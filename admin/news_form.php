@@ -20,13 +20,16 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
   <?php if ($item): ?>
     <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
   <?php endif; ?>
+  <fieldset>
+    <legend>Novinka</legend>
 
-  <label for="content">Text novinky <span aria-hidden="true">*</span></label>
-  <textarea id="content" name="content" rows="8" required aria-required="true"><?= h($item['content'] ?? '') ?></textarea>
+    <label for="content">Text novinky <span aria-hidden="true">*</span></label>
+    <textarea id="content" name="content" rows="8" required aria-required="true"><?= h($item['content'] ?? '') ?></textarea>
 
-  <p><small>Datum se uloží automaticky <?= $item ? '(zachová se původní)' : '(datum a čas přidání)' ?>.</small></p>
+    <p><small>Datum se uloží automaticky <?= $item ? '(zachová se původní)' : '(datum a čas přidání)' ?>.</small></p>
 
-  <button type="submit" style="margin-top:.5rem"><?= $item ? 'Uložit změny' : 'Přidat novinku' ?></button>
-  <a href="news.php" style="margin-left:1rem">Zrušit</a>
+    <button type="submit" style="margin-top:.5rem"><?= $item ? 'Uložit změny' : 'Přidat novinku' ?></button>
+    <a href="news.php" style="margin-left:1rem">Zrušit</a>
+  </fieldset>
 </form>
 <?php adminFooter(); ?>

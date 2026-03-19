@@ -6,7 +6,7 @@ $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    foreach (['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls'] as $m) {
+    foreach (['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq'] as $m) {
         saveSetting('module_' . $m, isset($_POST['module_' . $m]) ? '1' : '0');
     }
     logAction('settings_modules_save');
@@ -40,6 +40,7 @@ adminHeader('Moduly');
       'downloads' => 'Ke stažení',
       'food'      => 'Jídelní lístek',
       'polls'     => 'Ankety',
+      'faq'       => 'FAQ',
     ] as $k => $label): ?>
       <div>
         <input type="checkbox" id="module_<?= $k ?>" name="module_<?= $k ?>" value="1"

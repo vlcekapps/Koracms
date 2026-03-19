@@ -417,6 +417,7 @@ function navModuleDefaults(): array
         'food'      => ['/food/index.php',        'Jídelní lístek'],
         'chat'      => ['/chat/index.php',        'Chat'],
         'polls'     => ['/polls/index.php',       'Ankety'],
+        'faq'       => ['/faq/index.php',         'FAQ'],
         'contact'   => ['/contact/index.php',     'Kontakt'],
     ];
 }

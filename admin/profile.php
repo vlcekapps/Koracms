@@ -90,21 +90,25 @@ adminHeader('Můj profil');
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
-  <label for="first_name">Jméno</label>
-  <input type="text" id="first_name" name="first_name" maxlength="100"
-         value="<?= h($me['first_name']) ?>">
+  <fieldset>
+    <legend>Osobní údaje</legend>
 
-  <label for="last_name">Příjmení</label>
-  <input type="text" id="last_name" name="last_name" maxlength="100"
-         value="<?= h($me['last_name']) ?>">
+    <label for="first_name">Jméno</label>
+    <input type="text" id="first_name" name="first_name" maxlength="100"
+           value="<?= h($me['first_name']) ?>">
 
-  <label for="nickname">Přezdívka <small>(zobrazí se místo jména/příjmení)</small></label>
-  <input type="text" id="nickname" name="nickname" maxlength="100"
-         value="<?= h($me['nickname']) ?>">
+    <label for="last_name">Příjmení</label>
+    <input type="text" id="last_name" name="last_name" maxlength="100"
+           value="<?= h($me['last_name']) ?>">
 
-  <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
-  <input type="email" id="email" name="email" required aria-required="true"
-         value="<?= h($me['email']) ?>">
+    <label for="nickname">Přezdívka <small>(zobrazí se místo jména/příjmení)</small></label>
+    <input type="text" id="nickname" name="nickname" maxlength="100"
+           value="<?= h($me['nickname']) ?>">
+
+    <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
+    <input type="email" id="email" name="email" required aria-required="true"
+           value="<?= h($me['email']) ?>">
+  </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>Změna hesla <small>(vyplňte jen pokud chcete změnit)</small></legend>

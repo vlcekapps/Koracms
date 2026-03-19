@@ -68,20 +68,24 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     </p>
   <?php endif; ?>
 
-  <label for="title">Titulek <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-         value="<?= h($article['title'] ?? '') ?>">
+  <fieldset>
+    <legend>Článek</legend>
 
-  <label for="category_id">Kategorie</label>
-  <select id="category_id" name="category_id">
-    <option value="">– bez kategorie –</option>
-    <?php foreach ($categories as $cat): ?>
-      <option value="<?= (int)$cat['id'] ?>"
-        <?= ((int)($article['category_id'] ?? 0) === (int)$cat['id']) ? 'selected' : '' ?>>
-        <?= h($cat['name']) ?>
-      </option>
-    <?php endforeach; ?>
-  </select>
+    <label for="title">Titulek <span aria-hidden="true">*</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           value="<?= h($article['title'] ?? '') ?>">
+
+    <label for="category_id">Kategorie</label>
+    <select id="category_id" name="category_id">
+      <option value="">– bez kategorie –</option>
+      <?php foreach ($categories as $cat): ?>
+        <option value="<?= (int)$cat['id'] ?>"
+          <?= ((int)($article['category_id'] ?? 0) === (int)$cat['id']) ? 'selected' : '' ?>>
+          <?= h($cat['name']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+  </fieldset>
 
   <?php if (!empty($allTags)): ?>
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
@@ -96,29 +100,33 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   </fieldset>
   <?php endif; ?>
 
-  <label for="perex">Perex (krátký úvod)</label>
-  <textarea id="perex" name="perex" rows="3"><?= h($article['perex'] ?? '') ?></textarea>
+  <fieldset>
+    <legend>Obsah</legend>
 
-  <label for="content">Text článku <span aria-hidden="true">*</span></label>
-  <textarea id="content" name="content" rows="15" required aria-required="true"><?= h($article['content'] ?? '') ?></textarea>
+    <label for="perex">Perex (krátký úvod)</label>
+    <textarea id="perex" name="perex" rows="3"><?= h($article['perex'] ?? '') ?></textarea>
 
-  <label for="image">
-    Náhledový obrázek
-    <?php if (!empty($article['image_file'])): ?>
-      <small>(aktuální: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode($article['image_file']) ?>"
-             target="_blank"><?= h($article['image_file']) ?></a>)</small>
-    <?php endif; ?>
-  </label>
-  <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
-  <?php if (!empty($article['image_file'])): ?>
-    <label style="font-weight:normal;margin-top:.3rem">
-      <input type="checkbox" name="image_delete" value="1"> Smazat stávající obrázek
+    <label for="content">Text článku <span aria-hidden="true">*</span></label>
+    <textarea id="content" name="content" rows="15" required aria-required="true"><?= h($article['content'] ?? '') ?></textarea>
+
+    <label for="image">
+      Náhledový obrázek
+      <?php if (!empty($article['image_file'])): ?>
+        <small>(aktuální: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode($article['image_file']) ?>"
+               target="_blank"><?= h($article['image_file']) ?></a>)</small>
+      <?php endif; ?>
     </label>
-  <?php endif; ?>
+    <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+    <?php if (!empty($article['image_file'])): ?>
+      <label style="font-weight:normal;margin-top:.3rem">
+        <input type="checkbox" name="image_delete" value="1"> Smazat stávající obrázek
+      </label>
+    <?php endif; ?>
 
-  <label for="publish_at">Plánované publikování <small>(prázdné = ihned)</small></label>
-  <input type="datetime-local" id="publish_at" name="publish_at"
-         style="width:auto" value="<?= h($publishAtInput) ?>">
+    <label for="publish_at">Plánované publikování <small>(prázdné = ihned)</small></label>
+    <input type="datetime-local" id="publish_at" name="publish_at"
+           style="width:auto" value="<?= h($publishAtInput) ?>">
+  </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>SEO / Open Graph <small>(nepovinné – ponechte prázdné pro automatické hodnoty)</small></legend>

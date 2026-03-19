@@ -235,29 +235,32 @@ $captchaExpr = captchaGenerate();
       <form method="post" novalidate aria-describedby="comment-errors">
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <?= honeypotField() ?>
+        <fieldset>
+          <legend>Přidat komentář</legend>
 
-        <label for="author_name">Jméno <span aria-hidden="true">*</span></label>
-        <input type="text" id="author_name" name="author_name" required
-               aria-required="true" maxlength="100"
-               value="<?= h($_POST['author_name'] ?? '') ?>">
+          <label for="author_name">Jméno <span aria-hidden="true">*</span></label>
+          <input type="text" id="author_name" name="author_name" required
+                 aria-required="true" maxlength="100"
+                 value="<?= h($_POST['author_name'] ?? '') ?>">
 
-        <label for="author_email">E-mail <small>(nepovinný, nebude zveřejněn)</small></label>
-        <input type="email" id="author_email" name="author_email" maxlength="255"
-               value="<?= h($_POST['author_email'] ?? '') ?>">
+          <label for="author_email">E-mail <small>(nepovinný, nebude zveřejněn)</small></label>
+          <input type="email" id="author_email" name="author_email" maxlength="255"
+                 value="<?= h($_POST['author_email'] ?? '') ?>">
 
-        <label for="comment">Komentář <span aria-hidden="true">*</span></label>
-        <textarea id="comment" name="comment" required
-                  aria-required="true"><?= h($_POST['comment'] ?? '') ?></textarea>
+          <label for="comment">Komentář <span aria-hidden="true">*</span></label>
+          <textarea id="comment" name="comment" required
+                    aria-required="true"><?= h($_POST['comment'] ?? '') ?></textarea>
 
-        <label for="captcha">
-          Ověření: kolik je <?= h($captchaExpr) ?>?
-          <span aria-hidden="true">*</span>
-        </label>
-        <input type="text" id="captcha" name="captcha" required
-               aria-required="true" inputmode="numeric"
-               autocomplete="off" class="captcha-field">
+          <label for="captcha">
+            Ověření: kolik je <?= h($captchaExpr) ?>?
+            <span aria-hidden="true">*</span>
+          </label>
+          <input type="text" id="captcha" name="captcha" required
+                 aria-required="true" inputmode="numeric"
+                 autocomplete="off" class="captcha-field">
 
-        <button type="submit" style="margin-top:1rem">Odeslat komentář</button>
+          <button type="submit" style="margin-top:1rem">Odeslat komentář</button>
+        </fieldset>
       </form>
     </section>
   </section>

@@ -112,31 +112,61 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 
 | Modul | Popis |
 |---|---|
-| **Blog** | Články s kategoriemi, tagy, komentáři a náhledem před zveřejněním |
+| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací) a náhledem před zveřejněním; plánované publikování |
 | **Novinky** | Krátké zprávy |
 | **Chat** | Jednoduchá veřejná diskuse |
-| **Kontakt** | Kontaktní formulář s ochranou CAPTCHA |
-| **Galerie** | Fotoalba |
-| **Události** | Kalendář akcí |
+| **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou a rate limitingem |
+| **Galerie** | Vnořená fotoalba s automatickým generováním náhledů; výběr obálky alba |
+| **Události** | Kalendář akcí s datem začátku, konce a místem konání |
 | **Podcasty** | Správa více podcastů a jejich epizod; každý podcast má vlastní RSS feed (`/podcast/feed.php?show=ID`) kompatibilní s podcastovými aplikacemi |
-| **Zajímavá místa** | Adresář míst s popisem a odkazem |
-| **Newsletter** | Odběr novinek e-mailem |
-| **Ke stažení** | Knihovna souborů ke stažení |
-| **Jídelní lístek** | Správa jídelních karet |
-| **Ankety** | Hlasování s výsledky a archivem |
-| **Statické stránky** | Vlastní stránky se slug URL |
+| **Zajímavá místa** | Adresář míst s popisem, kategorií a odkazem |
+| **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
+| **Ke stažení** | Knihovna souborů ke stažení s kategoriemi |
+| **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |
+| **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
+| **FAQ** | Často kladené otázky s kategoriemi; accordion (`<details>` / `<summary>`) bez JavaScriptu |
+| **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci |
 
 Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Moduly**.
 
 ---
 
+## Úvodní stránka
+
+Na hlavní stránce se zobrazují widgety zapnutých modulů:
+
+- **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Základní nastavení → Text úvodní stránky*)
+- **Nejnovější novinky** – počet položek lze nastavit; hodnota 0 widget skryje
+- **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje
+- **Aktuální anketa** – pokud je modul Ankety zapnutý a existuje aktivní anketa
+
+---
+
 ## Nastavení
 
-Nastavení je rozděleno do tří samostatných sekcí:
+Nastavení je rozděleno do tří sekcí:
 
-- **Základní nastavení** – název webu, popis, e-mail, počty položek, editor, sociální sítě, favicon, logo, cookie lišta, režim údržby, text úvodní stránky
-- **Moduly** – zapínání a vypínání jednotlivých modulů
-- **Nastavení zobrazení** – pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů)
+### Základní nastavení
+
+- **Název a popis webu** – zobrazí se v záhlaví a v SEO meta tazích
+- **Kontaktní e-mail** – příjemce zpráv z kontaktního formuláře
+- **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
+- **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
+- **Výchozí OG obrázek** – obrázek pro náhledy při sdílení na sociálních sítích
+- **Editor obsahu** – volba mezi prostým HTML editorem a WYSIWYG editorem (Quill)
+- **Počty na hlavní stránce** – počet novinek a článků blogu zobrazených na HP (0 = widget skrytý)
+- **Stránkování** – počet novinek, článků a událostí na stránku
+- **Sociální sítě** – odkazy na Facebook, YouTube, Instagram, X (Twitter)
+- **Cookie lišta** – zapnutí GDPR lišty s vlastním textem
+- **Režim údržby** – dočasně zobrazí návštěvníkům hlášku o údržbě; přihlášení admini vidí web normálně
+
+### Moduly
+
+Zapínání a vypínání jednotlivých modulů jedním přepínačem.
+
+### Nastavení zobrazení
+
+Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů).
 
 ---
 
@@ -144,8 +174,40 @@ Nastavení je rozděleno do tří samostatných sekcí:
 
 Hlavní administrátor (účet vytvořený při instalaci) může přidávat **spolupracovníky** v sekci **Správa uživatelů**. Obsah přidaný spolupracovníkem musí hlavní administrátor před zveřejněním schválit.
 
+Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo).
+
+---
+
+## Další funkce
+
+- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ a místy
+- **RSS feed** – automaticky generovaný feed nejnovějších článků (`/feed.php`)
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`)
+- **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
+- **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
+- **Import / Export** – export a import dat CMS
+
+---
+
+## Bezpečnost
+
+- CSRF ochrana na všech formulářích
+- Rate limiting (přihlášení, kontakt, odběr, chat, hlasování)
+- Honeypot pole proti spambotům
+- Matematická CAPTCHA
+- Prepared statements proti SQL injection
+- HTML escapování proti XSS
+- Bezpečné hashování hesel (bcrypt)
+
 ---
 
 ## Přístupnost
 
-CMS je navržen s ohledem na **WCAG 2.2** – administrace i veřejná část webu používají sémantické HTML, ARIA atributy a jsou ovladatelné pouze klávesnicí.
+CMS je navržen s ohledem na **WCAG 2.2**:
+
+- Sémantické HTML (`<header>`, `<main>`, `<nav>`, `<article>`, `<section>`, `<details>`)
+- Formuláře seskupené pomocí `<fieldset>` / `<legend>` s `aria-required` a `role="alert"`
+- Skip link pro přeskočení na obsah
+- ARIA atributy (`aria-current`, `aria-hidden`, `aria-live`)
+- Ovladatelnost pouze klávesnicí
+- Nativní accordion (FAQ) bez závislosti na JavaScriptu

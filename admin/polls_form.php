@@ -52,18 +52,22 @@ $err = trim($_GET['err'] ?? '');
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
-  <label for="question">Otázka <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-  <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
-         value="<?= h($poll['question'] ?? '') ?>">
+  <fieldset>
+    <legend>Anketa</legend>
 
-  <label for="description">Popis <small>(nepovinný)</small></label>
-  <textarea id="description" name="description" rows="3"><?= h($poll['description'] ?? '') ?></textarea>
+    <label for="question">Otázka <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
+    <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
+           value="<?= h($poll['question'] ?? '') ?>">
 
-  <label for="status">Stav</label>
-  <select id="status" name="status">
-    <option value="active" <?= ($poll['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Aktivní</option>
-    <option value="closed" <?= ($poll['status'] ?? '') === 'closed' ? 'selected' : '' ?>>Uzavřená</option>
-  </select>
+    <label for="description">Popis <small>(nepovinný)</small></label>
+    <textarea id="description" name="description" rows="3"><?= h($poll['description'] ?? '') ?></textarea>
+
+    <label for="status">Stav</label>
+    <select id="status" name="status">
+      <option value="active" <?= ($poll['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Aktivní</option>
+      <option value="closed" <?= ($poll['status'] ?? '') === 'closed' ? 'selected' : '' ?>>Uzavřená</option>
+    </select>
+  </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
     <legend>Časové omezení <small>(nepovinné)</small></legend>

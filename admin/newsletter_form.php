@@ -20,24 +20,27 @@ adminHeader('Nový newsletter');
 
 <form method="post" action="newsletter_send.php" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <fieldset>
+    <legend>Složení e-mailu</legend>
 
-  <label for="subject">Předmět <span aria-hidden="true">*</span></label>
-  <input type="text" id="subject" name="subject" required aria-required="true" maxlength="255">
+    <label for="subject">Předmět <span aria-hidden="true">*</span></label>
+    <input type="text" id="subject" name="subject" required aria-required="true" maxlength="255">
 
-  <label for="body">Text emailu <span aria-hidden="true">*</span></label>
-  <textarea id="body" name="body" rows="15" required aria-required="true"></textarea>
+    <label for="body">Text emailu <span aria-hidden="true">*</span></label>
+    <textarea id="body" name="body" rows="15" required aria-required="true"></textarea>
 
-  <p style="margin-top:.5rem;font-size:.9rem;color:#555">
-    V textu emailu se automaticky přidá odkaz pro odhlášení z odběru.
-  </p>
+    <p style="margin-top:.5rem;font-size:.9rem;color:#555">
+      V textu emailu se automaticky přidá odkaz pro odhlášení z odběru.
+    </p>
 
-  <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"
-            onclick="return confirm('Opravdu odeslat newsletter <?= $confirmedCount ?> odběratelům?')">
-      Odeslat newsletter
-    </button>
-    <a href="newsletter.php" style="margin-left:1rem">Zrušit</a>
-  </div>
+    <div style="margin-top:1.5rem">
+      <button type="submit" class="btn"
+              onclick="return confirm('Opravdu odeslat newsletter <?= $confirmedCount ?> odběratelům?')">
+        Odeslat newsletter
+      </button>
+      <a href="newsletter.php" style="margin-left:1rem">Zrušit</a>
+    </div>
+  </fieldset>
 </form>
 
 <?php if ($useWysiwyg): ?>

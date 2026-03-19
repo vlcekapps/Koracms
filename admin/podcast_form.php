@@ -37,11 +37,14 @@ adminHeader($id ? 'Upravit epizodu' : 'Nová epizoda');
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
-  <label for="title">Název epizody <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-         value="<?= h($ep['title'] ?? '') ?>">
+  <fieldset>
+    <legend>Epizoda</legend>
 
-  <label for="episode_num">Číslo epizody <small>(nepovinné)</small></label>
+    <label for="title">Název epizody <span aria-hidden="true">*</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           value="<?= h($ep['title'] ?? '') ?>">
+
+    <label for="episode_num">Číslo epizody <small>(nepovinné)</small></label>
   <input type="number" id="episode_num" name="episode_num" min="1" style="width:8rem"
          value="<?= $ep['episode_num'] ? (int)$ep['episode_num'] : '' ?>">
 
@@ -68,10 +71,11 @@ adminHeader($id ? 'Upravit epizodu' : 'Nová epizoda');
   <input type="datetime-local" id="publish_at" name="publish_at" style="width:auto"
          value="<?= h($publishInput) ?>">
 
-  <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat epizodu' ?></button>
-    <a href="podcast.php?show_id=<?= (int)$showId ?>" style="margin-left:1rem">Zrušit</a>
-  </div>
+    <div style="margin-top:1.5rem">
+      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat epizodu' ?></button>
+      <a href="podcast.php?show_id=<?= (int)$showId ?>" style="margin-left:1rem">Zrušit</a>
+    </div>
+  </fieldset>
 </form>
 
 <?php if ($useWysiwyg): ?>

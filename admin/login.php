@@ -77,15 +77,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <form method="post" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <fieldset>
+      <legend>Přihlašovací údaje</legend>
 
-    <label for="email">E-mail <span aria-hidden="true">*</span></label>
-    <input type="email" id="email" name="email" required aria-required="true" autocomplete="username"
-           value="<?= h($_POST['email'] ?? '') ?>">
+      <label for="email">E-mail <span aria-hidden="true">*</span></label>
+      <input type="email" id="email" name="email" required aria-required="true" autocomplete="username"
+             value="<?= h($_POST['email'] ?? '') ?>">
 
-    <label for="heslo">Heslo <span aria-hidden="true">*</span></label>
-    <input type="password" id="heslo" name="heslo" required aria-required="true" autocomplete="current-password">
+      <label for="heslo">Heslo <span aria-hidden="true">*</span></label>
+      <input type="password" id="heslo" name="heslo" required aria-required="true" autocomplete="current-password">
 
-    <button type="submit">Přihlásit se</button>
+      <button type="submit">Přihlásit se</button>
+    </fieldset>
   </form>
 </main>
 </body>

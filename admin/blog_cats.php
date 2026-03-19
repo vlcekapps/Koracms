@@ -34,9 +34,12 @@ adminHeader('Blog – kategorie');
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <label for="name">Nová kategorie <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
-  <button type="submit" style="margin-top:.5rem">Přidat kategorii</button>
+  <fieldset>
+    <legend>Nová kategorie</legend>
+    <label for="name">Název <span aria-hidden="true">*</span></label>
+    <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
+    <button type="submit" style="margin-top:.5rem">Přidat kategorii</button>
+  </fieldset>
 </form>
 
 <h2>Existující kategorie</h2>

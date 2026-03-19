@@ -22,11 +22,14 @@ adminHeader($id ? 'Upravit podcast' : 'Nový podcast');
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
-  <label for="title">Název podcastu <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-         value="<?= h($show['title'] ?? '') ?>">
+  <fieldset>
+    <legend>Podcast</legend>
 
-  <label for="slug">URL identifikátor (slug) <span aria-hidden="true">*</span>
+    <label for="title">Název podcastu <span aria-hidden="true">*</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           value="<?= h($show['title'] ?? '') ?>">
+
+    <label for="slug">URL identifikátor (slug) <span aria-hidden="true">*</span>
     <small>(pouze malá písmena, číslice a pomlčky)</small>
   </label>
   <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
@@ -61,10 +64,11 @@ adminHeader($id ? 'Upravit podcast' : 'Nový podcast');
   <label for="description">Popis podcastu</label>
   <textarea id="description" name="description" rows="5"><?= h($show['description'] ?? '') ?></textarea>
 
-  <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Vytvořit podcast' ?></button>
-    <a href="podcast_shows.php" style="margin-left:1rem">Zrušit</a>
-  </div>
+    <div style="margin-top:1.5rem">
+      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Vytvořit podcast' ?></button>
+      <a href="podcast_shows.php" style="margin-left:1rem">Zrušit</a>
+    </div>
+  </fieldset>
 </form>
 
 <?php adminFooter(); ?>

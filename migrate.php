@@ -284,6 +284,24 @@ $tables = [
         UNIQUE KEY uq_poll_ip (poll_id, ip_hash)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_faq_categories' => "CREATE TABLE IF NOT EXISTS cms_faq_categories (
+        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name       VARCHAR(255) NOT NULL,
+        sort_order INT          NOT NULL DEFAULT 0,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_faqs' => "CREATE TABLE IF NOT EXISTS cms_faqs (
+        id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        category_id  INT          NULL DEFAULT NULL,
+        question     VARCHAR(500) NOT NULL,
+        answer       TEXT         NOT NULL,
+        sort_order   INT          NOT NULL DEFAULT 0,
+        is_published TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -425,6 +443,7 @@ $newSettings = [
     'module_downloads'        => '1',
     'module_food'             => '1',
     'module_polls'            => '0',
+    'module_faq'              => '0',
     // Počty a stránkování
     'home_blog_count'         => '5',
     'home_news_count'         => '5',

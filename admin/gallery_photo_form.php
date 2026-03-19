@@ -49,15 +49,19 @@ adminHeader($pageTitle);
            style="max-width:300px;height:auto;display:block;">
     </div>
 
-    <label for="title">Titulek fotografie</label>
-    <input type="text" id="title" name="title"
-           maxlength="255" value="<?= h($photo['title']) ?>">
+    <fieldset>
+      <legend>Vlastnosti fotografie</legend>
 
-    <label for="sort_order">Pořadí</label>
-    <input type="number" id="sort_order" name="sort_order"
-           min="0" value="<?= (int)$photo['sort_order'] ?>">
+      <label for="title">Titulek fotografie</label>
+      <input type="text" id="title" name="title"
+             maxlength="255" value="<?= h($photo['title']) ?>">
 
-    <button type="submit" style="margin-top:1rem">Uložit změny</button>
+      <label for="sort_order">Pořadí</label>
+      <input type="number" id="sort_order" name="sort_order"
+             min="0" value="<?= (int)$photo['sort_order'] ?>">
+
+      <button type="submit" style="margin-top:1rem">Uložit změny</button>
+    </fieldset>
   </form>
 
 <?php else: ?>
@@ -68,15 +72,19 @@ adminHeader($pageTitle);
     <input type="hidden" name="album_id"   value="<?= $albumId ?>">
     <input type="hidden" name="mode"       value="upload">
 
-    <label for="photos">
-      Vyberte fotografie
-      <small>(JPEG, PNG, GIF, WebP; max. 10 MB / soubor; lze vybrat více najednou)</small>
-    </label>
-    <input type="file" id="photos" name="photos[]"
-           accept="image/jpeg,image/png,image/gif,image/webp"
-           multiple required aria-required="true">
+    <fieldset>
+      <legend>Nahrání fotografií</legend>
 
-    <button type="submit" style="margin-top:1rem">Nahrát</button>
+      <label for="photos">
+        Vyberte fotografie
+        <small>(JPEG, PNG, GIF, WebP; max. 10 MB / soubor; lze vybrat více najednou)</small>
+      </label>
+      <input type="file" id="photos" name="photos[]"
+             accept="image/jpeg,image/png,image/gif,image/webp"
+             multiple required aria-required="true">
+
+      <button type="submit" style="margin-top:1rem">Nahrát</button>
+    </fieldset>
   </form>
 <?php endif; ?>
 

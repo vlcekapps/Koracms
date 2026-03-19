@@ -84,17 +84,20 @@ $captchaExpr = captchaGenerate();
   <form method="post" novalidate aria-describedby="form-errors">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <?= honeypotField() ?>
+    <fieldset>
+      <legend>Přihlášení k odběru</legend>
 
-    <label for="email">Váš e-mail <span aria-hidden="true">*</span></label>
-    <input type="email" id="email" name="email" required aria-required="true"
-           maxlength="255" value="<?= h($_POST['email'] ?? '') ?>"
-           style="max-width:360px">
+      <label for="email">Váš e-mail <span aria-hidden="true">*</span></label>
+      <input type="email" id="email" name="email" required aria-required="true"
+             maxlength="255" value="<?= h($_POST['email'] ?? '') ?>"
+             style="max-width:360px">
 
-    <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
-    <input type="text" id="captcha" name="captcha" required aria-required="true"
-           inputmode="numeric" autocomplete="off" style="max-width:6rem">
+      <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
+      <input type="text" id="captcha" name="captcha" required aria-required="true"
+             inputmode="numeric" autocomplete="off" style="max-width:6rem">
 
-    <button type="submit" style="margin-top:1rem">Přihlásit k odběru</button>
+      <button type="submit" style="margin-top:1rem">Přihlásit k odběru</button>
+    </fieldset>
   </form>
   <?php endif; ?>
 </main>

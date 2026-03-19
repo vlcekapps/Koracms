@@ -78,6 +78,19 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         } catch (\PDOException $e) {}
     }
 
+    // FAQ
+    if (isModuleEnabled('faq')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, question AS title, answer AS perex, created_at, 'faq' AS type
+                 FROM cms_faqs WHERE is_published = 1 AND (question LIKE ? OR answer LIKE ?)
+                 ORDER BY sort_order, id LIMIT 10"
+            );
+            $stmt->execute([$like, $like]);
+            foreach ($stmt->fetchAll() as $row) $results[] = $row;
+        } catch (\PDOException $e) {}
+    }
+
     // Zajímavá místa
     if (isModuleEnabled('places')) {
         try {
@@ -101,6 +114,7 @@ function resultUrl(array $r): string {
         'page'    => $b . '/page.php?slug=' . rawurlencode($r['slug'] ?? ''),
         'event'   => $b . '/events/index.php#event-' . (int)$r['id'],
         'podcast' => $b . '/podcast/index.php#ep-' . (int)$r['id'],
+        'faq'     => $b . '/faq/index.php',
         'place'   => $b . '/places/index.php#place-' . (int)$r['id'],
         default   => $b . '/',
     };
@@ -113,6 +127,7 @@ function typeLabel(string $type): string {
         'page'    => 'Stránka',
         'event'   => 'Akce',
         'podcast' => 'Podcast',
+        'faq'     => 'FAQ',
         'place'   => 'Místo',
         default   => '',
     };

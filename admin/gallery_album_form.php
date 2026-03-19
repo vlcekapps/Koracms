@@ -52,12 +52,15 @@ adminHeader($pageTitle);
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="id"         value="<?= (int)$album['id'] ?>">
 
-  <label for="name">Název alba <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required aria-required="true"
-         maxlength="255" value="<?= h($album['name']) ?>">
+  <fieldset>
+    <legend>Album</legend>
 
-  <label for="description">Popis</label>
-  <textarea id="description" name="description" rows="4"><?= h($album['description'] ?? '') ?></textarea>
+    <label for="name">Název alba <span aria-hidden="true">*</span></label>
+    <input type="text" id="name" name="name" required aria-required="true"
+           maxlength="255" value="<?= h($album['name']) ?>">
+
+    <label for="description">Popis</label>
+    <textarea id="description" name="description" rows="4"><?= h($album['description'] ?? '') ?></textarea>
 
   <label for="parent_id">Nadřazené album</label>
   <select id="parent_id" name="parent_id">
@@ -87,7 +90,8 @@ adminHeader($pageTitle);
     </select>
   <?php endif; ?>
 
-  <button type="submit" style="margin-top:1rem"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
+    <button type="submit" style="margin-top:1rem"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
+  </fieldset>
 </form>
 
 <?php adminFooter(); ?>

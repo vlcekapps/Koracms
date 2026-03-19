@@ -110,6 +110,15 @@ function adminHeader(string $pageTitle): void
        . '            <li><a href="' . $b . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
        . '          </ul>' . "\n"
        . '        </details>' . "\n"
+       . '      </li>' . "\n"
+       . '      <li>' . "\n"
+       . '        <details>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">FAQ</summary>' . "\n"
+       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+       . '            <li><a href="' . $b . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Otázky</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/faq_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+       . '          </ul>' . "\n"
+       . '        </details>' . "\n"
        . '      </li>' . "\n";
     foreach ($moduleItems as $item) { echo $renderItem($item); }
     echo '    </ul>' . "\n"

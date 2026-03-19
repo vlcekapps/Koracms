@@ -27,11 +27,14 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
-  <label for="name">Název <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
-         value="<?= h($pl['name'] ?? '') ?>">
+  <fieldset>
+    <legend>Místo</legend>
 
-  <label for="category">Kategorie <small>(nepovinná)</small></label>
+    <label for="name">Název <span aria-hidden="true">*</span></label>
+    <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
+           value="<?= h($pl['name'] ?? '') ?>">
+
+    <label for="category">Kategorie <small>(nepovinná)</small></label>
   <input type="text" id="category" name="category" maxlength="100"
          list="cats-list" value="<?= h($pl['category'] ?? '') ?>">
   <datalist id="cats-list">
@@ -57,10 +60,11 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
     Zobrazit na webu
   </label>
 
-  <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat místo' ?></button>
-    <a href="places.php" style="margin-left:1rem">Zrušit</a>
-  </div>
+    <div style="margin-top:1.5rem">
+      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat místo' ?></button>
+      <a href="places.php" style="margin-left:1rem">Zrušit</a>
+    </div>
+  </fieldset>
 </form>
 
 <?php adminFooter(); ?>

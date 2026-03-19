@@ -37,9 +37,13 @@ $err = trim($_GET['err'] ?? '');
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
-  <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-         value="<?= h($ev['title'] ?? '') ?>">
+  <fieldset>
+    <legend>Událost</legend>
+
+    <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           value="<?= h($ev['title'] ?? '') ?>">
+  </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
     <legend>Datum konání <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></legend>
@@ -73,23 +77,27 @@ $err = trim($_GET['err'] ?? '');
     </div>
   </fieldset>
 
-  <label for="location">Místo konání</label>
-  <input type="text" id="location" name="location" maxlength="255"
-         value="<?= h($ev['location'] ?? '') ?>">
+  <fieldset>
+    <legend>Podrobnosti</legend>
 
-  <label for="description">Popis</label>
-  <textarea id="description" name="description" rows="10"><?= h($ev['description'] ?? '') ?></textarea>
+    <label for="location">Místo konání</label>
+    <input type="text" id="location" name="location" maxlength="255"
+           value="<?= h($ev['location'] ?? '') ?>">
 
-  <label style="font-weight:normal;margin-top:1rem">
-    <input type="checkbox" name="is_published" value="1"
-           <?= ($ev['is_published'] ?? 1) ? 'checked' : '' ?>>
-    Publikováno
-  </label>
+    <label for="description">Popis</label>
+    <textarea id="description" name="description" rows="10"><?= h($ev['description'] ?? '') ?></textarea>
 
-  <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat událost' ?></button>
-    <a href="events.php" style="margin-left:1rem">Zrušit</a>
-  </div>
+    <label style="font-weight:normal;margin-top:1rem">
+      <input type="checkbox" name="is_published" value="1"
+             <?= ($ev['is_published'] ?? 1) ? 'checked' : '' ?>>
+      Publikováno
+    </label>
+
+    <div style="margin-top:1.5rem">
+      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat událost' ?></button>
+      <a href="events.php" style="margin-left:1rem">Zrušit</a>
+    </div>
+  </fieldset>
 </form>
 
 <?php if ($useWysiwyg): ?>

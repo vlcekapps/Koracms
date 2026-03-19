@@ -91,27 +91,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <?= honeypotField() ?>
 
-      <div>
-        <label for="from">Váš e-mail <span aria-hidden="true">*</span></label>
-        <input type="email" id="from" name="from" required aria-required="true"
-               maxlength="255" value="<?= h($_POST['from'] ?? '') ?>">
-      </div>
-      <div>
-        <label for="subject">Předmět <span aria-hidden="true">*</span></label>
-        <input type="text" id="subject" name="subject" required aria-required="true"
-               maxlength="255" value="<?= h($_POST['subject'] ?? '') ?>">
-      </div>
-      <div>
-        <label for="message">Zpráva <span aria-hidden="true">*</span></label>
-        <textarea id="message" name="message" rows="8" required
-                  aria-required="true"><?= h($_POST['message'] ?? '') ?></textarea>
-      </div>
-      <div>
-        <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
-        <input type="text" id="captcha" name="captcha" required aria-required="true"
-               inputmode="numeric" autocomplete="off" style="width:6rem">
-      </div>
-      <button type="submit">Odeslat zprávu</button>
+      <fieldset>
+        <legend>Kontaktní formulář</legend>
+        <div>
+          <label for="from">Váš e-mail <span aria-hidden="true">*</span></label>
+          <input type="email" id="from" name="from" required aria-required="true"
+                 maxlength="255" value="<?= h($_POST['from'] ?? '') ?>">
+        </div>
+        <div>
+          <label for="subject">Předmět <span aria-hidden="true">*</span></label>
+          <input type="text" id="subject" name="subject" required aria-required="true"
+                 maxlength="255" value="<?= h($_POST['subject'] ?? '') ?>">
+        </div>
+        <div>
+          <label for="message">Zpráva <span aria-hidden="true">*</span></label>
+          <textarea id="message" name="message" rows="8" required
+                    aria-required="true"><?= h($_POST['message'] ?? '') ?></textarea>
+        </div>
+        <div>
+          <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
+          <input type="text" id="captcha" name="captcha" required aria-required="true"
+                 inputmode="numeric" autocomplete="off" style="width:6rem">
+        </div>
+        <button type="submit">Odeslat zprávu</button>
+      </fieldset>
     </form>
 
   <?php endif; ?>

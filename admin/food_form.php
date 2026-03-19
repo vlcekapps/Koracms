@@ -28,36 +28,40 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
     <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
   <?php endif; ?>
 
-  <label for="type">Typ lístku <span aria-hidden="true">*</span></label>
-  <select id="type" name="type" style="width:auto">
-    <option value="food"     <?= $cardType === 'food'     ? 'selected' : '' ?>>Jídelní lístek</option>
-    <option value="beverage" <?= $cardType === 'beverage' ? 'selected' : '' ?>>Nápojový lístek</option>
-  </select>
+  <fieldset>
+    <legend>Lístek</legend>
 
-  <label for="title">Název <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-         placeholder="např. Týdenní menu 17.–23. března 2026"
-         value="<?= h($card['title'] ?? '') ?>">
+    <label for="type">Typ lístku <span aria-hidden="true">*</span></label>
+    <select id="type" name="type" style="width:auto">
+      <option value="food"     <?= $cardType === 'food'     ? 'selected' : '' ?>>Jídelní lístek</option>
+      <option value="beverage" <?= $cardType === 'beverage' ? 'selected' : '' ?>>Nápojový lístek</option>
+    </select>
 
-  <label for="description">Krátká poznámka <small>(nepovinná – zobrazí se v archivu pod názvem)</small></label>
-  <textarea id="description" name="description" rows="2"
-            style="min-height:0"><?= h($card['description'] ?? '') ?></textarea>
+    <label for="title">Název <span aria-hidden="true">*</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           placeholder="např. Týdenní menu 17.–23. března 2026"
+           value="<?= h($card['title'] ?? '') ?>">
 
-  <label for="content">Obsah lístku</label>
-  <textarea id="content" name="content" rows="18"><?= h($card['content'] ?? '') ?></textarea>
+    <label for="description">Krátká poznámka <small>(nepovinná – zobrazí se v archivu pod názvem)</small></label>
+    <textarea id="description" name="description" rows="2"
+              style="min-height:0"><?= h($card['description'] ?? '') ?></textarea>
 
-  <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
-    <div>
-      <label for="valid_from">Platí od</label>
-      <input type="date" id="valid_from" name="valid_from" style="width:auto"
-             value="<?= h($card['valid_from'] ?? '') ?>">
+    <label for="content">Obsah lístku</label>
+    <textarea id="content" name="content" rows="18"><?= h($card['content'] ?? '') ?></textarea>
+
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
+      <div>
+        <label for="valid_from">Platí od</label>
+        <input type="date" id="valid_from" name="valid_from" style="width:auto"
+               value="<?= h($card['valid_from'] ?? '') ?>">
+      </div>
+      <div>
+        <label for="valid_to">Platí do <small>(prázdné = bez omezení)</small></label>
+        <input type="date" id="valid_to" name="valid_to" style="width:auto"
+               value="<?= h($card['valid_to'] ?? '') ?>">
+      </div>
     </div>
-    <div>
-      <label for="valid_to">Platí do <small>(prázdné = bez omezení)</small></label>
-      <input type="date" id="valid_to" name="valid_to" style="width:auto"
-             value="<?= h($card['valid_to'] ?? '') ?>">
-    </div>
-  </div>
+  </fieldset>
 
   <?php if (isSuperAdmin()): ?>
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.75rem 1rem">

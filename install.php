@@ -300,6 +300,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UNIQUE KEY uq_poll_ip (poll_id, ip_hash)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faq_categories (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(255) NOT NULL,
+            sort_order INT          NOT NULL DEFAULT 0,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faqs (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            category_id  INT          NULL DEFAULT NULL,
+            question     VARCHAR(500) NOT NULL,
+            answer       TEXT         NOT NULL,
+            sort_order   INT          NOT NULL DEFAULT 0,
+            is_published TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Výchozí nastavení ────────────────────────────────────────────────
         $defaults = [
             'site_name'       => $siteName,
@@ -325,6 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'module_downloads'  => '1',
             'module_food'       => '1',
             'module_polls'      => '0',
+            'module_faq'        => '0',
             'social_facebook'          => '',
             'social_youtube'           => '',
             'social_instagram'         => '',

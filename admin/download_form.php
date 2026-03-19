@@ -24,11 +24,14 @@ adminHeader($id ? 'Upravit soubor' : 'Nový soubor ke stažení');
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
-  <label for="title">Název <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-         value="<?= h($d['title'] ?? '') ?>">
+  <fieldset>
+    <legend>Soubor ke stažení</legend>
 
-  <label for="dl_category_id">Kategorie</label>
+    <label for="title">Název <span aria-hidden="true">*</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           value="<?= h($d['title'] ?? '') ?>">
+
+    <label for="dl_category_id">Kategorie</label>
   <select id="dl_category_id" name="dl_category_id">
     <option value="">– bez kategorie –</option>
     <?php foreach ($categories as $cat): ?>
@@ -66,10 +69,11 @@ adminHeader($id ? 'Upravit soubor' : 'Nový soubor ke stažení');
     Zobrazit na webu
   </label>
 
-  <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat soubor' ?></button>
-    <a href="downloads.php" style="margin-left:1rem">Zrušit</a>
-  </div>
+    <div style="margin-top:1.5rem">
+      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat soubor' ?></button>
+      <a href="downloads.php" style="margin-left:1rem">Zrušit</a>
+    </div>
+  </fieldset>
 </form>
 
 <?php adminFooter(); ?>

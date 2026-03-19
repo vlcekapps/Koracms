@@ -44,9 +44,12 @@ adminHeader('Blog – tagy');
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <label for="name">Nový tag <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required aria-required="true" maxlength="100">
-  <button type="submit" style="margin-top:.5rem">Přidat tag</button>
+  <fieldset>
+    <legend>Nový tag</legend>
+    <label for="name">Název <span aria-hidden="true">*</span></label>
+    <input type="text" id="name" name="name" required aria-required="true" maxlength="100">
+    <button type="submit" style="margin-top:.5rem">Přidat tag</button>
+  </fieldset>
 </form>
 
 <h2>Existující tagy</h2>

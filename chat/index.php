@@ -109,36 +109,39 @@ $messages = $pdo->query(
     <form method="post" novalidate aria-describedby="form-errors">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <?= honeypotField() ?>
-      <div>
-        <label for="name">Jméno <span aria-hidden="true">*</span></label>
-        <input type="text" id="name" name="name" required maxlength="100"
-               aria-required="true" value="<?= h($_POST['name'] ?? '') ?>">
-      </div>
-      <div>
-        <label for="email">E-mail <small>(nepovinný)</small></label>
-        <input type="email" id="email" name="email" maxlength="255"
-               value="<?= h($_POST['email'] ?? '') ?>">
-      </div>
-      <div>
-        <label for="web">Web <small>(nepovinný)</small></label>
-        <input type="url" id="web" name="web" maxlength="255"
-               value="<?= h($_POST['web'] ?? '') ?>">
-      </div>
-      <div>
-        <label for="message">Zpráva <span aria-hidden="true">*</span></label>
-        <textarea id="message" name="message" rows="5" required
-                  aria-required="true"><?= h($_POST['message'] ?? '') ?></textarea>
-      </div>
-      <div>
-        <label for="captcha">
-          Ověření: kolik je <?= h($captchaExpr) ?>?
-          <span aria-hidden="true">*</span>
-        </label>
-        <input type="text" id="captcha" name="captcha" required
-               aria-required="true" inputmode="numeric"
-               autocomplete="off" style="max-width:6rem">
-      </div>
-      <button type="submit">Odeslat zprávu</button>
+      <fieldset>
+        <legend>Přidat zprávu</legend>
+        <div>
+          <label for="name">Jméno <span aria-hidden="true">*</span></label>
+          <input type="text" id="name" name="name" required maxlength="100"
+                 aria-required="true" value="<?= h($_POST['name'] ?? '') ?>">
+        </div>
+        <div>
+          <label for="email">E-mail <small>(nepovinný)</small></label>
+          <input type="email" id="email" name="email" maxlength="255"
+                 value="<?= h($_POST['email'] ?? '') ?>">
+        </div>
+        <div>
+          <label for="web">Web <small>(nepovinný)</small></label>
+          <input type="url" id="web" name="web" maxlength="255"
+                 value="<?= h($_POST['web'] ?? '') ?>">
+        </div>
+        <div>
+          <label for="message">Zpráva <span aria-hidden="true">*</span></label>
+          <textarea id="message" name="message" rows="5" required
+                    aria-required="true"><?= h($_POST['message'] ?? '') ?></textarea>
+        </div>
+        <div>
+          <label for="captcha">
+            Ověření: kolik je <?= h($captchaExpr) ?>?
+            <span aria-hidden="true">*</span>
+          </label>
+          <input type="text" id="captcha" name="captcha" required
+                 aria-required="true" inputmode="numeric"
+                 autocomplete="off" style="max-width:6rem">
+        </div>
+        <button type="submit">Odeslat zprávu</button>
+      </fieldset>
     </form>
   </section>
 </main>
