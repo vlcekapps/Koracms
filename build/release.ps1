@@ -63,6 +63,28 @@ function Get-BumpedVersion {
     }
 }
 
+function Update-Changelog {
+    param([string]$Path, [string]$NewVersion)
+    if (!(Test-Path $Path)) { return $false }
+    $content = [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false))
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+    $updated = $false
+    # 1) Nahradit ## [Unreleased] za ## [verze] – datum
+    if ($content -match '(?m)^## \[Unreleased\]') {
+        $content = $content -replace '(?m)^## \[Unreleased\].*$', "## [$NewVersion] – $today"
+        $updated = $true
+    }
+    # 2) Nebo nahradit ## [stará verze] bez data za ## [nová verze] – datum (pokud datum chybí)
+    elseif ($content -match ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$')) {
+        $content = $content -replace ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$'), "## [$NewVersion] – $today"
+        $updated = $true
+    }
+    if ($updated) {
+        [System.IO.File]::WriteAllText($Path, $content, [System.Text.UTF8Encoding]::new($false))
+    }
+    return $updated
+}
+
 function Assert-CleanWorkingTree {
     $status = (& git status --porcelain)
     if ($LASTEXITCODE -ne 0) { throw "Nelze načíst git status." }
@@ -125,6 +147,15 @@ Write-Host "Verze: $currentVersion → $newVersion"
 # Aktualizovat VERSION
 [System.IO.File]::WriteAllText($versionPath, $newVersion, [System.Text.UTF8Encoding]::new($false))
 
+# Aktualizovat CHANGELOG.md
+$changelogPath = Join-Path $projectRoot "CHANGELOG.md"
+$changelogUpdated = Update-Changelog -Path $changelogPath -NewVersion $newVersion
+if ($changelogUpdated) {
+    Write-Host "CHANGELOG.md aktualizován."
+} else {
+    Write-Host "CHANGELOG.md: nebyla nalezena sekce [Unreleased] ani [$newVersion] bez data – beze změn."
+}
+
 # Vytvořit zip
 if (!(Test-Path $distDir)) { New-Item -ItemType Directory -Path $distDir | Out-Null }
 $zipPath = Join-Path $distDir "koracms-$newVersion.zip"
@@ -133,6 +164,7 @@ New-ReleaseZip -ProjectRoot $projectRoot -OutPath $zipPath
 
 # Commit + tag
 Invoke-Git @("add", "VERSION")
+if ($changelogUpdated) { Invoke-Git @("add", "CHANGELOG.md") }
 Invoke-Git @("commit", "-m", "chore(release): $newVersion")
 
 if (-not $SkipPush) {
