@@ -317,6 +317,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              ON DUPLICATE KEY UPDATE password = VALUES(password), is_superadmin = 1"
         )->execute([$adminEmail, password_hash($adminPass, PASSWORD_BCRYPT)]);
 
+        // ── Adresáře pro nahrávání souborů ──────────────────────────────────
+        $uploadDirs = [
+            'uploads/site',
+            'uploads/articles',
+            'uploads/articles/thumbs',
+            'uploads/gallery',
+            'uploads/gallery/thumbs',
+            'uploads/downloads',
+            'uploads/podcasts',
+            'uploads/podcasts/covers',
+        ];
+        foreach ($uploadDirs as $dir) {
+            $path = __DIR__ . '/' . $dir;
+            if (!is_dir($path)) {
+                mkdir($path, 0755, true);
+            }
+        }
+
         $success = true;
     }
 }
