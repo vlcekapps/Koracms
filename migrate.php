@@ -349,7 +349,7 @@ try {
             $catId = $getCatId->fetchColumn();
             if ($catId) {
                 $updDl->execute([$catId, $catName]);
-                $log[] = "✓ Kategorie ke stažení „<code>" . h($catName) . "</code>" migrována (id={$catId}) – OK";
+                $log[] = '✓ Kategorie ke stažení <code>' . h($catName) . '</code> migrována (id=' . $catId . ') – OK';
             }
         }
 
