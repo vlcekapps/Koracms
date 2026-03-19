@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Opraveno
+- **Hlasování v anketách** – opravena chyba, kdy `rateLimit()` (void funkce) byla volána jako podmínka v if, což způsobovalo vždy chybu „Příliš mnoho pokusů"
+
 ## [1.0.7] – 2026-03-19
 
 ## [1.0.6] – 2026-03-19

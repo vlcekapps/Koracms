@@ -28,41 +28,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pollId !== null && isset($_POST['v
         exit;
     }
 
-    if (!rateLimit('poll_vote', 5, 60)) {
-        $voteError = 'too_many';
+    rateLimit('poll_vote', 5, 60);
+
+    $optionId = inputInt('post', 'option_id');
+
+    // Validate poll is active
+    $stmt = $pdo->prepare(
+        "SELECT * FROM cms_polls WHERE id = ? AND status = 'active'
+         AND (start_date IS NULL OR start_date <= ?) AND (end_date IS NULL OR end_date > ?)"
+    );
+    $stmt->execute([$pollId, $now, $now]);
+    $votePoll = $stmt->fetch();
+
+    if (!$votePoll) {
+        $voteError = 'closed';
+    } elseif ($optionId === null) {
+        $voteError = 'no_option';
     } else {
-        $optionId = inputInt('post', 'option_id');
-
-        // Validate poll is active
-        $stmt = $pdo->prepare(
-            "SELECT * FROM cms_polls WHERE id = ? AND status = 'active'
-             AND (start_date IS NULL OR start_date <= ?) AND (end_date IS NULL OR end_date > ?)"
-        );
-        $stmt->execute([$pollId, $now, $now]);
-        $votePoll = $stmt->fetch();
-
-        if (!$votePoll) {
-            $voteError = 'closed';
-        } elseif ($optionId === null) {
-            $voteError = 'no_option';
+        // Validate option belongs to poll
+        $stmt = $pdo->prepare("SELECT id FROM cms_poll_options WHERE id = ? AND poll_id = ?");
+        $stmt->execute([$optionId, $pollId]);
+        if (!$stmt->fetch()) {
+            $voteError = 'invalid_option';
         } else {
-            // Validate option belongs to poll
-            $stmt = $pdo->prepare("SELECT id FROM cms_poll_options WHERE id = ? AND poll_id = ?");
-            $stmt->execute([$optionId, $pollId]);
-            if (!$stmt->fetch()) {
-                $voteError = 'invalid_option';
-            } else {
-                $ipHash = pollIpHash($pollId);
-                try {
-                    $pdo->prepare(
-                        "INSERT INTO cms_poll_votes (poll_id, option_id, ip_hash) VALUES (?, ?, ?)"
-                    )->execute([$pollId, $optionId, $ipHash]);
-                    header('Location: ' . BASE_URL . '/polls/index.php?id=' . $pollId . '&voted=1');
-                    exit;
-                } catch (\PDOException $e) {
-                    // Duplicate key = already voted
-                    $voteError = 'already_voted';
-                }
+            $ipHash = pollIpHash($pollId);
+            try {
+                $pdo->prepare(
+                    "INSERT INTO cms_poll_votes (poll_id, option_id, ip_hash) VALUES (?, ?, ?)"
+                )->execute([$pollId, $optionId, $ipHash]);
+                header('Location: ' . BASE_URL . '/polls/index.php?id=' . $pollId . '&voted=1');
+                exit;
+            } catch (\PDOException $e) {
+                // Duplicate key = already voted
+                $voteError = 'already_voted';
             }
         }
     }
