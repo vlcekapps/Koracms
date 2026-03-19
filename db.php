@@ -416,6 +416,7 @@ function navModuleDefaults(): array
         'downloads' => ['/downloads/index.php',   'Ke stažení'],
         'food'      => ['/food/index.php',        'Jídelní lístek'],
         'chat'      => ['/chat/index.php',        'Chat'],
+        'polls'     => ['/polls/index.php',       'Ankety'],
         'contact'   => ['/contact/index.php',     'Kontakt'],
     ];
 }

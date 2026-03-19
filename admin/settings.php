@@ -11,8 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteName    = trim($_POST['site_name']       ?? '');
     $siteDesc    = trim($_POST['site_description'] ?? '');
     $contactEmail= trim($_POST['contact_email']   ?? '');
-    $homeBlog      = max(1, (int)($_POST['home_blog_count'] ?? 5));
-    $homeNews      = max(1, (int)($_POST['home_news_count'] ?? 5));
+    $homeBlog      = max(0, (int)($_POST['home_blog_count'] ?? 5));
+    $homeNews      = max(0, (int)($_POST['home_news_count'] ?? 5));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
@@ -133,15 +133,19 @@ adminHeader('Základní nastavení');
 
   <fieldset>
     <legend>Počty položek na hlavní stránce</legend>
+    <p style="margin-top:.25rem;font-size:.9rem;color:#555">Hodnota 0 znamená, že se sekce na hlavní stránce nezobrazí.</p>
     <label for="home_blog_count">Počet článků blogu na HP</label>
-    <input type="number" id="home_blog_count" name="home_blog_count" min="1" max="50"
+    <input type="number" id="home_blog_count" name="home_blog_count" min="0" max="50"
            value="<?= h(getSetting('home_blog_count', '5')) ?>">
 
     <label for="home_news_count">Počet novinek na HP</label>
-    <input type="number" id="home_news_count" name="home_news_count" min="1" max="50"
+    <input type="number" id="home_news_count" name="home_news_count" min="0" max="50"
            value="<?= h(getSetting('home_news_count', '5')) ?>">
+  </fieldset>
 
-    <label for="news_per_page">Novinek na stránku (stránkovač)</label>
+  <fieldset>
+    <legend>Stránkování</legend>
+    <label for="news_per_page">Novinek na stránku</label>
     <input type="number" id="news_per_page" name="news_per_page" min="1" max="100"
            value="<?= h(getSetting('news_per_page', '10')) ?>">
 
@@ -149,7 +153,7 @@ adminHeader('Základní nastavení');
     <input type="number" id="blog_per_page" name="blog_per_page" min="1" max="100"
            value="<?= h(getSetting('blog_per_page', '10')) ?>">
 
-    <label for="events_per_page">Akcí na stránku (stránkovač)</label>
+    <label for="events_per_page">Akcí na stránku</label>
     <input type="number" id="events_per_page" name="events_per_page" min="1" max="100"
            value="<?= h(getSetting('events_per_page', '10')) ?>">
   </fieldset>

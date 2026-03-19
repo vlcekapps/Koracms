@@ -18,6 +18,7 @@ foreach ([
     'cms_gallery_photos' => 'Galerie – fotografie',
     'cms_chat'           => 'Chat zprávy',
     'cms_contact'        => 'Kontaktní zprávy',
+    'cms_polls'          => 'Ankety',
 ] as $tbl => $label) {
     try {
         $counts[$label] = (int)$pdo->query("SELECT COUNT(*) FROM {$tbl}")->fetchColumn();
@@ -140,7 +141,7 @@ adminHeader('Přehled');
 
 <h2>Povolené moduly</h2>
 <ul>
-  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení'] as $k => $label): ?>
+  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety'] as $k => $label): ?>
     <li><?= h($label) ?>: <strong><?= isModuleEnabled($k) ? 'zapnuto' : 'vypnuto' ?></strong></li>
   <?php endforeach; ?>
 </ul>

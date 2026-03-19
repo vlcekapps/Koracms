@@ -63,6 +63,7 @@ function adminHeader(string $pageTitle): void
         ['url' => $b . '/admin/contact.php',       'label' => 'Kontakt'],
         ['url' => $b . '/admin/gallery_albums.php','label' => 'Galerie'],
         ['url' => $b . '/admin/events.php',        'label' => 'Události'],
+        ['url' => $b . '/admin/polls.php',         'label' => 'Ankety'],
         ['url' => $b . '/admin/podcast.php',         'label' => 'Podcasty'],
         ['url' => $b . '/admin/places.php',        'label' => 'Zajímavá místa'],
         ['url' => $b . '/admin/newsletter.php',    'label' => 'Newsletter'],

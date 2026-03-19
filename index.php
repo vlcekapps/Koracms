@@ -7,19 +7,19 @@ $siteDesc = getSetting('site_description', '');
 
 // Poslední novinky
 $latestNews = [];
-if (isModuleEnabled('news')) {
-    $n = max(1, (int)getSetting('home_news_count', '5'));
+$homeNewsCount = (int)getSetting('home_news_count', '5');
+if (isModuleEnabled('news') && $homeNewsCount > 0) {
     $stmt = db_connect()->prepare(
         "SELECT id, content, created_at FROM cms_news WHERE status = 'published' ORDER BY created_at DESC LIMIT ?"
     );
-    $stmt->execute([$n]);
+    $stmt->execute([$homeNewsCount]);
     $latestNews = $stmt->fetchAll();
 }
 
 // Poslední články blogu
 $latestArticles = [];
-if (isModuleEnabled('blog')) {
-    $n = max(1, (int)getSetting('home_blog_count', '5'));
+$homeBlogCount = (int)getSetting('home_blog_count', '5');
+if (isModuleEnabled('blog') && $homeBlogCount > 0) {
     $stmt = db_connect()->prepare(
         "SELECT a.id, a.title, a.perex, a.image_file, a.created_at, c.name AS category,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
@@ -29,7 +29,7 @@ if (isModuleEnabled('blog')) {
          WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
          ORDER BY a.created_at DESC LIMIT ?"
     );
-    $stmt->execute([$n]);
+    $stmt->execute([$homeBlogCount]);
     $latestArticles = $stmt->fetchAll();
 }
 ?>
@@ -110,6 +110,28 @@ if (isModuleEnabled('blog')) {
     <?php endforeach; ?>
     <p><a href="<?= BASE_URL ?>/blog/index.php">Všechny články <span aria-hidden="true">→</span></a></p>
   </section>
+  <?php endif; ?>
+
+  <?php if (isModuleEnabled('polls')):
+    $pollStmt = db_connect()->prepare(
+        "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
+         FROM cms_polls p
+         WHERE p.status = 'active'
+           AND (p.start_date IS NULL OR p.start_date <= NOW())
+           AND (p.end_date   IS NULL OR p.end_date > NOW())
+         ORDER BY p.created_at DESC LIMIT 1"
+    );
+    $pollStmt->execute();
+    $homePoll = $pollStmt->fetch();
+  ?>
+    <?php if ($homePoll): ?>
+    <section aria-labelledby="nadpis-anketa" style="margin-top:2rem">
+      <h2 id="nadpis-anketa">Anketa</h2>
+      <p><strong><?= h($homePoll['question']) ?></strong></p>
+      <p><?= (int)$homePoll['vote_count'] ?> hlasů</p>
+      <p><a href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$homePoll['id'] ?>">Hlasovat <span aria-hidden="true">→</span></a></p>
+    </section>
+    <?php endif; ?>
   <?php endif; ?>
 
 </main>

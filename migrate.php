@@ -256,6 +256,34 @@ $tables = [
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_polls' => "CREATE TABLE IF NOT EXISTS cms_polls (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        question    VARCHAR(500) NOT NULL,
+        description TEXT,
+        status      ENUM('active','closed') NOT NULL DEFAULT 'active',
+        start_date  DATETIME     NULL DEFAULT NULL,
+        end_date    DATETIME     NULL DEFAULT NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_poll_options' => "CREATE TABLE IF NOT EXISTS cms_poll_options (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        poll_id     INT          NOT NULL,
+        option_text VARCHAR(500) NOT NULL,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_poll_votes' => "CREATE TABLE IF NOT EXISTS cms_poll_votes (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        poll_id     INT          NOT NULL,
+        option_id   INT          NOT NULL,
+        ip_hash     VARCHAR(64)  NOT NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_poll_ip (poll_id, ip_hash)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -396,6 +424,7 @@ $newSettings = [
     'module_newsletter'       => '1',
     'module_downloads'        => '1',
     'module_food'             => '1',
+    'module_polls'            => '0',
     // Počty a stránkování
     'home_blog_count'         => '5',
     'home_news_count'         => '5',

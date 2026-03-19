@@ -123,6 +123,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Newsletter** | Odběr novinek e-mailem |
 | **Ke stažení** | Knihovna souborů ke stažení |
 | **Jídelní lístek** | Správa jídelních karet |
+| **Ankety** | Hlasování s výsledky a archivem |
 | **Statické stránky** | Vlastní stránky se slug URL |
 
 Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Moduly**.
