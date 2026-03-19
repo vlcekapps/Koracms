@@ -4,6 +4,17 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [1.0.3] – 2026-03-19
+
+### Vylepšeno
+- **Přehled v administraci** – tabulka počtů záznamů nyní pokrývá všechny moduly (události, podcast, místa, stránky, ke stažení, food, galerie)
+- Modul food a galerie přidány do seznamu povolených modulů a sledování čekajícího obsahu
+- **WCAG 2.2** – dekorativní Unicode šipky (`←`, `→`, `‹`, `›`) a emotikona `📋` obaleny `aria-hidden="true"` v 17 souborech
+
+### Opraveno
+- Odkaz „Zobrazit stránky" v admin přehledu se již neotevírá v novém okně
+- Odhlášení z admin přesměruje na hlavní stránku místo na přihlašovací formulář
+
 ## [1.0.2] – 2026-03-19
 
 ### Opraveno

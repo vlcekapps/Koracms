@@ -144,5 +144,5 @@ adminHeader('Přehled');
     <li><?= h($label) ?>: <strong><?= isModuleEnabled($k) ? 'zapnuto' : 'vypnuto' ?></strong></li>
   <?php endforeach; ?>
 </ul>
-<p><a href="<?= BASE_URL ?>/" target="_blank" rel="noopener">Zobrazit stránky <span aria-hidden="true">→</span></a></p>
+<p><a href="settings.php">Změnit nastavení <span aria-hidden="true">→</span></a></p>
 <?php adminFooter(); ?>
