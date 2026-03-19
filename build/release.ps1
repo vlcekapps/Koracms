@@ -2,8 +2,7 @@ param(
     [ValidateSet("patch", "minor", "major")]
     [string]$Bump = "patch",
     [string]$Version = "",
-    [switch]$SkipPush,
-    [switch]$SkipRelease
+    [switch]$SkipPush
 )
 
 $ErrorActionPreference = "Stop"
@@ -146,19 +145,27 @@ if (-not $SkipPush) {
 }
 
 # GitHub release
-if (-not $SkipRelease) {
-    if ($SkipPush) {
-        throw "GitHub release nelze vytvořit s -SkipPush. Nejdřív pushněte, pak spusťte bez tohoto přepínače."
-    }
-    Require-Command -Name gh
-    & gh release view $tagName *> $null
-    if ($LASTEXITCODE -eq 0) {
-        & gh release edit $tagName --title "Kora CMS $newVersion"
-        & gh release upload $tagName $zipPath --clobber
-    } else {
-        & gh release create $tagName $zipPath --target main --title "Kora CMS $newVersion" --generate-notes
-    }
+if ($SkipPush) {
+    throw "GitHub release nelze vytvořit s -SkipPush. Nejdřív pushněte, pak spusťte bez tohoto přepínače."
+}
+if (!(Test-Path $zipPath)) {
+    throw "Zip soubor nenalezen: $zipPath"
+}
+Require-Command -Name gh
+& gh release view $tagName *> $null
+if ($LASTEXITCODE -eq 0) {
+    & gh release edit $tagName --title "Kora CMS $newVersion"
+    if ($LASTEXITCODE -ne 0) { throw "Úprava GitHub release selhala." }
+    & gh release upload $tagName $zipPath --clobber
+    if ($LASTEXITCODE -ne 0) { throw "Nahrání assetu do GitHub release selhalo." }
+} else {
+    & gh release create $tagName $zipPath --target main --title "Kora CMS $newVersion" --generate-notes
     if ($LASTEXITCODE -ne 0) { throw "Vytvoření GitHub release selhalo." }
+}
+# Ověřit, že asset je skutečně přítomný
+$assets = & gh release view $tagName --json assets --jq ".assets[].name"
+if ($assets -notcontains "koracms-$newVersion.zip") {
+    throw "Asset koracms-$newVersion.zip nebyl nalezen v release $tagName."
 }
 
 Write-Host ""
