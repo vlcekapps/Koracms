@@ -533,6 +533,32 @@ try {
 } catch (\PDOException $e) {
     $log[] = "✗ Migrace superadmina – CHYBA: " . h($e->getMessage());
 }
+
+// ── 8. Adresáře pro nahrávání souborů ────────────────────────────────────────
+
+$uploadDirs = [
+    'uploads/site',
+    'uploads/articles',
+    'uploads/articles/thumbs',
+    'uploads/gallery',
+    'uploads/gallery/thumbs',
+    'uploads/downloads',
+    'uploads/board',
+    'uploads/podcasts',
+    'uploads/podcasts/covers',
+];
+foreach ($uploadDirs as $dir) {
+    $path = __DIR__ . '/' . $dir;
+    if (!is_dir($path)) {
+        if (mkdir($path, 0755, true)) {
+            $log[] = "✓ Adresář <code>{$dir}</code> vytvořen – OK";
+        } else {
+            $log[] = "✗ Adresář <code>{$dir}</code> – nepodařilo se vytvořit";
+        }
+    } else {
+        $log[] = "· Adresář <code>{$dir}</code> již existuje – přeskočeno";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="cs">
