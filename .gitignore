@@ -5,6 +5,9 @@ aconfig.php
 # Uživatelsky nahraná média
 uploads/
 
+# Vygenerované release zipy
+dist/
+
 # Systémové soubory
 .DS_Store
 Thumbs.db
