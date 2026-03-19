@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Vylepšeno
+- **migrate.php** – přidána sekce pro automatické vytvoření všech potřebných `uploads/` adresářů (`site`, `articles`, `articles/thumbs`, `gallery`, `gallery/thumbs`, `downloads`, `board`, `podcasts`, `podcasts/covers`); po migraci na novou verzi tak není nutné adresáře zakládat ručně
+
 ## [1.0.8] – 2026-03-19
 
 ### Opraveno
