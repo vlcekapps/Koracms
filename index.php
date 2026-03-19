@@ -75,10 +75,8 @@ if (isModuleEnabled('blog')) {
     <h2 id="novinky-nadpis">Novinky</h2>
     <?php foreach ($latestNews as $item): ?>
       <article>
+        <h3><time datetime="<?= h(str_replace(' ', 'T', $item['created_at'])) ?>"><?= formatCzechDate($item['created_at']) ?></time></h3>
         <p><?= h($item['content']) ?></p>
-        <footer>
-          <time datetime="<?= h(str_replace(' ', 'T', $item['created_at'])) ?>"><?= formatCzechDate($item['created_at']) ?></time>
-        </footer>
       </article>
     <?php endforeach; ?>
     <p><a href="<?= BASE_URL ?>/news/index.php">Všechny novinky <span aria-hidden="true">→</span></a></p>

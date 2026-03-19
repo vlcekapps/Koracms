@@ -51,11 +51,8 @@ $items = $stmt->fetchAll();
   <?php else: ?>
     <?php foreach ($items as $n): ?>
       <article>
+        <h3><time datetime="<?= h(str_replace(' ', 'T', $n['created_at'])) ?>"><?= formatCzechDate($n['created_at']) ?></time><?= !empty($n['author_name']) ? ' · ' . h($n['author_name']) : '' ?></h3>
         <p><?= h($n['content']) ?></p>
-        <footer>
-          <time datetime="<?= h(str_replace(' ', 'T', $n['created_at'])) ?>"><?= formatCzechDate($n['created_at']) ?></time>
-          <?= !empty($n['author_name']) ? ' · ' . h($n['author_name']) : '' ?>
-        </footer>
       </article>
       <hr>
     <?php endforeach; ?>
