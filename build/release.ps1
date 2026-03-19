@@ -69,14 +69,15 @@ function Update-Changelog {
     $content = [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false))
     $today = (Get-Date).ToString("yyyy-MM-dd")
     $updated = $false
-    # 1) Nahradit ## [Unreleased] za ## [verze] – datum
+    $dash = [char]0x2013  # en-dash
+    # 1) Nahradit ## [Unreleased] za ## [verze] - datum
     if ($content -match '(?m)^## \[Unreleased\]') {
-        $content = $content -replace '(?m)^## \[Unreleased\].*$', "## [$NewVersion] – $today"
+        $content = $content -replace '(?m)^## \[Unreleased\].*$', "## [$NewVersion] $dash $today"
         $updated = $true
     }
-    # 2) Nebo nahradit ## [stará verze] bez data za ## [nová verze] – datum (pokud datum chybí)
+    # 2) Nebo nahradit ## [verze] bez data za ## [verze] - datum
     elseif ($content -match ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$')) {
-        $content = $content -replace ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$'), "## [$NewVersion] – $today"
+        $content = $content -replace ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$'), "## [$NewVersion] $dash $today"
         $updated = $true
     }
     if ($updated) {
