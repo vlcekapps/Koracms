@@ -41,18 +41,24 @@ Přihlaste se do MySQL a vytvořte prázdnou databázi:
 CREATE DATABASE nazev_databaze CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 3. Upravte `config.php`
+### 3. Vytvořte `config.php`
 
-Otevřete soubor `config.php` a vyplňte přihlašovací údaje k databázi a základní URL:
+Zkopírujte přiložený vzorový soubor a přejmenujte ho:
+
+```
+cp config.sample.php config.php
+```
+
+Otevřete `config.php` a vyplňte přihlašovací údaje k databázi a základní URL:
 
 ```php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');        // databázový uživatel
-define('DB_PASS', '');            // heslo (prázdné na lokálním serveru)
-define('DB_NAME', 'nazev_databaze');
+$server   = 'localhost';
+$user     = 'root';           // databázový uživatel
+$pass     = '';               // heslo (prázdné na lokálním serveru)
+$database = 'nazev_databaze';
 
 // Pokud je web v kořeni domény, ponechte prázdné.
-// Pokud je ve složce, zadejte např. '/myweb'
+// Pokud je ve složce, zadejte např. '/koracms'
 define('BASE_URL', '');
 ```
 
