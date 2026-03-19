@@ -2,6 +2,8 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/auth.php';
 
+define('KORA_VERSION', trim(file_get_contents(__DIR__ . '/VERSION')));
+
 function db_connect(): PDO
 {
     static $pdo = null;
@@ -245,9 +247,12 @@ function siteFooter(): string
     }
     $links .= '<a href="' . $b . '/feed.php">RSS</a>';
 
+    $version = KORA_VERSION;
+
     return "<footer>\n"
          . "  <p>&copy; {$year} {$siteName}</p>\n"
          . "  <p>{$links}</p>\n"
+         . "  <p><small>Kora CMS {$version}</small></p>\n"
          . "  <p><a href=\"{$b}/search.php\">Vyhledávání</a>"
          . (isModuleEnabled('newsletter') ? " · <a href=\"{$b}/subscribe.php\">Odběr novinek</a>" : '')
          . "</p>\n"

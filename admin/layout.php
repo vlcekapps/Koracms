@@ -121,10 +121,15 @@ function adminHeader(string $pageTitle): void
 
 function adminFooter(): void
 {
+    $version = KORA_VERSION;
     echo '<script>document.addEventListener("DOMContentLoaded",function(){'
        . 'var l=document.getElementById("a11y-live");if(!l)return;'
        . 'var m=document.querySelector(\'[role="status"]:not(#a11y-live),[role="alert"]\');'
        . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);}'
        . '});</script>'
-       . '</main></body></html>';
+       . '</main>'
+       . '<footer style="text-align:center;padding:.5rem;font-size:.75rem;color:#999">'
+       . 'Kora CMS ' . $version
+       . '</footer>'
+       . '</body></html>';
 }
