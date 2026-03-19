@@ -152,8 +152,9 @@ if (!(Test-Path $zipPath)) {
     throw "Zip soubor nenalezen: $zipPath"
 }
 Require-Command -Name gh
-& gh release view $tagName *> $null
-if ($LASTEXITCODE -eq 0) {
+$releaseExists = $false
+try { & gh release view $tagName *> $null 2>&1; $releaseExists = ($LASTEXITCODE -eq 0) } catch { $releaseExists = $false }
+if ($releaseExists) {
     & gh release edit $tagName --title "Kora CMS $newVersion"
     if ($LASTEXITCODE -ne 0) { throw "Úprava GitHub release selhala." }
     & gh release upload $tagName $zipPath --clobber
