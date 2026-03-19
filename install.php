@@ -1,0 +1,382 @@
+<?php
+require_once __DIR__ . '/db.php';
+
+// Pokud je systém již nainstalován, přesměruj
+try {
+    db_connect()->query("SELECT 1 FROM cms_settings LIMIT 1");
+    header('Location: ' . BASE_URL . '/admin/index.php');
+    exit;
+} catch (\PDOException $e) {
+    // Tabulky ještě neexistují – pokračujeme v instalaci
+}
+
+$errors = [];
+$success = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $siteName    = trim($_POST['site_name']    ?? '');
+    $siteDesc    = trim($_POST['site_desc']    ?? '');
+    $adminEmail  = trim($_POST['admin_email']  ?? '');
+    $adminPass   = $_POST['admin_pass']        ?? '';
+    $adminPass2  = $_POST['admin_pass2']       ?? '';
+
+    if ($siteName === '')   $errors[] = 'Název webu je povinný.';
+    if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL))
+        $errors[] = 'Zadejte platnou e-mailovou adresu administrátora.';
+    if (strlen($adminPass) < 8) $errors[] = 'Heslo musí mít alespoň 8 znaků.';
+    if ($adminPass !== $adminPass2)  $errors[] = 'Hesla se neshodují.';
+
+    if (empty($errors)) {
+        $pdo = db_connect();
+
+        // ── Tabulky ──────────────────────────────────────────────────────────
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_settings (
+            id    INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            `key` VARCHAR(100) NOT NULL UNIQUE,
+            value TEXT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_categories (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(255) NOT NULL,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_articles (
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title            VARCHAR(255) NOT NULL,
+            perex            TEXT,
+            content          TEXT,
+            category_id      INT,
+            author_id        INT          NULL DEFAULT NULL,
+            image_file       VARCHAR(255) NOT NULL DEFAULT '',
+            meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            preview_token    VARCHAR(32)  NOT NULL DEFAULT '',
+            status           ENUM('pending','published') NOT NULL DEFAULT 'published',
+            publish_at       DATETIME     NULL DEFAULT NULL,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_news (
+            id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            content    TEXT     NOT NULL,
+            author_id  INT      NULL DEFAULT NULL,
+            status     ENUM('pending','published') NOT NULL DEFAULT 'published',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(100) NOT NULL,
+            email      VARCHAR(255) NOT NULL DEFAULT '',
+            web        VARCHAR(255) NOT NULL DEFAULT '',
+            message    TEXT         NOT NULL,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_contact (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            sender_email VARCHAR(255) NOT NULL,
+            subject      VARCHAR(255) NOT NULL,
+            message      TEXT         NOT NULL,
+            is_read      TINYINT(1)   NOT NULL DEFAULT 0,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_gallery_albums (
+            id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            parent_id      INT          DEFAULT NULL,
+            name           VARCHAR(255) NOT NULL,
+            description    TEXT,
+            cover_photo_id INT          DEFAULT NULL,
+            created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_comments (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            article_id   INT          NOT NULL,
+            author_name  VARCHAR(100) NOT NULL,
+            author_email VARCHAR(255) NOT NULL DEFAULT '',
+            content      TEXT         NOT NULL,
+            is_approved  TINYINT(1)   NOT NULL DEFAULT 0,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_pages (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title        VARCHAR(255) NOT NULL,
+            slug         VARCHAR(255) NOT NULL UNIQUE,
+            content      TEXT,
+            show_in_nav  TINYINT(1)   NOT NULL DEFAULT 0,
+            nav_order    INT          NOT NULL DEFAULT 0,
+            is_published TINYINT(1)   NOT NULL DEFAULT 1,
+            status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_tags (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(100) NOT NULL,
+            slug       VARCHAR(100) NOT NULL UNIQUE,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_article_tags (
+            article_id INT NOT NULL,
+            tag_id     INT NOT NULL,
+            PRIMARY KEY (article_id, tag_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_rate_limit (
+            id           VARCHAR(64) NOT NULL PRIMARY KEY,
+            attempts     INT         NOT NULL DEFAULT 1,
+            window_start DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_log (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            action     VARCHAR(100) NOT NULL,
+            detail     TEXT,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_events (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title       VARCHAR(255) NOT NULL,
+            description TEXT,
+            location    VARCHAR(255) NOT NULL DEFAULT '',
+            event_date  DATETIME     NOT NULL,
+            event_end   DATETIME     NULL DEFAULT NULL,
+            is_published TINYINT(1)  NOT NULL DEFAULT 1,
+            status      ENUM('pending','published') NOT NULL DEFAULT 'published',
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_subscribers (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            email      VARCHAR(255) NOT NULL UNIQUE,
+            token      VARCHAR(64)  NOT NULL UNIQUE,
+            confirmed  TINYINT(1)   NOT NULL DEFAULT 0,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_newsletters (
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            subject          VARCHAR(255) NOT NULL,
+            body             TEXT         NOT NULL,
+            recipient_count  INT          NOT NULL DEFAULT 0,
+            sent_at          DATETIME     NULL DEFAULT NULL,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_podcast_shows (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title       VARCHAR(255) NOT NULL,
+            slug        VARCHAR(100) NOT NULL UNIQUE,
+            description TEXT,
+            author      VARCHAR(255) NOT NULL DEFAULT '',
+            cover_image VARCHAR(255) NOT NULL DEFAULT '',
+            language    VARCHAR(10)  NOT NULL DEFAULT 'cs',
+            category    VARCHAR(100) NOT NULL DEFAULT '',
+            website_url VARCHAR(500) NOT NULL DEFAULT '',
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_podcasts (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            show_id      INT          NOT NULL DEFAULT 1,
+            title        VARCHAR(255) NOT NULL,
+            description  TEXT,
+            audio_file   VARCHAR(255) NOT NULL DEFAULT '',
+            audio_url    VARCHAR(500) NOT NULL DEFAULT '',
+            duration     VARCHAR(20)  NOT NULL DEFAULT '',
+            episode_num  INT          NULL DEFAULT NULL,
+            publish_at   DATETIME     NULL DEFAULT NULL,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            status       ENUM('pending','published') NOT NULL DEFAULT 'published'
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_users (
+            id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            email         VARCHAR(255) NOT NULL UNIQUE,
+            password      VARCHAR(255) NOT NULL,
+            first_name    VARCHAR(100) NOT NULL DEFAULT '',
+            last_name     VARCHAR(100) NOT NULL DEFAULT '',
+            nickname      VARCHAR(100) NOT NULL DEFAULT '',
+            is_superadmin TINYINT(1)   NOT NULL DEFAULT 0,
+            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_downloads (
+            id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title         VARCHAR(255) NOT NULL,
+            category      VARCHAR(100) NOT NULL DEFAULT '',
+            description   TEXT,
+            filename      VARCHAR(255) NOT NULL DEFAULT '',
+            original_name VARCHAR(255) NOT NULL DEFAULT '',
+            file_size     INT          NOT NULL DEFAULT 0,
+            sort_order    INT          NOT NULL DEFAULT 0,
+            is_published  TINYINT(1)   NOT NULL DEFAULT 1,
+            status        ENUM('pending','published') NOT NULL DEFAULT 'published',
+            author_id     INT          NULL DEFAULT NULL,
+            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_places (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name        VARCHAR(255) NOT NULL,
+            description TEXT,
+            url         VARCHAR(500) NOT NULL DEFAULT '',
+            category    VARCHAR(100) NOT NULL DEFAULT '',
+            is_published TINYINT(1)  NOT NULL DEFAULT 1,
+            status      ENUM('pending','published') NOT NULL DEFAULT 'published',
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_gallery_photos (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            album_id   INT          NOT NULL,
+            filename   VARCHAR(255) NOT NULL,
+            title      VARCHAR(255) NOT NULL DEFAULT '',
+            sort_order INT          NOT NULL DEFAULT 0,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_food_cards (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            type         ENUM('food','beverage') NOT NULL DEFAULT 'food',
+            title        VARCHAR(255) NOT NULL,
+            description  TEXT,
+            content      MEDIUMTEXT,
+            valid_from   DATE         NULL DEFAULT NULL,
+            valid_to     DATE         NULL DEFAULT NULL,
+            is_current   TINYINT(1)   NOT NULL DEFAULT 0,
+            is_published TINYINT(1)   NOT NULL DEFAULT 1,
+            status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+            author_id    INT          NULL DEFAULT NULL,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // ── Výchozí nastavení ────────────────────────────────────────────────
+        $defaults = [
+            'site_name'       => $siteName,
+            'site_description'=> $siteDesc,
+            'admin_email'     => $adminEmail,
+            'contact_email'   => $adminEmail,
+            'admin_password'  => password_hash($adminPass, PASSWORD_BCRYPT),
+            'module_blog'     => '1',
+            'module_news'     => '1',
+            'module_chat'     => '1',
+            'module_contact'  => '1',
+            'module_gallery'  => '1',
+            'home_blog_count' => '5',
+            'home_news_count' => '5',
+            'news_per_page'   => '10',
+            'blog_per_page'   => '10',
+            'events_per_page' => '10',
+            'content_editor'  => 'html',
+            'module_events'   => '1',
+            'module_podcast'  => '1',
+            'module_places'   => '1',
+            'module_newsletter' => '1',
+            'module_downloads'  => '1',
+            'module_food'       => '1',
+            'social_facebook'          => '',
+            'social_youtube'           => '',
+            'social_instagram'         => '',
+            'social_twitter'           => '',
+            'cookie_consent_enabled'   => '0',
+            'cookie_consent_text'      => 'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.',
+            'maintenance_mode'         => '0',
+            'maintenance_text'         => 'Právě probíhá údržba webu. Brzy budeme zpět, děkujeme za trpělivost.',
+            'og_image_default'         => '',
+            'site_favicon'             => '',
+            'site_logo'                => '',
+            'home_intro'               => '',
+            'nav_module_order'         => '',
+        ];
+        $stmt = $pdo->prepare("INSERT INTO cms_settings (`key`, value) VALUES (?, ?)
+                               ON DUPLICATE KEY UPDATE value = VALUES(value)");
+        foreach ($defaults as $k => $v) {
+            $stmt->execute([$k, $v]);
+        }
+
+        // Hlavní administrátor
+        $pdo->prepare(
+            "INSERT INTO cms_users (email, password, is_superadmin)
+             VALUES (?, ?, 1)
+             ON DUPLICATE KEY UPDATE password = VALUES(password), is_superadmin = 1"
+        )->execute([$adminEmail, password_hash($adminPass, PASSWORD_BCRYPT)]);
+
+        $success = true;
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instalace Kora CMS</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
+    label { display: block; margin-top: 1rem; font-weight: bold; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: .4rem; margin-top: .25rem; }
+    button { margin-top: 1.5rem; padding: .5rem 1.5rem; }
+    .error { color: #c00; }
+    .success { color: #060; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Instalace Kora CMS</h1>
+
+  <?php if ($success): ?>
+    <p class="success"><strong>Instalace proběhla úspěšně.</strong><br>
+    Smažte nebo přejmenujte soubor <code>install.php</code>.</p>
+    <p><a href="<?= BASE_URL ?>/admin/login.php">Přejít do administrace →</a></p>
+  <?php else: ?>
+
+    <?php if (!empty($errors)): ?>
+      <ul class="error" role="alert">
+        <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+
+    <form method="post" novalidate>
+      <label for="site_name">Název webu <span aria-hidden="true">*</span></label>
+      <input type="text" id="site_name" name="site_name" required
+             value="<?= h($_POST['site_name'] ?? '') ?>">
+
+      <label for="site_desc">Popis webu</label>
+      <input type="text" id="site_desc" name="site_desc"
+             value="<?= h($_POST['site_desc'] ?? '') ?>">
+
+      <label for="admin_email">E-mail administrátora <span aria-hidden="true">*</span></label>
+      <input type="email" id="admin_email" name="admin_email" required
+             value="<?= h($_POST['admin_email'] ?? '') ?>">
+
+      <label for="admin_pass">Heslo administrátora (min. 8 znaků) <span aria-hidden="true">*</span></label>
+      <input type="password" id="admin_pass" name="admin_pass" required
+             minlength="8" autocomplete="new-password">
+
+      <label for="admin_pass2">Heslo znovu <span aria-hidden="true">*</span></label>
+      <input type="password" id="admin_pass2" name="admin_pass2" required
+             minlength="8" autocomplete="new-password">
+
+      <button type="submit">Nainstalovat</button>
+    </form>
+
+  <?php endif; ?>
+</main>
+</body>
+</html>
