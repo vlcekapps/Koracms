@@ -34,6 +34,7 @@ adminHeader('Jídelní a nápojový lístek');
   ?>
   <h2 style="margin-top:2rem"><?= $labels[$type] ?></h2>
   <table>
+    <caption>Jídelní / nápojové lístky</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>

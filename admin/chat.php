@@ -15,6 +15,7 @@ adminHeader('Chat – zprávy');
 <form method="post" action="chat_bulk.php" id="bulk-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <table>
+    <caption>Chat zprávy</caption>
     <thead>
       <tr>
         <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>

@@ -22,10 +22,10 @@ adminHeader('Nový newsletter');
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
   <label for="subject">Předmět <span aria-hidden="true">*</span></label>
-  <input type="text" id="subject" name="subject" required maxlength="255">
+  <input type="text" id="subject" name="subject" required aria-required="true" maxlength="255">
 
   <label for="body">Text emailu <span aria-hidden="true">*</span></label>
-  <textarea id="body" name="body" rows="15" required></textarea>
+  <textarea id="body" name="body" rows="15" required aria-required="true"></textarea>
 
   <p style="margin-top:.5rem;font-size:.9rem;color:#555">
     V textu emailu se automaticky přidá odkaz pro odhlášení z odběru.

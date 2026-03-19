@@ -82,12 +82,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php else: ?>
 
     <?php if (!empty($errors)): ?>
-      <ul role="alert" style="color:#c00">
+      <ul id="form-errors" role="alert" style="color:#c00">
         <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
       </ul>
     <?php endif; ?>
 
-    <form method="post" novalidate>
+    <form method="post" novalidate aria-describedby="form-errors">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <?= honeypotField() ?>
 

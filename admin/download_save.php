@@ -3,13 +3,13 @@ require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 verifyCsrf();
 
-$pdo         = db_connect();
-$id          = inputInt('post', 'id');
-$title       = trim($_POST['title']       ?? '');
-$category    = trim($_POST['category']    ?? '');
-$description = trim($_POST['description'] ?? '');
-$sortOrder   = max(0, (int)($_POST['sort_order'] ?? 0));
-$isPublished = isset($_POST['is_published']) ? 1 : 0;
+$pdo           = db_connect();
+$id            = inputInt('post', 'id');
+$title         = trim($_POST['title']          ?? '');
+$dlCategoryId  = inputInt('post', 'dl_category_id');
+$description   = trim($_POST['description']    ?? '');
+$sortOrder     = max(0, (int)($_POST['sort_order'] ?? 0));
+$isPublished   = isset($_POST['is_published']) ? 1 : 0;
 
 if ($title === '') {
     header('Location: download_form.php' . ($id ? "?id={$id}" : ''));
@@ -55,7 +55,7 @@ if (!empty($_FILES['file']['name'])) {
                 $old = $pdo->prepare("SELECT filename FROM cms_downloads WHERE id = ?");
                 $old->execute([$id]);
                 $oldFile = $old->fetchColumn();
-                if ($oldFile) @unlink($dir . $oldFile);
+                if ($oldFile && file_exists($dir . $oldFile)) { unlink($dir . $oldFile); }
             }
             $newFilename = $storedName;
             $newOrigName = basename($_FILES['file']['name']);
@@ -70,9 +70,9 @@ if (!empty($_FILES['file']['name'])) {
 
 // ── Uložení ───────────────────────────────────────────────────────────────
 if ($id !== null) {
-    $set    = "title=?, category=?, description=?, sort_order=?, is_published=?,
+    $set    = "title=?, dl_category_id=?, description=?, sort_order=?, is_published=?,
                author_id=COALESCE(author_id,?)";
-    $params = [$title, $category, $description, $sortOrder, $isPublished, currentUserId()];
+    $params = [$title, $dlCategoryId, $description, $sortOrder, $isPublished, currentUserId()];
     if ($newFilename !== null) {
         $set     .= ", filename=?, original_name=?, file_size=?";
         $params[] = $newFilename;
@@ -87,9 +87,9 @@ if ($id !== null) {
     $authorId = currentUserId();
     $pdo->prepare(
         "INSERT INTO cms_downloads
-         (title, category, description, filename, original_name, file_size, sort_order, is_published, status, author_id)
+         (title, dl_category_id, description, filename, original_name, file_size, sort_order, is_published, status, author_id)
          VALUES (?,?,?,?,?,?,?,?,?,?)"
-    )->execute([$title, $category, $description, $newFilename, $newOrigName, $newFileSize,
+    )->execute([$title, $dlCategoryId, $description, $newFilename, $newOrigName, $newFileSize,
                 $sortOrder, isSuperAdmin() ? $isPublished : 0, $status, $authorId]);
     logAction('download_add', "title={$title} status={$status}");
 }

@@ -176,20 +176,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Galerie – fotografie importovány.';
                 }
 
+                // Kategorie ke stažení
+                if (!empty($data['dl_categories']) && is_array($data['dl_categories'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_dl_categories (id, name) VALUES (?,?)"
+                    );
+                    foreach ($data['dl_categories'] as $row) {
+                        $ins->execute([(int)$row['id'], $row['name']]);
+                    }
+                    $summary[] = 'Kategorie ke stažení importovány.';
+                }
+
                 // Soubory ke stažení
                 if (!empty($data['downloads']) && is_array($data['downloads'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_downloads
-                         (id, title, category, description, filename, original_name,
+                         (id, title, dl_category_id, description, filename, original_name,
                           file_size, sort_order, is_published, status)
                          VALUES (?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['downloads'] as $row) {
+                        $catId = $row['dl_category_id'] ?? null;
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $row['category'] ?? '',
+                            (int)$row['id'], $row['title'], $catId !== '' ? $catId : null,
                             $row['description'] ?? '', $row['filename'] ?? '',
-                            $row['original_name'] ?? '', (int)$row['file_size'],
-                            (int)$row['sort_order'], (int)$row['is_published'],
+                            $row['original_name'] ?? '', (int)($row['file_size'] ?? 0),
+                            (int)($row['sort_order'] ?? 0), (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
                         ]);
                     }
@@ -296,7 +308,7 @@ adminHeader('Import / Export dat');
 <form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <label for="import_file">JSON soubor (export z tohoto CMS)</label>
-  <input type="file" id="import_file" name="import_file" accept=".json,application/json" required>
+  <input type="file" id="import_file" name="import_file" accept=".json,application/json" required aria-required="true">
   <button type="submit" class="btn" style="margin-top:1rem">Importovat</button>
 </form>
 

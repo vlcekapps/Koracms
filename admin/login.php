@@ -79,11 +79,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
     <label for="email">E-mail <span aria-hidden="true">*</span></label>
-    <input type="email" id="email" name="email" required autocomplete="username"
+    <input type="email" id="email" name="email" required aria-required="true" autocomplete="username"
            value="<?= h($_POST['email'] ?? '') ?>">
 
     <label for="heslo">Heslo <span aria-hidden="true">*</span></label>
-    <input type="password" id="heslo" name="heslo" required autocomplete="current-password">
+    <input type="password" id="heslo" name="heslo" required aria-required="true" autocomplete="current-password">
 
     <button type="submit">Přihlásit se</button>
   </form>

@@ -187,19 +187,25 @@ $tables = [
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_dl_categories' => "CREATE TABLE IF NOT EXISTS cms_dl_categories (
+        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name       VARCHAR(255) NOT NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_downloads' => "CREATE TABLE IF NOT EXISTS cms_downloads (
-        id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        title         VARCHAR(255) NOT NULL,
-        category      VARCHAR(100) NOT NULL DEFAULT '',
-        description   TEXT,
-        filename      VARCHAR(255) NOT NULL DEFAULT '',
-        original_name VARCHAR(255) NOT NULL DEFAULT '',
-        file_size     INT          NOT NULL DEFAULT 0,
-        sort_order    INT          NOT NULL DEFAULT 0,
-        is_published  TINYINT(1)   NOT NULL DEFAULT 1,
-        status        ENUM('pending','published') NOT NULL DEFAULT 'published',
-        author_id     INT          NULL DEFAULT NULL,
-        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title          VARCHAR(255) NOT NULL,
+        dl_category_id INT          NULL DEFAULT NULL,
+        description    TEXT,
+        filename       VARCHAR(255) NOT NULL DEFAULT '',
+        original_name  VARCHAR(255) NOT NULL DEFAULT '',
+        file_size      INT          NOT NULL DEFAULT 0,
+        sort_order     INT          NOT NULL DEFAULT 0,
+        is_published   TINYINT(1)   NOT NULL DEFAULT 1,
+        status         ENUM('pending','published') NOT NULL DEFAULT 'published',
+        author_id      INT          NULL DEFAULT NULL,
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_gallery_albums' => "CREATE TABLE IF NOT EXISTS cms_gallery_albums (
@@ -286,6 +292,8 @@ $addColumns = [
     'cms_places.status'              => "ALTER TABLE cms_places ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    // cms_downloads
+    'cms_downloads.dl_category_id'   => "ALTER TABLE cms_downloads ADD COLUMN dl_category_id INT NULL DEFAULT NULL",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -307,7 +315,55 @@ foreach ($addColumns as $tableCol => $sql) {
     }
 }
 
-// ── 3. Výchozí podcast show (zachová zpětnou kompatibilitu) ───────────────────
+// ── 3. Migrace textových kategorií ke stažení → cms_dl_categories ─────────────
+// Převede existující hodnoty sloupce `category` na záznamy v cms_dl_categories
+// a nastaví dl_category_id. Bezpečné – spouští se jen pokud dl_category_id je NULL
+// a category není prázdný řetězec.
+
+try {
+    // Zkontroluje, zda sloupec `category` ještě existuje (starší instalace)
+    $colCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_downloads' AND COLUMN_NAME = 'category'"
+    );
+    $colCheck->execute();
+    $hasCatCol = (int)$colCheck->fetchColumn();
+
+    if ($hasCatCol) {
+        // Načte unikátní neprázdné textové kategorie bez přiřazeného dl_category_id
+        $rows = $pdo->query(
+            "SELECT DISTINCT category FROM cms_downloads
+             WHERE category != '' AND dl_category_id IS NULL
+             ORDER BY category"
+        )->fetchAll(\PDO::FETCH_COLUMN);
+
+        $insertCat = $pdo->prepare("INSERT IGNORE INTO cms_dl_categories (name) VALUES (?)");
+        $getCatId  = $pdo->prepare("SELECT id FROM cms_dl_categories WHERE name = ? LIMIT 1");
+        $updDl     = $pdo->prepare(
+            "UPDATE cms_downloads SET dl_category_id = ? WHERE category = ? AND dl_category_id IS NULL"
+        );
+
+        foreach ($rows as $catName) {
+            $insertCat->execute([$catName]);
+            $getCatId->execute([$catName]);
+            $catId = $getCatId->fetchColumn();
+            if ($catId) {
+                $updDl->execute([$catId, $catName]);
+                $log[] = "✓ Kategorie ke stažení „<code>" . h($catName) . "</code>" migrována (id={$catId}) – OK";
+            }
+        }
+
+        if (empty($rows)) {
+            $log[] = "· Migrace kategorií ke stažení – žádné textové kategorie k převodu";
+        }
+    } else {
+        $log[] = "· Migrace kategorií ke stažení – sloupec <code>category</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Migrace kategorií ke stažení – CHYBA: " . h($e->getMessage());
+}
+
+// ── 5. Výchozí podcast show (zachová zpětnou kompatibilitu) ───────────────────
 
 try {
     $showCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_podcast_shows")->fetchColumn();
@@ -325,7 +381,7 @@ try {
     $log[] = "✗ Výchozí podcast show – CHYBA: " . h($e->getMessage());
 }
 
-// ── 4. Chybějící nastavení (existující hodnoty NEPŘEPISUJE) ───────────────────
+// ── 6. Chybějící nastavení (existující hodnoty NEPŘEPISUJE) ───────────────────
 
 $newSettings = [
     // Moduly
@@ -382,7 +438,7 @@ foreach ($newSettings as $k => $v) {
     }
 }
 
-// ── 5. Migrace superadmina z cms_settings → cms_users ────────────────────────
+// ── 7. Migrace superadmina z cms_settings → cms_users ────────────────────────
 
 try {
     $count = (int)$pdo->query("SELECT COUNT(*) FROM cms_users")->fetchColumn();

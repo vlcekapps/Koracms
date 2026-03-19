@@ -57,6 +57,7 @@ adminHeader('Newsletter');
   <p>Žádní odběratelé.</p>
 <?php else: ?>
   <table>
+    <caption>Odběratelé newsletteru</caption>
     <thead>
       <tr>
         <th scope="col">E-mail</th>

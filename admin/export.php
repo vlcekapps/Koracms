@@ -28,7 +28,8 @@ $tables = [
                                FROM cms_gallery_albums",
     'gallery_photos'=> "SELECT id, album_id, filename, title, sort_order, created_at
                                FROM cms_gallery_photos",
-    'downloads'     => "SELECT id, title, category, description, filename, original_name,
+    'dl_categories' => "SELECT id, name, created_at FROM cms_dl_categories",
+    'downloads'     => "SELECT id, title, dl_category_id, description, filename, original_name,
                                file_size, sort_order, is_published, status, created_at
                                FROM cms_downloads",
     'food_cards'    => "SELECT id, type, title, description, content, valid_from, valid_to,

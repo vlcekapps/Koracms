@@ -3,12 +3,14 @@ require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $items = db_connect()->query(
-    "SELECT d.id, d.title, d.category, d.original_name, d.file_size, d.is_published, d.created_at,
+    "SELECT d.id, d.title, d.dl_category_id, c.name AS category_name,
+            d.original_name, d.file_size, d.is_published, d.created_at,
             COALESCE(d.status,'published') AS status,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_downloads d
+     LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
      LEFT JOIN cms_users u ON u.id = d.author_id
-     ORDER BY d.category, d.sort_order, d.title"
+     ORDER BY c.name, d.sort_order, d.title"
 )->fetchAll();
 
 adminHeader('Ke stažení');
@@ -19,6 +21,7 @@ adminHeader('Ke stažení');
   <p>Žádné soubory.</p>
 <?php else: ?>
   <table>
+    <caption>Soubory ke stažení</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>
@@ -33,7 +36,7 @@ adminHeader('Ke stažení');
     <?php foreach ($items as $d): ?>
       <tr>
         <td><?= h($d['title']) ?></td>
-        <td><?= h($d['category'] ?: '–') ?></td>
+        <td><?= $d['category_name'] ? h($d['category_name']) : '<em>–</em>' ?></td>
         <td>
           <?php if ($d['original_name'] !== ''): ?>
             <a href="<?= BASE_URL ?>/uploads/downloads/<?= rawurlencode($d['original_name']) ?>"

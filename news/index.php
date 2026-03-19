@@ -21,9 +21,9 @@ $stmt = $pdo->prepare(
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
      FROM cms_news n
      LEFT JOIN cms_users u ON u.id = n.author_id
-     WHERE n.status = 'published' ORDER BY n.created_at DESC LIMIT {$perPage} OFFSET {$offset}"
+     WHERE n.status = 'published' ORDER BY n.created_at DESC LIMIT ? OFFSET ?"
 );
-$stmt->execute();
+$stmt->execute([$perPage, $offset]);
 $items = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>

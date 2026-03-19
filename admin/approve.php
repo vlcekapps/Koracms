@@ -7,6 +7,11 @@ $module   = $_POST['module']   ?? '';
 $id       = inputInt('post', 'id');
 $redirect = $_POST['redirect'] ?? BASE_URL . '/admin/index.php';
 
+// Ochrana proti Open Redirect – povolit pouze URL v rámci tohoto webu
+if (!str_starts_with($redirect, BASE_URL . '/')) {
+    $redirect = BASE_URL . '/admin/index.php';
+}
+
 // Whitelist povolených modulů
 $moduleConfig = [
     'articles'  => ['table' => 'cms_articles',  'has_published' => false],

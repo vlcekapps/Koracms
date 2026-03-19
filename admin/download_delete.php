@@ -10,7 +10,8 @@ if ($id !== null) {
     $stmt->execute([$id]);
     $filename = $stmt->fetchColumn();
     if ($filename) {
-        @unlink(__DIR__ . '/../uploads/downloads/' . $filename);
+        $delPath = __DIR__ . '/../uploads/downloads/' . $filename;
+        if (file_exists($delPath)) { unlink($delPath); }
     }
     $pdo->prepare("DELETE FROM cms_downloads WHERE id = ?")->execute([$id]);
     logAction('download_delete', "id={$id}");

@@ -13,10 +13,7 @@ if ($id !== null) {
     if (!$d) { header('Location: downloads.php'); exit; }
 }
 
-// Existující kategorie jako návrhy
-$cats = $pdo->query(
-    "SELECT DISTINCT category FROM cms_downloads WHERE category != '' ORDER BY category"
-)->fetchAll(\PDO::FETCH_COLUMN);
+$categories = $pdo->query("SELECT id, name FROM cms_dl_categories ORDER BY name")->fetchAll();
 
 adminHeader($id ? 'Upravit soubor' : 'Nový soubor ke stažení');
 ?>
@@ -28,17 +25,19 @@ adminHeader($id ? 'Upravit soubor' : 'Nový soubor ke stažení');
   <?php endif; ?>
 
   <label for="title">Název <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required maxlength="255"
+  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
          value="<?= h($d['title'] ?? '') ?>">
 
-  <label for="category">Kategorie <small>(nepovinná – např. Stanovy, Zápisy, Formuláře)</small></label>
-  <input type="text" id="category" name="category" maxlength="100"
-         list="cats-list" value="<?= h($d['category'] ?? '') ?>">
-  <datalist id="cats-list">
-    <?php foreach ($cats as $c): ?>
-      <option value="<?= h($c) ?>">
+  <label for="dl_category_id">Kategorie</label>
+  <select id="dl_category_id" name="dl_category_id">
+    <option value="">– bez kategorie –</option>
+    <?php foreach ($categories as $cat): ?>
+      <option value="<?= (int)$cat['id'] ?>"
+        <?= ((int)($d['dl_category_id'] ?? 0) === (int)$cat['id']) ? 'selected' : '' ?>>
+        <?= h($cat['name']) ?>
+      </option>
     <?php endforeach; ?>
-  </datalist>
+  </select>
 
   <label for="description">Popis <small>(nepovinný)</small></label>
   <textarea id="description" name="description" rows="3"><?= h($d['description'] ?? '') ?></textarea>

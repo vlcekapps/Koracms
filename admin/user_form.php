@@ -41,7 +41,7 @@ adminHeader($user ? 'Upravit spolupracovníka' : 'Nový spolupracovník');
   <?php endif; ?>
 
   <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
-  <input type="email" id="email" name="email" required
+  <input type="email" id="email" name="email" required aria-required="true"
          value="<?= h($user['email'] ?? '') ?>">
 
   <label for="first_name">Jméno</label>
@@ -60,7 +60,7 @@ adminHeader($user ? 'Upravit spolupracovníka' : 'Nový spolupracovník');
     <legend><?= $user ? 'Změna hesla <small>(ponechte prázdné pro beze změny)</small>' : 'Heslo <span aria-hidden="true">*</span>' ?></legend>
     <label for="new_pass">Heslo (min. 8 znaků)</label>
     <input type="password" id="new_pass" name="new_pass" minlength="8"
-           autocomplete="new-password" <?= $user ? '' : 'required' ?>>
+           autocomplete="new-password" <?= $user ? '' : 'required aria-required="true"' ?>>
 
     <label for="new_pass2">Heslo znovu</label>
     <input type="password" id="new_pass2" name="new_pass2" minlength="8"

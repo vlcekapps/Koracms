@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../db.php';
 
 function adminHeader(string $pageTitle): void
@@ -26,7 +26,7 @@ function adminHeader(string $pageTitle): void
        . '    table { border-collapse: collapse; width: 100%; }' . "\n"
        . '    th, td { border: 1px solid #ccc; padding: .4rem .6rem; text-align: left; }' . "\n"
        . '    th { background: #f0f0f0; }' . "\n"
-       . '    .btn { padding: .3rem .8rem; cursor: pointer; }' . "\n"
+       . '    .btn { padding: .45rem .9rem; cursor: pointer; min-height: 2rem; }' . "\n"
        . '    .btn-danger { background: #c00; color: #fff; border: none; }' . "\n"
        . '    .error { color: #c00; }' . "\n"
        . '    .success { color: #060; }' . "\n"
@@ -38,15 +38,18 @@ function adminHeader(string $pageTitle): void
        . '    .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }' . "\n"
        . '    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }' . "\n"
        . '    nav a:focus-visible { outline-color: #7ecfff; }' . "\n"
+       . '    .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }' . "\n"
+       . '    .skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:#005fcc;color:#fff;font-size:1rem;text-decoration:none;z-index:9999; }' . "\n"
        . '  </style>' . "\n"
        . '</head>' . "\n"
        . '<body>' . "\n"
+       . '<a href="#obsah" class="skip-link">Přeskočit na obsah</a>' . "\n"
        . '<nav aria-label="Administrace">' . "\n"
        . '  <h2>' . $siteName . '</h2>' . "\n";
 
     $userName = h(currentUserDisplayName());
     if ($userName !== '') {
-        echo '  <p style="font-size:.8rem;color:#aaa;margin:0 0 .75rem"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
+        echo '  <p style="font-size:.8rem;color:#999;margin:0 0 .75rem"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
     }
 
     $topItems = [
@@ -63,7 +66,6 @@ function adminHeader(string $pageTitle): void
         ['url' => $b . '/admin/podcast.php',         'label' => 'Podcasty'],
         ['url' => $b . '/admin/places.php',        'label' => 'Zajímavá místa'],
         ['url' => $b . '/admin/newsletter.php',    'label' => 'Newsletter'],
-        ['url' => $b . '/admin/downloads.php',     'label' => 'Ke stažení'],
         ['url' => $b . '/admin/food.php',          'label' => 'Jídelní lístek'],
         ['url' => $b . '/admin/pages.php',         'label' => 'Stránky'],
         ['url' => $b . '/admin/import.php',        'label' => 'Export / Import'],
@@ -93,8 +95,18 @@ function adminHeader(string $pageTitle): void
        . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Blog</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/blog_tags.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Tagy</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře</a></li>' . "\n"
+       . '          </ul>' . "\n"
+       . '        </details>' . "\n"
+       . '      </li>' . "\n"
+       . '      <li>' . "\n"
+       . '        <details>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
+       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+       . '            <li><a href="' . $b . '/admin/downloads.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Soubory</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
        . '          </ul>' . "\n"
        . '        </details>' . "\n"
        . '      </li>' . "\n";

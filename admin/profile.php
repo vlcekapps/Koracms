@@ -103,7 +103,7 @@ adminHeader('Můj profil');
          value="<?= h($me['nickname']) ?>">
 
   <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
-  <input type="email" id="email" name="email" required
+  <input type="email" id="email" name="email" required aria-required="true"
          value="<?= h($me['email']) ?>">
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">

@@ -28,7 +28,7 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
   <?php endif; ?>
 
   <label for="name">Název <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required maxlength="255"
+  <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
          value="<?= h($pl['name'] ?? '') ?>">
 
   <label for="category">Kategorie <small>(nepovinná)</small></label>

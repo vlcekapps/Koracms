@@ -62,7 +62,7 @@ function eventsPager(int $current, int $total, string $param, string $otherParam
     if ($current > 1) {
         $html .= '<a href="' . h(eventsPagerUrl($param, $current - 1, $otherParam)) . '#' . $anchor . '">‹ Předchozí</a> ';
     }
-    $html .= '<span>' . $current . '&nbsp;/&nbsp;' . $total . '</span>';
+    $html .= '<span aria-current="page">' . $current . '&nbsp;/&nbsp;' . $total . '</span>';
     if ($current < $total) {
         $html .= ' <a href="' . h(eventsPagerUrl($param, $current + 1, $otherParam)) . '#' . $anchor . '">Další ›</a>';
     }

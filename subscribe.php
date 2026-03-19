@@ -67,7 +67,7 @@ $captchaExpr = captchaGenerate();
 
 <main id="obsah">
   <div id="a11y-live" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
-  <h2>Přihlášení k odběru novinek</h2>
+  <h1>Přihlášení k odběru novinek</h1>
 
   <?php if ($state === 'ok'): ?>
     <p role="status" style="color:#060">
@@ -77,11 +77,11 @@ $captchaExpr = captchaGenerate();
   <?php elseif ($state === 'exists'): ?>
     <p role="status" style="color:#060">Tato adresa je již přihlášena k odběru.</p>
   <?php elseif ($state === 'error'): ?>
-    <p role="alert" style="color:#c00">Zadejte platnou e-mailovou adresu.</p>
+    <p id="form-errors" role="alert" style="color:#c00">Zadejte platnou e-mailovou adresu.</p>
   <?php endif; ?>
 
   <?php if ($state === 'form' || $state === 'error'): ?>
-  <form method="post" novalidate>
+  <form method="post" novalidate aria-describedby="form-errors">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <?= honeypotField() ?>
 

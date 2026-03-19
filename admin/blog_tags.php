@@ -45,7 +45,7 @@ adminHeader('Blog – tagy');
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <label for="name">Nový tag <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required maxlength="100">
+  <input type="text" id="name" name="name" required aria-required="true" maxlength="100">
   <button type="submit" style="margin-top:.5rem">Přidat tag</button>
 </form>
 
@@ -54,6 +54,7 @@ adminHeader('Blog – tagy');
   <p>Žádné tagy.</p>
 <?php else: ?>
   <table>
+    <caption>Tagy blogu</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Slug</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($tags as $t): ?>
@@ -63,7 +64,7 @@ adminHeader('Blog – tagy');
             <form method="post" style="display:flex;gap:.4rem;align-items:center">
               <input type="hidden" name="csrf_token"  value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id"   value="<?= (int)$t['id'] ?>">
-              <input type="text"   name="name" required maxlength="100"
+              <input type="text"   name="name" required aria-required="true" maxlength="100"
                      value="<?= h($t['name']) ?>" style="width:auto">
               <button type="submit" class="btn">Uložit</button>
               <a href="blog_tags.php">Zrušit</a>

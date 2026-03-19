@@ -38,7 +38,7 @@ adminHeader($id ? 'Upravit epizodu' : 'Nová epizoda');
   <?php endif; ?>
 
   <label for="title">Název epizody <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required maxlength="255"
+  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
          value="<?= h($ep['title'] ?? '') ?>">
 
   <label for="episode_num">Číslo epizody <small>(nepovinné)</small></label>

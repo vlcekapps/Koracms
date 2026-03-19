@@ -214,19 +214,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_dl_categories (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(255) NOT NULL,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_downloads (
-            id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            title         VARCHAR(255) NOT NULL,
-            category      VARCHAR(100) NOT NULL DEFAULT '',
-            description   TEXT,
-            filename      VARCHAR(255) NOT NULL DEFAULT '',
-            original_name VARCHAR(255) NOT NULL DEFAULT '',
-            file_size     INT          NOT NULL DEFAULT 0,
-            sort_order    INT          NOT NULL DEFAULT 0,
-            is_published  TINYINT(1)   NOT NULL DEFAULT 1,
-            status        ENUM('pending','published') NOT NULL DEFAULT 'published',
-            author_id     INT          NULL DEFAULT NULL,
-            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title           VARCHAR(255) NOT NULL,
+            dl_category_id  INT          NULL DEFAULT NULL,
+            description     TEXT,
+            filename        VARCHAR(255) NOT NULL DEFAULT '',
+            original_name   VARCHAR(255) NOT NULL DEFAULT '',
+            file_size       INT          NOT NULL DEFAULT 0,
+            sort_order      INT          NOT NULL DEFAULT 0,
+            is_published    TINYINT(1)   NOT NULL DEFAULT 1,
+            status          ENUM('pending','published') NOT NULL DEFAULT 'published',
+            author_id       INT          NULL DEFAULT NULL,
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_places (

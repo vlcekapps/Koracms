@@ -23,13 +23,13 @@ adminHeader($id ? 'Upravit podcast' : 'Nový podcast');
   <?php endif; ?>
 
   <label for="title">Název podcastu <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required maxlength="255"
+  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
          value="<?= h($show['title'] ?? '') ?>">
 
   <label for="slug">URL identifikátor (slug) <span aria-hidden="true">*</span>
     <small>(pouze malá písmena, číslice a pomlčky)</small>
   </label>
-  <input type="text" id="slug" name="slug" required maxlength="100" pattern="[a-z0-9\-]+"
+  <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
          value="<?= h($show['slug'] ?? '') ?>">
 
   <label for="author">Autor / vydavatel</label>

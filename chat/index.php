@@ -101,12 +101,12 @@ $messages = $pdo->query(
     <h3 id="pridat-nadpis">Přidat zprávu</h3>
 
     <?php if (!empty($errors)): ?>
-      <ul role="alert">
+      <ul id="form-errors" role="alert">
         <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
       </ul>
     <?php endif; ?>
 
-    <form method="post" novalidate>
+    <form method="post" novalidate aria-describedby="form-errors">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <?= honeypotField() ?>
       <div>

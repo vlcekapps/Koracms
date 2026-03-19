@@ -9,9 +9,10 @@ $siteDesc = getSetting('site_description', '');
 $latestNews = [];
 if (isModuleEnabled('news')) {
     $n = max(1, (int)getSetting('home_news_count', '5'));
-    $stmt = db_connect()->query(
-        "SELECT id, content, created_at FROM cms_news WHERE status = 'published' ORDER BY created_at DESC LIMIT {$n}"
+    $stmt = db_connect()->prepare(
+        "SELECT id, content, created_at FROM cms_news WHERE status = 'published' ORDER BY created_at DESC LIMIT ?"
     );
+    $stmt->execute([$n]);
     $latestNews = $stmt->fetchAll();
 }
 
@@ -19,15 +20,16 @@ if (isModuleEnabled('news')) {
 $latestArticles = [];
 if (isModuleEnabled('blog')) {
     $n = max(1, (int)getSetting('home_blog_count', '5'));
-    $stmt = db_connect()->query(
+    $stmt = db_connect()->prepare(
         "SELECT a.id, a.title, a.perex, a.image_file, a.created_at, c.name AS category,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_users u ON u.id = a.author_id
          WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
-         ORDER BY a.created_at DESC LIMIT {$n}"
+         ORDER BY a.created_at DESC LIMIT ?"
     );
+    $stmt->execute([$n]);
     $latestArticles = $stmt->fetchAll();
 }
 ?>

@@ -16,6 +16,7 @@ adminHeader('Zajímavá místa');
   <p>Žádná místa.</p>
 <?php else: ?>
   <table>
+    <caption>Zajímavá místa</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>

@@ -35,7 +35,7 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
   </select>
 
   <label for="title">Název <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required maxlength="255"
+  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
          placeholder="např. Týdenní menu 17.–23. března 2026"
          value="<?= h($card['title'] ?? '') ?>">
 

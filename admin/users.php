@@ -14,6 +14,7 @@ adminHeader('Správa uživatelů');
 <p><a href="user_form.php" class="btn">+ Přidat spolupracovníka</a></p>
 
 <table>
+  <caption>Uživatelé</caption>
   <thead>
     <tr>
       <th scope="col">E-mail</th>

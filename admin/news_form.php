@@ -22,7 +22,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
   <?php endif; ?>
 
   <label for="content">Text novinky <span aria-hidden="true">*</span></label>
-  <textarea id="content" name="content" rows="8" required><?= h($item['content'] ?? '') ?></textarea>
+  <textarea id="content" name="content" rows="8" required aria-required="true"><?= h($item['content'] ?? '') ?></textarea>
 
   <p><small>Datum se uloží automaticky <?= $item ? '(zachová se původní)' : '(datum a čas přidání)' ?>.</small></p>
 

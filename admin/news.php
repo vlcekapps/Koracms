@@ -19,6 +19,7 @@ adminHeader('Novinky – správa');
   <p>Žádné novinky.</p>
 <?php else: ?>
   <table>
+    <caption>Novinky</caption>
     <thead>
       <tr>
         <th scope="col">Text</th>

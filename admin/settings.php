@@ -119,7 +119,7 @@ adminHeader('Základní nastavení');
   <fieldset>
     <legend>Základní informace</legend>
     <label for="site_name">Název webu <span aria-hidden="true">*</span></label>
-    <input type="text" id="site_name" name="site_name" required
+    <input type="text" id="site_name" name="site_name" required aria-required="true"
            value="<?= h(getSetting('site_name')) ?>">
 
     <label for="site_description">Popis webu</label>

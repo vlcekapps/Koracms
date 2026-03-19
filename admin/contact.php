@@ -18,6 +18,7 @@ adminHeader('Kontakt – přijaté zprávy');
   <p>Žádné zprávy.</p>
 <?php else: ?>
   <table>
+    <caption>Kontaktní zprávy</caption>
     <thead>
       <tr>
         <th scope="col">Od</th>

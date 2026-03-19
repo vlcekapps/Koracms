@@ -11,16 +11,18 @@ $pdo      = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
 $items = $pdo->query(
-    "SELECT id, title, category, description, filename, original_name, file_size, created_at
-     FROM cms_downloads
-     WHERE status = 'published' AND is_published = 1
-     ORDER BY category, sort_order, title"
+    "SELECT d.id, d.title, d.description, d.filename, d.original_name, d.file_size, d.created_at,
+            COALESCE(c.name, '') AS category_name
+     FROM cms_downloads d
+     LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+     WHERE d.status = 'published' AND d.is_published = 1
+     ORDER BY c.name, d.sort_order, d.title"
 )->fetchAll();
 
 // Seskupit podle kategorie
 $grouped = [];
 foreach ($items as $d) {
-    $grouped[$d['category'] ?: 'Ostatní'][] = $d;
+    $grouped[$d['category_name'] ?: 'Ostatní'][] = $d;
 }
 ksort($grouped);
 ?>

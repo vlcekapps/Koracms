@@ -69,7 +69,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <?php endif; ?>
 
   <label for="title">Titulek <span aria-hidden="true">*</span></label>
-  <input type="text" id="title" name="title" required maxlength="255"
+  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
          value="<?= h($article['title'] ?? '') ?>">
 
   <label for="category_id">Kategorie</label>
@@ -100,7 +100,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <textarea id="perex" name="perex" rows="3"><?= h($article['perex'] ?? '') ?></textarea>
 
   <label for="content">Text článku <span aria-hidden="true">*</span></label>
-  <textarea id="content" name="content" rows="15" required><?= h($article['content'] ?? '') ?></textarea>
+  <textarea id="content" name="content" rows="15" required aria-required="true"><?= h($article['content'] ?? '') ?></textarea>
 
   <label for="image">
     Náhledový obrázek

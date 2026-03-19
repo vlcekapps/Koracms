@@ -6,6 +6,7 @@ verifyCsrf();
 $id = inputInt('post', 'id');
 if ($id !== null) {
     db_connect()->prepare("DELETE FROM cms_news WHERE id = ?")->execute([$id]);
+    logAction('news_delete', "id={$id}");
 }
 
 header('Location: ' . BASE_URL . '/admin/news.php');

@@ -40,6 +40,7 @@ adminHeader('Podcast: ' . h($show['title']));
   <p>Žádné epizody.</p>
 <?php else: ?>
   <table>
+    <caption>Podcasty</caption>
     <thead>
       <tr>
         <th scope="col">Ep.</th>

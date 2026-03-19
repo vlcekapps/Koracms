@@ -53,7 +53,7 @@ adminHeader($pageTitle);
   <input type="hidden" name="id"         value="<?= (int)$album['id'] ?>">
 
   <label for="name">Název alba <span aria-hidden="true">*</span></label>
-  <input type="text" id="name" name="name" required
+  <input type="text" id="name" name="name" required aria-required="true"
          maxlength="255" value="<?= h($album['name']) ?>">
 
   <label for="description">Popis</label>

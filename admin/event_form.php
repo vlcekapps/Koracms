@@ -38,7 +38,7 @@ $err = trim($_GET['err'] ?? '');
   <?php endif; ?>
 
   <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-  <input type="text" id="title" name="title" required maxlength="255"
+  <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
          value="<?= h($ev['title'] ?? '') ?>">
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
@@ -46,7 +46,7 @@ $err = trim($_GET['err'] ?? '');
     <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
       <div>
         <label for="event_date">Datum <span aria-hidden="true">*</span></label>
-        <input type="date" id="event_date" name="event_date" required style="width:auto;display:block;margin-top:.2rem"
+        <input type="date" id="event_date" name="event_date" required aria-required="true" style="width:auto;display:block;margin-top:.2rem"
                value="<?= $ev ? h(date('Y-m-d', strtotime($ev['event_date']))) : '' ?>">
       </div>
       <div>

@@ -61,9 +61,9 @@ $stmt = $pdo->prepare(
      LEFT JOIN cms_users u ON u.id = a.author_id
      {$where}
      ORDER BY a.created_at DESC
-     LIMIT {$perPage} OFFSET {$offset}"
+     LIMIT ? OFFSET ?"
 );
-$stmt->execute($params);
+$stmt->execute(array_merge($params, [$perPage, $offset]));
 $articles = $stmt->fetchAll();
 
 // Název aktivního filtru

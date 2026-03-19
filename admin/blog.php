@@ -52,6 +52,7 @@ adminHeader('Blog – správa článků');
 <form method="post" action="blog_bulk.php" id="bulk-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <table>
+    <caption>Články</caption>
     <thead>
       <tr>
         <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>

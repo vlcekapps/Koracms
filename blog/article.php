@@ -227,12 +227,12 @@ $captchaExpr = captchaGenerate();
       <h4 id="pridat-komentar-nadpis">Přidat komentář</h4>
 
       <?php if (!empty($commentErrors)): ?>
-        <ul class="form-errors" role="alert">
+        <ul id="comment-errors" class="form-errors" role="alert">
           <?php foreach ($commentErrors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
         </ul>
       <?php endif; ?>
 
-      <form method="post" novalidate>
+      <form method="post" novalidate aria-describedby="comment-errors">
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <?= honeypotField() ?>
 
