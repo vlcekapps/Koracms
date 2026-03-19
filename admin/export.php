@@ -38,6 +38,19 @@ $tables = [
                                language, category, website_url, created_at FROM cms_podcast_shows",
     'podcasts'      => "SELECT id, show_id, title, description, audio_file, audio_url,
                                duration, episode_num, publish_at, status, created_at FROM cms_podcasts",
+    'polls'         => "SELECT id, question, start_date, end_date, status, created_at FROM cms_polls",
+    'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",
+    'faq_categories'=> "SELECT id, name, sort_order, created_at FROM cms_faq_categories",
+    'faqs'          => "SELECT id, question, answer, category_id, is_published, sort_order,
+                               status, created_at FROM cms_faqs",
+    'board_categories' => "SELECT id, name, sort_order, created_at FROM cms_board_categories",
+    'board'         => "SELECT id, title, description, category_id, posted_date, removal_date,
+                               filename, original_name, file_size, sort_order, is_published,
+                               status, created_at FROM cms_board",
+    'comments'      => "SELECT id, article_id, author_name, content, is_approved, created_at
+                               FROM cms_comments",
+    'subscribers'   => "SELECT id, email, confirmed, token, created_at FROM cms_subscribers",
+    'newsletters'   => "SELECT id, subject, body, sent_at FROM cms_newsletters",
 ];
 
 foreach ($tables as $key => $sql) {

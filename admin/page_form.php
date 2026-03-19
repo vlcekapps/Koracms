@@ -42,8 +42,9 @@ adminHeader($pageTitle);
            value="<?= h($page['slug']) ?>">
     <small>Automaticky vygenerován z názvu. Pouze malá písmena, číslice a pomlčky.</small>
 
-    <label for="content">Obsah (HTML)</label>
+    <label for="content">Obsah</label>
     <textarea id="content" name="content"><?= h($page['content']) ?></textarea>
+    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal; margin-top:1rem">
       <input type="checkbox" name="is_published" value="1"

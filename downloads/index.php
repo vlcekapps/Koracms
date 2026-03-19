@@ -68,7 +68,7 @@ ksort($grouped);
               <small style="color:#666">(<?= h(formatFileSize($d['file_size'])) ?>)</small>
             <?php endif; ?>
             <?php if (!empty($d['description'])): ?>
-              <br><span style="color:#555;font-size:.9rem"><?= h($d['description']) ?></span>
+              <br><span style="color:#555;font-size:.9rem"><?= renderContent($d['description']) ?></span>
             <?php endif; ?>
           </li>
         <?php endforeach; ?>

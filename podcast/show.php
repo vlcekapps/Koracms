@@ -112,7 +112,7 @@ $feedUrl = BASE_URL . '/podcast/feed.php?slug=' . rawurlencode($show['slug']);
         <?php endif; ?>
 
         <?php if (!empty($ep['description'])): ?>
-          <div><?= $ep['description'] ?></div>
+          <div><?= renderContent($ep['description']) ?></div>
         <?php endif; ?>
       </article>
     <?php endforeach; ?>

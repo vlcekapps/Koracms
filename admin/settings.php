@@ -32,6 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('blog_per_page',    (string)$blogPerPage);
         saveSetting('events_per_page',  (string)$eventsPerPage);
         saveSetting('content_editor',   $contentEditor);
+        $homeBoard     = max(0, (int)($_POST['home_board_count'] ?? 5));
+        saveSetting('home_board_count', (string)$homeBoard);
         logAction('settings_save');
 
         saveSetting('social_facebook',  trim($_POST['social_facebook']  ?? ''));
@@ -111,9 +113,10 @@ adminHeader('Základní nastavení');
 
   <fieldset>
     <legend>Úvodní text webu</legend>
-    <p>Zobrazí se na úvodní stránce webu nad novinkami a články. Podporuje HTML. Nechte prázdné, pokud úvodní text nechcete.</p>
-    <label for="home_intro" class="sr-only">Úvodní text (HTML)</label>
+    <p>Zobrazí se na úvodní stránce webu nad novinkami a články. Nechte prázdné, pokud úvodní text nechcete.</p>
+    <label for="home_intro" class="sr-only">Úvodní text</label>
     <textarea id="home_intro" name="home_intro" rows="6"><?= h(getSetting('home_intro', '')) ?></textarea>
+    <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
   </fieldset>
 
   <fieldset>
@@ -141,6 +144,10 @@ adminHeader('Základní nastavení');
     <label for="home_news_count">Počet novinek na HP</label>
     <input type="number" id="home_news_count" name="home_news_count" min="0" max="50"
            value="<?= h(getSetting('home_news_count', '5')) ?>">
+
+    <label for="home_board_count">Počet dokumentů úřední desky na HP</label>
+    <input type="number" id="home_board_count" name="home_board_count" min="0" max="50"
+           value="<?= h(getSetting('home_board_count', '5')) ?>">
   </fieldset>
 
   <fieldset>

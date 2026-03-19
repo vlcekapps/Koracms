@@ -45,6 +45,7 @@ $err = trim($_GET['err'] ?? '');
 
     <label for="answer">Odpověď <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
   <textarea id="answer" name="answer" rows="8" required aria-required="true"><?= h($faq['answer'] ?? '') ?></textarea>
+  <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
   <label for="category_id">Kategorie</label>
   <select id="category_id" name="category_id">

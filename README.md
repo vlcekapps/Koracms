@@ -125,6 +125,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |
 | **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
 | **FAQ** | Často kladené otázky s kategoriemi; accordion (`<details>` / `<summary>`) bez JavaScriptu |
+| **Úřední deska** | Dokumenty s datem vyvěšení/sejmutí, kategoriemi a přílohami; automatický archiv po datu sejmutí |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci |
 
 Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Moduly**.
@@ -138,6 +139,7 @@ Na hlavní stránce se zobrazují widgety zapnutých modulů:
 - **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Základní nastavení → Text úvodní stránky*)
 - **Nejnovější novinky** – počet položek lze nastavit; hodnota 0 widget skryje
 - **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje
+- **Úřední deska** – nejnovější aktuální dokumenty; počet položek lze nastavit; hodnota 0 widget skryje
 - **Aktuální anketa** – pokud je modul Ankety zapnutý a existuje aktivní anketa
 
 ---
@@ -154,7 +156,7 @@ Nastavení je rozděleno do tří sekcí:
 - **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
 - **Výchozí OG obrázek** – obrázek pro náhledy při sdílení na sociálních sítích
 - **Editor obsahu** – volba mezi prostým HTML editorem a WYSIWYG editorem (Quill)
-- **Počty na hlavní stránce** – počet novinek a článků blogu zobrazených na HP (0 = widget skrytý)
+- **Počty na hlavní stránce** – počet novinek, článků blogu a dokumentů úřední desky zobrazených na HP (0 = widget skrytý)
 - **Stránkování** – počet novinek, článků a událostí na stránku
 - **Sociální sítě** – odkazy na Facebook, YouTube, Instagram, X (Twitter)
 - **Cookie lišta** – zapnutí GDPR lišty s vlastním textem
@@ -172,7 +174,7 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 
 ## Správa uživatelů
 
-Hlavní administrátor (účet vytvořený při instalaci) může přidávat **spolupracovníky** v sekci **Správa uživatelů**. Obsah přidaný spolupracovníkem musí hlavní administrátor před zveřejněním schválit.
+Hlavní administrátor (účet vytvořený při instalaci) může přidávat **spolupracovníky** v sekci **Nastavení → Správa uživatelů**. Obsah přidaný spolupracovníkem musí hlavní administrátor před zveřejněním schválit.
 
 Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo).
 
@@ -180,12 +182,12 @@ Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdív
 
 ## Další funkce
 
-- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ a místy
+- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ, místy a úřední deskou
 - **RSS feed** – automaticky generovaný feed nejnovějších článků (`/feed.php`)
 - **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`)
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
-- **Import / Export** – export a import dat CMS
+- **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
 
 ---
 
@@ -207,7 +209,8 @@ CMS je navržen s ohledem na **WCAG 2.2**:
 
 - Sémantické HTML (`<header>`, `<main>`, `<nav>`, `<article>`, `<section>`, `<details>`)
 - Formuláře seskupené pomocí `<fieldset>` / `<legend>` s `aria-required` a `role="alert"`
+- Admin sidebar – podmenu modulů seskupena pomocí `role="group"` s `aria-label` (Blog, Ke stažení, FAQ, Úřední deska); v sidebaru se zobrazují jen zapnuté moduly
 - Skip link pro přeskočení na obsah
 - ARIA atributy (`aria-current`, `aria-hidden`, `aria-live`)
 - Ovladatelnost pouze klávesnicí
-- Nativní accordion (FAQ) bez závislosti na JavaScriptu
+- Nativní accordion (FAQ, archiv úřední desky) bez závislosti na JavaScriptu

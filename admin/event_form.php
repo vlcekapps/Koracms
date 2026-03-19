@@ -86,6 +86,7 @@ $err = trim($_GET['err'] ?? '');
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="10"><?= h($ev['description'] ?? '') ?></textarea>
+    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1"

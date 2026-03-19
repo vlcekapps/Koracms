@@ -88,7 +88,7 @@ elseif ($to)       $validityStr = 'do ' . $to;
 
   <div class="food-content">
     <?php if (!empty($card['content'])): ?>
-      <?= $card['content'] ?>
+      <?= renderContent($card['content']) ?>
     <?php else: ?>
       <p><em>Obsah tohoto lístku nebyl zadán.</em></p>
     <?php endif; ?>

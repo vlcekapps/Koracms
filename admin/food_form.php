@@ -48,6 +48,7 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
 
     <label for="content">Obsah lístku</label>
     <textarea id="content" name="content" rows="18"><?= h($card['content'] ?? '') ?></textarea>
+    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
       <div>

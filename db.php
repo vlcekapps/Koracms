@@ -215,6 +215,21 @@ function gallery_make_thumb(string $src, string $dst, int $maxDim = 300): bool
     return (bool)$ok;
 }
 
+/**
+ * Zpracuje obsah přes Parsedown (Markdown + HTML).
+ * Markdown syntaxe se převede na HTML, existující HTML projde beze změny.
+ */
+function renderContent(string $text): string
+{
+    static $parsedown = null;
+    if ($parsedown === null) {
+        require_once __DIR__ . '/lib/Parsedown.php';
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(false);
+    }
+    return $parsedown->text($text);
+}
+
 function formatFileSize(int $bytes): string
 {
     if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
@@ -418,6 +433,7 @@ function navModuleDefaults(): array
         'chat'      => ['/chat/index.php',        'Chat'],
         'polls'     => ['/polls/index.php',       'Ankety'],
         'faq'       => ['/faq/index.php',         'FAQ'],
+        'board'     => ['/board/index.php',       'Úřední deska'],
         'contact'   => ['/contact/index.php',     'Kontakt'],
     ];
 }

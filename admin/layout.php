@@ -58,24 +58,21 @@ function adminHeader(string $pageTitle): void
     ];
 
     $moduleItems = [
-        ['url' => $b . '/admin/news.php',          'label' => 'Novinky'],
-        ['url' => $b . '/admin/chat.php',          'label' => 'Chat'],
-        ['url' => $b . '/admin/contact.php',       'label' => 'Kontakt'],
-        ['url' => $b . '/admin/gallery_albums.php','label' => 'Galerie'],
-        ['url' => $b . '/admin/events.php',        'label' => 'Události'],
-        ['url' => $b . '/admin/polls.php',         'label' => 'Ankety'],
-        ['url' => $b . '/admin/podcast.php',         'label' => 'Podcasty'],
-        ['url' => $b . '/admin/places.php',        'label' => 'Zajímavá místa'],
-        ['url' => $b . '/admin/newsletter.php',    'label' => 'Newsletter'],
-        ['url' => $b . '/admin/food.php',          'label' => 'Jídelní lístek'],
+        ['url' => $b . '/admin/news.php',          'label' => 'Novinky',          'module' => 'news'],
+        ['url' => $b . '/admin/chat.php',          'label' => 'Chat',             'module' => 'chat'],
+        ['url' => $b . '/admin/contact.php',       'label' => 'Kontakt',          'module' => 'contact'],
+        ['url' => $b . '/admin/gallery_albums.php','label' => 'Galerie',          'module' => 'gallery'],
+        ['url' => $b . '/admin/events.php',        'label' => 'Události',         'module' => 'events'],
+        ['url' => $b . '/admin/polls.php',         'label' => 'Ankety',           'module' => 'polls'],
+        ['url' => $b . '/admin/podcast.php',       'label' => 'Podcasty',         'module' => 'podcast'],
+        ['url' => $b . '/admin/places.php',        'label' => 'Zajímavá místa',   'module' => 'places'],
+        ['url' => $b . '/admin/newsletter.php',    'label' => 'Newsletter',       'module' => 'newsletter'],
+        ['url' => $b . '/admin/food.php',          'label' => 'Jídelní lístek',   'module' => 'food'],
         ['url' => $b . '/admin/pages.php',         'label' => 'Stránky'],
         ['url' => $b . '/admin/import.php',        'label' => 'Export / Import'],
     ];
 
     $bottomItems = [];
-    if (isSuperAdmin()) {
-        $bottomItems[] = ['url' => $b . '/admin/users.php', 'label' => 'Správa uživatelů'];
-    }
     $bottomItems[] = ['url' => $b . '/index.php',        'label' => '<span aria-hidden="true">←</span> Web'];
     $bottomItems[] = ['url' => $b . '/admin/logout.php', 'label' => 'Odhlásit se'];
 
@@ -90,9 +87,10 @@ function adminHeader(string $pageTitle): void
        . '  <details style="margin:.4rem 0">' . "\n"
        . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.3rem 0;list-style:none">'
        . '<span aria-hidden="true">&#9776;</span> Moduly</summary>' . "\n"
-       . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n"
-       . '      <li>' . "\n"
-       . '        <details>' . "\n"
+       . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n";
+    if (isModuleEnabled('blog')) {
+    echo '      <li>' . "\n"
+       . '        <details role="group" aria-label="Blog">' . "\n"
        . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Blog</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n"
@@ -101,18 +99,22 @@ function adminHeader(string $pageTitle): void
        . '            <li><a href="' . $b . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře</a></li>' . "\n"
        . '          </ul>' . "\n"
        . '        </details>' . "\n"
-       . '      </li>' . "\n"
-       . '      <li>' . "\n"
-       . '        <details>' . "\n"
+       . '      </li>' . "\n";
+    }
+    if (isModuleEnabled('downloads')) {
+    echo '      <li>' . "\n"
+       . '        <details role="group" aria-label="Ke stažení">' . "\n"
        . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/downloads.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Soubory</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
        . '          </ul>' . "\n"
        . '        </details>' . "\n"
-       . '      </li>' . "\n"
-       . '      <li>' . "\n"
-       . '        <details>' . "\n"
+       . '      </li>' . "\n";
+    }
+    if (isModuleEnabled('faq')) {
+    echo '      <li>' . "\n"
+       . '        <details role="group" aria-label="FAQ">' . "\n"
        . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">FAQ</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Otázky</a></li>' . "\n"
@@ -120,7 +122,24 @@ function adminHeader(string $pageTitle): void
        . '          </ul>' . "\n"
        . '        </details>' . "\n"
        . '      </li>' . "\n";
-    foreach ($moduleItems as $item) { echo $renderItem($item); }
+    }
+    if (isModuleEnabled('board')) {
+    echo '      <li>' . "\n"
+       . '        <details role="group" aria-label="Úřední deska">' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Úřední deska</summary>' . "\n"
+       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+       . '            <li><a href="' . $b . '/admin/board.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Příspěvky</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/board_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+       . '          </ul>' . "\n"
+       . '        </details>' . "\n"
+       . '      </li>' . "\n";
+    }
+    echo '      <li role="group" aria-label="Ostatní moduly"><ul style="margin:0;padding:0;list-style:none">' . "\n";
+    foreach ($moduleItems as $item) {
+        if (isset($item['module']) && !isModuleEnabled($item['module'])) continue;
+        echo $renderItem($item);
+    }
+    echo '      </ul></li>' . "\n";
     echo '    </ul>' . "\n"
        . '  </details>' . "\n"
        . '  <details style="margin:.4rem 0">' . "\n"
@@ -129,8 +148,11 @@ function adminHeader(string $pageTitle): void
        . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n"
        . '      <li><a href="' . $b . '/admin/settings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Základní nastavení</a></li>' . "\n"
        . '      <li><a href="' . $b . '/admin/settings_modules.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Moduly</a></li>' . "\n"
-       . '      <li><a href="' . $b . '/admin/settings_display.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Nastavení zobrazení</a></li>' . "\n"
-       . '    </ul>' . "\n"
+       . '      <li><a href="' . $b . '/admin/settings_display.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Nastavení zobrazení</a></li>' . "\n";
+    if (isSuperAdmin()) {
+    echo '      <li><a href="' . $b . '/admin/users.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Správa uživatelů</a></li>' . "\n";
+    }
+    echo '    </ul>' . "\n"
        . '  </details>' . "\n"
        . '  <ul style="margin-top:.4rem">' . "\n";
     foreach ($bottomItems as $item) { echo $renderItem($item); }

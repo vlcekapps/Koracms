@@ -266,6 +266,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Epizody podcastů importovány.';
                 }
 
+                // Ankety (nejdřív ankety, pak možnosti)
+                if (!empty($data['polls']) && is_array($data['polls'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_polls
+                         (id, question, start_date, end_date, status, created_at)
+                         VALUES (?,?,?,?,?,?)"
+                    );
+                    foreach ($data['polls'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], $row['question'],
+                            $row['start_date'] ?: null, $row['end_date'] ?: null,
+                            $row['status'] ?? 'active', $row['created_at'],
+                        ]);
+                    }
+                    $summary[] = 'Ankety importovány.';
+                }
+
+                // Možnosti ankety
+                if (!empty($data['poll_options']) && is_array($data['poll_options'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_poll_options
+                         (id, poll_id, option_text, sort_order)
+                         VALUES (?,?,?,?)"
+                    );
+                    foreach ($data['poll_options'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], (int)$row['poll_id'],
+                            $row['option_text'], (int)($row['sort_order'] ?? 0),
+                        ]);
+                    }
+                    $summary[] = 'Možnosti anket importovány.';
+                }
+
+                // FAQ kategorie
+                if (!empty($data['faq_categories']) && is_array($data['faq_categories'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_faq_categories (id, name, sort_order) VALUES (?,?,?)"
+                    );
+                    foreach ($data['faq_categories'] as $row) {
+                        $ins->execute([(int)$row['id'], $row['name'], (int)($row['sort_order'] ?? 0)]);
+                    }
+                    $summary[] = 'FAQ kategorie importovány.';
+                }
+
+                // FAQ
+                if (!empty($data['faqs']) && is_array($data['faqs'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_faqs
+                         (id, question, answer, category_id, is_published, sort_order, status)
+                         VALUES (?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['faqs'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], $row['question'], $row['answer'] ?? '',
+                            $row['category_id'] ?: null, (int)($row['is_published'] ?? 1),
+                            (int)($row['sort_order'] ?? 0), $row['status'] ?? 'published',
+                        ]);
+                    }
+                    $summary[] = 'FAQ importovány.';
+                }
+
+                // Kategorie úřední desky
+                if (!empty($data['board_categories']) && is_array($data['board_categories'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_board_categories (id, name, sort_order) VALUES (?,?,?)"
+                    );
+                    foreach ($data['board_categories'] as $row) {
+                        $ins->execute([(int)$row['id'], $row['name'], (int)($row['sort_order'] ?? 0)]);
+                    }
+                    $summary[] = 'Kategorie úřední desky importovány.';
+                }
+
+                // Úřední deska
+                if (!empty($data['board']) && is_array($data['board'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_board
+                         (id, title, description, category_id, posted_date, removal_date,
+                          filename, original_name, file_size, sort_order, is_published, status)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['board'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], $row['title'], $row['description'] ?? '',
+                            $row['category_id'] ?: null, $row['posted_date'],
+                            $row['removal_date'] ?: null, $row['filename'] ?? '',
+                            $row['original_name'] ?? '', (int)($row['file_size'] ?? 0),
+                            (int)($row['sort_order'] ?? 0), (int)($row['is_published'] ?? 1),
+                            $row['status'] ?? 'published',
+                        ]);
+                    }
+                    $summary[] = 'Úřední deska importována.';
+                }
+
+                // Komentáře
+                if (!empty($data['comments']) && is_array($data['comments'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_comments
+                         (id, article_id, author_name, content, is_approved, created_at)
+                         VALUES (?,?,?,?,?,?)"
+                    );
+                    foreach ($data['comments'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], (int)$row['article_id'],
+                            $row['author_name'], $row['content'],
+                            (int)($row['is_approved'] ?? 0), $row['created_at'],
+                        ]);
+                    }
+                    $summary[] = 'Komentáře importovány.';
+                }
+
+                // Odběratelé newsletteru
+                if (!empty($data['subscribers']) && is_array($data['subscribers'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_subscribers
+                         (id, email, confirmed, token, created_at)
+                         VALUES (?,?,?,?,?)"
+                    );
+                    foreach ($data['subscribers'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], $row['email'],
+                            (int)($row['confirmed'] ?? 0), $row['token'] ?? '',
+                            $row['created_at'],
+                        ]);
+                    }
+                    $summary[] = 'Odběratelé importováni.';
+                }
+
+                // Newslettery
+                if (!empty($data['newsletters']) && is_array($data['newsletters'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_newsletters (id, subject, body, sent_at) VALUES (?,?,?,?)"
+                    );
+                    foreach ($data['newsletters'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], $row['subject'], $row['body'], $row['sent_at'],
+                        ]);
+                    }
+                    $summary[] = 'Newslettery importovány.';
+                }
+
                 $pdo->commit();
                 clearSettingsCache();
                 logAction('import_json');
@@ -283,7 +423,7 @@ adminHeader('Import / Export dat');
 
 <h2>Export dat</h2>
 <p>Stáhne veškerý obsah (články, novinky, stránky, události, galerie, místa, soubory ke stažení,
-   jídelní lístky, podcasty, nastavení) jako JSON soubor.
+   jídelní lístky, podcasty, ankety, FAQ, úřední desku, komentáře, odběratele a newslettery, nastavení) jako JSON soubor.
    Heslo administrátora se neexportuje.
    Nahrané soubory (obrázky, audio, přílohy) je třeba přenést ručně ze složky <code>uploads/</code>.</p>
 <p>

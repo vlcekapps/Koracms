@@ -20,6 +20,7 @@ foreach ([
     'cms_contact'        => 'Kontaktní zprávy',
     'cms_polls'          => 'Ankety',
     'cms_faqs'           => 'FAQ otázky',
+    'cms_board'          => 'Úřední deska',
 ] as $tbl => $label) {
     try {
         $counts[$label] = (int)$pdo->query("SELECT COUNT(*) FROM {$tbl}")->fetchColumn();
@@ -43,6 +44,7 @@ $pendingModules = [
     'pages'     => ['table' => 'cms_pages',    'label' => 'Stránek', 'url' => 'pages.php'],
     'downloads' => ['table' => 'cms_downloads','label' => 'Souborů', 'url' => 'downloads.php'],
     'food'      => ['table' => 'cms_food_cards','label' => 'Lístků',  'url' => 'food.php'],
+    'board'     => ['table' => 'cms_board',     'label' => 'Dokumentů','url' => 'board.php'],
 ];
 foreach ($pendingModules as $key => $cfg) {
     try {
@@ -142,7 +144,7 @@ adminHeader('Přehled');
 
 <h2>Povolené moduly</h2>
 <ul>
-  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ'] as $k => $label): ?>
+  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ', 'board' => 'Úřední deska'] as $k => $label): ?>
     <li><?= h($label) ?>: <strong><?= isModuleEnabled($k) ? 'zapnuto' : 'vypnuto' ?></strong></li>
   <?php endforeach; ?>
 </ul>

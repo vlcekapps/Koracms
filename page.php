@@ -60,7 +60,7 @@ $siteName = getSetting('site_name', 'Kora CMS');
 <main id="obsah">
   <h2><?= h($page['title']) ?></h2>
   <div class="stranka-obsah">
-    <?= $page['content'] ?>
+    <?= renderContent($page['content']) ?>
   </div>
 </main>
 

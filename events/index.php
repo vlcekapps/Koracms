@@ -157,7 +157,7 @@ function eventsPager(int $current, int $total, string $param, string $otherParam
               <td colspan="4">
                 <details>
                   <summary>Popis akce</summary>
-                  <div class="desc-content"><?= $e['description'] ?></div>
+                  <div class="desc-content"><?= renderContent($e['description']) ?></div>
                 </details>
               </td>
             </tr>

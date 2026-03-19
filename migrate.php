@@ -302,6 +302,30 @@ $tables = [
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_board_categories' => "CREATE TABLE IF NOT EXISTS cms_board_categories (
+        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name       VARCHAR(255) NOT NULL,
+        sort_order INT          NOT NULL DEFAULT 0,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_board' => "CREATE TABLE IF NOT EXISTS cms_board (
+        id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title          VARCHAR(255) NOT NULL,
+        description    TEXT,
+        category_id    INT          NULL DEFAULT NULL,
+        posted_date    DATE         NOT NULL,
+        removal_date   DATE         NULL DEFAULT NULL,
+        filename       VARCHAR(255) NOT NULL DEFAULT '',
+        original_name  VARCHAR(255) NOT NULL DEFAULT '',
+        file_size      INT          NOT NULL DEFAULT 0,
+        sort_order     INT          NOT NULL DEFAULT 0,
+        is_published   TINYINT(1)   NOT NULL DEFAULT 1,
+        status         ENUM('pending','published') NOT NULL DEFAULT 'published',
+        author_id      INT          NULL DEFAULT NULL,
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -444,9 +468,11 @@ $newSettings = [
     'module_food'             => '1',
     'module_polls'            => '0',
     'module_faq'              => '0',
+    'module_board'            => '0',
     // Počty a stránkování
     'home_blog_count'         => '5',
     'home_news_count'         => '5',
+    'home_board_count'        => '5',
     'news_per_page'           => '10',
     'blog_per_page'           => '10',
     'events_per_page'         => '10',

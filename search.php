@@ -91,6 +91,21 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         } catch (\PDOException $e) {}
     }
 
+    // Úřední deska
+    if (isModuleEnabled('board')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, title, description AS perex, posted_date AS created_at, 'board' AS type
+                 FROM cms_board
+                 WHERE status = 'published' AND is_published = 1
+                   AND (title LIKE ? OR description LIKE ?)
+                 ORDER BY posted_date DESC LIMIT 10"
+            );
+            $stmt->execute([$like, $like]);
+            foreach ($stmt->fetchAll() as $row) $results[] = $row;
+        } catch (\PDOException $e) {}
+    }
+
     // Zajímavá místa
     if (isModuleEnabled('places')) {
         try {
@@ -116,6 +131,7 @@ function resultUrl(array $r): string {
         'podcast' => $b . '/podcast/index.php#ep-' . (int)$r['id'],
         'faq'     => $b . '/faq/index.php',
         'place'   => $b . '/places/index.php#place-' . (int)$r['id'],
+        'board'   => $b . '/board/index.php',
         default   => $b . '/',
     };
 }
@@ -129,6 +145,7 @@ function typeLabel(string $type): string {
         'podcast' => 'Podcast',
         'faq'     => 'FAQ',
         'place'   => 'Místo',
+        'board'   => 'Úřední deska',
         default   => '',
     };
 }

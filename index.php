@@ -68,7 +68,7 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
   <?php if ($homeIntro !== ''): ?>
   <section aria-labelledby="uvod-nadpis">
     <h2 id="uvod-nadpis">Úvodní stránka</h2>
-    <?= $homeIntro ?>
+    <?= renderContent($homeIntro) ?>
   </section>
   <?php endif; ?>
 
@@ -109,6 +109,48 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
       </article>
     <?php endforeach; ?>
     <p><a href="<?= BASE_URL ?>/blog/index.php">Všechny články <span aria-hidden="true">→</span></a></p>
+  </section>
+  <?php endif; ?>
+
+  <?php
+  // Úřední deska
+  $latestBoard = [];
+  $homeBoardCount = (int)getSetting('home_board_count', '5');
+  if (isModuleEnabled('board') && $homeBoardCount > 0) {
+      $stmt = db_connect()->prepare(
+          "SELECT b.id, b.title, b.posted_date, b.filename, b.original_name, b.file_size
+           FROM cms_board b
+           WHERE b.status = 'published' AND b.is_published = 1
+             AND (b.removal_date IS NULL OR b.removal_date >= CURDATE())
+           ORDER BY b.posted_date DESC, b.sort_order, b.title
+           LIMIT ?"
+      );
+      $stmt->execute([$homeBoardCount]);
+      $latestBoard = $stmt->fetchAll();
+  }
+  ?>
+  <?php if (!empty($latestBoard)): ?>
+  <section aria-labelledby="deska-nadpis">
+    <h2 id="deska-nadpis">Úřední deska</h2>
+    <ul>
+      <?php foreach ($latestBoard as $bd): ?>
+        <li>
+          <?php if ($bd['filename'] !== ''): ?>
+            <a href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($bd['filename']) ?>"
+               download="<?= h($bd['original_name']) ?>">
+              <?= h($bd['title']) ?>
+            </a>
+          <?php else: ?>
+            <?= h($bd['title']) ?>
+          <?php endif; ?>
+          <?php if ($bd['file_size'] > 0): ?>
+            <small style="color:#666">(<?= h(formatFileSize($bd['file_size'])) ?>)</small>
+          <?php endif; ?>
+          <small> · <?= h($bd['posted_date']) ?></small>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+    <p><a href="<?= BASE_URL ?>/board/index.php">Všechny dokumenty <span aria-hidden="true">→</span></a></p>
   </section>
   <?php endif; ?>
 

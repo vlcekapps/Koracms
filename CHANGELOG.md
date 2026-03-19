@@ -4,6 +4,22 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [1.0.5] – 2026-03-19
+
+### Přidáno
+- **Modul Úřední deska** – dokumenty s datem vyvěšení/sejmutí, kategoriemi a přílohami; automatický archiv po datu sejmutí; veřejná stránka s rozbalovacím archivem (`<details>`)
+- Widget úřední desky na hlavní stránce (počet dokumentů nastavitelný, 0 = skrytý)
+- Vyhledávání v úřední desce (název + popis)
+- Nastavení `home_board_count` v administraci
+
+### Vylepšeno
+- **WCAG 2.2 – formuláře** – `<fieldset>` / `<legend>` seskupení přidáno do 25 formulářů napříč celým CMS (admin i veřejné stránky)
+- **WCAG 2.2 – admin sidebar** – podmenu modulů seskupena pomocí `role="group"` s `aria-label`; jednoduché moduly ve skupině „Ostatní moduly"
+- **Admin sidebar** – zobrazují se pouze zapnuté moduly; vypnuté moduly jsou skryté
+- **Admin sidebar** – Správa uživatelů přesunuta do sekce Nastavení
+- **Export / Import** – rozšířen o ankety, možnosti anket, FAQ kategorie, FAQ, kategorie úřední desky, úřední desku, komentáře, odběratele newsletteru a odeslané newslettery
+- **Markdown + HTML podpora** – obsahová pole (články, stránky, události, FAQ, podcast, jídelní lístky, úřední deska, ke stažení, místa, úvodní text) nyní zpracovávají Markdown i HTML současně pomocí knihovny Parsedown; admin formuláře zobrazují nápovědu o podpoře MD syntaxe
+
 ## [1.0.4] – 2026-03-19
 
 ### Přidáno

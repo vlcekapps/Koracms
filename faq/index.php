@@ -101,7 +101,7 @@ $multipleCategories = count($grouped) > 1;
         <?php foreach ($items as $f): ?>
           <details class="faq-item">
             <summary><?= h($f['question']) ?></summary>
-            <div class="faq-answer"><?= $f['answer'] ?></div>
+            <div class="faq-answer"><?= renderContent($f['answer']) ?></div>
           </details>
         <?php endforeach; ?>
       </section>

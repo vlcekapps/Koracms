@@ -66,6 +66,7 @@ adminHeader($id ? 'Upravit epizodu' : 'Nová epizoda');
 
   <label for="description">Popis epizody</label>
   <textarea id="description" name="description" rows="8"><?= h($ep['description'] ?? '') ?></textarea>
+  <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
   <label for="publish_at">Plánované zveřejnění <small>(prázdné = ihned)</small></label>
   <input type="datetime-local" id="publish_at" name="publish_at" style="width:auto"

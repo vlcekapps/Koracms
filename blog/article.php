@@ -180,7 +180,7 @@ $captchaExpr = captchaGenerate();
     <?php endif; ?>
 
     <div class="clanek-obsah">
-      <?= $article['content'] ?>
+      <?= renderContent($article['content']) ?>
     </div>
 
     <?php if (!empty($tags)): ?>

@@ -82,7 +82,7 @@ $beverageCard = $pdo->query(
         <?php endif; ?>
       </p>
       <div class="food-content">
-        <?= $foodCard['content'] ?>
+        <?= renderContent($foodCard['content']) ?>
       </div>
     <?php else: ?>
       <p>Aktuální jídelní lístek zatím není k dispozici.</p>
@@ -109,7 +109,7 @@ $beverageCard = $pdo->query(
         <?php endif; ?>
       </p>
       <div class="food-content">
-        <?= $beverageCard['content'] ?>
+        <?= renderContent($beverageCard['content']) ?>
       </div>
     <?php else: ?>
       <p>Aktuální nápojový lístek zatím není k dispozici.</p>

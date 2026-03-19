@@ -108,6 +108,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
     <label for="content">Text článku <span aria-hidden="true">*</span></label>
     <textarea id="content" name="content" rows="15" required aria-required="true"><?= h($article['content'] ?? '') ?></textarea>
+    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label for="image">
       Náhledový obrázek

@@ -57,7 +57,7 @@ ksort($grouped);
                 <strong><?= h($p['name']) ?></strong>
               <?php endif; ?>
               <?php if (!empty($p['description'])): ?>
-                <br><span style="color:#555"><?= h($p['description']) ?></span>
+                <br><span style="color:#555"><?= renderContent($p['description']) ?></span>
               <?php endif; ?>
             </li>
           <?php endforeach; ?>
