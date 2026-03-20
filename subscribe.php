@@ -30,16 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )->execute([$email, $token]);
 
                 // Odeslat potvrzovací email
-                $confirmUrl = BASE_URL . '/subscribe_confirm.php?token=' . $token;
+                $confirmUrl = siteUrl('/subscribe_confirm.php?token=' . $token);
                 $subject    = 'Potvrďte přihlášení k odběru – ' . $siteName;
                 $body       = "Dobrý den,\n\n"
                             . "pro potvrzení odběru novinek webu {$siteName} klikněte na odkaz:\n"
                             . $confirmUrl . "\n\n"
                             . "Pokud jste se k odběru nepřihlásili, tento email ignorujte.\n\n"
                             . "— " . $siteName;
-                $headers    = "From: noreply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "\r\n"
-                            . "Content-Type: text/plain; charset=UTF-8\r\n";
-                mail($email, $subject, $body, $headers);
+                sendMail($email, $subject, $body);
                 $state = 'ok';
             } catch (\PDOException $e) {
                 // Duplicate entry = email již existuje
@@ -103,6 +101,6 @@ $captchaExpr = captchaGenerate();
 </main>
 
 <?= siteFooter() ?>
-<script>document.addEventListener("DOMContentLoaded",function(){var l=document.getElementById("a11y-live");if(!l)return;var m=document.querySelector('[role="status"]:not(#a11y-live),[role="alert"]');if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);}});</script>
+<script>document.addEventListener("DOMContentLoaded",function(){var l=document.getElementById("a11y-live");if(!l)return;var m=document.querySelector('[role="status"]:not(#a11y-live),[role="alert"]');if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}});</script>
 </body>
 </html>

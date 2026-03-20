@@ -326,6 +326,99 @@ $tables = [
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    // ── Rezervační systém ──
+
+    'cms_res_categories' => "CREATE TABLE IF NOT EXISTS cms_res_categories (
+        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name       VARCHAR(255) NOT NULL,
+        sort_order INT          NOT NULL DEFAULT 0,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_resources' => "CREATE TABLE IF NOT EXISTS cms_res_resources (
+        id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        category_id        INT          NULL DEFAULT NULL,
+        name               VARCHAR(255) NOT NULL,
+        slug               VARCHAR(255) NOT NULL UNIQUE,
+        description        TEXT,
+        capacity           INT          NOT NULL DEFAULT 1,
+        location           VARCHAR(255) NOT NULL DEFAULT '',
+        slot_mode          ENUM('slots','range','duration') NOT NULL DEFAULT 'slots',
+        slot_duration_min  INT          NOT NULL DEFAULT 60,
+        min_advance_hours  INT          NOT NULL DEFAULT 1,
+        max_advance_days   INT          NOT NULL DEFAULT 30,
+        cancellation_hours INT          NOT NULL DEFAULT 24,
+        requires_approval  TINYINT(1)   NOT NULL DEFAULT 0,
+        allow_guests       TINYINT(1)   NOT NULL DEFAULT 0,
+        max_concurrent     INT          NOT NULL DEFAULT 1,
+        is_active          TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_hours' => "CREATE TABLE IF NOT EXISTS cms_res_hours (
+        id          INT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        resource_id INT        NOT NULL,
+        day_of_week TINYINT    NOT NULL,
+        open_time   TIME       NOT NULL DEFAULT '09:00:00',
+        close_time  TIME       NOT NULL DEFAULT '17:00:00',
+        is_closed   TINYINT(1) NOT NULL DEFAULT 0,
+        UNIQUE KEY uq_res_day (resource_id, day_of_week)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_slots' => "CREATE TABLE IF NOT EXISTS cms_res_slots (
+        id           INT     NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        resource_id  INT     NOT NULL,
+        day_of_week  TINYINT NOT NULL,
+        start_time   TIME    NOT NULL,
+        end_time     TIME    NOT NULL,
+        max_bookings INT     NOT NULL DEFAULT 1
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_blocked' => "CREATE TABLE IF NOT EXISTS cms_res_blocked (
+        id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        resource_id  INT          NOT NULL,
+        blocked_date DATE         NOT NULL,
+        reason       VARCHAR(255) NOT NULL DEFAULT '',
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_res_blocked (resource_id, blocked_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_locations' => "CREATE TABLE IF NOT EXISTS cms_res_locations (
+        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name       VARCHAR(255) NOT NULL,
+        address    VARCHAR(500) NOT NULL DEFAULT '',
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_resource_locations' => "CREATE TABLE IF NOT EXISTS cms_res_resource_locations (
+        resource_id INT NOT NULL,
+        location_id INT NOT NULL,
+        PRIMARY KEY (resource_id, location_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_bookings' => "CREATE TABLE IF NOT EXISTS cms_res_bookings (
+        id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        resource_id        INT          NOT NULL,
+        user_id            INT          NULL DEFAULT NULL,
+        guest_name         VARCHAR(255) NOT NULL DEFAULT '',
+        guest_email        VARCHAR(255) NOT NULL DEFAULT '',
+        guest_phone        VARCHAR(30)  NOT NULL DEFAULT '',
+        booking_date       DATE         NOT NULL,
+        start_time         TIME         NOT NULL,
+        end_time           TIME         NOT NULL,
+        party_size         INT          NOT NULL DEFAULT 1,
+        notes              TEXT,
+        status             ENUM('pending','confirmed','cancelled','rejected','completed','no_show') NOT NULL DEFAULT 'pending',
+        admin_note         TEXT,
+        confirmation_token VARCHAR(64)  NOT NULL DEFAULT '',
+        cancelled_at       DATETIME     NULL DEFAULT NULL,
+        created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_res_date (resource_id, booking_date, status),
+        INDEX idx_user (user_id, status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -364,6 +457,16 @@ $addColumns = [
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_downloads
     'cms_downloads.dl_category_id'   => "ALTER TABLE cms_downloads ADD COLUMN dl_category_id INT NULL DEFAULT NULL",
+    // cms_users – rozšíření pro veřejné uživatele a role
+    'cms_users.role'                 => "ALTER TABLE cms_users ADD COLUMN role ENUM('admin','collaborator','public') NOT NULL DEFAULT 'collaborator'",
+    'cms_users.phone'                => "ALTER TABLE cms_users ADD COLUMN phone VARCHAR(30) NOT NULL DEFAULT ''",
+    'cms_users.is_confirmed'         => "ALTER TABLE cms_users ADD COLUMN is_confirmed TINYINT(1) NOT NULL DEFAULT 1",
+    'cms_users.confirmation_token'   => "ALTER TABLE cms_users ADD COLUMN confirmation_token VARCHAR(64) NOT NULL DEFAULT ''",
+    'cms_users.reset_token'          => "ALTER TABLE cms_users ADD COLUMN reset_token VARCHAR(64) NOT NULL DEFAULT ''",
+    'cms_users.reset_expires'        => "ALTER TABLE cms_users ADD COLUMN reset_expires DATETIME NULL DEFAULT NULL",
+    'cms_users.updated_at'           => "ALTER TABLE cms_users ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_res_resources – povolení hostů
+    'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -433,6 +536,53 @@ try {
     $log[] = "✗ Migrace kategorií ke stažení – CHYBA: " . h($e->getMessage());
 }
 
+// ── 4. Migrace rolí stávajících uživatelů ────────────────────────────────────
+// Nastaví role='admin' pro superadminy a role='collaborator' pro ostatní.
+
+try {
+    $colCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_users' AND COLUMN_NAME = 'role'"
+    );
+    $colCheck->execute();
+    if ((int)$colCheck->fetchColumn() > 0) {
+        $updated = $pdo->exec(
+            "UPDATE cms_users SET role = 'admin' WHERE is_superadmin = 1 AND role = 'collaborator'"
+        );
+        if ($updated > 0) {
+            $log[] = "✓ Role superadminů nastavena na 'admin' – OK ({$updated} uživatelů)";
+        } else {
+            $log[] = "· Migrace rolí – žádní superadmini k aktualizaci";
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Migrace rolí – CHYBA: " . h($e->getMessage());
+}
+
+// ── 4b. Rozšíření ENUM stavu rezervací o 'no_show' ──────────────────────────
+
+try {
+    $colCheck = $pdo->prepare(
+        "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_res_bookings' AND COLUMN_NAME = 'status'"
+    );
+    $colCheck->execute();
+    $colType = (string)$colCheck->fetchColumn();
+
+    if ($colType !== '' && strpos($colType, 'no_show') === false) {
+        $pdo->exec(
+            "ALTER TABLE cms_res_bookings MODIFY COLUMN status
+             ENUM('pending','confirmed','cancelled','rejected','completed','no_show')
+             NOT NULL DEFAULT 'pending'"
+        );
+        $log[] = "✓ ENUM <code>cms_res_bookings.status</code> rozšířen o 'no_show' – OK";
+    } else {
+        $log[] = "· ENUM <code>cms_res_bookings.status</code> již obsahuje 'no_show' – přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Rozšíření ENUM stavu rezervací – CHYBA: " . h($e->getMessage());
+}
+
 // ── 5. Výchozí podcast show (zachová zpětnou kompatibilitu) ───────────────────
 
 try {
@@ -469,6 +619,7 @@ $newSettings = [
     'module_polls'            => '0',
     'module_faq'              => '0',
     'module_board'            => '0',
+    'module_reservations'     => '0',
     // Počty a stránkování
     'home_blog_count'         => '5',
     'home_news_count'         => '5',
@@ -521,7 +672,7 @@ try {
         $adminHash  = getSetting('admin_password', '');
         if ($adminEmail !== '' && $adminHash !== '') {
             $pdo->prepare(
-                "INSERT INTO cms_users (email, password, is_superadmin) VALUES (?, ?, 1)"
+                "INSERT INTO cms_users (email, password, role, is_superadmin, is_confirmed) VALUES (?, ?, 'admin', 1, 1)"
             )->execute([$adminEmail, $adminHash]);
             $log[] = "✓ Superadmin <code>{$adminEmail}</code> migrován do cms_users – OK";
         } else {

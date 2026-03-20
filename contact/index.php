@@ -44,11 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($destEmail !== '') {
             $safeSubject = preg_replace('/[\r\n]/', '', $subject);
             $safeFrom    = preg_replace('/[\r\n]/', '', $from);
-            $headers     = "Content-Type: text/plain; charset=UTF-8\r\n"
-                         . "Reply-To: {$safeFrom}\r\n"
-                         . "From: {$safeFrom}\r\n";
-            $body = "Zpráva z kontaktního formuláře.\n\nOd: {$safeFrom}\nPředmět: {$safeSubject}\n\n{$message}";
-            mail($destEmail, $safeSubject, $body, $headers);
+            $mailBody = "Zpráva z kontaktního formuláře.\n\nOd: {$safeFrom}\nPředmět: {$safeSubject}\n\n{$message}";
+            sendMail($destEmail, $safeSubject, $mailBody);
         }
 
         $success = true;
@@ -123,6 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <footer>
   <p>© <?= date('Y') ?> <?= h($siteName) ?></p>
 </footer>
-<script>document.addEventListener("DOMContentLoaded",function(){var l=document.getElementById("a11y-live");if(!l)return;var m=document.querySelector('[role="status"]:not(#a11y-live),[role="alert"]');if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);}});</script>
+<script>document.addEventListener("DOMContentLoaded",function(){var l=document.getElementById("a11y-live");if(!l)return;var m=document.querySelector('[role="status"]:not(#a11y-live),[role="alert"]');if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}});</script>
 </body>
 </html>

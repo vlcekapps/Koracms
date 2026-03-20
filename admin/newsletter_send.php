@@ -21,15 +21,12 @@ $subscribers = $pdo->query(
 
 $sent = 0;
 foreach ($subscribers as $s) {
-    $unsubUrl    = BASE_URL . '/unsubscribe.php?token=' . $s['token'];
+    $unsubUrl    = siteUrl('/unsubscribe.php?token=' . $s['token']);
     $personalBody = $body
         . "\n\n---\n"
         . "Pro odhlášení z odběru klikněte zde: {$unsubUrl}";
 
-    $headers = "From: {$siteName} <noreply@{$host}>\r\n"
-             . "Content-Type: text/plain; charset=UTF-8\r\n";
-
-    if (mail($s['email'], $subject, $personalBody, $headers)) {
+    if (sendMail($s['email'], $subject, $personalBody)) {
         $sent++;
     }
 }

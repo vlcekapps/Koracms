@@ -4,8 +4,8 @@ requireSuperAdmin();
 
 $pdo   = db_connect();
 $users = $pdo->query(
-    "SELECT id, email, first_name, last_name, nickname, is_superadmin, created_at
-     FROM cms_users ORDER BY is_superadmin DESC, created_at ASC"
+    "SELECT id, email, first_name, last_name, nickname, role, is_superadmin, is_confirmed, created_at
+     FROM cms_users ORDER BY is_superadmin DESC, role ASC, created_at ASC"
 )->fetchAll();
 
 adminHeader('Správa uživatelů');
@@ -20,6 +20,7 @@ adminHeader('Správa uživatelů');
       <th scope="col">E-mail</th>
       <th scope="col">Jméno / Přezdívka</th>
       <th scope="col">Role</th>
+      <th scope="col">Stav</th>
       <th scope="col">Přidán</th>
       <th scope="col">Akce</th>
     </tr>
@@ -33,7 +34,18 @@ adminHeader('Správa uživatelů');
     <tr>
       <td><?= h($u['email']) ?></td>
       <td><?= $displayName !== '' ? h($displayName) : '<em>–</em>' ?></td>
-      <td><?= $u['is_superadmin'] ? '<strong>Hlavní admin</strong>' : 'Spolupracovník' ?></td>
+      <td><?php
+        if ($u['is_superadmin']) {
+            echo '<strong>Hlavní admin</strong>';
+        } elseif ($u['role'] === 'admin') {
+            echo 'Admin';
+        } elseif ($u['role'] === 'public') {
+            echo 'Veřejný uživatel';
+        } else {
+            echo 'Spolupracovník';
+        }
+      ?></td>
+      <td><?= (int)$u['is_confirmed'] ? 'Aktivní' : '<em>Nepotvrzený</em>' ?></td>
       <td><?= h($u['created_at']) ?></td>
       <td class="actions">
         <?php if (!$u['is_superadmin']): ?>

@@ -3,6 +3,7 @@ require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
+autoCompleteBookings();
 $counts = [];
 foreach ([
     'cms_articles'       => 'Články',
@@ -71,6 +72,24 @@ $subscriberCount = 0;
 try {
     $subscriberCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_subscribers WHERE confirmed = 1")->fetchColumn();
 } catch (\PDOException $e) {}
+
+$resUpcoming = 0;
+$resPending  = 0;
+if (isModuleEnabled('reservations')) {
+    try {
+        $resUpcoming = (int)$pdo->query(
+            "SELECT COUNT(*) FROM cms_res_bookings
+             WHERE status IN ('pending','confirmed')
+               AND booking_date >= CURDATE()
+               AND booking_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)"
+        )->fetchColumn();
+    } catch (\PDOException $e) {}
+    try {
+        $resPending = (int)$pdo->query(
+            "SELECT COUNT(*) FROM cms_res_bookings WHERE status = 'pending'"
+        )->fetchColumn();
+    } catch (\PDOException $e) {}
+}
 
 adminHeader('Přehled');
 ?>
@@ -142,9 +161,18 @@ adminHeader('Přehled');
 </p>
 <?php endif; ?>
 
+<?php if (isModuleEnabled('reservations')): ?>
+<h2>Rezervace</h2>
+<ul>
+  <li>Nadcházejících rezervací (7 dní): <strong><?= $resUpcoming ?></strong></li>
+  <li>Čekajících na schválení: <strong><?= $resPending ?></strong></li>
+</ul>
+<p><a href="res_bookings.php">Správa rezervací <span aria-hidden="true">→</span></a></p>
+<?php endif; ?>
+
 <h2>Povolené moduly</h2>
 <ul>
-  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ', 'board' => 'Úřední deska'] as $k => $label): ?>
+  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ', 'board' => 'Úřední deska', 'reservations' => 'Rezervace'] as $k => $label): ?>
     <li><?= h($label) ?>: <strong><?= isModuleEnabled($k) ? 'zapnuto' : 'vypnuto' ?></strong></li>
   <?php endforeach; ?>
 </ul>

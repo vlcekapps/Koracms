@@ -6,8 +6,46 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **Modul Rezervace** – univerzální rezervační systém s veřejnou registrací uživatelů
+  - Tři režimy slotů: předdefinované sloty, pevná délka, volný rozsah
+  - Správa zdrojů, kategorií a míst v administraci
+  - Veřejný kalendář s barevným rozlišením dostupnosti (volné / obsazené / zavřeno / mimo rozsah)
+  - Rezervace pro přihlášené uživatele i neregistrované hosty (volitelně)
+  - Schvalování rezervací správcem (volitelné)
+  - E-mailové notifikace při vytvoření, schválení, zamítnutí a zrušení rezervace
+  - Zrušení rezervace přes tokenový odkaz v e-mailu (`cancel_booking.php`) – funguje pro hosty i registrované
+  - Zrušení přihlášeným uživatelem ze sekce „Moje rezervace"
+  - Lhůta pro bezplatné zrušení (nastavitelná v hodinách)
+  - Kapacita, souběžné rezervace, minimální/maximální předstih
+  - Stavy rezervací: čekající, potvrzená, dokončená, zrušená, neomluvená
+  - Automatické dokončení proběhlých rezervací (`autoCompleteBookings()`)
+  - Admin: filtrování rezervací podle stavu a zdroje, detail rezervace se změnou stavu
+  - Administrátor nemůže označit rezervaci jako dokončenou před koncem jejího času
+  - Admin: ruční vytvoření rezervace za hosta
+  - Veřejné stránky: přehled zdrojů, detail zdroje s kalendářem, rezervační formulář, moje rezervace
+- **Veřejná registrace a přihlášení** – registrace s potvrzením e-mailem, přihlášení, profil, odhlášení (`register.php`, `public_login.php`, `public_profile.php`, `public_logout.php`, `confirm_email.php`)
+- **Obnovení hesla** – tokenový reset hesla s expirací 1 hodiny (`reset_password.php`)
+- **Role „Veřejný uživatel"** (`public`) – oddělená od admin/spolupracovníků; nemá přístup do administrace
+- **Správa uživatelů** – admin seznam nyní zobrazuje skutečnou roli (Hlavní admin / Admin / Veřejný uživatel / Spolupracovník) a stav potvrzení (Aktivní / Nepotvrzený)
+- **`siteUrl()`** – helper pro absolutní URL v e-mailech (automatická detekce schématu a domény)
+
 ### Vylepšeno
+- **`sendMail()`** – kompletně přepsáno na přímé SMTP odesílání přes `fsockopen()` (spolehlivé na PHP 8.4 NTS/FastCGI na Windows, kde `mail()` nefunguje)
+- **Všechny e-maily** nyní používají `sendMail()` místo přímého `mail()` (registrace, odběr, reset hesla, newsletter)
+- **Všechny e-mailové odkazy** nyní obsahují plnou URL s doménou díky `siteUrl()` (dříve chybělo schéma a doména)
+- **Patička webu** – správné rozlišení tří stavů: admin (bez public odkazů), veřejný uživatel (Moje rezervace · Můj profil · Odhlásit se), nepřihlášený (Přihlášení · Registrace)
+- **Nepotvrzený účet** – při opakované registraci se odešle nový aktivační e-mail místo chyby „účet existuje"; při přihlášení se zobrazí specifická hláška místo „nesprávné heslo"
 - **migrate.php** – přidána sekce pro automatické vytvoření všech potřebných `uploads/` adresářů (`site`, `articles`, `articles/thumbs`, `gallery`, `gallery/thumbs`, `downloads`, `board`, `podcasts`, `podcasts/covers`); po migraci na novou verzi tak není nutné adresáře zakládat ručně
+- **WCAG 2.2** – podmíněné `aria-describedby` (jen při chybách), `aria-atomic="true"` na status/alert zprávách, skip linky a focus styly na všech nových stránkách, `aria-readonly` na needitovatelných polích, propojení nápověd přes `aria-describedby`
+- **Pravidla rezervací** – srozumitelnější formulace na veřejné stránce zdroje; zobrazení informace o nutnosti registrace na webu nebo možnosti rezervovat jako host
+
+### Opraveno
+- **`confirm_email.php`** – opravena chyba `confirmation_token cannot be null` (sloupec je NOT NULL, nyní se nastavuje prázdný řetězec)
+- **`reset_password.php`** – stejná oprava pro `reset_token`
+- **Patička** – opravena kontrola přihlášení (používala neexistující `$_SESSION['public_user_id']` místo `isPublicUser()`)
+- **Admin přihlášení** – public uživatel nemůže vstoupit do administrace (zobrazí se hláška s odkazem na veřejné přihlášení)
+- **Přesměrování** – přihlášený admin na `register.php`/`public_login.php` je přesměrován do administrace, ne na veřejný profil
 
 ## [1.0.8] – 2026-03-19
 

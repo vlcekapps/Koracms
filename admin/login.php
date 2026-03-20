@@ -21,18 +21,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo  = db_connect();
         $stmt = $pdo->prepare(
-            "SELECT id, password, first_name, last_name, nickname, is_superadmin
+            "SELECT id, password, first_name, last_name, nickname, is_superadmin, role
              FROM cms_users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([$inputEmail]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($inputPass, $user['password'])) {
-            $name = $user['nickname'] !== '' ? $user['nickname']
-                  : trim($user['first_name'] . ' ' . $user['last_name']);
-            if ($name === '') $name = $inputEmail;
-            loginUser((int)$user['id'], $inputEmail, (bool)$user['is_superadmin'], $name);
-            $authenticated = true;
+            $role = $user['role'] ?? 'collaborator';
+            // Veřejní uživatelé se nemohou přihlásit do administrace
+            if ($role === 'public') {
+                $error = 'Tento účet nemá přístup do administrace. Použijte veřejné přihlášení.';
+            } else {
+                $name = $user['nickname'] !== '' ? $user['nickname']
+                      : trim($user['first_name'] . ' ' . $user['last_name']);
+                if ($name === '') $name = $inputEmail;
+                loginUser((int)$user['id'], $inputEmail, (bool)$user['is_superadmin'], $name, $role);
+                $authenticated = true;
+            }
         }
     } catch (\PDOException $e) {
         // cms_users ještě neexistuje – fallback na admin_password ze settings

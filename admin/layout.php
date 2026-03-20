@@ -134,6 +134,19 @@ function adminHeader(string $pageTitle): void
        . '        </details>' . "\n"
        . '      </li>' . "\n";
     }
+    if (isModuleEnabled('reservations')) {
+    echo '      <li>' . "\n"
+       . '        <details role="group" aria-label="Rezervace">' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Rezervace</summary>' . "\n"
+       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+       . '            <li><a href="' . $b . '/admin/res_resources.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Zdroje</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/res_categories.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/res_bookings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Rezervace</a></li>' . "\n"
+       . '            <li><a href="' . $b . '/admin/res_locations.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Místa</a></li>' . "\n"
+       . '          </ul>' . "\n"
+       . '        </details>' . "\n"
+       . '      </li>' . "\n";
+    }
     echo '      <li role="group" aria-label="Ostatní moduly"><ul style="margin:0;padding:0;list-style:none">' . "\n";
     foreach ($moduleItems as $item) {
         if (isset($item['module']) && !isModuleEnabled($item['module'])) continue;
@@ -169,7 +182,7 @@ function adminFooter(): void
     echo '<script>document.addEventListener("DOMContentLoaded",function(){'
        . 'var l=document.getElementById("a11y-live");if(!l)return;'
        . 'var m=document.querySelector(\'[role="status"]:not(#a11y-live),[role="alert"]\');'
-       . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);}'
+       . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}'
        . '});</script>'
        . '</main>'
        . '<footer style="text-align:center;padding:.5rem;font-size:.75rem;color:#999">'

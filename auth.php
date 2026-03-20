@@ -43,11 +43,17 @@ function requireLogin(string $loginUrl = '/admin/login.php'): void
         exit;
     }
 
+    // Veřejní uživatelé nemají přístup do administrace
+    if (isPublicUser() && str_contains($loginUrl, '/admin/')) {
+        header('Location: ' . BASE_URL . '/public_profile.php');
+        exit;
+    }
+
     // Upgrade staré session (bez user_id) na nový formát s cms_users
     if (!isset($_SESSION['cms_user_id'])) {
         try {
             $u = db_connect()->query(
-                "SELECT id, email, first_name, last_name, nickname, is_superadmin
+                "SELECT id, email, first_name, last_name, nickname, is_superadmin, role
                  FROM cms_users WHERE is_superadmin = 1 LIMIT 1"
             )->fetch();
             if ($u) {
@@ -58,6 +64,7 @@ function requireLogin(string $loginUrl = '/admin/login.php'): void
                 $_SESSION['cms_user_email'] = $u['email'];
                 $_SESSION['cms_user_name']  = $name;
                 $_SESSION['cms_superadmin'] = (bool)$u['is_superadmin'];
+                $_SESSION['cms_user_role']  = $u['role'] ?? 'admin';
             }
         } catch (\PDOException $e) {
             // cms_users ještě neexistuje – ponecháme session beze změny
@@ -80,7 +87,7 @@ function requireSuperAdmin(): void
 /**
  * Přihlásí uživatele – uloží data do session.
  */
-function loginUser(int $id, string $email, bool $superadmin, string $displayName): void
+function loginUser(int $id, string $email, bool $superadmin, string $displayName, string $role = 'collaborator'): void
 {
     session_regenerate_id(true);
     $_SESSION['cms_logged_in']  = true;
@@ -88,6 +95,33 @@ function loginUser(int $id, string $email, bool $superadmin, string $displayName
     $_SESSION['cms_user_email'] = $email;
     $_SESSION['cms_superadmin'] = $superadmin;
     $_SESSION['cms_user_name']  = $displayName;
+    $_SESSION['cms_user_role']  = $role;
+}
+
+function isPublicUser(): bool
+{
+    return ($_SESSION['cms_user_role'] ?? '') === 'public';
+}
+
+function currentUserRole(): string
+{
+    return $_SESSION['cms_user_role'] ?? 'collaborator';
+}
+
+/**
+ * Vyžaduje přihlášení veřejného uživatele.
+ * Pokud není přihlášen, přesměruje na veřejný login.
+ */
+function requirePublicLogin(string $redirect = ''): void
+{
+    if (!isLoggedIn()) {
+        $url = BASE_URL . '/public_login.php';
+        if ($redirect !== '') {
+            $url .= '?redirect=' . urlencode($redirect);
+        }
+        header('Location: ' . $url);
+        exit;
+    }
 }
 
 function logout(): void

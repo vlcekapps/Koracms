@@ -126,6 +126,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
 | **FAQ** | Často kladené otázky s kategoriemi; accordion (`<details>` / `<summary>`) bez JavaScriptu |
 | **Úřední deska** | Dokumenty s datem vyvěšení/sejmutí, kategoriemi a přílohami; automatický archiv po datu sejmutí |
+| **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci |
 
 Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Moduly**.
@@ -174,9 +175,21 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 
 ## Správa uživatelů
 
+### Administrátoři a spolupracovníci
+
 Hlavní administrátor (účet vytvořený při instalaci) může přidávat **spolupracovníky** v sekci **Nastavení → Správa uživatelů**. Obsah přidaný spolupracovníkem musí hlavní administrátor před zveřejněním schválit.
 
 Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo).
+
+### Veřejní uživatelé
+
+Návštěvníci se mohou zaregistrovat přes veřejný formulář (`/register.php`). Registrace vyžaduje potvrzení e-mailem. Po přihlášení mají přístup k:
+
+- **Můj profil** – úprava osobních údajů a změna hesla
+- **Moje rezervace** – přehled vlastních rezervací s možností zrušení
+- **Obnovení hesla** – tokenový reset přes e-mail
+
+Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny uživatele (včetně veřejných) v přehledu se skutečnou rolí a stavem potvrzení.
 
 ---
 
@@ -186,6 +199,7 @@ Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdív
 - **RSS feed** – automaticky generovaný feed nejnovějších článků (`/feed.php`)
 - **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`)
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
+- **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
 - **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
 

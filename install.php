@@ -204,14 +204,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_users (
-            id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            email         VARCHAR(255) NOT NULL UNIQUE,
-            password      VARCHAR(255) NOT NULL,
-            first_name    VARCHAR(100) NOT NULL DEFAULT '',
-            last_name     VARCHAR(100) NOT NULL DEFAULT '',
-            nickname      VARCHAR(100) NOT NULL DEFAULT '',
-            is_superadmin TINYINT(1)   NOT NULL DEFAULT 0,
-            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            email              VARCHAR(255) NOT NULL UNIQUE,
+            password           VARCHAR(255) NOT NULL,
+            first_name         VARCHAR(100) NOT NULL DEFAULT '',
+            last_name          VARCHAR(100) NOT NULL DEFAULT '',
+            nickname           VARCHAR(100) NOT NULL DEFAULT '',
+            phone              VARCHAR(30)  NOT NULL DEFAULT '',
+            role               ENUM('admin','collaborator','public') NOT NULL DEFAULT 'collaborator',
+            is_superadmin      TINYINT(1)   NOT NULL DEFAULT 0,
+            is_confirmed       TINYINT(1)   NOT NULL DEFAULT 1,
+            confirmation_token VARCHAR(64)  NOT NULL DEFAULT '',
+            reset_token        VARCHAR(64)  NOT NULL DEFAULT '',
+            reset_expires      DATETIME     NULL DEFAULT NULL,
+            created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_dl_categories (
@@ -342,6 +349,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        // ── Rezervační systém ───────────────────────────────────────────────
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_categories (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(255) NOT NULL,
+            sort_order INT          NOT NULL DEFAULT 0,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_resources (
+            id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            category_id        INT          NULL DEFAULT NULL,
+            name               VARCHAR(255) NOT NULL,
+            slug               VARCHAR(255) NOT NULL UNIQUE,
+            description        TEXT,
+            capacity           INT          NOT NULL DEFAULT 1,
+            location           VARCHAR(255) NOT NULL DEFAULT '',
+            slot_mode          ENUM('slots','range','duration') NOT NULL DEFAULT 'slots',
+            slot_duration_min  INT          NOT NULL DEFAULT 60,
+            min_advance_hours  INT          NOT NULL DEFAULT 1,
+            max_advance_days   INT          NOT NULL DEFAULT 30,
+            cancellation_hours INT          NOT NULL DEFAULT 24,
+            requires_approval  TINYINT(1)   NOT NULL DEFAULT 0,
+            allow_guests       TINYINT(1)   NOT NULL DEFAULT 0,
+            max_concurrent     INT          NOT NULL DEFAULT 1,
+            is_active          TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_hours (
+            id          INT        NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            resource_id INT        NOT NULL,
+            day_of_week TINYINT    NOT NULL,
+            open_time   TIME       NOT NULL DEFAULT '09:00:00',
+            close_time  TIME       NOT NULL DEFAULT '17:00:00',
+            is_closed   TINYINT(1) NOT NULL DEFAULT 0,
+            UNIQUE KEY uq_res_day (resource_id, day_of_week)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_slots (
+            id           INT     NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            resource_id  INT     NOT NULL,
+            day_of_week  TINYINT NOT NULL,
+            start_time   TIME    NOT NULL,
+            end_time     TIME    NOT NULL,
+            max_bookings INT     NOT NULL DEFAULT 1
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_blocked (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            resource_id  INT          NOT NULL,
+            blocked_date DATE         NOT NULL,
+            reason       VARCHAR(255) NOT NULL DEFAULT '',
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_res_blocked (resource_id, blocked_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_locations (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name       VARCHAR(255) NOT NULL,
+            address    VARCHAR(500) NOT NULL DEFAULT '',
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_resource_locations (
+            resource_id INT NOT NULL,
+            location_id INT NOT NULL,
+            PRIMARY KEY (resource_id, location_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_bookings (
+            id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            resource_id        INT          NOT NULL,
+            user_id            INT          NULL DEFAULT NULL,
+            guest_name         VARCHAR(255) NOT NULL DEFAULT '',
+            guest_email        VARCHAR(255) NOT NULL DEFAULT '',
+            guest_phone        VARCHAR(30)  NOT NULL DEFAULT '',
+            booking_date       DATE         NOT NULL,
+            start_time         TIME         NOT NULL,
+            end_time           TIME         NOT NULL,
+            party_size         INT          NOT NULL DEFAULT 1,
+            notes              TEXT,
+            status             ENUM('pending','confirmed','cancelled','rejected','completed','no_show') NOT NULL DEFAULT 'pending',
+            admin_note         TEXT,
+            confirmation_token VARCHAR(64)  NOT NULL DEFAULT '',
+            cancelled_at       DATETIME     NULL DEFAULT NULL,
+            created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_res_date (resource_id, booking_date, status),
+            INDEX idx_user (user_id, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Výchozí nastavení ────────────────────────────────────────────────
         $defaults = [
             'site_name'       => $siteName,
@@ -370,6 +469,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'module_polls'      => '0',
             'module_faq'        => '0',
             'module_board'      => '0',
+            'module_reservations' => '0',
             'social_facebook'          => '',
             'social_youtube'           => '',
             'social_instagram'         => '',
@@ -392,9 +492,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Hlavní administrátor
         $pdo->prepare(
-            "INSERT INTO cms_users (email, password, is_superadmin)
-             VALUES (?, ?, 1)
-             ON DUPLICATE KEY UPDATE password = VALUES(password), is_superadmin = 1"
+            "INSERT INTO cms_users (email, password, role, is_superadmin)
+             VALUES (?, ?, 'admin', 1)
+             ON DUPLICATE KEY UPDATE password = VALUES(password), role = 'admin', is_superadmin = 1"
         )->execute([$adminEmail, password_hash($adminPass, PASSWORD_BCRYPT)]);
 
         // ── Adresáře pro nahrávání souborů ──────────────────────────────────

@@ -270,6 +270,15 @@ function siteFooter(): string
          . "  <p><a href=\"{$b}/search.php\">Vyhledávání</a>"
          . (isModuleEnabled('newsletter') ? " · <a href=\"{$b}/subscribe.php\">Odběr novinek</a>" : '')
          . "</p>\n"
+         . (isModuleEnabled('reservations')
+             ? "  <p>"
+               . (isLoggedIn()
+                   ? (isPublicUser()
+                       ? "<a href=\"{$b}/reservations/my.php\">Moje rezervace</a> · <a href=\"{$b}/public_profile.php\">Můj profil</a> · <a href=\"{$b}/public_logout.php\">Odhlásit se</a>"
+                       : '')
+                   : "<a href=\"{$b}/public_login.php\">Přihlášení</a> · <a href=\"{$b}/register.php\">Registrace</a>")
+               . "</p>\n"
+             : '')
          . "  <p><small><a href=\"https://koracms.pvlcek.cz\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$version}</a></small></p>\n"
          . "</footer>\n"
          . cookieBanner();
@@ -418,6 +427,110 @@ function logAction(string $action, string $detail = ''): void
     }
 }
 
+/**
+ * Vrátí absolutní URL včetně schématu a domény – pro použití v e-mailech.
+ */
+function siteUrl(string $path = ''): string
+{
+    $base = BASE_URL;
+    if ($base === '' || !str_starts_with($base, 'http')) {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $base   = $scheme . '://' . $host . $base;
+    }
+    return $base . $path;
+}
+
+/**
+ * Odešle e-mail v UTF-8. Vrátí true při úspěchu.
+ */
+function sendMail(string $to, string $subject, string $body): bool
+{
+    $from        = getSetting('contact_email', 'noreply@localhost');
+    $safeSubject = preg_replace('/[\r\n]/', '', $subject);
+    $safeFrom    = preg_replace('/[\r\n]/', '', $from);
+
+    $smtpHost = ini_get('SMTP') ?: 'localhost';
+    $smtpPort = (int)(ini_get('smtp_port') ?: 25);
+
+    $smtp = @fsockopen($smtpHost, $smtpPort, $errno, $errstr, 5);
+    if (!$smtp) {
+        error_log("sendMail FAILED: connect {$smtpHost}:{$smtpPort} – {$errstr}");
+        return false;
+    }
+
+    // Čtení SMTP odpovědi (včetně víceřádkových)
+    $read = function () use ($smtp): string {
+        $response = '';
+        while (($line = fgets($smtp, 512)) !== false) {
+            $response .= $line;
+            if (isset($line[3]) && $line[3] === ' ') break;
+        }
+        return $response;
+    };
+
+    $read(); // 220 greeting
+    fwrite($smtp, "EHLO localhost\r\n");
+    $read(); // 250 capabilities
+    fwrite($smtp, "MAIL FROM:<{$safeFrom}>\r\n");
+    $read();
+    fwrite($smtp, "RCPT TO:<{$to}>\r\n");
+    $read();
+    fwrite($smtp, "DATA\r\n");
+    $read(); // 354 go ahead
+
+    $msg = "From: {$safeFrom}\r\n"
+         . "To: {$to}\r\n"
+         . "Subject: {$safeSubject}\r\n"
+         . "Reply-To: {$safeFrom}\r\n"
+         . "Content-Type: text/plain; charset=UTF-8\r\n"
+         . "MIME-Version: 1.0\r\n"
+         . "\r\n"
+         . str_replace("\n.", "\n..", $body) . "\r\n.\r\n";
+
+    fwrite($smtp, $msg);
+    $dataResp = $read();
+    fwrite($smtp, "QUIT\r\n");
+    fclose($smtp);
+
+    $ok = str_starts_with(trim($dataResp), '250');
+    if (!$ok) {
+        error_log("sendMail FAILED: SMTP said: {$dataResp}");
+    }
+    return $ok;
+}
+
+/** Automatické dokončení proběhlých rezervací (lazy update) */
+function autoCompleteBookings(): void
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    if (!isModuleEnabled('reservations')) return;
+    try {
+        $pdo = db_connect();
+        // confirmed → completed
+        $pdo->exec(
+            "UPDATE cms_res_bookings SET status = 'completed', updated_at = NOW()
+             WHERE status = 'confirmed'
+               AND (booking_date < CURDATE() OR (booking_date = CURDATE() AND end_time < CURTIME()))"
+        );
+        // pending → cancelled (termín vypršel bez schválení)
+        $pdo->exec(
+            "UPDATE cms_res_bookings
+             SET status = 'cancelled', updated_at = NOW(), cancelled_at = NOW(),
+                 admin_note = CASE
+                     WHEN COALESCE(admin_note, '') = '' THEN 'Automaticky zrušeno – termín vypršel bez schválení'
+                     ELSE CONCAT(admin_note, '\nAutomaticky zrušeno – termín vypršel bez schválení')
+                 END
+             WHERE status = 'pending'
+               AND (booking_date < CURDATE() OR (booking_date = CURDATE() AND end_time < CURTIME()))"
+        );
+    } catch (\PDOException $e) {
+        // Tabulka nemusí existovat
+    }
+}
+
 /** Výchozí pořadí modulů v navigaci */
 function navModuleDefaults(): array
 {
@@ -434,6 +547,7 @@ function navModuleDefaults(): array
         'polls'     => ['/polls/index.php',       'Ankety'],
         'faq'       => ['/faq/index.php',         'FAQ'],
         'board'     => ['/board/index.php',       'Úřední deska'],
+        'reservations' => ['/reservations/index.php', 'Rezervace'],
         'contact'   => ['/contact/index.php',     'Kontakt'],
     ];
 }
