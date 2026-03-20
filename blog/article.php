@@ -175,6 +175,7 @@ $captchaExpr = captchaGenerate();
         <?php if (!empty($article['author_name'])): ?>
           · <?= h($article['author_name']) ?>
         <?php endif; ?>
+        · Doba čtení: <?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min
       </p>
     </header>
 

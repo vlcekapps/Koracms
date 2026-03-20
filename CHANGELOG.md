@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- Blog: přibližná doba čtení článku na výpisu (`blog/index.php`), detailu (`blog/article.php`) i widgetu na homepage
+- Blog: odkaz „Upravit" přímo z výpisu článků a homepage widgetu (viditelný jen pro admin/spolupracovníky)
+
 ## [2.1.0] – 2026-03-20
 
 ### Přidáno

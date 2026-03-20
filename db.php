@@ -86,6 +86,16 @@ function formatCzechDate(string $datetime): string
          . ' ' . $dt->format('Y, H:i');
 }
 
+/**
+ * Odhadne dobu čtení textu v minutách (průměr 200 slov/min pro češtinu).
+ */
+function readingTime(string $text): int
+{
+    $plain = strip_tags($text);
+    $words = preg_match_all('/\S+/u', $plain);
+    return max(1, (int)round($words / 200));
+}
+
 // ─────────────────────────────── Statické stránky ────────────────────────
 
 /**

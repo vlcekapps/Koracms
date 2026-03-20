@@ -54,7 +54,7 @@ $offset = ($page - 1) * $perPage;
 
 // Články
 $stmt = $pdo->prepare(
-    "SELECT a.id, a.title, a.perex, a.image_file, a.created_at, c.name AS category,
+    "SELECT a.id, a.title, a.perex, a.content, a.image_file, a.created_at, c.name AS category,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
      FROM cms_articles a
      LEFT JOIN cms_categories c ON c.id = a.category_id
@@ -146,6 +146,7 @@ $paginBase = 'index.php?' . ($katId !== null ? 'kat=' . $katId . '&' : '') . ($t
         <?php if (!empty($a['category'])): ?>
           <p><small>Kategorie: <a href="index.php?kat=<?= (int)$katId ?>"><?= h($a['category']) ?></a></small></p>
         <?php endif; ?>
+        <p><small>Doba čtení: <?= readingTime(($a['perex'] ?? '') . ($a['content'] ?? '')) ?> min</small></p>
         <?php if (!empty($a['perex'])): ?>
           <p><?= h($a['perex']) ?></p>
         <?php endif; ?>
@@ -153,6 +154,9 @@ $paginBase = 'index.php?' . ($katId !== null ? 'kat=' . $katId . '&' : '') . ($t
           <time datetime="<?= h(str_replace(' ', 'T', $a['created_at'])) ?>"><?= formatCzechDate($a['created_at']) ?></time>
           <?= !empty($a['author_name']) ? ' · ' . h($a['author_name']) : '' ?>
           · <a href="article.php?id=<?= (int)$a['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+          <?php if (isset($_SESSION['cms_user_id'])): ?>
+            · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$a['id'] ?>">Upravit</a>
+          <?php endif; ?>
         </p>
       </article>
     <?php endforeach; ?>

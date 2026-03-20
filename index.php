@@ -21,7 +21,7 @@ $latestArticles = [];
 $homeBlogCount = (int)getSetting('home_blog_count', '5');
 if (isModuleEnabled('blog') && $homeBlogCount > 0) {
     $stmt = db_connect()->prepare(
-        "SELECT a.id, a.title, a.perex, a.image_file, a.created_at, c.name AS category,
+        "SELECT a.id, a.title, a.perex, a.content, a.image_file, a.created_at, c.name AS category,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id
@@ -102,10 +102,11 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
         <?php if (!empty($a['category'])): ?>
           <p><small>Kategorie: <?= h($a['category']) ?></small></p>
         <?php endif; ?>
+        <p><small>Doba čtení: <?= readingTime(($a['perex'] ?? '') . ($a['content'] ?? '')) ?> min</small></p>
         <?php if (!empty($a['perex'])): ?>
           <p><?= h($a['perex']) ?></p>
         <?php endif; ?>
-        <p><a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$a['id'] ?>">Číst dále <span aria-hidden="true">→</span></a></p>
+        <p><a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$a['id'] ?>">Číst dále <span aria-hidden="true">→</span></a><?php if (isset($_SESSION['cms_user_id'])): ?> · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$a['id'] ?>">Upravit</a><?php endif; ?></p>
       </article>
     <?php endforeach; ?>
     <p><a href="<?= BASE_URL ?>/blog/index.php">Všechny články <span aria-hidden="true">→</span></a></p>
