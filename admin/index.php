@@ -92,7 +92,108 @@ if (isModuleEnabled('reservations')) {
 }
 
 adminHeader('Přehled');
+
+// ── Statistiky návštěvnosti ─────────────────────────────────────────────────
+if (isModuleEnabled('statistics') && getSetting('visitor_tracking_enabled', '0') === '1'):
+    statsCleanup();
+    $vs = getVisitorStats();
+    $fmt = fn(int $n) => number_format($n, 0, ',', "\u{00a0}");
+
+    // Posledních 7 dní – data pro graf
+    $days7 = [];
+    try {
+        $rows = $pdo->query(
+            "SELECT DATE(created_at) AS d, COUNT(*) AS views
+             FROM cms_page_views
+             WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+             GROUP BY DATE(created_at)
+             ORDER BY d"
+        )->fetchAll();
+        foreach ($rows as $r) $days7[$r['d']] = (int)$r['views'];
+    } catch (\PDOException $e) {}
+
+    // Doplnit chybějící dny
+    $chartData = [];
+    $maxViews  = 1;
+    for ($i = 6; $i >= 0; $i--) {
+        $date = date('Y-m-d', strtotime("-{$i} days"));
+        $v    = $days7[$date] ?? 0;
+        $chartData[] = ['date' => $date, 'label' => date('j.n.', strtotime($date)), 'views' => $v];
+        if ($v > $maxViews) $maxViews = $v;
+    }
 ?>
+<section aria-labelledby="stat-heading" style="margin-bottom:1.5rem">
+  <h2 id="stat-heading">Návštěvnost</h2>
+  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem" role="list" aria-label="Souhrn návštěvnosti">
+    <div role="listitem" style="background:#f0f7ff;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['online']) ?></div>
+      <div style="font-size:.85rem;color:#555">Online</div>
+    </div>
+    <div role="listitem" style="background:#f0fff0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['today']) ?></div>
+      <div style="font-size:.85rem;color:#555">Dnes</div>
+    </div>
+    <div role="listitem" style="background:#fffff0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['month']) ?></div>
+      <div style="font-size:.85rem;color:#555">Tento měsíc</div>
+    </div>
+    <div role="listitem" style="background:#fff0f0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
+      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['total']) ?></div>
+      <div style="font-size:.85rem;color:#555">Celkem</div>
+    </div>
+  </div>
+
+  <?php if (!empty($chartData)): ?>
+  <figure style="margin:0">
+    <figcaption class="sr-only">Návštěvnost za posledních 7 dní</figcaption>
+    <div style="display:flex;align-items:flex-end;gap:4px;height:100px" aria-hidden="true">
+      <?php foreach ($chartData as $d): ?>
+        <div style="flex:1;background:#005fcc;min-height:2px;height:<?= round($d['views'] / $maxViews * 100) ?>%"
+             title="<?= h($d['label']) ?>: <?= $d['views'] ?> zobrazení"></div>
+      <?php endforeach; ?>
+    </div>
+    <div style="display:flex;gap:4px" aria-hidden="true">
+      <?php foreach ($chartData as $d): ?>
+        <span style="flex:1;text-align:center;font-size:.7rem;color:#666"><?= h($d['label']) ?></span>
+      <?php endforeach; ?>
+    </div>
+    <table class="sr-only">
+      <caption>Návštěvnost za posledních 7 dní</caption>
+      <thead><tr><th scope="col">Den</th><th scope="col">Zobrazení</th></tr></thead>
+      <tbody>
+      <?php foreach ($chartData as $d): ?>
+        <tr><td><?= h($d['label']) ?></td><td><?= $d['views'] ?></td></tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </figure>
+  <?php endif; ?>
+
+  <?php
+    // Nejčtenější články (top 5)
+    if (isModuleEnabled('blog')):
+        $topArticles = [];
+        try {
+            $topArticles = $pdo->query(
+                "SELECT title, view_count FROM cms_articles
+                 WHERE status = 'published' AND view_count > 0
+                 ORDER BY view_count DESC LIMIT 5"
+            )->fetchAll();
+        } catch (\PDOException $e) {}
+        if (!empty($topArticles)):
+  ?>
+  <h3>Nejčtenější články</h3>
+  <ol>
+    <?php foreach ($topArticles as $a): ?>
+      <li><?= h($a['title']) ?> <small>(<?= (int)$a['view_count'] ?> zobrazení)</small></li>
+    <?php endforeach; ?>
+  </ol>
+  <?php endif; endif; ?>
+
+  <p><a href="statistics.php">Podrobné statistiky <span aria-hidden="true">→</span></a></p>
+</section>
+<?php endif; ?>
+
 <table>
   <caption>Počty záznamů</caption>
   <thead><tr><th scope="col">Modul</th><th scope="col">Počet</th></tr></thead>
@@ -172,7 +273,7 @@ adminHeader('Přehled');
 
 <h2>Povolené moduly</h2>
 <ul>
-  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ', 'board' => 'Úřední deska', 'reservations' => 'Rezervace'] as $k => $label): ?>
+  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ', 'board' => 'Úřední deska', 'reservations' => 'Rezervace', 'statistics' => 'Statistiky'] as $k => $label): ?>
     <li><?= h($label) ?>: <strong><?= isModuleEnabled($k) ? 'zapnuto' : 'vypnuto' ?></strong></li>
   <?php endforeach; ?>
 </ul>

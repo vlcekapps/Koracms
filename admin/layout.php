@@ -162,6 +162,9 @@ function adminHeader(string $pageTitle): void
        . '      <li><a href="' . $b . '/admin/settings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Základní nastavení</a></li>' . "\n"
        . '      <li><a href="' . $b . '/admin/settings_modules.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Moduly</a></li>' . "\n"
        . '      <li><a href="' . $b . '/admin/settings_display.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Nastavení zobrazení</a></li>' . "\n";
+    if (isModuleEnabled('statistics')) {
+    echo '      <li><a href="' . $b . '/admin/statistics.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Statistiky</a></li>' . "\n";
+    }
     if (isSuperAdmin()) {
     echo '      <li><a href="' . $b . '/admin/users.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Správa uživatelů</a></li>' . "\n";
     }

@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             preview_token    VARCHAR(32)  NOT NULL DEFAULT '',
             status           ENUM('pending','published') NOT NULL DEFAULT 'published',
             publish_at       DATETIME     NULL DEFAULT NULL,
+            view_count       INT          NOT NULL DEFAULT 0,
             created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -441,6 +442,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_user (user_id, status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        // ── Statistiky ────────────────────────────────────────────────────────
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_page_views (
+            id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            page_url    VARCHAR(500) NOT NULL,
+            page_type   VARCHAR(50)  NOT NULL DEFAULT '',
+            page_ref_id INT          NULL DEFAULT NULL,
+            ip_hash     VARCHAR(64)  NOT NULL,
+            user_agent  VARCHAR(500) NOT NULL DEFAULT '',
+            referrer    VARCHAR(500) NOT NULL DEFAULT '',
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_created (created_at),
+            INDEX idx_ip_created (ip_hash, created_at),
+            INDEX idx_page_type_ref (page_type, page_ref_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_stats_daily (
+            id              INT  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            stat_date       DATE NOT NULL UNIQUE,
+            total_views     INT  NOT NULL DEFAULT 0,
+            unique_visitors INT  NOT NULL DEFAULT 0
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Výchozí nastavení ────────────────────────────────────────────────
         $defaults = [
             'site_name'       => $siteName,
@@ -470,6 +493,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'module_faq'        => '0',
             'module_board'      => '0',
             'module_reservations' => '0',
+            'module_statistics'   => '0',
+            'visitor_tracking_enabled' => '0',
+            'visitor_counter_enabled'  => '0',
+            'stats_retention_days'     => '90',
             'social_facebook'          => '',
             'social_youtube'           => '',
             'social_instagram'         => '',

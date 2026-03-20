@@ -243,6 +243,8 @@ function formatFileSize(int $bytes): string
  */
 function siteFooter(): string
 {
+    trackPageView();
+
     $year     = date('Y');
     $siteName = h(getSetting('site_name', 'Kora CMS'));
     $b        = BASE_URL;
@@ -280,6 +282,18 @@ function siteFooter(): string
                . "</p>\n"
              : '')
          . "  <p><small><a href=\"https://koracms.pvlcek.cz\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$version}</a></small></p>\n"
+         . (getSetting('visitor_counter_enabled', '0') === '1'
+             ? (function () {
+                   $vs = getVisitorStats();
+                   $f  = fn(int $n) => number_format($n, 0, ',', "\u{00a0}");
+                   return "  <p class=\"visitor-counter\" role=\"status\" aria-label=\"Statistiky návštěvnosti\">"
+                        . "Online: <strong>{$f($vs['online'])}</strong>"
+                        . " · Dnes: <strong>{$f($vs['today'])}</strong>"
+                        . " · Měsíc: <strong>{$f($vs['month'])}</strong>"
+                        . " · Celkem: <strong>{$f($vs['total'])}</strong>"
+                        . "</p>\n";
+               })()
+             : '')
          . "</footer>\n"
          . cookieBanner();
 }
@@ -498,6 +512,138 @@ function sendMail(string $to, string $subject, string $body): bool
         error_log("sendMail FAILED: SMTP said: {$dataResp}");
     }
     return $ok;
+}
+
+// ─────────────────────────────── Statistiky ──────────────────────────────────
+
+/**
+ * Zaznamená zobrazení stránky (jedno volání za request).
+ * Přeskočí adminy a známé boty. Kontroluje visitor_tracking_enabled.
+ */
+function trackPageView(string $pageType = 'other', ?int $refId = null): void
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+
+    if (getSetting('visitor_tracking_enabled', '0') !== '1') return;
+    if (isset($_SESSION['cms_user_id'])) return; // admin/spolupracovník
+
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|wget|curl/i', $ua)) return;
+
+    $ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ipHash  = hash('sha256', $ip . '|' . date('Y-m-d'));
+    $pageUrl = mb_substr(($_SERVER['REQUEST_URI'] ?? '/'), 0, 500);
+    $ref     = mb_substr(($_SERVER['HTTP_REFERER'] ?? ''), 0, 500);
+
+    try {
+        db_connect()->prepare(
+            "INSERT INTO cms_page_views (page_url, page_type, page_ref_id, ip_hash, user_agent, referrer)
+             VALUES (?, ?, ?, ?, ?, ?)"
+        )->execute([
+            $pageUrl,
+            $pageType,
+            $refId,
+            $ipHash,
+            mb_substr($ua, 0, 500),
+            $ref,
+        ]);
+    } catch (\PDOException $e) {
+        // Tabulka nemusí existovat
+    }
+}
+
+/**
+ * Počet unikátních návštěvníků online (za posledních 5 minut).
+ */
+function getOnlineCount(): int
+{
+    try {
+        return (int)db_connect()->query(
+            "SELECT COUNT(DISTINCT ip_hash) FROM cms_page_views
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+        )->fetchColumn();
+    } catch (\PDOException $e) {
+        return 0;
+    }
+}
+
+/**
+ * Vrátí statistiky návštěvnosti: online, today, month, total.
+ */
+function getVisitorStats(): array
+{
+    $stats = ['online' => 0, 'today' => 0, 'month' => 0, 'total' => 0];
+    try {
+        $pdo = db_connect();
+
+        // Online (posledních 5 min)
+        $stats['online'] = (int)$pdo->query(
+            "SELECT COUNT(DISTINCT ip_hash) FROM cms_page_views
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+        )->fetchColumn();
+
+        // Dnes (unikátní IP)
+        $stats['today'] = (int)$pdo->query(
+            "SELECT COUNT(DISTINCT ip_hash) FROM cms_page_views
+             WHERE DATE(created_at) = CURDATE()"
+        )->fetchColumn();
+
+        // Měsíc = agregáty z cms_stats_daily + dnešní live data
+        $monthAgg = (int)$pdo->query(
+            "SELECT COALESCE(SUM(unique_visitors), 0) FROM cms_stats_daily
+             WHERE stat_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+               AND stat_date < CURDATE()"
+        )->fetchColumn();
+        $stats['month'] = $monthAgg + $stats['today'];
+
+        // Celkem = agregáty + dnešní live data
+        $totalAgg = (int)$pdo->query(
+            "SELECT COALESCE(SUM(unique_visitors), 0) FROM cms_stats_daily
+             WHERE stat_date < CURDATE()"
+        )->fetchColumn();
+        $stats['total'] = $totalAgg + $stats['today'];
+
+    } catch (\PDOException $e) {
+        // Tabulky nemusí existovat
+    }
+    return $stats;
+}
+
+/**
+ * Líná agregace denních statistik + mazání starých raw dat (GDPR).
+ * Volá se při návštěvě admin statistik.
+ */
+function statsCleanup(): void
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+
+    try {
+        $pdo = db_connect();
+
+        // Agregace: dny starší než včerejšek, které ještě nejsou v cms_stats_daily
+        $pdo->exec(
+            "INSERT IGNORE INTO cms_stats_daily (stat_date, total_views, unique_visitors)
+             SELECT DATE(created_at),
+                    COUNT(*),
+                    COUNT(DISTINCT ip_hash)
+             FROM cms_page_views
+             WHERE DATE(created_at) < CURDATE()
+             GROUP BY DATE(created_at)"
+        );
+
+        // Mazání raw dat starších než retence
+        $days = max(1, (int)getSetting('stats_retention_days', '90'));
+        $pdo->prepare(
+            "DELETE FROM cms_page_views WHERE created_at < DATE_SUB(CURDATE(), INTERVAL ? DAY)"
+        )->execute([$days]);
+
+    } catch (\PDOException $e) {
+        // Tabulky nemusí existovat
+    }
 }
 
 /** Automatické dokončení proběhlých rezervací (lazy update) */

@@ -4,6 +4,21 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- **Modul Statistiky** – sledování návštěvnosti a přehledy napříč moduly
+  - Veřejné počítadlo v patičce webu (Online / Dnes / Měsíc / Celkem)
+  - Dashboard widgety: souhrn návštěvnosti, graf posledních 7 dní, nejčtenější články
+  - Detailní stránka `admin/statistics.php` s CSS-only grafy a filtrem období
+  - Sekce: návštěvnost, nejčtenější články, rezervace, newsletter, komentáře, kontaktní zprávy
+  - Každá sekce se zobrazuje pouze pokud je příslušný modul zapnutý
+  - Počítadlo zobrazení článků (`view_count`)
+  - GDPR: IP adresy ukládány jako SHA-256 hash, automatické mazání raw dat dle nastavené retence
+  - Líná agregace denních statistik (`cms_stats_daily`) – souhrnné statistiky zůstávají trvale
+  - Sledování návštěvnosti nezávislé na modulu statistik (samostatné nastavení)
+  - WCAG 2.2: tabulky `.sr-only` pro čtečky pod každým grafem, `aria-label`, `role="list"`
+
 ## [2.0.0] – 2026-03-20
 
 ### Přidáno

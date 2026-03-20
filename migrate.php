@@ -419,6 +419,29 @@ $tables = [
         INDEX idx_user (user_id, status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    // ── Statistiky ──
+
+    'cms_page_views' => "CREATE TABLE IF NOT EXISTS cms_page_views (
+        id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        page_url    VARCHAR(500) NOT NULL,
+        page_type   VARCHAR(50)  NOT NULL DEFAULT '',
+        page_ref_id INT          NULL DEFAULT NULL,
+        ip_hash     VARCHAR(64)  NOT NULL,
+        user_agent  VARCHAR(500) NOT NULL DEFAULT '',
+        referrer    VARCHAR(500) NOT NULL DEFAULT '',
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_created (created_at),
+        INDEX idx_ip_created (ip_hash, created_at),
+        INDEX idx_page_type_ref (page_type, page_ref_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_stats_daily' => "CREATE TABLE IF NOT EXISTS cms_stats_daily (
+        id              INT  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        stat_date       DATE NOT NULL UNIQUE,
+        total_views     INT  NOT NULL DEFAULT 0,
+        unique_visitors INT  NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -467,6 +490,8 @@ $addColumns = [
     'cms_users.updated_at'           => "ALTER TABLE cms_users ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_res_resources – povolení hostů
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
+    // cms_articles – počítadlo zobrazení
+    'cms_articles.view_count'        => "ALTER TABLE cms_articles ADD COLUMN view_count INT NOT NULL DEFAULT 0",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -620,6 +645,10 @@ $newSettings = [
     'module_faq'              => '0',
     'module_board'            => '0',
     'module_reservations'     => '0',
+    'module_statistics'       => '0',
+    'visitor_tracking_enabled' => '0',
+    'visitor_counter_enabled'  => '0',
+    'stats_retention_days'     => '90',
     // Počty a stránkování
     'home_blog_count'         => '5',
     'home_news_count'         => '5',

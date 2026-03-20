@@ -38,6 +38,14 @@ if ($previewToken !== '') {
 $article = $stmt->fetch();
 if (!$article) { header('Location: index.php'); exit; }
 
+// Sledování zobrazení článku (jen publikované, ne preview)
+if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
+    trackPageView('article', (int)$article['id']);
+    try {
+        $pdo->prepare("UPDATE cms_articles SET view_count = view_count + 1 WHERE id = ?")->execute([$id]);
+    } catch (\PDOException $e) {}
+}
+
 // Tagy článku
 $tags = [];
 try {
