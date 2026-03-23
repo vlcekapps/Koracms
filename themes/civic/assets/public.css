@@ -14,15 +14,43 @@ body.theme-civic {
 }
 
 .theme-civic .site-header__panel {
+  position: relative;
+  overflow: hidden;
   padding: 1.35rem 1.5rem;
   border: 1px solid rgba(var(--accent-rgb), 0.12);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: none;
 }
 
+.theme-civic .site-header__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.45rem;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+}
+
+.theme-civic .brand__mark {
+  border-radius: 1rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  background: linear-gradient(160deg, #ffffff, rgba(var(--accent-rgb), 0.08));
+  box-shadow: none;
+}
+
+.theme-civic .site-header nav ul {
+  gap: 0.45rem;
+}
+
 .theme-civic .site-header nav a {
+  min-height: 3rem;
   border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.96);
+}
+
+.theme-civic .site-header nav a[aria-current="page"] {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  box-shadow: none;
 }
 
 .theme-civic .surface {
@@ -32,7 +60,12 @@ body.theme-civic {
 }
 
 .theme-civic .surface--accent {
-  background: linear-gradient(180deg, rgba(255, 249, 240, 0.98), rgba(255, 255, 255, 0.98));
+  background: linear-gradient(180deg, rgba(241, 246, 250, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.theme-civic .section-heading {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .theme-civic .card {
@@ -49,6 +82,40 @@ body.theme-civic {
   border-color: rgba(var(--accent-rgb), 0.18);
 }
 
+.theme-civic .button-primary,
+.theme-civic .button-secondary,
+.theme-civic .button-danger {
+  border-radius: 0.85rem;
+}
+
+.theme-civic .button-primary {
+  box-shadow: none;
+}
+
+.theme-civic .data-table thead th {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
 .theme-civic .site-shell > footer {
+  border-top: 0.4rem solid var(--accent);
   background: #20313f;
+}
+
+@media (min-width: 900px) {
+  .theme-civic .page-stack--home-balanced .home-utility-stack,
+  .theme-civic .page-stack--home-compact .home-utility-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .theme-civic .site-header__panel::before {
+    inset: 0 0 auto 0;
+    width: 100%;
+    height: 0.35rem;
+  }
+
+  .theme-civic .site-header nav a {
+    justify-content: center;
+  }
 }

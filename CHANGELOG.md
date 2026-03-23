@@ -13,6 +13,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Public theme kernel v `lib/theme.php`, první oficiální šablona v `themes/default/` a jednotný layout pro veřejný web
 - Administrace `Vzhled a šablony` pro výběr aktivní veřejné šablony s metadaty a bezpečným fallbackem na `default`
 - Obrázkové preview karty šablon v administraci včetně statických SVG náhledů pro first-party themes
+- Další vizuální polish first-party themes: výraznější identita `civic`, `editorial` a `modern-service` včetně lepšího desktop/mobile rytmu
 - Manifest-driven theme settings pro default theme: paleta, akcenty, typografie a šířka obsahu bez zásahu do PHP
 - Theme-aware layout varianty pro default theme: hlavička (`balanced` / `centered` / `split`) a homepage (`balanced` / `editorial` / `compact`)
 - Homepage composer pro default theme: featured modul, pořadí sekcí a bezpečné zapínání/vypínání homepage bloků podle theme settings

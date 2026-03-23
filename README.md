@@ -194,6 +194,8 @@ Součástí CMS jsou nyní tyto oficiální šablony:
 - `editorial` – magazínovější vzhled s výraznější typografií
 - `modern-service` – současný styl pro služby, firmy a projekty
 
+First-party šablony mají i vlastní vizuální rytmus a responzivní dolaďování, takže se neliší jen barvami, ale i charakterem hlavičky, karet a homepage sekcí.
+
 ---
 
 ## Správa uživatelů

@@ -14,7 +14,12 @@ body.theme-editorial {
     linear-gradient(180deg, rgba(255, 251, 244, 0.98), rgba(244, 239, 231, 0.98));
 }
 
+.theme-editorial .site-header {
+  padding-top: clamp(1.4rem, 3vw, 2.4rem);
+}
+
 .theme-editorial .site-header__panel {
+  gap: 0.9rem;
   padding: 0;
   border: 0;
   background: transparent;
@@ -22,8 +27,25 @@ body.theme-editorial {
   backdrop-filter: none;
 }
 
+.theme-editorial .brand {
+  padding-bottom: 1rem;
+  border-bottom: 2px solid rgba(83, 57, 42, 0.18);
+}
+
+.theme-editorial .brand__mark {
+  border-radius: 0.4rem;
+  background: #fff6eb;
+  box-shadow: none;
+}
+
 .theme-editorial .brand__title {
   letter-spacing: -0.03em;
+}
+
+.theme-editorial .site-header nav ul {
+  gap: 1rem 1.15rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(83, 57, 42, 0.16);
 }
 
 .theme-editorial .site-header nav a {
@@ -32,6 +54,9 @@ body.theme-editorial {
   border: 0;
   border-radius: 0;
   background: transparent;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .theme-editorial .site-header nav a[aria-current="page"] {
@@ -50,19 +75,68 @@ body.theme-editorial {
   box-shadow: none;
 }
 
+.theme-editorial .surface--hero {
+  border-top: 0.45rem solid rgba(var(--warm-rgb), 0.82);
+}
+
+.theme-editorial .section-heading {
+  align-items: end;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(83, 57, 42, 0.14);
+}
+
+.theme-editorial .section-link {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .theme-editorial .card__media img,
 .theme-editorial .prose img {
   border-radius: 0.35rem;
 }
 
+.theme-editorial .card__body {
+  padding: 1.2rem 1.15rem;
+}
+
+.theme-editorial .card__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+}
+
+.theme-editorial .pill {
+  background: #f2e4d3;
+  color: #6f4120;
+}
+
 .theme-editorial .home-featured__lead {
+  border: 1px solid rgba(83, 57, 42, 0.18);
   background: linear-gradient(180deg, rgba(255, 248, 242, 0.98), rgba(255, 253, 248, 0.98));
 }
 
 .theme-editorial .site-shell > footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
   background: #2c211c;
 }
 
 .theme-editorial .site-shell > footer a {
   color: #f4d3aa;
+}
+
+@media (min-width: 900px) {
+  .theme-editorial .page-stack--home-editorial .split-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .theme-editorial .brand {
+    padding-bottom: 0.75rem;
+  }
+
+  .theme-editorial .site-header nav ul {
+    gap: 0.65rem;
+    padding-bottom: 0.65rem;
+  }
 }
