@@ -1,0 +1,20 @@
+{
+  "name": "Kora Editorial",
+  "version": "1.0.0",
+  "author": "Kora CMS",
+  "description": "Magazine-inspired theme with stronger typography, calmer surfaces and editorial homepage rhythm.",
+  "preview": {
+    "summary": "Magazínovější prezentace s výraznější typografií a klidnějšími plochami.",
+    "colors": ["#f4efe7", "#7a3f2a", "#d8c6b3"]
+  },
+  "settings_defaults": {
+    "header_layout": "centered",
+    "palette_preset": "sand",
+    "accent": "#7a3f2a",
+    "accent_strong": "#51291d",
+    "warm": "#9a6a1f",
+    "font_pairing": "editorial",
+    "container_width": "narrow",
+    "home_layout": "editorial"
+  }
+}

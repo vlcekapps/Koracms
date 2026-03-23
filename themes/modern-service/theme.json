@@ -1,0 +1,20 @@
+{
+  "name": "Kora Modern Service",
+  "version": "1.0.0",
+  "author": "Kora CMS",
+  "description": "Polished service-oriented theme for modern companies, startups and membership-based projects.",
+  "preview": {
+    "summary": "Čistý současný vzhled pro služby, firmy a projekty s důrazem na důvěru a akci.",
+    "colors": ["#edf2f6", "#136f63", "#f5f7fb"]
+  },
+  "settings_defaults": {
+    "header_layout": "split",
+    "palette_preset": "slate",
+    "accent": "#136f63",
+    "accent_strong": "#0b4d45",
+    "warm": "#c0672d",
+    "font_pairing": "modern",
+    "container_width": "wide",
+    "home_layout": "compact"
+  }
+}

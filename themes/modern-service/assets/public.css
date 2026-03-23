@@ -1,0 +1,50 @@
+@import url("../../default/assets/public.css");
+
+body.theme-modern-service {
+  --radius-lg: 1.8rem;
+  --radius-md: 1.2rem;
+  --shadow-soft: 0 16px 36px rgba(12, 31, 37, 0.08);
+  --shadow-strong: 0 24px 60px rgba(10, 34, 46, 0.16);
+}
+
+body.theme-modern-service {
+  background:
+    radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.1), transparent 28%),
+    linear-gradient(180deg, #f5f7fb, var(--bg-main));
+}
+
+.theme-modern-service .site-header__panel {
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.theme-modern-service .site-header nav a {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(var(--accent-rgb), 0.12);
+}
+
+.theme-modern-service .surface {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+}
+
+.theme-modern-service .surface--accent {
+  background: linear-gradient(160deg, rgba(240, 255, 252, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.theme-modern-service .card {
+  border-color: rgba(var(--accent-rgb), 0.14);
+}
+
+.theme-modern-service .button-primary {
+  box-shadow: 0 14px 32px rgba(var(--accent-rgb), 0.28);
+}
+
+.theme-modern-service .hero-stats__item {
+  border-color: rgba(var(--accent-rgb), 0.2);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.theme-modern-service .site-shell > footer {
+  background: linear-gradient(135deg, #10232d, #173d49);
+}

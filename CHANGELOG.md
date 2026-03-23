@@ -10,6 +10,14 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Repo-local pravidla v `AGENTS.md` pro bezpečnost, diakritiku a WCAG
 - `build/runtime_audit.php` – HTTP smoke audit pro klíčové veřejné i admin stránky
 - Sdílené veřejné a11y styly pro skip link, screen-reader text a focus ring
+- Public theme kernel v `lib/theme.php`, první oficiální šablona v `themes/default/` a jednotný layout pro veřejný web
+- Administrace `Vzhled a šablony` pro výběr aktivní veřejné šablony s metadaty a bezpečným fallbackem na `default`
+- Manifest-driven theme settings pro default theme: paleta, akcenty, typografie a šířka obsahu bez zásahu do PHP
+- Theme-aware layout varianty pro default theme: hlavička (`balanced` / `centered` / `split`) a homepage (`balanced` / `editorial` / `compact`)
+- Homepage composer pro default theme: featured modul, pořadí sekcí a bezpečné zapínání/vypínání homepage bloků podle theme settings
+- Tři nové first-party šablony `civic`, `editorial` a `modern-service`, každá s vlastním manifestem, stylem a výchozím profilem vzhledu
+- Session-based živý náhled šablon a jejich draft nastavení bez změny `active_theme` v produkční konfiguraci
+- Bezpečný portable ZIP formát pro šablony: import/export statických theme balíčků bez PHP override souborů
 
 ### Opraveno
 - Veřejné přihlášení nyní validuje interní redirecty a odmítá externí / protocol-relative URL
@@ -24,6 +32,13 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Runtime audit kontroluje také skip-link/sr-only patterny a širší sadu veřejných modulových stránek
 - `install.php` ověřuje CSRF a `migrate.php` je chráněné na superadmina, potvrzovací POST a bezpečný anonymní redirect
 - Release ZIP nově nevkládá `AGENTS.md` a Git source archive vynechává `AGENTS.md` i `build/runtime_audit.php`
+- Instalace a migrace nově seedují `active_theme` a runtime audit ověřuje i pád na výchozí šablonu při chybné konfiguraci
+- Theme settings validují bezpečné hodnoty a kontrast kritických barev; runtime audit ověřuje i propsání vlastních CSS proměnných do veřejného webu
+- Homepage default theme umí bezpečně měnit rytmus a pořadí hlavních bloků bez zásahu do business logiky modulů
+- Administrace vzhledu skrývá homepage volby, které patří k vypnutým modulům, a runtime audit ověřuje i tento modulový gating
+- Runtime audit nově ověřuje celý katalog oficiálních šablon včetně dostupnosti jejich assetů a správného aktivování na homepage
+- Runtime audit nově testuje i skutečný preview flow přes admin formulář, veřejný preview banner a bezpečné ukončení náhledu
+- Runtime audit nově testuje i celý roundtrip portable theme package: ZIP upload, aktivaci, render homepage a zpětný export
 
 ## [2.1.1] – 2026-03-20
 

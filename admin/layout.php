@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../db.php';
 
 function adminHeader(string $pageTitle): void
@@ -30,6 +30,7 @@ function adminHeader(string $pageTitle): void
        . '    th { background: #f0f0f0; }' . "\n"
        . '    .btn { padding: .45rem .9rem; cursor: pointer; min-height: 2rem; }' . "\n"
        . '    .btn-danger { background: #c00; color: #fff; border: none; }' . "\n"
+       . '    .button-row { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }' . "\n"
        . '    .error { color: #c00; }' . "\n"
        . '    .success { color: #060; }' . "\n"
        . '    label { display: block; margin-top: 1rem; font-weight: bold; }' . "\n"
@@ -55,103 +56,107 @@ function adminHeader(string $pageTitle): void
     }
 
     $topItems = [
-        ['url' => $b . '/admin/index.php',   'label' => 'Přehled'],
+        ['url' => $b . '/admin/index.php', 'label' => 'Přehled'],
         ['url' => $b . '/admin/profile.php', 'label' => 'Můj profil'],
     ];
 
     $moduleItems = [
-        ['url' => $b . '/admin/news.php',          'label' => 'Novinky',          'module' => 'news'],
-        ['url' => $b . '/admin/chat.php',          'label' => 'Chat',             'module' => 'chat'],
-        ['url' => $b . '/admin/contact.php',       'label' => 'Kontakt',          'module' => 'contact'],
-        ['url' => $b . '/admin/gallery_albums.php','label' => 'Galerie',          'module' => 'gallery'],
-        ['url' => $b . '/admin/events.php',        'label' => 'Události',         'module' => 'events'],
-        ['url' => $b . '/admin/polls.php',         'label' => 'Ankety',           'module' => 'polls'],
-        ['url' => $b . '/admin/podcast.php',       'label' => 'Podcasty',         'module' => 'podcast'],
-        ['url' => $b . '/admin/places.php',        'label' => 'Zajímavá místa',   'module' => 'places'],
-        ['url' => $b . '/admin/newsletter.php',    'label' => 'Newsletter',       'module' => 'newsletter'],
-        ['url' => $b . '/admin/food.php',          'label' => 'Jídelní lístek',   'module' => 'food'],
-        ['url' => $b . '/admin/pages.php',         'label' => 'Stránky'],
-        ['url' => $b . '/admin/import.php',        'label' => 'Export / Import'],
+        ['url' => $b . '/admin/news.php', 'label' => 'Novinky', 'module' => 'news'],
+        ['url' => $b . '/admin/chat.php', 'label' => 'Chat', 'module' => 'chat'],
+        ['url' => $b . '/admin/contact.php', 'label' => 'Kontakt', 'module' => 'contact'],
+        ['url' => $b . '/admin/gallery_albums.php', 'label' => 'Galerie', 'module' => 'gallery'],
+        ['url' => $b . '/admin/events.php', 'label' => 'Události', 'module' => 'events'],
+        ['url' => $b . '/admin/polls.php', 'label' => 'Ankety', 'module' => 'polls'],
+        ['url' => $b . '/admin/podcast.php', 'label' => 'Podcasty', 'module' => 'podcast'],
+        ['url' => $b . '/admin/places.php', 'label' => 'Zajímavá místa', 'module' => 'places'],
+        ['url' => $b . '/admin/newsletter.php', 'label' => 'Newsletter', 'module' => 'newsletter'],
+        ['url' => $b . '/admin/food.php', 'label' => 'Jídelní lístek', 'module' => 'food'],
+        ['url' => $b . '/admin/pages.php', 'label' => 'Stránky'],
+        ['url' => $b . '/admin/import.php', 'label' => 'Export / Import'],
     ];
 
     $bottomItems = [];
-    $bottomItems[] = ['url' => $b . '/index.php',        'label' => '<span aria-hidden="true">←</span> Web'];
+    $bottomItems[] = ['url' => $b . '/index.php', 'label' => '<span aria-hidden="true">←</span> Web'];
     $bottomItems[] = ['url' => $b . '/admin/logout.php', 'label' => 'Odhlásit se'];
 
-    $renderItem = function(array $item): string {
+    $renderItem = function (array $item): string {
         $style = isset($item['style']) ? ' style="' . $item['style'] . '"' : '';
         return '    <li><a href="' . $item['url'] . '"' . $style . '>' . $item['label'] . '</a></li>' . "\n";
     };
 
     echo '  <ul>' . "\n";
-    foreach ($topItems as $item) { echo $renderItem($item); }
+    foreach ($topItems as $item) {
+        echo $renderItem($item);
+    }
     echo '  </ul>' . "\n"
        . '  <details style="margin:.4rem 0">' . "\n"
        . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.45rem .35rem;border-radius:4px;list-style:none">'
        . '<span aria-hidden="true">&#9776;</span> Moduly</summary>' . "\n"
        . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n";
     if (isModuleEnabled('blog')) {
-    echo '      <li>' . "\n"
-       . '        <details role="group" aria-label="Blog">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Blog</summary>' . "\n"
-       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-       . '            <li><a href="' . $b . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/blog_tags.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Tagy</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře</a></li>' . "\n"
-       . '          </ul>' . "\n"
-       . '        </details>' . "\n"
-       . '      </li>' . "\n";
+        echo '      <li>' . "\n"
+           . '        <details role="group" aria-label="Blog">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Blog</summary>' . "\n"
+           . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+           . '            <li><a href="' . $b . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/blog_tags.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Tagy</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře</a></li>' . "\n"
+           . '          </ul>' . "\n"
+           . '        </details>' . "\n"
+           . '      </li>' . "\n";
     }
     if (isModuleEnabled('downloads')) {
-    echo '      <li>' . "\n"
-       . '        <details role="group" aria-label="Ke stažení">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
-       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-       . '            <li><a href="' . $b . '/admin/downloads.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Soubory</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
-       . '          </ul>' . "\n"
-       . '        </details>' . "\n"
-       . '      </li>' . "\n";
+        echo '      <li>' . "\n"
+           . '        <details role="group" aria-label="Ke stažení">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
+           . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+           . '            <li><a href="' . $b . '/admin/downloads.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Soubory</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '          </ul>' . "\n"
+           . '        </details>' . "\n"
+           . '      </li>' . "\n";
     }
     if (isModuleEnabled('faq')) {
-    echo '      <li>' . "\n"
-       . '        <details role="group" aria-label="FAQ">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">FAQ</summary>' . "\n"
-       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-       . '            <li><a href="' . $b . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Otázky</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/faq_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
-       . '          </ul>' . "\n"
-       . '        </details>' . "\n"
-       . '      </li>' . "\n";
+        echo '      <li>' . "\n"
+           . '        <details role="group" aria-label="FAQ">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">FAQ</summary>' . "\n"
+           . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+           . '            <li><a href="' . $b . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Otázky</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/faq_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '          </ul>' . "\n"
+           . '        </details>' . "\n"
+           . '      </li>' . "\n";
     }
     if (isModuleEnabled('board')) {
-    echo '      <li>' . "\n"
-       . '        <details role="group" aria-label="Úřední deska">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Úřední deska</summary>' . "\n"
-       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-       . '            <li><a href="' . $b . '/admin/board.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Příspěvky</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/board_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
-       . '          </ul>' . "\n"
-       . '        </details>' . "\n"
-       . '      </li>' . "\n";
+        echo '      <li>' . "\n"
+           . '        <details role="group" aria-label="Úřední deska">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Úřední deska</summary>' . "\n"
+           . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+           . '            <li><a href="' . $b . '/admin/board.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Příspěvky</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/board_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '          </ul>' . "\n"
+           . '        </details>' . "\n"
+           . '      </li>' . "\n";
     }
     if (isModuleEnabled('reservations')) {
-    echo '      <li>' . "\n"
-       . '        <details role="group" aria-label="Rezervace">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Rezervace</summary>' . "\n"
-       . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-       . '            <li><a href="' . $b . '/admin/res_resources.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Zdroje</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/res_categories.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/res_bookings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Rezervace</a></li>' . "\n"
-       . '            <li><a href="' . $b . '/admin/res_locations.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Místa</a></li>' . "\n"
-       . '          </ul>' . "\n"
-       . '        </details>' . "\n"
-       . '      </li>' . "\n";
+        echo '      <li>' . "\n"
+           . '        <details role="group" aria-label="Rezervace">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Rezervace</summary>' . "\n"
+           . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
+           . '            <li><a href="' . $b . '/admin/res_resources.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Zdroje</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/res_categories.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/res_bookings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Rezervace</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/res_locations.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Místa</a></li>' . "\n"
+           . '          </ul>' . "\n"
+           . '        </details>' . "\n"
+           . '      </li>' . "\n";
     }
     echo '      <li role="group" aria-label="Ostatní moduly"><ul style="margin:0;padding:0;list-style:none">' . "\n";
     foreach ($moduleItems as $item) {
-        if (isset($item['module']) && !isModuleEnabled($item['module'])) continue;
+        if (isset($item['module']) && !isModuleEnabled($item['module'])) {
+            continue;
+        }
         echo $renderItem($item);
     }
     echo '      </ul></li>' . "\n";
@@ -164,16 +169,21 @@ function adminHeader(string $pageTitle): void
        . '      <li><a href="' . $b . '/admin/settings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Základní nastavení</a></li>' . "\n"
        . '      <li><a href="' . $b . '/admin/settings_modules.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Moduly</a></li>' . "\n"
        . '      <li><a href="' . $b . '/admin/settings_display.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Nastavení zobrazení</a></li>' . "\n";
+    if (isSuperAdmin()) {
+        echo '      <li><a href="' . $b . '/admin/themes.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Vzhled a šablony</a></li>' . "\n";
+    }
     if (isModuleEnabled('statistics')) {
-    echo '      <li><a href="' . $b . '/admin/statistics.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Statistiky</a></li>' . "\n";
+        echo '      <li><a href="' . $b . '/admin/statistics.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Statistiky</a></li>' . "\n";
     }
     if (isSuperAdmin()) {
-    echo '      <li><a href="' . $b . '/admin/users.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Správa uživatelů</a></li>' . "\n";
+        echo '      <li><a href="' . $b . '/admin/users.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Správa uživatelů</a></li>' . "\n";
     }
     echo '    </ul>' . "\n"
        . '  </details>' . "\n"
        . '  <ul style="margin-top:.4rem">' . "\n";
-    foreach ($bottomItems as $item) { echo $renderItem($item); }
+    foreach ($bottomItems as $item) {
+        echo $renderItem($item);
+    }
     echo '  </ul>' . "\n"
        . '</nav>' . "\n"
        . '<main id="obsah">' . "\n"

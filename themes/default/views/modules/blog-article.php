@@ -1,0 +1,131 @@
+<div class="article-layout">
+  <article class="surface" aria-labelledby="clanek-nadpis">
+    <p class="section-kicker">Článek</p>
+    <header class="section-heading">
+      <div>
+        <h1 id="clanek-nadpis" class="section-title section-title--hero"><?= h($article['title']) ?></h1>
+        <p class="meta-row">
+          <?php if (!empty($article['category'])): ?>
+            <a class="pill" href="<?= BASE_URL ?>/blog/index.php?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
+          <?php endif; ?>
+          <time datetime="<?= h(str_replace(' ', 'T', $article['created_at'])) ?>"><?= formatCzechDate($article['created_at']) ?></time>
+          <?php if (!empty($article['author_name'])): ?>
+            <span><?= h($article['author_name']) ?></span>
+          <?php endif; ?>
+          <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+        </p>
+      </div>
+    </header>
+
+    <?php if (!empty($article['image_file'])): ?>
+      <img src="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode($article['image_file']) ?>"
+           alt="<?= h($article['title']) ?>" class="article-cover" loading="lazy">
+    <?php endif; ?>
+
+    <?php if (!empty($article['perex'])): ?>
+      <p class="article-summary"><strong><?= h($article['perex']) ?></strong></p>
+    <?php endif; ?>
+
+    <div class="prose article-shell__content">
+      <?= renderContent($article['content']) ?>
+    </div>
+
+    <?php if (!empty($tags)): ?>
+      <nav aria-label="Tagy článku">
+        <ul class="chip-list">
+          <?php foreach ($tags as $tag): ?>
+            <li><a class="chip-link" href="<?= BASE_URL ?>/blog/index.php?tag=<?= rawurlencode($tag['slug']) ?>">#<?= h($tag['name']) ?></a></li>
+          <?php endforeach; ?>
+        </ul>
+      </nav>
+    <?php endif; ?>
+
+    <div class="article-actions">
+      <a class="button-secondary" href="<?= BASE_URL ?>/blog/index.php"><span aria-hidden="true">←</span> Zpět na seznam článků</a>
+    </div>
+  </article>
+
+  <section class="surface" aria-labelledby="komentare-nadpis">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">Diskuse</p>
+        <h2 id="komentare-nadpis" class="section-title">Komentáře<?= count($comments) > 0 ? ' (' . count($comments) . ')' : '' ?></h2>
+      </div>
+    </div>
+
+    <?php if ($commentSuccess): ?>
+      <div class="status-message status-message--success" role="status">
+        <p>Komentář byl přijat a čeká na schválení. Děkujeme!</p>
+      </div>
+    <?php endif; ?>
+
+    <?php if (empty($comments)): ?>
+      <p class="empty-state">Zatím žádné komentáře. Buďte první!</p>
+    <?php else: ?>
+      <div class="comments-list">
+        <?php foreach ($comments as $comment): ?>
+          <article class="comment-card">
+            <p class="meta-row meta-row--tight">
+              <strong><?= h($comment['author_name']) ?></strong>
+              <?php if ($comment['author_email'] !== ''): ?>
+                <a href="mailto:<?= h($comment['author_email']) ?>"><?= h($comment['author_email']) ?></a>
+              <?php endif; ?>
+              <time datetime="<?= h(str_replace(' ', 'T', $comment['created_at'])) ?>"><?= formatCzechDate($comment['created_at']) ?></time>
+            </p>
+            <p class="comment-text"><?= h($comment['content']) ?></p>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="surface surface--narrow" aria-labelledby="pridat-komentar-nadpis">
+    <p class="section-kicker">Zapojte se</p>
+    <h2 id="pridat-komentar-nadpis" class="section-title">Přidat komentář</h2>
+
+    <?php if (!empty($commentErrors)): ?>
+      <div id="comment-errors" class="status-message status-message--error" role="alert">
+        <ul>
+          <?php foreach ($commentErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
+
+    <form method="post" novalidate class="form-stack"<?php if (!empty($commentErrors)): ?> aria-describedby="comment-errors"<?php endif; ?>>
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <?= honeypotField() ?>
+
+      <fieldset class="form-fieldset">
+        <legend>Přidat komentář</legend>
+
+        <div class="field">
+          <label for="author_name">Jméno <span aria-hidden="true">*</span></label>
+          <input type="text" id="author_name" name="author_name" class="form-control" required
+                 aria-required="true" maxlength="100" value="<?= h($formData['author_name']) ?>">
+        </div>
+
+        <div class="field">
+          <label for="author_email">E-mail <small>(nepovinný, nebude zveřejněn)</small></label>
+          <input type="email" id="author_email" name="author_email" class="form-control" maxlength="255"
+                 value="<?= h($formData['author_email']) ?>">
+        </div>
+
+        <div class="field">
+          <label for="comment">Komentář <span aria-hidden="true">*</span></label>
+          <textarea id="comment" name="comment" class="form-control" required
+                    aria-required="true"><?= h($formData['comment']) ?></textarea>
+        </div>
+
+        <div class="field">
+          <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
+          <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
+                 aria-required="true" inputmode="numeric" autocomplete="off">
+        </div>
+
+        <div class="button-row button-row--start">
+          <button type="submit" class="button-primary">Odeslat komentář</button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+</div>

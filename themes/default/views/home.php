@@ -1,0 +1,741 @@
+<?php
+$themeKey = $themeManifest['key'] ?? null;
+
+$readThemeSelect = static function (string $settingKey, string $fallback) use ($themeKey): string {
+    $value = themeSettingValue($settingKey, $themeKey);
+    return $value !== '' ? $value : $fallback;
+};
+
+$homeLayout = $readThemeSelect('home_layout', 'balanced');
+$heroVisibility = $readThemeSelect('home_hero_visibility', 'show');
+$featuredPreference = $readThemeSelect('home_featured_module', 'auto');
+$primaryOrder = $readThemeSelect('home_primary_order', 'news_blog');
+$utilityOrder = $readThemeSelect('home_utility_order', 'board_poll_newsletter_cta');
+$newsVisibility = $readThemeSelect('home_news_visibility', 'show');
+$blogVisibility = $readThemeSelect('home_blog_visibility', 'show');
+$boardVisibility = $readThemeSelect('home_board_visibility', 'show');
+$pollVisibility = $readThemeSelect('home_poll_visibility', 'show');
+$newsletterVisibility = $readThemeSelect('home_newsletter_visibility', 'show');
+$ctaVisibility = $readThemeSelect('home_cta_visibility', 'show');
+
+$newsAvailable = !empty($latestNews);
+$blogAvailable = !empty($latestArticles);
+$boardAvailable = !empty($latestBoard);
+$pollAvailable = !empty($homePoll);
+$newsletterAvailable = isModuleEnabled('newsletter');
+$contactAvailable = isModuleEnabled('contact');
+
+$resolveFeaturedModule = static function (string $preference) use (
+    $newsAvailable,
+    $blogAvailable,
+    $boardAvailable,
+    $pollAvailable,
+    $newsletterAvailable
+): string {
+    $available = [
+        'blog' => $blogAvailable,
+        'news' => $newsAvailable,
+        'board' => $boardAvailable,
+        'poll' => $pollAvailable,
+        'newsletter' => $newsletterAvailable,
+    ];
+
+    if ($preference === 'none') {
+        return '';
+    }
+
+    if ($preference !== 'auto' && !empty($available[$preference])) {
+        return $preference;
+    }
+
+    foreach (['blog', 'news', 'board', 'poll', 'newsletter'] as $candidate) {
+        if (!empty($available[$candidate])) {
+            return $candidate;
+        }
+    }
+
+    return '';
+};
+
+$featuredModule = $resolveFeaturedModule($featuredPreference);
+
+$newsItems = $latestNews;
+$blogItems = $latestArticles;
+$boardItems = $latestBoard;
+$featuredNewsItem = null;
+$featuredArticle = null;
+$featuredBoardItem = null;
+
+if ($featuredModule === 'news' && !empty($newsItems)) {
+    $featuredNewsItem = array_shift($newsItems);
+}
+if ($featuredModule === 'blog' && !empty($blogItems)) {
+    $featuredArticle = array_shift($blogItems);
+}
+if ($featuredModule === 'board' && !empty($boardItems)) {
+    $featuredBoardItem = array_shift($boardItems);
+}
+
+$showHero = $heroVisibility === 'show' && $homeIntro !== '';
+$showNews = $newsVisibility === 'show' && !empty($newsItems);
+$showBlog = $blogVisibility === 'show' && !empty($blogItems);
+$showBoard = $boardVisibility === 'show' && !empty($boardItems);
+$showPoll = $pollVisibility === 'show' && $pollAvailable && $featuredModule !== 'poll';
+$showNewsletter = $newsletterVisibility === 'show' && $newsletterAvailable && $featuredModule !== 'newsletter';
+
+$ctaActions = [
+    [
+        'label' => 'Prohledat web',
+        'url' => BASE_URL . '/search.php',
+        'class' => 'button-primary',
+    ],
+];
+if ($contactAvailable) {
+    $ctaActions[] = [
+        'label' => 'Napsat zprávu',
+        'url' => BASE_URL . '/contact/index.php',
+        'class' => 'button-secondary',
+    ];
+}
+if ($newsletterAvailable) {
+    $ctaActions[] = [
+        'label' => 'Odebírat novinky',
+        'url' => BASE_URL . '/subscribe.php',
+        'class' => 'button-secondary',
+    ];
+}
+if (isPublicUser()) {
+    $ctaActions[] = [
+        'label' => 'Můj profil',
+        'url' => BASE_URL . '/public_profile.php',
+        'class' => 'button-secondary',
+    ];
+} elseif (!isLoggedIn()) {
+    $ctaActions[] = [
+        'label' => 'Přihlásit se',
+        'url' => BASE_URL . '/public_login.php',
+        'class' => 'button-secondary',
+    ];
+}
+
+$showCta = $ctaVisibility === 'show' && !empty($ctaActions);
+
+$heroStats = [];
+if (!empty($latestArticles)) {
+    $heroStats[] = [
+        'value' => count($latestArticles),
+        'label' => 'článků v přehledu',
+    ];
+}
+if (!empty($latestNews)) {
+    $heroStats[] = [
+        'value' => count($latestNews),
+        'label' => 'novinek na úvodní stránce',
+    ];
+}
+if (!empty($latestBoard)) {
+    $heroStats[] = [
+        'value' => count($latestBoard),
+        'label' => 'dokumentů na desce',
+    ];
+}
+if ($pollAvailable) {
+    $heroStats[] = [
+        'value' => (int)$homePoll['vote_count'],
+        'label' => 'hlasů v aktuální anketě',
+    ];
+}
+
+$renderIntroSection = static function () use ($showHero, $homeIntro, $heroStats, $homeLayout): string {
+    if (!$showHero) {
+        return '';
+    }
+
+    $sectionClasses = ['surface', 'surface--hero', 'home-section', 'home-section--hero'];
+    if ($homeLayout === 'editorial') {
+        $sectionClasses[] = 'surface--accent';
+        $sectionClasses[] = 'home-hero--editorial';
+    } elseif ($homeLayout === 'compact') {
+        $sectionClasses[] = 'home-hero--compact';
+    } else {
+        $sectionClasses[] = 'home-hero--balanced';
+    }
+
+    ob_start();
+    ?>
+    <section class="<?= h(implode(' ', $sectionClasses)) ?>" data-home-section="hero" aria-labelledby="uvod-nadpis">
+      <div class="home-hero__meta">
+        <div>
+          <p class="section-kicker">Vítejte</p>
+          <h2 id="uvod-nadpis" class="section-title section-title--hero">Úvodní stránka</h2>
+          <div class="prose">
+            <?= renderContent($homeIntro) ?>
+          </div>
+        </div>
+
+        <?php if ($homeLayout === 'editorial' && !empty($heroStats)): ?>
+          <ul class="hero-stats" aria-label="Rychlý přehled obsahu">
+            <?php foreach ($heroStats as $stat): ?>
+              <li class="hero-stats__item">
+                <strong class="hero-stats__value"><?= h((string)$stat['value']) ?></strong>
+                <span class="hero-stats__label"><?= h($stat['label']) ?></span>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
+      </div>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderNewsSection = static function (array $items, bool $compactCards = false): string {
+    if ($items === []) {
+        return '';
+    }
+
+    $gridClass = 'card-grid card-grid--compact';
+    if ($compactCards) {
+        $gridClass .= ' home-grid--dense';
+    }
+
+    ob_start();
+    ?>
+    <section class="surface home-section home-section--news" data-home-section="news" aria-labelledby="novinky-nadpis">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Přehled</p>
+          <h2 id="novinky-nadpis" class="section-title">Novinky</h2>
+        </div>
+        <a class="section-link" href="<?= BASE_URL ?>/news/index.php">Všechny novinky <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="<?= h($gridClass) ?>">
+        <?php foreach ($items as $item): ?>
+          <article class="card">
+            <div class="card__body">
+              <p class="meta-row meta-row--tight">
+                <time datetime="<?= h(str_replace(' ', 'T', $item['created_at'])) ?>"><?= formatCzechDate($item['created_at']) ?></time>
+              </p>
+              <p><?= h($item['content']) ?></p>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderBlogSection = static function (array $items, bool $featureLead = false, bool $compactCards = false): string {
+    if ($items === []) {
+        return '';
+    }
+
+    $gridClass = 'card-grid';
+    if ($compactCards) {
+        $gridClass .= ' card-grid--compact home-grid--dense';
+    }
+
+    ob_start();
+    ?>
+    <section class="surface home-section home-section--blog<?= $featureLead ? ' home-section--featured' : '' ?>" data-home-section="blog" aria-labelledby="blog-nadpis">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Obsah</p>
+          <h2 id="blog-nadpis" class="section-title">Blog</h2>
+        </div>
+        <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Všechny články <span aria-hidden="true">→</span></a>
+      </div>
+
+      <?php if ($featureLead && count($items) > 1): ?>
+        <?php
+          $leadArticle = $items[0];
+          $secondaryArticles = array_slice($items, 1);
+        ?>
+        <div class="home-featured">
+          <article class="card card--feature home-featured__lead">
+            <?php if (!empty($leadArticle['image_file'])): ?>
+              <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$leadArticle['id'] ?>">
+                <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($leadArticle['image_file']) ?>"
+                     alt="<?= h($leadArticle['title']) ?>" loading="lazy">
+              </a>
+            <?php endif; ?>
+            <div class="card__body">
+              <p class="section-kicker">Doporučený článek</p>
+              <p class="meta-row meta-row--tight">
+                <?php if (!empty($leadArticle['category'])): ?>
+                  <span class="pill"><?= h($leadArticle['category']) ?></span>
+                <?php endif; ?>
+                <span><?= readingTime(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? '')) ?> min čtení</span>
+                <?php if (!empty($leadArticle['author_name'])): ?>
+                  <span><?= h($leadArticle['author_name']) ?></span>
+                <?php endif; ?>
+              </p>
+              <h3 class="card__title card__title--feature">
+                <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$leadArticle['id'] ?>"><?= h($leadArticle['title']) ?></a>
+              </h3>
+              <?php if (!empty($leadArticle['perex'])): ?>
+                <p><?= h($leadArticle['perex']) ?></p>
+              <?php endif; ?>
+              <p>
+                <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$leadArticle['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                <?php if (isset($_SESSION['cms_user_id'])): ?>
+                  · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$leadArticle['id'] ?>">Upravit</a>
+                <?php endif; ?>
+              </p>
+            </div>
+          </article>
+
+          <div class="home-featured__side <?= h($gridClass) ?>">
+            <?php foreach ($secondaryArticles as $article): ?>
+              <article class="card">
+                <?php if (!empty($article['image_file'])): ?>
+                  <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">
+                    <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
+                         alt="<?= h($article['title']) ?>" loading="lazy">
+                  </a>
+                <?php endif; ?>
+                <div class="card__body">
+                  <p class="meta-row meta-row--tight">
+                    <?php if (!empty($article['category'])): ?>
+                      <span class="pill"><?= h($article['category']) ?></span>
+                    <?php endif; ?>
+                    <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+                    <?php if (!empty($article['author_name'])): ?>
+                      <span><?= h($article['author_name']) ?></span>
+                    <?php endif; ?>
+                  </p>
+                  <h3 class="card__title">
+                    <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>"><?= h($article['title']) ?></a>
+                  </h3>
+                  <?php if (!empty($article['perex'])): ?>
+                    <p><?= h($article['perex']) ?></p>
+                  <?php endif; ?>
+                  <p>
+                    <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                    <?php if (isset($_SESSION['cms_user_id'])): ?>
+                      · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
+                    <?php endif; ?>
+                  </p>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php else: ?>
+        <div class="<?= h($gridClass) ?>">
+          <?php foreach ($items as $article): ?>
+            <article class="card">
+              <?php if (!empty($article['image_file'])): ?>
+                <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">
+                  <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
+                       alt="<?= h($article['title']) ?>" loading="lazy">
+                </a>
+              <?php endif; ?>
+              <div class="card__body">
+                <p class="meta-row meta-row--tight">
+                  <?php if (!empty($article['category'])): ?>
+                    <span class="pill"><?= h($article['category']) ?></span>
+                  <?php endif; ?>
+                  <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+                  <?php if (!empty($article['author_name'])): ?>
+                    <span><?= h($article['author_name']) ?></span>
+                  <?php endif; ?>
+                </p>
+                <h3 class="card__title">
+                  <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>"><?= h($article['title']) ?></a>
+                </h3>
+                <?php if (!empty($article['perex'])): ?>
+                  <p><?= h($article['perex']) ?></p>
+                <?php endif; ?>
+                <p>
+                  <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                  <?php if (isset($_SESSION['cms_user_id'])): ?>
+                    · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
+                  <?php endif; ?>
+                </p>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderBoardSection = static function (array $items): string {
+    if ($items === []) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <section class="surface home-section home-section--board" data-home-section="board" aria-labelledby="deska-nadpis">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Dokumenty</p>
+          <h2 id="deska-nadpis" class="section-title">Úřední deska</h2>
+        </div>
+        <a class="section-link" href="<?= BASE_URL ?>/board/index.php">Všechny dokumenty <span aria-hidden="true">→</span></a>
+      </div>
+      <ul class="link-list">
+        <?php foreach ($items as $boardItem): ?>
+          <li class="link-list__item">
+            <?php if ($boardItem['filename'] !== ''): ?>
+              <a class="link-list__title"
+                 href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($boardItem['filename']) ?>"
+                 download="<?= h($boardItem['original_name']) ?>">
+                <?= h($boardItem['title']) ?>
+              </a>
+            <?php else: ?>
+              <span class="link-list__title"><?= h($boardItem['title']) ?></span>
+            <?php endif; ?>
+            <p class="meta-row meta-row--tight">
+              <?php if ($boardItem['file_size'] > 0): ?>
+                <span><?= h(formatFileSize($boardItem['file_size'])) ?></span>
+              <?php endif; ?>
+              <span><?= h($boardItem['posted_date']) ?></span>
+            </p>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderPollSection = static function () use ($showPoll, $homePoll): string {
+    if (!$showPoll) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <section class="surface surface--accent home-section home-section--poll" data-home-section="poll" aria-labelledby="anketa-nadpis">
+      <p class="section-kicker">Zapojte se</p>
+      <h2 id="anketa-nadpis" class="section-title">Anketa</h2>
+      <p><strong><?= h($homePoll['question']) ?></strong></p>
+      <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
+      <p><a class="section-link" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$homePoll['id'] ?>">Hlasovat <span aria-hidden="true">→</span></a></p>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderNewsletterSection = static function () use ($showNewsletter, $contactAvailable): string {
+    if (!$showNewsletter) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <section class="surface surface--accent home-section home-section--newsletter" data-home-section="newsletter" aria-labelledby="newsletter-nadpis">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Spojte se</p>
+          <h2 id="newsletter-nadpis" class="section-title">Odběr novinek</h2>
+          <p class="section-subtitle">Zájemci mohou dostávat nové články, aktuality a pozvánky přímo e-mailem.</p>
+        </div>
+      </div>
+      <div class="button-row button-row--start">
+        <a class="button-primary" href="<?= BASE_URL ?>/subscribe.php">Přihlásit odběr</a>
+        <?php if ($contactAvailable): ?>
+          <a class="button-secondary" href="<?= BASE_URL ?>/contact/index.php">Napsat zprávu</a>
+        <?php endif; ?>
+      </div>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderCtaSection = static function () use ($showCta, $ctaActions): string {
+    if (!$showCta) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <section class="surface home-section home-section--cta" data-home-section="cta" aria-labelledby="cta-nadpis">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Další kroky</p>
+          <h2 id="cta-nadpis" class="section-title">Co chcete udělat dál?</h2>
+          <p class="section-subtitle">Rychlé akce pomohou návštěvníkovi dostat se k důležitému obsahu bez zbytečného hledání.</p>
+        </div>
+      </div>
+      <div class="button-row button-row--start">
+        <?php foreach ($ctaActions as $action): ?>
+          <a class="<?= h($action['class']) ?>" href="<?= h($action['url']) ?>"><?= h($action['label']) ?></a>
+        <?php endforeach; ?>
+      </div>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
+$renderFeaturedSection = static function () use (
+    $featuredModule,
+    $featuredNewsItem,
+    $featuredArticle,
+    $featuredBoardItem,
+    $pollAvailable,
+    $homePoll,
+    $newsletterAvailable,
+    $contactAvailable
+): string {
+    if ($featuredModule === '') {
+        return '';
+    }
+
+    ob_start();
+    switch ($featuredModule) {
+        case 'blog':
+            if (!$featuredArticle) {
+                break;
+            }
+            ?>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="blog" aria-labelledby="featured-nadpis">
+              <div class="section-heading">
+                <div>
+                  <p class="section-kicker">Featured modul</p>
+                  <h2 id="featured-nadpis" class="section-title">Doporučený článek</h2>
+                </div>
+                <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Přejít na blog <span aria-hidden="true">→</span></a>
+              </div>
+              <article class="card card--feature">
+                <?php if (!empty($featuredArticle['image_file'])): ?>
+                  <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$featuredArticle['id'] ?>">
+                    <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($featuredArticle['image_file']) ?>"
+                         alt="<?= h($featuredArticle['title']) ?>" loading="lazy">
+                  </a>
+                <?php endif; ?>
+                <div class="card__body">
+                  <p class="meta-row meta-row--tight">
+                    <?php if (!empty($featuredArticle['category'])): ?>
+                      <span class="pill"><?= h($featuredArticle['category']) ?></span>
+                    <?php endif; ?>
+                    <span><?= readingTime(($featuredArticle['perex'] ?? '') . ($featuredArticle['content'] ?? '')) ?> min čtení</span>
+                    <?php if (!empty($featuredArticle['author_name'])): ?>
+                      <span><?= h($featuredArticle['author_name']) ?></span>
+                    <?php endif; ?>
+                  </p>
+                  <h3 class="card__title card__title--feature">
+                    <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$featuredArticle['id'] ?>"><?= h($featuredArticle['title']) ?></a>
+                  </h3>
+                  <?php if (!empty($featuredArticle['perex'])): ?>
+                    <p><?= h($featuredArticle['perex']) ?></p>
+                  <?php endif; ?>
+                  <p><a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$featuredArticle['id'] ?>">Číst článek <span aria-hidden="true">→</span></a></p>
+                </div>
+              </article>
+            </section>
+            <?php
+            break;
+
+        case 'news':
+            if (!$featuredNewsItem) {
+                break;
+            }
+            ?>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="news" aria-labelledby="featured-nadpis">
+              <div class="section-heading">
+                <div>
+                  <p class="section-kicker">Featured modul</p>
+                  <h2 id="featured-nadpis" class="section-title">Zvýrazněná novinka</h2>
+                </div>
+                <a class="section-link" href="<?= BASE_URL ?>/news/index.php">Přejít na novinky <span aria-hidden="true">→</span></a>
+              </div>
+              <article class="card card--highlighted">
+                <div class="card__body">
+                  <p class="meta-row meta-row--tight">
+                    <time datetime="<?= h(str_replace(' ', 'T', $featuredNewsItem['created_at'])) ?>"><?= formatCzechDate($featuredNewsItem['created_at']) ?></time>
+                  </p>
+                  <p><?= h($featuredNewsItem['content']) ?></p>
+                </div>
+              </article>
+            </section>
+            <?php
+            break;
+
+        case 'board':
+            if (!$featuredBoardItem) {
+                break;
+            }
+            ?>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="board" aria-labelledby="featured-nadpis">
+              <div class="section-heading">
+                <div>
+                  <p class="section-kicker">Featured modul</p>
+                  <h2 id="featured-nadpis" class="section-title">Důležitý dokument</h2>
+                </div>
+                <a class="section-link" href="<?= BASE_URL ?>/board/index.php">Přejít na úřední desku <span aria-hidden="true">→</span></a>
+              </div>
+              <article class="card card--highlighted">
+                <div class="card__body">
+                  <h3 class="card__title"><?= h($featuredBoardItem['title']) ?></h3>
+                  <p class="meta-row meta-row--tight">
+                    <?php if ($featuredBoardItem['file_size'] > 0): ?>
+                      <span><?= h(formatFileSize($featuredBoardItem['file_size'])) ?></span>
+                    <?php endif; ?>
+                    <span><?= h($featuredBoardItem['posted_date']) ?></span>
+                  </p>
+                  <?php if ($featuredBoardItem['filename'] !== ''): ?>
+                    <p><a class="section-link" href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($featuredBoardItem['filename']) ?>" download="<?= h($featuredBoardItem['original_name']) ?>">Stáhnout dokument <span aria-hidden="true">→</span></a></p>
+                  <?php endif; ?>
+                </div>
+              </article>
+            </section>
+            <?php
+            break;
+
+        case 'poll':
+            if (!$pollAvailable) {
+                break;
+            }
+            ?>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="poll" aria-labelledby="featured-nadpis">
+              <p class="section-kicker">Featured modul</p>
+              <h2 id="featured-nadpis" class="section-title">Aktuální anketa</h2>
+              <p><strong><?= h($homePoll['question']) ?></strong></p>
+              <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
+              <div class="button-row button-row--start">
+                <a class="button-primary" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$homePoll['id'] ?>">Hlasovat</a>
+                <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php">Všechny ankety</a>
+              </div>
+            </section>
+            <?php
+            break;
+
+        case 'newsletter':
+            if (!$newsletterAvailable) {
+                break;
+            }
+            ?>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="newsletter" aria-labelledby="featured-nadpis">
+              <p class="section-kicker">Featured modul</p>
+              <h2 id="featured-nadpis" class="section-title">Zůstaňte v kontaktu</h2>
+              <p class="section-subtitle">Přihlaste se k odběru a dostávejte nové články, aktuality a pozvánky přímo e-mailem.</p>
+              <div class="button-row button-row--start">
+                <a class="button-primary" href="<?= BASE_URL ?>/subscribe.php">Přihlásit odběr</a>
+                <?php if ($contactAvailable): ?>
+                  <a class="button-secondary" href="<?= BASE_URL ?>/contact/index.php">Napsat zprávu</a>
+                <?php endif; ?>
+              </div>
+            </section>
+            <?php
+            break;
+    }
+
+    return (string)ob_get_clean();
+};
+
+$introHtml = $renderIntroSection();
+$featuredHtml = $renderFeaturedSection();
+$newsHtml = $showNews ? $renderNewsSection($newsItems, $homeLayout === 'compact') : '';
+$blogHtml = $showBlog ? $renderBlogSection($blogItems, $homeLayout === 'editorial' && $featuredModule !== 'blog', $homeLayout === 'compact') : '';
+$boardHtml = $renderBoardSection($showBoard ? $boardItems : []);
+$pollHtml = $renderPollSection();
+$newsletterHtml = $renderNewsletterSection();
+$ctaHtml = $renderCtaSection();
+
+$primarySections = [
+    'news' => $newsHtml,
+    'blog' => $blogHtml,
+];
+$primaryOrderKeys = $primaryOrder === 'blog_news'
+    ? ['blog', 'news']
+    : ['news', 'blog'];
+$orderedPrimaryHtml = [];
+foreach ($primaryOrderKeys as $sectionKey) {
+    if (($primarySections[$sectionKey] ?? '') !== '') {
+        $orderedPrimaryHtml[] = $primarySections[$sectionKey];
+    }
+}
+
+$utilitySections = [
+    'board' => $boardHtml,
+    'poll' => $pollHtml,
+    'newsletter' => $newsletterHtml,
+    'cta' => $ctaHtml,
+];
+$utilityOrderKeys = match ($utilityOrder) {
+    'newsletter_cta_board_poll' => ['newsletter', 'cta', 'board', 'poll'],
+    'cta_board_poll_newsletter' => ['cta', 'board', 'poll', 'newsletter'],
+    default => ['board', 'poll', 'newsletter', 'cta'],
+};
+$orderedUtilityHtml = [];
+foreach ($utilityOrderKeys as $sectionKey) {
+    if (($utilitySections[$sectionKey] ?? '') !== '') {
+        $orderedUtilityHtml[] = $utilitySections[$sectionKey];
+    }
+}
+
+$utilityHtml = '';
+if ($orderedUtilityHtml !== []) {
+    ob_start();
+    ?>
+    <div class="stack-sections stack-sections--tight home-utility-stack">
+      <?php foreach ($orderedUtilityHtml as $sectionHtml): ?>
+        <?= $sectionHtml ?>
+      <?php endforeach; ?>
+    </div>
+    <?php
+    $utilityHtml = (string)ob_get_clean();
+}
+
+$hasAnyContent = $introHtml !== ''
+    || $featuredHtml !== ''
+    || $orderedPrimaryHtml !== []
+    || $utilityHtml !== '';
+
+$pageStackClasses = ['page-stack', 'page-stack--home', 'page-stack--home-' . $homeLayout];
+?>
+<div class="<?= h(implode(' ', $pageStackClasses)) ?>">
+  <?= $introHtml ?>
+  <?= $featuredHtml ?>
+
+  <?php if ($homeLayout === 'editorial'): ?>
+    <?php if ($orderedPrimaryHtml !== []): ?>
+      <?php $editorialLead = array_shift($orderedPrimaryHtml); ?>
+      <?= $editorialLead ?>
+    <?php endif; ?>
+
+    <?php if ($orderedPrimaryHtml !== [] || $utilityHtml !== ''): ?>
+      <div class="split-grid">
+        <?php foreach ($orderedPrimaryHtml as $sectionHtml): ?>
+          <?= $sectionHtml ?>
+        <?php endforeach; ?>
+        <?= $utilityHtml ?>
+      </div>
+    <?php endif; ?>
+  <?php elseif ($homeLayout === 'compact'): ?>
+    <?php if ($orderedPrimaryHtml !== []): ?>
+      <div class="split-grid">
+        <?php foreach ($orderedPrimaryHtml as $sectionHtml): ?>
+          <?= $sectionHtml ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+    <?= $utilityHtml ?>
+  <?php else: ?>
+    <?php foreach ($orderedPrimaryHtml as $sectionHtml): ?>
+      <?= $sectionHtml ?>
+    <?php endforeach; ?>
+    <?= $utilityHtml ?>
+  <?php endif; ?>
+
+  <?php if (!$hasAnyContent): ?>
+    <section class="surface empty-state" aria-labelledby="obsah-priprava">
+      <h2 id="obsah-priprava" class="section-title">Obsah se připravuje</h2>
+      <p>Úvodní stránka je připravena pro první obsahové bloky a modulové sekce.</p>
+    </section>
+  <?php endif; ?>
+</div>

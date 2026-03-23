@@ -1,0 +1,68 @@
+@import url("../../default/assets/public.css");
+
+body.theme-editorial {
+  --radius-lg: 0.45rem;
+  --radius-md: 0.2rem;
+  --surface: #fffdf8;
+  --border-soft: #d9cbbb;
+  --shadow-soft: none;
+  --shadow-strong: none;
+}
+
+body.theme-editorial {
+  background:
+    linear-gradient(180deg, rgba(255, 251, 244, 0.98), rgba(244, 239, 231, 0.98));
+}
+
+.theme-editorial .site-header__panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.theme-editorial .brand__title {
+  letter-spacing: -0.03em;
+}
+
+.theme-editorial .site-header nav a {
+  min-height: 2rem;
+  padding: 0.25rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.theme-editorial .site-header nav a[aria-current="page"] {
+  color: var(--accent-strong);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-decoration: underline;
+}
+
+.theme-editorial .surface,
+.theme-editorial .card,
+.theme-editorial .hero-stats__item {
+  border-color: rgba(83, 57, 42, 0.14);
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: none;
+}
+
+.theme-editorial .card__media img,
+.theme-editorial .prose img {
+  border-radius: 0.35rem;
+}
+
+.theme-editorial .home-featured__lead {
+  background: linear-gradient(180deg, rgba(255, 248, 242, 0.98), rgba(255, 253, 248, 0.98));
+}
+
+.theme-editorial .site-shell > footer {
+  background: #2c211c;
+}
+
+.theme-editorial .site-shell > footer a {
+  color: #f4d3aa;
+}

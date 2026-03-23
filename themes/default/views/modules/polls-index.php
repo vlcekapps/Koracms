@@ -1,0 +1,164 @@
+<div class="listing-shell">
+  <?php if ($poll !== null): ?>
+    <section class="surface" aria-labelledby="poll-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Anketa</p>
+          <h1 id="poll-title" class="section-title section-title--hero"><?= h($poll['question']) ?></h1>
+        </div>
+      </div>
+
+      <?php if (!empty($poll['description'])): ?>
+        <p class="section-subtitle"><?= h($poll['description']) ?></p>
+      <?php endif; ?>
+
+      <?php if ($voted): ?>
+        <div class="status-message status-message--success" role="status">
+          <p>Váš hlas byl zaznamenán. Děkujeme!</p>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($voteErrorMessage !== ''): ?>
+        <div class="status-message status-message--error" role="alert">
+          <p><?= h($voteErrorMessage) ?></p>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($showForm): ?>
+        <form method="post" action="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$poll['id'] ?>" class="form-stack poll-vote-form" novalidate>
+          <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+          <?= honeypotField() ?>
+
+          <fieldset class="form-fieldset">
+            <legend>Vyberte jednu možnost</legend>
+
+            <div class="stack-list">
+              <?php foreach ($options as $index => $option): ?>
+                <label class="choice-card" for="poll-option-<?= (int)$option['id'] ?>">
+                  <input type="radio" id="poll-option-<?= (int)$option['id'] ?>" name="option_id"
+                         value="<?= (int)$option['id'] ?>"<?= $index === 0 ? ' aria-required="true"' : '' ?> required>
+                  <span><?= h($option['option_text']) ?></span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+
+            <div class="button-row button-row--start">
+              <button type="submit" name="vote" value="1" class="button-primary">Hlasovat</button>
+            </div>
+          </fieldset>
+        </form>
+      <?php else: ?>
+        <section aria-labelledby="poll-results-title">
+          <h2 id="poll-results-title" class="section-title section-title--compact">Výsledky</h2>
+
+          <div class="poll-results" role="list" aria-label="Možnosti a výsledky hlasování">
+            <?php foreach ($options as $option): ?>
+              <?php $percentage = $totalVotes > 0 ? round(((int)$option['vote_count']) / $totalVotes * 100, 1) : 0; ?>
+              <div class="poll-result" role="listitem">
+                <div class="poll-result__header">
+                  <span><?= h($option['option_text']) ?></span>
+                  <span><?= $percentage ?>&nbsp;% (<?= (int)$option['vote_count'] ?>&nbsp;hlasů)</span>
+                </div>
+                <div class="poll-result__track" aria-hidden="true">
+                  <div class="poll-result__fill" style="width:<?= $percentage ?>%"></div>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+
+          <p><strong>Celkem hlasů: <?= $totalVotes ?></strong></p>
+
+          <?php if (!$isActive): ?>
+            <p class="poll-note">Tato anketa je uzavřena.</p>
+          <?php elseif ($hasVoted || $voted): ?>
+            <p class="poll-note">U této ankety už jste hlasoval/a.</p>
+          <?php endif; ?>
+        </section>
+      <?php endif; ?>
+
+      <div class="article-actions">
+        <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php"><span aria-hidden="true">←</span> Zpět na přehled anket</a>
+      </div>
+    </section>
+  <?php else: ?>
+    <section class="surface" aria-labelledby="polls-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Zapojte se</p>
+          <h1 id="polls-title" class="section-title section-title--hero"><?= $archiv ? 'Archiv anket' : 'Ankety' ?></h1>
+        </div>
+      </div>
+
+      <nav aria-label="Filtr anket">
+        <ul class="chip-list">
+          <?php if ($archiv): ?>
+            <li><a class="chip-link" href="<?= BASE_URL ?>/polls/index.php">Aktivní ankety</a></li>
+            <li><span class="chip-link" aria-current="page">Archiv</span></li>
+          <?php else: ?>
+            <li><span class="chip-link" aria-current="page">Aktivní ankety</span></li>
+            <li><a class="chip-link" href="<?= BASE_URL ?>/polls/index.php?archiv=1">Archiv</a></li>
+          <?php endif; ?>
+        </ul>
+      </nav>
+
+      <?php if (empty($polls)): ?>
+        <p class="empty-state"><?= $archiv ? 'Žádné uzavřené ankety.' : 'Žádné aktivní ankety.' ?></p>
+      <?php else: ?>
+        <div class="stack-list">
+          <?php foreach ($polls as $listPoll): ?>
+            <article class="card poll-card">
+              <div class="card__body">
+                <h2 class="card__title">
+                  <a href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$listPoll['id'] ?>"><?= h($listPoll['question']) ?></a>
+                </h2>
+
+                <p class="meta-row meta-row--tight">
+                  <span><?= (int)$listPoll['vote_count'] ?> hlasů</span>
+                  <time datetime="<?= h(str_replace(' ', 'T', $listPoll['created_at'])) ?>"><?= formatCzechDate($listPoll['created_at']) ?></time>
+                  <?php if (!empty($listPoll['end_date'])): ?>
+                    <span>Konec: <?= formatCzechDate($listPoll['end_date']) ?></span>
+                  <?php endif; ?>
+                </p>
+
+                <?php if (!empty($listPoll['description'])): ?>
+                  <p><?= h($listPoll['description']) ?></p>
+                <?php endif; ?>
+
+                <div class="button-row button-row--start">
+                  <?php if (!empty($listPoll['has_voted']) || $archiv): ?>
+                    <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$listPoll['id'] ?>">Zobrazit výsledky</a>
+                  <?php else: ?>
+                    <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$listPoll['id'] ?>">Hlasovat</a>
+                  <?php endif; ?>
+                </div>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+
+        <?php if ($totalPages > 1): ?>
+          <nav aria-label="Stránkování anket">
+            <ul class="pager">
+              <?php $base = $archiv ? (BASE_URL . '/polls/index.php?archiv=1&strana=') : (BASE_URL . '/polls/index.php?strana='); ?>
+              <?php if ($page > 1): ?>
+                <li><a href="<?= h($base) . ($page - 1) ?>" rel="prev"><span aria-hidden="true">←</span> Předchozí</a></li>
+              <?php endif; ?>
+              <?php for ($pageNumber = 1; $pageNumber <= $totalPages; $pageNumber++): ?>
+                <li>
+                  <?php if ($pageNumber === $page): ?>
+                    <span aria-current="page"><?= $pageNumber ?></span>
+                  <?php else: ?>
+                    <a href="<?= h($base) . $pageNumber ?>"><?= $pageNumber ?></a>
+                  <?php endif; ?>
+                </li>
+              <?php endfor; ?>
+              <?php if ($page < $totalPages): ?>
+                <li><a href="<?= h($base) . ($page + 1) ?>" rel="next">Další <span aria-hidden="true">→</span></a></li>
+              <?php endif; ?>
+            </ul>
+          </nav>
+        <?php endif; ?>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
+</div>

@@ -147,7 +147,7 @@ Na hlavní stránce se zobrazují widgety zapnutých modulů:
 
 ## Nastavení
 
-Nastavení je rozděleno do tří sekcí:
+Nastavení je rozděleno do čtyř sekcí:
 
 ### Základní nastavení
 
@@ -170,6 +170,28 @@ Zapínání a vypínání jednotlivých modulů jedním přepínačem.
 ### Nastavení zobrazení
 
 Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů).
+
+### Vzhled a šablony
+
+- Výběr aktivní veřejné šablony z adresáře `themes/`
+- Zobrazení názvu, verze, autora a popisu dostupných šablon
+- Bezpečný fallback na `default`, pokud uložená šablona na serveru chybí nebo je neplatná
+- Safe customizace aktivní šablony: paleta, hlavní akcenty, typografie a šířka obsahu
+- Varianta hlavičky a homepage přímo v administraci bez editace šablonových souborů
+- Homepage composer pro default theme: featured modul, pořadí hlavních sekcí a viditelnost bloků bez zásahu do kódu
+- Homepage composer vždy respektuje globální stav modulů, takže nenabízí ani nevyrenderuje blok pro vypnutý modul
+- Živý náhled šablony a draft vzhledu bez aktivace na produkčním webu
+- Reset vzhledu aktivní šablony na výchozí hodnoty bez zásahu do souborů
+- Bezpečný import portable ZIP balíčku: `theme.json` + statické assety v `assets/`, bez PHP override souborů
+- Export portable ZIP balíčku z administrace včetně uložených výchozích theme settings
+- Portable balíčky záměrně nepřenášejí layouty, partialy a view override; veřejný web dál používá fallback kontrakt na `default`
+
+Součástí CMS jsou nyní tyto oficiální šablony:
+
+- `default` – vyvážený univerzální základ
+- `civic` – důvěryhodný styl pro obce, spolky a informační weby
+- `editorial` – magazínovější vzhled s výraznější typografií
+- `modern-service` – současný styl pro služby, firmy a projekty
 
 ---
 

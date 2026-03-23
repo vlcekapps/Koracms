@@ -19,112 +19,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (honeypotTriggered()) {
         $success = true;
-        // Předstíráme úspěch, ale nic neukládáme
     } else {
-    verifyCsrf();
+        verifyCsrf();
 
-    $from    = trim($_POST['from']    ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $message = trim($_POST['message'] ?? '');
+        $from    = trim($_POST['from'] ?? '');
+        $subject = trim($_POST['subject'] ?? '');
+        $message = trim($_POST['message'] ?? '');
 
-    if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL))
-        $errors[] = 'Zadejte platnou e-mailovou adresu odesílatele.';
-    if ($subject === '') $errors[] = 'Předmět je povinný.';
-    if ($message === '') $errors[] = 'Zpráva je povinná.';
-    if (!captchaVerify($_POST['captcha'] ?? ''))
-        $errors[] = 'Chybná odpověď na ověřovací otázku.';
-
-    if (empty($errors)) {
-        // Uložit do databáze
-        $pdo->prepare(
-            "INSERT INTO cms_contact (sender_email, subject, message) VALUES (?,?,?)"
-        )->execute([$from, $subject, $message]);
-
-        // Odeslat e-mail, pokud je nastaven cílový e-mail
-        if ($destEmail !== '') {
-            $safeSubject = preg_replace('/[\r\n]/', '', $subject);
-            $safeFrom    = preg_replace('/[\r\n]/', '', $from);
-            $mailBody = "Zpráva z kontaktního formuláře.\n\nOd: {$safeFrom}\nPředmět: {$safeSubject}\n\n{$message}";
-            sendMail($destEmail, $safeSubject, $mailBody);
+        if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Zadejte platnou e-mailovou adresu odesílatele.';
+        }
+        if ($subject === '') {
+            $errors[] = 'Předmět je povinný.';
+        }
+        if ($message === '') {
+            $errors[] = 'Zpráva je povinná.';
+        }
+        if (!captchaVerify($_POST['captcha'] ?? '')) {
+            $errors[] = 'Chybná odpověď na ověřovací otázku.';
         }
 
-        $success = true;
+        if (empty($errors)) {
+            $pdo->prepare(
+                "INSERT INTO cms_contact (sender_email, subject, message) VALUES (?, ?, ?)"
+            )->execute([$from, $subject, $message]);
+
+            if ($destEmail !== '') {
+                $safeSubject = preg_replace('/[\r\n]/', '', $subject);
+                $safeFrom = preg_replace('/[\r\n]/', '', $from);
+                $mailBody = "Zpráva z kontaktního formuláře.\n\nOd: {$safeFrom}\nPředmět: {$safeSubject}\n\n{$message}";
+                sendMail($destEmail, $safeSubject, $mailBody);
+            }
+
+            $success = true;
+        }
     }
-    } // end honeypot else
 }
-?>
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kontakt – <?= h($siteName) ?></title>
-  <style>
-    .skip-link { position: absolute; left: -9999px; }
-    .skip-link:focus { left: 1rem; top: 1rem; z-index: 9999;
-      background: #fff; padding: .5rem 1rem; border: 2px solid #000; }
-  </style>
-</head>
-<body>
-<a href="#obsah" class="skip-link">Přeskočit na obsah</a>
-<header>
-  <h1><?= h($siteName) ?></h1>
-  <?= siteNav('contact') ?>
-</header>
 
-<main id="obsah">
-  <div id="a11y-live" role="status" aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
-  <h2>Kontakt</h2>
+$captchaExpr = captchaGenerate();
 
-  <?php $captchaExpr = captchaGenerate(); ?>
-  <?php if ($success): ?>
-    <p role="status" style="color:#060">
-      Zpráva byla odeslána. Děkujeme!
-    </p>
-  <?php else: ?>
-
-    <?php if (!empty($errors)): ?>
-      <ul id="form-errors" role="alert" style="color:#c00">
-        <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
-      </ul>
-    <?php endif; ?>
-
-    <form method="post" novalidate<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
-      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-      <?= honeypotField() ?>
-
-      <fieldset>
-        <legend>Kontaktní formulář</legend>
-        <div>
-          <label for="from">Váš e-mail <span aria-hidden="true">*</span></label>
-          <input type="email" id="from" name="from" required aria-required="true"
-                 maxlength="255" value="<?= h($_POST['from'] ?? '') ?>">
-        </div>
-        <div>
-          <label for="subject">Předmět <span aria-hidden="true">*</span></label>
-          <input type="text" id="subject" name="subject" required aria-required="true"
-                 maxlength="255" value="<?= h($_POST['subject'] ?? '') ?>">
-        </div>
-        <div>
-          <label for="message">Zpráva <span aria-hidden="true">*</span></label>
-          <textarea id="message" name="message" rows="8" required
-                    aria-required="true"><?= h($_POST['message'] ?? '') ?></textarea>
-        </div>
-        <div>
-          <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
-          <input type="text" id="captcha" name="captcha" required aria-required="true"
-                 inputmode="numeric" autocomplete="off" style="width:6rem">
-        </div>
-        <button type="submit">Odeslat zprávu</button>
-      </fieldset>
-    </form>
-
-  <?php endif; ?>
-</main>
-
-<footer>
-  <p>© <?= date('Y') ?> <?= h($siteName) ?></p>
-</footer>
-<script>document.addEventListener("DOMContentLoaded",function(){var l=document.getElementById("a11y-live");if(!l)return;var m=document.querySelector('[role="status"]:not(#a11y-live),[role="alert"]');if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}});</script>
-</body>
-</html>
+renderPublicPage([
+    'title' => 'Kontakt – ' . $siteName,
+    'meta' => [
+        'title' => 'Kontakt – ' . $siteName,
+        'url' => BASE_URL . '/contact/index.php',
+    ],
+    'view' => 'modules/contact',
+    'view_data' => [
+        'success' => $success,
+        'errors' => $errors,
+        'captchaExpr' => $captchaExpr,
+        'formData' => [
+            'from' => trim($_POST['from'] ?? ''),
+            'subject' => trim($_POST['subject'] ?? ''),
+            'message' => trim($_POST['message'] ?? ''),
+        ],
+    ],
+    'current_nav' => 'contact',
+    'body_class' => 'page-contact',
+    'page_kind' => 'form',
+    'admin_edit_url' => BASE_URL . '/admin/contact.php',
+]);

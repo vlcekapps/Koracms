@@ -1,0 +1,20 @@
+{
+  "name": "Kora Civic",
+  "version": "1.0.0",
+  "author": "Kora CMS",
+  "description": "Clean civic-oriented theme suitable for municipalities, clubs, associations and public information sites.",
+  "preview": {
+    "summary": "Důvěryhodný a přehledný styl pro obce, spolky a informační weby.",
+    "colors": ["#edf2f6", "#1d4f73", "#8a5a1f"]
+  },
+  "settings_defaults": {
+    "header_layout": "split",
+    "palette_preset": "slate",
+    "accent": "#1d4f73",
+    "accent_strong": "#133950",
+    "warm": "#8a5a1f",
+    "font_pairing": "modern",
+    "container_width": "standard",
+    "home_layout": "balanced"
+  }
+}

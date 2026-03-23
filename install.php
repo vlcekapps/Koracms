@@ -511,6 +511,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'og_image_default'         => '',
             'site_favicon'             => '',
             'site_logo'                => '',
+            'active_theme'             => defaultThemeName(),
             'home_intro'               => '',
             'nav_module_order'         => '',
         ];

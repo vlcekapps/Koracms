@@ -1,0 +1,372 @@
+{
+  "name": "Kora Default",
+  "version": "1.0.0",
+  "author": "Kora CMS",
+  "description": "Default responsive theme focused on readability, accessibility and safe extensibility.",
+  "preview": {
+    "summary": "Vyvážený univerzální základ pro obce, spolky i menší obsahové weby.",
+    "colors": ["#f4efe7", "#0f5f8c", "#9b5d1b"]
+  },
+  "settings": {
+    "header_layout": {
+      "type": "select",
+      "label": "Varianta hlavičky",
+      "description": "Mění rozložení loga, názvu webu a hlavní navigace v horní části stránky.",
+      "default": "balanced",
+      "options": {
+        "balanced": {
+          "label": "Vyvážená",
+          "description": "Klasická hlavička s přirozeným tokem obsahu."
+        },
+        "centered": {
+          "label": "Centrovaná",
+          "description": "Brand i navigace jsou zarovnané na střed pro klidnější prezentaci."
+        },
+        "split": {
+          "label": "Rozdělená",
+          "description": "Brand vlevo, navigace vpravo pro informačně hustší web."
+        }
+      }
+    },
+    "palette_preset": {
+      "type": "select",
+      "label": "Paleta pozadí a ploch",
+      "description": "Mění atmosféru pozadí, karet a jemných doprovodných ploch bez rizika ztráty čitelnosti.",
+      "default": "sand",
+      "options": {
+        "sand": {
+          "label": "Písková",
+          "description": "Teplý světlý základ s jemným modrým kontrastem.",
+          "css_vars": {
+            "bg-main": "#f4efe7",
+            "bg-accent": "#e7eef4",
+            "surface": "#ffffff",
+            "border-soft": "#c9d5e2",
+            "accent-soft": "#dcecf5"
+          }
+        },
+        "slate": {
+          "label": "Břidlicová",
+          "description": "Chladnější neutrální paleta pro civilnější vzhled.",
+          "css_vars": {
+            "bg-main": "#edf2f6",
+            "bg-accent": "#dfe8f1",
+            "surface": "#ffffff",
+            "border-soft": "#bed0de",
+            "accent-soft": "#d7e5ef"
+          }
+        },
+        "meadow": {
+          "label": "Lučná",
+          "description": "Světlá přírodní paleta s měkčím zeleným podtónem.",
+          "css_vars": {
+            "bg-main": "#eef3e8",
+            "bg-accent": "#e4efe6",
+            "surface": "#ffffff",
+            "border-soft": "#c8d9cb",
+            "accent-soft": "#dceede"
+          }
+        }
+      }
+    },
+    "accent": {
+      "type": "color",
+      "label": "Hlavní akcent",
+      "description": "Používá se pro primární tlačítka, aktivní navigaci a důležité stavy.",
+      "default": "#0f5f8c",
+      "css_var": "accent",
+      "contrast_with": ["#ffffff"],
+      "min_contrast": 4.5
+    },
+    "accent_strong": {
+      "type": "color",
+      "label": "Tmavší akcent",
+      "description": "Používá se pro hover stavy a výrazné odkazy.",
+      "default": "#0a4567",
+      "css_var": "accent-strong",
+      "contrast_with": ["#ffffff"],
+      "min_contrast": 4.5
+    },
+    "warm": {
+      "type": "color",
+      "label": "Doplňková barva",
+      "description": "Zvýrazňuje kickery a vedlejší akcenty na světlém pozadí.",
+      "default": "#9b5d1b",
+      "css_var": "warm",
+      "contrast_with": ["#ffffff"],
+      "min_contrast": 4.5
+    },
+    "font_pairing": {
+      "type": "select",
+      "label": "Typografie",
+      "description": "Předvolby mění párování běžného písma a nadpisů napříč celým webem.",
+      "default": "classic",
+      "options": {
+        "classic": {
+          "label": "Klasická",
+          "description": "Serifové nadpisy a čitelný humanistický text.",
+          "css_vars": {
+            "font-sans": "\"Segoe UI Variable Text\", \"Aptos\", \"Trebuchet MS\", sans-serif",
+            "font-display": "\"Georgia\", \"Iowan Old Style\", \"Palatino Linotype\", serif"
+          }
+        },
+        "editorial": {
+          "label": "Editoriální",
+          "description": "Výraznější serif pro nadpisy a klidný textový doprovod.",
+          "css_vars": {
+            "font-sans": "\"Aptos\", \"Calibri\", \"Segoe UI\", sans-serif",
+            "font-display": "\"Baskerville Old Face\", \"Book Antiqua\", Garamond, serif"
+          }
+        },
+        "modern": {
+          "label": "Moderní",
+          "description": "Střízlivější bezpatkový projev s technicky čistými nadpisy.",
+          "css_vars": {
+            "font-sans": "\"Aptos\", \"Segoe UI\", \"Trebuchet MS\", sans-serif",
+            "font-display": "\"Trebuchet MS\", \"Franklin Gothic Medium\", sans-serif"
+          }
+        }
+      }
+    },
+    "container_width": {
+      "type": "select",
+      "label": "Šířka obsahu",
+      "description": "Určuje maximální šířku hlavního obsahu na desktopu.",
+      "default": "standard",
+      "options": {
+        "narrow": {
+          "label": "Užší",
+          "description": "Kompaktnější sloupec pro textově orientované weby.",
+          "css_var": "container",
+          "value": "68rem"
+        },
+        "standard": {
+          "label": "Standardní",
+          "description": "Vyvážená šířka pro smíšený obsah.",
+          "css_var": "container",
+          "value": "72rem"
+        },
+        "wide": {
+          "label": "Širší",
+          "description": "Více místa pro karty, galerie a přehledové moduly.",
+          "css_var": "container",
+          "value": "80rem"
+        }
+      }
+    },
+    "home_layout": {
+      "type": "select",
+      "label": "Varianta úvodní stránky",
+      "description": "Určuje pořadí a prezentaci hlavních sekcí na homepage v rámci default theme.",
+      "default": "balanced",
+      "options": {
+        "balanced": {
+          "label": "Vyvážená",
+          "description": "Univerzální skladba s rovnoměrnou prezentací novinek, blogu a dalších bloků."
+        },
+        "editorial": {
+          "label": "Editoriální",
+          "description": "Důraz na úvodní hero a zvýrazněný obsah blogu s magazínovějším rytmem."
+        },
+        "compact": {
+          "label": "Kompaktní",
+          "description": "Úspornější homepage s menšími bloky a rychlejším přehledem obsahu."
+        }
+      }
+    },
+    "home_hero_visibility": {
+      "type": "select",
+      "label": "Úvodní hero blok",
+      "description": "Řídí zobrazení úvodního textu z nastavení webu. Blok se zobrazí jen pokud je vyplněný home intro obsah.",
+      "default": "show",
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Hero blok zůstane na homepage viditelný."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Úvodní hero blok se na homepage nevyrenderuje."
+        }
+      }
+    },
+    "home_featured_module": {
+      "type": "select",
+      "label": "Featured modul",
+      "description": "Zvýrazněný blok nad hlavním obsahem. Modul se použije jen pokud je globálně zapnutý a má dostupná data.",
+      "default": "auto",
+      "options": {
+        "auto": {
+          "label": "Automaticky",
+          "description": "Systém vybere první vhodný modul podle dostupných dat a zapnutých modulů."
+        },
+        "none": {
+          "label": "Bez featured",
+          "description": "Homepage poběží bez zvýrazněného featured bloku."
+        },
+        "blog": {
+          "label": "Blog",
+          "description": "Zvýrazní nejnovější článek blogu, pokud je modul blog zapnutý.",
+          "requires_modules": ["blog"]
+        },
+        "news": {
+          "label": "Novinky",
+          "description": "Zvýrazní nejnovější novinku, pokud je modul novinky zapnutý.",
+          "requires_modules": ["news"]
+        },
+        "board": {
+          "label": "Úřední deska",
+          "description": "Zvýrazní nejnovější dokument z úřední desky, pokud je modul zapnutý.",
+          "requires_modules": ["board"]
+        },
+        "poll": {
+          "label": "Anketa",
+          "description": "Zvýrazní aktuální anketu, pokud je modul ankety zapnutý a má aktivní hlasování.",
+          "requires_modules": ["polls"]
+        },
+        "newsletter": {
+          "label": "Newsletter",
+          "description": "Zvýrazní výzvu k odběru, pokud je modul newsletter zapnutý.",
+          "requires_modules": ["newsletter"]
+        }
+      }
+    },
+    "home_primary_order": {
+      "type": "select",
+      "label": "Pořadí hlavních sekcí",
+      "description": "Určuje, zda se na homepage dříve zobrazí novinky, nebo blog.",
+      "default": "news_blog",
+      "options": {
+        "news_blog": {
+          "label": "Novinky → Blog",
+          "description": "Nejdříve novinky a potom výpis blogu."
+        },
+        "blog_news": {
+          "label": "Blog → Novinky",
+          "description": "Nejdříve blog a potom novinky."
+        }
+      }
+    },
+    "home_utility_order": {
+      "type": "select",
+      "label": "Pořadí doplňkových bloků",
+      "description": "Řídí pořadí doplňkových bloků jako úřední deska, anketa, newsletter a CTA.",
+      "default": "board_poll_newsletter_cta",
+      "options": {
+        "board_poll_newsletter_cta": {
+          "label": "Deska → Anketa → Newsletter → CTA",
+          "description": "Klasické informační pořadí pro obsahové weby."
+        },
+        "newsletter_cta_board_poll": {
+          "label": "Newsletter → CTA → Deska → Anketa",
+          "description": "Dříve klade důraz na akce návštěvníka a kontakt."
+        },
+        "cta_board_poll_newsletter": {
+          "label": "CTA → Deska → Anketa → Newsletter",
+          "description": "Nejdříve vyzve návštěvníka k akci, potom nabídne informační bloky."
+        }
+      }
+    },
+    "home_news_visibility": {
+      "type": "select",
+      "label": "Blok novinek",
+      "description": "Zobrazí sekci novinek jen pokud je modul novinky zapnutý a homepage má co zobrazit.",
+      "default": "show",
+      "requires_modules": ["news"],
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Sekce novinek zůstane aktivní, pokud je modul dostupný."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Sekce novinek se na homepage nevyrenderuje."
+        }
+      }
+    },
+    "home_blog_visibility": {
+      "type": "select",
+      "label": "Blok blogu",
+      "description": "Zobrazí sekci blogu jen pokud je modul blog zapnutý a homepage má co zobrazit.",
+      "default": "show",
+      "requires_modules": ["blog"],
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Sekce blogu zůstane aktivní, pokud je modul dostupný."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Sekce blogu se na homepage nevyrenderuje."
+        }
+      }
+    },
+    "home_board_visibility": {
+      "type": "select",
+      "label": "Blok úřední desky",
+      "description": "Zobrazí dokumenty z úřední desky jen pokud je modul zapnutý a má aktivní obsah.",
+      "default": "show",
+      "requires_modules": ["board"],
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Sekce úřední desky zůstane aktivní, pokud je modul dostupný."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Sekce úřední desky se na homepage nevyrenderuje."
+        }
+      }
+    },
+    "home_poll_visibility": {
+      "type": "select",
+      "label": "Blok ankety",
+      "description": "Zobrazí anketu jen pokud je modul ankety zapnutý a existuje aktivní hlasování.",
+      "default": "show",
+      "requires_modules": ["polls"],
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Anketa zůstane na homepage viditelná, pokud je k dispozici."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Anketa se na homepage nevyrenderuje."
+        }
+      }
+    },
+    "home_newsletter_visibility": {
+      "type": "select",
+      "label": "Blok newsletteru",
+      "description": "Zobrazí výzvu k odběru jen pokud je modul newsletter globálně zapnutý.",
+      "default": "show",
+      "requires_modules": ["newsletter"],
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Newsletter blok bude k dispozici, pokud je modul aktivní."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Výzva k odběru se na homepage nevyrenderuje."
+        }
+      }
+    },
+    "home_cta_visibility": {
+      "type": "select",
+      "label": "CTA blok",
+      "description": "Zobrazí obecný blok s akcemi jako vyhledávání, kontakt nebo přihlášení.",
+      "default": "show",
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "CTA blok pomůže návštěvníkovi rychle přejít na důležité akce."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Obecný CTA blok se na homepage nevyrenderuje."
+        }
+      }
+    }
+  }
+}

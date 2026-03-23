@@ -1,0 +1,54 @@
+@import url("../../default/assets/public.css");
+
+body.theme-civic {
+  --radius-lg: 0.95rem;
+  --radius-md: 0.7rem;
+  --shadow-soft: 0 8px 20px rgba(16, 31, 43, 0.05);
+  --shadow-strong: 0 18px 42px rgba(16, 31, 43, 0.08);
+}
+
+body.theme-civic {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)),
+    linear-gradient(135deg, var(--bg-accent), var(--bg-main));
+}
+
+.theme-civic .site-header__panel {
+  padding: 1.35rem 1.5rem;
+  border: 1px solid rgba(var(--accent-rgb), 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: none;
+}
+
+.theme-civic .site-header nav a {
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.theme-civic .surface {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: none;
+  border-color: rgba(var(--accent-rgb), 0.12);
+}
+
+.theme-civic .surface--accent {
+  background: linear-gradient(180deg, rgba(255, 249, 240, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.theme-civic .card {
+  box-shadow: none;
+  border-color: rgba(var(--accent-rgb), 0.14);
+}
+
+.theme-civic .section-kicker {
+  letter-spacing: 0.08em;
+}
+
+.theme-civic .hero-stats__item {
+  background: #ffffff;
+  border-color: rgba(var(--accent-rgb), 0.18);
+}
+
+.theme-civic .site-shell > footer {
+  background: #20313f;
+}

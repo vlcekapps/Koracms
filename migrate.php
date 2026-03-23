@@ -708,6 +708,7 @@ $newSettings = [
     'og_image_default'        => '',
     'site_favicon'            => '',
     'site_logo'               => '',
+    'active_theme'            => defaultThemeName(),
     // Cookie lišta
     'cookie_consent_enabled'  => '0',
     'cookie_consent_text'     => 'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.',
