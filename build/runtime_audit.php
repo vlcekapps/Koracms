@@ -615,6 +615,18 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_settings') {
+        if (!str_contains($result['body'], 'name="site_profile"')) {
+            $issues[] = 'site profile setting is missing';
+        }
+        if (!str_contains($result['body'], 'name="apply_site_profile"')) {
+            $issues[] = 'site profile preset toggle is missing';
+        }
+        if (!str_contains($result['body'], 'value="custom"')) {
+            $issues[] = 'custom site profile option is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_themes') {
         if (!str_contains($result['body'], 'name="active_theme"')) {
             $issues[] = 'theme selector is missing';

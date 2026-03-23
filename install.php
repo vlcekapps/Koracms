@@ -12,16 +12,25 @@ try {
 
 $errors = [];
 $success = false;
+$siteProfiles = siteProfileDefinitions();
+$selectedSiteProfile = defaultSiteProfileKey();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('install', 5, 300);
     verifyCsrf();
 
-    $siteName    = trim($_POST['site_name']    ?? '');
-    $siteDesc    = trim($_POST['site_desc']    ?? '');
-    $adminEmail  = trim($_POST['admin_email']  ?? '');
-    $adminPass   = $_POST['admin_pass']        ?? '';
-    $adminPass2  = $_POST['admin_pass2']       ?? '';
+    $siteName = trim($_POST['site_name'] ?? '');
+    $siteDesc = trim($_POST['site_desc'] ?? '');
+    $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
+    $adminEmail = trim($_POST['admin_email'] ?? '');
+    $adminPass = $_POST['admin_pass'] ?? '';
+    $adminPass2 = $_POST['admin_pass2'] ?? '';
+
+    if (!isset($siteProfiles[$siteProfile])) {
+        $errors[] = 'Vyberte platný profil webu.';
+        $siteProfile = defaultSiteProfileKey();
+    }
+    $selectedSiteProfile = $siteProfile;
 
     if ($siteName === '')   $errors[] = 'Název webu je povinný.';
     if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL))
@@ -471,6 +480,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $defaults = [
             'site_name'       => $siteName,
             'site_description'=> $siteDesc,
+            'site_profile'    => $siteProfile,
             'admin_email'     => $adminEmail,
             'contact_email'   => $adminEmail,
             'admin_password'  => password_hash($adminPass, PASSWORD_BCRYPT),
@@ -527,6 +537,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              VALUES (?, ?, 'admin', 1)
              ON DUPLICATE KEY UPDATE password = VALUES(password), role = 'admin', is_superadmin = 1"
         )->execute([$adminEmail, password_hash($adminPass, PASSWORD_BCRYPT)]);
+        applySiteProfilePreset($siteProfile);
 
         // ── Adresáře pro nahrávání souborů ──────────────────────────────────
         $uploadDirs = [
@@ -565,6 +576,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     button { margin-top: 1.5rem; padding: .5rem 1.5rem; }
     .error { color: #c00; }
     .success { color: #060; }
+    .profile-option { margin-top: .9rem; padding: .85rem 1rem; border: 1px solid #d0d7de; border-radius: 10px; }
+    .profile-option input { width: auto; margin-right: .5rem; }
+    .profile-option label { display: inline; margin-top: 0; }
+    .profile-option p { margin: .4rem 0 0 1.8rem; color: #444; font-size: .95rem; }
   </style>
 </head>
 <body>
@@ -593,6 +608,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <label for="site_desc">Popis webu</label>
       <input type="text" id="site_desc" name="site_desc"
              value="<?= h($_POST['site_desc'] ?? '') ?>">
+      <fieldset>
+        <legend>Profil webu</legend>
+        <p>Vyberte výchozí směr webu. Instalace podle něj přednastaví moduly, domovskou stránku i doporučenou šablonu.</p>
+        <?php foreach ($siteProfiles as $profileKey => $profile): ?>
+          <div class="profile-option">
+            <input type="radio" id="site_profile_<?= h($profileKey) ?>" name="site_profile" value="<?= h($profileKey) ?>"
+                   <?= $selectedSiteProfile === $profileKey ? 'checked' : '' ?>>
+            <label for="site_profile_<?= h($profileKey) ?>">
+              <?= h($profile['label']) ?><?= $profileKey === defaultSiteProfileKey() ? ' (Doporučeno)' : '' ?>
+            </label>
+            <p><?= h($profile['description']) ?></p>
+          </div>
+        <?php endforeach; ?>
+      </fieldset>
 
       <label for="admin_email">E-mail administrátora <span aria-hidden="true">*</span></label>
       <input type="email" id="admin_email" name="admin_email" required

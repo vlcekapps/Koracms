@@ -21,6 +21,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Session-based živý náhled šablon a jejich draft nastavení bez změny `active_theme` v produkční konfiguraci
 - Bezpečný portable ZIP formát pro šablony: import/export statických theme balíčků bez PHP override souborů
 - Repo-local UX audit framework v `docs/ux-audit-framework.md` a základní UX guardrails v `build/runtime_audit.php`
+- Profil webu při instalaci i v administraci: `Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma` a `Vlastní profil`; první čtyři mají volitelné doporučené presety modulů, navigace, homepage composeru a aktivní šablony, `Vlastní profil` je neutrální režim pro ruční správu
 
 ### Opraveno
 - Veřejné přihlášení nyní validuje interní redirecty a odmítá externí / protocol-relative URL
@@ -43,6 +44,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Runtime audit nově testuje i skutečný preview flow přes admin formulář, veřejný preview banner a bezpečné ukončení náhledu
 - Runtime audit nově testuje i celý roundtrip portable theme package: ZIP upload, aktivaci, render homepage a zpětný export
 - Runtime audit nově hlídá i základní UX heuristiky jako skip link, `main#obsah`, jeden `h1`, prázdné titulkové texty a stabilitu homepage struktury
+- Migrace nově seeduje `site_profile` i pro starší instalace; pokud hodnota chybí, CMS použije bezpečný odhad podle aktivní šablony a zapnutých modulů
 
 ## [2.1.1] – 2026-03-20
 

@@ -4,6 +4,9 @@ requireLogin(BASE_URL . '/admin/login.php');
 
 $success = false;
 $errors  = [];
+$successMessage = '';
+$siteProfiles = siteProfileDefinitions();
+$selectedSiteProfile = currentSiteProfileKey();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -11,12 +14,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteName    = trim($_POST['site_name']       ?? '');
     $siteDesc    = trim($_POST['site_description'] ?? '');
     $contactEmail= trim($_POST['contact_email']   ?? '');
+    $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
     $homeBlog      = max(0, (int)($_POST['home_blog_count'] ?? 5));
     $homeNews      = max(0, (int)($_POST['home_news_count'] ?? 5));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
     $contentEditor = in_array($_POST['content_editor'] ?? '', ['html', 'wysiwyg']) ? $_POST['content_editor'] : 'html';
+    $applySiteProfile = isset($_POST['apply_site_profile']);
+
+    if (!isset($siteProfiles[$siteProfile])) {
+        $errors[] = 'Vyberte platný profil webu.';
+        $siteProfile = currentSiteProfileKey();
+    }
+    $selectedSiteProfile = $siteProfile;
 
     if ($siteName === '') $errors[] = 'Název webu je povinný.';
     if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL))
@@ -26,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('site_name',        $siteName);
         saveSetting('site_description', $siteDesc);
         saveSetting('contact_email',    $contactEmail);
+        saveSetting('site_profile',     $siteProfile);
         saveSetting('home_blog_count',  (string)$homeBlog);
         saveSetting('home_news_count',  (string)$homeNews);
         saveSetting('news_per_page',    (string)$newsPerPage);
@@ -91,6 +103,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if (empty($errors) && $applySiteProfile) {
+            applySiteProfilePreset($siteProfile);
+            if (siteProfileSupportsPreset($siteProfile)) {
+                $successMessage = 'Doporučené přednastavení profilu bylo použito.';
+            } else {
+                $successMessage = 'Vlastní profil byl uložen bez zásahu do stávajících modulů a vzhledu.';
+            }
+        }
         if (empty($errors)) $success = true;
     }
 }
@@ -100,6 +120,10 @@ adminHeader('Základní nastavení');
 
 <?php if ($success): ?>
   <p class="success" role="status">Nastavení bylo uloženo.</p>
+<?php endif; ?>
+
+<?php if ($success && $successMessage !== ''): ?>
+  <p class="success" role="status"><?= h($successMessage) ?></p>
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
@@ -132,6 +156,27 @@ adminHeader('Základní nastavení');
     <label for="contact_email">E-mail pro kontaktní formulář</label>
     <input type="email" id="contact_email" name="contact_email"
            value="<?= h(getSetting('contact_email')) ?>">
+  </fieldset>
+
+  <fieldset>
+    <legend>Profil webu</legend>
+    <p style="margin-top:.25rem;color:#555">Profil pomáhá držet vhodné výchozí moduly, domovskou stránku a doporučenou šablonu pro typ webu, který tvoříte.</p>
+    <?php foreach ($siteProfiles as $profileKey => $profile): ?>
+      <div style="margin-top:.85rem;padding:.85rem 1rem;border:1px solid #d0d7de;border-radius:10px">
+        <input type="radio" id="site_profile_<?= h($profileKey) ?>" name="site_profile" value="<?= h($profileKey) ?>"
+               <?= $selectedSiteProfile === $profileKey ? 'checked' : '' ?>>
+        <label for="site_profile_<?= h($profileKey) ?>" style="display:inline;margin-top:0"><?= h($profile['label']) ?></label>
+        <p style="margin:.45rem 0 0 1.8rem;color:#444"><?= h($profile['description']) ?></p>
+      </div>
+    <?php endforeach; ?>
+    <div style="margin-top:1rem">
+      <input type="checkbox" id="apply_site_profile" name="apply_site_profile" value="1"
+             <?= isset($_POST['apply_site_profile']) ? 'checked' : '' ?>>
+      <label for="apply_site_profile" style="display:inline;font-weight:normal">
+        Použít doporučené moduly, pořadí navigace a vzhled pro zvolený profil
+      </label>
+    </div>
+    <small style="color:#666">Bez zaškrtnutí se uloží jen zvolený profil webu a stávající konfigurace se nepřepíše. U vlastního profilu zůstane konfigurace beze změny i při použití této volby.</small>
   </fieldset>
 
   <fieldset>

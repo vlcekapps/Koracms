@@ -71,6 +71,7 @@ http://vas-web.cz/install.php
 ```
 
 Vyplňte název webu, e-mail a heslo hlavního administrátora a klikněte na **Nainstalovat**.
+Při instalaci si můžete rovnou vybrat i **profil webu** (`Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma`, `Vlastní profil`). První čtyři varianty přednastaví vhodné moduly, domovskou stránku a doporučenou šablonu, zatímco `Vlastní profil` ponechá CMS v neutrálním režimu pro ruční nastavení.
 
 ### 5. Smažte instalační soubor
 
@@ -152,6 +153,7 @@ Nastavení je rozděleno do čtyř sekcí:
 ### Základní nastavení
 
 - **Název a popis webu** – zobrazí se v záhlaví a v SEO meta tazích
+- **Profil webu** – uloží zaměření webu a volitelně jedním krokem použije doporučené moduly, pořadí navigace, homepage bloky a vhodnou first-party šablonu; `Vlastní profil` slouží jako neutrální režim bez vnuceného presetu
 - **Kontaktní e-mail** – příjemce zpráv z kontaktního formuláře
 - **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
 - **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
@@ -174,6 +176,7 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 ### Vzhled a šablony
 
 - Výběr aktivní veřejné šablony z adresáře `themes/`
+- Profil webu při instalaci i v administraci: `Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma`, `Vlastní profil`
 - Zobrazení názvu, verze, autora a popisu dostupných šablon
 - Obrázkové preview karty šablon přímo v administraci pro rychlejší orientaci při výběru
 - Bezpečný fallback na `default`, pokud uložená šablona na serveru chybí nebo je neplatná
