@@ -615,6 +615,28 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'home' && str_contains($result['body'], '/uploads/board/')) {
+        $issues[] = 'home board links still expose uploads/board paths';
+    }
+
+    if ($page['label'] === 'board_index') {
+        if (str_contains($result['body'], '/uploads/board/')) {
+            $issues[] = 'board listing still exposes uploads/board paths';
+        }
+        if (str_contains($result['body'], 'class="board-item"') && !str_contains($result['body'], '/board/file.php?id=')) {
+            $issues[] = 'board listing is missing file endpoint links';
+        }
+    }
+
+    if ($page['label'] === 'downloads_index') {
+        if (str_contains($result['body'], '/uploads/downloads/')) {
+            $issues[] = 'downloads listing still exposes uploads/downloads paths';
+        }
+        if (str_contains($result['body'], 'class="download-item"') && !str_contains($result['body'], '/downloads/file.php?id=')) {
+            $issues[] = 'downloads listing is missing file endpoint links';
+        }
+    }
+
     if ($page['label'] === 'admin_settings') {
         if (!str_contains($result['body'], 'name="site_profile"')) {
             $issues[] = 'site profile setting is missing';
@@ -666,6 +688,68 @@ foreach ($pages as $page) {
     $failures++;
     foreach ($issues as $issue) {
         echo '- ' . $issue . "\n";
+    }
+}
+
+$downloadsFileGuard = fetchUrl($baseUrl . '/downloads/file.php?id=-1', '', 0);
+echo "=== downloads_file_guard ===\n";
+if (!str_contains($downloadsFileGuard['status'], '404')) {
+    echo "- invalid downloads file request does not return 404 ({$downloadsFileGuard['status']})\n";
+    $failures++;
+} else {
+    echo "OK\n";
+}
+
+$sampleDownload = $pdo->query(
+    "SELECT id FROM cms_downloads
+     WHERE status = 'published' AND is_published = 1 AND filename <> ''
+     ORDER BY id DESC
+     LIMIT 1"
+)->fetchColumn();
+echo "=== downloads_file ===\n";
+if ($sampleDownload === false) {
+    echo "OK\n";
+} else {
+    $downloadProbe = fetchUrl($baseUrl . '/downloads/file.php?id=' . (int)$sampleDownload, '', 0);
+    if (!str_contains($downloadProbe['status'], '200')) {
+        echo "- unexpected status: {$downloadProbe['status']}\n";
+        $failures++;
+    } elseif (!preg_grep('/^Content-Disposition: attachment; /', $downloadProbe['headers'])) {
+        echo "- downloads file endpoint is missing attachment disposition\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+$boardFileGuard = fetchUrl($baseUrl . '/board/file.php?id=-1', '', 0);
+echo "=== board_file_guard ===\n";
+if (!str_contains($boardFileGuard['status'], '404')) {
+    echo "- invalid board file request does not return 404 ({$boardFileGuard['status']})\n";
+    $failures++;
+} else {
+    echo "OK\n";
+}
+
+$sampleBoard = $pdo->query(
+    "SELECT id FROM cms_board
+     WHERE status = 'published' AND is_published = 1 AND filename <> ''
+     ORDER BY id DESC
+     LIMIT 1"
+)->fetchColumn();
+echo "=== board_file ===\n";
+if ($sampleBoard === false) {
+    echo "OK\n";
+} else {
+    $boardProbe = fetchUrl($baseUrl . '/board/file.php?id=' . (int)$sampleBoard, '', 0);
+    if (!str_contains($boardProbe['status'], '200')) {
+        echo "- unexpected status: {$boardProbe['status']}\n";
+        $failures++;
+    } elseif (!preg_grep('/^Content-Disposition: attachment; /', $boardProbe['headers'])) {
+        echo "- board file endpoint is missing attachment disposition\n";
+        $failures++;
+    } else {
+        echo "OK\n";
     }
 }
 

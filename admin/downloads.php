@@ -39,7 +39,7 @@ adminHeader('Ke stažení');
         <td><?= $d['category_name'] ? h($d['category_name']) : '<em>–</em>' ?></td>
         <td>
           <?php if ($d['filename'] !== ''): ?>
-            <a href="<?= BASE_URL ?>/uploads/downloads/<?= rawurlencode($d['filename']) ?>"
+            <a href="<?= moduleFileUrl('downloads', (int)$d['id']) ?>"
                target="_blank" rel="noopener" download="<?= h($d['original_name']) ?>"><?= h($d['original_name']) ?></a>
             <?php if ($d['file_size'] > 0): ?>
               <small>(<?= h(formatFileSize($d['file_size'])) ?>)</small>

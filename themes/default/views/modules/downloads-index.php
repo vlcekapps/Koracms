@@ -23,7 +23,7 @@
               <?php foreach ($files as $file): ?>
                 <li class="link-list__item download-item">
                   <?php if ($file['filename'] !== ''): ?>
-                    <a class="link-list__title" href="<?= BASE_URL ?>/uploads/downloads/<?= rawurlencode($file['filename']) ?>"
+                    <a class="link-list__title" href="<?= moduleFileUrl('downloads', (int)$file['id']) ?>"
                        download="<?= h($file['original_name']) ?>">
                       <?= h($file['title']) ?>
                     </a>

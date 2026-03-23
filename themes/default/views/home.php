@@ -387,7 +387,7 @@ $renderBoardSection = static function (array $items): string {
           <li class="link-list__item">
             <?php if ($boardItem['filename'] !== ''): ?>
               <a class="link-list__title"
-                 href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($boardItem['filename']) ?>"
+                 href="<?= moduleFileUrl('board', (int)$boardItem['id']) ?>"
                  download="<?= h($boardItem['original_name']) ?>">
                 <?= h($boardItem['title']) ?>
               </a>
@@ -587,7 +587,7 @@ $renderFeaturedSection = static function () use (
                     <span><?= h($featuredBoardItem['posted_date']) ?></span>
                   </p>
                   <?php if ($featuredBoardItem['filename'] !== ''): ?>
-                    <p><a class="section-link" href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($featuredBoardItem['filename']) ?>" download="<?= h($featuredBoardItem['original_name']) ?>">Stáhnout dokument <span aria-hidden="true">→</span></a></p>
+                    <p><a class="section-link" href="<?= moduleFileUrl('board', (int)$featuredBoardItem['id']) ?>" download="<?= h($featuredBoardItem['original_name']) ?>">Stáhnout dokument <span aria-hidden="true">→</span></a></p>
                   <?php endif; ?>
                 </div>
               </article>

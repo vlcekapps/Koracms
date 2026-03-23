@@ -54,6 +54,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Runtime audit nově testuje i celý roundtrip portable theme package: ZIP upload, aktivaci, render homepage a zpětný export
 - Runtime audit nově hlídá i základní UX heuristiky jako skip link, `main#obsah`, jeden `h1`, prázdné titulkové texty a stabilitu homepage struktury
 - Migrace nově seeduje `site_profile` i pro starší instalace; pokud hodnota chybí, CMS použije bezpečný odhad podle aktivní šablony a zapnutých modulů
+- Moduly `Ke stažení` a `Úřední deska` nově stahují přes serverový endpoint s `Content-Disposition`, takže návštěvník dostává původní název souboru a veřejné HTML neodhaluje interní jméno na disku
 
 ## [2.1.1] – 2026-03-20
 

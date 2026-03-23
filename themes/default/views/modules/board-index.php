@@ -25,7 +25,7 @@
                   <li class="link-list__item board-item">
                     <strong class="link-list__title">
                       <?php if ($document['filename'] !== ''): ?>
-                        <a href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($document['filename']) ?>"
+                        <a href="<?= moduleFileUrl('board', (int)$document['id']) ?>"
                            download="<?= h($document['original_name']) ?>">
                           <?= h($document['title']) ?>
                         </a>
@@ -73,7 +73,7 @@
                       <li class="link-list__item board-item">
                         <strong class="link-list__title">
                           <?php if ($document['filename'] !== ''): ?>
-                            <a href="<?= BASE_URL ?>/uploads/board/<?= rawurlencode($document['filename']) ?>"
+                            <a href="<?= moduleFileUrl('board', (int)$document['id']) ?>"
                                download="<?= h($document['original_name']) ?>">
                               <?= h($document['title']) ?>
                             </a>
