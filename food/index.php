@@ -31,13 +31,14 @@ $beverageCard = $pdo->query(
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Jídelní a nápojový lístek – ' . $siteName, 'url' => BASE_URL . '/food/index.php']) ?>
   <title>Jídelní a nápojový lístek – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <style>
     .food-tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; flex-wrap:wrap; }
     .food-tab  { padding:.4rem 1.2rem; border:2px solid #ccc; background:#f8f8f8;
                  cursor:pointer; border-radius:3px; font-size:1rem; }
     .food-tab[aria-selected="true"] { border-color:#333; background:#333; color:#fff; }
-    .food-panel { display:none; }
-    .food-panel.active { display:block; }
+    .food-panel { margin-top:1rem; }
+    .food-panel[hidden] { display:none; }
     .food-meta  { font-size:.85rem; color:#666; margin-bottom:1rem; }
     .food-content { line-height:1.7; }
     .food-content h2, .food-content h3 { margin-top:1.5rem; }
@@ -55,14 +56,14 @@ $beverageCard = $pdo->query(
 <main id="obsah">
   <h2>Jídelní a nápojový lístek</h2>
 
-  <div class="food-tabs" role="tablist">
-    <button class="food-tab" role="tab" aria-selected="true"  aria-controls="panel-food"
-            id="tab-food"     onclick="switchTab('food')">Jídelní lístek</button>
-    <button class="food-tab" role="tab" aria-selected="false" aria-controls="panel-beverage"
-            id="tab-beverage" onclick="switchTab('beverage')">Nápojový lístek</button>
+  <div class="food-tabs" role="tablist" aria-label="Typ lístku">
+    <button type="button" class="food-tab" role="tab" aria-selected="true" aria-controls="panel-food"
+            id="tab-food" data-tab="food" tabindex="0">Jídelní lístek</button>
+    <button type="button" class="food-tab" role="tab" aria-selected="false" aria-controls="panel-beverage"
+            id="tab-beverage" data-tab="beverage" tabindex="-1">Nápojový lístek</button>
   </div>
 
-  <div id="panel-food" class="food-panel active" role="tabpanel" aria-labelledby="tab-food">
+  <div id="panel-food" class="food-panel" role="tabpanel" aria-labelledby="tab-food" data-panel="food">
     <?php if ($foodCard): ?>
       <h3><?= h($foodCard['title']) ?></h3>
       <p class="food-meta">
@@ -89,7 +90,7 @@ $beverageCard = $pdo->query(
     <?php endif; ?>
   </div>
 
-  <div id="panel-beverage" class="food-panel" role="tabpanel" aria-labelledby="tab-beverage">
+  <div id="panel-beverage" class="food-panel" role="tabpanel" aria-labelledby="tab-beverage" data-panel="beverage">
     <?php if ($beverageCard): ?>
       <h3><?= h($beverageCard['title']) ?></h3>
       <p class="food-meta">
@@ -122,20 +123,57 @@ $beverageCard = $pdo->query(
 </main>
 
 <script>
-function switchTab(type) {
-    document.querySelectorAll('.food-tab').forEach(function(btn) {
-        var active = btn.id === 'tab-' + type;
-        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+document.addEventListener('DOMContentLoaded', function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.food-tab'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('.food-panel'));
+
+    function activateTab(type, moveFocus, updateHash) {
+        tabs.forEach(function (tab) {
+            var active = tab.getAttribute('data-tab') === type;
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            tab.setAttribute('tabindex', active ? '0' : '-1');
+            if (active && moveFocus) {
+                tab.focus();
+            }
+        });
+
+        panels.forEach(function (panel) {
+            panel.hidden = panel.getAttribute('data-panel') !== type;
+        });
+
+        if (updateHash) {
+            window.location.hash = (type === 'beverage') ? 'beverage' : 'food';
+        }
+    }
+
+    tabs.forEach(function (tab, index) {
+        tab.addEventListener('click', function () {
+            activateTab(tab.getAttribute('data-tab'), false, true);
+        });
+
+        tab.addEventListener('keydown', function (event) {
+            var nextIndex = index;
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                nextIndex = (index + 1) % tabs.length;
+            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                nextIndex = (index - 1 + tabs.length) % tabs.length;
+            } else if (event.key === 'Home') {
+                nextIndex = 0;
+            } else if (event.key === 'End') {
+                nextIndex = tabs.length - 1;
+            } else {
+                return;
+            }
+
+            event.preventDefault();
+            activateTab(tabs[nextIndex].getAttribute('data-tab'), true, true);
+        });
     });
-    document.querySelectorAll('.food-panel').forEach(function(panel) {
-        panel.classList.toggle('active', panel.id === 'panel-' + type);
-    });
-}
-// Otevřít záložku z URL hash
-(function() {
+
     var hash = window.location.hash.replace('#', '');
-    if (hash === 'napojovy' || hash === 'beverage') switchTab('beverage');
-})();
+    var initialTab = (hash === 'napojovy' || hash === 'beverage') ? 'beverage' : 'food';
+    activateTab(initialTab, false, false);
+});
 </script>
 
 <?= siteFooter() ?>

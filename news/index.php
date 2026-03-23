@@ -34,6 +34,7 @@ $items = $stmt->fetchAll();
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Novinky – ' . $siteName, 'url' => BASE_URL . '/news/index.php']) ?>
   <title>Novinky – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar() ?>

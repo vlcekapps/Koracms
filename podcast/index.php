@@ -26,6 +26,7 @@ $shows = $pdo->query(
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Podcasty – ' . $siteName, 'url' => BASE_URL . '/podcast/index.php']) ?>
   <title>Podcasty – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar() ?>

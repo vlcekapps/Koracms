@@ -36,6 +36,44 @@ function currentUserDisplayName(): string
     return $_SESSION['cms_user_name'] ?? '';
 }
 
+/**
+ * Vrátí pouze bezpečný interní redirect v rámci tohoto webu.
+ * Zahazuje externí URL, protocol-relative URL i neplatné cesty.
+ */
+function internalRedirectTarget(string $target, string $default = ''): string
+{
+    $target = trim(str_replace(["\r", "\n"], '', $target));
+    if ($target === '') {
+        return $default;
+    }
+
+    if (preg_match('/[\x00-\x1F\x7F]/', $target)) {
+        return $default;
+    }
+
+    $parts = parse_url($target);
+    if ($parts === false) {
+        return $default;
+    }
+
+    if (isset($parts['scheme']) || isset($parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
+        return $default;
+    }
+
+    $path = $parts['path'] ?? '';
+    if ($path === '' || $path[0] !== '/' || str_starts_with($path, '//')) {
+        return $default;
+    }
+
+    if (BASE_URL !== '' && $path !== BASE_URL && !str_starts_with($path, BASE_URL . '/')) {
+        return $default;
+    }
+
+    $query    = isset($parts['query']) ? '?' . $parts['query'] : '';
+    $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
+    return $path . $query . $fragment;
+}
+
 function requireLogin(string $loginUrl = '/admin/login.php'): void
 {
     if (!isLoggedIn()) {
@@ -116,8 +154,9 @@ function requirePublicLogin(string $redirect = ''): void
 {
     if (!isLoggedIn()) {
         $url = BASE_URL . '/public_login.php';
-        if ($redirect !== '') {
-            $url .= '?redirect=' . urlencode($redirect);
+        $safeRedirect = internalRedirectTarget($redirect, '');
+        if ($safeRedirect !== '') {
+            $url .= '?redirect=' . urlencode($safeRedirect);
         }
         header('Location: ' . $url);
         exit;

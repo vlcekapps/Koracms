@@ -24,7 +24,7 @@ adminHeader('Nastavení zobrazení');
   $enabled   = isModuleEnabled($key);
 ?>
   <li style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #eee">
-    <span style="min-width:160px<?= $enabled ? '' : ';color:#999' ?>">
+    <span style="min-width:160px<?= $enabled ? '' : ';color:#666' ?>">
       <?= h($label) ?><?= $enabled ? '' : ' <em>(vypnuto)</em>' ?>
     </span>
 

@@ -399,17 +399,35 @@ function adminBar(string $editUrl = ''): string
     $b   = BASE_URL;
     $out = '<div id="admin-bar" role="navigation" aria-label="Administrace webu"'
          . ' style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#222;'
-         . 'color:#fff;display:flex;align-items:center;gap:1rem;padding:.35rem 1rem;'
+         . 'color:#fff;display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;'
          . 'font-size:.85rem">'
-         . '<a href="' . $b . '/admin/index.php" style="color:#ddd;text-decoration:none"><span aria-hidden="true">&#9881;</span> Admin</a>';
+         . '<a href="' . $b . '/admin/index.php" style="color:#ddd;text-decoration:none;display:inline-flex;'
+         . 'align-items:center;min-height:2rem;padding:.35rem .6rem;border-radius:4px"><span aria-hidden="true">&#9881;</span> Admin</a>';
     if ($editUrl !== '') {
-        $out .= ' <a href="' . h($editUrl) . '" style="color:#ffd700;text-decoration:none">&#9998; Upravit</a>';
+        $out .= ' <a href="' . h($editUrl) . '" style="color:#ffd700;text-decoration:none;display:inline-flex;'
+              . 'align-items:center;min-height:2rem;padding:.35rem .6rem;border-radius:4px">&#9998; Upravit</a>';
     }
     $out .= '<span style="margin-left:auto">'
-          . '<a href="' . $b . '/admin/logout.php" style="color:#aaa;text-decoration:none">Odhlásit se</a>'
+          . '<a href="' . $b . '/admin/logout.php" style="color:#ddd;text-decoration:none;display:inline-flex;'
+          . 'align-items:center;min-height:2rem;padding:.35rem .6rem;border-radius:4px">Odhlásit se</a>'
           . '</span>';
     $out .= '</div>';
     return $out;
+}
+
+/**
+ * Vrátí sdílené a11y styly pro skip link, screen-reader text a focus ring.
+ */
+function publicA11yStyleTag(): string
+{
+    return "<style>\n"
+         . "  .skip-link { position:absolute; left:-9999px; top:auto; }\n"
+         . "  .skip-link:focus { left:1rem; top:1rem; z-index:9999; background:#fff; color:#000;"
+         . " padding:.5rem 1rem; border:2px solid #000; text-decoration:none; }\n"
+         . "  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;"
+         . " clip:rect(0,0,0,0); white-space:nowrap; border:0; }\n"
+         . "  :focus-visible { outline:3px solid #005fcc; outline-offset:2px; }\n"
+         . "</style>\n";
 }
 
 /**

@@ -39,6 +39,7 @@ $feedUrl = BASE_URL . '/podcast/feed.php?slug=' . rawurlencode($show['slug']);
     'url'         => BASE_URL . '/podcast/show.php?slug=' . rawurlencode($show['slug']),
 ]) ?>
   <title><?= h($show['title']) ?> – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <link rel="alternate" type="application/rss+xml"
         title="<?= h($show['title']) ?> – RSS feed"
         href="<?= h($feedUrl) ?>">

@@ -4,6 +4,26 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- Repo-local pravidla v `AGENTS.md` pro bezpečnost, diakritiku a WCAG
+- `build/runtime_audit.php` – HTTP smoke audit pro klíčové veřejné i admin stránky
+- Sdílené veřejné a11y styly pro skip link, screen-reader text a focus ring
+
+### Opraveno
+- Veřejné přihlášení nyní validuje interní redirecty a odmítá externí / protocol-relative URL
+- Opakovaná registrace nepotvrzeného účtu již nepadá na duplicitním vložení uživatele
+- Veřejné formuláře používají `aria-describedby` jen tehdy, když cílový error blok skutečně existuje
+- Rezervační kalendář používá čitelnější kontrast u neaktivních stavů
+- Administrace `Ke stažení` otevírá uložený soubor podle interního názvu, ne podle původního jména
+- Administrace se vyhýbá kolizním lokálním proměnným `$user` v dotčených souborech
+- Veřejné stránky bez lokálního CSS dostaly funkční skip link a `.sr-only` helper přes sdílený a11y styl
+- Jídelní a nápojový lístek používá klávesnicově ovladatelné taby s korektním `tabindex` a `type="button"`
+- Administrační navigace a pevná admin lišta mají větší klikací plochy a čitelnější kontrast stavů rezervací
+- Runtime audit kontroluje také skip-link/sr-only patterny a širší sadu veřejných modulových stránek
+- `install.php` ověřuje CSRF a `migrate.php` je chráněné na superadmina, potvrzovací POST a bezpečný anonymní redirect
+
 ## [2.1.1] – 2026-03-20
 
 ### Přidáno

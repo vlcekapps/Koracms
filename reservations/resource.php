@@ -194,10 +194,10 @@ $startDow = ((int)$firstDay->format('N')) - 1;
     .cal-table { border-collapse: collapse; width: 100%; max-width: 600px; }
     .cal-table th, .cal-table td { border: 1px solid #ddd; padding: .4rem; text-align: center; width: 14.28%; }
     .cal-table thead th { background: #f4f4f4; }
-    .cal-day-past { color: #aaa; background: #f9f9f9; }
-    .cal-day-blocked { color: #aaa; background: #f9f9f9; text-decoration: line-through; }
-    .cal-day-closed { color: #aaa; background: #f9f9f9; }
-    .cal-day-beyond { color: #ccc; background: #fafafa; }
+    .cal-day-past { color: #555; background: #ececec; }
+    .cal-day-blocked { color: #555; background: #ececec; text-decoration: line-through; }
+    .cal-day-closed { color: #555; background: #f0f0f0; }
+    .cal-day-beyond { color: #666; background: #f5f5f5; }
     .cal-day-available a { color: #fff; background: #2e7d32; display: block; border-radius: 3px; text-decoration: none; padding: .2rem; }
     .cal-day-available a:hover, .cal-day-available a:focus { background: #1b5e20; outline: 2px solid #000; }
     .cal-day-full { color: #c62828; font-weight: bold; }
@@ -269,7 +269,7 @@ $startDow = ((int)$firstDay->format('N')) - 1;
               <?php if (isset($hours[$d]) && !$hours[$d]['is_closed']): ?>
                 <?= h(substr($hours[$d]['open_time'], 0, 5)) ?> – <?= h(substr($hours[$d]['close_time'], 0, 5)) ?>
               <?php else: ?>
-                <span style="color:#999">Zavřeno</span>
+                <span style="color:#666">Zavřeno</span>
               <?php endif; ?>
             </td>
           </tr>

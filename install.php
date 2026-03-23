@@ -14,6 +14,9 @@ $errors = [];
 $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    rateLimit('install', 5, 300);
+    verifyCsrf();
+
     $siteName    = trim($_POST['site_name']    ?? '');
     $siteDesc    = trim($_POST['site_desc']    ?? '');
     $adminEmail  = trim($_POST['admin_email']  ?? '');
@@ -553,6 +556,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instalace Kora CMS</title>
+<?= publicA11yStyleTag() ?>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
     label { display: block; margin-top: 1rem; font-weight: bold; }
@@ -563,22 +567,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </style>
 </head>
 <body>
-<main>
+<a href="#obsah" class="skip-link">Přeskočit na obsah</a>
+<main id="obsah">
   <h1>Instalace Kora CMS</h1>
 
   <?php if ($success): ?>
-    <p class="success"><strong>Instalace proběhla úspěšně.</strong><br>
+    <p class="success" role="status"><strong>Instalace proběhla úspěšně.</strong><br>
     Smažte nebo přejmenujte soubor <code>install.php</code>.</p>
     <p><a href="<?= BASE_URL ?>/admin/login.php">Přejít do administrace →</a></p>
   <?php else: ?>
 
     <?php if (!empty($errors)): ?>
-      <ul class="error" role="alert">
+      <ul id="install-errors" class="error" role="alert">
         <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
       </ul>
     <?php endif; ?>
 
-    <form method="post" novalidate>
+    <form method="post" novalidate<?php if (!empty($errors)): ?> aria-describedby="install-errors"<?php endif; ?>>
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <label for="site_name">Název webu <span aria-hidden="true">*</span></label>
       <input type="text" id="site_name" name="site_name" required
              value="<?= h($_POST['site_name'] ?? '') ?>">

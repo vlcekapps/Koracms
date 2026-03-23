@@ -158,6 +158,7 @@ function typeLabel(string $type): string {
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Vyhledávání – ' . $siteName]) ?>
   <title>Vyhledávání – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar() ?>

@@ -241,7 +241,7 @@ $captchaExpr = captchaGenerate();
         </ul>
       <?php endif; ?>
 
-      <form method="post" novalidate aria-describedby="comment-errors">
+      <form method="post" novalidate<?php if (!empty($commentErrors)): ?> aria-describedby="comment-errors"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <?= honeypotField() ?>
         <fieldset>

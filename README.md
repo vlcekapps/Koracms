@@ -100,7 +100,7 @@ Otevřete v prohlížeči:
 http://vas-web.cz/migrate.php
 ```
 
-Skript přidá případné nové tabulky, sloupce a výchozí nastavení. Existující data ani nastavení nepřepíše.
+Před spuštěním se přihlaste do administrace jako **superadmin**. Skript po potvrzení přidá případné nové tabulky, sloupce a výchozí nastavení. Existující data ani nastavení nepřepíše.
 
 ### 3. Smažte migrační soubor
 

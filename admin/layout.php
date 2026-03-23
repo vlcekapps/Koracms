@@ -18,9 +18,11 @@ function adminHeader(string $pageTitle): void
        . '    nav { background: #222; color: #fff; width: 210px; flex-shrink: 0; padding: 1rem; }' . "\n"
        . '    nav h2 { font-size: 1rem; margin: 0 0 .25rem; color: #ccc; }' . "\n"
        . '    nav ul { list-style: none; margin: 0; padding: 0; }' . "\n"
-       . '    nav li { margin: .4rem 0; }' . "\n"
-       . '    nav a { color: #ddd; text-decoration: none; font-size: .9rem; }' . "\n"
-       . '    nav a:hover, nav a:focus { color: #fff; text-decoration: underline; }' . "\n"
+       . '    nav li { margin: 0; }' . "\n"
+       . '    nav a, nav summary { display: block; min-height: 2.25rem; line-height: 1.35; border-radius: 4px; }' . "\n"
+       . '    nav a { color: #ddd; text-decoration: none; font-size: .9rem; padding: .45rem .35rem; }' . "\n"
+       . '    nav summary { color: #bbb; font-size: .85rem; }' . "\n"
+       . '    nav a:hover, nav a:focus, nav summary:hover, nav summary:focus { background: rgba(255,255,255,.08); color: #fff; text-decoration: none; }' . "\n"
        . '    main { flex: 1; padding: 1.5rem 2rem; }' . "\n"
        . '    h1 { margin-top: 0; }' . "\n"
        . '    table { border-collapse: collapse; width: 100%; }' . "\n"
@@ -49,7 +51,7 @@ function adminHeader(string $pageTitle): void
 
     $userName = h(currentUserDisplayName());
     if ($userName !== '') {
-        echo '  <p style="font-size:.8rem;color:#999;margin:0 0 .75rem"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
+        echo '  <p style="font-size:.8rem;color:#bbb;margin:0 0 .75rem"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
     }
 
     $topItems = [
@@ -85,13 +87,13 @@ function adminHeader(string $pageTitle): void
     foreach ($topItems as $item) { echo $renderItem($item); }
     echo '  </ul>' . "\n"
        . '  <details style="margin:.4rem 0">' . "\n"
-       . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.3rem 0;list-style:none">'
+       . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.45rem .35rem;border-radius:4px;list-style:none">'
        . '<span aria-hidden="true">&#9776;</span> Moduly</summary>' . "\n"
        . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n";
     if (isModuleEnabled('blog')) {
     echo '      <li>' . "\n"
        . '        <details role="group" aria-label="Blog">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Blog</summary>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Blog</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
@@ -104,7 +106,7 @@ function adminHeader(string $pageTitle): void
     if (isModuleEnabled('downloads')) {
     echo '      <li>' . "\n"
        . '        <details role="group" aria-label="Ke stažení">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/downloads.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Soubory</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
@@ -115,7 +117,7 @@ function adminHeader(string $pageTitle): void
     if (isModuleEnabled('faq')) {
     echo '      <li>' . "\n"
        . '        <details role="group" aria-label="FAQ">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">FAQ</summary>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">FAQ</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Otázky</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/faq_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
@@ -126,7 +128,7 @@ function adminHeader(string $pageTitle): void
     if (isModuleEnabled('board')) {
     echo '      <li>' . "\n"
        . '        <details role="group" aria-label="Úřední deska">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Úřední deska</summary>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Úřední deska</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/board.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Příspěvky</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/board_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
@@ -137,7 +139,7 @@ function adminHeader(string $pageTitle): void
     if (isModuleEnabled('reservations')) {
     echo '      <li>' . "\n"
        . '        <details role="group" aria-label="Rezervace">' . "\n"
-       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.2rem 0;list-style:none;user-select:none">Rezervace</summary>' . "\n"
+       . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Rezervace</summary>' . "\n"
        . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
        . '            <li><a href="' . $b . '/admin/res_resources.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Zdroje</a></li>' . "\n"
        . '            <li><a href="' . $b . '/admin/res_categories.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
@@ -156,7 +158,7 @@ function adminHeader(string $pageTitle): void
     echo '    </ul>' . "\n"
        . '  </details>' . "\n"
        . '  <details style="margin:.4rem 0">' . "\n"
-       . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.3rem 0;list-style:none">'
+       . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.45rem .35rem;border-radius:4px;list-style:none">'
        . '<span aria-hidden="true">&#9881;</span> Nastavení</summary>' . "\n"
        . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n"
        . '      <li><a href="' . $b . '/admin/settings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Základní nastavení</a></li>' . "\n"
@@ -188,7 +190,7 @@ function adminFooter(): void
        . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}'
        . '});</script>'
        . '</main>'
-       . '<footer style="text-align:center;padding:.5rem;font-size:.75rem;color:#999">'
+       . '<footer style="text-align:center;padding:.5rem;font-size:.75rem;color:#666">'
        . 'Kora CMS ' . $version
        . '</footer>'
        . '</body></html>';

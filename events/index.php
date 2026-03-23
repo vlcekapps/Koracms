@@ -78,6 +78,7 @@ function eventsPager(int $current, int $total, string $param, string $otherParam
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Akce – ' . $siteName, 'url' => BASE_URL . '/events/index.php']) ?>
   <title>Akce – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <style>
     .events-wrap { overflow-x: auto; }
     .events-table { width: 100%; border-collapse: collapse; }

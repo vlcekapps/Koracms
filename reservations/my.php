@@ -28,12 +28,12 @@ $statusLabels = [
     'no_show'   => 'Nedostavil se',
 ];
 $statusColors = [
-    'pending'   => '#e65100',
-    'confirmed' => '#2e7d32',
+    'pending'   => '#8a4b00',
+    'confirmed' => '#1b5e20',
     'cancelled' => '#666',
-    'rejected'  => '#c62828',
+    'rejected'  => '#b71c1c',
     'completed' => '#005fcc',
-    'no_show'   => '#8b0000',
+    'no_show'   => '#6d0000',
 ];
 
 // Upcoming bookings
@@ -151,7 +151,7 @@ function canCancel(array $booking, int $nowTs): bool
                               onclick="return confirm('Opravdu chcete zrušit tuto rezervaci?')">Zrušit</button>
                     </form>
                   <?php else: ?>
-                    <span style="color:#999; font-size:.85rem" aria-label="Zrušení již není možné">–</span>
+                    <span style="color:#666; font-size:.85rem" aria-label="Zrušení již není možné">–</span>
                   <?php endif; ?>
                 </td>
               </tr>

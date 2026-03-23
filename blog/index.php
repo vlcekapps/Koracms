@@ -87,6 +87,7 @@ $paginBase = 'index.php?' . ($katId !== null ? 'kat=' . $katId . '&' : '') . ($t
 <?= faviconTag() ?>
 <?= seoMeta(['title' => h($pageTitle) . ' – ' . h($siteName)]) ?>
   <title><?= h($pageTitle) ?> – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar() ?>

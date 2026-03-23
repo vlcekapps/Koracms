@@ -22,6 +22,7 @@ if ($token !== '') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Potvrzení odběru – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <a href="#obsah" class="skip-link">Přeskočit na obsah</a>

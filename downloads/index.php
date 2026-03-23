@@ -34,6 +34,7 @@ ksort($grouped);
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Ke stažení – ' . $siteName, 'url' => BASE_URL . '/downloads/index.php']) ?>
   <title>Ke stažení – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar(BASE_URL . '/admin/downloads.php') ?>

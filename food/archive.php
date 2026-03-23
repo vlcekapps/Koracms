@@ -40,6 +40,7 @@ $typeLabels = ['food' => 'Jídelní lístek', 'beverage' => 'Nápojový lístek'
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Archiv lístků – ' . $siteName, 'url' => BASE_URL . '/food/archive.php']) ?>
   <title>Archiv lístků – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <style>
     .filter-bar { display:flex; gap:.5rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center; }
     .filter-bar a { padding:.35rem .9rem; border:1px solid #ccc; text-decoration:none;

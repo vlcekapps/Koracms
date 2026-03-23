@@ -28,6 +28,7 @@ ksort($grouped);
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Zajímavá místa – ' . $siteName, 'url' => BASE_URL . '/places/index.php']) ?>
   <title>Zajímavá místa – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar() ?>

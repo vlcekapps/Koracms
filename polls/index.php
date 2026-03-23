@@ -156,6 +156,7 @@ if ($pollId !== null) {
 <?= faviconTag() ?>
 <?= seoMeta(['title' => $pageTitle . ' – ' . $siteName, 'url' => BASE_URL . '/polls/index.php']) ?>
   <title><?= h($pageTitle) ?> – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <style>
     .poll-card { border: 1px solid #ddd; border-radius: 6px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
     .poll-card h3 { margin: 0 0 .3rem; }

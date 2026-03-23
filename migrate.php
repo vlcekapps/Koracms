@@ -7,6 +7,47 @@
  */
 require_once __DIR__ . '/db.php';
 
+$isCli = PHP_SAPI === 'cli';
+
+if (!$isCli) {
+    requireSuperAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        ?>
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Potvrzení migrace databáze</title>
+<?= publicA11yStyleTag() ?>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    .warning { background: #fff4e5; border: 1px solid #c77700; color: #7a4300; padding: .9rem 1rem; border-radius: 6px; }
+    form { margin-top: 1.5rem; }
+    button { padding: .6rem 1.2rem; }
+  </style>
+</head>
+<body>
+<a href="#obsah" class="skip-link">Přeskočit na obsah</a>
+<main id="obsah">
+  <h1>Migrace databáze</h1>
+  <p class="warning"><strong>Tato akce upraví databázové schéma a výchozí nastavení.</strong> Spouštějte ji jen po aktualizaci systému a pouze jako superadmin.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <button type="submit">Spustit migraci</button>
+  </form>
+  <p><a href="<?= BASE_URL ?>/admin/index.php">Zpět do administrace</a></p>
+</main>
+</body>
+</html>
+        <?php
+        exit;
+    }
+
+    verifyCsrf();
+}
+
 $pdo = db_connect();
 $log = [];
 
@@ -738,6 +779,13 @@ foreach ($uploadDirs as $dir) {
     } else {
         $log[] = "· Adresář <code>{$dir}</code> již existuje – přeskočeno";
     }
+}
+if ($isCli) {
+    foreach ($log as $line) {
+        echo trim(strip_tags(html_entity_decode($line, ENT_QUOTES | ENT_HTML5, 'UTF-8'))) . PHP_EOL;
+    }
+    echo 'Hotovo. Smazte nebo prejmenujte soubor migrate.php.' . PHP_EOL;
+    exit;
 }
 ?>
 <!DOCTYPE html>

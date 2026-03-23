@@ -55,6 +55,11 @@ $captchaExpr = captchaGenerate();
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Odběr novinek – <?= h($siteName) ?></title>
+  <style>
+    .skip-link { position: absolute; left: -9999px; }
+    .skip-link:focus { left: 1rem; top: 1rem; z-index: 9999;
+      background: #fff; padding: .5rem 1rem; border: 2px solid #000; }
+  </style>
 </head>
 <body>
 <a href="#obsah" class="skip-link">Přeskočit na obsah</a>
@@ -79,7 +84,7 @@ $captchaExpr = captchaGenerate();
   <?php endif; ?>
 
   <?php if ($state === 'form' || $state === 'error'): ?>
-  <form method="post" novalidate aria-describedby="form-errors">
+  <form method="post" novalidate<?php if ($state === 'error'): ?> aria-describedby="form-errors"<?php endif; ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <?= honeypotField() ?>
     <fieldset>

@@ -4,7 +4,7 @@ requireLogin(BASE_URL . '/admin/login.php');
 
 $items = db_connect()->query(
     "SELECT d.id, d.title, d.dl_category_id, c.name AS category_name,
-            d.original_name, d.file_size, d.is_published, d.created_at,
+            d.filename, d.original_name, d.file_size, d.is_published, d.created_at,
             COALESCE(d.status,'published') AS status,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_downloads d
@@ -38,9 +38,9 @@ adminHeader('Ke stažení');
         <td><?= h($d['title']) ?></td>
         <td><?= $d['category_name'] ? h($d['category_name']) : '<em>–</em>' ?></td>
         <td>
-          <?php if ($d['original_name'] !== ''): ?>
-            <a href="<?= BASE_URL ?>/uploads/downloads/<?= rawurlencode($d['original_name']) ?>"
-               target="_blank" rel="noopener"><?= h($d['original_name']) ?></a>
+          <?php if ($d['filename'] !== ''): ?>
+            <a href="<?= BASE_URL ?>/uploads/downloads/<?= rawurlencode($d['filename']) ?>"
+               target="_blank" rel="noopener" download="<?= h($d['original_name']) ?>"><?= h($d['original_name']) ?></a>
             <?php if ($d['file_size'] > 0): ?>
               <small>(<?= h(formatFileSize($d['file_size'])) ?>)</small>
             <?php endif; ?>

@@ -34,6 +34,7 @@ $multipleCategories = count($grouped) > 1;
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'FAQ – ' . $siteName, 'url' => BASE_URL . '/faq/index.php']) ?>
   <title>FAQ – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <style>
     .faq-section { margin-bottom: 2rem; }
     .faq-item { border: 1px solid #ddd; border-radius: 6px; margin-bottom: .5rem; }

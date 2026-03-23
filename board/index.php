@@ -52,6 +52,7 @@ $archiveGrouped = groupByCategory($archive);
 <?= faviconTag() ?>
 <?= seoMeta(['title' => 'Úřední deska – ' . $siteName, 'url' => BASE_URL . '/board/index.php']) ?>
   <title>Úřední deska – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
 </head>
 <body>
 <?= adminBar(BASE_URL . '/admin/board.php') ?>

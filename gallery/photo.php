@@ -111,14 +111,14 @@ $photoTitle = $photo['title'] !== '' ? $photo['title']
         <a href="<?= BASE_URL ?>/gallery/photo.php?id=<?= (int)$prevId ?>"
            aria-label="Předchozí fotografie">« Předchozí</a>
       <?php else: ?>
-        <span aria-hidden="true" style="color:#aaa">« Předchozí</span>
+        <span aria-hidden="true" style="color:#666">« Předchozí</span>
       <?php endif; ?>
 
       <?php if ($nextId): ?>
         <a href="<?= BASE_URL ?>/gallery/photo.php?id=<?= (int)$nextId ?>"
            aria-label="Následující fotografie">Následující »</a>
       <?php else: ?>
-        <span aria-hidden="true" style="color:#aaa">Následující »</span>
+        <span aria-hidden="true" style="color:#666">Následující »</span>
       <?php endif; ?>
 
       <a class="photo-nav__back"

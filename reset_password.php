@@ -123,7 +123,7 @@ $captchaExpr = captchaGenerate();
         Zkontrolujte svou e-mailovou schránku.
       </p>
     <?php else: ?>
-      <form method="post" novalidate aria-describedby="form-errors">
+      <form method="post" novalidate<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
         <fieldset>
@@ -154,7 +154,7 @@ $captchaExpr = captchaGenerate();
         Nyní se můžete <a href="<?= BASE_URL ?>/public_login.php">přihlásit</a>.
       </p>
     <?php else: ?>
-      <form method="post" novalidate aria-describedby="form-errors">
+      <form method="post" novalidate<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <input type="hidden" name="token" value="<?= h($token) ?>">
 

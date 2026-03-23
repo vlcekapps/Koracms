@@ -16,6 +16,7 @@ $siteName = getSetting('site_name', 'Kora CMS');
 $errors   = [];
 $success  = false;
 $resent   = false;
+$skipCreate = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('register', 3, 300);
@@ -52,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dup->execute([$email]);
             $existingUser = $dup->fetch();
             if ($existingUser) {
+                $skipCreate = true;
                 if (!(int)$existingUser['is_confirmed'] && $existingUser['confirmation_token']) {
                     // Neaktivovaný účet — vygenerovat nový token a poslat znovu
                     $newToken = bin2hex(random_bytes(32));
@@ -72,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (empty($errors)) {
+        if (empty($errors) && !$skipCreate) {
             $pdo   = db_connect();
             $token = bin2hex(random_bytes(32));
             $hash  = password_hash($password, PASSWORD_BCRYPT);

@@ -15,7 +15,7 @@ if (isLoggedIn()) {
 $siteName     = getSetting('site_name', 'Kora CMS');
 $errors       = [];
 $notConfirmed = false;
-$redirect     = trim($_GET['redirect'] ?? $_POST['redirect'] ?? '');
+$redirect     = internalRedirectTarget(trim($_GET['redirect'] ?? $_POST['redirect'] ?? ''), '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('public_login', 5, 300);
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'public'
                 );
 
-                $target = ($redirect !== '') ? $redirect : BASE_URL . '/public_profile.php';
+                $target = internalRedirectTarget($redirect, BASE_URL . '/public_profile.php');
                 header('Location: ' . $target);
                 exit;
             }

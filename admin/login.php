@@ -25,18 +25,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              FROM cms_users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([$inputEmail]);
-        $user = $stmt->fetch();
+        $userRow = $stmt->fetch();
 
-        if ($user && password_verify($inputPass, $user['password'])) {
-            $role = $user['role'] ?? 'collaborator';
+        if ($userRow && password_verify($inputPass, $userRow['password'])) {
+            $role = $userRow['role'] ?? 'collaborator';
             // Veřejní uživatelé se nemohou přihlásit do administrace
             if ($role === 'public') {
                 $error = 'Tento účet nemá přístup do administrace. Použijte veřejné přihlášení.';
             } else {
-                $name = $user['nickname'] !== '' ? $user['nickname']
-                      : trim($user['first_name'] . ' ' . $user['last_name']);
+                $name = $userRow['nickname'] !== '' ? $userRow['nickname']
+                      : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
                 if ($name === '') $name = $inputEmail;
-                loginUser((int)$user['id'], $inputEmail, (bool)$user['is_superadmin'], $name, $role);
+                loginUser((int)$userRow['id'], $inputEmail, (bool)$userRow['is_superadmin'], $name, $role);
                 $authenticated = true;
             }
         }

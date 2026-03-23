@@ -38,12 +38,12 @@ $statusLabels = [
     'no_show'   => 'Nedostavil se',
 ];
 $statusColors = [
-    'pending'   => '#c60',
-    'confirmed' => '#060',
-    'cancelled' => '#999',
-    'rejected'  => '#c00',
+    'pending'   => '#8a4b00',
+    'confirmed' => '#1b5e20',
+    'cancelled' => '#666',
+    'rejected'  => '#b71c1c',
     'completed' => '#005fcc',
-    'no_show'   => '#8b0000',
+    'no_show'   => '#6d0000',
 ];
 
 // Jméno uživatele

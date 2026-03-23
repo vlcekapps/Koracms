@@ -43,6 +43,7 @@ elseif ($to)       $validityStr = 'do ' . $to;
     'url'         => BASE_URL . '/food/card.php?id=' . $id,
 ]) ?>
   <title><?= h($card['title']) ?> – <?= h($siteName) ?></title>
+<?= publicA11yStyleTag() ?>
   <style>
     .card-meta   { font-size:.85rem; color:#666; margin-bottom:1.5rem; }
     .card-badge  { display:inline-block; background:#060; color:#fff;
