@@ -806,6 +806,7 @@ function sendMail(string $to, string $subject, string $body): bool
     $from        = getSetting('contact_email', 'noreply@localhost');
     $safeSubject = preg_replace('/[\r\n]/', '', $subject);
     $safeFrom    = preg_replace('/[\r\n]/', '', $from);
+    $safeTo      = preg_replace('/[\r\n]/', '', $to);
 
     $smtpHost = ini_get('SMTP') ?: 'localhost';
     $smtpPort = (int)(ini_get('smtp_port') ?: 25);
@@ -831,13 +832,13 @@ function sendMail(string $to, string $subject, string $body): bool
     $read(); // 250 capabilities
     fwrite($smtp, "MAIL FROM:<{$safeFrom}>\r\n");
     $read();
-    fwrite($smtp, "RCPT TO:<{$to}>\r\n");
+    fwrite($smtp, "RCPT TO:<{$safeTo}>\r\n");
     $read();
     fwrite($smtp, "DATA\r\n");
     $read(); // 354 go ahead
 
     $msg = "From: {$safeFrom}\r\n"
-         . "To: {$to}\r\n"
+         . "To: {$safeTo}\r\n"
          . "Subject: {$safeSubject}\r\n"
          . "Reply-To: {$safeFrom}\r\n"
          . "Content-Type: text/plain; charset=UTF-8\r\n"

@@ -48,6 +48,7 @@ if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
     try {
         $pdo->prepare("UPDATE cms_articles SET view_count = view_count + 1 WHERE id = ?")->execute([$id]);
     } catch (\PDOException $e) {
+        error_log('article view_count: ' . $e->getMessage());
     }
 }
 
@@ -61,6 +62,7 @@ try {
     $ts->execute([$id]);
     $tags = $ts->fetchAll();
 } catch (\PDOException $e) {
+    error_log('article tags: ' . $e->getMessage());
 }
 
 $siteName       = getSetting('site_name', 'Kora CMS');

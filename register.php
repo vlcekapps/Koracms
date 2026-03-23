@@ -87,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hash  = password_hash($password, PASSWORD_BCRYPT);
 
             $pdo->prepare(
-                "INSERT INTO cms_users (email, password, first_name, last_name, phone, role, is_superadmin, is_confirmed, confirmation_token, created_at)
-                 VALUES (?, ?, ?, ?, ?, 'public', 0, 0, ?, NOW())"
+                "INSERT INTO cms_users (email, password, first_name, last_name, phone, role, is_superadmin, is_confirmed, confirmation_token, confirmation_expires, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'public', 0, 0, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW())"
             )->execute([$email, $hash, $firstName, $lastName, $phone, $token]);
 
             $confirmUrl = siteUrl('/confirm_email.php?token=' . $token);

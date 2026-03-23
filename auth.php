@@ -217,8 +217,9 @@ function rateLimit(string $action, int $max = 10, int $window = 60): void
     $key = hash('sha256', $ip . '|' . $action);
     try {
         $pdo = db_connect();
-        $pdo->exec("DELETE FROM cms_rate_limit
-                    WHERE window_start < DATE_SUB(NOW(), INTERVAL {$window} SECOND)");
+        $pdo->prepare("DELETE FROM cms_rate_limit
+                    WHERE window_start < DATE_SUB(NOW(), INTERVAL ? SECOND)")
+            ->execute([$window]);
         $stmt = $pdo->prepare("SELECT attempts FROM cms_rate_limit WHERE id = ?");
         $stmt->execute([$key]);
         $row = $stmt->fetch();
@@ -236,7 +237,7 @@ function rateLimit(string $action, int $max = 10, int $window = 60): void
                 ->execute([$key]);
         }
     } catch (\PDOException $e) {
-        // Tabulka ještě neexistuje – přeskočíme
+        error_log('rateLimit: ' . $e->getMessage());
     }
 }
 

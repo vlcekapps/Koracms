@@ -35,7 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$email]);
         $userRow = $stmt->fetch();
 
-        if ($userRow && password_verify($password, $userRow['password'])) {
+        $storedHash = $userRow ? $userRow['password'] : '$2y$10$dummyhashToPreventTimingAttackEnumerationXXXXXXXXXXXXXXXX';
+        $passwordOk = password_verify($password, $storedHash);
+
+        if ($userRow && $passwordOk) {
             if (!(int)$userRow['is_confirmed']) {
                 $notConfirmed = true;
             } else {
@@ -57,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
         } else {
+            sleep(1);
             $errors[] = 'Nesprávný e-mail nebo heslo.';
         }
     }

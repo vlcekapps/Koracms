@@ -11,7 +11,7 @@ $token = trim($_GET['token'] ?? '');
 if ($token !== '') {
     $pdo  = db_connect();
     $stmt = $pdo->prepare(
-        "SELECT id FROM cms_users WHERE confirmation_token = ? AND is_confirmed = 0"
+        "SELECT id FROM cms_users WHERE confirmation_token = ? AND is_confirmed = 0 AND (confirmation_expires IS NULL OR confirmation_expires > NOW())"
     );
     $stmt->execute([$token]);
     $userRow = $stmt->fetch();

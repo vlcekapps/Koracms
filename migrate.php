@@ -526,6 +526,7 @@ $addColumns = [
     'cms_users.phone'                => "ALTER TABLE cms_users ADD COLUMN phone VARCHAR(30) NOT NULL DEFAULT ''",
     'cms_users.is_confirmed'         => "ALTER TABLE cms_users ADD COLUMN is_confirmed TINYINT(1) NOT NULL DEFAULT 1",
     'cms_users.confirmation_token'   => "ALTER TABLE cms_users ADD COLUMN confirmation_token VARCHAR(64) NOT NULL DEFAULT ''",
+    'cms_users.confirmation_expires' => "ALTER TABLE cms_users ADD COLUMN confirmation_expires DATETIME NULL DEFAULT NULL",
     'cms_users.reset_token'          => "ALTER TABLE cms_users ADD COLUMN reset_token VARCHAR(64) NOT NULL DEFAULT ''",
     'cms_users.reset_expires'        => "ALTER TABLE cms_users ADD COLUMN reset_expires DATETIME NULL DEFAULT NULL",
     'cms_users.updated_at'           => "ALTER TABLE cms_users ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",

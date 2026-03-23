@@ -1050,7 +1050,9 @@ function themeDeleteDirectory(string $path): void
     }
 
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('themeDeleteDirectory: nelze smazat soubor ' . $path);
+        }
         return;
     }
 
@@ -1061,13 +1063,19 @@ function themeDeleteDirectory(string $path): void
 
     foreach ($iterator as $item) {
         if ($item->isDir()) {
-            @rmdir($item->getPathname());
+            if (!rmdir($item->getPathname())) {
+                error_log('themeDeleteDirectory: nelze smazat adresář ' . $item->getPathname());
+            }
         } else {
-            @unlink($item->getPathname());
+            if (!unlink($item->getPathname())) {
+                error_log('themeDeleteDirectory: nelze smazat soubor ' . $item->getPathname());
+            }
         }
     }
 
-    @rmdir($path);
+    if (!rmdir($path)) {
+        error_log('themeDeleteDirectory: nelze smazat kořenový adresář ' . $path);
+    }
 }
 
 function themeZipDosDateTime(?int $timestamp = null): array
@@ -1548,10 +1556,12 @@ function themeImportPortablePackageUpload(?array $upload): array
             }
         }
 
-        if (!@rename($tempThemeDir, $targetThemeDir)) {
+        if (!rename($tempThemeDir, $targetThemeDir)) {
             throw new RuntimeException('Nepodařilo se přesunout importovanou šablonu do adresáře `themes/`.');
         }
-        @rmdir($tempImportDir);
+        if (is_dir($tempImportDir) && !rmdir($tempImportDir)) {
+            error_log('themeImport: nelze smazat dočasný adresář ' . $tempImportDir);
+        }
     } catch (Throwable $exception) {
         themeDeleteDirectory($tempImportDir);
         return [

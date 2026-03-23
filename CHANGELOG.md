@@ -6,6 +6,15 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Opraveno
+- Sanitizace příjemce (`$to`) v `sendMail()` proti email header injection (SMTP RCPT TO i hlavička To)
+- Ochrana proti timing útokům v `public_login.php` – `password_verify()` se volá vždy + zpoždění při neúspěchu
+- Potvrzovací tokeny mají nyní 24h expiraci (`confirmation_expires`) – migrace, registrace i ověření
+- Prepared statement místo přímé interpolace `$window` v `rateLimit()`
+- Tichý catch v `rateLimit()` nyní loguje chybu přes `error_log()`
+- Prázdné catch bloky v `blog/article.php` doplněny o `error_log()`
+- Potlačení chyb (`@`) v `themeDeleteDirectory()` a importu šablon nahrazeno logováním
+
 ### Přidáno
 - Repo-local pravidla v `AGENTS.md` pro bezpečnost, diakritiku a WCAG
 - `build/runtime_audit.php` – HTTP smoke audit pro klíčové veřejné i admin stránky
