@@ -1635,6 +1635,31 @@ function themeAssetUrl(string $path, ?string $themeKey = null): string
         . implode('/', $encodedSegments);
 }
 
+function themePreviewAssetPath(?string $themeKey = null): string
+{
+    $resolvedTheme = resolveThemeName($themeKey);
+    $themePath = themeDirectoryPath($resolvedTheme);
+
+    foreach (['preview.svg', 'preview.webp', 'preview.png', 'preview.jpg', 'preview.jpeg'] as $filename) {
+        $candidate = $themePath . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . $filename;
+        if (is_file($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return '';
+}
+
+function themePreviewAssetUrl(?string $themeKey = null): string
+{
+    $previewPath = themePreviewAssetPath($themeKey);
+    if ($previewPath === '') {
+        return '';
+    }
+
+    return themeAssetUrl('assets/' . basename($previewPath), $themeKey);
+}
+
 function renderThemeTemplate(string $bucket, string $templateName, array $data = [], ?string $themeKey = null): string
 {
     $resolvedTheme = resolveThemeName($themeKey);

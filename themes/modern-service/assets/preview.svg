@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">Modern service theme preview</title>
+  <desc id="desc">Modern service preview card with bold calls to action.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#eef6f8"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f5f8c"/>
+      <stop offset="100%" stop-color="#2c8ba3"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect x="38" y="28" width="724" height="80" rx="24" fill="#ffffff"/>
+  <circle cx="82" cy="68" r="26" fill="#d8eff3"/>
+  <rect x="124" y="50" width="176" height="18" rx="9" fill="#153247"/>
+  <rect x="124" y="76" width="140" height="10" rx="5" fill="#537084"/>
+  <rect x="558" y="48" width="76" height="26" rx="13" fill="#d8eff3"/>
+  <rect x="646" y="48" width="88" height="26" rx="13" fill="#0f5f8c"/>
+  <rect x="38" y="134" width="724" height="158" rx="30" fill="url(#hero)"/>
+  <rect x="74" y="168" width="120" height="12" rx="6" fill="#dff6fb"/>
+  <rect x="74" y="194" width="282" height="42" rx="18" fill="#ffffff"/>
+  <rect x="74" y="252" width="244" height="12" rx="6" fill="#dff6fb" opacity="0.92"/>
+  <rect x="504" y="166" width="202" height="94" rx="24" fill="#ffffff" opacity="0.96"/>
+  <rect x="534" y="192" width="110" height="12" rx="6" fill="#0f5f8c"/>
+  <rect x="534" y="216" width="132" height="12" rx="6" fill="#58748a"/>
+  <rect x="534" y="240" width="86" height="30" rx="15" fill="#0f5f8c"/>
+  <rect x="38" y="320" width="344" height="142" rx="26" fill="#ffffff"/>
+  <rect x="418" y="320" width="344" height="142" rx="26" fill="#ffffff"/>
+  <rect x="66" y="346" width="128" height="12" rx="6" fill="#2c8ba3"/>
+  <rect x="66" y="372" width="214" height="18" rx="9" fill="#153247"/>
+  <rect x="66" y="404" width="242" height="10" rx="5" fill="#5c7385"/>
+  <rect x="446" y="346" width="128" height="12" rx="6" fill="#2c8ba3"/>
+  <rect x="446" y="372" width="226" height="18" rx="9" fill="#153247"/>
+  <rect x="446" y="404" width="250" height="10" rx="5" fill="#5c7385"/>
+</svg>

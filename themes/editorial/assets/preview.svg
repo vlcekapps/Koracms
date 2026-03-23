@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">Editorial theme preview</title>
+  <desc id="desc">Editorial preview card with magazine-like hierarchy.</desc>
+  <rect width="800" height="500" fill="#f4efe7"/>
+  <rect x="32" y="26" width="736" height="74" rx="14" fill="#fbf7f1"/>
+  <rect x="58" y="46" width="182" height="18" rx="9" fill="#241d18"/>
+  <rect x="58" y="72" width="126" height="10" rx="5" fill="#8c7054"/>
+  <rect x="496" y="46" width="70" height="22" rx="11" fill="#9b5d1b"/>
+  <rect x="576" y="46" width="70" height="22" rx="11" fill="#d9cab7"/>
+  <rect x="656" y="46" width="86" height="22" rx="11" fill="#241d18"/>
+  <rect x="32" y="122" width="448" height="336" rx="22" fill="#fbf7f1"/>
+  <rect x="506" y="122" width="262" height="160" rx="22" fill="#ffffff"/>
+  <rect x="506" y="298" width="262" height="160" rx="22" fill="#ffffff"/>
+  <rect x="60" y="152" width="128" height="12" rx="6" fill="#9b5d1b"/>
+  <rect x="60" y="176" width="322" height="54" rx="18" fill="#241d18"/>
+  <rect x="60" y="246" width="334" height="12" rx="6" fill="#7b6754"/>
+  <rect x="60" y="268" width="310" height="12" rx="6" fill="#7b6754" opacity="0.9"/>
+  <rect x="60" y="302" width="388" height="128" rx="18" fill="#efe6db"/>
+  <rect x="86" y="330" width="120" height="12" rx="6" fill="#9b5d1b"/>
+  <rect x="86" y="356" width="204" height="18" rx="9" fill="#241d18"/>
+  <rect x="86" y="388" width="280" height="10" rx="5" fill="#7b6754"/>
+  <rect x="532" y="150" width="110" height="12" rx="6" fill="#9b5d1b"/>
+  <rect x="532" y="174" width="182" height="18" rx="9" fill="#241d18"/>
+  <rect x="532" y="206" width="194" height="10" rx="5" fill="#7b6754"/>
+  <rect x="532" y="326" width="110" height="12" rx="6" fill="#9b5d1b"/>
+  <rect x="532" y="350" width="172" height="18" rx="9" fill="#241d18"/>
+  <rect x="532" y="382" width="194" height="10" rx="5" fill="#7b6754"/>
+</svg>

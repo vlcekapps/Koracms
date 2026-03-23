@@ -539,6 +539,9 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Kora Default')) {
             $issues[] = 'default theme metadata is missing';
         }
+        if (!str_contains($result['body'], 'theme-card__preview')) {
+            $issues[] = 'theme preview cards are missing';
+        }
         if (!str_contains($result['body'], 'theme_settings[accent]')) {
             $issues[] = 'theme settings form is missing';
         }
@@ -630,6 +633,7 @@ try {
 
         $themeHomeProbe = fetchUrl($baseUrl . '/', '', 0);
         $themeAssetProbe = fetchUrl($baseUrl . '/themes/' . rawurlencode($themeKey) . '/assets/public.css', '', 0);
+        $previewAssetUrl = themePreviewAssetUrl($themeKey);
 
         if (!str_contains($themeHomeProbe['status'], '200')) {
             $catalogIssues[] = "{$themeKey}: unexpected homepage status {$themeHomeProbe['status']}";
@@ -642,6 +646,12 @@ try {
         }
         if (!str_contains($themeHomeProbe['body'], 'theme-' . $themeKey)) {
             $catalogIssues[] = "{$themeKey}: homepage body class is missing";
+        }
+        if ($previewAssetUrl !== '') {
+            $previewAssetProbe = fetchUrl($baseUrl . parse_url($previewAssetUrl, PHP_URL_PATH), '', 0);
+            if (!str_contains($previewAssetProbe['status'], '200')) {
+                $catalogIssues[] = "{$themeKey}: preview asset is not reachable";
+            }
         }
     }
 

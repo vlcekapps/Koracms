@@ -12,6 +12,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Sdílené veřejné a11y styly pro skip link, screen-reader text a focus ring
 - Public theme kernel v `lib/theme.php`, první oficiální šablona v `themes/default/` a jednotný layout pro veřejný web
 - Administrace `Vzhled a šablony` pro výběr aktivní veřejné šablony s metadaty a bezpečným fallbackem na `default`
+- Obrázkové preview karty šablon v administraci včetně statických SVG náhledů pro first-party themes
 - Manifest-driven theme settings pro default theme: paleta, akcenty, typografie a šířka obsahu bez zásahu do PHP
 - Theme-aware layout varianty pro default theme: hlavička (`balanced` / `centered` / `split`) a homepage (`balanced` / `editorial` / `compact`)
 - Homepage composer pro default theme: featured modul, pořadí sekcí a bezpečné zapínání/vypínání homepage bloků podle theme settings

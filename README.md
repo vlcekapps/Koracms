@@ -175,6 +175,7 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 
 - Výběr aktivní veřejné šablony z adresáře `themes/`
 - Zobrazení názvu, verze, autora a popisu dostupných šablon
+- Obrázkové preview karty šablon přímo v administraci pro rychlejší orientaci při výběru
 - Bezpečný fallback na `default`, pokud uložená šablona na serveru chybí nebo je neplatná
 - Safe customizace aktivní šablony: paleta, hlavní akcenty, typografie a šířka obsahu
 - Varianta hlavičky a homepage přímo v administraci bez editace šablonových souborů
