@@ -23,6 +23,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Administrační navigace a pevná admin lišta mají větší klikací plochy a čitelnější kontrast stavů rezervací
 - Runtime audit kontroluje také skip-link/sr-only patterny a širší sadu veřejných modulových stránek
 - `install.php` ověřuje CSRF a `migrate.php` je chráněné na superadmina, potvrzovací POST a bezpečný anonymní redirect
+- Release ZIP nově nevkládá `AGENTS.md` a Git source archive vynechává `AGENTS.md` i `build/runtime_audit.php`
 
 ## [2.1.1] – 2026-03-20
 
