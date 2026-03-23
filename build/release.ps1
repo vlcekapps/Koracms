@@ -97,7 +97,7 @@ function Assert-CleanWorkingTree {
 function New-ReleaseZip {
     param([string]$ProjectRoot, [string]$OutPath)
 
-    $exclude = @('.git', '.gitignore', '.claude', 'uploads', 'build', 'dist', 'config.php', 'aconfig.php', 'AGENTS.md', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
+    $exclude = @('.git', '.gitignore', '.claude', 'uploads', 'build', 'dist', 'docs', 'config.php', 'aconfig.php', 'AGENTS.md', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
 
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("koracms_" + [System.Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $tempDir | Out-Null
