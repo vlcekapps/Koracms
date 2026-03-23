@@ -35,7 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$email]);
         $userRow = $stmt->fetch();
 
-        $storedHash = $userRow ? $userRow['password'] : '$2y$10$dummyhashToPreventTimingAttackEnumerationXXXXXXXXXXXXXXXX';
+        // Valid bcrypt hash keeps password_verify() work comparable even for unknown accounts.
+        $storedHash = $userRow ? $userRow['password'] : '$2y$12$/6yvhn9vu9UsOxpa0hp/4eptlAKyrXvFpcDWCHNm9UDf1Xi/QvPTu';
         $passwordOk = password_verify($password, $storedHash);
 
         if ($userRow && $passwordOk) {

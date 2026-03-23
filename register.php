@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $skipCreate = true;
                 if (!(int)$existingUser['is_confirmed'] && $existingUser['confirmation_token']) {
                     $newToken = bin2hex(random_bytes(32));
-                    $pdo->prepare("UPDATE cms_users SET confirmation_token = ? WHERE id = ?")
+                    $pdo->prepare("UPDATE cms_users SET confirmation_token = ?, confirmation_expires = DATE_ADD(NOW(), INTERVAL 24 HOUR) WHERE id = ?")
                         ->execute([$newToken, $existingUser['id']]);
                     $confirmUrl = siteUrl('/confirm_email.php?token=' . $newToken);
                     $subject    = 'Potvrďte registraci – ' . $siteName;
