@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-beta.1] – 2026-03-23
 
 ### Přidáno
 - `build/release.ps1` nově umí i prerelease verze (`alpha`, `beta`, `rc`) a GitHub release správně označí jako prerelease
