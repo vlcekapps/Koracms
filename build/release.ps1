@@ -3,8 +3,8 @@
     [string]$Bump = "patch",
     [string]$Version = "",
     [string]$PrereleaseLabel = "",
-    [ValidateRange(1, 9999)]
-    [int]$PrereleaseNumber = 1,
+    [ValidateRange(0, 9999)]
+    [int]$PrereleaseNumber = 0,
     [switch]$SkipPush
 )
 
@@ -109,10 +109,31 @@ function Get-BumpedVersion {
         [string]$Current,
         [string]$Kind,
         [string]$PrereleaseLabel = "",
-        [int]$PrereleaseNumber = 1
+        [int]$PrereleaseNumber = 0
     )
 
     $parts = Parse-SemVer $Current
+    $currentBase = "$($parts['Major']).$($parts['Minor']).$($parts['Patch'])"
+    $currentPre = $parts['Prerelease']
+
+    # Aktuální verze je prerelease (např. 3.0.0-beta.1)
+    if ($currentPre -ne '') {
+        if ($PrereleaseLabel.Trim() -ne '') {
+            # Další prerelease – base zůstává, mění se jen prerelease suffix
+            if ($currentPre -match '^([a-zA-Z]+)\.(\d+)$' -and $Matches[1] -eq $PrereleaseLabel) {
+                # Stejný label → auto-increment (beta.1 → beta.2)
+                $num = if ($PrereleaseNumber -gt 0) { $PrereleaseNumber } else { [int]$Matches[2] + 1 }
+            } else {
+                # Jiný label → začít od 1 (beta.3 → rc.1)
+                $num = if ($PrereleaseNumber -gt 0) { $PrereleaseNumber } else { 1 }
+            }
+            return "$currentBase-$PrereleaseLabel.$num"
+        }
+        # Bez labelu → promovat prerelease na stable (3.0.0-beta.3 → 3.0.0)
+        return $currentBase
+    }
+
+    # Aktuální verze je stable – bump base
     $baseVersion = switch ($Kind) {
         "major" { "$([int]$parts['Major'] + 1).0.0" }
         "minor" { "$($parts['Major']).$([int]$parts['Minor'] + 1).0" }
@@ -120,7 +141,8 @@ function Get-BumpedVersion {
     }
 
     if ($PrereleaseLabel.Trim() -ne '') {
-        return "$baseVersion-$PrereleaseLabel.$PrereleaseNumber"
+        $num = if ($PrereleaseNumber -gt 0) { $PrereleaseNumber } else { 1 }
+        return "$baseVersion-$PrereleaseLabel.$num"
     }
 
     return $baseVersion
