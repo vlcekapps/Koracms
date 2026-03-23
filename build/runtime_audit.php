@@ -511,6 +511,66 @@ function analyzeHeaders(array $headers): array
     return $issues;
 }
 
+/**
+ * @return list<string>
+ */
+function analyzeUxHeuristics(string $html, string $label): array
+{
+    $issues = [];
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    $dom->loadHTML($html);
+    $xpath = new DOMXPath($dom);
+
+    $skipLinks = $xpath->query('//a[@href="#obsah" and contains(concat(" ", normalize-space(@class), " "), " skip-link ")]');
+    if ($skipLinks->length === 0) {
+        $issues[] = 'missing skip link to #obsah';
+    }
+
+    $mainNodes = $xpath->query('//main[@id="obsah"]');
+    if ($mainNodes->length === 0) {
+        $issues[] = 'missing main#obsah landmark';
+    } elseif ($mainNodes->length > 1) {
+        $issues[] = 'multiple main#obsah landmarks';
+    }
+
+    $h1Nodes = $xpath->query('//h1');
+    if ($h1Nodes->length === 0) {
+        $issues[] = 'missing h1 heading';
+    } elseif ($h1Nodes->length > 1) {
+        $issues[] = 'multiple h1 headings';
+    }
+
+    foreach ($xpath->query('//h1 | //h2 | //h3') as $heading) {
+        if (trim($heading->textContent) === '') {
+            $issues[] = 'empty heading element';
+            break;
+        }
+    }
+
+    foreach ($xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " section-subtitle ")]') as $subtitle) {
+        if (trim($subtitle->textContent) === '') {
+            $issues[] = 'empty section subtitle';
+            break;
+        }
+    }
+
+    if ($label === 'home') {
+        $homeSections = $xpath->query('//*[@data-home-section]');
+        $homeFallback = $xpath->query('//*[@id="obsah-priprava"]');
+        if ($homeSections->length === 0 && $homeFallback->length === 0) {
+            $issues[] = 'home missing content sections and fallback state';
+        }
+
+        $ctaSections = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " home-section--cta ")]');
+        if ($ctaSections->length > 1) {
+            $issues[] = 'home renders multiple CTA sections';
+        }
+    }
+
+    return array_values(array_unique($issues));
+}
+
 $failures = 0;
 
 foreach ($pages as $page) {
@@ -521,6 +581,7 @@ foreach ($pages as $page) {
         $issues[] = 'unexpected status: ' . $result['status'];
     }
     $issues = array_merge($issues, analyzeHtml($result['body']));
+    $issues = array_merge($issues, analyzeUxHeuristics($result['body'], $page['label']));
 
     if ($page['label'] === 'public_login') {
         $issues = array_merge($issues, analyzeHeaders($result['headers']));
@@ -529,6 +590,28 @@ foreach ($pages as $page) {
         if (preg_match('/name="redirect"\s+value="([^"]*)"/', $probe['body'], $matches) === 1
             && $matches[1] === 'https://example.com/phish') {
             $issues[] = 'external redirect leaked into login form';
+        }
+    }
+
+    if ($page['label'] === 'home' && getSetting('visitor_counter_enabled', '0') === '1') {
+        if (!str_contains($result['body'], 'class="visitor-counter__item"')) {
+            $issues[] = 'visitor counter does not expose individual statistic items';
+        }
+        if (str_contains($result['body'], ' · Dnes:') || str_contains($result['body'], ' · Měsíc:') || str_contains($result['body'], ' · Celkem:')) {
+            $issues[] = 'visitor counter still uses visual dot separators in footer output';
+        }
+    }
+
+    if ($page['label'] === 'home') {
+        foreach ([
+            'Featured modul',
+            'Další kroky',
+            'Co chcete udělat dál?',
+            'Rychlé akce pomohou návštěvníkovi dostat se k důležitému obsahu bez zbytečného hledání.',
+        ] as $legacySnippet) {
+            if (str_contains($result['body'], $legacySnippet)) {
+                $issues[] = 'home still contains legacy copy: ' . $legacySnippet;
+            }
         }
     }
 

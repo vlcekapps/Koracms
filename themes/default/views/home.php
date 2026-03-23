@@ -16,7 +16,7 @@ $blogVisibility = $readThemeSelect('home_blog_visibility', 'show');
 $boardVisibility = $readThemeSelect('home_board_visibility', 'show');
 $pollVisibility = $readThemeSelect('home_poll_visibility', 'show');
 $newsletterVisibility = $readThemeSelect('home_newsletter_visibility', 'show');
-$ctaVisibility = $readThemeSelect('home_cta_visibility', 'show');
+$ctaVisibility = $readThemeSelect('home_cta_visibility', 'hide');
 
 $newsAvailable = !empty($latestNews);
 $blogAvailable = !empty($latestArticles);
@@ -85,7 +85,7 @@ $showNewsletter = $newsletterVisibility === 'show' && $newsletterAvailable && $f
 
 $ctaActions = [
     [
-        'label' => 'Prohledat web',
+        'label' => 'Hledat na webu',
         'url' => BASE_URL . '/search.php',
         'class' => 'button-primary',
     ],
@@ -438,7 +438,6 @@ $renderNewsletterSection = static function () use ($showNewsletter, $contactAvai
     <section class="surface surface--accent home-section home-section--newsletter" data-home-section="newsletter" aria-labelledby="newsletter-nadpis">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Spojte se</p>
           <h2 id="newsletter-nadpis" class="section-title">Odběr novinek</h2>
           <p class="section-subtitle">Zájemci mohou dostávat nové články, aktuality a pozvánky přímo e-mailem.</p>
         </div>
@@ -465,9 +464,9 @@ $renderCtaSection = static function () use ($showCta, $ctaActions): string {
     <section class="surface home-section home-section--cta" data-home-section="cta" aria-labelledby="cta-nadpis">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Další kroky</p>
-          <h2 id="cta-nadpis" class="section-title">Co chcete udělat dál?</h2>
-          <p class="section-subtitle">Rychlé akce pomohou návštěvníkovi dostat se k důležitému obsahu bez zbytečného hledání.</p>
+          <p class="section-kicker">Užitečné odkazy</p>
+          <h2 id="cta-nadpis" class="section-title">Rychlý přístup</h2>
+          <p class="section-subtitle">Vyberte si, kam chcete pokračovat.</p>
         </div>
       </div>
       <div class="button-row button-row--start">
@@ -505,7 +504,7 @@ $renderFeaturedSection = static function () use (
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="blog" aria-labelledby="featured-nadpis">
               <div class="section-heading">
                 <div>
-                  <p class="section-kicker">Featured modul</p>
+                  <p class="section-kicker">Doporučujeme</p>
                   <h2 id="featured-nadpis" class="section-title">Doporučený článek</h2>
                 </div>
                 <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Přejít na blog <span aria-hidden="true">→</span></a>
@@ -548,7 +547,7 @@ $renderFeaturedSection = static function () use (
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="news" aria-labelledby="featured-nadpis">
               <div class="section-heading">
                 <div>
-                  <p class="section-kicker">Featured modul</p>
+                  <p class="section-kicker">Aktuálně</p>
                   <h2 id="featured-nadpis" class="section-title">Zvýrazněná novinka</h2>
                 </div>
                 <a class="section-link" href="<?= BASE_URL ?>/news/index.php">Přejít na novinky <span aria-hidden="true">→</span></a>
@@ -573,7 +572,7 @@ $renderFeaturedSection = static function () use (
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="board" aria-labelledby="featured-nadpis">
               <div class="section-heading">
                 <div>
-                  <p class="section-kicker">Featured modul</p>
+                  <p class="section-kicker">Důležité</p>
                   <h2 id="featured-nadpis" class="section-title">Důležitý dokument</h2>
                 </div>
                 <a class="section-link" href="<?= BASE_URL ?>/board/index.php">Přejít na úřední desku <span aria-hidden="true">→</span></a>
@@ -602,7 +601,7 @@ $renderFeaturedSection = static function () use (
             }
             ?>
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="poll" aria-labelledby="featured-nadpis">
-              <p class="section-kicker">Featured modul</p>
+              <p class="section-kicker">Zapojte se</p>
               <h2 id="featured-nadpis" class="section-title">Aktuální anketa</h2>
               <p><strong><?= h($homePoll['question']) ?></strong></p>
               <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
@@ -620,7 +619,6 @@ $renderFeaturedSection = static function () use (
             }
             ?>
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="newsletter" aria-labelledby="featured-nadpis">
-              <p class="section-kicker">Featured modul</p>
               <h2 id="featured-nadpis" class="section-title">Zůstaňte v kontaktu</h2>
               <p class="section-subtitle">Přihlaste se k odběru a dostávejte nové články, aktuality a pozvánky přímo e-mailem.</p>
               <div class="button-row button-row--start">

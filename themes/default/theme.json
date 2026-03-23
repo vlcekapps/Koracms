@@ -192,8 +192,8 @@
     },
     "home_featured_module": {
       "type": "select",
-      "label": "Featured modul",
-      "description": "Zvýrazněný blok nad hlavním obsahem. Modul se použije jen pokud je globálně zapnutý a má dostupná data.",
+      "label": "Zvýrazněný blok",
+      "description": "Volitelný zvýrazněný blok nad hlavním obsahem. Použije se jen pokud je modul globálně zapnutý a má dostupná data.",
       "default": "auto",
       "options": {
         "auto": {
@@ -201,8 +201,8 @@
           "description": "Systém vybere první vhodný modul podle dostupných dat a zapnutých modulů."
         },
         "none": {
-          "label": "Bez featured",
-          "description": "Homepage poběží bez zvýrazněného featured bloku."
+          "label": "Bez zvýraznění",
+          "description": "Homepage poběží bez zvýrazněného bloku."
         },
         "blog": {
           "label": "Blog",
@@ -354,17 +354,17 @@
     },
     "home_cta_visibility": {
       "type": "select",
-      "label": "CTA blok",
-      "description": "Zobrazí obecný blok s akcemi jako vyhledávání, kontakt nebo přihlášení.",
-      "default": "show",
+      "label": "Blok užitečných odkazů",
+      "description": "Volitelný blok s odkazy na vyhledávání, kontakt nebo přihlášení. Ve výchozím stavu zůstává vypnutý.",
+      "default": "hide",
       "options": {
         "show": {
           "label": "Zobrazit",
-          "description": "CTA blok pomůže návštěvníkovi rychle přejít na důležité akce."
+          "description": "Blok zobrazí doplňkové odkazy na často hledané části webu."
         },
         "hide": {
           "label": "Skrýt",
-          "description": "Obecný CTA blok se na homepage nevyrenderuje."
+          "description": "Homepage zůstane bez tohoto doplňkového bloku."
         }
       }
     }

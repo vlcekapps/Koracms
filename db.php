@@ -296,13 +296,28 @@ function siteFooter(): string
          . (getSetting('visitor_counter_enabled', '0') === '1'
              ? (function () {
                    $vs = getVisitorStats();
-                   $f  = fn(int $n) => number_format($n, 0, ',', "\u{00a0}");
-                   return "  <p class=\"visitor-counter\" role=\"status\" aria-label=\"Statistiky návštěvnosti\">"
-                        . "Online: <strong>{$f($vs['online'])}</strong>"
-                        . " · Dnes: <strong>{$f($vs['today'])}</strong>"
-                        . " · Měsíc: <strong>{$f($vs['month'])}</strong>"
-                        . " · Celkem: <strong>{$f($vs['total'])}</strong>"
-                        . "</p>\n";
+                    $f  = fn(int $n) => number_format($n, 0, ',', "\u{00a0}");
+                    $items = [
+                        'Online' => $f($vs['online']),
+                        'Dnes' => $f($vs['today']),
+                        'Měsíc' => $f($vs['month']),
+                        'Celkem' => $f($vs['total']),
+                    ];
+
+                    $html = "  <div class=\"visitor-counter-block\" aria-labelledby=\"visitor-counter-heading\">\n"
+                          . "    <p id=\"visitor-counter-heading\" class=\"sr-only\">Statistiky návštěvnosti</p>\n"
+                          . "    <ul class=\"visitor-counter\">\n";
+
+                    foreach ($items as $label => $value) {
+                        $html .= "      <li class=\"visitor-counter__item\">"
+                              . "<span class=\"visitor-counter__label\">" . h($label) . ":</span> "
+                              . "<strong class=\"visitor-counter__value\">{$value}</strong>"
+                              . "</li>\n";
+                    }
+
+                    return $html
+                         . "    </ul>\n"
+                         . "  </div>\n";
                })()
              : '')
          . "</footer>\n"

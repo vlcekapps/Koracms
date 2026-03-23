@@ -186,6 +186,7 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 - Bezpečný import portable ZIP balíčku: `theme.json` + statické assety v `assets/`, bez PHP override souborů
 - Export portable ZIP balíčku z administrace včetně uložených výchozích theme settings
 - Portable balíčky záměrně nepřenášejí layouty, partialy a view override; veřejný web dál používá fallback kontrakt na `default`
+- UX audit má vlastní framework v `docs/ux-audit-framework.md`; automatické guardrails běží přes `php build/runtime_audit.php`
 
 Součástí CMS jsou nyní tyto oficiální šablony:
 
