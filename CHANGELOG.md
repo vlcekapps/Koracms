@@ -6,6 +6,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- `build/release.ps1` nově umí i prerelease verze (`alpha`, `beta`, `rc`) a GitHub release správně označí jako prerelease
+
 ### Opraveno
 - Sanitizace příjemce (`$to`) v `sendMail()` proti email header injection (SMTP RCPT TO i hlavička To)
 - Ochrana proti timing útokům v `public_login.php` – `password_verify()` se volá vždy + zpoždění při neúspěchu
@@ -16,6 +19,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Potlačení chyb (`@`) v `themeDeleteDirectory()` a importu šablon nahrazeno logováním
 
 ### Přidáno
+- `build/release.ps1` nově umí i prerelease verze (`alpha`, `beta`, `rc`) a GitHub release správně označí jako prerelease
 - Repo-local pravidla v `AGENTS.md` pro bezpečnost, diakritiku a WCAG
 - `build/runtime_audit.php` – HTTP smoke audit pro klíčové veřejné i admin stránky
 - Sdílené veřejné a11y styly pro skip link, screen-reader text a focus ring

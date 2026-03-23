@@ -2,6 +2,9 @@
     [ValidateSet("patch", "minor", "major")]
     [string]$Bump = "patch",
     [string]$Version = "",
+    [string]$PrereleaseLabel = "",
+    [ValidateRange(1, 9999)]
+    [int]$PrereleaseNumber = 1,
     [switch]$SkipPush
 )
 
@@ -30,37 +33,102 @@ function Read-VersionFile {
     param([string]$Path)
     if (!(Test-Path $Path)) { throw "Soubor VERSION nenalezen: $Path" }
     $raw = [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false)).Trim()
-    if ($raw -notmatch '^\d+\.\d+\.\d+$') {
-        throw "VERSION musí být ve formátu MAJOR.MINOR.PATCH. Nalezeno: '$raw'"
+    if ($raw -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$') {
+        throw "VERSION musí být ve formátu MAJOR.MINOR.PATCH nebo MAJOR.MINOR.PATCH-prerelease. Nalezeno: '$raw'"
     }
     return $raw
 }
 
 function Parse-SemVer {
     param([string]$Value)
-    $parts = $Value.Split('.')
-    return @([int]$parts[0], [int]$parts[1], [int]$parts[2])
+    if ($Value -notmatch '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-(?<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$') {
+        throw "Neplatná semver verze: '$Value'"
+    }
+
+    $prerelease = ''
+    if ($Matches['prerelease']) {
+        $prerelease = $Matches['prerelease']
+    }
+
+    return @{
+        Major = [int]$Matches['major']
+        Minor = [int]$Matches['minor']
+        Patch = [int]$Matches['patch']
+        Prerelease = $prerelease
+    }
 }
 
 function Compare-SemVer {
     param([string]$Left, [string]$Right)
     $l = Parse-SemVer $Left
     $r = Parse-SemVer $Right
-    for ($i = 0; $i -lt 3; $i++) {
-        if ($l[$i] -lt $r[$i]) { return -1 }
-        if ($l[$i] -gt $r[$i]) { return 1 }
+
+    foreach ($part in @('Major', 'Minor', 'Patch')) {
+        if ($l[$part] -lt $r[$part]) { return -1 }
+        if ($l[$part] -gt $r[$part]) { return 1 }
     }
+
+    if ($l['Prerelease'] -eq '' -and $r['Prerelease'] -eq '') { return 0 }
+    if ($l['Prerelease'] -eq '') { return 1 }
+    if ($r['Prerelease'] -eq '') { return -1 }
+
+    $lIdentifiers = $l['Prerelease'].Split('.')
+    $rIdentifiers = $r['Prerelease'].Split('.')
+    $maxCount = [Math]::Max($lIdentifiers.Count, $rIdentifiers.Count)
+
+    for ($i = 0; $i -lt $maxCount; $i++) {
+        if ($i -ge $lIdentifiers.Count) { return -1 }
+        if ($i -ge $rIdentifiers.Count) { return 1 }
+
+        $leftId = $lIdentifiers[$i]
+        $rightId = $rIdentifiers[$i]
+        $leftNumeric = $leftId -match '^\d+$'
+        $rightNumeric = $rightId -match '^\d+$'
+
+        if ($leftNumeric -and $rightNumeric) {
+            $leftNumber = [int64]$leftId
+            $rightNumber = [int64]$rightId
+            if ($leftNumber -lt $rightNumber) { return -1 }
+            if ($leftNumber -gt $rightNumber) { return 1 }
+            continue
+        }
+
+        if ($leftNumeric -and -not $rightNumeric) { return -1 }
+        if (-not $leftNumeric -and $rightNumeric) { return 1 }
+
+        $ordinal = [string]::CompareOrdinal($leftId, $rightId)
+        if ($ordinal -lt 0) { return -1 }
+        if ($ordinal -gt 0) { return 1 }
+    }
+
     return 0
 }
 
 function Get-BumpedVersion {
-    param([string]$Current, [string]$Kind)
+    param(
+        [string]$Current,
+        [string]$Kind,
+        [string]$PrereleaseLabel = "",
+        [int]$PrereleaseNumber = 1
+    )
+
     $parts = Parse-SemVer $Current
-    switch ($Kind) {
-        "major" { return "$([int]$parts[0] + 1).0.0" }
-        "minor" { return "$($parts[0]).$([int]$parts[1] + 1).0" }
-        default { return "$($parts[0]).$($parts[1]).$([int]$parts[2] + 1)" }
+    $baseVersion = switch ($Kind) {
+        "major" { "$([int]$parts['Major'] + 1).0.0" }
+        "minor" { "$($parts['Major']).$([int]$parts['Minor'] + 1).0" }
+        default { "$($parts['Major']).$($parts['Minor']).$([int]$parts['Patch'] + 1)" }
     }
+
+    if ($PrereleaseLabel.Trim() -ne '') {
+        return "$baseVersion-$PrereleaseLabel.$PrereleaseNumber"
+    }
+
+    return $baseVersion
+}
+
+function Test-PrereleaseVersion {
+    param([string]$Value)
+    return (Parse-SemVer $Value)['Prerelease'] -ne ''
 }
 
 function Update-Changelog {
@@ -129,14 +197,27 @@ $distDir     = Join-Path $projectRoot "dist"
 Assert-CleanWorkingTree
 
 $currentVersion = Read-VersionFile -Path $versionPath
-$newVersion = if ($Version -and $Version.Trim() -ne "") { $Version.Trim() } else { Get-BumpedVersion -Current $currentVersion -Kind $Bump }
+$normalizedPrereleaseLabel = $PrereleaseLabel.Trim().ToLowerInvariant()
+if ($normalizedPrereleaseLabel -ne '' -and $normalizedPrereleaseLabel -notin @('alpha', 'beta', 'rc')) {
+    throw "Parametr -PrereleaseLabel musí být alpha, beta nebo rc."
+}
+if ($Version -and $Version.Trim() -ne "" -and $normalizedPrereleaseLabel -ne '') {
+    throw "Použijte buď -Version, nebo kombinaci -PrereleaseLabel/-PrereleaseNumber."
+}
 
-if ($newVersion -notmatch '^\d+\.\d+\.\d+$') {
-    throw "Verze '$newVersion' není platná. Použijte formát MAJOR.MINOR.PATCH."
+$newVersion = if ($Version -and $Version.Trim() -ne "") {
+    $Version.Trim()
+} else {
+    Get-BumpedVersion -Current $currentVersion -Kind $Bump -PrereleaseLabel $normalizedPrereleaseLabel -PrereleaseNumber $PrereleaseNumber
+}
+
+if ($newVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$') {
+    throw "Verze '$newVersion' není platná. Použijte formát MAJOR.MINOR.PATCH nebo MAJOR.MINOR.PATCH-prerelease."
 }
 if ((Compare-SemVer -Left $newVersion -Right $currentVersion) -le 0) {
     throw "Nová verze '$newVersion' musí být vyšší než stávající '$currentVersion'."
 }
+$isPrerelease = Test-PrereleaseVersion -Value $newVersion
 
 $tagName = "v$newVersion"
 if ((& git tag --list $tagName) -contains $tagName) {
@@ -144,6 +225,9 @@ if ((& git tag --list $tagName) -contains $tagName) {
 }
 
 Write-Host "Verze: $currentVersion → $newVersion"
+if ($isPrerelease) {
+    Write-Host "Typ release: prerelease"
+}
 
 # Aktualizovat VERSION
 [System.IO.File]::WriteAllText($versionPath, $newVersion, [System.Text.UTF8Encoding]::new($false))
@@ -188,12 +272,20 @@ Require-Command -Name gh
 $releaseExists = $false
 try { & gh release view $tagName *> $null 2>&1; $releaseExists = ($LASTEXITCODE -eq 0) } catch { $releaseExists = $false }
 if ($releaseExists) {
-    & gh release edit $tagName --title "Kora CMS $newVersion"
+    $editArgs = @("release", "edit", $tagName, "--title", "Kora CMS $newVersion")
+    if ($isPrerelease) {
+        $editArgs += "--prerelease"
+    }
+    & gh @editArgs
     if ($LASTEXITCODE -ne 0) { throw "Úprava GitHub release selhala." }
     & gh release upload $tagName $zipPath --clobber
     if ($LASTEXITCODE -ne 0) { throw "Nahrání assetu do GitHub release selhalo." }
 } else {
-    & gh release create $tagName $zipPath --target main --title "Kora CMS $newVersion" --generate-notes
+    $createArgs = @("release", "create", $tagName, $zipPath, "--target", "main", "--title", "Kora CMS $newVersion", "--generate-notes")
+    if ($isPrerelease) {
+        $createArgs += @("--prerelease", "--latest=false")
+    }
+    & gh @createArgs
     if ($LASTEXITCODE -ne 0) { throw "Vytvoření GitHub release selhalo." }
 }
 # Ověřit, že asset je skutečně přítomný
