@@ -20,6 +20,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
+    if (isModuleEnabled('blog')) {
+        $commentsEnabled = isset($_POST['comments_enabled']) ? '1' : '0';
+        $commentModerationMode = in_array($_POST['comment_moderation_mode'] ?? '', ['always', 'known', 'none'], true)
+            ? (string)$_POST['comment_moderation_mode']
+            : 'always';
+        $commentCloseDays = max(0, min(3650, (int)($_POST['comment_close_days'] ?? 0)));
+        $commentNotifyAdmin = isset($_POST['comment_notify_admin']) ? '1' : '0';
+        $commentNotifyAuthorOnApprove = isset($_POST['comment_notify_author_approve']) ? '1' : '0';
+        $commentNotifyEmail = trim($_POST['comment_notify_email'] ?? '');
+        $commentBlockedEmails = trim(str_replace("\r", '', $_POST['comment_blocked_emails'] ?? ''));
+        $commentSpamWords = trim(str_replace("\r", '', $_POST['comment_spam_words'] ?? ''));
+    } else {
+        $commentsEnabled = getSetting('comments_enabled', '1');
+        $commentModerationMode = commentModerationMode();
+        $commentCloseDays = commentCloseDays();
+        $commentNotifyAdmin = getSetting('comment_notify_admin', '1');
+        $commentNotifyAuthorOnApprove = getSetting('comment_notify_author_approve', '0');
+        $commentNotifyEmail = getSetting('comment_notify_email', '');
+        $commentBlockedEmails = getSetting('comment_blocked_emails', '');
+        $commentSpamWords = getSetting('comment_spam_words', '');
+    }
     $contentEditor = in_array($_POST['content_editor'] ?? '', ['html', 'wysiwyg']) ? $_POST['content_editor'] : 'html';
     $applySiteProfile = isset($_POST['apply_site_profile']);
 
@@ -33,6 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
 
+    if ($commentNotifyEmail !== '' && !filter_var($commentNotifyEmail, FILTER_VALIDATE_EMAIL))
+        $errors[] = 'Neplatná e-mailová adresa pro upozornění na komentáře.';
+
     if (empty($errors)) {
         saveSetting('site_name',        $siteName);
         saveSetting('site_description', $siteDesc);
@@ -43,6 +67,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('news_per_page',    (string)$newsPerPage);
         saveSetting('blog_per_page',    (string)$blogPerPage);
         saveSetting('events_per_page',  (string)$eventsPerPage);
+        saveSetting('comments_enabled', $commentsEnabled);
+        saveSetting('comment_moderation_mode', $commentModerationMode);
+        saveSetting('comment_close_days', (string)$commentCloseDays);
+        saveSetting('comment_notify_admin', $commentNotifyAdmin);
+        saveSetting('comment_notify_author_approve', $commentNotifyAuthorOnApprove);
+        saveSetting('comment_notify_email', $commentNotifyEmail);
+        saveSetting('comment_blocked_emails', $commentBlockedEmails);
+        saveSetting('comment_spam_words', $commentSpamWords);
         saveSetting('content_editor',   $contentEditor);
         $homeBoard     = max(0, (int)($_POST['home_board_count'] ?? 5));
         saveSetting('home_board_count', (string)$homeBoard);
@@ -209,6 +241,84 @@ adminHeader('Základní nastavení');
     <input type="number" id="events_per_page" name="events_per_page" min="1" max="100"
            value="<?= h(getSetting('events_per_page', '10')) ?>">
   </fieldset>
+
+  <?php if (isModuleEnabled('blog')): ?>
+  <fieldset>
+    <legend>Komentáře blogu</legend>
+
+    <div>
+      <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1"
+             <?= getSetting('comments_enabled', '1') === '1' ? 'checked' : '' ?>>
+      <label for="comments_enabled" style="display:inline;font-weight:normal">
+        Povolit komentáře u článků blogu
+      </label>
+    </div>
+
+    <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.75rem 1rem">
+      <legend>Moderace komentářů</legend>
+      <p style="margin-top:.25rem;color:#555">Zvolte, kdy se má nový komentář zveřejnit a kdy má čekat na schválení.</p>
+
+      <p>
+        <input type="radio" id="comment_moderation_always" name="comment_moderation_mode" value="always"
+               <?= commentModerationMode() === 'always' ? 'checked' : '' ?>>
+        <label for="comment_moderation_always" style="display:inline;font-weight:normal">
+          Vždy schvalovat každý nový komentář
+        </label>
+      </p>
+
+      <p>
+        <input type="radio" id="comment_moderation_known" name="comment_moderation_mode" value="known"
+               <?= commentModerationMode() === 'known' ? 'checked' : '' ?>>
+        <label for="comment_moderation_known" style="display:inline;font-weight:normal">
+          Automaticky schválit autora, který už má schválený komentář se stejným e-mailem
+        </label>
+      </p>
+
+      <p>
+        <input type="radio" id="comment_moderation_none" name="comment_moderation_mode" value="none"
+               <?= commentModerationMode() === 'none' ? 'checked' : '' ?>>
+        <label for="comment_moderation_none" style="display:inline;font-weight:normal">
+          Zveřejnit nový komentář ihned bez schválení
+        </label>
+      </p>
+    </fieldset>
+
+    <label for="comment_close_days">Uzavřít komentáře po kolika dnech od publikace článku</label>
+    <input type="number" id="comment_close_days" name="comment_close_days" min="0" max="3650"
+           value="<?= h(getSetting('comment_close_days', '0')) ?>">
+    <small style="color:#666">Hodnota 0 znamená, že se komentáře automaticky neuzavírají.</small>
+
+    <div style="margin-top:1rem">
+      <input type="checkbox" id="comment_notify_admin" name="comment_notify_admin" value="1"
+             <?= getSetting('comment_notify_admin', '1') === '1' ? 'checked' : '' ?>>
+      <label for="comment_notify_admin" style="display:inline;font-weight:normal">
+        Poslat upozornění administrátorovi, když nový komentář čeká na schválení
+      </label>
+    </div>
+
+    <label for="comment_notify_email">E-mail pro upozornění na komentáře <small>(nepovinný)</small></label>
+    <input type="email" id="comment_notify_email" name="comment_notify_email"
+           value="<?= h(getSetting('comment_notify_email', '')) ?>">
+    <small style="color:#666">Když pole necháte prázdné, použije se kontaktní e-mail webu.</small>
+
+    <div style="margin-top:1rem">
+      <input type="checkbox" id="comment_notify_author_approve" name="comment_notify_author_approve" value="1"
+             <?= getSetting('comment_notify_author_approve', '0') === '1' ? 'checked' : '' ?>>
+      <label for="comment_notify_author_approve" style="display:inline;font-weight:normal">
+        Poslat autorovi e-mail, když jeho komentář schválíte
+      </label>
+    </div>
+    <small style="color:#666">Použije se stejná e-mailová vrstva jako u registrace, resetu hesla a rezervací. Odesílá se jen tehdy, když autor vyplnil platný e-mail.</small>
+
+    <label for="comment_blocked_emails">Blokované e-maily a domény</label>
+    <textarea id="comment_blocked_emails" name="comment_blocked_emails" rows="4"><?= h(getSetting('comment_blocked_emails', '')) ?></textarea>
+    <small style="color:#666">Jeden záznam na řádek. Použít můžete konkrétní adresu `spam@example.com` nebo celou doménu `@example.com`.</small>
+
+    <label for="comment_spam_words">Zakázané fráze v komentářích</label>
+    <textarea id="comment_spam_words" name="comment_spam_words" rows="4"><?= h(getSetting('comment_spam_words', '')) ?></textarea>
+    <small style="color:#666">Jeden výraz na řádek. Když se objeví ve jméně autora nebo v textu komentáře, komentář skončí ve spamu.</small>
+  </fieldset>
+  <?php endif; ?>
 
   <fieldset>
     <legend>Editor obsahu</legend>

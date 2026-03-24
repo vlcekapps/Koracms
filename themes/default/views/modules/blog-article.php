@@ -53,9 +53,13 @@
       </div>
     </div>
 
-    <?php if ($commentSuccess): ?>
+    <?php if ($commentResult === 'pending'): ?>
       <div class="status-message status-message--success" role="status">
         <p>Komentář byl přijat a čeká na schválení. Děkujeme!</p>
+      </div>
+    <?php elseif ($commentResult === 'approved'): ?>
+      <div class="status-message status-message--success" role="status">
+        <p>Komentář byl zveřejněn. Děkujeme!</p>
       </div>
     <?php endif; ?>
 
@@ -91,6 +95,11 @@
       </div>
     <?php endif; ?>
 
+    <?php if (!$commentsState['enabled']): ?>
+      <div class="status-message status-message--info" role="status">
+        <p><?= h($commentsState['message']) ?></p>
+      </div>
+    <?php else: ?>
     <form method="post" novalidate class="form-stack"<?php if (!empty($commentErrors)): ?> aria-describedby="comment-errors"<?php endif; ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <?= honeypotField() ?>
@@ -127,5 +136,6 @@
         </div>
       </fieldset>
     </form>
+    <?php endif; ?>
   </section>
 </div>

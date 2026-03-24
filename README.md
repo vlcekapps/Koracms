@@ -161,6 +161,7 @@ Nastavení je rozděleno do čtyř sekcí:
 - **Editor obsahu** – volba mezi prostým HTML editorem a WYSIWYG editorem (Quill)
 - **Počty na hlavní stránce** – počet novinek, článků blogu a dokumentů úřední desky zobrazených na HP (0 = widget skrytý)
 - **Stránkování** – počet novinek, článků a událostí na stránku
+- **Komentáře blogu** – globální zapnutí komentářů, režim moderace (`vždy schvalovat`, `schválit známého autora`, `zveřejnit ihned`), automatické uzavření komentářů po zadaném počtu dnů, antispam pravidla (blokované e-maily a fráze), e-mailové upozornění na nové komentáře čekající na schválení a volitelné upozornění autorovi po schválení komentáře; používá se stejná mailová vrstva jako u registrace, resetu hesla a rezervací
 - **Sociální sítě** – odkazy na Facebook, YouTube, Instagram, X (Twitter)
 - **Cookie lišta** – zapnutí GDPR lišty s vlastním textem
 - **Režim údržby** – dočasně zobrazí návštěvníkům hlášku o údržbě; přihlášení admini vidí web normálně

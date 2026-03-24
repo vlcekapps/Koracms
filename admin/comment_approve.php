@@ -7,8 +7,10 @@ $id     = inputInt('post', 'id');
 $filter = $_POST['filter'] ?? 'pending';
 
 if ($id !== null) {
-    db_connect()->prepare("UPDATE cms_comments SET is_approved = 1 WHERE id = ?")->execute([$id]);
-    logAction('comment_approve', "id={$id}");
+    $status = 'approved';
+    if (setCommentModerationStatus(db_connect(), $id, $status)) {
+        logAction('comment_approve', "id={$id} status={$status}");
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/comments.php?filter=' . urlencode($filter));

@@ -129,6 +129,18 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
            style="width:auto" value="<?= h($publishAtInput) ?>">
   </fieldset>
 
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Diskuse</legend>
+    <div>
+      <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1"
+             <?= (int)($article['comments_enabled'] ?? 1) === 1 ? 'checked' : '' ?>>
+      <label for="comments_enabled" style="display:inline;font-weight:normal">
+        Povolit komentáře u tohoto článku
+      </label>
+    </div>
+    <small style="color:#666">Globální pravidla moderace nastavíte v základním nastavení webu.</small>
+  </fieldset>
+
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>SEO / Open Graph <small>(nepovinné – ponechte prázdné pro automatické hodnoty)</small></legend>
     <label for="meta_title">Meta titulek</label>

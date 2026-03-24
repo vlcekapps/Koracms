@@ -135,6 +135,15 @@ $commentApproved = 0;
 $commentPending  = 0;
 if (isModuleEnabled('blog')) {
     try {
+        $commentApproved = (int)$pdo->query("SELECT COUNT(*) FROM cms_comments WHERE status = 'approved'")->fetchColumn();
+        $commentPending  = (int)$pdo->query("SELECT COUNT(*) FROM cms_comments WHERE status = 'pending'")->fetchColumn();
+        $commentStats    = $pdo->query(
+            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS m, COUNT(*) AS cnt
+             FROM cms_comments
+             WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+             GROUP BY m ORDER BY m"
+        )->fetchAll();
+    } catch (\PDOException $e) {
         $commentApproved = (int)$pdo->query("SELECT COUNT(*) FROM cms_comments WHERE is_approved = 1")->fetchColumn();
         $commentPending  = (int)$pdo->query("SELECT COUNT(*) FROM cms_comments WHERE is_approved = 0")->fetchColumn();
         $commentStats    = $pdo->query(
@@ -143,7 +152,7 @@ if (isModuleEnabled('blog')) {
              WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    }
 }
 
 // ── Kontakt ─────────────────────────────────────────────────────────────────

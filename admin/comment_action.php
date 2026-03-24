@@ -3,23 +3,21 @@ require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 verifyCsrf();
 
-$ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
-$action = trim($_POST['action'] ?? '');
+$id = inputInt('post', 'id');
 $filter = trim($_POST['filter'] ?? 'pending');
+$action = trim($_POST['action'] ?? '');
 
 $redirect = BASE_URL . '/admin/comments.php?filter=' . urlencode($filter);
-if ($ids === []) {
+if ($id === null) {
     header('Location: ' . $redirect);
     exit;
 }
 
 $pdo = db_connect();
-$placeholders = implode(',', array_fill(0, count($ids), '?'));
 
 if ($action === 'delete') {
-    $stmt = $pdo->prepare("DELETE FROM cms_comments WHERE id IN ({$placeholders})");
-    $stmt->execute($ids);
-    logAction('comment_bulk_delete', 'ids=' . implode(',', $ids));
+    $pdo->prepare("DELETE FROM cms_comments WHERE id = ?")->execute([$id]);
+    logAction('comment_delete', "id={$id}");
     header('Location: ' . $redirect);
     exit;
 }
@@ -33,10 +31,9 @@ $statusMap = [
 
 if (isset($statusMap[$action])) {
     $status = $statusMap[$action];
-    foreach ($ids as $commentId) {
-        setCommentModerationStatus($pdo, (int)$commentId, $status);
+    if (setCommentModerationStatus($pdo, $id, $status)) {
+        logAction('comment_status', "id={$id} status={$status}");
     }
-    logAction('comment_bulk_status', 'status=' . $status . ' ids=' . implode(',', $ids));
 }
 
 header('Location: ' . $redirect);

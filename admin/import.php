@@ -58,14 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['articles']) && is_array($data['articles'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_articles
-                         (id, title, perex, content, category_id, image_file,
+                         (id, title, perex, content, category_id, comments_enabled, image_file,
                           meta_title, meta_description, publish_at, status, created_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['articles'] as $row) {
                         $ins->execute([
                             (int)$row['id'], $row['title'], $row['perex'] ?? '',
                             $row['content'] ?? '', $row['category_id'] ?: null,
+                            (int)($row['comments_enabled'] ?? 1),
                             $row['image_file'] ?? '',
                             $row['meta_title'] ?? '', $row['meta_description'] ?? '',
                             $row['publish_at'] ?: null,
@@ -363,14 +364,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['comments']) && is_array($data['comments'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_comments
-                         (id, article_id, author_name, content, is_approved, created_at)
-                         VALUES (?,?,?,?,?,?)"
+                         (id, article_id, author_name, author_email, content, status, is_approved, created_at)
+                         VALUES (?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['comments'] as $row) {
+                        $status = normalizeCommentStatus((string)($row['status'] ?? ((int)($row['is_approved'] ?? 0) === 1 ? 'approved' : 'pending')));
                         $ins->execute([
                             (int)$row['id'], (int)$row['article_id'],
-                            $row['author_name'], $row['content'],
-                            (int)($row['is_approved'] ?? 0), $row['created_at'],
+                            $row['author_name'], $row['author_email'] ?? '', $row['content'],
+                            $status, commentStatusApprovalValue($status), $row['created_at'],
                         ]);
                     }
                     $summary[] = 'Komentáře importovány.';

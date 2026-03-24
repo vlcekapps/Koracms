@@ -5,6 +5,10 @@ function adminHeader(string $pageTitle): void
 {
     $siteName = h(getSetting('site_name', 'Kora CMS'));
     $b = BASE_URL;
+    $pendingComments = pendingCommentCount();
+    $pendingCommentsLabel = $pendingComments === 1
+        ? 'čekající komentář'
+        : ($pendingComments < 5 ? 'čekající komentáře' : 'čekajících komentářů');
 
     echo '<!DOCTYPE html>' . "\n"
        . '<html lang="cs">' . "\n"
@@ -38,6 +42,7 @@ function adminHeader(string $pageTitle): void
        . '      width: 100%; padding: .35rem; margin-top: .2rem; }' . "\n"
        . '    textarea { min-height: 200px; }' . "\n"
        . '    .actions form { display: inline; }' . "\n"
+       . '    .badge { display:inline-block; min-width:1.4rem; padding:.1rem .45rem; border-radius:999px; background:#b42318; color:#fff; font-size:.75rem; text-align:center; }' . "\n"
        . '    .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }' . "\n"
        . '    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }' . "\n"
        . '    nav a:focus-visible { outline-color: #7ecfff; }' . "\n"
@@ -101,7 +106,9 @@ function adminHeader(string $pageTitle): void
            . '            <li><a href="' . $b . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n"
            . '            <li><a href="' . $b . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
            . '            <li><a href="' . $b . '/admin/blog_tags.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Tagy</a></li>' . "\n"
-           . '            <li><a href="' . $b . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře</a></li>' . "\n"
+           . '            <li><a href="' . $b . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře'
+           . ($pendingComments > 0 ? ' <span class="badge" aria-label="' . $pendingComments . ' ' . $pendingCommentsLabel . '">' . $pendingComments . '</span>' : '')
+           . '</a></li>' . "\n"
            . '          </ul>' . "\n"
            . '        </details>' . "\n"
            . '      </li>' . "\n";

@@ -536,6 +536,12 @@ body.theme-public textarea.form-control {
   border-color: #d7ad63;
 }
 
+.status-message--info {
+  color: #143f66;
+  background: #edf5fc;
+  border-color: #94b7d7;
+}
+
 .status-message--error {
   color: #7d1f1f;
   background: #fff0f0;

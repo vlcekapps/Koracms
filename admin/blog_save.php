@@ -13,6 +13,7 @@ $tagIds         = array_map('intval', (array)($_POST['tags'] ?? []));
 $publishAt      = trim($_POST['publish_at']       ?? '');
 $metaTitle      = trim($_POST['meta_title']       ?? '');
 $metaDescription= trim($_POST['meta_description'] ?? '');
+$commentsEnabled = isset($_POST['comments_enabled']) ? 1 : 0;
 
 if ($title === '' || $content === '') {
     header('Location: blog_form.php' . ($id ? "?id={$id}" : ''));
@@ -84,9 +85,9 @@ if ($id !== null) {
         $pdo->prepare("UPDATE cms_articles SET preview_token=? WHERE id=?")->execute([$existingToken, $id]);
     }
 
-    $setClauses = "title=?, perex=?, content=?, category_id=?, publish_at=?,
+    $setClauses = "title=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?,
                    meta_title=?, meta_description=?, author_id=COALESCE(author_id,?), updated_at=NOW()";
-    $params     = [$title, $perex, $content, $catId, $publishAtSql, $metaTitle, $metaDescription, currentUserId()];
+    $params     = [$title, $perex, $content, $catId, $commentsEnabled, $publishAtSql, $metaTitle, $metaDescription, currentUserId()];
     if ($imageFile !== null) {
         $setClauses .= ", image_file=?";
         $params[]    = $imageFile;
@@ -100,10 +101,10 @@ if ($id !== null) {
     $status       = isSuperAdmin() ? 'published' : 'pending';
     $pdo->prepare(
         "INSERT INTO cms_articles
-         (title, perex, content, category_id, image_file, publish_at,
+         (title, perex, content, category_id, comments_enabled, image_file, publish_at,
           meta_title, meta_description, preview_token, author_id, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
-    )->execute([$title, $perex, $content, $catId, $imageFile ?? '', $publishAtSql,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+    )->execute([$title, $perex, $content, $catId, $commentsEnabled, $imageFile ?? '', $publishAtSql,
                 $metaTitle, $metaDescription, $previewToken, $authorId, $status]);
     $id = (int)$pdo->lastInsertId();
     logAction('article_add', "id={$id} title={$title} status={$status}");

@@ -4,19 +4,18 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [3.0.0-beta.1] – 2026-03-23
+## [Unreleased]
 
 ### Přidáno
-- `build/release.ps1` nově umí i prerelease verze (`alpha`, `beta`, `rc`) a GitHub release správně označí jako prerelease
+- Moderace komentářů po vzoru WordPressu v jednodušší podobě: stavy `čekající`, `schválený`, `spam`, `koš`, rychlé akce v administraci, badge čekajících komentářů a globální pravidla moderace v nastavení
+- Per-article přepínač komentářů v editoru článku a veřejné hlášky pro vypnuté nebo uzavřené komentáře
+- Antispam komentářů přes blokované e-maily / domény a zakázané fráze, plus e-mailové upozornění administrátorovi na nové komentáře čekající na schválení
+- Volitelné e-mailové upozornění autorovi po schválení komentáře, napojené na stejnou mailovou vrstvu jako registrace, reset hesla a rezervace
 
 ### Opraveno
-- Sanitizace příjemce (`$to`) v `sendMail()` proti email header injection (SMTP RCPT TO i hlavička To)
-- Ochrana proti timing útokům v `public_login.php` – `password_verify()` se volá vždy + zpoždění při neúspěchu
-- Potvrzovací tokeny mají nyní 24h expiraci (`confirmation_expires`) – migrace, registrace i ověření
-- Prepared statement místo přímé interpolace `$window` v `rateLimit()`
-- Tichý catch v `rateLimit()` nyní loguje chybu přes `error_log()`
-- Prázdné catch bloky v `blog/article.php` doplněny o `error_log()`
-- Potlačení chyb (`@`) v `themeDeleteDirectory()` a importu šablon nahrazeno logováním
+- Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
+
+## [3.0.0-beta.1] – 2026-03-23
 
 ### Přidáno
 - `build/release.ps1` nově umí i prerelease verze (`alpha`, `beta`, `rc`) a GitHub release správně označí jako prerelease
@@ -59,6 +58,13 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Runtime audit nově hlídá i základní UX heuristiky jako skip link, `main#obsah`, jeden `h1`, prázdné titulkové texty a stabilitu homepage struktury
 - Migrace nově seeduje `site_profile` i pro starší instalace; pokud hodnota chybí, CMS použije bezpečný odhad podle aktivní šablony a zapnutých modulů
 - Moduly `Ke stažení` a `Úřední deska` nově stahují přes serverový endpoint s `Content-Disposition`, takže návštěvník dostává původní název souboru a veřejné HTML neodhaluje interní jméno na disku
+- Sanitizace příjemce (`$to`) v `sendMail()` proti email header injection (SMTP RCPT TO i hlavička To)
+- Ochrana proti timing útokům v `public_login.php` – `password_verify()` se volá vždy + zpoždění při neúspěchu
+- Potvrzovací tokeny mají nyní 24h expiraci (`confirmation_expires`) – migrace, registrace i ověření
+- Prepared statement místo přímé interpolace `$window` v `rateLimit()`
+- Tichý catch v `rateLimit()` nyní loguje chybu přes `error_log()`
+- Prázdné catch bloky v `blog/article.php` doplněny o `error_log()`
+- Potlačení chyb (`@`) v `themeDeleteDirectory()` a importu šablon nahrazeno logováním
 
 ## [2.1.1] – 2026-03-20
 

@@ -72,6 +72,7 @@ $tables = [
         title            VARCHAR(255) NOT NULL,
         perex            TEXT,
         content          TEXT,
+        comments_enabled TINYINT(1)   NOT NULL DEFAULT 1,
         category_id      INT,
         author_id        INT          NULL DEFAULT NULL,
         image_file       VARCHAR(255) NOT NULL DEFAULT '',
@@ -140,6 +141,7 @@ $tables = [
         author_name  VARCHAR(100) NOT NULL,
         author_email VARCHAR(255) NOT NULL DEFAULT '',
         content      TEXT         NOT NULL,
+        status       ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending',
         is_approved  TINYINT(1)   NOT NULL DEFAULT 0,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -504,6 +506,7 @@ $addColumns = [
     'cms_articles.meta_title'        => "ALTER TABLE cms_articles ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
     'cms_articles.meta_description'  => "ALTER TABLE cms_articles ADD COLUMN meta_description TEXT",
     'cms_articles.preview_token'     => "ALTER TABLE cms_articles ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
+    'cms_articles.comments_enabled'  => "ALTER TABLE cms_articles ADD COLUMN comments_enabled TINYINT(1) NOT NULL DEFAULT 1",
     'cms_articles.author_id'         => "ALTER TABLE cms_articles ADD COLUMN author_id INT NULL DEFAULT NULL",
     'cms_articles.status'            => "ALTER TABLE cms_articles ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_articles.updated_at'        => "ALTER TABLE cms_articles ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
@@ -534,6 +537,8 @@ $addColumns = [
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
     // cms_articles – počítadlo zobrazení
     'cms_articles.view_count'        => "ALTER TABLE cms_articles ADD COLUMN view_count INT NOT NULL DEFAULT 0",
+    // cms_comments – stavový model moderace
+    'cms_comments.status'            => "ALTER TABLE cms_comments ADD COLUMN status ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending'",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -698,6 +703,14 @@ $newSettings = [
     'news_per_page'           => '10',
     'blog_per_page'           => '10',
     'events_per_page'         => '10',
+    'comments_enabled'        => '1',
+    'comment_moderation_mode' => 'always',
+    'comment_close_days'      => '0',
+    'comment_notify_admin'    => '1',
+    'comment_notify_author_approve' => '0',
+    'comment_notify_email'    => '',
+    'comment_blocked_emails'  => '',
+    'comment_spam_words'      => '',
     // Editor
     'content_editor'          => 'html',
     // Sociální sítě
@@ -783,6 +796,30 @@ foreach ($uploadDirs as $dir) {
         $log[] = "· Adresář <code>{$dir}</code> již existuje – přeskočeno";
     }
 }
+try {
+    $statusExists = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_comments' AND COLUMN_NAME = 'status'"
+    );
+    $statusExists->execute();
+    if ((int)$statusExists->fetchColumn() > 0) {
+        $updatedStatuses = $pdo->exec(
+            "UPDATE cms_comments
+             SET status = CASE WHEN is_approved = 1 THEN 'approved' ELSE 'pending' END
+             WHERE status NOT IN ('approved','spam','trash')"
+        );
+        $updatedApprovals = $pdo->exec(
+            "UPDATE cms_comments
+             SET is_approved = CASE WHEN status = 'approved' THEN 1 ELSE 0 END"
+        );
+        $log[] = "✓ Komentáře migrovány na stavový model – OK ({$updatedStatuses} stavů, {$updatedApprovals} synchronizací)";
+    } else {
+        $log[] = "· Migrace komentářů na stavový model – sloupec <code>status</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Migrace komentářů na stavový model – CHYBA: " . h($e->getMessage());
+}
+
 if ($isCli) {
     foreach ($log as $line) {
         echo trim(strip_tags(html_entity_decode($line, ENT_QUOTES | ENT_HTML5, 'UTF-8'))) . PHP_EOL;

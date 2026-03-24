@@ -184,6 +184,7 @@ $pages = [
     ['label' => 'chat', 'url' => $baseUrl . '/chat/index.php'],
     ['label' => 'public_profile', 'url' => $baseUrl . '/public_profile.php', 'cookie' => 'PHPSESSID=' . $publicAuditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
 ];
@@ -571,6 +572,25 @@ function analyzeUxHeuristics(string $html, string $label): array
     return array_values(array_unique($issues));
 }
 
+function extractHiddenInputValue(string $html, string $name): string
+{
+    $pattern = '/<input[^>]+name="' . preg_quote($name, '/') . '"[^>]+value="([^"]*)"/i';
+    if (preg_match($pattern, $html, $matches) === 1) {
+        return html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    return '';
+}
+
+function extractCaptchaAnswer(string $html): ?int
+{
+    if (preg_match('/<label[^>]+for="captcha"[^>]*>.*?(\d+)[^0-9]+(\d+)\?.*?<\/label>/isu', $html, $matches) === 1) {
+        return ((int)$matches[1]) * ((int)$matches[2]);
+    }
+
+    return null;
+}
+
 $failures = 0;
 
 foreach ($pages as $page) {
@@ -646,6 +666,49 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'value="custom"')) {
             $issues[] = 'custom site profile option is missing';
+        }
+        if (isModuleEnabled('blog')) {
+            if (!str_contains($result['body'], 'name="comments_enabled"')) {
+                $issues[] = 'comments enabled setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_moderation_mode"')) {
+                $issues[] = 'comment moderation mode setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_close_days"')) {
+                $issues[] = 'comment close days setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_notify_admin"')) {
+                $issues[] = 'comment admin notification setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_notify_author_approve"')) {
+                $issues[] = 'comment author approval notification setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_notify_email"')) {
+                $issues[] = 'comment notification email setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_blocked_emails"')) {
+                $issues[] = 'comment blocked emails setting is missing';
+            }
+            if (!str_contains($result['body'], 'name="comment_spam_words"')) {
+                $issues[] = 'comment spam words setting is missing';
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_comments') {
+        if (!str_contains($result['body'], '?filter=spam')) {
+            $issues[] = 'spam filter is missing in comment moderation';
+        }
+        if (!str_contains($result['body'], '?filter=trash')) {
+            $issues[] = 'trash filter is missing in comment moderation';
+        }
+        if (str_contains($result['body'], '<caption>Komentáře</caption>')) {
+            if (!str_contains($result['body'], '/admin/comment_action.php')) {
+                $issues[] = 'single comment moderation action endpoint is missing';
+            }
+            if (!str_contains($result['body'], '/admin/comment_bulk.php')) {
+                $issues[] = 'bulk comment moderation form is missing';
+            }
         }
     }
 
@@ -750,6 +813,285 @@ if ($sampleBoard === false) {
         $failures++;
     } else {
         echo "OK\n";
+    }
+}
+
+echo "=== comment_moderation_guards ===\n";
+if ($articleId === false) {
+    echo "OK\n";
+} else {
+    $commentGuardIssues = [];
+    $originalCommentsEnabled = getSetting('comments_enabled', '1');
+    $originalCommentMode = getSetting('comment_moderation_mode', 'always');
+    $originalCommentCloseDays = getSetting('comment_close_days', '0');
+    $articleCommentsColumnExists = false;
+    $originalArticleCommentsEnabled = '1';
+    try {
+        $articleCommentsStmt = $pdo->prepare("SELECT comments_enabled FROM cms_articles WHERE id = ?");
+        $articleCommentsStmt->execute([(int)$articleId]);
+        $originalArticleCommentsEnabled = (string)($articleCommentsStmt->fetchColumn() ?? '1');
+        $articleCommentsColumnExists = true;
+    } catch (\PDOException $e) {
+        $articleCommentsColumnExists = false;
+    }
+
+    try {
+        saveSetting('comments_enabled', '0');
+        clearSettingsCache();
+
+        $globalDisabledProbe = fetchUrl($baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId), '', 0);
+        if (!str_contains($globalDisabledProbe['status'], '200')) {
+            $commentGuardIssues[] = 'blog article did not load after disabling comments globally';
+        } else {
+            if (str_contains($globalDisabledProbe['body'], 'name="comment"')) {
+                $commentGuardIssues[] = 'comment form remained visible after disabling comments globally';
+            }
+            if (!str_contains($globalDisabledProbe['body'], 'Komentáře jsou na tomto webu vypnuté.')) {
+                $commentGuardIssues[] = 'missing public message for globally disabled comments';
+            }
+        }
+
+        saveSetting('comments_enabled', $originalCommentsEnabled);
+        saveSetting('comment_moderation_mode', $originalCommentMode);
+        saveSetting('comment_close_days', $originalCommentCloseDays);
+        clearSettingsCache();
+
+        if ($articleCommentsColumnExists) {
+            $pdo->prepare("UPDATE cms_articles SET comments_enabled = 0 WHERE id = ?")->execute([(int)$articleId]);
+        }
+        if ($articleCommentsColumnExists) {
+            $articleDisabledProbe = fetchUrl($baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId), '', 0);
+        if (!str_contains($articleDisabledProbe['status'], '200')) {
+            $commentGuardIssues[] = 'blog article did not load after disabling comments on article';
+        } else {
+            if (str_contains($articleDisabledProbe['body'], 'name="comment"')) {
+                $commentGuardIssues[] = 'comment form remained visible after disabling comments on article';
+            }
+            if (!str_contains($articleDisabledProbe['body'], 'Komentáře jsou u tohoto článku vypnuté.')) {
+                $commentGuardIssues[] = 'missing public message for article-level disabled comments';
+            }
+        }
+        }
+    } finally {
+        saveSetting('comments_enabled', $originalCommentsEnabled);
+        saveSetting('comment_moderation_mode', $originalCommentMode);
+        saveSetting('comment_close_days', $originalCommentCloseDays);
+        clearSettingsCache();
+        if ($articleCommentsColumnExists) {
+            $pdo->prepare("UPDATE cms_articles SET comments_enabled = ? WHERE id = ?")->execute([
+                (int)$originalArticleCommentsEnabled,
+                (int)$articleId,
+            ]);
+        }
+    }
+
+    if ($commentGuardIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($commentGuardIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
+    }
+}
+
+echo "=== comment_spam_filters ===\n";
+if ($articleId === false) {
+    echo "OK\n";
+} else {
+    $spamIssues = [];
+    $originalCommentsEnabled = getSetting('comments_enabled', '1');
+    $originalCommentMode = getSetting('comment_moderation_mode', 'always');
+    $originalNotifyAdmin = getSetting('comment_notify_admin', '1');
+    $originalBlockedEmails = getSetting('comment_blocked_emails', '');
+    $originalSpamWords = getSetting('comment_spam_words', '');
+    $articleCommentsColumnExists = false;
+    $originalArticleCommentsEnabled = '1';
+    $createdCommentIds = [];
+
+    try {
+        $articleCommentsStmt = $pdo->prepare("SELECT comments_enabled FROM cms_articles WHERE id = ?");
+        $articleCommentsStmt->execute([(int)$articleId]);
+        $originalArticleCommentsEnabled = (string)($articleCommentsStmt->fetchColumn() ?? '1');
+        $articleCommentsColumnExists = true;
+    } catch (\PDOException $e) {
+        $articleCommentsColumnExists = false;
+    }
+
+    try {
+        saveSetting('comments_enabled', '1');
+        saveSetting('comment_moderation_mode', 'always');
+        saveSetting('comment_notify_admin', '0');
+        saveSetting('comment_blocked_emails', '');
+        saveSetting('comment_spam_words', '');
+        clearSettingsCache();
+        if ($articleCommentsColumnExists) {
+            $pdo->prepare("UPDATE cms_articles SET comments_enabled = 1 WHERE id = ?")->execute([(int)$articleId]);
+        }
+
+        $baseCommentUrl = $baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId);
+
+        $blockedEmail = 'runtimeaudit-blocked-' . bin2hex(random_bytes(4)) . '@example.test';
+        saveSetting('comment_blocked_emails', $blockedEmail);
+        clearSettingsCache();
+
+        $blockedCookie = 'PHPSESSID=runtimeauditcommentblocked';
+        $blockedForm = fetchUrl($baseCommentUrl, $blockedCookie, 0);
+        $blockedCsrf = extractHiddenInputValue($blockedForm['body'], 'csrf_token');
+        $blockedCaptcha = extractCaptchaAnswer($blockedForm['body']);
+        if ($blockedCsrf === '' || $blockedCaptcha === null) {
+            $spamIssues[] = 'could not extract blocked-email comment form token or captcha';
+        } else {
+            $blockedPost = postUrl(
+                $baseCommentUrl,
+                [
+                    'csrf_token' => $blockedCsrf,
+                    'author_name' => 'Runtime Audit Blocked',
+                    'author_email' => $blockedEmail,
+                    'comment' => 'Tento komentář má skončit ve spamu kvůli blokovanému e-mailu.',
+                    'captcha' => (string)$blockedCaptcha,
+                    'hp_website' => '',
+                ],
+                $blockedCookie,
+                0
+            );
+            if (!str_contains($blockedPost['status'], '302')) {
+                $spamIssues[] = 'blocked-email comment did not redirect after submit';
+            } elseif (!in_array('Location: /blog/article.php?id=' . (int)$articleId . '&komentar=pending', $blockedPost['headers'], true)) {
+                $spamIssues[] = 'blocked-email comment did not use neutral pending redirect';
+            }
+
+            $stmt = $pdo->prepare(
+                "SELECT id, status FROM cms_comments WHERE author_email = ? ORDER BY id DESC LIMIT 1"
+            );
+            $stmt->execute([$blockedEmail]);
+            $blockedRow = $stmt->fetch();
+            if (!$blockedRow) {
+                $spamIssues[] = 'blocked-email comment was not stored';
+            } else {
+                $createdCommentIds[] = (int)$blockedRow['id'];
+                if (($blockedRow['status'] ?? '') !== 'spam') {
+                    $spamIssues[] = 'blocked-email comment did not land in spam';
+                }
+            }
+        }
+
+        $spamPhrase = 'runtimeaudit-spam-' . bin2hex(random_bytes(4));
+        saveSetting('comment_blocked_emails', '');
+        saveSetting('comment_spam_words', $spamPhrase);
+        clearSettingsCache();
+
+        $phraseCookie = 'PHPSESSID=runtimeauditcommentphrase';
+        $phraseForm = fetchUrl($baseCommentUrl, $phraseCookie, 0);
+        $phraseCsrf = extractHiddenInputValue($phraseForm['body'], 'csrf_token');
+        $phraseCaptcha = extractCaptchaAnswer($phraseForm['body']);
+        $phraseEmail = 'runtimeaudit-phrase-' . bin2hex(random_bytes(4)) . '@example.test';
+        if ($phraseCsrf === '' || $phraseCaptcha === null) {
+            $spamIssues[] = 'could not extract spam-phrase comment form token or captcha';
+        } else {
+            $phrasePost = postUrl(
+                $baseCommentUrl,
+                [
+                    'csrf_token' => $phraseCsrf,
+                    'author_name' => 'Runtime Audit Phrase',
+                    'author_email' => $phraseEmail,
+                    'comment' => 'Komentář obsahuje frázi ' . $spamPhrase . ' a má skončit ve spamu.',
+                    'captcha' => (string)$phraseCaptcha,
+                    'hp_website' => '',
+                ],
+                $phraseCookie,
+                0
+            );
+            if (!str_contains($phrasePost['status'], '302')) {
+                $spamIssues[] = 'spam-phrase comment did not redirect after submit';
+            }
+
+            $stmt = $pdo->prepare(
+                "SELECT id, status FROM cms_comments WHERE author_email = ? ORDER BY id DESC LIMIT 1"
+            );
+            $stmt->execute([$phraseEmail]);
+            $phraseRow = $stmt->fetch();
+            if (!$phraseRow) {
+                $spamIssues[] = 'spam-phrase comment was not stored';
+            } else {
+                $createdCommentIds[] = (int)$phraseRow['id'];
+                if (($phraseRow['status'] ?? '') !== 'spam') {
+                    $spamIssues[] = 'spam-phrase comment did not land in spam';
+                }
+            }
+        }
+
+        saveSetting('comment_spam_words', '');
+        clearSettingsCache();
+
+        $pendingCookie = 'PHPSESSID=runtimeauditcommentpending';
+        $pendingForm = fetchUrl($baseCommentUrl, $pendingCookie, 0);
+        $pendingCsrf = extractHiddenInputValue($pendingForm['body'], 'csrf_token');
+        $pendingCaptcha = extractCaptchaAnswer($pendingForm['body']);
+        $pendingEmail = 'runtimeaudit-pending-' . bin2hex(random_bytes(4)) . '@example.test';
+        if ($pendingCsrf === '' || $pendingCaptcha === null) {
+            $spamIssues[] = 'could not extract pending comment form token or captcha';
+        } else {
+            $pendingPost = postUrl(
+                $baseCommentUrl,
+                [
+                    'csrf_token' => $pendingCsrf,
+                    'author_name' => 'Runtime Audit Pending',
+                    'author_email' => $pendingEmail,
+                    'comment' => 'Tento komentář má čekat na schválení.',
+                    'captcha' => (string)$pendingCaptcha,
+                    'hp_website' => '',
+                ],
+                $pendingCookie,
+                0
+            );
+            if (!str_contains($pendingPost['status'], '302')) {
+                $spamIssues[] = 'pending comment did not redirect after submit';
+            } elseif (!in_array('Location: /blog/article.php?id=' . (int)$articleId . '&komentar=pending', $pendingPost['headers'], true)) {
+                $spamIssues[] = 'pending comment did not redirect to pending state';
+            }
+
+            $stmt = $pdo->prepare(
+                "SELECT id, status FROM cms_comments WHERE author_email = ? ORDER BY id DESC LIMIT 1"
+            );
+            $stmt->execute([$pendingEmail]);
+            $pendingRow = $stmt->fetch();
+            if (!$pendingRow) {
+                $spamIssues[] = 'pending comment was not stored';
+            } else {
+                $createdCommentIds[] = (int)$pendingRow['id'];
+                if (($pendingRow['status'] ?? '') !== 'pending') {
+                    $spamIssues[] = 'normal comment did not stay pending under always moderation';
+                }
+            }
+        }
+    } finally {
+        saveSetting('comments_enabled', $originalCommentsEnabled);
+        saveSetting('comment_moderation_mode', $originalCommentMode);
+        saveSetting('comment_notify_admin', $originalNotifyAdmin);
+        saveSetting('comment_blocked_emails', $originalBlockedEmails);
+        saveSetting('comment_spam_words', $originalSpamWords);
+        clearSettingsCache();
+        if ($articleCommentsColumnExists) {
+            $pdo->prepare("UPDATE cms_articles SET comments_enabled = ? WHERE id = ?")->execute([
+                (int)$originalArticleCommentsEnabled,
+                (int)$articleId,
+            ]);
+        }
+
+        if ($createdCommentIds !== []) {
+            $placeholders = implode(',', array_fill(0, count($createdCommentIds), '?'));
+            $pdo->prepare("DELETE FROM cms_comments WHERE id IN ({$placeholders})")->execute($createdCommentIds);
+        }
+    }
+
+    if ($spamIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($spamIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
     }
 }
 

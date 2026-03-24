@@ -65,60 +65,113 @@ try {
     error_log('article tags: ' . $e->getMessage());
 }
 
-$siteName       = getSetting('site_name', 'Kora CMS');
-$commentErrors  = [];
-$commentSuccess = isset($_GET['komentar']) && $_GET['komentar'] === 'ok';
+$siteName = getSetting('site_name', 'Kora CMS');
+$commentErrors = [];
+$commentResult = trim($_GET['komentar'] ?? '');
+if (!in_array($commentResult, ['approved', 'pending'], true)) {
+    $commentResult = '';
+}
+$commentsState = articleCommentsState($article);
+if ($previewToken !== '') {
+    $commentsState = [
+        'enabled' => false,
+        'reason' => 'preview',
+        'message' => 'V náhledu článku nejsou komentáře dostupné.',
+    ];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    rateLimit('comment', 5, 120);
+    if (!$commentsState['enabled']) {
+        $commentErrors[] = $commentsState['message'];
+    } else {
+        rateLimit('comment', 5, 120);
 
-    if (honeypotTriggered()) {
-        header('Location: ' . BASE_URL . '/blog/article.php?id=' . $id . '&komentar=ok');
-        exit;
-    }
+        if (honeypotTriggered()) {
+            header('Location: ' . BASE_URL . '/blog/article.php?id=' . $id . '&komentar=pending');
+            exit;
+        }
 
-    verifyCsrf();
+        verifyCsrf();
 
-    if (!captchaVerify($_POST['captcha'] ?? '')) {
-        $commentErrors[] = 'Nesprávná odpověď na ověřovací příklad.';
-    }
+        if (!captchaVerify($_POST['captcha'] ?? '')) {
+            $commentErrors[] = 'Nesprávná odpověď na ověřovací příklad.';
+        }
 
-    $authorName  = trim($_POST['author_name'] ?? '');
-    $authorEmail = trim($_POST['author_email'] ?? '');
-    $content     = trim($_POST['comment'] ?? '');
+        $authorName = trim($_POST['author_name'] ?? '');
+        $authorEmail = trim($_POST['author_email'] ?? '');
+        $content = trim($_POST['comment'] ?? '');
 
-    if ($authorName === '') {
-        $commentErrors[] = 'Jméno je povinné.';
-    }
-    if (mb_strlen($authorName) > 100) {
-        $commentErrors[] = 'Jméno je příliš dlouhé.';
-    }
-    if ($authorEmail !== '' && !filter_var($authorEmail, FILTER_VALIDATE_EMAIL)) {
-        $commentErrors[] = 'Neplatná e-mailová adresa.';
-    }
-    if ($content === '') {
-        $commentErrors[] = 'Text komentáře je povinný.';
-    }
+        if ($authorName === '') {
+            $commentErrors[] = 'Jméno je povinné.';
+        }
+        if (mb_strlen($authorName) > 100) {
+            $commentErrors[] = 'Jméno je příliš dlouhé.';
+        }
+        if ($authorEmail !== '' && !filter_var($authorEmail, FILTER_VALIDATE_EMAIL)) {
+            $commentErrors[] = 'Neplatná e-mailová adresa.';
+        }
+        if ($content === '') {
+            $commentErrors[] = 'Text komentáře je povinný.';
+        }
 
-    if (empty($commentErrors)) {
-        $pdo->prepare(
-            "INSERT INTO cms_comments (article_id, author_name, author_email, content)
-             VALUES (?, ?, ?, ?)"
-        )->execute([$id, $authorName, $authorEmail, $content]);
+        if (empty($commentErrors)) {
+            $commentDecision = determineCommentStatus($pdo, $authorName, $authorEmail, $content);
+            $commentStatus = $commentDecision['status'];
+            try {
+                $pdo->prepare(
+                    "INSERT INTO cms_comments (article_id, author_name, author_email, content, status, is_approved)
+                     VALUES (?, ?, ?, ?, ?, ?)"
+                )->execute([
+                    $id,
+                    $authorName,
+                    $authorEmail,
+                    $content,
+                    $commentStatus,
+                    commentStatusApprovalValue($commentStatus),
+                ]);
+            } catch (\PDOException $e) {
+                $pdo->prepare(
+                    "INSERT INTO cms_comments (article_id, author_name, author_email, content, is_approved)
+                     VALUES (?, ?, ?, ?, ?)"
+                )->execute([
+                    $id,
+                    $authorName,
+                    $authorEmail,
+                    $content,
+                    commentStatusApprovalValue($commentStatus),
+                ]);
+            }
 
-        header('Location: ' . BASE_URL . '/blog/article.php?id=' . $id . '&komentar=ok');
-        exit;
+            if ($commentStatus === 'pending') {
+                notifyAdminAboutPendingComment($article, $authorName, $authorEmail, $content);
+            }
+
+            header('Location: ' . BASE_URL . '/blog/article.php?id=' . $id . '&komentar=' . urlencode($commentDecision['public_result']));
+            exit;
+        }
     }
 }
 
-$commentsStmt = $pdo->prepare(
-    "SELECT author_name, author_email, content, created_at
-     FROM cms_comments
-     WHERE article_id = ? AND is_approved = 1
-     ORDER BY created_at ASC"
-);
-$commentsStmt->execute([$id]);
-$comments = $commentsStmt->fetchAll();
+$comments = [];
+try {
+    $commentsStmt = $pdo->prepare(
+        "SELECT author_name, author_email, content, created_at
+         FROM cms_comments
+         WHERE article_id = ? AND status = 'approved'
+         ORDER BY created_at ASC"
+    );
+    $commentsStmt->execute([$id]);
+    $comments = $commentsStmt->fetchAll();
+} catch (\PDOException $e) {
+    $commentsStmt = $pdo->prepare(
+        "SELECT author_name, author_email, content, created_at
+         FROM cms_comments
+         WHERE article_id = ? AND is_approved = 1
+         ORDER BY created_at ASC"
+    );
+    $commentsStmt->execute([$id]);
+    $comments = $commentsStmt->fetchAll();
+}
 
 $captchaExpr = captchaGenerate();
 
@@ -139,7 +192,8 @@ renderPublicPage([
         'tags' => $tags,
         'comments' => $comments,
         'commentErrors' => $commentErrors,
-        'commentSuccess' => $commentSuccess,
+        'commentResult' => $commentResult,
+        'commentsState' => $commentsState,
         'captchaExpr' => $captchaExpr,
         'formData' => [
             'author_name' => trim($_POST['author_name'] ?? ''),

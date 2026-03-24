@@ -30,10 +30,7 @@ foreach ([
     }
 }
 
-$pendingComments = 0;
-try {
-    $pendingComments = (int)$pdo->query("SELECT COUNT(*) FROM cms_comments WHERE is_approved = 0")->fetchColumn();
-} catch (\PDOException $e) {}
+$pendingComments = pendingCommentCount();
 
 $pendingContent = [];
 $pendingModules = [

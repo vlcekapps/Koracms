@@ -7,13 +7,13 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 1,
+    'version'     => 2,
 ];
 
 $tables = [
     'settings'    => "SELECT `key`, value FROM cms_settings WHERE `key` NOT IN ('admin_password')",
     'categories'  => "SELECT id, name, created_at FROM cms_categories",
-    'articles'    => "SELECT id, title, perex, content, category_id, image_file,
+    'articles'    => "SELECT id, title, perex, content, category_id, comments_enabled, image_file,
                              meta_title, meta_description, publish_at, status, created_at FROM cms_articles",
     'article_tags'=> "SELECT article_id, tag_id FROM cms_article_tags",
     'tags'        => "SELECT id, name, slug, created_at FROM cms_tags",
@@ -47,7 +47,7 @@ $tables = [
     'board'         => "SELECT id, title, description, category_id, posted_date, removal_date,
                                filename, original_name, file_size, sort_order, is_published,
                                status, created_at FROM cms_board",
-    'comments'      => "SELECT id, article_id, author_name, content, is_approved, created_at
+    'comments'      => "SELECT id, article_id, author_name, author_email, content, status, is_approved, created_at
                                FROM cms_comments",
     'subscribers'   => "SELECT id, email, confirmed, token, created_at FROM cms_subscribers",
     'newsletters'   => "SELECT id, subject, body, sent_at FROM cms_newsletters",
