@@ -114,6 +114,28 @@ if (in_array($scope, ['all', 'content'], true)) {
                 ],
             ],
             [
+                'enabled' => isModuleEnabled('faq'),
+                'module_label' => 'FAQ',
+                'approval_module' => 'faq',
+                'manage_url' => 'faq.php',
+                'edit_builder' => static fn(array $row): string => 'faq_form.php?id=' . (int)$row['id'],
+                'sql' => "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.created_at,
+                                 c.name AS category_name
+                          FROM cms_faqs f
+                          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
+                          WHERE f.status = 'pending'
+                          ORDER BY f.sort_order, f.id
+                          LIMIT 10",
+                'row_builder' => static fn(array $row): array => [
+                    'sort_at' => (string)$row['created_at'],
+                    'title' => (string)$row['question'],
+                    'meta' => trim((string)$row['category_name']) !== ''
+                        ? 'Kategorie: ' . (string)$row['category_name']
+                        : faqExcerpt($row, 80),
+                    'date' => (string)$row['created_at'],
+                ],
+            ],
+            [
                 'enabled' => isModuleEnabled('board'),
                 'module_label' => 'Úřední deska',
                 'approval_module' => 'board',
@@ -186,25 +208,6 @@ if (in_array($scope, ['all', 'content'], true)) {
                     'sort_at' => (string)$row['created_at'],
                     'title' => (string)$row['name'],
                     'meta' => trim((string)$row['category']) !== '' ? 'Kategorie: ' . (string)$row['category'] : '',
-                    'date' => (string)$row['created_at'],
-                ],
-            ],
-            [
-                'enabled' => isModuleEnabled('podcast'),
-                'module_label' => 'Podcasty',
-                'approval_module' => 'podcasts',
-                'manage_url' => 'podcast_shows.php',
-                'edit_builder' => static fn(array $row): string => 'podcast_form.php?id=' . (int)$row['id'] . '&show_id=' . (int)$row['show_id'],
-                'sql' => "SELECT p.id, p.title, p.show_id, p.created_at, s.title AS show_title
-                          FROM cms_podcasts p
-                          LEFT JOIN cms_podcast_shows s ON s.id = p.show_id
-                          WHERE p.status = 'pending'
-                          ORDER BY p.created_at DESC
-                          LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
-                    'sort_at' => (string)$row['created_at'],
-                    'title' => (string)$row['title'],
-                    'meta' => trim((string)$row['show_title']) !== '' ? 'Podcast: ' . (string)$row['show_title'] : '',
                     'date' => (string)$row['created_at'],
                 ],
             ],

@@ -17,6 +17,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_board' => getSetting('module_board', '0'),
     'module_downloads' => getSetting('module_downloads', '0'),
     'module_events' => getSetting('module_events', '0'),
+    'module_faq' => getSetting('module_faq', '0'),
     'module_places' => getSetting('module_places', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
 ];
@@ -72,6 +73,12 @@ $downloadCanonicalPath = '';
 $downloadLegacyPath = '';
 $downloadCanonicalUrl = '';
 $downloadLegacyUrl = '';
+$faqRow = null;
+$faqId = false;
+$faqCanonicalPath = '';
+$faqLegacyPath = '';
+$faqCanonicalUrl = '';
+$faqLegacyUrl = '';
 $placeRow = null;
 $placeId = false;
 $placeCanonicalPath = '';
@@ -155,6 +162,7 @@ $cleanup = [
     'board_ids' => [],
     'download_ids' => [],
     'download_files' => [],
+    'faq_ids' => [],
     'place_ids' => [],
 ];
 
@@ -440,6 +448,41 @@ if ($downloadRow) {
     $downloadLegacyUrl = $downloadLegacyPath !== '' ? $baseUrl . $downloadLegacyPath : '';
 }
 
+if (isModuleEnabled('faq')) {
+    $runtimeAuditFaqQuestion = 'Jak funguje runtime audit FAQ?';
+    $runtimeAuditFaqSlug = uniqueFaqSlug($pdo, 'runtime-audit-faq-' . bin2hex(random_bytes(4)));
+    $runtimeAuditFaqExcerpt = 'Krátké shrnutí testovací FAQ položky pro ověření veřejného detailu, vyhledávání a redakčního workflow.';
+    $pdo->prepare(
+        "INSERT INTO cms_faqs (
+            question, slug, excerpt, answer, category_id, sort_order, is_published, status, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, NULL, -100, 1, 'published', NOW(), NOW())"
+    )->execute([
+        $runtimeAuditFaqQuestion,
+        $runtimeAuditFaqSlug,
+        $runtimeAuditFaqExcerpt,
+        '<p>Detailní odpověď runtime audit položky FAQ pro ověření veřejného detailu a znalostní báze.</p>',
+    ]);
+    $runtimeAuditFaqId = (int)$pdo->lastInsertId();
+    $cleanup['faq_ids'][] = $runtimeAuditFaqId;
+
+    $faqStmt = $pdo->prepare(
+        "SELECT f.*, c.name AS category_name
+         FROM cms_faqs f
+         LEFT JOIN cms_faq_categories c ON c.id = f.category_id
+         WHERE f.id = ?"
+    );
+    $faqStmt->execute([$runtimeAuditFaqId]);
+    $faqRow = $faqStmt->fetch() ?: null;
+    if ($faqRow) {
+        $faqRow = hydrateFaqPresentation($faqRow);
+        $faqId = $faqRow['id'] ?? false;
+        $faqCanonicalPath = faqPublicPath($faqRow);
+        $faqLegacyPath = $faqId !== false ? BASE_URL . '/faq/item.php?id=' . urlencode((string)$faqId) : '';
+        $faqCanonicalUrl = $faqCanonicalPath !== '' ? $baseUrl . $faqCanonicalPath : '';
+        $faqLegacyUrl = $faqLegacyPath !== '' ? $baseUrl . $faqLegacyPath : '';
+    }
+}
+
 if (isModuleEnabled('places')) {
     $runtimeAuditPlaceName = 'Runtime audit místo';
     $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
@@ -499,6 +542,7 @@ $pages = [
     ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_faq', 'url' => $baseUrl . '/admin/faq.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -519,6 +563,9 @@ if ($boardId !== false) {
 }
 if ($downloadId !== false) {
     $pages[] = ['label' => 'admin_download_form', 'url' => $baseUrl . '/admin/download_form.php?id=' . urlencode((string)$downloadId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($faqId !== false) {
+    $pages[] = ['label' => 'admin_faq_form', 'url' => $baseUrl . '/admin/faq_form.php?id=' . urlencode((string)$faqId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($placeId !== false) {
     $pages[] = ['label' => 'admin_place_form', 'url' => $baseUrl . '/admin/place_form.php?id=' . urlencode((string)$placeId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -594,6 +641,9 @@ if ($downloadCanonicalUrl !== '') {
 }
 if ($placeCanonicalUrl !== '') {
     $pages[] = ['label' => 'places_article', 'url' => $placeCanonicalUrl];
+}
+if ($faqCanonicalUrl !== '') {
+    $pages[] = ['label' => 'faq_article', 'url' => $faqCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
@@ -1298,6 +1348,30 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_faq') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin faq search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin faq status filter is missing';
+        }
+    }
+
+    if ($page['label'] === 'admin_faq_form') {
+        foreach ([
+            'name="slug"',
+            'name="excerpt"',
+            'name="category_id"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin faq form is missing field: ' . $expectedField;
+            }
+        }
+        if (!str_contains($result['body'], 'id="answer"') && !str_contains($result['body'], 'name="answer"')) {
+            $issues[] = 'admin faq form is missing answer field';
+        }
+    }
+
     if ($page['label'] === 'admin_place_form') {
         foreach ([
             'name="slug"',
@@ -1415,6 +1489,22 @@ foreach ($pages as $page) {
         }
         if ($placeRow && !str_contains($result['body'], 'google.com/maps')) {
             $issues[] = 'places article is missing map link';
+        }
+    }
+
+    if ($page['label'] === 'faq_index' && $faqCanonicalPath !== '' && !str_contains($result['body'], $faqCanonicalPath)) {
+        $issues[] = 'faq listing is missing detail links';
+    }
+
+    if ($page['label'] === 'faq_article') {
+        if ($faqRow && !str_contains($result['body'], (string)($faqRow['question'] ?? ''))) {
+            $issues[] = 'faq article is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět na FAQ')) {
+            $issues[] = 'faq article is missing back link';
+        }
+        if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
+            $issues[] = 'faq article is missing excerpt';
         }
     }
 
@@ -1541,6 +1631,23 @@ if ($placeCanonicalPath === '' || $placeLegacyPath === '' || $placeCanonicalPath
     }
 }
 
+echo "=== faq_article_legacy_redirect ===\n";
+if ($faqCanonicalPath === '' || $faqLegacyPath === '' || $faqCanonicalPath === $faqLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyFaqProbe = fetchUrl($faqLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $faqCanonicalPath;
+    if (!str_contains($legacyFaqProbe['status'], '302')) {
+        echo "- legacy faq URL does not redirect ({$legacyFaqProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyFaqProbe['headers'], true)) {
+        echo "- legacy faq URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== public_author_guard ===\n";
 if ($runtimeAuditAuthorUrl === '') {
     echo "OK\n";
@@ -1591,6 +1698,9 @@ if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
 }
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'author downloads'];
+if (isModuleEnabled('faq')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/faq.php', 'expected' => '403', 'label' => 'author faq'];
+}
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'author places'];
 }
@@ -1617,6 +1727,9 @@ if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
 }
 $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'moderator downloads'];
+if (isModuleEnabled('faq')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/faq.php', 'expected' => '403', 'label' => 'moderator faq'];
+}
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'moderator places'];
 }
@@ -1632,6 +1745,9 @@ if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'booking manager board'];
 }
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'booking manager downloads'];
+if (isModuleEnabled('faq')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/faq.php', 'expected' => '403', 'label' => 'booking manager faq'];
+}
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'booking manager places'];
 }
@@ -2101,6 +2217,10 @@ if (!empty($cleanup['download_ids'])) {
 }
 foreach ($cleanup['download_files'] as $downloadFile) {
     deleteDownloadStoredFile((string)$downloadFile);
+}
+if (!empty($cleanup['faq_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['faq_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_faqs WHERE id IN ({$placeholders})")->execute($cleanup['faq_ids']);
 }
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));

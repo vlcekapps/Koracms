@@ -370,11 +370,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             category_id  INT          NULL DEFAULT NULL,
             question     VARCHAR(500) NOT NULL,
+            slug         VARCHAR(255) NOT NULL,
+            excerpt      TEXT,
             answer       TEXT         NOT NULL,
             sort_order   INT          NOT NULL DEFAULT 0,
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
+            status       ENUM('pending','published') NOT NULL DEFAULT 'published',
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_faqs_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_categories (

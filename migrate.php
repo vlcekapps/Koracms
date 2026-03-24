@@ -382,11 +382,15 @@ $tables = [
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         category_id  INT          NULL DEFAULT NULL,
         question     VARCHAR(500) NOT NULL,
+        slug         VARCHAR(255) NOT NULL,
+        excerpt      TEXT,
         answer       TEXT         NOT NULL,
         sort_order   INT          NOT NULL DEFAULT 0,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
+        status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_faqs_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_board_categories' => "CREATE TABLE IF NOT EXISTS cms_board_categories (
@@ -570,6 +574,10 @@ $addColumns = [
     'cms_news.author_id'             => "ALTER TABLE cms_news ADD COLUMN author_id INT NULL DEFAULT NULL",
     'cms_news.status'                => "ALTER TABLE cms_news ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_faqs
+    'cms_faqs.slug'                  => "ALTER TABLE cms_faqs ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
+    'cms_faqs.excerpt'               => "ALTER TABLE cms_faqs ADD COLUMN excerpt TEXT",
+    'cms_faqs.status'                => "ALTER TABLE cms_faqs ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_podcasts
     'cms_podcasts.show_id'           => "ALTER TABLE cms_podcasts ADD COLUMN show_id INT NOT NULL DEFAULT 1",
     'cms_podcasts.status'            => "ALTER TABLE cms_podcasts ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
@@ -940,6 +948,60 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy novinek – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $faqSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_faqs' AND COLUMN_NAME = 'slug'"
+    );
+    $faqSlugColumnCheck->execute();
+
+    if ((int)$faqSlugColumnCheck->fetchColumn() > 0) {
+        $faqRows = $pdo->query("SELECT id, question, slug FROM cms_faqs ORDER BY id")->fetchAll();
+        $updateFaqSlugStmt = $pdo->prepare("UPDATE cms_faqs SET slug = ? WHERE id = ?");
+
+        foreach ($faqRows as $faqRow) {
+            $existingSlug = trim((string)($faqRow['slug'] ?? ''));
+            $resolvedSlug = uniqueFaqSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$faqRow['question'],
+                (int)$faqRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateFaqSlugStmt->execute([$resolvedSlug, (int)$faqRow['id']]);
+            }
+        }
+
+        $faqSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_faqs' AND COLUMN_NAME = 'slug'"
+        );
+        $faqSlugNullabilityCheck->execute();
+        if (($faqSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_faqs MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_faqs.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_faqs.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $faqSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_faqs'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $faqSlugIndexCheck->execute();
+        if ((int)$faqSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_faqs ADD UNIQUE KEY uq_cms_faqs_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_faqs_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_faqs.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy FAQ – sloupec <code>cms_faqs.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy FAQ – CHYBA: " . h($e->getMessage());
 }
 
 try {

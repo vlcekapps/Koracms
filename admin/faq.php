@@ -1,23 +1,82 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ nemáte potřebné oprávnění.');
 
-$faqs = db_connect()->query(
-    "SELECT f.id, f.question, f.sort_order, f.is_published, c.name AS category_name
+$pdo = db_connect();
+$q = trim($_GET['q'] ?? '');
+$statusFilter = trim($_GET['status'] ?? 'all');
+$allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
+if (!in_array($statusFilter, $allowedStatusFilters, true)) {
+    $statusFilter = 'all';
+}
+
+$whereParts = [];
+$params = [];
+
+if ($q !== '') {
+    $whereParts[] = '(f.question LIKE ? OR f.excerpt LIKE ? OR f.answer LIKE ? OR c.name LIKE ?)';
+    for ($i = 0; $i < 4; $i++) {
+        $params[] = '%' . $q . '%';
+    }
+}
+
+if ($statusFilter === 'pending') {
+    $whereParts[] = "COALESCE(f.status,'published') = 'pending'";
+} elseif ($statusFilter === 'published') {
+    $whereParts[] = "COALESCE(f.status,'published') = 'published' AND f.is_published = 1";
+} elseif ($statusFilter === 'hidden') {
+    $whereParts[] = "COALESCE(f.status,'published') = 'published' AND f.is_published = 0";
+}
+
+$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+
+$stmt = $pdo->prepare(
+    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.sort_order, f.is_published,
+            COALESCE(f.status,'published') AS status, f.created_at, f.updated_at,
+            c.name AS category_name
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
+     {$whereSql}
      ORDER BY c.sort_order, c.name, f.sort_order, f.id"
-)->fetchAll();
+);
+$stmt->execute($params);
+$faqs = array_map(
+    static fn(array $faq): array => hydrateFaqPresentation($faq),
+    $stmt->fetchAll()
+);
 
-adminHeader('FAQ – otázky');
+$canApproveFaq = currentUserHasCapability('content_approve_shared');
+
+adminHeader('FAQ');
 ?>
 <p>
-  <a href="faq_form.php" class="btn">+ Nová otázka</a>
+  <a href="faq_form.php" class="btn">+ Přidat otázku</a>
   <a href="faq_cats.php" style="margin-left:1rem">Správa kategorií</a>
 </p>
 
+<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+  <div>
+    <label for="q" class="visually-hidden">Hledat ve FAQ</label>
+    <input type="search" id="q" name="q" placeholder="Hledat ve FAQ…"
+           value="<?= h($q) ?>" style="width:300px">
+  </div>
+  <div>
+    <label for="status">Stav</label>
+    <select id="status" name="status">
+      <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <option value="published"<?= $statusFilter === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
+      <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
+    </select>
+  </div>
+  <button type="submit" class="btn">Filtrovat</button>
+  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+    <a href="faq.php" class="btn">Zrušit</a>
+  <?php endif; ?>
+</form>
+
 <?php if (empty($faqs)): ?>
-  <p>Žádné otázky.</p>
+  <p>Žádné otázky<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
 <?php else: ?>
   <table>
     <caption>Často kladené otázky</caption>
@@ -31,17 +90,43 @@ adminHeader('FAQ – otázky');
       </tr>
     </thead>
     <tbody>
-    <?php foreach ($faqs as $f): ?>
-      <tr>
-        <td><?= h($f['question']) ?></td>
-        <td><?= h($f['category_name'] ?: '–') ?></td>
-        <td><?= (int)$f['sort_order'] ?></td>
-        <td><?= $f['is_published'] ? 'Publikováno' : '<strong style="color:#c60">Skryto</strong>' ?></td>
+    <?php foreach ($faqs as $faq): ?>
+      <tr<?= $faq['status'] === 'pending' ? ' style="background:#fffbe6"' : '' ?>>
+        <td>
+          <strong><?= h((string)$faq['question']) ?></strong><br>
+          <small style="color:#555">/faq/<?= h((string)$faq['slug']) ?></small>
+          <?php if ($faq['excerpt'] !== ''): ?>
+            <br><small style="color:#555"><?= h((string)$faq['excerpt']) ?></small>
+          <?php endif; ?>
+        </td>
+        <td><?= h((string)($faq['category_name'] ?: '–')) ?></td>
+        <td><?= (int)$faq['sort_order'] ?></td>
+        <td>
+          <?php if ($faq['status'] === 'pending'): ?>
+            <strong style="color:#c60">Čeká na schválení</strong>
+          <?php elseif ((int)$faq['is_published'] === 1): ?>
+            Publikováno
+          <?php else: ?>
+            <strong>Skryto</strong>
+          <?php endif; ?>
+        </td>
         <td class="actions">
-          <a href="faq_form.php?id=<?= (int)$f['id'] ?>" class="btn">Upravit</a>
+          <a href="faq_form.php?id=<?= (int)$faq['id'] ?>" class="btn">Upravit</a>
+          <?php if ($faq['is_publicly_visible']): ?>
+            <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+          <?php endif; ?>
+          <?php if ($faq['status'] === 'pending' && $canApproveFaq): ?>
+            <form action="approve.php" method="post" style="display:inline">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="module" value="faq">
+              <input type="hidden" name="id" value="<?= (int)$faq['id'] ?>">
+              <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/faq.php">
+              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+            </form>
+          <?php endif; ?>
           <form action="faq_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
+            <input type="hidden" name="id" value="<?= (int)$faq['id'] ?>">
             <button type="submit" class="btn btn-danger"
                     onclick="return confirm('Smazat otázku?')">Smazat</button>
           </form>
@@ -51,5 +136,7 @@ adminHeader('FAQ – otázky');
     </tbody>
   </table>
 <?php endif; ?>
+
+<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <?php adminFooter(); ?>

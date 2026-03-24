@@ -956,6 +956,7 @@ function pendingReviewSummary(PDO $pdo): array
             ['key' => 'board', 'enabled' => isModuleEnabled('board'), 'label' => boardModulePublicLabel(), 'url' => BASE_URL . '/admin/board.php', 'sql' => "SELECT COUNT(*) FROM cms_board WHERE status = 'pending'"],
             ['key' => 'downloads', 'enabled' => isModuleEnabled('downloads'), 'label' => 'Ke stažení', 'url' => BASE_URL . '/admin/downloads.php', 'sql' => "SELECT COUNT(*) FROM cms_downloads WHERE status = 'pending'"],
             ['key' => 'events', 'enabled' => isModuleEnabled('events'), 'label' => 'Události', 'url' => BASE_URL . '/admin/events.php', 'sql' => "SELECT COUNT(*) FROM cms_events WHERE status = 'pending'"],
+            ['key' => 'faq', 'enabled' => isModuleEnabled('faq'), 'label' => 'FAQ', 'url' => BASE_URL . '/admin/faq.php', 'sql' => "SELECT COUNT(*) FROM cms_faqs WHERE status = 'pending'"],
             ['key' => 'places', 'enabled' => isModuleEnabled('places'), 'label' => 'Zajímavá místa', 'url' => BASE_URL . '/admin/places.php', 'sql' => "SELECT COUNT(*) FROM cms_places WHERE status = 'pending'"],
             ['key' => 'podcasts', 'enabled' => isModuleEnabled('podcast'), 'label' => 'Podcasty', 'url' => BASE_URL . '/admin/podcast_shows.php', 'sql' => "SELECT COUNT(*) FROM cms_podcasts WHERE status = 'pending'"],
             ['key' => 'food', 'enabled' => isModuleEnabled('food'), 'label' => 'Jídelní lístky', 'url' => BASE_URL . '/admin/food.php', 'sql' => "SELECT COUNT(*) FROM cms_food_cards WHERE status = 'pending'"],
@@ -1062,6 +1063,11 @@ function boardSlug(string $value): string
     return slugify(trim($value));
 }
 
+function faqSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function authorSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1118,6 +1124,21 @@ function boardExcerpt(array $document, int $limit = 220): string
     }
 
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function faqExcerpt(array $faq, int $limit = 220): string
+{
+    $explicitExcerpt = normalizePlainText((string)($faq['excerpt'] ?? ''));
+    if ($explicitExcerpt !== '') {
+        return mb_strimwidth($explicitExcerpt, 0, $limit, '...', 'UTF-8');
+    }
+
+    $answerExcerpt = normalizePlainText((string)($faq['answer'] ?? ''));
+    if ($answerExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($answerExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
 function placeKindLabel(string $kind): string
@@ -1808,6 +1829,27 @@ function uniquePlaceSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     }
 }
 
+function uniqueFaqSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = faqSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'otazka';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_faqs WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
 function uniqueDownloadSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = downloadSlug($candidate);
@@ -1971,6 +2013,26 @@ function authorPublicUrl(array $author): string
     return $path !== '' ? siteUrl($path) : '';
 }
 
+function faqPublicRequestPath(array $faq): string
+{
+    $slug = faqSlug((string)($faq['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/faq/' . rawurlencode($slug);
+    }
+
+    return '/faq/item.php?id=' . (int)($faq['id'] ?? 0);
+}
+
+function faqPublicPath(array $faq, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(faqPublicRequestPath($faq), $query);
+}
+
+function faqPublicUrl(array $faq, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(faqPublicRequestPath($faq), $query));
+}
+
 function authorAvatarUrl(array $author): string
 {
     $avatarFile = trim((string)($author['author_avatar'] ?? ''));
@@ -2004,6 +2066,18 @@ function hydrateNewsPresentation(array $news): array
     }
 
     return $news;
+}
+
+function hydrateFaqPresentation(array $faq): array
+{
+    $faq['question'] = trim((string)($faq['question'] ?? ''));
+    $faq['slug'] = faqSlug((string)($faq['slug'] ?? ''));
+    $faq['excerpt'] = faqExcerpt($faq);
+    $faq['public_path'] = faqPublicPath($faq);
+    $faq['public_url'] = faqPublicUrl($faq);
+    $faq['status'] = (string)($faq['status'] ?? ((int)($faq['is_published'] ?? 1) === 1 ? 'published' : 'pending'));
+    $faq['is_publicly_visible'] = $faq['status'] === 'published' && (int)($faq['is_published'] ?? 1) === 1;
+    return $faq;
 }
 
 function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array

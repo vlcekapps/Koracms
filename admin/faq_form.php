@@ -1,36 +1,53 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
-$id  = inputInt('get', 'id');
+$id = inputInt('get', 'id');
 $faq = null;
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_faqs WHERE id = ?");
     $stmt->execute([$id]);
-    $faq = $stmt->fetch();
-    if (!$faq) { header('Location: faq.php'); exit; }
+    $faq = $stmt->fetch() ?: null;
+    if (!$faq) {
+        header('Location: faq.php');
+        exit;
+    }
 }
+
+$faq = $faq ?: [
+    'question' => '',
+    'slug' => '',
+    'excerpt' => '',
+    'answer' => '',
+    'category_id' => null,
+    'sort_order' => 0,
+    'is_published' => 1,
+    'status' => 'published',
+];
 
 $categories = $pdo->query("SELECT id, name FROM cms_faq_categories ORDER BY sort_order, name")->fetchAll();
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
+$err = trim($_GET['err'] ?? '');
+$formError = match ($err) {
+    'required' => 'Vyplňte prosím otázku a odpověď.',
+    'slug' => 'Slug FAQ je povinný a musí být unikátní.',
+    default => '',
+};
 
 adminHeader($id ? 'Upravit otázku' : 'Nová otázka');
-
-$err = trim($_GET['err'] ?? '');
 ?>
 
-<?php if ($err === 'required'): ?>
-  <p role="alert" class="error" id="form-error">Vyplňte prosím otázku a odpověď.</p>
+<?php if ($formError !== ''): ?>
+  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
-<form method="post" action="faq_save.php" novalidate
-      <?= $err ? 'aria-describedby="form-error"' : '' ?>>
+<form method="post" action="faq_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($id): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
@@ -41,52 +58,95 @@ $err = trim($_GET['err'] ?? '');
 
     <label for="question">Otázka <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
-           value="<?= h($faq['question'] ?? '') ?>">
+           value="<?= h((string)$faq['question']) ?>">
+
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
+      <small>(pouze malá písmena, číslice a pomlčky)</small>
+    </label>
+    <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           value="<?= h((string)$faq['slug']) ?>">
+
+    <label for="excerpt">Krátké shrnutí / perex</label>
+    <textarea id="excerpt" name="excerpt" rows="3"><?= h((string)($faq['excerpt'] ?? '')) ?></textarea>
+    <small style="color:#666">Zobrazí se ve výpisu FAQ, ve vyhledávání a jako úvod detailu.</small>
 
     <label for="answer">Odpověď <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-  <textarea id="answer" name="answer" rows="8" required aria-required="true"><?= h($faq['answer'] ?? '') ?></textarea>
-  <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <?php if ($useWysiwyg): ?>
+      <div id="editor-answer" style="min-height:220px"><?= (string)($faq['answer'] ?? '') ?></div>
+      <input type="hidden" id="answer" name="answer" value="<?= h((string)($faq['answer'] ?? '')) ?>">
+    <?php else: ?>
+      <textarea id="answer" name="answer" rows="8" required aria-required="true"><?= h((string)($faq['answer'] ?? '')) ?></textarea>
+      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+    <?php endif; ?>
 
-  <label for="category_id">Kategorie</label>
-  <select id="category_id" name="category_id">
-    <option value="">– bez kategorie –</option>
-    <?php foreach ($categories as $cat): ?>
-      <option value="<?= (int)$cat['id'] ?>" <?= ($faq['category_id'] ?? '') == $cat['id'] ? 'selected' : '' ?>>
-        <?= h($cat['name']) ?>
-      </option>
-    <?php endforeach; ?>
-  </select>
+    <label for="category_id">Kategorie</label>
+    <select id="category_id" name="category_id">
+      <option value="">– bez kategorie –</option>
+      <?php foreach ($categories as $category): ?>
+        <option value="<?= (int)$category['id'] ?>"<?= (string)($faq['category_id'] ?? '') === (string)$category['id'] ? ' selected' : '' ?>>
+          <?= h((string)$category['name']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
 
-  <label for="sort_order">Pořadí</label>
-  <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
-         value="<?= (int)($faq['sort_order'] ?? 0) ?>">
+    <label for="sort_order">Pořadí</label>
+    <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
+           value="<?= (int)($faq['sort_order'] ?? 0) ?>">
 
-  <label style="font-weight:normal;margin-top:1rem">
-    <input type="checkbox" name="is_published" value="1"
-           <?= ($faq['is_published'] ?? 1) ? 'checked' : '' ?>>
-    Publikováno
-  </label>
+    <label style="font-weight:normal;margin-top:1rem">
+      <input type="checkbox" name="is_published" value="1"
+             <?= (int)($faq['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+      Zobrazit na webu
+    </label>
 
     <div style="margin-top:1.5rem">
-      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat otázku' ?></button>
+      <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku' ?></button>
+      <?php if (($faq['status'] ?? 'published') === 'published' && (int)($faq['is_published'] ?? 1) === 1 && !empty($faq['slug'])): ?>
+        <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+      <?php endif; ?>
       <a href="faq.php" style="margin-left:1rem">Zrušit</a>
     </div>
   </fieldset>
 </form>
+
+<script>
+(function () {
+    const questionInput = document.getElementById('question');
+    const slugInput = document.getElementById('slug');
+    let slugManual = <?= !empty($faq['slug']) ? 'true' : 'false' ?>;
+
+    const slugify = (value) => value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    slugInput?.addEventListener('input', function () {
+        slugManual = this.value.trim() !== '';
+    });
+
+    questionInput?.addEventListener('input', function () {
+        if (slugManual || !slugInput) {
+            return;
+        }
+        slugInput.value = slugify(this.value);
+    });
+})();
+</script>
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <script>
 (function () {
-    const ta = document.getElementById('answer');
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem;min-height:200px';
-    ta.parentNode.insertBefore(wrapper, ta);
-    ta.style.display = 'none';
+    const textarea = document.getElementById('answer');
+    const wrapper = document.getElementById('editor-answer');
     const quill = new Quill(wrapper, { theme: 'snow' });
-    quill.root.innerHTML = ta.value;
-    ta.closest('form').addEventListener('submit', () => { ta.value = quill.root.innerHTML; });
+    quill.root.innerHTML = textarea.value;
+    textarea.closest('form')?.addEventListener('submit', function () {
+        textarea.value = quill.root.innerHTML;
+    });
 })();
 </script>
 <?php endif; ?>

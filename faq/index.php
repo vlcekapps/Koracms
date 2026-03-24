@@ -10,17 +10,26 @@ if (!isModuleEnabled('faq')) {
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
-$faqs = $pdo->query(
-    "SELECT f.id, f.question, f.answer, f.category_id, c.name AS category_name, c.sort_order AS cat_sort
+$faqRows = $pdo->query(
+    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.category_id, f.sort_order, f.updated_at,
+            COALESCE(f.status,'published') AS status, c.name AS category_name, c.sort_order AS cat_sort
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
-     WHERE f.is_published = 1
+     WHERE COALESCE(f.status,'published') = 'published' AND f.is_published = 1
      ORDER BY c.sort_order, c.name, f.sort_order, f.id"
 )->fetchAll();
 
+$faqs = array_map(
+    static fn(array $faq): array => hydrateFaqPresentation($faq),
+    $faqRows
+);
+
 $grouped = [];
 foreach ($faqs as $faq) {
-    $categoryName = $faq['category_name'] ?: 'Ostatní';
+    $categoryName = trim((string)($faq['category_name'] ?? ''));
+    if ($categoryName === '') {
+        $categoryName = 'Ostatní';
+    }
     $grouped[$categoryName][] = $faq;
 }
 

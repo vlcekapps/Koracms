@@ -29,12 +29,26 @@
               <h2 id="faq-category-<?= $categoryIndex ?>" class="sr-only">Otázky a odpovědi</h2>
             <?php endif; ?>
 
-            <div class="stack-list">
+            <div class="card-grid card-grid--compact">
               <?php foreach ($items as $faq): ?>
-                <details class="toggle-card">
-                  <summary><?= h($faq['question']) ?></summary>
-                  <div class="prose toggle-card__content"><?= renderContent($faq['answer']) ?></div>
-                </details>
+                <article class="card card--rich">
+                  <div class="card__body">
+                    <?php if ($multipleCategories): ?>
+                      <p class="card__eyebrow"><?= h($categoryName) ?></p>
+                    <?php endif; ?>
+                    <h3 class="card__title">
+                      <a href="<?= h(faqPublicPath($faq)) ?>"><?= h((string)$faq['question']) ?></a>
+                    </h3>
+
+                    <?php if ($faq['excerpt'] !== ''): ?>
+                      <p class="card__description"><?= h((string)$faq['excerpt']) ?></p>
+                    <?php endif; ?>
+
+                    <div class="card__actions">
+                      <a class="section-link" href="<?= h(faqPublicPath($faq)) ?>">Zobrazit odpověď <span aria-hidden="true">→</span></a>
+                    </div>
+                  </div>
+                </article>
               <?php endforeach; ?>
             </div>
           </section>

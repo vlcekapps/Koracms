@@ -125,7 +125,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |
 | **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
-| **FAQ** | Často kladené otázky s kategoriemi; accordion (`<details>` / `<summary>`) bez JavaScriptu |
+| **FAQ** | Znalostní báze s kategoriemi, krátkým perexem, detailovou stránkou na čisté slug URL a veřejným FAQ rozcestníkem |
 | **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL a automatický archiv po datu sejmutí |
 | **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci |

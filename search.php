@@ -75,30 +75,17 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
-    if (isModuleEnabled('podcast')) {
-        try {
-            $stmt = $pdo->prepare(
-                "SELECT id, title, description AS perex, created_at, 'podcast' AS type
-                 FROM cms_podcasts
-                 WHERE (publish_at IS NULL OR publish_at <= NOW()) AND (title LIKE ? OR description LIKE ?)
-                 ORDER BY created_at DESC LIMIT 5"
-            );
-            $stmt->execute([$like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
-                $results[] = $row;
-            }
-        } catch (\PDOException $e) {
-        }
-    }
-
     if (isModuleEnabled('faq')) {
         try {
             $stmt = $pdo->prepare(
-                "SELECT id, question AS title, answer AS perex, created_at, 'faq' AS type
-                 FROM cms_faqs WHERE is_published = 1 AND (question LIKE ? OR answer LIKE ?)
+                "SELECT id, question AS title, slug, COALESCE(NULLIF(excerpt, ''), answer) AS perex,
+                        COALESCE(updated_at, created_at) AS created_at, 'faq' AS type
+                 FROM cms_faqs
+                 WHERE COALESCE(status,'published') = 'published' AND is_published = 1
+                   AND (question LIKE ? OR excerpt LIKE ? OR answer LIKE ?)
                  ORDER BY sort_order, id LIMIT 10"
             );
-            $stmt->execute([$like, $like]);
+            $stmt->execute([$like, $like, $like]);
             foreach ($stmt->fetchAll() as $row) {
                 $results[] = $row;
             }
@@ -171,8 +158,7 @@ function resultUrl(array $result): string
         'news' => newsPublicPath($result),
         'page' => $baseUrl . '/page.php?slug=' . rawurlencode($result['slug'] ?? ''),
         'event' => eventPublicPath($result),
-        'podcast' => $baseUrl . '/podcast/index.php#ep-' . (int)$result['id'],
-        'faq' => $baseUrl . '/faq/index.php',
+        'faq' => faqPublicPath($result),
         'download' => downloadPublicPath($result),
         'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
@@ -187,7 +173,6 @@ function typeLabel(string $type): string
         'news' => 'Novinka',
         'page' => 'Stránka',
         'event' => 'Akce',
-        'podcast' => 'Podcast',
         'faq' => 'FAQ',
         'download' => 'Ke stažení',
         'place' => 'Místo',

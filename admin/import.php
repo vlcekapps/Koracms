@@ -403,14 +403,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['faqs']) && is_array($data['faqs'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_faqs
-                         (id, question, answer, category_id, is_published, sort_order, status)
-                         VALUES (?,?,?,?,?,?,?)"
+                         (id, question, slug, excerpt, answer, category_id, is_published, sort_order, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['faqs'] as $row) {
+                        $importQuestion = trim((string)($row['question'] ?? ''));
+                        if ($importQuestion === '') {
+                            $importQuestion = 'Otázka';
+                        }
+                        $importSlug = faqSlug((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniqueFaqSlug($pdo, $importQuestion);
+                        } else {
+                            $importSlug = uniqueFaqSlug($pdo, $importSlug, (int)$row['id']);
+                        }
                         $ins->execute([
-                            (int)$row['id'], $row['question'], $row['answer'] ?? '',
-                            $row['category_id'] ?: null, (int)($row['is_published'] ?? 1),
-                            (int)($row['sort_order'] ?? 0), $row['status'] ?? 'published',
+                            (int)$row['id'],
+                            $importQuestion,
+                            $importSlug,
+                            $row['excerpt'] ?? '',
+                            $row['answer'] ?? '',
+                            $row['category_id'] ?: null,
+                            (int)($row['is_published'] ?? 1),
+                            (int)($row['sort_order'] ?? 0),
+                            $row['status'] ?? 'published',
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);
                     }
                     $summary[] = 'FAQ importovány.';

@@ -128,6 +128,31 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('faq')): ?>
+  <url>
+    <loc><?= h(siteUrl('/faq/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $faqs = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_faqs
+             WHERE COALESCE(status,'published') = 'published' AND is_published = 1
+             ORDER BY sort_order, id"
+        )->fetchAll();
+        foreach ($faqs as $faq):
+?>
+  <url>
+    <loc><?= h(faqPublicUrl($faq)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$faq['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 <?php if (isModuleEnabled('events')): ?>
   <url>
     <loc><?= h(siteUrl('/events/index.php')) ?></loc>
@@ -152,6 +177,7 @@ endif; ?>
   </url>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
+
 
 <?php if (isModuleEnabled('gallery')): ?>
   <url>

@@ -1,25 +1,24 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií FAQ nemáte potřebné oprávnění.');
 
-$pdo     = db_connect();
+$pdo = db_connect();
 $success = false;
-$error   = '';
-
+$error = '';
 $editId = inputInt('get', 'edit');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $name      = trim($_POST['name'] ?? '');
+    $name = trim($_POST['name'] ?? '');
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
-    $updateId  = inputInt('post', 'update_id');
+    $updateId = inputInt('post', 'update_id');
 
     if ($name === '') {
         $error = 'Název kategorie je povinný.';
     } elseif ($updateId !== null) {
         $pdo->prepare("UPDATE cms_faq_categories SET name = ?, sort_order = ? WHERE id = ?")->execute([$name, $sortOrder, $updateId]);
         $success = true;
-        $editId  = null;
+        $editId = null;
     } else {
         $pdo->prepare("INSERT INTO cms_faq_categories (name, sort_order) VALUES (?, ?)")->execute([$name, $sortOrder]);
         $success = true;
@@ -59,36 +58,36 @@ adminHeader('FAQ – kategorie');
     <caption>FAQ kategorie</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Pořadí</th><th scope="col">Akce</th></tr></thead>
     <tbody>
-    <?php foreach ($categories as $cat): ?>
+    <?php foreach ($categories as $category): ?>
       <tr>
-        <?php if ($editId === (int)$cat['id']): ?>
+        <?php if ($editId === (int)$category['id']): ?>
           <td colspan="2">
             <form method="post" style="display:flex;gap:.4rem;align-items:center" novalidate>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id"  value="<?= (int)$cat['id'] ?>">
-              <label for="name-<?= (int)$cat['id'] ?>" class="sr-only">Název kategorie</label>
-              <input type="text" id="name-<?= (int)$cat['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h($cat['name']) ?>" style="width:auto">
-              <label for="sort-<?= (int)$cat['id'] ?>" class="sr-only">Pořadí</label>
-              <input type="number" id="sort-<?= (int)$cat['id'] ?>" name="sort_order" min="0" style="width:5rem"
-                     value="<?= (int)$cat['sort_order'] ?>">
+              <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
+              <label for="name-<?= (int)$category['id'] ?>" class="sr-only">Název kategorie</label>
+              <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
+                     value="<?= h((string)$category['name']) ?>" style="width:auto">
+              <label for="sort-<?= (int)$category['id'] ?>" class="sr-only">Pořadí</label>
+              <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0" style="width:5rem"
+                     value="<?= (int)$category['sort_order'] ?>">
               <button type="submit" class="btn">Uložit</button>
               <a href="faq_cats.php">Zrušit</a>
             </form>
           </td>
         <?php else: ?>
-          <td><?= h($cat['name']) ?></td>
-          <td><?= (int)$cat['sort_order'] ?></td>
+          <td><?= h((string)$category['name']) ?></td>
+          <td><?= (int)$category['sort_order'] ?></td>
         <?php endif; ?>
         <td class="actions">
-          <?php if ($editId !== (int)$cat['id']): ?>
-            <a href="faq_cats.php?edit=<?= (int)$cat['id'] ?>" class="btn">Upravit</a>
+          <?php if ($editId !== (int)$category['id']): ?>
+            <a href="faq_cats.php?edit=<?= (int)$category['id'] ?>" class="btn">Upravit</a>
           <?php endif; ?>
           <form action="faq_cat_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$cat['id'] ?>">
+            <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat kategorii? Otázky bez kategorie se zobrazí v sekci „Ostatní".')">Smazat</button>
+                    onclick="return confirm('Smazat kategorii? Otázky bez kategorie se zobrazí v sekci „Ostatní“.')">Smazat</button>
           </form>
         </td>
       </tr>
@@ -96,5 +95,7 @@ adminHeader('FAQ – kategorie');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="faq.php"><span aria-hidden="true">←</span> Zpět na otázky</a></p>
+
+<p><a href="faq.php"><span aria-hidden="true">&larr;</span> Zpět na otázky</a></p>
+
 <?php adminFooter(); ?>
