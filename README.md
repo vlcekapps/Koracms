@@ -126,7 +126,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |
 | **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
 | **FAQ** | Často kladené otázky s kategoriemi; accordion (`<details>` / `<summary>`) bez JavaScriptu |
-| **Úřední deska** | Dokumenty s datem vyvěšení/sejmutí, kategoriemi a přílohami; automatický archiv po datu sejmutí |
+| **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL a automatický archiv po datu sejmutí |
 | **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci |
 
@@ -141,7 +141,7 @@ Na hlavní stránce se zobrazují widgety zapnutých modulů:
 - **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Základní nastavení → Text úvodní stránky*)
 - **Nejnovější novinky** – počet položek lze nastavit; hodnota 0 widget skryje
 - **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje
-- **Úřední deska** – nejnovější aktuální dokumenty; počet položek lze nastavit; hodnota 0 widget skryje
+- **Úřední deska / Vývěska / Oznámení** – nejnovější aktuální položky; počet položek lze nastavit; hodnota 0 widget skryje
 - **Aktuální anketa** – pokud je modul Ankety zapnutý a existuje aktivní anketa
 
 ---
@@ -154,6 +154,7 @@ Nastavení je rozděleno do čtyř sekcí:
 
 - **Název a popis webu** – zobrazí se v záhlaví a v SEO meta tazích
 - **Profil webu** – uloží zaměření webu a volitelně jedním krokem použije doporučené moduly, pořadí navigace, homepage bloky a vhodnou first-party šablonu; `Vlastní profil` slouží jako neutrální režim bez vnuceného presetu
+- **Veřejný název úřední desky** – umožní modul na webu zobrazovat jako `Úřední deska`, `Vývěska`, `Oznámení` nebo jiný krátký veřejný název bez změny interní struktury modulu
 - **Hlavní autor homepage** – volba veřejného autora pro blok `O autorovi / O mně`; při prázdné hodnotě systém automaticky použije jediného dostupného veřejného autora
 - **Kontaktní e-mail** – příjemce zpráv z kontaktního formuláře
 - **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
@@ -239,9 +240,9 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 
 ## Další funkce
 
-- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ, místy a úřední deskou
+- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ, místy a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek i událostí
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, událostí i dokumentů úřední desky
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)

@@ -78,6 +78,31 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('board')): ?>
+  <url>
+    <loc><?= h(siteUrl('/board/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $documents = $pdo->query(
+            "SELECT id, slug, COALESCE(created_at, CONCAT(posted_date, ' 00:00:00')) AS sitemap_lastmod
+             FROM cms_board
+             WHERE status = 'published' AND is_published = 1
+             ORDER BY posted_date DESC, id DESC"
+        )->fetchAll();
+        foreach ($documents as $document):
+?>
+  <url>
+    <loc><?= h(boardPublicUrl($document)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$document['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 <?php if (isModuleEnabled('events')): ?>
   <url>
     <loc><?= h(siteUrl('/events/index.php')) ?></loc>

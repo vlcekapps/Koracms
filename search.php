@@ -109,13 +109,14 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('board')) {
         try {
             $stmt = $pdo->prepare(
-                "SELECT id, title, description AS perex, posted_date AS created_at, 'board' AS type
+                "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
+                        posted_date AS created_at, 'board' AS type
                  FROM cms_board
                  WHERE status = 'published' AND is_published = 1
-                   AND (title LIKE ? OR description LIKE ?)
+                   AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR contact_name LIKE ? OR contact_phone LIKE ? OR contact_email LIKE ?)
                  ORDER BY posted_date DESC LIMIT 10"
             );
-            $stmt->execute([$like, $like]);
+            $stmt->execute([$like, $like, $like, $like, $like, $like]);
             foreach ($stmt->fetchAll() as $row) {
                 $results[] = $row;
             }
@@ -150,7 +151,7 @@ function resultUrl(array $result): string
         'podcast' => $baseUrl . '/podcast/index.php#ep-' . (int)$result['id'],
         'faq' => $baseUrl . '/faq/index.php',
         'place' => $baseUrl . '/places/index.php#place-' . (int)$result['id'],
-        'board' => $baseUrl . '/board/index.php',
+        'board' => boardPublicPath($result),
         default => $baseUrl . '/',
     };
 }
@@ -165,7 +166,7 @@ function typeLabel(string $type): string
         'podcast' => 'Podcast',
         'faq' => 'FAQ',
         'place' => 'Místo',
-        'board' => 'Úřední deska',
+        'board' => boardModulePublicLabel(),
         default => '',
     };
 }

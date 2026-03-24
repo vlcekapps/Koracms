@@ -1,78 +1,186 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu úřední desky nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
-$id  = inputInt('get', 'id');
-$d   = null;
+$id = inputInt('get', 'id');
+$document = null;
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
     $stmt->execute([$id]);
-    $d = $stmt->fetch();
-    if (!$d) { header('Location: board.php'); exit; }
+    $document = $stmt->fetch() ?: null;
+    if (!$document) {
+        header('Location: board.php');
+        exit;
+    }
 }
+
+$document = $document ?: [
+    'title' => '',
+    'slug' => '',
+    'board_type' => 'document',
+    'excerpt' => '',
+    'description' => '',
+    'category_id' => null,
+    'posted_date' => date('Y-m-d'),
+    'removal_date' => '',
+    'image_file' => '',
+    'contact_name' => '',
+    'contact_phone' => '',
+    'contact_email' => '',
+    'filename' => '',
+    'original_name' => '',
+    'file_size' => 0,
+    'sort_order' => 0,
+    'is_pinned' => 0,
+    'is_published' => 1,
+    'status' => 'published',
+];
 
 $categories = $pdo->query("SELECT id, name FROM cms_board_categories ORDER BY sort_order, name")->fetchAll();
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
+$publicLabel = boardModulePublicLabel();
+$err = trim($_GET['err'] ?? '');
+$formError = match ($err) {
+    'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
+    'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
+    'slug' => 'Slug položky je povinný a musí být unikátní.',
+    'contact_email' => 'Kontaktní e-mail nemá platný formát.',
+    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF, WebP nebo SVG.',
+    'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
+    default => '',
+};
 
-adminHeader($id ? 'Upravit dokument' : 'Nový dokument úřední desky');
+adminHeader($id ? 'Upravit položku modulu' : 'Nová položka modulu');
 ?>
 
-<form method="post" action="board_save.php" enctype="multipart/form-data" novalidate>
+<?php if ($formError !== ''): ?>
+  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+<?php endif; ?>
+
+<p style="margin-top:0;color:#555">
+  Na veřejném webu se modul aktuálně zobrazuje jako <strong><?= h($publicLabel) ?></strong>.
+</p>
+<p style="margin-top:0;font-size:.9rem">
+  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+</p>
+
+<form method="post" action="board_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($id): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
   <fieldset>
-    <legend>Dokument úřední desky</legend>
+    <legend>Položka modulu <?= h($publicLabel) ?></legend>
 
-    <label for="title">Název <span aria-hidden="true">*</span></label>
+    <label for="title">Nadpis <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-           value="<?= h($d['title'] ?? '') ?>">
+           value="<?= h((string)$document['title']) ?>">
 
-    <label for="category_id">Kategorie</label>
-    <select id="category_id" name="category_id">
-      <option value="">– bez kategorie –</option>
-      <?php foreach ($categories as $cat): ?>
-        <option value="<?= (int)$cat['id'] ?>"
-          <?= ((int)($d['category_id'] ?? 0) === (int)$cat['id']) ? 'selected' : '' ?>>
-          <?= h($cat['name']) ?>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
+      <small>(pouze malá písmena, číslice a pomlčky)</small>
+    </label>
+    <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           value="<?= h((string)$document['slug']) ?>">
+
+    <label for="board_type">Typ oznámení</label>
+    <select id="board_type" name="board_type">
+      <?php foreach (boardTypeDefinitions() as $typeKey => $typeMeta): ?>
+        <option value="<?= h($typeKey) ?>"<?= normalizeBoardType((string)$document['board_type']) === $typeKey ? ' selected' : '' ?>>
+          <?= h($typeMeta['label']) ?>
         </option>
       <?php endforeach; ?>
     </select>
 
-    <label for="description">Popis <small>(nepovinný)</small></label>
+    <label for="category_id">Kategorie</label>
+    <select id="category_id" name="category_id">
+      <option value="">- bez kategorie -</option>
+      <?php foreach ($categories as $category): ?>
+        <option value="<?= (int)$category['id'] ?>"<?= ((int)($document['category_id'] ?? 0) === (int)$category['id']) ? ' selected' : '' ?>>
+          <?= h((string)$category['name']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+
+    <label for="excerpt">Krátký text / perex</label>
+    <textarea id="excerpt" name="excerpt" rows="3"><?= h((string)($document['excerpt'] ?? '')) ?></textarea>
+    <small style="color:#666">Zobrazí se ve výpisu a na homepage. Hodí se pro parte, ztráty a nálezy i krátká oznámení.</small>
+
+    <label for="description">Detailní popis <small>(nepovinný)</small></label>
     <?php if ($useWysiwyg): ?>
-      <div id="editor-description" style="min-height:150px"><?= $d['description'] ?? '' ?></div>
-      <input type="hidden" id="description" name="description" value="<?= h($d['description'] ?? '') ?>">
+      <div id="editor-description" style="min-height:180px"><?= (string)($document['description'] ?? '') ?></div>
+      <input type="hidden" id="description" name="description" value="<?= h((string)($document['description'] ?? '')) ?>">
     <?php else: ?>
-      <textarea id="description" name="description" rows="4"><?= h($d['description'] ?? '') ?></textarea>
+      <textarea id="description" name="description" rows="6"><?= h((string)($document['description'] ?? '')) ?></textarea>
       <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
   </fieldset>
 
   <fieldset>
-    <legend>Data vyvěšení a sejmutí</legend>
+    <legend>Termín a zvýraznění</legend>
 
-    <label for="posted_date">Datum vyvěšení <span aria-hidden="true">*</span></label>
+    <label for="posted_date">Datum vyvěšení <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="date" id="posted_date" name="posted_date" required aria-required="true"
-           value="<?= h($d['posted_date'] ?? date('Y-m-d')) ?>">
+           value="<?= h((string)$document['posted_date']) ?>">
 
     <label for="removal_date">Datum sejmutí <small>(prázdné = bez omezení)</small></label>
     <input type="date" id="removal_date" name="removal_date"
-           value="<?= h($d['removal_date'] ?? '') ?>">
+           value="<?= h((string)($document['removal_date'] ?? '')) ?>">
+
+    <label style="font-weight:normal;margin-top:1rem">
+      <input type="checkbox" name="is_pinned" value="1"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
+      Připnout mezi důležité položky
+    </label>
+    <small style="color:#666">Připnuté položky se zobrazují výš ve výpisu a mohou lépe fungovat i v homepage bloku.</small>
   </fieldset>
 
   <fieldset>
-    <legend>Příloha</legend>
+    <legend>Obrázek a kontakt</legend>
+
+    <label for="board_image">
+      Obrázek oznámení
+      <?php if (!empty($document['image_file'])): ?>
+        <small>(aktuální obrázek je už nahraný)</small>
+      <?php endif; ?>
+    </label>
+    <?php if (!empty($document['image_file'])): ?>
+      <div style="margin:.5rem 0">
+        <img src="<?= h(boardImageUrl($document)) ?>" alt=""
+             style="display:block;max-width:280px;width:100%;border-radius:12px;border:1px solid #d0d7de">
+      </div>
+    <?php endif; ?>
+    <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
+    <small style="color:#666">Vhodné pro parte, ztracená zvířata, plakáty nebo ilustrační fotku oznámení.</small>
+    <?php if (!empty($document['image_file'])): ?>
+      <label for="board_image_delete" style="font-weight:normal;margin-top:.35rem">
+        <input type="checkbox" id="board_image_delete" name="board_image_delete" value="1">
+        Smazat aktuální obrázek
+      </label>
+    <?php endif; ?>
+
+    <label for="contact_name">Kontaktní osoba</label>
+    <input type="text" id="contact_name" name="contact_name" maxlength="255"
+           value="<?= h((string)($document['contact_name'] ?? '')) ?>">
+
+    <label for="contact_phone">Telefon</label>
+    <input type="text" id="contact_phone" name="contact_phone" maxlength="100"
+           value="<?= h((string)($document['contact_phone'] ?? '')) ?>">
+
+    <label for="contact_email">E-mail</label>
+    <input type="email" id="contact_email" name="contact_email" maxlength="255"
+           value="<?= h((string)($document['contact_email'] ?? '')) ?>">
+  </fieldset>
+
+  <fieldset>
+    <legend>Příloha a zobrazení</legend>
 
     <label for="file">
-      Soubor
-      <?php if (!empty($d['original_name'])): ?>
-        <small>(aktuální: <strong><?= h($d['original_name']) ?></strong>
-          <?php if ($d['file_size'] > 0): ?>(<?= h(formatFileSize($d['file_size'])) ?>)<?php endif; ?>
+      Soubor přílohy
+      <?php if (!empty($document['original_name'])): ?>
+        <small>(aktuální: <strong><?= h((string)$document['original_name']) ?></strong>
+          <?php if ((int)$document['file_size'] > 0): ?>(<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>
           – nahrajte nový pro nahrazení)</small>
       <?php endif; ?>
     </label>
@@ -82,29 +190,68 @@ adminHeader($id ? 'Upravit dokument' : 'Nový dokument úřední desky');
 
     <label for="sort_order">Pořadí</label>
     <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
-           value="<?= (int)($d['sort_order'] ?? 0) ?>">
+           value="<?= (int)($document['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1"
-             <?= ($d['is_published'] ?? 1) ? 'checked' : '' ?>>
+             <?= (int)($document['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
       Zobrazit na webu
     </label>
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat dokument' ?></button>
+    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat položku' ?></button>
+    <?php if (($document['status'] ?? 'published') === 'published' && (int)($document['is_published'] ?? 1) === 1 && !empty($document['slug'])): ?>
+      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+    <?php endif; ?>
     <a href="board.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
+
+<script>
+(function () {
+    const titleInput = document.getElementById('title');
+    const slugInput = document.getElementById('slug');
+    let slugManual = <?= !empty($document['slug']) ? 'true' : 'false' ?>;
+
+    const slugify = (value) => value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    slugInput?.addEventListener('input', function () {
+        slugManual = this.value.trim() !== '';
+    });
+
+    titleInput?.addEventListener('input', function () {
+        if (slugManual || !slugInput) {
+            return;
+        }
+        slugInput.value = slugify(this.value);
+    });
+})();
+</script>
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
-var quillDesc = new Quill('#editor-description', {theme:'snow', modules:{toolbar:[[{'header':[2,3,false]}],'bold','italic','underline',{'list':'ordered'},{'list':'bullet'},'link','clean']}});
-document.querySelector('form').addEventListener('submit', function(){
-  document.getElementById('description').value = quillDesc.root.innerHTML;
-});
+(function () {
+    const textarea = document.getElementById('description');
+    const wrapper = document.getElementById('editor-description');
+    const quill = new Quill(wrapper, {
+        theme: 'snow',
+        modules: {
+            toolbar: [[{'header': [2, 3, false]}], 'bold', 'italic', 'underline', {'list': 'ordered'}, {'list': 'bullet'}, 'link', 'clean']
+        }
+    });
+    quill.root.innerHTML = textarea.value;
+    textarea.closest('form')?.addEventListener('submit', function () {
+        textarea.value = quill.root.innerHTML;
+    });
+})();
 </script>
 <?php endif; ?>
 

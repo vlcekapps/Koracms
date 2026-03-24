@@ -451,34 +451,66 @@ $renderBoardSection = static function (array $items): string {
         return '';
     }
 
+    $boardLabel = boardModulePublicLabel();
     ob_start();
     ?>
     <section class="surface home-section home-section--board" data-home-section="board" aria-labelledby="deska-nadpis">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Dokumenty</p>
-          <h2 id="deska-nadpis" class="section-title">Úřední deska</h2>
+          <p class="section-kicker"><?= h(boardModuleSectionKicker()) ?></p>
+          <h2 id="deska-nadpis" class="section-title"><?= h($boardLabel) ?></h2>
         </div>
-        <a class="section-link" href="<?= BASE_URL ?>/board/index.php">Všechny dokumenty <span aria-hidden="true">→</span></a>
+        <a class="section-link" href="<?= BASE_URL ?>/board/index.php"><?= h(boardModuleAllItemsLabel()) ?> <span aria-hidden="true">→</span></a>
       </div>
       <ul class="link-list">
         <?php foreach ($items as $boardItem): ?>
-          <li class="link-list__item">
-            <?php if ($boardItem['filename'] !== ''): ?>
-              <a class="link-list__title"
-                 href="<?= moduleFileUrl('board', (int)$boardItem['id']) ?>"
-                 download="<?= h($boardItem['original_name']) ?>">
-                <?= h($boardItem['title']) ?>
+          <li class="link-list__item board-item">
+            <?php if (!empty($boardItem['image_url'])): ?>
+              <a class="board-item__media" href="<?= h(boardPublicPath($boardItem)) ?>" aria-hidden="true" tabindex="-1">
+                <img class="board-item__image" src="<?= h((string)$boardItem['image_url']) ?>" alt="" loading="lazy">
               </a>
-            <?php else: ?>
-              <span class="link-list__title"><?= h($boardItem['title']) ?></span>
             <?php endif; ?>
-            <p class="meta-row meta-row--tight">
-              <?php if ($boardItem['file_size'] > 0): ?>
-                <span><?= h(formatFileSize($boardItem['file_size'])) ?></span>
+            <div class="board-item__content">
+              <a class="link-list__title" href="<?= h(boardPublicPath($boardItem)) ?>">
+                <?= h((string)$boardItem['title']) ?>
+              </a>
+              <p class="meta-row meta-row--tight board-item__flags">
+                <span class="pill"><?= h((string)$boardItem['board_type_label']) ?></span>
+                <?php if ((int)($boardItem['is_pinned'] ?? 0) === 1): ?>
+                  <span class="pill">Důležité</span>
+                <?php endif; ?>
+                <?php if (!empty($boardItem['category_name'])): ?>
+                  <span class="pill"><?= h((string)$boardItem['category_name']) ?></span>
+                <?php endif; ?>
+                <span>Vyvěšeno <time datetime="<?= h((string)$boardItem['posted_date']) ?>"><?= formatCzechDate((string)$boardItem['posted_date']) ?></time></span>
+                <?php if ((int)($boardItem['file_size'] ?? 0) > 0): ?>
+                  <span><?= h(formatFileSize((int)$boardItem['file_size'])) ?></span>
+                <?php endif; ?>
+              </p>
+              <?php if (!empty($boardItem['excerpt_plain'])): ?>
+                <p class="board-item__summary"><?= h((string)$boardItem['excerpt_plain']) ?></p>
               <?php endif; ?>
-              <span><?= h($boardItem['posted_date']) ?></span>
-            </p>
+              <?php if (!empty($boardItem['has_contact'])): ?>
+                <p class="board-item__contact">
+                  <strong>Kontakt:</strong>
+                  <?php if (!empty($boardItem['contact_name'])): ?>
+                    <span><?= h((string)$boardItem['contact_name']) ?></span>
+                  <?php endif; ?>
+                  <?php if (!empty($boardItem['contact_phone'])): ?>
+                    <span><a href="tel:<?= h((string)preg_replace('/\s+/', '', (string)$boardItem['contact_phone'])) ?>"><?= h((string)$boardItem['contact_phone']) ?></a></span>
+                  <?php endif; ?>
+                  <?php if (!empty($boardItem['contact_email'])): ?>
+                    <span><a href="mailto:<?= h((string)$boardItem['contact_email']) ?>"><?= h((string)$boardItem['contact_email']) ?></a></span>
+                  <?php endif; ?>
+                </p>
+              <?php endif; ?>
+              <div class="button-row button-row--start">
+                <a class="section-link" href="<?= h(boardPublicPath($boardItem)) ?>">Zobrazit detail <span aria-hidden="true">→</span></a>
+                <?php if ((string)($boardItem['filename'] ?? '') !== ''): ?>
+                  <a class="section-link" href="<?= moduleFileUrl('board', (int)$boardItem['id']) ?>" download="<?= h((string)$boardItem['original_name']) ?>">Stáhnout přílohu <span aria-hidden="true">→</span></a>
+                <?php endif; ?>
+              </div>
+            </div>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -659,27 +691,63 @@ $renderFeaturedSection = static function () use (
             if (!$featuredBoardItem) {
                 break;
             }
+            $featuredBoardPath = boardPublicPath($featuredBoardItem);
+            $featuredBoardSummary = (string)($featuredBoardItem['excerpt_plain'] ?? '');
             ?>
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="board" aria-labelledby="featured-nadpis">
               <div class="section-heading">
                 <div>
-                  <p class="section-kicker">Důležité</p>
-                  <h2 id="featured-nadpis" class="section-title">Důležitý dokument</h2>
+                  <p class="section-kicker"><?= h(boardModuleSectionKicker()) ?></p>
+                  <h2 id="featured-nadpis" class="section-title">Zvýrazněná položka</h2>
                 </div>
-                <a class="section-link" href="<?= BASE_URL ?>/board/index.php">Přejít na úřední desku <span aria-hidden="true">→</span></a>
+                <a class="section-link" href="<?= BASE_URL ?>/board/index.php"><?= h(boardModuleAllItemsLabel()) ?> <span aria-hidden="true">→</span></a>
               </div>
               <article class="card card--highlighted">
+                <?php if (!empty($featuredBoardItem['image_url'])): ?>
+                  <a class="card__media" href="<?= h($featuredBoardPath) ?>">
+                    <img src="<?= h((string)$featuredBoardItem['image_url']) ?>" alt="" loading="lazy">
+                  </a>
+                <?php endif; ?>
                 <div class="card__body">
-                  <h3 class="card__title"><?= h($featuredBoardItem['title']) ?></h3>
                   <p class="meta-row meta-row--tight">
-                    <?php if ($featuredBoardItem['file_size'] > 0): ?>
-                      <span><?= h(formatFileSize($featuredBoardItem['file_size'])) ?></span>
+                    <span class="pill"><?= h((string)$featuredBoardItem['board_type_label']) ?></span>
+                    <?php if ((int)($featuredBoardItem['is_pinned'] ?? 0) === 1): ?>
+                      <span class="pill">Důležité</span>
                     <?php endif; ?>
-                    <span><?= h($featuredBoardItem['posted_date']) ?></span>
+                    <?php if (!empty($featuredBoardItem['category_name'])): ?>
+                      <span class="pill"><?= h((string)$featuredBoardItem['category_name']) ?></span>
+                    <?php endif; ?>
+                    <time datetime="<?= h((string)$featuredBoardItem['posted_date']) ?>"><?= formatCzechDate((string)$featuredBoardItem['posted_date']) ?></time>
+                    <?php if ((int)($featuredBoardItem['file_size'] ?? 0) > 0): ?>
+                      <span><?= h(formatFileSize((int)$featuredBoardItem['file_size'])) ?></span>
+                    <?php endif; ?>
                   </p>
-                  <?php if ($featuredBoardItem['filename'] !== ''): ?>
-                    <p><a class="section-link" href="<?= moduleFileUrl('board', (int)$featuredBoardItem['id']) ?>" download="<?= h($featuredBoardItem['original_name']) ?>">Stáhnout dokument <span aria-hidden="true">→</span></a></p>
+                  <h3 class="card__title">
+                    <a href="<?= h($featuredBoardPath) ?>"><?= h($featuredBoardItem['title']) ?></a>
+                  </h3>
+                  <?php if ($featuredBoardSummary !== ''): ?>
+                    <p><?= h($featuredBoardSummary) ?></p>
                   <?php endif; ?>
+                  <?php if (!empty($featuredBoardItem['has_contact'])): ?>
+                    <p class="board-item__contact">
+                      <strong>Kontakt:</strong>
+                      <?php if (!empty($featuredBoardItem['contact_name'])): ?>
+                        <span><?= h((string)$featuredBoardItem['contact_name']) ?></span>
+                      <?php endif; ?>
+                      <?php if (!empty($featuredBoardItem['contact_phone'])): ?>
+                        <span><a href="tel:<?= h((string)preg_replace('/\s+/', '', (string)$featuredBoardItem['contact_phone'])) ?>"><?= h((string)$featuredBoardItem['contact_phone']) ?></a></span>
+                      <?php endif; ?>
+                      <?php if (!empty($featuredBoardItem['contact_email'])): ?>
+                        <span><a href="mailto:<?= h((string)$featuredBoardItem['contact_email']) ?>"><?= h((string)$featuredBoardItem['contact_email']) ?></a></span>
+                      <?php endif; ?>
+                    </p>
+                  <?php endif; ?>
+                  <div class="button-row button-row--start">
+                    <a class="section-link" href="<?= h($featuredBoardPath) ?>">Zobrazit detail <span aria-hidden="true">→</span></a>
+                    <?php if ((string)($featuredBoardItem['filename'] ?? '') !== ''): ?>
+                      <a class="section-link" href="<?= moduleFileUrl('board', (int)$featuredBoardItem['id']) ?>" download="<?= h((string)$featuredBoardItem['original_name']) ?>">Stáhnout přílohu <span aria-hidden="true">→</span></a>
+                    <?php endif; ?>
+                  </div>
                 </div>
               </article>
             </section>

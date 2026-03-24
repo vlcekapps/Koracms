@@ -14,6 +14,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
     'module_newsletter' => getSetting('module_newsletter', '0'),
     'module_chat' => getSetting('module_chat', '0'),
+    'module_board' => getSetting('module_board', '0'),
     'module_events' => getSetting('module_events', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
 ];
@@ -55,10 +56,14 @@ $eventCanonicalPath = $eventRow ? eventPublicPath($eventRow) : '';
 $eventLegacyPath = $eventId !== false ? BASE_URL . '/events/event.php?id=' . urlencode((string)$eventId) : '';
 $eventCanonicalUrl = $eventCanonicalPath !== '' ? $baseUrl . $eventCanonicalPath : '';
 $eventLegacyUrl = $eventLegacyPath !== '' ? $baseUrl . $eventLegacyPath : '';
-$boardCount = (int)$pdo->query(
-    "SELECT COUNT(*) FROM cms_board WHERE status = 'published' AND is_published = 1
-     AND (removal_date IS NULL OR removal_date >= CURDATE())"
-)->fetchColumn();
+$boardRow = null;
+$boardId = false;
+$boardCanonicalPath = '';
+$boardLegacyPath = '';
+$boardCanonicalUrl = '';
+$boardLegacyUrl = '';
+$boardCount = 0;
+$boardAttachmentId = false;
 $activePollCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_polls
      WHERE status = 'active'
@@ -133,6 +138,7 @@ $cleanup = [
     'subscriber_emails' => [],
     'author_user_ids' => [],
     'staff_user_ids' => [],
+    'board_ids' => [],
 ];
 
 $runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
@@ -313,6 +319,61 @@ $runtimeAuditThemeSettings['home_author_visibility'] = 'show';
 saveThemeSettings($runtimeAuditThemeSettings, $runtimeAuditActiveTheme);
 clearSettingsCache();
 
+if (isModuleEnabled('board')) {
+    $runtimeAuditBoardTitle = 'Runtime audit vývěska';
+    $runtimeAuditBoardSlug = uniqueBoardSlug($pdo, 'runtime-audit-vyveska-' . bin2hex(random_bytes(4)));
+    $runtimeAuditBoardExcerpt = 'Krátké shrnutí testovací položky pro audit vývěsky a oznámení.';
+    $runtimeAuditBoardPhone = '+420 777 123 456';
+    $runtimeAuditBoardEmail = 'vyveska@example.test';
+    $pdo->prepare(
+        "INSERT INTO cms_board (
+            title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+            image_file, contact_name, contact_phone, contact_email,
+            filename, original_name, file_size, sort_order, is_pinned, is_published, status, author_id, created_at
+         ) VALUES (?, ?, 'notice', ?, ?, NULL, '2030-12-31', NULL, '', ?, ?, ?, '', '', 0, -100, 1, 1, 'published', ?, NOW())"
+    )->execute([
+        $runtimeAuditBoardTitle,
+        $runtimeAuditBoardSlug,
+        $runtimeAuditBoardExcerpt,
+        '<p>Detailní text runtime audit položky pro ověření veřejného detailu a výpisu.</p>',
+        'Runtime Audit',
+        $runtimeAuditBoardPhone,
+        $runtimeAuditBoardEmail,
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $runtimeAuditBoardId = (int)$pdo->lastInsertId();
+    $cleanup['board_ids'][] = $runtimeAuditBoardId;
+
+    $boardStmt = $pdo->prepare(
+        "SELECT b.*, COALESCE(c.name, '') AS category_name
+         FROM cms_board b
+         LEFT JOIN cms_board_categories c ON c.id = b.category_id
+         WHERE b.id = ?"
+    );
+    $boardStmt->execute([$runtimeAuditBoardId]);
+    $boardRow = $boardStmt->fetch() ?: null;
+    if ($boardRow) {
+        $boardRow = hydrateBoardPresentation($boardRow);
+        $boardId = $boardRow['id'] ?? false;
+        $boardCanonicalPath = boardPublicPath($boardRow);
+        $boardLegacyPath = $boardId !== false ? BASE_URL . '/board/document.php?id=' . urlencode((string)$boardId) : '';
+        $boardCanonicalUrl = $boardCanonicalPath !== '' ? $baseUrl . $boardCanonicalPath : '';
+        $boardLegacyUrl = $boardLegacyPath !== '' ? $baseUrl . $boardLegacyPath : '';
+    }
+
+    $boardCount = (int)$pdo->query(
+        "SELECT COUNT(*) FROM cms_board
+         WHERE status = 'published' AND is_published = 1
+           AND (removal_date IS NULL OR removal_date >= CURDATE())"
+    )->fetchColumn();
+    $boardAttachmentId = $pdo->query(
+        "SELECT id FROM cms_board
+         WHERE status = 'published' AND is_published = 1 AND filename <> ''
+         ORDER BY posted_date DESC, id DESC
+         LIMIT 1"
+    )->fetchColumn();
+}
+
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
@@ -329,6 +390,7 @@ $pages = [
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -338,6 +400,9 @@ $pages = [
 
 if ($runtimeAuditAuthorId > 0) {
     $pages[] = ['label' => 'admin_user_form', 'url' => $baseUrl . '/admin/user_form.php?id=' . urlencode((string)$runtimeAuditAuthorId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($boardId !== false) {
+    $pages[] = ['label' => 'admin_board_form', 'url' => $baseUrl . '/admin/board_form.php?id=' . urlencode((string)$boardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 
 if (isModuleEnabled('newsletter')) {
@@ -403,6 +468,9 @@ if ($newsCanonicalUrl !== '') {
 }
 if ($eventCanonicalUrl !== '') {
     $pages[] = ['label' => 'events_article', 'url' => $eventCanonicalUrl];
+}
+if ($boardCanonicalUrl !== '') {
+    $pages[] = ['label' => 'board_article', 'url' => $boardCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
@@ -806,12 +874,32 @@ foreach ($pages as $page) {
     if ($page['label'] === 'home' && str_contains($result['body'], '/uploads/board/')) {
         $issues[] = 'home board links still expose uploads/board paths';
     }
+    if (
+        $page['label'] === 'home'
+        && $boardCanonicalPath !== ''
+        && (
+            str_contains($result['body'], 'data-home-section="board"')
+            || str_contains($result['body'], 'data-feature-source="board"')
+        )
+        && !str_contains($result['body'], $boardCanonicalPath)
+    ) {
+        $issues[] = 'home is missing board detail links';
+    }
 
     if ($page['label'] === 'board_index') {
         if (str_contains($result['body'], '/uploads/board/')) {
             $issues[] = 'board listing still exposes uploads/board paths';
         }
-        if (str_contains($result['body'], 'class="board-item"') && !str_contains($result['body'], '/board/file.php?id=')) {
+        if ($boardCanonicalPath !== '' && !str_contains($result['body'], $boardCanonicalPath)) {
+            $issues[] = 'board listing is missing detail links';
+        }
+        if ($boardRow && !str_contains($result['body'], (string)($boardRow['excerpt_plain'] ?? ''))) {
+            $issues[] = 'board listing is missing excerpt preview';
+        }
+        if ($boardRow && !str_contains($result['body'], (string)($boardRow['contact_email'] ?? ''))) {
+            $issues[] = 'board listing is missing contact email';
+        }
+        if ($boardAttachmentId !== false && !str_contains($result['body'], '/board/file.php?id=' . (int)$boardAttachmentId)) {
             $issues[] = 'board listing is missing file endpoint links';
         }
     }
@@ -837,6 +925,9 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="home_author_user_id"')) {
             $issues[] = 'home author setting is missing';
+        }
+        if (!str_contains($result['body'], 'name="board_public_label"')) {
+            $issues[] = 'board public label setting is missing';
         }
         if (isModuleEnabled('blog')) {
             if (!str_contains($result['body'], 'name="comments_enabled"')) {
@@ -1005,6 +1096,31 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_board') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin board search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin board status filter is missing';
+        }
+    }
+
+    if ($page['label'] === 'admin_board_form') {
+        foreach ([
+            'name="board_type"',
+            'name="excerpt"',
+            'name="board_image"',
+            'name="contact_name"',
+            'name="contact_phone"',
+            'name="contact_email"',
+            'name="is_pinned"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin board form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog listing is missing public author links';
     }
@@ -1040,6 +1156,26 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'Zpět na události')) {
             $issues[] = 'events article is missing back link';
+        }
+    }
+
+    if ($page['label'] === 'board_article') {
+        if ($boardRow && !str_contains($result['body'], (string)($boardRow['title'] ?? ''))) {
+            $issues[] = 'board article is missing title';
+        }
+        if (!str_contains($result['body'], boardModuleBackLabel())) {
+            $issues[] = 'board article is missing back link';
+        }
+        if ($boardRow && !str_contains($result['body'], (string)($boardRow['excerpt'] ?? ''))) {
+            $issues[] = 'board article is missing excerpt';
+        }
+        if ($boardRow && !str_contains($result['body'], (string)($boardRow['contact_phone'] ?? ''))) {
+            $issues[] = 'board article is missing contact phone';
+        }
+        if ($boardAttachmentId !== false
+            && (int)$boardAttachmentId === (int)($boardRow['id'] ?? 0)
+            && !str_contains($result['body'], '/board/file.php?id=' . (int)$boardAttachmentId)) {
+            $issues[] = 'board article is missing download CTA';
         }
     }
 
@@ -1115,6 +1251,23 @@ if ($eventCanonicalPath === '' || $eventLegacyPath === '' || $eventCanonicalPath
     }
 }
 
+echo "=== board_article_legacy_redirect ===\n";
+if ($boardCanonicalPath === '' || $boardLegacyPath === '' || $boardCanonicalPath === $boardLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyBoardProbe = fetchUrl($boardLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $boardCanonicalPath;
+    if (!str_contains($legacyBoardProbe['status'], '302')) {
+        echo "- legacy board document URL does not redirect ({$legacyBoardProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyBoardProbe['headers'], true)) {
+        echo "- legacy board document URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== public_author_guard ===\n";
 if ($runtimeAuditAuthorUrl === '') {
     echo "OK\n";
@@ -1161,6 +1314,9 @@ $roleChecks[] = ['role' => 'author', 'url' => '/admin/review_queue.php', 'expect
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'author reservations'];
 }
+if (isModuleEnabled('board')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
+}
 
 if (isModuleEnabled('blog')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/comments.php', 'expected' => '200', 'label' => 'moderator comments'];
@@ -1180,6 +1336,9 @@ if (isModuleEnabled('blog')) {
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'moderator reservations'];
 }
+if (isModuleEnabled('board')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
+}
 
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_bookings.php', 'expected' => '200', 'label' => 'booking manager reservations'];
@@ -1187,6 +1346,9 @@ if (isModuleEnabled('reservations')) {
 }
 if (isModuleEnabled('blog')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/blog.php', 'expected' => '403', 'label' => 'booking manager blog'];
+}
+if (isModuleEnabled('board')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'booking manager board'];
 }
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/comments.php', 'expected' => '403', 'label' => 'booking manager comments'];
 
@@ -1642,6 +1804,10 @@ if (!empty($cleanup['confirm_emails'])) {
 if (!empty($cleanup['subscriber_emails'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['subscriber_emails']), '?'));
     $pdo->prepare("DELETE FROM cms_subscribers WHERE email IN ({$placeholders})")->execute($cleanup['subscriber_emails']);
+}
+if (!empty($cleanup['board_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['board_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_board WHERE id IN ({$placeholders})")->execute($cleanup['board_ids']);
 }
 if (!empty($cleanup['author_user_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['author_user_ids']), '?'));

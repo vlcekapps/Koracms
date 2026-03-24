@@ -44,8 +44,9 @@ $tables = [
     'faqs'          => "SELECT id, question, answer, category_id, is_published, sort_order,
                                status, created_at FROM cms_faqs",
     'board_categories' => "SELECT id, name, sort_order, created_at FROM cms_board_categories",
-    'board'         => "SELECT id, title, description, category_id, posted_date, removal_date,
-                               filename, original_name, file_size, sort_order, is_published,
+    'board'         => "SELECT id, title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+                               image_file, contact_name, contact_phone, contact_email,
+                               filename, original_name, file_size, sort_order, is_pinned, is_published,
                                status, created_at FROM cms_board",
     'comments'      => "SELECT id, article_id, author_name, author_email, content, status, is_approved, created_at
                                FROM cms_comments",

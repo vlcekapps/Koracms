@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií úřední desky nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $id = inputInt('post', 'id');

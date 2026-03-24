@@ -1,103 +1,200 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu úřední desky nemáte potřebné oprávnění.');
 verifyCsrf();
 
-$pdo         = db_connect();
-$id          = inputInt('post', 'id');
-$title       = trim($_POST['title']       ?? '');
-$categoryId  = inputInt('post', 'category_id');
+$pdo = db_connect();
+$id = inputInt('post', 'id');
+$existingDocument = null;
+if ($id !== null) {
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+    $existingStmt->execute([$id]);
+    $existingDocument = $existingStmt->fetch() ?: null;
+    if (!$existingDocument) {
+        header('Location: ' . BASE_URL . '/admin/board.php');
+        exit;
+    }
+}
+
+$redirectToForm = static function (?int $documentId, string $errorCode): void {
+    $params = ['err' => $errorCode];
+    if ($documentId !== null) {
+        $params['id'] = (string)$documentId;
+    }
+    header('Location: ' . BASE_URL . appendUrlQuery('/admin/board_form.php', $params));
+    exit;
+};
+
+$title = trim($_POST['title'] ?? '');
+$submittedSlug = trim($_POST['slug'] ?? '');
+$boardType = normalizeBoardType((string)($_POST['board_type'] ?? 'document'));
+$categoryId = inputInt('post', 'category_id');
+$excerpt = trim($_POST['excerpt'] ?? '');
 $description = trim($_POST['description'] ?? '');
-$postedDate  = trim($_POST['posted_date'] ?? '');
+$postedDate = trim($_POST['posted_date'] ?? '');
 $removalDate = trim($_POST['removal_date'] ?? '');
-$sortOrder   = max(0, (int)($_POST['sort_order'] ?? 0));
+$contactName = trim($_POST['contact_name'] ?? '');
+$contactPhone = trim($_POST['contact_phone'] ?? '');
+$contactEmail = trim($_POST['contact_email'] ?? '');
+$sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
+$isPinned = isset($_POST['is_pinned']) ? 1 : 0;
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 if ($title === '' || $postedDate === '') {
-    header('Location: board_form.php' . ($id ? "?id={$id}" : ''));
-    exit;
+    $redirectToForm($id, 'required');
 }
 
 if ($removalDate !== '' && $removalDate < $postedDate) {
-    header('Location: board_form.php' . ($id ? "?id={$id}" : ''));
-    exit;
+    $redirectToForm($id, 'dates');
 }
-if ($removalDate === '') $removalDate = null;
+if ($removalDate === '') {
+    $removalDate = null;
+}
 
-// ── Nahrání souboru ───────────────────────────────────────────────────────
+if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL)) {
+    $redirectToForm($id, 'contact_email');
+}
+
+$slug = boardSlug($submittedSlug !== '' ? $submittedSlug : $title);
+if ($slug === '') {
+    $redirectToForm($id, 'slug');
+}
+
+$uniqueSlug = uniqueBoardSlug($pdo, $slug, $id);
+if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
+    $redirectToForm($id, 'slug');
+}
+$slug = $uniqueSlug;
+
+$boardImageFilename = (string)($existingDocument['image_file'] ?? '');
+$imageUpload = uploadBoardImage($_FILES['board_image'] ?? [], $boardImageFilename);
+if ($imageUpload['error'] !== '') {
+    $redirectToForm($id, 'image');
+}
+$boardImageFilename = $imageUpload['filename'];
+if (isset($_POST['board_image_delete']) && empty($_FILES['board_image']['name']) && $boardImageFilename !== '') {
+    deleteBoardImageFile($boardImageFilename);
+    $boardImageFilename = '';
+}
+
 $newFilename = null;
-$newOrigName = null;
+$newOriginalName = null;
 $newFileSize = null;
 
 if (!empty($_FILES['file']['name'])) {
-    $tmp   = $_FILES['file']['tmp_name'];
-    $finfo = new \finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($tmp);
+    $tmpPath = (string)($_FILES['file']['tmp_name'] ?? '');
+    $mime = $tmpPath !== '' ? (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) : '';
 
     $allowed = [
-        'application/pdf'                                                         => 'pdf',
-        'application/msword'                                                      => 'doc',
+        'application/pdf' => 'pdf',
+        'application/msword' => 'doc',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
-        'application/vnd.ms-excel'                                                => 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'       => 'xlsx',
-        'application/vnd.ms-powerpoint'                                           => 'ppt',
+        'application/vnd.ms-excel' => 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+        'application/vnd.ms-powerpoint' => 'ppt',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-        'application/vnd.oasis.opendocument.text'                                 => 'odt',
-        'application/vnd.oasis.opendocument.spreadsheet'                          => 'ods',
-        'application/vnd.oasis.opendocument.presentation'                         => 'odp',
-        'application/zip'                                                         => 'zip',
-        'application/x-zip-compressed'                                            => 'zip',
-        'text/plain'                                                              => 'txt',
+        'application/vnd.oasis.opendocument.text' => 'odt',
+        'application/vnd.oasis.opendocument.spreadsheet' => 'ods',
+        'application/vnd.oasis.opendocument.presentation' => 'odp',
+        'application/zip' => 'zip',
+        'application/x-zip-compressed' => 'zip',
+        'text/plain' => 'txt',
     ];
 
-    if (isset($allowed[$mime])) {
-        $ext = $allowed[$mime];
-        $dir = __DIR__ . '/../uploads/board/';
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
+    if ($tmpPath === '' || !isset($allowed[$mime])) {
+        $redirectToForm($id, 'file');
+    }
 
-        $storedName = uniqid('board_', true) . '.' . $ext;
+    $uploadDir = __DIR__ . '/../uploads/board/';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        $redirectToForm($id, 'file');
+    }
 
-        if (move_uploaded_file($tmp, $dir . $storedName)) {
-            if ($id !== null) {
-                $old = $pdo->prepare("SELECT filename FROM cms_board WHERE id = ?");
-                $old->execute([$id]);
-                $oldFile = $old->fetchColumn();
-                if ($oldFile && file_exists($dir . $oldFile)) { unlink($dir . $oldFile); }
-            }
-            $newFilename = $storedName;
-            $newOrigName = basename($_FILES['file']['name']);
-            $newFileSize = (int)$_FILES['file']['size'];
+    $storedName = uniqid('board_', true) . '.' . $allowed[$mime];
+    if (!move_uploaded_file($tmpPath, $uploadDir . $storedName)) {
+        $redirectToForm($id, 'file');
+    }
+
+    if ($existingDocument && !empty($existingDocument['filename'])) {
+        $oldFile = $uploadDir . basename((string)$existingDocument['filename']);
+        if (is_file($oldFile)) {
+            @unlink($oldFile);
         }
     }
+
+    $newFilename = $storedName;
+    $newOriginalName = basename((string)$_FILES['file']['name']);
+    $newFileSize = (int)($_FILES['file']['size'] ?? 0);
 }
 
-// ── Uložení ───────────────────────────────────────────────────────────────
 if ($id !== null) {
-    $set    = "title=?, category_id=?, description=?, posted_date=?, removal_date=?,
-               sort_order=?, is_published=?, author_id=COALESCE(author_id,?)";
-    $params = [$title, $categoryId, $description, $postedDate, $removalDate,
-               $sortOrder, $isPublished, currentUserId()];
+    $set = "title = ?, slug = ?, board_type = ?, excerpt = ?, description = ?, category_id = ?,
+            posted_date = ?, removal_date = ?, image_file = ?, contact_name = ?, contact_phone = ?,
+            contact_email = ?, sort_order = ?, is_pinned = ?, is_published = ?, author_id = COALESCE(author_id, ?)";
+    $params = [
+        $title,
+        $slug,
+        $boardType,
+        $excerpt,
+        $description,
+        $categoryId,
+        $postedDate,
+        $removalDate,
+        $boardImageFilename,
+        $contactName,
+        $contactPhone,
+        $contactEmail,
+        $sortOrder,
+        $isPinned,
+        $isPublished,
+        currentUserId(),
+    ];
+
     if ($newFilename !== null) {
-        $set     .= ", filename=?, original_name=?, file_size=?";
+        $set .= ", filename = ?, original_name = ?, file_size = ?";
         $params[] = $newFilename;
-        $params[] = $newOrigName;
+        $params[] = $newOriginalName;
         $params[] = $newFileSize;
     }
+
     $params[] = $id;
-    $pdo->prepare("UPDATE cms_board SET {$set} WHERE id=?")->execute($params);
-    logAction('board_edit', "id={$id}");
+    $pdo->prepare("UPDATE cms_board SET {$set} WHERE id = ?")->execute($params);
+    logAction('board_edit', "id={$id} title={$title} slug={$slug} type={$boardType} pinned={$isPinned}");
 } else {
-    $status   = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
-    $authorId = currentUserId();
+    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
+
     $pdo->prepare(
         "INSERT INTO cms_board
-         (title, category_id, description, posted_date, removal_date, filename, original_name, file_size,
-          sort_order, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
-    )->execute([$title, $categoryId, $description, $postedDate, $removalDate,
-                $newFilename ?? '', $newOrigName ?? '', $newFileSize ?? 0,
-                $sortOrder, currentUserHasCapability('content_approve_shared') ? $isPublished : 0, $status, $authorId]);
-    logAction('board_add', "title={$title} status={$status}");
+         (title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+          image_file, contact_name, contact_phone, contact_email, filename, original_name, file_size,
+          sort_order, is_pinned, is_published, status, author_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    )->execute([
+        $title,
+        $slug,
+        $boardType,
+        $excerpt,
+        $description,
+        $categoryId,
+        $postedDate,
+        $removalDate,
+        $boardImageFilename,
+        $contactName,
+        $contactPhone,
+        $contactEmail,
+        $newFilename ?? '',
+        $newOriginalName ?? '',
+        $newFileSize ?? 0,
+        $sortOrder,
+        $isPinned,
+        $visible,
+        $status,
+        currentUserId(),
+    ]);
+
+    $id = (int)$pdo->lastInsertId();
+    logAction('board_add', "id={$id} title={$title} slug={$slug} type={$boardType} status={$status} pinned={$isPinned}");
 }
 
 header('Location: ' . BASE_URL . '/admin/board.php');

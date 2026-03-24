@@ -50,15 +50,22 @@ $latestBoard = [];
 $homeBoardCount = (int)getSetting('home_board_count', '5');
 if (isModuleEnabled('board') && $homeBoardCount > 0) {
     $stmt = db_connect()->prepare(
-        "SELECT b.id, b.title, b.posted_date, b.filename, b.original_name, b.file_size
+        "SELECT b.id, b.title, b.slug, b.board_type, b.excerpt, b.description, b.posted_date, b.image_file,
+                b.contact_name, b.contact_phone, b.contact_email, b.is_pinned,
+                COALESCE(c.name, '') AS category_name,
+                b.filename, b.original_name, b.file_size
          FROM cms_board b
+         LEFT JOIN cms_board_categories c ON c.id = b.category_id
          WHERE b.status = 'published' AND b.is_published = 1
            AND (b.removal_date IS NULL OR b.removal_date >= CURDATE())
-         ORDER BY b.posted_date DESC, b.sort_order, b.title
+         ORDER BY b.is_pinned DESC, b.posted_date DESC, b.sort_order, b.title
          LIMIT ?"
     );
     $stmt->execute([$homeBoardCount]);
-    $latestBoard = $stmt->fetchAll();
+    $latestBoard = array_map(
+        static fn(array $document): array => hydrateBoardPresentation($document),
+        $stmt->fetchAll()
+    );
 }
 
 $homePoll = null;

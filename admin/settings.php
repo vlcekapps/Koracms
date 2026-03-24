@@ -7,6 +7,7 @@ $errors  = [];
 $successMessage = '';
 $siteProfiles = siteProfileDefinitions();
 $selectedSiteProfile = currentSiteProfileKey();
+$boardPublicLabel = trim($_POST['board_public_label'] ?? getSetting('board_public_label', boardModulePublicLabel()));
 $pdo = db_connect();
 $homeAuthorOptions = $pdo->query(
     "SELECT id, email, first_name, last_name, nickname, role,
@@ -32,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteDesc    = trim($_POST['site_description'] ?? '');
     $contactEmail= trim($_POST['contact_email']   ?? '');
     $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
+    $boardPublicLabel = trim($_POST['board_public_label'] ?? $boardPublicLabel);
     $homeAuthorUserId = max(0, (int)($_POST['home_author_user_id'] ?? $selectedHomeAuthorId));
     $homeBlog      = max(0, (int)($_POST['home_blog_count'] ?? 5));
     $homeNews      = max(0, (int)($_POST['home_news_count'] ?? 5));
@@ -66,10 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Vyberte platný profil webu.';
         $siteProfile = currentSiteProfileKey();
     }
+    if ($boardPublicLabel === '') {
+        $boardPublicLabel = defaultBoardPublicLabelForProfile($siteProfile);
+    }
     $selectedSiteProfile = $siteProfile;
     $selectedHomeAuthorId = $homeAuthorUserId;
 
     if ($siteName === '') $errors[] = 'Název webu je povinný.';
+    if (mb_strlen($boardPublicLabel, 'UTF-8') > 60) $errors[] = 'Veřejný název modulu musí mít nejvýše 60 znaků.';
     if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
     if ($homeAuthorUserId > 0 && !in_array($homeAuthorUserId, $availableHomeAuthorIds, true))
@@ -83,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('site_description', $siteDesc);
         saveSetting('contact_email',    $contactEmail);
         saveSetting('site_profile',     $siteProfile);
+        saveSetting('board_public_label', $boardPublicLabel);
         saveSetting('home_author_user_id', (string)$homeAuthorUserId);
         saveSetting('home_blog_count',  (string)$homeBlog);
         saveSetting('home_news_count',  (string)$homeNews);
@@ -210,6 +217,11 @@ adminHeader('Základní nastavení');
     <label for="contact_email">E-mail pro kontaktní formulář</label>
     <input type="email" id="contact_email" name="contact_email"
            value="<?= h(getSetting('contact_email')) ?>">
+
+    <label for="board_public_label">Veřejný název modulu Úřední deska / Vývěska</label>
+    <input type="text" id="board_public_label" name="board_public_label" maxlength="60"
+           value="<?= h($boardPublicLabel) ?>">
+    <small style="color:#666">Používá se ve veřejné navigaci, na výpisu modulu a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
   </fieldset>
 
   <fieldset>

@@ -73,6 +73,42 @@ function isModuleEnabled(string $module): bool
     return getSetting('module_' . $module, '0') === '1';
 }
 
+function boardTypeDefinitions(): array
+{
+    return [
+        'document' => [
+            'label' => 'Dokument',
+            'public_label' => 'Dokument',
+        ],
+        'notice' => [
+            'label' => 'Oznámení',
+            'public_label' => 'Oznámení',
+        ],
+        'lost_found' => [
+            'label' => 'Ztráty a nálezy',
+            'public_label' => 'Ztráty a nálezy',
+        ],
+        'memorial' => [
+            'label' => 'Parte / vzpomínka',
+            'public_label' => 'Vzpomínka',
+        ],
+        'invitation' => [
+            'label' => 'Pozvánka',
+            'public_label' => 'Pozvánka',
+        ],
+        'alert' => [
+            'label' => 'Upozornění',
+            'public_label' => 'Upozornění',
+        ],
+    ];
+}
+
+function normalizeBoardType(string $type): string
+{
+    $definitions = boardTypeDefinitions();
+    return isset($definitions[$type]) ? $type : 'document';
+}
+
 function siteProfileDefinitions(): array
 {
     return [
@@ -102,6 +138,7 @@ function siteProfileDefinitions(): array
                 'home_blog_count' => '6',
                 'home_news_count' => '0',
                 'home_board_count' => '0',
+                'board_public_label' => 'Vývěska',
                 'blog_per_page' => '10',
                 'news_per_page' => '10',
                 'events_per_page' => '10',
@@ -151,6 +188,7 @@ function siteProfileDefinitions(): array
                 'home_blog_count' => '8',
                 'home_news_count' => '0',
                 'home_board_count' => '0',
+                'board_public_label' => 'Vývěska',
                 'blog_per_page' => '12',
                 'news_per_page' => '10',
                 'events_per_page' => '10',
@@ -200,6 +238,7 @@ function siteProfileDefinitions(): array
                 'home_blog_count' => '3',
                 'home_news_count' => '5',
                 'home_board_count' => '5',
+                'board_public_label' => 'Úřední deska',
                 'blog_per_page' => '10',
                 'news_per_page' => '10',
                 'events_per_page' => '10',
@@ -250,6 +289,7 @@ function siteProfileDefinitions(): array
                 'home_blog_count' => '4',
                 'home_news_count' => '0',
                 'home_board_count' => '0',
+                'board_public_label' => 'Oznámení',
                 'blog_per_page' => '10',
                 'news_per_page' => '10',
                 'events_per_page' => '10',
@@ -328,6 +368,71 @@ function currentSiteProfileKey(): string
     }
 
     return guessSiteProfileKey();
+}
+
+function defaultBoardPublicLabelForProfile(string $profileKey): string
+{
+    return match (normalizeSiteProfileKey($profileKey)) {
+        'civic' => 'Úřední deska',
+        'service' => 'Oznámení',
+        default => 'Vývěska',
+    };
+}
+
+function boardModulePublicLabel(): string
+{
+    $label = trim(getSetting('board_public_label', ''));
+    if ($label === '') {
+        return defaultBoardPublicLabelForProfile(currentSiteProfileKey());
+    }
+
+    return mb_substr($label, 0, 60);
+}
+
+function boardModuleSectionKicker(): string
+{
+    return boardModulePublicLabel() === 'Úřední deska'
+        ? 'Veřejné dokumenty'
+        : 'Veřejná oznámení';
+}
+
+function boardModuleArchiveTitle(): string
+{
+    return match (boardModulePublicLabel()) {
+        'Úřední deska' => 'Archiv dokumentů',
+        'Oznámení' => 'Archiv oznámení',
+        'Vývěska' => 'Archiv vývěsky',
+        default => 'Archiv položek',
+    };
+}
+
+function boardModuleListingEmptyState(): string
+{
+    return match (boardModulePublicLabel()) {
+        'Úřední deska' => 'Na úřední desce zatím nejsou zveřejněné žádné dokumenty.',
+        'Oznámení' => 'V oznámeních zatím nejsou zveřejněné žádné položky.',
+        'Vývěska' => 'Ve vývěsce zatím nejsou zveřejněné žádné položky.',
+        default => 'V této části zatím nejsou zveřejněné žádné položky.',
+    };
+}
+
+function boardModuleAllItemsLabel(): string
+{
+    return match (boardModulePublicLabel()) {
+        'Úřední deska' => 'Všechny dokumenty',
+        'Oznámení' => 'Všechna oznámení',
+        default => 'Všechny položky',
+    };
+}
+
+function boardModuleBackLabel(): string
+{
+    return match (boardModulePublicLabel()) {
+        'Úřední deska' => 'Zpět na úřední desku',
+        'Oznámení' => 'Zpět na oznámení',
+        'Vývěska' => 'Zpět na vývěsku',
+        default => 'Zpět na přehled položek',
+    };
 }
 
 function siteProfileConfig(string $profileKey): array
@@ -811,7 +916,7 @@ function pendingReviewSummary(PDO $pdo): array
     if (currentUserHasCapability('content_approve_shared')) {
         $sharedModules = [
             ['key' => 'pages', 'enabled' => true, 'label' => 'Stránky', 'url' => BASE_URL . '/admin/pages.php', 'sql' => "SELECT COUNT(*) FROM cms_pages WHERE status = 'pending'"],
-            ['key' => 'board', 'enabled' => isModuleEnabled('board'), 'label' => 'Úřední deska', 'url' => BASE_URL . '/admin/board.php', 'sql' => "SELECT COUNT(*) FROM cms_board WHERE status = 'pending'"],
+            ['key' => 'board', 'enabled' => isModuleEnabled('board'), 'label' => boardModulePublicLabel(), 'url' => BASE_URL . '/admin/board.php', 'sql' => "SELECT COUNT(*) FROM cms_board WHERE status = 'pending'"],
             ['key' => 'downloads', 'enabled' => isModuleEnabled('downloads'), 'label' => 'Ke stažení', 'url' => BASE_URL . '/admin/downloads.php', 'sql' => "SELECT COUNT(*) FROM cms_downloads WHERE status = 'pending'"],
             ['key' => 'events', 'enabled' => isModuleEnabled('events'), 'label' => 'Události', 'url' => BASE_URL . '/admin/events.php', 'sql' => "SELECT COUNT(*) FROM cms_events WHERE status = 'pending'"],
             ['key' => 'places', 'enabled' => isModuleEnabled('places'), 'label' => 'Zajímavá místa', 'url' => BASE_URL . '/admin/places.php', 'sql' => "SELECT COUNT(*) FROM cms_places WHERE status = 'pending'"],
@@ -905,6 +1010,11 @@ function eventSlug(string $value): string
     return slugify(trim($value));
 }
 
+function boardSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function authorSlug(string $value): string
 {
     return slugify(trim($value));
@@ -940,6 +1050,144 @@ function newsExcerpt(string $content, int $limit = 220): string
     }
 
     return mb_strimwidth($plain, 0, $limit, '…', 'UTF-8');
+}
+
+function boardTypeLabel(string $type): string
+{
+    $definitions = boardTypeDefinitions();
+    return $definitions[normalizeBoardType($type)]['label'];
+}
+
+function boardExcerpt(array $document, int $limit = 220): string
+{
+    $explicitExcerpt = normalizePlainText((string)($document['excerpt'] ?? ''));
+    if ($explicitExcerpt !== '') {
+        return mb_strimwidth($explicitExcerpt, 0, $limit, '...', 'UTF-8');
+    }
+
+    $descriptionExcerpt = normalizePlainText((string)($document['description'] ?? ''));
+    if ($descriptionExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function boardImageUrl(array $document): string
+{
+    $filename = trim((string)($document['image_file'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/board/images/' . rawurlencode($filename);
+}
+
+function deleteBoardImageFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/board/images/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadBoardImage(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = __DIR__ . '/uploads/board/images/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro obrázky vývěsky se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('board_image_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo uložit.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deleteBoardImageFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
+function hydrateBoardPresentation(array $document): array
+{
+    $document['board_type'] = normalizeBoardType((string)($document['board_type'] ?? 'document'));
+    $document['board_type_label'] = boardTypeLabel((string)$document['board_type']);
+    $document['excerpt_plain'] = boardExcerpt($document);
+    $document['image_url'] = boardImageUrl($document);
+    $document['contact_name'] = trim((string)($document['contact_name'] ?? ''));
+    $document['contact_phone'] = trim((string)($document['contact_phone'] ?? ''));
+    $document['contact_email'] = trim((string)($document['contact_email'] ?? ''));
+    $document['has_contact'] = $document['contact_name'] !== ''
+        || $document['contact_phone'] !== ''
+        || $document['contact_email'] !== '';
+    $document['is_pinned'] = (int)($document['is_pinned'] ?? 0);
+
+    return $document;
 }
 
 function authorSlugCandidate(array $account): string
@@ -1025,6 +1273,26 @@ function newsPublicUrl(array $news, array $query = []): string
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));
 }
 
+function boardPublicRequestPath(array $document): string
+{
+    $slug = boardSlug((string)($document['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/board/' . rawurlencode($slug);
+    }
+
+    return '/board/document.php?id=' . (int)($document['id'] ?? 0);
+}
+
+function boardPublicPath(array $document, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(boardPublicRequestPath($document), $query);
+}
+
+function boardPublicUrl(array $document, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(boardPublicRequestPath($document), $query));
+}
+
 function eventPublicRequestPath(array $event): string
 {
     $slug = eventSlug((string)($event['slug'] ?? ''));
@@ -1076,6 +1344,27 @@ function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_events WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueBoardSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = boardSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'dokument';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_board WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);
@@ -2091,7 +2380,7 @@ function navModuleDefaults(): array
         'chat'      => ['/chat/index.php',        'Chat'],
         'polls'     => ['/polls/index.php',       'Ankety'],
         'faq'       => ['/faq/index.php',         'FAQ'],
-        'board'     => ['/board/index.php',       'Úřední deska'],
+        'board'     => ['/board/index.php',       boardModulePublicLabel()],
         'reservations' => ['/reservations/index.php', 'Rezervace'],
         'contact'   => ['/contact/index.php',     'Kontakt'],
     ];

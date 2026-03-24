@@ -19,21 +19,24 @@ function groupBoardByCategory(array $items): array
 
 function boardCountLabel(int $count): string
 {
-    return $count . ' ' . ($count === 1 ? 'dokument' : ($count < 5 ? 'dokumenty' : 'dokumentů'));
+    return $count . ' ' . ($count === 1 ? 'položka' : ($count < 5 ? 'položky' : 'položek'));
 }
 
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
+$boardLabel = boardModulePublicLabel();
 
 $items = $pdo->query(
-    "SELECT b.id, b.title, b.description, b.posted_date, b.removal_date,
-            b.filename, b.original_name, b.file_size,
-            COALESCE(c.name, '') AS category_name
+    "SELECT b.*, COALESCE(c.name, '') AS category_name
      FROM cms_board b
      LEFT JOIN cms_board_categories c ON c.id = b.category_id
      WHERE b.status = 'published' AND b.is_published = 1
-     ORDER BY c.sort_order, c.name, b.sort_order, b.posted_date DESC, b.title"
+     ORDER BY b.is_pinned DESC, c.sort_order, c.name, b.sort_order, b.posted_date DESC, b.title"
 )->fetchAll();
+$items = array_map(
+    static fn(array $document): array => hydrateBoardPresentation($document),
+    $items
+);
 
 $today = date('Y-m-d');
 $current = [];
@@ -50,13 +53,14 @@ $currentGrouped = groupBoardByCategory($current);
 $archiveGrouped = groupBoardByCategory($archive);
 
 renderPublicPage([
-    'title' => 'Úřední deska – ' . $siteName,
+    'title' => $boardLabel . ' - ' . $siteName,
     'meta' => [
-        'title' => 'Úřední deska – ' . $siteName,
+        'title' => $boardLabel . ' - ' . $siteName,
         'url' => BASE_URL . '/board/index.php',
     ],
     'view' => 'modules/board-index',
     'view_data' => [
+        'boardLabel' => $boardLabel,
         'current' => $current,
         'archive' => $archive,
         'currentGrouped' => $currentGrouped,

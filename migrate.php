@@ -376,18 +376,27 @@ $tables = [
     'cms_board' => "CREATE TABLE IF NOT EXISTS cms_board (
         id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title          VARCHAR(255) NOT NULL,
+        slug           VARCHAR(255) NOT NULL,
+        board_type     VARCHAR(50)  NOT NULL DEFAULT 'document',
+        excerpt        TEXT,
         description    TEXT,
         category_id    INT          NULL DEFAULT NULL,
         posted_date    DATE         NOT NULL,
         removal_date   DATE         NULL DEFAULT NULL,
+        image_file     VARCHAR(255) NOT NULL DEFAULT '',
+        contact_name   VARCHAR(255) NOT NULL DEFAULT '',
+        contact_phone  VARCHAR(100) NOT NULL DEFAULT '',
+        contact_email  VARCHAR(255) NOT NULL DEFAULT '',
         filename       VARCHAR(255) NOT NULL DEFAULT '',
         original_name  VARCHAR(255) NOT NULL DEFAULT '',
         file_size      INT          NOT NULL DEFAULT 0,
         sort_order     INT          NOT NULL DEFAULT 0,
+        is_pinned      TINYINT(1)   NOT NULL DEFAULT 0,
         is_published   TINYINT(1)   NOT NULL DEFAULT 1,
         status         ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id      INT          NULL DEFAULT NULL,
-        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_board_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     // ── Rezervační systém ──
@@ -548,6 +557,15 @@ $addColumns = [
     'cms_places.status'              => "ALTER TABLE cms_places ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    // cms_board
+    'cms_board.slug'                 => "ALTER TABLE cms_board ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
+    'cms_board.board_type'           => "ALTER TABLE cms_board ADD COLUMN board_type VARCHAR(50) NOT NULL DEFAULT 'document'",
+    'cms_board.excerpt'              => "ALTER TABLE cms_board ADD COLUMN excerpt TEXT",
+    'cms_board.image_file'           => "ALTER TABLE cms_board ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_board.contact_name'         => "ALTER TABLE cms_board ADD COLUMN contact_name VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_board.contact_phone'        => "ALTER TABLE cms_board ADD COLUMN contact_phone VARCHAR(100) NOT NULL DEFAULT ''",
+    'cms_board.contact_email'        => "ALTER TABLE cms_board ADD COLUMN contact_email VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_board.is_pinned'            => "ALTER TABLE cms_board ADD COLUMN is_pinned TINYINT(1) NOT NULL DEFAULT 0",
     // cms_downloads
     'cms_downloads.dl_category_id'   => "ALTER TABLE cms_downloads ADD COLUMN dl_category_id INT NULL DEFAULT NULL",
     // cms_users – rozšíření pro veřejné uživatele a role
@@ -934,6 +952,61 @@ try {
     $log[] = "✗ Slugy událostí – CHYBA: " . h($e->getMessage());
 }
 
+try {
+    $boardSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_board' AND COLUMN_NAME = 'slug'"
+    );
+    $boardSlugColumnCheck->execute();
+
+    if ((int)$boardSlugColumnCheck->fetchColumn() > 0) {
+        $boardRows = $pdo->query("SELECT id, title, slug FROM cms_board ORDER BY id")->fetchAll();
+        $updateBoardSlugStmt = $pdo->prepare("UPDATE cms_board SET slug = ? WHERE id = ?");
+
+        foreach ($boardRows as $boardRow) {
+            $existingSlug = trim((string)($boardRow['slug'] ?? ''));
+            $resolvedSlug = uniqueBoardSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$boardRow['title'],
+                (int)$boardRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateBoardSlugStmt->execute([$resolvedSlug, (int)$boardRow['id']]);
+            }
+        }
+
+        $boardSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_board' AND COLUMN_NAME = 'slug'"
+        );
+        $boardSlugNullabilityCheck->execute();
+        if (($boardSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_board MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_board.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_board.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $boardSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'cms_board'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $boardSlugIndexCheck->execute();
+        if ((int)$boardSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_board ADD UNIQUE KEY uq_cms_board_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_board_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_board.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy úřední desky – sloupec <code>cms_board.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy úřední desky – CHYBA: " . h($e->getMessage());
+}
+
 $newSettings = [
     // Moduly
     'module_blog'             => '1',
@@ -959,6 +1032,7 @@ $newSettings = [
     'home_blog_count'         => '5',
     'home_news_count'         => '5',
     'home_board_count'        => '5',
+    'board_public_label'      => defaultBoardPublicLabelForProfile(guessSiteProfileKey()),
     'news_per_page'           => '10',
     'blog_per_page'           => '10',
     'events_per_page'         => '10',
@@ -1047,6 +1121,7 @@ $uploadDirs = [
     'uploads/gallery/thumbs',
     'uploads/downloads',
     'uploads/board',
+    'uploads/board/images',
     'uploads/podcasts',
     'uploads/podcasts/covers',
 ];

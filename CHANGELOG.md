@@ -19,6 +19,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Jednotná admin fronta `Ke schválení` pro obsah, komentáře a rezervace, včetně rychlých akcí a návratu zpět do stejného filtru po schválení nebo moderaci
 - Novinky nově podporují titulek, slug a čisté URL typu `/news/moje-prvni-novinka`, včetně vlastního detailu, RSS feedu, sitemapy a použití ve vyhledávání i na homepage
 - Události nově podporují slug a čisté URL typu `/events/moje-akce`, včetně vlastního detailu, vyhledávání, sitemapy a použití v exportu/importu
+- Úřední deska nově podporuje slug a čisté URL typu `/board/moje-vyhlaska`, včetně veřejného detailu dokumentu a odděleného CTA na stažení přílohy přes bezpečný file endpoint
+- Modul `Úřední deska` se nově umí chovat i jako `Vývěska` nebo `Oznámení`: podporuje typ položky, krátký perex, volitelný obrázek, kontakt, připnutí důležitých položek a veřejný název modulu nastavitelný v administraci
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -29,6 +31,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Administrace i README teď výslovně doporučují HTML textarea jako přístupnější výchozí editor a Quill popisují jen jako volitelný vizuální režim
 - Import/export nově zachovává i titulky, slugy a čas poslední úpravy u novinek a runtime audit hlídá i detail novinky a kanonické přesměrování starého `news/article.php?id=...`
 - Import/export nově zachovává i slugy událostí a runtime audit hlídá detail události i kanonické přesměrování starého `events/event.php?id=...`
+- Import/export nově zachovává i slugy dokumentů úřední desky, typ položky, perex, obrázek, kontakt i připnutí; administrace úřední desky má vyhledávání a stavový filtr a runtime audit hlídá detail dokumentu, detail linky na výpisu, nové formulářové prvky i kanonické přesměrování starého `board/document.php?id=...`
 
 ## [3.0.0-beta.1] – 2026-03-23
 

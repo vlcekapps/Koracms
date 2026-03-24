@@ -378,18 +378,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['board']) && is_array($data['board'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_board
-                         (id, title, description, category_id, posted_date, removal_date,
-                          filename, original_name, file_size, sort_order, is_published, status)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                         (id, title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+                          image_file, contact_name, contact_phone, contact_email,
+                          filename, original_name, file_size, sort_order, is_pinned, is_published, status, created_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['board'] as $row) {
+                        $importTitle = trim((string)($row['title'] ?? ''));
+                        if ($importTitle === '') {
+                            $importTitle = 'Dokument';
+                        }
+                        $importSlug = boardSlug((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniqueBoardSlug($pdo, $importTitle);
+                        } else {
+                            $importSlug = uniqueBoardSlug($pdo, $importSlug, (int)$row['id']);
+                        }
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $row['description'] ?? '',
-                            $row['category_id'] ?: null, $row['posted_date'],
-                            $row['removal_date'] ?: null, $row['filename'] ?? '',
-                            $row['original_name'] ?? '', (int)($row['file_size'] ?? 0),
-                            (int)($row['sort_order'] ?? 0), (int)($row['is_published'] ?? 1),
+                            (int)$row['id'],
+                            $importTitle,
+                            $importSlug,
+                            normalizeBoardType((string)($row['board_type'] ?? 'document')),
+                            $row['excerpt'] ?? '',
+                            $row['description'] ?? '',
+                            $row['category_id'] ?: null,
+                            $row['posted_date'],
+                            $row['removal_date'] ?: null,
+                            $row['image_file'] ?? '',
+                            $row['contact_name'] ?? '',
+                            $row['contact_phone'] ?? '',
+                            $row['contact_email'] ?? '',
+                            $row['filename'] ?? '',
+                            $row['original_name'] ?? '',
+                            (int)($row['file_size'] ?? 0),
+                            (int)($row['sort_order'] ?? 0),
+                            (int)($row['is_pinned'] ?? 0),
+                            (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
                         ]);
                     }
                     $summary[] = 'Úřední deska importována.';
