@@ -369,16 +369,17 @@ adminHeader('Základní nastavení');
       <label style="font-weight:normal">
         <input type="radio" name="content_editor" value="html"
                <?= getSetting('content_editor', 'html') === 'html' ? 'checked' : '' ?>>
-        Čisté HTML (textarea) – vhodné pro pokročilé uživatele
+        Čisté HTML (textarea) – doporučená a přístupnější volba
       </label>
     </p>
     <p>
       <label style="font-weight:normal">
         <input type="radio" name="content_editor" value="wysiwyg"
                <?= getSetting('content_editor', 'html') === 'wysiwyg' ? 'checked' : '' ?>>
-        WYSIWYG editor (Quill) – vizuální editor bez nutnosti znát HTML
+        WYSIWYG editor (Quill) – volitelný vizuální editor pro uživatele bez asistivních technologií
       </label>
     </p>
+    <small style="color:#666">Pokud používáte čtečku obrazovky nebo jinou asistivní technologii, doporučujeme ponechat čisté HTML (textarea).</small>
   </fieldset>
 
   <fieldset>

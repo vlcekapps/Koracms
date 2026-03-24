@@ -291,7 +291,10 @@ $renderNewsSection = static function (array $items, bool $compactCards = false):
     return (string)ob_get_clean();
 };
 
-$renderBlogSection = static function (array $items, bool $featureLead = false, bool $compactCards = false): string {
+$renderBlogSection = static function (array $items, bool $featureLead = false, bool $compactCards = false) use (
+    $articleLink,
+    $renderAuthorName
+): string {
     if ($items === []) {
         return '';
     }
@@ -551,7 +554,9 @@ $renderFeaturedSection = static function () use (
     $pollAvailable,
     $homePoll,
     $newsletterAvailable,
-    $contactAvailable
+    $contactAvailable,
+    $articleLink,
+    $renderAuthorName
 ): string {
     if ($featuredModule === '') {
         return '';

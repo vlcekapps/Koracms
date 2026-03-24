@@ -159,7 +159,7 @@ Nastavení je rozděleno do čtyř sekcí:
 - **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
 - **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
 - **Výchozí OG obrázek** – obrázek pro náhledy při sdílení na sociálních sítích
-- **Editor obsahu** – volba mezi prostým HTML editorem a WYSIWYG editorem (Quill)
+- **Editor obsahu** – volba mezi doporučeným HTML editorem (textarea) a volitelným WYSIWYG editorem (Quill); pro práci s asistivními technologiemi doporučujeme HTML variantu
 - **Počty na hlavní stránce** – počet novinek, článků blogu a dokumentů úřední desky zobrazených na HP (0 = widget skrytý)
 - **Stránkování** – počet novinek, článků a událostí na stránku
 - **Komentáře blogu** – globální zapnutí komentářů, režim moderace (`vždy schvalovat`, `schválit známého autora`, `zveřejnit ihned`), automatické uzavření komentářů po zadaném počtu dnů, antispam pravidla (blokované e-maily a fráze), e-mailové upozornění na nové komentáře čekající na schválení a volitelné upozornění autorovi po schválení komentáře; používá se stejná mailová vrstva jako u registrace, resetu hesla a rezervací

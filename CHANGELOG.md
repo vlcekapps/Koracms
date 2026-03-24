@@ -24,6 +24,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Runtime audit nově hlídá i veřejnou stránku autora, homepage author block, author byliny a nová pole v administraci
 - Installace a migrace rozšiřují `cms_users.role` o nové redakční role a runtime audit nově ověřuje i přístupovou matici pro autora, moderátora a správce rezervací
 - Schvalování dokumentů úřední desky je nově napojené na stejný endpoint jako ostatní sdílený obsah a moderace komentářů i rezervací nově podporuje bezpečný interní návrat přes validovaný `redirect`
+- Administrace i README teď výslovně doporučují HTML textarea jako přístupnější výchozí editor a Quill popisují jen jako volitelný vizuální režim
 
 ## [3.0.0-beta.1] – 2026-03-23
 
