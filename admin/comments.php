@@ -48,7 +48,7 @@ $comments = [];
 try {
     $stmt = $pdo->prepare(
         "SELECT c.id, c.author_name, c.author_email, c.content, c.status, c.created_at,
-                a.title AS article_title, a.id AS article_id
+                a.title AS article_title, a.id AS article_id, a.slug AS article_slug
          FROM cms_comments c
          LEFT JOIN cms_articles a ON a.id = c.article_id
          {$where}
@@ -70,7 +70,7 @@ try {
     $stmt = $pdo->prepare(
         "SELECT c.id, c.author_name, c.author_email, c.content,
                 CASE WHEN c.is_approved = 1 THEN 'approved' ELSE 'pending' END AS status,
-                c.created_at, a.title AS article_title, a.id AS article_id
+                c.created_at, a.title AS article_title, a.id AS article_id, a.slug AS article_slug
          FROM cms_comments c
          LEFT JOIN cms_articles a ON a.id = c.article_id
          {$legacyWhere}
@@ -176,7 +176,7 @@ adminHeader('Komentáře');
           </td>
           <td>
             <?php if (!empty($comment['article_id'])): ?>
-              <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$comment['article_id'] ?>">
+              <a href="<?= h(articlePublicPath(['id' => (int)$comment['article_id'], 'slug' => (string)($comment['article_slug'] ?? '')])) ?>">
                 <?= h($articleTitle) ?>
               </a>
             <?php else: ?>

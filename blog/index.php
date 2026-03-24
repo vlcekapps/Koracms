@@ -49,8 +49,9 @@ $page   = max(1, min($pages, (int)($_GET['strana'] ?? 1)));
 $offset = ($page - 1) * $perPage;
 
 $stmt = $pdo->prepare(
-    "SELECT a.id, a.title, a.perex, a.content, a.image_file, a.created_at, a.category_id, c.name AS category,
-            COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
+    "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.category_id, c.name AS category,
+            COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+            u.author_public_enabled, u.author_slug, u.role AS author_role
      FROM cms_articles a
      LEFT JOIN cms_categories c ON c.id = a.category_id
      LEFT JOIN cms_users u ON u.id = a.author_id
@@ -60,6 +61,10 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $articles = $stmt->fetchAll();
+$articles = array_map(
+    static fn(array $article): array => hydrateAuthorPresentation($article),
+    $articles
+);
 
 $pageHeading = 'Blog';
 if ($katId !== null) {

@@ -51,7 +51,7 @@ adminHeader('Statické stránky');
           <td><?= (int)$p['nav_order'] ?></td>
           <td class="actions">
             <a href="<?= BASE_URL ?>/admin/page_form.php?id=<?= (int)$p['id'] ?>" class="btn">Upravit</a>
-            <?php if ($p['status'] === 'pending' && isSuperAdmin()): ?>
+            <?php if ($p['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="module" value="pages">

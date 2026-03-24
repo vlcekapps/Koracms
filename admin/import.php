@@ -58,13 +58,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['articles']) && is_array($data['articles'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_articles
-                         (id, title, perex, content, category_id, comments_enabled, image_file,
+                         (id, title, slug, perex, content, category_id, comments_enabled, image_file,
                           meta_title, meta_description, publish_at, status, created_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['articles'] as $row) {
+                        $importSlug = articleSlug((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniqueArticleSlug($pdo, (string)($row['title'] ?? 'clanek'));
+                        } else {
+                            $importSlug = uniqueArticleSlug($pdo, $importSlug, (int)$row['id']);
+                        }
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $row['perex'] ?? '',
+                            (int)$row['id'], $row['title'], $importSlug, $row['perex'] ?? '',
                             $row['content'] ?? '', $row['category_id'] ?: null,
                             (int)($row['comments_enabled'] ?? 1),
                             $row['image_file'] ?? '',

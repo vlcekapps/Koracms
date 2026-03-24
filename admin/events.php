@@ -43,7 +43,7 @@ adminHeader('Události');
         </td>
         <td class="actions">
           <a href="event_form.php?id=<?= (int)$e['id'] ?>" class="btn">Upravit</a>
-          <?php if ($e['status'] === 'pending' && isSuperAdmin()): ?>
+          <?php if ($e['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="events">

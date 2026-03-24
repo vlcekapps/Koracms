@@ -301,6 +301,22 @@
         }
       }
     },
+    "home_author_visibility": {
+      "type": "select",
+      "label": "Blok autora",
+      "description": "Volitelný blok O autorovi / O mně. Zobrazí se jen pokud je k dispozici platný veřejný autor vybraný v nastavení webu.",
+      "default": "hide",
+      "options": {
+        "show": {
+          "label": "Zobrazit",
+          "description": "Homepage zobrazí krátký medailonek vybraného autora."
+        },
+        "hide": {
+          "label": "Skrýt",
+          "description": "Homepage poběží bez autorského bloku."
+        }
+      }
+    },
     "home_board_visibility": {
       "type": "select",
       "label": "Blok úřední desky",

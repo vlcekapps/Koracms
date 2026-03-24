@@ -70,6 +70,7 @@ $tables = [
     'cms_articles' => "CREATE TABLE IF NOT EXISTS cms_articles (
         id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title            VARCHAR(255) NOT NULL,
+        slug             VARCHAR(255) NOT NULL UNIQUE,
         perex            TEXT,
         content          TEXT,
         comments_enabled TINYINT(1)   NOT NULL DEFAULT 1,
@@ -112,14 +113,28 @@ $tables = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_users' => "CREATE TABLE IF NOT EXISTS cms_users (
-        id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        email         VARCHAR(255) NOT NULL UNIQUE,
-        password      VARCHAR(255) NOT NULL,
-        first_name    VARCHAR(100) NOT NULL DEFAULT '',
-        last_name     VARCHAR(100) NOT NULL DEFAULT '',
-        nickname      VARCHAR(100) NOT NULL DEFAULT '',
-        is_superadmin TINYINT(1)   NOT NULL DEFAULT 0,
-        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id                    INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        email                 VARCHAR(255) NOT NULL UNIQUE,
+        password              VARCHAR(255) NOT NULL,
+        first_name            VARCHAR(100) NOT NULL DEFAULT '',
+        last_name             VARCHAR(100) NOT NULL DEFAULT '',
+        nickname              VARCHAR(100) NOT NULL DEFAULT '',
+        phone                 VARCHAR(30)  NOT NULL DEFAULT '',
+        role                  ENUM('admin','collaborator','author','editor','moderator','booking_manager','public') NOT NULL DEFAULT 'collaborator',
+        is_superadmin         TINYINT(1)   NOT NULL DEFAULT 0,
+        is_confirmed          TINYINT(1)   NOT NULL DEFAULT 1,
+        confirmation_token    VARCHAR(64)  NOT NULL DEFAULT '',
+        confirmation_expires  DATETIME     NULL DEFAULT NULL,
+        reset_token           VARCHAR(64)  NOT NULL DEFAULT '',
+        reset_expires         DATETIME     NULL DEFAULT NULL,
+        author_public_enabled TINYINT(1)   NOT NULL DEFAULT 0,
+        author_slug           VARCHAR(255) NULL DEFAULT NULL,
+        author_bio            TEXT,
+        author_avatar         VARCHAR(255) NOT NULL DEFAULT '',
+        author_website        VARCHAR(255) NOT NULL DEFAULT '',
+        created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_users_author_slug (author_slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_tags' => "CREATE TABLE IF NOT EXISTS cms_tags (
@@ -506,6 +521,7 @@ $addColumns = [
     'cms_articles.meta_title'        => "ALTER TABLE cms_articles ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
     'cms_articles.meta_description'  => "ALTER TABLE cms_articles ADD COLUMN meta_description TEXT",
     'cms_articles.preview_token'     => "ALTER TABLE cms_articles ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
+    'cms_articles.slug'              => "ALTER TABLE cms_articles ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_articles.comments_enabled'  => "ALTER TABLE cms_articles ADD COLUMN comments_enabled TINYINT(1) NOT NULL DEFAULT 1",
     'cms_articles.author_id'         => "ALTER TABLE cms_articles ADD COLUMN author_id INT NULL DEFAULT NULL",
     'cms_articles.status'            => "ALTER TABLE cms_articles ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
@@ -525,13 +541,18 @@ $addColumns = [
     // cms_downloads
     'cms_downloads.dl_category_id'   => "ALTER TABLE cms_downloads ADD COLUMN dl_category_id INT NULL DEFAULT NULL",
     // cms_users – rozšíření pro veřejné uživatele a role
-    'cms_users.role'                 => "ALTER TABLE cms_users ADD COLUMN role ENUM('admin','collaborator','public') NOT NULL DEFAULT 'collaborator'",
+    'cms_users.role'                 => "ALTER TABLE cms_users ADD COLUMN role ENUM('admin','collaborator','author','editor','moderator','booking_manager','public') NOT NULL DEFAULT 'collaborator'",
     'cms_users.phone'                => "ALTER TABLE cms_users ADD COLUMN phone VARCHAR(30) NOT NULL DEFAULT ''",
     'cms_users.is_confirmed'         => "ALTER TABLE cms_users ADD COLUMN is_confirmed TINYINT(1) NOT NULL DEFAULT 1",
     'cms_users.confirmation_token'   => "ALTER TABLE cms_users ADD COLUMN confirmation_token VARCHAR(64) NOT NULL DEFAULT ''",
     'cms_users.confirmation_expires' => "ALTER TABLE cms_users ADD COLUMN confirmation_expires DATETIME NULL DEFAULT NULL",
     'cms_users.reset_token'          => "ALTER TABLE cms_users ADD COLUMN reset_token VARCHAR(64) NOT NULL DEFAULT ''",
     'cms_users.reset_expires'        => "ALTER TABLE cms_users ADD COLUMN reset_expires DATETIME NULL DEFAULT NULL",
+    'cms_users.author_public_enabled'=> "ALTER TABLE cms_users ADD COLUMN author_public_enabled TINYINT(1) NOT NULL DEFAULT 0",
+    'cms_users.author_slug'          => "ALTER TABLE cms_users ADD COLUMN author_slug VARCHAR(255) NULL DEFAULT NULL",
+    'cms_users.author_bio'           => "ALTER TABLE cms_users ADD COLUMN author_bio TEXT",
+    'cms_users.author_avatar'        => "ALTER TABLE cms_users ADD COLUMN author_avatar VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_users.author_website'       => "ALTER TABLE cms_users ADD COLUMN author_website VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_users.updated_at'           => "ALTER TABLE cms_users ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_res_resources – povolení hostů
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
@@ -613,11 +634,23 @@ try {
 
 try {
     $colCheck = $pdo->prepare(
-        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+        "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_users' AND COLUMN_NAME = 'role'"
     );
     $colCheck->execute();
-    if ((int)$colCheck->fetchColumn() > 0) {
+    $roleColumnType = (string)$colCheck->fetchColumn();
+    if ($roleColumnType !== '') {
+        if (strpos($roleColumnType, "'author'") === false || strpos($roleColumnType, "'editor'") === false || strpos($roleColumnType, "'moderator'") === false || strpos($roleColumnType, "'booking_manager'") === false) {
+            $pdo->exec(
+                "ALTER TABLE cms_users MODIFY COLUMN role
+                 ENUM('admin','collaborator','author','editor','moderator','booking_manager','public')
+                 NOT NULL DEFAULT 'collaborator'"
+            );
+            $log[] = "✓ ENUM <code>cms_users.role</code> rozšířen o nové role – OK";
+        } else {
+            $log[] = "· ENUM <code>cms_users.role</code> již obsahuje nové role – přeskočeno";
+        }
+
         $updated = $pdo->exec(
             "UPDATE cms_users SET role = 'admin' WHERE is_superadmin = 1 AND role = 'collaborator'"
         );
@@ -675,6 +708,107 @@ try {
 
 // ── 6. Chybějící nastavení (existující hodnoty NEPŘEPISUJE) ───────────────────
 
+try {
+    $slugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_articles' AND COLUMN_NAME = 'slug'"
+    );
+    $slugColumnCheck->execute();
+
+    if ((int)$slugColumnCheck->fetchColumn() > 0) {
+        $articleRows = $pdo->query("SELECT id, title, slug FROM cms_articles ORDER BY id")->fetchAll();
+        $updateSlugStmt = $pdo->prepare("UPDATE cms_articles SET slug = ? WHERE id = ?");
+
+        foreach ($articleRows as $articleRow) {
+            $existingSlug = trim((string)($articleRow['slug'] ?? ''));
+            $resolvedSlug = uniqueArticleSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$articleRow['title'],
+                (int)$articleRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateSlugStmt->execute([$resolvedSlug, (int)$articleRow['id']]);
+            }
+        }
+
+        $slugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_articles' AND COLUMN_NAME = 'slug'"
+        );
+        $slugNullabilityCheck->execute();
+        if (($slugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_articles MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_articles.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_articles.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $slugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_articles'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $slugIndexCheck->execute();
+        if ((int)$slugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_articles ADD UNIQUE KEY uq_cms_articles_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_articles_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_articles.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy článků – sloupec <code>cms_articles.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy článků – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $authorSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_users' AND COLUMN_NAME = 'author_slug'"
+    );
+    $authorSlugColumnCheck->execute();
+
+    if ((int)$authorSlugColumnCheck->fetchColumn() > 0) {
+        $userRows = $pdo->query(
+            "SELECT id, email, first_name, last_name, nickname, role, author_slug
+             FROM cms_users
+             WHERE role != 'public'
+             ORDER BY is_superadmin DESC, id ASC"
+        )->fetchAll();
+        $updateAuthorSlugStmt = $pdo->prepare("UPDATE cms_users SET author_slug = ? WHERE id = ?");
+
+        foreach ($userRows as $userRow) {
+            $existingSlug = trim((string)($userRow['author_slug'] ?? ''));
+            $resolvedSlug = uniqueAuthorSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : authorSlugCandidate($userRow),
+                (int)$userRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateAuthorSlugStmt->execute([$resolvedSlug, (int)$userRow['id']]);
+            }
+        }
+
+        $authorSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_users'
+               AND COLUMN_NAME = 'author_slug' AND NON_UNIQUE = 0"
+        );
+        $authorSlugIndexCheck->execute();
+        if ((int)$authorSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_users ADD UNIQUE KEY uq_cms_users_author_slug (author_slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_users_author_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_users.author_slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy autorů – sloupec <code>cms_users.author_slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy autorů – CHYBA: " . h($e->getMessage());
+}
+
 $newSettings = [
     // Moduly
     'module_blog'             => '1',
@@ -711,6 +845,7 @@ $newSettings = [
     'comment_notify_email'    => '',
     'comment_blocked_emails'  => '',
     'comment_spam_words'      => '',
+    'home_author_user_id'     => '',
     // Editor
     'content_editor'          => 'html',
     // Sociální sítě
@@ -758,8 +893,13 @@ try {
         $adminHash  = getSetting('admin_password', '');
         if ($adminEmail !== '' && $adminHash !== '') {
             $pdo->prepare(
-                "INSERT INTO cms_users (email, password, role, is_superadmin, is_confirmed) VALUES (?, ?, 'admin', 1, 1)"
-            )->execute([$adminEmail, $adminHash]);
+                "INSERT INTO cms_users (email, password, role, is_superadmin, is_confirmed, author_slug)
+                 VALUES (?, ?, 'admin', 1, 1, ?)"
+            )->execute([
+                $adminEmail,
+                $adminHash,
+                uniqueAuthorSlug($pdo, strstr($adminEmail, '@', true) ?: 'autor'),
+            ]);
             $log[] = "✓ Superadmin <code>{$adminEmail}</code> migrován do cms_users – OK";
         } else {
             $log[] = "⚠ Superadmin nebyl migrován – admin_email nebo admin_password v nastavení chybí.";
@@ -775,6 +915,7 @@ try {
 
 $uploadDirs = [
     'uploads/site',
+    'uploads/authors',
     'uploads/articles',
     'uploads/articles/thumbs',
     'uploads/gallery',

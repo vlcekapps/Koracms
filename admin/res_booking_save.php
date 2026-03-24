@@ -7,9 +7,10 @@ $pdo       = db_connect();
 $bookingId = inputInt('post', 'booking_id');
 $action    = $_POST['action'] ?? '';
 $adminNote = trim($_POST['admin_note'] ?? '');
+$listRedirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/res_bookings.php');
 
 if ($bookingId === null || !in_array($action, ['approve', 'reject', 'cancel', 'complete', 'no_show'], true)) {
-    header('Location: res_bookings.php');
+    header('Location: ' . $listRedirect);
     exit;
 }
 
@@ -26,9 +27,14 @@ $stmt->execute([$bookingId]);
 $booking = $stmt->fetch();
 
 if (!$booking) {
-    header('Location: res_bookings.php');
+    header('Location: ' . $listRedirect);
     exit;
 }
+
+$detailRedirect = internalRedirectTarget(
+    trim($_POST['redirect'] ?? ''),
+    BASE_URL . '/admin/res_booking_detail.php?id=' . $bookingId
+);
 
 // ── Validace přechodu stavů ──
 $allowed = [
@@ -40,7 +46,7 @@ $allowed = [
 ];
 
 if (!in_array($booking['status'], $allowed[$action], true)) {
-    header('Location: res_booking_detail.php?id=' . $bookingId);
+    header('Location: ' . $detailRedirect);
     exit;
 }
 
@@ -48,7 +54,7 @@ if (!in_array($booking['status'], $allowed[$action], true)) {
 if ($action === 'complete') {
     $bookingEnd = new DateTime($booking['booking_date'] . ' ' . $booking['end_time']);
     if ($bookingEnd > new DateTime()) {
-        header('Location: res_booking_detail.php?id=' . $bookingId);
+        header('Location: ' . $detailRedirect);
         exit;
     }
 }
@@ -123,5 +129,9 @@ if ($email) {
     sendMail($email, $subject, $body);
 }
 
-header('Location: res_booking_detail.php?id=' . $bookingId . '&ok=1');
+$successRedirect = internalRedirectTarget(
+    trim($_POST['redirect'] ?? ''),
+    BASE_URL . '/admin/res_booking_detail.php?id=' . $bookingId . '&ok=1'
+);
+header('Location: ' . $successRedirect);
 exit;

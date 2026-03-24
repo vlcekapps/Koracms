@@ -67,7 +67,7 @@ adminHeader('Podcast: ' . h($show['title']));
         </td>
         <td class="actions">
           <a href="podcast_form.php?id=<?= (int)$ep['id'] ?>&amp;show_id=<?= (int)$showId ?>" class="btn">Upravit</a>
-          <?php if ($ep['status'] === 'pending' && isSuperAdmin()): ?>
+          <?php if ($ep['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="podcasts">

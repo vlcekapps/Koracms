@@ -8,7 +8,8 @@ if (!isModuleEnabled('blog')) {
 }
 
 $id = inputInt('get', 'id');
-if ($id === null) {
+$slug = articleSlug(trim($_GET['slug'] ?? ''));
+if ($id === null && $slug === '') {
     header('Location: index.php');
     exit;
 }
@@ -17,36 +18,73 @@ $pdo = db_connect();
 
 $previewToken = trim($_GET['preview'] ?? '');
 if ($previewToken !== '') {
-    $stmt = $pdo->prepare(
-        "SELECT a.*, c.name AS category, c.id AS category_id,
-                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
-         FROM cms_articles a
-         LEFT JOIN cms_categories c ON c.id = a.category_id
-         LEFT JOIN cms_users u ON u.id = a.author_id
-         WHERE a.id = ? AND a.preview_token = ?"
-    );
-    $stmt->execute([$id, $previewToken]);
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT a.*, c.name AS category, c.id AS category_id,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_articles a
+             LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_users u ON u.id = a.author_id
+             WHERE a.slug = ? AND a.preview_token = ?"
+        );
+        $stmt->execute([$slug, $previewToken]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT a.*, c.name AS category, c.id AS category_id,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_articles a
+             LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_users u ON u.id = a.author_id
+             WHERE a.id = ? AND a.preview_token = ?"
+        );
+        $stmt->execute([$id, $previewToken]);
+    }
 } else {
-    $stmt = $pdo->prepare(
-        "SELECT a.*, c.name AS category, c.id AS category_id,
-                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
-         FROM cms_articles a
-         LEFT JOIN cms_categories c ON c.id = a.category_id
-         LEFT JOIN cms_users u ON u.id = a.author_id
-         WHERE a.id = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
-    );
-    $stmt->execute([$id]);
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT a.*, c.name AS category, c.id AS category_id,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_articles a
+             LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_users u ON u.id = a.author_id
+             WHERE a.slug = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
+        );
+        $stmt->execute([$slug]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT a.*, c.name AS category, c.id AS category_id,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_articles a
+             LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_users u ON u.id = a.author_id
+             WHERE a.id = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
+        );
+        $stmt->execute([$id]);
+    }
 }
 $article = $stmt->fetch();
 if (!$article) {
     header('Location: index.php');
     exit;
 }
+$article = hydrateAuthorPresentation($article);
+
+if ($previewToken === '' && $slug === '' && !empty($article['slug'])) {
+    $commentRedirect = trim($_GET['komentar'] ?? '');
+    header('Location: ' . articlePublicPath($article, $commentRedirect !== '' ? ['komentar' => $commentRedirect] : []));
+    exit;
+}
+
+$articleId = (int)$article['id'];
 
 if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
     trackPageView('article', (int)$article['id']);
     try {
-        $pdo->prepare("UPDATE cms_articles SET view_count = view_count + 1 WHERE id = ?")->execute([$id]);
+        $pdo->prepare("UPDATE cms_articles SET view_count = view_count + 1 WHERE id = ?")->execute([$articleId]);
     } catch (\PDOException $e) {
         error_log('article view_count: ' . $e->getMessage());
     }
@@ -59,7 +97,7 @@ try {
          JOIN cms_article_tags at2 ON at2.tag_id = t.id
          WHERE at2.article_id = ? ORDER BY t.name"
     );
-    $ts->execute([$id]);
+    $ts->execute([$articleId]);
     $tags = $ts->fetchAll();
 } catch (\PDOException $e) {
     error_log('article tags: ' . $e->getMessage());
@@ -87,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         rateLimit('comment', 5, 120);
 
         if (honeypotTriggered()) {
-            header('Location: ' . BASE_URL . '/blog/article.php?id=' . $id . '&komentar=pending');
+            header('Location: ' . articlePublicPath($article, ['komentar' => 'pending']));
             exit;
         }
 
@@ -122,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "INSERT INTO cms_comments (article_id, author_name, author_email, content, status, is_approved)
                      VALUES (?, ?, ?, ?, ?, ?)"
                 )->execute([
-                    $id,
+                    $articleId,
                     $authorName,
                     $authorEmail,
                     $content,
@@ -134,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "INSERT INTO cms_comments (article_id, author_name, author_email, content, is_approved)
                      VALUES (?, ?, ?, ?, ?)"
                 )->execute([
-                    $id,
+                    $articleId,
                     $authorName,
                     $authorEmail,
                     $content,
@@ -146,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 notifyAdminAboutPendingComment($article, $authorName, $authorEmail, $content);
             }
 
-            header('Location: ' . BASE_URL . '/blog/article.php?id=' . $id . '&komentar=' . urlencode($commentDecision['public_result']));
+            header('Location: ' . articlePublicPath($article, ['komentar' => $commentDecision['public_result']]));
             exit;
         }
     }
@@ -160,7 +198,7 @@ try {
          WHERE article_id = ? AND status = 'approved'
          ORDER BY created_at ASC"
     );
-    $commentsStmt->execute([$id]);
+    $commentsStmt->execute([$articleId]);
     $comments = $commentsStmt->fetchAll();
 } catch (\PDOException $e) {
     $commentsStmt = $pdo->prepare(
@@ -169,7 +207,7 @@ try {
          WHERE article_id = ? AND is_approved = 1
          ORDER BY created_at ASC"
     );
-    $commentsStmt->execute([$id]);
+    $commentsStmt->execute([$articleId]);
     $comments = $commentsStmt->fetchAll();
 }
 
@@ -183,7 +221,7 @@ renderPublicPage([
         'image' => !empty($article['image_file'])
             ? BASE_URL . '/uploads/articles/' . rawurlencode($article['image_file'])
             : '',
-        'url' => BASE_URL . '/blog/article.php?id=' . (int)$article['id'],
+        'url' => articlePublicUrl($article),
         'type' => 'article',
     ],
     'view' => 'modules/blog-article',
@@ -204,5 +242,5 @@ renderPublicPage([
     'current_nav' => 'blog',
     'body_class' => 'page-blog-article',
     'page_kind' => 'detail',
-    'admin_edit_url' => BASE_URL . '/admin/blog_form.php?id=' . (int)$article['id'],
+    'admin_edit_url' => BASE_URL . '/admin/blog_form.php?id=' . $articleId,
 ]);

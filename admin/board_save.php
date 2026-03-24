@@ -87,7 +87,7 @@ if ($id !== null) {
     $pdo->prepare("UPDATE cms_board SET {$set} WHERE id=?")->execute($params);
     logAction('board_edit', "id={$id}");
 } else {
-    $status   = isSuperAdmin() ? 'published' : 'pending';
+    $status   = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $authorId = currentUserId();
     $pdo->prepare(
         "INSERT INTO cms_board
@@ -96,7 +96,7 @@ if ($id !== null) {
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([$title, $categoryId, $description, $postedDate, $removalDate,
                 $newFilename ?? '', $newOrigName ?? '', $newFileSize ?? 0,
-                $sortOrder, isSuperAdmin() ? $isPublished : 0, $status, $authorId]);
+                $sortOrder, currentUserHasCapability('content_approve_shared') ? $isPublished : 0, $status, $authorId]);
     logAction('board_add', "title={$title} status={$status}");
 }
 

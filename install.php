@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_articles (
             id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title            VARCHAR(255) NOT NULL,
+            slug             VARCHAR(255) NOT NULL UNIQUE,
             perex            TEXT,
             content          TEXT,
             comments_enabled TINYINT(1)   NOT NULL DEFAULT 1,
@@ -226,14 +227,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             last_name          VARCHAR(100) NOT NULL DEFAULT '',
             nickname           VARCHAR(100) NOT NULL DEFAULT '',
             phone              VARCHAR(30)  NOT NULL DEFAULT '',
-            role               ENUM('admin','collaborator','public') NOT NULL DEFAULT 'collaborator',
+            role               ENUM('admin','collaborator','author','editor','moderator','booking_manager','public') NOT NULL DEFAULT 'collaborator',
             is_superadmin      TINYINT(1)   NOT NULL DEFAULT 0,
             is_confirmed       TINYINT(1)   NOT NULL DEFAULT 1,
             confirmation_token VARCHAR(64)  NOT NULL DEFAULT '',
+            confirmation_expires DATETIME   NULL DEFAULT NULL,
             reset_token        VARCHAR(64)  NOT NULL DEFAULT '',
             reset_expires      DATETIME     NULL DEFAULT NULL,
+            author_public_enabled TINYINT(1) NOT NULL DEFAULT 0,
+            author_slug        VARCHAR(255) NULL DEFAULT NULL,
+            author_bio         TEXT,
+            author_avatar      VARCHAR(255) NOT NULL DEFAULT '',
+            author_website     VARCHAR(255) NOT NULL DEFAULT '',
             created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_users_author_slug (author_slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_dl_categories (
@@ -505,6 +513,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'comment_notify_email' => '',
             'comment_blocked_emails' => '',
             'comment_spam_words' => '',
+            'home_author_user_id' => '',
             'content_editor'  => 'html',
             'module_events'   => '1',
             'module_podcast'  => '1',
@@ -542,16 +551,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Hlavní administrátor
+        $adminPasswordHash = password_hash($adminPass, PASSWORD_BCRYPT);
         $pdo->prepare(
-            "INSERT INTO cms_users (email, password, role, is_superadmin)
-             VALUES (?, ?, 'admin', 1)
+            "INSERT INTO cms_users (email, password, role, is_superadmin, author_slug)
+             VALUES (?, ?, 'admin', 1, ?)
              ON DUPLICATE KEY UPDATE password = VALUES(password), role = 'admin', is_superadmin = 1"
-        )->execute([$adminEmail, password_hash($adminPass, PASSWORD_BCRYPT)]);
+        )->execute([
+            $adminEmail,
+            $adminPasswordHash,
+            uniqueAuthorSlug($pdo, strstr($adminEmail, '@', true) ?: 'autor'),
+        ]);
         applySiteProfilePreset($siteProfile);
 
         // ── Adresáře pro nahrávání souborů ──────────────────────────────────
         $uploadDirs = [
             'uploads/site',
+            'uploads/authors',
             'uploads/articles',
             'uploads/articles/thumbs',
             'uploads/gallery',

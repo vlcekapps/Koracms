@@ -2,42 +2,53 @@
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
-$pdo     = db_connect();
-$id      = inputInt('get', 'id');
+$pdo = db_connect();
+$id = inputInt('get', 'id');
 $article = null;
 
 if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_articles WHERE id = ?");
-    $stmt->execute([$id]);
+    if (canManageOwnBlogOnly()) {
+        $stmt = $pdo->prepare("SELECT * FROM cms_articles WHERE id = ? AND author_id = ?");
+        $stmt->execute([$id, currentUserId()]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM cms_articles WHERE id = ?");
+        $stmt->execute([$id]);
+    }
     $article = $stmt->fetch();
-    if (!$article) { header('Location: blog.php'); exit; }
+    if (!$article) {
+        header('Location: blog.php');
+        exit;
+    }
 }
 
 $categories = $pdo->query("SELECT id, name FROM cms_categories ORDER BY name")->fetchAll();
-
 $allTags = [];
 $articleTagIds = [];
 try {
     $allTags = $pdo->query("SELECT id, name FROM cms_tags ORDER BY name")->fetchAll();
     if ($id !== null) {
-        $ts = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ?");
-        $ts->execute([$id]);
-        $articleTagIds = array_column($ts->fetchAll(), 'tag_id');
+        $tagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ?");
+        $tagStmt->execute([$id]);
+        $articleTagIds = array_column($tagStmt->fetchAll(), 'tag_id');
     }
-} catch (\PDOException $e) {}
+} catch (\PDOException $e) {
+}
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-
-// Formátování publish_at pro datetime-local input
+$err = trim($_GET['err'] ?? '');
 $publishAtInput = '';
 if (!empty($article['publish_at'])) {
-    $publishAtInput = date('Y-m-d\TH:i', strtotime($article['publish_at']));
+    $publishAtInput = date('Y-m-d\TH:i', strtotime((string)$article['publish_at']));
 }
 
 adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 ?>
 
-<form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate>
+<?php if ($err === 'slug'): ?>
+  <p role="alert" class="error" id="form-error">Slug článku je povinný a musí být unikátní.</p>
+<?php endif; ?>
+
+<form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err === 'slug' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($article): ?>
     <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
@@ -45,19 +56,21 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
   <?php if ($article && !empty($article['author_id'])): ?>
     <?php
-    // Načteme jméno autora
     try {
         $authorStmt = $pdo->prepare("SELECT first_name, last_name, nickname, email FROM cms_users WHERE id = ?");
-        $authorStmt->execute([$article['author_id']]);
+        $authorStmt->execute([(int)$article['author_id']]);
         $authorRow = $authorStmt->fetch();
         if ($authorRow) {
-            $authorName = $authorRow['nickname'] !== '' ? $authorRow['nickname']
-                        : trim($authorRow['first_name'] . ' ' . $authorRow['last_name']);
-            if ($authorName === '') $authorName = $authorRow['email'];
+            $authorName = $authorRow['nickname'] !== '' ? $authorRow['nickname'] : trim($authorRow['first_name'] . ' ' . $authorRow['last_name']);
+            if ($authorName === '') {
+                $authorName = $authorRow['email'];
+            }
         } else {
             $authorName = '–';
         }
-    } catch (\PDOException $e) { $authorName = '–'; }
+    } catch (\PDOException $e) {
+        $authorName = '–';
+    }
     ?>
     <p style="color:#555;font-size:.9rem;margin-bottom:1rem">
       Autor: <strong><?= h($authorName) ?></strong>
@@ -75,13 +88,18 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            value="<?= h($article['title'] ?? '') ?>">
 
+    <label for="slug">Slug (URL článku) <span aria-hidden="true">*</span>
+      <small>(pouze malá písmena, číslice a pomlčky)</small>
+    </label>
+    <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           value="<?= h($article['slug'] ?? '') ?>">
+
     <label for="category_id">Kategorie</label>
     <select id="category_id" name="category_id">
       <option value="">– bez kategorie –</option>
-      <?php foreach ($categories as $cat): ?>
-        <option value="<?= (int)$cat['id'] ?>"
-          <?= ((int)($article['category_id'] ?? 0) === (int)$cat['id']) ? 'selected' : '' ?>>
-          <?= h($cat['name']) ?>
+      <?php foreach ($categories as $category): ?>
+        <option value="<?= (int)$category['id'] ?>" <?= ((int)($article['category_id'] ?? 0) === (int)$category['id']) ? 'selected' : '' ?>>
+          <?= h($category['name']) ?>
         </option>
       <?php endforeach; ?>
     </select>
@@ -90,11 +108,11 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <?php if (!empty($allTags)): ?>
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>Tagy</legend>
-    <?php foreach ($allTags as $t): ?>
+    <?php foreach ($allTags as $tag): ?>
       <label style="display:inline-block;margin-right:1rem;font-weight:normal">
-        <input type="checkbox" name="tags[]" value="<?= (int)$t['id'] ?>"
-               <?= in_array((int)$t['id'], $articleTagIds, true) ? 'checked' : '' ?>>
-        <?= h($t['name']) ?>
+        <input type="checkbox" name="tags[]" value="<?= (int)$tag['id'] ?>"
+               <?= in_array((int)$tag['id'], $articleTagIds, true) ? 'checked' : '' ?>>
+        <?= h($tag['name']) ?>
       </label>
     <?php endforeach; ?>
   </fieldset>
@@ -113,8 +131,8 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <label for="image">
       Náhledový obrázek
       <?php if (!empty($article['image_file'])): ?>
-        <small>(aktuální: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode($article['image_file']) ?>"
-               target="_blank"><?= h($article['image_file']) ?></a>)</small>
+        <small>(aktuální: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
+               target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?></a>)</small>
       <?php endif; ?>
     </label>
     <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
@@ -155,26 +173,50 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <div style="margin-top:1.5rem">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
     <?php if ($article && !empty($article['preview_token'])): ?>
-      <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>&preview=<?= h($article['preview_token']) ?>"
-         target="_blank" style="margin-left:1rem">Náhled</a>
+      <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
     <?php elseif ($article): ?>
-      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled“)</small>
     <?php endif; ?>
     <a href="blog.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
+
+<script>
+(function () {
+    const titleInput = document.getElementById('title');
+    const slugInput = document.getElementById('slug');
+    let slugManual = <?= $article && !empty($article['slug']) ? 'true' : 'false' ?>;
+
+    const slugify = (value) => value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    slugInput?.addEventListener('input', function () {
+        slugManual = this.value.trim() !== '';
+    });
+
+    titleInput?.addEventListener('input', function () {
+        if (slugManual || !slugInput) {
+            return;
+        }
+        slugInput.value = slugify(this.value);
+    });
+})();
+</script>
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <script>
 (function () {
-    const ta = document.getElementById('content');
+    const textarea = document.getElementById('content');
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem';
-    wrapper.style.minHeight = '300px';
-    ta.parentNode.insertBefore(wrapper, ta);
-    ta.style.display = 'none';
+    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem;min-height:300px';
+    textarea.parentNode.insertBefore(wrapper, textarea);
+    textarea.style.display = 'none';
 
     const quill = new Quill(wrapper, {
         theme: 'snow',
@@ -185,15 +227,13 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
             ['blockquote', 'code-block'],
             ['link', 'image'],
             ['clean']
-        ]}
+        ] }
     });
 
-    // Načteme existující obsah
-    quill.root.innerHTML = ta.value;
+    quill.root.innerHTML = textarea.value;
 
-    // Při odeslání formuláře synchronizujeme obsah
-    ta.closest('form').addEventListener('submit', function () {
-        ta.value = quill.root.innerHTML;
+    textarea.closest('form')?.addEventListener('submit', function () {
+        textarea.value = quill.root.innerHTML;
     });
 })();
 </script>

@@ -7,7 +7,10 @@ $id = inputInt('post', 'id');
 $filter = trim($_POST['filter'] ?? 'pending');
 $action = trim($_POST['action'] ?? '');
 
-$redirect = BASE_URL . '/admin/comments.php?filter=' . urlencode($filter);
+$redirect = internalRedirectTarget(
+    trim($_POST['redirect'] ?? ''),
+    BASE_URL . '/admin/comments.php?filter=' . urlencode($filter)
+);
 if ($id === null) {
     header('Location: ' . $redirect);
     exit;

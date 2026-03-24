@@ -1,3 +1,18 @@
+<?php
+$articleLink = static fn(array $article): string => articlePublicPath($article);
+$renderAuthorName = static function (array $article): string {
+    if (empty($article['author_name'])) {
+        return '';
+    }
+
+    $label = h((string)$article['author_name']);
+    if (!empty($article['author_public_path'])) {
+        return '<a href="' . h((string)$article['author_public_path']) . '">' . $label . '</a>';
+    }
+
+    return '<span>' . $label . '</span>';
+};
+?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="blog-title">
     <div class="section-heading">
@@ -43,7 +58,7 @@
         <?php foreach ($articles as $article): ?>
           <article class="card">
             <?php if (!empty($article['image_file'])): ?>
-              <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">
+              <a class="card__media" href="<?= h($articleLink($article)) ?>">
                 <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
                      alt="<?= h($article['title']) ?>" loading="lazy">
               </a>
@@ -56,7 +71,7 @@
                 <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
               </p>
               <h2 class="card__title">
-                <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>"><?= h($article['title']) ?></a>
+                <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
               </h2>
               <?php if (!empty($article['perex'])): ?>
                 <p><?= h($article['perex']) ?></p>
@@ -64,11 +79,11 @@
               <p class="meta-row meta-row--tight">
                 <time datetime="<?= h(str_replace(' ', 'T', $article['created_at'])) ?>"><?= formatCzechDate($article['created_at']) ?></time>
                 <?php if (!empty($article['author_name'])): ?>
-                  <span><?= h($article['author_name']) ?></span>
+                  <?= $renderAuthorName($article) ?>
                 <?php endif; ?>
               </p>
               <p>
-                <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a>
                 <?php if (isset($_SESSION['cms_user_id'])): ?>
                   · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                 <?php endif; ?>

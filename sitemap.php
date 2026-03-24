@@ -3,13 +3,12 @@ require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
-$base = BASE_URL;
 $pdo  = db_connect();
 
 echo '<?xml version="1.0" encoding="UTF-8"?>';
 ?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc><?= h($base) ?>/index.php</loc>
+    <loc><?= h(siteUrl('/index.php')) ?></loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -23,7 +22,7 @@ try {
     foreach ($pages as $p):
 ?>
   <url>
-    <loc><?= h($base) ?>/page.php?slug=<?= rawurlencode($p['slug']) ?></loc>
+    <loc><?= h(siteUrl('/page.php?slug=' . rawurlencode($p['slug']))) ?></loc>
     <lastmod><?= date('Y-m-d', strtotime($p['updated_at'])) ?></lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -32,21 +31,21 @@ try {
 
 <?php if (isModuleEnabled('blog')): ?>
   <url>
-    <loc><?= h($base) ?>/blog/index.php</loc>
+    <loc><?= h(siteUrl('/blog/index.php')) ?></loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 <?php
     try {
         $articles = $pdo->query(
-            "SELECT id, updated_at FROM cms_articles
-             WHERE publish_at IS NULL OR publish_at <= NOW()
+            "SELECT id, slug, updated_at FROM cms_articles
+             WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())
              ORDER BY created_at DESC"
         )->fetchAll();
         foreach ($articles as $a):
 ?>
   <url>
-    <loc><?= h($base) ?>/blog/article.php?id=<?= (int)$a['id'] ?></loc>
+    <loc><?= h(articlePublicUrl($a)) ?></loc>
     <lastmod><?= date('Y-m-d', strtotime($a['updated_at'])) ?></lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -56,7 +55,7 @@ endif; ?>
 
 <?php if (isModuleEnabled('news')): ?>
   <url>
-    <loc><?= h($base) ?>/news/index.php</loc>
+    <loc><?= h(siteUrl('/news/index.php')) ?></loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -64,7 +63,7 @@ endif; ?>
 
 <?php if (isModuleEnabled('gallery')): ?>
   <url>
-    <loc><?= h($base) ?>/gallery/index.php</loc>
+    <loc><?= h(siteUrl('/gallery/index.php')) ?></loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>

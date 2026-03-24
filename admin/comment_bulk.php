@@ -7,7 +7,10 @@ $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []
 $action = trim($_POST['action'] ?? '');
 $filter = trim($_POST['filter'] ?? 'pending');
 
-$redirect = BASE_URL . '/admin/comments.php?filter=' . urlencode($filter);
+$redirect = internalRedirectTarget(
+    trim($_POST['redirect'] ?? ''),
+    BASE_URL . '/admin/comments.php?filter=' . urlencode($filter)
+);
 if ($ids === []) {
     header('Location: ' . $redirect);
     exit;

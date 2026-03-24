@@ -19,8 +19,9 @@ $latestArticles = [];
 $homeBlogCount = (int)getSetting('home_blog_count', '5');
 if (isModuleEnabled('blog') && $homeBlogCount > 0) {
     $stmt = db_connect()->prepare(
-        "SELECT a.id, a.title, a.perex, a.content, a.image_file, a.created_at, c.name AS category,
-                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name
+        "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, c.name AS category,
+                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                u.author_public_enabled, u.author_slug, u.role AS author_role
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_users u ON u.id = a.author_id
@@ -29,6 +30,10 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
     );
     $stmt->execute([$homeBlogCount]);
     $latestArticles = $stmt->fetchAll();
+    $latestArticles = array_map(
+        static fn(array $article): array => hydrateAuthorPresentation($article),
+        $latestArticles
+    );
 }
 
 $latestBoard = [];
@@ -60,6 +65,8 @@ if (isModuleEnabled('polls')) {
     $homePoll = $pollStmt->fetch() ?: null;
 }
 
+$homeAuthor = resolveHomeAuthor(db_connect());
+
 renderPublicPage([
     'title' => $siteName,
     'meta' => [
@@ -72,6 +79,7 @@ renderPublicPage([
         'latestArticles' => $latestArticles,
         'latestBoard' => $latestBoard,
         'homePoll' => $homePoll,
+        'homeAuthor' => $homeAuthor,
     ],
     'current_nav' => 'home',
     'page_kind' => 'home',

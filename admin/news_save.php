@@ -3,8 +3,8 @@ require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 verifyCsrf();
 
-$pdo     = db_connect();
-$id      = inputInt('post', 'id');
+$pdo = db_connect();
+$id = inputInt('post', 'id');
 $content = trim($_POST['content'] ?? '');
 
 if ($content === '') {
@@ -13,10 +13,15 @@ if ($content === '') {
 }
 
 if ($id !== null) {
-    $pdo->prepare("UPDATE cms_news SET content = ?, author_id = COALESCE(author_id, ?) WHERE id = ?")
-        ->execute([$content, currentUserId(), $id]);
+    if (canManageOwnNewsOnly()) {
+        $stmt = $pdo->prepare("UPDATE cms_news SET content = ?, author_id = COALESCE(author_id, ?) WHERE id = ? AND author_id = ?");
+        $stmt->execute([$content, currentUserId(), $id, currentUserId()]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE cms_news SET content = ?, author_id = COALESCE(author_id, ?) WHERE id = ?");
+        $stmt->execute([$content, currentUserId(), $id]);
+    }
 } else {
-    $status   = isSuperAdmin() ? 'published' : 'pending';
+    $status = currentUserHasCapability('news_approve') ? 'published' : 'pending';
     $authorId = currentUserId();
     $pdo->prepare("INSERT INTO cms_news (content, status, author_id) VALUES (?,?,?)")->execute([$content, $status, $authorId]);
 }

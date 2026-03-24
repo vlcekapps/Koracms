@@ -21,10 +21,10 @@ if ($title === '') {
     exit;
 }
 
-$isSA        = isSuperAdmin();
-$isCurrent   = $isSA && isset($_POST['is_current'])   ? 1 : 0;
-$isPublished = $isSA && isset($_POST['is_published'])  ? 1 : 0;
-$status      = $isSA ? 'published' : 'pending';
+$canApproveContent = currentUserHasCapability('content_approve_shared');
+$isCurrent   = $canApproveContent && isset($_POST['is_current']) ? 1 : 0;
+$isPublished = $canApproveContent && isset($_POST['is_published']) ? 1 : 0;
+$status      = $canApproveContent ? 'published' : 'pending';
 
 // ── Pokud se tato karta označuje jako aktuální, odznačit předchozí ──────────
 if ($isCurrent) {
@@ -36,8 +36,8 @@ if ($isCurrent) {
 
 // ── Uložení ─────────────────────────────────────────────────────────────────
 if ($id !== null) {
-    // Při editaci: pouze superadmin smí měnit is_current a is_published
-    if ($isSA) {
+    // Při editaci může stav publikace měnit jen role se schvalovacím oprávněním.
+    if ($canApproveContent) {
         $pdo->prepare(
             "UPDATE cms_food_cards
              SET type=?, title=?, description=?, content=?,
@@ -64,8 +64,8 @@ if ($id !== null) {
          VALUES (?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $type, $title, $description, $content, $validFrom, $validTo,
-        $isSA ? $isCurrent   : 0,
-        $isSA ? $isPublished : 0,
+        $canApproveContent ? $isCurrent : 0,
+        $canApproveContent ? $isPublished : 0,
         $status,
         currentUserId()
     ]);

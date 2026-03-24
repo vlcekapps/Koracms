@@ -11,9 +11,19 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Per-article přepínač komentářů v editoru článku a veřejné hlášky pro vypnuté nebo uzavřené komentáře
 - Antispam komentářů přes blokované e-maily / domény a zakázané fráze, plus e-mailové upozornění administrátorovi na nové komentáře čekající na schválení
 - Volitelné e-mailové upozornění autorovi po schválení komentáře, napojené na stejnou mailovou vrstvu jako registrace, reset hesla a rezervace
+- Blogové články nově podporují slug a čisté URL typu `/blog/moje-prvni-clanky`, včetně náhledu, exportu/importu a použití v RSS feedu a sitemapě
+- Veřejná autorská vrstva pro blog a osobní weby: `/author/{slug}`, proklik bylinek na homepage i v blogu a homepage blok `O autorovi / O mně`
+- Správa veřejného autora v administraci i v Mém profilu: zapnutí profilu, vlastní slug, bio, web a avatar uložený do `uploads/authors/`
+- Capability-based role model pro administraci: nové role `autor`, `editor`, `moderátor` a `správce rezervací`, při zachování kompatibility se starší rolí `spolupracovník`
+- Role-aware administrace: levé menu, dashboard a schvalovací akce se nově řídí oprávněními konkrétního účtu, takže autor vidí jen svůj obsah, moderátor moderaci a správce rezervací pouze rezervační část
+- Jednotná admin fronta `Ke schválení` pro obsah, komentáře a rezervace, včetně rychlých akcí a návratu zpět do stejného filtru po schválení nebo moderaci
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
+- Staré odkazy `blog/article.php?id=...` se nyní kanonicky přesměrují na slug URL a veřejné vyhledávání vrací jen publikované články
+- Runtime audit nově hlídá i veřejnou stránku autora, homepage author block, author byliny a nová pole v administraci
+- Installace a migrace rozšiřují `cms_users.role` o nové redakční role a runtime audit nově ověřuje i přístupovou matici pro autora, moderátora a správce rezervací
+- Schvalování dokumentů úřední desky je nově napojené na stejný endpoint jako ostatní sdílený obsah a moderace komentářů i rezervací nově podporuje bezpečný interní návrat přes validovaný `redirect`
 
 ## [3.0.0-beta.1] – 2026-03-23
 

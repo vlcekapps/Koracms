@@ -64,7 +64,7 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
     </div>
   </fieldset>
 
-  <?php if (isSuperAdmin()): ?>
+  <?php if (currentUserHasCapability('content_approve_shared')): ?>
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.75rem 1rem">
     <legend>Publikování</legend>
 

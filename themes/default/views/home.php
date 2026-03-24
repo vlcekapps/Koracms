@@ -16,7 +16,21 @@ $blogVisibility = $readThemeSelect('home_blog_visibility', 'show');
 $boardVisibility = $readThemeSelect('home_board_visibility', 'show');
 $pollVisibility = $readThemeSelect('home_poll_visibility', 'show');
 $newsletterVisibility = $readThemeSelect('home_newsletter_visibility', 'show');
+$authorVisibility = $readThemeSelect('home_author_visibility', 'hide');
 $ctaVisibility = $readThemeSelect('home_cta_visibility', 'hide');
+$articleLink = static fn(array $article): string => articlePublicPath($article);
+$renderAuthorName = static function (array $entry): string {
+    if (empty($entry['author_name'])) {
+        return '';
+    }
+
+    $label = h((string)$entry['author_name']);
+    if (!empty($entry['author_public_path'])) {
+        return '<a href="' . h((string)$entry['author_public_path']) . '">' . $label . '</a>';
+    }
+
+    return '<span>' . $label . '</span>';
+};
 
 $newsAvailable = !empty($latestNews);
 $blogAvailable = !empty($latestArticles);
@@ -82,6 +96,7 @@ $showBlog = $blogVisibility === 'show' && !empty($blogItems);
 $showBoard = $boardVisibility === 'show' && !empty($boardItems);
 $showPoll = $pollVisibility === 'show' && $pollAvailable && $featuredModule !== 'poll';
 $showNewsletter = $newsletterVisibility === 'show' && $newsletterAvailable && $featuredModule !== 'newsletter';
+$showAuthor = $authorVisibility === 'show' && !empty($homeAuthor);
 
 $ctaActions = [
     [
@@ -190,6 +205,54 @@ $renderIntroSection = static function () use ($showHero, $homeIntro, $heroStats,
     return (string)ob_get_clean();
 };
 
+$renderAuthorSection = static function () use ($showAuthor, $homeAuthor): string {
+    if (!$showAuthor) {
+        return '';
+    }
+
+    $sectionTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi';
+    $ctaLabel = currentSiteProfileKey() === 'personal' ? 'Celý profil' : 'Profil autora';
+
+    ob_start();
+    ?>
+    <section class="surface surface--accent home-section home-section--author" data-home-section="author" aria-labelledby="autor-nadpis">
+      <div class="author-panel author-panel--home">
+        <div class="author-panel__media">
+          <?php if (!empty($homeAuthor['author_avatar_url'])): ?>
+            <img
+              class="author-avatar"
+              src="<?= h((string)$homeAuthor['author_avatar_url']) ?>"
+              alt="Profilová fotografie autora <?= h((string)$homeAuthor['author_display_name']) ?>"
+              loading="lazy">
+          <?php else: ?>
+            <div class="author-avatar author-avatar--placeholder" aria-hidden="true">
+              <?= h(mb_strtoupper(mb_substr((string)$homeAuthor['author_display_name'], 0, 1))) ?>
+            </div>
+          <?php endif; ?>
+        </div>
+        <div class="author-panel__content">
+          <p class="section-kicker">Autor</p>
+          <h2 id="autor-nadpis" class="section-title"><?= h($sectionTitle) ?></h2>
+          <p class="author-panel__name"><?= h((string)$homeAuthor['author_display_name']) ?></p>
+          <?php if (!empty($homeAuthor['author_bio'])): ?>
+            <div class="prose author-panel__bio">
+              <?= renderContent((string)$homeAuthor['author_bio']) ?>
+            </div>
+          <?php endif; ?>
+          <div class="button-row button-row--start">
+            <a class="button-primary" href="<?= h((string)$homeAuthor['author_public_path']) ?>"><?= h($ctaLabel) ?></a>
+            <?php if (!empty($homeAuthor['author_website_url'])): ?>
+              <a class="button-secondary" href="<?= h((string)$homeAuthor['author_website_url']) ?>" target="_blank" rel="noopener noreferrer">Web autora</a>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+    </section>
+    <?php
+
+    return (string)ob_get_clean();
+};
+
 $renderNewsSection = static function (array $items, bool $compactCards = false): string {
     if ($items === []) {
         return '';
@@ -257,7 +320,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
         <div class="home-featured">
           <article class="card card--feature home-featured__lead">
             <?php if (!empty($leadArticle['image_file'])): ?>
-              <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$leadArticle['id'] ?>">
+              <a class="card__media" href="<?= h($articleLink($leadArticle)) ?>">
                 <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($leadArticle['image_file']) ?>"
                      alt="<?= h($leadArticle['title']) ?>" loading="lazy">
               </a>
@@ -270,17 +333,17 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                 <?php endif; ?>
                 <span><?= readingTime(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? '')) ?> min čtení</span>
                 <?php if (!empty($leadArticle['author_name'])): ?>
-                  <span><?= h($leadArticle['author_name']) ?></span>
+                  <?= $renderAuthorName($leadArticle) ?>
                 <?php endif; ?>
               </p>
               <h3 class="card__title card__title--feature">
-                <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$leadArticle['id'] ?>"><?= h($leadArticle['title']) ?></a>
+                <a href="<?= h($articleLink($leadArticle)) ?>"><?= h($leadArticle['title']) ?></a>
               </h3>
               <?php if (!empty($leadArticle['perex'])): ?>
                 <p><?= h($leadArticle['perex']) ?></p>
               <?php endif; ?>
               <p>
-                <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$leadArticle['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                <a class="section-link" href="<?= h($articleLink($leadArticle)) ?>">Číst dále <span aria-hidden="true">→</span></a>
                 <?php if (isset($_SESSION['cms_user_id'])): ?>
                   · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$leadArticle['id'] ?>">Upravit</a>
                 <?php endif; ?>
@@ -292,7 +355,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
             <?php foreach ($secondaryArticles as $article): ?>
               <article class="card">
                 <?php if (!empty($article['image_file'])): ?>
-                  <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">
+                  <a class="card__media" href="<?= h($articleLink($article)) ?>">
                     <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
                          alt="<?= h($article['title']) ?>" loading="lazy">
                   </a>
@@ -304,17 +367,17 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                     <?php endif; ?>
                     <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
                     <?php if (!empty($article['author_name'])): ?>
-                      <span><?= h($article['author_name']) ?></span>
+                      <?= $renderAuthorName($article) ?>
                     <?php endif; ?>
                   </p>
                   <h3 class="card__title">
-                    <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>"><?= h($article['title']) ?></a>
+                    <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
                   </h3>
                   <?php if (!empty($article['perex'])): ?>
                     <p><?= h($article['perex']) ?></p>
                   <?php endif; ?>
                   <p>
-                    <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                    <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a>
                     <?php if (isset($_SESSION['cms_user_id'])): ?>
                       · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                     <?php endif; ?>
@@ -329,7 +392,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
           <?php foreach ($items as $article): ?>
             <article class="card">
               <?php if (!empty($article['image_file'])): ?>
-                <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">
+                <a class="card__media" href="<?= h($articleLink($article)) ?>">
                   <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
                        alt="<?= h($article['title']) ?>" loading="lazy">
                 </a>
@@ -341,17 +404,17 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                   <?php endif; ?>
                   <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
                   <?php if (!empty($article['author_name'])): ?>
-                    <span><?= h($article['author_name']) ?></span>
+                    <?= $renderAuthorName($article) ?>
                   <?php endif; ?>
                 </p>
                 <h3 class="card__title">
-                  <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>"><?= h($article['title']) ?></a>
+                  <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
                 </h3>
                 <?php if (!empty($article['perex'])): ?>
                   <p><?= h($article['perex']) ?></p>
                 <?php endif; ?>
                 <p>
-                  <a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$article['id'] ?>">Číst dále <span aria-hidden="true">→</span></a>
+                  <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a>
                   <?php if (isset($_SESSION['cms_user_id'])): ?>
                     · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                   <?php endif; ?>
@@ -511,7 +574,7 @@ $renderFeaturedSection = static function () use (
               </div>
               <article class="card card--feature">
                 <?php if (!empty($featuredArticle['image_file'])): ?>
-                  <a class="card__media" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$featuredArticle['id'] ?>">
+                  <a class="card__media" href="<?= h($articleLink($featuredArticle)) ?>">
                     <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($featuredArticle['image_file']) ?>"
                          alt="<?= h($featuredArticle['title']) ?>" loading="lazy">
                   </a>
@@ -523,16 +586,16 @@ $renderFeaturedSection = static function () use (
                     <?php endif; ?>
                     <span><?= readingTime(($featuredArticle['perex'] ?? '') . ($featuredArticle['content'] ?? '')) ?> min čtení</span>
                     <?php if (!empty($featuredArticle['author_name'])): ?>
-                      <span><?= h($featuredArticle['author_name']) ?></span>
+                      <?= $renderAuthorName($featuredArticle) ?>
                     <?php endif; ?>
                   </p>
                   <h3 class="card__title card__title--feature">
-                    <a href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$featuredArticle['id'] ?>"><?= h($featuredArticle['title']) ?></a>
+                    <a href="<?= h($articleLink($featuredArticle)) ?>"><?= h($featuredArticle['title']) ?></a>
                   </h3>
                   <?php if (!empty($featuredArticle['perex'])): ?>
                     <p><?= h($featuredArticle['perex']) ?></p>
                   <?php endif; ?>
-                  <p><a class="section-link" href="<?= BASE_URL ?>/blog/article.php?id=<?= (int)$featuredArticle['id'] ?>">Číst článek <span aria-hidden="true">→</span></a></p>
+                  <p><a class="section-link" href="<?= h($articleLink($featuredArticle)) ?>">Číst článek <span aria-hidden="true">→</span></a></p>
                 </div>
               </article>
             </section>
@@ -637,6 +700,7 @@ $renderFeaturedSection = static function () use (
 
 $introHtml = $renderIntroSection();
 $featuredHtml = $renderFeaturedSection();
+$authorHtml = $renderAuthorSection();
 $newsHtml = $showNews ? $renderNewsSection($newsItems, $homeLayout === 'compact') : '';
 $blogHtml = $showBlog ? $renderBlogSection($blogItems, $homeLayout === 'editorial' && $featuredModule !== 'blog', $homeLayout === 'compact') : '';
 $boardHtml = $renderBoardSection($showBoard ? $boardItems : []);
@@ -691,6 +755,7 @@ if ($orderedUtilityHtml !== []) {
 
 $hasAnyContent = $introHtml !== ''
     || $featuredHtml !== ''
+    || $authorHtml !== ''
     || $orderedPrimaryHtml !== []
     || $utilityHtml !== '';
 
@@ -699,6 +764,7 @@ $pageStackClasses = ['page-stack', 'page-stack--home', 'page-stack--home-' . $ho
 <div class="<?= h(implode(' ', $pageStackClasses)) ?>">
   <?= $introHtml ?>
   <?= $featuredHtml ?>
+  <?= $authorHtml ?>
 
   <?php if ($homeLayout === 'editorial'): ?>
     <?php if ($orderedPrimaryHtml !== []): ?>

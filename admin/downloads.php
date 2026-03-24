@@ -60,7 +60,7 @@ adminHeader('Ke stažení');
         </td>
         <td class="actions">
           <a href="download_form.php?id=<?= (int)$d['id'] ?>" class="btn">Upravit</a>
-          <?php if ($d['status'] === 'pending' && isSuperAdmin()): ?>
+          <?php if ($d['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="downloads">

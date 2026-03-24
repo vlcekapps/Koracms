@@ -4,100 +4,341 @@ requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
 autoCompleteBookings();
-$counts = [];
-foreach ([
-    'cms_articles'       => 'Články',
-    'cms_news'           => 'Novinky',
-    'cms_events'         => 'Události',
-    'cms_podcast_shows'  => 'Podcasty',
-    'cms_podcasts'       => 'Epizody podcastu',
-    'cms_places'         => 'Zajímavá místa',
-    'cms_pages'          => 'Statické stránky',
-    'cms_downloads'      => 'Soubory ke stažení',
-    'cms_food_cards'     => 'Jídelní / nápoj. lístky',
-    'cms_gallery_albums' => 'Galerie – alba',
-    'cms_gallery_photos' => 'Galerie – fotografie',
-    'cms_chat'           => 'Chat zprávy',
-    'cms_contact'        => 'Kontaktní zprávy',
-    'cms_polls'          => 'Ankety',
-    'cms_faqs'           => 'FAQ otázky',
-    'cms_board'          => 'Úřední deska',
-] as $tbl => $label) {
+
+$accountLabel = isSuperAdmin() ? 'Superadmin' : userRoleLabel(currentUserRole());
+$accountName = trim(currentUserDisplayName()) !== '' ? currentUserDisplayName() : $accountLabel;
+
+$safeCount = static function (PDO $pdo, string $sql, array $params = []): ?int {
     try {
-        $counts[$label] = (int)$pdo->query("SELECT COUNT(*) FROM {$tbl}")->fetchColumn();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
     } catch (\PDOException $e) {
-        $counts[$label] = '–';
+        return null;
+    }
+};
+
+$canManageBlog = currentUserHasCapability('blog_manage_own');
+$canManageAllBlog = currentUserHasCapability('blog_manage_all');
+$canApproveBlog = currentUserHasCapability('blog_approve');
+$canManageNews = currentUserHasCapability('news_manage_own');
+$canManageAllNews = currentUserHasCapability('news_manage_all');
+$canApproveNews = currentUserHasCapability('news_approve');
+$canManageSharedContent = currentUserHasCapability('content_manage_shared');
+$canApproveSharedContent = currentUserHasCapability('content_approve_shared');
+$canManageComments = currentUserHasCapability('comments_manage');
+$canManageMessages = currentUserHasCapability('messages_manage');
+$canManageBookings = currentUserHasCapability('bookings_manage');
+$canManageNewsletter = currentUserHasCapability('newsletter_manage');
+$canManageSettings = currentUserHasCapability('settings_manage');
+$canManageUsers = currentUserHasCapability('users_manage');
+$canViewStatistics = currentUserHasCapability('statistics_view');
+$canManageImportExport = currentUserHasCapability('import_export_manage');
+
+$overviewRows = [];
+
+if ($canManageBlog && isModuleEnabled('blog')) {
+    $blogScopeSql = $canManageAllBlog ? 'SELECT COUNT(*) FROM cms_articles' : 'SELECT COUNT(*) FROM cms_articles WHERE author_id = ?';
+    $blogScopeParams = $canManageAllBlog ? [] : [currentUserId()];
+    $blogCount = $safeCount($pdo, $blogScopeSql, $blogScopeParams);
+    if ($blogCount !== null) {
+        $overviewRows[] = [
+            'label' => $canManageAllBlog ? 'Články' : 'Vaše články',
+            'count' => $blogCount,
+            'url' => 'blog.php',
+        ];
     }
 }
 
-$pendingComments = pendingCommentCount();
+if ($canManageNews && isModuleEnabled('news')) {
+    $newsScopeSql = $canManageAllNews ? 'SELECT COUNT(*) FROM cms_news' : 'SELECT COUNT(*) FROM cms_news WHERE author_id = ?';
+    $newsScopeParams = $canManageAllNews ? [] : [currentUserId()];
+    $newsCount = $safeCount($pdo, $newsScopeSql, $newsScopeParams);
+    if ($newsCount !== null) {
+        $overviewRows[] = [
+            'label' => $canManageAllNews ? 'Novinky' : 'Vaše novinky',
+            'count' => $newsCount,
+            'url' => 'news.php',
+        ];
+    }
+}
 
-$pendingContent = [];
-$pendingModules = [
-    'articles' => ['table' => 'cms_articles', 'label' => 'Článků', 'url' => 'blog.php'],
-    'news'     => ['table' => 'cms_news',     'label' => 'Novinek', 'url' => 'news.php'],
-    'podcasts' => ['table' => 'cms_podcasts', 'label' => 'Epizod', 'url' => 'podcast.php'],
-    'events'   => ['table' => 'cms_events',   'label' => 'Událostí', 'url' => 'events.php'],
-    'places'    => ['table' => 'cms_places',    'label' => 'Míst',    'url' => 'places.php'],
-    'pages'     => ['table' => 'cms_pages',    'label' => 'Stránek', 'url' => 'pages.php'],
-    'downloads' => ['table' => 'cms_downloads','label' => 'Souborů', 'url' => 'downloads.php'],
-    'food'      => ['table' => 'cms_food_cards','label' => 'Lístků',  'url' => 'food.php'],
-    'board'     => ['table' => 'cms_board',     'label' => 'Dokumentů','url' => 'board.php'],
-];
-foreach ($pendingModules as $key => $cfg) {
-    try {
-        $n = (int)$pdo->query("SELECT COUNT(*) FROM {$cfg['table']} WHERE status='pending'")->fetchColumn();
-        if ($n > 0) $pendingContent[$key] = ['count' => $n, 'label' => $cfg['label'], 'url' => $cfg['url']];
-    } catch (\PDOException $e) {}
+if ($canManageSharedContent) {
+    $sharedOverview = [
+        ['module' => null, 'table' => 'cms_pages', 'label' => 'Stránky', 'url' => 'pages.php'],
+        ['module' => 'events', 'table' => 'cms_events', 'label' => 'Události', 'url' => 'events.php'],
+        ['module' => 'podcast', 'table' => 'cms_podcasts', 'label' => 'Epizody podcastu', 'url' => 'podcast.php'],
+        ['module' => 'places', 'table' => 'cms_places', 'label' => 'Místa', 'url' => 'places.php'],
+        ['module' => 'downloads', 'table' => 'cms_downloads', 'label' => 'Ke stažení', 'url' => 'downloads.php'],
+        ['module' => 'food', 'table' => 'cms_food_cards', 'label' => 'Lístky', 'url' => 'food.php'],
+        ['module' => 'faq', 'table' => 'cms_faqs', 'label' => 'FAQ', 'url' => 'faq.php'],
+        ['module' => 'board', 'table' => 'cms_board', 'label' => 'Úřední deska', 'url' => 'board.php'],
+        ['module' => 'gallery', 'table' => 'cms_gallery_albums', 'label' => 'Galerie', 'url' => 'gallery_albums.php'],
+        ['module' => 'polls', 'table' => 'cms_polls', 'label' => 'Ankety', 'url' => 'polls.php'],
+    ];
+
+    foreach ($sharedOverview as $item) {
+        if (!empty($item['module']) && !isModuleEnabled($item['module'])) {
+            continue;
+        }
+        $itemCount = $safeCount($pdo, "SELECT COUNT(*) FROM {$item['table']}");
+        if ($itemCount === null) {
+            continue;
+        }
+        $overviewRows[] = [
+            'label' => $item['label'],
+            'count' => $itemCount,
+            'url' => $item['url'],
+        ];
+    }
+}
+
+if ($canManageComments && isModuleEnabled('blog')) {
+    $commentCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_comments');
+    if ($commentCount !== null) {
+        $overviewRows[] = [
+            'label' => 'Komentáře',
+            'count' => $commentCount,
+            'url' => 'comments.php',
+        ];
+    }
+}
+
+if ($canManageMessages) {
+    if (isModuleEnabled('contact')) {
+        $contactCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_contact');
+        if ($contactCount !== null) {
+            $overviewRows[] = [
+                'label' => 'Kontaktní zprávy',
+                'count' => $contactCount,
+                'url' => 'contact.php',
+            ];
+        }
+    }
+    if (isModuleEnabled('chat')) {
+        $chatCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_chat');
+        if ($chatCount !== null) {
+            $overviewRows[] = [
+                'label' => 'Chat zprávy',
+                'count' => $chatCount,
+                'url' => 'chat.php',
+            ];
+        }
+    }
+}
+
+if ($canManageBookings && isModuleEnabled('reservations')) {
+    $bookingCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_res_bookings');
+    if ($bookingCount !== null) {
+        $overviewRows[] = [
+            'label' => 'Rezervace',
+            'count' => $bookingCount,
+            'url' => 'res_bookings.php',
+        ];
+    }
+}
+
+if ($canManageNewsletter && isModuleEnabled('newsletter')) {
+    $subscriberCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_subscribers WHERE confirmed = 1');
+    if ($subscriberCount !== null) {
+        $overviewRows[] = [
+            'label' => 'Odběratelé newsletteru',
+            'count' => $subscriberCount,
+            'url' => 'newsletter.php',
+        ];
+    }
+}
+
+if ($canManageUsers) {
+    $userCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_users');
+    if ($userCount !== null) {
+        $overviewRows[] = [
+            'label' => 'Uživatelé',
+            'count' => $userCount,
+            'url' => 'users.php',
+        ];
+    }
+}
+
+$pendingReviewItems = canAccessReviewQueue() ? pendingReviewSummary($pdo) : [];
+$pendingReviewTotal = array_sum(array_column($pendingReviewItems, 'count'));
+
+$contentSummaries = [];
+if ($canManageBlog && isModuleEnabled('blog')) {
+    $blogTotal = $canManageAllBlog
+        ? $safeCount($pdo, 'SELECT COUNT(*) FROM cms_articles')
+        : $safeCount($pdo, 'SELECT COUNT(*) FROM cms_articles WHERE author_id = ?', [currentUserId()]);
+    $blogPublished = $canManageAllBlog
+        ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_articles WHERE status = 'published'")
+        : $safeCount($pdo, "SELECT COUNT(*) FROM cms_articles WHERE author_id = ? AND status = 'published'", [currentUserId()]);
+    $blogPending = $canManageAllBlog
+        ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_articles WHERE status = 'pending'")
+        : $safeCount($pdo, "SELECT COUNT(*) FROM cms_articles WHERE author_id = ? AND status = 'pending'", [currentUserId()]);
+
+    if ($blogTotal !== null && $blogPublished !== null && $blogPending !== null) {
+        $contentSummaries[] = [
+            'heading' => $canManageAllBlog ? 'Blog' : 'Vaše články',
+            'items' => [
+                'Celkem' => $blogTotal,
+                'Publikováno' => $blogPublished,
+                'Čeká na schválení' => $blogPending,
+            ],
+            'url' => 'blog.php',
+        ];
+    }
+}
+
+if ($canManageNews && isModuleEnabled('news')) {
+    $newsTotal = $canManageAllNews
+        ? $safeCount($pdo, 'SELECT COUNT(*) FROM cms_news')
+        : $safeCount($pdo, 'SELECT COUNT(*) FROM cms_news WHERE author_id = ?', [currentUserId()]);
+    $newsPublished = $canManageAllNews
+        ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'published'")
+        : $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND status = 'published'", [currentUserId()]);
+    $newsPending = $canManageAllNews
+        ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'pending'")
+        : $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND status = 'pending'", [currentUserId()]);
+
+    if ($newsTotal !== null && $newsPublished !== null && $newsPending !== null) {
+        $contentSummaries[] = [
+            'heading' => $canManageAllNews ? 'Novinky' : 'Vaše novinky',
+            'items' => [
+                'Celkem' => $newsTotal,
+                'Publikováno' => $newsPublished,
+                'Čeká na schválení' => $newsPending,
+            ],
+            'url' => 'news.php',
+        ];
+    }
 }
 
 $pages = [];
-try {
-    $pages = $pdo->query("SELECT title, slug, is_published FROM cms_pages ORDER BY nav_order, title")->fetchAll();
-} catch (\PDOException $e) {}
-
-$upcomingEvents = [];
-try {
-    $upcomingEvents = $pdo->query(
-        "SELECT title, event_date, location FROM cms_events
-         WHERE is_published = 1 AND event_date >= NOW()
-         ORDER BY event_date ASC LIMIT 5"
-    )->fetchAll();
-} catch (\PDOException $e) {}
-
-$subscriberCount = 0;
-try {
-    $subscriberCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_subscribers WHERE confirmed = 1")->fetchColumn();
-} catch (\PDOException $e) {}
-
-$resUpcoming = 0;
-$resPending  = 0;
-if (isModuleEnabled('reservations')) {
+if ($canManageSharedContent) {
     try {
-        $resUpcoming = (int)$pdo->query(
-            "SELECT COUNT(*) FROM cms_res_bookings
-             WHERE status IN ('pending','confirmed')
-               AND booking_date >= CURDATE()
-               AND booking_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)"
-        )->fetchColumn();
-    } catch (\PDOException $e) {}
-    try {
-        $resPending = (int)$pdo->query(
-            "SELECT COUNT(*) FROM cms_res_bookings WHERE status = 'pending'"
-        )->fetchColumn();
-    } catch (\PDOException $e) {}
+        $pages = $pdo->query(
+            "SELECT title, slug, is_published
+             FROM cms_pages
+             ORDER BY nav_order, title"
+        )->fetchAll();
+    } catch (\PDOException $e) {
+        $pages = [];
+    }
 }
 
-adminHeader('Přehled');
+$upcomingEvents = [];
+if ($canManageSharedContent && isModuleEnabled('events')) {
+    try {
+        $upcomingEvents = $pdo->query(
+            "SELECT title, event_date, location
+             FROM cms_events
+             WHERE is_published = 1 AND event_date >= NOW()
+             ORDER BY event_date ASC
+             LIMIT 5"
+        )->fetchAll();
+    } catch (\PDOException $e) {
+        $upcomingEvents = [];
+    }
+}
 
-// ── Statistiky návštěvnosti ─────────────────────────────────────────────────
-if (isModuleEnabled('statistics') && getSetting('visitor_tracking_enabled', '0') === '1'):
+$reservationSummary = null;
+if ($canManageBookings && isModuleEnabled('reservations')) {
+    $upcoming = $safeCount(
+        $pdo,
+        "SELECT COUNT(*) FROM cms_res_bookings
+         WHERE status IN ('pending','confirmed')
+           AND booking_date >= CURDATE()
+           AND booking_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)"
+    );
+    $pending = $safeCount(
+        $pdo,
+        "SELECT COUNT(*) FROM cms_res_bookings WHERE status = 'pending'"
+    );
+    if ($upcoming !== null && $pending !== null) {
+        $reservationSummary = [
+            'upcoming' => $upcoming,
+            'pending' => $pending,
+        ];
+    }
+}
+
+$enabledModules = [];
+if ($canManageSettings) {
+    foreach ([
+        'blog' => 'Blog',
+        'news' => 'Novinky',
+        'chat' => 'Chat',
+        'contact' => 'Kontakt',
+        'events' => 'Události',
+        'podcast' => 'Podcast',
+        'places' => 'Zajímavá místa',
+        'food' => 'Jídelní lístek',
+        'gallery' => 'Galerie',
+        'newsletter' => 'Newsletter',
+        'downloads' => 'Ke stažení',
+        'polls' => 'Ankety',
+        'faq' => 'FAQ',
+        'board' => 'Úřední deska',
+        'reservations' => 'Rezervace',
+        'statistics' => 'Statistiky',
+    ] as $moduleKey => $moduleLabel) {
+        $enabledModules[] = [
+            'label' => $moduleLabel,
+            'enabled' => isModuleEnabled($moduleKey),
+        ];
+    }
+}
+
+$quickLinks = [];
+if (canAccessReviewQueue()) {
+    $quickLinks[] = ['url' => 'review_queue.php', 'label' => $pendingReviewTotal > 0 ? 'Fronta ke schválení' : 'Schvalovací fronta'];
+}
+if ($canManageBlog && isModuleEnabled('blog')) {
+    $quickLinks[] = ['url' => 'blog.php', 'label' => 'Správa článků'];
+    $quickLinks[] = ['url' => 'blog_form.php', 'label' => 'Nový článek'];
+}
+if ($canManageNews && isModuleEnabled('news')) {
+    $quickLinks[] = ['url' => 'news.php', 'label' => 'Správa novinek'];
+}
+if ($canManageComments && isModuleEnabled('blog')) {
+    $quickLinks[] = ['url' => 'comments.php?filter=pending', 'label' => 'Čekající komentáře'];
+}
+if ($canManageMessages) {
+    if (isModuleEnabled('contact')) {
+        $quickLinks[] = ['url' => 'contact.php', 'label' => 'Kontaktní zprávy'];
+    }
+    if (isModuleEnabled('chat')) {
+        $quickLinks[] = ['url' => 'chat.php', 'label' => 'Chat zprávy'];
+    }
+}
+if ($canManageBookings && isModuleEnabled('reservations')) {
+    $quickLinks[] = ['url' => 'res_bookings.php', 'label' => 'Správa rezervací'];
+}
+if ($canManageSharedContent) {
+    $quickLinks[] = ['url' => 'pages.php', 'label' => 'Stránky webu'];
+}
+if ($canManageNewsletter && isModuleEnabled('newsletter')) {
+    $quickLinks[] = ['url' => 'newsletter.php', 'label' => 'Newsletter'];
+}
+if ($canManageUsers) {
+    $quickLinks[] = ['url' => 'users.php', 'label' => 'Uživatelé'];
+}
+if ($canManageSettings) {
+    $quickLinks[] = ['url' => 'settings.php', 'label' => 'Nastavení webu'];
+}
+if ($canManageImportExport) {
+    $quickLinks[] = ['url' => 'export.php', 'label' => 'Export dat'];
+}
+if (isSuperAdmin()) {
+    $quickLinks[] = ['url' => 'themes.php', 'label' => 'Vzhled a šablony'];
+}
+
+$visitorStats = null;
+$chartData = [];
+$maxViews = 1;
+if ($canViewStatistics && isModuleEnabled('statistics') && getSetting('visitor_tracking_enabled', '0') === '1') {
     statsCleanup();
-    $vs = getVisitorStats();
-    $fmt = fn(int $n) => number_format($n, 0, ',', "\u{00a0}");
+    $visitorStats = getVisitorStats();
 
-    // Posledních 7 dní – data pro graf
-    $days7 = [];
     try {
         $rows = $pdo->query(
             "SELECT DATE(created_at) AS d, COUNT(*) AS views
@@ -106,173 +347,202 @@ if (isModuleEnabled('statistics') && getSetting('visitor_tracking_enabled', '0')
              GROUP BY DATE(created_at)
              ORDER BY d"
         )->fetchAll();
-        foreach ($rows as $r) $days7[$r['d']] = (int)$r['views'];
-    } catch (\PDOException $e) {}
+        $viewsByDay = [];
+        foreach ($rows as $row) {
+            $viewsByDay[$row['d']] = (int)$row['views'];
+        }
 
-    // Doplnit chybějící dny
-    $chartData = [];
-    $maxViews  = 1;
-    for ($i = 6; $i >= 0; $i--) {
-        $date = date('Y-m-d', strtotime("-{$i} days"));
-        $v    = $days7[$date] ?? 0;
-        $chartData[] = ['date' => $date, 'label' => date('j.n.', strtotime($date)), 'views' => $v];
-        if ($v > $maxViews) $maxViews = $v;
+        for ($offset = 6; $offset >= 0; $offset--) {
+            $date = date('Y-m-d', strtotime("-{$offset} days"));
+            $views = $viewsByDay[$date] ?? 0;
+            $chartData[] = [
+                'date' => $date,
+                'label' => date('j.n.', strtotime($date)),
+                'views' => $views,
+            ];
+            $maxViews = max($maxViews, $views);
+        }
+    } catch (\PDOException $e) {
+        $chartData = [];
     }
+}
+
+adminHeader('Přehled');
 ?>
-<section aria-labelledby="stat-heading" style="margin-bottom:1.5rem">
-  <h2 id="stat-heading">Návštěvnost</h2>
-  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem" role="list" aria-label="Souhrn návštěvnosti">
-    <div role="listitem" style="background:#f0f7ff;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['online']) ?></div>
-      <div style="font-size:.85rem;color:#555">Online</div>
-    </div>
-    <div role="listitem" style="background:#f0fff0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['today']) ?></div>
-      <div style="font-size:.85rem;color:#555">Dnes</div>
-    </div>
-    <div role="listitem" style="background:#fffff0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['month']) ?></div>
-      <div style="font-size:.85rem;color:#555">Tento měsíc</div>
-    </div>
-    <div role="listitem" style="background:#fff0f0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['total']) ?></div>
-      <div style="font-size:.85rem;color:#555">Celkem</div>
-    </div>
+
+<p>
+  Jste přihlášen jako <strong><?= h($accountName) ?></strong>.
+  Role tohoto účtu: <strong><?= h($accountLabel) ?></strong>.
+</p>
+
+<?php if (!empty($quickLinks)): ?>
+<nav aria-label="Rychlé odkazy" class="button-row" style="margin-bottom:1rem">
+  <?php foreach ($quickLinks as $link): ?>
+    <a href="<?= h($link['url']) ?>" class="btn"><?= h($link['label']) ?></a>
+  <?php endforeach; ?>
+</nav>
+<?php endif; ?>
+
+<?php if ($visitorStats !== null): ?>
+<section aria-labelledby="stats-heading" style="margin-bottom:1.5rem">
+  <h2 id="stats-heading">Návštěvnost</h2>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem" role="list" aria-label="Souhrn návštěvnosti">
+    <?php foreach ([
+        ['label' => 'Online', 'value' => (int)$visitorStats['online'], 'background' => '#f0f7ff'],
+        ['label' => 'Dnes', 'value' => (int)$visitorStats['today'], 'background' => '#f0fff0'],
+        ['label' => 'Tento měsíc', 'value' => (int)$visitorStats['month'], 'background' => '#fffbea'],
+        ['label' => 'Celkem', 'value' => (int)$visitorStats['total'], 'background' => '#fff2f2'],
+    ] as $statItem): ?>
+      <div role="listitem" style="background:<?= h($statItem['background']) ?>;padding:.75rem 1rem;border-radius:8px;min-width:120px;text-align:center">
+        <div style="font-size:1.5rem;font-weight:700"><?= number_format($statItem['value'], 0, ',', ' ') ?></div>
+        <div style="font-size:.9rem;color:#444"><?= h($statItem['label']) ?></div>
+      </div>
+    <?php endforeach; ?>
   </div>
 
-  <?php if (!empty($chartData)): ?>
+  <?php if ($chartData !== []): ?>
   <figure style="margin:0">
-    <figcaption class="sr-only">Návštěvnost za posledních 7 dní</figcaption>
+    <figcaption class="sr-only">Návštěvnost za posledních 7 dnů</figcaption>
     <div style="display:flex;align-items:flex-end;gap:4px;height:100px" aria-hidden="true">
-      <?php foreach ($chartData as $d): ?>
-        <div style="flex:1;background:#005fcc;min-height:2px;height:<?= round($d['views'] / $maxViews * 100) ?>%"
-             title="<?= h($d['label']) ?>: <?= $d['views'] ?> zobrazení"></div>
+      <?php foreach ($chartData as $chartItem): ?>
+        <div
+          style="flex:1;background:#005fcc;min-height:2px;height:<?= (int)round(($chartItem['views'] / $maxViews) * 100) ?>%"
+          title="<?= h($chartItem['label']) ?>: <?= (int)$chartItem['views'] ?> zobrazení"></div>
       <?php endforeach; ?>
     </div>
     <div style="display:flex;gap:4px" aria-hidden="true">
-      <?php foreach ($chartData as $d): ?>
-        <span style="flex:1;text-align:center;font-size:.7rem;color:#666"><?= h($d['label']) ?></span>
+      <?php foreach ($chartData as $chartItem): ?>
+        <span style="flex:1;text-align:center;font-size:.75rem;color:#666"><?= h($chartItem['label']) ?></span>
       <?php endforeach; ?>
     </div>
-    <table class="sr-only">
-      <caption>Návštěvnost za posledních 7 dní</caption>
-      <thead><tr><th scope="col">Den</th><th scope="col">Zobrazení</th></tr></thead>
-      <tbody>
-      <?php foreach ($chartData as $d): ?>
-        <tr><td><?= h($d['label']) ?></td><td><?= $d['views'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
   </figure>
-  <?php endif; ?>
-
-  <?php
-    // Nejčtenější články (top 5)
-    if (isModuleEnabled('blog')):
-        $topArticles = [];
-        try {
-            $topArticles = $pdo->query(
-                "SELECT title, view_count FROM cms_articles
-                 WHERE status = 'published' AND view_count > 0
-                 ORDER BY view_count DESC LIMIT 5"
-            )->fetchAll();
-        } catch (\PDOException $e) {}
-        if (!empty($topArticles)):
-  ?>
-  <h3>Nejčtenější články</h3>
-  <ol>
-    <?php foreach ($topArticles as $a): ?>
-      <li><?= h($a['title']) ?> <small>(<?= (int)$a['view_count'] ?> zobrazení)</small></li>
-    <?php endforeach; ?>
-  </ol>
-  <?php endif; endif; ?>
-
   <p><a href="statistics.php">Podrobné statistiky <span aria-hidden="true">→</span></a></p>
+  <?php endif; ?>
 </section>
 <?php endif; ?>
 
+<?php if ($pendingReviewItems !== []): ?>
+<section style="background:#fffbe6;border:1px solid #d7b600;padding:1rem;margin:1rem 0" aria-labelledby="pending-heading">
+  <h2 id="pending-heading" style="margin-top:0">Ke schválení</h2>
+  <p>Máte <strong><?= (int)$pendingReviewTotal ?></strong> položek, které čekají na vaši akci.</p>
+  <ul>
+    <?php foreach ($pendingReviewItems as $item): ?>
+      <li>
+        <?= h($item['label']) ?>: <strong><?= (int)$item['count'] ?></strong>
+        <a href="<?= h($item['url']) ?>">otevřít <span aria-hidden="true">→</span></a>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+  <p><a href="review_queue.php">Otevřít společnou frontu <span aria-hidden="true">→</span></a></p>
+</section>
+<?php endif; ?>
+
+<?php if ($contentSummaries !== []): ?>
+<section aria-labelledby="content-summary-heading" style="margin:1.5rem 0">
+  <h2 id="content-summary-heading">Vaše práce s obsahem</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem">
+    <?php foreach ($contentSummaries as $summary): ?>
+      <section style="border:1px solid #d6d6d6;border-radius:10px;padding:1rem;background:#fff">
+        <h3 style="margin-top:0"><?= h($summary['heading']) ?></h3>
+        <dl style="margin:0">
+          <?php foreach ($summary['items'] as $label => $value): ?>
+            <div style="display:flex;justify-content:space-between;gap:1rem;padding:.2rem 0">
+              <dt><?= h($label) ?></dt>
+              <dd style="margin:0"><strong><?= (int)$value ?></strong></dd>
+            </div>
+          <?php endforeach; ?>
+        </dl>
+        <p style="margin-bottom:0"><a href="<?= h($summary['url']) ?>">Otevřít přehled <span aria-hidden="true">→</span></a></p>
+      </section>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php if ($overviewRows !== []): ?>
 <table>
-  <caption>Počty záznamů</caption>
-  <thead><tr><th scope="col">Modul</th><th scope="col">Počet</th></tr></thead>
+  <caption>Přístupné sekce administrace</caption>
+  <thead>
+    <tr>
+      <th scope="col">Sekce</th>
+      <th scope="col">Počet</th>
+      <th scope="col">Akce</th>
+    </tr>
+  </thead>
   <tbody>
-  <?php foreach ($counts as $label => $count): ?>
-    <tr><td><?= h($label) ?></td><td><?= h((string)$count) ?></td></tr>
-  <?php endforeach; ?>
+    <?php foreach ($overviewRows as $row): ?>
+      <tr>
+        <td><?= h($row['label']) ?></td>
+        <td><?= (int)$row['count'] ?></td>
+        <td><a href="<?= h($row['url']) ?>">Otevřít <span aria-hidden="true">→</span></a></td>
+      </tr>
+    <?php endforeach; ?>
   </tbody>
 </table>
-
-<?php if ($pendingComments > 0): ?>
-  <p class="error">
-    <strong><?= $pendingComments ?> komentář<?= $pendingComments === 1 ? '' : ($pendingComments < 5 ? 'e' : 'ů') ?> čeká na schválení.</strong>
-    <a href="<?= BASE_URL ?>/admin/comments.php?filter=pending">Zobrazit <span aria-hidden="true">→</span></a>
-  </p>
-<?php endif; ?>
-
-<?php if (!empty($pendingContent)): ?>
-  <div style="background:#fffbe6;border:1px solid #e6c800;padding:.75rem 1rem;margin-bottom:1rem">
-    <strong>Obsah čekající na schválení:</strong>
-    <ul style="margin:.4rem 0 0;padding-left:1.2rem">
-      <?php foreach ($pendingContent as $cfg): ?>
-        <li>
-          <?= $cfg['count'] ?> <?= h($cfg['label']) ?>
-          <span aria-hidden="true">→</span> <a href="<?= BASE_URL ?>/admin/<?= h($cfg['url']) ?>"><?= h($cfg['url'] === 'blog.php' ? 'Blog' : ucfirst(str_replace('.php','', $cfg['url']))) ?></a>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-  </div>
-<?php endif; ?>
-
-<h2>Statické stránky</h2>
-<?php if (empty($pages)): ?>
-  <p>Zatím žádné statické stránky. <a href="page_form.php">Vytvořit <span aria-hidden="true">→</span></a></p>
 <?php else: ?>
+  <p>Pro tento účet zatím není přidělená žádná sekce administrace.</p>
+<?php endif; ?>
+
+<?php if ($pages !== []): ?>
+<section aria-labelledby="pages-heading" style="margin-top:1.5rem">
+  <h2 id="pages-heading">Statické stránky</h2>
   <ul>
-    <?php foreach ($pages as $p): ?>
+    <?php foreach ($pages as $page): ?>
       <li>
-        <a href="<?= BASE_URL ?>/page.php?slug=<?= rawurlencode($p['slug']) ?>"
-           target="_blank" rel="noopener"><?= h($p['title']) ?></a>
-        <?= $p['is_published'] ? '' : ' <em>(koncept)</em>' ?>
+        <a href="<?= BASE_URL ?>/page.php?slug=<?= rawurlencode((string)$page['slug']) ?>" target="_blank" rel="noopener">
+          <?= h((string)$page['title']) ?>
+        </a>
+        <?= (int)$page['is_published'] === 1 ? '' : ' <em>(koncept)</em>' ?>
       </li>
     <?php endforeach; ?>
   </ul>
   <p><a href="pages.php">Spravovat stránky <span aria-hidden="true">→</span></a></p>
+</section>
 <?php endif; ?>
 
-<?php if (!empty($upcomingEvents)): ?>
-<h2>Nadcházející akce</h2>
-<ul>
-  <?php foreach ($upcomingEvents as $e): ?>
-    <li>
-      <strong><?= h($e['title']) ?></strong>
-      – <time datetime="<?= h(str_replace(' ', 'T', $e['event_date'])) ?>"><?= h($e['event_date']) ?></time>
-      <?= $e['location'] ? '· ' . h($e['location']) : '' ?>
-    </li>
-  <?php endforeach; ?>
-</ul>
-<p><a href="events.php">Všechny události <span aria-hidden="true">→</span></a></p>
+<?php if ($upcomingEvents !== []): ?>
+<section aria-labelledby="events-heading" style="margin-top:1.5rem">
+  <h2 id="events-heading">Nadcházející akce</h2>
+  <ul>
+    <?php foreach ($upcomingEvents as $eventItem): ?>
+      <li>
+        <strong><?= h((string)$eventItem['title']) ?></strong>
+        –
+        <time datetime="<?= h(str_replace(' ', 'T', (string)$eventItem['event_date'])) ?>">
+          <?= formatCzechDate((string)$eventItem['event_date']) ?>
+        </time>
+        <?= trim((string)$eventItem['location']) !== '' ? ' · ' . h((string)$eventItem['location']) : '' ?>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+  <p><a href="events.php">Všechny události <span aria-hidden="true">→</span></a></p>
+</section>
 <?php endif; ?>
 
-<?php if ($subscriberCount > 0): ?>
-<p>
-  Newsletter: <strong><?= $subscriberCount ?></strong> potvrzených odběratelů.
-  <a href="newsletter.php">Správa <span aria-hidden="true">→</span></a>
-</p>
+<?php if ($reservationSummary !== null): ?>
+<section aria-labelledby="reservations-heading" style="margin-top:1.5rem">
+  <h2 id="reservations-heading">Rezervace</h2>
+  <ul>
+    <li>Nadcházejících rezervací za 7 dnů: <strong><?= (int)$reservationSummary['upcoming'] ?></strong></li>
+    <li>Čekajících na schválení: <strong><?= (int)$reservationSummary['pending'] ?></strong></li>
+  </ul>
+  <p><a href="res_bookings.php">Správa rezervací <span aria-hidden="true">→</span></a></p>
+</section>
 <?php endif; ?>
 
-<?php if (isModuleEnabled('reservations')): ?>
-<h2>Rezervace</h2>
-<ul>
-  <li>Nadcházejících rezervací (7 dní): <strong><?= $resUpcoming ?></strong></li>
-  <li>Čekajících na schválení: <strong><?= $resPending ?></strong></li>
-</ul>
-<p><a href="res_bookings.php">Správa rezervací <span aria-hidden="true">→</span></a></p>
+<?php if ($enabledModules !== []): ?>
+<section aria-labelledby="modules-heading" style="margin-top:1.5rem">
+  <h2 id="modules-heading">Povolené moduly</h2>
+  <ul>
+    <?php foreach ($enabledModules as $moduleItem): ?>
+      <li>
+        <?= h($moduleItem['label']) ?>:
+        <strong><?= $moduleItem['enabled'] ? 'zapnuto' : 'vypnuto' ?></strong>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+  <p><a href="settings.php">Upravit nastavení <span aria-hidden="true">→</span></a></p>
+</section>
 <?php endif; ?>
 
-<h2>Povolené moduly</h2>
-<ul>
-  <?php foreach (['blog' => 'Blog', 'news' => 'Novinky', 'chat' => 'Chat', 'contact' => 'Kontakt', 'events' => 'Události', 'podcast' => 'Podcast', 'places' => 'Zajímavá místa', 'food' => 'Jídelní lístek', 'gallery' => 'Galerie', 'newsletter' => 'Newsletter', 'downloads' => 'Ke stažení', 'polls' => 'Ankety', 'faq' => 'FAQ', 'board' => 'Úřední deska', 'reservations' => 'Rezervace', 'statistics' => 'Statistiky'] as $k => $label): ?>
-    <li><?= h($label) ?>: <strong><?= isModuleEnabled($k) ? 'zapnuto' : 'vypnuto' ?></strong></li>
-  <?php endforeach; ?>
-</ul>
-<p><a href="settings.php">Změnit nastavení <span aria-hidden="true">→</span></a></p>
 <?php adminFooter(); ?>

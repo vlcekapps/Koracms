@@ -63,7 +63,7 @@ if ($id !== null) {
     $pdo->prepare("UPDATE cms_podcasts SET {$set} WHERE id=?")->execute($params);
     logAction('podcast_edit', "id={$id}");
 } else {
-    $status = isSuperAdmin() ? 'published' : 'pending';
+    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $pdo->prepare(
         "INSERT INTO cms_podcasts (show_id,title,description,audio_file,audio_url,duration,episode_num,publish_at,status)
          VALUES (?,?,?,?,?,?,?,?,?)"

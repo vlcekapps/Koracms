@@ -39,8 +39,8 @@ if ($id !== null) {
     )->execute([$title, $description, $location, $eventDate, $eventEnd, $isPublished, $id]);
     logAction('event_edit', "id={$id}");
 } else {
-    $status      = isSuperAdmin() ? 'published' : 'pending';
-    $isPublished = isSuperAdmin() ? $isPublished : 0;
+    $status      = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $isPublished = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
         "INSERT INTO cms_events (title,description,location,event_date,event_end,is_published,status)
          VALUES (?,?,?,?,?,?,?)"

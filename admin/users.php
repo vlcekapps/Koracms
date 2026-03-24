@@ -1,17 +1,18 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireSuperAdmin();
+requireLogin(BASE_URL . '/admin/login.php');
 
-$pdo   = db_connect();
-$users = $pdo->query(
-    "SELECT id, email, first_name, last_name, nickname, role, is_superadmin, is_confirmed, created_at
-     FROM cms_users ORDER BY is_superadmin DESC, role ASC, created_at ASC"
+$pdo = db_connect();
+$accounts = $pdo->query(
+    "SELECT id, email, first_name, last_name, nickname, role, is_superadmin, is_confirmed,
+            author_public_enabled, author_slug, created_at
+     FROM cms_users ORDER BY is_superadmin DESC, created_at ASC, id ASC"
 )->fetchAll();
 
 adminHeader('Správa uživatelů');
 ?>
 
-<p><a href="user_form.php" class="btn">+ Přidat spolupracovníka</a></p>
+<p><a href="user_form.php" class="btn">+ Přidat uživatele</a></p>
 
 <table>
   <caption>Uživatelé</caption>
@@ -26,35 +27,37 @@ adminHeader('Správa uživatelů');
     </tr>
   </thead>
   <tbody>
-  <?php foreach ($users as $u): ?>
-    <?php
-    $displayName = $u['nickname'] !== '' ? $u['nickname']
-                 : trim($u['first_name'] . ' ' . $u['last_name']);
-    ?>
+  <?php foreach ($accounts as $account): ?>
+    <?php $displayName = $account['nickname'] !== '' ? $account['nickname'] : trim($account['first_name'] . ' ' . $account['last_name']); ?>
     <tr>
-      <td><?= h($u['email']) ?></td>
-      <td><?= $displayName !== '' ? h($displayName) : '<em>–</em>' ?></td>
-      <td><?php
-        if ($u['is_superadmin']) {
-            echo '<strong>Hlavní admin</strong>';
-        } elseif ($u['role'] === 'admin') {
-            echo 'Admin';
-        } elseif ($u['role'] === 'public') {
-            echo 'Veřejný uživatel';
-        } else {
-            echo 'Spolupracovník';
-        }
-      ?></td>
-      <td><?= (int)$u['is_confirmed'] ? 'Aktivní' : '<em>Nepotvrzený</em>' ?></td>
-      <td><?= h($u['created_at']) ?></td>
+      <td><?= h($account['email']) ?></td>
+      <td>
+        <?= $displayName !== '' ? h($displayName) : '<em>–</em>' ?>
+        <?php if ($account['role'] !== 'public' && (int)($account['author_public_enabled'] ?? 0) === 1 && (string)($account['author_slug'] ?? '') !== ''): ?>
+          <div style="margin-top:.35rem">
+            <small style="display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:999px;background:#edf5fc;color:#15486d;font-weight:700">
+              Veřejný autor
+            </small>
+          </div>
+        <?php endif; ?>
+      </td>
+      <td>
+        <?php if ($account['is_superadmin']): ?>
+          <strong>Hlavní admin</strong>
+        <?php else: ?>
+          <?= h(userRoleLabel((string)$account['role'])) ?>
+        <?php endif; ?>
+      </td>
+      <td><?= (int)$account['is_confirmed'] ? 'Aktivní' : '<em>Nepotvrzený</em>' ?></td>
+      <td><?= h($account['created_at']) ?></td>
       <td class="actions">
-        <?php if (!$u['is_superadmin']): ?>
-          <a href="user_form.php?id=<?= (int)$u['id'] ?>" class="btn">Upravit</a>
+        <?php if (!(int)$account['is_superadmin']): ?>
+          <a href="user_form.php?id=<?= (int)$account['id'] ?>" class="btn">Upravit</a>
           <form action="user_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+            <input type="hidden" name="id" value="<?= (int)$account['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat spolupracovníka <?= h(addslashes($u['email'])) ?>?')">
+                    onclick="return confirm('Smazat uživatele <?= h(addslashes($account['email'])) ?>?')">
               Smazat
             </button>
           </form>

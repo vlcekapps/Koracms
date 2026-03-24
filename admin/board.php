@@ -4,18 +4,6 @@ requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
 
-// Schválení pending dokumentu
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_id'])) {
-    verifyCsrf();
-    if (isSuperAdmin()) {
-        $approveId = inputInt('post', 'approve_id');
-        if ($approveId !== null) {
-            $pdo->prepare("UPDATE cms_board SET status = 'published', is_published = 1 WHERE id = ?")->execute([$approveId]);
-            logAction('board_approve', "id={$approveId}");
-        }
-    }
-}
-
 $items = $pdo->query(
     "SELECT b.id, b.title, b.category_id, c.name AS category_name,
             b.posted_date, b.removal_date, b.original_name, b.file_size,
@@ -83,10 +71,12 @@ adminHeader('Úřední deska');
         </td>
         <td class="actions">
           <a href="board_form.php?id=<?= (int)$d['id'] ?>" class="btn">Upravit</a>
-          <?php if ($d['status'] === 'pending' && isSuperAdmin()): ?>
-            <form method="post" style="display:inline">
+          <?php if ($d['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
+            <form action="approve.php" method="post" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="approve_id" value="<?= (int)$d['id'] ?>">
+              <input type="hidden" name="module" value="board">
+              <input type="hidden" name="id" value="<?= (int)$d['id'] ?>">
+              <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/board.php">
               <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
             </form>
           <?php endif; ?>

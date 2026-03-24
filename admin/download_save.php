@@ -83,14 +83,14 @@ if ($id !== null) {
     $pdo->prepare("UPDATE cms_downloads SET {$set} WHERE id=?")->execute($params);
     logAction('download_edit', "id={$id}");
 } else {
-    $status   = isSuperAdmin() ? 'published' : 'pending';
+    $status   = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $authorId = currentUserId();
     $pdo->prepare(
         "INSERT INTO cms_downloads
          (title, dl_category_id, description, filename, original_name, file_size, sort_order, is_published, status, author_id)
          VALUES (?,?,?,?,?,?,?,?,?,?)"
     )->execute([$title, $dlCategoryId, $description, $newFilename, $newOrigName, $newFileSize,
-                $sortOrder, isSuperAdmin() ? $isPublished : 0, $status, $authorId]);
+                $sortOrder, currentUserHasCapability('content_approve_shared') ? $isPublished : 0, $status, $authorId]);
     logAction('download_add', "title={$title} status={$status}");
 }
 

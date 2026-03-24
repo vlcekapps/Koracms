@@ -75,7 +75,7 @@ adminHeader('Jídelní a nápojový lístek');
         </td>
         <td class="actions">
           <a href="food_form.php?id=<?= (int)$c['id'] ?>" class="btn">Upravit</a>
-          <?php if ($c['status'] === 'pending' && isSuperAdmin()): ?>
+          <?php if ($c['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="food">

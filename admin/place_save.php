@@ -24,8 +24,8 @@ if ($id !== null) {
     )->execute([$name, $category, $url, $description, $sortOrder, $isPublished, $id]);
     logAction('place_edit', "id={$id}");
 } else {
-    $status      = isSuperAdmin() ? 'published' : 'pending';
-    $isPublished = isSuperAdmin() ? $isPublished : 0;
+    $status      = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $isPublished = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
         "INSERT INTO cms_places (name,category,url,description,sort_order,is_published,status)
          VALUES (?,?,?,?,?,?,?)"

@@ -30,8 +30,8 @@ if ($id !== null) {
          WHERE id=?"
     )->execute([$title, $slug, $content, $isPublished, $showInNav, $navOrder, $id]);
 } else {
-    $status      = isSuperAdmin() ? 'published' : 'pending';
-    $isPublished = isSuperAdmin() ? $isPublished : 0;
+    $status      = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $isPublished = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
         "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)"

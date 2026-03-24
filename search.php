@@ -13,9 +13,10 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('blog')) {
         try {
             $stmt = $pdo->prepare(
-                "SELECT id, title, perex, created_at, 'blog' AS type
+                "SELECT id, title, slug, perex, created_at, 'blog' AS type
                  FROM cms_articles
-                 WHERE (publish_at IS NULL OR publish_at <= NOW())
+                 WHERE status = 'published'
+                   AND (publish_at IS NULL OR publish_at <= NOW())
                    AND (title LIKE ? OR perex LIKE ? OR content LIKE ?)
                  ORDER BY created_at DESC LIMIT 10"
             );
@@ -140,7 +141,7 @@ function resultUrl(array $result): string
 {
     $baseUrl = BASE_URL;
     return match($result['type']) {
-        'blog' => $baseUrl . '/blog/article.php?id=' . (int)$result['id'],
+        'blog' => articlePublicPath($result),
         'news' => $baseUrl . '/news/index.php',
         'page' => $baseUrl . '/page.php?slug=' . rawurlencode($result['slug'] ?? ''),
         'event' => $baseUrl . '/events/index.php#event-' . (int)$result['id'],

@@ -10,9 +10,14 @@ require_once __DIR__ . '/../db.php';
 $baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
 $pdo     = db_connect();
 
-$articleId = $pdo->query(
-    "SELECT id FROM cms_articles WHERE status = 'published' ORDER BY id LIMIT 1"
-)->fetchColumn();
+$articleRow = $pdo->query(
+    "SELECT id, slug FROM cms_articles WHERE status = 'published' ORDER BY id LIMIT 1"
+)->fetch() ?: null;
+$articleId = $articleRow['id'] ?? false;
+$articleCanonicalPath = $articleRow ? articlePublicPath($articleRow) : '';
+$articleLegacyPath = $articleId !== false ? BASE_URL . '/blog/article.php?id=' . urlencode((string)$articleId) : '';
+$articleCanonicalUrl = $articleCanonicalPath !== '' ? $baseUrl . $articleCanonicalPath : '';
+$articleLegacyUrl = $articleLegacyPath !== '' ? $baseUrl . $articleLegacyPath : '';
 $articleCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_articles WHERE status = 'published'"
 )->fetchColumn();
@@ -95,7 +100,19 @@ $cleanup = [
     'public_user_ids' => [],
     'confirm_emails' => [],
     'subscriber_emails' => [],
+    'author_user_ids' => [],
+    'staff_user_ids' => [],
 ];
+
+$runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
+$runtimeAuditThemeSettingsKey = themeSettingStorageKey($runtimeAuditActiveTheme);
+$runtimeAuditOriginalThemeSettings = getSetting($runtimeAuditThemeSettingsKey, '');
+$runtimeAuditOriginalHomeAuthorUserId = getSetting('home_author_user_id', '0');
+$runtimeAuditOriginalArticleAuthorId = null;
+$runtimeAuditAuthorId = 0;
+$runtimeAuditAuthorSlug = '';
+$runtimeAuditAuthorPath = '';
+$runtimeAuditAuthorUrl = '';
 
 if (!$publicUserRow) {
     $publicAuditEmail = 'runtimeaudit-public-' . bin2hex(random_bytes(6)) . '@example.test';
@@ -140,6 +157,46 @@ $_SESSION['cms_user_name'] = trim(((string)$publicUserRow['first_name']) . ' ' .
 $_SESSION['cms_user_role'] = 'public';
 session_write_close();
 
+$roleAuditUsers = [];
+foreach ([
+    'author' => ['first_name' => 'Role', 'last_name' => 'Autor'],
+    'moderator' => ['first_name' => 'Role', 'last_name' => 'Moderátor'],
+    'booking_manager' => ['first_name' => 'Role', 'last_name' => 'Rezervace'],
+] as $roleKey => $roleMeta) {
+    $roleAuditEmail = 'runtimeaudit-' . $roleKey . '-' . bin2hex(random_bytes(6)) . '@example.test';
+    $pdo->prepare(
+        "INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, created_at)
+         VALUES (?, ?, ?, ?, ?, 0, 1, NOW())"
+    )->execute([
+        $roleAuditEmail,
+        password_hash('RuntimeAudit123!', PASSWORD_BCRYPT),
+        $roleMeta['first_name'],
+        $roleMeta['last_name'],
+        $roleKey,
+    ]);
+    $roleAuditUserId = (int)$pdo->lastInsertId();
+    $cleanup['staff_user_ids'][] = $roleAuditUserId;
+    $roleAuditUsers[$roleKey] = [
+        'id' => $roleAuditUserId,
+        'email' => $roleAuditEmail,
+        'name' => trim($roleMeta['first_name'] . ' ' . $roleMeta['last_name']),
+    ];
+}
+
+$roleAuditSessions = [];
+foreach ($roleAuditUsers as $roleKey => $roleAuditUser) {
+    $roleAuditSessionId = 'runtimeaudit-' . str_replace('_', '-', $roleKey);
+    session_id($roleAuditSessionId);
+    session_start();
+    $_SESSION['cms_logged_in'] = true;
+    $_SESSION['cms_superadmin'] = false;
+    $_SESSION['cms_user_id'] = (int)$roleAuditUser['id'];
+    $_SESSION['cms_user_name'] = $roleAuditUser['name'];
+    $_SESSION['cms_user_role'] = $roleKey;
+    session_write_close();
+    $roleAuditSessions[$roleKey] = $roleAuditSessionId;
+}
+
 $confirmToken = bin2hex(random_bytes(32));
 $confirmEmail = 'runtimeaudit-confirm-' . bin2hex(random_bytes(6)) . '@example.test';
 $pdo->prepare(
@@ -172,6 +229,48 @@ if (isModuleEnabled('newsletter')) {
     $cleanup['subscriber_emails'][] = $unsubscribeEmail;
 }
 
+$runtimeAuditAuthorSlug = uniqueAuthorSlug($pdo, 'runtime-author-' . bin2hex(random_bytes(4)));
+$runtimeAuditAuthorEmail = 'runtimeaudit-author-' . bin2hex(random_bytes(6)) . '@example.test';
+$pdo->prepare(
+    "INSERT INTO cms_users (
+        email, password, first_name, last_name, nickname, role, is_superadmin, is_confirmed,
+        author_public_enabled, author_slug, author_bio, author_website, created_at
+     ) VALUES (?, ?, ?, ?, ?, 'collaborator', 0, 1, 1, ?, ?, ?, NOW())"
+)->execute([
+    $runtimeAuditAuthorEmail,
+    password_hash('RuntimeAudit123!', PASSWORD_BCRYPT),
+    'Veřejný',
+    'Autor',
+    'Runtime Audit',
+    $runtimeAuditAuthorSlug,
+    'Krátký veřejný medailonek pro automatický audit autora.',
+    'https://example.test/autor',
+]);
+$runtimeAuditAuthorId = (int)$pdo->lastInsertId();
+$cleanup['author_user_ids'][] = $runtimeAuditAuthorId;
+
+$runtimeAuditAuthor = fetchPublicAuthorById($pdo, $runtimeAuditAuthorId);
+if ($runtimeAuditAuthor) {
+    $runtimeAuditAuthorPath = authorPublicPath($runtimeAuditAuthor);
+    $runtimeAuditAuthorUrl = $baseUrl . authorPublicRequestPath($runtimeAuditAuthor);
+}
+
+if ($articleId !== false && $runtimeAuditAuthorId > 0) {
+    $articleAuthorStmt = $pdo->prepare("SELECT author_id FROM cms_articles WHERE id = ?");
+    $articleAuthorStmt->execute([(int)$articleId]);
+    $runtimeAuditOriginalArticleAuthorId = $articleAuthorStmt->fetchColumn();
+    $pdo->prepare("UPDATE cms_articles SET author_id = ? WHERE id = ?")->execute([
+        $runtimeAuditAuthorId,
+        (int)$articleId,
+    ]);
+}
+
+saveSetting('home_author_user_id', (string)$runtimeAuditAuthorId);
+$runtimeAuditThemeSettings = themePersistedSettingsValues($runtimeAuditActiveTheme);
+$runtimeAuditThemeSettings['home_author_visibility'] = 'show';
+saveThemeSettings($runtimeAuditThemeSettings, $runtimeAuditActiveTheme);
+clearSettingsCache();
+
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
@@ -183,11 +282,19 @@ $pages = [
     ['label' => 'contact', 'url' => $baseUrl . '/contact/index.php'],
     ['label' => 'chat', 'url' => $baseUrl . '/chat/index.php'],
     ['label' => 'public_profile', 'url' => $baseUrl . '/public_profile.php', 'cookie' => 'PHPSESSID=' . $publicAuditSessionId],
+    ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_review_queue', 'url' => $baseUrl . '/admin/review_queue.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_user_create_form', 'url' => $baseUrl . '/admin/user_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
 ];
+
+if ($runtimeAuditAuthorId > 0) {
+    $pages[] = ['label' => 'admin_user_form', 'url' => $baseUrl . '/admin/user_form.php?id=' . urlencode((string)$runtimeAuditAuthorId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
 
 if (isModuleEnabled('newsletter')) {
     $pages[] = ['label' => 'subscribe_confirm', 'url' => $baseUrl . '/subscribe_confirm.php?token=' . urlencode($subscribeConfirmToken)];
@@ -244,8 +351,11 @@ if (isModuleEnabled('polls')) {
     }
 }
 
-if ($articleId) {
-    $pages[] = ['label' => 'blog_article', 'url' => $baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId)];
+if ($articleCanonicalUrl !== '') {
+    $pages[] = ['label' => 'blog_article', 'url' => $articleCanonicalUrl];
+}
+if ($runtimeAuditAuthorUrl !== '') {
+    $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
 }
 if ($pageSlug) {
     $pages[] = ['label' => 'static_page', 'url' => $baseUrl . '/page.php?slug=' . urlencode((string)$pageSlug)];
@@ -633,6 +743,14 @@ foreach ($pages as $page) {
                 $issues[] = 'home still contains legacy copy: ' . $legacySnippet;
             }
         }
+        if ($runtimeAuditAuthorPath !== '') {
+            if (!str_contains($result['body'], 'data-home-section="author"')) {
+                $issues[] = 'home author section is missing';
+            }
+            if (!str_contains($result['body'], $runtimeAuditAuthorPath)) {
+                $issues[] = 'home author section is missing its public profile link';
+            }
+        }
     }
 
     if ($page['label'] === 'home' && str_contains($result['body'], '/uploads/board/')) {
@@ -666,6 +784,9 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'value="custom"')) {
             $issues[] = 'custom site profile option is missing';
+        }
+        if (!str_contains($result['body'], 'name="home_author_user_id"')) {
+            $issues[] = 'home author setting is missing';
         }
         if (isModuleEnabled('blog')) {
             if (!str_contains($result['body'], 'name="comments_enabled"')) {
@@ -712,6 +833,65 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_profile') {
+        if (!str_contains($result['body'], 'name="author_public_enabled"')) {
+            $issues[] = 'author public toggle is missing in admin profile';
+        }
+        if (!str_contains($result['body'], 'name="author_slug"')) {
+            $issues[] = 'author slug field is missing in admin profile';
+        }
+        if (!str_contains($result['body'], 'name="author_bio"')) {
+            $issues[] = 'author bio field is missing in admin profile';
+        }
+        if (!str_contains($result['body'], 'name="author_website"')) {
+            $issues[] = 'author website field is missing in admin profile';
+        }
+        if (!str_contains($result['body'], 'name="author_avatar"')) {
+            $issues[] = 'author avatar field is missing in admin profile';
+        }
+    }
+
+    if ($page['label'] === 'admin_user_form') {
+        if (!str_contains($result['body'], 'name="role"')) {
+            $issues[] = 'role selector is missing in user form';
+        }
+        foreach (['public', 'author', 'editor', 'moderator', 'booking_manager', 'admin', 'collaborator'] as $roleValue) {
+            if (!str_contains($result['body'], 'value="' . $roleValue . '"')) {
+                $issues[] = 'user form is missing role option: ' . $roleValue;
+            }
+        }
+        if (!str_contains($result['body'], 'name="author_public_enabled"')) {
+            $issues[] = 'author public toggle is missing in user form';
+        }
+        if (!str_contains($result['body'], 'name="author_slug"')) {
+            $issues[] = 'author slug field is missing in user form';
+        }
+        if (!str_contains($result['body'], 'name="author_bio"')) {
+            $issues[] = 'author bio field is missing in user form';
+        }
+        if (!str_contains($result['body'], 'name="author_website"')) {
+            $issues[] = 'author website field is missing in user form';
+        }
+    }
+
+    if ($page['label'] === 'admin_user_create_form') {
+        if (!str_contains($result['body'], 'name="role"')) {
+            $issues[] = 'role selector is missing in user create form';
+        }
+        foreach (['public', 'author', 'editor', 'moderator', 'booking_manager', 'admin'] as $roleValue) {
+            if (!str_contains($result['body'], 'value="' . $roleValue . '"')) {
+                $issues[] = 'user create form is missing role option: ' . $roleValue;
+            }
+        }
+        if (str_contains($result['body'], 'value="collaborator"')) {
+            $issues[] = 'legacy collaborator role is unexpectedly offered for new users';
+        }
+    }
+
+    if ($page['label'] === 'admin_users' && !str_contains($result['body'], 'Veřejný autor')) {
+        $issues[] = 'public author badge is missing in user list';
+    }
+
     if ($page['label'] === 'admin_themes') {
         if (!str_contains($result['body'], 'name="active_theme"')) {
             $issues[] = 'theme selector is missing';
@@ -742,6 +922,38 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_review_queue') {
+        if (!str_contains($result['body'], 'Ke schválení')) {
+            $issues[] = 'review queue heading is missing';
+        }
+        if (!str_contains($result['body'], 'review_queue.php?scope=content')) {
+            $issues[] = 'review queue content filter is missing';
+        }
+        if (isModuleEnabled('blog') && !str_contains($result['body'], 'review_queue.php?scope=comments')) {
+            $issues[] = 'review queue comments filter is missing';
+        }
+        if (isModuleEnabled('reservations') && !str_contains($result['body'], 'review_queue.php?scope=reservations')) {
+            $issues[] = 'review queue reservations filter is missing';
+        }
+    }
+
+    if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
+        $issues[] = 'blog listing is missing public author links';
+    }
+
+    if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
+        $issues[] = 'blog article is missing public author link in byline';
+    }
+
+    if ($page['label'] === 'public_author') {
+        if (!str_contains($result['body'], 'Runtime Audit')) {
+            $issues[] = 'public author page is missing author identity';
+        }
+        if (!str_contains($result['body'], 'Krátký veřejný medailonek pro automatický audit autora.')) {
+            $issues[] = 'public author page is missing author bio';
+        }
+    }
+
     echo '=== ' . $page['label'] . " ===\n";
     if ($issues === []) {
         echo "OK\n";
@@ -750,6 +962,177 @@ foreach ($pages as $page) {
 
     $failures++;
     foreach ($issues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== blog_article_legacy_redirect ===\n";
+if ($articleCanonicalPath === '' || $articleLegacyPath === '' || $articleCanonicalPath === $articleLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyArticleProbe = fetchUrl($articleLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $articleCanonicalPath;
+    if (!str_contains($legacyArticleProbe['status'], '302')) {
+        echo "- legacy blog article URL does not redirect ({$legacyArticleProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyArticleProbe['headers'], true)) {
+        echo "- legacy blog article URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== public_author_guard ===\n";
+if ($runtimeAuditAuthorUrl === '') {
+    echo "OK\n";
+} else {
+    $authorGuardIssues = [];
+    $missingAuthorProbe = fetchUrl($baseUrl . '/author/runtimeaudit-chybejici-autor', '', 0);
+    if (!str_contains($missingAuthorProbe['status'], '404')) {
+        $authorGuardIssues[] = 'missing public author request does not return 404';
+    }
+
+    $pdo->prepare("UPDATE cms_users SET author_public_enabled = 0 WHERE id = ?")->execute([$runtimeAuditAuthorId]);
+    clearSettingsCache();
+    $disabledAuthorProbe = fetchUrl($runtimeAuditAuthorUrl, '', 0);
+    if (!str_contains($disabledAuthorProbe['status'], '404')) {
+        $authorGuardIssues[] = 'disabled public author request does not return 404';
+    }
+    $pdo->prepare("UPDATE cms_users SET author_public_enabled = 1 WHERE id = ?")->execute([$runtimeAuditAuthorId]);
+    clearSettingsCache();
+
+    if ($authorGuardIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($authorGuardIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
+    }
+}
+
+echo "=== role_access_matrix ===\n";
+$roleAccessIssues = [];
+
+$roleChecks = [];
+if (isModuleEnabled('blog')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/blog.php', 'expected' => '200', 'label' => 'author blog'];
+}
+if (isModuleEnabled('news')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/news.php', 'expected' => '200', 'label' => 'author news'];
+}
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/comments.php', 'expected' => '403', 'label' => 'author comments'];
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/settings.php', 'expected' => '403', 'label' => 'author settings'];
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/users.php', 'expected' => '403', 'label' => 'author users'];
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/review_queue.php', 'expected' => '403', 'label' => 'author review queue'];
+if (isModuleEnabled('reservations')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'author reservations'];
+}
+
+if (isModuleEnabled('blog')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/comments.php', 'expected' => '200', 'label' => 'moderator comments'];
+}
+if (isModuleEnabled('blog') || isModuleEnabled('reservations')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/review_queue.php', 'expected' => '200', 'label' => 'moderator review queue'];
+}
+if (isModuleEnabled('contact')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/contact.php', 'expected' => '200', 'label' => 'moderator contact'];
+}
+if (isModuleEnabled('chat')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/chat.php', 'expected' => '200', 'label' => 'moderator chat'];
+}
+if (isModuleEnabled('blog')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/blog.php', 'expected' => '403', 'label' => 'moderator blog'];
+}
+if (isModuleEnabled('reservations')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'moderator reservations'];
+}
+
+if (isModuleEnabled('reservations')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_bookings.php', 'expected' => '200', 'label' => 'booking manager reservations'];
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/review_queue.php', 'expected' => '200', 'label' => 'booking manager review queue'];
+}
+if (isModuleEnabled('blog')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/blog.php', 'expected' => '403', 'label' => 'booking manager blog'];
+}
+$roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/comments.php', 'expected' => '403', 'label' => 'booking manager comments'];
+
+foreach ($roleChecks as $roleCheck) {
+    $probe = fetchUrl(
+        $baseUrl . $roleCheck['url'],
+        'PHPSESSID=' . ($roleAuditSessions[$roleCheck['role']] ?? ''),
+        0
+    );
+    if (!str_contains($probe['status'], $roleCheck['expected'])) {
+        $roleAccessIssues[] = $roleCheck['label'] . ' returned ' . $probe['status'] . ' instead of ' . $roleCheck['expected'];
+    }
+}
+
+$authorIndexProbe = fetchUrl($baseUrl . '/admin/index.php', 'PHPSESSID=' . ($roleAuditSessions['author'] ?? ''), 0);
+if (!str_contains($authorIndexProbe['status'], '200')) {
+    $roleAccessIssues[] = 'author dashboard is not accessible';
+} else {
+    if (str_contains($authorIndexProbe['body'], '/admin/review_queue.php')) {
+        $roleAccessIssues[] = 'author dashboard still exposes review queue';
+    }
+    if (isModuleEnabled('blog') && !str_contains($authorIndexProbe['body'], '/admin/blog.php')) {
+        $roleAccessIssues[] = 'author dashboard is missing blog navigation';
+    }
+    if (isModuleEnabled('news') && !str_contains($authorIndexProbe['body'], '/admin/news.php')) {
+        $roleAccessIssues[] = 'author dashboard is missing news navigation';
+    }
+    if (str_contains($authorIndexProbe['body'], '/admin/comments.php')) {
+        $roleAccessIssues[] = 'author dashboard still exposes comment moderation';
+    }
+    if (str_contains($authorIndexProbe['body'], '/admin/users.php')) {
+        $roleAccessIssues[] = 'author dashboard still exposes user management';
+    }
+}
+
+$moderatorIndexProbe = fetchUrl($baseUrl . '/admin/index.php', 'PHPSESSID=' . ($roleAuditSessions['moderator'] ?? ''), 0);
+if (!str_contains($moderatorIndexProbe['status'], '200')) {
+    $roleAccessIssues[] = 'moderator dashboard is not accessible';
+} else {
+    if ((isModuleEnabled('blog') || isModuleEnabled('reservations')) && !str_contains($moderatorIndexProbe['body'], '/admin/review_queue.php')) {
+        $roleAccessIssues[] = 'moderator dashboard is missing review queue';
+    }
+    if (isModuleEnabled('blog') && !str_contains($moderatorIndexProbe['body'], '/admin/comments.php')) {
+        $roleAccessIssues[] = 'moderator dashboard is missing comment moderation';
+    }
+    if (isModuleEnabled('contact') && !str_contains($moderatorIndexProbe['body'], '/admin/contact.php')) {
+        $roleAccessIssues[] = 'moderator dashboard is missing contact moderation';
+    }
+    if (isModuleEnabled('chat') && !str_contains($moderatorIndexProbe['body'], '/admin/chat.php')) {
+        $roleAccessIssues[] = 'moderator dashboard is missing chat moderation';
+    }
+    if (str_contains($moderatorIndexProbe['body'], '/admin/blog.php')) {
+        $roleAccessIssues[] = 'moderator dashboard still exposes blog management';
+    }
+}
+
+if (isModuleEnabled('reservations')) {
+    $bookingIndexProbe = fetchUrl($baseUrl . '/admin/index.php', 'PHPSESSID=' . ($roleAuditSessions['booking_manager'] ?? ''), 0);
+    if (!str_contains($bookingIndexProbe['status'], '200')) {
+        $roleAccessIssues[] = 'booking manager dashboard is not accessible';
+    } else {
+        if (!str_contains($bookingIndexProbe['body'], '/admin/review_queue.php')) {
+            $roleAccessIssues[] = 'booking manager dashboard is missing review queue';
+        }
+        if (!str_contains($bookingIndexProbe['body'], '/admin/res_bookings.php')) {
+            $roleAccessIssues[] = 'booking manager dashboard is missing reservation management';
+        }
+        if (str_contains($bookingIndexProbe['body'], '/admin/comments.php')) {
+            $roleAccessIssues[] = 'booking manager dashboard still exposes comment moderation';
+        }
+    }
+}
+
+if ($roleAccessIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($roleAccessIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }
@@ -839,7 +1222,7 @@ if ($articleId === false) {
         saveSetting('comments_enabled', '0');
         clearSettingsCache();
 
-        $globalDisabledProbe = fetchUrl($baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId), '', 0);
+        $globalDisabledProbe = fetchUrl($articleCanonicalUrl, '', 0);
         if (!str_contains($globalDisabledProbe['status'], '200')) {
             $commentGuardIssues[] = 'blog article did not load after disabling comments globally';
         } else {
@@ -860,7 +1243,7 @@ if ($articleId === false) {
             $pdo->prepare("UPDATE cms_articles SET comments_enabled = 0 WHERE id = ?")->execute([(int)$articleId]);
         }
         if ($articleCommentsColumnExists) {
-            $articleDisabledProbe = fetchUrl($baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId), '', 0);
+            $articleDisabledProbe = fetchUrl($articleCanonicalUrl, '', 0);
         if (!str_contains($articleDisabledProbe['status'], '200')) {
             $commentGuardIssues[] = 'blog article did not load after disabling comments on article';
         } else {
@@ -919,6 +1302,7 @@ if ($articleId === false) {
     }
 
     try {
+        $pdo->exec("DELETE FROM cms_rate_limit");
         saveSetting('comments_enabled', '1');
         saveSetting('comment_moderation_mode', 'always');
         saveSetting('comment_notify_admin', '0');
@@ -929,7 +1313,7 @@ if ($articleId === false) {
             $pdo->prepare("UPDATE cms_articles SET comments_enabled = 1 WHERE id = ?")->execute([(int)$articleId]);
         }
 
-        $baseCommentUrl = $baseUrl . '/blog/article.php?id=' . urlencode((string)$articleId);
+        $baseCommentUrl = $articleCanonicalUrl;
 
         $blockedEmail = 'runtimeaudit-blocked-' . bin2hex(random_bytes(4)) . '@example.test';
         saveSetting('comment_blocked_emails', $blockedEmail);
@@ -957,7 +1341,7 @@ if ($articleId === false) {
             );
             if (!str_contains($blockedPost['status'], '302')) {
                 $spamIssues[] = 'blocked-email comment did not redirect after submit';
-            } elseif (!in_array('Location: /blog/article.php?id=' . (int)$articleId . '&komentar=pending', $blockedPost['headers'], true)) {
+            } elseif (!in_array('Location: ' . articlePublicPath($articleRow, ['komentar' => 'pending']), $blockedPost['headers'], true)) {
                 $spamIssues[] = 'blocked-email comment did not use neutral pending redirect';
             }
 
@@ -1047,7 +1431,7 @@ if ($articleId === false) {
             );
             if (!str_contains($pendingPost['status'], '302')) {
                 $spamIssues[] = 'pending comment did not redirect after submit';
-            } elseif (!in_array('Location: /blog/article.php?id=' . (int)$articleId . '&komentar=pending', $pendingPost['headers'], true)) {
+            } elseif (!in_array('Location: ' . articlePublicPath($articleRow, ['komentar' => 'pending']), $pendingPost['headers'], true)) {
                 $spamIssues[] = 'pending comment did not redirect to pending state';
             }
 
@@ -1071,6 +1455,7 @@ if ($articleId === false) {
         saveSetting('comment_notify_admin', $originalNotifyAdmin);
         saveSetting('comment_blocked_emails', $originalBlockedEmails);
         saveSetting('comment_spam_words', $originalSpamWords);
+        $pdo->exec("DELETE FROM cms_rate_limit");
         clearSettingsCache();
         if ($articleCommentsColumnExists) {
             $pdo->prepare("UPDATE cms_articles SET comments_enabled = ? WHERE id = ?")->execute([
@@ -1095,6 +1480,16 @@ if ($articleId === false) {
     }
 }
 
+saveSetting('home_author_user_id', $runtimeAuditOriginalHomeAuthorUserId);
+saveSetting($runtimeAuditThemeSettingsKey, $runtimeAuditOriginalThemeSettings);
+clearSettingsCache();
+if ($articleId !== false && $runtimeAuditOriginalArticleAuthorId !== null) {
+    $pdo->prepare("UPDATE cms_articles SET author_id = ? WHERE id = ?")->execute([
+        (int)$runtimeAuditOriginalArticleAuthorId,
+        (int)$articleId,
+    ]);
+}
+
 if (!empty($cleanup['public_user_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['public_user_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_users WHERE id IN ({$placeholders})")->execute($cleanup['public_user_ids']);
@@ -1106,6 +1501,14 @@ if (!empty($cleanup['confirm_emails'])) {
 if (!empty($cleanup['subscriber_emails'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['subscriber_emails']), '?'));
     $pdo->prepare("DELETE FROM cms_subscribers WHERE email IN ({$placeholders})")->execute($cleanup['subscriber_emails']);
+}
+if (!empty($cleanup['author_user_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['author_user_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_users WHERE id IN ({$placeholders})")->execute($cleanup['author_user_ids']);
+}
+if (!empty($cleanup['staff_user_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['staff_user_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_users WHERE id IN ({$placeholders})")->execute($cleanup['staff_user_ids']);
 }
 
 $installProbe = fetchUrl($baseUrl . '/install.php', '', 0);

@@ -2,15 +2,23 @@
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
-$pdo  = db_connect();
-$id   = inputInt('get', 'id');
+$pdo = db_connect();
+$id = inputInt('get', 'id');
 $item = null;
 
 if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_news WHERE id = ?");
-    $stmt->execute([$id]);
+    if (canManageOwnNewsOnly()) {
+        $stmt = $pdo->prepare("SELECT * FROM cms_news WHERE id = ? AND author_id = ?");
+        $stmt->execute([$id, currentUserId()]);
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM cms_news WHERE id = ?");
+        $stmt->execute([$id]);
+    }
     $item = $stmt->fetch();
-    if (!$item) { header('Location: news.php'); exit; }
+    if (!$item) {
+        header('Location: news.php');
+        exit;
+    }
 }
 
 adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');

@@ -114,6 +114,7 @@ function siteProfileDefinitions(): array
                 'container_width' => 'narrow',
                 'home_layout' => 'editorial',
                 'home_featured_module' => 'blog',
+                'home_author_visibility' => 'show',
                 'home_primary_order' => 'blog_news',
                 'home_utility_order' => 'newsletter_cta_board_poll',
                 'home_blog_visibility' => 'show',
@@ -162,6 +163,7 @@ function siteProfileDefinitions(): array
                 'container_width' => 'narrow',
                 'home_layout' => 'editorial',
                 'home_featured_module' => 'blog',
+                'home_author_visibility' => 'show',
                 'home_primary_order' => 'blog_news',
                 'home_utility_order' => 'newsletter_cta_board_poll',
                 'home_blog_visibility' => 'show',
@@ -210,6 +212,7 @@ function siteProfileDefinitions(): array
                 'container_width' => 'standard',
                 'home_layout' => 'balanced',
                 'home_featured_module' => 'news',
+                'home_author_visibility' => 'hide',
                 'home_primary_order' => 'news_blog',
                 'home_utility_order' => 'board_poll_newsletter_cta',
                 'home_blog_visibility' => 'show',
@@ -259,6 +262,7 @@ function siteProfileDefinitions(): array
                 'container_width' => 'wide',
                 'home_layout' => 'compact',
                 'home_featured_module' => 'blog',
+                'home_author_visibility' => 'hide',
                 'home_primary_order' => 'blog_news',
                 'home_utility_order' => 'newsletter_cta_board_poll',
                 'home_blog_visibility' => 'show',
@@ -645,7 +649,7 @@ function notifyAdminAboutPendingComment(array $article, string $authorName, stri
     }
 
     $siteName = getSetting('site_name', 'Kora CMS');
-    $articleUrl = siteUrl('/blog/article.php?id=' . (int)($article['id'] ?? 0));
+    $articleUrl = articlePublicUrl($article);
     $adminUrl = siteUrl('/admin/comments.php?filter=pending');
     $safeEmail = trim($authorEmail) !== '' ? $authorEmail : 'neuveden';
     $message = "Na webu {$siteName} čeká nový komentář na schválení.\n\n"
@@ -664,7 +668,7 @@ function loadCommentModerationContext(PDO $pdo, int $commentId): ?array
     try {
         $stmt = $pdo->prepare(
             "SELECT c.id, c.article_id, c.author_name, c.author_email, c.content, c.status, c.is_approved,
-                    c.created_at, a.title AS article_title
+                    c.created_at, a.title AS article_title, a.slug AS article_slug
              FROM cms_comments c
              LEFT JOIN cms_articles a ON a.id = c.article_id
              WHERE c.id = ?"
@@ -675,7 +679,7 @@ function loadCommentModerationContext(PDO $pdo, int $commentId): ?array
         $stmt = $pdo->prepare(
             "SELECT c.id, c.article_id, c.author_name, c.author_email, c.content,
                     CASE WHEN c.is_approved = 1 THEN 'approved' ELSE 'pending' END AS status,
-                    c.is_approved, c.created_at, a.title AS article_title
+                    c.is_approved, c.created_at, a.title AS article_title, a.slug AS article_slug
              FROM cms_comments c
              LEFT JOIN cms_articles a ON a.id = c.article_id
              WHERE c.id = ?"
@@ -705,7 +709,10 @@ function notifyAuthorAboutApprovedComment(array $comment): void
 
     $siteName = getSetting('site_name', 'Kora CMS');
     $articleTitle = trim((string)($comment['article_title'] ?? '')) ?: 'Článek';
-    $articleUrl = siteUrl('/blog/article.php?id=' . $articleId);
+    $articleUrl = articlePublicUrl([
+        'id' => $articleId,
+        'slug' => (string)($comment['article_slug'] ?? ''),
+    ]);
     $authorName = trim((string)($comment['author_name'] ?? ''));
     $greetingName = $authorName !== '' ? $authorName : 'dobrý den';
     $message = "Dobrý den"
@@ -769,6 +776,80 @@ function pendingCommentCount(): int
     }
 }
 
+function pendingReviewSummary(PDO $pdo): array
+{
+    $summary = [];
+
+    $addSummaryItem = static function (string $key, string $label, string $category, string $url, string $sql) use ($pdo, &$summary): void {
+        try {
+            $count = (int)$pdo->query($sql)->fetchColumn();
+        } catch (\PDOException $e) {
+            $count = 0;
+        }
+
+        if ($count < 1) {
+            return;
+        }
+
+        $summary[$key] = [
+            'key' => $key,
+            'label' => $label,
+            'category' => $category,
+            'count' => $count,
+            'url' => $url,
+        ];
+    };
+
+    if (isModuleEnabled('blog') && currentUserHasCapability('blog_approve')) {
+        $addSummaryItem('articles', 'Články blogu', 'content', BASE_URL . '/admin/blog.php', "SELECT COUNT(*) FROM cms_articles WHERE status = 'pending'");
+    }
+
+    if (isModuleEnabled('news') && currentUserHasCapability('news_approve')) {
+        $addSummaryItem('news', 'Novinky', 'content', BASE_URL . '/admin/news.php', "SELECT COUNT(*) FROM cms_news WHERE status = 'pending'");
+    }
+
+    if (currentUserHasCapability('content_approve_shared')) {
+        $sharedModules = [
+            ['key' => 'pages', 'enabled' => true, 'label' => 'Stránky', 'url' => BASE_URL . '/admin/pages.php', 'sql' => "SELECT COUNT(*) FROM cms_pages WHERE status = 'pending'"],
+            ['key' => 'board', 'enabled' => isModuleEnabled('board'), 'label' => 'Úřední deska', 'url' => BASE_URL . '/admin/board.php', 'sql' => "SELECT COUNT(*) FROM cms_board WHERE status = 'pending'"],
+            ['key' => 'downloads', 'enabled' => isModuleEnabled('downloads'), 'label' => 'Ke stažení', 'url' => BASE_URL . '/admin/downloads.php', 'sql' => "SELECT COUNT(*) FROM cms_downloads WHERE status = 'pending'"],
+            ['key' => 'events', 'enabled' => isModuleEnabled('events'), 'label' => 'Události', 'url' => BASE_URL . '/admin/events.php', 'sql' => "SELECT COUNT(*) FROM cms_events WHERE status = 'pending'"],
+            ['key' => 'places', 'enabled' => isModuleEnabled('places'), 'label' => 'Zajímavá místa', 'url' => BASE_URL . '/admin/places.php', 'sql' => "SELECT COUNT(*) FROM cms_places WHERE status = 'pending'"],
+            ['key' => 'podcasts', 'enabled' => isModuleEnabled('podcast'), 'label' => 'Podcasty', 'url' => BASE_URL . '/admin/podcast_shows.php', 'sql' => "SELECT COUNT(*) FROM cms_podcasts WHERE status = 'pending'"],
+            ['key' => 'food', 'enabled' => isModuleEnabled('food'), 'label' => 'Jídelní lístky', 'url' => BASE_URL . '/admin/food.php', 'sql' => "SELECT COUNT(*) FROM cms_food_cards WHERE status = 'pending'"],
+        ];
+
+        foreach ($sharedModules as $moduleItem) {
+            if (!$moduleItem['enabled']) {
+                continue;
+            }
+
+            $addSummaryItem(
+                $moduleItem['key'],
+                $moduleItem['label'],
+                'content',
+                $moduleItem['url'],
+                $moduleItem['sql']
+            );
+        }
+    }
+
+    if (isModuleEnabled('blog') && currentUserHasCapability('comments_manage')) {
+        $addSummaryItem('comments', 'Komentáře', 'comments', BASE_URL . '/admin/comments.php?filter=pending', "SELECT COUNT(*) FROM cms_comments WHERE status = 'pending'");
+    }
+
+    if (isModuleEnabled('reservations') && currentUserHasCapability('bookings_manage')) {
+        $addSummaryItem('reservations', 'Rezervace', 'reservations', BASE_URL . '/admin/res_bookings.php?status=pending', "SELECT COUNT(*) FROM cms_res_bookings WHERE status = 'pending'");
+    }
+
+    return array_values($summary);
+}
+
+function pendingReviewTotalCount(PDO $pdo): int
+{
+    return array_sum(array_column(pendingReviewSummary($pdo), 'count'));
+}
+
 function formatCzechDate(string $datetime): string
 {
     static $months = [
@@ -807,6 +888,369 @@ function slugify(string $text): string
     $text = mb_strtolower($text, 'UTF-8');
     $text = preg_replace('/[^a-z0-9]+/', '-', $text);
     return trim($text, '-');
+}
+
+function articleSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
+function authorSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
+function authorSlugCandidate(array $account): string
+{
+    $nickname = trim((string)($account['nickname'] ?? ''));
+    if ($nickname !== '') {
+        return $nickname;
+    }
+
+    $fullName = trim(
+        trim((string)($account['first_name'] ?? '')) . ' ' . trim((string)($account['last_name'] ?? ''))
+    );
+    if ($fullName !== '') {
+        return $fullName;
+    }
+
+    $email = trim((string)($account['email'] ?? ''));
+    if ($email !== '') {
+        $localPart = strstr($email, '@', true);
+        return $localPart !== false && $localPart !== '' ? $localPart : $email;
+    }
+
+    return 'autor';
+}
+
+function appendUrlQuery(string $path, array $params): string
+{
+    $query = http_build_query(array_filter(
+        $params,
+        static fn($value): bool => $value !== null && $value !== ''
+    ));
+
+    if ($query === '') {
+        return $path;
+    }
+
+    return $path . (str_contains($path, '?') ? '&' : '?') . $query;
+}
+
+function articlePublicRequestPath(array $article): string
+{
+    $slug = articleSlug((string)($article['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/blog/' . rawurlencode($slug);
+    }
+
+    return '/blog/article.php?id=' . (int)($article['id'] ?? 0);
+}
+
+function articlePublicPath(array $article, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(articlePublicRequestPath($article), $query);
+}
+
+function articlePublicUrl(array $article, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(articlePublicRequestPath($article), $query));
+}
+
+function articlePreviewPath(array $article): string
+{
+    $previewToken = trim((string)($article['preview_token'] ?? ''));
+    return articlePublicPath($article, $previewToken !== '' ? ['preview' => $previewToken] : []);
+}
+
+function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = articleSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'clanek';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_articles WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueAuthorSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = authorSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'autor';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_users WHERE author_slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function authorRoleValue(array $author): string
+{
+    return trim((string)($author['author_role'] ?? $author['role'] ?? ''));
+}
+
+function authorPublicSlugValue(array $author): string
+{
+    return authorSlug((string)($author['author_slug'] ?? $author['slug'] ?? ''));
+}
+
+function authorPublicEnabled(array $author): bool
+{
+    return (int)($author['author_public_enabled'] ?? 0) === 1
+        && authorRoleValue($author) !== 'public'
+        && authorPublicSlugValue($author) !== '';
+}
+
+function authorDisplayName(array $author): string
+{
+    $preferred = trim((string)($author['author_name'] ?? ''));
+    if ($preferred !== '') {
+        return $preferred;
+    }
+
+    $nickname = trim((string)($author['nickname'] ?? ''));
+    if ($nickname !== '') {
+        return $nickname;
+    }
+
+    $fullName = trim(
+        trim((string)($author['first_name'] ?? '')) . ' ' . trim((string)($author['last_name'] ?? ''))
+    );
+    if ($fullName !== '') {
+        return $fullName;
+    }
+
+    return trim((string)($author['email'] ?? ''));
+}
+
+function normalizeAuthorWebsite(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $value)) {
+        $value = 'https://' . ltrim($value, '/');
+    }
+
+    $validated = filter_var($value, FILTER_VALIDATE_URL);
+    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
+        return '';
+    }
+
+    return $validated;
+}
+
+function authorPublicRequestPath(array $author): string
+{
+    if (!authorPublicEnabled($author)) {
+        return '';
+    }
+
+    return '/author/' . rawurlencode(authorPublicSlugValue($author));
+}
+
+function authorPublicPath(array $author): string
+{
+    $path = authorPublicRequestPath($author);
+    return $path !== '' ? BASE_URL . $path : '';
+}
+
+function authorPublicUrl(array $author): string
+{
+    $path = authorPublicRequestPath($author);
+    return $path !== '' ? siteUrl($path) : '';
+}
+
+function authorAvatarUrl(array $author): string
+{
+    $avatarFile = trim((string)($author['author_avatar'] ?? ''));
+    if ($avatarFile === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/authors/' . rawurlencode($avatarFile);
+}
+
+function hydrateAuthorPresentation(array $author): array
+{
+    $author['author_display_name'] = authorDisplayName($author);
+    $author['author_public_path'] = authorPublicPath($author);
+    $author['author_public_url'] = authorPublicUrl($author);
+    $author['author_avatar_url'] = authorAvatarUrl($author);
+    $author['author_website_url'] = normalizeAuthorWebsite((string)($author['author_website'] ?? ''));
+    return $author;
+}
+
+function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array
+{
+    $normalizedSlug = authorSlug($slug);
+    if ($normalizedSlug === '') {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT id, email, first_name, last_name, nickname, role,
+                author_public_enabled, author_slug, author_bio, author_avatar, author_website
+         FROM cms_users
+         WHERE author_slug = ? AND author_public_enabled = 1 AND role != 'public'
+         LIMIT 1"
+    );
+    $stmt->execute([$normalizedSlug]);
+    $author = $stmt->fetch();
+
+    return $author ? hydrateAuthorPresentation($author) : null;
+}
+
+function fetchPublicAuthorById(PDO $pdo, int $userId): ?array
+{
+    if ($userId < 1) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT id, email, first_name, last_name, nickname, role,
+                author_public_enabled, author_slug, author_bio, author_avatar, author_website
+         FROM cms_users
+         WHERE id = ? AND author_public_enabled = 1 AND role != 'public'
+         LIMIT 1"
+    );
+    $stmt->execute([$userId]);
+    $author = $stmt->fetch();
+
+    return $author ? hydrateAuthorPresentation($author) : null;
+}
+
+function resolveHomeAuthor(PDO $pdo): ?array
+{
+    $selectedAuthorId = (int)getSetting('home_author_user_id', '0');
+    if ($selectedAuthorId > 0) {
+        return fetchPublicAuthorById($pdo, $selectedAuthorId);
+    }
+
+    $authors = $pdo->query(
+        "SELECT id, email, first_name, last_name, nickname, role,
+                author_public_enabled, author_slug, author_bio, author_avatar, author_website
+         FROM cms_users
+         WHERE author_public_enabled = 1 AND role != 'public'
+         ORDER BY is_superadmin DESC, id ASC
+         LIMIT 2"
+    )->fetchAll();
+
+    if (count($authors) !== 1) {
+        return null;
+    }
+
+    return hydrateAuthorPresentation($authors[0]);
+}
+
+function deleteAuthorAvatarFile(string $filename): void
+{
+    $safeFilename = basename(trim($filename));
+    if ($safeFilename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/authors/' . $safeFilename;
+    if (is_file($path)) {
+        unlink($path);
+    }
+}
+
+function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($uploadError === UPLOAD_ERR_NO_FILE || trim((string)($file['name'] ?? '')) === '') {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Avatar se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Avatar se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Avatar musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = __DIR__ . '/uploads/authors/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro avatary se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('author_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Avatar se nepodařilo uložit.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deleteAuthorAvatarFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
 }
 
 // ─────────────────────────────── Galerie ──────────────────────────────────

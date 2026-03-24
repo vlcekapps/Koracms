@@ -1,3 +1,17 @@
+<?php
+$renderAuthorName = static function (array $article): string {
+    if (empty($article['author_name'])) {
+        return '';
+    }
+
+    $label = h((string)$article['author_name']);
+    if (!empty($article['author_public_path'])) {
+        return '<a href="' . h((string)$article['author_public_path']) . '">' . $label . '</a>';
+    }
+
+    return '<span>' . $label . '</span>';
+};
+?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="clanek-nadpis">
     <p class="section-kicker">Článek</p>
@@ -10,7 +24,7 @@
           <?php endif; ?>
           <time datetime="<?= h(str_replace(' ', 'T', $article['created_at'])) ?>"><?= formatCzechDate($article['created_at']) ?></time>
           <?php if (!empty($article['author_name'])): ?>
-            <span><?= h($article['author_name']) ?></span>
+            <?= $renderAuthorName($article) ?>
           <?php endif; ?>
           <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
         </p>

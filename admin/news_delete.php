@@ -5,7 +5,12 @@ verifyCsrf();
 
 $id = inputInt('post', 'id');
 if ($id !== null) {
-    db_connect()->prepare("DELETE FROM cms_news WHERE id = ?")->execute([$id]);
+    $pdo = db_connect();
+    if (canManageOwnNewsOnly()) {
+        $pdo->prepare("DELETE FROM cms_news WHERE id = ? AND author_id = ?")->execute([$id, currentUserId()]);
+    } else {
+        $pdo->prepare("DELETE FROM cms_news WHERE id = ?")->execute([$id]);
+    }
     logAction('news_delete', "id={$id}");
 }
 
