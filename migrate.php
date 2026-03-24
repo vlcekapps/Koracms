@@ -273,8 +273,16 @@ $tables = [
     'cms_downloads' => "CREATE TABLE IF NOT EXISTS cms_downloads (
         id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title          VARCHAR(255) NOT NULL,
+        slug           VARCHAR(255) NOT NULL,
+        download_type  VARCHAR(50)  NOT NULL DEFAULT 'document',
         dl_category_id INT          NULL DEFAULT NULL,
+        excerpt        TEXT,
         description    TEXT,
+        image_file     VARCHAR(255) NOT NULL DEFAULT '',
+        version_label  VARCHAR(100) NOT NULL DEFAULT '',
+        platform_label VARCHAR(100) NOT NULL DEFAULT '',
+        license_label  VARCHAR(100) NOT NULL DEFAULT '',
+        external_url   VARCHAR(255) NOT NULL DEFAULT '',
         filename       VARCHAR(255) NOT NULL DEFAULT '',
         original_name  VARCHAR(255) NOT NULL DEFAULT '',
         file_size      INT          NOT NULL DEFAULT 0,
@@ -282,7 +290,9 @@ $tables = [
         is_published   TINYINT(1)   NOT NULL DEFAULT 1,
         status         ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id      INT          NULL DEFAULT NULL,
-        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_downloads_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_gallery_albums' => "CREATE TABLE IF NOT EXISTS cms_gallery_albums (
@@ -592,7 +602,16 @@ $addColumns = [
     'cms_board.contact_email'        => "ALTER TABLE cms_board ADD COLUMN contact_email VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_board.is_pinned'            => "ALTER TABLE cms_board ADD COLUMN is_pinned TINYINT(1) NOT NULL DEFAULT 0",
     // cms_downloads
+    'cms_downloads.slug'             => "ALTER TABLE cms_downloads ADD COLUMN slug VARCHAR(255) NOT NULL DEFAULT '' AFTER title",
+    'cms_downloads.download_type'    => "ALTER TABLE cms_downloads ADD COLUMN download_type VARCHAR(50) NOT NULL DEFAULT 'document' AFTER slug",
     'cms_downloads.dl_category_id'   => "ALTER TABLE cms_downloads ADD COLUMN dl_category_id INT NULL DEFAULT NULL",
+    'cms_downloads.excerpt'          => "ALTER TABLE cms_downloads ADD COLUMN excerpt TEXT NULL AFTER dl_category_id",
+    'cms_downloads.image_file'       => "ALTER TABLE cms_downloads ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT '' AFTER description",
+    'cms_downloads.version_label'    => "ALTER TABLE cms_downloads ADD COLUMN version_label VARCHAR(100) NOT NULL DEFAULT '' AFTER image_file",
+    'cms_downloads.platform_label'   => "ALTER TABLE cms_downloads ADD COLUMN platform_label VARCHAR(100) NOT NULL DEFAULT '' AFTER version_label",
+    'cms_downloads.license_label'    => "ALTER TABLE cms_downloads ADD COLUMN license_label VARCHAR(100) NOT NULL DEFAULT '' AFTER platform_label",
+    'cms_downloads.external_url'     => "ALTER TABLE cms_downloads ADD COLUMN external_url VARCHAR(255) NOT NULL DEFAULT '' AFTER license_label",
+    'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_users – rozšíření pro veřejné uživatele a role
     'cms_users.role'                 => "ALTER TABLE cms_users ADD COLUMN role ENUM('admin','collaborator','author','editor','moderator','booking_manager','public') NOT NULL DEFAULT 'collaborator'",
     'cms_users.phone'                => "ALTER TABLE cms_users ADD COLUMN phone VARCHAR(30) NOT NULL DEFAULT ''",
@@ -978,6 +997,60 @@ try {
 }
 
 try {
+    $downloadSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_downloads' AND COLUMN_NAME = 'slug'"
+    );
+    $downloadSlugColumnCheck->execute();
+
+    if ((int)$downloadSlugColumnCheck->fetchColumn() > 0) {
+        $downloadRows = $pdo->query("SELECT id, title, slug FROM cms_downloads ORDER BY id")->fetchAll();
+        $updateDownloadSlugStmt = $pdo->prepare("UPDATE cms_downloads SET slug = ? WHERE id = ?");
+
+        foreach ($downloadRows as $downloadRow) {
+            $existingSlug = trim((string)($downloadRow['slug'] ?? ''));
+            $resolvedSlug = uniqueDownloadSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$downloadRow['title'],
+                (int)$downloadRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateDownloadSlugStmt->execute([$resolvedSlug, (int)$downloadRow['id']]);
+            }
+        }
+
+        $downloadSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_downloads' AND COLUMN_NAME = 'slug'"
+        );
+        $downloadSlugNullabilityCheck->execute();
+        if (($downloadSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_downloads MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_downloads.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_downloads.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $downloadSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_downloads'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $downloadSlugIndexCheck->execute();
+        if ((int)$downloadSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_downloads ADD UNIQUE KEY uq_cms_downloads_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_downloads_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_downloads.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy souborů ke stažení – sloupec <code>cms_downloads.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy souborů ke stažení – CHYBA: " . h($e->getMessage());
+}
+
+try {
     $placeSlugColumnCheck = $pdo->prepare(
         "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_places' AND COLUMN_NAME = 'slug'"
@@ -1199,6 +1272,7 @@ $uploadDirs = [
     'uploads/gallery',
     'uploads/gallery/thumbs',
     'uploads/downloads',
+    'uploads/downloads/images',
     'uploads/places',
     'uploads/board',
     'uploads/board/images',

@@ -1,96 +1,201 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu souborů ke stažení nemáte potřebné oprávnění.');
 verifyCsrf();
 
-$pdo           = db_connect();
-$id            = inputInt('post', 'id');
-$title         = trim($_POST['title']          ?? '');
-$dlCategoryId  = inputInt('post', 'dl_category_id');
-$description   = trim($_POST['description']    ?? '');
-$sortOrder     = max(0, (int)($_POST['sort_order'] ?? 0));
-$isPublished   = isset($_POST['is_published']) ? 1 : 0;
+$pdo = db_connect();
+$id = inputInt('post', 'id');
+$title = trim((string)($_POST['title'] ?? ''));
+$slugInput = trim((string)($_POST['slug'] ?? ''));
+$downloadType = normalizeDownloadType(trim((string)($_POST['download_type'] ?? 'document')));
+$dlCategoryId = inputInt('post', 'dl_category_id');
+$excerpt = trim((string)($_POST['excerpt'] ?? ''));
+$description = trim((string)($_POST['description'] ?? ''));
+$versionLabel = trim((string)($_POST['version_label'] ?? ''));
+$platformLabel = trim((string)($_POST['platform_label'] ?? ''));
+$licenseLabel = trim((string)($_POST['license_label'] ?? ''));
+$externalUrlInput = trim((string)($_POST['external_url'] ?? ''));
+$sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
+$isPublished = isset($_POST['is_published']) ? 1 : 0;
+$deleteStoredFile = isset($_POST['file_delete']);
+$deleteImage = isset($_POST['download_image_delete']);
+
+$redirectBase = BASE_URL . '/admin/download_form.php';
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id): never {
+    $query = $id !== null
+        ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
+        : '?err=' . rawurlencode($errorCode);
+    header('Location: ' . $redirectBase . $query);
+    exit;
+};
 
 if ($title === '') {
-    header('Location: download_form.php' . ($id ? "?id={$id}" : ''));
-    exit;
+    $redirectWithError('required');
 }
 
-// ── Nahrání souboru ───────────────────────────────────────────────────────
-$newFilename   = null;
-$newOrigName   = null;
-$newFileSize   = null;
-
-if (!empty($_FILES['file']['name'])) {
-    $tmp   = $_FILES['file']['tmp_name'];
-    $finfo = new \finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($tmp);
-
-    $allowed = [
-        'application/pdf'                                                        => 'pdf',
-        'application/msword'                                                     => 'doc',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'=> 'docx',
-        'application/vnd.ms-excel'                                               => 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'     => 'xlsx',
-        'application/vnd.ms-powerpoint'                                          => 'ppt',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-        'application/vnd.oasis.opendocument.text'                                => 'odt',
-        'application/vnd.oasis.opendocument.spreadsheet'                         => 'ods',
-        'application/vnd.oasis.opendocument.presentation'                        => 'odp',
-        'application/zip'                                                        => 'zip',
-        'application/x-zip-compressed'                                           => 'zip',
-        'text/plain'                                                             => 'txt',
-    ];
-
-    if (isset($allowed[$mime])) {
-        $ext  = $allowed[$mime];
-        $dir  = __DIR__ . '/../uploads/downloads/';
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
-
-        $storedName = uniqid('dl_', true) . '.' . $ext;
-
-        if (move_uploaded_file($tmp, $dir . $storedName)) {
-            // Smazat starý soubor
-            if ($id !== null) {
-                $old = $pdo->prepare("SELECT filename FROM cms_downloads WHERE id = ?");
-                $old->execute([$id]);
-                $oldFile = $old->fetchColumn();
-                if ($oldFile && file_exists($dir . $oldFile)) { unlink($dir . $oldFile); }
-            }
-            $newFilename = $storedName;
-            $newOrigName = basename($_FILES['file']['name']);
-            $newFileSize = (int)$_FILES['file']['size'];
-        }
-    }
-} elseif ($id === null) {
-    // Nový záznam bez souboru – přesměruj zpět
-    header('Location: download_form.php');
-    exit;
+$resolvedSlug = downloadSlug($slugInput !== '' ? $slugInput : $title);
+if ($resolvedSlug === '') {
+    $redirectWithError('slug');
 }
 
-// ── Uložení ───────────────────────────────────────────────────────────────
+$existing = [
+    'filename' => '',
+    'original_name' => '',
+    'file_size' => 0,
+    'image_file' => '',
+];
 if ($id !== null) {
-    $set    = "title=?, dl_category_id=?, description=?, sort_order=?, is_published=?,
-               author_id=COALESCE(author_id,?)";
-    $params = [$title, $dlCategoryId, $description, $sortOrder, $isPublished, currentUserId()];
-    if ($newFilename !== null) {
-        $set     .= ", filename=?, original_name=?, file_size=?";
-        $params[] = $newFilename;
-        $params[] = $newOrigName;
-        $params[] = $newFileSize;
+    $existingStmt = $pdo->prepare(
+        "SELECT filename, original_name, file_size, image_file
+         FROM cms_downloads
+         WHERE id = ?"
+    );
+    $existingStmt->execute([$id]);
+    $existingRow = $existingStmt->fetch();
+    if (!$existingRow) {
+        header('Location: ' . BASE_URL . '/admin/downloads.php');
+        exit;
     }
-    $params[] = $id;
-    $pdo->prepare("UPDATE cms_downloads SET {$set} WHERE id=?")->execute($params);
+    $existing = array_merge($existing, $existingRow);
+}
+
+$uniqueSlug = uniqueDownloadSlug($pdo, $resolvedSlug, $id);
+if ($uniqueSlug !== $resolvedSlug) {
+    $redirectWithError('slug_taken');
+}
+
+$externalUrl = normalizeDownloadExternalUrl($externalUrlInput);
+if ($externalUrlInput !== '' && $externalUrl === '') {
+    $redirectWithError('url');
+}
+
+$imageFilename = (string)$existing['image_file'];
+$imageUpload = uploadDownloadImage($_FILES['download_image'] ?? [], $imageFilename);
+if ($imageUpload['error'] !== '') {
+    $redirectWithError('image');
+}
+$imageFilename = $imageUpload['filename'];
+if ($deleteImage && $imageFilename !== '') {
+    deleteDownloadImageFile($imageFilename);
+    $imageFilename = '';
+}
+
+$storedFilename = (string)$existing['filename'];
+$originalName = (string)$existing['original_name'];
+$fileSize = (int)$existing['file_size'];
+
+if ($deleteStoredFile && $storedFilename !== '') {
+    deleteDownloadStoredFile($storedFilename);
+    $storedFilename = '';
+    $originalName = '';
+    $fileSize = 0;
+}
+
+$allowedExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'odt', 'ods', 'odp', 'zip', '7z', 'tar', 'gz', 'bz2',
+    'txt', 'exe', 'msi', 'apk', 'jar', 'dmg', 'pkg', 'deb', 'rpm', 'appimage',
+];
+
+$fileField = $_FILES['file'] ?? null;
+if (is_array($fileField) && ($fileField['name'] ?? '') !== '' && (int)($fileField['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+    if ((int)($fileField['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $redirectWithError('file');
+    }
+
+    $tmpPath = (string)($fileField['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        $redirectWithError('file');
+    }
+
+    $extension = strtolower(pathinfo((string)$fileField['name'], PATHINFO_EXTENSION));
+    if (!in_array($extension, $allowedExtensions, true)) {
+        $redirectWithError('file');
+    }
+
+    $directory = __DIR__ . '/../uploads/downloads/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        $redirectWithError('file');
+    }
+
+    $newStoredFilename = uniqid('dl_', true) . '.' . $extension;
+    if (!move_uploaded_file($tmpPath, $directory . $newStoredFilename)) {
+        $redirectWithError('file');
+    }
+
+    if ($storedFilename !== '' && $storedFilename !== $newStoredFilename) {
+        deleteDownloadStoredFile($storedFilename);
+    }
+
+    $storedFilename = $newStoredFilename;
+    $originalName = basename((string)$fileField['name']);
+    $fileSize = (int)($fileField['size'] ?? 0);
+}
+
+if ($storedFilename === '' && $externalUrl === '') {
+    $redirectWithError('source');
+}
+
+if ($id !== null) {
+    $stmt = $pdo->prepare(
+        "UPDATE cms_downloads
+         SET title = ?, slug = ?, download_type = ?, dl_category_id = ?, excerpt = ?, description = ?,
+             image_file = ?, version_label = ?, platform_label = ?, license_label = ?, external_url = ?,
+             filename = ?, original_name = ?, file_size = ?, sort_order = ?, is_published = ?,
+             author_id = COALESCE(author_id, ?), updated_at = NOW()
+         WHERE id = ?"
+    );
+    $stmt->execute([
+        $title,
+        $uniqueSlug,
+        $downloadType,
+        $dlCategoryId,
+        $excerpt,
+        $description,
+        $imageFilename,
+        $versionLabel,
+        $platformLabel,
+        $licenseLabel,
+        $externalUrl,
+        $storedFilename,
+        $originalName,
+        $fileSize,
+        $sortOrder,
+        $isPublished,
+        currentUserId(),
+        $id,
+    ]);
     logAction('download_edit', "id={$id}");
 } else {
-    $status   = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $authorId = currentUserId();
-    $pdo->prepare(
+    $stmt = $pdo->prepare(
         "INSERT INTO cms_downloads
-         (title, dl_category_id, description, filename, original_name, file_size, sort_order, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?)"
-    )->execute([$title, $dlCategoryId, $description, $newFilename, $newOrigName, $newFileSize,
-                $sortOrder, currentUserHasCapability('content_approve_shared') ? $isPublished : 0, $status, $authorId]);
+         (title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
+          platform_label, license_label, external_url, filename, original_name, file_size,
+          sort_order, is_published, status, author_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    );
+    $stmt->execute([
+        $title,
+        $uniqueSlug,
+        $downloadType,
+        $dlCategoryId,
+        $excerpt,
+        $description,
+        $imageFilename,
+        $versionLabel,
+        $platformLabel,
+        $licenseLabel,
+        $externalUrl,
+        $storedFilename,
+        $originalName,
+        $fileSize,
+        $sortOrder,
+        currentUserHasCapability('content_approve_shared') ? $isPublished : 0,
+        $status,
+        $authorId,
+    ]);
     logAction('download_add', "title={$title} status={$status}");
 }
 

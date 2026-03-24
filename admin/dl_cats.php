@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií ke stažení nemáte potřebné oprávnění.');
 
 $pdo     = db_connect();
 $success = false;

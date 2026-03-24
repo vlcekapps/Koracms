@@ -124,6 +124,25 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
+    if (isModuleEnabled('downloads')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
+                        created_at, 'download' AS type
+                 FROM cms_downloads
+                 WHERE status = 'published' AND is_published = 1
+                   AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR version_label LIKE ? OR platform_label LIKE ? OR license_label LIKE ?)
+                 ORDER BY sort_order, title
+                 LIMIT 10"
+            );
+            $stmt->execute([$like, $like, $like, $like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+    }
+
     if (isModuleEnabled('places')) {
         try {
             $stmt = $pdo->prepare(
@@ -154,6 +173,7 @@ function resultUrl(array $result): string
         'event' => eventPublicPath($result),
         'podcast' => $baseUrl . '/podcast/index.php#ep-' . (int)$result['id'],
         'faq' => $baseUrl . '/faq/index.php',
+        'download' => downloadPublicPath($result),
         'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
         default => $baseUrl . '/',
@@ -169,6 +189,7 @@ function typeLabel(string $type): string
         'event' => 'Akce',
         'podcast' => 'Podcast',
         'faq' => 'FAQ',
+        'download' => 'Ke stažení',
         'place' => 'Místo',
         'board' => boardModulePublicLabel(),
         default => '',

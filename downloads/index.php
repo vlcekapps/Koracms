@@ -11,13 +11,19 @@ $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
 $items = $pdo->query(
-    "SELECT d.id, d.title, d.description, d.filename, d.original_name, d.file_size, d.created_at,
-            COALESCE(c.name, '') AS category_name
+    "SELECT d.id, d.title, d.slug, d.download_type, d.dl_category_id, COALESCE(c.name, '') AS category_name,
+            d.excerpt, d.description, d.image_file, d.version_label, d.platform_label, d.license_label,
+            d.external_url, d.filename, d.original_name, d.file_size, d.sort_order, d.created_at, d.updated_at
      FROM cms_downloads d
      LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
      WHERE d.status = 'published' AND d.is_published = 1
      ORDER BY c.name, d.sort_order, d.title"
 )->fetchAll();
+
+$items = array_map(
+    static fn(array $download): array => hydrateDownloadPresentation($download),
+    $items
+);
 
 $grouped = [];
 foreach ($items as $item) {

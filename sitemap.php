@@ -103,6 +103,31 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('downloads')): ?>
+  <url>
+    <loc><?= h(siteUrl('/downloads/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $downloads = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_downloads
+             WHERE status = 'published' AND is_published = 1
+             ORDER BY sort_order, title"
+        )->fetchAll();
+        foreach ($downloads as $download):
+?>
+  <url>
+    <loc><?= h(downloadPublicUrl($download)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$download['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 <?php if (isModuleEnabled('events')): ?>
   <url>
     <loc><?= h(siteUrl('/events/index.php')) ?></loc>

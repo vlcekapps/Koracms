@@ -392,6 +392,15 @@ body.theme-public textarea.form-control {
   padding: 1.1rem;
 }
 
+.card__eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .card__title {
   margin: 0.25rem 0 0.5rem;
   font-size: 1.25rem;
@@ -405,6 +414,18 @@ body.theme-public textarea.form-control {
 
 .card__title a:hover {
   color: var(--accent-strong);
+}
+
+.card__description {
+  margin: 0.6rem 0 0;
+  color: var(--text-muted);
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1rem;
 }
 
 .meta-row {
@@ -1013,6 +1034,40 @@ body.theme-public textarea.form-control {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.info-card {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
+}
+
+.info-list {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+}
+
+.info-list div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.info-list dt {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.info-list dd {
+  margin: 0;
+}
+
+.stack-actions {
+  display: grid;
+  gap: 0.75rem;
 }
 
 .download-item__description,
@@ -1645,6 +1700,11 @@ body.theme-public textarea.form-control {
   box-shadow: 0 12px 30px rgba(17, 24, 39, 0.1);
 }
 
+.article-shell--sidebar {
+  display: grid;
+  gap: 1.25rem;
+}
+
 .not-found {
   text-align: center;
 }
@@ -1719,6 +1779,11 @@ body.theme-public textarea.form-control {
   .podcast-card__body,
   .podcast-hero {
     grid-template-columns: auto 1fr;
+    align-items: start;
+  }
+
+  .article-shell--sidebar {
+    grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 0.9fr);
     align-items: start;
   }
 }

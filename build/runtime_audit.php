@@ -15,6 +15,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_newsletter' => getSetting('module_newsletter', '0'),
     'module_chat' => getSetting('module_chat', '0'),
     'module_board' => getSetting('module_board', '0'),
+    'module_downloads' => getSetting('module_downloads', '0'),
     'module_events' => getSetting('module_events', '0'),
     'module_places' => getSetting('module_places', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
@@ -65,6 +66,12 @@ $boardCanonicalUrl = '';
 $boardLegacyUrl = '';
 $boardCount = 0;
 $boardAttachmentId = false;
+$downloadRow = null;
+$downloadId = false;
+$downloadCanonicalPath = '';
+$downloadLegacyPath = '';
+$downloadCanonicalUrl = '';
+$downloadLegacyUrl = '';
 $placeRow = null;
 $placeId = false;
 $placeCanonicalPath = '';
@@ -146,6 +153,8 @@ $cleanup = [
     'author_user_ids' => [],
     'staff_user_ids' => [],
     'board_ids' => [],
+    'download_ids' => [],
+    'download_files' => [],
     'place_ids' => [],
 ];
 
@@ -382,6 +391,55 @@ if (isModuleEnabled('board')) {
     )->fetchColumn();
 }
 
+$runtimeAuditDownloadStoredName = 'runtime_audit_' . bin2hex(random_bytes(6)) . '.txt';
+$runtimeAuditDownloadFilePath = __DIR__ . '/../uploads/downloads/' . $runtimeAuditDownloadStoredName;
+if (!is_dir(dirname($runtimeAuditDownloadFilePath))) {
+    mkdir(dirname($runtimeAuditDownloadFilePath), 0755, true);
+}
+file_put_contents($runtimeAuditDownloadFilePath, "Runtime audit download file.\n");
+$cleanup['download_files'][] = $runtimeAuditDownloadStoredName;
+
+$runtimeAuditDownloadTitle = 'Runtime audit aplikace';
+$runtimeAuditDownloadSlug = uniqueDownloadSlug($pdo, 'runtime-audit-aplikace-' . bin2hex(random_bytes(4)));
+$runtimeAuditDownloadExcerpt = 'Krátký přehled testovací položky ke stažení pro ověření detailu, metadat a bezpečného file endpointu.';
+$pdo->prepare(
+    "INSERT INTO cms_downloads (
+        title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
+        platform_label, license_label, external_url, filename, original_name, file_size,
+        sort_order, is_published, status, author_id, created_at, updated_at
+     ) VALUES (?, ?, 'software', NULL, ?, ?, '', '1.0.0', 'Windows / Linux', 'MIT',
+               ?, ?, ?, ?, -100, 1, 'published', ?, NOW(), NOW())"
+)->execute([
+    $runtimeAuditDownloadTitle,
+    $runtimeAuditDownloadSlug,
+    $runtimeAuditDownloadExcerpt,
+    '<p>Detailní text runtime audit položky ke stažení pro ověření veřejného detailu a CTA tlačítek.</p>',
+    'https://example.test/runtime-download',
+    $runtimeAuditDownloadStoredName,
+    'runtime-audit.txt',
+    filesize($runtimeAuditDownloadFilePath) ?: 0,
+    null,
+]);
+$runtimeAuditDownloadId = (int)$pdo->lastInsertId();
+$cleanup['download_ids'][] = $runtimeAuditDownloadId;
+
+$downloadStmt = $pdo->prepare(
+    "SELECT d.*, COALESCE(c.name, '') AS category_name
+     FROM cms_downloads d
+     LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+     WHERE d.id = ?"
+);
+$downloadStmt->execute([$runtimeAuditDownloadId]);
+$downloadRow = $downloadStmt->fetch() ?: null;
+if ($downloadRow) {
+    $downloadRow = hydrateDownloadPresentation($downloadRow);
+    $downloadId = $downloadRow['id'] ?? false;
+    $downloadCanonicalPath = downloadPublicPath($downloadRow);
+    $downloadLegacyPath = $downloadId !== false ? BASE_URL . '/downloads/item.php?id=' . urlencode((string)$downloadId) : '';
+    $downloadCanonicalUrl = $downloadCanonicalPath !== '' ? $baseUrl . $downloadCanonicalPath : '';
+    $downloadLegacyUrl = $downloadLegacyPath !== '' ? $baseUrl . $downloadLegacyPath : '';
+}
+
 if (isModuleEnabled('places')) {
     $runtimeAuditPlaceName = 'Runtime audit místo';
     $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
@@ -444,6 +502,7 @@ $pages = [
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_downloads', 'url' => $baseUrl . '/admin/downloads.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_places', 'url' => $baseUrl . '/admin/places.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -457,6 +516,9 @@ if ($runtimeAuditAuthorId > 0) {
 }
 if ($boardId !== false) {
     $pages[] = ['label' => 'admin_board_form', 'url' => $baseUrl . '/admin/board_form.php?id=' . urlencode((string)$boardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($downloadId !== false) {
+    $pages[] = ['label' => 'admin_download_form', 'url' => $baseUrl . '/admin/download_form.php?id=' . urlencode((string)$downloadId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($placeId !== false) {
     $pages[] = ['label' => 'admin_place_form', 'url' => $baseUrl . '/admin/place_form.php?id=' . urlencode((string)$placeId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -473,9 +535,7 @@ if (isModuleEnabled('blog')) {
 if (isModuleEnabled('board')) {
     $pages[] = ['label' => 'board_index', 'url' => $baseUrl . '/board/index.php'];
 }
-if (isModuleEnabled('downloads')) {
-    $pages[] = ['label' => 'downloads_index', 'url' => $baseUrl . '/downloads/index.php'];
-}
+$pages[] = ['label' => 'downloads_index', 'url' => $baseUrl . '/downloads/index.php'];
 if (isModuleEnabled('events')) {
     $pages[] = ['label' => 'events_index', 'url' => $baseUrl . '/events/index.php'];
 }
@@ -528,6 +588,9 @@ if ($eventCanonicalUrl !== '') {
 }
 if ($boardCanonicalUrl !== '') {
     $pages[] = ['label' => 'board_article', 'url' => $boardCanonicalUrl];
+}
+if ($downloadCanonicalUrl !== '') {
+    $pages[] = ['label' => 'downloads_article', 'url' => $downloadCanonicalUrl];
 }
 if ($placeCanonicalUrl !== '') {
     $pages[] = ['label' => 'places_article', 'url' => $placeCanonicalUrl];
@@ -980,7 +1043,13 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], '/uploads/downloads/')) {
             $issues[] = 'downloads listing still exposes uploads/downloads paths';
         }
-        if (str_contains($result['body'], 'class="download-item"') && !str_contains($result['body'], '/downloads/file.php?id=')) {
+        if ($downloadCanonicalPath !== '' && !str_contains($result['body'], $downloadCanonicalPath)) {
+            $issues[] = 'downloads listing is missing detail links';
+        }
+        if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['excerpt_plain'] ?? ''))) {
+            $issues[] = 'downloads listing is missing excerpt preview';
+        }
+        if ($downloadId !== false && !str_contains($result['body'], '/downloads/file.php?id=' . (int)$downloadId)) {
             $issues[] = 'downloads listing is missing file endpoint links';
         }
     }
@@ -1177,6 +1246,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_downloads') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin downloads search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin downloads status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_places') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin places search field is missing';
@@ -1198,6 +1276,24 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin board form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_download_form') {
+        foreach ([
+            'name="slug"',
+            'name="download_type"',
+            'name="excerpt"',
+            'name="download_image"',
+            'name="version_label"',
+            'name="platform_label"',
+            'name="license_label"',
+            'name="external_url"',
+            'name="file_delete"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin download form is missing field: ' . $expectedField;
             }
         }
     }
@@ -1277,6 +1373,27 @@ foreach ($pages as $page) {
             && (int)$boardAttachmentId === (int)($boardRow['id'] ?? 0)
             && !str_contains($result['body'], '/board/file.php?id=' . (int)$boardAttachmentId)) {
             $issues[] = 'board article is missing download CTA';
+        }
+    }
+
+    if ($page['label'] === 'downloads_article') {
+        if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['title'] ?? ''))) {
+            $issues[] = 'downloads article is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět na ke stažení')) {
+            $issues[] = 'downloads article is missing back link';
+        }
+        if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['version_label'] ?? ''))) {
+            $issues[] = 'downloads article is missing version metadata';
+        }
+        if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['platform_label'] ?? ''))) {
+            $issues[] = 'downloads article is missing platform metadata';
+        }
+        if ($downloadId !== false && !str_contains($result['body'], '/downloads/file.php?id=' . (int)$downloadId)) {
+            $issues[] = 'downloads article is missing file download CTA';
+        }
+        if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['external_url'] ?? ''))) {
+            $issues[] = 'downloads article is missing external link CTA';
         }
     }
 
@@ -1390,6 +1507,23 @@ if ($boardCanonicalPath === '' || $boardLegacyPath === '' || $boardCanonicalPath
     }
 }
 
+echo "=== downloads_article_legacy_redirect ===\n";
+if ($downloadCanonicalPath === '' || $downloadLegacyPath === '' || $downloadCanonicalPath === $downloadLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyDownloadProbe = fetchUrl($downloadLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $downloadCanonicalPath;
+    if (!str_contains($legacyDownloadProbe['status'], '302')) {
+        echo "- legacy download URL does not redirect ({$legacyDownloadProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyDownloadProbe['headers'], true)) {
+        echo "- legacy download URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== places_article_legacy_redirect ===\n";
 if ($placeCanonicalPath === '' || $placeLegacyPath === '' || $placeCanonicalPath === $placeLegacyPath) {
     echo "OK\n";
@@ -1456,6 +1590,7 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
 }
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'author downloads'];
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'author places'];
 }
@@ -1481,6 +1616,7 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
 }
+$roleChecks[] = ['role' => 'moderator', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'moderator downloads'];
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'moderator places'];
 }
@@ -1495,6 +1631,7 @@ if (isModuleEnabled('blog')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'booking manager board'];
 }
+$roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'booking manager downloads'];
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'booking manager places'];
 }
@@ -1594,6 +1731,7 @@ $sampleDownload = $pdo->query(
      ORDER BY id DESC
      LIMIT 1"
 )->fetchColumn();
+$sampleDownload = $downloadId !== false ? $downloadId : $sampleDownload;
 echo "=== downloads_file ===\n";
 if ($sampleDownload === false) {
     echo "OK\n";
@@ -1956,6 +2094,13 @@ if (!empty($cleanup['subscriber_emails'])) {
 if (!empty($cleanup['board_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['board_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_board WHERE id IN ({$placeholders})")->execute($cleanup['board_ids']);
+}
+if (!empty($cleanup['download_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['download_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_downloads WHERE id IN ({$placeholders})")->execute($cleanup['download_ids']);
+}
+foreach ($cleanup['download_files'] as $downloadFile) {
+    deleteDownloadStoredFile((string)$downloadFile);
 }
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));

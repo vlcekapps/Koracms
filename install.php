@@ -259,8 +259,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_downloads (
             id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title           VARCHAR(255) NOT NULL,
+            slug            VARCHAR(255) NOT NULL,
+            download_type   VARCHAR(50)  NOT NULL DEFAULT 'document',
             dl_category_id  INT          NULL DEFAULT NULL,
+            excerpt         TEXT,
             description     TEXT,
+            image_file      VARCHAR(255) NOT NULL DEFAULT '',
+            version_label   VARCHAR(100) NOT NULL DEFAULT '',
+            platform_label  VARCHAR(100) NOT NULL DEFAULT '',
+            license_label   VARCHAR(100) NOT NULL DEFAULT '',
+            external_url    VARCHAR(255) NOT NULL DEFAULT '',
             filename        VARCHAR(255) NOT NULL DEFAULT '',
             original_name   VARCHAR(255) NOT NULL DEFAULT '',
             file_size       INT          NOT NULL DEFAULT 0,
@@ -268,7 +276,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published    TINYINT(1)   NOT NULL DEFAULT 1,
             status          ENUM('pending','published') NOT NULL DEFAULT 'published',
             author_id       INT          NULL DEFAULT NULL,
-            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_downloads_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_places (
@@ -601,6 +611,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'uploads/gallery',
             'uploads/gallery/thumbs',
             'uploads/downloads',
+            'uploads/downloads/images',
             'uploads/places',
             'uploads/board',
             'uploads/board/images',

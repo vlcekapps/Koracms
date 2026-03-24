@@ -255,18 +255,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['downloads']) && is_array($data['downloads'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_downloads
-                         (id, title, dl_category_id, description, filename, original_name,
-                          file_size, sort_order, is_published, status)
-                         VALUES (?,?,?,?,?,?,?,?,?,?)"
+                         (id, title, slug, download_type, dl_category_id, excerpt, description,
+                          image_file, version_label, platform_label, license_label, external_url,
+                          filename, original_name, file_size, sort_order, is_published, status,
+                          created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['downloads'] as $row) {
                         $catId = $row['dl_category_id'] ?? null;
+                        $title = (string)($row['title'] ?? 'Soubor ke stažení');
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $slug = uniqueDownloadSlug(
+                            $pdo,
+                            (string)($row['slug'] ?? '') !== '' ? (string)$row['slug'] : $title,
+                            (int)$row['id']
+                        );
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $catId !== '' ? $catId : null,
-                            $row['description'] ?? '', $row['filename'] ?? '',
-                            $row['original_name'] ?? '', (int)($row['file_size'] ?? 0),
-                            (int)($row['sort_order'] ?? 0), (int)($row['is_published'] ?? 1),
+                            (int)$row['id'],
+                            $title,
+                            $slug,
+                            normalizeDownloadType((string)($row['download_type'] ?? 'document')),
+                            $catId !== '' ? $catId : null,
+                            $row['excerpt'] ?? '',
+                            $row['description'] ?? '',
+                            $row['image_file'] ?? '',
+                            $row['version_label'] ?? '',
+                            $row['platform_label'] ?? '',
+                            $row['license_label'] ?? '',
+                            normalizeDownloadExternalUrl((string)($row['external_url'] ?? '')),
+                            $row['filename'] ?? '',
+                            $row['original_name'] ?? '',
+                            (int)($row['file_size'] ?? 0),
+                            (int)($row['sort_order'] ?? 0),
+                            (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
+                            $createdAt,
+                            $updatedAt,
                         ]);
                     }
                     $summary[] = 'Soubory ke stažení importovány.';

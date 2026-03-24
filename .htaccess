@@ -25,6 +25,7 @@ Options -Indexes
     RewriteRule ^author/([a-z0-9\-]+)/?$ author.php?slug=$1 [L,QSA,NC]
     RewriteRule ^blog/([a-z0-9\-]+)/?$ blog/article.php?slug=$1 [L,QSA,NC]
     RewriteRule ^board/([a-z0-9\-]+)/?$ board/document.php?slug=$1 [L,QSA,NC]
+    RewriteRule ^downloads/([a-z0-9\-]+)/?$ downloads/item.php?slug=$1 [L,QSA,NC]
     RewriteRule ^events/([a-z0-9\-]+)/?$ events/event.php?slug=$1 [L,QSA,NC]
     RewriteRule ^news/([a-z0-9\-]+)/?$ news/article.php?slug=$1 [L,QSA,NC]
     RewriteRule ^places/([a-z0-9\-]+)/?$ places/place.php?slug=$1 [L,QSA,NC]

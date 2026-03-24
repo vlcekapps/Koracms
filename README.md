@@ -122,7 +122,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Podcasty** | Správa více podcastů a jejich epizod; každý podcast má vlastní RSS feed (`/podcast/feed.php?show=ID`) kompatibilní s podcastovými aplikacemi |
 | **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
 | **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
-| **Ke stažení** | Knihovna souborů ke stažení s kategoriemi |
+| **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |
 | **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
 | **FAQ** | Často kladené otázky s kategoriemi; accordion (`<details>` / `<summary>`) bez JavaScriptu |

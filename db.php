@@ -116,6 +116,18 @@ function placeKindDefinitions(): array
     ];
 }
 
+function downloadTypeDefinitions(): array
+{
+    return [
+        'document' => ['label' => 'Dokument'],
+        'software' => ['label' => 'Software'],
+        'release' => ['label' => 'Aktualizace / release'],
+        'archive' => ['label' => 'Archiv / balíček'],
+        'template' => ['label' => 'Šablona / formulář'],
+        'media' => ['label' => 'Média / prezentace'],
+    ];
+}
+
 function normalizeBoardType(string $type): string
 {
     $definitions = boardTypeDefinitions();
@@ -126,6 +138,12 @@ function normalizePlaceKind(string $kind): string
 {
     $definitions = placeKindDefinitions();
     return isset($definitions[$kind]) ? $kind : 'sight';
+}
+
+function normalizeDownloadType(string $type): string
+{
+    $definitions = downloadTypeDefinitions();
+    return isset($definitions[$type]) ? $type : 'document';
 }
 
 function siteProfileDefinitions(): array
@@ -1034,6 +1052,11 @@ function placeSlug(string $value): string
     return slugify(trim($value));
 }
 
+function downloadSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function boardSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1116,6 +1139,178 @@ function placeExcerpt(array $place, int $limit = 220): string
     }
 
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function downloadTypeLabel(string $type): string
+{
+    $definitions = downloadTypeDefinitions();
+    return $definitions[normalizeDownloadType($type)]['label'];
+}
+
+function downloadExcerpt(array $download, int $limit = 220): string
+{
+    $explicitExcerpt = normalizePlainText((string)($download['excerpt'] ?? ''));
+    if ($explicitExcerpt !== '') {
+        return mb_strimwidth($explicitExcerpt, 0, $limit, '...', 'UTF-8');
+    }
+
+    $descriptionExcerpt = normalizePlainText((string)($download['description'] ?? ''));
+    if ($descriptionExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function downloadImageUrl(array $download): string
+{
+    $filename = trim((string)($download['image_file'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/downloads/images/' . rawurlencode($filename);
+}
+
+function deleteDownloadImageFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/downloads/images/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+function deleteDownloadStoredFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/downloads/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadDownloadImage(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = __DIR__ . '/uploads/downloads/images/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro obrázky ke stažení se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('download_image_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo uložit.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deleteDownloadImageFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
+function normalizeDownloadExternalUrl(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $value)) {
+        $value = 'https://' . ltrim($value, '/');
+    }
+
+    $validated = filter_var($value, FILTER_VALIDATE_URL);
+    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
+        return '';
+    }
+
+    return $validated;
+}
+
+function hydrateDownloadPresentation(array $download): array
+{
+    $download['slug'] = downloadSlug((string)($download['slug'] ?? ''));
+    $download['download_type'] = normalizeDownloadType((string)($download['download_type'] ?? 'document'));
+    $download['download_type_label'] = downloadTypeLabel((string)$download['download_type']);
+    $download['excerpt_plain'] = downloadExcerpt($download);
+    $download['image_url'] = downloadImageUrl($download);
+    $download['version_label'] = trim((string)($download['version_label'] ?? ''));
+    $download['platform_label'] = trim((string)($download['platform_label'] ?? ''));
+    $download['license_label'] = trim((string)($download['license_label'] ?? ''));
+    $download['external_url'] = normalizeDownloadExternalUrl((string)($download['external_url'] ?? ''));
+    $download['has_external_url'] = $download['external_url'] !== '';
+    $download['filename'] = trim((string)($download['filename'] ?? ''));
+    $download['original_name'] = trim((string)($download['original_name'] ?? ''));
+    $download['has_file'] = $download['filename'] !== '';
+
+    return $download;
 }
 
 function placeImageUrl(array $place): string
@@ -1470,6 +1665,26 @@ function newsPublicUrl(array $news, array $query = []): string
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));
 }
 
+function downloadPublicRequestPath(array $download): string
+{
+    $slug = downloadSlug((string)($download['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/downloads/' . rawurlencode($slug);
+    }
+
+    return '/downloads/item.php?id=' . (int)($download['id'] ?? 0);
+}
+
+function downloadPublicPath(array $download, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(downloadPublicRequestPath($download), $query);
+}
+
+function downloadPublicUrl(array $download, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(downloadPublicRequestPath($download), $query));
+}
+
 function boardPublicRequestPath(array $document): string
 {
     $slug = boardSlug((string)($document['slug'] ?? ''));
@@ -1582,6 +1797,27 @@ function uniquePlaceSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_places WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueDownloadSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = downloadSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'soubor';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_downloads WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);
