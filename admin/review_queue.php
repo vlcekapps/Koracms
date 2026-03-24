@@ -66,7 +66,7 @@ if (in_array($scope, ['all', 'content'], true)) {
 
     if (isModuleEnabled('news') && currentUserHasCapability('news_approve')) {
         $rows = $pdo->query(
-            "SELECT n.id, n.content, n.created_at,
+            "SELECT n.id, n.title, n.slug, n.content, n.created_at,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
              FROM cms_news n
              LEFT JOIN cms_users u ON u.id = n.author_id
@@ -78,8 +78,12 @@ if (in_array($scope, ['all', 'content'], true)) {
             $contentRows[] = [
                 'sort_at' => (string)$row['created_at'],
                 'module_label' => 'Novinky',
-                'title' => mb_strimwidth(trim(strip_tags((string)$row['content'])), 0, 90, '…'),
-                'meta' => trim((string)$row['author_name']) !== '' ? 'Autor: ' . (string)$row['author_name'] : '',
+                'title' => newsTitleCandidate((string)($row['title'] ?? ''), (string)($row['content'] ?? '')),
+                'meta' => trim((string)$row['author_name']) !== ''
+                    ? 'Autor: ' . (string)$row['author_name']
+                    : (newsSlug((string)($row['slug'] ?? '')) !== ''
+                        ? 'Slug: ' . newsSlug((string)($row['slug'] ?? ''))
+                        : newsExcerpt((string)($row['content'] ?? ''), 80)),
                 'date' => (string)$row['created_at'],
                 'edit_url' => 'news_form.php?id=' . (int)$row['id'],
                 'manage_url' => 'news.php',

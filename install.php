@@ -75,11 +75,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_news (
-            id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            content    TEXT     NOT NULL,
-            author_id  INT      NULL DEFAULT NULL,
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title      VARCHAR(255) NOT NULL,
+            slug       VARCHAR(255) NOT NULL,
+            content    TEXT         NOT NULL,
+            author_id  INT          NULL DEFAULT NULL,
             status     ENUM('pending','published') NOT NULL DEFAULT 'published',
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_news_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat (

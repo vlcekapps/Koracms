@@ -114,7 +114,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | Modul | Popis |
 |---|---|
 | **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování |
-| **Novinky** | Krátké zprávy |
+| **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
 | **Chat** | Jednoduchá veřejná diskuse |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou a rate limitingem |
 | **Galerie** | Vnořená fotoalba s automatickým generováním náhledů; výběr obálky alba |
@@ -240,8 +240,8 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 ## Další funkce
 
 - **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ, místy a úřední deskou
-- **RSS feed** – automaticky generovaný feed nejnovějších článků (`/feed.php`) s čistými odkazy na články
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků
+- **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků i novinek
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)

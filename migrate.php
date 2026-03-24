@@ -87,11 +87,15 @@ $tables = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_news' => "CREATE TABLE IF NOT EXISTS cms_news (
-        id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        content    TEXT     NOT NULL,
-        author_id  INT      NULL DEFAULT NULL,
+        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title      VARCHAR(255) NOT NULL,
+        slug       VARCHAR(255) NOT NULL,
+        content    TEXT         NOT NULL,
+        author_id  INT          NULL DEFAULT NULL,
         status     ENUM('pending','published') NOT NULL DEFAULT 'published',
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_news_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_chat' => "CREATE TABLE IF NOT EXISTS cms_chat (
@@ -527,8 +531,11 @@ $addColumns = [
     'cms_articles.status'            => "ALTER TABLE cms_articles ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_articles.updated_at'        => "ALTER TABLE cms_articles ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_news
+    'cms_news.title'                 => "ALTER TABLE cms_news ADD COLUMN title VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_news.slug'                  => "ALTER TABLE cms_news ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_news.author_id'             => "ALTER TABLE cms_news ADD COLUMN author_id INT NULL DEFAULT NULL",
     'cms_news.status'                => "ALTER TABLE cms_news ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_podcasts
     'cms_podcasts.show_id'           => "ALTER TABLE cms_podcasts ADD COLUMN show_id INT NOT NULL DEFAULT 1",
     'cms_podcasts.status'            => "ALTER TABLE cms_podcasts ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
@@ -807,6 +814,67 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy autorů – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $newsTitleColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_news' AND COLUMN_NAME = 'title'"
+    );
+    $newsSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_news' AND COLUMN_NAME = 'slug'"
+    );
+    $newsTitleColumnCheck->execute();
+    $newsSlugColumnCheck->execute();
+
+    if ((int)$newsTitleColumnCheck->fetchColumn() > 0 && (int)$newsSlugColumnCheck->fetchColumn() > 0) {
+        $newsRows = $pdo->query("SELECT id, title, slug, content FROM cms_news ORDER BY id")->fetchAll();
+        $updateNewsStmt = $pdo->prepare("UPDATE cms_news SET title = ?, slug = ? WHERE id = ?");
+
+        foreach ($newsRows as $newsRow) {
+            $resolvedTitle = newsTitleCandidate((string)($newsRow['title'] ?? ''), (string)($newsRow['content'] ?? ''));
+            $existingSlug = trim((string)($newsRow['slug'] ?? ''));
+            $resolvedSlug = uniqueNewsSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : $resolvedTitle,
+                (int)$newsRow['id']
+            );
+
+            if ((string)($newsRow['title'] ?? '') !== $resolvedTitle || $existingSlug !== $resolvedSlug) {
+                $updateNewsStmt->execute([$resolvedTitle, $resolvedSlug, (int)$newsRow['id']]);
+            }
+        }
+
+        $newsSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_news' AND COLUMN_NAME = 'slug'"
+        );
+        $newsSlugNullabilityCheck->execute();
+        if (($newsSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_news MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_news.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_news.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $newsSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_news'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $newsSlugIndexCheck->execute();
+        if ((int)$newsSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_news ADD UNIQUE KEY uq_cms_news_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_news_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_news.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy novinek – potřebné sloupce v <code>cms_news</code> neexistují, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy novinek – CHYBA: " . h($e->getMessage());
 }
 
 $newSettings = [

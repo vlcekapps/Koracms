@@ -103,13 +103,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Novinky
                 if (!empty($data['news']) && is_array($data['news'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_news (id, content, status, created_at)
-                         VALUES (?,?,?,?)"
+                        "INSERT IGNORE INTO cms_news (id, title, slug, content, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?)"
                     );
                     foreach ($data['news'] as $row) {
+                        $importTitle = newsTitleCandidate((string)($row['title'] ?? ''), (string)($row['content'] ?? ''));
+                        $importSlug = newsSlug((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniqueNewsSlug($pdo, $importTitle);
+                        } else {
+                            $importSlug = uniqueNewsSlug($pdo, $importSlug, (int)$row['id']);
+                        }
                         $ins->execute([
-                            (int)$row['id'], $row['content'] ?? '',
-                            $row['status'] ?? 'published', $row['created_at'],
+                            (int)$row['id'],
+                            $importTitle,
+                            $importSlug,
+                            $row['content'] ?? '',
+                            $row['status'] ?? 'published',
+                            $row['created_at'],
+                            $row['updated_at'] ?? $row['created_at'],
                         ]);
                     }
                     $summary[] = 'Novinky importovány.';

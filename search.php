@@ -31,11 +31,12 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('news')) {
         try {
             $stmt = $pdo->prepare(
-                "SELECT id, content AS title, '' AS perex, created_at, 'news' AS type
-                 FROM cms_news WHERE content LIKE ?
+                "SELECT id, title, slug, content AS perex, created_at, 'news' AS type
+                 FROM cms_news
+                 WHERE status = 'published' AND (title LIKE ? OR content LIKE ?)
                  ORDER BY created_at DESC LIMIT 5"
             );
-            $stmt->execute([$like]);
+            $stmt->execute([$like, $like]);
             foreach ($stmt->fetchAll() as $row) {
                 $results[] = $row;
             }
@@ -142,7 +143,7 @@ function resultUrl(array $result): string
     $baseUrl = BASE_URL;
     return match($result['type']) {
         'blog' => articlePublicPath($result),
-        'news' => $baseUrl . '/news/index.php',
+        'news' => newsPublicPath($result),
         'page' => $baseUrl . '/page.php?slug=' . rawurlencode($result['slug'] ?? ''),
         'event' => $baseUrl . '/events/index.php#event-' . (int)$result['id'],
         'podcast' => $baseUrl . '/podcast/index.php#ep-' . (int)$result['id'],

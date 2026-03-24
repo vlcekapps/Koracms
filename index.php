@@ -9,10 +9,20 @@ $latestNews = [];
 $homeNewsCount = (int)getSetting('home_news_count', '5');
 if (isModuleEnabled('news') && $homeNewsCount > 0) {
     $stmt = db_connect()->prepare(
-        "SELECT id, content, created_at FROM cms_news WHERE status = 'published' ORDER BY created_at DESC LIMIT ?"
+        "SELECT n.id, n.title, n.slug, n.content, n.created_at,
+                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                u.author_public_enabled, u.author_slug, u.role AS author_role
+         FROM cms_news n
+         LEFT JOIN cms_users u ON u.id = n.author_id
+         WHERE n.status = 'published'
+         ORDER BY n.created_at DESC
+         LIMIT ?"
     );
     $stmt->execute([$homeNewsCount]);
-    $latestNews = $stmt->fetchAll();
+    $latestNews = array_map(
+        static fn(array $news): array => hydrateNewsPresentation($news),
+        $stmt->fetchAll()
+    );
 }
 
 $latestArticles = [];

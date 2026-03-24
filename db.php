@@ -895,9 +895,46 @@ function articleSlug(string $value): string
     return slugify(trim($value));
 }
 
+function newsSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function authorSlug(string $value): string
 {
     return slugify(trim($value));
+}
+
+function normalizePlainText(string $text): string
+{
+    $plain = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $plain = preg_replace('/\s+/u', ' ', $plain);
+    return trim((string)$plain);
+}
+
+function newsTitleCandidate(string $title, string $content = ''): string
+{
+    $normalizedTitle = trim($title);
+    if ($normalizedTitle !== '') {
+        return mb_substr($normalizedTitle, 0, 255);
+    }
+
+    $plain = normalizePlainText($content);
+    if ($plain === '') {
+        return 'Novinka';
+    }
+
+    return mb_strimwidth($plain, 0, 120, '…', 'UTF-8');
+}
+
+function newsExcerpt(string $content, int $limit = 220): string
+{
+    $plain = normalizePlainText($content);
+    if ($plain === '') {
+        return '';
+    }
+
+    return mb_strimwidth($plain, 0, $limit, '…', 'UTF-8');
 }
 
 function authorSlugCandidate(array $account): string
@@ -963,6 +1000,26 @@ function articlePreviewPath(array $article): string
     return articlePublicPath($article, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+function newsPublicRequestPath(array $news): string
+{
+    $slug = newsSlug((string)($news['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/news/' . rawurlencode($slug);
+    }
+
+    return '/news/article.php?id=' . (int)($news['id'] ?? 0);
+}
+
+function newsPublicPath(array $news, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(newsPublicRequestPath($news), $query);
+}
+
+function newsPublicUrl(array $news, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));
+}
+
 function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = articleSlug($candidate);
@@ -973,6 +1030,27 @@ function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null):
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_articles WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueNewsSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = newsSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'novinka';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_news WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);
@@ -1102,6 +1180,21 @@ function hydrateAuthorPresentation(array $author): array
     $author['author_avatar_url'] = authorAvatarUrl($author);
     $author['author_website_url'] = normalizeAuthorWebsite((string)($author['author_website'] ?? ''));
     return $author;
+}
+
+function hydrateNewsPresentation(array $news): array
+{
+    $news['title'] = newsTitleCandidate((string)($news['title'] ?? ''), (string)($news['content'] ?? ''));
+    $news['slug'] = newsSlug((string)($news['slug'] ?? ''));
+    $news['excerpt'] = newsExcerpt((string)($news['content'] ?? ''));
+    $news['public_path'] = newsPublicPath($news);
+    $news['public_url'] = newsPublicUrl($news);
+
+    if (array_key_exists('author_public_enabled', $news) || array_key_exists('author_slug', $news) || array_key_exists('author_name', $news)) {
+        $news = hydrateAuthorPresentation($news);
+    }
+
+    return $news;
 }
 
 function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array

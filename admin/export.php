@@ -7,7 +7,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 3,
+    'version'     => 4,
 ];
 
 $tables = [
@@ -19,7 +19,7 @@ $tables = [
     'tags'        => "SELECT id, name, slug, created_at FROM cms_tags",
     'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
-    'news'          => "SELECT id, content, status, created_at FROM cms_news",
+    'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",
     'events'        => "SELECT id, title, description, location, event_date, event_end,
                                is_published, status, created_at FROM cms_events",
     'places'        => "SELECT id, name, description, url, category, is_published,

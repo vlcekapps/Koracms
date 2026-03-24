@@ -10,6 +10,17 @@ require_once __DIR__ . '/../db.php';
 $baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
 $pdo     = db_connect();
 
+$runtimeAuditOriginalModuleSettings = [
+    'module_news' => getSetting('module_news', '0'),
+    'module_newsletter' => getSetting('module_newsletter', '0'),
+    'module_chat' => getSetting('module_chat', '0'),
+    'module_reservations' => getSetting('module_reservations', '0'),
+];
+foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
+    saveSetting($moduleSettingKey, '1');
+}
+clearSettingsCache();
+
 $articleRow = $pdo->query(
     "SELECT id, slug FROM cms_articles WHERE status = 'published' ORDER BY id LIMIT 1"
 )->fetch() ?: null;
@@ -21,6 +32,14 @@ $articleLegacyUrl = $articleLegacyPath !== '' ? $baseUrl . $articleLegacyPath : 
 $articleCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_articles WHERE status = 'published'"
 )->fetchColumn();
+$newsRow = $pdo->query(
+    "SELECT id, title, slug FROM cms_news WHERE status = 'published' ORDER BY created_at DESC, id DESC LIMIT 1"
+)->fetch() ?: null;
+$newsId = $newsRow['id'] ?? false;
+$newsCanonicalPath = $newsRow ? newsPublicPath($newsRow) : '';
+$newsLegacyPath = $newsId !== false ? BASE_URL . '/news/article.php?id=' . urlencode((string)$newsId) : '';
+$newsCanonicalUrl = $newsCanonicalPath !== '' ? $baseUrl . $newsCanonicalPath : '';
+$newsLegacyUrl = $newsLegacyPath !== '' ? $baseUrl . $newsLegacyPath : '';
 $newsCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_news WHERE status = 'published'"
 )->fetchColumn();
@@ -109,6 +128,7 @@ $runtimeAuditThemeSettingsKey = themeSettingStorageKey($runtimeAuditActiveTheme)
 $runtimeAuditOriginalThemeSettings = getSetting($runtimeAuditThemeSettingsKey, '');
 $runtimeAuditOriginalHomeAuthorUserId = getSetting('home_author_user_id', '0');
 $runtimeAuditOriginalArticleAuthorId = null;
+$runtimeAuditOriginalNewsAuthorId = null;
 $runtimeAuditAuthorId = 0;
 $runtimeAuditAuthorSlug = '';
 $runtimeAuditAuthorPath = '';
@@ -265,6 +285,16 @@ if ($articleId !== false && $runtimeAuditAuthorId > 0) {
     ]);
 }
 
+if ($newsId !== false && $runtimeAuditAuthorId > 0) {
+    $newsAuthorStmt = $pdo->prepare("SELECT author_id FROM cms_news WHERE id = ?");
+    $newsAuthorStmt->execute([(int)$newsId]);
+    $runtimeAuditOriginalNewsAuthorId = $newsAuthorStmt->fetchColumn();
+    $pdo->prepare("UPDATE cms_news SET author_id = ? WHERE id = ?")->execute([
+        $runtimeAuditAuthorId,
+        (int)$newsId,
+    ]);
+}
+
 saveSetting('home_author_user_id', (string)$runtimeAuditAuthorId);
 $runtimeAuditThemeSettings = themePersistedSettingsValues($runtimeAuditActiveTheme);
 $runtimeAuditThemeSettings['home_author_visibility'] = 'show';
@@ -285,6 +315,7 @@ $pages = [
     ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -353,6 +384,9 @@ if (isModuleEnabled('polls')) {
 
 if ($articleCanonicalUrl !== '') {
     $pages[] = ['label' => 'blog_article', 'url' => $articleCanonicalUrl];
+}
+if ($newsCanonicalUrl !== '') {
+    $pages[] = ['label' => 'news_article', 'url' => $newsCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
@@ -937,12 +971,38 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_news') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin news search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin news status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog listing is missing public author links';
     }
 
     if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog article is missing public author link in byline';
+    }
+
+    if ($page['label'] === 'news_index' && $newsCanonicalPath !== '' && !str_contains($result['body'], $newsCanonicalPath)) {
+        $issues[] = 'news listing is missing detail links';
+    }
+
+    if ($page['label'] === 'news_index' && $newsId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
+        $issues[] = 'news listing is missing public author links';
+    }
+
+    if ($page['label'] === 'news_article') {
+        if ($newsRow && !str_contains($result['body'], newsTitleCandidate((string)($newsRow['title'] ?? ''), ''))) {
+            $issues[] = 'news article is missing title';
+        }
+        if ($newsId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
+            $issues[] = 'news article is missing public author link';
+        }
     }
 
     if ($page['label'] === 'public_author') {
@@ -977,6 +1037,23 @@ if ($articleCanonicalPath === '' || $articleLegacyPath === '' || $articleCanonic
         $failures++;
     } elseif (!in_array($expectedLocation, $legacyArticleProbe['headers'], true)) {
         echo "- legacy blog article URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== news_article_legacy_redirect ===\n";
+if ($newsCanonicalPath === '' || $newsLegacyPath === '' || $newsCanonicalPath === $newsLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyNewsProbe = fetchUrl($newsLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $newsCanonicalPath;
+    if (!str_contains($legacyNewsProbe['status'], '302')) {
+        echo "- legacy news article URL does not redirect ({$legacyNewsProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyNewsProbe['headers'], true)) {
+        echo "- legacy news article URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";
@@ -1482,11 +1559,20 @@ if ($articleId === false) {
 
 saveSetting('home_author_user_id', $runtimeAuditOriginalHomeAuthorUserId);
 saveSetting($runtimeAuditThemeSettingsKey, $runtimeAuditOriginalThemeSettings);
+foreach ($runtimeAuditOriginalModuleSettings as $moduleSettingKey => $moduleSettingValue) {
+    saveSetting($moduleSettingKey, $moduleSettingValue);
+}
 clearSettingsCache();
 if ($articleId !== false && $runtimeAuditOriginalArticleAuthorId !== null) {
     $pdo->prepare("UPDATE cms_articles SET author_id = ? WHERE id = ?")->execute([
         (int)$runtimeAuditOriginalArticleAuthorId,
         (int)$articleId,
+    ]);
+}
+if ($newsId !== false && $runtimeAuditOriginalNewsAuthorId !== null) {
+    $pdo->prepare("UPDATE cms_news SET author_id = ? WHERE id = ?")->execute([
+        (int)$runtimeAuditOriginalNewsAuthorId,
+        (int)$newsId,
     ]);
 }
 

@@ -59,7 +59,24 @@ endif; ?>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
-<?php endif; ?>
+<?php
+    try {
+        $newsItems = $pdo->query(
+            "SELECT id, slug, updated_at
+             FROM cms_news
+             WHERE status = 'published'
+             ORDER BY created_at DESC"
+        )->fetchAll();
+        foreach ($newsItems as $newsItem):
+?>
+  <url>
+    <loc><?= h(newsPublicUrl($newsItem)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$newsItem['updated_at'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
 
 <?php if (isModuleEnabled('gallery')): ?>
   <url>

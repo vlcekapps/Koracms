@@ -19,6 +19,7 @@ $newsletterVisibility = $readThemeSelect('home_newsletter_visibility', 'show');
 $authorVisibility = $readThemeSelect('home_author_visibility', 'hide');
 $ctaVisibility = $readThemeSelect('home_cta_visibility', 'hide');
 $articleLink = static fn(array $article): string => articlePublicPath($article);
+$newsLink = static fn(array $item): string => newsPublicPath($item);
 $renderAuthorName = static function (array $entry): string {
     if (empty($entry['author_name'])) {
         return '';
@@ -253,7 +254,10 @@ $renderAuthorSection = static function () use ($showAuthor, $homeAuthor): string
     return (string)ob_get_clean();
 };
 
-$renderNewsSection = static function (array $items, bool $compactCards = false): string {
+$renderNewsSection = static function (array $items, bool $compactCards = false) use (
+    $newsLink,
+    $renderAuthorName
+): string {
     if ($items === []) {
         return '';
     }
@@ -278,9 +282,18 @@ $renderNewsSection = static function (array $items, bool $compactCards = false):
           <article class="card">
             <div class="card__body">
               <p class="meta-row meta-row--tight">
-                <time datetime="<?= h(str_replace(' ', 'T', $item['created_at'])) ?>"><?= formatCzechDate($item['created_at']) ?></time>
+                <time datetime="<?= h(str_replace(' ', 'T', (string)$item['created_at'])) ?>"><?= formatCzechDate((string)$item['created_at']) ?></time>
+                <?php if (!empty($item['author_name'])): ?>
+                  <?= $renderAuthorName($item) ?>
+                <?php endif; ?>
               </p>
-              <p><?= h($item['content']) ?></p>
+              <h3 class="card__title">
+                <a href="<?= h($newsLink($item)) ?>"><?= h((string)$item['title']) ?></a>
+              </h3>
+              <?php if (!empty($item['excerpt'])): ?>
+                <p><?= h((string)$item['excerpt']) ?></p>
+              <?php endif; ?>
+              <p><a class="section-link" href="<?= h($newsLink($item)) ?>">Číst dále <span aria-hidden="true">→</span></a></p>
             </div>
           </article>
         <?php endforeach; ?>
@@ -556,6 +569,7 @@ $renderFeaturedSection = static function () use (
     $newsletterAvailable,
     $contactAvailable,
     $articleLink,
+    $newsLink,
     $renderAuthorName
 ): string {
     if ($featuredModule === '') {
@@ -623,9 +637,18 @@ $renderFeaturedSection = static function () use (
               <article class="card card--highlighted">
                 <div class="card__body">
                   <p class="meta-row meta-row--tight">
-                    <time datetime="<?= h(str_replace(' ', 'T', $featuredNewsItem['created_at'])) ?>"><?= formatCzechDate($featuredNewsItem['created_at']) ?></time>
+                    <time datetime="<?= h(str_replace(' ', 'T', (string)$featuredNewsItem['created_at'])) ?>"><?= formatCzechDate((string)$featuredNewsItem['created_at']) ?></time>
+                    <?php if (!empty($featuredNewsItem['author_name'])): ?>
+                      <?= $renderAuthorName($featuredNewsItem) ?>
+                    <?php endif; ?>
                   </p>
-                  <p><?= h($featuredNewsItem['content']) ?></p>
+                  <h3 class="card__title card__title--feature">
+                    <a href="<?= h($newsLink($featuredNewsItem)) ?>"><?= h((string)$featuredNewsItem['title']) ?></a>
+                  </h3>
+                  <?php if (!empty($featuredNewsItem['excerpt'])): ?>
+                    <p><?= h((string)$featuredNewsItem['excerpt']) ?></p>
+                  <?php endif; ?>
+                  <p><a class="section-link" href="<?= h($newsLink($featuredNewsItem)) ?>">Číst novinku <span aria-hidden="true">→</span></a></p>
                 </div>
               </article>
             </section>
