@@ -181,6 +181,7 @@ $tables = [
     'cms_events' => "CREATE TABLE IF NOT EXISTS cms_events (
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title        VARCHAR(255) NOT NULL,
+        slug         VARCHAR(255) NOT NULL,
         description  TEXT,
         location     VARCHAR(255) NOT NULL DEFAULT '',
         event_date   DATETIME     NOT NULL,
@@ -188,7 +189,8 @@ $tables = [
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_events_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_subscribers' => "CREATE TABLE IF NOT EXISTS cms_subscribers (
@@ -540,6 +542,7 @@ $addColumns = [
     'cms_podcasts.show_id'           => "ALTER TABLE cms_podcasts ADD COLUMN show_id INT NOT NULL DEFAULT 1",
     'cms_podcasts.status'            => "ALTER TABLE cms_podcasts ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_events
+    'cms_events.slug'                => "ALTER TABLE cms_events ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_events.status'              => "ALTER TABLE cms_events ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_places
     'cms_places.status'              => "ALTER TABLE cms_places ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
@@ -875,6 +878,60 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy novinek – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $eventSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_events' AND COLUMN_NAME = 'slug'"
+    );
+    $eventSlugColumnCheck->execute();
+
+    if ((int)$eventSlugColumnCheck->fetchColumn() > 0) {
+        $eventRows = $pdo->query("SELECT id, title, slug FROM cms_events ORDER BY id")->fetchAll();
+        $updateEventSlugStmt = $pdo->prepare("UPDATE cms_events SET slug = ? WHERE id = ?");
+
+        foreach ($eventRows as $eventRow) {
+            $existingSlug = trim((string)($eventRow['slug'] ?? ''));
+            $resolvedSlug = uniqueEventSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$eventRow['title'],
+                (int)$eventRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateEventSlugStmt->execute([$resolvedSlug, (int)$eventRow['id']]);
+            }
+        }
+
+        $eventSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_events' AND COLUMN_NAME = 'slug'"
+        );
+        $eventSlugNullabilityCheck->execute();
+        if (($eventSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_events MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_events.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_events.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $eventSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_events'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $eventSlugIndexCheck->execute();
+        if ((int)$eventSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_events ADD UNIQUE KEY uq_cms_events_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_events_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_events.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy událostí – sloupec <code>cms_events.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy událostí – CHYBA: " . h($e->getMessage());
 }
 
 $newSettings = [

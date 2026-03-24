@@ -61,9 +61,10 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('events')) {
         try {
             $stmt = $pdo->prepare(
-                "SELECT id, title, description AS perex, event_date AS created_at, 'event' AS type
+                "SELECT id, title, slug, description AS perex, event_date AS created_at, 'event' AS type
                  FROM cms_events
-                 WHERE is_published = 1 AND (title LIKE ? OR description LIKE ? OR location LIKE ?)
+                 WHERE status = 'published' AND is_published = 1
+                   AND (title LIKE ? OR description LIKE ? OR location LIKE ?)
                  ORDER BY event_date DESC LIMIT 5"
             );
             $stmt->execute([$like, $like, $like]);
@@ -145,7 +146,7 @@ function resultUrl(array $result): string
         'blog' => articlePublicPath($result),
         'news' => newsPublicPath($result),
         'page' => $baseUrl . '/page.php?slug=' . rawurlencode($result['slug'] ?? ''),
-        'event' => $baseUrl . '/events/index.php#event-' . (int)$result['id'],
+        'event' => eventPublicPath($result),
         'podcast' => $baseUrl . '/podcast/index.php#ep-' . (int)$result['id'],
         'faq' => $baseUrl . '/faq/index.php',
         'place' => $baseUrl . '/places/index.php#place-' . (int)$result['id'],

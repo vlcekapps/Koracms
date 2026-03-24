@@ -20,8 +20,8 @@ $tables = [
     'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
     'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",
-    'events'        => "SELECT id, title, description, location, event_date, event_end,
-                               is_published, status, created_at FROM cms_events",
+    'events'        => "SELECT id, title, slug, description, location, event_date, event_end,
+                               is_published, status, created_at, updated_at FROM cms_events",
     'places'        => "SELECT id, name, description, url, category, is_published,
                                sort_order, status, created_at FROM cms_places",
     'gallery_albums'=> "SELECT id, parent_id, name, description, cover_photo_id, created_at

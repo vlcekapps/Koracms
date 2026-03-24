@@ -131,15 +131,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['events']) && is_array($data['events'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_events
-                         (id, title, description, location, event_date, event_end, is_published, status)
-                         VALUES (?,?,?,?,?,?,?,?)"
+                         (id, title, slug, description, location, event_date, event_end, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['events'] as $row) {
+                        $importTitle = trim((string)($row['title'] ?? ''));
+                        if ($importTitle === '') {
+                            $importTitle = 'Událost';
+                        }
+                        $importSlug = eventSlug((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniqueEventSlug($pdo, $importTitle);
+                        } else {
+                            $importSlug = uniqueEventSlug($pdo, $importSlug, (int)$row['id']);
+                        }
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $row['description'] ?? '',
-                            $row['location'] ?? '', $row['event_date'],
-                            $row['event_end'] ?: null, (int)$row['is_published'],
+                            (int)$row['id'],
+                            $importTitle,
+                            $importSlug,
+                            $row['description'] ?? '',
+                            $row['location'] ?? '',
+                            $row['event_date'],
+                            $row['event_end'] ?: null,
+                            (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);
                     }
                     $summary[] = 'Události importovány.';

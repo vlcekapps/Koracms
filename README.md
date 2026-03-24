@@ -118,7 +118,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Chat** | Jednoduchá veřejná diskuse |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou a rate limitingem |
 | **Galerie** | Vnořená fotoalba s automatickým generováním náhledů; výběr obálky alba |
-| **Události** | Kalendář akcí s datem začátku, konce a místem konání |
+| **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; každý podcast má vlastní RSS feed (`/podcast/feed.php?show=ID`) kompatibilní s podcastovými aplikacemi |
 | **Zajímavá místa** | Adresář míst s popisem, kategorií a odkazem |
 | **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
@@ -241,7 +241,7 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 
 - **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ, místy a úřední deskou
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků i novinek
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek i událostí
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)

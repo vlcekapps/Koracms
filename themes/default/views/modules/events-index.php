@@ -1,3 +1,6 @@
+<?php
+$eventLink = static fn(array $event): string => eventPublicPath($event);
+?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="events-title">
     <div class="section-heading">
@@ -25,22 +28,24 @@
                   </tr>
                 </thead>
                 <?php foreach ($upcoming as $event): ?>
-                  <tbody>
+                  <tbody id="event-<?= (int)$event['id'] ?>">
                     <tr>
-                      <td><?= h($event['title']) ?></td>
                       <td>
-                        <time datetime="<?= h(str_replace(' ', 'T', $event['event_date'])) ?>"><?= formatCzechDate($event['event_date']) ?></time>
+                        <a href="<?= h($eventLink($event)) ?>"><?= h((string)$event['title']) ?></a>
                       </td>
                       <td>
-                        <?php if ($event['event_end']): ?>
-                          <time datetime="<?= h(str_replace(' ', 'T', $event['event_end'])) ?>"><?= formatCzechDate($event['event_end']) ?></time>
+                        <time datetime="<?= h(str_replace(' ', 'T', (string)$event['event_date'])) ?>"><?= formatCzechDate((string)$event['event_date']) ?></time>
+                      </td>
+                      <td>
+                        <?php if (!empty($event['event_end'])): ?>
+                          <time datetime="<?= h(str_replace(' ', 'T', (string)$event['event_end'])) ?>"><?= formatCzechDate((string)$event['event_end']) ?></time>
                         <?php else: ?>
                           <span class="table-muted" aria-label="bez data konce">Neuvedeno</span>
                         <?php endif; ?>
                       </td>
                       <td>
-                        <?php if ($event['location'] !== ''): ?>
-                          <?= h($event['location']) ?>
+                        <?php if ((string)$event['location'] !== ''): ?>
+                          <?= h((string)$event['location']) ?>
                         <?php else: ?>
                           <span class="table-muted" aria-label="místo neuvedeno">Neuvedeno</span>
                         <?php endif; ?>
@@ -49,10 +54,8 @@
                     <?php if (!empty($event['description'])): ?>
                       <tr>
                         <td colspan="4">
-                          <details class="toggle-card toggle-card--inline">
-                            <summary>Popis akce</summary>
-                            <div class="prose toggle-card__content"><?= renderContent($event['description']) ?></div>
-                          </details>
+                          <p style="margin:.25rem 0 .65rem"><?= h(mb_strimwidth(normalizePlainText((string)$event['description']), 0, 220, '...', 'UTF-8')) ?></p>
+                          <a class="section-link" href="<?= h($eventLink($event)) ?>">Detail události <span aria-hidden="true">&rarr;</span></a>
                         </td>
                       </tr>
                     <?php endif; ?>
@@ -79,21 +82,21 @@
                 </thead>
                 <tbody>
                   <?php foreach ($past as $event): ?>
-                    <tr>
-                      <td><?= h($event['title']) ?></td>
+                    <tr id="event-<?= (int)$event['id'] ?>">
+                      <td><a href="<?= h($eventLink($event)) ?>"><?= h((string)$event['title']) ?></a></td>
                       <td>
-                        <time datetime="<?= h(str_replace(' ', 'T', $event['event_date'])) ?>"><?= formatCzechDate($event['event_date']) ?></time>
+                        <time datetime="<?= h(str_replace(' ', 'T', (string)$event['event_date'])) ?>"><?= formatCzechDate((string)$event['event_date']) ?></time>
                       </td>
                       <td>
-                        <?php if ($event['event_end']): ?>
-                          <time datetime="<?= h(str_replace(' ', 'T', $event['event_end'])) ?>"><?= formatCzechDate($event['event_end']) ?></time>
+                        <?php if (!empty($event['event_end'])): ?>
+                          <time datetime="<?= h(str_replace(' ', 'T', (string)$event['event_end'])) ?>"><?= formatCzechDate((string)$event['event_end']) ?></time>
                         <?php else: ?>
                           <span class="table-muted" aria-label="bez data konce">Neuvedeno</span>
                         <?php endif; ?>
                       </td>
                       <td>
-                        <?php if ($event['location'] !== ''): ?>
-                          <?= h($event['location']) ?>
+                        <?php if ((string)$event['location'] !== ''): ?>
+                          <?= h((string)$event['location']) ?>
                         <?php else: ?>
                           <span class="table-muted" aria-label="místo neuvedeno">Neuvedeno</span>
                         <?php endif; ?>

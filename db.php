@@ -900,6 +900,11 @@ function newsSlug(string $value): string
     return slugify(trim($value));
 }
 
+function eventSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function authorSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1020,6 +1025,26 @@ function newsPublicUrl(array $news, array $query = []): string
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));
 }
 
+function eventPublicRequestPath(array $event): string
+{
+    $slug = eventSlug((string)($event['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/events/' . rawurlencode($slug);
+    }
+
+    return '/events/event.php?id=' . (int)($event['id'] ?? 0);
+}
+
+function eventPublicPath(array $event, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(eventPublicRequestPath($event), $query);
+}
+
+function eventPublicUrl(array $event, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(eventPublicRequestPath($event), $query));
+}
+
 function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = articleSlug($candidate);
@@ -1030,6 +1055,27 @@ function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null):
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_articles WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = eventSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'udalost';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_events WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);

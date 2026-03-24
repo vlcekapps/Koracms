@@ -78,6 +78,31 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('events')): ?>
+  <url>
+    <loc><?= h(siteUrl('/events/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $events = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at, event_date) AS sitemap_lastmod
+             FROM cms_events
+             WHERE status = 'published' AND is_published = 1
+             ORDER BY event_date DESC"
+        )->fetchAll();
+        foreach ($events as $event):
+?>
+  <url>
+    <loc><?= h(eventPublicUrl($event)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$event['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 <?php if (isModuleEnabled('gallery')): ?>
   <url>
     <loc><?= h(siteUrl('/gallery/index.php')) ?></loc>

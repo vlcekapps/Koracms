@@ -14,6 +14,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
     'module_newsletter' => getSetting('module_newsletter', '0'),
     'module_chat' => getSetting('module_chat', '0'),
+    'module_events' => getSetting('module_events', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
 ];
 foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
@@ -43,6 +44,17 @@ $newsLegacyUrl = $newsLegacyPath !== '' ? $baseUrl . $newsLegacyPath : '';
 $newsCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_news WHERE status = 'published'"
 )->fetchColumn();
+$eventRow = $pdo->query(
+    "SELECT id, title, slug FROM cms_events
+     WHERE status = 'published' AND is_published = 1
+     ORDER BY event_date DESC, id DESC
+     LIMIT 1"
+)->fetch() ?: null;
+$eventId = $eventRow['id'] ?? false;
+$eventCanonicalPath = $eventRow ? eventPublicPath($eventRow) : '';
+$eventLegacyPath = $eventId !== false ? BASE_URL . '/events/event.php?id=' . urlencode((string)$eventId) : '';
+$eventCanonicalUrl = $eventCanonicalPath !== '' ? $baseUrl . $eventCanonicalPath : '';
+$eventLegacyUrl = $eventLegacyPath !== '' ? $baseUrl . $eventLegacyPath : '';
 $boardCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_board WHERE status = 'published' AND is_published = 1
      AND (removal_date IS NULL OR removal_date >= CURDATE())"
@@ -316,6 +328,7 @@ $pages = [
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -387,6 +400,9 @@ if ($articleCanonicalUrl !== '') {
 }
 if ($newsCanonicalUrl !== '') {
     $pages[] = ['label' => 'news_article', 'url' => $newsCanonicalUrl];
+}
+if ($eventCanonicalUrl !== '') {
+    $pages[] = ['label' => 'events_article', 'url' => $eventCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
@@ -980,6 +996,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_events') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin events search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin events status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog listing is missing public author links';
     }
@@ -1002,6 +1027,19 @@ foreach ($pages as $page) {
         }
         if ($newsId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
             $issues[] = 'news article is missing public author link';
+        }
+    }
+
+    if ($page['label'] === 'events_index' && $eventCanonicalPath !== '' && !str_contains($result['body'], $eventCanonicalPath)) {
+        $issues[] = 'events listing is missing detail links';
+    }
+
+    if ($page['label'] === 'events_article') {
+        if ($eventRow && !str_contains($result['body'], (string)($eventRow['title'] ?? ''))) {
+            $issues[] = 'events article is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět na události')) {
+            $issues[] = 'events article is missing back link';
         }
     }
 
@@ -1054,6 +1092,23 @@ if ($newsCanonicalPath === '' || $newsLegacyPath === '' || $newsCanonicalPath ==
         $failures++;
     } elseif (!in_array($expectedLocation, $legacyNewsProbe['headers'], true)) {
         echo "- legacy news article URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== events_article_legacy_redirect ===\n";
+if ($eventCanonicalPath === '' || $eventLegacyPath === '' || $eventCanonicalPath === $eventLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyEventProbe = fetchUrl($eventLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $eventCanonicalPath;
+    if (!str_contains($legacyEventProbe['status'], '302')) {
+        echo "- legacy event URL does not redirect ({$legacyEventProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyEventProbe['headers'], true)) {
+        echo "- legacy event URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";

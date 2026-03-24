@@ -167,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_events (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title       VARCHAR(255) NOT NULL,
+            slug        VARCHAR(255) NOT NULL,
             description TEXT,
             location    VARCHAR(255) NOT NULL DEFAULT '',
             event_date  DATETIME     NOT NULL,
@@ -174,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published TINYINT(1)  NOT NULL DEFAULT 1,
             status      ENUM('pending','published') NOT NULL DEFAULT 'published',
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_events_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_subscribers (

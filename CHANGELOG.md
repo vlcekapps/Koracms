@@ -18,6 +18,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Role-aware administrace: levé menu, dashboard a schvalovací akce se nově řídí oprávněními konkrétního účtu, takže autor vidí jen svůj obsah, moderátor moderaci a správce rezervací pouze rezervační část
 - Jednotná admin fronta `Ke schválení` pro obsah, komentáře a rezervace, včetně rychlých akcí a návratu zpět do stejného filtru po schválení nebo moderaci
 - Novinky nově podporují titulek, slug a čisté URL typu `/news/moje-prvni-novinka`, včetně vlastního detailu, RSS feedu, sitemapy a použití ve vyhledávání i na homepage
+- Události nově podporují slug a čisté URL typu `/events/moje-akce`, včetně vlastního detailu, vyhledávání, sitemapy a použití v exportu/importu
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -27,6 +28,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Schvalování dokumentů úřední desky je nově napojené na stejný endpoint jako ostatní sdílený obsah a moderace komentářů i rezervací nově podporuje bezpečný interní návrat přes validovaný `redirect`
 - Administrace i README teď výslovně doporučují HTML textarea jako přístupnější výchozí editor a Quill popisují jen jako volitelný vizuální režim
 - Import/export nově zachovává i titulky, slugy a čas poslední úpravy u novinek a runtime audit hlídá i detail novinky a kanonické přesměrování starého `news/article.php?id=...`
+- Import/export nově zachovává i slugy událostí a runtime audit hlídá detail události i kanonické přesměrování starého `events/event.php?id=...`
 
 ## [3.0.0-beta.1] – 2026-03-23
 
