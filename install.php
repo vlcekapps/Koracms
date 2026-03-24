@@ -274,13 +274,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_places (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             name        VARCHAR(255) NOT NULL,
+            slug        VARCHAR(255) NOT NULL,
+            place_kind  VARCHAR(50)  NOT NULL DEFAULT 'sight',
+            excerpt     TEXT,
             description TEXT,
             url         VARCHAR(500) NOT NULL DEFAULT '',
+            image_file  VARCHAR(255) NOT NULL DEFAULT '',
             category    VARCHAR(100) NOT NULL DEFAULT '',
+            address     VARCHAR(255) NOT NULL DEFAULT '',
+            locality    VARCHAR(255) NOT NULL DEFAULT '',
+            latitude    DECIMAL(10,7) NULL DEFAULT NULL,
+            longitude   DECIMAL(10,7) NULL DEFAULT NULL,
+            contact_phone VARCHAR(100) NOT NULL DEFAULT '',
+            contact_email VARCHAR(255) NOT NULL DEFAULT '',
+            opening_hours TEXT,
             is_published TINYINT(1)  NOT NULL DEFAULT 1,
             status      ENUM('pending','published') NOT NULL DEFAULT 'published',
             sort_order  INT          NOT NULL DEFAULT 0,
-            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_places_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_gallery_photos (
@@ -588,6 +601,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'uploads/gallery',
             'uploads/gallery/thumbs',
             'uploads/downloads',
+            'uploads/places',
             'uploads/board',
             'uploads/board/images',
             'uploads/podcasts',

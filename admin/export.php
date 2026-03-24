@@ -22,8 +22,10 @@ $tables = [
     'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",
     'events'        => "SELECT id, title, slug, description, location, event_date, event_end,
                                is_published, status, created_at, updated_at FROM cms_events",
-    'places'        => "SELECT id, name, description, url, category, is_published,
-                               sort_order, status, created_at FROM cms_places",
+    'places'        => "SELECT id, name, slug, place_kind, excerpt, description, url, image_file, category,
+                               address, locality, latitude, longitude, contact_phone, contact_email,
+                               opening_hours, is_published, sort_order, status, created_at, updated_at
+                               FROM cms_places",
     'gallery_albums'=> "SELECT id, parent_id, name, description, cover_photo_id, created_at
                                FROM cms_gallery_albums",
     'gallery_photos'=> "SELECT id, album_id, filename, title, sort_order, created_at

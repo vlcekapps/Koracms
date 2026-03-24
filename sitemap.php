@@ -136,4 +136,29 @@ endif; ?>
   </url>
 <?php endif; ?>
 
+<?php if (isModuleEnabled('places')): ?>
+  <url>
+    <loc><?= h(siteUrl('/places/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $places = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_places
+             WHERE status = 'published' AND is_published = 1
+             ORDER BY sort_order, name"
+        )->fetchAll();
+        foreach ($places as $place):
+?>
+  <url>
+    <loc><?= h(placePublicUrl($place)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$place['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 </urlset>

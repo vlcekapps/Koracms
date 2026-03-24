@@ -127,11 +127,15 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('places')) {
         try {
             $stmt = $pdo->prepare(
-                "SELECT id, name AS title, description AS perex, created_at, 'place' AS type
-                 FROM cms_places WHERE is_published = 1 AND (name LIKE ? OR description LIKE ?)
-                 ORDER BY sort_order, name LIMIT 5"
+                "SELECT id, name AS title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
+                        created_at, 'place' AS type
+                 FROM cms_places
+                 WHERE status = 'published' AND is_published = 1
+                   AND (name LIKE ? OR excerpt LIKE ? OR description LIKE ? OR category LIKE ? OR locality LIKE ? OR address LIKE ?)
+                 ORDER BY sort_order, name
+                 LIMIT 10"
             );
-            $stmt->execute([$like, $like]);
+            $stmt->execute([$like, $like, $like, $like, $like, $like]);
             foreach ($stmt->fetchAll() as $row) {
                 $results[] = $row;
             }
@@ -150,7 +154,7 @@ function resultUrl(array $result): string
         'event' => eventPublicPath($result),
         'podcast' => $baseUrl . '/podcast/index.php#ep-' . (int)$result['id'],
         'faq' => $baseUrl . '/faq/index.php',
-        'place' => $baseUrl . '/places/index.php#place-' . (int)$result['id'],
+        'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
         default => $baseUrl . '/',
     };

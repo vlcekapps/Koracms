@@ -21,6 +21,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Události nově podporují slug a čisté URL typu `/events/moje-akce`, včetně vlastního detailu, vyhledávání, sitemapy a použití v exportu/importu
 - Úřední deska nově podporuje slug a čisté URL typu `/board/moje-vyhlaska`, včetně veřejného detailu dokumentu a odděleného CTA na stažení přílohy přes bezpečný file endpoint
 - Modul `Úřední deska` se nově umí chovat i jako `Vývěska` nebo `Oznámení`: podporuje typ položky, krátký perex, volitelný obrázek, kontakt, připnutí důležitých položek a veřejný název modulu nastavitelný v administraci
+- Modul `Zajímavá místa` se nově chová jako turistický adresář: podporuje slug a čisté URL typu `/places/moje-misto`, detailovou stránku, typ místa, krátký perex, volitelný obrázek, adresu, lokalitu, GPS, kontakt a otevírací dobu
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -32,6 +33,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Import/export nově zachovává i titulky, slugy a čas poslední úpravy u novinek a runtime audit hlídá i detail novinky a kanonické přesměrování starého `news/article.php?id=...`
 - Import/export nově zachovává i slugy událostí a runtime audit hlídá detail události i kanonické přesměrování starého `events/event.php?id=...`
 - Import/export nově zachovává i slugy dokumentů úřední desky, typ položky, perex, obrázek, kontakt i připnutí; administrace úřední desky má vyhledávání a stavový filtr a runtime audit hlídá detail dokumentu, detail linky na výpisu, nové formulářové prvky i kanonické přesměrování starého `board/document.php?id=...`
+- Import/export nově zachovává i slugy, typ, perex, obrázek, adresu, lokalitu, GPS a kontaktní údaje u modulu `Zajímavá místa`; administrace má vyhledávání a stavový filtr a runtime audit hlídá detail místa, detail linky na výpisu, nové formulářové prvky i kanonické přesměrování starého `places/place.php?id=...`
 
 ## [3.0.0-beta.1] – 2026-03-23
 

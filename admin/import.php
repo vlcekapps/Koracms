@@ -166,15 +166,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['places']) && is_array($data['places'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_places
-                         (id, name, description, url, category, is_published, sort_order, status)
-                         VALUES (?,?,?,?,?,?,?,?)"
+                         (id, name, slug, place_kind, excerpt, description, url, image_file, category,
+                          address, locality, latitude, longitude, contact_phone, contact_email,
+                          opening_hours, is_published, sort_order, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['places'] as $row) {
+                        $importName = trim((string)($row['name'] ?? ''));
+                        if ($importName === '') {
+                            continue;
+                        }
+                        $importSlug = uniquePlaceSlug(
+                            $pdo,
+                            trim((string)($row['slug'] ?? '')) !== '' ? (string)$row['slug'] : $importName,
+                            (int)($row['id'] ?? 0)
+                        );
                         $ins->execute([
-                            (int)$row['id'], $row['name'], $row['description'] ?? '',
-                            $row['url'] ?? '', $row['category'] ?? '',
-                            (int)$row['is_published'], (int)$row['sort_order'],
+                            (int)$row['id'],
+                            $importName,
+                            $importSlug,
+                            normalizePlaceKind((string)($row['place_kind'] ?? 'sight')),
+                            $row['excerpt'] ?? '',
+                            $row['description'] ?? '',
+                            normalizePlaceUrl((string)($row['url'] ?? '')),
+                            $row['image_file'] ?? '',
+                            $row['category'] ?? '',
+                            $row['address'] ?? '',
+                            $row['locality'] ?? '',
+                            $row['latitude'] !== '' ? ($row['latitude'] ?? null) : null,
+                            $row['longitude'] !== '' ? ($row['longitude'] ?? null) : null,
+                            $row['contact_phone'] ?? '',
+                            $row['contact_email'] ?? '',
+                            $row['opening_hours'] ?? '',
+                            (int)($row['is_published'] ?? 1),
+                            (int)($row['sort_order'] ?? 0),
                             $row['status'] ?? 'published',
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);
                     }
                     $summary[] = 'Zajímavá místa importována.';

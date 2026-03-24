@@ -16,6 +16,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_chat' => getSetting('module_chat', '0'),
     'module_board' => getSetting('module_board', '0'),
     'module_events' => getSetting('module_events', '0'),
+    'module_places' => getSetting('module_places', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
 ];
 foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
@@ -64,6 +65,12 @@ $boardCanonicalUrl = '';
 $boardLegacyUrl = '';
 $boardCount = 0;
 $boardAttachmentId = false;
+$placeRow = null;
+$placeId = false;
+$placeCanonicalPath = '';
+$placeLegacyPath = '';
+$placeCanonicalUrl = '';
+$placeLegacyUrl = '';
 $activePollCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_polls
      WHERE status = 'active'
@@ -139,6 +146,7 @@ $cleanup = [
     'author_user_ids' => [],
     'staff_user_ids' => [],
     'board_ids' => [],
+    'place_ids' => [],
 ];
 
 $runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
@@ -374,6 +382,51 @@ if (isModuleEnabled('board')) {
     )->fetchColumn();
 }
 
+if (isModuleEnabled('places')) {
+    $runtimeAuditPlaceName = 'Runtime audit místo';
+    $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
+    $runtimeAuditPlaceExcerpt = 'Krátký přehled testovacího místa pro ověření detailu, praktických informací a veřejného výpisu.';
+    $pdo->prepare(
+        "INSERT INTO cms_places (
+            name, slug, place_kind, category, excerpt, description, image_file, address, locality,
+            latitude, longitude, url, contact_phone, contact_email, opening_hours,
+            is_published, status, sort_order, created_at, updated_at
+         ) VALUES (?, ?, 'info', ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 1, 'published', -100, NOW(), NOW())"
+    )->execute([
+        $runtimeAuditPlaceName,
+        $runtimeAuditPlaceSlug,
+        'Testovací lokalita',
+        $runtimeAuditPlaceExcerpt,
+        '<p>Detailní text runtime audit místa pro ověření veřejného detailu a praktických informací.</p>',
+        'Testovací 1',
+        'Praha',
+        50.0874510,
+        14.4206710,
+        'https://example.test/misto',
+        '+420 777 987 654',
+        'misto@example.test',
+        "Po–Pá: 9:00–17:00\nSo: 10:00–14:00",
+    ]);
+    $runtimeAuditPlaceId = (int)$pdo->lastInsertId();
+    $cleanup['place_ids'][] = $runtimeAuditPlaceId;
+
+    $placeStmt = $pdo->prepare(
+        "SELECT *
+         FROM cms_places
+         WHERE id = ?"
+    );
+    $placeStmt->execute([$runtimeAuditPlaceId]);
+    $placeRow = $placeStmt->fetch() ?: null;
+    if ($placeRow) {
+        $placeRow = hydratePlacePresentation($placeRow);
+        $placeId = $placeRow['id'] ?? false;
+        $placeCanonicalPath = placePublicPath($placeRow);
+        $placeLegacyPath = $placeId !== false ? BASE_URL . '/places/place.php?id=' . urlencode((string)$placeId) : '';
+        $placeCanonicalUrl = $placeCanonicalPath !== '' ? $baseUrl . $placeCanonicalPath : '';
+        $placeLegacyUrl = $placeLegacyPath !== '' ? $baseUrl . $placeLegacyPath : '';
+    }
+}
+
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
@@ -391,6 +444,7 @@ $pages = [
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_places', 'url' => $baseUrl . '/admin/places.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -403,6 +457,9 @@ if ($runtimeAuditAuthorId > 0) {
 }
 if ($boardId !== false) {
     $pages[] = ['label' => 'admin_board_form', 'url' => $baseUrl . '/admin/board_form.php?id=' . urlencode((string)$boardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($placeId !== false) {
+    $pages[] = ['label' => 'admin_place_form', 'url' => $baseUrl . '/admin/place_form.php?id=' . urlencode((string)$placeId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 
 if (isModuleEnabled('newsletter')) {
@@ -471,6 +528,9 @@ if ($eventCanonicalUrl !== '') {
 }
 if ($boardCanonicalUrl !== '') {
     $pages[] = ['label' => 'board_article', 'url' => $boardCanonicalUrl];
+}
+if ($placeCanonicalUrl !== '') {
+    $pages[] = ['label' => 'places_article', 'url' => $placeCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
@@ -904,6 +964,18 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'places_index') {
+        if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
+            $issues[] = 'places listing is missing detail links';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['excerpt_plain'] ?? ''))) {
+            $issues[] = 'places listing is missing excerpt preview';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
+            $issues[] = 'places listing is missing address';
+        }
+    }
+
     if ($page['label'] === 'downloads_index') {
         if (str_contains($result['body'], '/uploads/downloads/')) {
             $issues[] = 'downloads listing still exposes uploads/downloads paths';
@@ -1105,6 +1177,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_places') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin places search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin places status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_board_form') {
         foreach ([
             'name="board_type"',
@@ -1117,6 +1198,26 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin board form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_place_form') {
+        foreach ([
+            'name="slug"',
+            'name="place_kind"',
+            'name="excerpt"',
+            'name="place_image"',
+            'name="address"',
+            'name="locality"',
+            'name="latitude"',
+            'name="longitude"',
+            'name="contact_phone"',
+            'name="contact_email"',
+            'name="opening_hours"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin place form is missing field: ' . $expectedField;
             }
         }
     }
@@ -1176,6 +1277,27 @@ foreach ($pages as $page) {
             && (int)$boardAttachmentId === (int)($boardRow['id'] ?? 0)
             && !str_contains($result['body'], '/board/file.php?id=' . (int)$boardAttachmentId)) {
             $issues[] = 'board article is missing download CTA';
+        }
+    }
+
+    if ($page['label'] === 'places_article') {
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['name'] ?? ''))) {
+            $issues[] = 'places article is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět na zajímavá místa')) {
+            $issues[] = 'places article is missing back link';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
+            $issues[] = 'places article is missing address';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['contact_phone'] ?? ''))) {
+            $issues[] = 'places article is missing contact phone';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['contact_email'] ?? ''))) {
+            $issues[] = 'places article is missing contact email';
+        }
+        if ($placeRow && !str_contains($result['body'], 'google.com/maps')) {
+            $issues[] = 'places article is missing map link';
         }
     }
 
@@ -1268,6 +1390,23 @@ if ($boardCanonicalPath === '' || $boardLegacyPath === '' || $boardCanonicalPath
     }
 }
 
+echo "=== places_article_legacy_redirect ===\n";
+if ($placeCanonicalPath === '' || $placeLegacyPath === '' || $placeCanonicalPath === $placeLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyPlaceProbe = fetchUrl($placeLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $placeCanonicalPath;
+    if (!str_contains($legacyPlaceProbe['status'], '302')) {
+        echo "- legacy place URL does not redirect ({$legacyPlaceProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyPlaceProbe['headers'], true)) {
+        echo "- legacy place URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== public_author_guard ===\n";
 if ($runtimeAuditAuthorUrl === '') {
     echo "OK\n";
@@ -1317,6 +1456,9 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
 }
+if (isModuleEnabled('places')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'author places'];
+}
 
 if (isModuleEnabled('blog')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/comments.php', 'expected' => '200', 'label' => 'moderator comments'];
@@ -1339,6 +1481,9 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
 }
+if (isModuleEnabled('places')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'moderator places'];
+}
 
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_bookings.php', 'expected' => '200', 'label' => 'booking manager reservations'];
@@ -1349,6 +1494,9 @@ if (isModuleEnabled('blog')) {
 }
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'booking manager board'];
+}
+if (isModuleEnabled('places')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'booking manager places'];
 }
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/comments.php', 'expected' => '403', 'label' => 'booking manager comments'];
 
@@ -1808,6 +1956,10 @@ if (!empty($cleanup['subscriber_emails'])) {
 if (!empty($cleanup['board_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['board_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_board WHERE id IN ({$placeholders})")->execute($cleanup['board_ids']);
+}
+if (!empty($cleanup['place_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_places WHERE id IN ({$placeholders})")->execute($cleanup['place_ids']);
 }
 if (!empty($cleanup['author_user_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['author_user_ids']), '?'));

@@ -103,10 +103,29 @@ function boardTypeDefinitions(): array
     ];
 }
 
+function placeKindDefinitions(): array
+{
+    return [
+        'sight' => ['label' => 'Památka a zajímavost'],
+        'trip' => ['label' => 'Tip na výlet'],
+        'service' => ['label' => 'Služba'],
+        'food' => ['label' => 'Občerstvení'],
+        'accommodation' => ['label' => 'Ubytování'],
+        'experience' => ['label' => 'Zážitek'],
+        'info' => ['label' => 'Informační místo'],
+    ];
+}
+
 function normalizeBoardType(string $type): string
 {
     $definitions = boardTypeDefinitions();
     return isset($definitions[$type]) ? $type : 'document';
+}
+
+function normalizePlaceKind(string $kind): string
+{
+    $definitions = placeKindDefinitions();
+    return isset($definitions[$kind]) ? $kind : 'sight';
 }
 
 function siteProfileDefinitions(): array
@@ -1010,6 +1029,11 @@ function eventSlug(string $value): string
     return slugify(trim($value));
 }
 
+function placeSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function boardSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1071,6 +1095,179 @@ function boardExcerpt(array $document, int $limit = 220): string
     }
 
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function placeKindLabel(string $kind): string
+{
+    $definitions = placeKindDefinitions();
+    return $definitions[normalizePlaceKind($kind)]['label'];
+}
+
+function placeExcerpt(array $place, int $limit = 220): string
+{
+    $explicitExcerpt = normalizePlainText((string)($place['excerpt'] ?? ''));
+    if ($explicitExcerpt !== '') {
+        return mb_strimwidth($explicitExcerpt, 0, $limit, '...', 'UTF-8');
+    }
+
+    $descriptionExcerpt = normalizePlainText((string)($place['description'] ?? ''));
+    if ($descriptionExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function placeImageUrl(array $place): string
+{
+    $filename = trim((string)($place['image_file'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/places/' . rawurlencode($filename);
+}
+
+function deletePlaceImageFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/places/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadPlaceImage(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = __DIR__ . '/uploads/places/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro obrázky míst se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('place_image_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek se nepodařilo uložit.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deletePlaceImageFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
+function normalizePlaceUrl(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $value)) {
+        $value = 'https://' . ltrim($value, '/');
+    }
+
+    $validated = filter_var($value, FILTER_VALIDATE_URL);
+    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
+        return '';
+    }
+
+    return $validated;
+}
+
+function hydratePlacePresentation(array $place): array
+{
+    $place['slug'] = placeSlug((string)($place['slug'] ?? ''));
+    $place['place_kind'] = normalizePlaceKind((string)($place['place_kind'] ?? 'sight'));
+    $place['place_kind_label'] = placeKindLabel((string)$place['place_kind']);
+    $place['excerpt_plain'] = placeExcerpt($place);
+    $place['image_url'] = placeImageUrl($place);
+    $place['url'] = normalizePlaceUrl((string)($place['url'] ?? ''));
+    $place['address'] = trim((string)($place['address'] ?? ''));
+    $place['locality'] = trim((string)($place['locality'] ?? ''));
+    $place['contact_phone'] = trim((string)($place['contact_phone'] ?? ''));
+    $place['contact_email'] = trim((string)($place['contact_email'] ?? ''));
+    $place['opening_hours'] = trim((string)($place['opening_hours'] ?? ''));
+    $place['has_contact'] = $place['contact_phone'] !== '' || $place['contact_email'] !== '';
+    $place['full_address'] = trim(
+        implode(', ', array_filter([
+            $place['address'],
+            $place['locality'],
+        ], static fn(string $value): bool => $value !== ''))
+    );
+
+    $latitude = trim((string)($place['latitude'] ?? ''));
+    $longitude = trim((string)($place['longitude'] ?? ''));
+    $place['latitude'] = $latitude;
+    $place['longitude'] = $longitude;
+    $place['has_coordinates'] = $latitude !== '' && $longitude !== '';
+    $place['map_url'] = $place['has_coordinates']
+        ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($latitude . ',' . $longitude)
+        : '';
+
+    return $place;
 }
 
 function boardImageUrl(array $document): string
@@ -1303,6 +1500,26 @@ function eventPublicRequestPath(array $event): string
     return '/events/event.php?id=' . (int)($event['id'] ?? 0);
 }
 
+function placePublicRequestPath(array $place): string
+{
+    $slug = placeSlug((string)($place['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/places/' . rawurlencode($slug);
+    }
+
+    return '/places/place.php?id=' . (int)($place['id'] ?? 0);
+}
+
+function placePublicPath(array $place, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(placePublicRequestPath($place), $query);
+}
+
+function placePublicUrl(array $place, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(placePublicRequestPath($place), $query));
+}
+
 function eventPublicPath(array $event, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(eventPublicRequestPath($event), $query);
@@ -1344,6 +1561,27 @@ function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_events WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniquePlaceSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = placeSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'misto';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_places WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);

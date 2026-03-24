@@ -242,13 +242,26 @@ $tables = [
     'cms_places' => "CREATE TABLE IF NOT EXISTS cms_places (
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name         VARCHAR(255) NOT NULL,
+        slug         VARCHAR(255) NOT NULL,
+        place_kind   VARCHAR(50)  NOT NULL DEFAULT 'sight',
+        excerpt      TEXT,
         description  TEXT,
         url          VARCHAR(500) NOT NULL DEFAULT '',
+        image_file   VARCHAR(255) NOT NULL DEFAULT '',
         category     VARCHAR(100) NOT NULL DEFAULT '',
+        address      VARCHAR(255) NOT NULL DEFAULT '',
+        locality     VARCHAR(255) NOT NULL DEFAULT '',
+        latitude     DECIMAL(10,7) NULL DEFAULT NULL,
+        longitude    DECIMAL(10,7) NULL DEFAULT NULL,
+        contact_phone VARCHAR(100) NOT NULL DEFAULT '',
+        contact_email VARCHAR(255) NOT NULL DEFAULT '',
+        opening_hours TEXT,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         sort_order   INT          NOT NULL DEFAULT 0,
-        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_places_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_dl_categories' => "CREATE TABLE IF NOT EXISTS cms_dl_categories (
@@ -554,7 +567,19 @@ $addColumns = [
     'cms_events.slug'                => "ALTER TABLE cms_events ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_events.status'              => "ALTER TABLE cms_events ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_places
+    'cms_places.slug'                => "ALTER TABLE cms_places ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
+    'cms_places.place_kind'          => "ALTER TABLE cms_places ADD COLUMN place_kind VARCHAR(50) NOT NULL DEFAULT 'sight'",
+    'cms_places.excerpt'             => "ALTER TABLE cms_places ADD COLUMN excerpt TEXT",
+    'cms_places.image_file'          => "ALTER TABLE cms_places ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_places.address'             => "ALTER TABLE cms_places ADD COLUMN address VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_places.locality'            => "ALTER TABLE cms_places ADD COLUMN locality VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_places.latitude'            => "ALTER TABLE cms_places ADD COLUMN latitude DECIMAL(10,7) NULL DEFAULT NULL",
+    'cms_places.longitude'           => "ALTER TABLE cms_places ADD COLUMN longitude DECIMAL(10,7) NULL DEFAULT NULL",
+    'cms_places.contact_phone'       => "ALTER TABLE cms_places ADD COLUMN contact_phone VARCHAR(100) NOT NULL DEFAULT ''",
+    'cms_places.contact_email'       => "ALTER TABLE cms_places ADD COLUMN contact_email VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_places.opening_hours'       => "ALTER TABLE cms_places ADD COLUMN opening_hours TEXT",
     'cms_places.status'              => "ALTER TABLE cms_places ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_places.updated_at'          => "ALTER TABLE cms_places ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_board
@@ -953,6 +978,60 @@ try {
 }
 
 try {
+    $placeSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_places' AND COLUMN_NAME = 'slug'"
+    );
+    $placeSlugColumnCheck->execute();
+
+    if ((int)$placeSlugColumnCheck->fetchColumn() > 0) {
+        $placeRows = $pdo->query("SELECT id, name, slug FROM cms_places ORDER BY id")->fetchAll();
+        $updatePlaceSlugStmt = $pdo->prepare("UPDATE cms_places SET slug = ? WHERE id = ?");
+
+        foreach ($placeRows as $placeRow) {
+            $existingSlug = trim((string)($placeRow['slug'] ?? ''));
+            $resolvedSlug = uniquePlaceSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$placeRow['name'],
+                (int)$placeRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updatePlaceSlugStmt->execute([$resolvedSlug, (int)$placeRow['id']]);
+            }
+        }
+
+        $placeSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_places' AND COLUMN_NAME = 'slug'"
+        );
+        $placeSlugNullabilityCheck->execute();
+        if (($placeSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_places MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_places.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_places.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $placeSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_places'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $placeSlugIndexCheck->execute();
+        if ((int)$placeSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_places ADD UNIQUE KEY uq_cms_places_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_places_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_places.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy míst – sloupec <code>cms_places.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy míst – CHYBA: " . h($e->getMessage());
+}
+
+try {
     $boardSlugColumnCheck = $pdo->prepare(
         "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_board' AND COLUMN_NAME = 'slug'"
@@ -1120,6 +1199,7 @@ $uploadDirs = [
     'uploads/gallery',
     'uploads/gallery/thumbs',
     'uploads/downloads',
+    'uploads/places',
     'uploads/board',
     'uploads/board/images',
     'uploads/podcasts',

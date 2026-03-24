@@ -120,7 +120,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Galerie** | Vnořená fotoalba s automatickým generováním náhledů; výběr obálky alba |
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; každý podcast má vlastní RSS feed (`/podcast/feed.php?show=ID`) kompatibilní s podcastovými aplikacemi |
-| **Zajímavá místa** | Adresář míst s popisem, kategorií a odkazem |
+| **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
 | **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
 | **Ke stažení** | Knihovna souborů ke stažení s kategoriemi |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |

@@ -7,23 +7,35 @@ if (!isModuleEnabled('places')) {
     exit;
 }
 
+function groupPlacesByCategory(array $places): array
+{
+    $grouped = [];
+    foreach ($places as $place) {
+        $grouped[$place['category'] ?: 'Ostatní'][] = $place;
+    }
+    ksort($grouped);
+    return $grouped;
+}
+
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
 $places = $pdo->query(
-    "SELECT * FROM cms_places WHERE status = 'published' AND is_published = 1 ORDER BY sort_order, name"
+    "SELECT *
+     FROM cms_places
+     WHERE status = 'published' AND is_published = 1
+     ORDER BY sort_order, name"
 )->fetchAll();
-
-$grouped = [];
-foreach ($places as $place) {
-    $grouped[$place['category'] ?: 'Ostatní'][] = $place;
-}
-ksort($grouped);
+$places = array_map(
+    static fn(array $place): array => hydratePlacePresentation($place),
+    $places
+);
+$grouped = groupPlacesByCategory($places);
 
 renderPublicPage([
-    'title' => 'Zajímavá místa – ' . $siteName,
+    'title' => 'Zajímavá místa - ' . $siteName,
     'meta' => [
-        'title' => 'Zajímavá místa – ' . $siteName,
+        'title' => 'Zajímavá místa - ' . $siteName,
         'url' => BASE_URL . '/places/index.php',
     ],
     'view' => 'modules/places-index',
