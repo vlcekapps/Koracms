@@ -212,6 +212,25 @@ if (in_array($scope, ['all', 'content'], true)) {
                 ],
             ],
             [
+                'enabled' => isModuleEnabled('podcast'),
+                'module_label' => 'Podcasty',
+                'approval_module' => 'podcasts',
+                'manage_url' => 'podcast_shows.php',
+                'edit_builder' => static fn(array $row): string => 'podcast_form.php?id=' . (int)$row['id'] . '&show_id=' . (int)$row['show_id'],
+                'sql' => "SELECT p.id, p.title, p.show_id, p.created_at, s.title AS show_title
+                          FROM cms_podcasts p
+                          LEFT JOIN cms_podcast_shows s ON s.id = p.show_id
+                          WHERE p.status = 'pending'
+                          ORDER BY p.created_at DESC
+                          LIMIT 10",
+                'row_builder' => static fn(array $row): array => [
+                    'sort_at' => (string)$row['created_at'],
+                    'title' => (string)$row['title'],
+                    'meta' => trim((string)$row['show_title']) !== '' ? 'Podcast: ' . (string)$row['show_title'] : '',
+                    'date' => (string)$row['created_at'],
+                ],
+            ],
+            [
                 'enabled' => isModuleEnabled('food'),
                 'module_label' => 'Jídelní lístky',
                 'approval_module' => 'food',

@@ -67,7 +67,7 @@ if ($canManageSharedContent) {
     $sharedOverview = [
         ['module' => null, 'table' => 'cms_pages', 'label' => 'Stránky', 'url' => 'pages.php'],
         ['module' => 'events', 'table' => 'cms_events', 'label' => 'Události', 'url' => 'events.php'],
-        ['module' => 'podcast', 'table' => 'cms_podcasts', 'label' => 'Epizody podcastu', 'url' => 'podcast.php'],
+        ['module' => 'podcast', 'table' => 'cms_podcasts', 'label' => 'Podcasty', 'url' => 'podcast_shows.php'],
         ['module' => 'places', 'table' => 'cms_places', 'label' => 'Místa', 'url' => 'places.php'],
         ['module' => 'downloads', 'table' => 'cms_downloads', 'label' => 'Ke stažení', 'url' => 'downloads.php'],
         ['module' => 'food', 'table' => 'cms_food_cards', 'label' => 'Lístky', 'url' => 'food.php'],

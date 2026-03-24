@@ -119,7 +119,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou a rate limitingem |
 | **Galerie** | Vnořená fotoalba s automatickým generováním náhledů; výběr obálky alba |
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
-| **Podcasty** | Správa více podcastů a jejich epizod; každý podcast má vlastní RSS feed (`/podcast/feed.php?show=ID`) kompatibilní s podcastovými aplikacemi |
+| **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |
 | **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
 | **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
 | **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
@@ -240,9 +240,9 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 
 ## Další funkce
 
-- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty, FAQ, místy a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
+- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, místy a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, událostí i dokumentů úřední desky
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, událostí, podcastů, epizod i dokumentů úřední desky
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)

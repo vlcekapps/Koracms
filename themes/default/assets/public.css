@@ -1322,6 +1322,14 @@ body.theme-public textarea.form-control {
   margin-bottom: 0.9rem;
 }
 
+.episode-card__footer {
+  margin-top: 1rem;
+}
+
+.episode-detail__content {
+  max-width: 72ch;
+}
+
 .audio-player {
   width: 100%;
   margin-bottom: 1rem;

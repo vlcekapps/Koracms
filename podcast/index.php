@@ -11,19 +11,25 @@ $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
 $shows = $pdo->query(
-    "SELECT s.*, COUNT(e.id) AS episode_count
+    "SELECT s.*,
+            COUNT(e.id) AS episode_count,
+            MAX(COALESCE(e.publish_at, e.created_at)) AS latest_episode_at
      FROM cms_podcast_shows s
      LEFT JOIN cms_podcasts e ON e.show_id = s.id
          AND e.status = 'published' AND (e.publish_at IS NULL OR e.publish_at <= NOW())
      GROUP BY s.id
-     ORDER BY s.title ASC"
+     ORDER BY latest_episode_at DESC, s.title ASC"
 )->fetchAll();
+$shows = array_map(
+    static fn(array $show): array => hydratePodcastShowPresentation($show),
+    $shows
+);
 
 renderPublicPage([
     'title' => 'Podcasty – ' . $siteName,
     'meta' => [
         'title' => 'Podcasty – ' . $siteName,
-        'url' => BASE_URL . '/podcast/index.php',
+        'url' => siteUrl('/podcast/index.php'),
     ],
     'view' => 'modules/podcast-index',
     'view_data' => [

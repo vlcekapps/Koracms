@@ -214,6 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             show_id      INT          NOT NULL DEFAULT 1,
             title        VARCHAR(255) NOT NULL,
+            slug         VARCHAR(255) NOT NULL,
             description  TEXT,
             audio_file   VARCHAR(255) NOT NULL DEFAULT '',
             audio_url    VARCHAR(500) NOT NULL DEFAULT '',
@@ -222,7 +223,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             publish_at   DATETIME     NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            status       ENUM('pending','published') NOT NULL DEFAULT 'published'
+            status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+            UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_users (

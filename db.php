@@ -953,10 +953,10 @@ function pendingReviewSummary(PDO $pdo): array
     if (currentUserHasCapability('content_approve_shared')) {
         $sharedModules = [
             ['key' => 'pages', 'enabled' => true, 'label' => 'Stránky', 'url' => BASE_URL . '/admin/pages.php', 'sql' => "SELECT COUNT(*) FROM cms_pages WHERE status = 'pending'"],
+            ['key' => 'faq', 'enabled' => isModuleEnabled('faq'), 'label' => 'FAQ', 'url' => BASE_URL . '/admin/faq.php', 'sql' => "SELECT COUNT(*) FROM cms_faqs WHERE status = 'pending'"],
             ['key' => 'board', 'enabled' => isModuleEnabled('board'), 'label' => boardModulePublicLabel(), 'url' => BASE_URL . '/admin/board.php', 'sql' => "SELECT COUNT(*) FROM cms_board WHERE status = 'pending'"],
             ['key' => 'downloads', 'enabled' => isModuleEnabled('downloads'), 'label' => 'Ke stažení', 'url' => BASE_URL . '/admin/downloads.php', 'sql' => "SELECT COUNT(*) FROM cms_downloads WHERE status = 'pending'"],
             ['key' => 'events', 'enabled' => isModuleEnabled('events'), 'label' => 'Události', 'url' => BASE_URL . '/admin/events.php', 'sql' => "SELECT COUNT(*) FROM cms_events WHERE status = 'pending'"],
-            ['key' => 'faq', 'enabled' => isModuleEnabled('faq'), 'label' => 'FAQ', 'url' => BASE_URL . '/admin/faq.php', 'sql' => "SELECT COUNT(*) FROM cms_faqs WHERE status = 'pending'"],
             ['key' => 'places', 'enabled' => isModuleEnabled('places'), 'label' => 'Zajímavá místa', 'url' => BASE_URL . '/admin/places.php', 'sql' => "SELECT COUNT(*) FROM cms_places WHERE status = 'pending'"],
             ['key' => 'podcasts', 'enabled' => isModuleEnabled('podcast'), 'label' => 'Podcasty', 'url' => BASE_URL . '/admin/podcast_shows.php', 'sql' => "SELECT COUNT(*) FROM cms_podcasts WHERE status = 'pending'"],
             ['key' => 'food', 'enabled' => isModuleEnabled('food'), 'label' => 'Jídelní lístky', 'url' => BASE_URL . '/admin/food.php', 'sql' => "SELECT COUNT(*) FROM cms_food_cards WHERE status = 'pending'"],
@@ -1064,6 +1064,16 @@ function boardSlug(string $value): string
 }
 
 function faqSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
+function podcastShowSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
+function podcastEpisodeSlug(string $value): string
 {
     return slugify(trim($value));
 }
@@ -1183,6 +1193,16 @@ function downloadExcerpt(array $download, int $limit = 220): string
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+function podcastEpisodeExcerpt(array $episode, int $limit = 220): string
+{
+    $descriptionExcerpt = normalizePlainText((string)($episode['description'] ?? ''));
+    if ($descriptionExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
 function downloadImageUrl(array $download): string
 {
     $filename = trim((string)($download['image_file'] ?? ''));
@@ -1191,6 +1211,233 @@ function downloadImageUrl(array $download): string
     }
 
     return BASE_URL . '/uploads/downloads/images/' . rawurlencode($filename);
+}
+
+function podcastCoverUrl(array $show): string
+{
+    $filename = trim((string)($show['cover_image'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/podcasts/covers/' . rawurlencode($filename);
+}
+
+function podcastEpisodeAudioUrl(array $episode): string
+{
+    $audioFile = trim((string)($episode['audio_file'] ?? ''));
+    if ($audioFile !== '') {
+        return BASE_URL . '/uploads/podcasts/' . rawurlencode($audioFile);
+    }
+
+    return trim((string)($episode['audio_url'] ?? ''));
+}
+
+function normalizePodcastWebsiteUrl(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $value)) {
+        $value = 'https://' . ltrim($value, '/');
+    }
+
+    $validated = filter_var($value, FILTER_VALIDATE_URL);
+    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
+        return '';
+    }
+
+    return $validated;
+}
+
+function normalizePodcastEpisodeAudioUrl(string $value): string
+{
+    return normalizePodcastWebsiteUrl($value);
+}
+
+function deletePodcastCoverFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/podcasts/covers/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+function deletePodcastAudioFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = __DIR__ . '/uploads/podcasts/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadPodcastCoverImage(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek coveru se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek coveru se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Cover musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = __DIR__ . '/uploads/podcasts/covers/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro cover obrázky se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('podcast_cover_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Cover obrázek se nepodařilo uložit.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deletePodcastCoverFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadPodcastAudioFile(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Audio soubor se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Audio soubor se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'audio/mpeg' => 'mp3',
+        'audio/mp3' => 'mp3',
+        'audio/ogg' => 'ogg',
+        'audio/wav' => 'wav',
+        'audio/x-wav' => 'wav',
+        'audio/mp4' => 'm4a',
+        'audio/x-m4a' => 'm4a',
+        'audio/aac' => 'aac',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Audio musí být ve formátu MP3, OGG, WAV, M4A nebo AAC.',
+        ];
+    }
+
+    $directory = __DIR__ . '/uploads/podcasts/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro podcastová audia se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('podcast_episode_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Audio soubor se nepodařilo uložit.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deletePodcastAudioFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
 }
 
 function deleteDownloadImageFile(string $filename): void
@@ -1676,6 +1923,67 @@ function newsPublicRequestPath(array $news): string
     return '/news/article.php?id=' . (int)($news['id'] ?? 0);
 }
 
+function podcastShowPublicRequestPath(array $show): string
+{
+    $slug = podcastShowSlug((string)($show['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/podcast/' . rawurlencode($slug);
+    }
+
+    return '/podcast/index.php';
+}
+
+function podcastShowPublicPath(array $show, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(podcastShowPublicRequestPath($show), $query);
+}
+
+function podcastShowPublicUrl(array $show, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(podcastShowPublicRequestPath($show), $query));
+}
+
+function podcastEpisodePublicRequestPath(array $episode): string
+{
+    $showSlug = podcastShowSlug((string)($episode['show_slug'] ?? ''));
+    $episodeSlug = podcastEpisodeSlug((string)($episode['slug'] ?? ''));
+    if ($showSlug !== '' && $episodeSlug !== '') {
+        return '/podcast/' . rawurlencode($showSlug) . '/' . rawurlencode($episodeSlug);
+    }
+
+    return '/podcast/episode.php?id=' . (int)($episode['id'] ?? 0);
+}
+
+function podcastEpisodePublicPath(array $episode, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(podcastEpisodePublicRequestPath($episode), $query);
+}
+
+function podcastEpisodePublicUrl(array $episode, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(podcastEpisodePublicRequestPath($episode), $query));
+}
+
+function faqPublicRequestPath(array $faq): string
+{
+    $slug = faqSlug((string)($faq['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/faq/' . rawurlencode($slug);
+    }
+
+    return '/faq/item.php?id=' . (int)($faq['id'] ?? 0);
+}
+
+function faqPublicPath(array $faq, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(faqPublicRequestPath($faq), $query);
+}
+
+function faqPublicUrl(array $faq, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(faqPublicRequestPath($faq), $query));
+}
+
 function newsPublicPath(array $news, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(newsPublicRequestPath($news), $query);
@@ -1829,27 +2137,6 @@ function uniquePlaceSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     }
 }
 
-function uniqueFaqSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
-{
-    $baseSlug = faqSlug($candidate);
-    if ($baseSlug === '') {
-        $baseSlug = 'otazka';
-    }
-
-    $slug = $baseSlug;
-    $suffix = 2;
-    $stmt = $pdo->prepare("SELECT id FROM cms_faqs WHERE slug = ? AND id != ?");
-
-    while (true) {
-        $stmt->execute([$slug, $excludeId ?? 0]);
-        if (!$stmt->fetch()) {
-            return $slug;
-        }
-        $slug = $baseSlug . '-' . $suffix;
-        $suffix++;
-    }
-}
-
 function uniqueDownloadSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = downloadSlug($candidate);
@@ -1881,6 +2168,69 @@ function uniqueBoardSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_board WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniquePodcastShowSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = podcastShowSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'podcast';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_podcast_shows WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniquePodcastEpisodeSlug(PDO $pdo, int $showId, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = podcastEpisodeSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'epizoda';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_podcasts WHERE show_id = ? AND slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$showId, $slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueFaqSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = faqSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'otazka';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_faqs WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);
@@ -2013,26 +2363,6 @@ function authorPublicUrl(array $author): string
     return $path !== '' ? siteUrl($path) : '';
 }
 
-function faqPublicRequestPath(array $faq): string
-{
-    $slug = faqSlug((string)($faq['slug'] ?? ''));
-    if ($slug !== '') {
-        return '/faq/' . rawurlencode($slug);
-    }
-
-    return '/faq/item.php?id=' . (int)($faq['id'] ?? 0);
-}
-
-function faqPublicPath(array $faq, array $query = []): string
-{
-    return BASE_URL . appendUrlQuery(faqPublicRequestPath($faq), $query);
-}
-
-function faqPublicUrl(array $faq, array $query = []): string
-{
-    return siteUrl(appendUrlQuery(faqPublicRequestPath($faq), $query));
-}
-
 function authorAvatarUrl(array $author): string
 {
     $avatarFile = trim((string)($author['author_avatar'] ?? ''));
@@ -2066,6 +2396,35 @@ function hydrateNewsPresentation(array $news): array
     }
 
     return $news;
+}
+
+function hydratePodcastShowPresentation(array $show): array
+{
+    $show['slug'] = podcastShowSlug((string)($show['slug'] ?? ''));
+    $show['website_url'] = normalizePodcastWebsiteUrl((string)($show['website_url'] ?? ''));
+    $show['cover_url'] = podcastCoverUrl($show);
+    $show['public_path'] = podcastShowPublicPath($show);
+    $show['public_url'] = podcastShowPublicUrl($show);
+    $show['description_plain'] = normalizePlainText((string)($show['description'] ?? ''));
+    return $show;
+}
+
+function hydratePodcastEpisodePresentation(array $episode): array
+{
+    $episode['slug'] = podcastEpisodeSlug((string)($episode['slug'] ?? ''));
+    $episode['audio_url'] = normalizePodcastEpisodeAudioUrl((string)($episode['audio_url'] ?? ''));
+    $episode['excerpt'] = podcastEpisodeExcerpt($episode);
+    $episode['public_path'] = podcastEpisodePublicPath($episode);
+    $episode['public_url'] = podcastEpisodePublicUrl($episode);
+    $episode['audio_src'] = podcastEpisodeAudioUrl($episode);
+    $displayDate = trim((string)($episode['publish_at'] ?? ''));
+    if ($displayDate === '') {
+        $displayDate = trim((string)($episode['created_at'] ?? ''));
+    }
+    $episode['display_date'] = $displayDate;
+    $episode['is_scheduled'] = trim((string)($episode['publish_at'] ?? '')) !== ''
+        && strtotime((string)$episode['publish_at']) > time();
+    return $episode;
 }
 
 function hydrateFaqPresentation(array $faq): array

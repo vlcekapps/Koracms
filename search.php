@@ -75,6 +75,42 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
+    if (isModuleEnabled('podcast')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, title, slug, description AS perex,
+                        COALESCE(updated_at, created_at) AS created_at, 'podcast_show' AS type
+                 FROM cms_podcast_shows
+                 WHERE title LIKE ? OR description LIKE ? OR author LIKE ? OR category LIKE ?
+                 ORDER BY updated_at DESC, title ASC LIMIT 5"
+            );
+            $stmt->execute([$like, $like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT p.id, p.title, p.slug, p.description AS perex,
+                        COALESCE(p.publish_at, p.updated_at, p.created_at) AS created_at,
+                        'podcast_episode' AS type, s.slug AS show_slug, s.title AS show_title
+                 FROM cms_podcasts p
+                 INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+                 WHERE p.status = 'published'
+                   AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+                   AND (p.title LIKE ? OR p.description LIKE ? OR s.title LIKE ?)
+                 ORDER BY COALESCE(p.publish_at, p.created_at) DESC LIMIT 8"
+            );
+            $stmt->execute([$like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+    }
+
     if (isModuleEnabled('faq')) {
         try {
             $stmt = $pdo->prepare(
@@ -158,6 +194,8 @@ function resultUrl(array $result): string
         'news' => newsPublicPath($result),
         'page' => $baseUrl . '/page.php?slug=' . rawurlencode($result['slug'] ?? ''),
         'event' => eventPublicPath($result),
+        'podcast_show' => podcastShowPublicPath($result),
+        'podcast_episode' => podcastEpisodePublicPath($result),
         'faq' => faqPublicPath($result),
         'download' => downloadPublicPath($result),
         'place' => placePublicPath($result),
@@ -173,6 +211,8 @@ function typeLabel(string $type): string
         'news' => 'Novinka',
         'page' => 'Stránka',
         'event' => 'Akce',
+        'podcast_show' => 'Podcast',
+        'podcast_episode' => 'Epizoda podcastu',
         'faq' => 'FAQ',
         'download' => 'Ke stažení',
         'place' => 'Místo',

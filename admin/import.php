@@ -321,15 +321,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['podcast_shows']) && is_array($data['podcast_shows'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_podcast_shows
-                         (id, title, slug, description, author, cover_image, language, category, website_url)
-                         VALUES (?,?,?,?,?,?,?,?,?)"
+                         (id, title, slug, description, author, cover_image, language, category, website_url, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['podcast_shows'] as $row) {
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($title === '') {
+                            $title = 'Podcast';
+                        }
+                        $slug = podcastShowSlug((string)($row['slug'] ?? ''));
+                        if ($slug === '') {
+                            $slug = uniquePodcastShowSlug($pdo, $title);
+                        } else {
+                            $slug = uniquePodcastShowSlug($pdo, $slug, (int)$row['id']);
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $row['slug'],
+                            (int)$row['id'], $title, $slug,
                             $row['description'] ?? '', $row['author'] ?? '',
                             $row['cover_image'] ?? '', $row['language'] ?? 'cs',
-                            $row['category'] ?? '', $row['website_url'] ?? '',
+                            $row['category'] ?? '', normalizePodcastWebsiteUrl((string)($row['website_url'] ?? '')),
+                            $createdAt, $updatedAt,
                         ]);
                     }
                     $summary[] = 'Podcast shows importovány.';
@@ -339,17 +352,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['podcasts']) && is_array($data['podcasts'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_podcasts
-                         (id, show_id, title, description, audio_file, audio_url,
-                          duration, episode_num, publish_at, status)
-                         VALUES (?,?,?,?,?,?,?,?,?,?)"
+                         (id, show_id, title, slug, description, audio_file, audio_url,
+                          duration, episode_num, publish_at, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['podcasts'] as $row) {
+                        $showId = max(1, (int)($row['show_id'] ?? 1));
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($title === '') {
+                            $title = 'Epizoda';
+                        }
+                        $slug = podcastEpisodeSlug((string)($row['slug'] ?? ''));
+                        if ($slug === '') {
+                            $slug = uniquePodcastEpisodeSlug($pdo, $showId, $title);
+                        } else {
+                            $slug = uniquePodcastEpisodeSlug($pdo, $showId, $slug, (int)$row['id']);
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
                         $ins->execute([
-                            (int)$row['id'], (int)($row['show_id'] ?? 1),
-                            $row['title'], $row['description'] ?? '',
-                            $row['audio_file'] ?? '', $row['audio_url'] ?? '',
+                            (int)$row['id'], $showId,
+                            $title, $slug, $row['description'] ?? '',
+                            $row['audio_file'] ?? '', normalizePodcastEpisodeAudioUrl((string)($row['audio_url'] ?? '')),
                             $row['duration'] ?? '', $row['episode_num'] ?: null,
-                            $row['publish_at'] ?: null, $row['status'] ?? 'published',
+                            $row['publish_at'] ?: null, $row['status'] ?? 'published', $createdAt, $updatedAt,
                         ]);
                     }
                     $summary[] = 'Epizody podcastů importovány.';

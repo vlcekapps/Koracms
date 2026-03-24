@@ -40,7 +40,7 @@ function adminHeader(string $pageTitle): void
         ['url' => $baseUrl . '/admin/gallery_albums.php', 'label' => 'Galerie', 'module' => 'gallery', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/events.php', 'label' => 'Události', 'module' => 'events', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/polls.php', 'label' => 'Ankety', 'module' => 'polls', 'capability' => 'content_manage_shared'],
-        ['url' => $baseUrl . '/admin/podcast.php', 'label' => 'Podcasty', 'module' => 'podcast', 'capability' => 'content_manage_shared'],
+        ['url' => $baseUrl . '/admin/podcast_shows.php', 'label' => 'Podcasty', 'module' => 'podcast', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/places.php', 'label' => 'Zajímavá místa', 'module' => 'places', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/newsletter.php', 'label' => 'Newsletter', 'module' => 'newsletter', 'capability' => 'newsletter_manage'],
         ['url' => $baseUrl . '/admin/food.php', 'label' => 'Jídelní lístek', 'module' => 'food', 'capability' => 'content_manage_shared'],

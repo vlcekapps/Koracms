@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $id = inputInt('post', 'id');
@@ -10,16 +10,19 @@ if ($id !== null) {
     // Smazat audio soubory epizod
     $eps = $pdo->prepare("SELECT audio_file FROM cms_podcasts WHERE show_id = ?");
     $eps->execute([$id]);
-    $audioDir = __DIR__ . '/../uploads/podcasts/';
     foreach ($eps->fetchAll() as $ep) {
-        if ($ep['audio_file']) @unlink($audioDir . $ep['audio_file']);
+        if (!empty($ep['audio_file'])) {
+            deletePodcastAudioFile((string)$ep['audio_file']);
+        }
     }
 
     // Smazat cover image
     $stmt = $pdo->prepare("SELECT cover_image FROM cms_podcast_shows WHERE id = ?");
     $stmt->execute([$id]);
     $cover = $stmt->fetchColumn();
-    if ($cover) @unlink($audioDir . 'covers/' . $cover);
+    if ($cover) {
+        deletePodcastCoverFile((string)$cover);
+    }
 
     // Smazat epizody a show
     $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$id]);

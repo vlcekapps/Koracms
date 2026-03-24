@@ -18,6 +18,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_downloads' => getSetting('module_downloads', '0'),
     'module_events' => getSetting('module_events', '0'),
     'module_faq' => getSetting('module_faq', '0'),
+    'module_podcast' => getSetting('module_podcast', '0'),
     'module_places' => getSetting('module_places', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
 ];
@@ -98,9 +99,14 @@ $pageSlug = $pdo->query(
 $publicUserRow = $pdo->query(
     "SELECT id, email, first_name, last_name FROM cms_users WHERE role = 'public' AND is_confirmed = 1 ORDER BY id LIMIT 1"
 )->fetch();
-$podcastShowSlug = $pdo->query(
-    "SELECT slug FROM cms_podcast_shows ORDER BY id LIMIT 1"
-)->fetchColumn();
+$podcastShowRow = null;
+$podcastShowSlug = '';
+$podcastEpisodeRow = null;
+$podcastEpisodeId = false;
+$podcastEpisodeCanonicalPath = '';
+$podcastEpisodeLegacyPath = '';
+$podcastEpisodeCanonicalUrl = '';
+$podcastEpisodeLegacyUrl = '';
 $foodCardId = $pdo->query(
     "SELECT id FROM cms_food_cards WHERE status = 'published' AND is_published = 1 ORDER BY is_current DESC, id LIMIT 1"
 )->fetchColumn();
@@ -164,6 +170,8 @@ $cleanup = [
     'download_files' => [],
     'faq_ids' => [],
     'place_ids' => [],
+    'podcast_show_ids' => [],
+    'podcast_episode_ids' => [],
 ];
 
 $runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
@@ -528,6 +536,76 @@ if (isModuleEnabled('places')) {
     }
 }
 
+if (isModuleEnabled('podcast')) {
+    $runtimeAuditPodcastShowTitle = 'Runtime audit podcast';
+    $runtimeAuditPodcastShowSlug = uniquePodcastShowSlug($pdo, 'runtime-audit-podcast-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_shows (
+            title, slug, description, author, cover_image, language, category, website_url, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, '', 'cs', ?, ?, NOW(), NOW())"
+    )->execute([
+        $runtimeAuditPodcastShowTitle,
+        $runtimeAuditPodcastShowSlug,
+        '<p>Testovací pořad pro runtime audit veřejných URL, RSS feedu a administrace podcastů.</p>',
+        'Runtime Audit',
+        'Technologie',
+        'https://example.test/podcast',
+    ]);
+    $runtimeAuditPodcastShowId = (int)$pdo->lastInsertId();
+    $cleanup['podcast_show_ids'][] = $runtimeAuditPodcastShowId;
+
+    $runtimeAuditPodcastEpisodeTitle = 'Runtime audit epizoda';
+    $runtimeAuditPodcastEpisodeSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditPodcastShowId, 'runtime-audit-epizoda-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_podcasts (
+            show_id, title, slug, description, audio_file, audio_url, duration, episode_num,
+            publish_at, status, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, '', ?, '12:34', 1, NOW(), 'published', NOW(), NOW())"
+    )->execute([
+        $runtimeAuditPodcastShowId,
+        $runtimeAuditPodcastEpisodeTitle,
+        $runtimeAuditPodcastEpisodeSlug,
+        '<p>Detailní text testovací epizody pro runtime audit podcastů.</p>',
+        'https://example.test/runtime-audit-episode.mp3',
+    ]);
+    $runtimeAuditPodcastEpisodeId = (int)$pdo->lastInsertId();
+    $cleanup['podcast_episode_ids'][] = $runtimeAuditPodcastEpisodeId;
+
+    $podcastShowStmt = $pdo->prepare(
+        "SELECT s.*,
+                COUNT(e.id) AS episode_count,
+                MAX(COALESCE(e.publish_at, e.created_at)) AS latest_episode_at
+         FROM cms_podcast_shows s
+         LEFT JOIN cms_podcasts e ON e.show_id = s.id
+             AND e.status = 'published' AND (e.publish_at IS NULL OR e.publish_at <= NOW())
+         WHERE s.id = ?
+         GROUP BY s.id"
+    );
+    $podcastShowStmt->execute([$runtimeAuditPodcastShowId]);
+    $podcastShowRow = $podcastShowStmt->fetch() ?: null;
+    if ($podcastShowRow) {
+        $podcastShowRow = hydratePodcastShowPresentation($podcastShowRow);
+        $podcastShowSlug = (string)($podcastShowRow['slug'] ?? '');
+    }
+
+    $podcastEpisodeStmt = $pdo->prepare(
+        "SELECT p.*, s.slug AS show_slug, s.title AS show_title
+         FROM cms_podcasts p
+         INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+         WHERE p.id = ?"
+    );
+    $podcastEpisodeStmt->execute([$runtimeAuditPodcastEpisodeId]);
+    $podcastEpisodeRow = $podcastEpisodeStmt->fetch() ?: null;
+    if ($podcastEpisodeRow) {
+        $podcastEpisodeRow = hydratePodcastEpisodePresentation($podcastEpisodeRow);
+        $podcastEpisodeId = $podcastEpisodeRow['id'] ?? false;
+        $podcastEpisodeCanonicalPath = podcastEpisodePublicPath($podcastEpisodeRow);
+        $podcastEpisodeLegacyPath = $podcastEpisodeId !== false ? BASE_URL . '/podcast/episode.php?id=' . urlencode((string)$podcastEpisodeId) : '';
+        $podcastEpisodeCanonicalUrl = $podcastEpisodeCanonicalPath !== '' ? $baseUrl . $podcastEpisodeCanonicalPath : '';
+        $podcastEpisodeLegacyUrl = $podcastEpisodeLegacyPath !== '' ? $baseUrl . $podcastEpisodeLegacyPath : '';
+    }
+}
+
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
@@ -569,6 +647,20 @@ if ($faqId !== false) {
 }
 if ($placeId !== false) {
     $pages[] = ['label' => 'admin_place_form', 'url' => $baseUrl . '/admin/place_form.php?id=' . urlencode((string)$placeId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if (isModuleEnabled('podcast')) {
+    $pages[] = ['label' => 'admin_podcast_shows', 'url' => $baseUrl . '/admin/podcast_shows.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($podcastShowRow) {
+    $pages[] = ['label' => 'admin_podcast', 'url' => $baseUrl . '/admin/podcast.php?show_id=' . urlencode((string)$podcastShowRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_podcast_show_form', 'url' => $baseUrl . '/admin/podcast_show_form.php?id=' . urlencode((string)$podcastShowRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($podcastEpisodeId !== false && $podcastShowRow) {
+    $pages[] = [
+        'label' => 'admin_podcast_form',
+        'url' => $baseUrl . '/admin/podcast_form.php?id=' . urlencode((string)$podcastEpisodeId) . '&show_id=' . urlencode((string)$podcastShowRow['id']),
+        'cookie' => 'PHPSESSID=' . $auditSessionId,
+    ];
 }
 
 if (isModuleEnabled('newsletter')) {
@@ -614,7 +706,7 @@ if (isModuleEnabled('places')) {
 if (isModuleEnabled('podcast')) {
     $pages[] = ['label' => 'podcast_index', 'url' => $baseUrl . '/podcast/index.php'];
     if ($podcastShowSlug) {
-        $pages[] = ['label' => 'podcast_show', 'url' => $baseUrl . '/podcast/show.php?slug=' . urlencode((string)$podcastShowSlug)];
+        $pages[] = ['label' => 'podcast_show', 'url' => $baseUrl . '/podcast/' . urlencode((string)$podcastShowSlug)];
     }
 }
 if (isModuleEnabled('polls')) {
@@ -644,6 +736,9 @@ if ($placeCanonicalUrl !== '') {
 }
 if ($faqCanonicalUrl !== '') {
     $pages[] = ['label' => 'faq_article', 'url' => $faqCanonicalUrl];
+}
+if ($podcastEpisodeCanonicalUrl !== '') {
+    $pages[] = ['label' => 'podcast_episode', 'url' => $podcastEpisodeCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
@@ -1278,6 +1373,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_faq') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin faq search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin faq status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_events') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin events search field is missing';
@@ -1314,6 +1418,24 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_podcast_shows') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin podcast shows search field is missing';
+        }
+        if (!str_contains($result['body'], 'podcast_show_form.php')) {
+            $issues[] = 'admin podcast shows page is missing create link';
+        }
+    }
+
+    if ($page['label'] === 'admin_podcast') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin podcast episode search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin podcast episode status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_board_form') {
         foreach ([
             'name="board_type"',
@@ -1345,15 +1467,6 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin download form is missing field: ' . $expectedField;
             }
-        }
-    }
-
-    if ($page['label'] === 'admin_faq') {
-        if (!str_contains($result['body'], 'name="q"')) {
-            $issues[] = 'admin faq search field is missing';
-        }
-        if (!str_contains($result['body'], 'name="status"')) {
-            $issues[] = 'admin faq status filter is missing';
         }
     }
 
@@ -1392,6 +1505,36 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_podcast_show_form') {
+        foreach ([
+            'name="slug"',
+            'name="author"',
+            'name="language"',
+            'name="category"',
+            'name="website_url"',
+            'name="cover_image"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin podcast show form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_podcast_form') {
+        foreach ([
+            'name="slug"',
+            'name="episode_num"',
+            'name="duration"',
+            'name="audio_file"',
+            'name="audio_url"',
+            'name="publish_at"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin podcast form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog listing is missing public author links';
     }
@@ -1414,6 +1557,22 @@ foreach ($pages as $page) {
         }
         if ($newsId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
             $issues[] = 'news article is missing public author link';
+        }
+    }
+
+    if ($page['label'] === 'faq_index' && $faqCanonicalPath !== '' && !str_contains($result['body'], $faqCanonicalPath)) {
+        $issues[] = 'faq listing is missing detail links';
+    }
+
+    if ($page['label'] === 'faq_article') {
+        if ($faqRow && !str_contains($result['body'], (string)($faqRow['question'] ?? ''))) {
+            $issues[] = 'faq article is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět na FAQ')) {
+            $issues[] = 'faq article is missing back link';
+        }
+        if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
+            $issues[] = 'faq article is missing excerpt';
         }
     }
 
@@ -1492,19 +1651,34 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'faq_index' && $faqCanonicalPath !== '' && !str_contains($result['body'], $faqCanonicalPath)) {
-        $issues[] = 'faq listing is missing detail links';
+    if ($page['label'] === 'podcast_index' && $podcastShowSlug !== '' && !str_contains($result['body'], '/podcast/' . $podcastShowSlug)) {
+        $issues[] = 'podcast listing is missing show detail link';
     }
 
-    if ($page['label'] === 'faq_article') {
-        if ($faqRow && !str_contains($result['body'], (string)($faqRow['question'] ?? ''))) {
-            $issues[] = 'faq article is missing title';
+    if ($page['label'] === 'podcast_show') {
+        if ($podcastShowRow && !str_contains($result['body'], (string)($podcastShowRow['title'] ?? ''))) {
+            $issues[] = 'podcast show is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na FAQ')) {
-            $issues[] = 'faq article is missing back link';
+        if ($podcastEpisodeCanonicalPath !== '' && !str_contains($result['body'], $podcastEpisodeCanonicalPath)) {
+            $issues[] = 'podcast show is missing episode detail links';
         }
-        if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
-            $issues[] = 'faq article is missing excerpt';
+        if (!str_contains($result['body'], 'RSS feed')) {
+            $issues[] = 'podcast show is missing RSS link';
+        }
+    }
+
+    if ($page['label'] === 'podcast_episode') {
+        if ($podcastEpisodeRow && !str_contains($result['body'], (string)($podcastEpisodeRow['title'] ?? ''))) {
+            $issues[] = 'podcast episode is missing title';
+        }
+        if ($podcastShowRow && !str_contains($result['body'], (string)($podcastShowRow['title'] ?? ''))) {
+            $issues[] = 'podcast episode is missing parent show title';
+        }
+        if (!str_contains($result['body'], '<audio')) {
+            $issues[] = 'podcast episode is missing audio player';
+        }
+        if ($podcastShowRow && !str_contains($result['body'], (string)($podcastShowRow['public_path'] ?? ''))) {
+            $issues[] = 'podcast episode is missing back link to show';
         }
     }
 
@@ -1557,6 +1731,23 @@ if ($newsCanonicalPath === '' || $newsLegacyPath === '' || $newsCanonicalPath ==
         $failures++;
     } elseif (!in_array($expectedLocation, $legacyNewsProbe['headers'], true)) {
         echo "- legacy news article URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== faq_article_legacy_redirect ===\n";
+if ($faqCanonicalPath === '' || $faqLegacyPath === '' || $faqCanonicalPath === $faqLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyFaqProbe = fetchUrl($faqLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $faqCanonicalPath;
+    if (!str_contains($legacyFaqProbe['status'], '302')) {
+        echo "- legacy faq URL does not redirect ({$legacyFaqProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyFaqProbe['headers'], true)) {
+        echo "- legacy faq URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";
@@ -1631,17 +1822,34 @@ if ($placeCanonicalPath === '' || $placeLegacyPath === '' || $placeCanonicalPath
     }
 }
 
-echo "=== faq_article_legacy_redirect ===\n";
-if ($faqCanonicalPath === '' || $faqLegacyPath === '' || $faqCanonicalPath === $faqLegacyPath) {
+echo "=== podcast_show_legacy_redirect ===\n";
+if ($podcastShowSlug === '') {
     echo "OK\n";
 } else {
-    $legacyFaqProbe = fetchUrl($faqLegacyUrl, '', 0);
-    $expectedLocation = 'Location: ' . $faqCanonicalPath;
-    if (!str_contains($legacyFaqProbe['status'], '302')) {
-        echo "- legacy faq URL does not redirect ({$legacyFaqProbe['status']})\n";
+    $legacyPodcastShowProbe = fetchUrl($baseUrl . '/podcast/show.php?slug=' . urlencode((string)$podcastShowSlug), '', 0);
+    $expectedLocation = 'Location: ' . BASE_URL . '/podcast/' . rawurlencode((string)$podcastShowSlug);
+    if (!str_contains($legacyPodcastShowProbe['status'], '302')) {
+        echo "- legacy podcast show URL does not redirect ({$legacyPodcastShowProbe['status']})\n";
         $failures++;
-    } elseif (!in_array($expectedLocation, $legacyFaqProbe['headers'], true)) {
-        echo "- legacy faq URL does not redirect to canonical slug path\n";
+    } elseif (!in_array($expectedLocation, $legacyPodcastShowProbe['headers'], true)) {
+        echo "- legacy podcast show URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== podcast_episode_legacy_redirect ===\n";
+if ($podcastEpisodeCanonicalPath === '' || $podcastEpisodeLegacyPath === '' || $podcastEpisodeCanonicalPath === $podcastEpisodeLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyPodcastEpisodeProbe = fetchUrl($podcastEpisodeLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $podcastEpisodeCanonicalPath;
+    if (!str_contains($legacyPodcastEpisodeProbe['status'], '302')) {
+        echo "- legacy podcast episode URL does not redirect ({$legacyPodcastEpisodeProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyPodcastEpisodeProbe['headers'], true)) {
+        echo "- legacy podcast episode URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";
@@ -1704,6 +1912,9 @@ if (isModuleEnabled('faq')) {
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'author places'];
 }
+if (isModuleEnabled('podcast')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/podcast_shows.php', 'expected' => '403', 'label' => 'author podcasts'];
+}
 
 if (isModuleEnabled('blog')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/comments.php', 'expected' => '200', 'label' => 'moderator comments'];
@@ -1733,6 +1944,9 @@ if (isModuleEnabled('faq')) {
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'moderator places'];
 }
+if (isModuleEnabled('podcast')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/podcast_shows.php', 'expected' => '403', 'label' => 'moderator podcasts'];
+}
 
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_bookings.php', 'expected' => '200', 'label' => 'booking manager reservations'];
@@ -1750,6 +1964,9 @@ if (isModuleEnabled('faq')) {
 }
 if (isModuleEnabled('places')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/places.php', 'expected' => '403', 'label' => 'booking manager places'];
+}
+if (isModuleEnabled('podcast')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/podcast_shows.php', 'expected' => '403', 'label' => 'booking manager podcasts'];
 }
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/comments.php', 'expected' => '403', 'label' => 'booking manager comments'];
 
@@ -2225,6 +2442,14 @@ if (!empty($cleanup['faq_ids'])) {
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_places WHERE id IN ({$placeholders})")->execute($cleanup['place_ids']);
+}
+if (!empty($cleanup['podcast_episode_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['podcast_episode_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_podcasts WHERE id IN ({$placeholders})")->execute($cleanup['podcast_episode_ids']);
+}
+if (!empty($cleanup['podcast_show_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['podcast_show_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_podcast_shows WHERE id IN ({$placeholders})")->execute($cleanup['podcast_show_ids']);
 }
 if (!empty($cleanup['author_user_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['author_user_ids']), '?'));

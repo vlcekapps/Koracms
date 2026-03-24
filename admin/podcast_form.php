@@ -1,99 +1,231 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
 
-$pdo    = db_connect();
-$id     = inputInt('get', 'id');
+$pdo = db_connect();
+$id = inputInt('get', 'id');
 $showId = inputInt('get', 'show_id');
-$ep     = null;
+$episode = [
+    'id' => null,
+    'show_id' => $showId,
+    'show_slug' => '',
+    'show_title' => '',
+    'title' => '',
+    'slug' => '',
+    'description' => '',
+    'audio_file' => '',
+    'audio_url' => '',
+    'duration' => '',
+    'episode_num' => null,
+    'publish_at' => null,
+    'created_at' => null,
+    'status' => 'published',
+];
 
 if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_podcasts WHERE id = ?");
+    $stmt = $pdo->prepare(
+        "SELECT p.*, s.slug AS show_slug, s.title AS show_title
+         FROM cms_podcasts p
+         INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+         WHERE p.id = ?"
+    );
     $stmt->execute([$id]);
-    $ep = $stmt->fetch();
-    if (!$ep) { header('Location: podcast_shows.php'); exit; }
-    if ($showId === null) $showId = (int)$ep['show_id'];
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        header('Location: podcast_shows.php');
+        exit;
+    }
+    $episode = array_merge($episode, $existing);
+    if ($showId === null) {
+        $showId = (int)$episode['show_id'];
+    }
 }
 
-// Potřebujeme znát show
-if ($showId === null) { header('Location: podcast_shows.php'); exit; }
-$showStmt = $pdo->prepare("SELECT id, title FROM cms_podcast_shows WHERE id = ?");
+if ($showId === null) {
+    header('Location: podcast_shows.php');
+    exit;
+}
+
+$showStmt = $pdo->prepare("SELECT * FROM cms_podcast_shows WHERE id = ?");
 $showStmt->execute([$showId]);
-$show = $showStmt->fetch();
-if (!$show) { header('Location: podcast_shows.php'); exit; }
+$show = $showStmt->fetch() ?: null;
+if (!$show) {
+    header('Location: podcast_shows.php');
+    exit;
+}
+$show = hydratePodcastShowPresentation($show);
+$episode['show_id'] = (int)$show['id'];
+$episode['show_slug'] = (string)$show['slug'];
+$episode['show_title'] = (string)$show['title'];
+$episode = hydratePodcastEpisodePresentation($episode);
 
-$useWysiwyg   = getSetting('content_editor', 'html') === 'wysiwyg';
-$publishInput = !empty($ep['publish_at']) ? date('Y-m-d\TH:i', strtotime($ep['publish_at'])) : '';
+$useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
+$publishInput = !empty($episode['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$episode['publish_at'])) : '';
+$err = trim((string)($_GET['err'] ?? ''));
+$formError = match ($err) {
+    'required' => 'Název epizody je povinný.',
+    'slug' => 'Slug epizody musí obsahovat alespoň jedno písmeno nebo číslo.',
+    'slug_taken' => 'Tento slug už v rámci pořadu používá jiná epizoda.',
+    'url' => 'Externí audio odkaz musí mít platný formát.',
+    'audio' => 'Audio soubor se nepodařilo uložit.',
+    default => '',
+};
 
-adminHeader($id ? 'Upravit epizodu' : 'Nová epizoda');
+adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
 ?>
 
-<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">←</span> <?= h($show['title']) ?></a></p>
+<?php if ($formError !== ''): ?>
+  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+<?php endif; ?>
 
-<form method="post" action="podcast_save.php" enctype="multipart/form-data" novalidate>
+<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">←</span> <?= h((string)$show['title']) ?></a></p>
+
+<p style="margin-top:0;font-size:.9rem">
+  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+</p>
+
+<form method="post" action="podcast_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
-  <?php if ($id): ?>
+  <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
   <fieldset>
     <legend>Epizoda</legend>
 
-    <label for="title">Název epizody <span aria-hidden="true">*</span></label>
+    <label for="title">Název epizody <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-           value="<?= h($ep['title'] ?? '') ?>">
+           value="<?= h((string)$episode['title']) ?>">
 
-    <label for="episode_num">Číslo epizody <small>(nepovinné)</small></label>
-  <input type="number" id="episode_num" name="episode_num" min="1" style="width:8rem"
-         value="<?= $ep['episode_num'] ? (int)$ep['episode_num'] : '' ?>">
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
+      <small>(unikátní v rámci pořadu)</small>
+    </label>
+    <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           value="<?= h((string)$episode['slug']) ?>">
 
-  <label for="duration">Délka <small>(např. 42:30)</small></label>
-  <input type="text" id="duration" name="duration" maxlength="20" style="width:8rem"
-         value="<?= h($ep['duration'] ?? '') ?>">
-
-  <label for="audio_file">
-    Audio soubor (MP3/OGG)
-    <?php if (!empty($ep['audio_file'])): ?>
-      <small>(aktuální: <?= h($ep['audio_file']) ?>)</small>
-    <?php endif; ?>
-  </label>
-  <input type="file" id="audio_file" name="audio_file" accept="audio/mpeg,audio/ogg,audio/wav">
-
-  <label for="audio_url">nebo externí URL <small>(YouTube, Soundcloud, přímý odkaz…)</small></label>
-  <input type="url" id="audio_url" name="audio_url" maxlength="500"
-         value="<?= h($ep['audio_url'] ?? '') ?>">
-
-  <label for="description">Popis epizody</label>
-  <textarea id="description" name="description" rows="8"><?= h($ep['description'] ?? '') ?></textarea>
-  <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
-
-  <label for="publish_at">Plánované zveřejnění <small>(prázdné = ihned)</small></label>
-  <input type="datetime-local" id="publish_at" name="publish_at" style="width:auto"
-         value="<?= h($publishInput) ?>">
-
-    <div style="margin-top:1.5rem">
-      <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat epizodu' ?></button>
-      <a href="podcast.php?show_id=<?= (int)$showId ?>" style="margin-left:1rem">Zrušit</a>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1 1 12rem">
+        <label for="episode_num">Číslo epizody</label>
+        <input type="number" id="episode_num" name="episode_num" min="1" style="width:100%"
+               value="<?= !empty($episode['episode_num']) ? (int)$episode['episode_num'] : '' ?>">
+      </div>
+      <div style="flex:1 1 12rem">
+        <label for="duration">Délka <small>(např. 42:30)</small></label>
+        <input type="text" id="duration" name="duration" maxlength="20"
+               value="<?= h((string)$episode['duration']) ?>">
+      </div>
+      <div style="flex:1 1 16rem">
+        <label for="publish_at">Plánované zveřejnění</label>
+        <input type="datetime-local" id="publish_at" name="publish_at" style="width:100%"
+               value="<?= h($publishInput) ?>">
+      </div>
     </div>
+    <small style="color:#666">Prázdné datum znamená zveřejnění ihned po schválení nebo uložení.</small>
   </fieldset>
+
+  <fieldset>
+    <legend>Audio a popis</legend>
+
+    <label for="audio_file">
+      Audio soubor
+      <?php if ((string)$episode['audio_file'] !== ''): ?>
+        <small>(aktuální soubor je už nahraný)</small>
+      <?php endif; ?>
+    </label>
+    <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*">
+    <small style="color:#666">Povolené formáty: MP3, OGG, WAV, M4A a AAC.</small>
+    <?php if ((string)$episode['audio_file'] !== ''): ?>
+      <label for="audio_file_delete" style="font-weight:normal;margin-top:.5rem">
+        <input type="checkbox" id="audio_file_delete" name="audio_file_delete" value="1">
+        Odebrat stávající audio soubor
+      </label>
+    <?php endif; ?>
+
+    <label for="audio_url">Externí audio odkaz</label>
+    <input type="url" id="audio_url" name="audio_url" maxlength="500"
+           placeholder="https://example.com/episode.mp3"
+           value="<?= h((string)$episode['audio_url']) ?>">
+    <small style="color:#666">Hodí se pro externí hosting nebo embedovatelný přímý audio soubor.</small>
+
+    <label for="description">Popis epizody</label>
+    <?php if ($useWysiwyg): ?>
+      <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
+      <textarea id="description" name="description" rows="10" class="visually-hidden"><?= h((string)$episode['description']) ?></textarea>
+      <small style="color:#666">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
+    <?php else: ?>
+      <textarea id="description" name="description" rows="10"><?= h((string)$episode['description']) ?></textarea>
+      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+    <?php endif; ?>
+  </fieldset>
+
+  <div style="margin-top:1.5rem">
+    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat epizodu' ?></button>
+    <?php if ($id !== null && (string)$episode['status'] === 'published' && empty($episode['is_scheduled'])): ?>
+      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+    <?php endif; ?>
+    <a href="podcast.php?show_id=<?= (int)$showId ?>" style="margin-left:1rem">Zrušit</a>
+  </div>
 </form>
 
-<?php if ($useWysiwyg): ?>
-<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 <script>
 (function () {
-    const ta = document.getElementById('description');
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem;min-height:150px';
-    ta.parentNode.insertBefore(wrapper, ta);
-    ta.style.display = 'none';
-    const quill = new Quill(wrapper, { theme: 'snow' });
-    quill.root.innerHTML = ta.value;
-    ta.closest('form').addEventListener('submit', () => { ta.value = quill.root.innerHTML; });
+    const titleInput = document.getElementById('title');
+    const slugInput = document.getElementById('slug');
+    let slugManual = <?= $id !== null && !empty($episode['slug']) ? 'true' : 'false' ?>;
+
+    const slugify = (value) => value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    slugInput?.addEventListener('input', function () {
+        slugManual = this.value.trim() !== '';
+    });
+
+    titleInput?.addEventListener('input', function () {
+        if (slugManual || !slugInput) {
+            return;
+        }
+        slugInput.value = slugify(this.value);
+    });
 })();
 </script>
+
+<?php if ($useWysiwyg): ?>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+  <script>
+  (() => {
+    const descriptionField = document.getElementById('description');
+    const host = document.getElementById('description_editor');
+    if (!descriptionField || !host || typeof Quill === 'undefined') {
+      return;
+    }
+
+    const quill = new Quill(host, {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'link'],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['blockquote', 'code-block'],
+          ['clean']
+        ]
+      }
+    });
+
+    quill.root.innerHTML = descriptionField.value;
+    quill.on('text-change', () => {
+      descriptionField.value = quill.root.innerHTML;
+    });
+  })();
+  </script>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

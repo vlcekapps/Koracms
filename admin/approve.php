@@ -10,6 +10,7 @@ $redirect = internalRedirectTarget($_POST['redirect'] ?? '', BASE_URL . '/admin/
 $moduleConfig = [
     'articles' => ['table' => 'cms_articles', 'has_published' => false, 'capability' => 'blog_approve'],
     'news' => ['table' => 'cms_news', 'has_published' => false, 'capability' => 'news_approve'],
+    'podcasts' => ['table' => 'cms_podcasts', 'has_published' => false, 'capability' => 'content_approve_shared'],
     'events' => ['table' => 'cms_events', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'faq' => ['table' => 'cms_faqs', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'places' => ['table' => 'cms_places', 'has_published' => true, 'capability' => 'content_approve_shared'],

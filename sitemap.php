@@ -178,6 +178,48 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('podcast')): ?>
+  <url>
+    <loc><?= h(siteUrl('/podcast/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $podcastShows = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_podcast_shows
+             ORDER BY updated_at DESC, title ASC"
+        )->fetchAll();
+        foreach ($podcastShows as $podcastShow):
+?>
+  <url>
+    <loc><?= h(podcastShowPublicUrl($podcastShow)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$podcastShow['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+
+    try {
+        $podcastEpisodes = $pdo->query(
+            "SELECT p.id, p.slug, s.slug AS show_slug,
+                    COALESCE(p.publish_at, p.updated_at, p.created_at) AS sitemap_lastmod
+             FROM cms_podcasts p
+             INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+             WHERE p.status = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+             ORDER BY COALESCE(p.publish_at, p.created_at) DESC, p.id DESC"
+        )->fetchAll();
+        foreach ($podcastEpisodes as $podcastEpisode):
+?>
+  <url>
+    <loc><?= h(podcastEpisodePublicUrl($podcastEpisode)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$podcastEpisode['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
 
 <?php if (isModuleEnabled('gallery')): ?>
   <url>

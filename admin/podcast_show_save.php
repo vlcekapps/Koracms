@@ -1,63 +1,108 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
 verifyCsrf();
 
-$pdo        = db_connect();
-$id         = inputInt('post', 'id');
-$title      = trim($_POST['title']       ?? '');
-$slug       = trim($_POST['slug']        ?? '');
-$author     = trim($_POST['author']      ?? '');
-$language   = trim($_POST['language']   ?? 'cs');
-$category   = trim($_POST['category']   ?? '');
-$websiteUrl = trim($_POST['website_url'] ?? '');
-$description = trim($_POST['description'] ?? '');
+$pdo = db_connect();
+$id = inputInt('post', 'id');
+$title = trim((string)($_POST['title'] ?? ''));
+$slugInput = trim((string)($_POST['slug'] ?? ''));
+$author = trim((string)($_POST['author'] ?? ''));
+$language = trim((string)($_POST['language'] ?? 'cs'));
+$category = trim((string)($_POST['category'] ?? ''));
+$websiteUrlInput = trim((string)($_POST['website_url'] ?? ''));
+$description = (string)($_POST['description'] ?? '');
+$deleteCover = isset($_POST['cover_image_delete']);
 
-// Slug sanitize – jen malá písmena, číslice, pomlčky
-$slug = preg_replace('/[^a-z0-9\-]/', '', strtolower($slug));
-
-if ($title === '' || $slug === '') {
-    header('Location: podcast_show_form.php' . ($id ? "?id={$id}" : ''));
+$redirectBase = BASE_URL . '/admin/podcast_show_form.php';
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id): never {
+    $query = $id !== null
+        ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
+        : '?err=' . rawurlencode($errorCode);
+    header('Location: ' . $redirectBase . $query);
     exit;
+};
+
+if ($title === '') {
+    $redirectWithError('required');
 }
 
-// Cover image upload
-$coverImage = null;
-if (!empty($_FILES['cover_image']['name'])) {
-    $tmp   = $_FILES['cover_image']['tmp_name'];
-    $finfo = new \finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($tmp);
-    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-    if (isset($allowed[$mime])) {
-        $dir = __DIR__ . '/../uploads/podcasts/covers/';
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
-        $filename = uniqid('cover_', true) . '.' . $allowed[$mime];
-        if (move_uploaded_file($tmp, $dir . $filename)) {
-            // Smazat starý obrázek
-            if ($id !== null) {
-                $old = $pdo->prepare("SELECT cover_image FROM cms_podcast_shows WHERE id = ?");
-                $old->execute([$id]);
-                $oldFile = $old->fetchColumn();
-                if ($oldFile) @unlink($dir . $oldFile);
-            }
-            $coverImage = $filename;
-        }
+$existing = [
+    'cover_image' => '',
+];
+if ($id !== null) {
+    $existingStmt = $pdo->prepare("SELECT cover_image FROM cms_podcast_shows WHERE id = ?");
+    $existingStmt->execute([$id]);
+    $existingRow = $existingStmt->fetch();
+    if (!$existingRow) {
+        header('Location: ' . BASE_URL . '/admin/podcast_shows.php');
+        exit;
     }
+    $existing = array_merge($existing, $existingRow);
+}
+
+$resolvedSlug = podcastShowSlug($slugInput !== '' ? $slugInput : $title);
+if ($resolvedSlug === '') {
+    $redirectWithError('slug');
+}
+
+$uniqueSlug = uniquePodcastShowSlug($pdo, $resolvedSlug, $id);
+if ($slugInput !== '' && $uniqueSlug !== $resolvedSlug) {
+    $redirectWithError('slug_taken');
+}
+
+$websiteUrl = normalizePodcastWebsiteUrl($websiteUrlInput);
+if ($websiteUrlInput !== '' && $websiteUrl === '') {
+    $redirectWithError('url');
+}
+
+$coverFilename = (string)$existing['cover_image'];
+$coverUpload = uploadPodcastCoverImage($_FILES['cover_image'] ?? [], $coverFilename);
+if ($coverUpload['error'] !== '') {
+    $redirectWithError('cover');
+}
+$coverFilename = $coverUpload['filename'];
+
+if ($deleteCover && empty($_FILES['cover_image']['name']) && $coverFilename !== '') {
+    deletePodcastCoverFile($coverFilename);
+    $coverFilename = '';
 }
 
 if ($id !== null) {
-    $set    = "title=?,slug=?,author=?,language=?,category=?,website_url=?,description=?,updated_at=NOW()";
-    $params = [$title, $slug, $author, $language, $category, $websiteUrl, $description];
-    if ($coverImage !== null) { $set .= ",cover_image=?"; $params[] = $coverImage; }
-    $params[] = $id;
-    $pdo->prepare("UPDATE cms_podcast_shows SET {$set} WHERE id=?")->execute($params);
-    logAction('podcast_show_edit', "id={$id} slug={$slug}");
+    $pdo->prepare(
+        "UPDATE cms_podcast_shows
+         SET title = ?, slug = ?, description = ?, author = ?, cover_image = ?, language = ?,
+             category = ?, website_url = ?, updated_at = NOW()
+         WHERE id = ?"
+    )->execute([
+        $title,
+        $uniqueSlug,
+        $description,
+        $author,
+        $coverFilename,
+        $language !== '' ? $language : 'cs',
+        $category,
+        $websiteUrl,
+        $id,
+    ]);
+    logAction('podcast_show_edit', "id={$id} slug={$uniqueSlug}");
 } else {
     $pdo->prepare(
-        "INSERT INTO cms_podcast_shows (title, slug, author, language, category, website_url, description, cover_image)
+        "INSERT INTO cms_podcast_shows
+         (title, slug, description, author, cover_image, language, category, website_url)
          VALUES (?,?,?,?,?,?,?,?)"
-    )->execute([$title, $slug, $author, $language, $category, $websiteUrl, $description, $coverImage ?? '']);
-    logAction('podcast_show_add', "title={$title} slug={$slug}");
+    )->execute([
+        $title,
+        $uniqueSlug,
+        $description,
+        $author,
+        $coverFilename,
+        $language !== '' ? $language : 'cs',
+        $category,
+        $websiteUrl,
+    ]);
+    $id = (int)$pdo->lastInsertId();
+    logAction('podcast_show_add', "id={$id} slug={$uniqueSlug}");
 }
 
 header('Location: ' . BASE_URL . '/admin/podcast_shows.php');

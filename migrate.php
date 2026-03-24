@@ -228,6 +228,7 @@ $tables = [
         id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         show_id     INT          NOT NULL DEFAULT 1,
         title       VARCHAR(255) NOT NULL,
+        slug        VARCHAR(255) NOT NULL,
         description TEXT,
         audio_file  VARCHAR(255) NOT NULL DEFAULT '',
         audio_url   VARCHAR(500) NOT NULL DEFAULT '',
@@ -236,7 +237,8 @@ $tables = [
         publish_at  DATETIME     NULL DEFAULT NULL,
         status      ENUM('pending','published') NOT NULL DEFAULT 'published',
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_places' => "CREATE TABLE IF NOT EXISTS cms_places (
@@ -580,6 +582,7 @@ $addColumns = [
     'cms_faqs.status'                => "ALTER TABLE cms_faqs ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_podcasts
     'cms_podcasts.show_id'           => "ALTER TABLE cms_podcasts ADD COLUMN show_id INT NOT NULL DEFAULT 1",
+    'cms_podcasts.slug'              => "ALTER TABLE cms_podcasts ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_podcasts.status'            => "ALTER TABLE cms_podcasts ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_events
     'cms_events.slug'                => "ALTER TABLE cms_events ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
@@ -1002,6 +1005,62 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy FAQ – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $podcastSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_podcasts' AND COLUMN_NAME = 'slug'"
+    );
+    $podcastSlugColumnCheck->execute();
+
+    if ((int)$podcastSlugColumnCheck->fetchColumn() > 0) {
+        $podcastRows = $pdo->query("SELECT id, show_id, title, slug FROM cms_podcasts ORDER BY id")->fetchAll();
+        $updatePodcastSlugStmt = $pdo->prepare("UPDATE cms_podcasts SET slug = ? WHERE id = ?");
+
+        foreach ($podcastRows as $podcastRow) {
+            $podcastShowId = max(1, (int)($podcastRow['show_id'] ?? 1));
+            $existingSlug = trim((string)($podcastRow['slug'] ?? ''));
+            $resolvedSlug = uniquePodcastEpisodeSlug(
+                $pdo,
+                $podcastShowId,
+                $existingSlug !== '' ? $existingSlug : (string)$podcastRow['title'],
+                (int)$podcastRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updatePodcastSlugStmt->execute([$resolvedSlug, (int)$podcastRow['id']]);
+            }
+        }
+
+        $podcastSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_podcasts' AND COLUMN_NAME = 'slug'"
+        );
+        $podcastSlugNullabilityCheck->execute();
+        if (($podcastSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_podcasts MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_podcasts.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_podcasts.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $podcastSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_podcasts'
+               AND INDEX_NAME = 'uq_cms_podcasts_show_slug'"
+        );
+        $podcastSlugIndexCheck->execute();
+        if ((int)$podcastSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_podcasts ADD UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_podcasts_show_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_podcasts(show_id, slug)</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy podcastových epizod – sloupec <code>cms_podcasts.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy podcastových epizod – CHYBA: " . h($e->getMessage());
 }
 
 try {
