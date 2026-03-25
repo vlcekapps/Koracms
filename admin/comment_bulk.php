@@ -5,11 +5,10 @@ verifyCsrf();
 
 $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
 $action = trim($_POST['action'] ?? '');
-$filter = trim($_POST['filter'] ?? 'pending');
 
 $redirect = internalRedirectTarget(
     trim($_POST['redirect'] ?? ''),
-    BASE_URL . '/admin/comments.php?filter=' . urlencode($filter)
+    BASE_URL . '/admin/comments.php?filter=pending'
 );
 if ($ids === []) {
     header('Location: ' . $redirect);

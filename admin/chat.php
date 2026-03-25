@@ -123,22 +123,26 @@ adminHeader('Chat');
   <form method="post" action="<?= BASE_URL ?>/admin/chat_bulk.php" id="chat-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+      <legend>Hromadné akce s vybranými zprávami</legend>
+      <p data-selection-status="chat" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná zpráva.</p>
+      <div class="button-row">
+        <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
+          <?php if (($bulkAction === 'read' && $statusFilter === 'read')
+              || ($bulkAction === 'new' && $statusFilter === 'new')
+              || ($bulkAction === 'handled' && $statusFilter === 'handled')): ?>
+            <?php continue; ?>
+          <?php endif; ?>
+          <button type="submit" form="chat-bulk-form" name="action" value="<?= h($bulkAction) ?>"
+                  class="btn bulk-action-btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
+                  disabled
+                  <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané chat zprávy trvale?')"<?php endif; ?>>
+            <?= h($bulkLabel) ?>
+          </button>
+        <?php endforeach; ?>
+      </div>
+    </fieldset>
   </form>
-
-  <div class="button-row" style="margin-bottom:.75rem">
-    <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
-      <?php if (($bulkAction === 'read' && $statusFilter === 'read')
-          || ($bulkAction === 'new' && $statusFilter === 'new')
-          || ($bulkAction === 'handled' && $statusFilter === 'handled')): ?>
-        <?php continue; ?>
-      <?php endif; ?>
-      <button type="submit" form="chat-bulk-form" name="action" value="<?= h($bulkAction) ?>"
-              class="btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
-              <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané chat zprávy trvale?')"<?php endif; ?>>
-        <?= h($bulkLabel) ?>
-      </button>
-    <?php endforeach; ?>
-  </div>
 
   <table>
     <caption>Chat zprávy</caption>
@@ -232,13 +236,46 @@ adminHeader('Chat');
       <?php endforeach; ?>
     </tbody>
   </table>
+  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
 
   <script>
-  document.getElementById('chat-check-all')?.addEventListener('change', function () {
-      document.querySelectorAll('input[form="chat-bulk-form"][name="ids[]"]').forEach((checkbox) => {
-          checkbox.checked = this.checked;
+  (() => {
+      const checkAll = document.getElementById('chat-check-all');
+      const checkboxes = Array.from(document.querySelectorAll('input[form="chat-bulk-form"][name="ids[]"]'));
+      const actionButtons = Array.from(document.querySelectorAll('#chat-bulk-form .bulk-action-btn'));
+      const status = document.querySelector('[data-selection-status="chat"]');
+
+      const updateBulkUi = () => {
+          const selectedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+          if (status) {
+              status.textContent = selectedCount === 0
+                  ? 'Zatím není vybraná žádná zpráva.'
+                  : (selectedCount === 1
+                      ? 'Vybraná je 1 zpráva.'
+                      : 'Vybrané jsou ' + selectedCount + ' zprávy.');
+          }
+          actionButtons.forEach((button) => {
+              button.disabled = selectedCount === 0;
+          });
+          if (checkAll) {
+              checkAll.checked = selectedCount > 0 && selectedCount === checkboxes.length;
+              checkAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+          }
+      };
+
+      checkAll?.addEventListener('change', function () {
+          checkboxes.forEach((checkbox) => {
+              checkbox.checked = this.checked;
+          });
+          updateBulkUi();
       });
-  });
+
+      checkboxes.forEach((checkbox) => {
+          checkbox.addEventListener('change', updateBulkUi);
+      });
+
+      updateBulkUi();
+  })();
   </script>
 <?php endif; ?>
 

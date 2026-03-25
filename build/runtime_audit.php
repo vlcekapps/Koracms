@@ -1695,6 +1695,12 @@ foreach ($pages as $page) {
             $issues[] = 'trash filter is missing in comment moderation';
         }
         if (str_contains($result['body'], '<caption>Komentáře</caption>')) {
+            if (!str_contains($result['body'], 'bulk-action-btn')) {
+                $issues[] = 'comment moderation bulk actions helper is missing';
+            }
+            if (!str_contains($result['body'], 'data-selection-status=')) {
+                $issues[] = 'comment moderation selection status is missing';
+            }
             if (!str_contains($result['body'], '/admin/comment_action.php')) {
                 $issues[] = 'single comment moderation action endpoint is missing';
             }
@@ -1882,6 +1888,7 @@ foreach ($pages as $page) {
             'contact_message.php',
             'Označit jako přečtené',
             'Označit jako vyřízené',
+            'data-selection-status="contact"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin contact inbox is missing fragment: ' . $expectedFragment;
@@ -1905,6 +1912,7 @@ foreach ($pages as $page) {
             'chat_message.php',
             'Označit jako přečtené',
             'Označit jako vyřízené',
+            'data-selection-status="chat"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat inbox is missing fragment: ' . $expectedFragment;

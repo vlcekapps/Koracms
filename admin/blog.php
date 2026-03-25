@@ -36,6 +36,7 @@ $articles = $stmt->fetchAll();
 
 $canManageTaxonomies = currentUserHasCapability('blog_taxonomies_manage');
 $canApproveBlog = currentUserHasCapability('blog_approve');
+$currentRedirect = BASE_URL . '/admin/blog.php' . ($q !== '' ? '?q=' . urlencode($q) : '');
 
 adminHeader('Blog – správa článků');
 ?>
@@ -63,6 +64,15 @@ adminHeader('Blog – správa článků');
 <?php else: ?>
 <form method="post" action="blog_bulk.php" id="bulk-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+  <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <legend>Hromadné akce s vybranými články</legend>
+    <p data-selection-status="blog" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný článek.</p>
+    <div class="button-row">
+      <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
+              disabled onclick="return confirm('Smazat vybrané články?')">Smazat vybrané</button>
+    </div>
+  </fieldset>
   <table>
     <caption>Články</caption>
     <thead>
@@ -119,19 +129,47 @@ adminHeader('Blog – správa článků');
     <?php endforeach; ?>
     </tbody>
   </table>
-  <div style="margin-top:.75rem">
-    <button type="submit" name="action" value="delete" class="btn btn-danger"
-            onclick="return confirm('Smazat vybrané články?')">Smazat vybrané</button>
-  </div>
+  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru článků můžete použít hromadnou akci nahoře.</div>
 </form>
 <?php endif; ?>
 
 
 <script>
-document.getElementById('check-all')?.addEventListener('change', function () {
-    document.querySelectorAll('#bulk-form input[name="ids[]"]')
-        .forEach((checkbox) => checkbox.checked = this.checked);
-});
+(() => {
+    const checkAll = document.getElementById('check-all');
+    const checkboxes = Array.from(document.querySelectorAll('#bulk-form input[name="ids[]"]'));
+    const actionButtons = Array.from(document.querySelectorAll('#bulk-form .bulk-action-btn'));
+    const status = document.querySelector('[data-selection-status="blog"]');
+
+    const updateBulkUi = () => {
+        const selectedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+        if (status) {
+            status.textContent = selectedCount === 0
+                ? 'Zatím není vybraný žádný článek.'
+                : (selectedCount === 1
+                    ? 'Vybraný je 1 článek.'
+                    : 'Vybrané jsou ' + selectedCount + ' články.');
+        }
+        actionButtons.forEach((button) => {
+            button.disabled = selectedCount === 0;
+        });
+        if (checkAll) {
+            checkAll.checked = selectedCount > 0 && selectedCount === checkboxes.length;
+            checkAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+        }
+    };
+
+    checkAll?.addEventListener('change', function () {
+        checkboxes.forEach((checkbox) => checkbox.checked = this.checked);
+        updateBulkUi();
+    });
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', updateBulkUi);
+    });
+
+    updateBulkUi();
+})();
 </script>
 
 <?php adminFooter(); ?>

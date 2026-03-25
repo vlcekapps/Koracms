@@ -87,6 +87,14 @@ $bulkOptions = [
     'trash' => 'Přesunout do koše',
     'delete' => 'Smazat trvale',
 ];
+$currentParams = [];
+if ($filter !== 'all') {
+    $currentParams['filter'] = $filter;
+}
+if ($q !== '') {
+    $currentParams['q'] = $q;
+}
+$currentRedirect = BASE_URL . '/admin/comments.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
 
 adminHeader('Komentáře');
 ?>
@@ -121,28 +129,32 @@ adminHeader('Komentáře');
 </form>
 
 <?php if (empty($comments)): ?>
-  <p>V této kategorii teď nejsou žádné komentáře.</p>
+  <p><?= $q !== '' || $filter !== 'all' ? 'Pro zvolený filtr tu teď nejsou žádné komentáře.' : 'Zatím tu nejsou žádné komentáře.' ?></p>
 <?php else: ?>
   <form method="post" action="<?= BASE_URL ?>/admin/comment_bulk.php" id="bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-    <input type="hidden" name="filter" value="<?= h($filter) ?>">
+    <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+      <legend>Hromadné akce s vybranými komentáři</legend>
+      <p data-selection-status="comments" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný komentář.</p>
+      <div class="button-row">
+        <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
+          <?php if (($bulkAction === 'approve' && $filter === 'approved')
+              || ($bulkAction === 'pending' && $filter === 'pending')
+              || ($bulkAction === 'spam' && $filter === 'spam')
+              || ($bulkAction === 'trash' && $filter === 'trash')): ?>
+            <?php continue; ?>
+          <?php endif; ?>
+          <button type="submit" form="bulk-form" name="action" value="<?= h($bulkAction) ?>"
+                  class="btn bulk-action-btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
+                  disabled
+                  <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané komentáře trvale?')"<?php endif; ?>>
+            <?= h($bulkLabel) ?>
+          </button>
+        <?php endforeach; ?>
+      </div>
+    </fieldset>
   </form>
-
-  <div class="button-row" style="margin-bottom:.75rem">
-    <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
-      <?php if (($bulkAction === 'approve' && $filter === 'approved')
-          || ($bulkAction === 'pending' && $filter === 'pending')
-          || ($bulkAction === 'spam' && $filter === 'spam')
-          || ($bulkAction === 'trash' && $filter === 'trash')): ?>
-        <?php continue; ?>
-      <?php endif; ?>
-      <button type="submit" form="bulk-form" name="action" value="<?= h($bulkAction) ?>"
-              class="btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
-              <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané komentáře trvale?')"<?php endif; ?>>
-        <?= h($bulkLabel) ?>
-      </button>
-    <?php endforeach; ?>
-  </div>
 
   <table>
     <caption>Komentáře</caption>
@@ -230,13 +242,46 @@ adminHeader('Komentáře');
       <?php endforeach; ?>
     </tbody>
   </table>
+  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru komentářů můžete použít hromadné akce nahoře.</div>
 
   <script>
-  document.getElementById('check-all')?.addEventListener('change', function () {
-      document.querySelectorAll('input[form="bulk-form"][name="ids[]"]').forEach((checkbox) => {
-          checkbox.checked = this.checked;
+  (() => {
+      const checkAll = document.getElementById('check-all');
+      const checkboxes = Array.from(document.querySelectorAll('input[form="bulk-form"][name="ids[]"]'));
+      const actionButtons = Array.from(document.querySelectorAll('#bulk-form .bulk-action-btn'));
+      const status = document.querySelector('[data-selection-status="comments"]');
+
+      const updateBulkUi = () => {
+          const selectedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+          if (status) {
+              status.textContent = selectedCount === 0
+                  ? 'Zatím není vybraný žádný komentář.'
+                  : (selectedCount === 1
+                      ? 'Vybraný je 1 komentář.'
+                      : 'Vybrané jsou ' + selectedCount + ' komentáře.');
+          }
+          actionButtons.forEach((button) => {
+              button.disabled = selectedCount === 0;
+          });
+          if (checkAll) {
+              checkAll.checked = selectedCount > 0 && selectedCount === checkboxes.length;
+              checkAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+          }
+      };
+
+      checkAll?.addEventListener('change', function () {
+          checkboxes.forEach((checkbox) => {
+              checkbox.checked = this.checked;
+          });
+          updateBulkUi();
       });
-  });
+
+      checkboxes.forEach((checkbox) => {
+          checkbox.addEventListener('change', updateBulkUi);
+      });
+
+      updateBulkUi();
+  })();
   </script>
 <?php endif; ?>
 

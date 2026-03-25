@@ -5,6 +5,7 @@ verifyCsrf();
 
 $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
 $action = $_POST['action'] ?? '';
+$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/blog.php');
 
 if ($action === 'delete' && $ids !== []) {
     $pdo = db_connect();
@@ -54,5 +55,5 @@ if ($action === 'delete' && $ids !== []) {
     }
 }
 
-header('Location: ' . BASE_URL . '/admin/blog.php');
+header('Location: ' . $redirect);
 exit;
