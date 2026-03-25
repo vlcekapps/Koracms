@@ -3359,8 +3359,23 @@ function normalizeContentEmbedUrl(string $value): string
     return '';
 }
 
-function contentEmbedMediaMimeType(string $url, string $type): string
+function normalizeContentEmbedMimeType(string $value, string $type): string
 {
+    $value = strtolower(trim($value));
+    if ($value === '' || !preg_match('#^[a-z0-9.+-]+/[a-z0-9.+-]+$#i', $value)) {
+        return '';
+    }
+
+    return str_starts_with($value, strtolower($type) . '/') ? $value : '';
+}
+
+function contentEmbedMediaMimeType(string $url, string $type, string $preferredMimeType = ''): string
+{
+    $normalizedPreferredMimeType = normalizeContentEmbedMimeType($preferredMimeType, $type);
+    if ($normalizedPreferredMimeType !== '') {
+        return $normalizedPreferredMimeType;
+    }
+
     $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
     $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
@@ -3385,10 +3400,10 @@ function contentEmbedMediaMimeType(string $url, string $type): string
     };
 }
 
-function renderContentAudioShortcode(string $url): ?string
+function renderContentAudioShortcode(string $url, string $preferredMimeType = ''): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
-    $mimeType = contentEmbedMediaMimeType($normalizedUrl, 'audio');
+    $mimeType = contentEmbedMediaMimeType($normalizedUrl, 'audio', $preferredMimeType);
 
     if ($normalizedUrl === '' || $mimeType === '') {
         return null;
@@ -3406,10 +3421,10 @@ function renderContentAudioShortcode(string $url): ?string
         . "\n\n";
 }
 
-function renderContentVideoShortcode(string $url): ?string
+function renderContentVideoShortcode(string $url, string $preferredMimeType = ''): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
-    $mimeType = contentEmbedMediaMimeType($normalizedUrl, 'video');
+    $mimeType = contentEmbedMediaMimeType($normalizedUrl, 'video', $preferredMimeType);
 
     if ($normalizedUrl === '' || $mimeType === '') {
         return null;
@@ -3516,7 +3531,9 @@ function renderContentShortcodes(string $text): string
                 $source = trim((string)($matches[2] ?? ''));
             }
 
-            return renderContentAudioShortcode($source) ?? $matches[0];
+            $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'audio');
+
+            return renderContentAudioShortcode($source, $mimeType) ?? $matches[0];
         },
         $text
     ) ?? $text;
@@ -3536,7 +3553,9 @@ function renderContentShortcodes(string $text): string
                 $source = trim((string)($matches[2] ?? ''));
             }
 
-            return renderContentVideoShortcode($source) ?? $matches[0];
+            $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'video');
+
+            return renderContentVideoShortcode($source, $mimeType) ?? $matches[0];
         },
         $text
     ) ?? $text;

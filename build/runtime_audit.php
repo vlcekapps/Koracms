@@ -1956,9 +1956,20 @@ foreach ($pages as $page) {
             'Vložit odkaz nebo HTML z webu',
             'Vyhledejte existující článek, stránku nebo jiný veřejný obsah',
             'Hledání prochází jen veřejně dostupný obsah webu.',
+            'fotogalerii nebo přehrávač',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'content reference picker is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            'aria-haspopup="dialog"',
+            'role="dialog"',
+            'aria-modal="true"',
+            'aria-expanded="false"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'content reference picker is missing modal accessibility fragment: ' . $expectedFragment;
             }
         }
     }
@@ -3681,8 +3692,8 @@ if ($articleId === false) {
 
         $shortcodeContent = <<<HTML
 <p>Runtime audit shortcode test.</p>
-[audio]https://example.test/runtime-audit.mp3[/audio]
-[video]https://example.test/runtime-audit.mp4[/video]
+[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]
+[video src="/downloads/file.php?id=321" mime="video/mp4"][/video]
 HTML;
 
         if (!empty($galleryAlbumRow['slug'])) {
@@ -3701,8 +3712,14 @@ HTML;
             if (!str_contains($shortcodeProbe['body'], '<audio class="audio-player" controls preload="metadata">')) {
                 $contentShortcodeIssues[] = 'audio shortcode was not rendered as html5 player';
             }
+            if (!str_contains($shortcodeProbe['body'], 'src="/downloads/file.php?id=123" type="audio/mpeg"')) {
+                $contentShortcodeIssues[] = 'audio shortcode with safe download endpoint and mime attribute was not rendered';
+            }
             if (!str_contains($shortcodeProbe['body'], '<video class="video-player" controls preload="metadata">')) {
                 $contentShortcodeIssues[] = 'video shortcode was not rendered as html5 player';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'src="/downloads/file.php?id=321" type="video/mp4"')) {
+                $contentShortcodeIssues[] = 'video shortcode with safe download endpoint and mime attribute was not rendered';
             }
             if (!empty($galleryAlbumRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-gallery-embed')) {
                 $contentShortcodeIssues[] = 'gallery shortcode was not rendered as embedded gallery';

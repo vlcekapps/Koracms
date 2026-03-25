@@ -206,10 +206,11 @@ HTML;
               id="<?= h($pickerId) ?>-picker-open"
               aria-haspopup="dialog"
               aria-controls="<?= h($pickerId) ?>-picker-dialog"
+              aria-expanded="false"
               aria-describedby="<?= h($pickerId) ?>-picker-launch-help">
         Vložit odkaz nebo HTML z webu
       </button>
-      <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz nebo hotový HTML blok.</small>
+      <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz, HTML blok, fotogalerii nebo přehrávač.</small>
     </div>
 
     <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden></div>
@@ -223,7 +224,7 @@ HTML;
       <div class="content-reference-picker-dialog__header">
         <div>
           <h2 id="<?= h($pickerId) ?>-picker-title" class="content-reference-picker-dialog__title">Vložit odkaz nebo HTML z webu</h2>
-          <p id="<?= h($pickerId) ?>-picker-description" class="field-help" style="margin-top:.35rem">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz nebo jako hotový HTML blok.</p>
+          <p id="<?= h($pickerId) ?>-picker-description" class="field-help" style="margin-top:.35rem">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz, HTML blok a podle typu výsledku i jako fotogalerii nebo přehrávač.</p>
         </div>
         <button type="button" class="btn" id="<?= h($pickerId) ?>-picker-close">Zavřít</button>
       </div>
@@ -275,6 +276,7 @@ HTML;
         const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let lastTrigger = null;
         let savedSelection = { start: 0, end: 0, text: '' };
+        let previousBodyOverflow = '';
 
         if (!textarea || !openButton || !dialog || !overlay || !queryInput || !typeSelect || !searchButton || !statusNode || !resultsNode) {
             return;
@@ -358,6 +360,24 @@ HTML;
             return lines.join('\n');
         };
 
+        const buildActionSnippet = (action, item) => {
+            switch (action.kind) {
+                case 'link':
+                    return buildInlineLink(item);
+                case 'html_block':
+                    return buildHtmlBlock(item);
+                default:
+                    return typeof action.snippet === 'string' ? action.snippet : '';
+            }
+        };
+
+        const buildActionStatus = (action) => {
+            if (typeof action.status === 'string' && action.status.trim() !== '') {
+                return action.status;
+            }
+            return 'Do textu byl vložen obsah.';
+        };
+
         const clearResults = () => {
             resultsNode.innerHTML = '';
             resultsNode.removeAttribute('aria-busy');
@@ -366,6 +386,8 @@ HTML;
         const closeDialog = (restoreFocus = true) => {
             dialog.hidden = true;
             overlay.hidden = true;
+            openButton.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = previousBodyOverflow;
             if (restoreFocus) {
                 (lastTrigger || openButton).focus();
             }
@@ -374,8 +396,11 @@ HTML;
         const openDialog = () => {
             rememberSelection();
             lastTrigger = document.activeElement;
+            previousBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
             overlay.hidden = false;
             dialog.hidden = false;
+            openButton.setAttribute('aria-expanded', 'true');
             queryInput.focus();
             queryInput.select();
         };
@@ -420,33 +445,38 @@ HTML;
                 const actions = document.createElement('div');
                 actions.className = 'content-reference-picker-result__actions';
 
-                const inlineButton = document.createElement('button');
-                inlineButton.type = 'button';
-                inlineButton.className = 'btn';
-                inlineButton.textContent = 'Vložit jako odkaz';
-                inlineButton.addEventListener('click', () => {
-                    insertSnippet(buildInlineLink(item), false);
-                    closeDialog(false);
-                    setStatus('Do textu byl vložen odkaz.');
-                });
-                actions.appendChild(inlineButton);
+                const availableActions = Array.isArray(item.insert_actions) && item.insert_actions.length
+                    ? item.insert_actions
+                    : [
+                        { kind: 'link', label: 'Vložit jako odkaz', status: 'Do textu byl vložen odkaz.', block: false },
+                        { kind: 'html_block', label: 'Vložit jako HTML blok', status: 'Do textu byl vložen HTML blok.', block: true },
+                    ];
 
-                const blockButton = document.createElement('button');
-                blockButton.type = 'button';
-                blockButton.className = 'btn';
-                blockButton.textContent = 'Vložit jako HTML blok';
-                blockButton.addEventListener('click', () => {
-                    insertSnippet(buildHtmlBlock(item), true);
-                    closeDialog(false);
-                    setStatus('Do textu byl vložen HTML blok.');
+                availableActions.forEach((action) => {
+                    const snippet = buildActionSnippet(action, item);
+                    if (!snippet) {
+                        return;
+                    }
+
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn';
+                    button.textContent = action.label || 'Vložit';
+                    button.setAttribute('aria-label', (action.label || 'Vložit') + ': ' + item.title);
+                    button.addEventListener('click', () => {
+                        insertSnippet(snippet, !!action.block);
+                        closeDialog(false);
+                        setStatus(buildActionStatus(action));
+                    });
+                    actions.appendChild(button);
                 });
-                actions.appendChild(blockButton);
 
                 const previewLink = document.createElement('a');
                 previewLink.href = item.url;
                 previewLink.target = '_blank';
                 previewLink.rel = 'noopener noreferrer';
                 previewLink.textContent = 'Zobrazit na webu';
+                previewLink.setAttribute('aria-label', 'Zobrazit na webu: ' + item.title + ' (otevře se v novém okně)');
                 actions.appendChild(previewLink);
 
                 article.appendChild(actions);

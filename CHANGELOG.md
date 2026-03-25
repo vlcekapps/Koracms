@@ -9,9 +9,12 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Přidáno
 - Přístupný dialog `Vložit odkaz nebo HTML z webu` je nově dostupný ve všech HTML polích, která se veřejně renderují přes CMS, takže lze z administrace rychle vkládat odkazy nebo hotové HTML bloky z existujících článků, stránek a dalších veřejných modulů
 - Veřejný render obsahu nyní podporuje snippety `[audio]...[/audio]`, `[video]...[/video]` a `[gallery]slug-alba[/gallery]` / `[gallery slug="slug-alba"][/gallery]`, které se převádějí na HTML5 přehrávače a jednoduchý embed galerie
+- Content picker v HTML polích nyní nabízí i chytré vložení podle typu výsledku: fotogalerii vloží rovnou jako `[gallery]slug-alba[/gallery]` a vhodné audio nebo video z podcastů či položek ke stažení umí vložit jako hotový přehrávač bez ručního psaní URL
+- Audio a video snippety nově podporují i atributy `src` a volitelný `mime`, takže lze bezpečně vkládat přehrávače i nad interními file endpointy typu `[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]`
 
 ### Opraveno
 - Runtime audit nově hlídá i přítomnost content pickeru a snippet nápovědy napříč HTML formuláři v administraci a převod audio, video a gallery snippetů do veřejného HTML výstupu
+- Přístupný modal dialog content pickeru nyní používá i přesnější stav `aria-expanded`, konkrétnější názvy akcí pro čtečky a guardrails pro základní dialogové minimum (`aria-haspopup="dialog"`, `role="dialog"`, `aria-modal="true"`)
 
 ## [3.0.0-beta.2] – 2026-03-25
 

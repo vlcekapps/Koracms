@@ -142,9 +142,178 @@ function contentReferenceResult(array $row): array
         'url' => $path,
         'path' => $path,
         'excerpt' => contentReferenceExcerpt($row),
+        'insert_actions' => contentReferenceInsertActions($row),
     ];
 }
 
+function contentReferenceShortcodeAttribute(string $name, string $value): string
+{
+    return $name . '="' . addcslashes(trim($value), "\\\"") . '"';
+}
+
+function contentReferenceAudioShortcode(string $url, string $mimeType = ''): string
+{
+    $attributes = [contentReferenceShortcodeAttribute('src', $url)];
+    if ($mimeType !== '') {
+        $attributes[] = contentReferenceShortcodeAttribute('mime', $mimeType);
+    }
+
+    return '[audio ' . implode(' ', $attributes) . '][/audio]';
+}
+
+function contentReferenceVideoShortcode(string $url, string $mimeType = ''): string
+{
+    $attributes = [contentReferenceShortcodeAttribute('src', $url)];
+    if ($mimeType !== '') {
+        $attributes[] = contentReferenceShortcodeAttribute('mime', $mimeType);
+    }
+
+    return '[video ' . implode(' ', $attributes) . '][/video]';
+}
+
+function contentReferenceGalleryShortcode(string $slug): string
+{
+    return '[gallery]' . $slug . '[/gallery]';
+}
+
+function contentReferenceBuildAction(
+    string $kind,
+    string $label,
+    string $status,
+    bool $block = false,
+    string $snippet = ''
+): array {
+    $action = [
+        'kind' => $kind,
+        'label' => $label,
+        'status' => $status,
+        'block' => $block,
+    ];
+
+    if ($snippet !== '') {
+        $action['snippet'] = $snippet;
+    }
+
+    return $action;
+}
+
+function contentReferenceDownloadMediaAction(array $row): ?array
+{
+    $externalUrl = normalizeDownloadExternalUrl((string)($row['external_url'] ?? ''));
+    if ($externalUrl !== '') {
+        $audioMime = contentEmbedMediaMimeType($externalUrl, 'audio');
+        if ($audioMime !== '') {
+            return contentReferenceBuildAction(
+                'audio_shortcode',
+                'Vložit audio přehrávač',
+                'Do textu byl vložen audio přehrávač.',
+                true,
+                contentReferenceAudioShortcode($externalUrl, $audioMime)
+            );
+        }
+
+        $videoMime = contentEmbedMediaMimeType($externalUrl, 'video');
+        if ($videoMime !== '') {
+            return contentReferenceBuildAction(
+                'video_shortcode',
+                'Vložit video přehrávač',
+                'Do textu byl vložen video přehrávač.',
+                true,
+                contentReferenceVideoShortcode($externalUrl, $videoMime)
+            );
+        }
+    }
+
+    $sourceName = trim((string)($row['original_name'] ?? ''));
+    if ($sourceName === '') {
+        $sourceName = trim((string)($row['filename'] ?? ''));
+    }
+    if ($sourceName === '') {
+        return null;
+    }
+
+    $mediaProbePath = '/downloads/' . rawurlencode($sourceName);
+    $audioMime = contentEmbedMediaMimeType($mediaProbePath, 'audio');
+    $videoMime = contentEmbedMediaMimeType($mediaProbePath, 'video');
+    $downloadUrl = BASE_URL . '/downloads/file.php?id=' . (int)($row['id'] ?? 0);
+
+    if ($audioMime !== '') {
+        return contentReferenceBuildAction(
+            'audio_shortcode',
+            'Vložit audio přehrávač',
+            'Do textu byl vložen audio přehrávač.',
+            true,
+            contentReferenceAudioShortcode($downloadUrl, $audioMime)
+        );
+    }
+
+    if ($videoMime !== '') {
+        return contentReferenceBuildAction(
+            'video_shortcode',
+            'Vložit video přehrávač',
+            'Do textu byl vložen video přehrávač.',
+            true,
+            contentReferenceVideoShortcode($downloadUrl, $videoMime)
+        );
+    }
+
+    return null;
+}
+
+function contentReferencePodcastEpisodeMediaAction(array $row): ?array
+{
+    $audioSrc = podcastEpisodeAudioUrl($row);
+    if ($audioSrc === '') {
+        return null;
+    }
+
+    $mimeType = contentEmbedMediaMimeType($audioSrc, 'audio');
+    if ($mimeType === '') {
+        return null;
+    }
+
+    return contentReferenceBuildAction(
+        'audio_shortcode',
+        'Vložit audio přehrávač',
+        'Do textu byl vložen audio přehrávač.',
+        true,
+        contentReferenceAudioShortcode($audioSrc, $mimeType)
+    );
+}
+
+function contentReferenceInsertActions(array $row): array
+{
+    $actions = [
+        contentReferenceBuildAction('link', 'Vložit jako odkaz', 'Do textu byl vložen odkaz.'),
+        contentReferenceBuildAction('html_block', 'Vložit jako HTML blok', 'Do textu byl vložen HTML blok.', true),
+    ];
+
+    $type = (string)($row['type'] ?? '');
+    if ($type === 'gallery_album') {
+        $slug = galleryAlbumSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'gallery_shortcode',
+                'Vložit fotogalerii',
+                'Do textu byla vložena fotogalerie.',
+                true,
+                contentReferenceGalleryShortcode($slug)
+            );
+        }
+    } elseif ($type === 'podcast_episode') {
+        $mediaAction = contentReferencePodcastEpisodeMediaAction($row);
+        if ($mediaAction !== null) {
+            $actions[] = $mediaAction;
+        }
+    } elseif ($type === 'download') {
+        $mediaAction = contentReferenceDownloadMediaAction($row);
+        if ($mediaAction !== null) {
+            $actions[] = $mediaAction;
+        }
+    }
+
+    return $actions;
+}
 $query = trim((string)($_GET['q'] ?? ''));
 $requestedType = strtolower(trim((string)($_GET['type'] ?? 'all')));
 
@@ -312,7 +481,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
         }
 
         $episodeStmt = $pdo->prepare(
-            "SELECT e.id, e.title, e.slug, e.description, e.published_at AS created_at,
+            "SELECT e.id, e.title, e.slug, e.description, e.audio_file, e.audio_url, e.published_at AS created_at,
                     s.slug AS show_slug, s.title AS show_title,
                     'podcast_episode' AS type
              FROM cms_podcast_episodes e
@@ -336,7 +505,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
 if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabled('downloads')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, excerpt, description, created_at, 'download' AS type
+            "SELECT id, title, slug, excerpt, description, external_url, filename, original_name, created_at, 'download' AS type
              FROM cms_downloads
              WHERE status = 'published'
                AND is_published = 1
