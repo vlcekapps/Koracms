@@ -42,7 +42,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Událost</legend>
+    <legend>Základní údaje události</legend>
 
     <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
@@ -91,7 +91,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
   </fieldset>
 
   <fieldset>
-    <legend>Podrobnosti</legend>
+    <legend>Popis události</legend>
 
     <label for="location">Místo konání</label>
     <input type="text" id="location" name="location" maxlength="255"

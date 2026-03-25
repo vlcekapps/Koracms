@@ -82,7 +82,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Článek</legend>
+    <legend>Základní údaje článku</legend>
 
     <label for="title">Titulek <span aria-hidden="true">*</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
@@ -107,7 +107,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
   <?php if (!empty($allTags)): ?>
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
-    <legend>Tagy</legend>
+    <legend>Štítky článku</legend>
     <?php foreach ($allTags as $tag): ?>
       <label style="display:inline-block;margin-right:1rem;font-weight:normal">
         <input type="checkbox" name="tags[]" value="<?= (int)$tag['id'] ?>"
@@ -119,7 +119,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Obsah</legend>
+    <legend>Text článku</legend>
 
     <label for="perex">Perex (krátký úvod)</label>
     <textarea id="perex" name="perex" rows="3"><?= h($article['perex'] ?? '') ?></textarea>
@@ -150,7 +150,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
-    <legend>Diskuse</legend>
+    <legend>Komentáře</legend>
     <div>
       <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1" aria-describedby="blog-comments-help"
              <?= (int)($article['comments_enabled'] ?? 1) === 1 ? 'checked' : '' ?>>
@@ -162,7 +162,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
-    <legend>SEO / Open Graph</legend>
+    <legend>Vyhledávače a sdílení</legend>
     <small id="blog-seo-help" class="field-help" style="margin-top:0">Nepovinné. Ponechte prázdné pro automatické hodnoty.</small>
     <label for="meta_title">Meta titulek</label>
     <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-seo-help"

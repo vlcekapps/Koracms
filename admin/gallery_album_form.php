@@ -77,7 +77,7 @@ adminHeader($pageTitle);
   <input type="hidden" name="id" value="<?= (int)$album['id'] ?>">
 
   <fieldset>
-    <legend>Album</legend>
+    <legend>Údaje o albu</legend>
 
     <label for="name">Název alba <span aria-hidden="true">*</span></label>
     <input type="text" id="name" name="name" required aria-required="true"

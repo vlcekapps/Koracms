@@ -70,7 +70,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Novinka</legend>
+    <legend>Obsah novinky</legend>
 
     <label for="title">Titulek <span aria-hidden="true">*</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"

@@ -75,7 +75,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   <?php endif; ?>
 
   <fieldset>
-    <legend>Položka modulu <?= h($publicLabel) ?></legend>
+    <legend>Položka sekce <?= h($publicLabel) ?></legend>
 
     <label for="title">Nadpis <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
@@ -177,7 +177,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   </fieldset>
 
   <fieldset>
-    <legend>Příloha a zobrazení</legend>
+    <legend>Příloha a zveřejnění</legend>
 
     <label for="file">Soubor přílohy</label>
     <input type="file" id="file" name="file"

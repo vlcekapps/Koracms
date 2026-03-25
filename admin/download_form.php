@@ -68,7 +68,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   <?php endif; ?>
 
   <fieldset>
-    <legend>Položka ke stažení</legend>
+    <legend>Základní údaje položky</legend>
 
     <label for="title">Název <span aria-hidden="true">*</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
@@ -155,7 +155,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   </fieldset>
 
   <fieldset>
-    <legend>Náhled a zobrazení</legend>
+    <legend>Náhled a zveřejnění</legend>
 
     <label for="download_image">Náhledový obrázek</label>
     <input type="file" id="download_image" name="download_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg">

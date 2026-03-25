@@ -72,7 +72,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Místo</legend>
+    <legend>Základní údaje místa</legend>
 
     <label for="name">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
@@ -127,7 +127,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   </fieldset>
 
   <fieldset>
-    <legend>Praktické informace</legend>
+    <legend>Poloha a kontakt</legend>
 
     <label for="url">Web / externí odkaz</label>
     <input type="url" id="url" name="url" maxlength="500"
@@ -160,7 +160,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   </fieldset>
 
   <fieldset>
-    <legend>Obrázek a zobrazení</legend>
+    <legend>Obrázek a zveřejnění</legend>
 
     <label for="place_image">Hlavní obrázek</label>
     <?php if (!empty($place['image_file'])): ?>

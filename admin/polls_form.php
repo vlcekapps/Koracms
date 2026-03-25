@@ -71,7 +71,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Anketa</legend>
+    <legend>Základní údaje ankety</legend>
 
     <label for="question">Otázka <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="question" name="question" required aria-required="true" maxlength="500"

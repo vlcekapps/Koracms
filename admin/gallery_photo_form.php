@@ -70,7 +70,7 @@ adminHeader($pageTitle);
     </div>
 
     <fieldset>
-      <legend>Vlastnosti fotografie</legend>
+      <legend>Údaje o fotografii</legend>
 
       <label for="title">Titulek fotografie</label>
       <input type="text" id="title" name="title" maxlength="255"
@@ -129,7 +129,7 @@ adminHeader($pageTitle);
     <input type="hidden" name="mode" value="upload">
 
     <fieldset>
-      <legend>Nahrání fotografií</legend>
+      <legend>Nahrání fotografií do alba</legend>
 
       <label for="photos">Vyberte fotografie</label>
       <input type="file" id="photos" name="photos[]"

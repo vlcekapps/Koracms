@@ -92,7 +92,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
   <?php endif; ?>
 
   <fieldset>
-    <legend>Epizoda</legend>
+    <legend>Základní údaje epizody</legend>
 
     <label for="title">Název epizody <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
@@ -126,7 +126,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
   </fieldset>
 
   <fieldset>
-    <legend>Audio a popis</legend>
+    <legend>Audio a text epizody</legend>
 
     <label for="audio_file">Audio soubor</label>
     <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*"

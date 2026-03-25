@@ -112,7 +112,7 @@ $err = trim($_GET['err'] ?? '');
     <small id="resource-capacity-help" class="field-help">Kolik lidí může přijít v rámci jedné rezervace, například rodina nebo skupina.</small>
 
     <fieldset style="border:1px solid #ddd;padding:.5rem .75rem;margin-top:1rem">
-      <legend>Místa konání</legend>
+      <legend>Lokality rezervací</legend>
       <?php if (empty($locations)): ?>
         <p style="margin:.25rem 0;font-size:.9rem">Zatím tu nejsou žádné lokality rezervací. <a href="res_locations.php">Přidat lokalitu</a></p>
       <?php else: ?>
@@ -135,7 +135,7 @@ $err = trim($_GET['err'] ?? '');
     <legend>Pravidla rezervací</legend>
 
     <fieldset style="border:none;padding:0;margin:1rem 0 0">
-      <legend>Režim slotů <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></legend>
+      <legend>Způsob rezervací <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></legend>
       <div style="margin:.3rem 0">
         <input type="radio" id="mode_slots" name="slot_mode" value="slots" aria-describedby="mode-slots-help"
                <?= ($resource['slot_mode'] ?? 'slots') === 'slots' ? 'checked' : '' ?>>
@@ -246,10 +246,10 @@ $err = trim($_GET['err'] ?? '');
 
   <!-- D) Predefined slots -->
   <fieldset id="slots-section" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem;<?= ($resource['slot_mode'] ?? 'slots') !== 'slots' ? 'display:none' : '' ?>">
-    <legend>Předdefinované sloty</legend>
+    <legend>Časy k rezervaci</legend>
 
     <fieldset style="border:1px dashed #aaa;padding:.5rem 1rem;margin-bottom:1rem">
-      <legend>Hromadný generátor</legend>
+      <legend>Hromadné přidání slotů</legend>
       <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
         <div>
           <label for="gen_from">První slot od</label>

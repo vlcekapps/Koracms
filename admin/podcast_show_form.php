@@ -62,7 +62,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   <?php endif; ?>
 
   <fieldset>
-    <legend>Pořad</legend>
+    <legend>Základní údaje podcastu</legend>
 
     <label for="title">Název pořadu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
@@ -100,7 +100,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   </fieldset>
 
   <fieldset>
-    <legend>Popis a cover</legend>
+    <legend>Popis a titulní obrázek</legend>
 
     <label for="description">Popis pořadu</label>
     <?php if ($useWysiwyg): ?>

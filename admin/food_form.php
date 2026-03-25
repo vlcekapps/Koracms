@@ -61,7 +61,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
   <?php endif; ?>
 
   <fieldset>
-    <legend>Lístek</legend>
+    <legend>Údaje o lístku</legend>
 
     <label for="type">Typ lístku <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <select id="type" name="type" style="width:auto">
@@ -106,7 +106,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 
   <?php if (currentUserHasCapability('content_approve_shared')): ?>
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.75rem 1rem">
-    <legend>Publikování</legend>
+    <legend>Aktualita a zveřejnění</legend>
 
     <label style="font-weight:normal;margin-top:.25rem">
       <input type="checkbox" name="is_current" value="1" aria-describedby="food-current-help"

@@ -1927,6 +1927,82 @@ foreach ($pages as $page) {
         }
     }
 
+    $adminFormSectionExpectations = [
+        'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Komentáře', 'Vyhledávače a sdílení'],
+        'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Komentáře', 'Vyhledávače a sdílení'],
+        'admin_news_form' => ['Obsah novinky'],
+        'admin_news_create_form' => ['Obsah novinky'],
+        'admin_event_form' => ['Základní údaje události', 'Popis události'],
+        'admin_event_create_form' => ['Základní údaje události', 'Popis události'],
+        'admin_page_form' => ['Obsah a zobrazení stránky'],
+        'admin_page_create_form' => ['Obsah a zobrazení stránky'],
+        'admin_download_form' => ['Základní údaje položky', 'Náhled a zveřejnění'],
+        'admin_download_create_form' => ['Základní údaje položky', 'Náhled a zveřejnění'],
+        'admin_food_form' => ['Údaje o lístku', 'Aktualita a zveřejnění'],
+        'admin_food_create_form' => ['Údaje o lístku', 'Aktualita a zveřejnění'],
+        'admin_place_form' => ['Základní údaje místa', 'Poloha a kontakt', 'Obrázek a zveřejnění'],
+        'admin_place_create_form' => ['Základní údaje místa', 'Poloha a kontakt', 'Obrázek a zveřejnění'],
+        'admin_board_form' => ['Položka sekce', 'Příloha a zveřejnění'],
+        'admin_board_create_form' => ['Položka sekce', 'Příloha a zveřejnění'],
+        'admin_gallery_album_form' => ['Údaje o albu'],
+        'admin_gallery_album_create_form' => ['Údaje o albu'],
+        'admin_gallery_photo_form' => ['Údaje o fotografii'],
+        'admin_gallery_photo_create_form' => ['Nahrání fotografií do alba'],
+        'admin_podcast_show_form' => ['Základní údaje podcastu', 'Popis a titulní obrázek'],
+        'admin_podcast_show_create_form' => ['Základní údaje podcastu', 'Popis a titulní obrázek'],
+        'admin_podcast_form' => ['Základní údaje epizody', 'Audio a text epizody'],
+        'admin_podcast_create_form' => ['Základní údaje epizody', 'Audio a text epizody'],
+        'admin_polls_form' => ['Základní údaje ankety'],
+        'admin_polls_create_form' => ['Základní údaje ankety'],
+        'admin_res_resource_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
+        'admin_res_resource_create_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
+    ];
+    if (isset($adminFormSectionExpectations[$page['label']])) {
+        foreach ($adminFormSectionExpectations[$page['label']] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin form is missing section label: ' . $expectedFragment;
+            }
+        }
+    }
+
+    $adminFormSectionForbiddenFragments = [
+        'admin_blog_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
+        'admin_blog_create_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
+        'admin_news_form' => ['<legend>Novinka</legend>'],
+        'admin_news_create_form' => ['<legend>Novinka</legend>'],
+        'admin_event_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>'],
+        'admin_event_create_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>'],
+        'admin_page_form' => ['<legend>Vlastnosti stránky</legend>'],
+        'admin_page_create_form' => ['<legend>Vlastnosti stránky</legend>'],
+        'admin_download_form' => ['<legend>Položka ke stažení</legend>', '<legend>Náhled a zobrazení</legend>'],
+        'admin_download_create_form' => ['<legend>Položka ke stažení</legend>', '<legend>Náhled a zobrazení</legend>'],
+        'admin_food_form' => ['<legend>Lístek</legend>', '<legend>Publikování</legend>'],
+        'admin_food_create_form' => ['<legend>Lístek</legend>', '<legend>Publikování</legend>'],
+        'admin_place_form' => ['<legend>Místo</legend>', '<legend>Praktické informace</legend>', '<legend>Obrázek a zobrazení</legend>'],
+        'admin_place_create_form' => ['<legend>Místo</legend>', '<legend>Praktické informace</legend>', '<legend>Obrázek a zobrazení</legend>'],
+        'admin_board_form' => ['Položka modulu', '<legend>Příloha a zobrazení</legend>'],
+        'admin_board_create_form' => ['Položka modulu', '<legend>Příloha a zobrazení</legend>'],
+        'admin_gallery_album_form' => ['<legend>Album</legend>'],
+        'admin_gallery_album_create_form' => ['<legend>Album</legend>'],
+        'admin_gallery_photo_form' => ['<legend>Vlastnosti fotografie</legend>'],
+        'admin_gallery_photo_create_form' => ['<legend>Nahrání fotografií</legend>'],
+        'admin_podcast_show_form' => ['<legend>Pořad</legend>', '<legend>Popis a cover</legend>'],
+        'admin_podcast_show_create_form' => ['<legend>Pořad</legend>', '<legend>Popis a cover</legend>'],
+        'admin_podcast_form' => ['<legend>Epizoda</legend>', '<legend>Audio a popis</legend>'],
+        'admin_podcast_create_form' => ['<legend>Epizoda</legend>', '<legend>Audio a popis</legend>'],
+        'admin_polls_form' => ['<legend>Anketa</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>'],
+        'admin_res_resource_form' => ['<legend>Místa konání</legend>', '<legend>Režim slotů', '<legend>Předdefinované sloty</legend>', '<legend>Hromadný generátor</legend>'],
+        'admin_res_resource_create_form' => ['<legend>Místa konání</legend>', '<legend>Režim slotů', '<legend>Předdefinované sloty</legend>', '<legend>Hromadný generátor</legend>'],
+    ];
+    if (isset($adminFormSectionForbiddenFragments[$page['label']])) {
+        foreach ($adminFormSectionForbiddenFragments[$page['label']] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin form still contains outdated section label: ' . $forbiddenFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_index') {
         foreach ([
             'Na čem chcete pracovat',

@@ -52,7 +52,7 @@ adminHeader($pageTitle);
   <?php endif; ?>
 
   <fieldset>
-    <legend>Vlastnosti stránky</legend>
+    <legend>Obsah a zobrazení stránky</legend>
 
     <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" value="<?= h((string)$page['title']) ?>">
