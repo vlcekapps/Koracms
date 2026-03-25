@@ -121,7 +121,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |
 | **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
-| **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení; administrace nabízí přehled odběratelů, detail čekajících potvrzení a historii rozesílek |
+| **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení; administrace nabízí přehled odběratelů, detail čekajících potvrzení, historii rozesílek i hromadné akce nad odběrateli |
 | **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do, archivem, veřejným detailem a čistou slug URL |
 | **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |
@@ -155,7 +155,6 @@ Nastavení je rozděleno do čtyř sekcí:
 - **Název a popis webu** – zobrazí se v záhlaví a v SEO meta tazích
 - **Profil webu** – uloží zaměření webu a volitelně jedním krokem použije doporučené moduly, pořadí navigace, homepage bloky a vhodnou first-party šablonu; `Vlastní profil` slouží jako neutrální režim bez vnuceného presetu
 - **Veřejný název úřední desky** – umožní modul na webu zobrazovat jako `Úřední deska`, `Vývěska`, `Oznámení` nebo jiný krátký veřejný název bez změny interní struktury modulu
-- **Hlavní autor homepage** – volba veřejného autora pro blok `O autorovi / O mně`; při prázdné hodnotě systém automaticky použije jediného dostupného veřejného autora
 - **Kontaktní e-mail** – příjemce zpráv z kontaktního formuláře
 - **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
 - **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
@@ -192,7 +191,7 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 - Bezpečný import portable ZIP balíčku: `theme.json` + statické assety v `assets/`, bez PHP override souborů
 - Export portable ZIP balíčku z administrace včetně uložených výchozích theme settings
 - Portable balíčky záměrně nepřenášejí layouty, partialy a view override; veřejný web dál používá fallback kontrakt na `default`
-- UX audit má vlastní framework v `docs/ux-audit-framework.md`; automatické guardrails běží přes `php build/runtime_audit.php`
+- UX audit má vlastní framework v `docs/ux-audit-framework.md`, praktický screen-by-screen audit v `docs/ux-intuition-audit.md` a prioritizovaný backlog v `docs/ux-intuition-backlog.md`; automatické guardrails běží přes `php build/runtime_audit.php`
 
 Součástí CMS jsou nyní tyto oficiální šablony:
 
@@ -225,6 +224,8 @@ Starší role **Spolupracovník / Správce obsahu** zůstává kvůli kompatibil
 Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo). Účty s přístupem do administrace mohou navíc zapnout i **veřejný autorský profil** s vlastním slugem, bio, webem a avatarem. Pokud je profil zapnutý, blog a homepage na něj mohou veřejně odkazovat přes URL typu `/author/jmeno-autora`.
 
 Role se propsávají i do pracovního rozhraní administrace. Účet tak nově vidí jen moduly, dashboard a schvalovací akce, které opravdu potřebuje. Součástí administrace je i společná fronta **Ke schválení**, která sjednocuje čekající obsah, komentáře a rezervace na jedno místo.
+
+Administrace používá i sjednocené filtry, hromadné akce, civilnější prázdné stavy a role-based dashboard. Formuláře mají konkrétní názvy akcí, návraty na přehledy a helper texty pro slugy, zveřejnění, plánování i práci se soubory nebo médii, aby se v nich lépe orientoval i ne-technický správce.
 
 ### Veřejní uživatelé
 

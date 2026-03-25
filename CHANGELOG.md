@@ -7,12 +7,13 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- Praktický screen-by-screen audit intuitivnosti v `docs/ux-intuition-audit.md` a prioritizovaný backlog oprav v `docs/ux-intuition-backlog.md`
 - Moderace komentářů po vzoru WordPressu v jednodušší podobě: stavy `čekající`, `schválený`, `spam`, `koš`, rychlé akce v administraci, badge čekajících komentářů a globální pravidla moderace v nastavení
 - Per-article přepínač komentářů v editoru článku a veřejné hlášky pro vypnuté nebo uzavřené komentáře
 - Antispam komentářů přes blokované e-maily / domény a zakázané fráze, plus e-mailové upozornění administrátorovi na nové komentáře čekající na schválení
 - Volitelné e-mailové upozornění autorovi po schválení komentáře, napojené na stejnou mailovou vrstvu jako registrace, reset hesla a rezervace
 - Blogové články nově podporují slug a čisté URL typu `/blog/moje-prvni-clanky`, včetně náhledu, exportu/importu a použití v RSS feedu a sitemapě
-- Veřejná autorská vrstva pro blog a osobní weby: `/author/{slug}`, proklik bylinek na homepage i v blogu a homepage blok `O autorovi / O mně`
+- Veřejná autorská vrstva pro blog a osobní weby: `/author/{slug}`, proklik autora v blogu a autorský medailonek pod detailem článku
 - Správa veřejného autora v administraci i v Mém profilu: zapnutí profilu, vlastní slug, bio, web a avatar uložený do `uploads/authors/`
 - Capability-based role model pro administraci: nové role `autor`, `editor`, `moderátor` a `správce rezervací`, při zachování kompatibility se starší rolí `spolupracovník`
 - Role-aware administrace: levé menu, dashboard a schvalovací akce se nově řídí oprávněními konkrétního účtu, takže autor vidí jen svůj obsah, moderátor moderaci a správce rezervací pouze rezervační část
@@ -35,6 +36,12 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Odběratelé newsletteru nově podporují i hromadné akce: potvrdit vybrané odběry, znovu poslat potvrzení a smazat vybrané, včetně bezpečného návratu do stejného filtru
 
 ### Opraveno
+- Veřejný web nově používá klidnější a logičtější texty na homepage i detailech obsahu: z homepage zmizely redundantní kickery a souhrny, doporučený článek má přirozenější pořadí informací a autorský medailonek se zobrazuje přímo pod detailem článku
+- Veřejné i admin formuláře nyní drží jednotný WCAG vzor pomocných textů pod polem s korektním `aria-describedby`; runtime audit hlídá i zákaz inline helper textů uvnitř `label` a `legend`
+- Administrace nyní používá role-based dashboard, klidnější levé menu, srozumitelnější popisky sekcí, detailů a návratových odkazů, jednotné filtry a civilnější prázdné stavy
+- Administrace nyní používá i jednotnější hromadné akce, captiony tabulek a přesnější názvy sekcí včetně newsletterových bulk akcí pro odběratele
+- Administrace nyní používá i přesnější mikrocopy uvnitř formulářů: konkrétní helper texty pro slugy, plánování, zveřejnění a práci se soubory nebo médii
+- Opravena rozházená diakritika ve sdíleném admin layoutu po accessibility passu
 - Administrace nyní používá srozumitelnější titulky formulářů, horní návratové odkazy na příslušné přehledy a civilnější veřejné odkazy `Zobrazit na webu`, takže je při vytváření a úpravě obsahu hned jasné, kde se správce nachází a kam se může vrátit
 - Administrace nyní používá i jednotnější spodní akce formulářů: konkrétní hlavní tlačítka typu `Přidat novinku`, `Vytvořit stránku` nebo `Uložit změny`, konzistentní `Zrušit` a veřejné odkazy `Zobrazit na webu` jen tam, kde je stránka skutečně dostupná
 - Administrace nyní používá i srozumitelnější úvodní věty a stavové volby ve formulářích: `Zveřejnit na webu`, `Zobrazit v hlavní navigaci` nebo `Použít jako aktuální lístek` nově jasněji popisují, co se po uložení skutečně stane
@@ -47,7 +54,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Detailové obrazovky v administraci teď používají srozumitelnější návraty a akční nadpisy jako `Zpět na přehled kontaktních zpráv`, `Zpět na odběratele newsletteru` nebo `Co můžete udělat`; přesnější názvy dostaly i kategorie a rezervační přehledy
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
 - Staré odkazy `blog/article.php?id=...` se nyní kanonicky přesměrují na slug URL a veřejné vyhledávání vrací jen publikované články
-- Runtime audit nově hlídá i veřejnou stránku autora, homepage author block, author byliny a nová pole v administraci
+- Runtime audit nově hlídá i veřejnou stránku autora, autorské odkazy v blogu a nová pole v administraci
 - Installace a migrace rozšiřují `cms_users.role` o nové redakční role a runtime audit nově ověřuje i přístupovou matici pro autora, moderátora a správce rezervací
 - Schvalování dokumentů úřední desky je nově napojené na stejný endpoint jako ostatní sdílený obsah a moderace komentářů i rezervací nově podporuje bezpečný interní návrat přes validovaný `redirect`
 - Administrace i README teď výslovně doporučují HTML textarea jako přístupnější výchozí editor a Quill popisují jen jako volitelný vizuální režim
