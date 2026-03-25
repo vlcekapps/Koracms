@@ -35,6 +35,40 @@ $canManageUsers = currentUserHasCapability('users_manage');
 $canViewStatistics = currentUserHasCapability('statistics_view');
 $canManageImportExport = currentUserHasCapability('import_export_manage');
 
+$dashboardMode = 'general';
+if (
+    $canManageBookings
+    && !$canManageBlog
+    && !$canManageNews
+    && !$canManageSharedContent
+    && !$canManageMessages
+    && !$canManageNewsletter
+    && !$canManageSettings
+    && !$canManageUsers
+) {
+    $dashboardMode = 'bookings';
+} elseif (
+    $canManageMessages
+    && !$canManageBlog
+    && !$canManageNews
+    && !$canManageSharedContent
+    && !$canManageBookings
+    && !$canManageNewsletter
+    && !$canManageSettings
+    && !$canManageUsers
+) {
+    $dashboardMode = 'moderation';
+} elseif (
+    ($canManageBlog || $canManageNews || $canManageSharedContent)
+    && !$canManageMessages
+    && !$canManageBookings
+    && !$canManageNewsletter
+    && !$canManageSettings
+    && !$canManageUsers
+) {
+    $dashboardMode = 'content';
+}
+
 $overviewRows = [];
 
 if ($canManageBlog && isModuleEnabled('blog')) {
@@ -284,77 +318,102 @@ if ($canManageSettings) {
         'reservations' => 'Rezervace',
         'statistics' => 'Statistiky',
     ] as $moduleKey => $moduleLabel) {
-        $enabledModules[] = [
-            'label' => $moduleLabel,
-            'enabled' => isModuleEnabled($moduleKey),
-        ];
+        if (isModuleEnabled($moduleKey)) {
+            $enabledModules[] = $moduleLabel;
+        }
     }
 }
 
 $quickLinks = [];
-if (canAccessReviewQueue()) {
-    $quickLinks[] = ['url' => 'review_queue.php', 'label' => $pendingReviewTotal > 0 ? 'Fronta ke schválení' : 'Schvalovací fronta'];
-}
-if ($canManageBlog && isModuleEnabled('blog')) {
-    $quickLinks[] = ['url' => 'blog.php', 'label' => 'Správa článků'];
-    $quickLinks[] = ['url' => 'blog_form.php', 'label' => 'Nový článek'];
-}
-if ($canManageNews && isModuleEnabled('news')) {
-    $quickLinks[] = ['url' => 'news.php', 'label' => 'Správa novinek'];
-}
-if ($canManageComments && isModuleEnabled('blog')) {
-    $quickLinks[] = ['url' => 'comments.php?filter=pending', 'label' => 'Čekající komentáře'];
-}
-if ($canManageMessages) {
+$dashboardFocusHeading = 'Na čem chcete pracovat';
+$dashboardFocusIntro = 'Vyberte si nejbližší krok, který teď chcete na webu udělat.';
+
+$appendQuickLink = static function (array &$target, string $url, string $label): void {
+    foreach ($target as $existing) {
+        if ($existing['url'] === $url) {
+            return;
+        }
+    }
+    $target[] = ['url' => $url, 'label' => $label];
+};
+
+if ($dashboardMode === 'content') {
+    $dashboardFocusHeading = 'Na čem chcete pracovat';
+    $dashboardFocusIntro = 'Začněte tím, co právě potřebujete napsat, upravit nebo schválit.';
+    if (canAccessReviewQueue() && $pendingReviewTotal > 0) {
+        $appendQuickLink($quickLinks, 'review_queue.php', 'Co čeká na schválení');
+    }
+    if ($canManageBlog && isModuleEnabled('blog')) {
+        $appendQuickLink($quickLinks, 'blog_form.php', 'Nový článek');
+        $appendQuickLink($quickLinks, 'blog.php', 'Správa článků');
+    }
+    if ($canManageNews && isModuleEnabled('news')) {
+        $appendQuickLink($quickLinks, 'news.php', 'Správa novinek');
+    }
+    if ($canManageSharedContent) {
+        $appendQuickLink($quickLinks, 'pages.php', 'Stránky webu');
+    }
+} elseif ($dashboardMode === 'moderation') {
+    $dashboardFocusHeading = 'Co chcete vyřídit';
+    $dashboardFocusIntro = 'Začněte zprávami a komentáři, které právě čekají na reakci nebo schválení.';
+    if ($canManageComments && isModuleEnabled('blog')) {
+        $appendQuickLink($quickLinks, 'comments.php?filter=pending', 'Čekající komentáře');
+    }
     if (isModuleEnabled('contact')) {
-        $quickLinks[] = [
-            'url' => $newContactCount > 0 ? 'contact.php?status=new' : 'contact.php',
-            'label' => $newContactCount > 0 ? 'Nové kontaktní zprávy' : 'Kontaktní zprávy',
-        ];
+        $appendQuickLink($quickLinks, $newContactCount > 0 ? 'contact.php?status=new' : 'contact.php', $newContactCount > 0 ? 'Nové kontaktní zprávy' : 'Kontaktní zprávy');
     }
     if (isModuleEnabled('chat')) {
-        $quickLinks[] = [
-            'url' => $newChatCount > 0 ? 'chat.php?status=new' : 'chat.php',
-            'label' => $newChatCount > 0 ? 'Nové chat zprávy' : 'Chat zprávy',
-        ];
+        $appendQuickLink($quickLinks, $newChatCount > 0 ? 'chat.php?status=new' : 'chat.php', $newChatCount > 0 ? 'Nové chat zprávy' : 'Chat zprávy');
+    }
+    if (canAccessReviewQueue() && $pendingReviewTotal > 0) {
+        $appendQuickLink($quickLinks, 'review_queue.php', 'Co čeká na schválení');
+    }
+    if ($canManageNewsletter && isModuleEnabled('newsletter')) {
+        $appendQuickLink($quickLinks, 'newsletter.php', 'Newsletter');
+    }
+} elseif ($dashboardMode === 'bookings') {
+    $dashboardFocusHeading = 'Rezervace';
+    $dashboardFocusIntro = 'Začněte rezervacemi, které čekají na vyřízení, nebo správou zdrojů a lokalit.';
+    $appendQuickLink($quickLinks, 'res_bookings.php?status=pending', 'Čekající rezervace');
+    $appendQuickLink($quickLinks, 'res_bookings.php', 'Všechny rezervace');
+    $appendQuickLink($quickLinks, 'res_resources.php', 'Zdroje rezervací');
+    $appendQuickLink($quickLinks, 'res_locations.php', 'Lokality rezervací');
+} else {
+    if (canAccessReviewQueue()) {
+        $appendQuickLink($quickLinks, 'review_queue.php', $pendingReviewTotal > 0 ? 'Co čeká na schválení' : 'Schvalovací fronta');
+    }
+    if ($canManageBlog && isModuleEnabled('blog')) {
+        $appendQuickLink($quickLinks, 'blog.php', 'Správa článků');
+        $appendQuickLink($quickLinks, 'blog_form.php', 'Nový článek');
+    }
+    if ($canManageMessages && isModuleEnabled('contact')) {
+        $appendQuickLink($quickLinks, $newContactCount > 0 ? 'contact.php?status=new' : 'contact.php', $newContactCount > 0 ? 'Nové kontaktní zprávy' : 'Kontaktní zprávy');
+    }
+    if ($canManageBookings && isModuleEnabled('reservations')) {
+        $appendQuickLink($quickLinks, 'res_bookings.php', 'Správa rezervací');
+    }
+    if ($canManageSettings) {
+        $appendQuickLink($quickLinks, 'settings.php', 'Nastavení webu');
+    }
+    if ($canManageUsers) {
+        $appendQuickLink($quickLinks, 'users.php', 'Uživatelé');
+    }
+    if (isSuperAdmin()) {
+        $appendQuickLink($quickLinks, 'themes.php', 'Vzhled a šablony');
     }
 }
-if ($canManageBookings && isModuleEnabled('reservations')) {
-    $quickLinks[] = ['url' => 'res_bookings.php', 'label' => 'Správa rezervací'];
+if (count($quickLinks) > 5) {
+    $quickLinks = array_slice($quickLinks, 0, 5);
 }
-if ($canManageSharedContent) {
-    $quickLinks[] = ['url' => 'pages.php', 'label' => 'Stránky webu'];
-}
-if ($canManageNewsletter && isModuleEnabled('newsletter')) {
-    $newsletterCounts = newsletterSubscriberCounts($pdo);
-    $pendingSubscriberCount = $newsletterCounts['pending'];
-    $quickLinks[] = [
-        'url' => 'newsletter.php',
-        'label' => $pendingSubscriberCount > 0
-            ? 'Newsletter (' . $pendingSubscriberCount . ' čeká na potvrzení)'
-            : 'Newsletter',
-    ];
-}
-if ($canManageUsers) {
-    $quickLinks[] = ['url' => 'users.php', 'label' => 'Uživatelé'];
-}
-if ($canManageSettings) {
-    $quickLinks[] = ['url' => 'settings.php', 'label' => 'Nastavení webu'];
-}
-if ($canManageImportExport) {
-    $quickLinks[] = ['url' => 'export.php', 'label' => 'Export dat'];
-}
-if (isSuperAdmin()) {
-    $quickLinks[] = ['url' => 'themes.php', 'label' => 'Vzhled a šablony'];
-}
-if (count($quickLinks) > 6) {
-    $quickLinks = array_slice($quickLinks, 0, 6);
-}
+
+$showOperationalOverview = $dashboardMode === 'general';
+$showContentSecondaryBlocks = in_array($dashboardMode, ['general', 'content'], true);
+$showReservationSecondaryBlocks = in_array($dashboardMode, ['general', 'bookings'], true);
 
 $visitorStats = null;
 $chartData = [];
 $maxViews = 1;
-if ($canViewStatistics && isModuleEnabled('statistics') && getSetting('visitor_tracking_enabled', '0') === '1') {
+if ($showOperationalOverview && $canViewStatistics && isModuleEnabled('statistics') && getSetting('visitor_tracking_enabled', '0') === '1') {
     statsCleanup();
     $visitorStats = getVisitorStats();
 
@@ -412,7 +471,8 @@ adminHeader('Přehled');
 
 <?php if (!empty($quickLinks)): ?>
 <section aria-labelledby="task-links-heading" style="margin-bottom:1.5rem">
-  <h2 id="task-links-heading">Na čem chcete pracovat</h2>
+  <h2 id="task-links-heading"><?= h($dashboardFocusHeading) ?></h2>
+  <p style="margin-top:0;color:#555"><?= h($dashboardFocusIntro) ?></p>
   <nav aria-label="Na čem chcete pracovat" class="button-row">
     <?php foreach ($quickLinks as $link): ?>
       <a href="<?= h($link['url']) ?>" class="btn"><?= h($link['label']) ?></a>
@@ -444,32 +504,43 @@ adminHeader('Přehled');
 
 <?php if ($overviewRows !== []): ?>
 <section aria-labelledby="overview-heading-new" style="margin-top:1.5rem">
-  <h2 id="overview-heading-new">Dostupné sekce administrace</h2>
-  <table>
-    <caption>Sekce, které máte k dispozici</caption>
-    <thead>
-      <tr>
-        <th scope="col">Sekce</th>
-        <th scope="col">Počet</th>
-        <th scope="col">Akce</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($overviewRows as $row): ?>
+  <h2 id="overview-heading-new"><?= $showOperationalOverview ? 'Dostupné sekce administrace' : 'Další části administrace' ?></h2>
+  <?php if ($showOperationalOverview): ?>
+    <table>
+      <caption>Sekce, které máte k dispozici</caption>
+      <thead>
         <tr>
-          <td><?= h($row['label']) ?></td>
-          <td><?= (int)$row['count'] ?></td>
-          <td><a href="<?= h($row['url']) ?>">Otevřít <span aria-hidden="true">→</span></a></td>
+          <th scope="col">Sekce</th>
+          <th scope="col">Počet</th>
+          <th scope="col">Akce</th>
         </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($overviewRows as $row): ?>
+          <tr>
+            <td><?= h($row['label']) ?></td>
+            <td><?= (int)$row['count'] ?></td>
+            <td><a href="<?= h($row['url']) ?>">Otevřít <span aria-hidden="true">→</span></a></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php else: ?>
+    <ul>
+      <?php foreach ($overviewRows as $row): ?>
+        <li>
+          <a href="<?= h($row['url']) ?>"><?= h($row['label']) ?></a>
+          <span style="color:#555"> · <?= (int)$row['count'] ?></span>
+        </li>
       <?php endforeach; ?>
-    </tbody>
-  </table>
+    </ul>
+  <?php endif; ?>
 </section>
 <?php else: ?>
   <p>Tomuto účtu zatím není přidělena žádná část administrace.</p>
 <?php endif; ?>
 
-<?php if ($pages !== []): ?>
+<?php if ($showContentSecondaryBlocks && $pages !== []): ?>
 <section aria-labelledby="pages-heading-new" style="margin-top:1.5rem">
   <h2 id="pages-heading-new">Důležité stránky webu</h2>
   <ul>
@@ -486,7 +557,7 @@ adminHeader('Přehled');
 </section>
 <?php endif; ?>
 
-<?php if ($upcomingEvents !== []): ?>
+<?php if ($showContentSecondaryBlocks && $upcomingEvents !== []): ?>
 <section aria-labelledby="events-heading-new" style="margin-top:1.5rem">
   <h2 id="events-heading-new">Nejbližší události</h2>
   <ul>
@@ -505,7 +576,7 @@ adminHeader('Přehled');
 </section>
 <?php endif; ?>
 
-<?php if ($reservationSummary !== null): ?>
+<?php if ($showReservationSecondaryBlocks && $reservationSummary !== null): ?>
 <section aria-labelledby="reservations-heading-new" style="margin-top:1.5rem">
   <h2 id="reservations-heading-new">Přehled rezervací</h2>
   <ul>
@@ -554,17 +625,10 @@ adminHeader('Přehled');
 </section>
 <?php endif; ?>
 
-<?php if ($enabledModules !== []): ?>
+<?php if ($showOperationalOverview && $enabledModules !== []): ?>
 <section aria-labelledby="modules-heading-new" style="margin-top:1.5rem">
-  <h2 id="modules-heading-new">Aktivní moduly webu</h2>
-  <ul>
-    <?php foreach ($enabledModules as $moduleItem): ?>
-      <li>
-        <?= h($moduleItem['label']) ?>:
-        <strong><?= $moduleItem['enabled'] ? 'zapnuto' : 'vypnuto' ?></strong>
-      </li>
-    <?php endforeach; ?>
-  </ul>
+  <h2 id="modules-heading-new">Zapnuté moduly na webu</h2>
+  <p><?= h(implode(', ', $enabledModules)) ?></p>
 </section>
 <?php endif; ?>
 
