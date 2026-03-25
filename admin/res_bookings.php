@@ -144,7 +144,7 @@ adminHeader('Rezervace');
         <input type="date" id="date_to" name="date_to" value="<?= h($dateTo) ?>" style="width:auto">
       </div>
       <div>
-        <button type="submit" class="btn">Filtrovat</button>
+        <button type="submit" class="btn">Použít filtr</button>
         <?php if ($filterParams !== []): ?>
           <a href="res_bookings.php" class="btn" style="margin-left:.25rem">Zrušit filtr</a>
         <?php endif; ?>

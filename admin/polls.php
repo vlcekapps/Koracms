@@ -61,9 +61,9 @@ adminHeader('Ankety');
       <option value="closed"<?= $statusFilter === 'closed' ? ' selected' : '' ?>>Uzavřené</option>
     </select>
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== '' || $statusFilter !== 'all'): ?>
-    <a href="polls.php" class="btn">Zrušit</a>
+    <a href="polls.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

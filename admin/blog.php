@@ -53,9 +53,9 @@ adminHeader('Blog – správa článků');
   <label for="q" class="visually-hidden">Hledat</label>
   <input type="search" id="q" name="q" placeholder="Hledat v článcích…"
          value="<?= h($q) ?>" style="width:300px">
-  <button type="submit" class="btn">Hledat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="blog.php" class="btn">Zrušit</a>
+    <a href="blog.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

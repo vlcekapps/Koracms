@@ -111,9 +111,9 @@ adminHeader('Chat');
   <label for="q" class="sr-only">Hledat v chat zprávách</label>
   <input type="search" id="q" name="q" placeholder="Hledat v chat zprávách…"
          value="<?= h($q) ?>" style="width:min(100%, 24rem)">
-  <button type="submit" class="btn">Hledat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit</a>
+    <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

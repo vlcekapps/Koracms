@@ -122,9 +122,9 @@ adminHeader('Komentáře');
   <label for="q" class="sr-only">Hledat v komentářích</label>
   <input type="search" id="q" name="q" placeholder="Hledat v komentářích…"
          value="<?= h($q) ?>" style="width:min(100%, 24rem)">
-  <button type="submit" class="btn">Hledat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="?filter=<?= h($filter) ?>" class="btn">Zrušit</a>
+    <a href="?filter=<?= h($filter) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

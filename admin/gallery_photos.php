@@ -50,9 +50,9 @@ adminHeader('Galerie – ' . $album['name']);
     <label for="q" class="visually-hidden">Hledat ve fotografiích</label>
     <input type="search" id="q" name="q" placeholder="Hledat ve fotografiích..." value="<?= h($q) ?>" style="width:320px">
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Zrušit</a>
+    <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

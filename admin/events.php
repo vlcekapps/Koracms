@@ -59,9 +59,9 @@ adminHeader('Události');
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
     </select>
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== '' || $statusFilter !== 'all'): ?>
-    <a href="events.php" class="btn">Zrušit</a>
+    <a href="events.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

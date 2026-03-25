@@ -49,9 +49,9 @@ adminHeader('Rezervace – kategorie');
     <label for="q">Hledat</label>
     <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název kategorie">
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="res_categories.php" class="btn">Zrušit</a>
+    <a href="res_categories.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

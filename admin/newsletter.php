@@ -112,9 +112,9 @@ adminHeader('Newsletter');
   <label for="q" class="sr-only">Hledat v odběratelích a historii newsletterů</label>
   <input type="search" id="q" name="q" placeholder="Hledat podle e-mailu nebo předmětu rozesílky…"
          value="<?= h($q) ?>" style="width:min(100%, 24rem)">
-  <button type="submit" class="btn">Hledat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit</a>
+    <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

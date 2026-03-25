@@ -43,9 +43,9 @@ adminHeader('Podcasty');
     <input type="search" id="q" name="q" placeholder="Hledat v podcastech…"
            value="<?= h($q) ?>" style="width:300px">
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="podcast_shows.php" class="btn">Zrušit</a>
+    <a href="podcast_shows.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

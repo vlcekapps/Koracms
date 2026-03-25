@@ -43,9 +43,9 @@ adminHeader('Galerie – Alba');
     <label for="q" class="visually-hidden">Hledat v albech</label>
     <input type="search" id="q" name="q" placeholder="Hledat v albech..." value="<?= h($q) ?>" style="width:320px">
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
-    <a href="gallery_albums.php" class="btn">Zrušit</a>
+    <a href="gallery_albums.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 

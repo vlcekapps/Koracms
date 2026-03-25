@@ -2057,6 +2057,33 @@ foreach ($pages as $page) {
         }
     }
 
+    if (in_array($page['label'], [
+        'admin_blog',
+        'admin_board',
+        'admin_comments',
+        'admin_contact',
+        'admin_chat',
+        'admin_newsletter',
+        'admin_news',
+        'admin_faq',
+        'admin_events',
+        'admin_downloads',
+        'admin_food',
+        'admin_gallery_albums',
+        'admin_gallery_photos',
+        'admin_pages',
+        'admin_places',
+        'admin_res_resources',
+        'admin_res_categories',
+        'admin_res_locations',
+        'admin_res_bookings',
+        'admin_podcast_shows',
+        'admin_podcast',
+        'admin_polls',
+    ], true) && !str_contains($result['body'], 'Použít filtr')) {
+        $issues[] = 'admin list page is missing the unified "Použít filtr" action';
+    }
+
     if (str_starts_with($page['label'], 'admin_')) {
         foreach ([
             'Žádné články odpovídající hledání.',

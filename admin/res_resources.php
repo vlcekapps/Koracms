@@ -71,9 +71,9 @@ adminHeader('Rezervace – zdroje');
       <option value="inactive"<?= $statusFilter === 'inactive' ? ' selected' : '' ?>>Neaktivní</option>
     </select>
   </div>
-  <button type="submit" class="btn">Filtrovat</button>
+  <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== '' || $statusFilter !== 'all'): ?>
-    <a href="res_resources.php" class="btn">Zrušit</a>
+    <a href="res_resources.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
