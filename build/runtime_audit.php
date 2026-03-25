@@ -913,6 +913,7 @@ $pages = [
     ['label' => 'contact', 'url' => $baseUrl . '/contact/index.php'],
     ['label' => 'chat', 'url' => $baseUrl . '/chat/index.php'],
     ['label' => 'public_profile', 'url' => $baseUrl . '/public_profile.php', 'cookie' => 'PHPSESSID=' . $publicAuditSessionId],
+    ['label' => 'admin_index', 'url' => $baseUrl . '/admin/index.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -1739,6 +1740,26 @@ foreach ($pages as $page) {
         $issues[] = 'public author badge is missing in user list';
     }
 
+    if ($page['label'] === 'admin_index') {
+        foreach ([
+            'Na čem chcete pracovat',
+            'Dostupné sekce administrace',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin dashboard is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            'Ostatní moduly',
+            'Nejčastější akce',
+            'Co můžete spravovat',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin dashboard still contains outdated phrase: ' . $forbiddenFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_themes') {
         if (!str_contains($result['body'], 'name="active_theme"')) {
             $issues[] = 'theme selector is missing';
@@ -1782,6 +1803,20 @@ foreach ($pages as $page) {
         if (isModuleEnabled('reservations') && !str_contains($result['body'], 'review_queue.php?scope=reservations')) {
             $issues[] = 'review queue reservations filter is missing';
         }
+        if (str_contains($result['body'], 'queue-summary-heading') && !str_contains($result['body'], 'Rychlý přehled')) {
+            $issues[] = 'review queue summary heading was not updated';
+        }
+        if (str_contains($result['body'], 'queue-summary-heading') && !str_contains($result['body'], 'Přejít do seznamu')) {
+            $issues[] = 'review queue summary link text was not updated';
+        }
+        foreach ([
+            'Souhrn čekajících položek',
+            '>Modul<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'review queue still contains outdated phrase: ' . $forbiddenFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'admin_news') {
@@ -1816,6 +1851,8 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'contact_message.php',
+            'Označit jako přečtené',
+            'Označit jako vyřízené',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin contact inbox is missing fragment: ' . $expectedFragment;
@@ -1828,6 +1865,8 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'chat_message.php',
+            'Označit jako přečtené',
+            'Označit jako vyřízené',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat inbox is missing fragment: ' . $expectedFragment;

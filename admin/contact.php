@@ -71,6 +71,12 @@ $bulkOptions = [
     'handled' => 'Označit jako vyřízené',
     'delete' => 'Smazat trvale',
 ];
+$emptyStateText = match ($statusFilter) {
+    'new' => 'Zatím tu nejsou žádné nové kontaktní zprávy.',
+    'read' => 'Zatím tu nejsou žádné přečtené kontaktní zprávy.',
+    'handled' => 'Zatím tu nejsou žádné vyřízené kontaktní zprávy.',
+    default => 'Zatím tu nejsou žádné kontaktní zprávy.',
+};
 
 adminHeader('Kontakt');
 ?>
@@ -106,7 +112,7 @@ adminHeader('Kontakt');
 </form>
 
 <?php if (empty($messages)): ?>
-  <p>Zatím tu nejsou žádné kontaktní zprávy.</p>
+  <p><?= h($emptyStateText) ?></p>
 <?php else: ?>
   <form method="post" action="<?= BASE_URL ?>/admin/contact_bulk.php" id="contact-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -183,7 +189,7 @@ adminHeader('Kontakt');
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="read">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn">Přečteno</button>
+                <button type="submit" class="btn">Označit jako přečtené</button>
               </form>
             <?php endif; ?>
             <?php if ($messageStatus !== 'handled'): ?>
@@ -192,7 +198,7 @@ adminHeader('Kontakt');
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="handled">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn">Vyřízeno</button>
+                <button type="submit" class="btn">Označit jako vyřízené</button>
               </form>
             <?php endif; ?>
             <?php if ($messageStatus !== 'new'): ?>

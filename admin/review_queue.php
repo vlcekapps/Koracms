@@ -27,7 +27,7 @@ $summaryByCategory['all'] = array_sum(array_column($summaryItems, 'count'));
 
 $scopeTabs = [
     ['key' => 'all', 'label' => 'Vše', 'count' => $summaryByCategory['all'], 'visible' => true],
-    ['key' => 'content', 'label' => 'Obsah', 'count' => $summaryByCategory['content'], 'visible' => $summaryByCategory['content'] > 0 || currentUserHasCapability('blog_approve') || currentUserHasCapability('news_approve') || currentUserHasCapability('content_approve_shared')],
+    ['key' => 'content', 'label' => 'Obsah webu', 'count' => $summaryByCategory['content'], 'visible' => $summaryByCategory['content'] > 0 || currentUserHasCapability('blog_approve') || currentUserHasCapability('news_approve') || currentUserHasCapability('content_approve_shared')],
     ['key' => 'comments', 'label' => 'Komentáře', 'count' => $summaryByCategory['comments'], 'visible' => isModuleEnabled('blog') && currentUserHasCapability('comments_manage')],
     ['key' => 'reservations', 'label' => 'Rezervace', 'count' => $summaryByCategory['reservations'], 'visible' => isModuleEnabled('reservations') && currentUserHasCapability('bookings_manage')],
 ];
@@ -327,7 +327,7 @@ if (in_array($scope, ['all', 'reservations'], true) && isModuleEnabled('reservat
 adminHeader('Ke schválení');
 ?>
 
-<p>Jednotné místo pro schvalování obsahu, moderaci komentářů a správu čekajících rezervací.</p>
+<p>Na jednom místě najdete obsah, komentáře i rezervace, které čekají na vaši reakci.</p>
 
 <nav aria-label="Filtr fronty ke schválení" class="button-row" style="margin-bottom:1rem">
   <?php foreach ($scopeTabs as $scopeTab): ?>
@@ -343,13 +343,13 @@ adminHeader('Ke schválení');
 
 <?php if ($summaryItems !== []): ?>
 <section aria-labelledby="queue-summary-heading" style="margin-bottom:1.5rem">
-  <h2 id="queue-summary-heading">Souhrn čekajících položek</h2>
+  <h2 id="queue-summary-heading">Rychlý přehled</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem">
     <?php foreach ($summaryItems as $summaryItem): ?>
       <section style="border:1px solid #d6d6d6;border-radius:10px;padding:1rem;background:#fff">
         <h3 style="margin:.1rem 0 .35rem;font-size:1rem"><?= h($summaryItem['label']) ?></h3>
         <p style="margin:.2rem 0 .75rem;font-size:1.8rem;font-weight:700"><?= (int)$summaryItem['count'] ?></p>
-        <p style="margin:0"><a href="<?= h($summaryItem['url']) ?>">Otevřít <span aria-hidden="true">→</span></a></p>
+        <p style="margin:0"><a href="<?= h($summaryItem['url']) ?>">Přejít do seznamu <span aria-hidden="true">→</span></a></p>
       </section>
     <?php endforeach; ?>
   </div>
@@ -369,9 +369,9 @@ adminHeader('Ke schválení');
         <caption>Čekající obsah</caption>
         <thead>
           <tr>
-            <th scope="col">Modul</th>
-            <th scope="col">Položka</th>
-            <th scope="col">Detail</th>
+            <th scope="col">Sekce</th>
+            <th scope="col">Název</th>
+            <th scope="col">Doplňující info</th>
             <th scope="col">Datum</th>
             <th scope="col">Akce</th>
           </tr>
@@ -390,7 +390,7 @@ adminHeader('Ke schválení');
                 <?php endif; ?>
               </td>
               <td class="actions">
-                <a href="<?= h($row['edit_url']) ?>" class="btn">Otevřít</a>
+                <a href="<?= h($row['edit_url']) ?>" class="btn">Upravit</a>
                 <form action="approve.php" method="post" style="display:inline">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="module" value="<?= h($row['approval_module']) ?>">
@@ -398,7 +398,7 @@ adminHeader('Ke schválení');
                   <input type="hidden" name="redirect" value="<?= h($redirectPath) ?>">
                   <button type="submit" class="btn btn-success">Schválit</button>
                 </form>
-                <a href="<?= h($row['manage_url']) ?>">Modul</a>
+                <a href="<?= h($row['manage_url']) ?>">Přejít do správy</a>
               </td>
             </tr>
           <?php endforeach; ?>
@@ -521,7 +521,7 @@ adminHeader('Ke schválení');
 <?php endif; ?>
 
 <?php if (!$hasVisibleRows): ?>
-  <p>Aktuálně tu není nic, co by čekalo na vaše schválení.</p>
+  <p>Zatím tu není nic, co by vyžadovalo vaši akci.</p>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

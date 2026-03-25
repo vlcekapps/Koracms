@@ -77,6 +77,12 @@ $bulkOptions = [
     'handled' => 'Označit jako vyřízené',
     'delete' => 'Smazat trvale',
 ];
+$emptyStateText = match ($statusFilter) {
+    'new' => 'Zatím tu nejsou žádné nové chat zprávy.',
+    'read' => 'Zatím tu nejsou žádné přečtené chat zprávy.',
+    'handled' => 'Zatím tu nejsou žádné vyřízené chat zprávy.',
+    default => 'Zatím tu nejsou žádné chat zprávy.',
+};
 
 adminHeader('Chat');
 ?>
@@ -112,7 +118,7 @@ adminHeader('Chat');
 </form>
 
 <?php if (empty($messages)): ?>
-  <p>Zatím tu nejsou žádné chat zprávy.</p>
+  <p><?= h($emptyStateText) ?></p>
 <?php else: ?>
   <form method="post" action="<?= BASE_URL ?>/admin/chat_bulk.php" id="chat-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -192,7 +198,7 @@ adminHeader('Chat');
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="read">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn">Přečteno</button>
+                <button type="submit" class="btn">Označit jako přečtené</button>
               </form>
             <?php endif; ?>
             <?php if ($messageStatus !== 'handled'): ?>
@@ -201,7 +207,7 @@ adminHeader('Chat');
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="handled">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn">Vyřízeno</button>
+                <button type="submit" class="btn">Označit jako vyřízené</button>
               </form>
             <?php endif; ?>
             <?php if ($messageStatus !== 'new'): ?>
