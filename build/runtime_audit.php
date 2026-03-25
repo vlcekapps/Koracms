@@ -1517,6 +1517,25 @@ foreach ($pages as $page) {
     if ($page['label'] === 'home' && str_contains($result['body'], '/uploads/board/')) {
         $issues[] = 'home board links still expose uploads/board paths';
     }
+    if ($page['label'] === 'home') {
+        $redundantHomeSnippets = [
+            'class="section-kicker">Vítejte</p>' => 'Vítejte',
+            'class="section-title section-title--hero">Úvodní stránka</h2>' => 'Úvodní stránka',
+            'class="section-kicker">Užitečné odkazy</p>' => 'Užitečné odkazy',
+            'class="section-kicker">Doporučujeme</p>' => 'Doporučujeme',
+            'class="section-kicker">Aktuálně</p>' => 'Aktuálně',
+        ];
+        $redundantHomeSnippets = array_filter(
+            $redundantHomeSnippets,
+            static fn(string $label, string $snippet): bool => !str_contains($snippet, 'section-title section-title--hero'),
+            ARRAY_FILTER_USE_BOTH
+        );
+        foreach ($redundantHomeSnippets as $snippet => $label) {
+            if (str_contains($result['body'], $snippet)) {
+                $issues[] = 'home still contains redundant section copy: ' . $label;
+            }
+        }
+    }
     if (
         $page['label'] === 'home'
         && $boardCanonicalPath !== ''
@@ -1556,6 +1575,35 @@ foreach ($pages as $page) {
         }
         if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
             $issues[] = 'places listing is missing address';
+        }
+    }
+
+    if ($page['label'] === 'search') {
+        foreach (['Navigace obsahem', 'Hledání pro „'] as $legacySnippet) {
+            if (str_contains($result['body'], $legacySnippet)) {
+                $issues[] = 'search still contains legacy copy: ' . $legacySnippet;
+            }
+        }
+    }
+
+    if ($page['label'] === 'public_author' && str_contains($result['body'], 'Publikace')) {
+        $issues[] = 'public author page still contains redundant publications kicker';
+    }
+
+    if ($page['label'] === 'podcast_episode') {
+        if (str_contains($result['body'], 'Detail epizody')) {
+            $issues[] = 'podcast episode still uses generic detail heading';
+        }
+        if (str_contains($result['body'], 'class="section-kicker">Obsah</p>')) {
+            $issues[] = 'podcast episode still contains generic content kicker';
+        }
+    }
+
+    if ($page['label'] === 'gallery_album') {
+        foreach (['Struktura', 'Obsah alba'] as $legacySnippet) {
+            if (str_contains($result['body'], $legacySnippet)) {
+                $issues[] = 'gallery album still contains technical section label: ' . $legacySnippet;
+            }
         }
     }
 

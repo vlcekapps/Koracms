@@ -67,7 +67,7 @@ if ($q !== '') {
 $currentRedirect = BASE_URL . '/admin/contact.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
 $bulkOptions = [
     'read' => 'Označit jako přečtené',
-    'new' => 'Vrátit jako nové',
+    'new' => 'Označit jako nové',
     'handled' => 'Označit jako vyřízené',
     'delete' => 'Smazat trvale',
 ];
@@ -106,7 +106,7 @@ adminHeader('Kontakt');
 </form>
 
 <?php if (empty($messages)): ?>
-  <p>V této části teď nejsou žádné kontaktní zprávy.</p>
+  <p>Zatím tu nejsou žádné kontaktní zprávy.</p>
 <?php else: ?>
   <form method="post" action="<?= BASE_URL ?>/admin/contact_bulk.php" id="contact-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -201,7 +201,7 @@ adminHeader('Kontakt');
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="new">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn">Vrátit</button>
+                <button type="submit" class="btn">Označit jako nové</button>
               </form>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline"

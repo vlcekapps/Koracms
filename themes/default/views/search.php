@@ -1,6 +1,5 @@
 <div class="search-shell">
   <section class="surface surface--narrow" aria-labelledby="search-title">
-    <p class="section-kicker">Navigace obsahem</p>
     <h1 id="search-title" class="section-title section-title--hero">Vyhledávání</h1>
     <p class="section-subtitle">Najděte články, novinky, stránky a další obsah napříč celým webem.</p>
 
@@ -20,8 +19,7 @@
     <section class="surface" aria-labelledby="search-results-title">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Výsledky</p>
-          <h2 id="search-results-title" class="section-title">Hledání pro „<?= h($q) ?>“</h2>
+          <h2 id="search-results-title" class="section-title">Výsledky pro „<?= h($q) ?>“</h2>
         </div>
       </div>
 

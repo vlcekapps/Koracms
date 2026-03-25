@@ -43,7 +43,6 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
     <section class="surface" aria-labelledby="author-articles-title">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Publikace</p>
           <h2 id="author-articles-title" class="section-title">Články autora</h2>
         </div>
       </div>
@@ -78,7 +77,7 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
                 <?php if (!empty($article['perex'])): ?>
                   <p><?= h($article['perex']) ?></p>
                 <?php endif; ?>
-                <p><a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a></p>
+                <p><a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a></p>
               </div>
             </article>
           <?php endforeach; ?>

@@ -25,7 +25,7 @@ $eventLocation = trim((string)($event['location'] ?? ''));
     <div class="split-grid">
       <section class="card" aria-labelledby="udalost-prehled">
         <div class="card__body">
-          <h2 id="udalost-prehled" class="card__title">Přehled</h2>
+          <h2 id="udalost-prehled" class="card__title">Praktické informace</h2>
           <p><strong>Začátek:</strong> <time datetime="<?= h(str_replace(' ', 'T', $eventStart)) ?>"><?= formatCzechDate($eventStart) ?></time></p>
           <?php if ($eventEnd !== ''): ?>
             <p><strong>Konec:</strong> <time datetime="<?= h(str_replace(' ', 'T', $eventEnd)) ?>"><?= formatCzechDate($eventEnd) ?></time></p>

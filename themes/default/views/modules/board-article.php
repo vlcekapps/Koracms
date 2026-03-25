@@ -40,7 +40,7 @@ $leadText = normalizePlainText((string)($document['excerpt'] ?? ''));
     <div class="split-grid">
       <section class="card" aria-labelledby="dokument-prehled">
         <div class="card__body">
-          <h2 id="dokument-prehled" class="card__title">Přehled</h2>
+          <h2 id="dokument-prehled" class="card__title">Důležité informace</h2>
           <p><strong>Typ:</strong> <?= h((string)($document['board_type_label'] ?? 'Položka')) ?></p>
           <p><strong>Vyvěšeno:</strong> <time datetime="<?= h($documentPostedDate) ?>"><?= formatCzechDate($documentPostedDate) ?></time></p>
           <?php if ($documentRemovalDate !== ''): ?>

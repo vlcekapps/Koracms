@@ -55,8 +55,7 @@
   <section class="surface" aria-labelledby="podcast-episode-detail">
     <div class="section-heading">
       <div>
-        <p class="section-kicker">Obsah</p>
-        <h2 id="podcast-episode-detail" class="section-title">Detail epizody</h2>
+        <h2 id="podcast-episode-detail" class="section-title">Popis epizody</h2>
       </div>
     </div>
 

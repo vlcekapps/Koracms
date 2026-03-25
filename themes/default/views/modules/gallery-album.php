@@ -27,7 +27,6 @@
     <section class="surface" aria-labelledby="gallery-subalbums-title">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Struktura</p>
           <h2 id="gallery-subalbums-title" class="section-title">Podsložky</h2>
         </div>
       </div>
@@ -64,7 +63,6 @@
     <section class="surface" aria-labelledby="gallery-photos-title">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Obsah alba</p>
           <h2 id="gallery-photos-title" class="section-title">Fotografie</h2>
         </div>
       </div>

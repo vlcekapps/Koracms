@@ -17,7 +17,6 @@ $renderAuthorName = static function (array $item): string {
   <section class="surface" aria-labelledby="news-title">
     <div class="section-heading">
       <div>
-        <p class="section-kicker">Aktuálně</p>
         <h1 id="news-title" class="section-title section-title--hero">Novinky</h1>
       </div>
     </div>
@@ -40,7 +39,7 @@ $renderAuthorName = static function (array $item): string {
             <?php if (!empty($item['excerpt'])): ?>
               <p><?= h((string)$item['excerpt']) ?></p>
             <?php endif; ?>
-            <p><a class="section-link" href="<?= h($newsLink($item)) ?>">Číst dále <span aria-hidden="true">→</span></a></p>
+            <p><a class="section-link" href="<?= h($newsLink($item)) ?>">Zobrazit novinku <span aria-hidden="true">→</span></a></p>
           </article>
         <?php endforeach; ?>
       </div>

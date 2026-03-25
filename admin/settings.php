@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedSiteProfile = $siteProfile;
 
     if ($siteName === '') $errors[] = 'Název webu je povinný.';
-    if (mb_strlen($boardPublicLabel, 'UTF-8') > 60) $errors[] = 'Veřejný název modulu musí mít nejvýše 60 znaků.';
+    if (mb_strlen($boardPublicLabel, 'UTF-8') > 60) $errors[] = 'Název sekce pro návštěvníky musí mít nejvýše 60 znaků.';
     if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
 
@@ -196,11 +196,11 @@ adminHeader('Základní nastavení');
     <input type="email" id="contact_email" name="contact_email"
            value="<?= h(getSetting('contact_email')) ?>">
 
-    <label for="board_public_label">Veřejný název modulu Úřední deska / Vývěska</label>
+    <label for="board_public_label">Název sekce pro návštěvníky</label>
     <input type="text" id="board_public_label" name="board_public_label" maxlength="60"
            aria-describedby="board-public-label-help"
            value="<?= h($boardPublicLabel) ?>">
-    <small id="board-public-label-help" class="field-help">Používá se ve veřejné navigaci, na výpisu modulu a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
+    <small id="board-public-label-help" class="field-help">Používá se ve veřejné navigaci, na výpisu sekce a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
   </fieldset>
 
   <fieldset>
@@ -225,17 +225,17 @@ adminHeader('Základní nastavení');
   </fieldset>
 
   <fieldset>
-    <legend>Počty položek na hlavní stránce</legend>
-    <p style="margin-top:.25rem;font-size:.9rem;color:#555">Hodnota 0 znamená, že se sekce na hlavní stránce nezobrazí.</p>
-    <label for="home_blog_count">Počet článků blogu na HP</label>
+    <legend>Počty položek na domovské stránce</legend>
+    <p style="margin-top:.25rem;font-size:.9rem;color:#555">Hodnota 0 znamená, že se sekce na domovské stránce nezobrazí.</p>
+    <label for="home_blog_count">Počet článků na domovské stránce</label>
     <input type="number" id="home_blog_count" name="home_blog_count" min="0" max="50"
            value="<?= h(getSetting('home_blog_count', '5')) ?>">
 
-    <label for="home_news_count">Počet novinek na HP</label>
+    <label for="home_news_count">Počet novinek na domovské stránce</label>
     <input type="number" id="home_news_count" name="home_news_count" min="0" max="50"
            value="<?= h(getSetting('home_news_count', '5')) ?>">
 
-    <label for="home_board_count">Počet dokumentů úřední desky na HP</label>
+    <label for="home_board_count">Počet položek sekce <?= h($boardPublicLabel) ?> na domovské stránce</label>
     <input type="number" id="home_board_count" name="home_board_count" min="0" max="50"
            value="<?= h(getSetting('home_board_count', '5')) ?>">
   </fieldset>

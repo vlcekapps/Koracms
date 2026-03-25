@@ -347,6 +347,9 @@ if ($canManageImportExport) {
 if (isSuperAdmin()) {
     $quickLinks[] = ['url' => 'themes.php', 'label' => 'Vzhled a šablony'];
 }
+if (count($quickLinks) > 6) {
+    $quickLinks = array_slice($quickLinks, 0, 6);
+}
 
 $visitorStats = null;
 $chartData = [];
@@ -390,14 +393,6 @@ adminHeader('Přehled');
   Jste přihlášen jako <strong><?= h($accountName) ?></strong>.
   Role tohoto účtu: <strong><?= h($accountLabel) ?></strong>.
 </p>
-
-<?php if (!empty($quickLinks)): ?>
-<nav aria-label="Rychlé odkazy" class="button-row" style="margin-bottom:1rem">
-  <?php foreach ($quickLinks as $link): ?>
-    <a href="<?= h($link['url']) ?>" class="btn"><?= h($link['label']) ?></a>
-  <?php endforeach; ?>
-</nav>
-<?php endif; ?>
 
 <?php if ($visitorStats !== null): ?>
 <section aria-labelledby="stats-heading" style="margin-bottom:1.5rem">
@@ -453,6 +448,17 @@ adminHeader('Přehled');
 </section>
 <?php endif; ?>
 
+<?php if (!empty($quickLinks)): ?>
+<section aria-labelledby="quick-links-heading" style="margin-bottom:1.5rem">
+  <h2 id="quick-links-heading">Nejčastější akce</h2>
+  <nav aria-label="Nejčastější akce" class="button-row">
+    <?php foreach ($quickLinks as $link): ?>
+      <a href="<?= h($link['url']) ?>" class="btn"><?= h($link['label']) ?></a>
+    <?php endforeach; ?>
+  </nav>
+</section>
+<?php endif; ?>
+
 <?php if ($contentSummaries !== []): ?>
 <section aria-labelledby="content-summary-heading" style="margin:1.5rem 0">
   <h2 id="content-summary-heading">Vaše práce s obsahem</h2>
@@ -476,8 +482,10 @@ adminHeader('Přehled');
 <?php endif; ?>
 
 <?php if ($overviewRows !== []): ?>
+<section aria-labelledby="overview-heading" style="margin-top:1.5rem">
+<h2 id="overview-heading">Co můžete spravovat</h2>
 <table>
-  <caption>Přístupné sekce administrace</caption>
+  <caption>Sekce, které můžete spravovat</caption>
   <thead>
     <tr>
       <th scope="col">Sekce</th>
@@ -495,6 +503,7 @@ adminHeader('Přehled');
     <?php endforeach; ?>
   </tbody>
 </table>
+</section>
 <?php else: ?>
   <p>Pro tento účet zatím není přidělená žádná sekce administrace.</p>
 <?php endif; ?>

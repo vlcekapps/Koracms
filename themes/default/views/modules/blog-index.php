@@ -82,7 +82,7 @@ $renderAuthorName = static function (array $article): string {
                 <?php endif; ?>
               </p>
               <p>
-                <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a>
+                <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a>
                 <?php if (isset($_SESSION['cms_user_id'])): ?>
                   · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                 <?php endif; ?>

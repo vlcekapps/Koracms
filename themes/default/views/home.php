@@ -133,33 +133,7 @@ if (isPublicUser()) {
 
 $showCta = $ctaVisibility === 'show' && !empty($ctaActions);
 
-$heroStats = [];
-if (!empty($latestArticles)) {
-    $heroStats[] = [
-        'value' => count($latestArticles),
-        'label' => 'článků v přehledu',
-    ];
-}
-if (!empty($latestNews)) {
-    $heroStats[] = [
-        'value' => count($latestNews),
-        'label' => 'novinek na úvodní stránce',
-    ];
-}
-if (!empty($latestBoard)) {
-    $heroStats[] = [
-        'value' => count($latestBoard),
-        'label' => 'dokumentů na desce',
-    ];
-}
-if ($pollAvailable) {
-    $heroStats[] = [
-        'value' => (int)$homePoll['vote_count'],
-        'label' => 'hlasů v aktuální anketě',
-    ];
-}
-
-$renderIntroSection = static function () use ($showHero, $homeIntro, $heroStats, $homeLayout): string {
+$renderIntroSection = static function () use ($showHero, $homeIntro, $homeLayout): string {
     if (!$showHero) {
         return '';
     }
@@ -179,23 +153,11 @@ $renderIntroSection = static function () use ($showHero, $homeIntro, $heroStats,
     <section class="<?= h(implode(' ', $sectionClasses)) ?>" data-home-section="hero" aria-labelledby="uvod-nadpis">
       <div class="home-hero__meta">
         <div>
-          <p class="section-kicker">Vítejte</p>
           <h2 id="uvod-nadpis" class="section-title section-title--hero">Úvodní stránka</h2>
           <div class="prose">
             <?= renderContent($homeIntro) ?>
           </div>
         </div>
-
-        <?php if ($homeLayout === 'editorial' && !empty($heroStats)): ?>
-          <ul class="hero-stats" aria-label="Rychlý přehled obsahu">
-            <?php foreach ($heroStats as $stat): ?>
-              <li class="hero-stats__item">
-                <strong class="hero-stats__value"><?= h((string)$stat['value']) ?></strong>
-                <span class="hero-stats__label"><?= h($stat['label']) ?></span>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-        <?php endif; ?>
       </div>
     </section>
     <?php
@@ -221,7 +183,6 @@ $renderNewsSection = static function (array $items, bool $compactCards = false) 
     <section class="surface home-section home-section--news" data-home-section="news" aria-labelledby="novinky-nadpis">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Přehled</p>
           <h2 id="novinky-nadpis" class="section-title">Novinky</h2>
         </div>
         <a class="section-link" href="<?= BASE_URL ?>/news/index.php">Všechny novinky <span aria-hidden="true">→</span></a>
@@ -242,7 +203,7 @@ $renderNewsSection = static function (array $items, bool $compactCards = false) 
               <?php if (!empty($item['excerpt'])): ?>
                 <p><?= h((string)$item['excerpt']) ?></p>
               <?php endif; ?>
-              <p><a class="section-link" href="<?= h($newsLink($item)) ?>">Číst dále <span aria-hidden="true">→</span></a></p>
+              <p><a class="section-link" href="<?= h($newsLink($item)) ?>">Zobrazit novinku <span aria-hidden="true">→</span></a></p>
             </div>
           </article>
         <?php endforeach; ?>
@@ -290,18 +251,21 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
               </a>
             <?php endif; ?>
             <div class="card__body">
-              <p class="section-kicker">Doporučený článek</p>
               <h3 class="card__title card__title--feature">
                 <a href="<?= h($articleLink($leadArticle)) ?>"><?= h($leadArticle['title']) ?></a>
               </h3>
               <p class="meta-row meta-row--tight">
+                <time datetime="<?= h(str_replace(' ', 'T', (string)$leadArticle['created_at'])) ?>"><?= formatCzechDate((string)$leadArticle['created_at']) ?></time>
                 <span><?= readingTime(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? '')) ?> min čtení</span>
+                <?php if (!empty($leadArticle['author_name'])): ?>
+                  <?= $renderAuthorName($leadArticle) ?>
+                <?php endif; ?>
               </p>
               <?php if (!empty($leadArticle['perex'])): ?>
                 <p><?= h($leadArticle['perex']) ?></p>
               <?php endif; ?>
               <p>
-                <a class="section-link" href="<?= h($articleLink($leadArticle)) ?>">Číst dále <span aria-hidden="true">→</span></a>
+                <a class="section-link" href="<?= h($articleLink($leadArticle)) ?>">Číst článek <span aria-hidden="true">→</span></a>
                 <?php if (isset($_SESSION['cms_user_id'])): ?>
                   · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$leadArticle['id'] ?>">Upravit</a>
                 <?php endif; ?>
@@ -319,23 +283,21 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                   </a>
                 <?php endif; ?>
                 <div class="card__body">
+                  <h3 class="card__title">
+                    <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
+                  </h3>
                   <p class="meta-row meta-row--tight">
-                    <?php if (!empty($article['category'])): ?>
-                      <span class="pill"><?= h($article['category']) ?></span>
-                    <?php endif; ?>
+                    <time datetime="<?= h(str_replace(' ', 'T', (string)$article['created_at'])) ?>"><?= formatCzechDate((string)$article['created_at']) ?></time>
                     <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
                     <?php if (!empty($article['author_name'])): ?>
                       <?= $renderAuthorName($article) ?>
                     <?php endif; ?>
                   </p>
-                  <h3 class="card__title">
-                    <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
-                  </h3>
                   <?php if (!empty($article['perex'])): ?>
                     <p><?= h($article['perex']) ?></p>
                   <?php endif; ?>
                   <p>
-                    <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a>
+                    <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a>
                     <?php if (isset($_SESSION['cms_user_id'])): ?>
                       · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                     <?php endif; ?>
@@ -354,25 +316,23 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                   <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
                        alt="<?= h($article['title']) ?>" loading="lazy">
                 </a>
-              <?php endif; ?>
+                <?php endif; ?>
               <div class="card__body">
+                <h3 class="card__title">
+                  <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
+                </h3>
                 <p class="meta-row meta-row--tight">
-                  <?php if (!empty($article['category'])): ?>
-                    <span class="pill"><?= h($article['category']) ?></span>
-                  <?php endif; ?>
+                  <time datetime="<?= h(str_replace(' ', 'T', (string)$article['created_at'])) ?>"><?= formatCzechDate((string)$article['created_at']) ?></time>
                   <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
                   <?php if (!empty($article['author_name'])): ?>
                     <?= $renderAuthorName($article) ?>
                   <?php endif; ?>
                 </p>
-                <h3 class="card__title">
-                  <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
-                </h3>
                 <?php if (!empty($article['perex'])): ?>
                   <p><?= h($article['perex']) ?></p>
                 <?php endif; ?>
                 <p>
-                  <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst dále <span aria-hidden="true">→</span></a>
+                  <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a>
                   <?php if (isset($_SESSION['cms_user_id'])): ?>
                     · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                   <?php endif; ?>
@@ -470,7 +430,6 @@ $renderPollSection = static function () use ($showPoll, $homePoll): string {
     ob_start();
     ?>
     <section class="surface surface--accent home-section home-section--poll" data-home-section="poll" aria-labelledby="anketa-nadpis">
-      <p class="section-kicker">Zapojte se</p>
       <h2 id="anketa-nadpis" class="section-title">Anketa</h2>
       <p><strong><?= h($homePoll['question']) ?></strong></p>
       <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
@@ -517,8 +476,7 @@ $renderCtaSection = static function () use ($showCta, $ctaActions): string {
     <section class="surface home-section home-section--cta" data-home-section="cta" aria-labelledby="cta-nadpis">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Užitečné odkazy</p>
-          <h2 id="cta-nadpis" class="section-title">Rychlý přístup</h2>
+          <h2 id="cta-nadpis" class="section-title">Kam dál na webu</h2>
           <p class="section-subtitle">Vyberte si, kam chcete pokračovat.</p>
         </div>
       </div>
@@ -560,7 +518,6 @@ $renderFeaturedSection = static function () use (
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="blog" aria-labelledby="featured-nadpis">
               <div class="section-heading">
                 <div>
-                  <p class="section-kicker">Doporučujeme</p>
                   <h2 id="featured-nadpis" class="section-title">Doporučený článek</h2>
                 </div>
               </div>
@@ -596,10 +553,8 @@ $renderFeaturedSection = static function () use (
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="news" aria-labelledby="featured-nadpis">
               <div class="section-heading">
                 <div>
-                  <p class="section-kicker">Aktuálně</p>
                   <h2 id="featured-nadpis" class="section-title">Zvýrazněná novinka</h2>
                 </div>
-                <a class="section-link" href="<?= BASE_URL ?>/news/index.php">Přejít na novinky <span aria-hidden="true">→</span></a>
               </div>
               <article class="card card--highlighted">
                 <div class="card__body">
@@ -695,7 +650,6 @@ $renderFeaturedSection = static function () use (
             }
             ?>
             <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="poll" aria-labelledby="featured-nadpis">
-              <p class="section-kicker">Zapojte se</p>
               <h2 id="featured-nadpis" class="section-title">Aktuální anketa</h2>
               <p><strong><?= h($homePoll['question']) ?></strong></p>
               <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
@@ -827,7 +781,7 @@ $pageStackClasses = ['page-stack', 'page-stack--home', 'page-stack--home-' . $ho
   <?php if (!$hasAnyContent): ?>
     <section class="surface empty-state" aria-labelledby="obsah-priprava">
       <h2 id="obsah-priprava" class="section-title">Obsah se připravuje</h2>
-      <p>Úvodní stránka je připravena pro první obsahové bloky a modulové sekce.</p>
+      <p>Domovská stránka je připravena pro první obsahové bloky a modulové sekce.</p>
     </section>
   <?php endif; ?>
 </div>
