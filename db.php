@@ -1187,6 +1187,11 @@ function readingTime(string $text): int
     return max(1, (int)round($words / 200));
 }
 
+function articleReadingMeta(string $text, int $viewCount): string
+{
+    return readingTime($text) . ' min čtení, přečteno ' . max(0, $viewCount) . ' krát';
+}
+
 // ─────────────────────────────── Statické stránky ────────────────────────
 
 /**

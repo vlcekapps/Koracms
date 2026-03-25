@@ -33,7 +33,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
           <?php if (!empty($article['author_name'])): ?>
             <?= $renderAuthorName($article) ?>
           <?php endif; ?>
-          <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+          <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
         </p>
       </div>
     </header>

@@ -67,7 +67,7 @@ $renderAuthorName = static function (array $article): string {
                 <?php if (!empty($article['category'])): ?>
                   <a class="pill" href="<?= BASE_URL ?>/blog/index.php?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
                 <?php endif; ?>
-                <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+                <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
               </p>
               <h2 class="card__title">
                 <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>

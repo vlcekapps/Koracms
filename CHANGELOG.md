@@ -9,6 +9,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Změněno
 - Domovská stránka nyní u blogu přesně respektuje nastavený počet článků v běžném výpisu; `Doporučený článek` se vybírá samostatně podle počtu zobrazení a už neubírá položku z blogové sekce
 - Homepage composer už nenabízí `Novinky` jako zdroj pro zvýrazněný blok; blog zůstává obsahovým featured zdrojem a civic preset nově používá jako výchozí zvýraznění `Úřední desku`
+- Blogové karty, detail článku i stránka autora nyní u článků zobrazují sjednocený údaj `min čtení, přečteno X krát`, takže je vedle odhadované doby čtení vidět i skutečný počet zobrazení článku
 
 ## [3.0.0-beta.3] – 2026-03-26
 

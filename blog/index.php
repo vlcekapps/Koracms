@@ -50,6 +50,7 @@ $offset = ($page - 1) * $perPage;
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.category_id, c.name AS category,
+            a.view_count,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
             u.author_public_enabled, u.author_slug, u.role AS author_role
      FROM cms_articles a

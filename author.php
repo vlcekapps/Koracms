@@ -29,7 +29,7 @@ if (!$author) {
 $articles = [];
 if (isModuleEnabled('blog')) {
     $stmt = $pdo->prepare(
-        "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.publish_at,
+        "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.publish_at, a.view_count,
                 a.category_id, c.name AS category
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id

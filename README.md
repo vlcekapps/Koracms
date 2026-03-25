@@ -113,7 +113,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 
 | Modul | Popis |
 |---|---|
-| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování |
+| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení a počet přečtení |
 | **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
 | **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem, detailovým pohledem na zprávu a interními stavy `nová`, `přečtená`, `vyřízená` |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou, rate limitingem a moderátorským inboxem pro příchozí zprávy |
@@ -144,6 +144,7 @@ Na hlavní stránce se zobrazují widgety zapnutých modulů:
 - **Úřední deska / Vývěska / Oznámení** – nejnovější aktuální položky; počet položek lze nastavit; hodnota 0 widget skryje
 - **Aktuální anketa** – pokud je modul Ankety zapnutý a existuje aktivní anketa
 - **Doporučený článek** – volitelný zvýrazněný blok na domovské stránce; pokud je jako zdroj zvolen blog, použije se nejčtenější publikovaný článek podle počtu zobrazení
+- **Metadata článků** – blogové výpisy, detail článku i stránka autora ukazují odhad doby čtení a počet přečtení článku ve formátu `7 min čtení, přečteno 22 krát`
 
 ---
 

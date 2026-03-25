@@ -267,7 +267,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
               </h3>
               <p class="meta-row meta-row--tight">
                 <time datetime="<?= h(str_replace(' ', 'T', (string)$leadArticle['created_at'])) ?>"><?= formatCzechDate((string)$leadArticle['created_at']) ?></time>
-                <span><?= readingTime(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? '')) ?> min čtení</span>
+                <span><?= h(articleReadingMeta(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? ''), (int)($leadArticle['view_count'] ?? 0))) ?></span>
                 <?php if (!empty($leadArticle['author_name'])): ?>
                   <?= $renderAuthorName($leadArticle) ?>
                 <?php endif; ?>
@@ -299,7 +299,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                   </h3>
                   <p class="meta-row meta-row--tight">
                     <time datetime="<?= h(str_replace(' ', 'T', (string)$article['created_at'])) ?>"><?= formatCzechDate((string)$article['created_at']) ?></time>
-                    <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+                    <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
                     <?php if (!empty($article['author_name'])): ?>
                       <?= $renderAuthorName($article) ?>
                     <?php endif; ?>
@@ -334,7 +334,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                 </h3>
                 <p class="meta-row meta-row--tight">
                   <time datetime="<?= h(str_replace(' ', 'T', (string)$article['created_at'])) ?>"><?= formatCzechDate((string)$article['created_at']) ?></time>
-                  <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+                  <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
                   <?php if (!empty($article['author_name'])): ?>
                     <?= $renderAuthorName($article) ?>
                   <?php endif; ?>
@@ -543,7 +543,7 @@ $renderFeaturedSection = static function () use (
                     <a href="<?= h($articleLink($featuredArticle)) ?>"><?= h($featuredArticle['title']) ?></a>
                   </h3>
                   <p class="meta-row meta-row--tight">
-                    <span><?= readingTime(($featuredArticle['perex'] ?? '') . ($featuredArticle['content'] ?? '')) ?> min čtení</span>
+                  <span><?= h(articleReadingMeta(($featuredArticle['perex'] ?? '') . ($featuredArticle['content'] ?? ''), (int)($featuredArticle['view_count'] ?? 0))) ?></span>
                   </p>
                   <?php if (!empty($featuredArticle['perex'])): ?>
                     <p><?= h($featuredArticle['perex']) ?></p>

@@ -72,7 +72,7 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
                   <time datetime="<?= h(str_replace(' ', 'T', $article['publish_at'] ?: $article['created_at'])) ?>">
                     <?= formatCzechDate($article['publish_at'] ?: $article['created_at']) ?>
                   </time>
-                  <span><?= readingTime(($article['perex'] ?? '') . ($article['content'] ?? '')) ?> min čtení</span>
+                  <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
                 </p>
                 <?php if (!empty($article['perex'])): ?>
                   <p><?= h($article['perex']) ?></p>

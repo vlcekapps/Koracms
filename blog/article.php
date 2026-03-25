@@ -85,6 +85,7 @@ if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
     trackPageView('article', (int)$article['id']);
     try {
         $pdo->prepare("UPDATE cms_articles SET view_count = view_count + 1 WHERE id = ?")->execute([$articleId]);
+        $article['view_count'] = (int)($article['view_count'] ?? 0) + 1;
     } catch (\PDOException $e) {
         error_log('article view_count: ' . $e->getMessage());
     }
