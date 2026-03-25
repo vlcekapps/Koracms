@@ -8,8 +8,8 @@
         </div>
       </div>
 
-      <?php if (!empty($poll['description'])): ?>
-        <p class="section-subtitle"><?= h($poll['description']) ?></p>
+      <?php if (!empty($poll['excerpt'])): ?>
+        <p class="section-subtitle"><?= h((string)$poll['excerpt']) ?></p>
       <?php endif; ?>
 
       <?php if ($voted): ?>
@@ -25,7 +25,7 @@
       <?php endif; ?>
 
       <?php if ($showForm): ?>
-        <form method="post" action="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$poll['id'] ?>" class="form-stack poll-vote-form" novalidate>
+        <form method="post" action="<?= h((string)$poll['public_path']) ?>" class="form-stack poll-vote-form" novalidate>
           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
           <?= honeypotField() ?>
 
@@ -109,10 +109,11 @@
             <article class="card poll-card">
               <div class="card__body">
                 <h2 class="card__title">
-                  <a href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$listPoll['id'] ?>"><?= h($listPoll['question']) ?></a>
+                  <a href="<?= h((string)$listPoll['public_path']) ?>"><?= h($listPoll['question']) ?></a>
                 </h2>
 
                 <p class="meta-row meta-row--tight">
+                  <span><?= h((string)($listPoll['state_label'] ?? 'Anketa')) ?></span>
                   <span><?= (int)$listPoll['vote_count'] ?> hlasů</span>
                   <time datetime="<?= h(str_replace(' ', 'T', $listPoll['created_at'])) ?>"><?= formatCzechDate($listPoll['created_at']) ?></time>
                   <?php if (!empty($listPoll['end_date'])): ?>
@@ -120,15 +121,15 @@
                   <?php endif; ?>
                 </p>
 
-                <?php if (!empty($listPoll['description'])): ?>
-                  <p><?= h($listPoll['description']) ?></p>
+                <?php if (!empty($listPoll['excerpt'])): ?>
+                  <p><?= h((string)$listPoll['excerpt']) ?></p>
                 <?php endif; ?>
 
                 <div class="button-row button-row--start">
-                  <?php if (!empty($listPoll['has_voted']) || $archiv): ?>
-                    <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$listPoll['id'] ?>">Zobrazit výsledky</a>
+                  <?php if (!empty($listPoll['has_voted']) || $archiv || ($listPoll['state'] ?? '') !== 'active'): ?>
+                    <a class="button-secondary" href="<?= h((string)$listPoll['public_path']) ?>">Zobrazit výsledky</a>
                   <?php else: ?>
-                    <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$listPoll['id'] ?>">Hlasovat</a>
+                    <a class="button-secondary" href="<?= h((string)$listPoll['public_path']) ?>">Hlasovat</a>
                   <?php endif; ?>
                 </div>
               </div>

@@ -1063,6 +1063,11 @@ function boardSlug(string $value): string
     return slugify(trim($value));
 }
 
+function pollSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function faqSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1129,6 +1134,16 @@ function boardExcerpt(array $document, int $limit = 220): string
     }
 
     $descriptionExcerpt = normalizePlainText((string)($document['description'] ?? ''));
+    if ($descriptionExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function pollExcerpt(array $poll, int $limit = 220): string
+{
+    $descriptionExcerpt = normalizePlainText((string)($poll['description'] ?? ''));
     if ($descriptionExcerpt === '') {
         return '';
     }
@@ -1984,6 +1999,26 @@ function faqPublicUrl(array $faq, array $query = []): string
     return siteUrl(appendUrlQuery(faqPublicRequestPath($faq), $query));
 }
 
+function pollPublicRequestPath(array $poll): string
+{
+    $slug = pollSlug((string)($poll['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/polls/' . rawurlencode($slug);
+    }
+
+    return '/polls/index.php?id=' . (int)($poll['id'] ?? 0);
+}
+
+function pollPublicPath(array $poll, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(pollPublicRequestPath($poll), $query);
+}
+
+function pollPublicUrl(array $poll, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(pollPublicRequestPath($poll), $query));
+}
+
 function newsPublicPath(array $news, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(newsPublicRequestPath($news), $query);
@@ -2242,6 +2277,27 @@ function uniqueFaqSlug(PDO $pdo, string $candidate, ?int $excludeId = null): str
     }
 }
 
+function uniquePollSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = pollSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'anketa';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_polls WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
 function uniqueNewsSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = newsSlug($candidate);
@@ -2437,6 +2493,35 @@ function hydrateFaqPresentation(array $faq): array
     $faq['status'] = (string)($faq['status'] ?? ((int)($faq['is_published'] ?? 1) === 1 ? 'published' : 'pending'));
     $faq['is_publicly_visible'] = $faq['status'] === 'published' && (int)($faq['is_published'] ?? 1) === 1;
     return $faq;
+}
+
+function hydratePollPresentation(array $poll): array
+{
+    $poll['question'] = trim((string)($poll['question'] ?? ''));
+    $poll['slug'] = pollSlug((string)($poll['slug'] ?? ''));
+    $poll['excerpt'] = pollExcerpt($poll);
+    $poll['public_path'] = pollPublicPath($poll);
+    $poll['public_url'] = pollPublicUrl($poll);
+
+    $status = (string)($poll['status'] ?? 'active');
+    $nowTimestamp = time();
+    $startAt = trim((string)($poll['start_date'] ?? ''));
+    $endAt = trim((string)($poll['end_date'] ?? ''));
+    $startTimestamp = $startAt !== '' ? strtotime($startAt) : false;
+    $endTimestamp = $endAt !== '' ? strtotime($endAt) : false;
+
+    if ($status === 'closed' || ($endTimestamp !== false && $endTimestamp <= $nowTimestamp)) {
+        $poll['state'] = 'closed';
+        $poll['state_label'] = 'Uzavřená';
+    } elseif ($startTimestamp !== false && $startTimestamp > $nowTimestamp) {
+        $poll['state'] = 'scheduled';
+        $poll['state_label'] = 'Naplánovaná';
+    } else {
+        $poll['state'] = 'active';
+        $poll['state_label'] = 'Aktivní';
+    }
+
+    return $poll;
 }
 
 function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array

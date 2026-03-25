@@ -20,6 +20,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_faq' => getSetting('module_faq', '0'),
     'module_podcast' => getSetting('module_podcast', '0'),
     'module_places' => getSetting('module_places', '0'),
+    'module_polls' => getSetting('module_polls', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
 ];
 foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
@@ -86,6 +87,12 @@ $placeCanonicalPath = '';
 $placeLegacyPath = '';
 $placeCanonicalUrl = '';
 $placeLegacyUrl = '';
+$pollRow = null;
+$pollId = false;
+$pollCanonicalPath = '';
+$pollLegacyPath = '';
+$pollCanonicalUrl = '';
+$pollLegacyUrl = '';
 $activePollCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_polls
      WHERE status = 'active'
@@ -116,9 +123,7 @@ $galleryAlbumId = $pdo->query(
 $galleryPhotoId = $pdo->query(
     "SELECT id FROM cms_gallery_photos ORDER BY id LIMIT 1"
 )->fetchColumn();
-$pollDetailId = $pdo->query(
-    "SELECT id FROM cms_polls ORDER BY created_at DESC, id DESC LIMIT 1"
-)->fetchColumn();
+$pollDetailId = false;
 $resourceRow = $pdo->query(
     "SELECT id, slug, max_advance_days FROM cms_res_resources WHERE is_active = 1 ORDER BY id LIMIT 1"
 )->fetch();
@@ -170,6 +175,7 @@ $cleanup = [
     'download_files' => [],
     'faq_ids' => [],
     'place_ids' => [],
+    'poll_ids' => [],
     'podcast_show_ids' => [],
     'podcast_episode_ids' => [],
 ];
@@ -536,6 +542,56 @@ if (isModuleEnabled('places')) {
     }
 }
 
+if (isModuleEnabled('polls')) {
+    $runtimeAuditPollQuestion = 'Runtime audit anketa';
+    $runtimeAuditPollSlug = uniquePollSlug($pdo, 'runtime-audit-anketa-' . bin2hex(random_bytes(4)));
+    $runtimeAuditPollStartAt = date('Y-m-d H:i:s', time() - 3600);
+    $runtimeAuditPollEndAt = date('Y-m-d H:i:s', time() + (14 * 86400));
+    $pdo->prepare(
+        "INSERT INTO cms_polls (question, slug, description, status, start_date, end_date, created_at, updated_at)
+         VALUES (?, ?, ?, 'active', ?, ?, NOW(), NOW())"
+    )->execute([
+        $runtimeAuditPollQuestion,
+        $runtimeAuditPollSlug,
+        'Krátké shrnutí testovací ankety pro ověření detailu, hlasování a čistých URL.',
+        $runtimeAuditPollStartAt,
+        $runtimeAuditPollEndAt,
+    ]);
+    $runtimeAuditPollId = (int)$pdo->lastInsertId();
+    $cleanup['poll_ids'][] = $runtimeAuditPollId;
+
+    $pollOptionStmt = $pdo->prepare(
+        "INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)"
+    );
+    foreach (['Ano', 'Ne', 'Ještě nevím'] as $pollOptionIndex => $pollOptionText) {
+        $pollOptionStmt->execute([$runtimeAuditPollId, $pollOptionText, $pollOptionIndex]);
+    }
+
+    $pollStmt = $pdo->prepare(
+        "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
+         FROM cms_polls p
+         WHERE p.id = ?"
+    );
+    $pollStmt->execute([$runtimeAuditPollId]);
+    $pollRow = $pollStmt->fetch() ?: null;
+    if ($pollRow) {
+        $pollRow = hydratePollPresentation($pollRow);
+        $pollId = $pollRow['id'] ?? false;
+        $pollCanonicalPath = pollPublicPath($pollRow);
+        $pollLegacyPath = $pollId !== false ? BASE_URL . '/polls/index.php?id=' . urlencode((string)$pollId) : '';
+        $pollCanonicalUrl = $pollCanonicalPath !== '' ? $baseUrl . $pollCanonicalPath : '';
+        $pollLegacyUrl = $pollLegacyPath !== '' ? $baseUrl . $pollLegacyPath : '';
+        $pollDetailId = $pollId;
+    }
+
+    $activePollCount = (int)$pdo->query(
+        "SELECT COUNT(*) FROM cms_polls
+         WHERE status = 'active'
+           AND (start_date IS NULL OR start_date <= NOW())
+           AND (end_date IS NULL OR end_date > NOW())"
+    )->fetchColumn();
+}
+
 if (isModuleEnabled('podcast')) {
     $runtimeAuditPodcastShowTitle = 'Runtime audit podcast';
     $runtimeAuditPodcastShowSlug = uniquePodcastShowSlug($pdo, 'runtime-audit-podcast-' . bin2hex(random_bytes(4)));
@@ -625,6 +681,7 @@ $pages = [
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_downloads', 'url' => $baseUrl . '/admin/downloads.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_polls', 'url' => $baseUrl . '/admin/polls.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_places', 'url' => $baseUrl . '/admin/places.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -647,6 +704,9 @@ if ($faqId !== false) {
 }
 if ($placeId !== false) {
     $pages[] = ['label' => 'admin_place_form', 'url' => $baseUrl . '/admin/place_form.php?id=' . urlencode((string)$placeId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($pollId !== false) {
+    $pages[] = ['label' => 'admin_polls_form', 'url' => $baseUrl . '/admin/polls_form.php?id=' . urlencode((string)$pollId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if (isModuleEnabled('podcast')) {
     $pages[] = ['label' => 'admin_podcast_shows', 'url' => $baseUrl . '/admin/podcast_shows.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -711,8 +771,8 @@ if (isModuleEnabled('podcast')) {
 }
 if (isModuleEnabled('polls')) {
     $pages[] = ['label' => 'polls_index', 'url' => $baseUrl . '/polls/index.php'];
-    if ($pollDetailId) {
-        $pages[] = ['label' => 'polls_detail', 'url' => $baseUrl . '/polls/index.php?id=' . urlencode((string)$pollDetailId)];
+    if ($pollCanonicalUrl !== '') {
+        $pages[] = ['label' => 'polls_detail', 'url' => $pollCanonicalUrl];
     }
 }
 
@@ -1505,6 +1565,36 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_polls') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'value="active"',
+            'value="scheduled"',
+            'value="closed"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin polls page is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_polls_form') {
+        foreach ([
+            'name="slug"',
+            'name="description"',
+            'name="start_date"',
+            'name="start_time"',
+            'name="end_date"',
+            'name="end_time"',
+            'name="options[]"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin polls form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_podcast_show_form') {
         foreach ([
             'name="slug"',
@@ -1648,6 +1738,24 @@ foreach ($pages as $page) {
         }
         if ($placeRow && !str_contains($result['body'], 'google.com/maps')) {
             $issues[] = 'places article is missing map link';
+        }
+    }
+
+    if ($page['label'] === 'polls_index') {
+        if ($pollCanonicalPath !== '' && !str_contains($result['body'], $pollCanonicalPath)) {
+            $issues[] = 'polls listing is missing detail links';
+        }
+    }
+
+    if ($page['label'] === 'polls_detail') {
+        if ($pollRow && !str_contains($result['body'], (string)($pollRow['question'] ?? ''))) {
+            $issues[] = 'poll detail is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět na přehled anket')) {
+            $issues[] = 'poll detail is missing back link';
+        }
+        if ($pollRow && !str_contains($result['body'], (string)($pollRow['excerpt'] ?? ''))) {
+            $issues[] = 'poll detail is missing description';
         }
     }
 
@@ -1822,6 +1930,23 @@ if ($placeCanonicalPath === '' || $placeLegacyPath === '' || $placeCanonicalPath
     }
 }
 
+echo "=== polls_article_legacy_redirect ===\n";
+if ($pollCanonicalPath === '' || $pollLegacyPath === '' || $pollCanonicalPath === $pollLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyPollProbe = fetchUrl($pollLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $pollCanonicalPath;
+    if (!str_contains($legacyPollProbe['status'], '302')) {
+        echo "- legacy poll URL does not redirect ({$legacyPollProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyPollProbe['headers'], true)) {
+        echo "- legacy poll URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== podcast_show_legacy_redirect ===\n";
 if ($podcastShowSlug === '') {
     echo "OK\n";
@@ -1905,6 +2030,7 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
 }
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'author polls'];
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'author downloads'];
 if (isModuleEnabled('faq')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/faq.php', 'expected' => '403', 'label' => 'author faq'];
@@ -1937,6 +2063,7 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
 }
+$roleChecks[] = ['role' => 'moderator', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'moderator polls'];
 $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'moderator downloads'];
 if (isModuleEnabled('faq')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/faq.php', 'expected' => '403', 'label' => 'moderator faq'];
@@ -1958,6 +2085,7 @@ if (isModuleEnabled('blog')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'booking manager board'];
 }
+$roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'booking manager polls'];
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'booking manager downloads'];
 if (isModuleEnabled('faq')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/faq.php', 'expected' => '403', 'label' => 'booking manager faq'];
@@ -2442,6 +2570,12 @@ if (!empty($cleanup['faq_ids'])) {
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_places WHERE id IN ({$placeholders})")->execute($cleanup['place_ids']);
+}
+if (!empty($cleanup['poll_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['poll_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id IN ({$placeholders})")->execute($cleanup['poll_ids']);
+    $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id IN ({$placeholders})")->execute($cleanup['poll_ids']);
+    $pdo->prepare("DELETE FROM cms_polls WHERE id IN ({$placeholders})")->execute($cleanup['poll_ids']);
 }
 if (!empty($cleanup['podcast_episode_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['podcast_episode_ids']), '?'));

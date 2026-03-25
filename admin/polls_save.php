@@ -1,123 +1,157 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu anket nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $pdo = db_connect();
-$id  = inputInt('post', 'id');
+$id = inputInt('post', 'id');
 
-$question    = trim($_POST['question'] ?? '');
+$redirectToForm = static function (?int $pollId, string $errorCode): void {
+    $params = ['err' => $errorCode];
+    if ($pollId !== null) {
+        $params['id'] = (string)$pollId;
+    }
+    header('Location: ' . BASE_URL . appendUrlQuery('/admin/polls_form.php', $params));
+    exit;
+};
+
+$question = trim($_POST['question'] ?? '');
+$submittedSlug = trim($_POST['slug'] ?? '');
 $description = trim($_POST['description'] ?? '');
-$status      = in_array($_POST['status'] ?? '', ['active', 'closed']) ? $_POST['status'] : 'active';
+$status = in_array($_POST['status'] ?? '', ['active', 'closed'], true) ? (string)$_POST['status'] : 'active';
 
-// Dates
 $startDate = null;
 if (!empty($_POST['start_date'])) {
-    $startDate = $_POST['start_date'] . ' ' . ($_POST['start_time'] ?? '00:00') . ':00';
+    $startDate = trim((string)$_POST['start_date']) . ' ' . trim((string)($_POST['start_time'] ?? '00:00')) . ':00';
 }
 $endDate = null;
 if (!empty($_POST['end_date'])) {
-    $endDate = $_POST['end_date'] . ' ' . ($_POST['end_time'] ?? '00:00') . ':00';
+    $endDate = trim((string)$_POST['end_date']) . ' ' . trim((string)($_POST['end_time'] ?? '00:00')) . ':00';
 }
 
-// Options
+if ($startDate !== null && strtotime($startDate) === false) {
+    $startDate = null;
+}
+if ($endDate !== null && strtotime($endDate) === false) {
+    $endDate = null;
+}
+if ($startDate !== null && $endDate !== null && $endDate <= $startDate) {
+    $redirectToForm($id, 'range');
+}
+
 $optionTexts = $_POST['options'] ?? [];
-$optionIds   = $_POST['option_ids'] ?? [];
+$optionIds = $_POST['option_ids'] ?? [];
 $validOptions = [];
-foreach ($optionTexts as $i => $text) {
-    $text = trim($text);
-    if ($text !== '') {
-        $validOptions[] = [
-            'id'   => (int)($optionIds[$i] ?? 0),
-            'text' => $text,
-            'sort' => count($validOptions),
-        ];
+foreach ($optionTexts as $index => $text) {
+    $normalizedText = trim((string)$text);
+    if ($normalizedText === '') {
+        continue;
+    }
+    $validOptions[] = [
+        'id' => (int)($optionIds[$index] ?? 0),
+        'text' => $normalizedText,
+        'sort' => count($validOptions),
+    ];
+}
+
+if ($question === '' || count($validOptions) < 2) {
+    $redirectToForm($id, 'required');
+}
+if (count($validOptions) > 10) {
+    $redirectToForm($id, 'max_options');
+}
+
+$existingPoll = null;
+if ($id !== null) {
+    $existingStmt = $pdo->prepare("SELECT id FROM cms_polls WHERE id = ?");
+    $existingStmt->execute([$id]);
+    $existingPoll = $existingStmt->fetch() ?: null;
+    if (!$existingPoll) {
+        header('Location: ' . BASE_URL . '/admin/polls.php');
+        exit;
     }
 }
 
-// Validation
-if ($question === '' || count($validOptions) < 2) {
-    $redir = 'polls_form.php?err=required' . ($id ? '&id=' . $id : '');
-    header('Location: ' . $redir);
-    exit;
-}
-if (count($validOptions) > 10) {
-    $redir = 'polls_form.php?err=max_options' . ($id ? '&id=' . $id : '');
-    header('Location: ' . $redir);
-    exit;
+$slug = pollSlug($submittedSlug !== '' ? $submittedSlug : $question);
+if ($slug === '') {
+    $redirectToForm($id, 'slug');
 }
 
-if ($id !== null) {
-    // ── Update ──
-    $stmt = $pdo->prepare("SELECT id FROM cms_polls WHERE id = ?");
-    $stmt->execute([$id]);
-    if (!$stmt->fetch()) { header('Location: polls.php'); exit; }
+$uniqueSlug = uniquePollSlug($pdo, $slug, $id);
+if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
+    $redirectToForm($id, 'slug');
+}
+$slug = $uniqueSlug;
 
+if ($existingPoll) {
     $pdo->prepare(
-        "UPDATE cms_polls SET question = ?, description = ?, status = ?, start_date = ?, end_date = ? WHERE id = ?"
-    )->execute([$question, $description ?: null, $status, $startDate, $endDate, $id]);
+        "UPDATE cms_polls
+         SET question = ?, slug = ?, description = ?, status = ?, start_date = ?, end_date = ?
+         WHERE id = ?"
+    )->execute([$question, $slug, $description ?: null, $status, $startDate, $endDate, $id]);
 
-    // Get existing options with vote counts
-    $existing = $pdo->prepare(
+    $existingOptionsStmt = $pdo->prepare(
         "SELECT o.id, (SELECT COUNT(*) FROM cms_poll_votes WHERE option_id = o.id) AS vote_count
-         FROM cms_poll_options o WHERE o.poll_id = ?"
+         FROM cms_poll_options o
+         WHERE o.poll_id = ?"
     );
-    $existing->execute([$id]);
+    $existingOptionsStmt->execute([$id]);
     $existingMap = [];
-    foreach ($existing->fetchAll() as $row) {
+    foreach ($existingOptionsStmt->fetchAll() as $row) {
         $existingMap[(int)$row['id']] = (int)$row['vote_count'];
     }
 
-    // Determine which existing options are being kept
     $submittedExistingIds = [];
-    foreach ($validOptions as $opt) {
-        if ($opt['id'] > 0) $submittedExistingIds[] = $opt['id'];
-    }
-
-    // Check if any removed options have votes
-    foreach ($existingMap as $eid => $vc) {
-        if (!in_array($eid, $submittedExistingIds) && $vc > 0) {
-            header('Location: polls_form.php?err=has_votes&id=' . $id);
-            exit;
+    foreach ($validOptions as $option) {
+        if ($option['id'] > 0) {
+            $submittedExistingIds[] = $option['id'];
         }
     }
 
-    // Delete removed options (only those with 0 votes)
-    foreach ($existingMap as $eid => $vc) {
-        if (!in_array($eid, $submittedExistingIds) && $vc === 0) {
-            $pdo->prepare("DELETE FROM cms_poll_options WHERE id = ? AND poll_id = ?")->execute([$eid, $id]);
+    foreach ($existingMap as $existingId => $voteCount) {
+        if (!in_array($existingId, $submittedExistingIds, true) && $voteCount > 0) {
+            $redirectToForm($id, 'has_votes');
         }
     }
 
-    // Update existing / insert new options
-    $stmtUpdate = $pdo->prepare("UPDATE cms_poll_options SET option_text = ?, sort_order = ? WHERE id = ? AND poll_id = ?");
-    $stmtInsert = $pdo->prepare("INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)");
+    foreach ($existingMap as $existingId => $voteCount) {
+        if (!in_array($existingId, $submittedExistingIds, true) && $voteCount === 0) {
+            $pdo->prepare("DELETE FROM cms_poll_options WHERE id = ? AND poll_id = ?")->execute([$existingId, $id]);
+        }
+    }
 
-    foreach ($validOptions as $opt) {
-        if ($opt['id'] > 0 && isset($existingMap[$opt['id']])) {
-            $stmtUpdate->execute([$opt['text'], $opt['sort'], $opt['id'], $id]);
+    $updateOptionStmt = $pdo->prepare(
+        "UPDATE cms_poll_options SET option_text = ?, sort_order = ? WHERE id = ? AND poll_id = ?"
+    );
+    $insertOptionStmt = $pdo->prepare(
+        "INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)"
+    );
+
+    foreach ($validOptions as $option) {
+        if ($option['id'] > 0 && isset($existingMap[$option['id']])) {
+            $updateOptionStmt->execute([$option['text'], $option['sort'], $option['id'], $id]);
         } else {
-            $stmtInsert->execute([$id, $opt['text'], $opt['sort']]);
+            $insertOptionStmt->execute([$id, $option['text'], $option['sort']]);
         }
     }
 
-    logAction('poll_edit', "id={$id}, question=" . mb_substr($question, 0, 80));
-
+    logAction('poll_edit', "id={$id} question={$question} slug={$slug} status={$status}");
 } else {
-    // ── Create ──
     $pdo->prepare(
-        "INSERT INTO cms_polls (question, description, status, start_date, end_date) VALUES (?, ?, ?, ?, ?)"
-    )->execute([$question, $description ?: null, $status, $startDate, $endDate]);
+        "INSERT INTO cms_polls (question, slug, description, status, start_date, end_date)
+         VALUES (?, ?, ?, ?, ?, ?)"
+    )->execute([$question, $slug, $description ?: null, $status, $startDate, $endDate]);
 
-    $pollId = (int)$pdo->lastInsertId();
-
-    $stmtInsert = $pdo->prepare("INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)");
-    foreach ($validOptions as $opt) {
-        $stmtInsert->execute([$pollId, $opt['text'], $opt['sort']]);
+    $id = (int)$pdo->lastInsertId();
+    $insertOptionStmt = $pdo->prepare(
+        "INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)"
+    );
+    foreach ($validOptions as $option) {
+        $insertOptionStmt->execute([$id, $option['text'], $option['sort']]);
     }
 
-    logAction('poll_add', "id={$pollId}, question=" . mb_substr($question, 0, 80));
+    logAction('poll_add', "id={$id} question={$question} slug={$slug} status={$status}");
 }
 
-header('Location: polls.php');
+header('Location: ' . BASE_URL . '/admin/polls.php');
 exit;

@@ -336,12 +336,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_polls (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             question    VARCHAR(500) NOT NULL,
+            slug        VARCHAR(255) NOT NULL,
             description TEXT,
             status      ENUM('active','closed') NOT NULL DEFAULT 'active',
             start_date  DATETIME     NULL DEFAULT NULL,
             end_date    DATETIME     NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_polls_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_poll_options (

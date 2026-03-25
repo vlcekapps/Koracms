@@ -25,6 +25,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Modul `Ke stažení` se nově chová jako katalog dokumentů a software: podporuje slug a čisté URL typu `/downloads/moje-aplikace`, detailovou stránku, typ položky včetně `software`, krátký perex, volitelný náhled, verzi, platformu, licenci a kombinaci lokálního souboru s externím odkazem
 - Modul `FAQ` se nově chová jako znalostní báze: podporuje slug a čisté URL typu `/faq/moje-otazka`, krátký perex, vlastní detail odpovědi a redakční workflow se schvalováním v adminu
 - Modul `Podcasty` nově podporuje čisté URL pořadů i epizod (`/podcast/slug-poradu` a `/podcast/slug-poradu/slug-epizody`), veřejný detail epizody, RSS feed navázaný na slug pořadu a redakční administraci s filtrováním pořadů i epizod
+- Modul `Ankety` nově podporuje slug a čisté URL typu `/polls/moje-anketa`, veřejný detail ankety, kanonické přesměrování starého `?id=` odkazu a redakční administraci s filtrem, slug workflow a časovým plánováním
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -40,6 +41,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Import/export nově zachovává i slugy, typ položky, perex, náhled, verzi, platformu, licenci a externí odkaz u modulu `Ke stažení`; administrace má vyhledávání a stavový filtr a runtime audit hlídá detail položky, detail linky na výpisu, nové formulářové prvky i kanonické přesměrování starého `downloads/item.php?id=...`
 - Import/export nově zachovává i slug, perex a stav FAQ; administrace FAQ má vyhledávání a stavový filtr a runtime audit hlídá detail FAQ, detail linky na výpisu, nové formulářové prvky i kanonické přesměrování starého `faq/item.php?id=...`
 - Import/export nově zachovává i slugy a čas poslední úpravy podcastových pořadů i epizod; vyhledávání, sitemapa, RSS feed i runtime audit teď používají kanonické podcast URL a hlídají veřejný detail pořadu i epizody, admin formuláře a legacy redirecty ze starých query URL
+- Import/export nově zachovává i slug, popis a čas poslední úpravy anket; vyhledávání, sitemapa, homepage i runtime audit teď používají kanonické poll URL a hlídají veřejný detail ankety, detail linky na výpisu, admin formuláře i legacy redirect ze starého `polls/index.php?id=...`
 
 ## [3.0.0-beta.1] – 2026-03-23
 

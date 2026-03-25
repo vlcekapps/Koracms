@@ -124,7 +124,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
 | **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do a archivem |
-| **Ankety** | Hlasování s výsledky, archivem a volitelným časovým omezením; ochrana proti opakovanému hlasování |
+| **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |
 | **FAQ** | Znalostní báze s kategoriemi, krátkým perexem, detailovou stránkou na čisté slug URL a veřejným FAQ rozcestníkem |
 | **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL a automatický archiv po datu sejmutí |
 | **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem |
@@ -240,9 +240,9 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 
 ## Další funkce
 
-- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, místy a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
+- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, místy, anketami a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, událostí, podcastů, epizod i dokumentů úřední desky
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, událostí, podcastů, epizod, anket i dokumentů úřední desky
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)

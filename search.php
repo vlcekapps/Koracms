@@ -184,6 +184,29 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         } catch (\PDOException $e) {
         }
     }
+
+    if (isModuleEnabled('polls')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, question AS title, slug, COALESCE(NULLIF(description, ''), question) AS perex,
+                        COALESCE(updated_at, created_at) AS created_at, 'poll' AS type
+                 FROM cms_polls
+                 WHERE (
+                        (status = 'active' AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date > NOW()))
+                        OR status = 'closed'
+                        OR (end_date IS NOT NULL AND end_date <= NOW())
+                   )
+                   AND (question LIKE ? OR description LIKE ?)
+                 ORDER BY COALESCE(start_date, created_at) DESC, id DESC
+                 LIMIT 10"
+            );
+            $stmt->execute([$like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+    }
 }
 
 function resultUrl(array $result): string
@@ -200,6 +223,7 @@ function resultUrl(array $result): string
         'download' => downloadPublicPath($result),
         'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
+        'poll' => pollPublicPath($result),
         default => $baseUrl . '/',
     };
 }
@@ -217,6 +241,7 @@ function typeLabel(string $type): string
         'download' => 'Ke stažení',
         'place' => 'Místo',
         'board' => boardModulePublicLabel(),
+        'poll' => 'Anketa',
         default => '',
     };
 }

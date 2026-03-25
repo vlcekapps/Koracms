@@ -1,17 +1,20 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu anket nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
-$id  = inputInt('get', 'id');
+$id = inputInt('get', 'id');
 $poll = null;
 $options = [];
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_polls WHERE id = ?");
     $stmt->execute([$id]);
-    $poll = $stmt->fetch();
-    if (!$poll) { header('Location: polls.php'); exit; }
+    $poll = $stmt->fetch() ?: null;
+    if (!$poll) {
+        header('Location: polls.php');
+        exit;
+    }
 
     $stmt = $pdo->prepare(
         "SELECT o.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE option_id = o.id) AS vote_count
@@ -21,34 +24,47 @@ if ($id !== null) {
     $options = $stmt->fetchAll();
 }
 
+$poll = $poll ?: [
+    'question' => '',
+    'slug' => '',
+    'description' => '',
+    'status' => 'active',
+    'start_date' => null,
+    'end_date' => null,
+];
+$poll = hydratePollPresentation($poll);
+
 $totalVotes = 0;
-if ($id) {
-    $stmtVc = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ?");
-    $stmtVc->execute([$id]);
-    $totalVotes = (int)$stmtVc->fetchColumn();
+if ($id !== null) {
+    $stmtVotes = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ?");
+    $stmtVotes->execute([$id]);
+    $totalVotes = (int)$stmtVotes->fetchColumn();
 }
 
-adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
-
 $err = trim($_GET['err'] ?? '');
+$formError = match ($err) {
+    'required' => 'Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.',
+    'max_options' => 'Maximální počet možností je 10.',
+    'has_votes' => 'Nelze odebrat možnosti, které už mají hlasy.',
+    'slug' => 'Slug ankety je povinný a musí být unikátní.',
+    'range' => 'Konec ankety musí být později než začátek.',
+    default => '',
+};
+
+adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
 ?>
 
-<?php if ($err === 'required'): ?>
-  <p role="alert" class="error" id="form-error">Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.</p>
-<?php elseif ($err === 'max_options'): ?>
-  <p role="alert" class="error" id="form-error">Maximální počet možností je 10.</p>
-<?php elseif ($err === 'has_votes'): ?>
-  <p role="alert" class="error" id="form-error">Nelze odebrat možnosti, které již mají hlasy.</p>
+<?php if ($formError !== ''): ?>
+  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
-<form method="post" action="polls_save.php" novalidate
-      <?= $err ? 'aria-describedby="form-error"' : '' ?>>
+<form method="post" action="polls_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <?php if ($id): ?>
+  <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
@@ -57,15 +73,22 @@ $err = trim($_GET['err'] ?? '');
 
     <label for="question">Otázka <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
-           value="<?= h($poll['question'] ?? '') ?>">
+           value="<?= h((string)$poll['question']) ?>">
+
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
+      <small>(pouze malá písmena, číslice a pomlčky)</small>
+    </label>
+    <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           value="<?= h((string)$poll['slug']) ?>">
 
     <label for="description">Popis <small>(nepovinný)</small></label>
-    <textarea id="description" name="description" rows="3"><?= h($poll['description'] ?? '') ?></textarea>
+    <textarea id="description" name="description" rows="4"><?= h((string)($poll['description'] ?? '')) ?></textarea>
+    <small style="color:#666">Krátké vysvětlení se zobrazí na detailu ankety i ve výpisu.</small>
 
     <label for="status">Stav</label>
     <select id="status" name="status">
-      <option value="active" <?= ($poll['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Aktivní</option>
-      <option value="closed" <?= ($poll['status'] ?? '') === 'closed' ? 'selected' : '' ?>>Uzavřená</option>
+      <option value="active"<?= (string)$poll['status'] === 'active' ? ' selected' : '' ?>>Aktivní</option>
+      <option value="closed"<?= (string)$poll['status'] === 'closed' ? ' selected' : '' ?>>Uzavřená</option>
     </select>
   </fieldset>
 
@@ -75,22 +98,22 @@ $err = trim($_GET['err'] ?? '');
       <div>
         <label for="start_date">Začátek – datum</label>
         <input type="date" id="start_date" name="start_date" style="width:auto;display:block;margin-top:.2rem"
-               value="<?= $poll && $poll['start_date'] ? h(date('Y-m-d', strtotime($poll['start_date']))) : '' ?>">
+               value="<?= !empty($poll['start_date']) ? h(date('Y-m-d', strtotime((string)$poll['start_date']))) : '' ?>">
       </div>
       <div>
         <label for="start_time">Začátek – čas</label>
         <input type="time" id="start_time" name="start_time" style="width:auto;display:block;margin-top:.2rem"
-               value="<?= $poll && $poll['start_date'] ? h(date('H:i', strtotime($poll['start_date']))) : '' ?>">
+               value="<?= !empty($poll['start_date']) ? h(date('H:i', strtotime((string)$poll['start_date']))) : '' ?>">
       </div>
       <div>
         <label for="end_date">Konec – datum</label>
         <input type="date" id="end_date" name="end_date" style="width:auto;display:block;margin-top:.2rem"
-               value="<?= $poll && $poll['end_date'] ? h(date('Y-m-d', strtotime($poll['end_date']))) : '' ?>">
+               value="<?= !empty($poll['end_date']) ? h(date('Y-m-d', strtotime((string)$poll['end_date']))) : '' ?>">
       </div>
       <div>
         <label for="end_time">Konec – čas</label>
         <input type="time" id="end_time" name="end_time" style="width:auto;display:block;margin-top:.2rem"
-               value="<?= $poll && $poll['end_date'] ? h(date('H:i', strtotime($poll['end_date']))) : '' ?>">
+               value="<?= !empty($poll['end_date']) ? h(date('H:i', strtotime((string)$poll['end_date']))) : '' ?>">
       </div>
     </div>
   </fieldset>
@@ -99,30 +122,30 @@ $err = trim($_GET['err'] ?? '');
     <legend>Možnosti odpovědi <span aria-hidden="true">*</span><span class="sr-only">(povinné, min. 2, max. 10)</span></legend>
     <div id="options-list">
       <?php if (!empty($options)): ?>
-        <?php foreach ($options as $i => $opt): ?>
+        <?php foreach ($options as $index => $option): ?>
           <div class="option-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
-            <input type="hidden" name="option_ids[]" value="<?= (int)$opt['id'] ?>">
-            <label for="option_<?= $i ?>" class="sr-only">Možnost <?= $i + 1 ?></label>
-            <input type="text" id="option_<?= $i ?>" name="options[]" required aria-required="true" maxlength="500"
-                   value="<?= h($opt['option_text']) ?>" style="flex:1">
-            <?php if ((int)$opt['vote_count'] > 0): ?>
-              <span style="font-size:.85rem;color:#666">(<?= (int)$opt['vote_count'] ?> hlasů)</span>
+            <input type="hidden" name="option_ids[]" value="<?= (int)$option['id'] ?>">
+            <label for="option_<?= $index ?>" class="sr-only">Možnost <?= $index + 1 ?></label>
+            <input type="text" id="option_<?= $index ?>" name="options[]" required aria-required="true" maxlength="500"
+                   value="<?= h((string)$option['option_text']) ?>" style="flex:1">
+            <?php if ((int)$option['vote_count'] > 0): ?>
+              <span style="font-size:.85rem;color:#666">(<?= (int)$option['vote_count'] ?> hlasů)</span>
             <?php else: ?>
               <button type="button" class="btn btn-danger btn-remove-option"
-                      aria-label="Odebrat možnost <?= $i + 1 ?>"
+                      aria-label="Odebrat možnost <?= $index + 1 ?>"
                       onclick="removeOption(this)">Odebrat</button>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
       <?php else: ?>
-        <?php for ($i = 0; $i < 2; $i++): ?>
+        <?php for ($index = 0; $index < 2; $index++): ?>
           <div class="option-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
             <input type="hidden" name="option_ids[]" value="0">
-            <label for="option_<?= $i ?>" class="sr-only">Možnost <?= $i + 1 ?></label>
-            <input type="text" id="option_<?= $i ?>" name="options[]" required aria-required="true" maxlength="500"
+            <label for="option_<?= $index ?>" class="sr-only">Možnost <?= $index + 1 ?></label>
+            <input type="text" id="option_<?= $index ?>" name="options[]" required aria-required="true" maxlength="500"
                    value="" style="flex:1">
             <button type="button" class="btn btn-danger btn-remove-option"
-                    aria-label="Odebrat možnost <?= $i + 1 ?>"
+                    aria-label="Odebrat možnost <?= $index + 1 ?>"
                     onclick="removeOption(this)">Odebrat</button>
           </div>
         <?php endfor; ?>
@@ -132,24 +155,26 @@ $err = trim($_GET['err'] ?? '');
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Vytvořit anketu' ?></button>
+    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit anketu' ?></button>
+    <?php if ($id !== null && (string)$poll['slug'] !== '' && (string)($poll['state'] ?? '') !== 'scheduled'): ?>
+      <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+    <?php endif; ?>
     <a href="polls.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
 
-<?php if ($id && $totalVotes > 0): ?>
+<?php if ($id !== null && $totalVotes > 0): ?>
   <h2 style="margin-top:2rem">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
   <div role="list" aria-label="Výsledky ankety">
-    <?php foreach ($options as $opt):
-      $pct = $totalVotes > 0 ? round((int)$opt['vote_count'] / $totalVotes * 100, 1) : 0;
-    ?>
+    <?php foreach ($options as $option): ?>
+      <?php $percentage = $totalVotes > 0 ? round((int)$option['vote_count'] / $totalVotes * 100, 1) : 0; ?>
       <div role="listitem" style="margin-bottom:.75rem">
         <div style="display:flex;justify-content:space-between;margin-bottom:.2rem">
-          <span><?= h($opt['option_text']) ?></span>
-          <span><?= $pct ?> % (<?= (int)$opt['vote_count'] ?> hlasů)</span>
+          <span><?= h((string)$option['option_text']) ?></span>
+          <span><?= $percentage ?> % (<?= (int)$option['vote_count'] ?> hlasů)</span>
         </div>
         <div style="background:#e8e8e8;border-radius:4px;overflow:hidden" aria-hidden="true">
-          <div style="background:#005fcc;height:1.2rem;width:<?= $pct ?>%;min-width:<?= $pct > 0 ? '2px' : '0' ?>"></div>
+          <div style="background:#005fcc;height:1.2rem;width:<?= $percentage ?>%;min-width:<?= $percentage > 0 ? '2px' : '0' ?>"></div>
         </div>
       </div>
     <?php endforeach; ?>
@@ -158,57 +183,97 @@ $err = trim($_GET['err'] ?? '');
 
 <script>
 (function () {
-  var counter = document.querySelectorAll('.option-row').length;
-  var list = document.getElementById('options-list');
-  var addBtn = document.getElementById('add-option');
-  var live = document.getElementById('a11y-live');
+  const questionInput = document.getElementById('question');
+  const slugInput = document.getElementById('slug');
+  let slugManual = <?= !empty($poll['slug']) ? 'true' : 'false' ?>;
+
+  const slugify = (value) => value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  slugInput?.addEventListener('input', function () {
+    slugManual = this.value.trim() !== '';
+  });
+
+  questionInput?.addEventListener('input', function () {
+    if (slugManual || !slugInput) {
+      return;
+    }
+    slugInput.value = slugify(this.value);
+  });
+
+  let counter = document.querySelectorAll('.option-row').length;
+  const list = document.getElementById('options-list');
+  const addButton = document.getElementById('add-option');
+  const live = document.getElementById('a11y-live');
 
   function updateState() {
-    var rows = list.querySelectorAll('.option-row');
-    var removable = list.querySelectorAll('.btn-remove-option');
-    for (var i = 0; i < removable.length; i++) {
-      removable[i].disabled = rows.length <= 2;
-    }
-    addBtn.disabled = rows.length >= 10;
-    // Re-number labels
-    for (var j = 0; j < rows.length; j++) {
-      var inp = rows[j].querySelector('input[type="text"]');
-      var lbl = rows[j].querySelector('label');
-      var btn = rows[j].querySelector('.btn-remove-option');
-      inp.id = 'option_' + j;
-      if (lbl) { lbl.setAttribute('for', 'option_' + j); lbl.textContent = 'Možnost ' + (j + 1); }
-      if (btn) btn.setAttribute('aria-label', 'Odebrat možnost ' + (j + 1));
-    }
+    const rows = list.querySelectorAll('.option-row');
+    const removable = list.querySelectorAll('.btn-remove-option');
+    removable.forEach((button) => {
+      button.disabled = rows.length <= 2;
+    });
+    addButton.disabled = rows.length >= 10;
+    rows.forEach((row, index) => {
+      const input = row.querySelector('input[type="text"]');
+      const label = row.querySelector('label');
+      const button = row.querySelector('.btn-remove-option');
+      if (input) {
+        input.id = 'option_' + index;
+      }
+      if (label) {
+        label.setAttribute('for', 'option_' + index);
+        label.textContent = 'Možnost ' + (index + 1);
+      }
+      if (button) {
+        button.setAttribute('aria-label', 'Odebrat možnost ' + (index + 1));
+      }
+    });
   }
 
   window.addOption = function () {
-    var rows = list.querySelectorAll('.option-row');
-    if (rows.length >= 10) return;
-    var div = document.createElement('div');
+    const rows = list.querySelectorAll('.option-row');
+    if (rows.length >= 10) {
+      return;
+    }
+
+    const div = document.createElement('div');
     div.className = 'option-row';
     div.style.cssText = 'display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem';
-    var idx = counter++;
     div.innerHTML =
       '<input type="hidden" name="option_ids[]" value="0">' +
-      '<label for="option_' + idx + '" class="sr-only">Možnost ' + (rows.length + 1) + '</label>' +
-      '<input type="text" id="option_' + idx + '" name="options[]" required aria-required="true" maxlength="500" style="flex:1">' +
+      '<label for="option_' + counter + '" class="sr-only">Možnost ' + (rows.length + 1) + '</label>' +
+      '<input type="text" id="option_' + counter + '" name="options[]" required aria-required="true" maxlength="500" style="flex:1">' +
       '<button type="button" class="btn btn-danger btn-remove-option" aria-label="Odebrat možnost ' + (rows.length + 1) + '" onclick="removeOption(this)">Odebrat</button>';
+    counter += 1;
     list.appendChild(div);
-    div.querySelector('input[type="text"]').focus();
     updateState();
-    if (live) live.textContent = 'Přidána možnost ' + (rows.length + 1);
+    div.querySelector('input[type="text"]')?.focus();
+    if (live) {
+      live.textContent = 'Přidána nová možnost.';
+    }
   };
 
-  window.removeOption = function (btn) {
-    var rows = list.querySelectorAll('.option-row');
-    if (rows.length <= 2) return;
-    var row = btn.closest('.option-row');
-    var prev = row.previousElementSibling;
-    row.remove();
+  window.removeOption = function (button) {
+    const rows = list.querySelectorAll('.option-row');
+    if (rows.length <= 2) {
+      return;
+    }
+    const row = button.closest('.option-row');
+    const previous = row?.previousElementSibling;
+    row?.remove();
     updateState();
-    if (prev) { var inp = prev.querySelector('input[type="text"]'); if (inp) inp.focus(); }
-    else { var first = list.querySelector('input[type="text"]'); if (first) first.focus(); }
-    if (live) live.textContent = 'Možnost odebrána';
+    if (previous) {
+      previous.querySelector('input[type="text"]')?.focus();
+    } else {
+      list.querySelector('input[type="text"]')?.focus();
+    }
+    if (live) {
+      live.textContent = 'Možnost odebrána.';
+    }
   };
 
   updateState();

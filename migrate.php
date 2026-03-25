@@ -348,12 +348,14 @@ $tables = [
     'cms_polls' => "CREATE TABLE IF NOT EXISTS cms_polls (
         id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         question    VARCHAR(500) NOT NULL,
+        slug        VARCHAR(255) NOT NULL,
         description TEXT,
         status      ENUM('active','closed') NOT NULL DEFAULT 'active',
         start_date  DATETIME     NULL DEFAULT NULL,
         end_date    DATETIME     NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_polls_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_poll_options' => "CREATE TABLE IF NOT EXISTS cms_poll_options (
@@ -623,6 +625,8 @@ $addColumns = [
     'cms_downloads.license_label'    => "ALTER TABLE cms_downloads ADD COLUMN license_label VARCHAR(100) NOT NULL DEFAULT '' AFTER platform_label",
     'cms_downloads.external_url'     => "ALTER TABLE cms_downloads ADD COLUMN external_url VARCHAR(255) NOT NULL DEFAULT '' AFTER license_label",
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+    // cms_polls
+    'cms_polls.slug'                 => "ALTER TABLE cms_polls ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER question",
     // cms_users – rozšíření pro veřejné uživatele a role
     'cms_users.role'                 => "ALTER TABLE cms_users ADD COLUMN role ENUM('admin','collaborator','author','editor','moderator','booking_manager','public') NOT NULL DEFAULT 'collaborator'",
     'cms_users.phone'                => "ALTER TABLE cms_users ADD COLUMN phone VARCHAR(30) NOT NULL DEFAULT ''",
@@ -1169,6 +1173,60 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy souborů ke stažení – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $pollSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_polls' AND COLUMN_NAME = 'slug'"
+    );
+    $pollSlugColumnCheck->execute();
+
+    if ((int)$pollSlugColumnCheck->fetchColumn() > 0) {
+        $pollRows = $pdo->query("SELECT id, question, slug FROM cms_polls ORDER BY id")->fetchAll();
+        $updatePollSlugStmt = $pdo->prepare("UPDATE cms_polls SET slug = ? WHERE id = ?");
+
+        foreach ($pollRows as $pollRow) {
+            $existingSlug = trim((string)($pollRow['slug'] ?? ''));
+            $resolvedSlug = uniquePollSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$pollRow['question'],
+                (int)$pollRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updatePollSlugStmt->execute([$resolvedSlug, (int)$pollRow['id']]);
+            }
+        }
+
+        $pollSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_polls' AND COLUMN_NAME = 'slug'"
+        );
+        $pollSlugNullabilityCheck->execute();
+        if (($pollSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_polls MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_polls.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_polls.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $pollSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_polls'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $pollSlugIndexCheck->execute();
+        if ((int)$pollSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_polls ADD UNIQUE KEY uq_cms_polls_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_polls_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_polls.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy anket – sloupec <code>cms_polls.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy anket – CHYBA: " . h($e->getMessage());
 }
 
 try {

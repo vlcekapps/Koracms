@@ -385,14 +385,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['polls']) && is_array($data['polls'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_polls
-                         (id, question, start_date, end_date, status, created_at)
-                         VALUES (?,?,?,?,?,?)"
+                         (id, question, slug, description, start_date, end_date, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['polls'] as $row) {
+                        $question = trim((string)($row['question'] ?? ''));
+                        if ($question === '') {
+                            $question = 'Anketa';
+                        }
+                        $slug = pollSlug((string)($row['slug'] ?? ''));
+                        if ($slug === '') {
+                            $slug = uniquePollSlug($pdo, $question);
+                        } else {
+                            $slug = uniquePollSlug($pdo, $slug, (int)$row['id']);
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
                         $ins->execute([
-                            (int)$row['id'], $row['question'],
-                            $row['start_date'] ?: null, $row['end_date'] ?: null,
-                            $row['status'] ?? 'active', $row['created_at'],
+                            (int)$row['id'],
+                            $question,
+                            $slug,
+                            $row['description'] ?? '',
+                            $row['start_date'] ?: null,
+                            $row['end_date'] ?: null,
+                            $row['status'] ?? 'active',
+                            $createdAt,
+                            $updatedAt,
                         ]);
                     }
                     $summary[] = 'Ankety importovány.';

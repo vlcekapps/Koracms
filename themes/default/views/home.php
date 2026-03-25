@@ -532,7 +532,7 @@ $renderPollSection = static function () use ($showPoll, $homePoll): string {
       <h2 id="anketa-nadpis" class="section-title">Anketa</h2>
       <p><strong><?= h($homePoll['question']) ?></strong></p>
       <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
-      <p><a class="section-link" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$homePoll['id'] ?>">Hlasovat <span aria-hidden="true">→</span></a></p>
+      <p><a class="section-link" href="<?= h((string)$homePoll['public_path']) ?>">Hlasovat <span aria-hidden="true">→</span></a></p>
     </section>
     <?php
 
@@ -765,7 +765,7 @@ $renderFeaturedSection = static function () use (
               <p><strong><?= h($homePoll['question']) ?></strong></p>
               <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
               <div class="button-row button-row--start">
-                <a class="button-primary" href="<?= BASE_URL ?>/polls/index.php?id=<?= (int)$homePoll['id'] ?>">Hlasovat</a>
+                <a class="button-primary" href="<?= h((string)$homePoll['public_path']) ?>">Hlasovat</a>
                 <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php">Všechny ankety</a>
               </div>
             </section>

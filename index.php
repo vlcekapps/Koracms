@@ -80,6 +80,9 @@ if (isModuleEnabled('polls')) {
     );
     $pollStmt->execute();
     $homePoll = $pollStmt->fetch() ?: null;
+    if ($homePoll !== null) {
+        $homePoll = hydratePollPresentation($homePoll);
+    }
 }
 
 $homeAuthor = resolveHomeAuthor(db_connect());

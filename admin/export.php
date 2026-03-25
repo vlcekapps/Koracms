@@ -42,7 +42,7 @@ $tables = [
                                language, category, website_url, created_at, updated_at FROM cms_podcast_shows",
     'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, audio_url,
                                duration, episode_num, publish_at, status, created_at, updated_at FROM cms_podcasts",
-    'polls'         => "SELECT id, question, start_date, end_date, status, created_at FROM cms_polls",
+    'polls'         => "SELECT id, question, slug, description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
     'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",
     'faq_categories'=> "SELECT id, name, sort_order, created_at FROM cms_faq_categories",
     'faqs'          => "SELECT id, question, slug, excerpt, answer, category_id, is_published, sort_order,

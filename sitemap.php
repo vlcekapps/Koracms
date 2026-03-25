@@ -254,4 +254,33 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('polls')): ?>
+  <url>
+    <loc><?= h(siteUrl('/polls/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $polls = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_polls
+             WHERE (
+                    (status = 'active' AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date > NOW()))
+                    OR status = 'closed'
+                    OR (end_date IS NOT NULL AND end_date <= NOW())
+                  )
+             ORDER BY COALESCE(start_date, created_at) DESC, id DESC"
+        )->fetchAll();
+        foreach ($polls as $poll):
+?>
+  <url>
+    <loc><?= h(pollPublicUrl($poll)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$poll['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 </urlset>
