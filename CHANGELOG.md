@@ -4,6 +4,15 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- Blogový HTML editor nyní podporuje přístupný dialog `Vložit odkaz nebo HTML z webu`, který umožňuje vyhledat existující veřejný obsah a vložit ho do článku jako inline odkaz nebo hotový HTML blok
+- Veřejný render obsahu nyní podporuje snippety `[audio]...[/audio]`, `[video]...[/video]` a `[gallery]slug-alba[/gallery]` / `[gallery slug="slug-alba"][/gallery]`, které se převádějí na HTML5 přehrávače a jednoduchý embed galerie
+
+### Opraveno
+- Runtime audit nově hlídá i přítomnost content pickeru v blog formuláři a převod audio, video a gallery snippetů do veřejného HTML výstupu
+
 ## [3.0.0-beta.2] – 2026-03-25
 
 ### Přidáno

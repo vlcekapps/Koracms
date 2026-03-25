@@ -1880,8 +1880,8 @@ foreach ($pages as $page) {
     }
 
     $adminFormCopyExpectations = [
-        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.'],
-        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.'],
+        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku nebo jiný veřejný obsah', 'Hledání prochází jen veřejně dostupný obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku nebo jiný veřejný obsah', 'Hledání prochází jen veřejně dostupný obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_news_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
@@ -1950,8 +1950,8 @@ foreach ($pages as $page) {
     }
 
     $adminFormSectionExpectations = [
-        'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Komentáře', 'Vyhledávače a sdílení'],
-        'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Komentáře', 'Vyhledávače a sdílení'],
+        'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
+        'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_news_form' => ['Obsah novinky'],
         'admin_news_create_form' => ['Obsah novinky'],
         'admin_event_form' => ['Základní údaje události', 'Popis události'],
@@ -3568,6 +3568,63 @@ if ($sampleBoard === false) {
         $failures++;
     } else {
         echo "OK\n";
+    }
+}
+
+echo "=== content_shortcodes ===\n";
+if ($articleId === false) {
+    echo "OK\n";
+} else {
+    $contentShortcodeIssues = [];
+    $originalArticleContent = '';
+    try {
+        $originalContentStmt = $pdo->prepare("SELECT content FROM cms_articles WHERE id = ?");
+        $originalContentStmt->execute([(int)$articleId]);
+        $originalArticleContent = (string)($originalContentStmt->fetchColumn() ?? '');
+
+        $shortcodeContent = <<<HTML
+<p>Runtime audit shortcode test.</p>
+[audio]https://example.test/runtime-audit.mp3[/audio]
+[video]https://example.test/runtime-audit.mp4[/video]
+HTML;
+
+        if (!empty($galleryAlbumRow['slug'])) {
+            $shortcodeContent .= "\n[gallery]" . (string)$galleryAlbumRow['slug'] . "[/gallery]\n";
+        }
+
+        $pdo->prepare("UPDATE cms_articles SET content = ? WHERE id = ?")->execute([
+            $shortcodeContent,
+            (int)$articleId,
+        ]);
+
+        $shortcodeProbe = fetchUrl($articleCanonicalUrl, '', 0);
+        if (!str_contains($shortcodeProbe['status'], '200')) {
+            $contentShortcodeIssues[] = 'blog article did not load after inserting content shortcodes';
+        } else {
+            if (!str_contains($shortcodeProbe['body'], '<audio class="audio-player" controls preload="metadata">')) {
+                $contentShortcodeIssues[] = 'audio shortcode was not rendered as html5 player';
+            }
+            if (!str_contains($shortcodeProbe['body'], '<video class="video-player" controls preload="metadata">')) {
+                $contentShortcodeIssues[] = 'video shortcode was not rendered as html5 player';
+            }
+            if (!empty($galleryAlbumRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-gallery-embed')) {
+                $contentShortcodeIssues[] = 'gallery shortcode was not rendered as embedded gallery';
+            }
+        }
+    } finally {
+        $pdo->prepare("UPDATE cms_articles SET content = ? WHERE id = ?")->execute([
+            $originalArticleContent,
+            (int)$articleId,
+        ]);
+    }
+
+    if ($contentShortcodeIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($contentShortcodeIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
     }
 }
 
