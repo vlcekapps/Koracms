@@ -8,23 +8,6 @@ $successMessage = '';
 $siteProfiles = siteProfileDefinitions();
 $selectedSiteProfile = currentSiteProfileKey();
 $boardPublicLabel = trim($_POST['board_public_label'] ?? getSetting('board_public_label', boardModulePublicLabel()));
-$pdo = db_connect();
-$homeAuthorOptions = $pdo->query(
-    "SELECT id, email, first_name, last_name, nickname, role,
-            author_public_enabled, author_slug, author_bio, author_avatar, author_website
-     FROM cms_users
-     WHERE author_public_enabled = 1 AND role != 'public'
-     ORDER BY is_superadmin DESC, nickname ASC, first_name ASC, last_name ASC, email ASC"
-)->fetchAll();
-$homeAuthorOptions = array_map(
-    static fn(array $author): array => hydrateAuthorPresentation($author),
-    $homeAuthorOptions
-);
-$availableHomeAuthorIds = array_map(
-    static fn(array $author): int => (int)$author['id'],
-    $homeAuthorOptions
-);
-$selectedHomeAuthorId = (int)getSetting('home_author_user_id', '0');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -34,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contactEmail= trim($_POST['contact_email']   ?? '');
     $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
     $boardPublicLabel = trim($_POST['board_public_label'] ?? $boardPublicLabel);
-    $homeAuthorUserId = max(0, (int)($_POST['home_author_user_id'] ?? $selectedHomeAuthorId));
     $homeBlog      = max(0, (int)($_POST['home_blog_count'] ?? 5));
     $homeNews      = max(0, (int)($_POST['home_news_count'] ?? 5));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
@@ -72,14 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $boardPublicLabel = defaultBoardPublicLabelForProfile($siteProfile);
     }
     $selectedSiteProfile = $siteProfile;
-    $selectedHomeAuthorId = $homeAuthorUserId;
 
     if ($siteName === '') $errors[] = 'Název webu je povinný.';
     if (mb_strlen($boardPublicLabel, 'UTF-8') > 60) $errors[] = 'Veřejný název modulu musí mít nejvýše 60 znaků.';
     if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
-    if ($homeAuthorUserId > 0 && !in_array($homeAuthorUserId, $availableHomeAuthorIds, true))
-        $errors[] = 'Vyberte platného veřejného autora pro blok na úvodní stránce.';
 
     if ($commentNotifyEmail !== '' && !filter_var($commentNotifyEmail, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Neplatná e-mailová adresa pro upozornění na komentáře.';
@@ -90,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('contact_email',    $contactEmail);
         saveSetting('site_profile',     $siteProfile);
         saveSetting('board_public_label', $boardPublicLabel);
-        saveSetting('home_author_user_id', (string)$homeAuthorUserId);
         saveSetting('home_blog_count',  (string)$homeBlog);
         saveSetting('home_news_count',  (string)$homeNews);
         saveSetting('news_per_page',    (string)$newsPerPage);
@@ -244,27 +222,6 @@ adminHeader('Základní nastavení');
       </label>
     </div>
     <small id="apply-site-profile-help" class="field-help">Bez zaškrtnutí se uloží jen zvolený profil webu a stávající konfigurace se nepřepíše. U vlastního profilu zůstane konfigurace beze změny i při použití této volby.</small>
-  </fieldset>
-
-  <fieldset>
-    <legend>Autor na úvodní stránce</legend>
-    <label for="home_author_user_id">Hlavní autor pro blok O autorovi / O mně</label>
-    <select id="home_author_user_id" name="home_author_user_id" aria-describedby="home-author-help">
-      <option value="0">Automaticky podle veřejných autorů</option>
-      <?php foreach ($homeAuthorOptions as $author): ?>
-        <option value="<?= (int)$author['id'] ?>" <?= $selectedHomeAuthorId === (int)$author['id'] ? 'selected' : '' ?>>
-          <?= h($author['author_display_name']) ?><?= !empty($author['author_slug']) ? ' (' . h($author['author_slug']) . ')' : '' ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
-    <?php if ($homeAuthorOptions === []): ?>
-      <small id="home-author-help" class="field-help">Zatím není k dispozici žádný veřejný autor. Zapnete ho v Mém profilu nebo ve správě spolupracovníků.</small>
-    <?php else: ?>
-      <small id="home-author-help" class="field-help">
-        Když pole necháte na automatice a bude existovat právě jeden veřejný autor, homepage použije jeho profil sama.
-        Pokud bude veřejných autorů více, blok zůstane bez vybrané osoby skrytý.
-      </small>
-    <?php endif; ?>
   </fieldset>
 
   <fieldset>

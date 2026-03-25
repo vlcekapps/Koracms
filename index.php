@@ -85,8 +85,6 @@ if (isModuleEnabled('polls')) {
     }
 }
 
-$homeAuthor = resolveHomeAuthor(db_connect());
-
 renderPublicPage([
     'title' => $siteName,
     'meta' => [
@@ -99,7 +97,6 @@ renderPublicPage([
         'latestArticles' => $latestArticles,
         'latestBoard' => $latestBoard,
         'homePoll' => $homePoll,
-        'homeAuthor' => $homeAuthor,
     ],
     'current_nav' => 'home',
     'page_kind' => 'home',

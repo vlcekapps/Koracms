@@ -16,7 +16,6 @@ $blogVisibility = $readThemeSelect('home_blog_visibility', 'show');
 $boardVisibility = $readThemeSelect('home_board_visibility', 'show');
 $pollVisibility = $readThemeSelect('home_poll_visibility', 'show');
 $newsletterVisibility = $readThemeSelect('home_newsletter_visibility', 'show');
-$authorVisibility = $readThemeSelect('home_author_visibility', 'hide');
 $ctaVisibility = $readThemeSelect('home_cta_visibility', 'hide');
 $articleLink = static fn(array $article): string => articlePublicPath($article);
 $newsLink = static fn(array $item): string => newsPublicPath($item);
@@ -97,8 +96,6 @@ $showBlog = $blogVisibility === 'show' && !empty($blogItems);
 $showBoard = $boardVisibility === 'show' && !empty($boardItems);
 $showPoll = $pollVisibility === 'show' && $pollAvailable && $featuredModule !== 'poll';
 $showNewsletter = $newsletterVisibility === 'show' && $newsletterAvailable && $featuredModule !== 'newsletter';
-$showAuthor = $authorVisibility === 'show' && !empty($homeAuthor);
-
 $ctaActions = [
     [
         'label' => 'Hledat na webu',
@@ -206,54 +203,6 @@ $renderIntroSection = static function () use ($showHero, $homeIntro, $heroStats,
     return (string)ob_get_clean();
 };
 
-$renderAuthorSection = static function () use ($showAuthor, $homeAuthor): string {
-    if (!$showAuthor) {
-        return '';
-    }
-
-    $sectionTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi';
-    $ctaLabel = currentSiteProfileKey() === 'personal' ? 'Celý profil' : 'Profil autora';
-
-    ob_start();
-    ?>
-    <section class="surface surface--accent home-section home-section--author" data-home-section="author" aria-labelledby="autor-nadpis">
-      <div class="author-panel author-panel--home">
-        <div class="author-panel__media">
-          <?php if (!empty($homeAuthor['author_avatar_url'])): ?>
-            <img
-              class="author-avatar"
-              src="<?= h((string)$homeAuthor['author_avatar_url']) ?>"
-              alt="Profilová fotografie autora <?= h((string)$homeAuthor['author_display_name']) ?>"
-              loading="lazy">
-          <?php else: ?>
-            <div class="author-avatar author-avatar--placeholder" aria-hidden="true">
-              <?= h(mb_strtoupper(mb_substr((string)$homeAuthor['author_display_name'], 0, 1))) ?>
-            </div>
-          <?php endif; ?>
-        </div>
-        <div class="author-panel__content">
-          <p class="section-kicker">Autor</p>
-          <h2 id="autor-nadpis" class="section-title"><?= h($sectionTitle) ?></h2>
-          <p class="author-panel__name"><?= h((string)$homeAuthor['author_display_name']) ?></p>
-          <?php if (!empty($homeAuthor['author_bio'])): ?>
-            <div class="prose author-panel__bio">
-              <?= renderContent((string)$homeAuthor['author_bio']) ?>
-            </div>
-          <?php endif; ?>
-          <div class="button-row button-row--start">
-            <a class="button-primary" href="<?= h((string)$homeAuthor['author_public_path']) ?>"><?= h($ctaLabel) ?></a>
-            <?php if (!empty($homeAuthor['author_website_url'])): ?>
-              <a class="button-secondary" href="<?= h((string)$homeAuthor['author_website_url']) ?>" target="_blank" rel="noopener noreferrer">Web autora</a>
-            <?php endif; ?>
-          </div>
-        </div>
-      </div>
-    </section>
-    <?php
-
-    return (string)ob_get_clean();
-};
-
 $renderNewsSection = static function (array $items, bool $compactCards = false) use (
     $newsLink,
     $renderAuthorName
@@ -322,7 +271,6 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
     <section class="surface home-section home-section--blog<?= $featureLead ? ' home-section--featured' : '' ?>" data-home-section="blog" aria-labelledby="blog-nadpis">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">Obsah</p>
           <h2 id="blog-nadpis" class="section-title">Blog</h2>
         </div>
         <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Všechny články <span aria-hidden="true">→</span></a>
@@ -343,18 +291,12 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
             <?php endif; ?>
             <div class="card__body">
               <p class="section-kicker">Doporučený článek</p>
-              <p class="meta-row meta-row--tight">
-                <?php if (!empty($leadArticle['category'])): ?>
-                  <span class="pill"><?= h($leadArticle['category']) ?></span>
-                <?php endif; ?>
-                <span><?= readingTime(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? '')) ?> min čtení</span>
-                <?php if (!empty($leadArticle['author_name'])): ?>
-                  <?= $renderAuthorName($leadArticle) ?>
-                <?php endif; ?>
-              </p>
               <h3 class="card__title card__title--feature">
                 <a href="<?= h($articleLink($leadArticle)) ?>"><?= h($leadArticle['title']) ?></a>
               </h3>
+              <p class="meta-row meta-row--tight">
+                <span><?= readingTime(($leadArticle['perex'] ?? '') . ($leadArticle['content'] ?? '')) ?> min čtení</span>
+              </p>
               <?php if (!empty($leadArticle['perex'])): ?>
                 <p><?= h($leadArticle['perex']) ?></p>
               <?php endif; ?>
@@ -621,7 +563,6 @@ $renderFeaturedSection = static function () use (
                   <p class="section-kicker">Doporučujeme</p>
                   <h2 id="featured-nadpis" class="section-title">Doporučený článek</h2>
                 </div>
-                <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Přejít na blog <span aria-hidden="true">→</span></a>
               </div>
               <article class="card card--feature">
                 <?php if (!empty($featuredArticle['image_file'])): ?>
@@ -631,18 +572,12 @@ $renderFeaturedSection = static function () use (
                   </a>
                 <?php endif; ?>
                 <div class="card__body">
-                  <p class="meta-row meta-row--tight">
-                    <?php if (!empty($featuredArticle['category'])): ?>
-                      <span class="pill"><?= h($featuredArticle['category']) ?></span>
-                    <?php endif; ?>
-                    <span><?= readingTime(($featuredArticle['perex'] ?? '') . ($featuredArticle['content'] ?? '')) ?> min čtení</span>
-                    <?php if (!empty($featuredArticle['author_name'])): ?>
-                      <?= $renderAuthorName($featuredArticle) ?>
-                    <?php endif; ?>
-                  </p>
                   <h3 class="card__title card__title--feature">
                     <a href="<?= h($articleLink($featuredArticle)) ?>"><?= h($featuredArticle['title']) ?></a>
                   </h3>
+                  <p class="meta-row meta-row--tight">
+                    <span><?= readingTime(($featuredArticle['perex'] ?? '') . ($featuredArticle['content'] ?? '')) ?> min čtení</span>
+                  </p>
                   <?php if (!empty($featuredArticle['perex'])): ?>
                     <p><?= h($featuredArticle['perex']) ?></p>
                   <?php endif; ?>
@@ -796,7 +731,6 @@ $renderFeaturedSection = static function () use (
 
 $introHtml = $renderIntroSection();
 $featuredHtml = $renderFeaturedSection();
-$authorHtml = $renderAuthorSection();
 $newsHtml = $showNews ? $renderNewsSection($newsItems, $homeLayout === 'compact') : '';
 $blogHtml = $showBlog ? $renderBlogSection($blogItems, $homeLayout === 'editorial' && $featuredModule !== 'blog', $homeLayout === 'compact') : '';
 $boardHtml = $renderBoardSection($showBoard ? $boardItems : []);
@@ -851,7 +785,6 @@ if ($orderedUtilityHtml !== []) {
 
 $hasAnyContent = $introHtml !== ''
     || $featuredHtml !== ''
-    || $authorHtml !== ''
     || $orderedPrimaryHtml !== []
     || $utilityHtml !== '';
 
@@ -860,7 +793,6 @@ $pageStackClasses = ['page-stack', 'page-stack--home', 'page-stack--home-' . $ho
 <div class="<?= h(implode(' ', $pageStackClasses)) ?>">
   <?= $introHtml ?>
   <?= $featuredHtml ?>
-  <?= $authorHtml ?>
 
   <?php if ($homeLayout === 'editorial'): ?>
     <?php if ($orderedPrimaryHtml !== []): ?>

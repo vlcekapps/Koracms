@@ -22,7 +22,7 @@ if ($previewToken !== '') {
         $stmt = $pdo->prepare(
             "SELECT a.*, c.name AS category, c.id AS category_id,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
-                    u.author_public_enabled, u.author_slug, u.role AS author_role
+                    u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_users u ON u.id = a.author_id
@@ -33,7 +33,7 @@ if ($previewToken !== '') {
         $stmt = $pdo->prepare(
             "SELECT a.*, c.name AS category, c.id AS category_id,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
-                    u.author_public_enabled, u.author_slug, u.role AS author_role
+                    u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_users u ON u.id = a.author_id
@@ -46,7 +46,7 @@ if ($previewToken !== '') {
         $stmt = $pdo->prepare(
             "SELECT a.*, c.name AS category, c.id AS category_id,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
-                    u.author_public_enabled, u.author_slug, u.role AS author_role
+                    u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_users u ON u.id = a.author_id
@@ -57,7 +57,7 @@ if ($previewToken !== '') {
         $stmt = $pdo->prepare(
             "SELECT a.*, c.name AS category, c.id AS category_id,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
-                    u.author_public_enabled, u.author_slug, u.role AS author_role
+                    u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_users u ON u.id = a.author_id

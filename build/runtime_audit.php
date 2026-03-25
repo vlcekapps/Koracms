@@ -446,9 +446,7 @@ if ($newsId !== false && $runtimeAuditAuthorId > 0) {
     ]);
 }
 
-saveSetting('home_author_user_id', (string)$runtimeAuditAuthorId);
 $runtimeAuditThemeSettings = themePersistedSettingsValues($runtimeAuditActiveTheme);
-$runtimeAuditThemeSettings['home_author_visibility'] = 'show';
 saveThemeSettings($runtimeAuditThemeSettings, $runtimeAuditActiveTheme);
 clearSettingsCache();
 
@@ -1505,18 +1503,14 @@ foreach ($pages as $page) {
             'Další kroky',
             'Co chcete udělat dál?',
             'Rychlé akce pomohou návštěvníkovi dostat se k důležitému obsahu bez zbytečného hledání.',
+            'Přejít na blog',
         ] as $legacySnippet) {
             if (str_contains($result['body'], $legacySnippet)) {
                 $issues[] = 'home still contains legacy copy: ' . $legacySnippet;
             }
         }
-        if ($runtimeAuditAuthorPath !== '') {
-            if (!str_contains($result['body'], 'data-home-section="author"')) {
-                $issues[] = 'home author section is missing';
-            }
-            if (!str_contains($result['body'], $runtimeAuditAuthorPath)) {
-                $issues[] = 'home author section is missing its public profile link';
-            }
+        if (str_contains($result['body'], 'data-home-section="author"')) {
+            $issues[] = 'home still renders deprecated author section';
         }
     }
 
@@ -1589,9 +1583,6 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'value="custom"')) {
             $issues[] = 'custom site profile option is missing';
-        }
-        if (!str_contains($result['body'], 'name="home_author_user_id"')) {
-            $issues[] = 'home author setting is missing';
         }
         if (!str_contains($result['body'], 'name="board_public_label"')) {
             $issues[] = 'board public label setting is missing';
@@ -2177,6 +2168,13 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog article is missing public author link in byline';
+    }
+    if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '') {
+        foreach (['O autorovi', 'Profil autora', 'Web autora'] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'blog article is missing author panel fragment: ' . $expectedFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'news_index' && $newsCanonicalPath !== '' && !str_contains($result['body'], $newsCanonicalPath)) {

@@ -17,7 +17,6 @@ $renderAuthorName = static function (array $article): string {
   <section class="surface" aria-labelledby="blog-title">
     <div class="section-heading">
       <div>
-        <p class="section-kicker">Publikace</p>
         <h1 id="blog-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
       </div>
     </div>

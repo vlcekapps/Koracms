@@ -11,6 +11,13 @@ $renderAuthorName = static function (array $article): string {
 
     return '<span>' . $label . '</span>';
 };
+
+$showAuthorPanel = !empty($article['author_public_path'])
+    && (
+        !empty($article['author_bio'])
+        || !empty($article['author_website_url'])
+        || !empty($article['author_avatar_url'])
+    );
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="clanek-nadpis">
@@ -52,6 +59,42 @@ $renderAuthorName = static function (array $article): string {
           <?php endforeach; ?>
         </ul>
       </nav>
+    <?php endif; ?>
+
+    <?php if ($showAuthorPanel): ?>
+      <section class="surface surface--accent" aria-labelledby="autor-clanku-nadpis">
+        <div class="author-panel">
+          <div class="author-panel__media">
+            <?php if (!empty($article['author_avatar_url'])): ?>
+              <img
+                class="author-avatar"
+                src="<?= h((string)$article['author_avatar_url']) ?>"
+                alt="Profilová fotografie autora <?= h((string)$article['author_display_name']) ?>"
+                loading="lazy">
+            <?php else: ?>
+              <div class="author-avatar author-avatar--placeholder" aria-hidden="true">
+                <?= h(mb_strtoupper(mb_substr((string)$article['author_display_name'], 0, 1))) ?>
+              </div>
+            <?php endif; ?>
+          </div>
+          <div class="author-panel__content">
+            <p class="section-kicker">Autor článku</p>
+            <h2 id="autor-clanku-nadpis" class="section-title">O autorovi</h2>
+            <p class="author-panel__name"><?= h((string)$article['author_display_name']) ?></p>
+            <?php if (!empty($article['author_bio'])): ?>
+              <div class="prose author-panel__bio">
+                <?= renderContent((string)$article['author_bio']) ?>
+              </div>
+            <?php endif; ?>
+            <div class="button-row button-row--start">
+              <a class="button-primary" href="<?= h((string)$article['author_public_path']) ?>">Profil autora</a>
+              <?php if (!empty($article['author_website_url'])): ?>
+                <a class="button-secondary" href="<?= h((string)$article['author_website_url']) ?>" target="_blank" rel="noopener noreferrer">Web autora</a>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+      </section>
     <?php endif; ?>
 
     <div class="article-actions">
