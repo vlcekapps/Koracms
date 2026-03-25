@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedSiteProfile = $siteProfile;
 
     if ($siteName === '') $errors[] = 'Název webu je povinný.';
-    if (mb_strlen($boardPublicLabel, 'UTF-8') > 60) $errors[] = 'Název sekce pro návštěvníky musí mít nejvýše 60 znaků.';
+    if (mb_strlen($boardPublicLabel, 'UTF-8') > 60) $errors[] = 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.';
     if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
 
@@ -220,7 +220,7 @@ adminHeader('Nastavení webu');
     <input type="email" id="contact_email" name="contact_email"
            value="<?= h(getSetting('contact_email')) ?>">
 
-    <label for="board_public_label">Název sekce pro návštěvníky</label>
+    <label for="board_public_label">Veřejný název sekce vývěsky</label>
     <input type="text" id="board_public_label" name="board_public_label" maxlength="60"
            aria-describedby="board-public-label-help"
            value="<?= h($boardPublicLabel) ?>">
