@@ -34,6 +34,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Modul `Newsletter` nově používá capability-aware administraci s hledáním a filtrem odběratelů, detailem odběratele, potvrzením a znovu-posláním potvrzovacího e-mailu, detailní historií rozesílek a přehlednějším compose workflow bez veřejného archivu
 
 ### Opraveno
+- Administrace nově používá civilnější názvy sekcí a přehledů: `Obecná nastavení`, `Správa modulů`, `Pozice modulů`, přesnější položky rezervací v levém menu a čitelnější souhrny `Celkem: X / Publikováno: X / Čeká na schválení: X` na dashboardu
+- Dashboard už nepoužívá redundantní relationship vrstvu u rozbalovacích skupin v levém menu, takže čtečky nehlásí duplicitní text typu `Blog seskupení, Blog tlačítko`
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
 - Staré odkazy `blog/article.php?id=...` se nyní kanonicky přesměrují na slug URL a veřejné vyhledávání vrací jen publikované články
 - Runtime audit nově hlídá i veřejnou stránku autora, homepage author block, author byliny a nová pole v administraci

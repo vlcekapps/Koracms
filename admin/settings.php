@@ -156,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $settingsSections = [
     ['id' => 'settings-homepage', 'label' => 'Domovská stránka'],
-    ['id' => 'settings-basics', 'label' => 'Základ webu'],
+    ['id' => 'settings-basics', 'label' => 'Obecná nastavení'],
     ['id' => 'settings-profile', 'label' => 'Profil webu'],
     ['id' => 'settings-home-sections', 'label' => 'Sekce na domovské stránce'],
     ['id' => 'settings-pagination', 'label' => 'Výpisy a stránkování'],
@@ -207,7 +207,7 @@ adminHeader('Nastavení webu');
   </fieldset>
 
   <fieldset id="settings-basics">
-    <legend>Základ webu</legend>
+    <legend>Obecná nastavení</legend>
     <label for="site_name">Název webu <span aria-hidden="true">*</span></label>
     <input type="text" id="site_name" name="site_name" required aria-required="true"
            value="<?= h(getSetting('site_name')) ?>">

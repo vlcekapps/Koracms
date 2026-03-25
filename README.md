@@ -130,7 +130,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem a sjednocená administrace zdrojů, kategorií, míst i rezervací s capability guardy |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci a sjednocená redakční administrace s filtrováním, bezpečným slug workflow a veřejným preview |
 
-Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Moduly**.
+Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Správa modulů**.
 
 ---
 
@@ -138,7 +138,7 @@ Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → M
 
 Na hlavní stránce se zobrazují widgety zapnutých modulů:
 
-- **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Základní nastavení → Text úvodní stránky*)
+- **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Obecná nastavení → Text úvodní stránky*)
 - **Nejnovější novinky** – počet položek lze nastavit; hodnota 0 widget skryje
 - **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje
 - **Úřední deska / Vývěska / Oznámení** – nejnovější aktuální položky; počet položek lze nastavit; hodnota 0 widget skryje
@@ -150,7 +150,7 @@ Na hlavní stránce se zobrazují widgety zapnutých modulů:
 
 Nastavení je rozděleno do čtyř sekcí:
 
-### Základní nastavení
+### Obecná nastavení
 
 - **Název a popis webu** – zobrazí se v záhlaví a v SEO meta tazích
 - **Profil webu** – uloží zaměření webu a volitelně jedním krokem použije doporučené moduly, pořadí navigace, homepage bloky a vhodnou first-party šablonu; `Vlastní profil` slouží jako neutrální režim bez vnuceného presetu
@@ -168,11 +168,11 @@ Nastavení je rozděleno do čtyř sekcí:
 - **Cookie lišta** – zapnutí GDPR lišty s vlastním textem
 - **Režim údržby** – dočasně zobrazí návštěvníkům hlášku o údržbě; přihlášení admini vidí web normálně
 
-### Moduly
+### Správa modulů
 
 Zapínání a vypínání jednotlivých modulů jedním přepínačem.
 
-### Nastavení zobrazení
+### Pozice modulů
 
 Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů).
 

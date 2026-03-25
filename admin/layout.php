@@ -51,7 +51,7 @@ function adminHeader(string $pageTitle): void
 
             $summaryStyle = $item['summary_style'] ?? 'cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none';
             $html .= '      <li>' . "\n"
-                . '        <details role="group" aria-label="' . $item['label_plain'] . '">' . "\n"
+                . '        <details>' . "\n"
                 . '          <summary style="' . $summaryStyle . '">' . $item['label'] . '</summary>' . "\n"
                 . '          <ul class="nav-list--nested">' . "\n";
 
@@ -202,16 +202,16 @@ function adminHeader(string $pageTitle): void
     $reservationItems = [];
     if (isModuleEnabled('reservations') && currentUserHasCapability('bookings_manage')) {
         $reservationItems[] = ['url' => $baseUrl . '/admin/res_bookings.php', 'label' => 'Rezervace'];
-        $reservationItems[] = ['url' => $baseUrl . '/admin/res_resources.php', 'label' => 'Zdroje'];
-        $reservationItems[] = ['url' => $baseUrl . '/admin/res_categories.php', 'label' => 'Kategorie'];
-        $reservationItems[] = ['url' => $baseUrl . '/admin/res_locations.php', 'label' => 'Místa'];
+        $reservationItems[] = ['url' => $baseUrl . '/admin/res_resources.php', 'label' => 'Zdroje rezervací'];
+        $reservationItems[] = ['url' => $baseUrl . '/admin/res_categories.php', 'label' => 'Kategorie zdrojů rezervací'];
+        $reservationItems[] = ['url' => $baseUrl . '/admin/res_locations.php', 'label' => 'Lokality rezervací'];
     }
 
     $settingsItems = [];
     if (currentUserHasCapability('settings_manage')) {
-        $settingsItems[] = ['url' => $baseUrl . '/admin/settings.php', 'label' => 'Základ webu'];
-        $settingsItems[] = ['url' => $baseUrl . '/admin/settings_modules.php', 'label' => 'Moduly'];
-        $settingsItems[] = ['url' => $baseUrl . '/admin/settings_display.php', 'label' => 'Zobrazení webu'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/settings.php', 'label' => 'Obecná nastavení'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/settings_modules.php', 'label' => 'Správa modulů'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/settings_display.php', 'label' => 'Pozice modulů'];
     }
     if (isSuperAdmin()) {
         $settingsItems[] = ['url' => $baseUrl . '/admin/themes.php', 'label' => 'Vzhled a šablony'];

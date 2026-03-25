@@ -391,7 +391,7 @@ adminHeader('Přehled');
 
 <p>
   Jste přihlášen jako <strong><?= h($accountName) ?></strong>.
-  Role tohoto účtu: <strong><?= h($accountLabel) ?></strong>.
+  Role vašeho účtu: <strong><?= h($accountLabel) ?></strong>.
 </p>
 
 <?php if ($pendingReviewItems !== []): ?>
@@ -423,19 +423,18 @@ adminHeader('Přehled');
 
 <?php if ($contentSummaries !== []): ?>
 <section aria-labelledby="content-summary-heading-new" style="margin:1.5rem 0">
-  <h2 id="content-summary-heading-new">Vaše práce s obsahem</h2>
+  <h2 id="content-summary-heading-new">Práce s obsahem</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem">
     <?php foreach ($contentSummaries as $summary): ?>
       <section style="border:1px solid #d6d6d6;border-radius:10px;padding:1rem;background:#fff">
         <h3 style="margin-top:0"><?= h($summary['heading']) ?></h3>
-        <dl style="margin:0">
+        <ul style="margin:0;padding-left:1.1rem">
           <?php foreach ($summary['items'] as $label => $value): ?>
-            <div style="display:flex;justify-content:space-between;gap:1rem;padding:.2rem 0">
-              <dt><?= h($label) ?></dt>
-              <dd style="margin:0"><strong><?= (int)$value ?></strong></dd>
-            </div>
+            <li style="padding:.15rem 0">
+              <strong><?= h($label) ?>:</strong> <?= (int)$value ?>
+            </li>
           <?php endforeach; ?>
-        </dl>
+        </ul>
         <p style="margin-bottom:0"><a href="<?= h($summary['url']) ?>">Otevřít přehled <span aria-hidden="true">→</span></a></p>
       </section>
     <?php endforeach; ?>

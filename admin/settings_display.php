@@ -2,7 +2,7 @@
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
-adminHeader('Nastavení zobrazení');
+adminHeader('Pozice modulů');
 ?>
 
 <?php if (isset($_GET['nav_saved'])): ?>
@@ -10,7 +10,7 @@ adminHeader('Nastavení zobrazení');
 <?php endif; ?>
 
 <p>Tlačítky měňte pořadí, v jakém se moduly zobrazují návštěvníkům v hlavní navigaci webu.
-   Vypnuté moduly se v navigaci nezobrazí bez ohledu na pořadí.</p>
+   Vypnuté moduly se v navigaci nezobrazí bez ohledu na zvolenou pozici.</p>
 
 <?php
   $moduleMap = navModuleDefaults();

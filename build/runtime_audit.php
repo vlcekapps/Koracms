@@ -1781,6 +1781,12 @@ foreach ($pages as $page) {
                 $issues[] = 'admin dashboard still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
+        if (str_contains($result['body'], '<details role="group"')) {
+            $issues[] = 'admin navigation still uses redundant grouped details semantics';
+        }
+        if (str_contains($result['body'], 'aria-label="Blog"') || str_contains($result['body'], 'aria-label="Ke stažení"') || str_contains($result['body'], 'aria-label="FAQ"') || str_contains($result['body'], 'aria-label="Vývěska a oznámení"')) {
+            $issues[] = 'admin navigation still uses redundant aria-label on collapsible module groups';
+        }
     }
 
     if ($page['label'] === 'admin_themes') {

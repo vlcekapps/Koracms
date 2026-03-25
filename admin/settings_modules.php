@@ -17,14 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $success = true;
 }
 
-adminHeader('Moduly');
+adminHeader('Správa modulů');
 ?>
 
 <?php if ($success): ?>
   <p class="success" role="status">Nastavení modulů bylo uloženo.</p>
 <?php endif; ?>
 
-<p>Zaškrtnuté moduly jsou aktivní a zobrazují se návštěvníkům v navigaci.</p>
+<p>Tady zapnete nebo vypnete jednotlivé moduly webu. Aktivní moduly se podle svého nastavení zobrazují návštěvníkům na veřejném webu.</p>
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
