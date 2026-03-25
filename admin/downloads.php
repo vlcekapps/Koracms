@@ -84,7 +84,7 @@ adminHeader('Ke stažení');
   </p>
 <?php else: ?>
   <table>
-    <caption>Položky ke stažení</caption>
+    <caption>Přehled položek ke stažení</caption>
     <thead>
       <tr>
         <th scope="col">Položka</th>

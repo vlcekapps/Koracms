@@ -121,7 +121,7 @@ adminHeader('Newsletter');
 <section aria-labelledby="newsletter-subscribers-heading" style="margin-bottom:2rem">
   <div class="button-row" style="justify-content:space-between;align-items:baseline">
     <h2 id="newsletter-subscribers-heading" style="margin-bottom:.5rem">Odběratelé newsletteru</h2>
-    <small><?= count($subscribers) ?> zobrazených položek</small>
+    <small><?= count($subscribers) ?> zobrazených odběratelů</small>
   </div>
 
   <?php if (empty($subscribers)): ?>
@@ -173,7 +173,7 @@ adminHeader('Newsletter');
 <section aria-labelledby="newsletter-history-heading">
   <div class="button-row" style="justify-content:space-between;align-items:baseline">
     <h2 id="newsletter-history-heading" style="margin-bottom:.5rem">Poslední rozesílky</h2>
-    <small><?= count($newsletters) ?> zobrazených položek</small>
+    <small><?= count($newsletters) ?> zobrazených rozesílek</small>
   </div>
 
   <?php if (empty($newsletters)): ?>

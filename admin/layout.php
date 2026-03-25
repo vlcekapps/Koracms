@@ -126,7 +126,7 @@ function adminHeader(string $pageTitle): void
                 'label' => 'Ke stažení',
                 'label_plain' => 'Ke stažení',
                 'items' => [
-                    ['url' => $baseUrl . '/admin/downloads.php', 'label' => 'Položky'],
+                    ['url' => $baseUrl . '/admin/downloads.php', 'label' => 'Soubory a položky'],
                     ['url' => $baseUrl . '/admin/dl_cats.php', 'label' => 'Kategorie'],
                 ],
             ];
@@ -148,7 +148,7 @@ function adminHeader(string $pageTitle): void
                 'label' => 'Vývěska a oznámení',
                 'label_plain' => 'Vývěska a oznámení',
                 'items' => [
-                    ['url' => $baseUrl . '/admin/board.php', 'label' => 'Položky'],
+                    ['url' => $baseUrl . '/admin/board.php', 'label' => 'Dokumenty a oznámení'],
                     ['url' => $baseUrl . '/admin/board_cats.php', 'label' => 'Kategorie'],
                 ],
             ];

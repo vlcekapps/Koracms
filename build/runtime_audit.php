@@ -1797,6 +1797,12 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], 'aria-label="Blog"') || str_contains($result['body'], 'aria-label="Ke stažení"') || str_contains($result['body'], 'aria-label="FAQ"') || str_contains($result['body'], 'aria-label="Vývěska a oznámení"')) {
             $issues[] = 'admin navigation still uses redundant aria-label on collapsible module groups';
         }
+        if (isModuleEnabled('downloads') && !str_contains($result['body'], 'Soubory a položky')) {
+            $issues[] = 'admin navigation is missing the updated downloads section label';
+        }
+        if (isModuleEnabled('board') && !str_contains($result['body'], 'Dokumenty a oznámení')) {
+            $issues[] = 'admin navigation is missing the updated board section label';
+        }
     }
 
     if ($page['label'] === 'admin_themes') {
@@ -1959,6 +1965,9 @@ foreach ($pages as $page) {
                 $issues[] = 'admin newsletter overview still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
+        if (str_contains($result['body'], 'zobrazených položek')) {
+            $issues[] = 'admin newsletter overview still uses generic item count wording';
+        }
     }
 
     if ($page['label'] === 'admin_newsletter_form') {
@@ -1982,6 +1991,9 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin board status filter is missing';
         }
+        if (!str_contains($result['body'], 'Přehled položek sekce')) {
+            $issues[] = 'admin board table caption was not updated';
+        }
         if (!str_contains($result['body'], 'Návštěvníci tuto sekci na webu vidí jako')) {
             $issues[] = 'admin board is missing visitor-facing public label helper text';
         }
@@ -1996,6 +2008,9 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin downloads status filter is missing';
+        }
+        if (!str_contains($result['body'], 'Přehled položek ke stažení')) {
+            $issues[] = 'admin downloads table caption was not updated';
         }
     }
 
@@ -2052,6 +2067,12 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'podcast_show_form.php')) {
             $issues[] = 'admin podcast shows page is missing create link';
+        }
+        if (!str_contains($result['body'], 'Přehled podcastů')) {
+            $issues[] = 'admin podcast shows table caption was not updated';
+        }
+        if (!str_contains($result['body'], 'Spravovat epizody')) {
+            $issues[] = 'admin podcast shows page is missing the updated episode action label';
         }
     }
 

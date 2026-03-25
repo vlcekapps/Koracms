@@ -59,7 +59,7 @@ adminHeader('Podcasty');
   </p>
 <?php else: ?>
   <table>
-    <caption>Podcasty</caption>
+    <caption>Přehled podcastů</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>
@@ -99,7 +99,7 @@ adminHeader('Podcasty');
         </td>
         <td class="actions">
           <a href="podcast_show_form.php?id=<?= (int)$show['id'] ?>" class="btn">Upravit</a>
-          <a href="podcast.php?show_id=<?= (int)$show['id'] ?>" class="btn">Epizody</a>
+          <a href="podcast.php?show_id=<?= (int)$show['id'] ?>" class="btn">Spravovat epizody</a>
           <form action="podcast_show_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$show['id'] ?>">

@@ -168,7 +168,7 @@ adminHeader('Rezervace');
   <p><?= $filterParams !== [] ? 'Pro zvolený filtr tu teď nejsou žádné rezervace.' : 'Zatím tu nejsou žádné rezervace.' ?></p>
 <?php else: ?>
   <table>
-    <caption>Rezervace (celkem <?= $total ?>)</caption>
+    <caption>Přehled rezervací (celkem <?= $total ?>)</caption>
     <thead>
       <tr>
         <th scope="col">ID</th>

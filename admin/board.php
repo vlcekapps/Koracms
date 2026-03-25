@@ -81,7 +81,7 @@ adminHeader('Úřední deska');
   <p><?= $q !== '' || $statusFilter !== 'all' ? 'Pro zvolený filtr tu teď nejsou žádné položky.' : 'Zatím tu nejsou žádné položky této sekce.' ?></p>
 <?php else: ?>
   <table>
-    <caption>Položky modulu <?= h($publicLabel) ?></caption>
+    <caption>Přehled položek sekce <?= h($publicLabel) ?></caption>
     <thead>
       <tr>
         <th scope="col">Nadpis</th>
