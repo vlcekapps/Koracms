@@ -90,8 +90,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          VALUES (?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['pages'] as $row) {
+                        $importTitle = trim((string)($row['title'] ?? ''));
+                        if ($importTitle === '') {
+                            continue;
+                        }
+                        $importSlug = trim((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniquePageSlug($pdo, $importTitle);
+                        } else {
+                            $importSlug = uniquePageSlug($pdo, $importSlug, (int)$row['id']);
+                        }
                         $ins->execute([
-                            (int)$row['id'], $row['title'], $row['slug'],
+                            (int)$row['id'], $importTitle, $importSlug,
                             $row['content'] ?? '', (int)$row['show_in_nav'],
                             (int)$row['nav_order'], (int)$row['is_published'],
                             $row['status'] ?? 'published',

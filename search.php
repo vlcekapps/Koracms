@@ -293,7 +293,7 @@ function resultUrl(array $result): string
     return match($result['type']) {
         'blog' => articlePublicPath($result),
         'news' => newsPublicPath($result),
-        'page' => $baseUrl . '/page.php?slug=' . rawurlencode($result['slug'] ?? ''),
+        'page' => pagePublicPath($result),
         'event' => eventPublicPath($result),
         'podcast_show' => podcastShowPublicPath($result),
         'podcast_episode' => podcastEpisodePublicPath($result),

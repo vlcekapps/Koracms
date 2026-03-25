@@ -1,70 +1,89 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu statických stránek nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
-$id  = inputInt('get', 'id');
+$id = inputInt('get', 'id');
+$redirect = internalRedirectTarget(trim($_GET['redirect'] ?? ''), BASE_URL . '/admin/pages.php');
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_pages WHERE id = ?");
     $stmt->execute([$id]);
     $page = $stmt->fetch();
     if (!$page) {
-        header('Location: ' . BASE_URL . '/admin/pages.php');
+        header('Location: ' . $redirect);
         exit;
     }
 } else {
-    $page = ['id' => null, 'title' => '', 'slug' => '', 'content' => '',
-             'is_published' => 0, 'show_in_nav' => 0, 'nav_order' => 1];
+    $page = [
+        'id' => null,
+        'title' => '',
+        'slug' => '',
+        'content' => '',
+        'is_published' => 0,
+        'show_in_nav' => 0,
+        'nav_order' => 1,
+        'status' => 'published',
+    ];
 }
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-$pageTitle  = $id ? 'Upravit stránku' : 'Nová stránka';
+$pageTitle = $id ? 'Upravit stránku' : 'Nová stránka';
+$err = trim($_GET['err'] ?? '');
+$publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['slug'] ?? '')) !== '') ? pagePublicPath($page) : '';
+
 adminHeader($pageTitle);
 ?>
 
-<form method="post" action="<?= BASE_URL ?>/admin/page_save.php">
+<?php if ($err === 'required'): ?>
+  <p role="alert" class="error" id="form-error">Název stránky je povinný.</p>
+<?php elseif ($err === 'slug'): ?>
+  <p role="alert" class="error" id="form-error">Slug stránky je už obsazený. Zvolte prosím jiný.</p>
+<?php endif; ?>
+
+<?php if ($publicPath !== ''): ?>
+  <p><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Otevřít veřejnou stránku <span aria-hidden="true">↗</span></a></p>
+<?php endif; ?>
+
+<form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <?php if ($id): ?>
+  <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
+  <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
   <fieldset>
     <legend>Vlastnosti stránky</legend>
 
-    <label for="title">Název *</label>
-    <input type="text" id="title" name="title" required aria-required="true"
-           value="<?= h($page['title']) ?>">
+    <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
+    <input type="text" id="title" name="title" required aria-required="true" value="<?= h((string)$page['title']) ?>">
 
-    <label for="slug">Slug (URL) *</label>
+    <label for="slug">Slug (URL) <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true"
            pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky"
-           value="<?= h($page['slug']) ?>">
-    <small>Automaticky vygenerován z názvu. Pouze malá písmena, číslice a pomlčky.</small>
+           value="<?= h((string)$page['slug']) ?>">
+    <small>Automaticky se generuje z názvu, dokud slug neupravíte ručně.</small>
 
     <label for="content">Obsah</label>
-    <textarea id="content" name="content"><?= h($page['content']) ?></textarea>
+    <textarea id="content" name="content"><?= h((string)$page['content']) ?></textarea>
     <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal; margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"
-             <?= $page['is_published'] ? 'checked' : '' ?>>
+      <input type="checkbox" name="is_published" value="1"<?= !empty($page['is_published']) ? ' checked' : '' ?>>
       Publikováno
     </label>
 
     <label style="font-weight:normal; margin-top:.5rem">
-      <input type="checkbox" name="show_in_nav" value="1"
-             <?= $page['show_in_nav'] ? 'checked' : '' ?>>
+      <input type="checkbox" name="show_in_nav" value="1"<?= !empty($page['show_in_nav']) ? ' checked' : '' ?>>
       Zobrazit v navigaci
     </label>
 
     <label for="nav_order">Pořadí v navigaci</label>
-    <input type="number" id="nav_order" name="nav_order" min="1" style="width:8rem"
-           value="<?= (int)$page['nav_order'] ?>">
+    <input type="number" id="nav_order" name="nav_order" min="1" style="width:8rem" value="<?= (int)$page['nav_order'] ?>">
 
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn">Uložit</button>
-      <a href="<?= BASE_URL ?>/admin/pages.php" style="margin-left:1rem">Zrušit</a>
+      <a href="<?= h($redirect) ?>" style="margin-left:1rem">Zrušit</a>
     </div>
   </fieldset>
 </form>
@@ -100,14 +119,27 @@ adminHeader($pageTitle);
 <?php endif; ?>
 
 <script>
-document.getElementById('title').addEventListener('input', function () {
-    const slug = this.value
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
-    document.getElementById('slug').value = slug;
-});
+(function () {
+    var titleInput = document.getElementById('title');
+    var slugInput = document.getElementById('slug');
+    var slugManuallyEdited = <?= $id !== null ? 'true' : 'false' ?>;
+
+    slugInput.addEventListener('input', function () {
+        slugManuallyEdited = true;
+    });
+
+    titleInput.addEventListener('input', function () {
+        if (slugManuallyEdited) {
+            return;
+        }
+
+        slugInput.value = this.value
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+    });
+})();
 </script>
 
 <?php adminFooter(); ?>

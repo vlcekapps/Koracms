@@ -1,42 +1,49 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu statických stránek nemáte potřebné oprávnění.');
 verifyCsrf();
 
-$id          = inputInt('post', 'id');
-$title       = trim($_POST['title']       ?? '');
-$slug        = trim($_POST['slug']        ?? '');
-$content     = $_POST['content']          ?? '';
+$id = inputInt('post', 'id');
+$title = trim($_POST['title'] ?? '');
+$rawSlug = trim($_POST['slug'] ?? '');
+$slug = pageSlug($rawSlug !== '' ? $rawSlug : $title);
+$content = (string)($_POST['content'] ?? '');
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
-$showInNav   = isset($_POST['show_in_nav'])  ? 1 : 0;
-$navOrder    = max(1, (int)($_POST['nav_order'] ?? 1));
+$showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
+$navOrder = max(1, (int)($_POST['nav_order'] ?? 1));
+$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/pages.php');
 
 if ($title === '' || $slug === '') {
-    header('Location: ' . BASE_URL . '/admin/page_form.php' . ($id ? '?id=' . $id : ''));
+    $fallback = BASE_URL . '/admin/page_form.php' . ($id ? '?id=' . $id : '');
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'required', 'redirect' => $redirect]));
     exit;
 }
 
-// Sanitize slug
-$slug = preg_replace('/[^a-z0-9\-]/', '', strtolower($slug));
-$slug = trim($slug, '-');
-if ($slug === '') $slug = slugify($title);
-
 $pdo = db_connect();
+$uniqueSlug = uniquePageSlug($pdo, $slug, $id);
+if ($uniqueSlug !== $slug) {
+    $fallback = BASE_URL . '/admin/page_form.php' . ($id ? '?id=' . $id : '');
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'slug', 'redirect' => $redirect]));
+    exit;
+}
 
 if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_pages
-         SET title=?, slug=?, content=?, is_published=?, show_in_nav=?, nav_order=?
-         WHERE id=?"
+         SET title = ?, slug = ?, content = ?, is_published = ?, show_in_nav = ?, nav_order = ?
+         WHERE id = ?"
     )->execute([$title, $slug, $content, $isPublished, $showInNav, $navOrder, $id]);
+    logAction('page_edit', "id={$id}, title=" . mb_substr($title, 0, 80));
 } else {
-    $status      = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $isPublished = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
         "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)"
     )->execute([$title, $slug, $content, $isPublished, $showInNav, $navOrder, $status]);
+    $newId = (int)$pdo->lastInsertId();
+    logAction('page_add', "id={$newId}, title=" . mb_substr($title, 0, 80));
 }
 
-header('Location: ' . BASE_URL . '/admin/pages.php');
+header('Location: ' . $redirect);
 exit;

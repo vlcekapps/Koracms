@@ -22,7 +22,7 @@ if (!$page) {
         'title' => 'Stránka nenalezena – ' . $siteName,
         'meta' => [
             'title' => 'Stránka nenalezena – ' . $siteName,
-            'url' => BASE_URL . '/page.php?slug=' . rawurlencode($slug),
+            'url' => pagePublicPath(['slug' => $slug]),
         ],
         'view' => 'not-found',
         'body_class' => 'page-not-found',
@@ -36,7 +36,7 @@ renderPublicPage([
     'title' => $page['title'] . ' – ' . $siteName,
     'meta' => [
         'title' => $page['title'] . ' – ' . $siteName,
-        'url' => BASE_URL . '/page.php?slug=' . rawurlencode($slug),
+        'url' => pagePublicPath($page),
     ],
     'view' => 'page',
     'view_data' => [

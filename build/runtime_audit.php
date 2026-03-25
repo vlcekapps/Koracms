@@ -102,9 +102,11 @@ $activePollCount = (int)$pdo->query(
        AND (end_date IS NULL OR end_date > NOW())"
 )->fetchColumn();
 $homeBlogCountSetting = max(0, (int)getSetting('home_blog_count', '5'));
-$pageSlug = $pdo->query(
-    "SELECT slug FROM cms_pages WHERE status = 'published' AND is_published = 1 ORDER BY id LIMIT 1"
-)->fetchColumn();
+$pageRow = $pdo->query(
+    "SELECT id, slug FROM cms_pages WHERE status = 'published' AND is_published = 1 ORDER BY id LIMIT 1"
+)->fetch() ?: null;
+$pageId = $pageRow['id'] ?? false;
+$pageSlug = $pageRow['slug'] ?? null;
 $publicUserRow = $pdo->query(
     "SELECT id, email, first_name, last_name FROM cms_users WHERE role = 'public' AND is_confirmed = 1 ORDER BY id LIMIT 1"
 )->fetch();
@@ -865,6 +867,7 @@ $pages = [
     ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_pages', 'url' => $baseUrl . '/admin/pages.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_faq', 'url' => $baseUrl . '/admin/faq.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -886,6 +889,9 @@ $pages = [
 
 if ($runtimeAuditAuthorId > 0) {
     $pages[] = ['label' => 'admin_user_form', 'url' => $baseUrl . '/admin/user_form.php?id=' . urlencode((string)$runtimeAuditAuthorId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($pageId !== false) {
+    $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($boardId !== false) {
     $pages[] = ['label' => 'admin_board_form', 'url' => $baseUrl . '/admin/board_form.php?id=' . urlencode((string)$boardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -1011,8 +1017,8 @@ if ($podcastEpisodeCanonicalUrl !== '') {
 if ($runtimeAuditAuthorUrl !== '') {
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
 }
-if ($pageSlug) {
-    $pages[] = ['label' => 'static_page', 'url' => $baseUrl . '/page.php?slug=' . urlencode((string)$pageSlug)];
+if ($pageRow) {
+    $pages[] = ['label' => 'static_page', 'url' => $baseUrl . pagePublicRequestPath($pageRow)];
 }
 if ($resourceSlug) {
     $pages[] = ['label' => 'reservations_index', 'url' => $baseUrl . '/reservations/index.php'];
@@ -1677,6 +1683,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_pages') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin pages search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin pages status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_food') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin food search field is missing';
@@ -1776,6 +1791,19 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin food form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_page_form') {
+        foreach ([
+            'name="slug"',
+            'name="show_in_nav"',
+            'name="nav_order"',
+            'name="is_published"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin page form is missing field: ' . $expectedField;
             }
         }
     }
@@ -2434,6 +2462,7 @@ if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'author reservations'];
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/res_resources.php', 'expected' => '403', 'label' => 'author reservation resources'];
 }
+$roleChecks[] = ['role' => 'author', 'url' => '/admin/pages.php', 'expected' => '403', 'label' => 'author pages'];
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
 }
@@ -2474,6 +2503,7 @@ if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'moderator reservations'];
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/res_resources.php', 'expected' => '403', 'label' => 'moderator reservation resources'];
 }
+$roleChecks[] = ['role' => 'moderator', 'url' => '/admin/pages.php', 'expected' => '403', 'label' => 'moderator pages'];
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
 }
@@ -2502,6 +2532,7 @@ if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_locations.php', 'expected' => '200', 'label' => 'booking manager reservation locations'];
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/review_queue.php', 'expected' => '200', 'label' => 'booking manager review queue'];
 }
+$roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/pages.php', 'expected' => '403', 'label' => 'booking manager pages'];
 if (isModuleEnabled('blog')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/blog.php', 'expected' => '403', 'label' => 'booking manager blog'];
 }

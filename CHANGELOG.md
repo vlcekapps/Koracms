@@ -29,6 +29,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Modul `Galerie` nově podporuje slug a čisté URL pro alba i fotografie (`/gallery/album/moje-album` a `/gallery/photo/moje-fotografie`), veřejný detail alba i fotografie a modernější administraci s filtrováním, slug workflow a kanonickým přesměrováním starých `?id=` odkazů
 - Modul `Jídelní lístek` nově podporuje slug a čisté URL typu `/food/card/moje-menu`, veřejný detail lístku a redakční administraci s filtrem, slug workflow a kanonickým přesměrováním starých `?id=` odkazů
 - Modul `Rezervace` nově používá capability-aware administraci pro rezervace, zdroje, kategorie a místa, se sjednoceným vyhledáváním, stavovými filtry a bezpečnými návraty zpět do stejného workflow
+- Modul `Statické stránky` nově používá capability-aware administraci s vyhledáváním, stavovým filtrem, robustnějším slug workflow, veřejným preview a bezpečnými návraty zpět do stejného seznamu
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -48,6 +49,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Import/export nově zachovává i slugy a čas poslední úpravy jídelních a nápojových lístků; vyhledávání, sitemapa a runtime audit teď používají kanonické food URL a hlídají veřejný detail lístku, admin formulář i legacy redirect ze starého `food/card.php?id=...`
 - Import/export nově zachovává i slugy alb a fotografií galerie; vyhledávání, sitemapa a runtime audit teď používají kanonické gallery URL a hlídají veřejný detail alba i fotografie, admin formuláře a legacy redirecty ze starých `gallery/album.php?id=...` a `gallery/photo.php?id=...`
 - Vyhledávání a sitemap nyní zahrnují i aktivní rezervační zdroje a runtime audit hlídá novou administraci zdrojů, kategorií a míst i přístup booking managera k celé rezervační části
+- Vyhledávání, sitemapa, navigace a dashboard teď používají sdílené helpery i pro statické stránky a runtime audit hlídá seznam stránek, formulář i přístupová pravidla pro role mimo shared content
 
 ## [3.0.0-beta.1] – 2026-03-23
 

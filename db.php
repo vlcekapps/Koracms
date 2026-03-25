@@ -1038,6 +1038,11 @@ function articleSlug(string $value): string
     return slugify(trim($value));
 }
 
+function pageSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function newsSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1997,6 +2002,26 @@ function articlePublicUrl(array $article, array $query = []): string
     return siteUrl(appendUrlQuery(articlePublicRequestPath($article), $query));
 }
 
+function pagePublicRequestPath(array $page): string
+{
+    $slug = pageSlug((string)($page['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/page.php?slug=' . rawurlencode($slug);
+    }
+
+    return '/';
+}
+
+function pagePublicPath(array $page, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(pagePublicRequestPath($page), $query);
+}
+
+function pagePublicUrl(array $page, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(pagePublicRequestPath($page), $query));
+}
+
 function articlePreviewPath(array $article): string
 {
     $previewToken = trim((string)($article['preview_token'] ?? ''));
@@ -2274,6 +2299,27 @@ function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null):
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_articles WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniquePageSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = pageSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'stranka';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_pages WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);
@@ -3721,9 +3767,9 @@ function siteNav(string $current = ''): string
              ORDER BY nav_order, title"
         )->fetchAll();
         foreach ($pages as $p) {
-            $nav .= '<li><a href="' . $b . '/page.php?slug=' . rawurlencode($p['slug']) . '"'
-                  . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '')
-                  . '>' . h($p['title']) . '</a></li>' . "\n";
+            $nav .= '<li><a href="' . pagePublicPath($p) . '"'
+                   . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '')
+                   . '>' . h($p['title']) . '</a></li>' . "\n";
         }
     } catch (\PDOException $e) {
         // Tabulka cms_pages ještě neexistuje

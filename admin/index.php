@@ -489,8 +489,8 @@ adminHeader('Přehled');
   <ul>
     <?php foreach ($pages as $page): ?>
       <li>
-        <a href="<?= BASE_URL ?>/page.php?slug=<?= rawurlencode((string)$page['slug']) ?>" target="_blank" rel="noopener">
-          <?= h((string)$page['title']) ?>
+        <a href="<?= h(pagePublicPath($page)) ?>" target="_blank" rel="noopener">
+            <?= h((string)$page['title']) ?>
         </a>
         <?= (int)$page['is_published'] === 1 ? '' : ' <em>(koncept)</em>' ?>
       </li>

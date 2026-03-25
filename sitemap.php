@@ -22,7 +22,7 @@ try {
     foreach ($pages as $p):
 ?>
   <url>
-    <loc><?= h(siteUrl('/page.php?slug=' . rawurlencode($p['slug']))) ?></loc>
+    <loc><?= h(pagePublicUrl($p)) ?></loc>
     <lastmod><?= date('Y-m-d', strtotime($p['updated_at'])) ?></lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
