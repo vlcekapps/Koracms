@@ -75,7 +75,13 @@ adminHeader('Ke stažení');
 </form>
 
 <?php if (empty($items)): ?>
-  <p>Žádné položky<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné položky ke stažení.
+    <?php else: ?>
+      Zatím tu nejsou žádné položky ke stažení. <a href="download_form.php">Přidat první položku</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Položky ke stažení</caption>

@@ -73,7 +73,13 @@ adminHeader('Statické stránky');
 </form>
 
 <?php if ($pages === []): ?>
-  <p>Žádné statické stránky<?= ($q !== '' || $statusFilter !== 'all') ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné statické stránky.
+    <?php else: ?>
+      Zatím tu nejsou žádné statické stránky. <a href="<?= BASE_URL ?>/admin/page_form.php">Přidat první stránku</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Statické stránky</caption>

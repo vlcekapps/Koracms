@@ -70,7 +70,13 @@ adminHeader('Zajímavá místa');
 </form>
 
 <?php if (empty($places)): ?>
-  <p>Žádná místa<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádná místa.
+    <?php else: ?>
+      Zatím tu nejsou žádná místa. <a href="place_form.php">Přidat první místo</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Zajímavá místa</caption>

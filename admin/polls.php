@@ -68,7 +68,13 @@ adminHeader('Ankety');
 </form>
 
 <?php if (empty($polls)): ?>
-  <p>Žádné ankety<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné ankety.
+    <?php else: ?>
+      Zatím tu nejsou žádné ankety. <a href="polls_form.php">Přidat první anketu</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Ankety</caption>

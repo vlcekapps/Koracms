@@ -50,7 +50,13 @@ adminHeader('Galerie – Alba');
 </form>
 
 <?php if (empty($albums)): ?>
-  <p><?= $q !== '' ? 'Pro zadaný filtr nebyla nalezena žádná alba.' : 'Zatím nebylo vytvořeno žádné album.' ?></p>
+  <p>
+    <?php if ($q !== ''): ?>
+      Pro zvolený filtr tu teď nejsou žádná alba.
+    <?php else: ?>
+      Zatím tu nejsou žádná alba. <a href="<?= BASE_URL ?>/admin/gallery_album_form.php">Přidat první album</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Seznam alb</caption>

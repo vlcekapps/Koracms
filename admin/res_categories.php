@@ -75,7 +75,7 @@ adminHeader('Rezervace – kategorie');
 
 <h2>Existující kategorie</h2>
 <?php if ($categories === []): ?>
-  <p>Žádné kategorie<?= $q !== '' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p><?= $q !== '' ? 'Pro zvolený filtr tu teď nejsou žádné kategorie zdrojů rezervací.' : 'Zatím tu nejsou žádné kategorie zdrojů rezervací.' ?></p>
 <?php else: ?>
   <table>
     <caption>Kategorie zdrojů</caption>

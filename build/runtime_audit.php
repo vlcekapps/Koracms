@@ -2057,6 +2057,38 @@ foreach ($pages as $page) {
         }
     }
 
+    if (str_starts_with($page['label'], 'admin_')) {
+        foreach ([
+            'Žádné články odpovídající hledání.',
+            'Žádné novinky pro zadaný filtr.',
+            'Žádné události pro zadaný filtr.',
+            'Žádné položky pro zadaný filtr.',
+            'Žádné otázky pro zadaný filtr.',
+            'Žádné statické stránky pro zadaný filtr.',
+            'Žádná místa pro zadaný filtr.',
+            'Žádné epizody pro zadaný filtr.',
+            'Žádné podcasty pro zadaný filtr.',
+            'Přidejte první podcast.',
+            'Žádné ankety pro zadaný filtr.',
+            'Žádné lístky pro zadaný filtr.',
+            'Žádné zdroje pro zadaný filtr.',
+            'Žádné kategorie pro zadaný filtr.',
+            'Žádné rezervace neodpovídají zadanému filtru.',
+            'Pro zadaný filtr nebyla nalezena žádná alba.',
+            'Pro zadaný filtr nebyly nalezeny žádné fotografie.',
+            'Zatím nebylo vytvořeno žádné album.',
+            'V tomto albu nejsou žádné fotografie.',
+            'Žádné kategorie.',
+            'Žádné tagy.',
+            'Tomuto účtu zatím není přidělena žádná část administrace.',
+            'Žádná místa. <a href="res_locations.php">Přidat místo</a>',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin page still contains outdated empty-state wording: ' . $forbiddenFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_board_form') {
         foreach ([
             'name="board_type"',

@@ -77,7 +77,7 @@ adminHeader('Rezervace – místa');
 
 <h2>Existující místa</h2>
 <?php if ($locations === []): ?>
-  <p>Žádná místa<?= $q !== '' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p><?= $q !== '' ? 'Pro zvolený filtr tu teď nejsou žádné lokality rezervací.' : 'Zatím tu nejsou žádné lokality rezervací.' ?></p>
 <?php else: ?>
   <table>
     <caption>Místa konání</caption>

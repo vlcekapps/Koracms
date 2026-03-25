@@ -60,7 +60,13 @@ adminHeader('Blog – správa článků');
 </form>
 
 <?php if (empty($articles)): ?>
-  <p>Žádné články<?= $q !== '' ? ' odpovídající hledání.' : '.' ?></p>
+  <p>
+    <?php if ($q !== ''): ?>
+      Pro zadané hledání tu teď nejsou žádné články.
+    <?php else: ?>
+      Zatím tu nejsou žádné články. <a href="blog_form.php">Přidat první článek</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
 <form method="post" action="blog_bulk.php" id="bulk-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

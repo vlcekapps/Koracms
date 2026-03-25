@@ -52,7 +52,7 @@ adminHeader('FAQ – kategorie');
 
 <h2>Existující kategorie</h2>
 <?php if (empty($categories)): ?>
-  <p>Žádné kategorie.</p>
+  <p>Zatím tu nejsou žádné kategorie.</p>
 <?php else: ?>
   <table>
     <caption>FAQ kategorie</caption>

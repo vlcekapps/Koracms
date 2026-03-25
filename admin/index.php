@@ -537,7 +537,7 @@ adminHeader('Přehled');
   <?php endif; ?>
 </section>
 <?php else: ?>
-  <p>Tomuto účtu zatím není přidělena žádná část administrace.</p>
+  <p>Pro tento účet teď není dostupná žádná část administrace.</p>
 <?php endif; ?>
 
 <?php if ($showContentSecondaryBlocks && $pages !== []): ?>

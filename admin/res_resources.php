@@ -78,7 +78,13 @@ adminHeader('Rezervace – zdroje');
 </form>
 
 <?php if ($resources === []): ?>
-  <p>Žádné zdroje<?= ($q !== '' || $statusFilter !== 'all') ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné zdroje rezervací.
+    <?php else: ?>
+      Zatím tu nejsou žádné zdroje rezervací. <a href="res_resource_form.php">Přidat první zdroj</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Rezervační zdroje</caption>

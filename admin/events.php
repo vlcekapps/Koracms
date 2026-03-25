@@ -66,7 +66,13 @@ adminHeader('Události');
 </form>
 
 <?php if (empty($events)): ?>
-  <p>Žádné události<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné události.
+    <?php else: ?>
+      Zatím tu nejsou žádné události. <a href="event_form.php">Přidat první událost</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Události</caption>

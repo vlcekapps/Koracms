@@ -50,7 +50,13 @@ adminHeader('Podcasty');
 </form>
 
 <?php if (empty($shows)): ?>
-  <p>Žádné podcasty<?= $q !== '' ? ' pro zadaný filtr.' : '. ' ?><a href="podcast_show_form.php">Přidejte první podcast.</a></p>
+  <p>
+    <?php if ($q !== ''): ?>
+      Pro zvolený filtr tu teď nejsou žádné podcasty.
+    <?php else: ?>
+      Zatím tu nejsou žádné podcasty. <a href="podcast_show_form.php">Přidat první podcast</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Podcasty</caption>

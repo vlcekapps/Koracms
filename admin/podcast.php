@@ -97,7 +97,14 @@ adminHeader('Podcast: ' . (string)$show['title']);
 </form>
 
 <?php if (empty($episodes)): ?>
-  <p>Žádné epizody<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné epizody.
+    <?php else: ?>
+      Zatím tu v tomto podcastu nejsou žádné epizody.
+      <a href="podcast_form.php?show_id=<?= (int)$showId ?>">Přidat první epizodu</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Epizody podcastu</caption>

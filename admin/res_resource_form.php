@@ -112,7 +112,7 @@ $err = trim($_GET['err'] ?? '');
     <fieldset style="border:1px solid #ddd;padding:.5rem .75rem;margin-top:1rem">
       <legend>Místa konání</legend>
       <?php if (empty($locations)): ?>
-        <p style="margin:.25rem 0;font-size:.9rem">Žádná místa. <a href="res_locations.php">Přidat místo</a></p>
+        <p style="margin:.25rem 0;font-size:.9rem">Zatím tu nejsou žádné lokality rezervací. <a href="res_locations.php">Přidat lokalitu</a></p>
       <?php else: ?>
         <?php foreach ($locations as $loc): ?>
           <div style="margin:.25rem 0">

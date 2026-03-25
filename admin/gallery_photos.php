@@ -57,7 +57,14 @@ adminHeader('Galerie – ' . $album['name']);
 </form>
 
 <?php if (empty($photos)): ?>
-  <p><?= $q !== '' ? 'Pro zadaný filtr nebyly nalezeny žádné fotografie.' : 'V tomto albu nejsou žádné fotografie.' ?></p>
+  <p>
+    <?php if ($q !== ''): ?>
+      Pro zvolený filtr tu teď nejsou žádné fotografie.
+    <?php else: ?>
+      V tomto albu zatím nejsou žádné fotografie.
+      <a href="<?= BASE_URL ?>/admin/gallery_photo_form.php?album_id=<?= (int)$album['id'] ?>">Přidat první fotografie</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Fotografie v albu „<?= h($album['name']) ?>“</caption>

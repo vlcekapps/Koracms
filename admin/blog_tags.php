@@ -54,7 +54,7 @@ adminHeader('Blog – tagy');
 
 <h2>Existující tagy</h2>
 <?php if (empty($tags)): ?>
-  <p>Žádné tagy.</p>
+  <p>Zatím tu nejsou žádné tagy.</p>
 <?php else: ?>
   <table>
     <caption>Tagy blogu</caption>

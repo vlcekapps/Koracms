@@ -55,7 +55,7 @@ adminHeader('Úřední deska - kategorie');
 
 <h2>Existující kategorie</h2>
 <?php if (empty($categories)): ?>
-  <p>Žádné kategorie.</p>
+  <p>Zatím tu nejsou žádné kategorie.</p>
 <?php else: ?>
   <table>
     <caption>Kategorie úřední desky</caption>

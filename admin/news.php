@@ -73,7 +73,13 @@ adminHeader('Novinky – správa');
 </form>
 
 <?php if (empty($items)): ?>
-  <p>Žádné novinky<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné novinky.
+    <?php else: ?>
+      Zatím tu nejsou žádné novinky. <a href="news_form.php">Přidat první novinku</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Novinky</caption>

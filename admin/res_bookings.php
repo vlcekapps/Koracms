@@ -165,7 +165,7 @@ adminHeader('Rezervace');
 <?php endif; endif; ?>
 
 <?php if ($bookings === []): ?>
-  <p>Žádné rezervace<?= $filterParams !== [] ? ' neodpovídají zadanému filtru.' : '.' ?></p>
+  <p><?= $filterParams !== [] ? 'Pro zvolený filtr tu teď nejsou žádné rezervace.' : 'Zatím tu nejsou žádné rezervace.' ?></p>
 <?php else: ?>
   <table>
     <caption>Rezervace (celkem <?= $total ?>)</caption>

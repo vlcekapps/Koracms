@@ -76,7 +76,14 @@ adminHeader('Jídelní a nápojový lístek');
 </form>
 
 <?php if (empty($items)): ?>
-  <p>Žádné lístky<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné jídelní ani nápojové lístky.
+    <?php else: ?>
+      Zatím tu nejsou žádné jídelní ani nápojové lístky.
+      <a href="food_form.php?type=food">Přidat první jídelní lístek</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <?php
   $groups = ['food' => [], 'beverage' => []];

@@ -76,7 +76,13 @@ adminHeader('FAQ');
 </form>
 
 <?php if (empty($faqs)): ?>
-  <p>Žádné otázky<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : '.' ?></p>
+  <p>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+      Pro zvolený filtr tu teď nejsou žádné otázky.
+    <?php else: ?>
+      Zatím tu nejsou žádné otázky. <a href="faq_form.php">Přidat první otázku</a>.
+    <?php endif; ?>
+  </p>
 <?php else: ?>
   <table>
     <caption>Často kladené otázky</caption>
