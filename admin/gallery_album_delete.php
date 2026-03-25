@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $id = inputInt('post', 'id');
@@ -38,6 +38,7 @@ function deleteAlbumRecursive(PDO $pdo, int $albumId): void
 }
 
 deleteAlbumRecursive($pdo, $id);
+logAction('gallery_album_delete', 'id=' . $id);
 
 header('Location: ' . BASE_URL . '/admin/gallery_albums.php');
 exit;

@@ -129,6 +129,43 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
+    if (isModuleEnabled('gallery')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT a.id, a.name AS title, a.slug,
+                        COALESCE(NULLIF(a.description, ''), a.name) AS perex,
+                        COALESCE(a.updated_at, a.created_at) AS created_at,
+                        'gallery_album' AS type
+                 FROM cms_gallery_albums a
+                 WHERE a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ?
+                 ORDER BY a.updated_at DESC, a.name ASC
+                 LIMIT 8"
+            );
+            $stmt->execute([$like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT p.id, p.title AS title, p.slug, a.name AS perex,
+                        p.created_at, 'gallery_photo' AS type
+                 FROM cms_gallery_photos p
+                 INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+                 WHERE p.title <> '' AND (p.title LIKE ? OR p.slug LIKE ? OR a.name LIKE ?)
+                 ORDER BY p.created_at DESC, p.id DESC
+                 LIMIT 8"
+            );
+            $stmt->execute([$like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+    }
+
     if (isModuleEnabled('board')) {
         try {
             $stmt = $pdo->prepare(
@@ -220,6 +257,8 @@ function resultUrl(array $result): string
         'podcast_show' => podcastShowPublicPath($result),
         'podcast_episode' => podcastEpisodePublicPath($result),
         'faq' => faqPublicPath($result),
+        'gallery_album' => galleryAlbumPublicPath($result),
+        'gallery_photo' => galleryPhotoPublicPath($result),
         'download' => downloadPublicPath($result),
         'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
@@ -238,6 +277,8 @@ function typeLabel(string $type): string
         'podcast_show' => 'Podcast',
         'podcast_episode' => 'Epizoda podcastu',
         'faq' => 'FAQ',
+        'gallery_album' => 'Album galerie',
+        'gallery_photo' => 'Fotografie',
         'download' => 'Ke stažení',
         'place' => 'Místo',
         'board' => boardModulePublicLabel(),

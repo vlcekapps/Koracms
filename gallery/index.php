@@ -16,7 +16,7 @@ $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
 $albums = $pdo->query(
-    "SELECT a.id, a.name, a.description,
+    "SELECT a.id, a.name, a.slug, a.description,
             (SELECT COUNT(*) FROM cms_gallery_photos p WHERE p.album_id = a.id) AS photo_count,
             (SELECT COUNT(*) FROM cms_gallery_albums s WHERE s.parent_id = a.id) AS sub_count
      FROM cms_gallery_albums a
@@ -25,7 +25,7 @@ $albums = $pdo->query(
 )->fetchAll();
 
 foreach ($albums as &$album) {
-    $album['cover_url'] = gallery_cover_url((int)$album['id']);
+    $album = hydrateGalleryAlbumPresentation($album);
     $album['photo_count_label'] = galleryCountLabel((int)$album['photo_count'], 'fotka', 'fotky', 'fotek');
     $album['sub_count_label'] = galleryCountLabel((int)$album['sub_count'], 'podsložka', 'podsložky', 'podsložek');
 }

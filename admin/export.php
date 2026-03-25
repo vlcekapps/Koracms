@@ -26,9 +26,9 @@ $tables = [
                                address, locality, latitude, longitude, contact_phone, contact_email,
                                opening_hours, is_published, sort_order, status, created_at, updated_at
                                FROM cms_places",
-    'gallery_albums'=> "SELECT id, parent_id, name, description, cover_photo_id, created_at
+    'gallery_albums'=> "SELECT id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at
                                FROM cms_gallery_albums",
-    'gallery_photos'=> "SELECT id, album_id, filename, title, sort_order, created_at
+    'gallery_photos'=> "SELECT id, album_id, filename, title, slug, sort_order, created_at
                                FROM cms_gallery_photos",
     'dl_categories' => "SELECT id, name, created_at FROM cms_dl_categories",
     'downloads'     => "SELECT id, title, slug, download_type, dl_category_id, excerpt, description,

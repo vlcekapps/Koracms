@@ -18,6 +18,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_downloads' => getSetting('module_downloads', '0'),
     'module_events' => getSetting('module_events', '0'),
     'module_faq' => getSetting('module_faq', '0'),
+    'module_gallery' => getSetting('module_gallery', '0'),
     'module_podcast' => getSetting('module_podcast', '0'),
     'module_places' => getSetting('module_places', '0'),
     'module_polls' => getSetting('module_polls', '0'),
@@ -117,12 +118,61 @@ $podcastEpisodeLegacyUrl = '';
 $foodCardId = $pdo->query(
     "SELECT id FROM cms_food_cards WHERE status = 'published' AND is_published = 1 ORDER BY is_current DESC, id LIMIT 1"
 )->fetchColumn();
-$galleryAlbumId = $pdo->query(
-    "SELECT id FROM cms_gallery_albums ORDER BY id LIMIT 1"
-)->fetchColumn();
-$galleryPhotoId = $pdo->query(
-    "SELECT id FROM cms_gallery_photos ORDER BY id LIMIT 1"
-)->fetchColumn();
+$galleryAlbumRow = $pdo->query(
+    "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
+     FROM cms_gallery_albums
+     WHERE parent_id IS NULL
+     ORDER BY id
+     LIMIT 1"
+)->fetch() ?: null;
+if (!$galleryAlbumRow) {
+    $galleryAlbumRow = $pdo->query(
+        "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
+         FROM cms_gallery_albums
+         ORDER BY id
+         LIMIT 1"
+    )->fetch() ?: null;
+}
+$galleryAlbumId = $galleryAlbumRow['id'] ?? false;
+if ($galleryAlbumRow) {
+    $galleryAlbumRow = hydrateGalleryAlbumPresentation($galleryAlbumRow);
+}
+$galleryAlbumCanonicalPath = $galleryAlbumRow ? galleryAlbumPublicPath($galleryAlbumRow) : '';
+$galleryAlbumLegacyPath = $galleryAlbumId !== false ? BASE_URL . '/gallery/album.php?id=' . urlencode((string)$galleryAlbumId) : '';
+$galleryAlbumCanonicalUrl = $galleryAlbumCanonicalPath !== '' ? $baseUrl . $galleryAlbumCanonicalPath : '';
+$galleryAlbumLegacyUrl = $galleryAlbumLegacyPath !== '' ? $baseUrl . $galleryAlbumLegacyPath : '';
+$galleryAlbumPhotoRow = null;
+$galleryAlbumPhotoCanonicalPath = '';
+if ($galleryAlbumId !== false) {
+    $galleryAlbumPhotoRow = $pdo->prepare(
+        "SELECT id, album_id, filename, title, slug, sort_order, created_at
+         FROM cms_gallery_photos
+         WHERE album_id = ?
+         ORDER BY id
+         LIMIT 1"
+    );
+    $galleryAlbumPhotoRow->execute([(int)$galleryAlbumId]);
+    $galleryAlbumPhotoRow = $galleryAlbumPhotoRow->fetch() ?: null;
+    if ($galleryAlbumPhotoRow) {
+        $galleryAlbumPhotoRow = hydrateGalleryPhotoPresentation($galleryAlbumPhotoRow);
+        $galleryAlbumPhotoCanonicalPath = galleryPhotoPublicPath($galleryAlbumPhotoRow);
+    }
+}
+$galleryPhotoRow = $pdo->query(
+    "SELECT id, album_id, filename, title, slug, sort_order, created_at
+     FROM cms_gallery_photos
+     ORDER BY id
+     LIMIT 1"
+)->fetch() ?: null;
+$galleryPhotoId = $galleryPhotoRow['id'] ?? false;
+$galleryPhotoAlbumId = $galleryPhotoRow['album_id'] ?? false;
+if ($galleryPhotoRow) {
+    $galleryPhotoRow = hydrateGalleryPhotoPresentation($galleryPhotoRow);
+}
+$galleryPhotoCanonicalPath = $galleryPhotoRow ? galleryPhotoPublicPath($galleryPhotoRow) : '';
+$galleryPhotoLegacyPath = $galleryPhotoId !== false ? BASE_URL . '/gallery/photo.php?id=' . urlencode((string)$galleryPhotoId) : '';
+$galleryPhotoCanonicalUrl = $galleryPhotoCanonicalPath !== '' ? $baseUrl . $galleryPhotoCanonicalPath : '';
+$galleryPhotoLegacyUrl = $galleryPhotoLegacyPath !== '' ? $baseUrl . $galleryPhotoLegacyPath : '';
 $pollDetailId = false;
 $resourceRow = $pdo->query(
     "SELECT id, slug, max_advance_days FROM cms_res_resources WHERE is_active = 1 ORDER BY id LIMIT 1"
@@ -174,6 +224,9 @@ $cleanup = [
     'download_ids' => [],
     'download_files' => [],
     'faq_ids' => [],
+    'gallery_album_ids' => [],
+    'gallery_photo_ids' => [],
+    'gallery_files' => [],
     'place_ids' => [],
     'poll_ids' => [],
     'podcast_show_ids' => [],
@@ -462,6 +515,92 @@ if ($downloadRow) {
     $downloadLegacyUrl = $downloadLegacyPath !== '' ? $baseUrl . $downloadLegacyPath : '';
 }
 
+if (isModuleEnabled('gallery')) {
+    $runtimeAuditGalleryBaseDir = __DIR__ . '/../uploads/gallery/';
+    $runtimeAuditGalleryThumbDir = $runtimeAuditGalleryBaseDir . 'thumbs/';
+    if (!is_dir($runtimeAuditGalleryBaseDir)) {
+        mkdir($runtimeAuditGalleryBaseDir, 0755, true);
+    }
+    if (!is_dir($runtimeAuditGalleryThumbDir)) {
+        mkdir($runtimeAuditGalleryThumbDir, 0755, true);
+    }
+
+    $runtimeAuditGalleryFilename = 'runtime_audit_' . bin2hex(random_bytes(6)) . '.gif';
+    $runtimeAuditGalleryFileData = base64_decode('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==');
+    if ($runtimeAuditGalleryFileData === false) {
+        $runtimeAuditGalleryFileData = "GIF89a";
+    }
+    file_put_contents($runtimeAuditGalleryBaseDir . $runtimeAuditGalleryFilename, $runtimeAuditGalleryFileData);
+    file_put_contents($runtimeAuditGalleryThumbDir . $runtimeAuditGalleryFilename, $runtimeAuditGalleryFileData);
+    $cleanup['gallery_files'][] = $runtimeAuditGalleryFilename;
+
+    $runtimeAuditGalleryAlbumSlug = uniqueGalleryAlbumSlug($pdo, 'runtime-audit-galerie-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_albums (parent_id, name, slug, description, cover_photo_id, created_at, updated_at)
+         VALUES (NULL, ?, ?, ?, NULL, NOW(), NOW())"
+    )->execute([
+        'Runtime audit galerie',
+        $runtimeAuditGalleryAlbumSlug,
+        'Testovaci album pro overeni verejneho detailu, admin workflow a cistych URL.',
+    ]);
+    $runtimeAuditGalleryAlbumId = (int)$pdo->lastInsertId();
+    $cleanup['gallery_album_ids'][] = $runtimeAuditGalleryAlbumId;
+
+    $runtimeAuditGalleryPhotoSlug = uniqueGalleryPhotoSlug($pdo, 'runtime-audit-fotka-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order, created_at)
+         VALUES (?, ?, ?, ?, 0, NOW())"
+    )->execute([
+        $runtimeAuditGalleryAlbumId,
+        $runtimeAuditGalleryFilename,
+        'Runtime audit fotka',
+        $runtimeAuditGalleryPhotoSlug,
+    ]);
+    $runtimeAuditGalleryPhotoId = (int)$pdo->lastInsertId();
+    $cleanup['gallery_photo_ids'][] = $runtimeAuditGalleryPhotoId;
+
+    $pdo->prepare("UPDATE cms_gallery_albums SET cover_photo_id = ? WHERE id = ?")->execute([
+        $runtimeAuditGalleryPhotoId,
+        $runtimeAuditGalleryAlbumId,
+    ]);
+
+    $galleryAlbumStmt = $pdo->prepare(
+        "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
+         FROM cms_gallery_albums
+         WHERE id = ?"
+    );
+    $galleryAlbumStmt->execute([$runtimeAuditGalleryAlbumId]);
+    $galleryAlbumRow = $galleryAlbumStmt->fetch() ?: null;
+    $galleryAlbumId = $galleryAlbumRow['id'] ?? false;
+    if ($galleryAlbumRow) {
+        $galleryAlbumRow = hydrateGalleryAlbumPresentation($galleryAlbumRow);
+    }
+    $galleryAlbumCanonicalPath = $galleryAlbumRow ? galleryAlbumPublicPath($galleryAlbumRow) : '';
+    $galleryAlbumLegacyPath = $galleryAlbumId !== false ? BASE_URL . '/gallery/album.php?id=' . urlencode((string)$galleryAlbumId) : '';
+    $galleryAlbumCanonicalUrl = $galleryAlbumCanonicalPath !== '' ? $baseUrl . $galleryAlbumCanonicalPath : '';
+    $galleryAlbumLegacyUrl = $galleryAlbumLegacyPath !== '' ? $baseUrl . $galleryAlbumLegacyPath : '';
+
+    $galleryPhotoStmt = $pdo->prepare(
+        "SELECT id, album_id, filename, title, slug, sort_order, created_at
+         FROM cms_gallery_photos
+         WHERE id = ?"
+    );
+    $galleryPhotoStmt->execute([$runtimeAuditGalleryPhotoId]);
+    $galleryPhotoRow = $galleryPhotoStmt->fetch() ?: null;
+    $galleryPhotoId = $galleryPhotoRow['id'] ?? false;
+    $galleryPhotoAlbumId = $galleryPhotoRow['album_id'] ?? false;
+    if ($galleryPhotoRow) {
+        $galleryPhotoRow = hydrateGalleryPhotoPresentation($galleryPhotoRow);
+    }
+    $galleryPhotoCanonicalPath = $galleryPhotoRow ? galleryPhotoPublicPath($galleryPhotoRow) : '';
+    $galleryPhotoLegacyPath = $galleryPhotoId !== false ? BASE_URL . '/gallery/photo.php?id=' . urlencode((string)$galleryPhotoId) : '';
+    $galleryPhotoCanonicalUrl = $galleryPhotoCanonicalPath !== '' ? $baseUrl . $galleryPhotoCanonicalPath : '';
+    $galleryPhotoLegacyUrl = $galleryPhotoLegacyPath !== '' ? $baseUrl . $galleryPhotoLegacyPath : '';
+
+    $galleryAlbumPhotoRow = $galleryPhotoRow;
+    $galleryAlbumPhotoCanonicalPath = $galleryPhotoCanonicalPath;
+}
+
 if (isModuleEnabled('faq')) {
     $runtimeAuditFaqQuestion = 'Jak funguje runtime audit FAQ?';
     $runtimeAuditFaqSlug = uniqueFaqSlug($pdo, 'runtime-audit-faq-' . bin2hex(random_bytes(4)));
@@ -681,6 +820,7 @@ $pages = [
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_downloads', 'url' => $baseUrl . '/admin/downloads.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_gallery_albums', 'url' => $baseUrl . '/admin/gallery_albums.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_polls', 'url' => $baseUrl . '/admin/polls.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_places', 'url' => $baseUrl . '/admin/places.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -698,6 +838,14 @@ if ($boardId !== false) {
 }
 if ($downloadId !== false) {
     $pages[] = ['label' => 'admin_download_form', 'url' => $baseUrl . '/admin/download_form.php?id=' . urlencode((string)$downloadId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($galleryAlbumId !== false) {
+    $pages[] = ['label' => 'admin_gallery_album_form', 'url' => $baseUrl . '/admin/gallery_album_form.php?id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_gallery_photos', 'url' => $baseUrl . '/admin/gallery_photos.php?album_id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_gallery_photo_create_form', 'url' => $baseUrl . '/admin/gallery_photo_form.php?album_id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($galleryPhotoId !== false && $galleryPhotoAlbumId !== false) {
+    $pages[] = ['label' => 'admin_gallery_photo_form', 'url' => $baseUrl . '/admin/gallery_photo_form.php?id=' . urlencode((string)$galleryPhotoId) . '&album_id=' . urlencode((string)$galleryPhotoAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($faqId !== false) {
     $pages[] = ['label' => 'admin_faq_form', 'url' => $baseUrl . '/admin/faq_form.php?id=' . urlencode((string)$faqId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -750,11 +898,11 @@ if (isModuleEnabled('food')) {
 }
 if (isModuleEnabled('gallery')) {
     $pages[] = ['label' => 'gallery_index', 'url' => $baseUrl . '/gallery/index.php'];
-    if ($galleryAlbumId) {
-        $pages[] = ['label' => 'gallery_album', 'url' => $baseUrl . '/gallery/album.php?id=' . urlencode((string)$galleryAlbumId)];
+    if ($galleryAlbumCanonicalUrl !== '') {
+        $pages[] = ['label' => 'gallery_album', 'url' => $galleryAlbumCanonicalUrl];
     }
-    if ($galleryPhotoId) {
-        $pages[] = ['label' => 'gallery_photo', 'url' => $baseUrl . '/gallery/photo.php?id=' . urlencode((string)$galleryPhotoId)];
+    if ($galleryPhotoCanonicalUrl !== '') {
+        $pages[] = ['label' => 'gallery_photo', 'url' => $galleryPhotoCanonicalUrl];
     }
 }
 if (isModuleEnabled('news')) {
@@ -1595,6 +1743,57 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_gallery_albums') {
+        foreach ([
+            'name="q"',
+            '/admin/gallery_album_form.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin gallery albums is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_gallery_album_form') {
+        foreach ([
+            'name="slug"',
+            'name="parent_id"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin gallery album form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_gallery_photos') {
+        foreach ([
+            'name="q"',
+            '/admin/gallery_photo_form.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin gallery photos is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_gallery_photo_create_form') {
+        if (!str_contains($result['body'], 'name="photos[]"')) {
+            $issues[] = 'admin gallery photo create form is missing upload field';
+        }
+    }
+
+    if ($page['label'] === 'admin_gallery_photo_form') {
+        foreach ([
+            'name="title"',
+            'name="slug"',
+            'name="sort_order"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin gallery photo form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_podcast_show_form') {
         foreach ([
             'name="slug"',
@@ -1663,6 +1862,28 @@ foreach ($pages as $page) {
         }
         if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
             $issues[] = 'faq article is missing excerpt';
+        }
+    }
+
+    if ($page['label'] === 'gallery_index' && $galleryAlbumCanonicalPath !== '' && !str_contains($result['body'], $galleryAlbumCanonicalPath)) {
+        $issues[] = 'gallery listing is missing album detail links';
+    }
+
+    if ($page['label'] === 'gallery_album') {
+        if ($galleryAlbumRow && !str_contains($result['body'], (string)($galleryAlbumRow['name'] ?? ''))) {
+            $issues[] = 'gallery album is missing title';
+        }
+        if ($galleryAlbumPhotoCanonicalPath !== '' && !str_contains($result['body'], $galleryAlbumPhotoCanonicalPath)) {
+            $issues[] = 'gallery album is missing photo detail links';
+        }
+    }
+
+    if ($page['label'] === 'gallery_photo') {
+        if ($galleryPhotoRow && !str_contains($result['body'], (string)($galleryPhotoRow['label'] ?? ''))) {
+            $issues[] = 'gallery photo is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět do alba')) {
+            $issues[] = 'gallery photo is missing back link';
         }
     }
 
@@ -1862,6 +2083,40 @@ if ($faqCanonicalPath === '' || $faqLegacyPath === '' || $faqCanonicalPath === $
     }
 }
 
+echo "=== gallery_album_legacy_redirect ===\n";
+if ($galleryAlbumCanonicalPath === '' || $galleryAlbumLegacyPath === '' || $galleryAlbumCanonicalPath === $galleryAlbumLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyGalleryAlbumProbe = fetchUrl($galleryAlbumLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $galleryAlbumCanonicalPath;
+    if (!str_contains($legacyGalleryAlbumProbe['status'], '302')) {
+        echo "- legacy gallery album URL does not redirect ({$legacyGalleryAlbumProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyGalleryAlbumProbe['headers'], true)) {
+        echo "- legacy gallery album URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== gallery_photo_legacy_redirect ===\n";
+if ($galleryPhotoCanonicalPath === '' || $galleryPhotoLegacyPath === '' || $galleryPhotoCanonicalPath === $galleryPhotoLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyGalleryPhotoProbe = fetchUrl($galleryPhotoLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $galleryPhotoCanonicalPath;
+    if (!str_contains($legacyGalleryPhotoProbe['status'], '302')) {
+        echo "- legacy gallery photo URL does not redirect ({$legacyGalleryPhotoProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyGalleryPhotoProbe['headers'], true)) {
+        echo "- legacy gallery photo URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== events_article_legacy_redirect ===\n";
 if ($eventCanonicalPath === '' || $eventLegacyPath === '' || $eventCanonicalPath === $eventLegacyPath) {
     echo "OK\n";
@@ -2030,6 +2285,9 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
 }
+if (isModuleEnabled('gallery')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/gallery_albums.php', 'expected' => '403', 'label' => 'author gallery'];
+}
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'author polls'];
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'author downloads'];
 if (isModuleEnabled('faq')) {
@@ -2063,6 +2321,9 @@ if (isModuleEnabled('reservations')) {
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
 }
+if (isModuleEnabled('gallery')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/gallery_albums.php', 'expected' => '403', 'label' => 'moderator gallery'];
+}
 $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'moderator polls'];
 $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'moderator downloads'];
 if (isModuleEnabled('faq')) {
@@ -2084,6 +2345,9 @@ if (isModuleEnabled('blog')) {
 }
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'booking manager board'];
+}
+if (isModuleEnabled('gallery')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/gallery_albums.php', 'expected' => '403', 'label' => 'booking manager gallery'];
 }
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'booking manager polls'];
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'booking manager downloads'];
@@ -2566,6 +2830,18 @@ foreach ($cleanup['download_files'] as $downloadFile) {
 if (!empty($cleanup['faq_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['faq_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_faqs WHERE id IN ({$placeholders})")->execute($cleanup['faq_ids']);
+}
+if (!empty($cleanup['gallery_photo_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['gallery_photo_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_gallery_photos WHERE id IN ({$placeholders})")->execute($cleanup['gallery_photo_ids']);
+}
+if (!empty($cleanup['gallery_album_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['gallery_album_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id IN ({$placeholders})")->execute($cleanup['gallery_album_ids']);
+}
+foreach ($cleanup['gallery_files'] as $galleryFile) {
+    @unlink(__DIR__ . '/../uploads/gallery/' . $galleryFile);
+    @unlink(__DIR__ . '/../uploads/gallery/thumbs/' . $galleryFile);
 }
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));

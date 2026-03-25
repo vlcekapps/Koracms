@@ -301,10 +301,12 @@ $tables = [
         id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         parent_id      INT          DEFAULT NULL,
         name           VARCHAR(255) NOT NULL,
+        slug           VARCHAR(255) NOT NULL,
         description    TEXT,
         cover_photo_id INT          DEFAULT NULL,
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_gallery_albums_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_gallery_photos' => "CREATE TABLE IF NOT EXISTS cms_gallery_photos (
@@ -312,8 +314,10 @@ $tables = [
         album_id   INT          NOT NULL,
         filename   VARCHAR(255) NOT NULL,
         title      VARCHAR(255) NOT NULL DEFAULT '',
+        slug       VARCHAR(255) NOT NULL,
         sort_order INT          NOT NULL DEFAULT 0,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_gallery_photos_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_food_cards' => "CREATE TABLE IF NOT EXISTS cms_food_cards (
@@ -603,6 +607,9 @@ $addColumns = [
     'cms_places.opening_hours'       => "ALTER TABLE cms_places ADD COLUMN opening_hours TEXT",
     'cms_places.status'              => "ALTER TABLE cms_places ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_places.updated_at'          => "ALTER TABLE cms_places ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_gallery
+    'cms_gallery_albums.slug'        => "ALTER TABLE cms_gallery_albums ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER name",
+    'cms_gallery_photos.slug'        => "ALTER TABLE cms_gallery_photos ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_board
@@ -1173,6 +1180,119 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy souborů ke stažení – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $galleryAlbumSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_gallery_albums' AND COLUMN_NAME = 'slug'"
+    );
+    $galleryAlbumSlugColumnCheck->execute();
+
+    if ((int)$galleryAlbumSlugColumnCheck->fetchColumn() > 0) {
+        $galleryAlbumRows = $pdo->query("SELECT id, name, slug FROM cms_gallery_albums ORDER BY id")->fetchAll();
+        $updateGalleryAlbumSlugStmt = $pdo->prepare("UPDATE cms_gallery_albums SET slug = ? WHERE id = ?");
+
+        foreach ($galleryAlbumRows as $galleryAlbumRow) {
+            $existingSlug = trim((string)($galleryAlbumRow['slug'] ?? ''));
+            $resolvedSlug = uniqueGalleryAlbumSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$galleryAlbumRow['name'],
+                (int)$galleryAlbumRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateGalleryAlbumSlugStmt->execute([$resolvedSlug, (int)$galleryAlbumRow['id']]);
+            }
+        }
+
+        $galleryAlbumSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_gallery_albums' AND COLUMN_NAME = 'slug'"
+        );
+        $galleryAlbumSlugNullabilityCheck->execute();
+        if (($galleryAlbumSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_gallery_albums MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_gallery_albums.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_gallery_albums.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $galleryAlbumSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_gallery_albums'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $galleryAlbumSlugIndexCheck->execute();
+        if ((int)$galleryAlbumSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_gallery_albums ADD UNIQUE KEY uq_cms_gallery_albums_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_gallery_albums_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_gallery_albums.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy galerií – sloupec <code>cms_gallery_albums.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy galerií – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $galleryPhotoSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_gallery_photos' AND COLUMN_NAME = 'slug'"
+    );
+    $galleryPhotoSlugColumnCheck->execute();
+
+    if ((int)$galleryPhotoSlugColumnCheck->fetchColumn() > 0) {
+        $galleryPhotoRows = $pdo->query("SELECT id, title, filename, slug FROM cms_gallery_photos ORDER BY id")->fetchAll();
+        $updateGalleryPhotoSlugStmt = $pdo->prepare("UPDATE cms_gallery_photos SET slug = ? WHERE id = ?");
+
+        foreach ($galleryPhotoRows as $galleryPhotoRow) {
+            $existingSlug = trim((string)($galleryPhotoRow['slug'] ?? ''));
+            $slugCandidate = $existingSlug !== ''
+                ? $existingSlug
+                : ((string)($galleryPhotoRow['title'] ?? '') !== ''
+                    ? (string)$galleryPhotoRow['title']
+                    : pathinfo((string)($galleryPhotoRow['filename'] ?? ''), PATHINFO_FILENAME));
+            $resolvedSlug = uniqueGalleryPhotoSlug(
+                $pdo,
+                $slugCandidate,
+                (int)$galleryPhotoRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateGalleryPhotoSlugStmt->execute([$resolvedSlug, (int)$galleryPhotoRow['id']]);
+            }
+        }
+
+        $galleryPhotoSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_gallery_photos' AND COLUMN_NAME = 'slug'"
+        );
+        $galleryPhotoSlugNullabilityCheck->execute();
+        if (($galleryPhotoSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_gallery_photos MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "✓ Sloupec <code>cms_gallery_photos.slug</code> je nyní NOT NULL – OK";
+        } else {
+            $log[] = "· Sloupec <code>cms_gallery_photos.slug</code> už je NOT NULL – přeskočeno";
+        }
+
+        $galleryPhotoSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_gallery_photos'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $galleryPhotoSlugIndexCheck->execute();
+        if ((int)$galleryPhotoSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_gallery_photos ADD UNIQUE KEY uq_cms_gallery_photos_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_gallery_photos_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_gallery_photos.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy fotografií – sloupec <code>cms_gallery_photos.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy fotografií – CHYBA: " . h($e->getMessage());
 }
 
 try {

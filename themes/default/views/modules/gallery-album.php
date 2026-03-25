@@ -9,7 +9,7 @@
             <?php if ($isLast): ?>
               <?= h($crumb['name']) ?>
             <?php else: ?>
-              <a href="<?= BASE_URL ?>/gallery/album.php?id=<?= (int)$crumb['id'] ?>"><?= h($crumb['name']) ?></a>
+              <a href="<?= h((string)$crumb['public_path']) ?>"><?= h($crumb['name']) ?></a>
             <?php endif; ?>
           </li>
         <?php endforeach; ?>
@@ -35,7 +35,7 @@
       <div class="gallery-grid">
         <?php foreach ($subAlbums as $subAlbum): ?>
           <article class="card gallery-card">
-            <a class="gallery-card__link" href="<?= BASE_URL ?>/gallery/album.php?id=<?= (int)$subAlbum['id'] ?>">
+            <a class="gallery-card__link" href="<?= h((string)$subAlbum['public_path']) ?>">
               <?php if ($subAlbum['cover_url'] !== ''): ?>
                 <img class="gallery-card__image" src="<?= h($subAlbum['cover_url']) ?>" alt="">
               <?php else: ?>
@@ -72,8 +72,8 @@
       <div class="gallery-grid gallery-grid--photos">
         <?php foreach ($photos as $photo): ?>
           <figure class="card gallery-photo-card">
-            <a class="gallery-card__link" href="<?= BASE_URL ?>/gallery/photo.php?id=<?= (int)$photo['id'] ?>">
-              <img class="gallery-card__image" src="<?= BASE_URL ?>/uploads/gallery/thumbs/<?= rawurlencode($photo['filename']) ?>"
+            <a class="gallery-card__link" href="<?= h((string)$photo['public_path']) ?>">
+              <img class="gallery-card__image" src="<?= h((string)$photo['thumb_url']) ?>"
                    alt="<?= h($photo['label']) ?>">
             </a>
             <?php if ($photo['title'] !== ''): ?>

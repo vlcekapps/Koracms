@@ -227,7 +227,39 @@ endif; ?>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
-<?php endif; ?>
+<?php
+    try {
+        $galleryAlbums = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_gallery_albums
+             ORDER BY updated_at DESC, id DESC"
+        )->fetchAll();
+        foreach ($galleryAlbums as $galleryAlbum):
+?>
+  <url>
+    <loc><?= h(galleryAlbumPublicUrl($galleryAlbum)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$galleryAlbum['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+
+    try {
+        $galleryPhotos = $pdo->query(
+            "SELECT id, slug, created_at AS sitemap_lastmod
+             FROM cms_gallery_photos
+             ORDER BY created_at DESC, id DESC"
+        )->fetchAll();
+        foreach ($galleryPhotos as $galleryPhoto):
+?>
+  <url>
+    <loc><?= h(galleryPhotoPublicUrl($galleryPhoto)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$galleryPhoto['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
 
 <?php if (isModuleEnabled('places')): ?>
   <url>

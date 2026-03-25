@@ -108,10 +108,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             parent_id      INT          DEFAULT NULL,
             name           VARCHAR(255) NOT NULL,
+            slug           VARCHAR(255) NOT NULL,
             description    TEXT,
             cover_photo_id INT          DEFAULT NULL,
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_gallery_albums_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_comments (
@@ -313,8 +315,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             album_id   INT          NOT NULL,
             filename   VARCHAR(255) NOT NULL,
             title      VARCHAR(255) NOT NULL DEFAULT '',
+            slug       VARCHAR(255) NOT NULL,
             sort_order INT          NOT NULL DEFAULT 0,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_gallery_photos_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_food_cards (

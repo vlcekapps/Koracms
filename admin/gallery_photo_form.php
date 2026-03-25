@@ -1,17 +1,31 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
 
-$pdo     = db_connect();
-$id      = inputInt('get', 'id');
+$pdo = db_connect();
+$id = inputInt('get', 'id');
 $albumId = inputInt('get', 'album_id');
+$errorKey = trim($_GET['err'] ?? '');
+$errorMap = [
+    'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
+];
+$formError = $errorMap[$errorKey] ?? '';
 
 $photo = null;
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_gallery_photos WHERE id = ?");
     $stmt->execute([$id]);
     $photo = $stmt->fetch();
-    if ($photo) $albumId = (int)$photo['album_id'];
+    if ($photo) {
+        $photo = hydrateGalleryPhotoPresentation($photo);
+        $albumId = (int)$photo['album_id'];
+    } elseif ($albumId !== null) {
+        header('Location: ' . BASE_URL . '/admin/gallery_photos.php?album_id=' . $albumId);
+        exit;
+    } else {
+        header('Location: ' . BASE_URL . '/admin/gallery_albums.php');
+        exit;
+    }
 }
 
 if ($albumId === null) {
@@ -19,33 +33,43 @@ if ($albumId === null) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ?");
-$stmt->execute([$albumId]);
-$album = $stmt->fetch();
+$albumStmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ?");
+$albumStmt->execute([$albumId]);
+$album = $albumStmt->fetch();
 if (!$album) {
     header('Location: ' . BASE_URL . '/admin/gallery_albums.php');
     exit;
 }
+$album = hydrateGalleryAlbumPresentation($album);
 
 $pageTitle = $id ? 'Upravit fotografii' : 'Přidat fotografie';
 adminHeader($pageTitle);
 ?>
 
 <p>
-  <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= $albumId ?>"><span aria-hidden="true">←</span> Zpět na fotografie alba</a>
+  <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>"><span aria-hidden="true">←</span> Zpět na fotografie alba</a>
 </p>
 
-<?php if ($id && $photo): ?>
-  <!-- Úprava existující fotografie (titulek + pořadí) -->
+<?php if ($id !== null && $photo !== null): ?>
+  <p><a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejnou stránku fotografie</a></p>
+<?php endif; ?>
+
+<?php if ($formError !== ''): ?>
+  <div id="form-errors" class="error" role="alert">
+    <p><?= h($formError) ?></p>
+  </div>
+<?php endif; ?>
+
+<?php if ($id !== null && $photo !== null): ?>
   <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_save.php" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-    <input type="hidden" name="id"         value="<?= (int)$photo['id'] ?>">
-    <input type="hidden" name="album_id"   value="<?= $albumId ?>">
-    <input type="hidden" name="mode"       value="edit">
+    <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
+    <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
+    <input type="hidden" name="mode" value="edit">
 
     <div style="margin-bottom:1rem">
-      <img src="<?= BASE_URL ?>/uploads/gallery/thumbs/<?= rawurlencode($photo['filename']) ?>"
-           alt="<?= h($photo['title'] ?: $photo['filename']) ?>"
+      <img src="<?= h((string)$photo['thumb_url']) ?>"
+           alt="<?= h((string)$photo['label']) ?>"
            style="max-width:300px;height:auto;display:block;">
     </div>
 
@@ -53,24 +77,56 @@ adminHeader($pageTitle);
       <legend>Vlastnosti fotografie</legend>
 
       <label for="title">Titulek fotografie</label>
-      <input type="text" id="title" name="title"
-             maxlength="255" value="<?= h($photo['title']) ?>">
+      <input type="text" id="title" name="title" maxlength="255"
+             value="<?= h((string)$photo['title']) ?>"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
+
+      <label for="slug">Slug adresy</label>
+      <input type="text" id="slug" name="slug" maxlength="255"
+             value="<?= h((string)$photo['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
+      <small>Veřejná adresa bude vypadat například jako <code>/gallery/photo/moje-fotografie</code>.</small>
 
       <label for="sort_order">Pořadí</label>
-      <input type="number" id="sort_order" name="sort_order"
-             min="0" value="<?= (int)$photo['sort_order'] ?>">
+      <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">
 
       <button type="submit" style="margin-top:1rem">Uložit změny</button>
     </fieldset>
   </form>
 
+  <script>
+  (() => {
+    const titleInput = document.getElementById('title');
+    const slugInput = document.getElementById('slug');
+    if (!titleInput || !slugInput) return;
+
+    const transliteration = {
+      'á':'a','č':'c','ď':'d','é':'e','ě':'e','í':'i','ň':'n','ó':'o','ř':'r','š':'s','ť':'t','ú':'u','ů':'u','ý':'y','ž':'z',
+      'Á':'a','Č':'c','Ď':'d','É':'e','Ě':'e','Í':'i','Ň':'n','Ó':'o','Ř':'r','Š':'s','Ť':'t','Ú':'u','Ů':'u','Ý':'y','Ž':'z'
+    };
+    const slugify = (value) => value
+      .split('')
+      .map((char) => transliteration[char] ?? char)
+      .join('')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    let slugTouched = slugInput.value.trim() !== '';
+    slugInput.addEventListener('input', () => {
+      slugTouched = slugInput.value.trim() !== '';
+    });
+    titleInput.addEventListener('input', () => {
+      if (!slugTouched) {
+        slugInput.value = slugify(titleInput.value);
+      }
+    });
+  })();
+  </script>
 <?php else: ?>
-  <!-- Upload nových fotografií (lze vybrat více souborů najednou) -->
   <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_save.php"
         enctype="multipart/form-data" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-    <input type="hidden" name="album_id"   value="<?= $albumId ?>">
-    <input type="hidden" name="mode"       value="upload">
+    <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
+    <input type="hidden" name="mode" value="upload">
 
     <fieldset>
       <legend>Nahrání fotografií</legend>
@@ -82,6 +138,8 @@ adminHeader($pageTitle);
       <input type="file" id="photos" name="photos[]"
              accept="image/jpeg,image/png,image/gif,image/webp"
              multiple required aria-required="true">
+
+      <p style="margin:.75rem 0 0;color:#555">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
 
       <button type="submit" style="margin-top:1rem">Nahrát</button>
     </fieldset>

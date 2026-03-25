@@ -13,53 +13,79 @@ function galleryCountLabel(int $count, string $one, string $few, string $many): 
 }
 
 $albumId = inputInt('get', 'id');
-if ($albumId === null) {
+$albumSlug = galleryAlbumSlug(trim($_GET['slug'] ?? ''));
+if ($albumId === null && $albumSlug === '') {
     header('Location: ' . BASE_URL . '/gallery/index.php');
     exit;
 }
 
 $pdo = db_connect();
-$stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ?");
-$stmt->execute([$albumId]);
-$album = $stmt->fetch();
-if (!$album) {
-    header('Location: ' . BASE_URL . '/gallery/index.php');
+$siteName = getSetting('site_name', 'Kora CMS');
+
+if ($albumSlug !== '') {
+    $stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE slug = ? LIMIT 1");
+    $stmt->execute([$albumSlug]);
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ? LIMIT 1");
+    $stmt->execute([$albumId]);
+}
+$album = $stmt->fetch() ?: null;
+
+if ($album === null) {
+    http_response_code(404);
+    $missingPath = $albumSlug !== ''
+        ? BASE_URL . '/gallery/album/' . rawurlencode($albumSlug)
+        : BASE_URL . '/gallery/album.php' . ($albumId !== null ? '?id=' . urlencode((string)$albumId) : '');
+
+    renderPublicPage([
+        'title' => 'Album nenalezeno – ' . $siteName,
+        'meta' => [
+            'title' => 'Album nenalezeno – ' . $siteName,
+            'url' => $missingPath,
+        ],
+        'view' => 'not-found',
+        'body_class' => 'page-gallery-not-found',
+    ]);
     exit;
 }
 
-$siteName = getSetting('site_name', 'Kora CMS');
-$trail = gallery_breadcrumb($albumId);
+$album = hydrateGalleryAlbumPresentation($album);
+if ($albumSlug === '') {
+    header('Location: ' . $album['public_path']);
+    exit;
+}
+
+$trail = gallery_breadcrumb((int)$album['id']);
 
 $subAlbumsStmt = $pdo->prepare(
-    "SELECT a.id, a.name, a.description,
+    "SELECT a.id, a.name, a.slug, a.description,
             (SELECT COUNT(*) FROM cms_gallery_photos p WHERE p.album_id = a.id) AS photo_count,
             (SELECT COUNT(*) FROM cms_gallery_albums s WHERE s.parent_id = a.id) AS sub_count
      FROM cms_gallery_albums a
      WHERE a.parent_id = ?
      ORDER BY a.name"
 );
-$subAlbumsStmt->execute([$albumId]);
+$subAlbumsStmt->execute([(int)$album['id']]);
 $subAlbums = $subAlbumsStmt->fetchAll();
 
 $photosStmt = $pdo->prepare(
-    "SELECT id, filename, title FROM cms_gallery_photos
+    "SELECT id, filename, title, slug
+     FROM cms_gallery_photos
      WHERE album_id = ?
      ORDER BY sort_order, id"
 );
-$photosStmt->execute([$albumId]);
+$photosStmt->execute([(int)$album['id']]);
 $photos = $photosStmt->fetchAll();
 
 foreach ($subAlbums as &$subAlbum) {
-    $subAlbum['cover_url'] = gallery_cover_url((int)$subAlbum['id']);
+    $subAlbum = hydrateGalleryAlbumPresentation($subAlbum);
     $subAlbum['photo_count_label'] = galleryCountLabel((int)$subAlbum['photo_count'], 'fotka', 'fotky', 'fotek');
     $subAlbum['sub_count_label'] = galleryCountLabel((int)$subAlbum['sub_count'], 'podsložka', 'podsložky', 'podsložek');
 }
 unset($subAlbum);
 
 foreach ($photos as &$photo) {
-    $photo['label'] = $photo['title'] !== ''
-        ? $photo['title']
-        : pathinfo($photo['filename'], PATHINFO_FILENAME);
+    $photo = hydrateGalleryPhotoPresentation($photo);
 }
 unset($photo);
 
@@ -67,8 +93,8 @@ renderPublicPage([
     'title' => $album['name'] . ' – Galerie – ' . $siteName,
     'meta' => [
         'title' => $album['name'] . ' – Galerie – ' . $siteName,
-        'description' => $album['description'] ?? '',
-        'url' => BASE_URL . '/gallery/album.php?id=' . $albumId,
+        'description' => $album['excerpt'] !== '' ? $album['excerpt'] : '',
+        'url' => $album['public_path'],
     ],
     'view' => 'modules/gallery-album',
     'view_data' => [
@@ -80,5 +106,5 @@ renderPublicPage([
     'current_nav' => 'gallery',
     'body_class' => 'page-gallery-album',
     'page_kind' => 'detail',
-    'admin_edit_url' => BASE_URL . '/admin/gallery_album_form.php?id=' . $albumId,
+    'admin_edit_url' => BASE_URL . '/admin/gallery_album_form.php?id=' . (int)$album['id'],
 ]);

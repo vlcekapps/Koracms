@@ -13,7 +13,7 @@
       <div class="gallery-grid">
         <?php foreach ($albums as $album): ?>
           <article class="card gallery-card">
-            <a class="gallery-card__link" href="<?= BASE_URL ?>/gallery/album.php?id=<?= (int)$album['id'] ?>">
+            <a class="gallery-card__link" href="<?= h((string)$album['public_path']) ?>">
               <?php if ($album['cover_url'] !== ''): ?>
                 <img class="gallery-card__image" src="<?= h($album['cover_url']) ?>" alt="">
               <?php else: ?>

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $id      = inputInt('post', 'id');
@@ -24,6 +24,7 @@ if ($id !== null) {
         )->execute([$id]);
 
         $pdo->prepare("DELETE FROM cms_gallery_photos WHERE id = ?")->execute([$id]);
+        logAction('gallery_photo_delete', 'id=' . $id);
     }
 }
 

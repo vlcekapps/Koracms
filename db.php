@@ -1063,6 +1063,16 @@ function boardSlug(string $value): string
     return slugify(trim($value));
 }
 
+function galleryAlbumSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
+function galleryPhotoSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function pollSlug(string $value): string
 {
     return slugify(trim($value));
@@ -2019,6 +2029,46 @@ function pollPublicUrl(array $poll, array $query = []): string
     return siteUrl(appendUrlQuery(pollPublicRequestPath($poll), $query));
 }
 
+function galleryAlbumPublicRequestPath(array $album): string
+{
+    $slug = galleryAlbumSlug((string)($album['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/gallery/album/' . rawurlencode($slug);
+    }
+
+    return '/gallery/album.php?id=' . (int)($album['id'] ?? 0);
+}
+
+function galleryAlbumPublicPath(array $album, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(galleryAlbumPublicRequestPath($album), $query);
+}
+
+function galleryAlbumPublicUrl(array $album, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(galleryAlbumPublicRequestPath($album), $query));
+}
+
+function galleryPhotoPublicRequestPath(array $photo): string
+{
+    $slug = galleryPhotoSlug((string)($photo['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/gallery/photo/' . rawurlencode($slug);
+    }
+
+    return '/gallery/photo.php?id=' . (int)($photo['id'] ?? 0);
+}
+
+function galleryPhotoPublicPath(array $photo, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(galleryPhotoPublicRequestPath($photo), $query);
+}
+
+function galleryPhotoPublicUrl(array $photo, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(galleryPhotoPublicRequestPath($photo), $query));
+}
+
 function newsPublicPath(array $news, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(newsPublicRequestPath($news), $query);
@@ -2203,6 +2253,48 @@ function uniqueBoardSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_board WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueGalleryAlbumSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = galleryAlbumSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'album';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_gallery_albums WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueGalleryPhotoSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = galleryPhotoSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'fotografie';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_gallery_photos WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);
@@ -2524,6 +2616,64 @@ function hydratePollPresentation(array $poll): array
     return $poll;
 }
 
+function galleryAlbumExcerpt(array $album, int $limit = 220): string
+{
+    $explicitExcerpt = normalizePlainText((string)($album['description'] ?? ''));
+    if ($explicitExcerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($explicitExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function galleryPhotoLabel(array $photo): string
+{
+    $title = trim((string)($photo['title'] ?? ''));
+    if ($title !== '') {
+        return $title;
+    }
+
+    $filename = pathinfo((string)($photo['filename'] ?? ''), PATHINFO_FILENAME);
+    $filename = preg_replace('/[_-]+/u', ' ', $filename);
+    $filename = trim((string)$filename);
+    if ($filename !== '') {
+        return $filename;
+    }
+
+    return 'Fotografie';
+}
+
+function hydrateGalleryAlbumPresentation(array $album): array
+{
+    $album['name'] = trim((string)($album['name'] ?? ''));
+    if ($album['name'] === '') {
+        $album['name'] = 'Album';
+    }
+    $album['slug'] = galleryAlbumSlug((string)($album['slug'] ?? ''));
+    $album['excerpt'] = galleryAlbumExcerpt($album);
+    $album['public_path'] = galleryAlbumPublicPath($album);
+    $album['public_url'] = galleryAlbumPublicUrl($album);
+    if (!isset($album['cover_url']) && !empty($album['id'])) {
+        $album['cover_url'] = gallery_cover_url((int)$album['id']);
+    }
+    return $album;
+}
+
+function hydrateGalleryPhotoPresentation(array $photo): array
+{
+    $photo['slug'] = galleryPhotoSlug((string)($photo['slug'] ?? ''));
+    $photo['label'] = galleryPhotoLabel($photo);
+    $photo['public_path'] = galleryPhotoPublicPath($photo);
+    $photo['public_url'] = galleryPhotoPublicUrl($photo);
+    if (!isset($photo['image_url'])) {
+        $photo['image_url'] = BASE_URL . '/uploads/gallery/' . rawurlencode((string)($photo['filename'] ?? ''));
+    }
+    if (!isset($photo['thumb_url'])) {
+        $photo['thumb_url'] = BASE_URL . '/uploads/gallery/thumbs/' . rawurlencode((string)($photo['filename'] ?? ''));
+    }
+    return $photo;
+}
+
 function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array
 {
     $normalizedSlug = authorSlug($slug);
@@ -2687,11 +2837,16 @@ function gallery_breadcrumb(int $albumId): array
     $seen  = [];
     while ($id !== null && !in_array($id, $seen, true)) {
         $seen[] = $id;
-        $stmt   = $pdo->prepare("SELECT id, name, parent_id FROM cms_gallery_albums WHERE id = ?");
+        $stmt   = $pdo->prepare("SELECT id, name, slug, parent_id FROM cms_gallery_albums WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         if (!$row) break;
-        array_unshift($trail, ['id' => (int)$row['id'], 'name' => $row['name']]);
+        array_unshift($trail, [
+            'id' => (int)$row['id'],
+            'name' => $row['name'],
+            'slug' => galleryAlbumSlug((string)($row['slug'] ?? '')),
+            'public_path' => galleryAlbumPublicPath($row),
+        ]);
         $id = $row['parent_id'] !== null ? (int)$row['parent_id'] : null;
     }
     return $trail;

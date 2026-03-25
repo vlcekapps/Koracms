@@ -117,7 +117,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
 | **Chat** | Jednoduchá veřejná diskuse |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou a rate limitingem |
-| **Galerie** | Vnořená fotoalba s automatickým generováním náhledů; výběr obálky alba |
+| **Galerie** | Vnořená fotoalba s automatickým generováním náhledů, čistými slug URL pro alba i fotografie a výběrem obálky alba |
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |
 | **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
@@ -240,13 +240,13 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 
 ## Další funkce
 
-- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, místy, anketami a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
+- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, galeriemi, místy, anketami a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, událostí, podcastů, epizod, anket i dokumentů úřední desky
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, galerií, událostí, podcastů, epizod, anket i dokumentů úřední desky
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
-- **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
+- **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie včetně slugů alb a fotografií, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
 
 ---
 

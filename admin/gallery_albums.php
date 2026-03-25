@@ -1,29 +1,56 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
+$q = trim($_GET['q'] ?? '');
 
-// Načteme všechna alba (flat list) + počty
-$allAlbums = $pdo->query(
-    "SELECT a.id, a.name, a.parent_id,
-            (SELECT COUNT(*) FROM cms_gallery_photos p WHERE p.album_id  = a.id) AS photo_count,
-            (SELECT COUNT(*) FROM cms_gallery_albums s WHERE s.parent_id = a.id) AS sub_count,
+$whereSql = '';
+$params = [];
+if ($q !== '') {
+    $whereSql = "WHERE a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ? OR COALESCE(p.name, '') LIKE ?";
+    $params = [
+        '%' . $q . '%',
+        '%' . $q . '%',
+        '%' . $q . '%',
+        '%' . $q . '%',
+    ];
+}
+
+$stmt = $pdo->prepare(
+    "SELECT a.id, a.name, a.slug, a.parent_id, a.description, a.cover_photo_id,
+            (SELECT COUNT(*) FROM cms_gallery_photos gp WHERE gp.album_id = a.id) AS photo_count,
+            (SELECT COUNT(*) FROM cms_gallery_albums gs WHERE gs.parent_id = a.id) AS sub_count,
             p.name AS parent_name
      FROM cms_gallery_albums a
      LEFT JOIN cms_gallery_albums p ON p.id = a.parent_id
-     ORDER BY a.parent_id IS NOT NULL, p.name, a.name"
-)->fetchAll();
+     {$whereSql}
+     ORDER BY a.parent_id IS NOT NULL, COALESCE(p.name, ''), a.name"
+);
+$stmt->execute($params);
+$albums = array_map(
+    static fn(array $album): array => hydrateGalleryAlbumPresentation($album),
+    $stmt->fetchAll()
+);
 
 adminHeader('Galerie – Alba');
 ?>
 
-<p>
-  <a href="<?= BASE_URL ?>/admin/gallery_album_form.php" class="btn">+ Nové album</a>
-</p>
+<p><a href="<?= BASE_URL ?>/admin/gallery_album_form.php" class="btn">+ Nové album</a></p>
 
-<?php if (empty($allAlbums)): ?>
-  <p>Zatím nebylo vytvořeno žádné album.</p>
+<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+  <div>
+    <label for="q" class="visually-hidden">Hledat v albech</label>
+    <input type="search" id="q" name="q" placeholder="Hledat v albech..." value="<?= h($q) ?>" style="width:320px">
+  </div>
+  <button type="submit" class="btn">Filtrovat</button>
+  <?php if ($q !== ''): ?>
+    <a href="gallery_albums.php" class="btn">Zrušit</a>
+  <?php endif; ?>
+</form>
+
+<?php if (empty($albums)): ?>
+  <p><?= $q !== '' ? 'Pro zadaný filtr nebyla nalezena žádná alba.' : 'Zatím nebylo vytvořeno žádné album.' ?></p>
 <?php else: ?>
   <table>
     <caption>Seznam alb</caption>
@@ -37,19 +64,26 @@ adminHeader('Galerie – Alba');
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($allAlbums as $a): ?>
+      <?php foreach ($albums as $album): ?>
         <tr>
-          <td><?= $a['parent_id'] ? '— ' : '' ?><?= h($a['name']) ?></td>
-          <td><?= $a['parent_name'] !== null ? h($a['parent_name']) : '(kořen)' ?></td>
-          <td><?= (int)$a['photo_count'] ?></td>
-          <td><?= (int)$a['sub_count'] ?></td>
+          <td>
+            <?= $album['parent_id'] ? '— ' : '' ?><strong><?= h($album['name']) ?></strong><br>
+            <small style="color:#555"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>
+            <?php if ($album['excerpt'] !== ''): ?>
+              <br><small style="color:#555"><?= h($album['excerpt']) ?></small>
+            <?php endif; ?>
+          </td>
+          <td><?= $album['parent_name'] !== null ? h((string)$album['parent_name']) : '(kořen)' ?></td>
+          <td><?= (int)$album['photo_count'] ?></td>
+          <td><?= (int)$album['sub_count'] ?></td>
           <td class="actions">
-            <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$a['id'] ?>" class="btn">Fotografie</a>
-            <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$a['id'] ?>" class="btn">Upravit</a>
+            <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Fotografie</a>
+            <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
+            <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_album_delete.php"
-                  onsubmit="return confirm('Smazat album „<?= h(addslashes($a['name'])) ?>" včetně všech fotografií a podsložek?')">
+                  onsubmit="return confirm('Smazat album „<?= h(addslashes($album['name'])) ?>“ včetně všech fotografií a podsložek?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
+              <input type="hidden" name="id" value="<?= (int)$album['id'] ?>">
               <button type="submit" class="btn btn-danger">Smazat</button>
             </form>
           </td>
@@ -58,5 +92,7 @@ adminHeader('Galerie – Alba');
     </tbody>
   </table>
 <?php endif; ?>
+
+<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <?php adminFooter(); ?>

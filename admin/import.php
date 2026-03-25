@@ -211,13 +211,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Galerie – alba (nejdřív, fotky odkazují na album_id)
                 if (!empty($data['gallery_albums']) && is_array($data['gallery_albums'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_gallery_albums (id, parent_id, name, description)
-                         VALUES (?,?,?,?)"
+                        "INSERT IGNORE INTO cms_gallery_albums (id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['gallery_albums'] as $row) {
+                        $albumName = trim((string)($row['name'] ?? ''));
+                        if ($albumName === '') {
+                            $albumName = 'Album';
+                        }
+                        $albumSlug = galleryAlbumSlug((string)($row['slug'] ?? ''));
+                        if ($albumSlug === '') {
+                            $albumSlug = uniqueGalleryAlbumSlug($pdo, $albumName);
+                        } else {
+                            $albumSlug = uniqueGalleryAlbumSlug($pdo, $albumSlug, (int)$row['id']);
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
                         $ins->execute([
-                            (int)$row['id'], $row['parent_id'] ?: null,
-                            $row['name'], $row['description'] ?? '',
+                            (int)$row['id'],
+                            $row['parent_id'] ?: null,
+                            $albumName,
+                            $albumSlug,
+                            $row['description'] ?? '',
+                            $row['cover_photo_id'] ?: null,
+                            $createdAt,
+                            $updatedAt,
                         ]);
                     }
                     $summary[] = 'Galerie – alba importována.';
@@ -227,14 +245,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['gallery_photos']) && is_array($data['gallery_photos'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_gallery_photos
-                         (id, album_id, filename, title, sort_order)
-                         VALUES (?,?,?,?,?)"
+                         (id, album_id, filename, title, slug, sort_order, created_at)
+                         VALUES (?,?,?,?,?,?,?)"
                     );
                     foreach ($data['gallery_photos'] as $row) {
+                        $photoTitle = (string)($row['title'] ?? '');
+                        $photoSlugCandidate = trim((string)($row['slug'] ?? ''));
+                        if ($photoSlugCandidate === '') {
+                            $photoSlugCandidate = $photoTitle !== ''
+                                ? $photoTitle
+                                : pathinfo((string)($row['filename'] ?? ''), PATHINFO_FILENAME);
+                        }
+                        $photoSlug = uniqueGalleryPhotoSlug($pdo, $photoSlugCandidate, (int)$row['id']);
                         $ins->execute([
-                            (int)$row['id'], (int)$row['album_id'],
-                            $row['filename'], $row['title'] ?? '',
+                            (int)$row['id'],
+                            (int)$row['album_id'],
+                            $row['filename'],
+                            $photoTitle,
+                            $photoSlug,
                             (int)$row['sort_order'],
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
                         ]);
                     }
                     $summary[] = 'Galerie – fotografie importovány.';
