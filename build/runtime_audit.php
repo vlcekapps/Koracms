@@ -2116,6 +2116,20 @@ foreach ($pages as $page) {
         }
     }
 
+    if (str_starts_with($page['label'], 'admin_')) {
+        foreach ([
+            '>Detail<',
+            'VeĹ™ejnĂˇ strĂˇnka',
+            'VeĹ™ejnĂˇ strĂˇnka zdroje',
+            '>VĹˇechny podcasty<',
+            '>SprĂˇva zdrojĹŻ<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin page still contains outdated action wording: ' . $forbiddenFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_board_form') {
         foreach ([
             'name="board_type"',

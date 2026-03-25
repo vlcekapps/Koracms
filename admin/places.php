@@ -124,7 +124,7 @@ adminHeader('Zajímavá místa');
         <td class="actions">
           <a href="place_form.php?id=<?= (int)$place['id'] ?>" class="btn">Upravit</a>
           <?php if ($place['status'] === 'published' && (int)$place['is_published'] === 1): ?>
-            <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($place['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">

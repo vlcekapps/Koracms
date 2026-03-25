@@ -136,7 +136,7 @@ adminHeader('Jídelní a nápojový lístek');
         <td class="actions">
           <a href="food_form.php?id=<?= (int)$card['id'] ?>" class="btn">Upravit</a>
           <?php if ($card['is_publicly_visible']): ?>
-            <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($card['status'] === 'pending' && $canApprove): ?>
             <form action="approve.php" method="post" style="display:inline">

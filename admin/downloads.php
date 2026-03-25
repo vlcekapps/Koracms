@@ -149,7 +149,7 @@ adminHeader('Ke stažení');
         <td class="actions">
           <a href="download_form.php?id=<?= (int)$download['id'] ?>" class="btn">Upravit</a>
           <?php if ($download['status'] === 'published' && (int)$download['is_published'] === 1): ?>
-            <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($download['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">

@@ -200,7 +200,7 @@ adminHeader($id ? 'Upravit položku modulu' : 'Nová položka modulu');
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat položku' ?></button>
     <?php if (($document['status'] ?? 'published') === 'published' && (int)($document['is_published'] ?? 1) === 1 && !empty($document['slug'])): ?>
-      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
     <a href="board.php" style="margin-left:1rem">Zrušit</a>
   </div>

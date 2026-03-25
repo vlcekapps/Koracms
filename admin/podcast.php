@@ -63,11 +63,11 @@ $canApprovePodcast = currentUserHasCapability('content_approve_shared');
 adminHeader('Podcast: ' . (string)$show['title']);
 ?>
 <p>
-  <a href="podcast_shows.php"><span aria-hidden="true">&larr;</span> Všechny podcasty</a>
+  <a href="podcast_shows.php"><span aria-hidden="true">&larr;</span> Zpět na podcasty</a>
   &nbsp;|&nbsp;
   <a href="podcast_show_form.php?id=<?= (int)$show['id'] ?>">Upravit podcast</a>
   &nbsp;|&nbsp;
-  <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+  <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
   &nbsp;|&nbsp;
   <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed</a>
 </p>
@@ -151,7 +151,7 @@ adminHeader('Podcast: ' . (string)$show['title']);
         <td class="actions">
           <a href="podcast_form.php?id=<?= (int)$episode['id'] ?>&amp;show_id=<?= (int)$showId ?>" class="btn">Upravit</a>
           <?php if ((string)$episode['status'] === 'published' && empty($episode['is_scheduled'])): ?>
-            <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ((string)$episode['status'] === 'pending' && $canApprovePodcast): ?>
             <form action="approve.php" method="post" style="display:inline">

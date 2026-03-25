@@ -91,7 +91,7 @@ adminHeader('Galerie – ' . $album['name']);
           <td><?= (int)$photo['sort_order'] ?></td>
           <td class="actions">
             <a href="<?= BASE_URL ?>/admin/gallery_photo_form.php?id=<?= (int)$photo['id'] ?>&amp;album_id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
-            <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_delete.php"
                   onsubmit="return confirm('Smazat tuto fotografii?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

@@ -162,7 +162,7 @@ adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat epizodu' ?></button>
     <?php if ($id !== null && (string)$episode['status'] === 'published' && empty($episode['is_scheduled'])): ?>
-      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
     <a href="podcast.php?show_id=<?= (int)$showId ?>" style="margin-left:1rem">Zrušit</a>
   </div>

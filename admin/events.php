@@ -106,7 +106,7 @@ adminHeader('Události');
         <td class="actions">
           <a href="event_form.php?id=<?= (int)$event['id'] ?>" class="btn">Upravit</a>
           <?php if ($event['status'] === 'published' && (int)$event['is_published'] === 1): ?>
-            <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($event['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">

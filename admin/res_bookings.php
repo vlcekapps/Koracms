@@ -106,7 +106,7 @@ adminHeader('Rezervace');
 <?php endif; ?>
 <p>
   <a href="res_booking_add.php" class="btn">+ Přidat rezervaci</a>
-  <a href="res_resources.php" class="btn" style="margin-left:.5rem">Správa zdrojů</a>
+  <a href="res_resources.php" class="btn" style="margin-left:.5rem">Zdroje rezervací</a>
 </p>
 
 <form method="get" aria-labelledby="filter-heading" style="margin-bottom:1rem">
@@ -204,7 +204,7 @@ adminHeader('Rezervace');
         <td>
           <?= h((string)($booking['resource_name'] ?? '–')) ?>
           <?php if ($resourcePublicPath !== ''): ?>
-            <br><small><a href="<?= h($resourcePublicPath) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a></small>
+            <br><small><a href="<?= h($resourcePublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a></small>
           <?php endif; ?>
         </td>
         <td><?= h($customerLabel) ?></td>
@@ -219,7 +219,7 @@ adminHeader('Rezervace');
           </strong>
         </td>
         <td class="actions">
-          <a href="<?= h($detailHref) ?>" class="btn">Detail</a>
+          <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
           <?php if ($booking['status'] === 'pending'): ?>
             <form action="res_booking_save.php" method="post" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -246,7 +246,7 @@ adminHeader('Rezervace');
   <nav aria-label="Stránkování rezervací">
     <ul style="list-style:none;display:flex;gap:.5rem;padding:0;margin-top:1rem;flex-wrap:wrap">
       <?php if ($page > 1): ?>
-        <li><a href="?<?= h($filterBaseQuery !== '' ? $filterBaseQuery . '&amp;' : '') ?>strana=<?= $page - 1 ?>" rel="prev"><span aria-hidden="true">‹</span> Předchozí</a></li>
+        <li><a href="?<?= h($filterBaseQuery !== '' ? $filterBaseQuery . '&amp;' : '') ?>strana=<?= $page - 1 ?>" rel="prev"><span aria-hidden="true">‹</span> Předchozí stránka</a></li>
       <?php endif; ?>
       <?php for ($p = 1; $p <= $pages; $p++): ?>
         <li>
@@ -258,7 +258,7 @@ adminHeader('Rezervace');
         </li>
       <?php endfor; ?>
       <?php if ($page < $pages): ?>
-        <li><a href="?<?= h($filterBaseQuery !== '' ? $filterBaseQuery . '&amp;' : '') ?>strana=<?= $page + 1 ?>" rel="next">Další <span aria-hidden="true">›</span></a></li>
+        <li><a href="?<?= h($filterBaseQuery !== '' ? $filterBaseQuery . '&amp;' : '') ?>strana=<?= $page + 1 ?>" rel="next">Další stránka <span aria-hidden="true">›</span></a></li>
       <?php endif; ?>
     </ul>
   </nav>

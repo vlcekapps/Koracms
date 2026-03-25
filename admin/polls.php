@@ -113,7 +113,7 @@ adminHeader('Ankety');
         <td class="actions">
           <a href="polls_form.php?id=<?= (int)$poll['id'] ?>" class="btn">Upravit</a>
           <?php if ($state !== 'scheduled'): ?>
-            <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <form action="polls_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

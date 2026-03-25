@@ -141,7 +141,7 @@ adminHeader('Úřední deska');
         <td class="actions">
           <a href="board_form.php?id=<?= (int)$document['id'] ?>" class="btn">Upravit</a>
           <?php if ($document['status'] === 'published' && (int)$document['is_published'] === 1): ?>
-            <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+            <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($document['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post" style="display:inline">

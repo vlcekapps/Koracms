@@ -195,7 +195,7 @@ adminHeader('Chat');
             </strong>
           </td>
           <td class="actions">
-            <a href="<?= h($detailHref) ?>" class="btn">Detail</a>
+            <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
             <?php if ($messageStatus !== 'read'): ?>
               <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

@@ -110,7 +110,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat událost' ?></button>
       <?php if ($event && ($event['status'] ?? 'published') === 'published' && (int)($event['is_published'] ?? 1) === 1): ?>
-        <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+        <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
       <?php endif; ?>
       <a href="events.php" style="margin-left:1rem">Zrušit</a>
     </div>

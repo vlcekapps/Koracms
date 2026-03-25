@@ -153,7 +153,7 @@ adminHeader('Newsletter');
               </time>
             </td>
             <td class="actions">
-              <a class="btn" href="newsletter_subscriber.php?id=<?= (int)$subscriber['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Detail</a>
+              <a class="btn" href="newsletter_subscriber.php?id=<?= (int)$subscriber['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Zobrazit detail</a>
               <form action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php" method="post" style="display:inline"
                     onsubmit="return confirm('Smazat tohoto odběratele?')">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -204,7 +204,7 @@ adminHeader('Newsletter');
             </td>
             <td><?= (int)$newsletter['recipient_count'] ?></td>
             <td class="actions">
-              <a class="btn" href="newsletter_history.php?id=<?= (int)$newsletter['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Detail</a>
+              <a class="btn" href="newsletter_history.php?id=<?= (int)$newsletter['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Zobrazit detail</a>
             </td>
           </tr>
         <?php endforeach; ?>

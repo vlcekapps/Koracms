@@ -126,7 +126,7 @@ adminHeader('Statické stránky');
               </form>
             <?php endif; ?>
             <?php if ((int)$page['is_published'] === 1): ?>
-              <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+              <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
                   onsubmit="return confirm('Smazat tuto stránku?')">

@@ -94,7 +94,7 @@ adminHeader('Podcasty');
           <?php endif; ?>
         </td>
         <td class="actions">
-          <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Veřejná stránka</a>
+          <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed</a>
         </td>
         <td class="actions">

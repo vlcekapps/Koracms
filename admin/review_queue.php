@@ -496,7 +496,7 @@ adminHeader('Ke schválení');
               </td>
               <td><?= (int)$reservationRow['party_size'] ?></td>
               <td class="actions">
-                <a href="res_booking_detail.php?id=<?= (int)$reservationRow['id'] ?>&amp;redirect=<?= rawurlencode($redirectPath) ?>" class="btn">Detail</a>
+                <a href="res_booking_detail.php?id=<?= (int)$reservationRow['id'] ?>&amp;redirect=<?= rawurlencode($redirectPath) ?>" class="btn">Zobrazit detail</a>
                 <form action="res_booking_save.php" method="post" style="display:inline">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="booking_id" value="<?= (int)$reservationRow['id'] ?>">
