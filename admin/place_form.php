@@ -52,7 +52,7 @@ $formError = match ($err) {
     default => '',
 };
 
-adminHeader($id ? 'Upravit místo' : 'Nové místo');
+adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 ?>
 
 <?php if ($formError !== ''): ?>
@@ -62,6 +62,8 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
+
+<p><a href="places.php"><span aria-hidden="true">←</span> Zpět na zajímavá místa</a></p>
 
 <form method="post" action="place_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

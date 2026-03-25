@@ -53,6 +53,8 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
+<p><a href="podcast_shows.php"><span aria-hidden="true">←</span> Zpět na přehled podcastů</a></p>
+
 <form method="post" action="podcast_show_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($id !== null): ?>

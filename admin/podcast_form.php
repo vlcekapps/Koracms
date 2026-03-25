@@ -71,14 +71,14 @@ $formError = match ($err) {
     default => '',
 };
 
-adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
+adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu');
 ?>
 
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">←</span> <?= h((string)$show['title']) ?></a></p>
+<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">←</span> Zpět na epizody podcastu</a></p>
 
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.

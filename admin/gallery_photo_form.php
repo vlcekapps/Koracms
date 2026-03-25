@@ -42,16 +42,16 @@ if (!$album) {
 }
 $album = hydrateGalleryAlbumPresentation($album);
 
-$pageTitle = $id ? 'Upravit fotografii' : 'Přidat fotografie';
+$pageTitle = $id ? 'Upravit fotografii' : 'Nahrát fotografie do alba';
 adminHeader($pageTitle);
 ?>
 
 <p>
-  <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>"><span aria-hidden="true">←</span> Zpět na fotografie alba</a>
+  <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>"><span aria-hidden="true">←</span> Zpět na fotografie v albu</a>
 </p>
 
 <?php if ($id !== null && $photo !== null): ?>
-  <p><a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejnou stránku fotografie</a></p>
+  <p><a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a></p>
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>

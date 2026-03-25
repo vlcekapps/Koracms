@@ -53,7 +53,7 @@ foreach ($slots as $s) {
 
 $dayNames = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle'];
 
-adminHeader($id ? 'Upravit zdroj' : 'Nový zdroj');
+adminHeader($id ? 'Upravit zdroj rezervací' : 'Nový zdroj rezervací');
 
 $err = trim($_GET['err'] ?? '');
 ?>
@@ -69,6 +69,8 @@ $err = trim($_GET['err'] ?? '');
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
+
+<p><a href="res_resources.php"><span aria-hidden="true">←</span> Zpět na zdroje rezervací</a></p>
 
 <form method="post" action="res_resource_save.php" novalidate
       <?= $err ? 'aria-describedby="form-error"' : '' ?>>
@@ -123,7 +125,7 @@ $err = trim($_GET['err'] ?? '');
             </label>
           </div>
         <?php endforeach; ?>
-        <p style="margin:.5rem 0 0;font-size:.85rem"><a href="res_locations.php">Spravovat místa</a></p>
+        <p style="margin:.5rem 0 0;font-size:.85rem"><a href="res_locations.php">Spravovat lokality rezervací</a></p>
       <?php endif; ?>
     </fieldset>
   </fieldset>

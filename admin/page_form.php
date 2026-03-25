@@ -28,7 +28,7 @@ if ($id !== null) {
 }
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-$pageTitle = $id ? 'Upravit stránku' : 'Nová stránka';
+$pageTitle = $id ? 'Upravit statickou stránku' : 'Nová statická stránka';
 $err = trim($_GET['err'] ?? '');
 $publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['slug'] ?? '')) !== '') ? pagePublicPath($page) : '';
 
@@ -41,8 +41,10 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Slug stránky je už obsazený. Zvolte prosím jiný.</p>
 <?php endif; ?>
 
+<p><a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a></p>
+
 <?php if ($publicPath !== ''): ?>
-  <p><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Otevřít veřejnou stránku <span aria-hidden="true">↗</span></a></p>
+  <p><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu <span aria-hidden="true">↗</span></a></p>
 <?php endif; ?>
 
 <form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>

@@ -59,6 +59,8 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   <p class="error" role="alert"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
+<p><a href="downloads.php"><span aria-hidden="true">←</span> Zpět na přehled ke stažení</a></p>
+
 <form method="post" action="download_save.php" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($id !== null): ?>
@@ -179,7 +181,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
     <?php if ($id !== null && (string)$download['slug'] !== '' && (string)$download['status'] === 'published' && (int)($download['is_published'] ?? 0) === 1): ?>
       <p style="margin-top:1rem">
-        <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Otevřít veřejnou stránku položky</a>
+        <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
       </p>
     <?php endif; ?>
   </fieldset>

@@ -60,15 +60,15 @@ if ($id !== null) {
     );
 }
 
-$pageTitle = $id ? 'Upravit album' : 'Nové album';
+$pageTitle = $id ? 'Upravit album galerie' : 'Nové album galerie';
 adminHeader($pageTitle);
 ?>
 
-<p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na seznam alb</a></p>
+<p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na alba galerie</a></p>
 
 <?php if ($id !== null): ?>
   <?php $albumPublicPath = galleryAlbumPublicPath($album); ?>
-  <p><a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejnou stránku alba</a></p>
+  <p><a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a></p>
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>

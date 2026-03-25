@@ -35,6 +35,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Odběratelé newsletteru nově podporují i hromadné akce: potvrdit vybrané odběry, znovu poslat potvrzení a smazat vybrané, včetně bezpečného návratu do stejného filtru
 
 ### Opraveno
+- Administrace nyní používá srozumitelnější titulky formulářů, horní návratové odkazy na příslušné přehledy a civilnější veřejné odkazy `Zobrazit na webu`, takže je při vytváření a úpravě obsahu hned jasné, kde se správce nachází a kam se může vrátit
 - Administrace teď používá civilnější a jednotnější texty v seznamech: přirozenější prázdné stavy, první kroky při prázdném seznamu, sjednocené akce `Použít filtr` / `Zrušit filtr` a srozumitelnější odkazy typu `Zobrazit na webu` nebo `Zobrazit detail`
 - Nastavení veřejného názvu vývěsky v administraci má přesnější popisek `Veřejný název sekce vývěsky`, takže je hned zřejmé, k jakému modulu se pole vztahuje
 - Administrace nově používá civilnější názvy sekcí a přehledů: `Obecná nastavení`, `Správa modulů`, `Pozice modulů`, přesnější položky rezervací v levém menu a čitelnější souhrny `Celkem: X / Publikováno: X / Čeká na schválení: X` na dashboardu

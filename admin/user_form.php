@@ -49,7 +49,7 @@ $account = hydrateAuthorPresentation($account);
 $authorFieldsetAvailable = $accountRole !== 'public';
 $roleOptions = staffRoleOptions($accountRole);
 
-adminHeader($accountId !== null ? 'Upravit uživatele' : 'Nový uživatel');
+adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživatelský účet');
 ?>
 
 <?php if (!empty($formErrors)): ?>
@@ -57,6 +57,8 @@ adminHeader($accountId !== null ? 'Upravit uživatele' : 'Nový uživatel');
     <?php foreach ($formErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
   </ul>
 <?php endif; ?>
+
+<p><a href="users.php"><span aria-hidden="true">←</span> Zpět na uživatele a role</a></p>
 
 <form method="post" action="user_save.php" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

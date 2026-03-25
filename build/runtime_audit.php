@@ -1749,6 +1749,14 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="author_website"')) {
             $issues[] = 'author website field is missing in user form';
         }
+        foreach ([
+            'Upravit uživatelský účet',
+            'Zpět na uživatele a role',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'user form is missing fragment: ' . $expectedFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'admin_user_create_form') {
@@ -1762,6 +1770,14 @@ foreach ($pages as $page) {
         }
         if (str_contains($result['body'], 'value="collaborator"')) {
             $issues[] = 'legacy collaborator role is unexpectedly offered for new users';
+        }
+        foreach ([
+            'Nový uživatelský účet',
+            'Zpět na uživatele a role',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'user create form is missing fragment: ' . $expectedFragment;
+            }
         }
     }
 
@@ -2248,6 +2264,7 @@ foreach ($pages as $page) {
             'name="contact_phone"',
             'name="contact_email"',
             'name="is_pinned"',
+            'Zpět na přehled sekce',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin board form is missing field: ' . $expectedField;
@@ -2266,6 +2283,7 @@ foreach ($pages as $page) {
             'name="license_label"',
             'name="external_url"',
             'name="file_delete"',
+            'Zpět na přehled ke stažení',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin download form is missing field: ' . $expectedField;
@@ -2279,6 +2297,7 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="valid_from"',
             'name="valid_to"',
+            'Zpět na jídelní a nápojové lístky',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin food form is missing field: ' . $expectedField;
@@ -2292,6 +2311,8 @@ foreach ($pages as $page) {
             'name="show_in_nav"',
             'name="nav_order"',
             'name="is_published"',
+            'Upravit statickou stránku',
+            'Zpět na statické stránky',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin page form is missing field: ' . $expectedField;
@@ -2385,6 +2406,9 @@ foreach ($pages as $page) {
             'name="location_ids[]"',
             'name="allow_guests"',
             'name="max_concurrent"',
+            'Upravit zdroj rezervací',
+            'Zpět na zdroje rezervací',
+            'Spravovat lokality rezervací',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin reservation resource form is missing field: ' . $expectedField;
@@ -2397,6 +2421,8 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="excerpt"',
             'name="category_id"',
+            'Upravit otázku FAQ',
+            'Zpět na FAQ',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin faq form is missing field: ' . $expectedField;
@@ -2420,6 +2446,8 @@ foreach ($pages as $page) {
             'name="contact_phone"',
             'name="contact_email"',
             'name="opening_hours"',
+            'Upravit zajímavé místo',
+            'Zpět na zajímavá místa',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin place form is missing field: ' . $expectedField;
@@ -2451,6 +2479,7 @@ foreach ($pages as $page) {
             'name="end_date"',
             'name="end_time"',
             'name="options[]"',
+            'Zpět na ankety',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin polls form is missing field: ' . $expectedField;
@@ -2483,6 +2512,8 @@ foreach ($pages as $page) {
         foreach ([
             'name="slug"',
             'name="parent_id"',
+            'Upravit album galerie',
+            'Zpět na alba galerie',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin gallery album form is missing field: ' . $expectedField;
@@ -2512,6 +2543,8 @@ foreach ($pages as $page) {
             'name="title"',
             'name="slug"',
             'name="sort_order"',
+            'Zpět na fotografie v albu',
+            'Zobrazit na webu',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin gallery photo form is missing field: ' . $expectedField;
@@ -2527,6 +2560,7 @@ foreach ($pages as $page) {
             'name="category"',
             'name="website_url"',
             'name="cover_image"',
+            'Zpět na přehled podcastů',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin podcast show form is missing field: ' . $expectedField;
@@ -2542,6 +2576,8 @@ foreach ($pages as $page) {
             'name="audio_file"',
             'name="audio_url"',
             'name="publish_at"',
+            'Upravit epizodu podcastu',
+            'Zpět na epizody podcastu',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin podcast form is missing field: ' . $expectedField;

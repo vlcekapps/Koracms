@@ -36,7 +36,7 @@ $formError = match ($err) {
     default => '',
 };
 
-adminHeader($id ? 'Upravit otázku' : 'Nová otázka');
+adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
 ?>
 
 <?php if ($formError !== ''): ?>
@@ -46,6 +46,8 @@ adminHeader($id ? 'Upravit otázku' : 'Nová otázka');
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
+
+<p><a href="faq.php"><span aria-hidden="true">←</span> Zpět na FAQ</a></p>
 
 <form method="post" action="faq_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

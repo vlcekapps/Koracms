@@ -62,6 +62,8 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
+<p><a href="polls.php"><span aria-hidden="true">←</span> Zpět na ankety</a></p>
+
 <form method="post" action="polls_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($id !== null): ?>

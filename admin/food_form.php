@@ -39,8 +39,9 @@ $formError = match ($err) {
 };
 
 $card = hydrateFoodCardPresentation($card);
+$foodTypeLabel = $card['type'] === 'beverage' ? 'nápojový lístek' : 'jídelní lístek';
 
-adminHeader($id ? 'Upravit lístek' : 'Nový lístek');
+adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 ?>
 
 <?php if ($formError !== ''): ?>
@@ -50,6 +51,8 @@ adminHeader($id ? 'Upravit lístek' : 'Nový lístek');
 <p style="margin-top:0;font-size:.9rem">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
+
+<p><a href="food.php"><span aria-hidden="true">←</span> Zpět na jídelní a nápojové lístky</a></p>
 
 <form method="post" action="food_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
