@@ -51,7 +51,7 @@
                     <?php endif; ?>
 
                     <div class="card__actions">
-                      <a class="section-link" href="<?= h(downloadPublicPath($download)) ?>">Detail položky <span aria-hidden="true">→</span></a>
+                      <a class="section-link" href="<?= h(downloadPublicPath($download)) ?>">Zobrazit položku <span aria-hidden="true">→</span></a>
                       <?php if ($download['has_file']): ?>
                         <a class="section-link" href="<?= moduleFileUrl('downloads', (int)$download['id']) ?>"
                            download="<?= h((string)$download['original_name']) ?>">Stáhnout soubor <span aria-hidden="true">→</span></a>

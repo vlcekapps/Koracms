@@ -83,7 +83,7 @@
 
   <section class="surface">
     <div class="article-shell">
-      <p><a href="<?= h(BASE_URL . '/downloads/index.php') ?>"><span aria-hidden="true">←</span> Zpět na ke stažení</a></p>
+      <p><a href="<?= h(BASE_URL . '/downloads/index.php') ?>"><span aria-hidden="true">←</span> Zpět na přehled ke stažení</a></p>
     </div>
   </section>
 </div>

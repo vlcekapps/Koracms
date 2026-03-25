@@ -1,7 +1,6 @@
 <?php $faqCategory = trim((string)($faq['category_name'] ?? '')); ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="faq-title">
-    <p class="section-kicker">FAQ</p>
     <header class="section-heading">
       <div>
         <h1 id="faq-title" class="section-title section-title--hero"><?= h((string)$faq['question']) ?></h1>

@@ -44,7 +44,7 @@
                     <?php endif; ?>
 
                     <div class="button-row button-row--start">
-                      <a class="section-link" href="<?= h(placePublicPath($place)) ?>">Detail místa <span aria-hidden="true">→</span></a>
+                      <a class="section-link" href="<?= h(placePublicPath($place)) ?>">Zobrazit místo <span aria-hidden="true">→</span></a>
                       <?php if ($place['url'] !== ''): ?>
                         <a class="section-link" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Navštívit web <span aria-hidden="true">→</span></a>
                       <?php endif; ?>

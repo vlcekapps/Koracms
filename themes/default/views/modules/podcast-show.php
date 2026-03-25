@@ -41,13 +41,12 @@
   <section class="surface" aria-labelledby="podcast-episodes-title">
     <div class="section-heading">
       <div>
-        <p class="section-kicker">Epizody</p>
-        <h2 id="podcast-episodes-title" class="section-title">Přehled epizod</h2>
+        <h2 id="podcast-episodes-title" class="section-title">Epizody</h2>
       </div>
     </div>
 
     <?php if (empty($episodes)): ?>
-      <p class="empty-state">Zatím nejsou zveřejněné žádné epizody.</p>
+      <p class="empty-state">Zatím tu nejsou žádné zveřejněné epizody.</p>
     <?php else: ?>
       <div class="episode-list">
         <?php foreach ($episodes as $episode): ?>
@@ -76,7 +75,7 @@
             <?php endif; ?>
 
             <footer class="episode-card__footer">
-              <a class="section-link" href="<?= h((string)$episode['public_path']) ?>">Otevřít epizodu <span aria-hidden="true">→</span></a>
+              <a class="section-link" href="<?= h((string)$episode['public_path']) ?>">Zobrazit epizodu <span aria-hidden="true">→</span></a>
             </footer>
           </article>
         <?php endforeach; ?>

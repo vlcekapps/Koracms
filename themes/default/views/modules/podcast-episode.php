@@ -16,7 +16,6 @@
       <?php endif; ?>
 
       <div class="podcast-hero__copy">
-        <p class="section-kicker">Epizoda podcastu</p>
         <h1 id="podcast-episode-title" class="section-title section-title--hero"><?= h((string)$episode['title']) ?></h1>
         <p class="meta-row">
           <a href="<?= h((string)$show['public_path']) ?>"><?= h((string)$show['title']) ?></a>

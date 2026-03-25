@@ -1598,10 +1598,13 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], 'class="section-kicker">Obsah</p>')) {
             $issues[] = 'podcast episode still contains generic content kicker';
         }
+        if (str_contains($result['body'], 'Epizoda podcastu')) {
+            $issues[] = 'podcast episode still contains redundant kicker';
+        }
     }
 
     if ($page['label'] === 'gallery_album') {
-        foreach (['Struktura', 'Obsah alba'] as $legacySnippet) {
+        foreach (['Struktura', 'Obsah alba', 'Podsložky'] as $legacySnippet) {
             if (str_contains($result['body'], $legacySnippet)) {
                 $issues[] = 'gallery album still contains technical section label: ' . $legacySnippet;
             }
@@ -2407,7 +2410,7 @@ foreach ($pages as $page) {
         if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['title'] ?? ''))) {
             $issues[] = 'downloads article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na ke stažení')) {
+        if (!str_contains($result['body'], 'Zpět na přehled ke stažení')) {
             $issues[] = 'downloads article is missing back link';
         }
         if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['version_label'] ?? ''))) {

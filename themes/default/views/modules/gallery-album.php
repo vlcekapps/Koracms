@@ -27,7 +27,7 @@
     <section class="surface" aria-labelledby="gallery-subalbums-title">
       <div class="section-heading">
         <div>
-          <h2 id="gallery-subalbums-title" class="section-title">Podsložky</h2>
+          <h2 id="gallery-subalbums-title" class="section-title">Další alba</h2>
         </div>
       </div>
 

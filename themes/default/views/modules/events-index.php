@@ -55,7 +55,7 @@ $eventLink = static fn(array $event): string => eventPublicPath($event);
                       <tr>
                         <td colspan="4">
                           <p style="margin:.25rem 0 .65rem"><?= h(mb_strimwidth(normalizePlainText((string)$event['description']), 0, 220, '...', 'UTF-8')) ?></p>
-                          <a class="section-link" href="<?= h($eventLink($event)) ?>">Detail události <span aria-hidden="true">&rarr;</span></a>
+                          <a class="section-link" href="<?= h($eventLink($event)) ?>">Zobrazit událost <span aria-hidden="true">&rarr;</span></a>
                         </td>
                       </tr>
                     <?php endif; ?>
