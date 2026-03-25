@@ -1947,10 +1947,14 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'newsletter_subscriber.php',
+            'newsletter_bulk.php',
             'newsletter_history.php',
             'Odběratelé newsletteru',
             'Poslední rozesílky',
             'Nová rozesílka',
+            'Hromadné akce s vybranými odběrateli',
+            'data-selection-status="newsletter-subscribers"',
+            'Vybrat všechny odběratele newsletteru',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter overview is missing fragment: ' . $expectedFragment;

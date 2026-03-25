@@ -60,6 +60,13 @@ if ($q !== '') {
     $currentParams['q'] = $q;
 }
 $currentRedirect = BASE_URL . '/admin/newsletter.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
+$bulkOptions = [
+    'confirm' => 'Potvrdit vybrané odběry',
+    'resend' => 'Znovu poslat potvrzení',
+    'delete' => 'Smazat vybrané',
+];
+$bulkCount = max(0, (int)($_GET['count'] ?? 0));
+$bulkFailed = max(0, (int)($_GET['failed'] ?? 0));
 
 $successMessages = [
     'sent' => 'Newsletter byl odeslán a uložen do historie.',
@@ -72,15 +79,38 @@ $errorMessages = [
 ];
 $ok = trim($_GET['ok'] ?? '');
 $error = trim($_GET['error'] ?? '');
+$successMessage = match ($ok) {
+    'sent' => 'Newsletter byl odeslán a uložen do historie.',
+    'confirmed' => 'Odběratel byl potvrzen.',
+    'resent' => 'Potvrzovací e-mail byl znovu odeslán.',
+    'deleted' => 'Odběratel byl smazán.',
+    'bulk_confirmed' => $bulkCount === 1
+        ? 'Potvrzen byl 1 odběratel.'
+        : 'Potvrzeno bylo ' . $bulkCount . ' odběratelů.',
+    'bulk_resent' => $bulkCount === 1
+        ? 'Potvrzovací e-mail byl znovu odeslán 1 odběrateli.'
+        : 'Potvrzovací e-maily byly znovu odeslány ' . $bulkCount . ' odběratelům.',
+    'bulk_deleted' => $bulkCount === 1
+        ? 'Smazán byl 1 odběratel.'
+        : 'Smazáno bylo ' . $bulkCount . ' odběratelů.',
+    'bulk_no_change' => 'U vybraných odběratelů nebyla potřeba žádná změna.',
+    default => $successMessages[$ok] ?? '',
+};
+$errorMessage = match ($error) {
+    'bulk_resend_failed' => $bulkFailed === 1
+        ? 'Potvrzovací e-mail se nepodařilo odeslat 1 odběrateli.'
+        : 'Potvrzovací e-mail se nepodařilo odeslat ' . $bulkFailed . ' odběratelům.',
+    default => $errorMessages[$error] ?? '',
+};
 
 adminHeader('Newsletter');
 ?>
 
-<?php if (isset($successMessages[$ok])): ?>
-  <p class="success" role="status"><?= h($successMessages[$ok]) ?></p>
+<?php if ($successMessage !== ''): ?>
+  <p class="success" role="status"><?= h($successMessage) ?></p>
 <?php endif; ?>
-<?php if (isset($errorMessages[$error])): ?>
-  <p class="error" role="alert"><?= h($errorMessages[$error]) ?></p>
+<?php if ($errorMessage !== ''): ?>
+  <p class="error" role="alert"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
 <div class="button-row" style="justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem">
@@ -127,10 +157,34 @@ adminHeader('Newsletter');
   <?php if (empty($subscribers)): ?>
     <p><?= $statusFilter === 'all' && $q === '' ? 'Zatím tu nejsou žádní odběratelé.' : 'Pro zvolený filtr teď není k dispozici žádný odběratel.' ?></p>
   <?php else: ?>
+    <form method="post" action="<?= BASE_URL ?>/admin/newsletter_bulk.php" id="newsletter-bulk-form">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+      <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+        <legend>Hromadné akce s vybranými odběrateli</legend>
+        <p data-selection-status="newsletter-subscribers" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný odběratel.</p>
+        <div class="button-row">
+          <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
+            <?php if (($bulkAction === 'confirm' || $bulkAction === 'resend') && $statusFilter === 'confirmed'): ?>
+              <?php continue; ?>
+            <?php endif; ?>
+            <button type="submit" form="newsletter-bulk-form" name="action" value="<?= h($bulkAction) ?>"
+                    class="btn bulk-action-btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
+                    disabled
+                    <?php if ($bulkAction === 'resend'): ?>onclick="return confirm('Opravdu znovu poslat potvrzovací e-mail vybraným odběratelům?')"<?php endif; ?>
+                    <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané odběratele?')"<?php endif; ?>>
+              <?= h($bulkLabel) ?>
+            </button>
+          <?php endforeach; ?>
+        </div>
+      </fieldset>
+    </form>
+
     <table>
       <caption class="sr-only">Odběratelé newsletteru</caption>
       <thead>
         <tr>
+          <th scope="col"><input type="checkbox" id="newsletter-check-all" aria-label="Vybrat všechny odběratele newsletteru" form="newsletter-bulk-form"></th>
           <th scope="col">E-mail</th>
           <th scope="col">Stav</th>
           <th scope="col">Přihlášen</th>
@@ -141,6 +195,10 @@ adminHeader('Newsletter');
         <?php foreach ($subscribers as $subscriber): ?>
           <?php $isConfirmed = (int)$subscriber['confirmed'] === 1; ?>
           <tr>
+            <td>
+              <input type="checkbox" name="ids[]" value="<?= (int)$subscriber['id'] ?>"
+                     aria-label="Vybrat odběratele <?= h((string)$subscriber['email']) ?>" form="newsletter-bulk-form">
+            </td>
             <td><a href="mailto:<?= h((string)$subscriber['email']) ?>"><?= h((string)$subscriber['email']) ?></a></td>
             <td>
               <strong<?= !$isConfirmed ? ' style="color:#9a3412"' : '' ?>>
@@ -167,6 +225,47 @@ adminHeader('Newsletter');
         <?php endforeach; ?>
       </tbody>
     </table>
+    <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru odběratelů můžete použít hromadné akce nahoře.</div>
+
+    <script>
+    (() => {
+        const checkAll = document.getElementById('newsletter-check-all');
+        const checkboxes = Array.from(document.querySelectorAll('input[form="newsletter-bulk-form"][name="ids[]"]'));
+        const actionButtons = Array.from(document.querySelectorAll('#newsletter-bulk-form .bulk-action-btn'));
+        const status = document.querySelector('[data-selection-status="newsletter-subscribers"]');
+
+        const updateBulkUi = () => {
+            const selectedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+            if (status) {
+                status.textContent = selectedCount === 0
+                    ? 'Zatím není vybraný žádný odběratel.'
+                    : (selectedCount === 1
+                        ? 'Vybraný je 1 odběratel.'
+                        : 'Vybráno: ' + selectedCount + ' odběratelů.');
+            }
+            actionButtons.forEach((button) => {
+                button.disabled = selectedCount === 0;
+            });
+            if (checkAll) {
+                checkAll.checked = selectedCount > 0 && selectedCount === checkboxes.length;
+                checkAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+            }
+        };
+
+        checkAll?.addEventListener('change', function () {
+            checkboxes.forEach((checkbox) => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkUi();
+        });
+
+        checkboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', updateBulkUi);
+        });
+
+        updateBulkUi();
+    })();
+    </script>
   <?php endif; ?>
 </section>
 

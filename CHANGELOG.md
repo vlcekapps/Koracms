@@ -32,6 +32,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Modul `Statické stránky` nově používá capability-aware administraci s vyhledáváním, stavovým filtrem, robustnějším slug workflow, veřejným preview a bezpečnými návraty zpět do stejného seznamu
 - Moduly `Kontakt` a `Chat` nově používají moderátorský inbox se stavy `nové`, `přečtené`, `vyřízené`, detailovou obrazovkou zprávy, bulk akcemi, hledáním a stavovým filtrem
 - Modul `Newsletter` nově používá capability-aware administraci s hledáním a filtrem odběratelů, detailem odběratele, potvrzením a znovu-posláním potvrzovacího e-mailu, detailní historií rozesílek a přehlednějším compose workflow bez veřejného archivu
+- Odběratelé newsletteru nově podporují i hromadné akce: potvrdit vybrané odběry, znovu poslat potvrzení a smazat vybrané, včetně bezpečného návratu do stejného filtru
 
 ### Opraveno
 - Administrace teď používá civilnější a jednotnější texty v seznamech: přirozenější prázdné stavy, první kroky při prázdném seznamu, sjednocené akce `Použít filtr` / `Zrušit filtr` a srozumitelnější odkazy typu `Zobrazit na webu` nebo `Zobrazit detail`
