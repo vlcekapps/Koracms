@@ -85,7 +85,7 @@ adminHeader('Newsletter');
 
 <div class="button-row" style="justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem">
   <div>
-    <p style="margin:.2rem 0 .45rem">Na jednom místě spravujete odběratele a vidíte historii odeslaných rozesílek.</p>
+    <p style="margin:.2rem 0 .45rem">Tady spravujete odběratele newsletteru a kontrolujete historii odeslaných rozesílek.</p>
     <p style="margin:.2rem 0 0">
       <strong><?= $subscriberCounts['confirmed'] ?></strong> potvrzených odběratelů,
       <strong><?= $subscriberCounts['pending'] ?></strong> čeká na potvrzení,
@@ -125,7 +125,7 @@ adminHeader('Newsletter');
   </div>
 
   <?php if (empty($subscribers)): ?>
-    <p><?= $statusFilter === 'all' && $q === '' ? 'Zatím tu nejsou žádní odběratelé newsletteru.' : 'Pro zvolený filtr teď není k dispozici žádný odběratel.' ?></p>
+    <p><?= $statusFilter === 'all' && $q === '' ? 'Zatím tu nejsou žádní odběratelé.' : 'Pro zvolený filtr teď není k dispozici žádný odběratel.' ?></p>
   <?php else: ?>
     <table>
       <caption class="sr-only">Odběratelé newsletteru</caption>
@@ -177,7 +177,7 @@ adminHeader('Newsletter');
   </div>
 
   <?php if (empty($newsletters)): ?>
-    <p>Zatím jste neodeslali žádnou rozesílku.</p>
+    <p>Zatím jste neodeslali žádný newsletter.</p>
   <?php else: ?>
     <table>
       <caption class="sr-only">Historie odeslaných newsletterů</caption>

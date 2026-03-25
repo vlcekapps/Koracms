@@ -81,7 +81,7 @@ $emptyStateText = match ($statusFilter) {
     'new' => 'Zatím tu nejsou žádné nové chat zprávy.',
     'read' => 'Zatím tu nejsou žádné přečtené chat zprávy.',
     'handled' => 'Zatím tu nejsou žádné vyřízené chat zprávy.',
-    default => 'Zatím tu nejsou žádné chat zprávy.',
+    default => 'Zatím tu nejsou žádné zprávy v chatu.',
 };
 
 adminHeader('Chat');

@@ -50,7 +50,7 @@ $publicLabel = boardModulePublicLabel();
 adminHeader('Úřední deska');
 ?>
 <p style="margin-top:0;color:#555">
-  Veřejný název modulu je aktuálně <strong><?= h($publicLabel) ?></strong>.
+  Návštěvníci tuto sekci na webu vidí jako <strong><?= h($publicLabel) ?></strong>.
 </p>
 <p>
   <a href="board_form.php" class="btn">+ Přidat položku</a>
@@ -78,7 +78,7 @@ adminHeader('Úřední deska');
 </form>
 
 <?php if (empty($items)): ?>
-  <p>Žádné položky<?= $q !== '' || $statusFilter !== 'all' ? ' pro zadaný filtr.' : ' v modulu úřední desky.' ?></p>
+  <p><?= $q !== '' || $statusFilter !== 'all' ? 'Pro zvolený filtr tu teď nejsou žádné položky.' : 'Zatím tu nejsou žádné položky této sekce.' ?></p>
 <?php else: ?>
   <table>
     <caption>Položky modulu <?= h($publicLabel) ?></caption>

@@ -187,7 +187,7 @@ adminHeader('Nastavení webu');
   </ul>
 <?php endif; ?>
 
-<p>Na jednom místě upravíte základ webu, podobu domovské stránky, komentáře, vzhled i provozní nastavení. Pokud hledáte heslo nebo osobní údaje účtu, najdete je v <a href="profile.php">Mém profilu</a>.</p>
+<p>Tady nastavíte identitu webu, domovskou stránku, komentáře, vzhled i provoz webu. Pokud hledáte heslo nebo osobní údaje účtu, najdete je v <a href="profile.php">Mém profilu</a>.</p>
 
 <nav aria-label="Sekce nastavení webu" class="button-row" style="margin:1rem 0 1.5rem">
   <?php foreach ($settingsSections as $section): ?>

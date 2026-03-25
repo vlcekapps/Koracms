@@ -105,7 +105,7 @@ adminHeader('Chat zpráva');
       <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
       <input type="hidden" name="action" value="new">
       <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
-      <button type="submit" class="btn">Vrátit jako nové</button>
+      <button type="submit" class="btn">Označit jako nové</button>
     </form>
   <?php endif; ?>
   <?php if ($messageStatus !== 'read'): ?>

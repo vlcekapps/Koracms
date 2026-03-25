@@ -72,10 +72,10 @@ $bulkOptions = [
     'delete' => 'Smazat trvale',
 ];
 $emptyStateText = match ($statusFilter) {
-    'new' => 'Zatím tu nejsou žádné nové kontaktní zprávy.',
-    'read' => 'Zatím tu nejsou žádné přečtené kontaktní zprávy.',
-    'handled' => 'Zatím tu nejsou žádné vyřízené kontaktní zprávy.',
-    default => 'Zatím tu nejsou žádné kontaktní zprávy.',
+    'new' => 'Zatím tu nejsou žádné nové zprávy z kontaktního formuláře.',
+    'read' => 'Zatím tu nejsou žádné přečtené zprávy z kontaktního formuláře.',
+    'handled' => 'Zatím tu nejsou žádné vyřízené zprávy z kontaktního formuláře.',
+    default => 'Zatím tu nejsou žádné zprávy z kontaktního formuláře.',
 };
 
 adminHeader('Kontakt');

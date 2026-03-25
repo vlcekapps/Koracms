@@ -1889,6 +1889,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_contact_message') {
+        if (!str_contains($result['body'], 'Označit jako nové')) {
+            $issues[] = 'admin contact detail is missing "mark as new" action label';
+        }
+        if (str_contains($result['body'], 'Vrátit jako nové')) {
+            $issues[] = 'admin contact detail still contains outdated "return as new" wording';
+        }
+    }
+
     if ($page['label'] === 'admin_chat') {
         foreach ([
             'name="q"',
@@ -1900,6 +1909,15 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat inbox is missing fragment: ' . $expectedFragment;
             }
+        }
+    }
+
+    if ($page['label'] === 'admin_chat_message') {
+        if (!str_contains($result['body'], 'Označit jako nové')) {
+            $issues[] = 'admin chat detail is missing "mark as new" action label';
+        }
+        if (str_contains($result['body'], 'Vrátit jako nové')) {
+            $issues[] = 'admin chat detail still contains outdated "return as new" wording';
         }
     }
 
@@ -1948,6 +1966,12 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin board status filter is missing';
+        }
+        if (!str_contains($result['body'], 'Návštěvníci tuto sekci na webu vidí jako')) {
+            $issues[] = 'admin board is missing visitor-facing public label helper text';
+        }
+        if (str_contains($result['body'], 'Veřejný název modulu je aktuálně')) {
+            $issues[] = 'admin board still contains outdated public label wording';
         }
     }
 
