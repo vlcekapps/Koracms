@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-beta.3] – 2026-03-26
 
 ### Přidáno
 - Přístupný dialog `Vložit odkaz nebo HTML z webu` je nově dostupný ve všech HTML polích, která se veřejně renderují přes CMS, takže lze z administrace rychle vkládat odkazy nebo hotové HTML bloky z existujících článků, stránek a dalších veřejných modulů
