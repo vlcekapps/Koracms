@@ -3,6 +3,7 @@ $eventDescription = normalizePlainText((string)($event['description'] ?? ''));
 $eventStart = (string)($event['event_date'] ?? '');
 $eventEnd = (string)($event['event_end'] ?? '');
 $eventLocation = trim((string)($event['location'] ?? ''));
+$eventLead = $eventDescription !== '' ? mb_strimwidth($eventDescription, 0, 260, '...', 'UTF-8') : '';
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="udalost-nadpis">
@@ -22,34 +23,16 @@ $eventLocation = trim((string)($event['location'] ?? ''));
       </div>
     </header>
 
-    <div class="split-grid">
-      <section class="card" aria-labelledby="udalost-prehled">
-        <div class="card__body">
-          <h2 id="udalost-prehled" class="card__title">Praktické informace</h2>
-          <p><strong>Začátek:</strong> <time datetime="<?= h(str_replace(' ', 'T', $eventStart)) ?>"><?= formatCzechDate($eventStart) ?></time></p>
-          <?php if ($eventEnd !== ''): ?>
-            <p><strong>Konec:</strong> <time datetime="<?= h(str_replace(' ', 'T', $eventEnd)) ?>"><?= formatCzechDate($eventEnd) ?></time></p>
-          <?php endif; ?>
-          <?php if ($eventLocation !== ''): ?>
-            <p><strong>Místo:</strong> <?= h($eventLocation) ?></p>
-          <?php endif; ?>
-        </div>
-      </section>
-
-      <?php if ($eventDescription !== ''): ?>
-        <section class="card" aria-labelledby="udalost-popis">
-          <div class="card__body">
-            <h2 id="udalost-popis" class="card__title">O události</h2>
-            <p><?= h(mb_strimwidth($eventDescription, 0, 260, '...', 'UTF-8')) ?></p>
-          </div>
-        </section>
-      <?php endif; ?>
-    </div>
+    <?php if ($eventLead !== ''): ?>
+      <p class="article-shell__lead"><?= h($eventLead) ?></p>
+    <?php endif; ?>
 
     <?php if ((string)($event['description'] ?? '') !== ''): ?>
       <div class="prose article-shell__content">
         <?= renderContent((string)$event['description']) ?>
       </div>
+    <?php else: ?>
+      <p class="empty-state">Další podrobnosti k této události zatím nejsou doplněné.</p>
     <?php endif; ?>
 
     <div class="article-actions">

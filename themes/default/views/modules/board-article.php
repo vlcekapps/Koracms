@@ -5,6 +5,8 @@ $documentPostedDate = (string)($document['posted_date'] ?? '');
 $documentRemovalDate = (string)($document['removal_date'] ?? '');
 $documentIsArchived = $documentRemovalDate !== '' && $documentRemovalDate < date('Y-m-d');
 $leadText = normalizePlainText((string)($document['excerpt'] ?? ''));
+$hasAttachment = (string)($document['original_name'] ?? '') !== '';
+$hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="dokument-nadpis">
@@ -37,28 +39,25 @@ $leadText = normalizePlainText((string)($document['excerpt'] ?? ''));
       </div>
     <?php endif; ?>
 
+    <?php if ($hasExtraInfoCard || !empty($document['has_contact'])): ?>
     <div class="split-grid">
-      <section class="card" aria-labelledby="dokument-prehled">
-        <div class="card__body">
-          <h2 id="dokument-prehled" class="card__title">Důležité informace</h2>
-          <p><strong>Typ:</strong> <?= h((string)($document['board_type_label'] ?? 'Položka')) ?></p>
-          <p><strong>Vyvěšeno:</strong> <time datetime="<?= h($documentPostedDate) ?>"><?= formatCzechDate($documentPostedDate) ?></time></p>
-          <?php if ($documentRemovalDate !== ''): ?>
-            <p><strong>Sejmuto:</strong> <time datetime="<?= h($documentRemovalDate) ?>"><?= formatCzechDate($documentRemovalDate) ?></time></p>
-          <?php endif; ?>
-          <?php if ($documentCategory !== ''): ?>
-            <p><strong>Kategorie:</strong> <?= h($documentCategory) ?></p>
-          <?php endif; ?>
-          <?php if ((string)($document['original_name'] ?? '') !== ''): ?>
-            <p><strong>Příloha:</strong> <?= h((string)$document['original_name']) ?>
-              <?php if ((int)($document['file_size'] ?? 0) > 0): ?>
-                (<?= h(formatFileSize((int)$document['file_size'])) ?>)
-              <?php endif; ?>
-            </p>
-          <?php endif; ?>
-        </div>
-      </section>
-
+      <?php if ($hasExtraInfoCard): ?>
+        <section class="card" aria-labelledby="dokument-detaily">
+          <div class="card__body">
+            <h2 id="dokument-detaily" class="card__title">Další informace</h2>
+            <?php if ($documentRemovalDate !== ''): ?>
+              <p><strong>Sejmuto:</strong> <time datetime="<?= h($documentRemovalDate) ?>"><?= formatCzechDate($documentRemovalDate) ?></time></p>
+            <?php endif; ?>
+            <?php if ($hasAttachment): ?>
+              <p><strong>Příloha:</strong> <?= h((string)$document['original_name']) ?>
+                <?php if ((int)($document['file_size'] ?? 0) > 0): ?>
+                  (<?= h(formatFileSize((int)$document['file_size'])) ?>)
+                <?php endif; ?>
+              </p>
+            <?php endif; ?>
+          </div>
+        </section>
+      <?php endif; ?>
       <?php if (!empty($document['has_contact'])): ?>
         <section class="card" aria-labelledby="dokument-kontakt">
           <div class="card__body">
@@ -78,6 +77,7 @@ $leadText = normalizePlainText((string)($document['excerpt'] ?? ''));
         </section>
       <?php endif; ?>
     </div>
+    <?php endif; ?>
 
     <?php if ((string)($document['description'] ?? '') !== ''): ?>
       <div class="prose article-shell__content">

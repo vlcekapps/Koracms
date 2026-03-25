@@ -2384,6 +2384,11 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Zpět na události')) {
             $issues[] = 'events article is missing back link';
         }
+        foreach (['Praktické informace', 'O události'] as $legacySnippet) {
+            if (str_contains($result['body'], $legacySnippet)) {
+                $issues[] = 'events article still contains redundant detail block: ' . $legacySnippet;
+            }
+        }
     }
 
     if ($page['label'] === 'board_article') {
@@ -2398,6 +2403,9 @@ foreach ($pages as $page) {
         }
         if ($boardRow && !str_contains($result['body'], (string)($boardRow['contact_phone'] ?? ''))) {
             $issues[] = 'board article is missing contact phone';
+        }
+        if (str_contains($result['body'], 'Důležité informace')) {
+            $issues[] = 'board article still contains redundant detail block';
         }
         if ($boardAttachmentId !== false
             && (int)$boardAttachmentId === (int)($boardRow['id'] ?? 0)
