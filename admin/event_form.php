@@ -32,7 +32,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte potřebné údaje k této události. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <form method="post" action="event_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
@@ -102,10 +102,11 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <?php if (!$useWysiwyg): ?><small id="event-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"
+      <input type="checkbox" name="is_published" value="1" aria-describedby="event-published-help"
              <?= (int)($event['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Publikováno
+      Zveřejnit na webu
     </label>
+    <small id="event-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, událost zůstane uložená jen v administraci.</small>
 
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat událost' ?></button>

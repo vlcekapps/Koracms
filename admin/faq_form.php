@@ -44,7 +44,7 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte potřebné údaje k otázce a odpovědi. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="faq.php"><span aria-hidden="true">←</span> Zpět na FAQ</a></p>
@@ -96,10 +96,11 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
            value="<?= (int)($faq['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"
+      <input type="checkbox" name="is_published" value="1" aria-describedby="faq-published-help"
              <?= (int)($faq['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zobrazit na webu
+      Zveřejnit na webu
     </label>
+    <small id="faq-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, otázka zůstane uložená jen v administraci.</small>
 
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku FAQ' ?></button>

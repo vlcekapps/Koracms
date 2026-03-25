@@ -1879,6 +1879,54 @@ foreach ($pages as $page) {
         }
     }
 
+    $adminFormCopyExpectations = [
+        'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
+        'admin_event_create_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
+        'admin_page_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
+        'admin_page_create_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
+        'admin_download_form' => ['Zveřejnit na webu'],
+        'admin_download_create_form' => ['Zveřejnit na webu'],
+        'admin_faq_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
+        'admin_faq_create_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
+        'admin_food_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu'],
+        'admin_food_create_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu'],
+        'admin_place_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu'],
+        'admin_place_create_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu'],
+        'admin_board_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu'],
+        'admin_board_create_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu'],
+        'admin_podcast_show_form' => ['Vyplňte základní údaje o podcastu.'],
+        'admin_podcast_show_create_form' => ['Vyplňte základní údaje o podcastu.'],
+        'admin_podcast_form' => ['Vyplňte základní údaje o epizodě.'],
+        'admin_podcast_create_form' => ['Vyplňte základní údaje o epizodě.'],
+        'admin_polls_form' => ['Vyplňte otázku, možnosti a případné časové omezení.'],
+        'admin_polls_create_form' => ['Vyplňte otázku, možnosti a případné časové omezení.'],
+        'admin_res_resource_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.'],
+        'admin_res_resource_create_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.'],
+    ];
+    if (isset($adminFormCopyExpectations[$page['label']])) {
+        foreach ($adminFormCopyExpectations[$page['label']] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin form is missing helper copy fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    $adminFormCopyForbiddenFragments = [
+        'admin_event_form' => ['>Publikováno<'],
+        'admin_event_create_form' => ['>Publikováno<'],
+        'admin_page_form' => ['>Publikováno<', '>Zobrazit v navigaci<'],
+        'admin_page_create_form' => ['>Publikováno<', '>Zobrazit v navigaci<'],
+        'admin_food_form' => ['>Zobrazit v archivu<', 'Označit jako aktuální lístek'],
+        'admin_food_create_form' => ['>Zobrazit v archivu<', 'Označit jako aktuální lístek'],
+    ];
+    if (isset($adminFormCopyForbiddenFragments[$page['label']])) {
+        foreach ($adminFormCopyForbiddenFragments[$page['label']] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin form still contains outdated helper copy: ' . $forbiddenFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_index') {
         foreach ([
             'Na čem chcete pracovat',

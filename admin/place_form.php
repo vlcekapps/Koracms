@@ -60,7 +60,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="places.php"><span aria-hidden="true">←</span> Zpět na zajímavá místa</a></p>
@@ -187,10 +187,11 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
            value="<?= (int)($place['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"
+      <input type="checkbox" name="is_published" value="1" aria-describedby="place-published-help"
              <?= (int)($place['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zobrazit na webu
+      Zveřejnit na webu
     </label>
+    <small id="place-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, místo zůstane uložené jen v administraci.</small>
   </fieldset>
 
   <div style="margin-top:1.5rem">

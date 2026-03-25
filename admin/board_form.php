@@ -63,7 +63,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   Na veřejném webu se modul aktuálně zobrazuje jako <strong><?= h($publicLabel) ?></strong>.
 </p>
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="board.php"><span aria-hidden="true">←</span> Zpět na přehled sekce <?= h($publicLabel) ?></a></p>
@@ -193,10 +193,11 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
            value="<?= (int)($document['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"
+      <input type="checkbox" name="is_published" value="1" aria-describedby="board-published-help"
              <?= (int)($document['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zobrazit na webu
+      Zveřejnit na webu
     </label>
+    <small id="board-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, položka zůstane uložená jen v administraci.</small>
   </fieldset>
 
   <div style="margin-top:1.5rem">

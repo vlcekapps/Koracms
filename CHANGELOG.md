@@ -37,6 +37,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Opraveno
 - Administrace nyní používá srozumitelnější titulky formulářů, horní návratové odkazy na příslušné přehledy a civilnější veřejné odkazy `Zobrazit na webu`, takže je při vytváření a úpravě obsahu hned jasné, kde se správce nachází a kam se může vrátit
 - Administrace nyní používá i jednotnější spodní akce formulářů: konkrétní hlavní tlačítka typu `Přidat novinku`, `Vytvořit stránku` nebo `Uložit změny`, konzistentní `Zrušit` a veřejné odkazy `Zobrazit na webu` jen tam, kde je stránka skutečně dostupná
+- Administrace nyní používá i srozumitelnější úvodní věty a stavové volby ve formulářích: `Zveřejnit na webu`, `Zobrazit v hlavní navigaci` nebo `Použít jako aktuální lístek` nově jasněji popisují, co se po uložení skutečně stane
 - Administrace teď používá civilnější a jednotnější texty v seznamech: přirozenější prázdné stavy, první kroky při prázdném seznamu, sjednocené akce `Použít filtr` / `Zrušit filtr` a srozumitelnější odkazy typu `Zobrazit na webu` nebo `Zobrazit detail`
 - Nastavení veřejného názvu vývěsky v administraci má přesnější popisek `Veřejný název sekce vývěsky`, takže je hned zřejmé, k jakému modulu se pole vztahuje
 - Administrace nově používá civilnější názvy sekcí a přehledů: `Obecná nastavení`, `Správa modulů`, `Pozice modulů`, přesnější položky rezervací v levém menu a čitelnější souhrny `Celkem: X / Publikováno: X / Čeká na schválení: X` na dashboardu

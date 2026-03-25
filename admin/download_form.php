@@ -174,10 +174,11 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
            value="<?= (int)($download['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"
+      <input type="checkbox" name="is_published" value="1" aria-describedby="download-published-help"
              <?= (int)($download['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zobrazit na webu
+      Zveřejnit na webu
     </label>
+    <small id="download-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, položka se na veřejném webu nezobrazí.</small>
 
   </fieldset>
 

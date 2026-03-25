@@ -42,6 +42,7 @@ adminHeader($pageTitle);
 <?php endif; ?>
 
 <p><a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a></p>
+<p style="margin-top:0;font-size:.9rem">Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.</p>
 
 <form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -67,14 +68,16 @@ adminHeader($pageTitle);
     <?php if (!$useWysiwyg): ?><small id="page-content-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal; margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1"<?= !empty($page['is_published']) ? ' checked' : '' ?>>
-      Publikováno
+      <input type="checkbox" name="is_published" value="1" aria-describedby="page-published-help"<?= !empty($page['is_published']) ? ' checked' : '' ?>>
+      Zveřejnit na webu
     </label>
+    <small id="page-published-help" class="field-help">Když volbu vypnete, stránka se na veřejném webu nezobrazí.</small>
 
     <label style="font-weight:normal; margin-top:.5rem">
-      <input type="checkbox" name="show_in_nav" value="1"<?= !empty($page['show_in_nav']) ? ' checked' : '' ?>>
-      Zobrazit v navigaci
+      <input type="checkbox" name="show_in_nav" value="1" aria-describedby="page-nav-help"<?= !empty($page['show_in_nav']) ? ' checked' : '' ?>>
+      Zobrazit v hlavní navigaci
     </label>
+    <small id="page-nav-help" class="field-help">Použije se jen u zveřejněné stránky.</small>
 
     <label for="nav_order">Pořadí v navigaci</label>
     <input type="number" id="nav_order" name="nav_order" min="1" style="width:8rem" value="<?= (int)$page['nav_order'] ?>">

@@ -49,7 +49,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="food.php"><span aria-hidden="true">←</span> Zpět na jídelní a nápojové lístky</a></p>
@@ -111,15 +111,16 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
     <label style="font-weight:normal;margin-top:.25rem">
       <input type="checkbox" name="is_current" value="1" aria-describedby="food-current-help"
              <?= (int)($card['is_current'] ?? 0) === 1 ? 'checked' : '' ?>>
-      <strong>Označit jako aktuální lístek</strong>
+      <strong>Použít jako aktuální lístek</strong>
     </label>
     <small id="food-current-help" class="field-help" style="margin-left:1.4rem">Při uložení se automaticky odznačí předchozí aktuální lístek stejného typu.</small>
 
     <label style="font-weight:normal;margin-top:.75rem">
-      <input type="checkbox" name="is_published" value="1"
+      <input type="checkbox" name="is_published" value="1" aria-describedby="food-published-help"
              <?= (int)($card['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zobrazit v archivu
+      Zveřejnit na webu
     </label>
+    <small id="food-published-help" class="field-help" style="margin-left:1.4rem">Když volbu vypnete, lístek se neobjeví ani v aktuálním přehledu, ani v archivu.</small>
   </fieldset>
   <?php endif; ?>
 

@@ -67,7 +67,7 @@ $err = trim($_GET['err'] ?? '');
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="res_resources.php"><span aria-hidden="true">←</span> Zpět na zdroje rezervací</a></p>

@@ -81,7 +81,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 <p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">←</span> Zpět na epizody podcastu</a></p>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte základní údaje o epizodě. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <form method="post" action="podcast_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>

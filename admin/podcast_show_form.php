@@ -50,7 +50,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte základní údaje o podcastu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="podcast_shows.php"><span aria-hidden="true">←</span> Zpět na přehled podcastů</a></p>

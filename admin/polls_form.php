@@ -59,7 +59,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">
-  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+  Vyplňte otázku, možnosti a případné časové omezení. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
 <p><a href="polls.php"><span aria-hidden="true">←</span> Zpět na ankety</a></p>
