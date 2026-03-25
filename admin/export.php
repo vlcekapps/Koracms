@@ -55,7 +55,7 @@ $tables = [
     'comments'      => "SELECT id, article_id, author_name, author_email, content, status, is_approved, created_at
                                FROM cms_comments",
     'subscribers'   => "SELECT id, email, confirmed, token, created_at FROM cms_subscribers",
-    'newsletters'   => "SELECT id, subject, body, sent_at FROM cms_newsletters",
+    'newsletters'   => "SELECT id, subject, body, recipient_count, sent_at, created_at FROM cms_newsletters",
 ];
 
 foreach ($tables as $key => $sql) {

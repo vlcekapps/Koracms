@@ -8,9 +8,12 @@ function adminHeader(string $pageTitle): void
     $pdo = db_connect();
     $canManageComments = currentUserHasCapability('comments_manage');
     $canManageMessages = currentUserHasCapability('messages_manage');
+    $canManageNewsletter = currentUserHasCapability('newsletter_manage');
     $pendingComments = $canManageComments ? pendingCommentCount() : 0;
     $unreadContactMessages = ($canManageMessages && isModuleEnabled('contact')) ? unreadContactCount() : 0;
     $unreadChatMessages = ($canManageMessages && isModuleEnabled('chat')) ? unreadChatCount() : 0;
+    $newsletterCounts = ($canManageNewsletter && isModuleEnabled('newsletter')) ? newsletterSubscriberCounts($pdo) : ['confirmed' => 0, 'pending' => 0];
+    $pendingNewsletterSubscribers = $newsletterCounts['pending'];
     $pendingReviewItems = canAccessReviewQueue() ? pendingReviewSummary($pdo) : [];
     $pendingReviewTotal = array_sum(array_column($pendingReviewItems, 'count'));
     $pendingCommentsLabel = $pendingComments === 1
@@ -61,7 +64,15 @@ function adminHeader(string $pageTitle): void
         ['url' => $baseUrl . '/admin/polls.php', 'label' => 'Ankety', 'module' => 'polls', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/podcast_shows.php', 'label' => 'Podcasty', 'module' => 'podcast', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/places.php', 'label' => 'Zajímavá místa', 'module' => 'places', 'capability' => 'content_manage_shared'],
-        ['url' => $baseUrl . '/admin/newsletter.php', 'label' => 'Newsletter', 'module' => 'newsletter', 'capability' => 'newsletter_manage'],
+        [
+            'url' => $baseUrl . '/admin/newsletter.php',
+            'label' => 'Newsletter'
+                . ($pendingNewsletterSubscribers > 0
+                    ? ' <span class="badge" aria-label="' . $pendingNewsletterSubscribers . ' odběratelů čeká na potvrzení">' . $pendingNewsletterSubscribers . '</span>'
+                    : ''),
+            'module' => 'newsletter',
+            'capability' => 'newsletter_manage',
+        ],
         ['url' => $baseUrl . '/admin/food.php', 'label' => 'Jídelní lístek', 'module' => 'food', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/pages.php', 'label' => 'Stránky', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/import.php', 'label' => 'Export / Import', 'capability' => 'import_export_manage'],

@@ -31,6 +31,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Modul `Rezervace` nově používá capability-aware administraci pro rezervace, zdroje, kategorie a místa, se sjednoceným vyhledáváním, stavovými filtry a bezpečnými návraty zpět do stejného workflow
 - Modul `Statické stránky` nově používá capability-aware administraci s vyhledáváním, stavovým filtrem, robustnějším slug workflow, veřejným preview a bezpečnými návraty zpět do stejného seznamu
 - Moduly `Kontakt` a `Chat` nově používají moderátorský inbox se stavy `nové`, `přečtené`, `vyřízené`, detailovou obrazovkou zprávy, bulk akcemi, hledáním a stavovým filtrem
+- Modul `Newsletter` nově používá capability-aware administraci s hledáním a filtrem odběratelů, detailem odběratele, potvrzením a znovu-posláním potvrzovacího e-mailu, detailní historií rozesílek a přehlednějším compose workflow bez veřejného archivu
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -52,6 +53,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Vyhledávání a sitemap nyní zahrnují i aktivní rezervační zdroje a runtime audit hlídá novou administraci zdrojů, kategorií a míst i přístup booking managera k celé rezervační části
 - Vyhledávání, sitemapa, navigace a dashboard teď používají sdílené helpery i pro statické stránky a runtime audit hlídá seznam stránek, formulář i přístupová pravidla pro role mimo shared content
 - Dashboard a levé menu teď ukazují nové kontaktní a chat zprávy přímo v moderátorském workflow a runtime audit nově hlídá i admin inboxy a detail zprávy
+- Veřejné přihlášení k newsletteru i administrativní znovu-poslání potvrzení teď používají stejnou sdílenou mailovou vrstvu a runtime audit nově hlídá i přehled newsletteru, detail odběratele, detail rozesílky a compose obrazovku
 
 ## [3.0.0-beta.1] – 2026-03-23
 

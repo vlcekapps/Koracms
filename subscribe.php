@@ -29,15 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare(
                     "INSERT INTO cms_subscribers (email, token, confirmed) VALUES (?, ?, 0)"
                 )->execute([$email, $token]);
-
-                $confirmUrl = siteUrl('/subscribe_confirm.php?token=' . $token);
-                $subject    = 'Potvrďte přihlášení k odběru – ' . $siteName;
-                $body       = "Dobrý den,\n\n"
-                            . "pro potvrzení odběru novinek webu {$siteName} klikněte na odkaz:\n"
-                            . $confirmUrl . "\n\n"
-                            . "Pokud jste se k odběru nepřihlásili, tento email ignorujte.\n\n"
-                            . "— " . $siteName;
-                sendMail($email, $subject, $body);
+                sendNewsletterSubscriptionConfirmation($email, $token);
                 $state = 'ok';
             } catch (\PDOException $e) {
                 $state = 'exists';

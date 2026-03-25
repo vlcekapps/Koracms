@@ -267,7 +267,15 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         return 'bookings_manage';
     }
 
-    if (in_array($file, ['newsletter.php', 'newsletter_form.php', 'newsletter_send.php', 'newsletter_subscriber_delete.php'], true)) {
+    if (in_array($file, [
+        'newsletter.php',
+        'newsletter_form.php',
+        'newsletter_send.php',
+        'newsletter_subscriber.php',
+        'newsletter_subscriber_action.php',
+        'newsletter_subscriber_delete.php',
+        'newsletter_history.php',
+    ], true)) {
         return 'newsletter_manage';
     }
 

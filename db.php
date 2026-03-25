@@ -1012,6 +1012,35 @@ function totalUnreadMessageCount(): int
     return unreadContactCount() + unreadChatCount();
 }
 
+function newsletterSubscriberStatusLabel(bool $confirmed): string
+{
+    return $confirmed ? 'Potvrzeno' : 'Čeká na potvrzení';
+}
+
+function newsletterSubscriberCounts(PDO $pdo): array
+{
+    $counts = [
+        'confirmed' => 0,
+        'pending' => 0,
+    ];
+
+    try {
+        $rows = $pdo->query(
+            "SELECT confirmed, COUNT(*) AS cnt
+             FROM cms_subscribers
+             GROUP BY confirmed"
+        )->fetchAll();
+        foreach ($rows as $row) {
+            $bucket = ((int)($row['confirmed'] ?? 0) === 1) ? 'confirmed' : 'pending';
+            $counts[$bucket] = (int)($row['cnt'] ?? 0);
+        }
+    } catch (\PDOException $e) {
+        return $counts;
+    }
+
+    return $counts;
+}
+
 function setContactMessageStatus(PDO $pdo, int $messageId, string $status): bool
 {
     $normalizedStatus = normalizeMessageStatus($status);
@@ -3631,6 +3660,20 @@ function siteUrl(string $path = ''): string
         $base   = $scheme . '://' . $host . $base;
     }
     return $base . $path;
+}
+
+function sendNewsletterSubscriptionConfirmation(string $recipient, string $token): bool
+{
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $confirmUrl = siteUrl('/subscribe_confirm.php?token=' . $token);
+    $subject = 'Potvrďte přihlášení k odběru – ' . $siteName;
+    $body = "Dobrý den,\n\n"
+        . "pro potvrzení odběru novinek webu {$siteName} klikněte na odkaz:\n"
+        . $confirmUrl . "\n\n"
+        . "Pokud jste se k odběru nepřihlásili, tento email ignorujte.\n\n"
+        . "— " . $siteName;
+
+    return sendMail($recipient, $subject, $body);
 }
 
 /**

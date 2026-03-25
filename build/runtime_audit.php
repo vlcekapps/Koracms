@@ -119,6 +119,9 @@ $podcastEpisodeCanonicalPath = '';
 $podcastEpisodeLegacyPath = '';
 $podcastEpisodeCanonicalUrl = '';
 $podcastEpisodeLegacyUrl = '';
+$newsletterPendingSubscriberId = false;
+$newsletterConfirmedSubscriberId = false;
+$newsletterHistoryId = false;
 $contactMessageId = false;
 $chatMessageId = false;
 $foodCardRow = $pdo->query(
@@ -237,6 +240,7 @@ $cleanup = [
     'public_user_ids' => [],
     'confirm_emails' => [],
     'subscriber_emails' => [],
+    'newsletter_ids' => [],
     'contact_ids' => [],
     'chat_ids' => [],
     'author_user_ids' => [],
@@ -368,17 +372,32 @@ $unsubscribeToken = '';
 if (isModuleEnabled('newsletter')) {
     $subscribeConfirmToken = bin2hex(random_bytes(32));
     $subscribeConfirmEmail = 'runtimeaudit-newsletter-confirm-' . bin2hex(random_bytes(6)) . '@example.test';
-    $pdo->prepare(
+    $pendingSubscriberStmt = $pdo->prepare(
         "INSERT INTO cms_subscribers (email, token, confirmed) VALUES (?, ?, 0)"
-    )->execute([$subscribeConfirmEmail, $subscribeConfirmToken]);
+    );
+    $pendingSubscriberStmt->execute([$subscribeConfirmEmail, $subscribeConfirmToken]);
+    $newsletterPendingSubscriberId = (int)$pdo->lastInsertId();
     $cleanup['subscriber_emails'][] = $subscribeConfirmEmail;
 
     $unsubscribeToken = bin2hex(random_bytes(32));
     $unsubscribeEmail = 'runtimeaudit-newsletter-unsub-' . bin2hex(random_bytes(6)) . '@example.test';
-    $pdo->prepare(
+    $confirmedSubscriberStmt = $pdo->prepare(
         "INSERT INTO cms_subscribers (email, token, confirmed) VALUES (?, ?, 1)"
-    )->execute([$unsubscribeEmail, $unsubscribeToken]);
+    );
+    $confirmedSubscriberStmt->execute([$unsubscribeEmail, $unsubscribeToken]);
+    $newsletterConfirmedSubscriberId = (int)$pdo->lastInsertId();
     $cleanup['subscriber_emails'][] = $unsubscribeEmail;
+
+    $pdo->prepare(
+        "INSERT INTO cms_newsletters (subject, body, recipient_count, sent_at, created_at)
+         VALUES (?, ?, ?, NOW(), NOW())"
+    )->execute([
+        'Runtime audit newsletter',
+        "Testovací obsah rozesílky pro audit administrace newsletteru.",
+        1,
+    ]);
+    $newsletterHistoryId = (int)$pdo->lastInsertId();
+    $cleanup['newsletter_ids'][] = $newsletterHistoryId;
 }
 
 $runtimeAuditAuthorSlug = uniqueAuthorSlug($pdo, 'runtime-author-' . bin2hex(random_bytes(4)));
@@ -901,6 +920,8 @@ $pages = [
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_contact', 'url' => $baseUrl . '/admin/contact.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_chat', 'url' => $baseUrl . '/admin/chat.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_newsletter', 'url' => $baseUrl . '/admin/newsletter.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_newsletter_form', 'url' => $baseUrl . '/admin/newsletter_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_pages', 'url' => $baseUrl . '/admin/pages.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_faq', 'url' => $baseUrl . '/admin/faq.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -929,6 +950,12 @@ if ($contactMessageId !== false) {
 }
 if ($chatMessageId !== false) {
     $pages[] = ['label' => 'admin_chat_message', 'url' => $baseUrl . '/admin/chat_message.php?id=' . urlencode((string)$chatMessageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($newsletterPendingSubscriberId !== false) {
+    $pages[] = ['label' => 'admin_newsletter_subscriber', 'url' => $baseUrl . '/admin/newsletter_subscriber.php?id=' . urlencode((string)$newsletterPendingSubscriberId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($newsletterHistoryId !== false) {
+    $pages[] = ['label' => 'admin_newsletter_history', 'url' => $baseUrl . '/admin/newsletter_history.php?id=' . urlencode((string)$newsletterHistoryId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($pageId !== false) {
     $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -1729,6 +1756,31 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_newsletter') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'newsletter_subscriber.php',
+            'newsletter_history.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin newsletter overview is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_newsletter_form') {
+        foreach ([
+            'name="subject"',
+            'name="body"',
+            'potvrzených odběratelů',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin newsletter compose form is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_board') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin board search field is missing';
@@ -1890,6 +1942,30 @@ foreach ($pages as $page) {
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_newsletter_subscriber') {
+        foreach ([
+            'mailto:',
+            'name="action" value="resend"',
+            'name="action" value="confirm"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin newsletter subscriber detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_newsletter_history') {
+        foreach ([
+            'Runtime audit newsletter',
+            'Příjemců',
+            'Testovací obsah rozesílky',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin newsletter history detail is missing fragment: ' . $expectedFragment;
             }
         }
     }
@@ -3097,6 +3173,11 @@ if (!empty($cleanup['confirm_emails'])) {
 if (!empty($cleanup['subscriber_emails'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['subscriber_emails']), '?'));
     $pdo->prepare("DELETE FROM cms_subscribers WHERE email IN ({$placeholders})")->execute($cleanup['subscriber_emails']);
+}
+
+if (!empty($cleanup['newsletter_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['newsletter_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_newsletters WHERE id IN ({$placeholders})")->execute($cleanup['newsletter_ids']);
 }
 if (!empty($cleanup['contact_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['contact_ids']), '?'));

@@ -121,7 +121,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |
 | **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
-| **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení |
+| **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení; administrace nabízí přehled odběratelů, detail čekajících potvrzení a historii rozesílek |
 | **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do, archivem, veřejným detailem a čistou slug URL |
 | **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |

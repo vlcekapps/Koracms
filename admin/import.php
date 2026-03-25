@@ -634,11 +634,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Newslettery
                 if (!empty($data['newsletters']) && is_array($data['newsletters'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_newsletters (id, subject, body, sent_at) VALUES (?,?,?,?)"
+                        "INSERT IGNORE INTO cms_newsletters
+                         (id, subject, body, recipient_count, sent_at, created_at)
+                         VALUES (?,?,?,?,?,?)"
                     );
                     foreach ($data['newsletters'] as $row) {
                         $ins->execute([
-                            (int)$row['id'], $row['subject'], $row['body'], $row['sent_at'],
+                            (int)$row['id'],
+                            $row['subject'],
+                            $row['body'],
+                            (int)($row['recipient_count'] ?? 0),
+                            $row['sent_at'] ?? null,
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
                         ]);
                     }
                     $summary[] = 'Newslettery importovány.';

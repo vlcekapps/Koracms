@@ -1,13 +1,16 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('newsletter_manage', 'Přístup odepřen. Pro správu odběratelů newsletteru nemáte potřebné oprávnění.');
 verifyCsrf();
 
-$id = inputInt('post', 'id');
-if ($id !== null) {
-    db_connect()->prepare("DELETE FROM cms_subscribers WHERE id = ?")->execute([$id]);
-    logAction('subscriber_delete', "id={$id}");
+$subscriberId = inputInt('post', 'id');
+$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/newsletter.php');
+
+if ($subscriberId !== null) {
+    db_connect()->prepare("DELETE FROM cms_subscribers WHERE id = ?")->execute([$subscriberId]);
+    logAction('newsletter_subscriber_delete', 'id=' . $subscriberId);
 }
 
-header('Location: ' . BASE_URL . '/admin/newsletter.php');
+$separator = str_contains($redirect, '?') ? '&' : '?';
+header('Location: ' . $redirect . $separator . 'ok=deleted');
 exit;

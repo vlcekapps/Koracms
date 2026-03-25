@@ -141,8 +141,9 @@ if ($canManageBookings && isModuleEnabled('reservations')) {
 }
 
 if ($canManageNewsletter && isModuleEnabled('newsletter')) {
-    $subscriberCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_subscribers WHERE confirmed = 1');
-    if ($subscriberCount !== null) {
+    $newsletterCounts = newsletterSubscriberCounts($pdo);
+    $subscriberCount = $newsletterCounts['confirmed'] + $newsletterCounts['pending'];
+    if ($subscriberCount >= 0) {
         $overviewRows[] = [
             'label' => 'Odběratelé newsletteru',
             'count' => $subscriberCount,
@@ -325,7 +326,14 @@ if ($canManageSharedContent) {
     $quickLinks[] = ['url' => 'pages.php', 'label' => 'Stránky webu'];
 }
 if ($canManageNewsletter && isModuleEnabled('newsletter')) {
-    $quickLinks[] = ['url' => 'newsletter.php', 'label' => 'Newsletter'];
+    $newsletterCounts = newsletterSubscriberCounts($pdo);
+    $pendingSubscriberCount = $newsletterCounts['pending'];
+    $quickLinks[] = [
+        'url' => 'newsletter.php',
+        'label' => $pendingSubscriberCount > 0
+            ? 'Newsletter (' . $pendingSubscriberCount . ' čeká na potvrzení)'
+            : 'Newsletter',
+    ];
 }
 if ($canManageUsers) {
     $quickLinks[] = ['url' => 'users.php', 'label' => 'Uživatelé'];
