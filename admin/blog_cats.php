@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categories = $pdo->query("SELECT id, name FROM cms_categories ORDER BY name")->fetchAll();
 
-adminHeader('Blog – kategorie');
+adminHeader('Kategorie blogu');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie přidána.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
@@ -42,12 +42,12 @@ adminHeader('Blog – kategorie');
   </fieldset>
 </form>
 
-<h2>Existující kategorie</h2>
+<h2>Přehled kategorií blogu</h2>
 <?php if (empty($categories)): ?>
   <p>Zatím tu nejsou žádné kategorie.</p>
 <?php else: ?>
   <table>
-    <caption>Kategorie blogu</caption>
+    <caption>Přehled kategorií blogu</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($categories as $cat): ?>
@@ -82,5 +82,5 @@ adminHeader('Blog – kategorie');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="blog.php"><span aria-hidden="true">←</span> Zpět na články</a></p>
+<p><a href="blog.php"><span aria-hidden="true">←</span> Zpět na blog</a></p>
 <?php adminFooter(); ?>

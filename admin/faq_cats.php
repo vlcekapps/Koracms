@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categories = $pdo->query("SELECT id, name, sort_order FROM cms_faq_categories ORDER BY sort_order, name")->fetchAll();
 
-adminHeader('FAQ – kategorie');
+adminHeader('Kategorie FAQ');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
@@ -50,12 +50,12 @@ adminHeader('FAQ – kategorie');
   </fieldset>
 </form>
 
-<h2>Existující kategorie</h2>
+<h2>Přehled kategorií FAQ</h2>
 <?php if (empty($categories)): ?>
   <p>Zatím tu nejsou žádné kategorie.</p>
 <?php else: ?>
   <table>
-    <caption>FAQ kategorie</caption>
+    <caption>Přehled kategorií FAQ</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Pořadí</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($categories as $category): ?>
@@ -96,6 +96,6 @@ adminHeader('FAQ – kategorie');
   </table>
 <?php endif; ?>
 
-<p><a href="faq.php"><span aria-hidden="true">&larr;</span> Zpět na otázky</a></p>
+<p><a href="faq.php"><span aria-hidden="true">&larr;</span> Zpět na FAQ</a></p>
 
 <?php adminFooter(); ?>

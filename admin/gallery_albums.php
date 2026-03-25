@@ -33,7 +33,7 @@ $albums = array_map(
     $stmt->fetchAll()
 );
 
-adminHeader('Galerie – Alba');
+adminHeader('Alba galerie');
 ?>
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_album_form.php" class="btn">+ Nové album</a></p>
@@ -59,7 +59,7 @@ adminHeader('Galerie – Alba');
   </p>
 <?php else: ?>
   <table>
-    <caption>Seznam alb</caption>
+    <caption>Přehled alb</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>
@@ -83,7 +83,7 @@ adminHeader('Galerie – Alba');
           <td><?= (int)$album['photo_count'] ?></td>
           <td><?= (int)$album['sub_count'] ?></td>
           <td class="actions">
-            <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Fotografie</a>
+            <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Spravovat fotografie</a>
             <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
             <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_album_delete.php"

@@ -77,7 +77,7 @@ adminHeader('Ankety');
   </p>
 <?php else: ?>
   <table>
-    <caption>Ankety</caption>
+    <caption>Přehled anket</caption>
     <thead>
       <tr>
         <th scope="col">Otázka</th>

@@ -9,13 +9,13 @@ $accounts = $pdo->query(
      FROM cms_users ORDER BY is_superadmin DESC, created_at ASC, id ASC"
 )->fetchAll();
 
-adminHeader('Správa uživatelů');
+adminHeader('Uživatelé a role');
 ?>
 
 <p><a href="user_form.php" class="btn">+ Přidat uživatele</a></p>
 
 <table>
-  <caption>Uživatelé</caption>
+  <caption>Přehled uživatelů</caption>
   <thead>
     <tr>
       <th scope="col">E-mail</th>

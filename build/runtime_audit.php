@@ -1874,6 +1874,9 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin news status filter is missing';
         }
+        if (!str_contains($result['body'], 'Přehled novinek')) {
+            $issues[] = 'admin news table caption was not updated';
+        }
     }
 
     if ($page['label'] === 'admin_faq') {
@@ -1883,6 +1886,17 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin faq status filter is missing';
         }
+        foreach ([
+            'Kategorie FAQ',
+            'Přehled otázek FAQ',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin faq page is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], 'Správa kategorií')) {
+            $issues[] = 'admin faq page still contains outdated category action wording';
+        }
     }
 
     if ($page['label'] === 'admin_events') {
@@ -1891,6 +1905,9 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin events status filter is missing';
+        }
+        if (!str_contains($result['body'], 'Přehled událostí')) {
+            $issues[] = 'admin events table caption was not updated';
         }
     }
 
@@ -2001,8 +2018,14 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Návštěvníci tuto sekci na webu vidí jako')) {
             $issues[] = 'admin board is missing visitor-facing public label helper text';
         }
+        if (!str_contains($result['body'], 'Kategorie vývěsky')) {
+            $issues[] = 'admin board category quick link was not updated';
+        }
         if (str_contains($result['body'], 'Veřejný název modulu je aktuálně')) {
             $issues[] = 'admin board still contains outdated public label wording';
+        }
+        if (str_contains($result['body'], 'Správa kategorií')) {
+            $issues[] = 'admin board still contains outdated category action wording';
         }
     }
 
@@ -2025,6 +2048,9 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin pages status filter is missing';
         }
+        if (!str_contains($result['body'], 'Přehled statických stránek')) {
+            $issues[] = 'admin pages table caption was not updated';
+        }
     }
 
     if ($page['label'] === 'admin_food') {
@@ -2033,6 +2059,14 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin food status filter is missing';
+        }
+        foreach ([
+            'Přehled jídelních lístků',
+            'Přehled nápojových lístků',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin food page is missing fragment: ' . $expectedFragment;
+            }
         }
     }
 
@@ -2043,6 +2077,9 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin places status filter is missing';
         }
+        if (!str_contains($result['body'], 'Přehled zajímavých míst')) {
+            $issues[] = 'admin places table caption was not updated';
+        }
     }
 
     if ($page['label'] === 'admin_res_resources') {
@@ -2050,6 +2087,9 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'res_resource_form.php',
+            'Kategorie zdrojů rezervací',
+            'Lokality rezervací',
+            'Přehled zdrojů rezervací',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin reservation resources is missing fragment: ' . $expectedFragment;
@@ -2086,6 +2126,43 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin podcast episode status filter is missing';
+        }
+        foreach ([
+            'Zpět na přehled podcastů',
+            'Přehled epizod podcastu',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin podcast episode page is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], 'Zpět na podcasty')) {
+            $issues[] = 'admin podcast episode page still contains outdated return label';
+        }
+    }
+
+    if ($page['label'] === 'admin_blog') {
+        foreach ([
+            'Kategorie blogu',
+            'Štítky blogu',
+            'Přehled článků blogu',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin blog page is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_users') {
+        foreach ([
+            'Uživatelé a role',
+            'Přehled uživatelů',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin users page is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], 'Správa uživatelů')) {
+            $issues[] = 'admin users page still contains outdated heading';
         }
     }
 
@@ -2357,6 +2434,7 @@ foreach ($pages as $page) {
             'value="active"',
             'value="scheduled"',
             'value="closed"',
+            'Přehled anket',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin polls page is missing field: ' . $expectedField;
@@ -2384,9 +2462,19 @@ foreach ($pages as $page) {
         foreach ([
             'name="q"',
             '/admin/gallery_album_form.php',
+            'Přehled alb',
+            'Spravovat fotografie',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin gallery albums is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            'Seznam alb',
+            '>Fotografie<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin gallery albums still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
     }

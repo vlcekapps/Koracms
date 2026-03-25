@@ -50,12 +50,12 @@ $slotModeLabels = [
     'duration' => 'Pevná délka',
 ];
 
-adminHeader('Rezervace – zdroje');
+adminHeader('Zdroje rezervací');
 ?>
 <p>
   <a href="res_resource_form.php" class="btn">+ Přidat zdroj</a>
-  <a href="res_categories.php" class="btn" style="margin-left:.5rem">Kategorie</a>
-  <a href="res_locations.php" class="btn" style="margin-left:.5rem">Místa</a>
+  <a href="res_categories.php" class="btn" style="margin-left:.5rem">Kategorie zdrojů rezervací</a>
+  <a href="res_locations.php" class="btn" style="margin-left:.5rem">Lokality rezervací</a>
 </p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
@@ -87,7 +87,7 @@ adminHeader('Rezervace – zdroje');
   </p>
 <?php else: ?>
   <table>
-    <caption>Rezervační zdroje</caption>
+    <caption>Přehled zdrojů rezervací</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>

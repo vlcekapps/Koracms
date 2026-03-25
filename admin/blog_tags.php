@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $tags = $pdo->query("SELECT id, name, slug FROM cms_tags ORDER BY name")->fetchAll();
 
-adminHeader('Blog – tagy');
+adminHeader('Štítky blogu');
 ?>
 
 <?php if ($success): ?><p class="success" role="status">Tag uložen.</p><?php endif; ?>
@@ -52,12 +52,12 @@ adminHeader('Blog – tagy');
   </fieldset>
 </form>
 
-<h2>Existující tagy</h2>
+<h2>Přehled štítků blogu</h2>
 <?php if (empty($tags)): ?>
   <p>Zatím tu nejsou žádné tagy.</p>
 <?php else: ?>
   <table>
-    <caption>Tagy blogu</caption>
+    <caption>Přehled štítků blogu</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Slug</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($tags as $t): ?>
@@ -93,5 +93,5 @@ adminHeader('Blog – tagy');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="blog.php"><span aria-hidden="true">←</span> Zpět na články</a></p>
+<p><a href="blog.php"><span aria-hidden="true">←</span> Zpět na blog</a></p>
 <?php adminFooter(); ?>

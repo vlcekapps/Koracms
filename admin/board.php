@@ -54,7 +54,7 @@ adminHeader('Úřední deska');
 </p>
 <p>
   <a href="board_form.php" class="btn">+ Přidat položku</a>
-  <a href="board_cats.php" style="margin-left:1rem">Správa kategorií</a>
+  <a href="board_cats.php" style="margin-left:1rem">Kategorie vývěsky</a>
 </p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">

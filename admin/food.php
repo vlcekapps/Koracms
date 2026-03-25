@@ -91,6 +91,7 @@ adminHeader('Jídelní a nápojový lístek');
       $groups[$item['type']][] = $item;
   }
   $labels = ['food' => 'Jídelní lístky', 'beverage' => 'Nápojové lístky'];
+  $captions = ['food' => 'Přehled jídelních lístků', 'beverage' => 'Přehled nápojových lístků'];
   foreach ($groups as $type => $rows):
       if (empty($rows)) {
           continue;
@@ -98,7 +99,7 @@ adminHeader('Jídelní a nápojový lístek');
   ?>
   <h2 style="margin-top:2rem"><?= h($labels[$type]) ?></h2>
   <table>
-    <caption>Jídelní a nápojové lístky</caption>
+    <caption><?= h($captions[$type]) ?></caption>
     <thead>
       <tr>
         <th scope="col">Název</th>

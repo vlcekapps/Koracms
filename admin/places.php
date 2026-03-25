@@ -79,7 +79,7 @@ adminHeader('Zajímavá místa');
   </p>
 <?php else: ?>
   <table>
-    <caption>Zajímavá místa</caption>
+    <caption>Přehled zajímavých míst</caption>
     <thead>
       <tr>
         <th scope="col">Místo</th>

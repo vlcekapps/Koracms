@@ -75,7 +75,7 @@ adminHeader('Události');
   </p>
 <?php else: ?>
   <table>
-    <caption>Události</caption>
+    <caption>Přehled událostí</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>

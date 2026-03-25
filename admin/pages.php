@@ -82,7 +82,7 @@ adminHeader('Statické stránky');
   </p>
 <?php else: ?>
   <table>
-    <caption>Statické stránky</caption>
+    <caption>Přehled statických stránek</caption>
     <thead>
       <tr>
         <th scope="col">Název</th>

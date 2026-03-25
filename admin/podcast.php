@@ -60,10 +60,10 @@ $episodes = array_map(
 
 $canApprovePodcast = currentUserHasCapability('content_approve_shared');
 
-adminHeader('Podcast: ' . (string)$show['title']);
+adminHeader('Epizody podcastu: ' . (string)$show['title']);
 ?>
 <p>
-  <a href="podcast_shows.php"><span aria-hidden="true">&larr;</span> Zpět na podcasty</a>
+  <a href="podcast_shows.php"><span aria-hidden="true">&larr;</span> Zpět na přehled podcastů</a>
   &nbsp;|&nbsp;
   <a href="podcast_show_form.php?id=<?= (int)$show['id'] ?>">Upravit podcast</a>
   &nbsp;|&nbsp;
@@ -107,7 +107,7 @@ adminHeader('Podcast: ' . (string)$show['title']);
   </p>
 <?php else: ?>
   <table>
-    <caption>Epizody podcastu</caption>
+    <caption>Přehled epizod podcastu</caption>
     <thead>
       <tr>
         <th scope="col">Epizoda</th>

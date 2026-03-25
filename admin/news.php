@@ -48,7 +48,7 @@ $items = array_map(
 
 $canApproveNews = currentUserHasCapability('news_approve');
 
-adminHeader('Novinky – správa');
+adminHeader('Novinky');
 ?>
 <p><a href="news_form.php" class="btn">+ Přidat novinku</a></p>
 
@@ -82,7 +82,7 @@ adminHeader('Novinky – správa');
   </p>
 <?php else: ?>
   <table>
-    <caption>Novinky</caption>
+    <caption>Přehled novinek</caption>
     <thead>
       <tr>
         <th scope="col">Titulek</th>

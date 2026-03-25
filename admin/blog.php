@@ -38,14 +38,14 @@ $canManageTaxonomies = currentUserHasCapability('blog_taxonomies_manage');
 $canApproveBlog = currentUserHasCapability('blog_approve');
 $currentRedirect = BASE_URL . '/admin/blog.php' . ($q !== '' ? '?q=' . urlencode($q) : '');
 
-adminHeader('Blog – správa článků');
+adminHeader('Blog');
 ?>
 
 <p>
   <a href="blog_form.php" class="btn">+ Přidat článek</a>
   <?php if ($canManageTaxonomies): ?>
-    <a href="blog_cats.php" style="margin-left:1rem">Kategorie</a>
-    <a href="blog_tags.php" style="margin-left:1rem">Tagy</a>
+    <a href="blog_cats.php" style="margin-left:1rem">Kategorie blogu</a>
+    <a href="blog_tags.php" style="margin-left:1rem">Štítky blogu</a>
   <?php endif; ?>
 </p>
 
@@ -80,7 +80,7 @@ adminHeader('Blog – správa článků');
     </div>
   </fieldset>
   <table>
-    <caption>Články</caption>
+    <caption>Přehled článků blogu</caption>
     <thead>
       <tr>
         <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>

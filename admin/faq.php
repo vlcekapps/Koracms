@@ -51,7 +51,7 @@ adminHeader('FAQ');
 ?>
 <p>
   <a href="faq_form.php" class="btn">+ Přidat otázku</a>
-  <a href="faq_cats.php" style="margin-left:1rem">Správa kategorií</a>
+  <a href="faq_cats.php" style="margin-left:1rem">Kategorie FAQ</a>
 </p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
@@ -85,7 +85,7 @@ adminHeader('FAQ');
   </p>
 <?php else: ?>
   <table>
-    <caption>Často kladené otázky</caption>
+    <caption>Přehled otázek FAQ</caption>
     <thead>
       <tr>
         <th scope="col">Otázka</th>
