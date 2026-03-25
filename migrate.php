@@ -104,7 +104,9 @@ $tables = [
         email      VARCHAR(255) NOT NULL DEFAULT '',
         web        VARCHAR(255) NOT NULL DEFAULT '',
         message    TEXT         NOT NULL,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        status     ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_contact' => "CREATE TABLE IF NOT EXISTS cms_contact (
@@ -113,7 +115,9 @@ $tables = [
         subject      VARCHAR(255) NOT NULL,
         message      TEXT         NOT NULL,
         is_read      TINYINT(1)   NOT NULL DEFAULT 0,
-        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        status       ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_users' => "CREATE TABLE IF NOT EXISTS cms_users (
@@ -566,6 +570,18 @@ foreach ($tables as $name => $sql) {
 // ── 2. Sloupce přidané v novějších verzích ────────────────────────────────────
 // Přidáme jen pokud ještě neexistují (bezpečné pro existující instalace).
 
+$columnExists = static function (string $tableName, string $columnName) use ($pdo): bool {
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+    );
+    $stmt->execute([$tableName, $columnName]);
+    return (int)$stmt->fetchColumn() > 0;
+};
+
+$contactStatusWasMissing = !$columnExists('cms_contact', 'status');
+$chatStatusWasMissing = !$columnExists('cms_chat', 'status');
+
 $addColumns = [
     // cms_articles
     'cms_articles.image_file'        => "ALTER TABLE cms_articles ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
@@ -584,6 +600,12 @@ $addColumns = [
     'cms_news.author_id'             => "ALTER TABLE cms_news ADD COLUMN author_id INT NULL DEFAULT NULL",
     'cms_news.status'                => "ALTER TABLE cms_news ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_chat
+    'cms_chat.status'                => "ALTER TABLE cms_chat ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
+    'cms_chat.updated_at'            => "ALTER TABLE cms_chat ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_contact
+    'cms_contact.status'             => "ALTER TABLE cms_contact ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
+    'cms_contact.updated_at'         => "ALTER TABLE cms_contact ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_faqs
     'cms_faqs.slug'                  => "ALTER TABLE cms_faqs ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_faqs.excerpt'               => "ALTER TABLE cms_faqs ADD COLUMN excerpt TEXT",
@@ -1670,6 +1692,39 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Migrace komentářů na stavový model – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if ($contactStatusWasMissing) {
+        $updatedContacts = $pdo->exec(
+            "UPDATE cms_contact
+             SET status = CASE
+                 WHEN status = 'handled' THEN 'handled'
+                 WHEN is_read = 1 THEN 'read'
+                 ELSE 'new'
+             END"
+        );
+        $log[] = "✓ Stav kontaktů sjednocen podle existujících dat – OK ({$updatedContacts} záznamů)";
+    } else {
+        $log[] = "· Migrace stavů kontaktů – stavový model již existuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Migrace stavů kontaktů – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if ($chatStatusWasMissing) {
+        $updatedChat = $pdo->exec(
+            "UPDATE cms_chat
+             SET status = 'read'
+             WHERE status = 'new'"
+        );
+        $log[] = "✓ Stav chat zpráv sjednocen pro starší instalace – OK ({$updatedChat} záznamů)";
+    } else {
+        $log[] = "· Migrace stavů chat zpráv – stavový model již existuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Migrace stavů chat zpráv – CHYBA: " . h($e->getMessage());
 }
 
 if ($isCli) {

@@ -14,6 +14,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
     'module_newsletter' => getSetting('module_newsletter', '0'),
     'module_chat' => getSetting('module_chat', '0'),
+    'module_contact' => getSetting('module_contact', '0'),
     'module_board' => getSetting('module_board', '0'),
     'module_downloads' => getSetting('module_downloads', '0'),
     'module_events' => getSetting('module_events', '0'),
@@ -118,6 +119,8 @@ $podcastEpisodeCanonicalPath = '';
 $podcastEpisodeLegacyPath = '';
 $podcastEpisodeCanonicalUrl = '';
 $podcastEpisodeLegacyUrl = '';
+$contactMessageId = false;
+$chatMessageId = false;
 $foodCardRow = $pdo->query(
     "SELECT id, type, title, slug, description, valid_from, valid_to, is_current, is_published,
             status, created_at, updated_at
@@ -234,6 +237,8 @@ $cleanup = [
     'public_user_ids' => [],
     'confirm_emails' => [],
     'subscriber_emails' => [],
+    'contact_ids' => [],
+    'chat_ids' => [],
     'author_user_ids' => [],
     'staff_user_ids' => [],
     'board_ids' => [],
@@ -853,6 +858,33 @@ if (isModuleEnabled('podcast')) {
     }
 }
 
+if (isModuleEnabled('contact')) {
+    $pdo->prepare(
+        "INSERT INTO cms_contact (sender_email, subject, message, is_read, status, created_at, updated_at)
+         VALUES (?, ?, ?, 0, 'new', NOW(), NOW())"
+    )->execute([
+        'runtimeaudit-contact-' . bin2hex(random_bytes(4)) . '@example.test',
+        'Runtime audit kontakt',
+        "Testovací kontaktní zpráva pro audit inboxu a detailu zprávy.",
+    ]);
+    $contactMessageId = (int)$pdo->lastInsertId();
+    $cleanup['contact_ids'][] = $contactMessageId;
+}
+
+if (isModuleEnabled('chat')) {
+    $pdo->prepare(
+        "INSERT INTO cms_chat (name, email, web, message, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'new', NOW(), NOW())"
+    )->execute([
+        'Runtime Audit',
+        'runtimeaudit-chat-' . bin2hex(random_bytes(4)) . '@example.test',
+        'https://example.test/runtime-audit-chat',
+        'Testovací chat zpráva pro audit moderátorského inboxu.',
+    ]);
+    $chatMessageId = (int)$pdo->lastInsertId();
+    $cleanup['chat_ids'][] = $chatMessageId;
+}
+
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
@@ -867,6 +899,8 @@ $pages = [
     ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_contact', 'url' => $baseUrl . '/admin/contact.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_chat', 'url' => $baseUrl . '/admin/chat.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_pages', 'url' => $baseUrl . '/admin/pages.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_faq', 'url' => $baseUrl . '/admin/faq.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -889,6 +923,12 @@ $pages = [
 
 if ($runtimeAuditAuthorId > 0) {
     $pages[] = ['label' => 'admin_user_form', 'url' => $baseUrl . '/admin/user_form.php?id=' . urlencode((string)$runtimeAuditAuthorId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($contactMessageId !== false) {
+    $pages[] = ['label' => 'admin_contact_message', 'url' => $baseUrl . '/admin/contact_message.php?id=' . urlencode((string)$contactMessageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($chatMessageId !== false) {
+    $pages[] = ['label' => 'admin_chat_message', 'url' => $baseUrl . '/admin/chat_message.php?id=' . urlencode((string)$chatMessageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($pageId !== false) {
     $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -1665,6 +1705,30 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_contact') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'contact_message.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin contact inbox is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_chat') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'chat_message.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin chat inbox is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_board') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin board search field is missing';
@@ -1804,6 +1868,28 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin page form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_contact_message') {
+        foreach ([
+            'mailto:',
+            'name="action" value="handled"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin contact detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_chat_message') {
+        foreach ([
+            'name="action" value="handled"',
+            'Runtime Audit',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin chat detail is missing fragment: ' . $expectedFragment;
             }
         }
     }
@@ -3011,6 +3097,14 @@ if (!empty($cleanup['confirm_emails'])) {
 if (!empty($cleanup['subscriber_emails'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['subscriber_emails']), '?'));
     $pdo->prepare("DELETE FROM cms_subscribers WHERE email IN ({$placeholders})")->execute($cleanup['subscriber_emails']);
+}
+if (!empty($cleanup['contact_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['contact_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_contact WHERE id IN ({$placeholders})")->execute($cleanup['contact_ids']);
+}
+if (!empty($cleanup['chat_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['chat_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($cleanup['chat_ids']);
 }
 if (!empty($cleanup['board_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['board_ids']), '?'));

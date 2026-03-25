@@ -1,12 +1,15 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('messages_manage', 'Přístup odepřen. Pro správu chat zpráv nemáte potřebné oprávnění.');
 verifyCsrf();
 
-$id = inputInt('post', 'id');
-if ($id !== null) {
-    db_connect()->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$id]);
+$messageId = inputInt('post', 'id');
+$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/chat.php');
+
+if ($messageId !== null) {
+    db_connect()->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$messageId]);
+    logAction('chat_delete', "id={$messageId}");
 }
 
-header('Location: ' . BASE_URL . '/admin/chat.php');
+header('Location: ' . appendUrlQuery($redirect, ['ok' => 1]));
 exit;

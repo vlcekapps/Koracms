@@ -918,6 +918,154 @@ function pendingCommentCount(): int
     }
 }
 
+function messageStatusDefinitions(): array
+{
+    return [
+        'new' => ['label' => 'Nové'],
+        'read' => ['label' => 'Přečtené'],
+        'handled' => ['label' => 'Vyřízené'],
+    ];
+}
+
+function normalizeMessageStatus(string $status): string
+{
+    $normalized = trim($status);
+    return array_key_exists($normalized, messageStatusDefinitions()) ? $normalized : 'new';
+}
+
+function messageStatusLabel(string $status): string
+{
+    $normalized = normalizeMessageStatus($status);
+    return messageStatusDefinitions()[$normalized]['label'] ?? 'Nové';
+}
+
+function messageStatusReadValue(string $status): int
+{
+    return normalizeMessageStatus($status) === 'new' ? 0 : 1;
+}
+
+function inboxStatusCounts(PDO $pdo, string $tableName, bool $hasLegacyReadColumn = false): array
+{
+    $counts = array_fill_keys(array_keys(messageStatusDefinitions()), 0);
+
+    try {
+        $rows = $pdo->query("SELECT status, COUNT(*) AS cnt FROM {$tableName} GROUP BY status")->fetchAll();
+        foreach ($rows as $row) {
+            $statusKey = normalizeMessageStatus((string)($row['status'] ?? 'new'));
+            $counts[$statusKey] = (int)($row['cnt'] ?? 0);
+        }
+    } catch (\PDOException $e) {
+        if ($hasLegacyReadColumn) {
+            try {
+                $counts['new'] = (int)$pdo->query("SELECT COUNT(*) FROM {$tableName} WHERE is_read = 0")->fetchColumn();
+                $counts['read'] = (int)$pdo->query("SELECT COUNT(*) FROM {$tableName} WHERE is_read = 1")->fetchColumn();
+            } catch (\PDOException $fallbackError) {
+                return $counts;
+            }
+        }
+    }
+
+    return $counts;
+}
+
+function newInboxMessageCount(string $tableName, bool $hasLegacyReadColumn = false): int
+{
+    try {
+        return (int)db_connect()->query(
+            "SELECT COUNT(*) FROM {$tableName} WHERE status = 'new'"
+        )->fetchColumn();
+    } catch (\PDOException $e) {
+        if ($hasLegacyReadColumn) {
+            try {
+                return (int)db_connect()->query(
+                    "SELECT COUNT(*) FROM {$tableName} WHERE is_read = 0"
+                )->fetchColumn();
+            } catch (\PDOException $fallbackError) {
+                return 0;
+            }
+        }
+
+        return 0;
+    }
+}
+
+function unreadContactCount(): int
+{
+    if (!isModuleEnabled('contact')) {
+        return 0;
+    }
+
+    return newInboxMessageCount('cms_contact', true);
+}
+
+function unreadChatCount(): int
+{
+    if (!isModuleEnabled('chat')) {
+        return 0;
+    }
+
+    return newInboxMessageCount('cms_chat');
+}
+
+function totalUnreadMessageCount(): int
+{
+    return unreadContactCount() + unreadChatCount();
+}
+
+function setContactMessageStatus(PDO $pdo, int $messageId, string $status): bool
+{
+    $normalizedStatus = normalizeMessageStatus($status);
+
+    try {
+        $stmt = $pdo->prepare(
+            "UPDATE cms_contact
+             SET status = ?, is_read = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?"
+        );
+        $stmt->execute([$normalizedStatus, messageStatusReadValue($normalizedStatus), $messageId]);
+        if ($stmt->rowCount() > 0) {
+            return true;
+        }
+    } catch (\PDOException $e) {
+        try {
+            $stmt = $pdo->prepare("UPDATE cms_contact SET is_read = ? WHERE id = ?");
+            $stmt->execute([messageStatusReadValue($normalizedStatus), $messageId]);
+            if ($stmt->rowCount() > 0) {
+                return true;
+            }
+        } catch (\PDOException $fallbackError) {
+            return false;
+        }
+    }
+
+    $exists = $pdo->prepare("SELECT COUNT(*) FROM cms_contact WHERE id = ?");
+    $exists->execute([$messageId]);
+    return (int)$exists->fetchColumn() > 0;
+}
+
+function setChatMessageStatus(PDO $pdo, int $messageId, string $status): bool
+{
+    $normalizedStatus = normalizeMessageStatus($status);
+
+    try {
+        $stmt = $pdo->prepare(
+            "UPDATE cms_chat
+             SET status = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?"
+        );
+        $stmt->execute([$normalizedStatus, $messageId]);
+        if ($stmt->rowCount() > 0) {
+            return true;
+        }
+    } catch (\PDOException $e) {
+        return false;
+    }
+
+    $exists = $pdo->prepare("SELECT COUNT(*) FROM cms_chat WHERE id = ?");
+    $exists->execute([$messageId]);
+    return (int)$exists->fetchColumn() > 0;
+}
+
 function pendingReviewSummary(PDO $pdo): array
 {
     $summary = [];

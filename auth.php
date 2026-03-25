@@ -248,7 +248,18 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         return 'comments_manage';
     }
 
-    if (in_array($file, ['chat.php', 'chat_bulk.php', 'chat_delete.php', 'contact.php', 'contact_delete.php'], true)) {
+    if (in_array($file, [
+        'chat.php',
+        'chat_bulk.php',
+        'chat_delete.php',
+        'chat_action.php',
+        'chat_message.php',
+        'contact.php',
+        'contact_delete.php',
+        'contact_action.php',
+        'contact_bulk.php',
+        'contact_message.php',
+    ], true)) {
         return 'messages_manage';
     }
 

@@ -115,8 +115,8 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 |---|---|
 | **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování |
 | **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
-| **Chat** | Jednoduchá veřejná diskuse |
-| **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou a rate limitingem |
+| **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem, detailovým pohledem na zprávu a interními stavy `nová`, `přečtená`, `vyřízená` |
+| **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou, rate limitingem a moderátorským inboxem pro příchozí zprávy |
 | **Galerie** | Vnořená fotoalba s automatickým generováním náhledů, čistými slug URL pro alba i fotografie a výběrem obálky alba |
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |

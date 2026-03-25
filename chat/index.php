@@ -45,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $pdo->prepare(
-            "INSERT INTO cms_chat (name, email, web, message) VALUES (?, ?, ?, ?)"
+            "INSERT INTO cms_chat (name, email, web, message, status)
+             VALUES (?, ?, ?, ?, 'new')"
         )->execute([$name, $email, $web, $message]);
 
         header('Location: ' . BASE_URL . '/chat/index.php');

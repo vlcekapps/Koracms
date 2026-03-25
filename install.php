@@ -92,7 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             email      VARCHAR(255) NOT NULL DEFAULT '',
             web        VARCHAR(255) NOT NULL DEFAULT '',
             message    TEXT         NOT NULL,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            status     ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_contact (
@@ -101,7 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             subject      VARCHAR(255) NOT NULL,
             message      TEXT         NOT NULL,
             is_read      TINYINT(1)   NOT NULL DEFAULT 0,
-            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            status       ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_gallery_albums (

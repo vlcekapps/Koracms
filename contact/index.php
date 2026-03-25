@@ -41,7 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             $pdo->prepare(
-                "INSERT INTO cms_contact (sender_email, subject, message) VALUES (?, ?, ?)"
+                "INSERT INTO cms_contact (sender_email, subject, message, is_read, status)
+                 VALUES (?, ?, ?, 0, 'new')"
             )->execute([$from, $subject, $message]);
 
             if ($destEmail !== '') {

@@ -105,6 +105,8 @@ if ($canManageComments && isModuleEnabled('blog')) {
 }
 
 if ($canManageMessages) {
+    $newContactCount = isModuleEnabled('contact') ? unreadContactCount() : 0;
+    $newChatCount = isModuleEnabled('chat') ? unreadChatCount() : 0;
     if (isModuleEnabled('contact')) {
         $contactCount = $safeCount($pdo, 'SELECT COUNT(*) FROM cms_contact');
         if ($contactCount !== null) {
@@ -304,10 +306,16 @@ if ($canManageComments && isModuleEnabled('blog')) {
 }
 if ($canManageMessages) {
     if (isModuleEnabled('contact')) {
-        $quickLinks[] = ['url' => 'contact.php', 'label' => 'Kontaktní zprávy'];
+        $quickLinks[] = [
+            'url' => $newContactCount > 0 ? 'contact.php?status=new' : 'contact.php',
+            'label' => $newContactCount > 0 ? 'Nové kontaktní zprávy' : 'Kontaktní zprávy',
+        ];
     }
     if (isModuleEnabled('chat')) {
-        $quickLinks[] = ['url' => 'chat.php', 'label' => 'Chat zprávy'];
+        $quickLinks[] = [
+            'url' => $newChatCount > 0 ? 'chat.php?status=new' : 'chat.php',
+            'label' => $newChatCount > 0 ? 'Nové chat zprávy' : 'Chat zprávy',
+        ];
     }
 }
 if ($canManageBookings && isModuleEnabled('reservations')) {

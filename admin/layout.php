@@ -7,7 +7,10 @@ function adminHeader(string $pageTitle): void
     $baseUrl = BASE_URL;
     $pdo = db_connect();
     $canManageComments = currentUserHasCapability('comments_manage');
+    $canManageMessages = currentUserHasCapability('messages_manage');
     $pendingComments = $canManageComments ? pendingCommentCount() : 0;
+    $unreadContactMessages = ($canManageMessages && isModuleEnabled('contact')) ? unreadContactCount() : 0;
+    $unreadChatMessages = ($canManageMessages && isModuleEnabled('chat')) ? unreadChatCount() : 0;
     $pendingReviewItems = canAccessReviewQueue() ? pendingReviewSummary($pdo) : [];
     $pendingReviewTotal = array_sum(array_column($pendingReviewItems, 'count'));
     $pendingCommentsLabel = $pendingComments === 1
@@ -35,8 +38,24 @@ function adminHeader(string $pageTitle): void
 
     $moduleItems = [
         ['url' => $baseUrl . '/admin/news.php', 'label' => 'Novinky', 'module' => 'news', 'capability' => 'news_manage_own'],
-        ['url' => $baseUrl . '/admin/chat.php', 'label' => 'Chat', 'module' => 'chat', 'capability' => 'messages_manage'],
-        ['url' => $baseUrl . '/admin/contact.php', 'label' => 'Kontakt', 'module' => 'contact', 'capability' => 'messages_manage'],
+        [
+            'url' => $baseUrl . '/admin/chat.php',
+            'label' => 'Chat'
+                . ($unreadChatMessages > 0
+                    ? ' <span class="badge" aria-label="' . $unreadChatMessages . ' nových chat zpráv">' . $unreadChatMessages . '</span>'
+                    : ''),
+            'module' => 'chat',
+            'capability' => 'messages_manage',
+        ],
+        [
+            'url' => $baseUrl . '/admin/contact.php',
+            'label' => 'Kontakt'
+                . ($unreadContactMessages > 0
+                    ? ' <span class="badge" aria-label="' . $unreadContactMessages . ' nových kontaktních zpráv">' . $unreadContactMessages . '</span>'
+                    : ''),
+            'module' => 'contact',
+            'capability' => 'messages_manage',
+        ],
         ['url' => $baseUrl . '/admin/gallery_albums.php', 'label' => 'Galerie', 'module' => 'gallery', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/events.php', 'label' => 'Události', 'module' => 'events', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/polls.php', 'label' => 'Ankety', 'module' => 'polls', 'capability' => 'content_manage_shared'],
