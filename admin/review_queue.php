@@ -371,7 +371,7 @@ adminHeader('Ke schválení');
           <tr>
             <th scope="col">Sekce</th>
             <th scope="col">Název</th>
-            <th scope="col">Doplňující info</th>
+            <th scope="col">Upřesnění</th>
             <th scope="col">Datum</th>
             <th scope="col">Akce</th>
           </tr>
@@ -398,7 +398,7 @@ adminHeader('Ke schválení');
                   <input type="hidden" name="redirect" value="<?= h($redirectPath) ?>">
                   <button type="submit" class="btn btn-success">Schválit</button>
                 </form>
-                <a href="<?= h($row['manage_url']) ?>">Přejít do správy</a>
+                <a href="<?= h($row['manage_url']) ?>">Otevřít seznam</a>
               </td>
             </tr>
           <?php endforeach; ?>
@@ -457,7 +457,7 @@ adminHeader('Ke schválení');
                     <button type="submit" class="btn<?= $actionKey === 'trash' ? ' btn-danger' : '' ?>"><?= h($actionLabel) ?></button>
                   </form>
                 <?php endforeach; ?>
-                <a href="comments.php?filter=pending">Moderace</a>
+                <a href="comments.php?filter=pending">Otevřít moderaci</a>
               </td>
             </tr>
           <?php endforeach; ?>

@@ -495,7 +495,7 @@ adminHeader('Přehled');
             </li>
           <?php endforeach; ?>
         </ul>
-        <p style="margin-bottom:0"><a href="<?= h($summary['url']) ?>">Otevřít přehled <span aria-hidden="true">→</span></a></p>
+        <p style="margin-bottom:0"><a href="<?= h($summary['url']) ?>">Otevřít sekci <span aria-hidden="true">→</span></a></p>
       </section>
     <?php endforeach; ?>
   </div>
@@ -504,10 +504,10 @@ adminHeader('Přehled');
 
 <?php if ($overviewRows !== []): ?>
 <section aria-labelledby="overview-heading-new" style="margin-top:1.5rem">
-  <h2 id="overview-heading-new"><?= $showOperationalOverview ? 'Dostupné sekce administrace' : 'Další části administrace' ?></h2>
+  <h2 id="overview-heading-new"><?= $showOperationalOverview ? 'Přehled administrace' : 'Další přehledy' ?></h2>
   <?php if ($showOperationalOverview): ?>
     <table>
-      <caption>Sekce, které máte k dispozici</caption>
+      <caption>Přehled dostupných sekcí</caption>
       <thead>
         <tr>
           <th scope="col">Sekce</th>
@@ -520,7 +520,7 @@ adminHeader('Přehled');
           <tr>
             <td><?= h($row['label']) ?></td>
             <td><?= (int)$row['count'] ?></td>
-            <td><a href="<?= h($row['url']) ?>">Otevřít <span aria-hidden="true">→</span></a></td>
+            <td><a href="<?= h($row['url']) ?>">Otevřít sekci <span aria-hidden="true">→</span></a></td>
           </tr>
         <?php endforeach; ?>
       </tbody>

@@ -1772,7 +1772,7 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_index') {
         foreach ([
             'Na čem chcete pracovat',
-            'Dostupné sekce administrace',
+            'Přehled administrace',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin dashboard is missing fragment: ' . $expectedFragment;
@@ -1782,6 +1782,10 @@ foreach ($pages as $page) {
             'Ostatní moduly',
             'Nejčastější akce',
             'Co můžete spravovat',
+            'Dostupné sekce administrace',
+            'Další části administrace',
+            'Sekce, které máte k dispozici',
+            'Otevřít přehled',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin dashboard still contains outdated phrase: ' . $forbiddenFragment;
@@ -1847,6 +1851,9 @@ foreach ($pages as $page) {
         foreach ([
             'Souhrn čekajících položek',
             '>Modul<',
+            'Doplňující info',
+            'Přejít do správy',
+            '>Moderace<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'review queue still contains outdated phrase: ' . $forbiddenFragment;
