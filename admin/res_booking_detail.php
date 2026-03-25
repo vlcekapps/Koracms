@@ -57,7 +57,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
   <p role="status" class="success">Rezervace byla úspěšně aktualizována.</p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>">&larr; Zpět</a></p>
+<p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled rezervací</a></p>
 
 <table>
   <caption class="sr-only">Informace o rezervaci</caption>
@@ -99,7 +99,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
   </tbody>
 </table>
 
-<h2>Akce</h2>
+<h2>Co můžete udělat</h2>
 
 <?php if ($booking['status'] === 'pending'): ?>
   <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1rem">

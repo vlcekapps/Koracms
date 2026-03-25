@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categories = $pdo->query("SELECT id, name, sort_order FROM cms_board_categories ORDER BY sort_order, name")->fetchAll();
 
-adminHeader('Úřední deska - kategorie');
+adminHeader('Vývěska a oznámení – kategorie');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
@@ -98,5 +98,5 @@ adminHeader('Úřední deska - kategorie');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="board.php"><span aria-hidden="true">&larr;</span> Zpět na úřední desku</a></p>
+<p><a href="board.php"><span aria-hidden="true">&larr;</span> Zpět na dokumenty a oznámení</a></p>
 <?php adminFooter(); ?>

@@ -46,7 +46,7 @@ adminHeader('Detail odběratele');
   <p class="error" role="alert"><?= h($errorMessages[$error]) ?></p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled newsletteru</a></p>
+<p><a href="<?= h($redirect) ?>">&larr; Zpět na odběratele newsletteru</a></p>
 
 <table>
   <caption class="sr-only">Detail odběratele newsletteru</caption>
@@ -68,7 +68,7 @@ adminHeader('Detail odběratele');
       </td>
     </tr>
     <tr>
-      <th scope="row">Správa potvrzení</th>
+      <th scope="row">Potvrzení odběru</th>
       <td>
         <?php if ($isConfirmed): ?>
           Tento odběratel už je potvrzený a bude dostávat další rozesílky.
@@ -80,7 +80,7 @@ adminHeader('Detail odběratele');
   </tbody>
 </table>
 
-<h2>Akce</h2>
+<h2>Co můžete udělat</h2>
 <div class="button-row">
   <?php if (!$isConfirmed): ?>
     <form method="post" action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php">

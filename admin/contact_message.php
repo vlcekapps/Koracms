@@ -41,7 +41,7 @@ adminHeader('Kontaktní zpráva');
   <p class="success" role="status">Kontaktní zpráva byla aktualizována.</p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>">&larr; Zpět na kontaktní zprávy</a></p>
+<p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled kontaktních zpráv</a></p>
 
 <table>
   <caption class="sr-only">Detail kontaktní zprávy</caption>
@@ -81,7 +81,7 @@ adminHeader('Kontaktní zpráva');
   </tbody>
 </table>
 
-<h2>Akce</h2>
+<h2>Co můžete udělat</h2>
 <div class="button-row">
   <?php if ($messageStatus !== 'new'): ?>
     <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php">

@@ -39,7 +39,7 @@ $stmt = $pdo->prepare(
 $stmt->execute($q !== '' ? ['%' . $q . '%', '%' . $q . '%'] : []);
 $locations = $stmt->fetchAll();
 
-adminHeader('Rezervace – místa');
+adminHeader('Lokality rezervací');
 ?>
 <?php if ($success): ?><p class="success" role="status">Místo uloženo.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
@@ -80,7 +80,7 @@ adminHeader('Rezervace – místa');
   <p><?= $q !== '' ? 'Pro zvolený filtr tu teď nejsou žádné lokality rezervací.' : 'Zatím tu nejsou žádné lokality rezervací.' ?></p>
 <?php else: ?>
   <table>
-    <caption>Místa konání</caption>
+    <caption>Lokality rezervací</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Adresa</th><th scope="col">Zdroje</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($locations as $location): ?>
@@ -121,5 +121,5 @@ adminHeader('Rezervace – místa');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="res_resources.php"><span aria-hidden="true">&larr;</span> Zpět na zdroje</a></p>
+<p><a href="res_resources.php"><span aria-hidden="true">&larr;</span> Zpět na zdroje rezervací</a></p>
 <?php adminFooter(); ?>

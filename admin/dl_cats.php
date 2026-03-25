@@ -83,5 +83,5 @@ adminHeader('Ke stažení – kategorie');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="downloads.php"><span aria-hidden="true">←</span> Zpět na soubory</a></p>
+<p><a href="downloads.php"><span aria-hidden="true">←</span> Zpět na soubory a položky</a></p>
 <?php adminFooter(); ?>

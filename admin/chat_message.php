@@ -41,7 +41,7 @@ adminHeader('Chat zpráva');
   <p class="success" role="status">Chat zpráva byla aktualizována.</p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>">&larr; Zpět na chat zprávy</a></p>
+<p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled chat zpráv</a></p>
 
 <table>
   <caption class="sr-only">Detail chat zprávy</caption>
@@ -97,7 +97,7 @@ adminHeader('Chat zpráva');
   </tbody>
 </table>
 
-<h2>Akce</h2>
+<h2>Co můžete udělat</h2>
 <div class="button-row">
   <?php if ($messageStatus !== 'new'): ?>
     <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php">

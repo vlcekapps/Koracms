@@ -2226,9 +2226,19 @@ foreach ($pages as $page) {
         foreach ([
             'mailto:',
             'name="action" value="handled"',
+            'Zpět na přehled kontaktních zpráv',
+            'Co můžete udělat',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin contact detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            'Zpět na kontaktní zprávy',
+            '>Akce<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin contact detail still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
     }
@@ -2237,9 +2247,19 @@ foreach ($pages as $page) {
         foreach ([
             'name="action" value="handled"',
             'Runtime Audit',
+            'Zpět na přehled chat zpráv',
+            'Co můžete udělat',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            'Zpět na chat zprávy',
+            '>Akce<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin chat detail still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
     }
@@ -2249,9 +2269,21 @@ foreach ($pages as $page) {
             'mailto:',
             'name="action" value="resend"',
             'name="action" value="confirm"',
+            'Zpět na odběratele newsletteru',
+            'Potvrzení odběru',
+            'Co můžete udělat',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter subscriber detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            'Zpět na přehled newsletteru',
+            'Správa potvrzení',
+            '>Akce<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin newsletter subscriber detail still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
     }

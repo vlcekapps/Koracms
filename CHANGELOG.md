@@ -40,6 +40,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Administrace nově používá civilnější názvy sekcí a přehledů: `Obecná nastavení`, `Správa modulů`, `Pozice modulů`, přesnější položky rezervací v levém menu a čitelnější souhrny `Celkem: X / Publikováno: X / Čeká na schválení: X` na dashboardu
 - Dashboard a fronta `Ke schválení` nově používají srozumitelnější názvy přehledů a akcí jako `Přehled administrace`, `Další přehledy`, `Upřesnění`, `Otevřít sekci`, `Otevřít seznam` a `Otevřít moderaci`
 - Dashboard už nepoužívá redundantní relationship vrstvu u rozbalovacích skupin v levém menu, takže čtečky nehlásí duplicitní text typu `Blog seskupení, Blog tlačítko`
+- Detailové obrazovky v administraci teď používají srozumitelnější návraty a akční nadpisy jako `Zpět na přehled kontaktních zpráv`, `Zpět na odběratele newsletteru` nebo `Co můžete udělat`; přesnější názvy dostaly i kategorie a rezervační přehledy
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
 - Staré odkazy `blog/article.php?id=...` se nyní kanonicky přesměrují na slug URL a veřejné vyhledávání vrací jen publikované články
 - Runtime audit nově hlídá i veřejnou stránku autora, homepage author block, author byliny a nová pole v administraci

@@ -39,7 +39,7 @@ $stmt = $pdo->prepare(
 $stmt->execute($q !== '' ? ['%' . $q . '%'] : []);
 $categories = $stmt->fetchAll();
 
-adminHeader('Rezervace – kategorie');
+adminHeader('Kategorie zdrojů rezervací');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
@@ -78,7 +78,7 @@ adminHeader('Rezervace – kategorie');
   <p><?= $q !== '' ? 'Pro zvolený filtr tu teď nejsou žádné kategorie zdrojů rezervací.' : 'Zatím tu nejsou žádné kategorie zdrojů rezervací.' ?></p>
 <?php else: ?>
   <table>
-    <caption>Kategorie zdrojů</caption>
+    <caption>Kategorie zdrojů rezervací</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Pořadí</th><th scope="col">Zdroje</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($categories as $category): ?>
@@ -119,5 +119,5 @@ adminHeader('Rezervace – kategorie');
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="res_resources.php"><span aria-hidden="true">&larr;</span> Zpět na zdroje</a></p>
+<p><a href="res_resources.php"><span aria-hidden="true">&larr;</span> Zpět na zdroje rezervací</a></p>
 <?php adminFooter(); ?>
