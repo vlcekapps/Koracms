@@ -94,10 +94,10 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 
     <div style="margin-top:1rem">
       <button type="submit"><?= $item ? 'Uložit změny' : 'Přidat novinku' ?></button>
+      <a href="news.php" style="margin-left:1rem">Zrušit</a>
       <?php if ($item && ($item['status'] ?? 'published') === 'published'): ?>
         <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
       <?php endif; ?>
-      <a href="news.php" style="margin-left:1rem">Zrušit</a>
     </div>
   </fieldset>
 </form>

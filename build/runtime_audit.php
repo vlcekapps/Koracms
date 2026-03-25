@@ -944,6 +944,24 @@ $pages = [
 if ($runtimeAuditAuthorId > 0) {
     $pages[] = ['label' => 'admin_user_form', 'url' => $baseUrl . '/admin/user_form.php?id=' . urlencode((string)$runtimeAuditAuthorId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
+if (isModuleEnabled('blog')) {
+    $pages[] = ['label' => 'admin_blog_create_form', 'url' => $baseUrl . '/admin/blog_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($articleId !== false) {
+    $pages[] = ['label' => 'admin_blog_form', 'url' => $baseUrl . '/admin/blog_form.php?id=' . urlencode((string)$articleId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if (isModuleEnabled('news')) {
+    $pages[] = ['label' => 'admin_news_create_form', 'url' => $baseUrl . '/admin/news_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($newsId !== false) {
+    $pages[] = ['label' => 'admin_news_form', 'url' => $baseUrl . '/admin/news_form.php?id=' . urlencode((string)$newsId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if (isModuleEnabled('events')) {
+    $pages[] = ['label' => 'admin_event_create_form', 'url' => $baseUrl . '/admin/event_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($eventId !== false) {
+    $pages[] = ['label' => 'admin_event_form', 'url' => $baseUrl . '/admin/event_form.php?id=' . urlencode((string)$eventId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
 if ($contactMessageId !== false) {
     $pages[] = ['label' => 'admin_contact_message', 'url' => $baseUrl . '/admin/contact_message.php?id=' . urlencode((string)$contactMessageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
@@ -959,20 +977,26 @@ if ($newsletterHistoryId !== false) {
 if ($pageId !== false) {
     $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
+ $pages[] = ['label' => 'admin_page_create_form', 'url' => $baseUrl . '/admin/page_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 if ($boardId !== false) {
     $pages[] = ['label' => 'admin_board_form', 'url' => $baseUrl . '/admin/board_form.php?id=' . urlencode((string)$boardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_board_create_form', 'url' => $baseUrl . '/admin/board_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($downloadId !== false) {
     $pages[] = ['label' => 'admin_download_form', 'url' => $baseUrl . '/admin/download_form.php?id=' . urlencode((string)$downloadId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_download_create_form', 'url' => $baseUrl . '/admin/download_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($foodCardId !== false) {
     $pages[] = ['label' => 'admin_food_form', 'url' => $baseUrl . '/admin/food_form.php?id=' . urlencode((string)$foodCardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_food_create_form', 'url' => $baseUrl . '/admin/food_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($resourceRow) {
     $pages[] = ['label' => 'admin_res_resource_form', 'url' => $baseUrl . '/admin/res_resource_form.php?id=' . urlencode((string)$resourceRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_res_resource_create_form', 'url' => $baseUrl . '/admin/res_resource_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($galleryAlbumId !== false) {
     $pages[] = ['label' => 'admin_gallery_album_form', 'url' => $baseUrl . '/admin/gallery_album_form.php?id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_gallery_album_create_form', 'url' => $baseUrl . '/admin/gallery_album_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
     $pages[] = ['label' => 'admin_gallery_photos', 'url' => $baseUrl . '/admin/gallery_photos.php?album_id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
     $pages[] = ['label' => 'admin_gallery_photo_create_form', 'url' => $baseUrl . '/admin/gallery_photo_form.php?album_id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
@@ -981,19 +1005,24 @@ if ($galleryPhotoId !== false && $galleryPhotoAlbumId !== false) {
 }
 if ($faqId !== false) {
     $pages[] = ['label' => 'admin_faq_form', 'url' => $baseUrl . '/admin/faq_form.php?id=' . urlencode((string)$faqId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_faq_create_form', 'url' => $baseUrl . '/admin/faq_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($placeId !== false) {
     $pages[] = ['label' => 'admin_place_form', 'url' => $baseUrl . '/admin/place_form.php?id=' . urlencode((string)$placeId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_place_create_form', 'url' => $baseUrl . '/admin/place_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($pollId !== false) {
     $pages[] = ['label' => 'admin_polls_form', 'url' => $baseUrl . '/admin/polls_form.php?id=' . urlencode((string)$pollId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_polls_create_form', 'url' => $baseUrl . '/admin/polls_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if (isModuleEnabled('podcast')) {
     $pages[] = ['label' => 'admin_podcast_shows', 'url' => $baseUrl . '/admin/podcast_shows.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_podcast_show_create_form', 'url' => $baseUrl . '/admin/podcast_show_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($podcastShowRow) {
     $pages[] = ['label' => 'admin_podcast', 'url' => $baseUrl . '/admin/podcast.php?show_id=' . urlencode((string)$podcastShowRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
     $pages[] = ['label' => 'admin_podcast_show_form', 'url' => $baseUrl . '/admin/podcast_show_form.php?id=' . urlencode((string)$podcastShowRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_podcast_create_form', 'url' => $baseUrl . '/admin/podcast_form.php?show_id=' . urlencode((string)$podcastShowRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($podcastEpisodeId !== false && $podcastShowRow) {
     $pages[] = [
@@ -1783,6 +1812,71 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'admin_users' && !str_contains($result['body'], 'Veřejný autor')) {
         $issues[] = 'public author badge is missing in user list';
+    }
+
+    $adminFormActionExpectations = [
+        'admin_blog_form' => ['Uložit změny', 'Zrušit'],
+        'admin_blog_create_form' => ['Přidat článek', 'Zrušit'],
+        'admin_news_form' => ['Uložit změny', 'Zrušit'],
+        'admin_news_create_form' => ['Přidat novinku', 'Zrušit'],
+        'admin_event_form' => ['Uložit změny', 'Zrušit'],
+        'admin_event_create_form' => ['Přidat událost', 'Zrušit'],
+        'admin_user_form' => ['Uložit změny', 'Zrušit'],
+        'admin_user_create_form' => ['Vytvořit účet', 'Zrušit'],
+        'admin_page_form' => ['Uložit změny', 'Zrušit'],
+        'admin_page_create_form' => ['Vytvořit stránku', 'Zrušit'],
+        'admin_board_form' => ['Uložit změny', 'Zrušit'],
+        'admin_board_create_form' => ['Přidat položku sekce', 'Zrušit'],
+        'admin_download_form' => ['Uložit změny', 'Zrušit'],
+        'admin_download_create_form' => ['Přidat položku ke stažení', 'Zrušit'],
+        'admin_food_form' => ['Uložit změny', 'Zrušit'],
+        'admin_food_create_form' => ['Přidat jídelní lístek', 'Zrušit'],
+        'admin_res_resource_form' => ['Uložit změny', 'Zrušit'],
+        'admin_res_resource_create_form' => ['Vytvořit zdroj rezervací', 'Zrušit'],
+        'admin_gallery_album_form' => ['Uložit změny', 'Zrušit'],
+        'admin_gallery_album_create_form' => ['Vytvořit album', 'Zrušit'],
+        'admin_gallery_photo_form' => ['Uložit změny', 'Zrušit'],
+        'admin_gallery_photo_create_form' => ['Nahrát fotografie', 'Zrušit'],
+        'admin_faq_form' => ['Uložit změny', 'Zrušit'],
+        'admin_faq_create_form' => ['Přidat otázku FAQ', 'Zrušit'],
+        'admin_place_form' => ['Uložit změny', 'Zrušit'],
+        'admin_place_create_form' => ['Přidat zajímavé místo', 'Zrušit'],
+        'admin_polls_form' => ['Uložit změny', 'Zrušit'],
+        'admin_polls_create_form' => ['Vytvořit anketu', 'Zrušit'],
+        'admin_podcast_show_form' => ['Uložit změny', 'Zrušit'],
+        'admin_podcast_show_create_form' => ['Vytvořit podcast', 'Zrušit'],
+        'admin_podcast_form' => ['Uložit změny', 'Zrušit'],
+        'admin_podcast_create_form' => ['Přidat epizodu podcastu', 'Zrušit'],
+    ];
+    if (isset($adminFormActionExpectations[$page['label']])) {
+        foreach ($adminFormActionExpectations[$page['label']] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin form is missing action fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    $adminFormForbiddenFragments = [
+        'admin_event_form' => ['>Uložit<'],
+        'admin_page_form' => ['>Uložit<'],
+        'admin_user_form' => ['>Uložit<'],
+        'admin_board_form' => ['>Uložit<'],
+        'admin_place_form' => ['>Uložit<'],
+        'admin_res_resource_form' => ['>Uložit<'],
+        'admin_gallery_photo_create_form' => ['>Nahrát<'],
+        'admin_download_create_form' => ['Přidat položku</button>'],
+        'admin_food_create_form' => ['Přidat lístek</button>'],
+        'admin_faq_create_form' => ['Přidat otázku</button>'],
+        'admin_podcast_show_create_form' => ['Přidat podcast</button>'],
+        'admin_podcast_create_form' => ['Přidat epizodu</button>'],
+        'admin_place_create_form' => ['Přidat místo</button>'],
+    ];
+    if (isset($adminFormForbiddenFragments[$page['label']])) {
+        foreach ($adminFormForbiddenFragments[$page['label']] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin form still contains outdated action text: ' . $forbiddenFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'admin_index') {

@@ -133,12 +133,12 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat podcast' ?></button>
+    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit podcast' ?></button>
+    <a href="podcast_shows.php" style="margin-left:1rem">Zrušit</a>
     <?php if ($id !== null && (string)$show['slug'] !== ''): ?>
       <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
       <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">RSS feed</a>
     <?php endif; ?>
-    <a href="podcast_shows.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
 

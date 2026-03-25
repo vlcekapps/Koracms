@@ -179,16 +179,14 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       Zobrazit na webu
     </label>
 
-    <?php if ($id !== null && (string)$download['slug'] !== '' && (string)$download['status'] === 'published' && (int)($download['is_published'] ?? 0) === 1): ?>
-      <p style="margin-top:1rem">
-        <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
-      </p>
-    <?php endif; ?>
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat položku' ?></button>
+    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat položku ke stažení' ?></button>
     <a href="downloads.php" style="margin-left:1rem">Zrušit</a>
+    <?php if ($id !== null && (string)$download['slug'] !== '' && (string)$download['status'] === 'published' && (int)($download['is_published'] ?? 0) === 1): ?>
+      <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+    <?php endif; ?>
   </div>
 </form>
 

@@ -50,10 +50,6 @@ adminHeader($pageTitle);
   <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>"><span aria-hidden="true">←</span> Zpět na fotografie v albu</a>
 </p>
 
-<?php if ($id !== null && $photo !== null): ?>
-  <p><a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a></p>
-<?php endif; ?>
-
 <?php if ($formError !== ''): ?>
   <div id="form-errors" class="error" role="alert">
     <p><?= h($formError) ?></p>
@@ -88,7 +84,11 @@ adminHeader($pageTitle);
       <label for="sort_order">Pořadí</label>
       <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">
 
-      <button type="submit" style="margin-top:1rem">Uložit změny</button>
+      <div style="margin-top:1.5rem">
+        <button type="submit">Uložit změny</button>
+        <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Zrušit</a>
+        <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      </div>
     </fieldset>
   </form>
 
@@ -139,7 +139,10 @@ adminHeader($pageTitle);
 
       <p style="margin:.75rem 0 0;color:#555">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
 
-      <button type="submit" style="margin-top:1rem">Nahrát</button>
+      <div style="margin-top:1.5rem">
+        <button type="submit">Nahrát fotografie</button>
+        <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Zrušit</a>
+      </div>
     </fieldset>
   </form>
 <?php endif; ?>

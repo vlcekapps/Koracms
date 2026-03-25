@@ -66,11 +66,6 @@ adminHeader($pageTitle);
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na alba galerie</a></p>
 
-<?php if ($id !== null): ?>
-  <?php $albumPublicPath = galleryAlbumPublicPath($album); ?>
-  <p><a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a></p>
-<?php endif; ?>
-
 <?php if ($formError !== ''): ?>
   <div id="form-errors" class="error" role="alert">
     <p><?= h($formError) ?></p>
@@ -119,7 +114,14 @@ adminHeader($pageTitle);
       </select>
     <?php endif; ?>
 
-    <button type="submit" style="margin-top:1rem"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
+    <div style="margin-top:1.5rem">
+      <button type="submit"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
+      <a href="<?= BASE_URL ?>/admin/gallery_albums.php" style="margin-left:1rem">Zrušit</a>
+      <?php if ($id !== null): ?>
+        <?php $albumPublicPath = galleryAlbumPublicPath($album); ?>
+        <a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <?php endif; ?>
+    </div>
   </fieldset>
 </form>
 

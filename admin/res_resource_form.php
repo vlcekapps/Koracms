@@ -327,7 +327,7 @@ $err = trim($_GET['err'] ?? '');
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Vytvořit zdroj' ?></button>
+    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Vytvořit zdroj rezervací' ?></button>
     <a href="res_resources.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>

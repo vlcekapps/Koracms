@@ -102,11 +102,11 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
     </label>
 
     <div style="margin-top:1.5rem">
-      <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku' ?></button>
+      <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku FAQ' ?></button>
+      <a href="faq.php" style="margin-left:1rem">Zrušit</a>
       <?php if (($faq['status'] ?? 'published') === 'published' && (int)($faq['is_published'] ?? 1) === 1 && !empty($faq['slug'])): ?>
         <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
       <?php endif; ?>
-      <a href="faq.php" style="margin-left:1rem">Zrušit</a>
     </div>
   </fieldset>
 </form>

@@ -194,11 +194,11 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat místo' ?></button>
+    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
+    <a href="places.php" style="margin-left:1rem">Zrušit</a>
     <?php if (($place['status'] ?? 'published') === 'published' && (int)($place['is_published'] ?? 1) === 1 && !empty($place['slug'])): ?>
       <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
-    <a href="places.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
 

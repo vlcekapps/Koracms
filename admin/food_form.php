@@ -124,11 +124,11 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
   <?php endif; ?>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat lístek' ?></button>
+    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat ' . $foodTypeLabel ?></button>
+    <a href="food.php" style="margin-left:1rem">Zrušit</a>
     <?php if ($card['is_publicly_visible'] && (string)$card['slug'] !== ''): ?>
       <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
-    <a href="food.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
 

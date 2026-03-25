@@ -175,12 +175,12 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
   <div style="margin-top:1.5rem">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
+    <a href="blog.php" style="margin-left:1rem">Zrušit</a>
     <?php if ($article && !empty($article['preview_token'])): ?>
       <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
     <?php elseif ($article): ?>
       <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled“)</small>
     <?php endif; ?>
-    <a href="blog.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
 

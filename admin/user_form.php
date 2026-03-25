@@ -177,7 +177,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $accountId !== null ? 'Uložit' : 'Vytvořit účet' ?></button>
+    <button type="submit" class="btn"><?= $accountId !== null ? 'Uložit změny' : 'Vytvořit účet' ?></button>
     <a href="users.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>

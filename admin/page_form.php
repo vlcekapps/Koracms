@@ -43,10 +43,6 @@ adminHeader($pageTitle);
 
 <p><a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a></p>
 
-<?php if ($publicPath !== ''): ?>
-  <p><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu <span aria-hidden="true">↗</span></a></p>
-<?php endif; ?>
-
 <form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
@@ -84,8 +80,11 @@ adminHeader($pageTitle);
     <input type="number" id="nav_order" name="nav_order" min="1" style="width:8rem" value="<?= (int)$page['nav_order'] ?>">
 
     <div style="margin-top:1.5rem">
-      <button type="submit" class="btn">Uložit</button>
+      <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit stránku' ?></button>
       <a href="<?= h($redirect) ?>" style="margin-left:1rem">Zrušit</a>
+      <?php if ($publicPath !== ''): ?>
+        <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu <span aria-hidden="true">↗</span></a>
+      <?php endif; ?>
     </div>
   </fieldset>
 </form>

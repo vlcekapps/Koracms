@@ -200,11 +200,11 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   </fieldset>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $id ? 'Uložit' : 'Přidat položku' ?></button>
+    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat položku sekce' ?></button>
+    <a href="board.php" style="margin-left:1rem">Zrušit</a>
     <?php if (($document['status'] ?? 'published') === 'published' && (int)($document['is_published'] ?? 1) === 1 && !empty($document['slug'])): ?>
       <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
-    <a href="board.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
 
