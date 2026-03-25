@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu míst nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -122,7 +123,8 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
       <input type="hidden" id="description" name="description" value="<?= h((string)($place['description'] ?? '')) ?>">
     <?php else: ?>
       <textarea id="description" name="description" rows="8" aria-describedby="place-description-help"><?= h((string)($place['description'] ?? '')) ?></textarea>
-      <small id="place-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
+      <small id="place-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('description'); ?>
     <?php endif; ?>
   </fieldset>
 

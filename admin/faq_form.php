@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -78,7 +79,8 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
       <input type="hidden" id="answer" name="answer" value="<?= h((string)($faq['answer'] ?? '')) ?>">
     <?php else: ?>
       <textarea id="answer" name="answer" rows="8" required aria-required="true" aria-describedby="faq-answer-help"><?= h((string)($faq['answer'] ?? '')) ?></textarea>
-      <small id="faq-answer-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+      <small id="faq-answer-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('answer'); ?>
     <?php endif; ?>
 
     <label for="category_id">Kategorie</label>

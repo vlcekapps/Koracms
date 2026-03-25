@@ -7,11 +7,11 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
-- Blogový HTML editor nyní podporuje přístupný dialog `Vložit odkaz nebo HTML z webu`, který umožňuje vyhledat existující veřejný obsah a vložit ho do článku jako inline odkaz nebo hotový HTML blok
+- Přístupný dialog `Vložit odkaz nebo HTML z webu` je nově dostupný ve všech HTML polích, která se veřejně renderují přes CMS, takže lze z administrace rychle vkládat odkazy nebo hotové HTML bloky z existujících článků, stránek a dalších veřejných modulů
 - Veřejný render obsahu nyní podporuje snippety `[audio]...[/audio]`, `[video]...[/video]` a `[gallery]slug-alba[/gallery]` / `[gallery slug="slug-alba"][/gallery]`, které se převádějí na HTML5 přehrávače a jednoduchý embed galerie
 
 ### Opraveno
-- Runtime audit nově hlídá i přítomnost content pickeru v blog formuláři a převod audio, video a gallery snippetů do veřejného HTML výstupu
+- Runtime audit nově hlídá i přítomnost content pickeru a snippet nápovědy napříč HTML formuláři v administraci a převod audio, video a gallery snippetů do veřejného HTML výstupu
 
 ## [3.0.0-beta.2] – 2026-03-25
 

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu souborů ke stažení nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -125,7 +126,8 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       <small id="download-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="10" aria-describedby="download-description-help"><?= h((string)$download['description']) ?></textarea>
-      <small id="download-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
+      <small id="download-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('description'); ?>
     <?php endif; ?>
   </fieldset>
 

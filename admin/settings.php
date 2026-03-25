@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('settings_manage', 'Přístup odepřen. Pro správu nastavení webu nemáte potřebné oprávnění.');
 
 $success = false;
@@ -203,7 +204,8 @@ adminHeader('Nastavení webu');
     <p>Pokud text vyplníte, zobrazí se na domovské stránce nad hlavním obsahem. Když pole necháte prázdné, úvodní blok se nezobrazí.</p>
     <label for="home_intro" class="sr-only">Úvodní text</label>
     <textarea id="home_intro" name="home_intro" rows="6" aria-describedby="home-intro-help"><?= h(getSetting('home_intro', '')) ?></textarea>
-    <small id="home-intro-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+    <small id="home-intro-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('home_intro'); ?>
   </fieldset>
 
   <fieldset id="settings-basics">

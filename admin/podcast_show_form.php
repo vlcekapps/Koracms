@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -109,7 +110,8 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <small id="podcast-show-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="8" aria-describedby="podcast-show-description-help"><?= h((string)$show['description']) ?></textarea>
-      <small id="podcast-show-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
+      <small id="podcast-show-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('description'); ?>
     <?php endif; ?>
 
     <label for="cover_image">Cover obrázek</label>

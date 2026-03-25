@@ -159,7 +159,7 @@ Nastavení je rozděleno do čtyř sekcí:
 - **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
 - **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
 - **Výchozí OG obrázek** – obrázek pro náhledy při sdílení na sociálních sítích
-- **Editor obsahu** – volba mezi doporučeným HTML editorem (textarea) a volitelným WYSIWYG editorem (Quill); pro práci s asistivními technologiemi doporučujeme HTML variantu. V blogovém HTML editoru je navíc dostupný přístupný dialog pro vložení odkazu nebo hotového HTML bloku z existujícího veřejného obsahu webu
+- **Editor obsahu** – volba mezi doporučeným HTML editorem (textarea) a volitelným WYSIWYG editorem (Quill); pro práci s asistivními technologiemi doporučujeme HTML variantu. V HTML polích, která se veřejně renderují přes CMS, je navíc dostupný přístupný dialog pro vložení odkazu nebo hotového HTML bloku z existujícího veřejného obsahu webu
 - **Počty na hlavní stránce** – počet novinek, článků blogu a dokumentů úřední desky zobrazených na HP (0 = widget skrytý)
 - **Stránkování** – počet novinek, článků a událostí na stránku
 - **Komentáře blogu** – globální zapnutí komentářů, režim moderace (`vždy schvalovat`, `schválit známého autora`, `zveřejnit ihned`), automatické uzavření komentářů po zadaném počtu dnů, antispam pravidla (blokované e-maily a fráze), e-mailové upozornění na nové komentáře čekající na schválení a volitelné upozornění autorovi po schválení komentáře; používá se stejná mailová vrstva jako u registrace, resetu hesla a rezervací
@@ -245,7 +245,8 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
 - **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, galerií, událostí, podcastů, epizod, anket i dokumentů úřední desky
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
-- **Snippety v HTML/Markdown obsahu** – renderer podporuje i zápis `[audio]https://example.test/audio.mp3[/audio]`, `[video]https://example.test/video.mp4[/video]` a `[gallery]slug-alba[/gallery]` nebo `[gallery slug="slug-alba"][/gallery]`
+- **Vkládání interního obsahu do HTML polí** – v HTML textarea polích pro obsah, která se veřejně vykreslují přes CMS, je dostupný přístupný dialog `Vložit odkaz nebo HTML z webu` pro rychlé vložení odkazu nebo hotového HTML bloku z existujících článků, stránek a dalších veřejných modulů
+- **Snippety v HTML/Markdown obsahu** – renderer podporuje i zápis `[audio]https://example.test/audio.mp3[/audio]`, `[video]https://example.test/video.mp4[/video]` a `[gallery]slug-alba[/gallery]` nebo `[gallery slug="slug-alba"][/gallery]`; fungují ve všech HTML/Markdown polích, která CMS na veřejném webu vykresluje přes `renderContent()`
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
 - **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie včetně slugů alb a fotografií, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)

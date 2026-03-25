@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu statických stránek nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -65,7 +66,10 @@ adminHeader($pageTitle);
 
     <label for="content">Obsah</label>
     <textarea id="content" name="content"<?= !$useWysiwyg ? ' aria-describedby="page-content-help"' : '' ?>><?= h((string)$page['content']) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="page-content-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="page-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?>
+      <?php renderAdminContentReferencePicker('content'); ?>
+    <?php endif; ?>
 
     <label style="font-weight:normal; margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="page-published-help"<?= !empty($page['is_published']) ? ' checked' : '' ?>>

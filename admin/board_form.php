@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu úřední desky nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -117,7 +118,8 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
       <small id="board-description-help" class="field-help">Vyplňte, když chcete na detailu doplnit delší text.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="6" aria-describedby="board-description-help"><?= h((string)($document['description'] ?? '')) ?></textarea>
-      <small id="board-description-help" class="field-help">Vyplňte, když chcete na detailu doplnit delší text. Můžete použít HTML nebo Markdown.</small>
+      <small id="board-description-help" class="field-help">Vyplňte, když chcete na detailu doplnit delší text. <?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('description'); ?>
     <?php endif; ?>
   </fieldset>
 

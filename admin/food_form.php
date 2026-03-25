@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jídelních lístků nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -87,7 +88,10 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 
     <label for="content">Obsah lístku</label>
     <textarea id="content" name="content" rows="18"<?= !$useWysiwyg ? ' aria-describedby="food-content-help"' : '' ?>><?= h((string)($card['content'] ?? '')) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="food-content-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="food-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?>
+      <?php renderAdminContentReferencePicker('content'); ?>
+    <?php endif; ?>
 
     <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
       <div>

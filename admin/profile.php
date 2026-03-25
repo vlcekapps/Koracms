@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
@@ -228,7 +229,8 @@ adminHeader('Můj profil');
 
     <label for="author_bio">Krátké bio / medailonek</label>
     <textarea id="author_bio" name="author_bio" rows="6" aria-describedby="profile-author-bio-help"><?= h((string)($currentRow['author_bio'] ?? '')) ?></textarea>
-    <small id="profile-author-bio-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+    <small id="profile-author-bio-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('author_bio'); ?>
 
     <label for="author_website">Web autora</label>
     <input type="url" id="author_website" name="author_website" maxlength="255"

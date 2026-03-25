@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu zdrojů rezervací nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -94,7 +95,9 @@ $err = trim($_GET['err'] ?? '');
     <small id="resource-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Popis</label>
-    <textarea id="description" name="description" rows="4"><?= h($resource['description'] ?? '') ?></textarea>
+    <textarea id="description" name="description" rows="4" aria-describedby="resource-description-help"><?= h($resource['description'] ?? '') ?></textarea>
+    <small id="resource-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('description'); ?>
 
     <label for="category_id">Kategorie</label>
     <select id="category_id" name="category_id">

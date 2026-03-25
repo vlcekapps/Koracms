@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
@@ -83,7 +84,9 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <small id="news-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="content">Text novinky <span aria-hidden="true">*</span></label>
-    <textarea id="content" name="content" rows="8" required aria-required="true"><?= h((string)($item['content'] ?? '')) ?></textarea>
+    <textarea id="content" name="content" rows="8" required aria-required="true" aria-describedby="news-content-help"><?= h((string)($item['content'] ?? '')) ?></textarea>
+    <small id="news-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('content'); ?>
 
     <p>
       <small>

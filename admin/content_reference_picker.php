@@ -1,0 +1,559 @@
+<?php
+declare(strict_types=1);
+
+function adminContentReferencePickerTypes(): array
+{
+    $types = [
+        'all' => 'Všechen obsah',
+        'blog' => 'Články blogu',
+        'page' => 'Statické stránky',
+    ];
+
+    if (isModuleEnabled('news')) {
+        $types['news'] = 'Novinky';
+    }
+    if (isModuleEnabled('events')) {
+        $types['event'] = 'Události';
+    }
+    if (isModuleEnabled('faq')) {
+        $types['faq'] = 'FAQ';
+    }
+    if (isModuleEnabled('gallery')) {
+        $types['gallery'] = 'Fotogalerie';
+    }
+    if (isModuleEnabled('podcast')) {
+        $types['podcast'] = 'Podcasty';
+    }
+    if (isModuleEnabled('downloads')) {
+        $types['download'] = 'Ke stažení';
+    }
+    if (isModuleEnabled('places')) {
+        $types['place'] = 'Zajímavá místa';
+    }
+    if (isModuleEnabled('board')) {
+        $types['board'] = boardModulePublicLabel();
+    }
+    if (isModuleEnabled('polls')) {
+        $types['poll'] = 'Ankety';
+    }
+
+    return $types;
+}
+
+function adminHtmlSnippetSupportMarkup(): string
+{
+    $snippets = [
+        '<code>[audio]https://example.test/audio.mp3[/audio]</code>',
+        '<code>[video]https://example.test/video.mp4[/video]</code>',
+    ];
+
+    if (isModuleEnabled('gallery')) {
+        $snippets[] = '<code>[gallery]slug-alba[/gallery]</code>';
+    }
+
+    $last = array_pop($snippets);
+    if ($last === null) {
+        return 'Můžete použít HTML nebo Markdown.';
+    }
+
+    $body = $snippets !== []
+        ? implode(', ', $snippets) . ' a ' . $last
+        : $last;
+
+    return 'Můžete použít HTML, Markdown nebo snippety jako ' . $body . '.';
+}
+
+function renderAdminContentReferencePicker(string $textareaId): void
+{
+    static $stylesPrinted = false;
+
+    $pickerId = preg_replace('/[^a-z0-9_-]+/i', '-', $textareaId) ?: 'content';
+    $endpoint = BASE_URL . '/admin/content_reference_search.php';
+    $contentPickerTypes = adminContentReferencePickerTypes();
+
+    if (!$stylesPrinted) {
+        $stylesPrinted = true;
+        echo <<<HTML
+<style>
+  .content-reference-picker-launch {
+    margin-top: 1rem;
+  }
+
+  .content-reference-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.54);
+    z-index: 1000;
+  }
+
+  .content-reference-picker-dialog {
+    position: fixed;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    width: min(56rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    padding: 1rem 1.1rem 1.15rem;
+    border: 1px solid #cbd5e1;
+    border-radius: .9rem;
+    background: #fff;
+    box-shadow: 0 28px 60px rgba(15, 23, 42, 0.28);
+    z-index: 1001;
+  }
+
+  .content-reference-picker-dialog__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: .75rem;
+  }
+
+  .content-reference-picker-dialog__title {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  .content-reference-picker-toolbar {
+    display: grid;
+    grid-template-columns: minmax(15rem, 2fr) minmax(12rem, 1fr) auto;
+    gap: .75rem;
+    align-items: end;
+  }
+
+  .content-reference-picker-toolbar label {
+    margin-top: 0;
+  }
+
+  .content-reference-picker-toolbar .btn {
+    margin-top: .2rem;
+  }
+
+  .content-reference-picker-results {
+    margin-top: 1rem;
+  }
+
+  .content-reference-picker-results__list {
+    display: grid;
+    gap: .8rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .content-reference-picker-result {
+    padding: .85rem 1rem;
+    border: 1px solid #d0d5dd;
+    border-radius: .75rem;
+    background: #f8fafc;
+  }
+
+  .content-reference-picker-result__meta {
+    margin: 0 0 .35rem;
+    color: #475467;
+    font-size: .86rem;
+    font-weight: 700;
+  }
+
+  .content-reference-picker-result__title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .content-reference-picker-result__path {
+    display: block;
+    margin-top: .35rem;
+    color: #475467;
+    font-size: .85rem;
+    word-break: break-word;
+  }
+
+  .content-reference-picker-result__excerpt {
+    margin: .55rem 0 0;
+    color: #344054;
+  }
+
+  .content-reference-picker-result__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    align-items: center;
+    margin-top: .85rem;
+  }
+
+  .content-reference-picker-result__actions a {
+    color: #0f4c81;
+  }
+
+  @media (max-width: 720px) {
+    .content-reference-picker-dialog {
+      width: calc(100vw - 1rem);
+      max-height: calc(100vh - 1rem);
+      padding: .9rem;
+    }
+
+    .content-reference-picker-toolbar {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+HTML;
+    }
+    ?>
+    <div class="content-reference-picker-launch">
+      <button type="button"
+              class="btn"
+              id="<?= h($pickerId) ?>-picker-open"
+              aria-haspopup="dialog"
+              aria-controls="<?= h($pickerId) ?>-picker-dialog"
+              aria-describedby="<?= h($pickerId) ?>-picker-launch-help">
+        Vložit odkaz nebo HTML z webu
+      </button>
+      <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz nebo hotový HTML blok.</small>
+    </div>
+
+    <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden></div>
+    <section id="<?= h($pickerId) ?>-picker-dialog"
+             class="content-reference-picker-dialog"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="<?= h($pickerId) ?>-picker-title"
+             aria-describedby="<?= h($pickerId) ?>-picker-description"
+             hidden>
+      <div class="content-reference-picker-dialog__header">
+        <div>
+          <h2 id="<?= h($pickerId) ?>-picker-title" class="content-reference-picker-dialog__title">Vložit odkaz nebo HTML z webu</h2>
+          <p id="<?= h($pickerId) ?>-picker-description" class="field-help" style="margin-top:.35rem">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz nebo jako hotový HTML blok.</p>
+        </div>
+        <button type="button" class="btn" id="<?= h($pickerId) ?>-picker-close">Zavřít</button>
+      </div>
+
+      <fieldset style="margin:0;border:1px solid #ccc;padding:.5rem 1rem">
+        <legend>Vyhledání obsahu</legend>
+        <div class="content-reference-picker-toolbar">
+          <div>
+            <label for="<?= h($pickerId) ?>-picker-query">Hledat obsah webu</label>
+            <input type="text"
+                   id="<?= h($pickerId) ?>-picker-query"
+                   autocomplete="off"
+                   aria-describedby="<?= h($pickerId) ?>-picker-query-help <?= h($pickerId) ?>-picker-selection-help">
+          </div>
+          <div>
+            <label for="<?= h($pickerId) ?>-picker-type">Typ obsahu</label>
+            <select id="<?= h($pickerId) ?>-picker-type">
+              <?php foreach ($contentPickerTypes as $pickerTypeValue => $pickerTypeLabel): ?>
+                <option value="<?= h($pickerTypeValue) ?>"><?= h($pickerTypeLabel) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <button type="button" class="btn" id="<?= h($pickerId) ?>-picker-submit">Vyhledat</button>
+          </div>
+        </div>
+        <small id="<?= h($pickerId) ?>-picker-query-help" class="field-help">Hledání prochází jen veřejně dostupný obsah webu.</small>
+        <small id="<?= h($pickerId) ?>-picker-selection-help" class="field-help">Pokud máte v editoru označený text, při vložení odkazu se použije jako text odkazu. Jinak se vloží název nalezené položky.</small>
+      </fieldset>
+
+      <p id="<?= h($pickerId) ?>-picker-status" role="status" aria-live="polite" aria-atomic="true" style="margin:.85rem 0 0;color:#555;font-size:.92rem;line-height:1.45">Zadejte alespoň 2 znaky a vyhledejte obsah.</p>
+      <div id="<?= h($pickerId) ?>-picker-results" class="content-reference-picker-results" aria-live="polite"></div>
+    </section>
+
+    <script>
+    (function () {
+        const textarea = document.getElementById(<?= json_encode($textareaId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const openButton = document.getElementById(<?= json_encode($pickerId . '-picker-open', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const closeButton = document.getElementById(<?= json_encode($pickerId . '-picker-close', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const overlay = document.getElementById(<?= json_encode($pickerId . '-picker-overlay', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const dialog = document.getElementById(<?= json_encode($pickerId . '-picker-dialog', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const queryInput = document.getElementById(<?= json_encode($pickerId . '-picker-query', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const typeSelect = document.getElementById(<?= json_encode($pickerId . '-picker-type', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const searchButton = document.getElementById(<?= json_encode($pickerId . '-picker-submit', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const statusNode = document.getElementById(<?= json_encode($pickerId . '-picker-status', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const resultsNode = document.getElementById(<?= json_encode($pickerId . '-picker-results', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const liveRegion = document.getElementById('a11y-live');
+        const endpoint = <?= json_encode($endpoint, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        let lastTrigger = null;
+        let savedSelection = { start: 0, end: 0, text: '' };
+
+        if (!textarea || !openButton || !dialog || !overlay || !queryInput || !typeSelect || !searchButton || !statusNode || !resultsNode) {
+            return;
+        }
+
+        const isVisible = (element) => !element.hasAttribute('hidden') && element.getClientRects().length > 0;
+        const visibleFocusableNodes = () => Array.from(dialog.querySelectorAll(focusableSelector)).filter(isVisible);
+
+        const setStatus = (message) => {
+            statusNode.textContent = message;
+            if (liveRegion && message) {
+                liveRegion.textContent = message;
+            }
+        };
+
+        const rememberSelection = () => {
+            savedSelection = {
+                start: textarea.selectionStart ?? 0,
+                end: textarea.selectionEnd ?? 0,
+                text: textarea.value.slice(textarea.selectionStart ?? 0, textarea.selectionEnd ?? 0),
+            };
+        };
+
+        const countLabel = (count) => {
+            if (count === 1) {
+                return 'Nalezena 1 položka.';
+            }
+            if (count >= 2 && count <= 4) {
+                return 'Nalezeny ' + count + ' položky.';
+            }
+            return 'Nalezeno ' + count + ' položek.';
+        };
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        const insertSnippet = (snippet, blockMode) => {
+            const start = Number.isInteger(savedSelection.start) ? savedSelection.start : (textarea.selectionStart ?? textarea.value.length);
+            const end = Number.isInteger(savedSelection.end) ? savedSelection.end : (textarea.selectionEnd ?? start);
+            const before = textarea.value.slice(0, start);
+            const after = textarea.value.slice(end);
+            let insertion = snippet;
+
+            if (blockMode) {
+                const needsLeadingBreak = before !== '' && !before.endsWith('\n\n');
+                const needsTrailingBreak = after !== '' && !after.startsWith('\n\n');
+                insertion = (needsLeadingBreak ? (before.endsWith('\n') ? '\n' : '\n\n') : '')
+                    + snippet
+                    + (needsTrailingBreak ? (after.startsWith('\n') ? '\n' : '\n\n') : '');
+            }
+
+            textarea.value = before + insertion + after;
+
+            const caretPosition = (before + insertion).length;
+            textarea.focus();
+            textarea.setSelectionRange(caretPosition, caretPosition);
+            rememberSelection();
+        };
+
+        const buildInlineLink = (item) => {
+            const linkText = savedSelection.text.trim() !== '' ? savedSelection.text : item.title;
+            return '<a href="' + escapeHtml(item.url) + '">' + escapeHtml(linkText) + '</a>';
+        };
+
+        const buildHtmlBlock = (item) => {
+            const lines = [
+                '<aside class="content-reference">',
+                '  <p class="content-reference__eyebrow">' + escapeHtml(item.kind_label) + '</p>',
+                '  <p class="content-reference__title"><a href="' + escapeHtml(item.url) + '">' + escapeHtml(item.title) + '</a></p>',
+            ];
+
+            if (item.excerpt) {
+                lines.push('  <p class="content-reference__excerpt">' + escapeHtml(item.excerpt) + '</p>');
+            }
+
+            lines.push('</aside>');
+            return lines.join('\n');
+        };
+
+        const clearResults = () => {
+            resultsNode.innerHTML = '';
+            resultsNode.removeAttribute('aria-busy');
+        };
+
+        const closeDialog = (restoreFocus = true) => {
+            dialog.hidden = true;
+            overlay.hidden = true;
+            if (restoreFocus) {
+                (lastTrigger || openButton).focus();
+            }
+        };
+
+        const openDialog = () => {
+            rememberSelection();
+            lastTrigger = document.activeElement;
+            overlay.hidden = false;
+            dialog.hidden = false;
+            queryInput.focus();
+            queryInput.select();
+        };
+
+        const renderResults = (items) => {
+            clearResults();
+
+            if (!items.length) {
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'content-reference-picker-results__list';
+
+            items.forEach((item) => {
+                const listItem = document.createElement('li');
+                const article = document.createElement('article');
+                article.className = 'content-reference-picker-result';
+
+                const meta = document.createElement('p');
+                meta.className = 'content-reference-picker-result__meta';
+                meta.textContent = item.kind_label;
+                article.appendChild(meta);
+
+                const heading = document.createElement('h3');
+                heading.className = 'content-reference-picker-result__title';
+                heading.textContent = item.title;
+                article.appendChild(heading);
+
+                const path = document.createElement('code');
+                path.className = 'content-reference-picker-result__path';
+                path.textContent = item.path;
+                article.appendChild(path);
+
+                if (item.excerpt) {
+                    const excerpt = document.createElement('p');
+                    excerpt.className = 'content-reference-picker-result__excerpt';
+                    excerpt.textContent = item.excerpt;
+                    article.appendChild(excerpt);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'content-reference-picker-result__actions';
+
+                const inlineButton = document.createElement('button');
+                inlineButton.type = 'button';
+                inlineButton.className = 'btn';
+                inlineButton.textContent = 'Vložit jako odkaz';
+                inlineButton.addEventListener('click', () => {
+                    insertSnippet(buildInlineLink(item), false);
+                    closeDialog(false);
+                    setStatus('Do textu byl vložen odkaz.');
+                });
+                actions.appendChild(inlineButton);
+
+                const blockButton = document.createElement('button');
+                blockButton.type = 'button';
+                blockButton.className = 'btn';
+                blockButton.textContent = 'Vložit jako HTML blok';
+                blockButton.addEventListener('click', () => {
+                    insertSnippet(buildHtmlBlock(item), true);
+                    closeDialog(false);
+                    setStatus('Do textu byl vložen HTML blok.');
+                });
+                actions.appendChild(blockButton);
+
+                const previewLink = document.createElement('a');
+                previewLink.href = item.url;
+                previewLink.target = '_blank';
+                previewLink.rel = 'noopener noreferrer';
+                previewLink.textContent = 'Zobrazit na webu';
+                actions.appendChild(previewLink);
+
+                article.appendChild(actions);
+                listItem.appendChild(article);
+                list.appendChild(listItem);
+            });
+
+            resultsNode.appendChild(list);
+        };
+
+        const runSearch = async () => {
+            const query = queryInput.value.trim();
+
+            if (query.length < 2) {
+                clearResults();
+                setStatus('Zadejte alespoň 2 znaky.');
+                return;
+            }
+
+            resultsNode.innerHTML = '';
+            resultsNode.setAttribute('aria-busy', 'true');
+            setStatus('Hledám obsah…');
+            searchButton.disabled = true;
+
+            try {
+                const url = endpoint + '?q=' + encodeURIComponent(query) + '&type=' + encodeURIComponent(typeSelect.value);
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (error) {
+                    payload = null;
+                }
+
+                if (!response.ok || !payload || payload.ok === false) {
+                    throw new Error(payload && payload.message ? payload.message : 'Vyhledávání se nepodařilo dokončit.');
+                }
+
+                const items = Array.isArray(payload.results) ? payload.results : [];
+                renderResults(items);
+                setStatus(items.length ? countLabel(items.length) : (payload.message || 'Žádný veřejný obsah neodpovídá hledání.'));
+            } catch (error) {
+                clearResults();
+                setStatus(error instanceof Error ? error.message : 'Vyhledávání se nepodařilo dokončit.');
+            } finally {
+                resultsNode.removeAttribute('aria-busy');
+                searchButton.disabled = false;
+            }
+        };
+
+        openButton.addEventListener('mousedown', rememberSelection);
+        openButton.addEventListener('click', openDialog);
+        if (closeButton) {
+            closeButton.addEventListener('click', () => closeDialog());
+        }
+        overlay.addEventListener('click', () => closeDialog());
+        searchButton.addEventListener('click', runSearch);
+        typeSelect.addEventListener('change', () => {
+            if (queryInput.value.trim().length >= 2) {
+                runSearch();
+            }
+        });
+
+        queryInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                runSearch();
+            }
+        });
+
+        textarea.addEventListener('keyup', rememberSelection);
+        textarea.addEventListener('click', rememberSelection);
+        textarea.addEventListener('select', rememberSelection);
+
+        dialog.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeDialog();
+                return;
+            }
+
+            if (event.key !== 'Tab') {
+                return;
+            }
+
+            const focusable = visibleFocusableNodes();
+            if (!focusable.length) {
+                return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
+    })();
+    </script>
+    <?php
+}

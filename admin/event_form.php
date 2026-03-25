@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu událostí nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -99,7 +100,10 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="10"<?= !$useWysiwyg ? ' aria-describedby="event-description-help"' : '' ?>><?= h((string)($event['description'] ?? '')) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="event-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="event-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?>
+      <?php renderAdminContentReferencePicker('description'); ?>
+    <?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="event-published-help"

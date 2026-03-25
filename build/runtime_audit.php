@@ -1921,6 +1921,92 @@ foreach ($pages as $page) {
         }
     }
 
+    $contentReferencePickerLabels = [
+        'admin_blog_form',
+        'admin_blog_create_form',
+        'admin_news_form',
+        'admin_news_create_form',
+        'admin_event_form',
+        'admin_event_create_form',
+        'admin_page_form',
+        'admin_page_create_form',
+        'admin_board_form',
+        'admin_board_create_form',
+        'admin_download_form',
+        'admin_download_create_form',
+        'admin_food_form',
+        'admin_food_create_form',
+        'admin_res_resource_form',
+        'admin_res_resource_create_form',
+        'admin_faq_form',
+        'admin_faq_create_form',
+        'admin_place_form',
+        'admin_place_create_form',
+        'admin_podcast_show_form',
+        'admin_podcast_show_create_form',
+        'admin_podcast_form',
+        'admin_podcast_create_form',
+        'admin_profile',
+        'admin_user_form',
+        'admin_user_create_form',
+        'admin_settings',
+    ];
+    if (in_array($page['label'], $contentReferencePickerLabels, true)) {
+        foreach ([
+            'Vložit odkaz nebo HTML z webu',
+            'Vyhledejte existující článek, stránku nebo jiný veřejný obsah',
+            'Hledání prochází jen veřejně dostupný obsah webu.',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'content reference picker is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    $htmlSnippetHelpLabels = [
+        'admin_blog_form',
+        'admin_blog_create_form',
+        'admin_news_form',
+        'admin_news_create_form',
+        'admin_event_form',
+        'admin_event_create_form',
+        'admin_page_form',
+        'admin_page_create_form',
+        'admin_board_form',
+        'admin_board_create_form',
+        'admin_download_form',
+        'admin_download_create_form',
+        'admin_food_form',
+        'admin_food_create_form',
+        'admin_res_resource_form',
+        'admin_res_resource_create_form',
+        'admin_faq_form',
+        'admin_faq_create_form',
+        'admin_place_form',
+        'admin_place_create_form',
+        'admin_podcast_show_form',
+        'admin_podcast_show_create_form',
+        'admin_podcast_form',
+        'admin_podcast_create_form',
+        'admin_profile',
+        'admin_user_form',
+        'admin_user_create_form',
+        'admin_settings',
+    ];
+    if (in_array($page['label'], $htmlSnippetHelpLabels, true)) {
+        foreach ([
+            '[audio]https://example.test/audio.mp3[/audio]',
+            '[video]https://example.test/video.mp4[/video]',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'HTML snippet helper is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (isModuleEnabled('gallery') && !str_contains($result['body'], '[gallery]slug-alba[/gallery]')) {
+            $issues[] = 'HTML snippet helper is missing gallery shortcode example';
+        }
+    }
+
     $adminFormCopyForbiddenFragments = [
         'admin_blog_form' => ['<small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>', 'Prázdné pole znamená publikování ihned.'],
         'admin_blog_create_form' => ['<small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>', 'Prázdné pole znamená publikování ihned.'],
@@ -1945,6 +2031,17 @@ foreach ($pages as $page) {
         foreach ($adminFormCopyForbiddenFragments[$page['label']] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin form still contains outdated helper copy: ' . $forbiddenFragment;
+            }
+        }
+    }
+
+    if (in_array($page['label'], $htmlSnippetHelpLabels, true)) {
+        foreach ([
+            'Můžete použít HTML nebo Markdown.',
+            'Podporuje HTML i Markdown syntaxi.',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin form still contains outdated HTML helper copy: ' . $forbiddenFragment;
             }
         }
     }
