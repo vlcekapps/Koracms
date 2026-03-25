@@ -85,13 +85,14 @@ adminHeader('Newsletter');
 
 <div class="button-row" style="justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem">
   <div>
+    <p style="margin:.2rem 0 .45rem">Na jednom místě spravujete odběratele a vidíte historii odeslaných rozesílek.</p>
     <p style="margin:.2rem 0 0">
       <strong><?= $subscriberCounts['confirmed'] ?></strong> potvrzených odběratelů,
       <strong><?= $subscriberCounts['pending'] ?></strong> čeká na potvrzení,
       <strong><?= $sentNewsletterCount ?></strong> rozesílek v historii.
     </p>
   </div>
-  <a href="newsletter_form.php" class="btn">+ Napsat newsletter</a>
+  <a href="newsletter_form.php" class="btn">+ Nová rozesílka</a>
 </div>
 
 <nav aria-label="Filtr odběratelů newsletteru" class="button-row" style="margin-bottom:1rem">
@@ -109,7 +110,7 @@ adminHeader('Newsletter');
 <form method="get" class="button-row" style="margin-bottom:1.5rem">
   <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
   <label for="q" class="sr-only">Hledat v odběratelích a historii newsletterů</label>
-  <input type="search" id="q" name="q" placeholder="Hledat v odběratelích a historii…"
+  <input type="search" id="q" name="q" placeholder="Hledat podle e-mailu nebo předmětu rozesílky…"
          value="<?= h($q) ?>" style="width:min(100%, 24rem)">
   <button type="submit" class="btn">Hledat</button>
   <?php if ($q !== ''): ?>
@@ -117,57 +118,14 @@ adminHeader('Newsletter');
   <?php endif; ?>
 </form>
 
-<section aria-labelledby="newsletter-history-heading" style="margin-bottom:2rem">
+<section aria-labelledby="newsletter-subscribers-heading" style="margin-bottom:2rem">
   <div class="button-row" style="justify-content:space-between;align-items:baseline">
-    <h2 id="newsletter-history-heading" style="margin-bottom:.5rem">Historie rozesílek</h2>
-    <small><?= count($newsletters) ?> zobrazených položek</small>
-  </div>
-
-  <?php if (empty($newsletters)): ?>
-    <p>Zatím tu nejsou žádné odeslané newslettery.</p>
-  <?php else: ?>
-    <table>
-      <caption class="sr-only">Historie odeslaných newsletterů</caption>
-      <thead>
-        <tr>
-          <th scope="col">Předmět</th>
-          <th scope="col">Odesláno</th>
-          <th scope="col">Příjemců</th>
-          <th scope="col">Akce</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($newsletters as $newsletter): ?>
-          <tr>
-            <td><strong><?= h((string)$newsletter['subject']) ?></strong></td>
-            <td>
-              <?php if (!empty($newsletter['sent_at'])): ?>
-                <time datetime="<?= h(str_replace(' ', 'T', (string)$newsletter['sent_at'])) ?>">
-                  <?= formatCzechDate((string)$newsletter['sent_at']) ?>
-                </time>
-              <?php else: ?>
-                <em>Neodesláno</em>
-              <?php endif; ?>
-            </td>
-            <td><?= (int)$newsletter['recipient_count'] ?></td>
-            <td class="actions">
-              <a class="btn" href="newsletter_history.php?id=<?= (int)$newsletter['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Detail</a>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php endif; ?>
-</section>
-
-<section aria-labelledby="newsletter-subscribers-heading">
-  <div class="button-row" style="justify-content:space-between;align-items:baseline">
-    <h2 id="newsletter-subscribers-heading" style="margin-bottom:.5rem">Odběratelé</h2>
+    <h2 id="newsletter-subscribers-heading" style="margin-bottom:.5rem">Odběratelé newsletteru</h2>
     <small><?= count($subscribers) ?> zobrazených položek</small>
   </div>
 
   <?php if (empty($subscribers)): ?>
-    <p>Pro zvolený filtr tu zatím nejsou žádní odběratelé.</p>
+    <p><?= $statusFilter === 'all' && $q === '' ? 'Zatím tu nejsou žádní odběratelé newsletteru.' : 'Pro zvolený filtr teď není k dispozici žádný odběratel.' ?></p>
   <?php else: ?>
     <table>
       <caption class="sr-only">Odběratelé newsletteru</caption>
@@ -204,6 +162,49 @@ adminHeader('Newsletter');
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
                 <button type="submit" class="btn btn-danger">Smazat</button>
               </form>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
+</section>
+
+<section aria-labelledby="newsletter-history-heading">
+  <div class="button-row" style="justify-content:space-between;align-items:baseline">
+    <h2 id="newsletter-history-heading" style="margin-bottom:.5rem">Poslední rozesílky</h2>
+    <small><?= count($newsletters) ?> zobrazených položek</small>
+  </div>
+
+  <?php if (empty($newsletters)): ?>
+    <p>Zatím jste neodeslali žádnou rozesílku.</p>
+  <?php else: ?>
+    <table>
+      <caption class="sr-only">Historie odeslaných newsletterů</caption>
+      <thead>
+        <tr>
+          <th scope="col">Předmět</th>
+          <th scope="col">Odesláno</th>
+          <th scope="col">Příjemců</th>
+          <th scope="col">Akce</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($newsletters as $newsletter): ?>
+          <tr>
+            <td><strong><?= h((string)$newsletter['subject']) ?></strong></td>
+            <td>
+              <?php if (!empty($newsletter['sent_at'])): ?>
+                <time datetime="<?= h(str_replace(' ', 'T', (string)$newsletter['sent_at'])) ?>">
+                  <?= formatCzechDate((string)$newsletter['sent_at']) ?>
+                </time>
+              <?php else: ?>
+                <em>Neodesláno</em>
+              <?php endif; ?>
+            </td>
+            <td><?= (int)$newsletter['recipient_count'] ?></td>
+            <td class="actions">
+              <a class="btn" href="newsletter_history.php?id=<?= (int)$newsletter['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Detail</a>
             </td>
           </tr>
         <?php endforeach; ?>

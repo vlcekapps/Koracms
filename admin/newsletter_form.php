@@ -15,17 +15,18 @@ $formState = $_SESSION['newsletter_form_state'] ?? [
 $formError = $_SESSION['newsletter_form_error'] ?? '';
 unset($_SESSION['newsletter_form_state'], $_SESSION['newsletter_form_error']);
 
-adminHeader('Nový newsletter');
+adminHeader('Nová rozesílka');
 ?>
 
 <?php if ($formError !== ''): ?>
   <p class="error" role="alert" id="newsletter-form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p><a href="newsletter.php">&larr; Zpět na přehled newsletteru</a></p>
+<p><a href="newsletter.php">&larr; Zpět na newsletter</a></p>
 
 <div class="button-row" style="justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem">
   <div>
+    <p style="margin:.2rem 0 .45rem">Rozesílka se odešle všem potvrzeným odběratelům newsletteru.</p>
     <p style="margin:.2rem 0 0">
       Odeslání proběhne na <strong><?= $confirmedCount ?></strong> potvrzených odběratelů.
       <?php if ($pendingCount > 0): ?>
@@ -36,12 +37,12 @@ adminHeader('Nový newsletter');
 </div>
 
 <?php if ($confirmedCount === 0): ?>
-  <p class="error">Nejsou žádní potvrzení odběratelé. Newsletter teď nelze odeslat.</p>
+  <p class="error">Zatím nemáte žádné potvrzené odběratele, takže novou rozesílku teď nelze odeslat.</p>
 <?php else: ?>
   <form method="post" action="newsletter_send.php" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <fieldset>
-      <legend>Obsah rozesílky</legend>
+      <legend>Obsah e-mailu</legend>
 
       <label for="subject">Předmět <span aria-hidden="true">*</span></label>
       <input type="text" id="subject" name="subject" required aria-required="true" maxlength="255"
@@ -57,7 +58,7 @@ adminHeader('Nový newsletter');
       <div class="button-row" style="margin-top:1.5rem">
         <button type="submit" class="btn"
                 onclick="return confirm('Opravdu odeslat newsletter <?= $confirmedCount ?> potvrzeným odběratelům?')">
-          Odeslat newsletter
+          Odeslat rozesílku
         </button>
         <a href="newsletter.php" class="btn">Zrušit</a>
       </div>

@@ -51,7 +51,7 @@ $renderAuthorName = static function (array $article): string {
     <?php endif; ?>
 
     <?php if (empty($articles)): ?>
-      <p class="empty-state">Žádné články.</p>
+      <p class="empty-state">Zatím tu nejsou žádné články.</p>
     <?php else: ?>
       <div class="card-grid">
         <?php foreach ($articles as $article): ?>

@@ -8,7 +8,7 @@
     </div>
 
     <?php if (empty($places)): ?>
-      <p class="empty-state">Zatím nejsou zveřejněná žádná místa.</p>
+      <p class="empty-state">Zatím tu nejsou žádná zveřejněná místa.</p>
     <?php else: ?>
       <div class="stack-sections">
         <?php $groupIndex = 0; foreach ($grouped as $category => $items): ?>
@@ -44,7 +44,7 @@
                     <?php endif; ?>
 
                     <div class="button-row button-row--start">
-                      <a class="section-link" href="<?= h(placePublicPath($place)) ?>">Zobrazit detail <span aria-hidden="true">→</span></a>
+                      <a class="section-link" href="<?= h(placePublicPath($place)) ?>">Detail místa <span aria-hidden="true">→</span></a>
                       <?php if ($place['url'] !== ''): ?>
                         <a class="section-link" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Navštívit web <span aria-hidden="true">→</span></a>
                       <?php endif; ?>

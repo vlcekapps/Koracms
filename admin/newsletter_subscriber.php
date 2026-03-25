@@ -36,7 +36,7 @@ $errorMessages = [
 $ok = trim($_GET['ok'] ?? '');
 $error = trim($_GET['error'] ?? '');
 
-adminHeader('Odběratel newsletteru');
+adminHeader('Detail odběratele');
 ?>
 
 <?php if (isset($successMessages[$ok])): ?>
@@ -46,7 +46,7 @@ adminHeader('Odběratel newsletteru');
   <p class="error" role="alert"><?= h($errorMessages[$error]) ?></p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>">&larr; Zpět na newsletter</a></p>
+<p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled newsletteru</a></p>
 
 <table>
   <caption class="sr-only">Detail odběratele newsletteru</caption>

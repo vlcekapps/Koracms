@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('settings_manage', 'Přístup odepřen. Pro správu nastavení webu nemáte potřebné oprávnění.');
 
 $success = false;
 $errors  = [];
@@ -154,7 +154,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-adminHeader('Základní nastavení');
+$settingsSections = [
+    ['id' => 'settings-homepage', 'label' => 'Domovská stránka'],
+    ['id' => 'settings-basics', 'label' => 'Základ webu'],
+    ['id' => 'settings-profile', 'label' => 'Profil webu'],
+    ['id' => 'settings-home-sections', 'label' => 'Sekce na domovské stránce'],
+    ['id' => 'settings-pagination', 'label' => 'Výpisy a stránkování'],
+];
+if (isModuleEnabled('blog')) {
+    $settingsSections[] = ['id' => 'settings-comments', 'label' => 'Komentáře blogu'];
+}
+$settingsSections[] = ['id' => 'settings-editor', 'label' => 'Obsah a editor'];
+$settingsSections[] = ['id' => 'settings-social', 'label' => 'Sociální sítě'];
+$settingsSections[] = ['id' => 'settings-brand', 'label' => 'Logo a sdílení'];
+$settingsSections[] = ['id' => 'settings-privacy', 'label' => 'Soukromí a cookies'];
+$settingsSections[] = ['id' => 'settings-operation', 'label' => 'Provoz webu'];
+
+adminHeader('Nastavení webu');
 ?>
 
 <?php if ($success): ?>
@@ -171,19 +187,27 @@ adminHeader('Základní nastavení');
   </ul>
 <?php endif; ?>
 
+<p>Na jednom místě upravíte základ webu, podobu domovské stránky, komentáře, vzhled i provozní nastavení. Pokud hledáte heslo nebo osobní údaje účtu, najdete je v <a href="profile.php">Mém profilu</a>.</p>
+
+<nav aria-label="Sekce nastavení webu" class="button-row" style="margin:1rem 0 1.5rem">
+  <?php foreach ($settingsSections as $section): ?>
+    <a href="#<?= h($section['id']) ?>"><?= h($section['label']) ?></a>
+  <?php endforeach; ?>
+</nav>
+
 <form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
-  <fieldset>
-    <legend>Úvodní text webu</legend>
-    <p>Zobrazí se na úvodní stránce webu nad novinkami a články. Nechte prázdné, pokud úvodní text nechcete.</p>
+  <fieldset id="settings-homepage">
+    <legend>Domovská stránka</legend>
+    <p>Pokud text vyplníte, zobrazí se na domovské stránce nad hlavním obsahem. Když pole necháte prázdné, úvodní blok se nezobrazí.</p>
     <label for="home_intro" class="sr-only">Úvodní text</label>
     <textarea id="home_intro" name="home_intro" rows="6" aria-describedby="home-intro-help"><?= h(getSetting('home_intro', '')) ?></textarea>
     <small id="home-intro-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
   </fieldset>
 
-  <fieldset>
-    <legend>Základní informace</legend>
+  <fieldset id="settings-basics">
+    <legend>Základ webu</legend>
     <label for="site_name">Název webu <span aria-hidden="true">*</span></label>
     <input type="text" id="site_name" name="site_name" required aria-required="true"
            value="<?= h(getSetting('site_name')) ?>">
@@ -203,7 +227,7 @@ adminHeader('Základní nastavení');
     <small id="board-public-label-help" class="field-help">Používá se ve veřejné navigaci, na výpisu sekce a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
   </fieldset>
 
-  <fieldset>
+  <fieldset id="settings-profile">
     <legend>Profil webu</legend>
     <p style="margin-top:.25rem;color:#555">Profil pomáhá držet vhodné výchozí moduly, domovskou stránku a doporučenou šablonu pro typ webu, který tvoříte.</p>
     <?php foreach ($siteProfiles as $profileKey => $profile): ?>
@@ -224,8 +248,8 @@ adminHeader('Základní nastavení');
     <small id="apply-site-profile-help" class="field-help">Bez zaškrtnutí se uloží jen zvolený profil webu a stávající konfigurace se nepřepíše. U vlastního profilu zůstane konfigurace beze změny i při použití této volby.</small>
   </fieldset>
 
-  <fieldset>
-    <legend>Počty položek na domovské stránce</legend>
+  <fieldset id="settings-home-sections">
+    <legend>Sekce na domovské stránce</legend>
     <p style="margin-top:.25rem;font-size:.9rem;color:#555">Hodnota 0 znamená, že se sekce na domovské stránce nezobrazí.</p>
     <label for="home_blog_count">Počet článků na domovské stránce</label>
     <input type="number" id="home_blog_count" name="home_blog_count" min="0" max="50"
@@ -240,8 +264,8 @@ adminHeader('Základní nastavení');
            value="<?= h(getSetting('home_board_count', '5')) ?>">
   </fieldset>
 
-  <fieldset>
-    <legend>Stránkování</legend>
+  <fieldset id="settings-pagination">
+    <legend>Výpisy a stránkování</legend>
     <label for="news_per_page">Novinek na stránku</label>
     <input type="number" id="news_per_page" name="news_per_page" min="1" max="100"
            value="<?= h(getSetting('news_per_page', '10')) ?>">
@@ -256,7 +280,7 @@ adminHeader('Základní nastavení');
   </fieldset>
 
   <?php if (isModuleEnabled('blog')): ?>
-  <fieldset>
+  <fieldset id="settings-comments">
     <legend>Komentáře blogu</legend>
 
     <div>
@@ -335,8 +359,8 @@ adminHeader('Základní nastavení');
   </fieldset>
   <?php endif; ?>
 
-  <fieldset>
-    <legend>Editor obsahu</legend>
+  <fieldset id="settings-editor">
+    <legend>Obsah a editor</legend>
     <p style="margin-top:.5rem">
       <label style="font-weight:normal">
         <input type="radio" name="content_editor" value="html"
@@ -356,7 +380,7 @@ adminHeader('Základní nastavení');
     <small id="content-editor-help" class="field-help">Pokud používáte čtečku obrazovky nebo jinou asistivní technologii, doporučujeme ponechat čisté HTML (textarea).</small>
   </fieldset>
 
-  <fieldset>
+  <fieldset id="settings-social">
     <legend>Sociální sítě</legend>
     <label for="social_facebook">Facebook (URL)</label>
     <input type="url" id="social_facebook" name="social_facebook"
@@ -372,8 +396,8 @@ adminHeader('Základní nastavení');
            value="<?= h(getSetting('social_twitter')) ?>">
   </fieldset>
 
-  <fieldset>
-    <legend>Favicon a logo</legend>
+  <fieldset id="settings-brand">
+    <legend>Logo, favicon a sdílení webu</legend>
     <label for="site_favicon">Favicon</label>
     <input type="file" id="site_favicon" name="site_favicon" accept=".ico,.png,.svg,image/x-icon,image/png,image/svg+xml"
            aria-describedby="site-favicon-help<?= getSetting('site_favicon', '') !== '' ? ' site-favicon-current' : '' ?>">
@@ -406,8 +430,8 @@ adminHeader('Základní nastavení');
     <small id="og-image-default-help" class="field-help">Zadejte relativní cestu v <code>uploads/</code>, například <code>site/og.jpg</code>.</small>
   </fieldset>
 
-  <fieldset>
-    <legend>Cookie lišta (GDPR)</legend>
+  <fieldset id="settings-privacy">
+    <legend>Soukromí a cookies</legend>
     <div>
       <input type="checkbox" id="cookie_consent_enabled" name="cookie_consent_enabled" value="1"
              <?= getSetting('cookie_consent_enabled', '0') === '1' ? 'checked' : '' ?>>
@@ -421,8 +445,8 @@ adminHeader('Základní nastavení');
               'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.')) ?></textarea>
   </fieldset>
 
-  <fieldset>
-    <legend>Režim údržby</legend>
+  <fieldset id="settings-operation">
+    <legend>Provoz webu</legend>
     <div>
       <input type="checkbox" id="maintenance_mode" name="maintenance_mode" value="1" aria-describedby="maintenance-mode-help"
              <?= getSetting('maintenance_mode', '0') === '1' ? 'checked' : '' ?>>
@@ -436,10 +460,6 @@ adminHeader('Základní nastavení');
               rows="2"><?= h(getSetting('maintenance_text',
               'Právě probíhá údržba webu. Brzy budeme zpět, děkujeme za trpělivost.')) ?></textarea>
   </fieldset>
-
-  <p style="margin-top:.5rem">
-    <small>Heslo a osobní údaje změníte v <a href="profile.php">Mém profilu</a>.</small>
-  </p>
 
   <button type="submit" style="margin-top:1rem">Uložit nastavení</button>
 </form>

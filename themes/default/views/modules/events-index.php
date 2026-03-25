@@ -11,7 +11,7 @@ $eventLink = static fn(array $event): string => eventPublicPath($event);
     </div>
 
     <?php if ($upTotal === 0 && $pastTotal === 0): ?>
-      <p class="empty-state">Zatím nejsou zveřejněné žádné akce.</p>
+      <p class="empty-state">Zatím tu nejsou žádné plánované ani proběhlé akce.</p>
     <?php else: ?>
       <div class="stack-sections">
         <?php if ($upTotal > 0): ?>

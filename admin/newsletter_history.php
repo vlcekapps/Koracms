@@ -24,14 +24,14 @@ if (!$newsletter) {
     exit;
 }
 
-adminHeader('Detail rozesílky');
+adminHeader('Odeslaná rozesílka');
 ?>
 
 <?php if (trim($_GET['ok'] ?? '') === 'sent'): ?>
   <p class="success" role="status">Newsletter byl odeslán a uložen do historie.</p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>">&larr; Zpět na newsletter</a></p>
+<p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled newsletteru</a></p>
 
 <table>
   <caption class="sr-only">Detail odeslaného newsletteru</caption>

@@ -8,7 +8,7 @@
     </div>
 
     <?php if (empty($items)): ?>
-      <p class="empty-state">Zatím nejsou k dispozici žádné položky ke stažení.</p>
+      <p class="empty-state">Zatím tu nejsou žádné materiály ke stažení.</p>
     <?php else: ?>
       <div class="stack-sections">
         <?php $groupIndex = 0; foreach ($grouped as $category => $files): ?>

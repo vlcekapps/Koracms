@@ -121,7 +121,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
     <?php endif; ?>
 
     <?php if (empty($comments)): ?>
-      <p class="empty-state">Zatím žádné komentáře. Buďte první!</p>
+      <p class="empty-state">Zatím tu nejsou žádné komentáře.</p>
     <?php else: ?>
       <div class="comments-list">
         <?php foreach ($comments as $comment): ?>

@@ -8,7 +8,7 @@
     </div>
 
     <?php if (empty($messages)): ?>
-      <p class="empty-state">Zatím žádné zprávy. Buďte první, kdo se zapojí.</p>
+      <p class="empty-state">Zatím tu nejsou žádné zprávy.</p>
     <?php else: ?>
       <div class="chat-stream" aria-label="Zprávy z chatu">
         <?php foreach ($messages as $message): ?>

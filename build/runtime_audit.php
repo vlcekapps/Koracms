@@ -1624,6 +1624,17 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'admin_settings') {
+        foreach ([
+            'Nastavení webu',
+            'Sekce nastavení webu',
+            '#settings-homepage',
+            '#settings-basics',
+            '#settings-operation',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin settings is missing fragment: ' . $expectedFragment;
+            }
+        }
         if (!str_contains($result['body'], 'name="site_profile"')) {
             $issues[] = 'site profile setting is missing';
         }
@@ -1660,6 +1671,15 @@ foreach ($pages as $page) {
             }
             if (!str_contains($result['body'], 'name="comment_spam_words"')) {
                 $issues[] = 'comment spam words setting is missing';
+            }
+        }
+        foreach ([
+            'Základní nastavení',
+            'Počty položek na domovské stránce',
+            'Cookie lišta (GDPR)',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin settings still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
     }
@@ -1880,9 +1900,21 @@ foreach ($pages as $page) {
             'name="status"',
             'newsletter_subscriber.php',
             'newsletter_history.php',
+            'Odběratelé newsletteru',
+            'Poslední rozesílky',
+            'Nová rozesílka',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter overview is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            '+ Napsat newsletter',
+            '>Historie rozesílek<',
+            '>Odběratelé<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin newsletter overview still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
     }
@@ -1892,6 +1924,8 @@ foreach ($pages as $page) {
             'name="subject"',
             'name="body"',
             'potvrzených odběratelů',
+            'Nová rozesílka',
+            'Odeslat rozesílku',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter compose form is missing fragment: ' . $expectedFragment;
