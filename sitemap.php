@@ -183,6 +183,30 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('reservations')): ?>
+  <url>
+    <loc><?= h(siteUrl('/reservations/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+    try {
+        $reservationResources = $pdo->query(
+            "SELECT id, slug
+             FROM cms_res_resources
+             WHERE is_active = 1
+             ORDER BY name"
+        )->fetchAll();
+        foreach ($reservationResources as $reservationResource):
+?>
+  <url>
+    <loc><?= h(reservationResourcePublicUrl($reservationResource)) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 <?php if (isModuleEnabled('events')): ?>
   <url>
     <loc><?= h(siteUrl('/events/index.php')) ?></loc>

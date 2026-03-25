@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('bookings_manage', 'Přístup odepřen. Pro správu zdrojů rezervací nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $pdo = db_connect();
@@ -23,10 +23,9 @@ $maxConcurrent    = max(1, (int)($_POST['max_concurrent'] ?? 1));
 
 // Slug: auto-generate if empty
 if ($slug === '' && $name !== '') {
-    $slug = slugify($name);
+    $slug = reservationResourceSlug($name);
 }
-$slug = preg_replace('/[^a-z0-9\-]/', '', strtolower($slug));
-$slug = trim($slug, '-');
+$slug = reservationResourceSlug($slug);
 
 // Validation
 if ($name === '') {

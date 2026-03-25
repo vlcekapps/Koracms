@@ -28,6 +28,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Modul `Ankety` nově podporuje slug a čisté URL typu `/polls/moje-anketa`, veřejný detail ankety, kanonické přesměrování starého `?id=` odkazu a redakční administraci s filtrem, slug workflow a časovým plánováním
 - Modul `Galerie` nově podporuje slug a čisté URL pro alba i fotografie (`/gallery/album/moje-album` a `/gallery/photo/moje-fotografie`), veřejný detail alba i fotografie a modernější administraci s filtrováním, slug workflow a kanonickým přesměrováním starých `?id=` odkazů
 - Modul `Jídelní lístek` nově podporuje slug a čisté URL typu `/food/card/moje-menu`, veřejný detail lístku a redakční administraci s filtrem, slug workflow a kanonickým přesměrováním starých `?id=` odkazů
+- Modul `Rezervace` nově používá capability-aware administraci pro rezervace, zdroje, kategorie a místa, se sjednoceným vyhledáváním, stavovými filtry a bezpečnými návraty zpět do stejného workflow
 
 ### Opraveno
 - Import/export nyní zachovává i stav komentářů, e-mail autora a per-article volbu `comments_enabled`
@@ -46,6 +47,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - Import/export nově zachovává i slug, popis a čas poslední úpravy anket; vyhledávání, sitemapa, homepage i runtime audit teď používají kanonické poll URL a hlídají veřejný detail ankety, detail linky na výpisu, admin formuláře i legacy redirect ze starého `polls/index.php?id=...`
 - Import/export nově zachovává i slugy a čas poslední úpravy jídelních a nápojových lístků; vyhledávání, sitemapa a runtime audit teď používají kanonické food URL a hlídají veřejný detail lístku, admin formulář i legacy redirect ze starého `food/card.php?id=...`
 - Import/export nově zachovává i slugy alb a fotografií galerie; vyhledávání, sitemapa a runtime audit teď používají kanonické gallery URL a hlídají veřejný detail alba i fotografie, admin formuláře a legacy redirecty ze starých `gallery/album.php?id=...` a `gallery/photo.php?id=...`
+- Vyhledávání a sitemap nyní zahrnují i aktivní rezervační zdroje a runtime audit hlídá novou administraci zdrojů, kategorií a míst i přístup booking managera k celé rezervační části
 
 ## [3.0.0-beta.1] – 2026-03-23
 

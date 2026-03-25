@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('bookings_manage', 'Přístup odepřen. Pro správu míst rezervací nemáte potřebné oprávnění.');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: res_locations.php'); exit;

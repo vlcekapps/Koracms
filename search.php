@@ -264,6 +264,27 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         } catch (\PDOException $e) {
         }
     }
+
+    if (isModuleEnabled('reservations')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT r.id, r.name AS title, r.slug,
+                        COALESCE(NULLIF(r.description, ''), r.name) AS perex,
+                        'reservation_resource' AS type
+                 FROM cms_res_resources r
+                 LEFT JOIN cms_res_categories c ON c.id = r.category_id
+                 WHERE r.is_active = 1
+                   AND (r.name LIKE ? OR r.slug LIKE ? OR r.description LIKE ? OR c.name LIKE ?)
+                 ORDER BY r.name
+                 LIMIT 10"
+            );
+            $stmt->execute([$like, $like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+    }
 }
 
 function resultUrl(array $result): string
@@ -284,6 +305,7 @@ function resultUrl(array $result): string
         'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
         'poll' => pollPublicPath($result),
+        'reservation_resource' => reservationResourcePublicPath($result),
         default => $baseUrl . '/',
     };
 }
@@ -305,6 +327,7 @@ function typeLabel(string $type): string
         'place' => 'Místo',
         'board' => boardModulePublicLabel(),
         'poll' => 'Anketa',
+        'reservation_resource' => 'Rezervace',
         default => '',
     };
 }

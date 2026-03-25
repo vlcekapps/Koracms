@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('bookings_manage', 'Přístup odepřen. Pro správu rezervací nemáte potřebné oprávnění.');
 verifyCsrf();
 
 $pdo       = db_connect();
@@ -129,9 +129,6 @@ if ($email) {
     sendMail($email, $subject, $body);
 }
 
-$successRedirect = internalRedirectTarget(
-    trim($_POST['redirect'] ?? ''),
-    BASE_URL . '/admin/res_booking_detail.php?id=' . $bookingId . '&ok=1'
-);
+$successRedirect = appendUrlQuery($detailRedirect, ['ok' => 1]);
 header('Location: ' . $successRedirect);
 exit;

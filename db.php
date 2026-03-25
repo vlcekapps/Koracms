@@ -1058,6 +1058,11 @@ function foodCardSlug(string $value): string
     return slugify(trim($value));
 }
 
+function reservationResourceSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function downloadSlug(string $value): string
 {
     return slugify(trim($value));
@@ -2109,6 +2114,26 @@ function foodCardPublicUrl(array $card, array $query = []): string
     return siteUrl(appendUrlQuery(foodCardPublicRequestPath($card), $query));
 }
 
+function reservationResourcePublicRequestPath(array $resource): string
+{
+    $slug = reservationResourceSlug((string)($resource['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/reservations/resource.php?slug=' . rawurlencode($slug);
+    }
+
+    return '/reservations/index.php';
+}
+
+function reservationResourcePublicPath(array $resource, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(reservationResourcePublicRequestPath($resource), $query);
+}
+
+function reservationResourcePublicUrl(array $resource, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(reservationResourcePublicRequestPath($resource), $query));
+}
+
 function galleryAlbumPublicRequestPath(array $album): string
 {
     $slug = galleryAlbumSlug((string)($album['slug'] ?? ''));
@@ -2342,6 +2367,30 @@ function uniqueFoodCardSlug(PDO $pdo, string $candidate, ?int $excludeId = null)
         $slug = $baseSlug . '-' . $suffix;
         $suffix++;
     }
+}
+
+function reservationBookingStatusLabels(): array
+{
+    return [
+        'pending' => 'Čeká na schválení',
+        'confirmed' => 'Potvrzená',
+        'cancelled' => 'Zrušená',
+        'rejected' => 'Zamítnutá',
+        'completed' => 'Dokončená',
+        'no_show' => 'Nedostavil se',
+    ];
+}
+
+function reservationBookingStatusColors(): array
+{
+    return [
+        'pending' => '#8a4b00',
+        'confirmed' => '#1b5e20',
+        'cancelled' => '#666666',
+        'rejected' => '#b71c1c',
+        'completed' => '#005fcc',
+        'no_show' => '#6d0000',
+    ];
 }
 
 function uniqueBoardSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string

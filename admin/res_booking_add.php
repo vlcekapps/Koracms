@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('bookings_manage', 'Přístup odepřen. Pro správu rezervací nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
 
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newId = (int)$pdo->lastInsertId();
         logAction('booking_add', "id={$newId}, resource_id={$resourceId}");
 
-        header('Location: res_bookings.php?ok=1');
+        header('Location: res_booking_detail.php?id=' . $newId . '&ok=1&redirect=' . rawurlencode(BASE_URL . '/admin/res_bookings.php'));
         exit;
     }
 }

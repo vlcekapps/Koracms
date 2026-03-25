@@ -874,6 +874,9 @@ $pages = [
     ['label' => 'admin_gallery_albums', 'url' => $baseUrl . '/admin/gallery_albums.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_polls', 'url' => $baseUrl . '/admin/polls.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_places', 'url' => $baseUrl . '/admin/places.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_res_resources', 'url' => $baseUrl . '/admin/res_resources.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_res_categories', 'url' => $baseUrl . '/admin/res_categories.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_res_locations', 'url' => $baseUrl . '/admin/res_locations.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_themes', 'url' => $baseUrl . '/admin/themes.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_statistics', 'url' => $baseUrl . '/admin/statistics.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -892,6 +895,9 @@ if ($downloadId !== false) {
 }
 if ($foodCardId !== false) {
     $pages[] = ['label' => 'admin_food_form', 'url' => $baseUrl . '/admin/food_form.php?id=' . urlencode((string)$foodCardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($resourceRow) {
+    $pages[] = ['label' => 'admin_res_resource_form', 'url' => $baseUrl . '/admin/res_resource_form.php?id=' . urlencode((string)$resourceRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($galleryAlbumId !== false) {
     $pages[] = ['label' => 'admin_gallery_album_form', 'url' => $baseUrl . '/admin/gallery_album_form.php?id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -1689,6 +1695,26 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_res_resources') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'res_resource_form.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin reservation resources is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_res_categories' && !str_contains($result['body'], 'name="q"')) {
+        $issues[] = 'admin reservation categories search field is missing';
+    }
+
+    if ($page['label'] === 'admin_res_locations' && !str_contains($result['body'], 'name="q"')) {
+        $issues[] = 'admin reservation locations search field is missing';
+    }
+
     if ($page['label'] === 'admin_podcast_shows') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin podcast shows search field is missing';
@@ -1750,6 +1776,21 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin food form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_res_resource_form') {
+        foreach ([
+            'name="slug"',
+            'name="capacity"',
+            'name="slot_mode"',
+            'name="location_ids[]"',
+            'name="allow_guests"',
+            'name="max_concurrent"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin reservation resource form is missing field: ' . $expectedField;
             }
         }
     }
@@ -2391,6 +2432,7 @@ $roleChecks[] = ['role' => 'author', 'url' => '/admin/users.php', 'expected' => 
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/review_queue.php', 'expected' => '403', 'label' => 'author review queue'];
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'author reservations'];
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/res_resources.php', 'expected' => '403', 'label' => 'author reservation resources'];
 }
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'author board'];
@@ -2430,6 +2472,7 @@ if (isModuleEnabled('blog')) {
 }
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/res_bookings.php', 'expected' => '403', 'label' => 'moderator reservations'];
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/res_resources.php', 'expected' => '403', 'label' => 'moderator reservation resources'];
 }
 if (isModuleEnabled('board')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/board.php', 'expected' => '403', 'label' => 'moderator board'];
@@ -2454,6 +2497,9 @@ if (isModuleEnabled('podcast')) {
 
 if (isModuleEnabled('reservations')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_bookings.php', 'expected' => '200', 'label' => 'booking manager reservations'];
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_resources.php', 'expected' => '200', 'label' => 'booking manager reservation resources'];
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_categories.php', 'expected' => '200', 'label' => 'booking manager reservation categories'];
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/res_locations.php', 'expected' => '200', 'label' => 'booking manager reservation locations'];
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/review_queue.php', 'expected' => '200', 'label' => 'booking manager review queue'];
 }
 if (isModuleEnabled('blog')) {

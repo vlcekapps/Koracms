@@ -127,7 +127,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |
 | **FAQ** | Znalostní báze s kategoriemi, krátkým perexem, detailovou stránkou na čisté slug URL a veřejným FAQ rozcestníkem |
 | **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL a automatický archiv po datu sejmutí |
-| **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem |
+| **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem a sjednocená administrace zdrojů, kategorií, míst i rezervací s capability guardy |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci |
 
 Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Moduly**.
