@@ -86,7 +86,7 @@ adminHeader('Blog – správa článků');
         <td><?= h((string)$article['created_at']) ?></td>
         <td>
           <?php if ($article['status'] === 'pending'): ?>
-            <strong style="color:#c60">⟳ Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">⟳ Čeká na schválení</strong>
           <?php elseif ($article['publish_at'] && strtotime((string)$article['publish_at']) > time()): ?>
             <small>Naplánováno: <?= h((string)$article['publish_at']) ?></small>
           <?php else: ?>
@@ -105,7 +105,7 @@ adminHeader('Blog – správa článků');
               <input type="hidden" name="module" value="articles">
               <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/blog.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="blog_delete.php" method="post" style="display:inline">
@@ -126,7 +126,7 @@ adminHeader('Blog – správa článků');
 </form>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 <script>
 document.getElementById('check-all')?.addEventListener('change', function () {
     document.querySelectorAll('#bulk-form input[name="ids[]"]')

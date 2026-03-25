@@ -186,8 +186,9 @@ $notes       = $_POST['notes'] ?? '';
     <label for="party_size">Počet osob</label>
     <input type="number" id="party_size" name="party_size" min="1" value="<?= h($partySize) ?>" style="width:100px">
 
-    <label for="notes">Poznámka <small>(nepovinná)</small></label>
-    <textarea id="notes" name="notes" rows="3" style="min-height:80px"><?= h($notes) ?></textarea>
+    <label for="notes">Poznámka</label>
+    <textarea id="notes" name="notes" rows="3" style="min-height:80px" aria-describedby="booking-notes-help"><?= h($notes) ?></textarea>
+    <small id="booking-notes-help" class="field-help">Nepovinné pole.</small>
   </fieldset>
 
   <div style="margin-top:1.5rem">

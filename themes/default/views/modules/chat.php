@@ -58,15 +58,19 @@
         </div>
 
         <div class="field">
-          <label for="email">E-mail <small>(nepovinný)</small></label>
+          <label for="email">E-mail</label>
           <input type="email" id="email" name="email" class="form-control" maxlength="255"
+                 aria-describedby="chat-email-help"
                  value="<?= h($formData['email']) ?>">
+          <small id="chat-email-help" class="help-text">Nepovinné pole.</small>
         </div>
 
         <div class="field">
-          <label for="web">Web <small>(nepovinný)</small></label>
+          <label for="web">Web</label>
           <input type="url" id="web" name="web" class="form-control" maxlength="255"
+                 aria-describedby="chat-web-help"
                  value="<?= h($formData['web']) ?>">
+          <small id="chat-web-help" class="help-text">Nepovinné pole.</small>
         </div>
 
         <div class="field">

@@ -189,9 +189,10 @@ adminHeader('Můj profil');
     <input type="text" id="last_name" name="last_name" maxlength="100"
            value="<?= h($currentRow['last_name']) ?>">
 
-    <label for="nickname">Přezdívka <small>(zobrazí se místo jména a příjmení)</small></label>
-    <input type="text" id="nickname" name="nickname" maxlength="100"
+    <label for="nickname">Přezdívka</label>
+    <input type="text" id="nickname" name="nickname" maxlength="100" aria-describedby="profile-nickname-help"
            value="<?= h($currentRow['nickname']) ?>">
+    <small id="profile-nickname-help" class="field-help">Zobrazí se místo jména a příjmení.</small>
 
     <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
     <input type="email" id="email" name="email" required aria-required="true"
@@ -199,12 +200,13 @@ adminHeader('Můj profil');
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
-    <legend>Změna hesla <small>(vyplňte jen pokud chcete změnit)</small></legend>
+    <legend>Změna hesla</legend>
+    <small id="profile-password-help" class="field-help" style="margin-top:0">Vyplňte jen pokud chcete změnit.</small>
     <label for="new_pass">Nové heslo (min. 8 znaků)</label>
-    <input type="password" id="new_pass" name="new_pass" minlength="8" autocomplete="new-password">
+    <input type="password" id="new_pass" name="new_pass" minlength="8" autocomplete="new-password" aria-describedby="profile-password-help">
 
     <label for="new_pass2">Nové heslo znovu</label>
-    <input type="password" id="new_pass2" name="new_pass2" minlength="8" autocomplete="new-password">
+    <input type="password" id="new_pass2" name="new_pass2" minlength="8" autocomplete="new-password" aria-describedby="profile-password-help">
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
@@ -218,29 +220,33 @@ adminHeader('Můj profil');
       </label>
     </div>
 
-    <label for="author_slug">Slug veřejného autora <span aria-hidden="true">*</span>
-      <small>(malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="author_slug">Slug veřejného autora <span aria-hidden="true">*</span></label>
     <input type="text" id="author_slug" name="author_slug" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="profile-author-slug-help"
            value="<?= h((string)($currentRow['author_slug'] ?? '')) ?>">
+    <small id="profile-author-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="author_bio">Krátké bio / medailonek</label>
-    <textarea id="author_bio" name="author_bio" rows="6"><?= h((string)($currentRow['author_bio'] ?? '')) ?></textarea>
-    <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+    <textarea id="author_bio" name="author_bio" rows="6" aria-describedby="profile-author-bio-help"><?= h((string)($currentRow['author_bio'] ?? '')) ?></textarea>
+    <small id="profile-author-bio-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
 
-    <label for="author_website">Web autora <small>(nepovinné)</small></label>
+    <label for="author_website">Web autora</label>
     <input type="url" id="author_website" name="author_website" maxlength="255"
+           aria-describedby="profile-author-website-help"
            value="<?= h((string)($currentRow['author_website'] ?? '')) ?>">
+    <small id="profile-author-website-help" class="field-help">Nepovinné pole pro osobní web nebo profil autora.</small>
 
-    <label for="author_avatar">
-      Avatar autora <small>(JPEG, PNG, GIF, WebP nebo SVG)</small>
-      <?php if (!empty($currentRow['author_avatar'])): ?>
-        – aktuální:
+    <label for="author_avatar">Avatar autora</label>
+    <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+           aria-describedby="profile-author-avatar-help<?= !empty($currentRow['author_avatar']) ? ' profile-author-avatar-current' : '' ?>">
+    <small id="profile-author-avatar-help" class="field-help">Povolené formáty: JPEG, PNG, GIF, WebP nebo SVG.</small>
+    <?php if (!empty($currentRow['author_avatar'])): ?>
+      <div id="profile-author-avatar-current" class="field-help">
+        Aktuální avatar:
         <img src="<?= BASE_URL ?>/uploads/authors/<?= rawurlencode($currentRow['author_avatar']) ?>"
              alt="Aktuální avatar autora" style="height:48px;width:48px;object-fit:cover;border-radius:999px;vertical-align:middle">
-      <?php endif; ?>
-    </label>
-    <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
+      </div>
+    <?php endif; ?>
 
     <?php if (!empty($currentRow['author_avatar'])): ?>
       <label for="author_avatar_delete" style="font-weight:normal;margin-top:.35rem">

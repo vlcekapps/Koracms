@@ -396,7 +396,7 @@ adminHeader('Ke schválení');
                   <input type="hidden" name="module" value="<?= h($row['approval_module']) ?>">
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                   <input type="hidden" name="redirect" value="<?= h($redirectPath) ?>">
-                  <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+                  <button type="submit" class="btn btn-success">Schválit</button>
                 </form>
                 <a href="<?= h($row['manage_url']) ?>">Modul</a>
               </td>
@@ -502,7 +502,7 @@ adminHeader('Ke schválení');
                   <input type="hidden" name="booking_id" value="<?= (int)$reservationRow['id'] ?>">
                   <input type="hidden" name="action" value="approve">
                   <input type="hidden" name="redirect" value="<?= h($redirectPath) ?>">
-                  <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+                  <button type="submit" class="btn btn-success">Schválit</button>
                 </form>
                 <form action="res_booking_save.php" method="post" style="display:inline" onsubmit="return confirm('Zamítnout rezervaci?')">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

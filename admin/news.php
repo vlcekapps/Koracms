@@ -88,7 +88,7 @@ adminHeader('Novinky – správa');
     </thead>
     <tbody>
     <?php foreach ($items as $item): ?>
-      <tr<?= $item['status'] === 'pending' ? ' style="background:#fffbe6"' : '' ?>>
+      <tr<?= $item['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
         <td>
           <strong><?= h((string)$item['title']) ?></strong><br>
           <small style="color:#555">/news/<?= h((string)$item['slug']) ?></small>
@@ -100,7 +100,7 @@ adminHeader('Novinky – správa');
         <td><?= h(formatCzechDate((string)$item['created_at'])) ?></td>
         <td>
           <?php if ($item['status'] === 'pending'): ?>
-            <strong style="color:#c60">Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php else: ?>
             Publikováno
           <?php endif; ?>
@@ -116,7 +116,7 @@ adminHeader('Novinky – správa');
               <input type="hidden" name="module" value="news">
               <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/news.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="news_delete.php" method="post" style="display:inline">
@@ -131,5 +131,5 @@ adminHeader('Novinky – správa');
     </tbody>
   </table>
 <?php endif; ?>
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 <?php adminFooter(); ?>

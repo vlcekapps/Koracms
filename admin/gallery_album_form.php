@@ -89,9 +89,9 @@ adminHeader($pageTitle);
            maxlength="255" value="<?= h((string)$album['name']) ?>"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
 
     <label for="slug">Slug adresy</label>
-    <input type="text" id="slug" name="slug" maxlength="255"
-           value="<?= h((string)$album['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
-    <small>Veřejná adresa bude vypadat například jako <code>/gallery/album/moje-fotografie</code>.</small>
+    <input type="text" id="slug" name="slug" maxlength="255" aria-describedby="gallery-album-slug-help<?= $formError !== '' ? ' form-errors' : '' ?>"
+           value="<?= h((string)$album['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false">
+    <small id="gallery-album-slug-help" class="field-help">Veřejná adresa bude vypadat například jako <code>/gallery/album/moje-fotografie</code>.</small>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4"><?= h((string)($album['description'] ?? '')) ?></textarea>

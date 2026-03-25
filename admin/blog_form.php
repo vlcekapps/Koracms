@@ -88,11 +88,11 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            value="<?= h($article['title'] ?? '') ?>">
 
-    <label for="slug">Slug (URL článku) <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug (URL článku) <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="blog-slug-help"
            value="<?= h($article['slug'] ?? '') ?>">
+    <small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="category_id">Kategorie</label>
     <select id="category_id" name="category_id">
@@ -125,48 +125,51 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <textarea id="perex" name="perex" rows="3"><?= h($article['perex'] ?? '') ?></textarea>
 
     <label for="content">Text článku <span aria-hidden="true">*</span></label>
-    <textarea id="content" name="content" rows="15" required aria-required="true"><?= h($article['content'] ?? '') ?></textarea>
-    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <textarea id="content" name="content" rows="15" required aria-required="true"<?= !$useWysiwyg ? ' aria-describedby="blog-content-help"' : '' ?>><?= h($article['content'] ?? '') ?></textarea>
+    <?php if (!$useWysiwyg): ?><small id="blog-content-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
-    <label for="image">
-      Náhledový obrázek
-      <?php if (!empty($article['image_file'])): ?>
-        <small>(aktuální: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
-               target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?></a>)</small>
-      <?php endif; ?>
-    </label>
-    <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+    <label for="image">Náhledový obrázek</label>
+    <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
+           aria-describedby="<?= !empty($article['image_file']) ? 'blog-image-current' : 'blog-image-help' ?>">
+    <?php if (!empty($article['image_file'])): ?>
+      <small id="blog-image-current" class="field-help">Aktuální obrázek: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
+             target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?></a>.</small>
+    <?php else: ?>
+      <small id="blog-image-help" class="field-help">Volitelné pole pro úvodní náhled článku.</small>
+    <?php endif; ?>
     <?php if (!empty($article['image_file'])): ?>
       <label style="font-weight:normal;margin-top:.3rem">
         <input type="checkbox" name="image_delete" value="1"> Smazat stávající obrázek
       </label>
     <?php endif; ?>
 
-    <label for="publish_at">Plánované publikování <small>(prázdné = ihned)</small></label>
-    <input type="datetime-local" id="publish_at" name="publish_at"
+    <label for="publish_at">Plánované publikování</label>
+    <input type="datetime-local" id="publish_at" name="publish_at" aria-describedby="blog-publish-at-help"
            style="width:auto" value="<?= h($publishAtInput) ?>">
+    <small id="blog-publish-at-help" class="field-help">Prázdné pole znamená publikování ihned.</small>
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>Diskuse</legend>
     <div>
-      <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1"
+      <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1" aria-describedby="blog-comments-help"
              <?= (int)($article['comments_enabled'] ?? 1) === 1 ? 'checked' : '' ?>>
       <label for="comments_enabled" style="display:inline;font-weight:normal">
         Povolit komentáře u tohoto článku
       </label>
     </div>
-    <small style="color:#666">Globální pravidla moderace nastavíte v základním nastavení webu.</small>
+    <small id="blog-comments-help" class="field-help">Globální pravidla moderace nastavíte v základním nastavení webu.</small>
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
-    <legend>SEO / Open Graph <small>(nepovinné – ponechte prázdné pro automatické hodnoty)</small></legend>
+    <legend>SEO / Open Graph</legend>
+    <small id="blog-seo-help" class="field-help" style="margin-top:0">Nepovinné. Ponechte prázdné pro automatické hodnoty.</small>
     <label for="meta_title">Meta titulek</label>
-    <input type="text" id="meta_title" name="meta_title" maxlength="160"
+    <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-seo-help"
            value="<?= h($article['meta_title'] ?? '') ?>">
 
     <label for="meta_description">Meta popis</label>
-    <textarea id="meta_description" name="meta_description" rows="2"
+    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="blog-seo-help"
               style="min-height:0"><?= h($article['meta_description'] ?? '') ?></textarea>
   </fieldset>
 

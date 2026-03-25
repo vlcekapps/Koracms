@@ -17,8 +17,8 @@ function adminHeader(string $pageTitle): void
     $pendingReviewItems = canAccessReviewQueue() ? pendingReviewSummary($pdo) : [];
     $pendingReviewTotal = array_sum(array_column($pendingReviewItems, 'count'));
     $pendingCommentsLabel = $pendingComments === 1
-        ? 'čekající komentář'
-        : ($pendingComments < 5 ? 'čekající komentáře' : 'čekajících komentářů');
+        ? 'ÄŤekajĂ­cĂ­ komentĂˇĹ™'
+        : ($pendingComments < 5 ? 'ÄŤekajĂ­cĂ­ komentĂˇĹ™e' : 'ÄŤekajĂ­cĂ­ch komentĂˇĹ™ĹŻ');
 
     $renderItem = static function (array $item): string {
         $style = isset($item['style']) ? ' style="' . $item['style'] . '"' : '';
@@ -26,15 +26,15 @@ function adminHeader(string $pageTitle): void
     };
 
     $topItems = [
-        ['url' => $baseUrl . '/admin/index.php', 'label' => 'Přehled'],
-        ['url' => $baseUrl . '/admin/profile.php', 'label' => 'Můj profil'],
+        ['url' => $baseUrl . '/admin/index.php', 'label' => 'PĹ™ehled'],
+        ['url' => $baseUrl . '/admin/profile.php', 'label' => 'MĹŻj profil'],
     ];
     if (canAccessReviewQueue()) {
         $topItems[] = [
             'url' => $baseUrl . '/admin/review_queue.php',
-            'label' => 'Ke schválení'
+            'label' => 'Ke schvĂˇlenĂ­'
                 . ($pendingReviewTotal > 0
-                    ? ' <span class="badge" aria-label="' . $pendingReviewTotal . ' čekajících položek">' . $pendingReviewTotal . '</span>'
+                    ? ' <span class="badge" aria-label="' . $pendingReviewTotal . ' ÄŤekajĂ­cĂ­ch poloĹľek">' . $pendingReviewTotal . '</span>'
                     : ''),
         ];
     }
@@ -45,7 +45,7 @@ function adminHeader(string $pageTitle): void
             'url' => $baseUrl . '/admin/chat.php',
             'label' => 'Chat'
                 . ($unreadChatMessages > 0
-                    ? ' <span class="badge" aria-label="' . $unreadChatMessages . ' nových chat zpráv">' . $unreadChatMessages . '</span>'
+                    ? ' <span class="badge" aria-label="' . $unreadChatMessages . ' novĂ˝ch chat zprĂˇv">' . $unreadChatMessages . '</span>'
                     : ''),
             'module' => 'chat',
             'capability' => 'messages_manage',
@@ -54,33 +54,33 @@ function adminHeader(string $pageTitle): void
             'url' => $baseUrl . '/admin/contact.php',
             'label' => 'Kontakt'
                 . ($unreadContactMessages > 0
-                    ? ' <span class="badge" aria-label="' . $unreadContactMessages . ' nových kontaktních zpráv">' . $unreadContactMessages . '</span>'
+                    ? ' <span class="badge" aria-label="' . $unreadContactMessages . ' novĂ˝ch kontaktnĂ­ch zprĂˇv">' . $unreadContactMessages . '</span>'
                     : ''),
             'module' => 'contact',
             'capability' => 'messages_manage',
         ],
         ['url' => $baseUrl . '/admin/gallery_albums.php', 'label' => 'Galerie', 'module' => 'gallery', 'capability' => 'content_manage_shared'],
-        ['url' => $baseUrl . '/admin/events.php', 'label' => 'Události', 'module' => 'events', 'capability' => 'content_manage_shared'],
+        ['url' => $baseUrl . '/admin/events.php', 'label' => 'UdĂˇlosti', 'module' => 'events', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/polls.php', 'label' => 'Ankety', 'module' => 'polls', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/podcast_shows.php', 'label' => 'Podcasty', 'module' => 'podcast', 'capability' => 'content_manage_shared'],
-        ['url' => $baseUrl . '/admin/places.php', 'label' => 'Zajímavá místa', 'module' => 'places', 'capability' => 'content_manage_shared'],
+        ['url' => $baseUrl . '/admin/places.php', 'label' => 'ZajĂ­mavĂˇ mĂ­sta', 'module' => 'places', 'capability' => 'content_manage_shared'],
         [
             'url' => $baseUrl . '/admin/newsletter.php',
             'label' => 'Newsletter'
                 . ($pendingNewsletterSubscribers > 0
-                    ? ' <span class="badge" aria-label="' . $pendingNewsletterSubscribers . ' odběratelů čeká na potvrzení">' . $pendingNewsletterSubscribers . '</span>'
+                    ? ' <span class="badge" aria-label="' . $pendingNewsletterSubscribers . ' odbÄ›ratelĹŻ ÄŤekĂˇ na potvrzenĂ­">' . $pendingNewsletterSubscribers . '</span>'
                     : ''),
             'module' => 'newsletter',
             'capability' => 'newsletter_manage',
         ],
-        ['url' => $baseUrl . '/admin/food.php', 'label' => 'Jídelní lístek', 'module' => 'food', 'capability' => 'content_manage_shared'],
-        ['url' => $baseUrl . '/admin/pages.php', 'label' => 'Stránky', 'capability' => 'content_manage_shared'],
+        ['url' => $baseUrl . '/admin/food.php', 'label' => 'JĂ­delnĂ­ lĂ­stek', 'module' => 'food', 'capability' => 'content_manage_shared'],
+        ['url' => $baseUrl . '/admin/pages.php', 'label' => 'StrĂˇnky', 'capability' => 'content_manage_shared'],
         ['url' => $baseUrl . '/admin/import.php', 'label' => 'Export / Import', 'capability' => 'import_export_manage'],
     ];
 
     $bottomItems = [
-        ['url' => $baseUrl . '/index.php', 'label' => '<span aria-hidden="true">←</span> Web'],
-        ['url' => $baseUrl . '/admin/logout.php', 'label' => 'Odhlásit se'],
+        ['url' => $baseUrl . '/index.php', 'label' => '<span aria-hidden="true">â†</span> Web'],
+        ['url' => $baseUrl . '/admin/logout.php', 'label' => 'OdhlĂˇsit se'],
     ];
 
     echo '<!DOCTYPE html>' . "\n"
@@ -88,7 +88,7 @@ function adminHeader(string $pageTitle): void
        . '<head>' . "\n"
        . '  <meta charset="utf-8">' . "\n"
        . '  <meta name="viewport" content="width=device-width, initial-scale=1">' . "\n"
-       . '  <title>' . $pageTitle . ' – ' . $siteName . ' Admin</title>' . "\n"
+       . '  <title>' . $pageTitle . ' â€“ ' . $siteName . ' Admin</title>' . "\n"
        . '  <style>' . "\n"
        . '    *, *::before, *::after { box-sizing: border-box; }' . "\n"
        . '    body { font-family: system-ui, sans-serif; margin: 0; display: flex; min-height: 100vh; }' . "\n"
@@ -105,18 +105,32 @@ function adminHeader(string $pageTitle): void
        . '    table { border-collapse: collapse; width: 100%; }' . "\n"
        . '    th, td { border: 1px solid #ccc; padding: .4rem .6rem; text-align: left; }' . "\n"
        . '    th { background: #f0f0f0; }' . "\n"
-       . '    .btn { padding: .45rem .9rem; cursor: pointer; min-height: 2rem; }' . "\n"
-       . '    .btn-danger { background: #c00; color: #fff; border: none; }' . "\n"
+       . '    .btn { padding: .45rem .9rem; cursor: pointer; min-height: 2rem; border: 1px solid #c6d0db; border-radius: .55rem; background: #f8fafc; color: #102a43; }' . "\n"
+       . '    .btn-danger { background: #b42318; color: #fff; border: 1px solid #8f1d14; }' . "\n"
+       . '    .btn-success { background: #1b5e20; color: #fff; border: 1px solid #154d1a; }' . "\n"
        . '    .button-row { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }' . "\n"
-       . '    .error { color: #c00; }' . "\n"
-       . '    .success { color: #060; }' . "\n"
+       . '    .error { color: #b42318; }' . "\n"
+       . '    .success { color: #1b5e20; }' . "\n"
        . '    label { display: block; margin-top: 1rem; font-weight: bold; }' . "\n"
        . '    input[type=text], input[type=email], input[type=password], input[type=number], textarea, select {' . "\n"
        . '      width: 100%; padding: .35rem; margin-top: .2rem; }' . "\n"
        . '    textarea { min-height: 200px; }' . "\n"
        . '    .actions form { display: inline; }' . "\n"
        . '    .badge { display:inline-block; min-width:1.4rem; padding:.1rem .45rem; border-radius:999px; background:#b42318; color:#fff; font-size:.75rem; text-align:center; }' . "\n"
-       . '    .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }' . "\n"
+       . '    .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .55rem; border-radius:999px; border:1px solid transparent; font-size:.82rem; font-weight:700; line-height:1.25; }' . "\n"
+       . '    .status-badge--pending { background:#fff4d6; border-color:#d7b46a; color:#7a4300; }' . "\n"
+       . '    .status-badge--published { background:#e8f5ec; border-color:#9cc7a4; color:#1f5f2b; }' . "\n"
+       . '    .status-badge--hidden { background:#f2f4f7; border-color:#d0d5dd; color:#344054; }' . "\n"
+       . '    .status-badge--scheduled { background:#eaf2ff; border-color:#9bb8e8; color:#1f4f99; }' . "\n"
+       . '    .status-badge--current { background:#e4f7ea; border-color:#8fcca2; color:#166534; }' . "\n"
+       . '    .status-badge--danger { background:#fdecea; border-color:#f0a39c; color:#8f1d14; }' . "\n"
+       . '    .status-badge--neutral { background:#f8fafc; border-color:#cbd5e1; color:#334155; }' . "\n"
+       . '    .status-stack { display:grid; gap:.3rem; }' . "\n"
+       . '    .table-row--pending { background:#fffaf0; }' . "\n"
+       . '    .table-meta { display:block; margin-top:.2rem; color:#475467; font-size:.85rem; line-height:1.4; }' . "\n"
+       . '    .field-help { display:block; margin:.35rem 0 0; color:#555; font-size:.92rem; line-height:1.45; font-weight:normal; }' . "\n"
+       . '    .field-help code { font-size:.95em; }' . "\n"
+       . '    .sr-only, .visually-hidden { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }' . "\n"
        . '    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }' . "\n"
        . '    nav a:focus-visible { outline-color: #7ecfff; }' . "\n"
        . '    .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }' . "\n"
@@ -124,7 +138,7 @@ function adminHeader(string $pageTitle): void
        . '  </style>' . "\n"
        . '</head>' . "\n"
        . '<body>' . "\n"
-       . '<a href="#obsah" class="skip-link">Přeskočit na obsah</a>' . "\n"
+       . '<a href="#obsah" class="skip-link">PĹ™eskoÄŤit na obsah</a>' . "\n"
        . '<nav aria-label="Administrace">' . "\n"
        . '  <h2>' . $siteName . '</h2>' . "\n";
 
@@ -148,14 +162,14 @@ function adminHeader(string $pageTitle): void
            . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Blog</summary>' . "\n"
            . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n";
         if (currentUserHasCapability('blog_manage_own')) {
-            echo '            <li><a href="' . $baseUrl . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Články</a></li>' . "\n";
+            echo '            <li><a href="' . $baseUrl . '/admin/blog.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">ÄŚlĂˇnky</a></li>' . "\n";
         }
         if (currentUserHasCapability('blog_taxonomies_manage')) {
-            echo '            <li><a href="' . $baseUrl . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n";
-            echo '            <li><a href="' . $baseUrl . '/admin/blog_tags.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Tagy</a></li>' . "\n";
+            echo '            <li><a href="' . $baseUrl . '/admin/blog_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Kategorie</a></li>' . "\n";
+            echo '            <li><a href="' . $baseUrl . '/admin/blog_tags.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Tagy</a></li>' . "\n";
         }
         if ($canManageComments) {
-            echo '            <li><a href="' . $baseUrl . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Komentáře'
+            echo '            <li><a href="' . $baseUrl . '/admin/comments.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> KomentĂˇĹ™e'
                . ($pendingComments > 0 ? ' <span class="badge" aria-label="' . $pendingComments . ' ' . $pendingCommentsLabel . '">' . $pendingComments . '</span>' : '')
                . '</a></li>' . "\n";
         }
@@ -166,11 +180,11 @@ function adminHeader(string $pageTitle): void
 
     if (isModuleEnabled('downloads') && currentUserHasCapability('content_manage_shared')) {
         echo '      <li>' . "\n"
-           . '        <details role="group" aria-label="Ke stažení">' . "\n"
-           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Ke stažení</summary>' . "\n"
+           . '        <details role="group" aria-label="Ke staĹľenĂ­">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Ke staĹľenĂ­</summary>' . "\n"
            . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
            . '            <li><a href="' . $baseUrl . '/admin/downloads.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Soubory</a></li>' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/dl_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Kategorie</a></li>' . "\n"
            . '          </ul>' . "\n"
            . '        </details>' . "\n"
            . '      </li>' . "\n";
@@ -181,8 +195,8 @@ function adminHeader(string $pageTitle): void
            . '        <details role="group" aria-label="FAQ">' . "\n"
            . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">FAQ</summary>' . "\n"
            . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Otázky</a></li>' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/faq_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/faq.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">OtĂˇzky</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/faq_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Kategorie</a></li>' . "\n"
            . '          </ul>' . "\n"
            . '        </details>' . "\n"
            . '      </li>' . "\n";
@@ -190,11 +204,11 @@ function adminHeader(string $pageTitle): void
 
     if (isModuleEnabled('board') && currentUserHasCapability('content_manage_shared')) {
         echo '      <li>' . "\n"
-           . '        <details role="group" aria-label="Úřední deska">' . "\n"
-           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Úřední deska</summary>' . "\n"
+           . '        <details role="group" aria-label="ĂšĹ™ednĂ­ deska">' . "\n"
+           . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">ĂšĹ™ednĂ­ deska</summary>' . "\n"
            . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/board.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Příspěvky</a></li>' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/board_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/board.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">PĹ™Ă­spÄ›vky</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/board_cats.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Kategorie</a></li>' . "\n"
            . '          </ul>' . "\n"
            . '        </details>' . "\n"
            . '      </li>' . "\n";
@@ -206,15 +220,15 @@ function adminHeader(string $pageTitle): void
            . '          <summary style="cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none">Rezervace</summary>' . "\n"
            . '          <ul style="margin:.2rem 0 0;padding:0;list-style:none">' . "\n"
            . '            <li><a href="' . $baseUrl . '/admin/res_resources.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Zdroje</a></li>' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/res_categories.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Kategorie</a></li>' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/res_bookings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Rezervace</a></li>' . "\n"
-           . '            <li><a href="' . $baseUrl . '/admin/res_locations.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">↳</span> Místa</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/res_categories.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Kategorie</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/res_bookings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> Rezervace</a></li>' . "\n"
+           . '            <li><a href="' . $baseUrl . '/admin/res_locations.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd"><span aria-hidden="true">â†ł</span> MĂ­sta</a></li>' . "\n"
            . '          </ul>' . "\n"
            . '        </details>' . "\n"
            . '      </li>' . "\n";
     }
 
-    echo '      <li role="group" aria-label="Ostatní moduly"><ul style="margin:0;padding:0;list-style:none">' . "\n";
+    echo '      <li role="group" aria-label="OstatnĂ­ moduly"><ul style="margin:0;padding:0;list-style:none">' . "\n";
     foreach ($moduleItems as $item) {
         if (isset($item['module']) && !isModuleEnabled($item['module'])) {
             continue;
@@ -228,22 +242,22 @@ function adminHeader(string $pageTitle): void
        . '    </ul>' . "\n"
        . '  </details>' . "\n"
        . '  <details style="margin:.4rem 0">' . "\n"
-       . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.45rem .35rem;border-radius:4px;list-style:none"><span aria-hidden="true">&#9881;</span> Nastavení</summary>' . "\n"
+       . '    <summary style="cursor:pointer;color:#bbb;font-size:.85rem;padding:.45rem .35rem;border-radius:4px;list-style:none"><span aria-hidden="true">&#9881;</span> NastavenĂ­</summary>' . "\n"
        . '    <ul style="margin:.3rem 0 0;padding:0;list-style:none">' . "\n";
 
     if (currentUserHasCapability('settings_manage')) {
-        echo '      <li><a href="' . $baseUrl . '/admin/settings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Základní nastavení</a></li>' . "\n";
+        echo '      <li><a href="' . $baseUrl . '/admin/settings.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">ZĂˇkladnĂ­ nastavenĂ­</a></li>' . "\n";
         echo '      <li><a href="' . $baseUrl . '/admin/settings_modules.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Moduly</a></li>' . "\n";
-        echo '      <li><a href="' . $baseUrl . '/admin/settings_display.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Nastavení zobrazení</a></li>' . "\n";
+        echo '      <li><a href="' . $baseUrl . '/admin/settings_display.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">NastavenĂ­ zobrazenĂ­</a></li>' . "\n";
     }
     if (isSuperAdmin()) {
-        echo '      <li><a href="' . $baseUrl . '/admin/themes.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Vzhled a šablony</a></li>' . "\n";
+        echo '      <li><a href="' . $baseUrl . '/admin/themes.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Vzhled a Ĺˇablony</a></li>' . "\n";
     }
     if (isModuleEnabled('statistics') && currentUserHasCapability('statistics_view')) {
         echo '      <li><a href="' . $baseUrl . '/admin/statistics.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Statistiky</a></li>' . "\n";
     }
     if (currentUserHasCapability('users_manage')) {
-        echo '      <li><a href="' . $baseUrl . '/admin/users.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">Správa uživatelů</a></li>' . "\n";
+        echo '      <li><a href="' . $baseUrl . '/admin/users.php" style="padding-left:.75rem;font-size:.85rem;color:#ddd">SprĂˇva uĹľivatelĹŻ</a></li>' . "\n";
     }
 
     echo '    </ul>' . "\n"

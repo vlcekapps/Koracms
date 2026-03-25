@@ -130,8 +130,9 @@
           </div>
 
           <div class="field">
-            <label for="notes">Poznámka <small>(nepovinné)</small></label>
-            <textarea id="notes" name="notes" class="form-control"><?= h($formData['notes']) ?></textarea>
+            <label for="notes">Poznámka</label>
+            <textarea id="notes" name="notes" class="form-control" aria-describedby="reservation-notes-help"><?= h($formData['notes']) ?></textarea>
+            <small id="reservation-notes-help" class="help-text">Nepovinné pole.</small>
           </div>
         </fieldset>
 

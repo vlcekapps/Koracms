@@ -99,7 +99,7 @@ adminHeader('Statické stránky');
           </td>
           <td>
             <?php if ($page['status'] === 'pending'): ?>
-              <strong style="color:#c60">Čeká na schválení</strong>
+              <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
             <?php elseif ((int)$page['is_published'] === 1): ?>
               Publikováno
             <?php else: ?>
@@ -116,7 +116,7 @@ adminHeader('Statické stránky');
                 <input type="hidden" name="module" value="pages">
                 <input type="hidden" name="id" value="<?= (int)$page['id'] ?>">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+                <button type="submit" class="btn btn-success">Schválit</button>
               </form>
             <?php endif; ?>
             <?php if ((int)$page['is_published'] === 1): ?>

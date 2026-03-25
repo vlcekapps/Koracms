@@ -76,11 +76,11 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
            value="<?= h((string)$place['name']) ?>">
 
-    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="place-slug-help"
            value="<?= h((string)$place['slug']) ?>">
+    <small id="place-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="place_kind">Typ místa</label>
     <select id="place_kind" name="place_kind">
@@ -91,14 +91,16 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
       <?php endforeach; ?>
     </select>
 
-    <label for="category">Kategorie <small>(nepovinná)</small></label>
+    <label for="category">Kategorie</label>
     <input type="text" id="category" name="category" maxlength="100" list="places-categories"
+           aria-describedby="place-category-help"
            value="<?= h((string)$place['category']) ?>">
     <datalist id="places-categories">
       <?php foreach ($categories as $category): ?>
         <option value="<?= h((string)$category) ?>">
       <?php endforeach; ?>
     </datalist>
+    <small id="place-category-help" class="field-help">Nepovinné pole.</small>
 
     <label for="locality">Lokalita / obec</label>
     <input type="text" id="locality" name="locality" maxlength="255"
@@ -109,16 +111,16 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
            value="<?= h((string)($place['address'] ?? '')) ?>">
 
     <label for="excerpt">Krátké shrnutí / perex</label>
-    <textarea id="excerpt" name="excerpt" rows="3"><?= h((string)($place['excerpt'] ?? '')) ?></textarea>
-    <small style="color:#666">Zobrazí se ve výpisu míst, ve vyhledávání a jako úvod detailu.</small>
+    <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="place-excerpt-help"><?= h((string)($place['excerpt'] ?? '')) ?></textarea>
+    <small id="place-excerpt-help" class="field-help">Zobrazí se ve výpisu míst, ve vyhledávání a jako úvod detailu.</small>
 
     <label for="description">Detailní popis</label>
     <?php if ($useWysiwyg): ?>
       <div id="editor-description" style="min-height:220px"><?= (string)($place['description'] ?? '') ?></div>
       <input type="hidden" id="description" name="description" value="<?= h((string)($place['description'] ?? '')) ?>">
     <?php else: ?>
-      <textarea id="description" name="description" rows="8"><?= h((string)($place['description'] ?? '')) ?></textarea>
-      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+      <textarea id="description" name="description" rows="8" aria-describedby="place-description-help"><?= h((string)($place['description'] ?? '')) ?></textarea>
+      <small id="place-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
   </fieldset>
 
@@ -132,16 +134,16 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
     <div style="display:flex;gap:1rem;flex-wrap:wrap">
       <div style="flex:1 1 12rem">
         <label for="latitude">Zeměpisná šířka</label>
-        <input type="text" id="latitude" name="latitude" inputmode="decimal"
+        <input type="text" id="latitude" name="latitude" inputmode="decimal" aria-describedby="place-coordinates-help"
                value="<?= h((string)($place['latitude'] ?? '')) ?>">
       </div>
       <div style="flex:1 1 12rem">
         <label for="longitude">Zeměpisná délka</label>
-        <input type="text" id="longitude" name="longitude" inputmode="decimal"
+        <input type="text" id="longitude" name="longitude" inputmode="decimal" aria-describedby="place-coordinates-help"
                value="<?= h((string)($place['longitude'] ?? '')) ?>">
       </div>
     </div>
-    <small style="color:#666">Pokud vyplníte obě souřadnice, na veřejné stránce se zobrazí odkaz do map.</small>
+    <small id="place-coordinates-help" class="field-help">Pokud vyplníte obě souřadnice, na veřejné stránce se zobrazí odkaz do map.</small>
 
     <label for="opening_hours">Otevírací doba / praktické poznámky</label>
     <textarea id="opening_hours" name="opening_hours" rows="4"><?= h((string)($place['opening_hours'] ?? '')) ?></textarea>
@@ -158,20 +160,19 @@ adminHeader($id ? 'Upravit místo' : 'Nové místo');
   <fieldset>
     <legend>Obrázek a zobrazení</legend>
 
-    <label for="place_image">
-      Hlavní obrázek
-      <?php if (!empty($place['image_file'])): ?>
-        <small>(aktuální obrázek je už nahraný)</small>
-      <?php endif; ?>
-    </label>
+    <label for="place_image">Hlavní obrázek</label>
     <?php if (!empty($place['image_file'])): ?>
       <div style="margin:.5rem 0">
         <img src="<?= h(placeImageUrl($place)) ?>" alt=""
              style="display:block;max-width:320px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>
-    <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
-    <small style="color:#666">Hodí se pro fotku místa, ilustrační snímek nebo plakát akce v lokalitě.</small>
+    <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+           aria-describedby="place-image-help<?= !empty($place['image_file']) ? ' place-image-current' : '' ?>">
+    <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát akce v lokalitě.</small>
+    <?php if (!empty($place['image_file'])): ?>
+      <small id="place-image-current" class="field-help">Aktuální obrázek je už nahraný.</small>
+    <?php endif; ?>
     <?php if (!empty($place['image_file'])): ?>
       <label for="place_image_delete" style="font-weight:normal;margin-top:.35rem">
         <input type="checkbox" id="place_image_delete" name="place_image_delete" value="1">

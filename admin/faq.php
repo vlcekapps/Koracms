@@ -91,7 +91,7 @@ adminHeader('FAQ');
     </thead>
     <tbody>
     <?php foreach ($faqs as $faq): ?>
-      <tr<?= $faq['status'] === 'pending' ? ' style="background:#fffbe6"' : '' ?>>
+      <tr<?= $faq['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
         <td>
           <strong><?= h((string)$faq['question']) ?></strong><br>
           <small style="color:#555">/faq/<?= h((string)$faq['slug']) ?></small>
@@ -103,7 +103,7 @@ adminHeader('FAQ');
         <td><?= (int)$faq['sort_order'] ?></td>
         <td>
           <?php if ($faq['status'] === 'pending'): ?>
-            <strong style="color:#c60">Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php elseif ((int)$faq['is_published'] === 1): ?>
             Publikováno
           <?php else: ?>
@@ -121,7 +121,7 @@ adminHeader('FAQ');
               <input type="hidden" name="module" value="faq">
               <input type="hidden" name="id" value="<?= (int)$faq['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/faq.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="faq_delete.php" method="post" style="display:inline">
@@ -137,6 +137,5 @@ adminHeader('FAQ');
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <?php adminFooter(); ?>

@@ -98,11 +98,11 @@ adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            value="<?= h((string)$episode['title']) ?>">
 
-    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
-      <small>(unikátní v rámci pořadu)</small>
-    </label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="podcast-episode-slug-help"
            value="<?= h((string)$episode['slug']) ?>">
+    <small id="podcast-episode-slug-help" class="field-help">Slug musí být unikátní v rámci pořadu.</small>
 
     <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1 1 12rem">
@@ -111,30 +111,30 @@ adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
                value="<?= !empty($episode['episode_num']) ? (int)$episode['episode_num'] : '' ?>">
       </div>
       <div style="flex:1 1 12rem">
-        <label for="duration">Délka <small>(např. 42:30)</small></label>
-        <input type="text" id="duration" name="duration" maxlength="20"
+        <label for="duration">Délka</label>
+        <input type="text" id="duration" name="duration" maxlength="20" aria-describedby="podcast-episode-duration-help"
                value="<?= h((string)$episode['duration']) ?>">
+        <small id="podcast-episode-duration-help" class="field-help">Například <code>42:30</code>.</small>
       </div>
       <div style="flex:1 1 16rem">
         <label for="publish_at">Plánované zveřejnění</label>
-        <input type="datetime-local" id="publish_at" name="publish_at" style="width:100%"
+        <input type="datetime-local" id="publish_at" name="publish_at" style="width:100%" aria-describedby="podcast-episode-publish-help"
                value="<?= h($publishInput) ?>">
       </div>
     </div>
-    <small style="color:#666">Prázdné datum znamená zveřejnění ihned po schválení nebo uložení.</small>
+    <small id="podcast-episode-publish-help" class="field-help">Prázdné datum znamená zveřejnění ihned po schválení nebo uložení.</small>
   </fieldset>
 
   <fieldset>
     <legend>Audio a popis</legend>
 
-    <label for="audio_file">
-      Audio soubor
-      <?php if ((string)$episode['audio_file'] !== ''): ?>
-        <small>(aktuální soubor je už nahraný)</small>
-      <?php endif; ?>
-    </label>
-    <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*">
-    <small style="color:#666">Povolené formáty: MP3, OGG, WAV, M4A a AAC.</small>
+    <label for="audio_file">Audio soubor</label>
+    <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*"
+           aria-describedby="podcast-episode-audio-help<?= (string)$episode['audio_file'] !== '' ? ' podcast-episode-audio-current' : '' ?>">
+    <small id="podcast-episode-audio-help" class="field-help">Povolené formáty: MP3, OGG, WAV, M4A a AAC.</small>
+    <?php if ((string)$episode['audio_file'] !== ''): ?>
+      <small id="podcast-episode-audio-current" class="field-help">Aktuální soubor je už nahraný.</small>
+    <?php endif; ?>
     <?php if ((string)$episode['audio_file'] !== ''): ?>
       <label for="audio_file_delete" style="font-weight:normal;margin-top:.5rem">
         <input type="checkbox" id="audio_file_delete" name="audio_file_delete" value="1">
@@ -143,19 +143,19 @@ adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
     <?php endif; ?>
 
     <label for="audio_url">Externí audio odkaz</label>
-    <input type="url" id="audio_url" name="audio_url" maxlength="500"
+    <input type="url" id="audio_url" name="audio_url" maxlength="500" aria-describedby="podcast-episode-audio-url-help"
            placeholder="https://example.com/episode.mp3"
            value="<?= h((string)$episode['audio_url']) ?>">
-    <small style="color:#666">Hodí se pro externí hosting nebo embedovatelný přímý audio soubor.</small>
+    <small id="podcast-episode-audio-url-help" class="field-help">Hodí se pro externí hosting nebo embedovatelný přímý audio soubor.</small>
 
     <label for="description">Popis epizody</label>
     <?php if ($useWysiwyg): ?>
       <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
-      <textarea id="description" name="description" rows="10" class="visually-hidden"><?= h((string)$episode['description']) ?></textarea>
-      <small style="color:#666">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
+      <textarea id="description" name="description" rows="10" class="visually-hidden" aria-describedby="podcast-episode-description-help"><?= h((string)$episode['description']) ?></textarea>
+      <small id="podcast-episode-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
-      <textarea id="description" name="description" rows="10"><?= h((string)$episode['description']) ?></textarea>
-      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+      <textarea id="description" name="description" rows="10" aria-describedby="podcast-episode-description-help"><?= h((string)$episode['description']) ?></textarea>
+      <small id="podcast-episode-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
   </fieldset>
 
@@ -168,7 +168,6 @@ adminHeader($id !== null ? 'Upravit epizodu' : 'Nová epizoda');
   </div>
 </form>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <script>
 (function () {

@@ -79,11 +79,11 @@ adminHeader($id ? 'Upravit položku modulu' : 'Nová položka modulu');
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            value="<?= h((string)$document['title']) ?>">
 
-    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="board-slug-help"
            value="<?= h((string)$document['slug']) ?>">
+    <small id="board-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="board_type">Typ oznámení</label>
     <select id="board_type" name="board_type">
@@ -105,16 +105,17 @@ adminHeader($id ? 'Upravit položku modulu' : 'Nová položka modulu');
     </select>
 
     <label for="excerpt">Krátký text / perex</label>
-    <textarea id="excerpt" name="excerpt" rows="3"><?= h((string)($document['excerpt'] ?? '')) ?></textarea>
-    <small style="color:#666">Zobrazí se ve výpisu a na homepage. Hodí se pro parte, ztráty a nálezy i krátká oznámení.</small>
+    <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="board-excerpt-help"><?= h((string)($document['excerpt'] ?? '')) ?></textarea>
+    <small id="board-excerpt-help" class="field-help">Zobrazí se ve výpisu a na homepage. Hodí se pro parte, ztráty a nálezy i krátká oznámení.</small>
 
-    <label for="description">Detailní popis <small>(nepovinný)</small></label>
+    <label for="description">Detailní popis</label>
     <?php if ($useWysiwyg): ?>
       <div id="editor-description" style="min-height:180px"><?= (string)($document['description'] ?? '') ?></div>
-      <input type="hidden" id="description" name="description" value="<?= h((string)($document['description'] ?? '')) ?>">
+      <input type="hidden" id="description" name="description" aria-describedby="board-description-help" value="<?= h((string)($document['description'] ?? '')) ?>">
+      <small id="board-description-help" class="field-help">Nepovinné pole pro detail položky.</small>
     <?php else: ?>
-      <textarea id="description" name="description" rows="6"><?= h((string)($document['description'] ?? '')) ?></textarea>
-      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+      <textarea id="description" name="description" rows="6" aria-describedby="board-description-help"><?= h((string)($document['description'] ?? '')) ?></textarea>
+      <small id="board-description-help" class="field-help">Nepovinné pole. Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
   </fieldset>
 
@@ -125,34 +126,34 @@ adminHeader($id ? 'Upravit položku modulu' : 'Nová položka modulu');
     <input type="date" id="posted_date" name="posted_date" required aria-required="true"
            value="<?= h((string)$document['posted_date']) ?>">
 
-    <label for="removal_date">Datum sejmutí <small>(prázdné = bez omezení)</small></label>
-    <input type="date" id="removal_date" name="removal_date"
+    <label for="removal_date">Datum sejmutí</label>
+    <input type="date" id="removal_date" name="removal_date" aria-describedby="board-removal-date-help"
            value="<?= h((string)($document['removal_date'] ?? '')) ?>">
+    <small id="board-removal-date-help" class="field-help">Prázdné pole znamená bez omezení.</small>
 
     <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_pinned" value="1"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
+      <input type="checkbox" name="is_pinned" value="1" aria-describedby="board-pinned-help"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
       Připnout mezi důležité položky
     </label>
-    <small style="color:#666">Připnuté položky se zobrazují výš ve výpisu a mohou lépe fungovat i v homepage bloku.</small>
+    <small id="board-pinned-help" class="field-help">Připnuté položky se zobrazují výš ve výpisu a mohou lépe fungovat i v homepage bloku.</small>
   </fieldset>
 
   <fieldset>
     <legend>Obrázek a kontakt</legend>
 
-    <label for="board_image">
-      Obrázek oznámení
-      <?php if (!empty($document['image_file'])): ?>
-        <small>(aktuální obrázek je už nahraný)</small>
-      <?php endif; ?>
-    </label>
+    <label for="board_image">Obrázek oznámení</label>
     <?php if (!empty($document['image_file'])): ?>
       <div style="margin:.5rem 0">
         <img src="<?= h(boardImageUrl($document)) ?>" alt=""
              style="display:block;max-width:280px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>
-    <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
-    <small style="color:#666">Vhodné pro parte, ztracená zvířata, plakáty nebo ilustrační fotku oznámení.</small>
+    <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+           aria-describedby="board-image-help<?= !empty($document['image_file']) ? ' board-image-current' : '' ?>">
+    <small id="board-image-help" class="field-help">Vhodné pro parte, ztracená zvířata, plakáty nebo ilustrační fotku oznámení.</small>
+    <?php if (!empty($document['image_file'])): ?>
+      <small id="board-image-current" class="field-help">Aktuální obrázek je už nahraný.</small>
+    <?php endif; ?>
     <?php if (!empty($document['image_file'])): ?>
       <label for="board_image_delete" style="font-weight:normal;margin-top:.35rem">
         <input type="checkbox" id="board_image_delete" name="board_image_delete" value="1">
@@ -176,17 +177,14 @@ adminHeader($id ? 'Upravit položku modulu' : 'Nová položka modulu');
   <fieldset>
     <legend>Příloha a zobrazení</legend>
 
-    <label for="file">
-      Soubor přílohy
-      <?php if (!empty($document['original_name'])): ?>
-        <small>(aktuální: <strong><?= h((string)$document['original_name']) ?></strong>
-          <?php if ((int)$document['file_size'] > 0): ?>(<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>
-          – nahrajte nový pro nahrazení)</small>
-      <?php endif; ?>
-    </label>
+    <label for="file">Soubor přílohy</label>
     <input type="file" id="file" name="file"
-           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.txt">
-    <small style="color:#666">Povolené formáty: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ODT, ODS, ODP, ZIP, TXT</small>
+           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.txt"
+           aria-describedby="board-file-help<?= !empty($document['original_name']) ? ' board-file-current' : '' ?>">
+    <small id="board-file-help" class="field-help">Povolené formáty: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ODT, ODS, ODP, ZIP, TXT.</small>
+    <?php if (!empty($document['original_name'])): ?>
+      <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor pro nahrazení.</small>
+    <?php endif; ?>
 
     <label for="sort_order">Pořadí</label>
     <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"

@@ -85,11 +85,11 @@ $err = trim($_GET['err'] ?? '');
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
            value="<?= h($resource['name'] ?? '') ?>">
 
-    <label for="slug">Slug (URL identifikátor) <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug (URL identifikátor) <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
+           aria-describedby="resource-slug-help"
            value="<?= h($resource['slug'] ?? '') ?>">
+    <small id="resource-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4"><?= h($resource['description'] ?? '') ?></textarea>
@@ -103,11 +103,11 @@ $err = trim($_GET['err'] ?? '');
       <?php endforeach; ?>
     </select>
 
-    <label for="capacity">Max. osob na jednu rezervaci <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span>
-      <small style="font-weight:normal;color:#666">– kolik lidí může přijít v rámci jedné rezervace (např. rodina, skupina)</small>
-    </label>
+    <label for="capacity">Max. osob na jednu rezervaci <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="number" id="capacity" name="capacity" min="1" required aria-required="true" style="width:8rem"
+           aria-describedby="resource-capacity-help"
            value="<?= (int)($resource['capacity'] ?? 1) ?>">
+    <small id="resource-capacity-help" class="field-help">Kolik lidí může přijít v rámci jedné rezervace, například rodina nebo skupina.</small>
 
     <fieldset style="border:1px solid #ddd;padding:.5rem .75rem;margin-top:1rem">
       <legend>Místa konání</legend>
@@ -119,7 +119,7 @@ $err = trim($_GET['err'] ?? '');
             <input type="checkbox" id="loc_<?= (int)$loc['id'] ?>" name="location_ids[]" value="<?= (int)$loc['id'] ?>"
                    <?= in_array((int)$loc['id'], $selectedLocations) ? 'checked' : '' ?>>
             <label for="loc_<?= (int)$loc['id'] ?>" style="display:inline;font-weight:normal">
-              <?= h($loc['name']) ?><?= $loc['address'] !== '' ? ' <small style="color:#666">(' . h($loc['address']) . ')</small>' : '' ?>
+              <?= h($loc['name']) ?><?= $loc['address'] !== '' ? ' <span style="color:#666">(' . h($loc['address']) . ')</span>' : '' ?>
             </label>
           </div>
         <?php endforeach; ?>
@@ -135,22 +135,22 @@ $err = trim($_GET['err'] ?? '');
     <fieldset style="border:none;padding:0;margin:1rem 0 0">
       <legend>Režim slotů <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></legend>
       <div style="margin:.3rem 0">
-        <input type="radio" id="mode_slots" name="slot_mode" value="slots"
+        <input type="radio" id="mode_slots" name="slot_mode" value="slots" aria-describedby="mode-slots-help"
                <?= ($resource['slot_mode'] ?? 'slots') === 'slots' ? 'checked' : '' ?>>
-        <label for="mode_slots" style="display:inline;font-weight:normal">Předdefinované sloty
-          <small>– přesné časové bloky pro každý den (např. prohlídky muzea, vyhlídkové jízdy / lety)</small></label>
+        <label for="mode_slots" style="display:inline;font-weight:normal">Předdefinované sloty</label>
+        <small id="mode-slots-help" class="field-help" style="margin:.15rem 0 0 1.6rem">Přesné časové bloky pro každý den, například prohlídky muzea nebo vyhlídkové jízdy.</small>
       </div>
       <div style="margin:.3rem 0">
-        <input type="radio" id="mode_range" name="slot_mode" value="range"
+        <input type="radio" id="mode_range" name="slot_mode" value="range" aria-describedby="mode-range-help"
                <?= ($resource['slot_mode'] ?? '') === 'range' ? 'checked' : '' ?>>
-        <label for="mode_range" style="display:inline;font-weight:normal">Časový rozsah
-          <small>– uživatel zadá začátek a konec (např. pronájem sálu, sportoviště)</small></label>
+        <label for="mode_range" style="display:inline;font-weight:normal">Časový rozsah</label>
+        <small id="mode-range-help" class="field-help" style="margin:.15rem 0 0 1.6rem">Uživatel zadá začátek a konec, například u pronájmu sálu nebo sportoviště.</small>
       </div>
       <div style="margin:.3rem 0">
-        <input type="radio" id="mode_duration" name="slot_mode" value="duration"
+        <input type="radio" id="mode_duration" name="slot_mode" value="duration" aria-describedby="mode-duration-help"
                <?= ($resource['slot_mode'] ?? '') === 'duration' ? 'checked' : '' ?>>
-        <label for="mode_duration" style="display:inline;font-weight:normal">Délka
-          <small>– uživatel zadá začátek, délka je fixní (např. masáž 60 min, tenisový kurt 90 min)</small></label>
+        <label for="mode_duration" style="display:inline;font-weight:normal">Délka</label>
+        <small id="mode-duration-help" class="field-help" style="margin:.15rem 0 0 1.6rem">Uživatel zadá začátek a délka je fixní, například masáž na 60 minut nebo tenisový kurt na 90 minut.</small>
       </div>
     </fieldset>
 
@@ -160,45 +160,43 @@ $err = trim($_GET['err'] ?? '');
              value="<?= (int)($resource['slot_duration_min'] ?? 60) ?>">
     </div>
 
-    <label for="min_advance_hours">Nejpozději rezervovat (hodin předem)
-      <small style="font-weight:normal;color:#666">– kolik hodin před začátkem je třeba rezervovat nejpozději</small>
-    </label>
+    <label for="min_advance_hours">Nejpozději rezervovat (hodin předem)</label>
     <input type="number" id="min_advance_hours" name="min_advance_hours" min="0" style="width:8rem"
+           aria-describedby="resource-min-advance-help"
            value="<?= (int)($resource['min_advance_hours'] ?? 1) ?>">
+    <small id="resource-min-advance-help" class="field-help">Kolik hodin před začátkem je třeba rezervovat nejpozději.</small>
 
-    <label for="max_advance_days">Nejdříve rezervovat (dní dopředu)
-      <small style="font-weight:normal;color:#666">– jak daleko do budoucna lze rezervaci vytvořit</small>
-    </label>
+    <label for="max_advance_days">Nejdříve rezervovat (dní dopředu)</label>
     <input type="number" id="max_advance_days" name="max_advance_days" min="1" style="width:8rem"
+           aria-describedby="resource-max-advance-help"
            value="<?= (int)($resource['max_advance_days'] ?? 30) ?>">
+    <small id="resource-max-advance-help" class="field-help">Jak daleko do budoucna lze rezervaci vytvořit.</small>
 
-    <label for="cancellation_hours">Bezplatné zrušení do (hodin předem)
-      <small style="font-weight:normal;color:#666">– kolik hodin před začátkem může zákazník ještě zrušit; 0 = lze zrušit kdykoli</small>
-    </label>
+    <label for="cancellation_hours">Bezplatné zrušení do (hodin předem)</label>
     <input type="number" id="cancellation_hours" name="cancellation_hours" min="0" style="width:8rem"
+           aria-describedby="resource-cancellation-help"
            value="<?= (int)($resource['cancellation_hours'] ?? 24) ?>">
+    <small id="resource-cancellation-help" class="field-help">Kolik hodin před začátkem může zákazník ještě zrušit. Hodnota 0 znamená, že lze zrušit kdykoli.</small>
 
     <div style="margin-top:1rem">
-      <input type="checkbox" id="requires_approval" name="requires_approval" value="1"
+      <input type="checkbox" id="requires_approval" name="requires_approval" value="1" aria-describedby="resource-requires-approval-help"
              <?= !empty($resource['requires_approval']) ? 'checked' : '' ?>>
-      <label for="requires_approval" style="display:inline;font-weight:normal">Vyžaduje schválení
-        <small style="font-weight:normal;color:#666">– rezervace bude čekat na ruční potvrzení administrátorem</small>
-      </label>
+      <label for="requires_approval" style="display:inline;font-weight:normal">Vyžaduje schválení</label>
     </div>
+    <small id="resource-requires-approval-help" class="field-help" style="margin-top:.2rem">Rezervace bude čekat na ruční potvrzení administrátorem.</small>
 
     <div style="margin-top:.5rem">
-      <input type="checkbox" id="allow_guests" name="allow_guests" value="1"
+      <input type="checkbox" id="allow_guests" name="allow_guests" value="1" aria-describedby="resource-allow-guests-help"
              <?= !empty($resource['allow_guests']) ? 'checked' : '' ?>>
-      <label for="allow_guests" style="display:inline;font-weight:normal">Povolit rezervace bez registrace
-        <small style="font-weight:normal;color:#666">– host vyplní jméno, email a telefon přímo ve formuláři</small>
-      </label>
+      <label for="allow_guests" style="display:inline;font-weight:normal">Povolit rezervace bez registrace</label>
     </div>
+    <small id="resource-allow-guests-help" class="field-help" style="margin-top:.2rem">Host vyplní jméno, e-mail a telefon přímo ve formuláři.</small>
 
-    <label for="max_concurrent">Max. rezervací ve stejném čase
-      <small style="font-weight:normal;color:#666">– kolik nezávislých skupin/osob si může rezervovat stejný slot (např. masáž = 1, prohlídka = 10)</small>
-    </label>
+    <label for="max_concurrent">Max. rezervací ve stejném čase</label>
     <input type="number" id="max_concurrent" name="max_concurrent" min="1" style="width:8rem"
+           aria-describedby="resource-max-concurrent-help"
            value="<?= (int)($resource['max_concurrent'] ?? 1) ?>">
+    <small id="resource-max-concurrent-help" class="field-help">Kolik nezávislých skupin nebo osob si může rezervovat stejný slot, například masáž = 1 a prohlídka = 10.</small>
   </fieldset>
 
   <!-- C) Opening hours -->

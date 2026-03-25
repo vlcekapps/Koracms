@@ -133,7 +133,7 @@ adminHeader('Ke stažení');
         <td><?= $download['author_name'] ? h((string)$download['author_name']) : '<em>–</em>' ?></td>
         <td>
           <?php if ($download['status'] === 'pending'): ?>
-            <strong style="color:#c60">Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php elseif ((int)$download['is_published'] === 1): ?>
             Publikováno
           <?php else: ?>
@@ -151,7 +151,7 @@ adminHeader('Ke stažení');
               <input type="hidden" name="module" value="downloads">
               <input type="hidden" name="id" value="<?= (int)$download['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/downloads.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="download_delete.php" method="post" style="display:inline">
@@ -167,6 +167,6 @@ adminHeader('Ke stažení');
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 
 <?php adminFooter(); ?>

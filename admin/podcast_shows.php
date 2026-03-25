@@ -84,7 +84,7 @@ adminHeader('Podcasty');
             <?= (int)$show['episode_count'] ?> epizod
           </a>
           <?php if ((int)($show['pending_episode_count'] ?? 0) > 0): ?>
-            <br><small style="color:#c60"><?= (int)$show['pending_episode_count'] ?> čeká na schválení</small>
+            <br><small class="status-badge status-badge--pending"><?= (int)$show['pending_episode_count'] ?> čeká na schválení</small>
           <?php endif; ?>
         </td>
         <td class="actions">
@@ -107,6 +107,5 @@ adminHeader('Podcasty');
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <?php adminFooter(); ?>

@@ -82,8 +82,8 @@ adminHeader($pageTitle);
 
       <label for="slug">Slug adresy</label>
       <input type="text" id="slug" name="slug" maxlength="255"
-             value="<?= h((string)$photo['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
-      <small>Veřejná adresa bude vypadat například jako <code>/gallery/photo/moje-fotografie</code>.</small>
+             value="<?= h((string)$photo['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false" aria-describedby="gallery-photo-slug-help<?= $formError !== '' ? ' form-errors' : '' ?>">
+      <small id="gallery-photo-slug-help" class="field-help">Veřejná adresa bude vypadat například jako <code>/gallery/photo/moje-fotografie</code>.</small>
 
       <label for="sort_order">Pořadí</label>
       <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">
@@ -131,13 +131,11 @@ adminHeader($pageTitle);
     <fieldset>
       <legend>Nahrání fotografií</legend>
 
-      <label for="photos">
-        Vyberte fotografie
-        <small>(JPEG, PNG, GIF, WebP; max. 10 MB / soubor; lze vybrat více najednou)</small>
-      </label>
+      <label for="photos">Vyberte fotografie</label>
       <input type="file" id="photos" name="photos[]"
              accept="image/jpeg,image/png,image/gif,image/webp"
-             multiple required aria-required="true">
+             multiple required aria-required="true" aria-describedby="gallery-photos-help">
+      <small id="gallery-photos-help" class="field-help">Povolené formáty: JPEG, PNG, GIF a WebP. Maximálně 10 MB na soubor, lze vybrat více fotografií najednou.</small>
 
       <p style="margin:.75rem 0 0;color:#555">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
 

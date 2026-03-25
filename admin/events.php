@@ -90,7 +90,7 @@ adminHeader('Události');
         <td><?= h((string)($event['location'] ?: '–')) ?></td>
         <td>
           <?php if ($event['status'] === 'pending'): ?>
-            <strong style="color:#c60"><span aria-hidden="true">⌛</span> Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending"><span aria-hidden="true">⌛</span> Čeká na schválení</strong>
           <?php elseif ((int)$event['is_published'] === 1): ?>
             Publikováno
           <?php else: ?>
@@ -108,7 +108,7 @@ adminHeader('Události');
               <input type="hidden" name="module" value="events">
               <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/events.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="event_delete.php" method="post" style="display:inline">
@@ -124,6 +124,6 @@ adminHeader('Události');
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 
 <?php adminFooter(); ?>

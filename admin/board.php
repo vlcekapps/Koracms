@@ -129,7 +129,7 @@ adminHeader('Úřední deska');
         <td><?= $document['author_name'] ? h((string)$document['author_name']) : '<em>-</em>' ?></td>
         <td>
           <?php if ($document['status'] === 'pending'): ?>
-            <strong style="color:#c60"><span aria-hidden="true">⟳</span> Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending"><span aria-hidden="true">⟳</span> Čeká na schválení</strong>
           <?php elseif (!(int)$document['is_published']): ?>
             <strong>Skryto</strong>
           <?php elseif (!empty($document['removal_date']) && (string)$document['removal_date'] < date('Y-m-d')): ?>
@@ -149,7 +149,7 @@ adminHeader('Úřední deska');
               <input type="hidden" name="module" value="board">
               <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/board.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="board_delete.php" method="post" style="display:inline">
@@ -164,6 +164,6 @@ adminHeader('Úřední deska');
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 
 <?php adminFooter(); ?>

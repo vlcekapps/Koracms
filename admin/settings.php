@@ -200,8 +200,8 @@ adminHeader('Základní nastavení');
     <legend>Úvodní text webu</legend>
     <p>Zobrazí se na úvodní stránce webu nad novinkami a články. Nechte prázdné, pokud úvodní text nechcete.</p>
     <label for="home_intro" class="sr-only">Úvodní text</label>
-    <textarea id="home_intro" name="home_intro" rows="6"><?= h(getSetting('home_intro', '')) ?></textarea>
-    <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+    <textarea id="home_intro" name="home_intro" rows="6" aria-describedby="home-intro-help"><?= h(getSetting('home_intro', '')) ?></textarea>
+    <small id="home-intro-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
   </fieldset>
 
   <fieldset>
@@ -220,8 +220,9 @@ adminHeader('Základní nastavení');
 
     <label for="board_public_label">Veřejný název modulu Úřední deska / Vývěska</label>
     <input type="text" id="board_public_label" name="board_public_label" maxlength="60"
+           aria-describedby="board-public-label-help"
            value="<?= h($boardPublicLabel) ?>">
-    <small style="color:#666">Používá se ve veřejné navigaci, na výpisu modulu a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
+    <small id="board-public-label-help" class="field-help">Používá se ve veřejné navigaci, na výpisu modulu a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
   </fieldset>
 
   <fieldset>
@@ -236,19 +237,19 @@ adminHeader('Základní nastavení');
       </div>
     <?php endforeach; ?>
     <div style="margin-top:1rem">
-      <input type="checkbox" id="apply_site_profile" name="apply_site_profile" value="1"
+      <input type="checkbox" id="apply_site_profile" name="apply_site_profile" value="1" aria-describedby="apply-site-profile-help"
              <?= isset($_POST['apply_site_profile']) ? 'checked' : '' ?>>
       <label for="apply_site_profile" style="display:inline;font-weight:normal">
         Použít doporučené moduly, pořadí navigace a vzhled pro zvolený profil
       </label>
     </div>
-    <small style="color:#666">Bez zaškrtnutí se uloží jen zvolený profil webu a stávající konfigurace se nepřepíše. U vlastního profilu zůstane konfigurace beze změny i při použití této volby.</small>
+    <small id="apply-site-profile-help" class="field-help">Bez zaškrtnutí se uloží jen zvolený profil webu a stávající konfigurace se nepřepíše. U vlastního profilu zůstane konfigurace beze změny i při použití této volby.</small>
   </fieldset>
 
   <fieldset>
     <legend>Autor na úvodní stránce</legend>
     <label for="home_author_user_id">Hlavní autor pro blok O autorovi / O mně</label>
-    <select id="home_author_user_id" name="home_author_user_id">
+    <select id="home_author_user_id" name="home_author_user_id" aria-describedby="home-author-help">
       <option value="0">Automaticky podle veřejných autorů</option>
       <?php foreach ($homeAuthorOptions as $author): ?>
         <option value="<?= (int)$author['id'] ?>" <?= $selectedHomeAuthorId === (int)$author['id'] ? 'selected' : '' ?>>
@@ -257,9 +258,9 @@ adminHeader('Základní nastavení');
       <?php endforeach; ?>
     </select>
     <?php if ($homeAuthorOptions === []): ?>
-      <small style="color:#666">Zatím není k dispozici žádný veřejný autor. Zapnete ho v Mém profilu nebo ve správě spolupracovníků.</small>
+      <small id="home-author-help" class="field-help">Zatím není k dispozici žádný veřejný autor. Zapnete ho v Mém profilu nebo ve správě spolupracovníků.</small>
     <?php else: ?>
-      <small style="color:#666">
+      <small id="home-author-help" class="field-help">
         Když pole necháte na automatice a bude existovat právě jeden veřejný autor, homepage použije jeho profil sama.
         Pokud bude veřejných autorů více, blok zůstane bez vybrané osoby skrytý.
       </small>
@@ -340,8 +341,9 @@ adminHeader('Základní nastavení');
 
     <label for="comment_close_days">Uzavřít komentáře po kolika dnech od publikace článku</label>
     <input type="number" id="comment_close_days" name="comment_close_days" min="0" max="3650"
+           aria-describedby="comment-close-days-help"
            value="<?= h(getSetting('comment_close_days', '0')) ?>">
-    <small style="color:#666">Hodnota 0 znamená, že se komentáře automaticky neuzavírají.</small>
+    <small id="comment-close-days-help" class="field-help">Hodnota 0 znamená, že se komentáře automaticky neuzavírají.</small>
 
     <div style="margin-top:1rem">
       <input type="checkbox" id="comment_notify_admin" name="comment_notify_admin" value="1"
@@ -351,27 +353,28 @@ adminHeader('Základní nastavení');
       </label>
     </div>
 
-    <label for="comment_notify_email">E-mail pro upozornění na komentáře <small>(nepovinný)</small></label>
+    <label for="comment_notify_email">E-mail pro upozornění na komentáře</label>
     <input type="email" id="comment_notify_email" name="comment_notify_email"
+           aria-describedby="comment-notify-email-help"
            value="<?= h(getSetting('comment_notify_email', '')) ?>">
-    <small style="color:#666">Když pole necháte prázdné, použije se kontaktní e-mail webu.</small>
+    <small id="comment-notify-email-help" class="field-help">Nepovinné pole. Když ho necháte prázdné, použije se kontaktní e-mail webu.</small>
 
     <div style="margin-top:1rem">
-      <input type="checkbox" id="comment_notify_author_approve" name="comment_notify_author_approve" value="1"
+      <input type="checkbox" id="comment_notify_author_approve" name="comment_notify_author_approve" value="1" aria-describedby="comment-notify-author-help"
              <?= getSetting('comment_notify_author_approve', '0') === '1' ? 'checked' : '' ?>>
       <label for="comment_notify_author_approve" style="display:inline;font-weight:normal">
         Poslat autorovi e-mail, když jeho komentář schválíte
       </label>
     </div>
-    <small style="color:#666">Použije se stejná e-mailová vrstva jako u registrace, resetu hesla a rezervací. Odesílá se jen tehdy, když autor vyplnil platný e-mail.</small>
+    <small id="comment-notify-author-help" class="field-help">Použije se stejná e-mailová vrstva jako u registrace, resetu hesla a rezervací. Odesílá se jen tehdy, když autor vyplnil platný e-mail.</small>
 
     <label for="comment_blocked_emails">Blokované e-maily a domény</label>
-    <textarea id="comment_blocked_emails" name="comment_blocked_emails" rows="4"><?= h(getSetting('comment_blocked_emails', '')) ?></textarea>
-    <small style="color:#666">Jeden záznam na řádek. Použít můžete konkrétní adresu `spam@example.com` nebo celou doménu `@example.com`.</small>
+    <textarea id="comment_blocked_emails" name="comment_blocked_emails" rows="4" aria-describedby="comment-blocked-emails-help"><?= h(getSetting('comment_blocked_emails', '')) ?></textarea>
+    <small id="comment-blocked-emails-help" class="field-help">Jeden záznam na řádek. Použít můžete konkrétní adresu <code>spam@example.com</code> nebo celou doménu <code>@example.com</code>.</small>
 
     <label for="comment_spam_words">Zakázané fráze v komentářích</label>
-    <textarea id="comment_spam_words" name="comment_spam_words" rows="4"><?= h(getSetting('comment_spam_words', '')) ?></textarea>
-    <small style="color:#666">Jeden výraz na řádek. Když se objeví ve jméně autora nebo v textu komentáře, komentář skončí ve spamu.</small>
+    <textarea id="comment_spam_words" name="comment_spam_words" rows="4" aria-describedby="comment-spam-words-help"><?= h(getSetting('comment_spam_words', '')) ?></textarea>
+    <small id="comment-spam-words-help" class="field-help">Jeden výraz na řádek. Když se objeví ve jméně autora nebo v textu komentáře, komentář skončí ve spamu.</small>
   </fieldset>
   <?php endif; ?>
 
@@ -380,6 +383,7 @@ adminHeader('Základní nastavení');
     <p style="margin-top:.5rem">
       <label style="font-weight:normal">
         <input type="radio" name="content_editor" value="html"
+               aria-describedby="content-editor-help"
                <?= getSetting('content_editor', 'html') === 'html' ? 'checked' : '' ?>>
         Čisté HTML (textarea) – doporučená a přístupnější volba
       </label>
@@ -387,11 +391,12 @@ adminHeader('Základní nastavení');
     <p>
       <label style="font-weight:normal">
         <input type="radio" name="content_editor" value="wysiwyg"
+               aria-describedby="content-editor-help"
                <?= getSetting('content_editor', 'html') === 'wysiwyg' ? 'checked' : '' ?>>
         WYSIWYG editor (Quill) – volitelný vizuální editor pro uživatele bez asistivních technologií
       </label>
     </p>
-    <small style="color:#666">Pokud používáte čtečku obrazovky nebo jinou asistivní technologii, doporučujeme ponechat čisté HTML (textarea).</small>
+    <small id="content-editor-help" class="field-help">Pokud používáte čtečku obrazovky nebo jinou asistivní technologii, doporučujeme ponechat čisté HTML (textarea).</small>
   </fieldset>
 
   <fieldset>
@@ -412,29 +417,36 @@ adminHeader('Základní nastavení');
 
   <fieldset>
     <legend>Favicon a logo</legend>
-    <label for="site_favicon">
-      Favicon <small>(ICO, PNG nebo SVG, max. 256 KB)</small>
-      <?php $fav = getSetting('site_favicon', ''); ?>
-      <?php if ($fav !== ''): ?>
-        – aktuální: <img src="<?= BASE_URL ?>/uploads/site/<?= h($fav) ?>"
-                         alt="favicon" style="height:20px;vertical-align:middle">
-      <?php endif; ?>
-    </label>
-    <input type="file" id="site_favicon" name="site_favicon" accept=".ico,.png,.svg,image/x-icon,image/png,image/svg+xml">
+    <label for="site_favicon">Favicon</label>
+    <input type="file" id="site_favicon" name="site_favicon" accept=".ico,.png,.svg,image/x-icon,image/png,image/svg+xml"
+           aria-describedby="site-favicon-help<?= getSetting('site_favicon', '') !== '' ? ' site-favicon-current' : '' ?>">
+    <small id="site-favicon-help" class="field-help">Povolené formáty: ICO, PNG nebo SVG. Maximální velikost je 256 KB.</small>
+    <?php $fav = getSetting('site_favicon', ''); ?>
+    <?php if ($fav !== ''): ?>
+      <div id="site-favicon-current" class="field-help">
+        Aktuální favicon:
+        <img src="<?= BASE_URL ?>/uploads/site/<?= h($fav) ?>"
+             alt="Aktuální favicon" style="height:20px;vertical-align:middle">
+      </div>
+    <?php endif; ?>
 
-    <label for="site_logo">
-      Logo webu <small>(JPEG, PNG, WebP nebo SVG, max. 2 MB)</small>
-      <?php $logo = getSetting('site_logo', ''); ?>
-      <?php if ($logo !== ''): ?>
-        – aktuální: <img src="<?= BASE_URL ?>/uploads/site/<?= h($logo) ?>"
-                         alt="logo" style="max-height:40px;vertical-align:middle">
-      <?php endif; ?>
-    </label>
-    <input type="file" id="site_logo" name="site_logo" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
+    <label for="site_logo">Logo webu</label>
+    <input type="file" id="site_logo" name="site_logo" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+           aria-describedby="site-logo-help<?= getSetting('site_logo', '') !== '' ? ' site-logo-current' : '' ?>">
+    <small id="site-logo-help" class="field-help">Povolené formáty: JPEG, PNG, WebP nebo SVG. Maximální velikost je 2 MB.</small>
+    <?php $logo = getSetting('site_logo', ''); ?>
+    <?php if ($logo !== ''): ?>
+      <div id="site-logo-current" class="field-help">
+        Aktuální logo:
+        <img src="<?= BASE_URL ?>/uploads/site/<?= h($logo) ?>"
+             alt="Aktuální logo webu" style="max-height:40px;vertical-align:middle">
+      </div>
+    <?php endif; ?>
 
-    <label for="og_image_default">Výchozí OG obrázek <small>(relativní cesta v uploads/, např. site/og.jpg)</small></label>
-    <input type="text" id="og_image_default" name="og_image_default"
+    <label for="og_image_default">Výchozí OG obrázek</label>
+    <input type="text" id="og_image_default" name="og_image_default" aria-describedby="og-image-default-help"
            value="<?= h(getSetting('og_image_default', '')) ?>">
+    <small id="og-image-default-help" class="field-help">Zadejte relativní cestu v <code>uploads/</code>, například <code>site/og.jpg</code>.</small>
   </fieldset>
 
   <fieldset>
@@ -455,12 +467,13 @@ adminHeader('Základní nastavení');
   <fieldset>
     <legend>Režim údržby</legend>
     <div>
-      <input type="checkbox" id="maintenance_mode" name="maintenance_mode" value="1"
+      <input type="checkbox" id="maintenance_mode" name="maintenance_mode" value="1" aria-describedby="maintenance-mode-help"
              <?= getSetting('maintenance_mode', '0') === '1' ? 'checked' : '' ?>>
       <label for="maintenance_mode" style="display:inline;font-weight:normal">
-        Zapnout režim údržby <small>(přihlášení admini vidí web normálně)</small>
+        Zapnout režim údržby
       </label>
     </div>
+    <small id="maintenance-mode-help" class="field-help">Přihlášení administrátoři vidí web normálně.</small>
     <label for="maintenance_text">Zpráva pro návštěvníky</label>
     <textarea id="maintenance_text" name="maintenance_text"
               rows="2"><?= h(getSetting('maintenance_text',

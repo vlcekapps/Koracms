@@ -48,11 +48,11 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            value="<?= h((string)($event['title'] ?? '')) ?>">
 
-    <label for="slug">Slug (URL události) <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug (URL události) <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="event-slug-help"
            value="<?= h((string)($event['slug'] ?? '')) ?>">
+    <small id="event-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
   </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
@@ -64,24 +64,27 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
                value="<?= $event ? h(date('Y-m-d', strtotime((string)$event['event_date']))) : '' ?>">
       </div>
       <div>
-        <label for="event_time">Čas <small>(nepovinný)</small></label>
+        <label for="event_time">Čas</label>
         <input type="time" id="event_time" name="event_time" style="width:auto;display:block;margin-top:.2rem"
+               aria-describedby="event-time-help"
                value="<?= $event ? h(date('H:i', strtotime((string)$event['event_date']))) : '' ?>">
+        <small id="event-time-help" class="field-help">Nepovinné pole.</small>
       </div>
     </div>
   </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
-    <legend>Konec akce <small>(nepovinné)</small></legend>
+    <legend>Konec akce</legend>
+    <small id="event-end-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>
     <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
       <div>
         <label for="event_end_date">Datum</label>
-        <input type="date" id="event_end_date" name="event_end_date" style="width:auto;display:block;margin-top:.2rem"
+        <input type="date" id="event_end_date" name="event_end_date" style="width:auto;display:block;margin-top:.2rem" aria-describedby="event-end-help"
                value="<?= !empty($event['event_end']) ? h(date('Y-m-d', strtotime((string)$event['event_end']))) : '' ?>">
       </div>
       <div>
         <label for="event_end_time">Čas</label>
-        <input type="time" id="event_end_time" name="event_end_time" style="width:auto;display:block;margin-top:.2rem"
+        <input type="time" id="event_end_time" name="event_end_time" style="width:auto;display:block;margin-top:.2rem" aria-describedby="event-end-help"
                value="<?= !empty($event['event_end']) ? h(date('H:i', strtotime((string)$event['event_end']))) : '' ?>">
       </div>
     </div>
@@ -95,8 +98,8 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
            value="<?= h((string)($event['location'] ?? '')) ?>">
 
     <label for="description">Popis</label>
-    <textarea id="description" name="description" rows="10"><?= h((string)($event['description'] ?? '')) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <textarea id="description" name="description" rows="10"<?= !$useWysiwyg ? ' aria-describedby="event-description-help"' : '' ?>><?= h((string)($event['description'] ?? '')) ?></textarea>
+    <?php if (!$useWysiwyg): ?><small id="event-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1"

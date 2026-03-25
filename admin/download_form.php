@@ -74,9 +74,9 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
     <label for="slug">Slug <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255"
-           pattern="[a-z0-9\-]+"
+           pattern="[a-z0-9\-]+" aria-describedby="download-slug-help"
            value="<?= h((string)$download['slug']) ?>">
-    <small style="color:#666">Použije se ve veřejné adrese, například <code>/downloads/moje-aplikace</code>.</small>
+    <small id="download-slug-help" class="field-help">Použije se ve veřejné adrese, například <code>/downloads/moje-aplikace</code>.</small>
 
     <label for="download_type">Typ položky</label>
     <select id="download_type" name="download_type">
@@ -119,27 +119,25 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <label for="description">Popis</label>
     <?php if ($editorMode === 'wysiwyg'): ?>
       <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
-      <textarea id="description" name="description" rows="10" class="visually-hidden"><?= h((string)$download['description']) ?></textarea>
-      <small style="color:#666">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
+      <textarea id="description" name="description" rows="10" class="visually-hidden" aria-describedby="download-description-help"><?= h((string)$download['description']) ?></textarea>
+      <small id="download-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
-      <textarea id="description" name="description" rows="10"><?= h((string)$download['description']) ?></textarea>
+      <textarea id="description" name="description" rows="10" aria-describedby="download-description-help"><?= h((string)$download['description']) ?></textarea>
+      <small id="download-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
   </fieldset>
 
   <fieldset>
     <legend>Zdroje a odkazy</legend>
 
-    <label for="file">
-      Soubor
-      <?php if ((string)$download['original_name'] !== ''): ?>
-        <small>(aktuální: <strong><?= h((string)$download['original_name']) ?></strong>
-          <?php if ((int)$download['file_size'] > 0): ?>(<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>
-          – nahrajte nový pro nahrazení)</small>
-      <?php endif; ?>
-    </label>
+    <label for="file">Soubor</label>
     <input type="file" id="file" name="file"
-           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.7z,.tar,.gz,.bz2,.txt,.exe,.msi,.apk,.jar,.dmg,.pkg,.deb,.rpm,.appimage">
-    <small style="color:#666">Povolené formáty zahrnují dokumenty, archivy a běžné softwarové balíčky.</small>
+           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.7z,.tar,.gz,.bz2,.txt,.exe,.msi,.apk,.jar,.dmg,.pkg,.deb,.rpm,.appimage"
+           aria-describedby="download-file-help<?= (string)$download['original_name'] !== '' ? ' download-file-current' : '' ?>">
+    <small id="download-file-help" class="field-help">Povolené formáty zahrnují dokumenty, archivy a běžné softwarové balíčky.</small>
+    <?php if ((string)$download['original_name'] !== ''): ?>
+      <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový pro nahrazení.</small>
+    <?php endif; ?>
     <?php if ((string)$download['filename'] !== ''): ?>
       <label style="font-weight:normal;margin-top:.75rem">
         <input type="checkbox" name="file_delete" value="1">
@@ -148,10 +146,10 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <?php endif; ?>
 
     <label for="external_url">Externí odkaz</label>
-    <input type="url" id="external_url" name="external_url" maxlength="255"
+    <input type="url" id="external_url" name="external_url" maxlength="255" aria-describedby="download-external-url-help"
            placeholder="https://example.com/download"
            value="<?= h((string)$download['external_url']) ?>">
-    <small style="color:#666">Hodí se například pro GitHub Releases, App Store nebo produktovou stránku.</small>
+    <small id="download-external-url-help" class="field-help">Hodí se například pro GitHub Releases, App Store nebo produktovou stránku.</small>
   </fieldset>
 
   <fieldset>
@@ -192,7 +190,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   </div>
 </form>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 
 <script>
 (() => {

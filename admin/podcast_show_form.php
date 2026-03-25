@@ -66,19 +66,21 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            value="<?= h((string)$show['title']) ?>">
 
-    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
+           aria-describedby="podcast-show-slug-help"
            value="<?= h((string)$show['slug']) ?>">
+    <small id="podcast-show-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="author">Autor / vydavatel</label>
     <input type="text" id="author" name="author" maxlength="255"
            value="<?= h((string)$show['author']) ?>">
 
-    <label for="language">Jazyk <small>(kód dle IETF, např. cs, en)</small></label>
+    <label for="language">Jazyk</label>
     <input type="text" id="language" name="language" maxlength="10" style="width:8rem"
+           aria-describedby="podcast-show-language-help"
            value="<?= h((string)$show['language']) ?>">
+    <small id="podcast-show-language-help" class="field-help">Použijte kód dle IETF, například <code>cs</code> nebo <code>en</code>.</small>
 
     <label for="category">Kategorie</label>
     <input type="text" id="category" name="category" maxlength="100" list="podcast-categories"
@@ -101,11 +103,11 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <label for="description">Popis pořadu</label>
     <?php if ($useWysiwyg): ?>
       <div id="description_editor" class="quill-editor" style="min-height:14rem"></div>
-      <textarea id="description" name="description" rows="8" class="visually-hidden"><?= h((string)$show['description']) ?></textarea>
-      <small style="color:#666">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
+      <textarea id="description" name="description" rows="8" class="visually-hidden" aria-describedby="podcast-show-description-help"><?= h((string)$show['description']) ?></textarea>
+      <small id="podcast-show-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
-      <textarea id="description" name="description" rows="8"><?= h((string)$show['description']) ?></textarea>
-      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+      <textarea id="description" name="description" rows="8" aria-describedby="podcast-show-description-help"><?= h((string)$show['description']) ?></textarea>
+      <small id="podcast-show-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
 
     <label for="cover_image">Cover obrázek</label>
@@ -113,9 +115,13 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <div style="margin:.75rem 0">
         <img src="<?= h((string)$show['cover_url']) ?>" alt="" style="display:block;max-width:18rem;width:100%;border-radius:1rem;border:1px solid #d6d6d6">
       </div>
-      <small>Aktuální cover je už nahraný. Nahrajte nový pro nahrazení.</small>
+      <small id="podcast-show-cover-current" class="field-help">Aktuální cover je už nahraný. Nahrajte nový pro nahrazení.</small>
     <?php endif; ?>
-    <input type="file" id="cover_image" name="cover_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
+    <input type="file" id="cover_image" name="cover_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+           aria-describedby="<?= (string)$show['cover_url'] !== '' ? 'podcast-show-cover-current' : 'podcast-show-cover-help' ?>">
+    <?php if ((string)$show['cover_url'] === ''): ?>
+      <small id="podcast-show-cover-help" class="field-help">Volitelné pole pro titulní obrázek pořadu.</small>
+    <?php endif; ?>
     <?php if ((string)$show['cover_image'] !== ''): ?>
       <label for="cover_image_delete" style="font-weight:normal;margin-top:.5rem">
         <input type="checkbox" id="cover_image_delete" name="cover_image_delete" value="1">
@@ -134,7 +140,6 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   </div>
 </form>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <script>
 (function () {

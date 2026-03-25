@@ -111,7 +111,7 @@ adminHeader('Podcast: ' . (string)$show['title']);
     </thead>
     <tbody>
     <?php foreach ($episodes as $episode): ?>
-      <tr<?= (string)$episode['status'] === 'pending' ? ' style="background:#fffbe6"' : '' ?>>
+      <tr<?= (string)$episode['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
         <td>
           <?php if (!empty($episode['episode_num'])): ?>
             <strong>Epizoda <?= (int)$episode['episode_num'] ?></strong><br>
@@ -134,7 +134,7 @@ adminHeader('Podcast: ' . (string)$show['title']);
         </td>
         <td>
           <?php if ((string)$episode['status'] === 'pending'): ?>
-            <strong style="color:#c60">Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php elseif (!empty($episode['is_scheduled'])): ?>
             <strong>Naplánováno</strong>
           <?php else: ?>
@@ -152,7 +152,7 @@ adminHeader('Podcast: ' . (string)$show['title']);
               <input type="hidden" name="module" value="podcasts">
               <input type="hidden" name="id" value="<?= (int)$episode['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/podcast.php?show_id=<?= (int)$showId ?>">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="podcast_delete.php" method="post" style="display:inline">
@@ -169,6 +169,5 @@ adminHeader('Podcast: ' . (string)$show['title']);
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
 
 <?php adminFooter(); ?>

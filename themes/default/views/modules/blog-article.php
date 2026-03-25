@@ -128,9 +128,11 @@ $renderAuthorName = static function (array $article): string {
         </div>
 
         <div class="field">
-          <label for="author_email">E-mail <small>(nepovinný, nebude zveřejněn)</small></label>
+          <label for="author_email">E-mail</label>
           <input type="email" id="author_email" name="author_email" class="form-control" maxlength="255"
+                 aria-describedby="comment-author-email-help"
                  value="<?= h($formData['author_email']) ?>">
+          <small id="comment-author-email-help" class="help-text">Nepovinné pole, nebude zveřejněno.</small>
         </div>
 
         <div class="field">

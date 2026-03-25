@@ -226,7 +226,7 @@ adminHeader('Rezervace');
               <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
               <input type="hidden" name="action" value="approve">
               <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
             <form action="res_booking_save.php" method="post" style="display:inline" onsubmit="return confirm('Zamítnout rezervaci?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

@@ -1262,6 +1262,30 @@ function analyzeHtml(string $html): array
         }
     }
 
+    foreach ($xpath->query('//label[.//small] | //legend[.//small]') as $node) {
+        $issues[] = strtolower($node->nodeName) . ' contains nested helper text';
+    }
+
+    $describedByRefs = [];
+    foreach ($xpath->query('//*[@aria-describedby]') as $node) {
+        $targets = preg_split('/\s+/', trim($node->getAttribute('aria-describedby'))) ?: [];
+        foreach ($targets as $targetId) {
+            if ($targetId !== '') {
+                $describedByRefs[$targetId] = true;
+            }
+        }
+    }
+
+    foreach ($xpath->query('//*[@id and (contains(concat(" ", normalize-space(@class), " "), " field-help ") or contains(concat(" ", normalize-space(@class), " "), " help-text "))]') as $node) {
+        $targetId = $node->getAttribute('id');
+        if ($targetId === '') {
+            continue;
+        }
+        if (!isset($describedByRefs[$targetId])) {
+            $issues[] = 'helper text without aria-describedby reference: ' . $targetId;
+        }
+    }
+
     foreach ($xpath->query('//img') as $img) {
         if (!$img->hasAttribute('alt')) {
             $issues[] = 'img without alt';
@@ -1292,6 +1316,22 @@ function analyzeHtml(string $html): array
         $issues[] = 'sr-only helper without CSS definition';
     }
 
+    if (str_contains($html, 'class="visually-hidden"') && !str_contains($html, '.visually-hidden')) {
+        $issues[] = 'visually-hidden helper without CSS definition';
+    }
+
+
+    if (str_contains($html, '<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>')) {
+        $issues[] = 'page-local visually-hidden style should use shared admin helper';
+    }
+
+    if (str_contains($html, 'style="color:#c60"')) {
+        $issues[] = 'low-contrast pending status style detected';
+    }
+
+    if (str_contains($html, 'background:#060;color:#fff')) {
+        $issues[] = 'legacy approve button style detected';
+    }
     $tabs = $xpath->query('//*[@role="tab"]');
     if ($tabs->length > 0) {
         $selectedCount = 0;

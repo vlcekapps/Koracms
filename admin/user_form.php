@@ -79,33 +79,37 @@ adminHeader($accountId !== null ? 'Upravit uživatele' : 'Nový uživatel');
     <input type="text" id="last_name" name="last_name" maxlength="100"
            value="<?= h((string)$account['last_name']) ?>">
 
-    <label for="nickname">Přezdívka <small>(zobrazí se místo jména a příjmení)</small></label>
-    <input type="text" id="nickname" name="nickname" maxlength="100"
+    <label for="nickname">Přezdívka</label>
+    <input type="text" id="nickname" name="nickname" maxlength="100" aria-describedby="nickname-help"
            value="<?= h((string)$account['nickname']) ?>">
+    <small id="nickname-help" class="field-help">Zobrazí se místo jména a příjmení.</small>
 
     <label for="role">Role</label>
-    <select id="role" name="role">
+    <select id="role" name="role" aria-describedby="role-help">
       <?php foreach ($roleOptions as $roleKey => $roleLabel): ?>
         <option value="<?= h($roleKey) ?>" <?= $accountRole === $roleKey ? 'selected' : '' ?>>
           <?= h($roleLabel) ?>
         </option>
       <?php endforeach; ?>
     </select>
-    <small style="color:#666">
+    <small id="role-help" class="field-help">
       Autor pracuje s blogem a novinkami, editor navíc schvaluje obsah, moderátor řeší komentáře a zprávy,
       správce rezervací řeší rezervace a admin spravuje i nastavení a uživatele.
     </small>
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
-    <legend><?= $accountId !== null ? 'Změna hesla <small>(ponechte prázdné pro beze změny)</small>' : 'Heslo <span aria-hidden="true">*</span>' ?></legend>
+    <legend><?= $accountId !== null ? 'Změna hesla' : 'Heslo <span aria-hidden="true">*</span>' ?></legend>
+    <?php if ($accountId !== null): ?>
+      <small id="password-help" class="field-help" style="margin-top:0">Ponechte prázdné pro beze změny.</small>
+    <?php endif; ?>
     <label for="new_pass">Heslo (min. 8 znaků)</label>
     <input type="password" id="new_pass" name="new_pass" minlength="8"
-           autocomplete="new-password" <?= $accountId !== null ? '' : 'required aria-required="true"' ?>>
+           autocomplete="new-password"<?= $accountId !== null ? ' aria-describedby="password-help"' : '' ?> <?= $accountId !== null ? '' : 'required aria-required="true"' ?>>
 
     <label for="new_pass2">Heslo znovu</label>
     <input type="password" id="new_pass2" name="new_pass2" minlength="8"
-           autocomplete="new-password">
+           autocomplete="new-password"<?= $accountId !== null ? ' aria-describedby="password-help"' : '' ?>>
   </fieldset>
 
   <fieldset id="author-fieldset" style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
@@ -124,29 +128,33 @@ adminHeader($accountId !== null ? 'Upravit uživatele' : 'Nový uživatel');
         </label>
       </div>
 
-      <label for="author_slug">Slug veřejného autora <span aria-hidden="true">*</span>
-        <small>(malá písmena, číslice a pomlčky)</small>
-      </label>
+      <label for="author_slug">Slug veřejného autora <span aria-hidden="true">*</span></label>
       <input type="text" id="author_slug" name="author_slug" maxlength="255" pattern="[a-z0-9\-]+"
+             aria-describedby="author-slug-help"
              value="<?= h((string)($account['author_slug'] ?? '')) ?>">
+      <small id="author-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
       <label for="author_bio">Krátké bio / medailonek</label>
-      <textarea id="author_bio" name="author_bio" rows="6"><?= h((string)($account['author_bio'] ?? '')) ?></textarea>
-      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+      <textarea id="author_bio" name="author_bio" rows="6" aria-describedby="author-bio-help"><?= h((string)($account['author_bio'] ?? '')) ?></textarea>
+      <small id="author-bio-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
 
-      <label for="author_website">Web autora <small>(nepovinné)</small></label>
+      <label for="author_website">Web autora</label>
       <input type="url" id="author_website" name="author_website" maxlength="255"
+             aria-describedby="author-website-help"
              value="<?= h((string)($account['author_website'] ?? '')) ?>">
+      <small id="author-website-help" class="field-help">Nepovinné pole pro osobní web nebo profil autora.</small>
 
-      <label for="author_avatar">
-        Avatar autora <small>(JPEG, PNG, GIF, WebP nebo SVG)</small>
-        <?php if (!empty($account['author_avatar'])): ?>
-          – aktuální:
+      <label for="author_avatar">Avatar autora</label>
+      <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+             aria-describedby="author-avatar-help<?= !empty($account['author_avatar']) ? ' author-avatar-current' : '' ?>">
+      <small id="author-avatar-help" class="field-help">Povolené formáty: JPEG, PNG, GIF, WebP nebo SVG.</small>
+      <?php if (!empty($account['author_avatar'])): ?>
+        <div id="author-avatar-current" class="field-help">
+          Aktuální avatar:
           <img src="<?= BASE_URL ?>/uploads/authors/<?= rawurlencode((string)$account['author_avatar']) ?>"
                alt="Aktuální avatar autora" style="height:48px;width:48px;object-fit:cover;border-radius:999px;vertical-align:middle">
-        <?php endif; ?>
-      </label>
-      <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*">
+        </div>
+      <?php endif; ?>
 
       <?php if (!empty($account['author_avatar'])): ?>
         <label for="author_avatar_delete" style="font-weight:normal;margin-top:.35rem">

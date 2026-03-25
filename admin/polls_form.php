@@ -75,15 +75,15 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
            value="<?= h((string)$poll['question']) ?>">
 
-    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="poll-slug-help"
            value="<?= h((string)$poll['slug']) ?>">
+    <small id="poll-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
-    <label for="description">Popis <small>(nepovinný)</small></label>
-    <textarea id="description" name="description" rows="4"><?= h((string)($poll['description'] ?? '')) ?></textarea>
-    <small style="color:#666">Krátké vysvětlení se zobrazí na detailu ankety i ve výpisu.</small>
+    <label for="description">Popis</label>
+    <textarea id="description" name="description" rows="4" aria-describedby="poll-description-help"><?= h((string)($poll['description'] ?? '')) ?></textarea>
+    <small id="poll-description-help" class="field-help">Nepovinné pole. Krátké vysvětlení se zobrazí na detailu ankety i ve výpisu.</small>
 
     <label for="status">Stav</label>
     <select id="status" name="status">
@@ -93,26 +93,27 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
-    <legend>Časové omezení <small>(nepovinné)</small></legend>
+    <legend>Časové omezení</legend>
+    <small id="poll-timing-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>
     <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
       <div>
         <label for="start_date">Začátek – datum</label>
-        <input type="date" id="start_date" name="start_date" style="width:auto;display:block;margin-top:.2rem"
+        <input type="date" id="start_date" name="start_date" style="width:auto;display:block;margin-top:.2rem" aria-describedby="poll-timing-help"
                value="<?= !empty($poll['start_date']) ? h(date('Y-m-d', strtotime((string)$poll['start_date']))) : '' ?>">
       </div>
       <div>
         <label for="start_time">Začátek – čas</label>
-        <input type="time" id="start_time" name="start_time" style="width:auto;display:block;margin-top:.2rem"
+        <input type="time" id="start_time" name="start_time" style="width:auto;display:block;margin-top:.2rem" aria-describedby="poll-timing-help"
                value="<?= !empty($poll['start_date']) ? h(date('H:i', strtotime((string)$poll['start_date']))) : '' ?>">
       </div>
       <div>
         <label for="end_date">Konec – datum</label>
-        <input type="date" id="end_date" name="end_date" style="width:auto;display:block;margin-top:.2rem"
+        <input type="date" id="end_date" name="end_date" style="width:auto;display:block;margin-top:.2rem" aria-describedby="poll-timing-help"
                value="<?= !empty($poll['end_date']) ? h(date('Y-m-d', strtotime((string)$poll['end_date']))) : '' ?>">
       </div>
       <div>
         <label for="end_time">Konec – čas</label>
-        <input type="time" id="end_time" name="end_time" style="width:auto;display:block;margin-top:.2rem"
+        <input type="time" id="end_time" name="end_time" style="width:auto;display:block;margin-top:.2rem" aria-describedby="poll-timing-help"
                value="<?= !empty($poll['end_date']) ? h(date('H:i', strtotime((string)$poll['end_date']))) : '' ?>">
       </div>
     </div>

@@ -59,14 +59,14 @@ adminHeader($pageTitle);
     <input type="text" id="title" name="title" required aria-required="true" value="<?= h((string)$page['title']) ?>">
 
     <label for="slug">Slug (URL) <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="slug" name="slug" required aria-required="true"
+    <input type="text" id="slug" name="slug" required aria-required="true" aria-describedby="page-slug-help"
            pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky"
            value="<?= h((string)$page['slug']) ?>">
-    <small>Automaticky se generuje z názvu, dokud slug neupravíte ručně.</small>
+    <small id="page-slug-help" class="field-help">Automaticky se generuje z názvu, dokud slug neupravíte ručně.</small>
 
     <label for="content">Obsah</label>
-    <textarea id="content" name="content"><?= h((string)$page['content']) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <textarea id="content" name="content"<?= !$useWysiwyg ? ' aria-describedby="page-content-help"' : '' ?>><?= h((string)$page['content']) ?></textarea>
+    <?php if (!$useWysiwyg): ?><small id="page-content-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <label style="font-weight:normal; margin-top:1rem">
       <input type="checkbox" name="is_published" value="1"<?= !empty($page['is_published']) ? ' checked' : '' ?>>

@@ -108,7 +108,7 @@ adminHeader('Zajímavá místa');
         <td><?= (int)$place['sort_order'] ?></td>
         <td>
           <?php if ($place['status'] === 'pending'): ?>
-            <strong style="color:#c60">Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php elseif ((int)$place['is_published'] === 1): ?>
             Publikováno
           <?php else: ?>
@@ -126,7 +126,7 @@ adminHeader('Zajímavá místa');
               <input type="hidden" name="module" value="places">
               <input type="hidden" name="id" value="<?= (int)$place['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/places.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="place_delete.php" method="post" style="display:inline">
@@ -142,6 +142,6 @@ adminHeader('Zajímavá místa');
   </table>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 
 <?php adminFooter(); ?>

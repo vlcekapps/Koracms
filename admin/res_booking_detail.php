@@ -108,7 +108,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
       <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
       <input type="hidden" name="action" value="approve">
       <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-      <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+      <button type="submit" class="btn btn-success">Schválit</button>
     </form>
 
     <form action="res_booking_save.php" method="post">
@@ -118,8 +118,9 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
       <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
       <fieldset style="border:1px solid #ccc;padding:.5rem 1rem">
         <legend>Zamítnutí</legend>
-        <label for="admin_note_reject">Poznámka <small>(nepovinná)</small></label>
-        <textarea id="admin_note_reject" name="admin_note" rows="3" style="min-height:80px"></textarea>
+        <label for="admin_note_reject">Poznámka</label>
+        <textarea id="admin_note_reject" name="admin_note" rows="3" style="min-height:80px" aria-describedby="admin-note-reject-help"></textarea>
+        <small id="admin-note-reject-help" class="field-help">Nepovinné pole.</small>
         <div style="margin-top:.5rem">
           <button type="submit" class="btn btn-danger" onclick="return confirm('Zamítnout rezervaci?')">Zamítnout</button>
         </div>
@@ -134,8 +135,9 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="cancel">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-    <label for="admin_note_cancel">Poznámka <small>(nepovinná)</small></label>
-    <textarea id="admin_note_cancel" name="admin_note" rows="2" style="min-height:60px;max-width:400px"></textarea>
+    <label for="admin_note_cancel">Poznámka</label>
+    <textarea id="admin_note_cancel" name="admin_note" rows="2" style="min-height:60px;max-width:400px" aria-describedby="admin-note-cancel-help"></textarea>
+    <small id="admin-note-cancel-help" class="field-help">Nepovinné pole.</small>
     <div style="margin-top:.5rem">
       <button type="submit" class="btn btn-danger" onclick="return confirm('Zrušit rezervaci?')">Zrušit</button>
     </div>
@@ -162,8 +164,9 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
     <fieldset style="border:1px solid #ccc;padding:.5rem 1rem">
       <legend>Neomluvená absence</legend>
-      <label for="admin_note_noshow">Poznámka <small>(nepovinná)</small></label>
-      <textarea id="admin_note_noshow" name="admin_note" rows="2" style="min-height:60px;max-width:400px"></textarea>
+      <label for="admin_note_noshow">Poznámka</label>
+      <textarea id="admin_note_noshow" name="admin_note" rows="2" style="min-height:60px;max-width:400px" aria-describedby="admin-note-noshow-help"></textarea>
+      <small id="admin-note-noshow-help" class="field-help">Nepovinné pole.</small>
       <div style="margin-top:.5rem">
         <button type="submit" class="btn btn-danger"
                 onclick="return confirm('Označit rezervaci jako neomluvenou? Tato akce se zaznamená do historie.')">Nedostavil se</button>

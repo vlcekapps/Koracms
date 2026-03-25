@@ -60,23 +60,23 @@ adminHeader($id ? 'Upravit otázku' : 'Nová otázka');
     <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
            value="<?= h((string)$faq['question']) ?>">
 
-    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
-      <small>(pouze malá písmena, číslice a pomlčky)</small>
-    </label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           aria-describedby="faq-slug-help"
            value="<?= h((string)$faq['slug']) ?>">
+    <small id="faq-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
 
     <label for="excerpt">Krátké shrnutí / perex</label>
-    <textarea id="excerpt" name="excerpt" rows="3"><?= h((string)($faq['excerpt'] ?? '')) ?></textarea>
-    <small style="color:#666">Zobrazí se ve výpisu FAQ, ve vyhledávání a jako úvod detailu.</small>
+    <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="faq-excerpt-help"><?= h((string)($faq['excerpt'] ?? '')) ?></textarea>
+    <small id="faq-excerpt-help" class="field-help">Zobrazí se ve výpisu FAQ, ve vyhledávání a jako úvod detailu.</small>
 
     <label for="answer">Odpověď <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <?php if ($useWysiwyg): ?>
       <div id="editor-answer" style="min-height:220px"><?= (string)($faq['answer'] ?? '') ?></div>
       <input type="hidden" id="answer" name="answer" value="<?= h((string)($faq['answer'] ?? '')) ?>">
     <?php else: ?>
-      <textarea id="answer" name="answer" rows="8" required aria-required="true"><?= h((string)($faq['answer'] ?? '')) ?></textarea>
-      <small style="color:#666">Podporuje HTML i Markdown syntaxi.</small>
+      <textarea id="answer" name="answer" rows="8" required aria-required="true" aria-describedby="faq-answer-help"><?= h((string)($faq['answer'] ?? '')) ?></textarea>
+      <small id="faq-answer-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
     <?php endif; ?>
 
     <label for="category_id">Kategorie</label>

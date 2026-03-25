@@ -103,7 +103,7 @@ adminHeader('Jídelní a nápojový lístek');
     </thead>
     <tbody>
     <?php foreach ($rows as $card): ?>
-      <tr<?= $card['status'] === 'pending' ? ' style="background:#fffbe6"' : '' ?>>
+      <tr<?= $card['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
         <td>
           <?php if ($card['is_current']): ?>
             <strong>★ <?= h((string)$card['title']) ?></strong>
@@ -119,7 +119,7 @@ adminHeader('Jídelní a nápojový lístek');
         <td><?= h((string)($card['author_name'] ?: '–')) ?></td>
         <td>
           <?php if ($card['status'] === 'pending'): ?>
-            <strong style="color:#c60">Čeká na schválení</strong>
+            <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php elseif ((int)$card['is_published'] === 1): ?>
             <?= $card['is_current'] ? '<strong style="color:#060">Aktuální</strong>' : 'Publikováno' ?>
           <?php else: ?>
@@ -137,7 +137,7 @@ adminHeader('Jídelní a nápojový lístek');
               <input type="hidden" name="module" value="food">
               <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
               <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/food.php">
-              <button type="submit" class="btn" style="background:#060;color:#fff">Schválit</button>
+              <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="food_delete.php" method="post" style="display:inline">
@@ -154,6 +154,6 @@ adminHeader('Jídelní a nápojový lístek');
   <?php endforeach; ?>
 <?php endif; ?>
 
-<style>.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style>
+
 
 <?php adminFooter(); ?>
