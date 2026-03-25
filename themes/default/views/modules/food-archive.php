@@ -30,15 +30,15 @@
                 <p class="section-kicker">Aktuální</p>
               <?php endif; ?>
               <p class="meta-row meta-row--tight">
-                <span class="pill"><?= h($typeLabels[$card['type']] ?? $card['type']) ?></span>
+                <span class="pill"><?= h((string)($typeLabels[$card['type']] ?? $card['type_label'])) ?></span>
               </p>
-              <h2 class="card__title"><a href="<?= BASE_URL ?>/food/card.php?id=<?= (int)$card['id'] ?>"><?= h($card['title']) ?></a></h2>
-              <p class="meta-row meta-row--tight"><?= h($card['validity_label']) ?></p>
+              <h2 class="card__title"><a href="<?= h((string)$card['public_path']) ?>"><?= h((string)$card['title']) ?></a></h2>
+              <p class="meta-row meta-row--tight"><?= h((string)$card['validity_label']) ?></p>
               <?php if (!empty($card['description'])): ?>
-                <p><?= h($card['description']) ?></p>
+                <p><?= h((string)$card['description']) ?></p>
               <?php endif; ?>
               <div class="button-row button-row--start">
-                <a class="button-secondary" href="<?= BASE_URL ?>/food/card.php?id=<?= (int)$card['id'] ?>">Zobrazit lístek</a>
+                <a class="button-secondary" href="<?= h((string)$card['public_path']) ?>">Zobrazit lístek</a>
               </div>
             </div>
           </article>

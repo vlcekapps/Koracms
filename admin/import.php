@@ -331,17 +331,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['food_cards']) && is_array($data['food_cards'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_food_cards
-                         (id, type, title, description, content, valid_from, valid_to,
-                          is_current, is_published, status)
-                         VALUES (?,?,?,?,?,?,?,?,?,?)"
+                         (id, type, title, slug, description, content, valid_from, valid_to,
+                          is_current, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['food_cards'] as $row) {
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($title === '') {
+                            $title = 'Lístek';
+                        }
+                        $importSlug = trim((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniqueFoodCardSlug($pdo, $title);
+                        } else {
+                            $importSlug = uniqueFoodCardSlug($pdo, $importSlug, (int)$row['id']);
+                        }
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $updatedAt = $row['updated_at'] ?? $createdAt;
                         $ins->execute([
-                            (int)$row['id'], $row['type'] ?? 'food',
-                            $row['title'], $row['description'] ?? '',
-                            $row['content'] ?? '', $row['valid_from'] ?: null,
-                            $row['valid_to'] ?: null, (int)$row['is_current'],
-                            (int)$row['is_published'], $row['status'] ?? 'published',
+                            (int)$row['id'],
+                            $row['type'] ?? 'food',
+                            $title,
+                            $importSlug,
+                            $row['description'] ?? '',
+                            $row['content'] ?? '',
+                            $row['valid_from'] ?: null,
+                            $row['valid_to'] ?: null,
+                            (int)($row['is_current'] ?? 0),
+                            (int)($row['is_published'] ?? 1),
+                            $row['status'] ?? 'published',
+                            $createdAt,
+                            $updatedAt,
                         ]);
                     }
                     $summary[] = 'Jídelní lístky importovány.';

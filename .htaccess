@@ -28,6 +28,7 @@ Options -Indexes
     RewriteRule ^downloads/([a-z0-9\-]+)/?$ downloads/item.php?slug=$1 [L,QSA,NC]
     RewriteRule ^events/([a-z0-9\-]+)/?$ events/event.php?slug=$1 [L,QSA,NC]
     RewriteRule ^faq/([a-z0-9\-]+)/?$ faq/item.php?slug=$1 [L,QSA,NC]
+    RewriteRule ^food/card/([a-z0-9\-]+)/?$ food/card.php?slug=$1 [L,QSA,NC]
     RewriteRule ^gallery/album/([a-z0-9\-]+)/?$ gallery/album.php?slug=$1 [L,QSA,NC]
     RewriteRule ^gallery/photo/([a-z0-9\-]+)/?$ gallery/photo.php?slug=$1 [L,QSA,NC]
     RewriteRule ^news/([a-z0-9\-]+)/?$ news/article.php?slug=$1 [L,QSA,NC]

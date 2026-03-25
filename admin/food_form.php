@@ -1,65 +1,100 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jídelních lístků nemáte potřebné oprávnění.');
 
-$pdo  = db_connect();
-$id   = inputInt('get', 'id');
+$pdo = db_connect();
+$id = inputInt('get', 'id');
 $card = null;
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_food_cards WHERE id = ?");
     $stmt->execute([$id]);
-    $card = $stmt->fetch();
-    if (!$card) { header('Location: food.php'); exit; }
+    $card = $stmt->fetch() ?: null;
+    if (!$card) {
+        header('Location: ' . BASE_URL . '/admin/food.php');
+        exit;
+    }
 }
 
-// Předvolený typ z URL parametru (pro tlačítko "+ Nový jídelní/nápojový lístek")
 $defaultType = ($_GET['type'] ?? '') === 'beverage' ? 'beverage' : 'food';
-$cardType    = $card ? $card['type'] : $defaultType;
+$card = $card ?: [
+    'type' => $defaultType,
+    'title' => '',
+    'slug' => '',
+    'description' => '',
+    'content' => '',
+    'valid_from' => '',
+    'valid_to' => '',
+    'is_current' => 0,
+    'is_published' => 1,
+    'status' => 'published',
+];
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
+$err = trim($_GET['err'] ?? '');
+$formError = match ($err) {
+    'required' => 'Vyplňte prosím název lístku.',
+    'slug' => 'Slug lístku je povinný a musí být unikátní.',
+    default => '',
+};
 
-adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
+$card = hydrateFoodCardPresentation($card);
+
+adminHeader($id ? 'Upravit lístek' : 'Nový lístek');
 ?>
 
-<form method="post" action="food_save.php" novalidate>
+<?php if ($formError !== ''): ?>
+  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+<?php endif; ?>
+
+<p style="margin-top:0;font-size:.9rem">
+  Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
+</p>
+
+<form method="post" action="food_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <?php if ($card): ?>
-    <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
+  <?php if ($id): ?>
+    <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
 
   <fieldset>
     <legend>Lístek</legend>
 
-    <label for="type">Typ lístku <span aria-hidden="true">*</span></label>
+    <label for="type">Typ lístku <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <select id="type" name="type" style="width:auto">
-      <option value="food"     <?= $cardType === 'food'     ? 'selected' : '' ?>>Jídelní lístek</option>
-      <option value="beverage" <?= $cardType === 'beverage' ? 'selected' : '' ?>>Nápojový lístek</option>
+      <option value="food"<?= $card['type'] === 'food' ? ' selected' : '' ?>>Jídelní lístek</option>
+      <option value="beverage"<?= $card['type'] === 'beverage' ? ' selected' : '' ?>>Nápojový lístek</option>
     </select>
 
-    <label for="title">Název <span aria-hidden="true">*</span></label>
+    <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
            placeholder="např. Týdenní menu 17.–23. března 2026"
-           value="<?= h($card['title'] ?? '') ?>">
+           value="<?= h((string)$card['title']) ?>">
 
-    <label for="description">Krátká poznámka <small>(nepovinná – zobrazí se v archivu pod názvem)</small></label>
+    <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span>
+      <small>(pouze malá písmena, číslice a pomlčky)</small>
+    </label>
+    <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
+           value="<?= h((string)$card['slug']) ?>">
+
+    <label for="description">Krátká poznámka <small>(nepovinná – zobrazí se v archivu a v detailu)</small></label>
     <textarea id="description" name="description" rows="2"
-              style="min-height:0"><?= h($card['description'] ?? '') ?></textarea>
+              style="min-height:0"><?= h((string)($card['description'] ?? '')) ?></textarea>
 
     <label for="content">Obsah lístku</label>
-    <textarea id="content" name="content" rows="18"><?= h($card['content'] ?? '') ?></textarea>
+    <textarea id="content" name="content" rows="18"><?= h((string)($card['content'] ?? '')) ?></textarea>
     <?php if (!$useWysiwyg): ?><small style="color:#666">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
 
     <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
       <div>
         <label for="valid_from">Platí od</label>
         <input type="date" id="valid_from" name="valid_from" style="width:auto"
-               value="<?= h($card['valid_from'] ?? '') ?>">
+               value="<?= h((string)($card['valid_from'] ?? '')) ?>">
       </div>
       <div>
         <label for="valid_to">Platí do <small>(prázdné = bez omezení)</small></label>
         <input type="date" id="valid_to" name="valid_to" style="width:auto"
-               value="<?= h($card['valid_to'] ?? '') ?>">
+               value="<?= h((string)($card['valid_to'] ?? '')) ?>">
       </div>
     </div>
   </fieldset>
@@ -70,7 +105,7 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
 
     <label style="font-weight:normal;margin-top:.25rem">
       <input type="checkbox" name="is_current" value="1"
-             <?= ($card['is_current'] ?? 0) ? 'checked' : '' ?>>
+             <?= (int)($card['is_current'] ?? 0) === 1 ? 'checked' : '' ?>>
       <strong>Označit jako aktuální lístek</strong>
       <small style="color:#666;display:block;margin-left:1.4rem">
         Při uložení se automaticky odznačí předchozí aktuální lístek stejného typu.
@@ -79,29 +114,58 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
 
     <label style="font-weight:normal;margin-top:.75rem">
       <input type="checkbox" name="is_published" value="1"
-             <?= ($card['is_published'] ?? 1) ? 'checked' : '' ?>>
+             <?= (int)($card['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
       Zobrazit v archivu
     </label>
   </fieldset>
   <?php endif; ?>
 
   <div style="margin-top:1.5rem">
-    <button type="submit" class="btn"><?= $card ? 'Uložit změny' : 'Přidat lístek' ?></button>
+    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat lístek' ?></button>
+    <?php if ($card['is_publicly_visible'] && (string)$card['slug'] !== ''): ?>
+      <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Veřejná stránka</a>
+    <?php endif; ?>
     <a href="food.php" style="margin-left:1rem">Zrušit</a>
   </div>
 </form>
+
+<script>
+(function () {
+    const titleInput = document.getElementById('title');
+    const slugInput = document.getElementById('slug');
+    let slugManual = <?= !empty($card['slug']) ? 'true' : 'false' ?>;
+
+    const slugify = (value) => value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    slugInput?.addEventListener('input', function () {
+        slugManual = this.value.trim() !== '';
+    });
+
+    titleInput?.addEventListener('input', function () {
+        if (slugManual || !slugInput) {
+            return;
+        }
+        slugInput.value = slugify(this.value);
+    });
+})();
+</script>
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <script>
 (function () {
-    const ta = document.getElementById('content');
+    const textarea = document.getElementById('content');
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem';
     wrapper.style.minHeight = '350px';
-    ta.parentNode.insertBefore(wrapper, ta);
-    ta.style.display = 'none';
+    textarea.parentNode.insertBefore(wrapper, textarea);
+    textarea.style.display = 'none';
 
     const quill = new Quill(wrapper, {
         theme: 'snow',
@@ -114,10 +178,10 @@ adminHeader($card ? 'Upravit lístek' : 'Nový lístek');
         ]}
     });
 
-    quill.root.innerHTML = ta.value;
+    quill.root.innerHTML = textarea.value;
 
-    ta.closest('form').addEventListener('submit', function () {
-        ta.value = quill.root.innerHTML;
+    textarea.closest('form')?.addEventListener('submit', function () {
+        textarea.value = quill.root.innerHTML;
     });
 })();
 </script>

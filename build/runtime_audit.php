@@ -18,6 +18,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_downloads' => getSetting('module_downloads', '0'),
     'module_events' => getSetting('module_events', '0'),
     'module_faq' => getSetting('module_faq', '0'),
+    'module_food' => getSetting('module_food', '0'),
     'module_gallery' => getSetting('module_gallery', '0'),
     'module_podcast' => getSetting('module_podcast', '0'),
     'module_places' => getSetting('module_places', '0'),
@@ -115,9 +116,22 @@ $podcastEpisodeCanonicalPath = '';
 $podcastEpisodeLegacyPath = '';
 $podcastEpisodeCanonicalUrl = '';
 $podcastEpisodeLegacyUrl = '';
-$foodCardId = $pdo->query(
-    "SELECT id FROM cms_food_cards WHERE status = 'published' AND is_published = 1 ORDER BY is_current DESC, id LIMIT 1"
-)->fetchColumn();
+$foodCardRow = $pdo->query(
+    "SELECT id, type, title, slug, description, valid_from, valid_to, is_current, is_published,
+            status, created_at, updated_at
+     FROM cms_food_cards
+     WHERE status = 'published' AND is_published = 1
+     ORDER BY is_current DESC, id
+     LIMIT 1"
+)->fetch() ?: null;
+$foodCardId = $foodCardRow['id'] ?? false;
+if ($foodCardRow) {
+    $foodCardRow = hydrateFoodCardPresentation($foodCardRow);
+}
+$foodCardCanonicalPath = $foodCardRow ? foodCardPublicPath($foodCardRow) : '';
+$foodCardLegacyPath = $foodCardId !== false ? BASE_URL . '/food/card.php?id=' . urlencode((string)$foodCardId) : '';
+$foodCardCanonicalUrl = $foodCardCanonicalPath !== '' ? $baseUrl . $foodCardCanonicalPath : '';
+$foodCardLegacyUrl = $foodCardLegacyPath !== '' ? $baseUrl . $foodCardLegacyPath : '';
 $galleryAlbumRow = $pdo->query(
     "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
      FROM cms_gallery_albums
@@ -224,6 +238,7 @@ $cleanup = [
     'download_ids' => [],
     'download_files' => [],
     'faq_ids' => [],
+    'food_ids' => [],
     'gallery_album_ids' => [],
     'gallery_photo_ids' => [],
     'gallery_files' => [],
@@ -601,6 +616,41 @@ if (isModuleEnabled('gallery')) {
     $galleryAlbumPhotoCanonicalPath = $galleryPhotoCanonicalPath;
 }
 
+if (isModuleEnabled('food')) {
+    $runtimeAuditFoodSlug = uniqueFoodCardSlug($pdo, 'runtime-audit-listek-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_food_cards (
+            type, title, slug, description, content, valid_from, valid_to,
+            is_current, is_published, status, author_id, created_at, updated_at
+         ) VALUES ('food', ?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), 1, 1, 'published', ?, NOW(), NOW())"
+    )->execute([
+        'Runtime audit listek',
+        $runtimeAuditFoodSlug,
+        'Testovaci karta pro overeni detailu a cistych URL.',
+        '<p>Obsah testovaciho listku pro runtime audit verejneho detailu a admin workflow.</p>',
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $runtimeAuditFoodId = (int)$pdo->lastInsertId();
+    $cleanup['food_ids'][] = $runtimeAuditFoodId;
+
+    $foodStmt = $pdo->prepare(
+        "SELECT id, type, title, slug, description, valid_from, valid_to, is_current, is_published,
+                status, created_at, updated_at
+         FROM cms_food_cards
+         WHERE id = ?"
+    );
+    $foodStmt->execute([$runtimeAuditFoodId]);
+    $foodCardRow = $foodStmt->fetch() ?: null;
+    $foodCardId = $foodCardRow['id'] ?? false;
+    if ($foodCardRow) {
+        $foodCardRow = hydrateFoodCardPresentation($foodCardRow);
+    }
+    $foodCardCanonicalPath = $foodCardRow ? foodCardPublicPath($foodCardRow) : '';
+    $foodCardLegacyPath = $foodCardId !== false ? BASE_URL . '/food/card.php?id=' . urlencode((string)$foodCardId) : '';
+    $foodCardCanonicalUrl = $foodCardCanonicalPath !== '' ? $baseUrl . $foodCardCanonicalPath : '';
+    $foodCardLegacyUrl = $foodCardLegacyPath !== '' ? $baseUrl . $foodCardLegacyPath : '';
+}
+
 if (isModuleEnabled('faq')) {
     $runtimeAuditFaqQuestion = 'Jak funguje runtime audit FAQ?';
     $runtimeAuditFaqSlug = uniqueFaqSlug($pdo, 'runtime-audit-faq-' . bin2hex(random_bytes(4)));
@@ -820,6 +870,7 @@ $pages = [
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_downloads', 'url' => $baseUrl . '/admin/downloads.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_food', 'url' => $baseUrl . '/admin/food.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_gallery_albums', 'url' => $baseUrl . '/admin/gallery_albums.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_polls', 'url' => $baseUrl . '/admin/polls.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_places', 'url' => $baseUrl . '/admin/places.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -838,6 +889,9 @@ if ($boardId !== false) {
 }
 if ($downloadId !== false) {
     $pages[] = ['label' => 'admin_download_form', 'url' => $baseUrl . '/admin/download_form.php?id=' . urlencode((string)$downloadId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
+if ($foodCardId !== false) {
+    $pages[] = ['label' => 'admin_food_form', 'url' => $baseUrl . '/admin/food_form.php?id=' . urlencode((string)$foodCardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($galleryAlbumId !== false) {
     $pages[] = ['label' => 'admin_gallery_album_form', 'url' => $baseUrl . '/admin/gallery_album_form.php?id=' . urlencode((string)$galleryAlbumId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -892,8 +946,8 @@ if (isModuleEnabled('faq')) {
 if (isModuleEnabled('food')) {
     $pages[] = ['label' => 'food', 'url' => $baseUrl . '/food/index.php'];
     $pages[] = ['label' => 'food_archive', 'url' => $baseUrl . '/food/archive.php'];
-    if ($foodCardId) {
-        $pages[] = ['label' => 'food_card', 'url' => $baseUrl . '/food/card.php?id=' . urlencode((string)$foodCardId)];
+    if ($foodCardCanonicalUrl !== '') {
+        $pages[] = ['label' => 'food_card', 'url' => $foodCardCanonicalUrl];
     }
 }
 if (isModuleEnabled('gallery')) {
@@ -1617,6 +1671,15 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_food') {
+        if (!str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin food search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin food status filter is missing';
+        }
+    }
+
     if ($page['label'] === 'admin_places') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin places search field is missing';
@@ -1674,6 +1737,19 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin download form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_food_form') {
+        foreach ([
+            'name="type"',
+            'name="slug"',
+            'name="valid_from"',
+            'name="valid_to"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin food form is missing field: ' . $expectedField;
             }
         }
     }
@@ -1851,6 +1927,23 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'faq_index' && $faqCanonicalPath !== '' && !str_contains($result['body'], $faqCanonicalPath)) {
         $issues[] = 'faq listing is missing detail links';
+    }
+
+    if ($page['label'] === 'food' && $foodCardCanonicalPath !== '' && !str_contains($result['body'], $foodCardCanonicalPath)) {
+        $issues[] = 'food index is missing detail links';
+    }
+
+    if ($page['label'] === 'food_archive' && $foodCardCanonicalPath !== '' && !str_contains($result['body'], $foodCardCanonicalPath)) {
+        $issues[] = 'food archive is missing detail links';
+    }
+
+    if ($page['label'] === 'food_card') {
+        if ($foodCardRow && !str_contains($result['body'], (string)($foodCardRow['title'] ?? ''))) {
+            $issues[] = 'food card is missing title';
+        }
+        if (!str_contains($result['body'], 'Zpět do archivu')) {
+            $issues[] = 'food card is missing back link';
+        }
     }
 
     if ($page['label'] === 'faq_article') {
@@ -2083,6 +2176,23 @@ if ($faqCanonicalPath === '' || $faqLegacyPath === '' || $faqCanonicalPath === $
     }
 }
 
+echo "=== food_card_legacy_redirect ===\n";
+if ($foodCardCanonicalPath === '' || $foodCardLegacyPath === '' || $foodCardCanonicalPath === $foodCardLegacyPath) {
+    echo "OK\n";
+} else {
+    $legacyFoodProbe = fetchUrl($foodCardLegacyUrl, '', 0);
+    $expectedLocation = 'Location: ' . $foodCardCanonicalPath;
+    if (!str_contains($legacyFoodProbe['status'], '302')) {
+        echo "- legacy food card URL does not redirect ({$legacyFoodProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyFoodProbe['headers'], true)) {
+        echo "- legacy food card URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
 echo "=== gallery_album_legacy_redirect ===\n";
 if ($galleryAlbumCanonicalPath === '' || $galleryAlbumLegacyPath === '' || $galleryAlbumCanonicalPath === $galleryAlbumLegacyPath) {
     echo "OK\n";
@@ -2288,6 +2398,9 @@ if (isModuleEnabled('board')) {
 if (isModuleEnabled('gallery')) {
     $roleChecks[] = ['role' => 'author', 'url' => '/admin/gallery_albums.php', 'expected' => '403', 'label' => 'author gallery'];
 }
+if (isModuleEnabled('food')) {
+    $roleChecks[] = ['role' => 'author', 'url' => '/admin/food.php', 'expected' => '403', 'label' => 'author food'];
+}
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'author polls'];
 $roleChecks[] = ['role' => 'author', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'author downloads'];
 if (isModuleEnabled('faq')) {
@@ -2324,6 +2437,9 @@ if (isModuleEnabled('board')) {
 if (isModuleEnabled('gallery')) {
     $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/gallery_albums.php', 'expected' => '403', 'label' => 'moderator gallery'];
 }
+if (isModuleEnabled('food')) {
+    $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/food.php', 'expected' => '403', 'label' => 'moderator food'];
+}
 $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'moderator polls'];
 $roleChecks[] = ['role' => 'moderator', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'moderator downloads'];
 if (isModuleEnabled('faq')) {
@@ -2348,6 +2464,9 @@ if (isModuleEnabled('board')) {
 }
 if (isModuleEnabled('gallery')) {
     $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/gallery_albums.php', 'expected' => '403', 'label' => 'booking manager gallery'];
+}
+if (isModuleEnabled('food')) {
+    $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/food.php', 'expected' => '403', 'label' => 'booking manager food'];
 }
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/polls.php', 'expected' => '403', 'label' => 'booking manager polls'];
 $roleChecks[] = ['role' => 'booking_manager', 'url' => '/admin/downloads.php', 'expected' => '403', 'label' => 'booking manager downloads'];
@@ -2830,6 +2949,10 @@ foreach ($cleanup['download_files'] as $downloadFile) {
 if (!empty($cleanup['faq_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['faq_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_faqs WHERE id IN ({$placeholders})")->execute($cleanup['faq_ids']);
+}
+if (!empty($cleanup['food_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['food_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_food_cards WHERE id IN ({$placeholders})")->execute($cleanup['food_ids']);
 }
 if (!empty($cleanup['gallery_photo_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['gallery_photo_ids']), '?'));

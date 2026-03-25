@@ -16,11 +16,16 @@
 
     <section id="food-panel-food" class="tab-panel" role="tabpanel" aria-labelledby="food-tab-food" data-panel="food">
       <?php if ($foodCard): ?>
-        <h2 class="section-title section-title--compact"><?= h($foodCard['title']) ?></h2>
-        <?php if ($foodMeta !== ''): ?>
-          <p class="meta-row meta-row--tight"><?= h($foodMeta) ?></p>
+        <h2 class="section-title section-title--compact">
+          <a href="<?= h((string)$foodCard['public_path']) ?>"><?= h((string)$foodCard['title']) ?></a>
+        </h2>
+        <?php if ($foodCard['meta_label'] !== ''): ?>
+          <p class="meta-row meta-row--tight"><?= h((string)$foodCard['meta_label']) ?></p>
         <?php endif; ?>
-        <div class="prose menu-content"><?= renderContent($foodCard['content']) ?></div>
+        <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
+        <div class="button-row button-row--start">
+          <a class="button-secondary" href="<?= h((string)$foodCard['public_path']) ?>">Detail lístku</a>
+        </div>
       <?php else: ?>
         <p class="empty-state">Aktuální jídelní lístek zatím není k dispozici.</p>
       <?php endif; ?>
@@ -28,11 +33,16 @@
 
     <section id="food-panel-beverage" class="tab-panel" role="tabpanel" aria-labelledby="food-tab-beverage" data-panel="beverage" hidden>
       <?php if ($beverageCard): ?>
-        <h2 class="section-title section-title--compact"><?= h($beverageCard['title']) ?></h2>
-        <?php if ($beverageMeta !== ''): ?>
-          <p class="meta-row meta-row--tight"><?= h($beverageMeta) ?></p>
+        <h2 class="section-title section-title--compact">
+          <a href="<?= h((string)$beverageCard['public_path']) ?>"><?= h((string)$beverageCard['title']) ?></a>
+        </h2>
+        <?php if ($beverageCard['meta_label'] !== ''): ?>
+          <p class="meta-row meta-row--tight"><?= h((string)$beverageCard['meta_label']) ?></p>
         <?php endif; ?>
-        <div class="prose menu-content"><?= renderContent($beverageCard['content']) ?></div>
+        <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
+        <div class="button-row button-row--start">
+          <a class="button-secondary" href="<?= h((string)$beverageCard['public_path']) ?>">Detail lístku</a>
+        </div>
       <?php else: ?>
         <p class="empty-state">Aktuální nápojový lístek zatím není k dispozici.</p>
       <?php endif; ?>

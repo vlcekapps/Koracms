@@ -36,8 +36,8 @@ $tables = [
                                filename, original_name, file_size, sort_order, is_published, status,
                                created_at, updated_at
                                FROM cms_downloads",
-    'food_cards'    => "SELECT id, type, title, description, content, valid_from, valid_to,
-                               is_current, is_published, status, created_at FROM cms_food_cards",
+    'food_cards'    => "SELECT id, type, title, slug, description, content, valid_from, valid_to,
+                               is_current, is_published, status, created_at, updated_at FROM cms_food_cards",
     'podcast_shows' => "SELECT id, title, slug, description, author, cover_image,
                                language, category, website_url, created_at, updated_at FROM cms_podcast_shows",
     'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, audio_url,

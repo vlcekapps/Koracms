@@ -324,6 +324,7 @@ $tables = [
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         type         ENUM('food','beverage') NOT NULL DEFAULT 'food',
         title        VARCHAR(255) NOT NULL,
+        slug         VARCHAR(255) NOT NULL,
         description  TEXT,
         content      MEDIUMTEXT,
         valid_from   DATE         NULL DEFAULT NULL,
@@ -333,7 +334,8 @@ $tables = [
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id    INT          NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_food_cards_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_rate_limit' => "CREATE TABLE IF NOT EXISTS cms_rate_limit (
@@ -610,6 +612,8 @@ $addColumns = [
     // cms_gallery
     'cms_gallery_albums.slug'        => "ALTER TABLE cms_gallery_albums ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER name",
     'cms_gallery_photos.slug'        => "ALTER TABLE cms_gallery_photos ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
+    // cms_food_cards
+    'cms_food_cards.slug'            => "ALTER TABLE cms_food_cards ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_board
@@ -1293,6 +1297,60 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy fotografií – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $foodSlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_food_cards' AND COLUMN_NAME = 'slug'"
+    );
+    $foodSlugColumnCheck->execute();
+
+    if ((int)$foodSlugColumnCheck->fetchColumn() > 0) {
+        $foodRows = $pdo->query("SELECT id, title, slug FROM cms_food_cards ORDER BY id")->fetchAll();
+        $updateFoodSlugStmt = $pdo->prepare("UPDATE cms_food_cards SET slug = ? WHERE id = ?");
+
+        foreach ($foodRows as $foodRow) {
+            $existingSlug = trim((string)($foodRow['slug'] ?? ''));
+            $resolvedSlug = uniqueFoodCardSlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$foodRow['title'],
+                (int)$foodRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateFoodSlugStmt->execute([$resolvedSlug, (int)$foodRow['id']]);
+            }
+        }
+
+        $foodSlugNullabilityCheck = $pdo->prepare(
+            "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_food_cards' AND COLUMN_NAME = 'slug'"
+        );
+        $foodSlugNullabilityCheck->execute();
+        if (($foodSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
+            $pdo->exec("ALTER TABLE cms_food_cards MODIFY slug VARCHAR(255) NOT NULL");
+            $log[] = "âś“ Sloupec <code>cms_food_cards.slug</code> je nynĂ­ NOT NULL â€“ OK";
+        } else {
+            $log[] = "Â· Sloupec <code>cms_food_cards.slug</code> uĹľ je NOT NULL â€“ pĹ™eskoÄŤeno";
+        }
+
+        $foodSlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_food_cards'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $foodSlugIndexCheck->execute();
+        if ((int)$foodSlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_food_cards ADD UNIQUE KEY uq_cms_food_cards_slug (slug)");
+            $log[] = "âś“ UnikĂˇtnĂ­ index <code>uq_cms_food_cards_slug</code> pĹ™idĂˇn â€“ OK";
+        } else {
+            $log[] = "Â· UnikĂˇtnĂ­ index pro <code>cms_food_cards.slug</code> jiĹľ existuje â€“ pĹ™eskoÄŤeno";
+        }
+    } else {
+        $log[] = "Â· Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ sloupec <code>cms_food_cards.slug</code> neexistuje, pĹ™eskoÄŤeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "âś— Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ CHYBA: " . h($e->getMessage());
 }
 
 try {

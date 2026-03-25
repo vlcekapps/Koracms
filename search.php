@@ -166,6 +166,26 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
+    if (isModuleEnabled('food')) {
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, title, slug, COALESCE(NULLIF(description, ''), title) AS perex,
+                        COALESCE(valid_from, updated_at, created_at) AS created_at,
+                        'food_card' AS type
+                 FROM cms_food_cards
+                 WHERE status = 'published' AND is_published = 1
+                   AND (title LIKE ? OR slug LIKE ? OR description LIKE ? OR content LIKE ?)
+                 ORDER BY COALESCE(valid_from, created_at) DESC, id DESC
+                 LIMIT 10"
+            );
+            $stmt->execute([$like, $like, $like, $like]);
+            foreach ($stmt->fetchAll() as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+        }
+    }
+
     if (isModuleEnabled('board')) {
         try {
             $stmt = $pdo->prepare(
@@ -257,6 +277,7 @@ function resultUrl(array $result): string
         'podcast_show' => podcastShowPublicPath($result),
         'podcast_episode' => podcastEpisodePublicPath($result),
         'faq' => faqPublicPath($result),
+        'food_card' => foodCardPublicPath($result),
         'gallery_album' => galleryAlbumPublicPath($result),
         'gallery_photo' => galleryPhotoPublicPath($result),
         'download' => downloadPublicPath($result),
@@ -277,6 +298,7 @@ function typeLabel(string $type): string
         'podcast_show' => 'Podcast',
         'podcast_episode' => 'Epizoda podcastu',
         'faq' => 'FAQ',
+        'food_card' => 'Lístek',
         'gallery_album' => 'Album galerie',
         'gallery_photo' => 'Fotografie',
         'download' => 'Ke stažení',

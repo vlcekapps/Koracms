@@ -1053,6 +1053,11 @@ function placeSlug(string $value): string
     return slugify(trim($value));
 }
 
+function foodCardSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function downloadSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1606,6 +1611,61 @@ function hydrateDownloadPresentation(array $download): array
     return $download;
 }
 
+function foodCardTypeLabel(string $type): string
+{
+    return $type === 'beverage' ? 'Nápojový lístek' : 'Jídelní lístek';
+}
+
+function foodCardValidityLabel(array $card): string
+{
+    $from = !empty($card['valid_from']) ? formatCzechDate((string)$card['valid_from']) : null;
+    $to = !empty($card['valid_to']) ? formatCzechDate((string)$card['valid_to']) : null;
+
+    if ($from && $to) {
+        return 'Platnost: ' . $from . ' – ' . $to;
+    }
+    if ($from) {
+        return 'Platnost od ' . $from;
+    }
+    if ($to) {
+        return 'Platnost do ' . $to;
+    }
+
+    return '';
+}
+
+function foodCardMetaLabel(array $card): string
+{
+    $parts = [];
+    $validityLabel = foodCardValidityLabel($card);
+    if ($validityLabel !== '') {
+        $parts[] = $validityLabel;
+    }
+
+    $description = trim((string)($card['description'] ?? ''));
+    if ($description !== '') {
+        $parts[] = $description;
+    }
+
+    return implode(' | ', $parts);
+}
+
+function hydrateFoodCardPresentation(array $card): array
+{
+    $card['slug'] = foodCardSlug((string)($card['slug'] ?? ''));
+    $card['type'] = in_array((string)($card['type'] ?? 'food'), ['food', 'beverage'], true)
+        ? (string)$card['type']
+        : 'food';
+    $card['type_label'] = foodCardTypeLabel((string)$card['type']);
+    $card['validity_label'] = foodCardValidityLabel($card);
+    $card['meta_label'] = foodCardMetaLabel($card);
+    $card['public_path'] = foodCardPublicPath($card);
+    $card['is_publicly_visible'] = ((string)($card['status'] ?? 'published') === 'published')
+        && (int)($card['is_published'] ?? 1) === 1;
+
+    return $card;
+}
+
 function placeImageUrl(array $place): string
 {
     $filename = trim((string)($place['image_file'] ?? ''));
@@ -2029,6 +2089,26 @@ function pollPublicUrl(array $poll, array $query = []): string
     return siteUrl(appendUrlQuery(pollPublicRequestPath($poll), $query));
 }
 
+function foodCardPublicRequestPath(array $card): string
+{
+    $slug = foodCardSlug((string)($card['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/food/card/' . rawurlencode($slug);
+    }
+
+    return '/food/card.php?id=' . (int)($card['id'] ?? 0);
+}
+
+function foodCardPublicPath(array $card, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(foodCardPublicRequestPath($card), $query);
+}
+
+function foodCardPublicUrl(array $card, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(foodCardPublicRequestPath($card), $query));
+}
+
 function galleryAlbumPublicRequestPath(array $album): string
 {
     $slug = galleryAlbumSlug((string)($album['slug'] ?? ''));
@@ -2232,6 +2312,27 @@ function uniqueDownloadSlug(PDO $pdo, string $candidate, ?int $excludeId = null)
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_downloads WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueFoodCardSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = foodCardSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'listek';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_food_cards WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);

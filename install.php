@@ -325,6 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             type         ENUM('food','beverage') NOT NULL DEFAULT 'food',
             title        VARCHAR(255) NOT NULL,
+            slug         VARCHAR(255) NOT NULL,
             description  TEXT,
             content      MEDIUMTEXT,
             valid_from   DATE         NULL DEFAULT NULL,
@@ -334,7 +335,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
             author_id    INT          NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_food_cards_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_polls (

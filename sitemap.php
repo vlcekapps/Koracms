@@ -153,6 +153,36 @@ endif; ?>
 <?php endforeach; } catch (\PDOException $e) {}
 endif; ?>
 
+<?php if (isModuleEnabled('food')): ?>
+  <url>
+    <loc><?= h(siteUrl('/food/index.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc><?= h(siteUrl('/food/archive.php')) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php
+    try {
+        $foodCards = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at, valid_from) AS sitemap_lastmod
+             FROM cms_food_cards
+             WHERE status = 'published' AND is_published = 1
+             ORDER BY COALESCE(valid_from, created_at) DESC, id DESC"
+        )->fetchAll();
+        foreach ($foodCards as $foodCard):
+?>
+  <url>
+    <loc><?= h(foodCardPublicUrl($foodCard)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$foodCard['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php endforeach; } catch (\PDOException $e) {}
+endif; ?>
+
 <?php if (isModuleEnabled('events')): ?>
   <url>
     <loc><?= h(siteUrl('/events/index.php')) ?></loc>

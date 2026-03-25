@@ -23,26 +23,22 @@ if ($filterType !== 'vse') {
 }
 
 $cardsStmt = $pdo->prepare(
-    "SELECT id, type, title, description, valid_from, valid_to, is_current, created_at
+    "SELECT id, type, title, slug, description, valid_from, valid_to, is_current,
+            is_published, status, created_at, updated_at
      FROM cms_food_cards
      {$where}
-     ORDER BY is_current DESC, COALESCE(valid_from, created_at) DESC"
+     ORDER BY is_current DESC, COALESCE(valid_from, created_at) DESC, id DESC"
 );
 $cardsStmt->execute($params);
-$cards = $cardsStmt->fetchAll();
+$cards = array_map(
+    static fn(array $card): array => hydrateFoodCardPresentation($card),
+    $cardsStmt->fetchAll()
+);
 
 $typeLabels = ['food' => 'Jídelní lístek', 'beverage' => 'Nápojový lístek'];
 foreach ($cards as &$card) {
-    $from = $card['valid_from'] ? formatCzechDate($card['valid_from']) : null;
-    $to = $card['valid_to'] ? formatCzechDate($card['valid_to']) : null;
-    if ($from && $to) {
-        $card['validity_label'] = $from . ' – ' . $to;
-    } elseif ($from) {
-        $card['validity_label'] = 'Od ' . $from;
-    } elseif ($to) {
-        $card['validity_label'] = 'Do ' . $to;
-    } else {
-        $card['validity_label'] = 'Přidáno ' . formatCzechDate($card['created_at']);
+    if ((string)$card['validity_label'] === '') {
+        $card['validity_label'] = 'Přidáno ' . formatCzechDate((string)$card['created_at']);
     }
 }
 unset($card);
