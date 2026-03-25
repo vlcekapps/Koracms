@@ -102,7 +102,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="podcast-episode-slug-help"
            value="<?= h((string)$episode['slug']) ?>">
-    <small id="podcast-episode-slug-help" class="field-help">Slug musí být unikátní v rámci pořadu.</small>
+    <small id="podcast-episode-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu epizody. V rámci pořadu musí zůstat jedinečná.</small>
 
     <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1 1 12rem">
@@ -122,7 +122,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
                value="<?= h($publishInput) ?>">
       </div>
     </div>
-    <small id="podcast-episode-publish-help" class="field-help">Prázdné datum znamená zveřejnění ihned po schválení nebo uložení.</small>
+    <small id="podcast-episode-publish-help" class="field-help">Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.</small>
   </fieldset>
 
   <fieldset>
@@ -131,9 +131,9 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <label for="audio_file">Audio soubor</label>
     <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*"
            aria-describedby="podcast-episode-audio-help<?= (string)$episode['audio_file'] !== '' ? ' podcast-episode-audio-current' : '' ?>">
-    <small id="podcast-episode-audio-help" class="field-help">Povolené formáty: MP3, OGG, WAV, M4A a AAC.</small>
+    <small id="podcast-episode-audio-help" class="field-help">Můžete nahrát běžný zvukový soubor, například MP3, OGG, WAV, M4A nebo AAC.</small>
     <?php if ((string)$episode['audio_file'] !== ''): ?>
-      <small id="podcast-episode-audio-current" class="field-help">Aktuální soubor je už nahraný.</small>
+      <small id="podcast-episode-audio-current" class="field-help">Aktuální soubor je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if ((string)$episode['audio_file'] !== ''): ?>
       <label for="audio_file_delete" style="font-weight:normal;margin-top:.5rem">
@@ -146,7 +146,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <input type="url" id="audio_url" name="audio_url" maxlength="500" aria-describedby="podcast-episode-audio-url-help"
            placeholder="https://example.com/episode.mp3"
            value="<?= h((string)$episode['audio_url']) ?>">
-    <small id="podcast-episode-audio-url-help" class="field-help">Hodí se pro externí hosting nebo embedovatelný přímý audio soubor.</small>
+    <small id="podcast-episode-audio-url-help" class="field-help">Hodí se pro externí hosting nebo přímý odkaz na audio soubor.</small>
 
     <label for="description">Popis epizody</label>
     <?php if ($useWysiwyg): ?>
@@ -155,7 +155,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       <small id="podcast-episode-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="10" aria-describedby="podcast-episode-description-help"><?= h((string)$episode['description']) ?></textarea>
-      <small id="podcast-episode-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+      <small id="podcast-episode-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
     <?php endif; ?>
   </fieldset>
 

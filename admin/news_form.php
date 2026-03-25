@@ -80,7 +80,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="news-slug-help"
            value="<?= h((string)($item['slug'] ?? '')) ?>">
-    <small id="news-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="news-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="content">Text novinky <span aria-hidden="true">*</span></label>
     <textarea id="content" name="content" rows="8" required aria-required="true"><?= h((string)($item['content'] ?? '')) ?></textarea>

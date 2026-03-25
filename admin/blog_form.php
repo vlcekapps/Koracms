@@ -92,7 +92,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="blog-slug-help"
            value="<?= h($article['slug'] ?? '') ?>">
-    <small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="blog-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="category_id">Kategorie</label>
     <select id="category_id" name="category_id">
@@ -126,7 +126,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
     <label for="content">Text článku <span aria-hidden="true">*</span></label>
     <textarea id="content" name="content" rows="15" required aria-required="true"<?= !$useWysiwyg ? ' aria-describedby="blog-content-help"' : '' ?>><?= h($article['content'] ?? '') ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="blog-content-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="blog-content-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
 
     <label for="image">Náhledový obrázek</label>
     <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
@@ -135,7 +135,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
       <small id="blog-image-current" class="field-help">Aktuální obrázek: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
              target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?></a>.</small>
     <?php else: ?>
-      <small id="blog-image-help" class="field-help">Volitelné pole pro úvodní náhled článku.</small>
+      <small id="blog-image-help" class="field-help">Volitelné. Hodí se pro úvodní náhled článku.</small>
     <?php endif; ?>
     <?php if (!empty($article['image_file'])): ?>
       <label style="font-weight:normal;margin-top:.3rem">
@@ -146,7 +146,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <label for="publish_at">Plánované publikování</label>
     <input type="datetime-local" id="publish_at" name="publish_at" aria-describedby="blog-publish-at-help"
            style="width:auto" value="<?= h($publishAtInput) ?>">
-    <small id="blog-publish-at-help" class="field-help">Prázdné pole znamená publikování ihned.</small>
+    <small id="blog-publish-at-help" class="field-help">Nechte prázdné, pokud se má článek zveřejnit hned.</small>
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">

@@ -72,7 +72,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
            aria-describedby="podcast-show-slug-help"
            value="<?= h((string)$show['slug']) ?>">
-    <small id="podcast-show-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="podcast-show-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="author">Autor / vydavatel</label>
     <input type="text" id="author" name="author" maxlength="255"
@@ -109,7 +109,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <small id="podcast-show-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="8" aria-describedby="podcast-show-description-help"><?= h((string)$show['description']) ?></textarea>
-      <small id="podcast-show-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+      <small id="podcast-show-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
     <?php endif; ?>
 
     <label for="cover_image">Cover obrázek</label>
@@ -117,12 +117,12 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <div style="margin:.75rem 0">
         <img src="<?= h((string)$show['cover_url']) ?>" alt="" style="display:block;max-width:18rem;width:100%;border-radius:1rem;border:1px solid #d6d6d6">
       </div>
-      <small id="podcast-show-cover-current" class="field-help">Aktuální cover je už nahraný. Nahrajte nový pro nahrazení.</small>
+      <small id="podcast-show-cover-current" class="field-help">Aktuální titulní obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <input type="file" id="cover_image" name="cover_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
            aria-describedby="<?= (string)$show['cover_url'] !== '' ? 'podcast-show-cover-current' : 'podcast-show-cover-help' ?>">
     <?php if ((string)$show['cover_url'] === ''): ?>
-      <small id="podcast-show-cover-help" class="field-help">Volitelné pole pro titulní obrázek pořadu.</small>
+      <small id="podcast-show-cover-help" class="field-help">Volitelné. Hodí se pro titulní obrázek pořadu.</small>
     <?php endif; ?>
     <?php if ((string)$show['cover_image'] !== ''): ?>
       <label for="cover_image_delete" style="font-weight:normal;margin-top:.5rem">

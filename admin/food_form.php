@@ -78,16 +78,16 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="food-slug-help"
            value="<?= h((string)$card['slug']) ?>">
-    <small id="food-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="food-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Krátká poznámka</label>
     <textarea id="description" name="description" rows="2" aria-describedby="food-description-help"
               style="min-height:0"><?= h((string)($card['description'] ?? '')) ?></textarea>
-    <small id="food-description-help" class="field-help">Nepovinné pole. Zobrazí se v archivu a v detailu.</small>
+    <small id="food-description-help" class="field-help">Volitelné. Zobrazí se v archivu i na detailu lístku.</small>
 
     <label for="content">Obsah lístku</label>
     <textarea id="content" name="content" rows="18"<?= !$useWysiwyg ? ' aria-describedby="food-content-help"' : '' ?>><?= h((string)($card['content'] ?? '')) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="food-content-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="food-content-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
 
     <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
       <div>
@@ -99,7 +99,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
         <label for="valid_to">Platí do</label>
         <input type="date" id="valid_to" name="valid_to" style="width:auto" aria-describedby="food-valid-to-help"
                value="<?= h((string)($card['valid_to'] ?? '')) ?>">
-        <small id="food-valid-to-help" class="field-help">Prázdné pole znamená bez omezení.</small>
+        <small id="food-valid-to-help" class="field-help">Nechte prázdné, pokud má lístek platit bez data konce.</small>
       </div>
     </div>
   </fieldset>

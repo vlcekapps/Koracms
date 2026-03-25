@@ -78,7 +78,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255"
            pattern="[a-z0-9\-]+" aria-describedby="download-slug-help"
            value="<?= h((string)$download['slug']) ?>">
-    <small id="download-slug-help" class="field-help">Použije se ve veřejné adrese, například <code>/downloads/moje-aplikace</code>.</small>
+    <small id="download-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu položky. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="download_type">Typ položky</label>
     <select id="download_type" name="download_type">
@@ -125,7 +125,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       <small id="download-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="10" aria-describedby="download-description-help"><?= h((string)$download['description']) ?></textarea>
-      <small id="download-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+      <small id="download-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
     <?php endif; ?>
   </fieldset>
 
@@ -136,9 +136,9 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <input type="file" id="file" name="file"
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.7z,.tar,.gz,.bz2,.txt,.exe,.msi,.apk,.jar,.dmg,.pkg,.deb,.rpm,.appimage"
            aria-describedby="download-file-help<?= (string)$download['original_name'] !== '' ? ' download-file-current' : '' ?>">
-    <small id="download-file-help" class="field-help">Povolené formáty zahrnují dokumenty, archivy a běžné softwarové balíčky.</small>
+    <small id="download-file-help" class="field-help">Můžete nahrát dokument, archiv nebo instalační balíček.</small>
     <?php if ((string)$download['original_name'] !== ''): ?>
-      <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový pro nahrazení.</small>
+      <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if ((string)$download['filename'] !== ''): ?>
       <label style="font-weight:normal;margin-top:.75rem">
@@ -151,7 +151,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <input type="url" id="external_url" name="external_url" maxlength="255" aria-describedby="download-external-url-help"
            placeholder="https://example.com/download"
            value="<?= h((string)$download['external_url']) ?>">
-    <small id="download-external-url-help" class="field-help">Hodí se například pro GitHub Releases, App Store nebo produktovou stránku.</small>
+    <small id="download-external-url-help" class="field-help">Hodí se třeba pro GitHub Releases, App Store nebo produktovou stránku.</small>
   </fieldset>
 
   <fieldset>

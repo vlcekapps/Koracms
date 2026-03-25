@@ -81,11 +81,11 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="poll-slug-help"
            value="<?= h((string)$poll['slug']) ?>">
-    <small id="poll-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="poll-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4" aria-describedby="poll-description-help"><?= h((string)($poll['description'] ?? '')) ?></textarea>
-    <small id="poll-description-help" class="field-help">Nepovinné pole. Krátké vysvětlení se zobrazí na detailu ankety i ve výpisu.</small>
+    <small id="poll-description-help" class="field-help">Volitelné. Krátké vysvětlení se zobrazí ve výpisu i na detailu ankety.</small>
 
     <label for="status">Stav</label>
     <select id="status" name="status">
@@ -96,7 +96,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
     <legend>Časové omezení</legend>
-    <small id="poll-timing-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>
+    <small id="poll-timing-help" class="field-help" style="margin-top:0">Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.</small>
     <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
       <div>
         <label for="start_date">Začátek – datum</label>

@@ -82,7 +82,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="place-slug-help"
            value="<?= h((string)$place['slug']) ?>">
-    <small id="place-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="place-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="place_kind">Typ místa</label>
     <select id="place_kind" name="place_kind">
@@ -102,7 +102,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
         <option value="<?= h((string)$category) ?>">
       <?php endforeach; ?>
     </datalist>
-    <small id="place-category-help" class="field-help">Nepovinné pole.</small>
+    <small id="place-category-help" class="field-help">Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.</small>
 
     <label for="locality">Lokalita / obec</label>
     <input type="text" id="locality" name="locality" maxlength="255"
@@ -122,7 +122,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
       <input type="hidden" id="description" name="description" value="<?= h((string)($place['description'] ?? '')) ?>">
     <?php else: ?>
       <textarea id="description" name="description" rows="8" aria-describedby="place-description-help"><?= h((string)($place['description'] ?? '')) ?></textarea>
-      <small id="place-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small>
+      <small id="place-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small>
     <?php endif; ?>
   </fieldset>
 
@@ -171,9 +171,9 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <?php endif; ?>
     <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
            aria-describedby="place-image-help<?= !empty($place['image_file']) ? ' place-image-current' : '' ?>">
-    <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát akce v lokalitě.</small>
+    <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát k lokalitě.</small>
     <?php if (!empty($place['image_file'])): ?>
-      <small id="place-image-current" class="field-help">Aktuální obrázek je už nahraný.</small>
+      <small id="place-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if (!empty($place['image_file'])): ?>
       <label for="place_image_delete" style="font-weight:normal;margin-top:.35rem">

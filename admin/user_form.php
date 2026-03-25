@@ -134,7 +134,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
       <input type="text" id="author_slug" name="author_slug" maxlength="255" pattern="[a-z0-9\-]+"
              aria-describedby="author-slug-help"
              value="<?= h((string)($account['author_slug'] ?? '')) ?>">
-      <small id="author-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+      <small id="author-slug-help" class="field-help">Adresa autora se vyplní automaticky podle jména nebo přezdívky. Použijte malá písmena, číslice a pomlčky.</small>
 
       <label for="author_bio">Krátké bio / medailonek</label>
       <textarea id="author_bio" name="author_bio" rows="6" aria-describedby="author-bio-help"><?= h((string)($account['author_bio'] ?? '')) ?></textarea>

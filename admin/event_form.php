@@ -52,7 +52,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="event-slug-help"
            value="<?= h((string)($event['slug'] ?? '')) ?>">
-    <small id="event-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="event-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
   </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
@@ -68,14 +68,14 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
         <input type="time" id="event_time" name="event_time" style="width:auto;display:block;margin-top:.2rem"
                aria-describedby="event-time-help"
                value="<?= $event ? h(date('H:i', strtotime((string)$event['event_date']))) : '' ?>">
-        <small id="event-time-help" class="field-help">Nepovinné pole.</small>
+        <small id="event-time-help" class="field-help">Vyplňte jen pokud chcete návštěvníkům ukázat přesný čas začátku.</small>
       </div>
     </div>
   </fieldset>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
     <legend>Konec akce</legend>
-    <small id="event-end-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>
+    <small id="event-end-help" class="field-help" style="margin-top:0">Vyplňte jen pokud má událost jasný konec.</small>
     <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
       <div>
         <label for="event_end_date">Datum</label>
@@ -99,7 +99,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="10"<?= !$useWysiwyg ? ' aria-describedby="event-description-help"' : '' ?>><?= h((string)($event['description'] ?? '')) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="event-description-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="event-description-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="event-published-help"

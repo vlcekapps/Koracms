@@ -91,7 +91,7 @@ $err = trim($_GET['err'] ?? '');
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
            aria-describedby="resource-slug-help"
            value="<?= h($resource['slug'] ?? '') ?>">
-    <small id="resource-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="resource-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4"><?= h($resource['description'] ?? '') ?></textarea>
@@ -166,19 +166,19 @@ $err = trim($_GET['err'] ?? '');
     <input type="number" id="min_advance_hours" name="min_advance_hours" min="0" style="width:8rem"
            aria-describedby="resource-min-advance-help"
            value="<?= (int)($resource['min_advance_hours'] ?? 1) ?>">
-    <small id="resource-min-advance-help" class="field-help">Kolik hodin před začátkem je třeba rezervovat nejpozději.</small>
+    <small id="resource-min-advance-help" class="field-help">Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.</small>
 
     <label for="max_advance_days">Nejdříve rezervovat (dní dopředu)</label>
     <input type="number" id="max_advance_days" name="max_advance_days" min="1" style="width:8rem"
            aria-describedby="resource-max-advance-help"
            value="<?= (int)($resource['max_advance_days'] ?? 30) ?>">
-    <small id="resource-max-advance-help" class="field-help">Jak daleko do budoucna lze rezervaci vytvořit.</small>
+    <small id="resource-max-advance-help" class="field-help">Například 30 znamená, že rezervaci lze vytvořit nejvýš 30 dní dopředu.</small>
 
     <label for="cancellation_hours">Bezplatné zrušení do (hodin předem)</label>
     <input type="number" id="cancellation_hours" name="cancellation_hours" min="0" style="width:8rem"
            aria-describedby="resource-cancellation-help"
            value="<?= (int)($resource['cancellation_hours'] ?? 24) ?>">
-    <small id="resource-cancellation-help" class="field-help">Kolik hodin před začátkem může zákazník ještě zrušit. Hodnota 0 znamená, že lze zrušit kdykoli.</small>
+    <small id="resource-cancellation-help" class="field-help">Hodnota 0 znamená, že rezervaci lze zrušit kdykoli před začátkem.</small>
 
     <div style="margin-top:1rem">
       <input type="checkbox" id="requires_approval" name="requires_approval" value="1" aria-describedby="resource-requires-approval-help"

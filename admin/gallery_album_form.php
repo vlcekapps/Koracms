@@ -86,7 +86,7 @@ adminHeader($pageTitle);
     <label for="slug">Slug adresy</label>
     <input type="text" id="slug" name="slug" maxlength="255" aria-describedby="gallery-album-slug-help<?= $formError !== '' ? ' form-errors' : '' ?>"
            value="<?= h((string)$album['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false">
-    <small id="gallery-album-slug-help" class="field-help">Veřejná adresa bude vypadat například jako <code>/gallery/album/moje-fotografie</code>.</small>
+    <small id="gallery-album-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu alba. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4"><?= h((string)($album['description'] ?? '')) ?></textarea>

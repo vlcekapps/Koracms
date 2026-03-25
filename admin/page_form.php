@@ -61,11 +61,11 @@ adminHeader($pageTitle);
     <input type="text" id="slug" name="slug" required aria-required="true" aria-describedby="page-slug-help"
            pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky"
            value="<?= h((string)$page['slug']) ?>">
-    <small id="page-slug-help" class="field-help">Automaticky se generuje z názvu, dokud slug neupravíte ručně.</small>
+    <small id="page-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="content">Obsah</label>
     <textarea id="content" name="content"<?= !$useWysiwyg ? ' aria-describedby="page-content-help"' : '' ?>><?= h((string)$page['content']) ?></textarea>
-    <?php if (!$useWysiwyg): ?><small id="page-content-help" class="field-help">Podporuje HTML i Markdown syntaxi.</small><?php endif; ?>
+    <?php if (!$useWysiwyg): ?><small id="page-content-help" class="field-help">Můžete použít HTML nebo Markdown.</small><?php endif; ?>
 
     <label style="font-weight:normal; margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="page-published-help"<?= !empty($page['is_published']) ? ' checked' : '' ?>>

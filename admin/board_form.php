@@ -85,7 +85,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
            aria-describedby="board-slug-help"
            value="<?= h((string)$document['slug']) ?>">
-    <small id="board-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <small id="board-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="board_type">Typ oznámení</label>
     <select id="board_type" name="board_type">
@@ -114,10 +114,10 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <?php if ($useWysiwyg): ?>
       <div id="editor-description" style="min-height:180px"><?= (string)($document['description'] ?? '') ?></div>
       <input type="hidden" id="description" name="description" aria-describedby="board-description-help" value="<?= h((string)($document['description'] ?? '')) ?>">
-      <small id="board-description-help" class="field-help">Nepovinné pole pro detail položky.</small>
+      <small id="board-description-help" class="field-help">Vyplňte, když chcete na detailu doplnit delší text.</small>
     <?php else: ?>
       <textarea id="description" name="description" rows="6" aria-describedby="board-description-help"><?= h((string)($document['description'] ?? '')) ?></textarea>
-      <small id="board-description-help" class="field-help">Nepovinné pole. Podporuje HTML i Markdown syntaxi.</small>
+      <small id="board-description-help" class="field-help">Vyplňte, když chcete na detailu doplnit delší text. Můžete použít HTML nebo Markdown.</small>
     <?php endif; ?>
   </fieldset>
 
@@ -131,7 +131,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <label for="removal_date">Datum sejmutí</label>
     <input type="date" id="removal_date" name="removal_date" aria-describedby="board-removal-date-help"
            value="<?= h((string)($document['removal_date'] ?? '')) ?>">
-    <small id="board-removal-date-help" class="field-help">Prázdné pole znamená bez omezení.</small>
+    <small id="board-removal-date-help" class="field-help">Nechte prázdné, pokud má položka zůstat bez data stažení.</small>
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_pinned" value="1" aria-describedby="board-pinned-help"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
@@ -152,9 +152,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <?php endif; ?>
     <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
            aria-describedby="board-image-help<?= !empty($document['image_file']) ? ' board-image-current' : '' ?>">
-    <small id="board-image-help" class="field-help">Vhodné pro parte, ztracená zvířata, plakáty nebo ilustrační fotku oznámení.</small>
+    <small id="board-image-help" class="field-help">Hodí se pro parte, ztracené zvíře, plakát nebo ilustrační fotku oznámení.</small>
     <?php if (!empty($document['image_file'])): ?>
-      <small id="board-image-current" class="field-help">Aktuální obrázek je už nahraný.</small>
+      <small id="board-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if (!empty($document['image_file'])): ?>
       <label for="board_image_delete" style="font-weight:normal;margin-top:.35rem">
@@ -183,9 +183,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <input type="file" id="file" name="file"
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.txt"
            aria-describedby="board-file-help<?= !empty($document['original_name']) ? ' board-file-current' : '' ?>">
-    <small id="board-file-help" class="field-help">Povolené formáty: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ODT, ODS, ODP, ZIP, TXT.</small>
+    <small id="board-file-help" class="field-help">Můžete nahrát běžný dokument nebo archiv, například PDF, DOCX, XLSX, PPTX, ODT nebo ZIP.</small>
     <?php if (!empty($document['original_name'])): ?>
-      <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor pro nahrazení.</small>
+      <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor, pokud ji chcete nahradit.</small>
     <?php endif; ?>
 
     <label for="sort_order">Pořadí</label>
