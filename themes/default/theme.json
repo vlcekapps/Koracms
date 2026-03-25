@@ -206,13 +206,8 @@
         },
         "blog": {
           "label": "Blog",
-          "description": "Zvýrazní nejnovější článek blogu, pokud je modul blog zapnutý.",
+          "description": "Zvýrazní nejčtenější článek blogu, pokud je modul blog zapnutý.",
           "requires_modules": ["blog"]
-        },
-        "news": {
-          "label": "Novinky",
-          "description": "Zvýrazní nejnovější novinku, pokud je modul novinky zapnutý.",
-          "requires_modules": ["news"]
         },
         "board": {
           "label": "Úřední deska",

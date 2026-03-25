@@ -17,6 +17,9 @@ $boardVisibility = $readThemeSelect('home_board_visibility', 'show');
 $pollVisibility = $readThemeSelect('home_poll_visibility', 'show');
 $newsletterVisibility = $readThemeSelect('home_newsletter_visibility', 'show');
 $ctaVisibility = $readThemeSelect('home_cta_visibility', 'hide');
+$homeNewsLimit = max(0, (int)($homeNewsCount ?? 0));
+$homeBlogLimit = max(0, (int)($homeBlogCount ?? 0));
+$homeBoardLimit = max(0, (int)($homeBoardCount ?? 0));
 $articleLink = static fn(array $article): string => articlePublicPath($article);
 $newsLink = static fn(array $item): string => newsPublicPath($item);
 $renderAuthorName = static function (array $entry): string {
@@ -40,7 +43,6 @@ $newsletterAvailable = isModuleEnabled('newsletter');
 $contactAvailable = isModuleEnabled('contact');
 
 $resolveFeaturedModule = static function (string $preference) use (
-    $newsAvailable,
     $blogAvailable,
     $boardAvailable,
     $pollAvailable,
@@ -48,7 +50,6 @@ $resolveFeaturedModule = static function (string $preference) use (
 ): string {
     $available = [
         'blog' => $blogAvailable,
-        'news' => $newsAvailable,
         'board' => $boardAvailable,
         'poll' => $pollAvailable,
         'newsletter' => $newsletterAvailable,
@@ -62,7 +63,7 @@ $resolveFeaturedModule = static function (string $preference) use (
         return $preference;
     }
 
-    foreach (['blog', 'news', 'board', 'poll', 'newsletter'] as $candidate) {
+    foreach (['blog', 'board', 'poll', 'newsletter'] as $candidate) {
         if (!empty($available[$candidate])) {
             return $candidate;
         }
@@ -76,18 +77,28 @@ $featuredModule = $resolveFeaturedModule($featuredPreference);
 $newsItems = $latestNews;
 $blogItems = $latestArticles;
 $boardItems = $latestBoard;
-$featuredNewsItem = null;
 $featuredArticle = null;
 $featuredBoardItem = null;
 
-if ($featuredModule === 'news' && !empty($newsItems)) {
-    $featuredNewsItem = array_shift($newsItems);
-}
-if ($featuredModule === 'blog' && !empty($blogItems)) {
-    $featuredArticle = array_shift($blogItems);
+if ($featuredModule === 'blog') {
+    if (!empty($featuredBlogArticle)) {
+        $featuredArticle = $featuredBlogArticle;
+    } elseif (!empty($blogItems)) {
+        $featuredArticle = $blogItems[0];
+    }
 }
 if ($featuredModule === 'board' && !empty($boardItems)) {
     $featuredBoardItem = array_shift($boardItems);
+}
+
+if ($homeNewsLimit > 0 && count($newsItems) > $homeNewsLimit) {
+    $newsItems = array_slice($newsItems, 0, $homeNewsLimit);
+}
+if ($homeBlogLimit > 0 && count($blogItems) > $homeBlogLimit) {
+    $blogItems = array_slice($blogItems, 0, $homeBlogLimit);
+}
+if ($homeBoardLimit > 0 && count($boardItems) > $homeBoardLimit) {
+    $boardItems = array_slice($boardItems, 0, $homeBoardLimit);
 }
 
 $showHero = $heroVisibility === 'show' && $homeIntro !== '';
@@ -243,7 +254,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
           $secondaryArticles = array_slice($items, 1);
         ?>
         <div class="home-featured">
-          <article class="card card--feature home-featured__lead">
+          <article class="card card--feature home-featured__lead" data-home-blog-item>
             <?php if (!empty($leadArticle['image_file'])): ?>
               <a class="card__media" href="<?= h($articleLink($leadArticle)) ?>">
                 <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($leadArticle['image_file']) ?>"
@@ -275,7 +286,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
 
           <div class="home-featured__side <?= h($gridClass) ?>">
             <?php foreach ($secondaryArticles as $article): ?>
-              <article class="card">
+              <article class="card" data-home-blog-item>
                 <?php if (!empty($article['image_file'])): ?>
                   <a class="card__media" href="<?= h($articleLink($article)) ?>">
                     <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
@@ -310,7 +321,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
       <?php else: ?>
         <div class="<?= h($gridClass) ?>">
           <?php foreach ($items as $article): ?>
-            <article class="card">
+            <article class="card" data-home-blog-item>
               <?php if (!empty($article['image_file'])): ?>
                 <a class="card__media" href="<?= h($articleLink($article)) ?>">
                   <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
@@ -493,7 +504,6 @@ $renderCtaSection = static function () use ($showCta, $ctaActions): string {
 
 $renderFeaturedSection = static function () use (
     $featuredModule,
-    $featuredNewsItem,
     $featuredArticle,
     $featuredBoardItem,
     $pollAvailable,
@@ -539,38 +549,6 @@ $renderFeaturedSection = static function () use (
                     <p><?= h($featuredArticle['perex']) ?></p>
                   <?php endif; ?>
                   <p><a class="section-link" href="<?= h($articleLink($featuredArticle)) ?>">Číst článek <span aria-hidden="true">→</span></a></p>
-                </div>
-              </article>
-            </section>
-            <?php
-            break;
-
-        case 'news':
-            if (!$featuredNewsItem) {
-                break;
-            }
-            ?>
-            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="news" aria-labelledby="featured-nadpis">
-              <div class="section-heading">
-                <div>
-                  <h2 id="featured-nadpis" class="section-title">Zvýrazněná novinka</h2>
-                </div>
-              </div>
-              <article class="card card--highlighted">
-                <div class="card__body">
-                  <p class="meta-row meta-row--tight">
-                    <time datetime="<?= h(str_replace(' ', 'T', (string)$featuredNewsItem['created_at'])) ?>"><?= formatCzechDate((string)$featuredNewsItem['created_at']) ?></time>
-                    <?php if (!empty($featuredNewsItem['author_name'])): ?>
-                      <?= $renderAuthorName($featuredNewsItem) ?>
-                    <?php endif; ?>
-                  </p>
-                  <h3 class="card__title card__title--feature">
-                    <a href="<?= h($newsLink($featuredNewsItem)) ?>"><?= h((string)$featuredNewsItem['title']) ?></a>
-                  </h3>
-                  <?php if (!empty($featuredNewsItem['excerpt'])): ?>
-                    <p><?= h((string)$featuredNewsItem['excerpt']) ?></p>
-                  <?php endif; ?>
-                  <p><a class="section-link" href="<?= h($newsLink($featuredNewsItem)) ?>">Číst novinku <span aria-hidden="true">→</span></a></p>
                 </div>
               </article>
             </section>

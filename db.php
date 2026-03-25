@@ -285,7 +285,7 @@ function siteProfileDefinitions(): array
                 'header_layout' => 'split',
                 'container_width' => 'standard',
                 'home_layout' => 'balanced',
-                'home_featured_module' => 'news',
+                'home_featured_module' => 'board',
                 'home_primary_order' => 'news_blog',
                 'home_utility_order' => 'board_poll_newsletter_cta',
                 'home_blog_visibility' => 'show',

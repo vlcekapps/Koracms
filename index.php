@@ -8,6 +8,7 @@ $siteDesc = getSetting('site_description', '');
 $latestNews = [];
 $homeNewsCount = (int)getSetting('home_news_count', '5');
 if (isModuleEnabled('news') && $homeNewsCount > 0) {
+    $homeNewsFetchLimit = $homeNewsCount + 1;
     $stmt = db_connect()->prepare(
         "SELECT n.id, n.title, n.slug, n.content, n.created_at,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
@@ -18,7 +19,7 @@ if (isModuleEnabled('news') && $homeNewsCount > 0) {
          ORDER BY n.created_at DESC
          LIMIT ?"
     );
-    $stmt->execute([$homeNewsCount]);
+    $stmt->execute([$homeNewsFetchLimit]);
     $latestNews = array_map(
         static fn(array $news): array => hydrateNewsPresentation($news),
         $stmt->fetchAll()
@@ -26,10 +27,30 @@ if (isModuleEnabled('news') && $homeNewsCount > 0) {
 }
 
 $latestArticles = [];
+$featuredBlogArticle = null;
 $homeBlogCount = (int)getSetting('home_blog_count', '5');
+if (isModuleEnabled('blog')) {
+    $featuredBlogStmt = db_connect()->prepare(
+        "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.view_count, c.name AS category,
+                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                u.author_public_enabled, u.author_slug, u.role AS author_role
+         FROM cms_articles a
+         LEFT JOIN cms_categories c ON c.id = a.category_id
+         LEFT JOIN cms_users u ON u.id = a.author_id
+         WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+         ORDER BY a.view_count DESC, a.created_at DESC, a.id DESC
+         LIMIT 1"
+    );
+    $featuredBlogStmt->execute();
+    $featuredBlogArticle = $featuredBlogStmt->fetch() ?: null;
+    if ($featuredBlogArticle !== null) {
+        $featuredBlogArticle = hydrateAuthorPresentation($featuredBlogArticle);
+    }
+}
 if (isModuleEnabled('blog') && $homeBlogCount > 0) {
     $stmt = db_connect()->prepare(
         "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, c.name AS category,
+                a.view_count,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                 u.author_public_enabled, u.author_slug, u.role AS author_role
          FROM cms_articles a
@@ -49,6 +70,7 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
 $latestBoard = [];
 $homeBoardCount = (int)getSetting('home_board_count', '5');
 if (isModuleEnabled('board') && $homeBoardCount > 0) {
+    $homeBoardFetchLimit = $homeBoardCount + 1;
     $stmt = db_connect()->prepare(
         "SELECT b.id, b.title, b.slug, b.board_type, b.excerpt, b.description, b.posted_date, b.image_file,
                 b.contact_name, b.contact_phone, b.contact_email, b.is_pinned,
@@ -61,7 +83,7 @@ if (isModuleEnabled('board') && $homeBoardCount > 0) {
          ORDER BY b.is_pinned DESC, b.posted_date DESC, b.sort_order, b.title
          LIMIT ?"
     );
-    $stmt->execute([$homeBoardCount]);
+    $stmt->execute([$homeBoardFetchLimit]);
     $latestBoard = array_map(
         static fn(array $document): array => hydrateBoardPresentation($document),
         $stmt->fetchAll()
@@ -95,8 +117,12 @@ renderPublicPage([
         'homeIntro' => getSetting('home_intro', ''),
         'latestNews' => $latestNews,
         'latestArticles' => $latestArticles,
+        'featuredBlogArticle' => $featuredBlogArticle,
         'latestBoard' => $latestBoard,
         'homePoll' => $homePoll,
+        'homeNewsCount' => $homeNewsCount,
+        'homeBlogCount' => $homeBlogCount,
+        'homeBoardCount' => $homeBoardCount,
     ],
     'current_nav' => 'home',
     'page_kind' => 'home',

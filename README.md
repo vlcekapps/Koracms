@@ -140,9 +140,10 @@ Na hlavní stránce se zobrazují widgety zapnutých modulů:
 
 - **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Obecná nastavení → Text úvodní stránky*)
 - **Nejnovější novinky** – počet položek lze nastavit; hodnota 0 widget skryje
-- **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje
+- **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje a při zobrazení se vždy dodrží přesně nastavený počet položek
 - **Úřední deska / Vývěska / Oznámení** – nejnovější aktuální položky; počet položek lze nastavit; hodnota 0 widget skryje
 - **Aktuální anketa** – pokud je modul Ankety zapnutý a existuje aktivní anketa
+- **Doporučený článek** – volitelný zvýrazněný blok na domovské stránce; pokud je jako zdroj zvolen blog, použije se nejčtenější publikovaný článek podle počtu zobrazení
 
 ---
 
@@ -184,7 +185,8 @@ Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů
 - Bezpečný fallback na `default`, pokud uložená šablona na serveru chybí nebo je neplatná
 - Safe customizace aktivní šablony: paleta, hlavní akcenty, typografie a šířka obsahu
 - Varianta hlavičky a homepage přímo v administraci bez editace šablonových souborů
-- Homepage composer pro default theme: featured modul, pořadí hlavních sekcí a viditelnost bloků bez zásahu do kódu
+- Homepage composer pro default theme: zvýrazněný blok, pořadí hlavních sekcí a viditelnost bloků bez zásahu do kódu
+- Zvýrazněný blok podporuje smysluplné zdroje jako blog, úřední desku, anketu nebo newsletter; novinky se už jako featured zdroj nepoužívají
 - Homepage composer vždy respektuje globální stav modulů, takže nenabízí ani nevyrenderuje blok pro vypnutý modul
 - Živý náhled šablony a draft vzhledu bez aktivace na produkčním webu
 - Reset vzhledu aktivní šablony na výchozí hodnoty bez zásahu do souborů

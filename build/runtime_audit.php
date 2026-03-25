@@ -42,6 +42,7 @@ $articleLegacyUrl = $articleLegacyPath !== '' ? $baseUrl . $articleLegacyPath : 
 $articleCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_articles WHERE status = 'published'"
 )->fetchColumn();
+$homeBlogCountSetting = max(0, (int)getSetting('home_blog_count', '5'));
 $newsRow = $pdo->query(
     "SELECT id, title, slug FROM cms_news WHERE status = 'published' ORDER BY created_at DESC, id DESC LIMIT 1"
 )->fetch() ?: null;
@@ -102,7 +103,6 @@ $activePollCount = (int)$pdo->query(
        AND (start_date IS NULL OR start_date <= NOW())
        AND (end_date IS NULL OR end_date > NOW())"
 )->fetchColumn();
-$homeBlogCountSetting = max(0, (int)getSetting('home_blog_count', '5'));
 $pageRow = $pdo->query(
     "SELECT id, slug FROM cms_pages WHERE status = 'published' AND is_published = 1 ORDER BY id LIMIT 1"
 )->fetch() ?: null;
@@ -4467,7 +4467,9 @@ try {
             ? 'newsletter'
             : ($blogModuleEnabled && $articleId
                 ? 'blog'
-                : ($newsModuleEnabled && $newsCount > 0 ? 'news' : 'none')),
+                : ($boardModuleEnabled && $boardCount > 0
+                    ? 'board'
+                    : ($pollModuleEnabled && $activePollCount > 0 ? 'poll' : 'none'))),
         'home_primary_order' => 'blog_news',
         'home_utility_order' => $newsletterModuleEnabled
             ? 'newsletter_cta_board_poll'
@@ -4480,9 +4482,9 @@ try {
         'home_cta_visibility' => 'show',
     ];
     $expectedFeaturedModule = (string)$composerSettings['home_featured_module'];
-    $expectedHomeBlogItems = $blogModuleEnabled ? min($articleCount, $homeBlogCountSetting) : 0;
-    if ($expectedFeaturedModule === 'blog' && $expectedHomeBlogItems > 0) {
-        $expectedHomeBlogItems--;
+    $expectedHomeBlogItems = 0;
+    if ($blogModuleEnabled && (string)$composerSettings['home_blog_visibility'] === 'show') {
+        $expectedHomeBlogItems = min($articleCount, $homeBlogCountSetting);
     }
 
     saveThemeSettings($composerSettings, $originalActiveTheme);
@@ -4507,6 +4509,10 @@ try {
     }
     if ($expectedHomeBlogItems > 0 && !str_contains($composerProbe['body'], 'data-home-section="blog"')) {
         $composerIssues[] = 'blog block was not rendered';
+    }
+    $actualHomeBlogItems = substr_count($composerProbe['body'], 'data-home-blog-item');
+    if ($actualHomeBlogItems !== $expectedHomeBlogItems) {
+        $composerIssues[] = 'homepage blog section rendered unexpected number of blog items';
     }
 
     $blogPos = strpos($composerProbe['body'], 'data-home-section="blog"');
@@ -4540,6 +4546,9 @@ try {
     }
     if (str_contains($adminComposerProbe['body'], '<option value="newsletter"')) {
         $composerIssues[] = 'newsletter featured option remained visible in admin after disabling module';
+    }
+    if (str_contains($adminComposerProbe['body'], '<option value="news"')) {
+        $composerIssues[] = 'news remained available as featured source in admin';
     }
 
     $newsletterDisabledSettings = $composerSettings;
