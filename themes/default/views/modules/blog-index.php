@@ -63,24 +63,19 @@ $renderAuthorName = static function (array $article): string {
               </a>
             <?php endif; ?>
             <div class="card__body">
-              <p class="meta-row meta-row--tight">
-                <?php if (!empty($article['category'])): ?>
-                  <a class="pill" href="<?= BASE_URL ?>/blog/index.php?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
-                <?php endif; ?>
-                <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
-              </p>
               <h2 class="card__title">
                 <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
               </h2>
-              <?php if (!empty($article['perex'])): ?>
-                <p><?= h($article['perex']) ?></p>
-              <?php endif; ?>
               <p class="meta-row meta-row--tight">
                 <time datetime="<?= h(str_replace(' ', 'T', $article['created_at'])) ?>"><?= formatCzechDate($article['created_at']) ?></time>
+                <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
                 <?php if (!empty($article['author_name'])): ?>
                   <?= $renderAuthorName($article) ?>
                 <?php endif; ?>
               </p>
+              <?php if (!empty($article['perex'])): ?>
+                <p><?= h($article['perex']) ?></p>
+              <?php endif; ?>
               <p>
                 <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a>
                 <?php if (isset($_SESSION['cms_user_id'])): ?>
