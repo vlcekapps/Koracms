@@ -1588,7 +1588,7 @@ $newSettings = [
     'og_image_default'        => '',
     'site_favicon'            => '',
     'site_logo'               => '',
-    'site_profile'            => guessSiteProfileKey(),
+    'site_profile'            => 'custom',
     'active_theme'            => defaultThemeName(),
     // Cookie lišta
     'cookie_consent_enabled'  => '0',

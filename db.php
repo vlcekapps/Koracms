@@ -480,6 +480,27 @@ function siteProfileSupportsPreset(string $profileKey): bool
     return ($config['supports_preset'] ?? true) !== false;
 }
 
+function siteProfileRecommendedTheme(string $profileKey): string
+{
+    $config = siteProfileConfig($profileKey);
+    $themeKey = trim((string)($config['theme'] ?? ''));
+    if ($themeKey === '') {
+        $themeKey = defaultThemeName();
+    }
+
+    return resolveThemeName($themeKey);
+}
+
+function siteProfileShouldDetachForTheme(string $profileKey, string $themeKey): bool
+{
+    $normalizedProfileKey = normalizeSiteProfileKey($profileKey);
+    if (!siteProfileSupportsPreset($normalizedProfileKey)) {
+        return false;
+    }
+
+    return siteProfileRecommendedTheme($normalizedProfileKey) !== resolveThemeName($themeKey);
+}
+
 function siteProfileModuleKeys(): array
 {
     return ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations'];
@@ -496,7 +517,7 @@ function applySiteProfilePreset(string $profileKey): void
         return;
     }
 
-    $themeKey = resolveThemeName((string)($profileConfig['theme'] ?? defaultThemeName()));
+    $themeKey = siteProfileRecommendedTheme($normalizedProfileKey);
 
     saveSetting('active_theme', $themeKey);
 

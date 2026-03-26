@@ -71,11 +71,13 @@ body.theme-modern-service {
 }
 
 .theme-modern-service.page-author .author-panel,
+.theme-modern-service.page-authors .author-panel,
 .theme-modern-service .home-section--author .author-panel--home {
   gap: 1.5rem;
 }
 
 .theme-modern-service.page-author .author-panel__media,
+.theme-modern-service.page-authors .author-panel__media,
 .theme-modern-service .home-section--author .author-panel__media {
   padding: 0.85rem;
   border: 1px solid rgba(var(--accent-rgb), 0.16);
@@ -84,6 +86,7 @@ body.theme-modern-service {
 }
 
 .theme-modern-service.page-author .author-avatar,
+.theme-modern-service.page-authors .author-avatar,
 .theme-modern-service .home-section--author .author-avatar {
   border-radius: 1.5rem;
   background: #ffffff;
@@ -91,6 +94,7 @@ body.theme-modern-service {
 }
 
 .theme-modern-service.page-blog-index .card,
+.theme-modern-service.page-authors .card,
 .theme-modern-service.page-author .card {
   position: relative;
   overflow: hidden;
@@ -99,6 +103,7 @@ body.theme-modern-service {
 }
 
 .theme-modern-service.page-blog-index .card::before,
+.theme-modern-service.page-authors .card::before,
 .theme-modern-service.page-author .card::before {
   content: "";
   position: absolute;
@@ -108,17 +113,20 @@ body.theme-modern-service {
 }
 
 .theme-modern-service.page-blog-index .card__body,
+.theme-modern-service.page-authors .card__body,
 .theme-modern-service.page-author .card__body {
   padding: 1.25rem 1.25rem 1.35rem;
 }
 
 .theme-modern-service.page-blog-index .card__title,
+.theme-modern-service.page-authors .card__title,
 .theme-modern-service.page-author .card__title {
   margin-top: 0;
   font-size: clamp(1.35rem, 2.2vw, 1.7rem);
 }
 
 .theme-modern-service.page-blog-index .meta-row--tight,
+.theme-modern-service.page-authors .meta-row--tight,
 .theme-modern-service.page-author .meta-row--tight,
 .theme-modern-service.page-blog-article .meta-row {
   color: #41545a;
@@ -166,27 +174,32 @@ body.theme-modern-service {
 }
 
 @media (min-width: 900px) {
-  .theme-modern-service.page-author .author-panel {
+  .theme-modern-service.page-author .author-panel,
+  .theme-modern-service.page-authors .author-panel {
     grid-template-columns: minmax(10rem, 12rem) minmax(0, 1fr);
   }
 
   .theme-modern-service.page-blog-index .card,
+  .theme-modern-service.page-authors .card,
   .theme-modern-service.page-author .card {
     display: grid;
     grid-template-columns: minmax(15rem, 17rem) minmax(0, 1fr);
   }
 
   .theme-modern-service.page-blog-index .card__body,
+  .theme-modern-service.page-authors .card__body,
   .theme-modern-service.page-author .card__body {
     grid-column: 1 / -1;
   }
 
   .theme-modern-service.page-blog-index .card__media,
+  .theme-modern-service.page-authors .card__media,
   .theme-modern-service.page-author .card__media {
     grid-column: 1;
   }
 
   .theme-modern-service.page-blog-index .card__media + .card__body,
+  .theme-modern-service.page-authors .card__media + .card__body,
   .theme-modern-service.page-author .card__media + .card__body {
     grid-column: 2;
     padding-left: 0;

@@ -47,11 +47,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($errors === []) {
             if ($formAction === 'activate_theme') {
+                $profileDetached = false;
                 saveSetting('active_theme', $selectedTheme);
                 clearThemePreview();
+                $currentProfile = currentSiteProfileKey();
+                if (siteProfileShouldDetachForTheme($currentProfile, $selectedTheme)) {
+                    saveSetting('site_profile', 'custom');
+                    $profileDetached = true;
+                }
                 $reloadThemeCatalog();
                 logAction('theme_activate', 'theme=' . $selectedTheme);
                 $successMessage = 'Aktivní šablona byla uložena.';
+                if ($profileDetached) {
+                    $successMessage .= ' Profil webu byl přepnut na Vlastní profil, aby se ruční volba šablony nepřepisovala doporučeným presetem.';
+                }
             } else {
                 setThemePreview($selectedTheme, themeSettingsValues($selectedTheme));
                 logAction('theme_preview_start', 'theme=' . $selectedTheme . ';source=theme');

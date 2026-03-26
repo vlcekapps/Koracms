@@ -4202,6 +4202,116 @@ if (!str_contains($migrateConfirm['status'], '200')) {
 }
 
 $originalActiveTheme = getSetting('active_theme', defaultThemeName());
+$originalSiteProfile = getSetting('site_profile', 'custom');
+echo "=== custom_profile_theme_guard ===\n";
+try {
+    $customProfileIssues = [];
+    $customProfileTheme = defaultThemeName();
+    foreach (availableThemes() as $themeKey) {
+        if ($themeKey !== 'editorial') {
+            $customProfileTheme = $themeKey;
+            break;
+        }
+    }
+
+    saveSetting('active_theme', $customProfileTheme);
+    saveSetting('site_profile', 'custom');
+    clearSettingsCache();
+
+    $settingsPayload = [
+        'csrf_token' => $adminCsrfToken,
+        'site_name' => getSetting('site_name', 'Kora CMS'),
+        'site_description' => getSetting('site_description', ''),
+        'contact_email' => getSetting('contact_email', ''),
+        'site_profile' => 'custom',
+        'apply_site_profile' => '1',
+        'board_public_label' => getSetting('board_public_label', defaultBoardPublicLabelForProfile('custom')),
+        'home_blog_count' => getSetting('home_blog_count', '5'),
+        'home_news_count' => getSetting('home_news_count', '5'),
+        'home_board_count' => getSetting('home_board_count', '5'),
+        'news_per_page' => getSetting('news_per_page', '10'),
+        'blog_per_page' => getSetting('blog_per_page', '10'),
+        'events_per_page' => getSetting('events_per_page', '10'),
+        'content_editor' => getSetting('content_editor', 'html'),
+        'social_facebook' => getSetting('social_facebook', ''),
+        'social_youtube' => getSetting('social_youtube', ''),
+        'social_instagram' => getSetting('social_instagram', ''),
+        'social_twitter' => getSetting('social_twitter', ''),
+        'maintenance_text' => getSetting('maintenance_text', ''),
+        'cookie_consent_text' => getSetting('cookie_consent_text', ''),
+        'og_image_default' => getSetting('og_image_default', ''),
+        'home_intro' => getSetting('home_intro', ''),
+    ];
+
+    if (getSetting('maintenance_mode', '0') === '1') {
+        $settingsPayload['maintenance_mode'] = '1';
+    }
+    if (getSetting('cookie_consent_enabled', '0') === '1') {
+        $settingsPayload['cookie_consent_enabled'] = '1';
+    }
+    if (isModuleEnabled('blog')) {
+        $settingsPayload['comment_moderation_mode'] = getSetting('comment_moderation_mode', 'always');
+        $settingsPayload['comment_close_days'] = getSetting('comment_close_days', '0');
+        $settingsPayload['comment_notify_email'] = getSetting('comment_notify_email', '');
+        $settingsPayload['comment_blocked_emails'] = getSetting('comment_blocked_emails', '');
+        $settingsPayload['comment_spam_words'] = getSetting('comment_spam_words', '');
+
+        if (getSetting('blog_authors_index_enabled', '0') === '1') {
+            $settingsPayload['blog_authors_index_enabled'] = '1';
+        }
+        if (getSetting('comments_enabled', '1') === '1') {
+            $settingsPayload['comments_enabled'] = '1';
+        }
+        if (getSetting('comment_notify_admin', '1') === '1') {
+            $settingsPayload['comment_notify_admin'] = '1';
+        }
+        if (getSetting('comment_notify_author_approve', '0') === '1') {
+            $settingsPayload['comment_notify_author_approve'] = '1';
+        }
+    }
+
+    $customProfileResult = postUrl(
+        $baseUrl . '/admin/settings.php',
+        $settingsPayload,
+        'PHPSESSID=' . $auditSessionId,
+        0
+    );
+
+    if (!str_contains($customProfileResult['status'], '200')) {
+        $customProfileIssues[] = 'custom profile settings save did not return 200';
+    }
+    if (!str_contains($customProfileResult['body'], 'Vlastní profil byl uložen bez zásahu do stávajících modulů a vzhledu.')) {
+        $customProfileIssues[] = 'custom profile save did not confirm non-destructive apply';
+    }
+
+    clearSettingsCache();
+    $persistedCustomProfileTheme = (string)$pdo->query(
+        "SELECT value FROM cms_settings WHERE `key` = 'active_theme'"
+    )->fetchColumn();
+    $persistedCustomProfileKey = (string)$pdo->query(
+        "SELECT value FROM cms_settings WHERE `key` = 'site_profile'"
+    )->fetchColumn();
+    if ($persistedCustomProfileTheme !== $customProfileTheme) {
+        $customProfileIssues[] = 'custom profile apply changed active theme';
+    }
+    if ($persistedCustomProfileKey !== 'custom') {
+        $customProfileIssues[] = 'custom profile apply did not keep site_profile=custom';
+    }
+
+    if ($customProfileIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($customProfileIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
+    }
+} finally {
+    saveSetting('site_profile', $originalSiteProfile);
+    saveSetting('active_theme', $originalActiveTheme);
+    clearSettingsCache();
+}
+
 echo "=== theme_catalog ===\n";
 try {
     $catalogIssues = [];
@@ -4372,6 +4482,7 @@ try {
     }
 
     $roundtripIssues = [];
+    $originalRoundtripSiteProfile = getSetting('site_profile', 'custom');
     $importResult = postMultipartUrl(
         $baseUrl . '/admin/themes.php',
         [
@@ -4395,6 +4506,9 @@ try {
         $roundtripIssues[] = 'imported theme directory was not created';
     }
 
+    saveSetting('site_profile', 'personal');
+    clearSettingsCache();
+
     $activateResult = postUrl(
         $baseUrl . '/admin/themes.php',
         [
@@ -4409,8 +4523,14 @@ try {
     if (!str_contains($activateResult['status'], '200')) {
         $roundtripIssues[] = 'imported theme activation did not return 200';
     }
+    if (!str_contains($activateResult['body'], 'Profil webu byl přepnut na Vlastní profil')) {
+        $roundtripIssues[] = 'manual theme activation did not announce profile detachment';
+    }
 
     clearSettingsCache();
+    if (getSetting('site_profile', '') !== 'custom') {
+        $roundtripIssues[] = 'manual theme activation did not detach preset site profile';
+    }
     $roundtripHome = fetchUrl($baseUrl . '/', '', 0);
     if (!str_contains($roundtripHome['status'], '200')) {
         $roundtripIssues[] = 'imported theme homepage did not load';
@@ -4481,6 +4601,7 @@ try {
     $failures++;
     echo '- ' . $exception->getMessage() . "\n";
 } finally {
+    saveSetting('site_profile', $originalRoundtripSiteProfile ?? 'custom');
     saveSetting('active_theme', $originalActiveTheme);
     clearSettingsCache();
     if (themeExists($roundtripThemeKey)) {

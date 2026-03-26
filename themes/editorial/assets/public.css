@@ -106,16 +106,19 @@ body.theme-editorial {
 }
 
 .theme-editorial.page-author .author-panel,
+.theme-editorial.page-authors .author-panel,
 .theme-editorial .home-section--author .author-panel--home {
   gap: 1.5rem;
 }
 
 .theme-editorial.page-author .author-panel__media,
+.theme-editorial.page-authors .author-panel__media,
 .theme-editorial .home-section--author .author-panel__media {
   justify-content: flex-start;
 }
 
 .theme-editorial.page-author .author-avatar,
+.theme-editorial.page-authors .author-avatar,
 .theme-editorial .home-section--author .author-avatar {
   width: min(100%, 9.5rem);
   border-radius: 0.4rem;
@@ -125,11 +128,13 @@ body.theme-editorial {
 }
 
 .theme-editorial.page-author .author-avatar--placeholder,
+.theme-editorial.page-authors .author-avatar--placeholder,
 .theme-editorial .home-section--author .author-avatar--placeholder {
   background: linear-gradient(180deg, #fff8ef, #f2e4d3);
 }
 
 .theme-editorial.page-blog-index .card,
+.theme-editorial.page-authors .card,
 .theme-editorial.page-author .card {
   display: grid;
   gap: 0;
@@ -139,17 +144,20 @@ body.theme-editorial {
 }
 
 .theme-editorial.page-blog-index .card__body,
+.theme-editorial.page-authors .card__body,
 .theme-editorial.page-author .card__body {
   grid-column: 1 / -1;
   padding: 1.1rem 0 0;
 }
 
 .theme-editorial.page-blog-index .card__media,
+.theme-editorial.page-authors .card__media,
 .theme-editorial.page-author .card__media {
   grid-column: 1;
 }
 
 .theme-editorial.page-blog-index .card__media img,
+.theme-editorial.page-authors .card__media img,
 .theme-editorial.page-author .card__media img {
   height: 100%;
   min-height: 12rem;
@@ -157,6 +165,7 @@ body.theme-editorial {
 }
 
 .theme-editorial.page-blog-index .meta-row--tight,
+.theme-editorial.page-authors .meta-row--tight,
 .theme-editorial.page-author .meta-row--tight,
 .theme-editorial.page-blog-article .meta-row {
   font-size: 0.8rem;
@@ -165,6 +174,7 @@ body.theme-editorial {
 }
 
 .theme-editorial.page-blog-index .card__title,
+.theme-editorial.page-authors .card__title,
 .theme-editorial.page-author .card__title {
   margin: 0 0 0.7rem;
   font-size: clamp(1.45rem, 2.6vw, 1.95rem);
@@ -200,18 +210,21 @@ body.theme-editorial {
 }
 
 @media (min-width: 900px) {
-  .theme-editorial.page-author .author-panel {
+  .theme-editorial.page-author .author-panel,
+  .theme-editorial.page-authors .author-panel {
     grid-template-columns: minmax(10rem, 11rem) minmax(0, 1fr);
     gap: 2rem;
   }
 
   .theme-editorial.page-blog-index .card,
+  .theme-editorial.page-authors .card,
   .theme-editorial.page-author .card {
     grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
     align-items: start;
   }
 
   .theme-editorial.page-blog-index .card__media + .card__body,
+  .theme-editorial.page-authors .card__media + .card__body,
   .theme-editorial.page-author .card__media + .card__body {
     grid-column: 2;
     padding: 0 0 0 1.35rem;
