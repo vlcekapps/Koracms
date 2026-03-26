@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-beta.5] – 2026-03-26
 
 ### Přidáno
 - Blog nově podporuje i veřejný přehled autorů na `/authors/`, takže návštěvník může projít všechny veřejné autory na jednom místě a otevřít jejich detail
