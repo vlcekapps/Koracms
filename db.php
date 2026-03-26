@@ -2530,6 +2530,71 @@ function uniquePageSlug(PDO $pdo, string $candidate, ?int $excludeId = null): st
     }
 }
 
+function normalizePageNavigationOrder(PDO $pdo): void
+{
+    $pages = $pdo->query(
+        "SELECT id, nav_order, title
+         FROM cms_pages
+         ORDER BY nav_order, title, id"
+    )->fetchAll();
+
+    if ($pages === []) {
+        return;
+    }
+
+    $update = $pdo->prepare("UPDATE cms_pages SET nav_order = ? WHERE id = ?");
+    $position = 1;
+    foreach ($pages as $page) {
+        if ((int)($page['nav_order'] ?? 0) !== $position) {
+            $update->execute([$position, (int)$page['id']]);
+        }
+        $position++;
+    }
+}
+
+function nextPageNavigationOrder(PDO $pdo): int
+{
+    normalizePageNavigationOrder($pdo);
+
+    $maxOrder = (int)$pdo->query("SELECT COALESCE(MAX(nav_order), 0) FROM cms_pages")->fetchColumn();
+    return $maxOrder + 1;
+}
+
+function movePageNavigationOrder(PDO $pdo, int $pageId, string $direction): bool
+{
+    if (!in_array($direction, ['up', 'down'], true)) {
+        return false;
+    }
+
+    normalizePageNavigationOrder($pdo);
+
+    $pages = $pdo->query(
+        "SELECT id
+         FROM cms_pages
+         ORDER BY nav_order, title, id"
+    )->fetchAll();
+
+    $orderedIds = array_map(static fn(array $row): int => (int)$row['id'], $pages);
+    $currentIndex = array_search($pageId, $orderedIds, true);
+    if ($currentIndex === false) {
+        return false;
+    }
+
+    $swapIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
+    if (!isset($orderedIds[$swapIndex])) {
+        return false;
+    }
+
+    [$orderedIds[$currentIndex], $orderedIds[$swapIndex]] = [$orderedIds[$swapIndex], $orderedIds[$currentIndex]];
+
+    $update = $pdo->prepare("UPDATE cms_pages SET nav_order = ? WHERE id = ?");
+    foreach ($orderedIds as $index => $orderedId) {
+        $update->execute([$index + 1, $orderedId]);
+    }
+
+    return true;
+}
+
 function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = eventSlug($candidate);

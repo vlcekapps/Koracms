@@ -8,6 +8,7 @@ $redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/
 
 if ($id !== null) {
     db_connect()->prepare("DELETE FROM cms_pages WHERE id = ?")->execute([$id]);
+    normalizePageNavigationOrder(db_connect());
     logAction('page_delete', "id={$id}");
 }
 

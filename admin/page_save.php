@@ -10,7 +10,6 @@ $slug = pageSlug($rawSlug !== '' ? $rawSlug : $title);
 $content = (string)($_POST['content'] ?? '');
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
-$navOrder = max(1, (int)($_POST['nav_order'] ?? 1));
 $redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/pages.php');
 
 if ($title === '' || $slug === '') {
@@ -30,13 +29,14 @@ if ($uniqueSlug !== $slug) {
 if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_pages
-         SET title = ?, slug = ?, content = ?, is_published = ?, show_in_nav = ?, nav_order = ?
+         SET title = ?, slug = ?, content = ?, is_published = ?, show_in_nav = ?
          WHERE id = ?"
-    )->execute([$title, $slug, $content, $isPublished, $showInNav, $navOrder, $id]);
+    )->execute([$title, $slug, $content, $isPublished, $showInNav, $id]);
     logAction('page_edit', "id={$id}, title=" . mb_substr($title, 0, 80));
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $isPublished = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
+    $navOrder = nextPageNavigationOrder($pdo);
     $pdo->prepare(
         "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)"

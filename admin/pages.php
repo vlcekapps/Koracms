@@ -28,6 +28,8 @@ if ($statusFilter === 'pending') {
 
 $whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
 
+normalizePageNavigationOrder($pdo);
+
 $stmt = $pdo->prepare(
     "SELECT id, title, slug, is_published, show_in_nav, nav_order,
             COALESCE(status,'published') AS status, created_at
@@ -50,7 +52,10 @@ if ($queryArgs !== []) {
 adminHeader('Statické stránky');
 ?>
 
-<p><a href="<?= BASE_URL ?>/admin/page_form.php" class="btn">+ Nová stránka</a></p>
+<p class="button-row button-row--start">
+  <a href="<?= BASE_URL ?>/admin/page_form.php" class="btn">+ Nová stránka</a>
+  <a href="<?= BASE_URL ?>/admin/page_positions.php" class="btn">Pozice statických stránek</a>
+</p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <div>

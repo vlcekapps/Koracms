@@ -924,6 +924,7 @@ $pages = [
     ['label' => 'admin_newsletter', 'url' => $baseUrl . '/admin/newsletter.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_newsletter_form', 'url' => $baseUrl . '/admin/newsletter_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_pages', 'url' => $baseUrl . '/admin/pages.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_page_positions', 'url' => $baseUrl . '/admin/page_positions.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_faq', 'url' => $baseUrl . '/admin/faq.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -1865,6 +1866,14 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_page_positions') {
+        foreach (['name="dir" value="up"', 'name="dir" value="down"', 'page_form.php?id='] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin page positions is missing action fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
     $adminFormForbiddenFragments = [
         'admin_event_form' => ['>Uložit<'],
         'admin_page_form' => ['>Uložit<'],
@@ -1926,6 +1935,24 @@ foreach ($pages as $page) {
         foreach ($adminFormCopyExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin form is missing helper copy fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if (in_array($page['label'], ['admin_page_form', 'admin_page_create_form'], true) && !str_contains($result['body'], 'page_positions.php')) {
+        $issues[] = 'admin page form is missing the page positions helper link';
+    }
+
+    if ($page['label'] === 'admin_page_positions') {
+        foreach ([
+            'page_reorder.php',
+            '/admin/pages.php',
+            '/admin/page_form.php',
+            'name="dir" value="up"',
+            'name="dir" value="down"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin page positions is missing helper copy fragment: ' . $expectedFragment;
             }
         }
     }
@@ -2053,6 +2080,10 @@ foreach ($pages as $page) {
                 $issues[] = 'admin form still contains outdated helper copy: ' . $forbiddenFragment;
             }
         }
+    }
+
+    if (in_array($page['label'], ['admin_page_form', 'admin_page_create_form'], true) && str_contains($result['body'], 'name="nav_order"')) {
+        $issues[] = 'admin page form still exposes manual navigation order input';
     }
 
     if (in_array($page['label'], $htmlSnippetHelpLabels, true)) {
@@ -2426,6 +2457,24 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_pages' && !str_contains($result['body'], 'page_positions.php')) {
+        $issues[] = 'admin pages list is missing the page positions link';
+    }
+
+    if ($page['label'] === 'admin_page_positions') {
+        foreach ([
+            'page_reorder.php',
+            '/admin/pages.php',
+            '/admin/page_form.php',
+            'name="dir" value="up"',
+            'name="dir" value="down"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin page positions is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_food') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin food search field is missing';
@@ -2666,7 +2715,6 @@ foreach ($pages as $page) {
         foreach ([
             'name="slug"',
             'name="show_in_nav"',
-            'name="nav_order"',
             'name="is_published"',
             'Upravit statickou stránku',
             'Zpět na statické stránky',
@@ -2674,6 +2722,22 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin page form is missing field: ' . $expectedField;
             }
+        }
+    }
+
+    if (in_array($page['label'], ['admin_page_form', 'admin_page_create_form'], true)) {
+        foreach ([
+            'name="slug"',
+            'name="show_in_nav"',
+            'name="is_published"',
+            'page_positions.php',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin page form is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], 'name="nav_order"')) {
+            $issues[] = 'admin page form still contains the old nav_order input';
         }
     }
 

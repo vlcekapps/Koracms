@@ -108,6 +108,7 @@ function adminHeader(string $pageTitle): void
     }
     if (currentUserHasCapability('content_manage_shared')) {
         $contentItems[] = ['url' => $baseUrl . '/admin/pages.php', 'label' => 'Stránky'];
+        $contentItems[] = ['url' => $baseUrl . '/admin/page_positions.php', 'label' => 'Pozice stránek'];
         if (isModuleEnabled('events')) {
             $contentItems[] = ['url' => $baseUrl . '/admin/events.php', 'label' => 'Události'];
         }

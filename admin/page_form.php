@@ -23,7 +23,6 @@ if ($id !== null) {
         'content' => '',
         'is_published' => 0,
         'show_in_nav' => 0,
-        'nav_order' => 1,
         'status' => 'published',
     ];
 }
@@ -42,7 +41,10 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Slug stránky je už obsazený. Zvolte prosím jiný.</p>
 <?php endif; ?>
 
-<p><a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a></p>
+<p class="button-row button-row--start">
+  <a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a>
+  <a href="<?= BASE_URL ?>/admin/page_positions.php">Pozice statických stránek</a>
+</p>
 <p style="margin-top:0;font-size:.9rem">Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.</p>
 
 <form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
@@ -81,10 +83,7 @@ adminHeader($pageTitle);
       <input type="checkbox" name="show_in_nav" value="1" aria-describedby="page-nav-help"<?= !empty($page['show_in_nav']) ? ' checked' : '' ?>>
       Zobrazit v hlavní navigaci
     </label>
-    <small id="page-nav-help" class="field-help">Použije se jen u zveřejněné stránky.</small>
-
-    <label for="nav_order">Pořadí v navigaci</label>
-    <input type="number" id="nav_order" name="nav_order" min="1" style="width:8rem" value="<?= (int)$page['nav_order'] ?>">
+    <small id="page-nav-help" class="field-help">Použije se jen u zveřejněné stránky. Pořadí v navigaci upravíte na stránce <a href="<?= BASE_URL ?>/admin/page_positions.php">Pozice statických stránek</a>.</small>
 
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit stránku' ?></button>
