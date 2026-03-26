@@ -40,7 +40,7 @@ $stmt = $pdo->prepare(
      LEFT JOIN cms_board_categories c ON c.id = b.category_id
      LEFT JOIN cms_users u ON u.id = b.author_id
      {$whereSql}
-     ORDER BY b.is_pinned DESC, b.posted_date DESC, b.sort_order, b.title"
+     ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC, b.title"
 );
 $stmt->execute($params);
 $items = $stmt->fetchAll();

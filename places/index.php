@@ -24,7 +24,7 @@ $places = $pdo->query(
     "SELECT *
      FROM cms_places
      WHERE status = 'published' AND is_published = 1
-     ORDER BY sort_order, name"
+     ORDER BY name ASC"
 )->fetchAll();
 $places = array_map(
     static fn(array $place): array => hydratePlacePresentation($place),

@@ -15,7 +15,6 @@ $versionLabel = trim((string)($_POST['version_label'] ?? ''));
 $platformLabel = trim((string)($_POST['platform_label'] ?? ''));
 $licenseLabel = trim((string)($_POST['license_label'] ?? ''));
 $externalUrlInput = trim((string)($_POST['external_url'] ?? ''));
-$sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $deleteStoredFile = isset($_POST['file_delete']);
 $deleteImage = isset($_POST['download_image_delete']);
@@ -141,7 +140,7 @@ if ($id !== null) {
         "UPDATE cms_downloads
          SET title = ?, slug = ?, download_type = ?, dl_category_id = ?, excerpt = ?, description = ?,
              image_file = ?, version_label = ?, platform_label = ?, license_label = ?, external_url = ?,
-             filename = ?, original_name = ?, file_size = ?, sort_order = ?, is_published = ?,
+             filename = ?, original_name = ?, file_size = ?, is_published = ?,
              author_id = COALESCE(author_id, ?), updated_at = NOW()
          WHERE id = ?"
     );
@@ -160,7 +159,6 @@ if ($id !== null) {
         $storedFilename,
         $originalName,
         $fileSize,
-        $sortOrder,
         $isPublished,
         currentUserId(),
         $id,
@@ -173,8 +171,8 @@ if ($id !== null) {
         "INSERT INTO cms_downloads
          (title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
           platform_label, license_label, external_url, filename, original_name, file_size,
-          sort_order, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+          is_published, status, author_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
         $title,
@@ -191,7 +189,6 @@ if ($id !== null) {
         $storedFilename,
         $originalName,
         $fileSize,
-        $sortOrder,
         currentUserHasCapability('content_approve_shared') ? $isPublished : 0,
         $status,
         $authorId,

@@ -146,7 +146,7 @@ endif; ?>
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_downloads
              WHERE status = 'published' AND is_published = 1
-             ORDER BY sort_order, title"
+             ORDER BY created_at DESC, id DESC"
         )->fetchAll();
         foreach ($downloads as $download):
 ?>
@@ -171,7 +171,7 @@ endif; ?>
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_faqs
              WHERE COALESCE(status,'published') = 'published' AND is_published = 1
-             ORDER BY sort_order, id"
+             ORDER BY created_at DESC, id DESC"
         )->fetchAll();
         foreach ($faqs as $faq):
 ?>
@@ -358,7 +358,7 @@ endif; ?>
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_places
              WHERE status = 'published' AND is_published = 1
-             ORDER BY sort_order, name"
+             ORDER BY name ASC"
         )->fetchAll();
         foreach ($places as $place):
 ?>

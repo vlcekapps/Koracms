@@ -33,10 +33,10 @@ $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
 $stmt = $pdo->prepare(
     "SELECT p.id, p.name, p.slug, p.place_kind, p.category, p.locality, p.url, p.image_file,
-            p.is_published, p.sort_order, COALESCE(p.status,'published') AS status
+            p.is_published, COALESCE(p.status,'published') AS status
      FROM cms_places p
      {$whereSql}
-     ORDER BY p.sort_order, p.name"
+     ORDER BY p.name ASC"
 );
 $stmt->execute($params);
 $places = array_map(
@@ -84,7 +84,6 @@ adminHeader('Zajímavá místa');
       <tr>
         <th scope="col">Místo</th>
         <th scope="col">Typ a lokalita</th>
-        <th scope="col">Pořadí</th>
         <th scope="col">Stav</th>
         <th scope="col">Akce</th>
       </tr>
@@ -111,7 +110,6 @@ adminHeader('Zajímavá místa');
             <br><a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Externí web</a>
           <?php endif; ?>
         </td>
-        <td><?= (int)$place['sort_order'] ?></td>
         <td>
           <?php if ($place['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">Čeká na schválení</strong>

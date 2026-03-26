@@ -34,14 +34,14 @@ $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 $stmt = $pdo->prepare(
     "SELECT d.id, d.title, d.slug, d.download_type, d.dl_category_id, COALESCE(c.name, '') AS category_name,
             d.excerpt, d.description, d.image_file, d.version_label, d.platform_label, d.license_label,
-            d.external_url, d.filename, d.original_name, d.file_size, d.sort_order, d.is_published,
+            d.external_url, d.filename, d.original_name, d.file_size, d.is_published,
             d.created_at, COALESCE(d.status,'published') AS status,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_downloads d
      LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
      LEFT JOIN cms_users u ON u.id = d.author_id
      {$whereSql}
-     ORDER BY c.name, d.sort_order, d.title"
+     ORDER BY c.name, d.created_at DESC, d.id DESC"
 );
 $stmt->execute($params);
 $items = array_map(

@@ -31,13 +31,13 @@ if ($statusFilter === 'pending') {
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
 $stmt = $pdo->prepare(
-    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.sort_order, f.is_published,
+    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.is_published,
             COALESCE(f.status,'published') AS status, f.created_at, f.updated_at,
             c.name AS category_name
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
      {$whereSql}
-     ORDER BY c.sort_order, c.name, f.sort_order, f.id"
+     ORDER BY c.sort_order, c.name, f.created_at DESC, f.id DESC"
 );
 $stmt->execute($params);
 $faqs = array_map(
@@ -90,7 +90,6 @@ adminHeader('FAQ');
       <tr>
         <th scope="col">Otázka</th>
         <th scope="col">Kategorie</th>
-        <th scope="col">Pořadí</th>
         <th scope="col">Stav</th>
         <th scope="col">Akce</th>
       </tr>
@@ -106,7 +105,6 @@ adminHeader('FAQ');
           <?php endif; ?>
         </td>
         <td><?= h((string)($faq['category_name'] ?: '–')) ?></td>
-        <td><?= (int)$faq['sort_order'] ?></td>
         <td>
           <?php if ($faq['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">Čeká na schválení</strong>

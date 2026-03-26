@@ -119,7 +119,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                  FROM cms_faqs
                  WHERE COALESCE(status,'published') = 'published' AND is_published = 1
                    AND (question LIKE ? OR excerpt LIKE ? OR answer LIKE ?)
-                 ORDER BY sort_order, id LIMIT 10"
+                 ORDER BY created_at DESC, id DESC LIMIT 10"
             );
             $stmt->execute([$like, $like, $like]);
             foreach ($stmt->fetchAll() as $row) {
@@ -212,7 +212,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                  FROM cms_downloads
                  WHERE status = 'published' AND is_published = 1
                    AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR version_label LIKE ? OR platform_label LIKE ? OR license_label LIKE ?)
-                 ORDER BY sort_order, title
+                 ORDER BY created_at DESC, id DESC
                  LIMIT 10"
             );
             $stmt->execute([$like, $like, $like, $like, $like, $like]);
@@ -231,7 +231,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                  FROM cms_places
                  WHERE status = 'published' AND is_published = 1
                    AND (name LIKE ? OR excerpt LIKE ? OR description LIKE ? OR category LIKE ? OR locality LIKE ? OR address LIKE ?)
-                 ORDER BY sort_order, name
+                 ORDER BY name ASC
                  LIMIT 10"
             );
             $stmt->execute([$like, $like, $like, $like, $like, $like]);

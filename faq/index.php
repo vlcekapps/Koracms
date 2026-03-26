@@ -11,12 +11,12 @@ $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 
 $faqRows = $pdo->query(
-    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.category_id, f.sort_order, f.updated_at,
+    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.category_id, f.updated_at,
             COALESCE(f.status,'published') AS status, c.name AS category_name, c.sort_order AS cat_sort
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
      WHERE COALESCE(f.status,'published') = 'published' AND f.is_published = 1
-     ORDER BY c.sort_order, c.name, f.sort_order, f.id"
+     ORDER BY c.sort_order, c.name, f.created_at DESC, f.id DESC"
 )->fetchAll();
 
 $faqs = array_map(

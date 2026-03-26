@@ -21,7 +21,6 @@ $download = [
     'filename' => '',
     'original_name' => '',
     'file_size' => 0,
-    'sort_order' => 0,
     'is_published' => 1,
     'status' => 'published',
 ];
@@ -170,10 +169,6 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
         Odebrat stávající náhledový obrázek
       </label>
     <?php endif; ?>
-
-    <label for="sort_order">Pořadí</label>
-    <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
-           value="<?= (int)($download['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="download-published-help"

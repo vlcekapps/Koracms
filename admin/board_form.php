@@ -33,7 +33,6 @@ $document = $document ?: [
     'filename' => '',
     'original_name' => '',
     'file_size' => 0,
-    'sort_order' => 0,
     'is_pinned' => 0,
     'is_published' => 1,
     'status' => 'published',
@@ -189,10 +188,6 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <?php if (!empty($document['original_name'])): ?>
       <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor, pokud ji chcete nahradit.</small>
     <?php endif; ?>
-
-    <label for="sort_order">Pořadí</label>
-    <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
-           value="<?= (int)($document['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="board-published-help"

@@ -2929,6 +2929,19 @@ foreach ($pages as $page) {
         }
     }
 
+    if (in_array($page['label'], [
+        'admin_board_form',
+        'admin_board_create_form',
+        'admin_download_form',
+        'admin_download_create_form',
+        'admin_faq_form',
+        'admin_faq_create_form',
+        'admin_place_form',
+        'admin_place_create_form',
+    ], true) && str_contains($result['body'], 'name="sort_order"')) {
+        $issues[] = 'admin content form still contains the old sort_order input';
+    }
+
     if ($page['label'] === 'admin_gallery_album_form') {
         foreach ([
             'name="slug"',

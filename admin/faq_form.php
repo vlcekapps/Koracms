@@ -23,7 +23,6 @@ $faq = $faq ?: [
     'excerpt' => '',
     'answer' => '',
     'category_id' => null,
-    'sort_order' => 0,
     'is_published' => 1,
     'status' => 'published',
 ];
@@ -92,10 +91,6 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
         </option>
       <?php endforeach; ?>
     </select>
-
-    <label for="sort_order">Pořadí</label>
-    <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
-           value="<?= (int)($faq['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="faq-published-help"

@@ -120,15 +120,15 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Galerie** | Vnořená fotoalba s automatickým generováním náhledů, čistými slug URL pro alba i fotografie a výběrem obálky alba |
 | **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
 | **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |
-| **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL |
+| **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL; veřejný výpis se řadí abecedně podle názvu |
 | **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení; administrace nabízí přehled odběratelů, detail čekajících potvrzení, historii rozesílek i hromadné akce nad odběrateli |
-| **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem |
+| **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem; položky se v kategoriích řadí automaticky od nejnovějších |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do, archivem, veřejným detailem a čistou slug URL |
 | **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |
-| **FAQ** | Znalostní báze s kategoriemi, krátkým perexem, detailovou stránkou na čisté slug URL a veřejným FAQ rozcestníkem |
-| **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL a automatický archiv po datu sejmutí |
+| **FAQ** | Znalostní báze s kategoriemi, krátkým perexem, detailovou stránkou na čisté slug URL a veřejným FAQ rozcestníkem; otázky se v kategoriích řadí automaticky od nejnovějších |
+| **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL, automatický archiv po datu sejmutí a přirozené řazení podle připnutí a data vyvěšení |
 | **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem a sjednocená administrace zdrojů, kategorií, míst i rezervací s capability guardy |
-| **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci a sjednocená redakční administrace s filtrováním, bezpečným slug workflow a veřejným preview |
+| **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci, samostatná stránka pro pořadí v hlavní navigaci a sjednocená redakční administrace s filtrováním, bezpečným slug workflow a veřejným preview |
 
 Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Správa modulů**.
 

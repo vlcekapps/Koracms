@@ -19,7 +19,6 @@ $longitudeInput = trim($_POST['longitude'] ?? '');
 $openingHours = trim($_POST['opening_hours'] ?? '');
 $contactPhone = trim($_POST['contact_phone'] ?? '');
 $contactEmail = trim($_POST['contact_email'] ?? '');
-$sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 if ($name === '') {
@@ -104,7 +103,7 @@ if ($id !== null) {
         "UPDATE cms_places
          SET name = ?, slug = ?, place_kind = ?, category = ?, locality = ?, address = ?, excerpt = ?,
              description = ?, url = ?, image_file = ?, latitude = ?, longitude = ?, opening_hours = ?,
-             contact_phone = ?, contact_email = ?, sort_order = ?, is_published = ?, updated_at = NOW()
+             contact_phone = ?, contact_email = ?, is_published = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([
         $name,
@@ -122,7 +121,6 @@ if ($id !== null) {
         $openingHours,
         $contactPhone,
         $contactEmail,
-        $sortOrder,
         $isPublished,
         $id,
     ]);
@@ -133,8 +131,8 @@ if ($id !== null) {
     $pdo->prepare(
         "INSERT INTO cms_places (
             name, slug, place_kind, category, locality, address, excerpt, description, url, image_file,
-            latitude, longitude, opening_hours, contact_phone, contact_email, sort_order, is_published, status
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            latitude, longitude, opening_hours, contact_phone, contact_email, is_published, status
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $name,
         $slug,
@@ -151,7 +149,6 @@ if ($id !== null) {
         $openingHours,
         $contactPhone,
         $contactEmail,
-        $sortOrder,
         $visible,
         $status,
     ]);

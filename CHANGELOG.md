@@ -4,6 +4,18 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [3.0.0-beta.6] – 2026-03-26
+
+### Přidáno
+- Statické stránky nově mají samostatnou obrazovku Pozice statických stránek, kde lze měnit pořadí položek v hlavní navigaci přes přesun nahoru a dolů; nové stránky se automaticky ukládají na konec a formulář už ruční pořadí nenabízí
+
+### Změněno
+- Modul Ke stažení už nepoužívá ruční pořadí položek v administraci; položky se nově řadí přirozeně podle data vytvoření, od nejnovějších
+- Modul Úřední deska / Vývěska / Oznámení už nepoužívá ruční pořadí položek v administraci; položky se nově řadí podle připnutí, data vyvěšení a data vytvoření
+- Modul FAQ už nepoužívá ruční pořadí otázek v administraci; otázky se v rámci kategorií nově řadí přirozeně od nejnovějších
+- Modul Zajímavá místa už nepoužívá ruční pořadí položek v administraci; výpisy se nově řadí abecedně podle názvu
+- Vyhledávání, sitemapa, homepage blok úřední desky a runtime audit nyní respektují nové přirozené řazení těchto modulů a hlídají i odstranění starého sort_order pole z formulářů
+
 ## [3.0.0-beta.5] – 2026-03-26
 
 ### Přidáno

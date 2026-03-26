@@ -10,7 +10,6 @@ $submittedSlug = trim($_POST['slug'] ?? '');
 $excerpt = trim($_POST['excerpt'] ?? '');
 $answer = $_POST['answer'] ?? '';
 $categoryId = inputInt('post', 'category_id');
-$sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 if ($question === '' || trim($answer) === '') {
@@ -45,7 +44,7 @@ $slug = $uniqueSlug;
 if ($existingFaq) {
     $pdo->prepare(
         "UPDATE cms_faqs
-         SET question = ?, slug = ?, excerpt = ?, answer = ?, category_id = ?, sort_order = ?, is_published = ?, updated_at = NOW()
+         SET question = ?, slug = ?, excerpt = ?, answer = ?, category_id = ?, is_published = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([
         $question,
@@ -53,7 +52,6 @@ if ($existingFaq) {
         $excerpt,
         $answer,
         $categoryId,
-        $sortOrder,
         $isPublished,
         $id,
     ]);
@@ -62,15 +60,14 @@ if ($existingFaq) {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
-        "INSERT INTO cms_faqs (question, slug, excerpt, answer, category_id, sort_order, is_published, status)
-         VALUES (?,?,?,?,?,?,?,?)"
+        "INSERT INTO cms_faqs (question, slug, excerpt, answer, category_id, is_published, status)
+         VALUES (?,?,?,?,?,?,?)"
     )->execute([
         $question,
         $slug,
         $excerpt,
         $answer,
         $categoryId,
-        $sortOrder,
         $visible,
         $status,
     ]);

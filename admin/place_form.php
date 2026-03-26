@@ -33,7 +33,6 @@ $place = $place ?: [
     'contact_phone' => '',
     'contact_email' => '',
     'opening_hours' => '',
-    'sort_order' => 0,
     'is_published' => 1,
     'status' => 'published',
 ];
@@ -183,10 +182,6 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
         Smazat aktuální obrázek
       </label>
     <?php endif; ?>
-
-    <label for="sort_order">Pořadí</label>
-    <input type="number" id="sort_order" name="sort_order" min="0" style="width:8rem"
-           value="<?= (int)($place['sort_order'] ?? 0) ?>">
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="place-published-help"

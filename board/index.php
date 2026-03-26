@@ -31,7 +31,7 @@ $items = $pdo->query(
      FROM cms_board b
      LEFT JOIN cms_board_categories c ON c.id = b.category_id
      WHERE b.status = 'published' AND b.is_published = 1
-     ORDER BY b.is_pinned DESC, c.sort_order, c.name, b.sort_order, b.posted_date DESC, b.title"
+     ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC, b.title"
 )->fetchAll();
 $items = array_map(
     static fn(array $document): array => hydrateBoardPresentation($document),

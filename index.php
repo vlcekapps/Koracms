@@ -80,7 +80,7 @@ if (isModuleEnabled('board') && $homeBoardCount > 0) {
          LEFT JOIN cms_board_categories c ON c.id = b.category_id
          WHERE b.status = 'published' AND b.is_published = 1
            AND (b.removal_date IS NULL OR b.removal_date >= CURDATE())
-         ORDER BY b.is_pinned DESC, b.posted_date DESC, b.sort_order, b.title
+         ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC, b.title
          LIMIT ?"
     );
     $stmt->execute([$homeBoardFetchLimit]);

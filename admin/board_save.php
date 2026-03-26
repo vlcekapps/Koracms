@@ -36,7 +36,6 @@ $removalDate = trim($_POST['removal_date'] ?? '');
 $contactName = trim($_POST['contact_name'] ?? '');
 $contactPhone = trim($_POST['contact_phone'] ?? '');
 $contactEmail = trim($_POST['contact_email'] ?? '');
-$sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
 $isPinned = isset($_POST['is_pinned']) ? 1 : 0;
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
@@ -130,7 +129,7 @@ if (!empty($_FILES['file']['name'])) {
 if ($id !== null) {
     $set = "title = ?, slug = ?, board_type = ?, excerpt = ?, description = ?, category_id = ?,
             posted_date = ?, removal_date = ?, image_file = ?, contact_name = ?, contact_phone = ?,
-            contact_email = ?, sort_order = ?, is_pinned = ?, is_published = ?, author_id = COALESCE(author_id, ?)";
+            contact_email = ?, is_pinned = ?, is_published = ?, author_id = COALESCE(author_id, ?)";
     $params = [
         $title,
         $slug,
@@ -144,7 +143,6 @@ if ($id !== null) {
         $contactName,
         $contactPhone,
         $contactEmail,
-        $sortOrder,
         $isPinned,
         $isPublished,
         currentUserId(),
@@ -168,8 +166,8 @@ if ($id !== null) {
         "INSERT INTO cms_board
          (title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
           image_file, contact_name, contact_phone, contact_email, filename, original_name, file_size,
-          sort_order, is_pinned, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+          is_pinned, is_published, status, author_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -186,7 +184,6 @@ if ($id !== null) {
         $newFilename ?? '',
         $newOriginalName ?? '',
         $newFileSize ?? 0,
-        $sortOrder,
         $isPinned,
         $visible,
         $status,
