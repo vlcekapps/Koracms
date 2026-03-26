@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
     if (isModuleEnabled('blog')) {
+        $blogAuthorsIndexEnabled = isset($_POST['blog_authors_index_enabled']) ? '1' : '0';
         $commentsEnabled = isset($_POST['comments_enabled']) ? '1' : '0';
         $commentModerationMode = in_array($_POST['comment_moderation_mode'] ?? '', ['always', 'known', 'none'], true)
             ? (string)$_POST['comment_moderation_mode']
@@ -35,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $commentBlockedEmails = trim(str_replace("\r", '', $_POST['comment_blocked_emails'] ?? ''));
         $commentSpamWords = trim(str_replace("\r", '', $_POST['comment_spam_words'] ?? ''));
     } else {
+        $blogAuthorsIndexEnabled = getSetting('blog_authors_index_enabled', '0');
         $commentsEnabled = getSetting('comments_enabled', '1');
         $commentModerationMode = commentModerationMode();
         $commentCloseDays = commentCloseDays();
@@ -75,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('news_per_page',    (string)$newsPerPage);
         saveSetting('blog_per_page',    (string)$blogPerPage);
         saveSetting('events_per_page',  (string)$eventsPerPage);
+        saveSetting('blog_authors_index_enabled', $blogAuthorsIndexEnabled);
         saveSetting('comments_enabled', $commentsEnabled);
         saveSetting('comment_moderation_mode', $commentModerationMode);
         saveSetting('comment_close_days', (string)$commentCloseDays);
@@ -163,6 +166,7 @@ $settingsSections = [
     ['id' => 'settings-pagination', 'label' => 'Výpisy a stránkování'],
 ];
 if (isModuleEnabled('blog')) {
+    $settingsSections[] = ['id' => 'settings-blog-authors', 'label' => 'Veřejní autoři'];
     $settingsSections[] = ['id' => 'settings-comments', 'label' => 'Komentáře blogu'];
 }
 $settingsSections[] = ['id' => 'settings-editor', 'label' => 'Obsah a editor'];
@@ -282,6 +286,20 @@ adminHeader('Nastavení webu');
   </fieldset>
 
   <?php if (isModuleEnabled('blog')): ?>
+  <fieldset id="settings-blog-authors">
+    <legend>Veřejní autoři</legend>
+
+    <div>
+      <input type="checkbox" id="blog_authors_index_enabled" name="blog_authors_index_enabled" value="1"
+             aria-describedby="blog-authors-index-help"
+             <?= getSetting('blog_authors_index_enabled', '0') === '1' ? 'checked' : '' ?>>
+      <label for="blog_authors_index_enabled" style="display:inline;font-weight:normal">
+        Zobrazovat na blogu odkaz na veřejný seznam autorů
+      </label>
+    </div>
+    <small id="blog-authors-index-help" class="field-help">Když je volba zapnutá, na stránce blogu se zobrazí odkaz na přehled všech veřejných autorů. Výchozí stav je vypnutý.</small>
+  </fieldset>
+
   <fieldset id="settings-comments">
     <legend>Komentáře blogu</legend>
 

@@ -562,6 +562,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'news_per_page'   => '10',
             'blog_per_page'   => '10',
             'events_per_page' => '10',
+            'blog_authors_index_enabled' => '0',
             'comments_enabled' => '1',
             'comment_moderation_mode' => 'always',
             'comment_close_days' => '0',

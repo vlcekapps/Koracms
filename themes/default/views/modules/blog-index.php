@@ -19,6 +19,9 @@ $renderAuthorName = static function (array $article): string {
       <div>
         <h1 id="blog-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
       </div>
+      <?php if (!empty($showAuthorsIndexLink)): ?>
+        <a class="section-link" href="<?= authorIndexPath() ?>">Autoři <span aria-hidden="true">→</span></a>
+      <?php endif; ?>
     </div>
 
     <?php if (!empty($categories)): ?>
@@ -50,8 +53,24 @@ $renderAuthorName = static function (array $article): string {
       </nav>
     <?php endif; ?>
 
+    <?php if (!empty($activeAuthor)): ?>
+      <nav aria-label="Aktivní autor blogu" class="form-stack">
+        <ul class="chip-list">
+          <li><a class="chip-link" href="<?= authorIndexPath() ?>">Všichni autoři</a></li>
+          <li><a class="chip-link" href="<?= BASE_URL ?>/blog/index.php">Všechny články</a></li>
+          <li><span class="pill">Autor: <?= h($activeAuthor['author_display_name']) ?></span></li>
+        </ul>
+      </nav>
+    <?php endif; ?>
+
     <?php if (empty($articles)): ?>
-      <p class="empty-state">Zatím tu nejsou žádné články.</p>
+      <p class="empty-state">
+        <?php if (!empty($activeAuthor)): ?>
+          Autor zatím nemá žádné veřejně publikované články.
+        <?php else: ?>
+          Zatím tu nejsou žádné články.
+        <?php endif; ?>
+      </p>
     <?php else: ?>
       <div class="card-grid">
         <?php foreach ($articles as $article): ?>

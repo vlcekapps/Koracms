@@ -29,11 +29,12 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
       <?php endif; ?>
 
       <div class="button-row button-row--start">
+        <a class="button-secondary" href="<?= authorIndexPath() ?>">Všichni autoři</a>
+        <?php if ($blogEnabled): ?>
+          <a class="button-secondary" href="<?= BASE_URL ?>/blog/index.php">Blog</a>
+        <?php endif; ?>
         <?php if ($author['author_website_url'] !== ''): ?>
           <a class="button-secondary" href="<?= h($author['author_website_url']) ?>" rel="noopener noreferrer" target="_blank">Web autora</a>
-        <?php endif; ?>
-        <?php if ($blogEnabled): ?>
-          <a class="button-secondary" href="<?= BASE_URL ?>/blog/index.php">Všechny články</a>
         <?php endif; ?>
       </div>
     </div>

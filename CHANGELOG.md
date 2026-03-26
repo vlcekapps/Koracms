@@ -4,6 +4,17 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- Blog nově podporuje i veřejný přehled autorů na `/authors/`, takže návštěvník může projít všechny veřejné autory na jednom místě a otevřít jejich detail
+
+### Změněno
+- Detail autora nově nabízí přirozené návratové odkazy na `Všichni autoři` i na `Blog`
+- Blog nově umí i filtr podle veřejného autora přes parametr `?autor=slug`, takže z author vrstvy lze přirozeně přejít na články konkrétního autora
+- V nastavení blogu je nově i volitelný přepínač pro zobrazení odkazu na veřejný přehled autorů; ve výchozím stavu zůstává vypnutý
+- XML sitemap nově zahrnuje i veřejný přehled autorů a jednotlivé veřejné profily autorů
+
 ## [3.0.0-beta.4] – 2026-03-26
 
 ### Změněno

@@ -29,6 +29,37 @@ try {
   </url>
 <?php endforeach; } catch (\PDOException $e) {} ?>
 
+<?php
+try {
+    $authors = $pdo->query(
+        "SELECT author_slug AS slug, author_public_enabled, role,
+                COALESCE(updated_at, created_at) AS sitemap_lastmod
+         FROM cms_users
+         WHERE author_public_enabled = 1 AND role != 'public'
+         ORDER BY is_superadmin DESC, id ASC"
+    )->fetchAll();
+    if ($authors !== []):
+?>
+  <url>
+    <loc><?= h(authorIndexUrl()) ?></loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+<?php
+        foreach ($authors as $author):
+?>
+  <url>
+    <loc><?= h(authorPublicUrl($author)) ?></loc>
+    <lastmod><?= date('Y-m-d', strtotime((string)$author['sitemap_lastmod'])) ?></lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+<?php
+        endforeach;
+    endif;
+} catch (\PDOException $e) {}
+?>
+
 <?php if (isModuleEnabled('blog')): ?>
   <url>
     <loc><?= h(siteUrl('/blog/index.php')) ?></loc>

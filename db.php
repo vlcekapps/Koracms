@@ -2873,16 +2873,31 @@ function authorPublicRequestPath(array $author): string
     return '/author/' . rawurlencode(authorPublicSlugValue($author));
 }
 
+function authorIndexRequestPath(): string
+{
+    return '/authors/';
+}
+
 function authorPublicPath(array $author): string
 {
     $path = authorPublicRequestPath($author);
     return $path !== '' ? BASE_URL . $path : '';
 }
 
+function authorIndexPath(): string
+{
+    return BASE_URL . authorIndexRequestPath();
+}
+
 function authorPublicUrl(array $author): string
 {
     $path = authorPublicRequestPath($author);
     return $path !== '' ? siteUrl($path) : '';
+}
+
+function authorIndexUrl(): string
+{
+    return siteUrl(authorIndexRequestPath());
 }
 
 function authorAvatarUrl(array $author): string
@@ -3087,6 +3102,34 @@ function fetchPublicAuthorById(PDO $pdo, int $userId): ?array
     return $author ? hydrateAuthorPresentation($author) : null;
 }
 
+function fetchPublicAuthors(PDO $pdo): array
+{
+    $authors = $pdo->query(
+        "SELECT u.id, u.email, u.first_name, u.last_name, u.nickname, u.role, u.is_superadmin,
+                u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website,
+                COUNT(a.id) AS article_count,
+                MAX(COALESCE(a.publish_at, a.created_at)) AS latest_article_at
+         FROM cms_users u
+         LEFT JOIN cms_articles a
+           ON a.author_id = u.id
+          AND a.status = 'published'
+          AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+         WHERE u.author_public_enabled = 1
+           AND u.role != 'public'
+         GROUP BY u.id, u.email, u.first_name, u.last_name, u.nickname, u.role, u.is_superadmin,
+                  u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website
+         ORDER BY COUNT(a.id) DESC, latest_article_at DESC, u.is_superadmin DESC, u.id ASC"
+    )->fetchAll();
+
+    return array_map(
+        static function (array $author): array {
+            $author['article_count'] = (int)($author['article_count'] ?? 0);
+            return hydrateAuthorPresentation($author);
+        },
+        $authors
+    );
+}
+
 function resolveHomeAuthor(PDO $pdo): ?array
 {
     $selectedAuthorId = (int)getSetting('home_author_user_id', '0');
@@ -3108,6 +3151,22 @@ function resolveHomeAuthor(PDO $pdo): ?array
     }
 
     return hydrateAuthorPresentation($authors[0]);
+}
+
+function articleCountLabel(int $count): string
+{
+    $count = max(0, $count);
+    if ($count === 1) {
+        return '1 článek';
+    }
+
+    $mod100 = $count % 100;
+    $mod10 = $count % 10;
+    if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+        return $count . ' články';
+    }
+
+    return $count . ' článků';
 }
 
 function deleteAuthorAvatarFile(string $filename): void

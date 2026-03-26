@@ -113,7 +113,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 
 | Modul | Popis |
 |---|---|
-| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení a počet přečtení |
+| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení, počet přečtení a veřejná author vrstva s profilem autora i přehledem všech autorů |
 | **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
 | **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem, detailovým pohledem na zprávu a interními stavy `nová`, `přečtená`, `vyřízená` |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou, rate limitingem a moderátorským inboxem pro příchozí zprávy |
@@ -224,7 +224,7 @@ K dispozici jsou tyto role:
 
 Starší role **Spolupracovník / Správce obsahu** zůstává kvůli kompatibilitě se staršími instalacemi zachovaná a chová se jako širší redakční role.
 
-Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo). Účty s přístupem do administrace mohou navíc zapnout i **veřejný autorský profil** s vlastním slugem, bio, webem a avatarem. Pokud je profil zapnutý, blog a homepage na něj mohou veřejně odkazovat přes URL typu `/author/jmeno-autora`.
+Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo). Účty s přístupem do administrace mohou navíc zapnout i **veřejný autorský profil** s vlastním slugem, bio, webem a avatarem. Pokud je profil zapnutý, blog a homepage na něj mohou veřejně odkazovat přes URL typu `/author/jmeno-autora`. Veřejné autory lze zároveň procházet i přes společný přehled `/authors/`; odkaz na tento přehled v modulu blogu je volitelný a ve výchozím stavu vypnutý.
 
 Role se propsávají i do pracovního rozhraní administrace. Účet tak nově vidí jen moduly, dashboard a schvalovací akce, které opravdu potřebuje. Součástí administrace je i společná fronta **Ke schválení**, která sjednocuje čekající obsah, komentáře a rezervace na jedno místo.
 
@@ -246,7 +246,7 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 
 - **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, galeriemi, místy, anketami a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
 - **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, galerií, událostí, podcastů, epizod, anket i dokumentů úřední desky
+- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, galerií, událostí, podcastů, epizod, anket, dokumentů úřední desky i veřejných profilů autorů
 - **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
 - **Vkládání interního obsahu do HTML polí** – v HTML textarea polích pro obsah, která se veřejně vykreslují přes CMS, je dostupný přístupný dialog `Vložit odkaz nebo HTML z webu` pro rychlé vložení odkazu nebo hotového HTML bloku z existujících článků, stránek a dalších veřejných modulů. Podle typu výsledku umí nabídnout i `Vložit fotogalerii`, `Vložit audio přehrávač` nebo `Vložit video přehrávač`
 - **Snippety v HTML/Markdown obsahu** – renderer podporuje i zápis `[audio]https://example.test/audio.mp3[/audio]`, `[video]https://example.test/video.mp4[/video]` a `[gallery]slug-alba[/gallery]` nebo `[gallery slug="slug-alba"][/gallery]`; fungují ve všech HTML/Markdown polích, která CMS na veřejném webu vykresluje přes `renderContent()`. Audio a video podporují i atributy `src` a volitelný `mime`, takže lze bezpečně použít i interní file endpointy, například `[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]`

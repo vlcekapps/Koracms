@@ -29,6 +29,8 @@ $runtimeAuditOriginalModuleSettings = [
 foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
     saveSetting($moduleSettingKey, '1');
 }
+$runtimeAuditOriginalBlogAuthorsIndexEnabled = getSetting('blog_authors_index_enabled', '0');
+saveSetting('blog_authors_index_enabled', '1');
 clearSettingsCache();
 
 $articleRow = $pdo->query(
@@ -1039,6 +1041,9 @@ if (isModuleEnabled('newsletter')) {
 
 if (isModuleEnabled('blog')) {
     $pages[] = ['label' => 'blog_index', 'url' => $baseUrl . '/blog/index.php'];
+    if ($runtimeAuditAuthorSlug !== '') {
+        $pages[] = ['label' => 'blog_author_filter', 'url' => $baseUrl . '/blog/index.php?autor=' . urlencode($runtimeAuditAuthorSlug)];
+    }
 }
 if (isModuleEnabled('board')) {
     $pages[] = ['label' => 'board_index', 'url' => $baseUrl . '/board/index.php'];
@@ -1110,6 +1115,7 @@ if ($podcastEpisodeCanonicalUrl !== '') {
     $pages[] = ['label' => 'podcast_episode', 'url' => $podcastEpisodeCanonicalUrl];
 }
 if ($runtimeAuditAuthorUrl !== '') {
+    $pages[] = ['label' => 'authors_index', 'url' => $baseUrl . authorIndexRequestPath()];
     $pages[] = ['label' => 'public_author', 'url' => $runtimeAuditAuthorUrl];
 }
 if ($pageRow) {
@@ -1680,6 +1686,9 @@ foreach ($pages as $page) {
             $issues[] = 'board public label setting is missing';
         }
         if (isModuleEnabled('blog')) {
+            if (!str_contains($result['body'], 'name="blog_authors_index_enabled"')) {
+                $issues[] = 'blog authors index setting is missing';
+            }
             if (!str_contains($result['body'], 'name="comments_enabled"')) {
                 $issues[] = 'comments enabled setting is missing';
             }
@@ -2936,6 +2945,21 @@ foreach ($pages as $page) {
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog listing is missing public author links';
     }
+    if ($page['label'] === 'blog_index' && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], authorIndexPath())) {
+        $issues[] = 'blog listing is missing authors index link';
+    }
+
+    if ($page['label'] === 'blog_author_filter') {
+        if (!str_contains($result['body'], 'Autor: Runtime Audit')) {
+            $issues[] = 'filtered blog listing is missing active author label';
+        }
+        if (!str_contains($result['body'], 'Všichni autoři')) {
+            $issues[] = 'filtered blog listing is missing link back to all authors';
+        }
+        if ($runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
+            $issues[] = 'filtered blog listing is missing author links';
+        }
+    }
 
     if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog article is missing public author link in byline';
@@ -3152,12 +3176,27 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'authors_index') {
+        if (!str_contains($result['body'], 'Autoři')) {
+            $issues[] = 'authors index is missing title';
+        }
+        if ($runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
+            $issues[] = 'authors index is missing public author profile link';
+        }
+    }
+
     if ($page['label'] === 'public_author') {
         if (!str_contains($result['body'], 'Runtime Audit')) {
             $issues[] = 'public author page is missing author identity';
         }
         if (!str_contains($result['body'], 'Krátký veřejný medailonek pro automatický audit autora.')) {
             $issues[] = 'public author page is missing author bio';
+        }
+        if (!str_contains($result['body'], 'Všichni autoři')) {
+            $issues[] = 'public author page is missing back link to all authors';
+        }
+        if (!str_contains($result['body'], '/blog/index.php')) {
+            $issues[] = 'public author page is missing back link to blog';
         }
     }
 
@@ -4024,6 +4063,7 @@ if ($articleId === false) {
 }
 
 saveSetting('home_author_user_id', $runtimeAuditOriginalHomeAuthorUserId);
+saveSetting('blog_authors_index_enabled', $runtimeAuditOriginalBlogAuthorsIndexEnabled);
 saveSetting($runtimeAuditThemeSettingsKey, $runtimeAuditOriginalThemeSettings);
 foreach ($runtimeAuditOriginalModuleSettings as $moduleSettingKey => $moduleSettingValue) {
     saveSetting($moduleSettingKey, $moduleSettingValue);
