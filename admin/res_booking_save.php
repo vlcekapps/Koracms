@@ -126,7 +126,9 @@ if ($email) {
 
     $body .= "\nDěkujeme.\n";
 
-    sendMail($email, $subject, $body);
+    if (!sendMail($email, $subject, $body)) {
+        error_log("sendMail FAILED: změna stavu rezervace pro {$email}");
+    }
 }
 
 $successRedirect = appendUrlQuery($detailRedirect, ['ok' => 1]);

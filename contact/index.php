@@ -40,19 +40,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $pdo->prepare(
-                "INSERT INTO cms_contact (sender_email, subject, message, is_read, status)
-                 VALUES (?, ?, ?, 0, 'new')"
-            )->execute([$from, $subject, $message]);
-
-            if ($destEmail !== '') {
-                $safeSubject = preg_replace('/[\r\n]/', '', $subject);
-                $safeFrom = preg_replace('/[\r\n]/', '', $from);
-                $mailBody = "Zpráva z kontaktního formuláře.\n\nOd: {$safeFrom}\nPředmět: {$safeSubject}\n\n{$message}";
-                sendMail($destEmail, $safeSubject, $mailBody);
+            try {
+                $pdo->prepare(
+                    "INSERT INTO cms_contact (sender_email, subject, message, is_read, status)
+                     VALUES (?, ?, ?, 0, 'new')"
+                )->execute([$from, $subject, $message]);
+            } catch (\PDOException $e) {
+                error_log('contact INSERT failed: ' . $e->getMessage());
+                $errors[] = 'Zprávu se nepodařilo uložit. Zkuste to prosím později.';
             }
 
-            $success = true;
+            if (empty($errors)) {
+                $mailSent = true;
+                if ($destEmail !== '') {
+                    $mailBody = "Zpráva z kontaktního formuláře.\n\nOd: {$from}\nPředmět: {$subject}\n\n{$message}";
+                    $mailSent = sendMail($destEmail, $subject, $mailBody);
+                }
+
+                $success = true;
+                if (!$mailSent) {
+                    $errors[] = 'Zpráva byla uložena, ale e-mailové oznámení se nepodařilo odeslat.';
+                }
+            }
         }
     }
 }

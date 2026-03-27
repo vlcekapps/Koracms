@@ -268,7 +268,7 @@ adminHeader('Můj profil');
   <button type="submit" style="margin-top:1.5rem">Uložit profil</button>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const nicknameInput = document.getElementById('nickname');
     const firstNameInput = document.getElementById('first_name');

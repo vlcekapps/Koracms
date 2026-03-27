@@ -333,7 +333,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             . "Pokud chcete rezervaci zrušit, klikněte na tento odkaz:\n"
                             . $cancelUrl . "\n\n"
                             . "Děkujeme za rezervaci.";
-                        sendMail($guestEmail, 'Rezervace – ' . $resource['name'], $mailBody);
+                        if (!sendMail($guestEmail, 'Rezervace – ' . $resource['name'], $mailBody)) {
+                            error_log("sendMail FAILED: potvrzení rezervace pro {$guestEmail}");
+                        }
                     }
 
                     if ($isGuest) {

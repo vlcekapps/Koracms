@@ -184,7 +184,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const roleInput = document.getElementById('role');
     const authorFieldsWrap = document.getElementById('author-role-fields');

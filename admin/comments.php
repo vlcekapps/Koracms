@@ -244,7 +244,7 @@ adminHeader('Komentáře');
   </table>
   <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru komentářů můžete použít hromadné akce nahoře.</div>
 
-  <script>
+  <script nonce="<?= cspNonce() ?>">
   (() => {
       const checkAll = document.getElementById('check-all');
       const checkboxes = Array.from(document.querySelectorAll('input[form="bulk-form"][name="ids[]"]'));

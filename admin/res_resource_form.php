@@ -335,7 +335,7 @@ $err = trim($_GET['err'] ?? '');
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
   var live = document.getElementById('a11y-live');
 

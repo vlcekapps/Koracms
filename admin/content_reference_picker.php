@@ -74,7 +74,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
     if (!$stylesPrinted) {
         $stylesPrinted = true;
         echo <<<HTML
-<style>
+<style nonce="<?= cspNonce() ?>">
   .content-reference-picker-launch {
     margin-top: 1rem;
   }
@@ -259,7 +259,7 @@ HTML;
       <div id="<?= h($pickerId) ?>-picker-results" class="content-reference-picker-results" aria-live="polite"></div>
     </section>
 
-    <script>
+    <script nonce="<?= cspNonce() ?>">
     (function () {
         const textarea = document.getElementById(<?= json_encode($textareaId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
         const openButton = document.getElementById(<?= json_encode($pickerId . '-picker-open', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);

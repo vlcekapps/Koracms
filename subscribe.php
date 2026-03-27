@@ -29,8 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare(
                     "INSERT INTO cms_subscribers (email, token, confirmed) VALUES (?, ?, 0)"
                 )->execute([$email, $token]);
-                sendNewsletterSubscriptionConfirmation($email, $token);
-                $state = 'ok';
+                if (!sendNewsletterSubscriptionConfirmation($email, $token)) {
+                    $state = 'mail_error';
+                } else {
+                    $state = 'ok';
+                }
             } catch (\PDOException $e) {
                 $state = 'exists';
             }

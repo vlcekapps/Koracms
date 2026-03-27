@@ -55,7 +55,7 @@ $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? 
   </main>
   <?= renderThemePartial('footer', [], $themeName) ?>
 </div>
-<script>
+<script nonce="<?= cspNonce() ?>">
 document.addEventListener('DOMContentLoaded', function () {
   var liveRegion = document.getElementById('a11y-live');
   if (!liveRegion) return;

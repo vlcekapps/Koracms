@@ -68,7 +68,7 @@ adminHeader('Nová rozesílka');
   <?php if ($useWysiwyg): ?>
   <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
   (function () {
       const ta = document.getElementById('body');
       const wrapper = document.createElement('div');

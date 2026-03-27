@@ -4,6 +4,26 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- **Globální exception handler** (`db.php`) – neošetřené výjimky nyní zobrazí uživatelsky přívětivou chybovou stránku místo bílé obrazovky; v debug režimu (`display_errors=1`) zobrazí i stack trace
+- **Runtime audit** – nové sekce `smtp_connectivity` (ověří SMTP připojení, STARTTLS, AUTH LOGIN) a `sendmail_return_check` (hlídá, že žádné volání `sendMail()` neignoruje návratovou hodnotu)
+
+### Změněno
+- **`db.php`** – rozdělení monolitu (4 400 řádků, 282 funkcí) do 10 tematických souborů v `lib/`: `definitions.php`, `comments.php`, `messages.php`, `presentation.php`, `gallery.php`, `content.php`, `filedownloads.php`, `ui.php`, `mail.php`, `stats.php`; `db.php` zůstává vstupním bodem (require_once), API je beze změny
+- **CSP nonce** – všechny inline `<script>` a `<style>` tagy (veřejné i admin stránky) nyní používají per-request `nonce` atribut; `cspNonce()` funkce v `auth.php` generuje kryptograficky bezpečný nonce; `Content-Security-Policy` hlavička obsahuje `'nonce-…'` vedle stávajícího `'unsafe-inline'` (fallback pro starší prohlížeče)
+- **Legacy role `collaborator`** – výchozí fallback v `normalizeUserRole()`, `loginUser()`, `currentUserRole()` a `admin/login.php` nahrazen odpovídajícími hodnotami (`public` / `admin`); role `collaborator` zůstává platnou hodnotou v DB schématu pro zpětnou kompatibilitu, ale již není nikde použita jako výchozí
+
+### Opraveno
+- **`sendMail()`** – přidána podpora SMTP autentizace (AUTH LOGIN) a šifrování (STARTTLS, SSL) přes konstanty `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` v `config.php`; bez konfigurace se chová jako dříve (localhost:25)
+- **Všechna volání `sendMail()`** nyní kontrolují návratovou hodnotu – uživatel vidí chybovou hlášku, pokud se e-mail nepodařilo odeslat (kontakt, registrace, newsletter, rezervace); interní notifikace (komentáře, admin) logují selhání do `error_log()`
+- **Newsletter přihlášení** – nový stav `mail_error` v šabloně informuje uživatele o selhání odeslání potvrzovacího e-mailu
+- **`config.sample.php`** – doplněna ukázková SMTP konfigurace
+- **Kontaktní formulář** – INSERT do DB je nyní v try/catch, při selhání se zobrazí formulář s hláškou
+- **Chat** – INSERT do DB je nyní v try/catch, při selhání se zobrazí formulář s hláškou
+- **Kontaktní formulář** – odstraněna duplicitní sanitizace vstupů (dvojité `trim()` / `htmlspecialchars()`)
+
 ## [3.0.0-beta.6] – 2026-03-26
 
 ### Přidáno

@@ -21,7 +21,7 @@ if (!headers_sent()) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Údržba – <?= h($_siteName) ?></title>
-  <style>
+  <style nonce="<?= cspNonce() ?>">
     body { font-family: system-ui, sans-serif; display: flex; align-items: center;
            justify-content: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
     .box { background: #fff; padding: 2rem 3rem; border-radius: 8px;

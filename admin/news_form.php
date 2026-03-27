@@ -105,7 +105,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
   </fieldset>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');

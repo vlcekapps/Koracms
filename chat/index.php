@@ -44,13 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $pdo->prepare(
-            "INSERT INTO cms_chat (name, email, web, message, status)
-             VALUES (?, ?, ?, ?, 'new')"
-        )->execute([$name, $email, $web, $message]);
+        try {
+            $pdo->prepare(
+                "INSERT INTO cms_chat (name, email, web, message, status)
+                 VALUES (?, ?, ?, ?, 'new')"
+            )->execute([$name, $email, $web, $message]);
 
-        header('Location: ' . BASE_URL . '/chat/index.php');
-        exit;
+            header('Location: ' . BASE_URL . '/chat/index.php');
+            exit;
+        } catch (\PDOException $e) {
+            error_log('chat INSERT failed: ' . $e->getMessage());
+            $errors[] = 'Zprávu se nepodařilo uložit. Zkuste to prosím později.';
+        }
     }
 }
 

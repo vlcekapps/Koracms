@@ -125,7 +125,7 @@ adminHeader($pageTitle);
   </fieldset>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (() => {
   const nameInput = document.getElementById('name');
   const slugInput = document.getElementById('slug');

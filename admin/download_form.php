@@ -190,7 +190,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
 
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (() => {
   const titleField = document.getElementById('title');
   const slugField = document.getElementById('slug');
@@ -218,7 +218,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 <?php if ($editorMode === 'wysiwyg'): ?>
   <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-  <script>
+  <script nonce="<?= cspNonce() ?>">
   (() => {
     const descriptionField = document.getElementById('description');
     const host = document.getElementById('description_editor');

@@ -206,7 +206,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
@@ -235,7 +235,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('description');
     const wrapper = document.getElementById('editor-description');

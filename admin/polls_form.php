@@ -184,7 +184,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   </div>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
   const questionInput = document.getElementById('question');
   const slugInput = document.getElementById('slug');

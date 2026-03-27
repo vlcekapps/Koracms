@@ -227,7 +227,7 @@ adminHeader('Newsletter');
     </table>
     <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru odběratelů můžete použít hromadné akce nahoře.</div>
 
-    <script>
+    <script nonce="<?= cspNonce() ?>">
     (() => {
         const checkAll = document.getElementById('newsletter-check-all');
         const checkboxes = Array.from(document.querySelectorAll('input[form="newsletter-bulk-form"][name="ids[]"]'));

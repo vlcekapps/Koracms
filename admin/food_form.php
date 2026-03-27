@@ -137,7 +137,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
@@ -166,7 +166,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('content');
     const wrapper = document.createElement('div');

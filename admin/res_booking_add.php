@@ -197,7 +197,7 @@ $notes       = $_POST['notes'] ?? '';
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 function toggleMode() {
   var isGuest = document.querySelector('input[name="mode"][value="guest"]').checked;
   document.getElementById('user-fields').style.display = isGuest ? 'none' : '';

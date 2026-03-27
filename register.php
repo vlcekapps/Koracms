@@ -73,7 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 . $confirmUrl . "\n\n"
                                 . "Pokud jste se neregistrovali, tento email ignorujte.\n\n"
                                 . "— " . $siteName;
-                    sendMail($email, $subject, $body);
+                    if (!sendMail($email, $subject, $body)) {
+                        $errors[] = 'Potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.';
+                    }
                     $resent = true;
                 } else {
                     $errors[] = 'Účet s tímto e-mailem již existuje.';
@@ -98,7 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         . $confirmUrl . "\n\n"
                         . "Pokud jste se neregistrovali, tento email ignorujte.\n\n"
                         . "— " . $siteName;
-            sendMail($email, $subject, $body);
+            if (!sendMail($email, $subject, $body)) {
+                $errors[] = 'Potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.';
+            }
 
             $success = true;
         }

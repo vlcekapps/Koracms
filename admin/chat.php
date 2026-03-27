@@ -238,7 +238,7 @@ adminHeader('Chat');
   </table>
   <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
 
-  <script>
+  <script nonce="<?= cspNonce() ?>">
   (() => {
       const checkAll = document.getElementById('chat-check-all');
       const checkboxes = Array.from(document.querySelectorAll('input[form="chat-bulk-form"][name="ids[]"]'));

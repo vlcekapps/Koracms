@@ -54,7 +54,7 @@
   </section>
 </div>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 document.addEventListener('DOMContentLoaded', function () {
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs-nav__tab'));
   var panels = Array.prototype.slice.call(document.querySelectorAll('.tab-panel'));

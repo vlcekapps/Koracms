@@ -4902,4 +4902,136 @@ try {
     clearSettingsCache();
 }
 
+// ─────────────────────────────── SMTP konektivita ──────────────────────────
+
+echo "=== smtp_connectivity ===\n";
+$smtpIssues = [];
+
+$smtpHost   = defined('SMTP_HOST')   ? SMTP_HOST   : (ini_get('SMTP') ?: 'localhost');
+$smtpPort   = defined('SMTP_PORT')   ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
+$smtpSecure = defined('SMTP_SECURE') ? SMTP_SECURE : '';
+
+$smtpTarget = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
+$smtpSocket = @fsockopen($smtpTarget, $smtpPort, $smtpErrno, $smtpErrstr, 5);
+if (!$smtpSocket) {
+    $smtpIssues[] = "cannot connect to {$smtpTarget}:{$smtpPort} – {$smtpErrstr}";
+} else {
+    $smtpGreeting = '';
+    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+        $smtpGreeting .= $smtpLine;
+        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+    }
+    if (!str_starts_with(trim($smtpGreeting), '220')) {
+        $smtpIssues[] = 'unexpected SMTP greeting: ' . trim($smtpGreeting);
+    }
+
+    fwrite($smtpSocket, "EHLO localhost\r\n");
+    $smtpEhlo = '';
+    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+        $smtpEhlo .= $smtpLine;
+        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+    }
+    if (!str_starts_with(trim($smtpEhlo), '250')) {
+        $smtpIssues[] = 'EHLO failed: ' . trim($smtpEhlo);
+    }
+
+    if ($smtpSecure === 'tls') {
+        fwrite($smtpSocket, "STARTTLS\r\n");
+        $smtpTls = '';
+        while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+            $smtpTls .= $smtpLine;
+            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+        }
+        if (!str_starts_with(trim($smtpTls), '220')) {
+            $smtpIssues[] = 'STARTTLS not supported: ' . trim($smtpTls);
+        } else {
+            $smtpCrypto = @stream_socket_enable_crypto(
+                $smtpSocket, true,
+                STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
+            );
+            if (!$smtpCrypto) {
+                $smtpIssues[] = 'STARTTLS handshake failed';
+            }
+        }
+    }
+
+    $smtpUser = defined('SMTP_USER') ? SMTP_USER : '';
+    $smtpPass = defined('SMTP_PASS') ? SMTP_PASS : '';
+    if ($smtpUser !== '' && $smtpPass !== '' && empty($smtpIssues)) {
+        if ($smtpSecure === 'tls') {
+            fwrite($smtpSocket, "EHLO localhost\r\n");
+            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+            }
+        }
+        fwrite($smtpSocket, "AUTH LOGIN\r\n");
+        $smtpAuth = '';
+        while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+            $smtpAuth .= $smtpLine;
+            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+        }
+        if (!str_starts_with(trim($smtpAuth), '334')) {
+            $smtpIssues[] = 'AUTH LOGIN not supported: ' . trim($smtpAuth);
+        } else {
+            fwrite($smtpSocket, base64_encode($smtpUser) . "\r\n");
+            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+            }
+            fwrite($smtpSocket, base64_encode($smtpPass) . "\r\n");
+            $smtpLogin = '';
+            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                $smtpLogin .= $smtpLine;
+                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+            }
+            if (!str_starts_with(trim($smtpLogin), '235')) {
+                $smtpIssues[] = 'AUTH LOGIN credentials rejected: ' . trim($smtpLogin);
+            }
+        }
+    }
+
+    fwrite($smtpSocket, "QUIT\r\n");
+    fclose($smtpSocket);
+}
+
+$contactEmail = getSetting('contact_email', '');
+if ($contactEmail === '' || $contactEmail === 'noreply@localhost') {
+    $smtpIssues[] = 'contact_email is not configured (current: ' . ($contactEmail ?: 'empty') . ')';
+}
+
+if ($smtpIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($smtpIssues as $smtpIssue) {
+        echo '- ' . $smtpIssue . "\n";
+    }
+}
+
+// ─────────────────────────── sendMail return value audit ────────────────────
+
+echo "=== sendmail_return_check ===\n";
+$sendMailIssues = [];
+$sendMailCallFiles = [
+    'contact/index.php', 'register.php', 'reset_password.php', 'subscribe.php',
+    'reservations/book.php', 'reservations/cancel.php', 'reservations/cancel_booking.php',
+    'admin/res_booking_save.php',
+];
+foreach ($sendMailCallFiles as $sendMailFile) {
+    $sendMailPath = dirname(__DIR__) . '/' . $sendMailFile;
+    if (!is_file($sendMailPath)) continue;
+    $sendMailSrc = file_get_contents($sendMailPath);
+    // Hledáme volání sendMail() bez kontroly návratové hodnoty (řádek začíná jen sendMail)
+    if (preg_match('/^\s+sendMail\(/m', $sendMailSrc)) {
+        $sendMailIssues[] = $sendMailFile . ': sendMail() return value not checked';
+    }
+}
+if ($sendMailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($sendMailIssues as $sendMailIssue) {
+        echo '- ' . $sendMailIssue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

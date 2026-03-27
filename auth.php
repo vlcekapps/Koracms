@@ -14,7 +14,22 @@ if (session_status() === PHP_SESSION_NONE) {
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'");
+
+// CSP nonce – per-request nonce pro inline skripty a styly.
+// 'unsafe-inline' zůstává jako fallback pro prohlížeče bez podpory nonce
+// a pro inline style atributy (nonce nepokrývá style="...").
+$_CSP_NONCE = base64_encode(random_bytes(16));
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'");
+
+/**
+ * Vrátí CSP nonce pro aktuální request.
+ * Použití: <script nonce="<?= cspNonce() ?>"> nebo <style nonce="<?= cspNonce() ?>">
+ */
+function cspNonce(): string
+{
+    global $_CSP_NONCE;
+    return $_CSP_NONCE ?? '';
+}
 
 function isLoggedIn(): bool
 {
@@ -131,7 +146,7 @@ function normalizeUserRole(?string $role): string
 {
     $normalized = trim((string)$role);
     $definitions = roleDefinitions();
-    return isset($definitions[$normalized]) ? $normalized : 'collaborator';
+    return isset($definitions[$normalized]) ? $normalized : 'public';
 }
 
 function userRoleLabel(string $role): string
@@ -423,7 +438,7 @@ function requireSuperAdmin(): void
 /**
  * Přihlásí uživatele – uloží data do session.
  */
-function loginUser(int $id, string $email, bool $superadmin, string $displayName, string $role = 'collaborator'): void
+function loginUser(int $id, string $email, bool $superadmin, string $displayName, string $role = 'admin'): void
 {
     session_regenerate_id(true);
     $_SESSION['cms_logged_in']  = true;
@@ -441,7 +456,7 @@ function isPublicUser(): bool
 
 function currentUserRole(): string
 {
-    return normalizeUserRole($_SESSION['cms_user_role'] ?? 'collaborator');
+    return normalizeUserRole($_SESSION['cms_user_role'] ?? 'public');
 }
 
 /**

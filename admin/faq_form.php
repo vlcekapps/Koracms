@@ -109,7 +109,7 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
   </fieldset>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const questionInput = document.getElementById('question');
     const slugInput = document.getElementById('slug');
@@ -138,7 +138,7 @@ adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('answer');
     const wrapper = document.getElementById('editor-answer');

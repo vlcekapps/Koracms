@@ -163,7 +163,7 @@ $exportThemeDefault = in_array($selectedTheme, $availableThemeKeys, true)
 adminHeader('Vzhled a šablony');
 ?>
 
-<style>
+<style nonce="<?= cspNonce() ?>">
   .theme-catalog {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));

@@ -140,7 +140,7 @@ adminHeader('Blog');
 <?php endif; ?>
 
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (() => {
     const checkAll = document.getElementById('check-all');
     const checkboxes = Array.from(document.querySelectorAll('#bulk-form input[name="ids[]"]'));

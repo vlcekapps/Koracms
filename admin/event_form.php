@@ -122,7 +122,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
   </fieldset>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
@@ -151,7 +151,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('description');
     const wrapper = document.createElement('div');

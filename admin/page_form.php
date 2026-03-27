@@ -98,7 +98,7 @@ adminHeader($pageTitle);
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const ta = document.getElementById('content');
     const wrapper = document.createElement('div');
@@ -125,7 +125,7 @@ adminHeader($pageTitle);
 </script>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     var titleInput = document.getElementById('title');
     var slugInput = document.getElementById('slug');

@@ -200,7 +200,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const nameInput = document.getElementById('name');
     const slugInput = document.getElementById('slug');
@@ -229,7 +229,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('description');
     const wrapper = document.getElementById('editor-description');

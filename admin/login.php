@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userRow = $stmt->fetch();
 
         if ($userRow && password_verify($inputPass, $userRow['password'])) {
-            $role = $userRow['role'] ?? 'collaborator';
+            $role = $userRow['role'] ?? 'admin';
             // Veřejní uživatelé se nemohou přihlásit do administrace
             if ($role === 'public') {
                 $error = 'Tento účet nemá přístup do administrace. Použijte veřejné přihlášení.';
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Přihlášení – Administrace</title>
-  <style>
+  <style nonce="<?= cspNonce() ?>">
     body { font-family: system-ui, sans-serif; max-width: 380px; margin: 4rem auto; padding: 0 1rem; }
     label { display: block; margin-top: 1rem; font-weight: bold; }
     input { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; }

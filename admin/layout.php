@@ -238,7 +238,7 @@ function adminHeader(string $pageTitle): void
        . '  <meta charset="utf-8">' . "\n"
        . '  <meta name="viewport" content="width=device-width, initial-scale=1">' . "\n"
        . '  <title>' . $pageTitle . ' – ' . $siteName . ' Admin</title>' . "\n"
-       . '  <style>' . "\n"
+       . '  <style nonce="' . cspNonce() . '">' . "\n"
        . '    *, *::before, *::after { box-sizing: border-box; }' . "\n"
        . '    body { font-family: system-ui, sans-serif; margin: 0; display: flex; min-height: 100vh; }' . "\n"
        . '    nav { background: #222; color: #fff; width: 230px; flex-shrink: 0; padding: 1rem; }' . "\n"
@@ -324,7 +324,8 @@ function adminHeader(string $pageTitle): void
 function adminFooter(): void
 {
     $version = KORA_VERSION;
-    echo '<script>document.addEventListener("DOMContentLoaded",function(){'
+    $nonce = cspNonce();
+    echo '<script nonce="' . $nonce . '">document.addEventListener("DOMContentLoaded",function(){'
        . 'var l=document.getElementById("a11y-live");if(!l)return;'
        . 'var m=document.querySelector(\'[role="status"]:not(#a11y-live),[role="alert"]\');'
        . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}'

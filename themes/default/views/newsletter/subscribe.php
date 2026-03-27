@@ -13,6 +13,10 @@
       <div class="status-message status-message--success" role="status">
         <p>Tato adresa je již přihlášena k odběru.</p>
       </div>
+    <?php elseif ($state === 'mail_error'): ?>
+      <div id="form-errors" class="status-message status-message--error" role="alert">
+        <p>Adresa byla zaregistrována, ale potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.</p>
+      </div>
     <?php elseif ($state === 'error'): ?>
       <div id="form-errors" class="status-message status-message--error" role="alert">
         <p>Zadejte platnou e-mailovou adresu.</p>

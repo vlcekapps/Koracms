@@ -46,9 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                           . "Odkaz je platný 1 hodinu.\n\n"
                           . "Pokud jste o obnovení nežádali, tento email ignorujte.\n\n"
                           . "— " . $siteName;
-                sendMail($userRow['email'], $subject, $body);
+                if (!sendMail($userRow['email'], $subject, $body)) {
+                    error_log("sendMail FAILED: reset hesla pro {$userRow['email']}");
+                }
             }
 
+            // Úspěch zobrazujeme vždy – nechceme prozradit, zda e-mail existuje
             $success = true;
         }
     } else {

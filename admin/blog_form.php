@@ -188,7 +188,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   </div>
 </form>
 
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
@@ -217,7 +217,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
-<script>
+<script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('content');
     const wrapper = document.createElement('div');
