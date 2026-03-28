@@ -593,6 +593,10 @@ body.theme-public textarea.form-control {
   gap: 1rem;
 }
 
+.form-fields-grid--single {
+  margin-top: 1rem;
+}
+
 .field {
   display: grid;
   gap: 0.45rem;
@@ -607,6 +611,22 @@ body.theme-public textarea.form-control {
   margin-top: 0;
 }
 
+.form-section-card {
+  margin-top: 1.25rem;
+  padding: 1rem 1rem 1.1rem;
+  border: 1px solid #d7dce5;
+  border-radius: var(--radius-md);
+  background: #fafbfd;
+}
+
+.form-section-card legend {
+  margin-bottom: 0.35rem;
+}
+
+.field-help--section {
+  margin: 0 0 0.95rem;
+}
+
 .form-field--full {
   grid-column: 1 / -1;
 }
@@ -617,6 +637,13 @@ body.theme-public textarea.form-control {
 
 .form-field--third {
   grid-column: span 4;
+}
+
+.form-row-break {
+  grid-column: 1 / -1;
+  height: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .field label {

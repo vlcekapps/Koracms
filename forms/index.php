@@ -212,6 +212,7 @@ $errors = [];
 $success = false;
 $formData = [];
 $storedUploads = [];
+$successActions = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('form_submit_' . (int)$form['id'], 5, 300);
@@ -230,6 +231,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = (string)$field['name'];
             $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
             $defaultValue = trim((string)($field['default_value'] ?? ''));
+
+            if (!formFieldStoresSubmissionValue($field)) {
+                continue;
+            }
 
             if ($fieldType === 'hidden') {
                 $previewData[$name] = $defaultValue;
@@ -267,6 +272,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $required = (int)($field['is_required'] ?? 0) === 1;
             $defaultValue = trim((string)($field['default_value'] ?? ''));
             $value = '';
+
+            if (!formFieldStoresSubmissionValue($field)) {
+                continue;
+            }
 
             if (!formFieldConditionMatches($field, $previewData)) {
                 $submissionData[$name] = $fieldType === 'checkbox_group' ? [] : '';
@@ -393,13 +402,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 sendFormSubmitterConfirmation($form, $fieldsByName, $submissionData);
 
+                $effectiveSuccessBehavior = normalizeFormSuccessBehavior(
+                    (string)($form['success_behavior'] ?? ''),
+                    (string)($form['redirect_url'] ?? '')
+                );
                 $redirectUrl = internalRedirectTarget((string)($form['redirect_url'] ?? ''), '');
-                if ($redirectUrl !== '') {
+                if ($effectiveSuccessBehavior === 'redirect' && $redirectUrl !== '') {
                     header('Location: ' . $redirectUrl);
                     exit;
                 }
 
                 $success = true;
+                $successActions = formResolveSuccessActions($form);
             }
         }
     }
@@ -425,6 +439,7 @@ renderPublicPage([
         'fields' => $fields,
         'errors' => $errors,
         'success' => $success,
+        'successActions' => $successActions,
         'formData' => $formData,
         'captchaExpr' => $captchaExpr,
     ],

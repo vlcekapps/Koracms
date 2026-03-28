@@ -10,6 +10,7 @@ $fields = [];
 $fieldTypes = formFieldTypeDefinitions();
 $fieldLayoutWidths = formFieldLayoutWidthDefinitions();
 $conditionOperators = formConditionOperatorDefinitions();
+$successBehaviors = formSuccessBehaviorDefinitions();
 $presetKey = '';
 $presetDefinition = null;
 if ($id !== null) {
@@ -41,6 +42,14 @@ $fieldSourceForOptions = $fields !== [] ? $fields : $presetFields;
 $emailFieldOptions = formEmailFieldOptions($fieldSourceForOptions);
 $submitterConfirmationSubjectValue = (string)($form['submitter_confirmation_subject'] ?? ($formDefaults['submitter_confirmation_subject'] ?? ''));
 $submitterConfirmationMessageValue = (string)($form['submitter_confirmation_message'] ?? ($formDefaults['submitter_confirmation_message'] ?? ''));
+$successBehaviorValue = normalizeFormSuccessBehavior(
+    (string)($form['success_behavior'] ?? ($formDefaults['success_behavior'] ?? '')),
+    (string)($form['redirect_url'] ?? ($formDefaults['redirect_url'] ?? ''))
+);
+$successPrimaryLabelValue = (string)($form['success_primary_label'] ?? ($formDefaults['success_primary_label'] ?? ''));
+$successPrimaryUrlValue = (string)($form['success_primary_url'] ?? ($formDefaults['success_primary_url'] ?? ''));
+$successSecondaryLabelValue = (string)($form['success_secondary_label'] ?? ($formDefaults['success_secondary_label'] ?? ''));
+$successSecondaryUrlValue = (string)($form['success_secondary_url'] ?? ($formDefaults['success_secondary_url'] ?? ''));
 $conditionalFieldOptions = [];
 foreach ($fieldSourceForOptions as $candidateField) {
     $candidateName = trim((string)($candidateField['name'] ?? ''));
@@ -88,9 +97,9 @@ adminHeader($pageTitle);
 </div>
 
 <?php if ($form): ?>
-  <p class="section-subtitle">Upravte nastavení formuláře, jeho pole a text, který se zobrazí po úspěšném odeslání.</p>
+  <p class="section-subtitle">Upravte nastavení formuláře, jeho pole, sekce, rozložení a to, co se má stát po úspěšném odeslání.</p>
 <?php else: ?>
-  <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole, podmínky zobrazení, rozložení polí, přílohy i potvrzovací e-mail pro odesílatele.</p>
+  <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole, sekce, podmínky zobrazení, rozložení polí, přílohy, potvrzovací e-mail i navazující kroky po odeslání.</p>
   <?php if ($presetDefinition !== null): ?>
     <div class="notice notice-info" style="margin-bottom:1rem">
       <p><strong>Šablona:</strong> <?= h((string)$presetDefinition['label']) ?></p>
@@ -139,13 +148,6 @@ adminHeader($pageTitle);
     </div>
 
     <div style="margin-bottom:.75rem">
-      <label for="success_message">Zpráva po odeslání</label>
-      <textarea id="success_message" name="success_message" rows="2" style="width:100%;max-width:500px"
-                aria-describedby="success-help"><?= h((string)($form['success_message'] ?? ($formDefaults['success_message'] ?? 'Formulář byl úspěšně odeslán. Děkujeme!'))) ?></textarea>
-      <small id="success-help" class="field-help">Zobrazí se návštěvníkovi po úspěšném odeslání formuláře.</small>
-    </div>
-
-    <div style="margin-bottom:.75rem">
       <label for="submit_label">Text tlačítka pro odeslání</label>
       <input type="text" id="submit_label" name="submit_label" maxlength="100"
              value="<?= h((string)($form['submit_label'] ?? ($formDefaults['submit_label'] ?? 'Odeslat formulář'))) ?>" style="width:100%;max-width:500px"
@@ -167,14 +169,6 @@ adminHeader($pageTitle);
              value="<?= h((string)($form['notification_subject'] ?? ($formDefaults['notification_subject'] ?? ''))) ?>" style="width:100%;max-width:500px"
              aria-describedby="notification-subject-help">
       <small id="notification-subject-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se výchozí předmět podle názvu formuláře.</small>
-    </div>
-
-    <div style="margin-bottom:.75rem">
-      <label for="redirect_url">Kam přesměrovat po odeslání</label>
-      <input type="text" id="redirect_url" name="redirect_url" maxlength="500"
-             value="<?= h((string)($form['redirect_url'] ?? ($formDefaults['redirect_url'] ?? ''))) ?>" style="width:100%;max-width:500px"
-             aria-describedby="redirect-url-help" placeholder="/dekujeme">
-      <small id="redirect-url-help" class="field-help">Volitelné. Zadejte interní cestu v rámci webu, například <code>/dekujeme</code>. Když pole necháte prázdné, zůstane návštěvník na stránce formuláře.</small>
     </div>
 
     <div style="margin-bottom:.75rem">
@@ -256,10 +250,71 @@ adminHeader($pageTitle);
     </section>
   </fieldset>
 
+  <fieldset>
+    <legend>Po odeslání formuláře</legend>
+    <p class="field-help">Tady určíte, co návštěvník uvidí po úspěšném odeslání a jaké další kroky mu formulář nabídne.</p>
+
+    <div style="margin-bottom:.75rem">
+      <label for="success_message">Zpráva po odeslání</label>
+      <textarea id="success_message" name="success_message" rows="2" style="width:100%;max-width:700px"
+                aria-describedby="success-help"><?= h((string)($form['success_message'] ?? ($formDefaults['success_message'] ?? 'Formulář byl úspěšně odeslán. Děkujeme!'))) ?></textarea>
+      <small id="success-help" class="field-help">Zobrazí se návštěvníkovi tehdy, když po odeslání zůstane na stránce formuláře.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="success_behavior">Režim po odeslání</label>
+      <select id="success_behavior" name="success_behavior" aria-describedby="success-behavior-help" style="width:100%;max-width:500px">
+        <?php foreach ($successBehaviors as $successBehaviorKey => $successBehaviorDefinition): ?>
+          <option value="<?= h($successBehaviorKey) ?>"<?= $successBehaviorValue === $successBehaviorKey ? ' selected' : '' ?>><?= h((string)$successBehaviorDefinition['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <small id="success-behavior-help" class="field-help">Přesměrování použijte tehdy, když má návštěvník po odeslání pokračovat na jiné interní stránce. Jinak může zůstat na místě a uvidí potvrzení i volitelná tlačítka.</small>
+    </div>
+
+    <div data-after-submit-redirect style="margin-bottom:.75rem">
+      <label for="redirect_url">Kam přesměrovat po odeslání</label>
+      <input type="text" id="redirect_url" name="redirect_url" maxlength="500"
+             value="<?= h((string)($form['redirect_url'] ?? ($formDefaults['redirect_url'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             aria-describedby="redirect-url-help" placeholder="/dekujeme">
+      <small id="redirect-url-help" class="field-help">Zadejte interní cestu v rámci webu, například <code>/dekujeme</code>. Použije se jen v režimu přesměrování.</small>
+    </div>
+
+    <div data-after-submit-actions style="display:grid;grid-template-columns:minmax(14rem,1fr) minmax(18rem,1.2fr);gap:.75rem;align-items:end;margin-top:.5rem">
+      <div>
+        <label for="success_primary_label">Primární tlačítko po odeslání</label>
+        <input type="text" id="success_primary_label" name="success_primary_label" maxlength="120"
+               value="<?= h($successPrimaryLabelValue) ?>"
+               aria-describedby="success-primary-label-help">
+        <small id="success-primary-label-help" class="field-help">Volitelné. Když vyplníte jen adresu, použije se text <code>Pokračovat</code>.</small>
+      </div>
+      <div>
+        <label for="success_primary_url">Adresa primárního tlačítka</label>
+        <input type="text" id="success_primary_url" name="success_primary_url" maxlength="500"
+               value="<?= h($successPrimaryUrlValue) ?>" placeholder="/"
+               aria-describedby="success-primary-url-help">
+        <small id="success-primary-url-help" class="field-help">Jen interní cesta v rámci webu, například <code>/</code> nebo <code>/forms/nahlaseni-chyby</code>.</small>
+      </div>
+      <div>
+        <label for="success_secondary_label">Sekundární tlačítko po odeslání</label>
+        <input type="text" id="success_secondary_label" name="success_secondary_label" maxlength="120"
+               value="<?= h($successSecondaryLabelValue) ?>"
+               aria-describedby="success-secondary-label-help">
+        <small id="success-secondary-label-help" class="field-help">Volitelné. Když vyplníte jen adresu, použije se text <code>Další krok</code>.</small>
+      </div>
+      <div>
+        <label for="success_secondary_url">Adresa sekundárního tlačítka</label>
+        <input type="text" id="success_secondary_url" name="success_secondary_url" maxlength="500"
+               value="<?= h($successSecondaryUrlValue) ?>" placeholder="/kontakt"
+               aria-describedby="success-secondary-url-help">
+        <small id="success-secondary-url-help" class="field-help">Volitelné. Hodí se pro návrat na domovskou stránku, další formulář nebo nápovědu.</small>
+      </div>
+    </div>
+  </fieldset>
+
   <?php if ($form): ?>
   <fieldset>
-    <legend>Pole formuláře</legend>
-    <p class="field-help">U každého pole nastavte popisek, typ, šířku, pořadí a případné doplňující možnosti. Interní klíče se po uložení zachovají, takže starší odpovědi zůstanou čitelné i po úpravě formuláře.</p>
+    <legend>Pole a sekce formuláře</legend>
+    <p class="field-help">U každého pole nastavte popisek, typ, šířku, řádek, pořadí a případné doplňující možnosti. Typ <strong>Sekce formuláře</strong> vytvoří nový blok s vlastním mezititulkem a nápovědou. Interní klíče se po uložení zachovají, takže starší odpovědi zůstanou čitelné i po úpravě formuláře.</p>
 
     <div id="fields-container">
       <?php foreach ($fields as $i => $field): ?>
@@ -298,7 +353,7 @@ adminHeader($pageTitle);
               <input type="text" id="field-help-text-<?= $i ?>" name="fields[<?= $i ?>][help_text]"
                      value="<?= h((string)($field['help_text'] ?? '')) ?>"
                      aria-describedby="field-help-text-help-<?= $i ?>">
-              <small id="field-help-text-help-<?= $i ?>" class="field-help">Volitelné. Zobrazí se pod polem jako vysvětlení nebo instrukce.</small>
+              <small id="field-help-text-help-<?= $i ?>" class="field-help">Volitelné. Zobrazí se pod polem jako vysvětlení nebo instrukce. U sekce funguje jako úvodní text celého bloku.</small>
             </div>
             <div>
               <label for="field-sort-<?= $i ?>">Pořadí</label>
@@ -369,6 +424,7 @@ adminHeader($pageTitle);
           <div style="margin-top:.5rem;display:flex;gap:1rem;align-items:center">
             <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?>> Povinné pole</label>
             <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?>> Povolit více souborů</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field['start_new_row'] ?? 0) === 1 ? ' checked' : '' ?>> Začít na novém řádku</label>
             <label><input type="checkbox" name="fields[<?= $i ?>][delete]" value="1"> Odebrat pole po uložení</label>
           </div>
         </div>
@@ -376,7 +432,7 @@ adminHeader($pageTitle);
     </div>
 
     <h3>Přidat nové pole</h3>
-    <p class="field-help">Nové pole se po uložení přidá na konec formuláře. Pořadí pak můžete případně upravit přímo tady.</p>
+    <p class="field-help">Nové pole se po uložení přidá na konec formuláře. Typ <strong>Sekce formuláře</strong> použijte pro nový blok s mezititulkem a nápovědou. Pořadí, šířku i řádek pak můžete případně upravit přímo tady.</p>
     <div style="border:1px dashed #b8b0a4;border-radius:8px;padding:.75rem;background:#fff">
       <div style="display:grid;grid-template-columns:minmax(12rem,1.4fr) minmax(10rem,.9fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(11rem,.9fr) 6rem;gap:.5rem;align-items:end">
         <div>
@@ -404,7 +460,7 @@ adminHeader($pageTitle);
         <div>
           <label for="new-field-help-text">Nápověda k poli</label>
           <input type="text" id="new-field-help-text" name="new_field_help_text" aria-describedby="new-field-help-text-help">
-          <small id="new-field-help-text-help" class="field-help">Volitelné. Zobrazí se pod polem jako vysvětlení nebo instrukce.</small>
+          <small id="new-field-help-text-help" class="field-help">Volitelné. Zobrazí se pod polem jako vysvětlení nebo instrukce. U sekce funguje jako úvodní text celého bloku.</small>
         </div>
         <div>
           <label for="new-field-sort">Pořadí</label>
@@ -467,6 +523,7 @@ adminHeader($pageTitle);
       <div style="margin-top:.5rem">
         <label><input type="checkbox" name="new_field_required" value="1"> Povinné pole</label>
         <label style="margin-left:1rem"><input type="checkbox" name="new_field_allow_multiple" value="1"> Povolit více souborů</label>
+        <label style="margin-left:1rem"><input type="checkbox" name="new_field_start_new_row" value="1"> Začít na novém řádku</label>
       </div>
     </div>
   </fieldset>
@@ -526,6 +583,38 @@ adminHeader($pageTitle);
     input.addEventListener('change', updateConfirmationPreview);
   });
   updateConfirmationPreview();
+
+  const successBehaviorSelect = document.getElementById('success_behavior');
+  const redirectRow = document.querySelector('[data-after-submit-redirect]');
+  const actionGrid = document.querySelector('[data-after-submit-actions]');
+  const syncSuccessBehavior = () => {
+    if (!successBehaviorSelect || !redirectRow || !actionGrid) {
+      return;
+    }
+
+    const isRedirect = successBehaviorSelect.value === 'redirect';
+    redirectRow.hidden = !isRedirect;
+    redirectRow.setAttribute('aria-hidden', isRedirect ? 'false' : 'true');
+    actionGrid.hidden = isRedirect;
+    actionGrid.setAttribute('aria-hidden', isRedirect ? 'true' : 'false');
+
+    redirectRow.querySelectorAll('input, select, textarea').forEach((control) => {
+      if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
+        control.disabled = !isRedirect;
+      }
+    });
+
+    actionGrid.querySelectorAll('input, select, textarea').forEach((control) => {
+      if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
+        control.disabled = isRedirect;
+      }
+    });
+  };
+
+  if (successBehaviorSelect) {
+    successBehaviorSelect.addEventListener('change', syncSuccessBehavior);
+    syncSuccessBehavior();
+  }
 
   document.querySelectorAll('[data-condition-row]').forEach((row) => {
     const controllerSelect = row.querySelector('select[name$="[show_if_field]"], select[name="new_field_show_if_field"]');

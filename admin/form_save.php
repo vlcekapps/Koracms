@@ -36,6 +36,11 @@ $submitLabel = trim($_POST['submit_label'] ?? '');
 $notificationEmail = trim($_POST['notification_email'] ?? '');
 $notificationSubject = trim($_POST['notification_subject'] ?? '');
 $redirectUrl = trim($_POST['redirect_url'] ?? '');
+$successBehavior = trim($_POST['success_behavior'] ?? '');
+$successPrimaryLabel = trim($_POST['success_primary_label'] ?? '');
+$successPrimaryUrl = trim($_POST['success_primary_url'] ?? '');
+$successSecondaryLabel = trim($_POST['success_secondary_label'] ?? '');
+$successSecondaryUrl = trim($_POST['success_secondary_url'] ?? '');
 $useHoneypot = isset($_POST['use_honeypot']) ? 1 : 0;
 $submitterConfirmationEnabled = isset($_POST['submitter_confirmation_enabled']) ? 1 : 0;
 $submitterEmailField = trim($_POST['submitter_email_field'] ?? '');
@@ -58,6 +63,9 @@ if ($submitterConfirmationEnabled === 1 && $submitterEmailField === '') {
     exit;
 }
 $redirectUrl = $redirectUrl !== '' ? internalRedirectTarget($redirectUrl, '') : '';
+$successPrimaryUrl = $successPrimaryUrl !== '' ? internalRedirectTarget($successPrimaryUrl, '') : '';
+$successSecondaryUrl = $successSecondaryUrl !== '' ? internalRedirectTarget($successSecondaryUrl, '') : '';
+$successBehavior = normalizeFormSuccessBehavior($successBehavior, $redirectUrl);
 
 if ($title === '') {
     header('Location: form_form.php?err=required' . $errorSuffix);
@@ -87,9 +95,9 @@ if ($id !== null) {
 
     $pdo->prepare(
         "UPDATE cms_forms
-         SET title = ?, slug = ?, description = ?, success_message = ?, submit_label = ?, notification_email = ?, notification_subject = ?, redirect_url = ?, use_honeypot = ?, submitter_confirmation_enabled = ?, submitter_email_field = ?, submitter_confirmation_subject = ?, submitter_confirmation_message = ?, is_active = ?, updated_at = NOW()
+         SET title = ?, slug = ?, description = ?, success_message = ?, submit_label = ?, notification_email = ?, notification_subject = ?, redirect_url = ?, success_behavior = ?, success_primary_label = ?, success_primary_url = ?, success_secondary_label = ?, success_secondary_url = ?, use_honeypot = ?, submitter_confirmation_enabled = ?, submitter_email_field = ?, submitter_confirmation_subject = ?, submitter_confirmation_message = ?, is_active = ?, updated_at = NOW()
          WHERE id = ?"
-    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $isActive, $id]);
+    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $successBehavior, $successPrimaryLabel, $successPrimaryUrl, $successSecondaryLabel, $successSecondaryUrl, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $isActive, $id]);
     logAction('form_edit', "id={$id} title={$title}");
 
     // Zpracování existujících polí
@@ -127,16 +135,25 @@ if ($id !== null) {
         $fieldMaxFileSize = max(1, min(100, (int)($fieldData['max_file_size_mb'] ?? 10)));
         $fieldAllowMultiple = isset($fieldData['allow_multiple']) && $fieldType === 'file' ? 1 : 0;
         $fieldLayoutWidth = normalizeFormFieldLayoutWidth((string)($fieldData['layout_width'] ?? 'full'));
+        $fieldStartNewRow = isset($fieldData['start_new_row']) ? 1 : 0;
         $fieldShowIfField = trim((string)($fieldData['show_if_field'] ?? ''));
         $fieldShowIfOperator = normalizeFormConditionOperator((string)($fieldData['show_if_operator'] ?? ''), trim((string)($fieldData['show_if_value'] ?? '')));
         $fieldShowIfValue = trim((string)($fieldData['show_if_value'] ?? ''));
+        if ($fieldType === 'section') {
+            $fieldRequired = 0;
+            $fieldAllowMultiple = 0;
+            $fieldStartNewRow = 0;
+            $fieldShowIfField = '';
+            $fieldShowIfOperator = '';
+            $fieldShowIfValue = '';
+        }
         if ($fieldShowIfField === '') {
             $fieldShowIfOperator = '';
             $fieldShowIfValue = '';
         } elseif (!formConditionOperatorRequiresValue($fieldShowIfOperator)) {
             $fieldShowIfValue = '';
         }
-        $fieldRequired = isset($fieldData['is_required']) ? 1 : 0;
+        $fieldRequired = $fieldType === 'section' ? 0 : (isset($fieldData['is_required']) ? 1 : 0);
         $fieldSort = max(0, (int)($fieldData['sort_order'] ?? 0));
         $fieldName = trim((string)($existingNames[$fieldId] ?? ''));
         if ($fieldName === '') {
@@ -145,9 +162,9 @@ if ($id !== null) {
 
         $pdo->prepare(
             "UPDATE cms_form_fields
-             SET label = ?, name = ?, field_type = ?, options = ?, placeholder = ?, default_value = ?, help_text = ?, accept_types = ?, max_file_size_mb = ?, allow_multiple = ?, layout_width = ?, show_if_field = ?, show_if_operator = ?, show_if_value = ?, is_required = ?, sort_order = ?
+             SET label = ?, name = ?, field_type = ?, options = ?, placeholder = ?, default_value = ?, help_text = ?, accept_types = ?, max_file_size_mb = ?, allow_multiple = ?, layout_width = ?, start_new_row = ?, show_if_field = ?, show_if_operator = ?, show_if_value = ?, is_required = ?, sort_order = ?
              WHERE id = ? AND form_id = ?"
-        )->execute([$fieldLabel, $fieldName, $fieldType, $fieldOptions, $fieldPlaceholder, $fieldDefaultValue, $fieldHelpText, $fieldAcceptTypes, $fieldMaxFileSize, $fieldAllowMultiple, $fieldLayoutWidth, $fieldShowIfField, $fieldShowIfOperator, $fieldShowIfValue, $fieldRequired, $fieldSort, $fieldId, $id]);
+        )->execute([$fieldLabel, $fieldName, $fieldType, $fieldOptions, $fieldPlaceholder, $fieldDefaultValue, $fieldHelpText, $fieldAcceptTypes, $fieldMaxFileSize, $fieldAllowMultiple, $fieldLayoutWidth, $fieldStartNewRow, $fieldShowIfField, $fieldShowIfOperator, $fieldShowIfValue, $fieldRequired, $fieldSort, $fieldId, $id]);
     }
 
     // Nové pole
@@ -165,38 +182,47 @@ if ($id !== null) {
         $newMaxFileSize = max(1, min(100, (int)($_POST['new_field_max_file_size_mb'] ?? 10)));
         $newAllowMultiple = isset($_POST['new_field_allow_multiple']) && $newType === 'file' ? 1 : 0;
         $newLayoutWidth = normalizeFormFieldLayoutWidth((string)($_POST['new_field_layout_width'] ?? 'full'));
+        $newStartNewRow = isset($_POST['new_field_start_new_row']) ? 1 : 0;
         $newShowIfField = trim($_POST['new_field_show_if_field'] ?? '');
         $newShowIfOperator = normalizeFormConditionOperator((string)($_POST['new_field_show_if_operator'] ?? ''), trim((string)($_POST['new_field_show_if_value'] ?? '')));
         $newShowIfValue = trim($_POST['new_field_show_if_value'] ?? '');
+        if ($newType === 'section') {
+            $newRequired = 0;
+            $newAllowMultiple = 0;
+            $newStartNewRow = 0;
+            $newShowIfField = '';
+            $newShowIfOperator = '';
+            $newShowIfValue = '';
+        }
         if ($newShowIfField === '') {
             $newShowIfOperator = '';
             $newShowIfValue = '';
         } elseif (!formConditionOperatorRequiresValue($newShowIfOperator)) {
             $newShowIfValue = '';
         }
-        $newRequired = isset($_POST['new_field_required']) ? 1 : 0;
+        $newRequired = $newType === 'section' ? 0 : (isset($_POST['new_field_required']) ? 1 : 0);
         $newSort = max(0, (int)($_POST['new_field_sort'] ?? 0));
         $newName = adminUniqueFormFieldName($newLabel, $usedFieldNames, 'field_' . time());
 
         $pdo->prepare(
-            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, layout_width, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newDefaultValue, $newHelpText, $newAcceptTypes, $newMaxFileSize, $newAllowMultiple, $newLayoutWidth, $newShowIfField, $newShowIfOperator, $newShowIfValue, $newRequired, $newSort]);
+            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, layout_width, start_new_row, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newDefaultValue, $newHelpText, $newAcceptTypes, $newMaxFileSize, $newAllowMultiple, $newLayoutWidth, $newStartNewRow, $newShowIfField, $newShowIfOperator, $newShowIfValue, $newRequired, $newSort]);
     }
 
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $id);
 } else {
     $pdo->prepare(
-        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_email, notification_subject, redirect_url, use_honeypot, submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject, submitter_confirmation_message, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $isActive]);
+        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_email, notification_subject, redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label, success_secondary_url, use_honeypot, submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject, submitter_confirmation_message, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $successBehavior, $successPrimaryLabel, $successPrimaryUrl, $successSecondaryLabel, $successSecondaryUrl, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $isActive]);
     $newId = (int)$pdo->lastInsertId();
 
     if ($presetDefinition !== null && !empty($presetDefinition['fields'])) {
         $usedFieldNames = [];
         $insertFieldStmt = $pdo->prepare(
-            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, layout_width, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, layout_width, start_new_row, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         foreach ((array)$presetDefinition['fields'] as $presetField) {
@@ -225,6 +251,7 @@ if ($id !== null) {
                 max(1, min(100, (int)($presetField['max_file_size_mb'] ?? 10))),
                 !empty($presetField['allow_multiple']) ? 1 : 0,
                 normalizeFormFieldLayoutWidth((string)($presetField['layout_width'] ?? 'full')),
+                !empty($presetField['start_new_row']) ? 1 : 0,
                 trim((string)($presetField['show_if_field'] ?? '')),
                 trim((string)($presetField['show_if_field'] ?? '')) !== ''
                     ? normalizeFormConditionOperator((string)($presetField['show_if_operator'] ?? ''), trim((string)($presetField['show_if_value'] ?? '')))

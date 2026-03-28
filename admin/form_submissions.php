@@ -26,6 +26,10 @@ $fields = $fields->fetchAll();
 $fieldNames = [];
 $fieldDefinitions = [];
 foreach ($fields as $field) {
+    if (!formFieldStoresSubmissionValue($field)) {
+        continue;
+    }
+
     $fieldNames[(string)$field['name']] = (string)$field['label'];
     $fieldDefinitions[(string)$field['name']] = $field;
 }

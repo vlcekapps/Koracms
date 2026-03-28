@@ -2307,6 +2307,7 @@ function formFieldTypeDefinitions(): array
         'url' => ['label' => 'Webová adresa'],
         'file' => ['label' => 'Soubor'],
         'hidden' => ['label' => 'Skryté pole'],
+        'section' => ['label' => 'Sekce formuláře'],
     ];
 }
 
@@ -2343,6 +2344,24 @@ function formConditionOperatorDefinitions(): array
     ];
 }
 
+function formSuccessBehaviorDefinitions(): array
+{
+    return [
+        'message' => ['label' => 'Zobrazit potvrzení na stránce'],
+        'redirect' => ['label' => 'Přesměrovat na jinou interní stránku'],
+    ];
+}
+
+function normalizeFormSuccessBehavior(string $value, string $redirectUrl = ''): string
+{
+    $normalized = trim($value);
+    if (array_key_exists($normalized, formSuccessBehaviorDefinitions())) {
+        return $normalized;
+    }
+
+    return trim($redirectUrl) !== '' ? 'redirect' : 'message';
+}
+
 function normalizeFormConditionOperator(string $value, string $fallbackExpected = ''): string
 {
     $normalized = trim($value);
@@ -2363,6 +2382,20 @@ function normalizeFormFieldType(string $type): string
 {
     $normalized = trim($type);
     return array_key_exists($normalized, formFieldTypeDefinitions()) ? $normalized : 'text';
+}
+
+function formFieldStoresSubmissionValue(array $field): bool
+{
+    return !in_array(normalizeFormFieldType((string)($field['field_type'] ?? 'text')), ['section'], true);
+}
+
+function formFieldStartsNewRow(array $field): bool
+{
+    if ((int)($field['start_new_row'] ?? 0) !== 1) {
+        return false;
+    }
+
+    return !in_array(normalizeFormFieldType((string)($field['field_type'] ?? 'text')), ['hidden', 'section'], true);
 }
 
 function formFieldTypeLabel(string $type): string
@@ -2397,6 +2430,11 @@ function formPresetDefinitions(): array
                 'submit_label' => 'Odeslat hlášení',
                 'notification_subject' => 'Nové hlášení chyby',
                 'redirect_url' => '',
+                'success_behavior' => 'message',
+                'success_primary_label' => '',
+                'success_primary_url' => '',
+                'success_secondary_label' => '',
+                'success_secondary_url' => '',
                 'is_active' => 1,
                 'use_honeypot' => 1,
                 'submitter_confirmation_enabled' => 1,
@@ -2420,6 +2458,20 @@ function formPresetDefinitions(): array
                     'sort_order' => 0,
                 ],
                 [
+                    'field_type' => 'section',
+                    'label' => 'Zařazení problému',
+                    'name' => 'zarazeni_problemu',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Pomozte nám rychle poznat, jak závažný problém je a kde se projevil.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
+                    'is_required' => 0,
+                    'sort_order' => 5,
+                ],
+                [
                     'field_type' => 'text',
                     'label' => 'Stručný název problému',
                     'name' => 'strucny_nazev_problemu',
@@ -2430,6 +2482,7 @@ function formPresetDefinitions(): array
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
                     'layout_width' => 'full',
+                    'start_new_row' => 1,
                     'is_required' => 1,
                     'sort_order' => 10,
                 ],
@@ -2504,6 +2557,20 @@ function formPresetDefinitions(): array
                     'sort_order' => 60,
                 ],
                 [
+                    'field_type' => 'section',
+                    'label' => 'Popis chyby',
+                    'name' => 'popis_chyby',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Čím konkrétněji problém popíšete, tím rychleji ho půjde ověřit a opravit.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
+                    'is_required' => 0,
+                    'sort_order' => 65,
+                ],
+                [
                     'field_type' => 'textarea',
                     'label' => 'Jak problém vyvolat',
                     'name' => 'jak_problem_vyvolat',
@@ -2514,6 +2581,7 @@ function formPresetDefinitions(): array
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
                     'layout_width' => 'full',
+                    'start_new_row' => 1,
                     'is_required' => 1,
                     'sort_order' => 70,
                 ],
@@ -2556,6 +2624,7 @@ function formPresetDefinitions(): array
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
                     'layout_width' => 'full',
+                    'start_new_row' => 1,
                     'show_if_field' => 'zavaznost',
                     'show_if_operator' => 'contains',
                     'show_if_value' => 'Vysoká|Kritická',
@@ -2580,6 +2649,20 @@ function formPresetDefinitions(): array
                     'sort_order' => 110,
                 ],
                 [
+                    'field_type' => 'section',
+                    'label' => 'Přílohy a kontakt',
+                    'name' => 'prilohy_a_kontakt',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Sem patří vše, co nám může pomoct při dohledání a ověření problému.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
+                    'is_required' => 0,
+                    'sort_order' => 115,
+                ],
+                [
                     'field_type' => 'email',
                     'label' => 'E-mail pro případnou odpověď',
                     'name' => 'email_pro_odpoved',
@@ -2590,6 +2673,7 @@ function formPresetDefinitions(): array
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
                     'layout_width' => 'half',
+                    'start_new_row' => 1,
                     'is_required' => 0,
                     'sort_order' => 120,
                 ],
@@ -2739,6 +2823,10 @@ function formPreviewSampleValueForField(array $field): mixed
     $label = trim((string)($field['label'] ?? ''));
     $options = formFieldOptionsList((string)($field['options'] ?? ''));
 
+    if (!formFieldStoresSubmissionValue($field)) {
+        return '';
+    }
+
     if ($defaultValue !== '' && !in_array($fieldType, ['checkbox_group', 'checkbox', 'consent', 'file'], true)) {
         return $defaultValue;
     }
@@ -2765,6 +2853,10 @@ function formPreviewSubmissionData(array $fields): array
 {
     $previewData = [];
     foreach ($fields as $field) {
+        if (!formFieldStoresSubmissionValue($field)) {
+            continue;
+        }
+
         $name = trim((string)($field['name'] ?? ''));
         if ($name === '') {
             continue;
@@ -2779,6 +2871,10 @@ function formSubmitterConfirmationPreview(array $form, array $fields, string $su
 {
     $fieldsByName = [];
     foreach ($fields as $field) {
+        if (!formFieldStoresSubmissionValue($field)) {
+            continue;
+        }
+
         $name = trim((string)($field['name'] ?? ''));
         if ($name !== '') {
             $fieldsByName[$name] = $field;
@@ -2862,6 +2958,10 @@ function formSubmissionDisplayValueForField(array $field, mixed $value): string
 {
     $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
 
+    if (!formFieldStoresSubmissionValue($field)) {
+        return '';
+    }
+
     if ($fieldType === 'checkbox_group') {
         return formSubmissionDisplayValue(is_array($value) ? $value : [$value]);
     }
@@ -2936,6 +3036,45 @@ function formPublicRequestPath(array $form): string
 function formPublicPath(array $form, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(formPublicRequestPath($form), $query);
+}
+
+function formResolveSuccessActions(array $form): array
+{
+    $resolved = [];
+    $actionDefinitions = [
+        [
+            'label_key' => 'success_primary_label',
+            'url_key' => 'success_primary_url',
+            'fallback_label' => 'Pokračovat',
+            'variant' => 'primary',
+        ],
+        [
+            'label_key' => 'success_secondary_label',
+            'url_key' => 'success_secondary_url',
+            'fallback_label' => 'Další krok',
+            'variant' => 'secondary',
+        ],
+    ];
+
+    foreach ($actionDefinitions as $definition) {
+        $target = internalRedirectTarget((string)($form[$definition['url_key']] ?? ''), '');
+        if ($target === '') {
+            continue;
+        }
+
+        $label = trim((string)($form[$definition['label_key']] ?? ''));
+        if ($label === '') {
+            $label = $definition['fallback_label'];
+        }
+
+        $resolved[] = [
+            'label' => $label,
+            'url' => $target,
+            'variant' => $definition['variant'],
+        ];
+    }
+
+    return $resolved;
 }
 
 function formPublicUrl(array $form, array $query = []): string

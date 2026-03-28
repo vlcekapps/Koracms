@@ -9,6 +9,13 @@
     <?php if ($success): ?>
       <div class="status-message status-message--success" role="status" aria-atomic="true">
         <p><strong><?= h(trim((string)($form['success_message'] ?? '')) !== '' ? (string)$form['success_message'] : 'Formulář byl úspěšně odeslán. Děkujeme!') ?></strong></p>
+        <?php if (!empty($successActions)): ?>
+          <div class="button-row button-row--start" style="margin-top:1rem">
+            <?php foreach ($successActions as $action): ?>
+              <a href="<?= h((string)$action['url']) ?>" class="<?= ($action['variant'] ?? '') === 'primary' ? 'button-primary' : 'btn' ?>"><?= h((string)$action['label']) ?></a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
       </div>
     <?php else: ?>
       <?php if (!empty($errors)): ?>
@@ -55,14 +62,48 @@
 
         <fieldset class="form-fieldset">
           <legend><?= h((string)$form['title']) ?></legend>
-          <div class="form-fields-grid">
+          <?php $currentFieldsContainer = null; ?>
 
           <?php foreach ($fields as $field): ?>
             <?php
+              $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+              $helpText = trim((string)($field['help_text'] ?? ''));
+
+              if ($fieldType === 'hidden') {
+                  $name = h((string)$field['name']);
+                  $defaultValue = (string)($field['default_value'] ?? '');
+                  ?>
+                  <input type="hidden" name="<?= $name ?>" value="<?= h((string)$defaultValue) ?>">
+                  <?php
+                  continue;
+              }
+
+              if ($fieldType === 'section') {
+                  if ($currentFieldsContainer === 'root') {
+                      echo '</div>';
+                  } elseif ($currentFieldsContainer === 'section') {
+                      echo '</div></fieldset>';
+                  }
+                  $currentFieldsContainer = 'section';
+                  ?>
+                  <fieldset class="form-fieldset form-section-card">
+                    <legend><?= h((string)$field['label']) ?></legend>
+                    <?php if ($helpText !== ''): ?>
+                      <p class="field-help field-help--section"><?= h($helpText) ?></p>
+                    <?php endif; ?>
+                    <div class="form-fields-grid">
+                  <?php
+                  continue;
+              }
+
+              if ($currentFieldsContainer === null) {
+                  $currentFieldsContainer = 'root';
+                  echo '<div class="form-fields-grid">';
+              }
+
               $name = h((string)$field['name']);
               $label = h((string)$field['label']);
               $required = (int)$field['is_required'];
-              $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
               $defaultValue = (string)($field['default_value'] ?? '');
               $rawValue = $formData[$field['name']] ?? (
                 $fieldType === 'checkbox_group'
@@ -72,7 +113,6 @@
               $value = h((string)$rawValue);
               $fieldId = 'field-' . $name;
               $placeholder = h((string)($field['placeholder'] ?? ''));
-              $helpText = trim((string)($field['help_text'] ?? ''));
               $describedBy = $helpText !== '' ? $fieldId . '-help' : '';
               $optionList = formFieldOptionsList((string)($field['options'] ?? ''));
               $showIfField = trim((string)($field['show_if_field'] ?? ''));
@@ -87,10 +127,11 @@
               $conditionalHidden = !$isConditionallyVisible ? ' hidden aria-hidden="true"' : '';
             ?>
 
-            <?php if ($fieldType === 'hidden'): ?>
-              <input type="hidden" name="<?= $name ?>" value="<?= h((string)$defaultValue) ?>">
+            <?php if (formFieldStartsNewRow($field)): ?>
+              <div class="form-row-break js-conditional-field"<?= $conditionalAttributes ?><?= !$isConditionallyVisible ? ' hidden' : '' ?> aria-hidden="true"></div>
+            <?php endif; ?>
 
-            <?php elseif ($fieldType === 'checkbox_group'): ?>
+            <?php if ($fieldType === 'checkbox_group'): ?>
               <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
                 <?php foreach ($optionList as $index => $opt): ?>
@@ -203,12 +244,19 @@
             <?php endif; ?>
           <?php endforeach; ?>
 
-          <div class="field form-field form-field--full">
-            <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
-            <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
-                   aria-required="true" inputmode="numeric" autocomplete="off" aria-describedby="captcha-help">
-            <small id="captcha-help" class="field-help">Krátké ověření proti spamu. Zadejte jen výsledek příkladu.</small>
-          </div>
+          <?php if ($currentFieldsContainer === 'root'): ?>
+            </div>
+          <?php elseif ($currentFieldsContainer === 'section'): ?>
+            </div></fieldset>
+          <?php endif; ?>
+
+          <div class="form-fields-grid form-fields-grid--single">
+            <div class="field form-field form-field--full">
+              <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
+              <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
+                     aria-required="true" inputmode="numeric" autocomplete="off" aria-describedby="captcha-help">
+              <small id="captcha-help" class="field-help">Krátké ověření proti spamu. Zadejte jen výsledek příkladu.</small>
+            </div>
           </div>
 
           <div class="button-row button-row--start">
