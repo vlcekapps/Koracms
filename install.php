@@ -553,6 +553,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unique_visitors INT  NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        // ── Formuláře ──
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_forms (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title       VARCHAR(255) NOT NULL,
+            slug        VARCHAR(255) NOT NULL,
+            description TEXT,
+            success_message TEXT,
+            is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_forms_slug (slug)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_form_fields (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            form_id     INT          NOT NULL,
+            field_type  VARCHAR(30)  NOT NULL DEFAULT 'text',
+            label       VARCHAR(255) NOT NULL,
+            name        VARCHAR(100) NOT NULL,
+            placeholder VARCHAR(255) NOT NULL DEFAULT '',
+            options     TEXT,
+            is_required TINYINT(1)   NOT NULL DEFAULT 0,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            INDEX idx_form (form_id, sort_order)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_form_submissions (
+            id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            form_id     INT          NOT NULL,
+            data        JSON         NOT NULL,
+            ip_hash     VARCHAR(64)  NOT NULL DEFAULT '',
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_form_date (form_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_revisions (
             id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
             entity_type VARCHAR(50)  NOT NULL,

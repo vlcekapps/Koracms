@@ -431,7 +431,7 @@ function siteProfileShouldDetachForTheme(string $profileKey, string $themeKey): 
 
 function siteProfileModuleKeys(): array
 {
-    return ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations'];
+    return ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms'];
 }
 
 function applySiteProfilePreset(string $profileKey): void

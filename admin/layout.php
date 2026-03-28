@@ -143,6 +143,16 @@ function adminHeader(string $pageTitle): void
                 ],
             ];
         }
+        if (isModuleEnabled('forms')) {
+            $contentItems[] = [
+                'type' => 'details',
+                'label' => 'Formuláře',
+                'label_plain' => 'Formuláře',
+                'items' => [
+                    ['url' => $baseUrl . '/admin/forms.php', 'label' => 'Přehled formulářů'],
+                ],
+            ];
+        }
         if (isModuleEnabled('board')) {
             $contentItems[] = [
                 'type' => 'details',

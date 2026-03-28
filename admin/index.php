@@ -314,6 +314,7 @@ if ($canManageSettings) {
         'downloads' => 'Ke stažení',
         'polls' => 'Ankety',
         'faq' => 'Znalostní báze',
+        'forms' => 'Formuláře',
         'board' => 'Úřední deska',
         'reservations' => 'Rezervace',
         'statistics' => 'Statistiky',

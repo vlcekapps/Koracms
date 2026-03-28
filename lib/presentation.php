@@ -2168,4 +2168,51 @@ function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): 
     ];
 }
 
+// ─────────────────────────────── Formuláře ────────────────────────────────
+
+function formSlug(string $input): string
+{
+    return slugify($input);
+}
+
+function uniqueFormSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = formSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'formular';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_forms WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function formPublicRequestPath(array $form): string
+{
+    $slug = formSlug((string)($form['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/forms/' . rawurlencode($slug);
+    }
+    return '/forms/index.php?id=' . (int)($form['id'] ?? 0);
+}
+
+function formPublicPath(array $form, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(formPublicRequestPath($form), $query);
+}
+
+function formPublicUrl(array $form, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(formPublicRequestPath($form), $query));
+}
+
 // ─────────────────────────────── Galerie ──────────────────────────────────
