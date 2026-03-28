@@ -2646,6 +2646,20 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_audit_log') {
+        foreach ([
+            'Audit log',
+            'Podrobnosti akce',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin audit log page is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '>Detail<')) {
+            $issues[] = 'admin audit log page still contains outdated detail column label';
+        }
+    }
+
     if (in_array($page['label'], [
         'admin_blog',
         'admin_board',
@@ -2674,6 +2688,12 @@ foreach ($pages as $page) {
     }
 
     if (str_starts_with($page['label'], 'admin_')) {
+        if (preg_match('/<(?:th|td|button|input|select|option|a)\b[^>]*\b(?:scope|type|class|aria-label|data-confirm)\s*=\s*[“”]/u', $result['body'])) {
+            $issues[] = 'admin page contains smart quotes inside HTML attributes';
+        }
+        if (preg_match('/\bdata-confirm="[^"]*"[^>\s][^>]*>/u', $result['body'])) {
+            $issues[] = 'admin page contains broken data-confirm attribute quoting';
+        }
         foreach ([
             'Žádné články odpovídající hledání.',
             'Žádné novinky pro zadaný filtr.',
@@ -2971,6 +2991,7 @@ foreach ($pages as $page) {
             '/admin/gallery_album_form.php',
             'Přehled alb',
             'Spravovat fotografie',
+            'Zobrazit na webu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin gallery albums is missing fragment: ' . $expectedFragment;
@@ -2979,6 +3000,7 @@ foreach ($pages as $page) {
         foreach ([
             'Seznam alb',
             '>Fotografie<',
+            '>Web<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin gallery albums still contains outdated phrase: ' . $forbiddenFragment;
@@ -3092,6 +3114,13 @@ foreach ($pages as $page) {
         }
         if ($runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
             $issues[] = 'filtered blog listing is missing author links';
+        }
+        if (
+            $runtimeAuditAuthorSlug !== ''
+            && (str_contains($result['body'], 'Kategorie blogu') || str_contains($result['body'], 'Tagy blogu'))
+            && !str_contains($result['body'], 'autor=' . rawurlencode($runtimeAuditAuthorSlug))
+        ) {
+            $issues[] = 'filtered blog listing is missing author-preserving filter links';
         }
     }
 
@@ -3331,6 +3360,17 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], '>Blog<')) {
             $issues[] = 'public author page is missing back link to blog';
+        }
+    }
+
+    if ($page['label'] === 'reservations_resource') {
+        foreach ([
+            'Zpět na přehled zdrojů',
+            'Jak rezervace fungují',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'reservations resource page is missing fragment: ' . $expectedFragment;
+            }
         }
     }
 

@@ -74,7 +74,7 @@ adminHeader('Widgety');
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
                 <button type="submit" class="btn btn-danger" style="font-size:.85rem"
-                        data-confirm="Odebrat widget „<?= h($w['title'] ?: $wTypeName) ?>"?"
+                        data-confirm="<?= h('Odebrat widget „' . (string)($w['title'] ?: $wTypeName) . '“?') ?>"
                         aria-label="Odebrat widget <?= h($w['title'] ?: $wTypeName) ?>">✕</button>
               </form>
             </div>

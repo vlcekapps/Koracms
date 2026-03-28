@@ -91,12 +91,12 @@ adminHeader('Galerie – ' . $album['name']);
     <caption>Fotografie v albu „<?= h($album['name']) ?>”</caption>
     <thead>
       <tr>
-        <th scope=”col”><input type=”checkbox” class=”bulk-select-all” aria-label=”Vybrat vše”></th>
-        <th scope=”col”>Náhled</th>
-        <th scope=”col”>Fotografie</th>
-        <th scope=”col”>Pořadí</th>
-        <th scope=”col”>Stav</th>
-        <th scope=”col”>Akce</th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col">Náhled</th>
+        <th scope="col">Fotografie</th>
+        <th scope="col">Pořadí</th>
+        <th scope="col">Stav</th>
+        <th scope="col">Akce</th>
       </tr>
     </thead>
     <tbody>

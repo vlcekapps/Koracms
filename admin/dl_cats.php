@@ -75,7 +75,7 @@ adminHeader('Ke stažení – kategorie');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$cat['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat kategorii? Soubory bez kategorie se zobrazí v sekci „Ostatní".">Smazat</button>
+                    data-confirm="<?= h('Smazat kategorii? Soubory bez kategorie se zobrazí v sekci „Ostatní“.') ?>">Smazat</button>
           </form>
         </td>
       </tr>

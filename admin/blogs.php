@@ -19,9 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($slug === '') {
         $error = 'Slug blogu je povinný.';
     } elseif (in_array($slug, reservedBlogSlugs(), true)) {
-        $error = 'Slug „' . h($slug) . '" je rezervovaný a nelze ho použít.';
+        $error = 'Slug „' . $slug . '“ je rezervovaný a nelze ho použít.';
     } elseif (is_dir(__DIR__ . '/../' . $slug) && ($updateId === null || getBlogBySlug($slug) === null || (int)getBlogBySlug($slug)['id'] !== $updateId)) {
-        $error = 'Slug „' . h($slug) . '" koliduje s existujícím adresářem na serveru.';
+        $error = 'Slug „' . $slug . '“ koliduje s existujícím adresářem na serveru.';
     } elseif ($updateId !== null) {
         try {
             $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, show_in_nav = ? WHERE id = ?")
@@ -124,7 +124,7 @@ adminHeader('Správa blogů');
             <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
             <?php if (count($blogs) > 1): ?>
               <button type="submit" class="btn btn-danger"
-                      data-confirm="Smazat blog „<?= h((string)$blog['name']) ?>"? Články, kategorie a tagy budou přesunuty do jiného blogu.">Smazat</button>
+                      data-confirm="<?= h('Smazat blog „' . (string)$blog['name'] . '“? Články, kategorie a štítky budou přesunuty do jiného blogu.') ?>">Smazat</button>
             <?php else: ?>
               <button type="submit" class="btn btn-danger"
                       data-confirm="POZOR: Toto je poslední blog! Smazáním nenávratně odstraníte VŠECHNY články (<?= (int)$blog['article_count'] ?>), kategorie i tagy. Opravdu chcete pokračovat?">Smazat</button>

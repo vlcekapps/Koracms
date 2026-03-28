@@ -1,7 +1,7 @@
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="reservation-resource-title">
     <div class="button-row button-row--start">
-      <a class="button-secondary" href="<?= BASE_URL ?>/reservations/index.php"><span aria-hidden="true">←</span> Zpět na přehled</a>
+      <a class="button-secondary" href="<?= BASE_URL ?>/reservations/index.php"><span aria-hidden="true">←</span> Zpět na přehled zdrojů</a>
     </div>
 
     <p class="section-kicker">Rezervace</p>

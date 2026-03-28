@@ -92,7 +92,7 @@ adminHeader('Audit log');
         <th scope="col">Datum a čas</th>
         <th scope="col">Uživatel</th>
         <th scope="col">Akce</th>
-        <th scope="col">Detail</th>
+        <th scope="col">Podrobnosti akce</th>
       </tr>
     </thead>
     <tbody>

@@ -49,6 +49,48 @@ try {
     error_log('admin/blog_form tags: ' . $e->getMessage());
 }
 
+$blogFormOptions = [];
+if (isMultiBlog()) {
+    foreach ($allBlogs as $blogEntry) {
+        $blogFormOptions[(int)$blogEntry['id']] = [
+            'categories' => [],
+            'tags' => [],
+        ];
+    }
+
+    try {
+        $allCategoriesStmt = $pdo->query("SELECT id, blog_id, name FROM cms_categories ORDER BY blog_id, name");
+        foreach ($allCategoriesStmt->fetchAll() as $categoryRow) {
+            $blogId = (int)($categoryRow['blog_id'] ?? 0);
+            if (!isset($blogFormOptions[$blogId])) {
+                continue;
+            }
+            $blogFormOptions[$blogId]['categories'][] = [
+                'id' => (int)$categoryRow['id'],
+                'name' => (string)$categoryRow['name'],
+            ];
+        }
+    } catch (\PDOException $e) {
+        error_log('admin/blog_form all categories: ' . $e->getMessage());
+    }
+
+    try {
+        $allTagsStmt = $pdo->query("SELECT id, blog_id, name FROM cms_tags ORDER BY blog_id, name");
+        foreach ($allTagsStmt->fetchAll() as $tagRow) {
+            $blogId = (int)($tagRow['blog_id'] ?? 0);
+            if (!isset($blogFormOptions[$blogId])) {
+                continue;
+            }
+            $blogFormOptions[$blogId]['tags'][] = [
+                'id' => (int)$tagRow['id'],
+                'name' => (string)$tagRow['name'],
+            ];
+        }
+    } catch (\PDOException $e) {
+        error_log('admin/blog_form all tags: ' . $e->getMessage());
+    }
+}
+
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');
 $publishAtInput = '';
@@ -85,11 +127,12 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
   <?php if (isMultiBlog()): ?>
     <label for="blog_id">Blog</label>
-    <select id="blog_id" name="blog_id" data-blog-switch="<?= $article ? 'blog_form.php?id=' . (int)$article['id'] . '&amp;blog_id=' : 'blog_form.php?blog_id=' ?>">
+    <select id="blog_id" name="blog_id" aria-describedby="blog-id-help">
       <?php foreach ($allBlogs as $b): ?>
         <option value="<?= (int)$b['id'] ?>"<?= (int)$b['id'] === $currentBlogId ? ' selected' : '' ?>><?= h((string)$b['name']) ?></option>
       <?php endforeach; ?>
     </select>
+    <small id="blog-id-help" class="field-help">Po změně blogu se kategorie a štítky upraví rovnou ve formuláři bez obnovení stránky.</small>
   <?php else: ?>
     <input type="hidden" name="blog_id" value="<?= $currentBlogId ?>">
   <?php endif; ?>
@@ -135,7 +178,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <small id="blog-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="category_id">Kategorie</label>
-    <select id="category_id" name="category_id">
+    <select id="category_id" name="category_id"<?= isMultiBlog() ? ' aria-describedby="blog-category-help"' : '' ?>>
       <option value="">– bez kategorie –</option>
       <?php foreach ($categories as $category): ?>
         <option value="<?= (int)$category['id'] ?>" <?= ((int)($article['category_id'] ?? 0) === (int)$category['id']) ? 'selected' : '' ?>>
@@ -143,20 +186,26 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
         </option>
       <?php endforeach; ?>
     </select>
+    <?php if (isMultiBlog()): ?>
+      <small id="blog-category-help" class="field-help">Nabídka kategorií odpovídá právě vybranému blogu.</small>
+    <?php endif; ?>
   </fieldset>
 
-  <?php if (!empty($allTags)): ?>
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset id="article-tags-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help"' : '' ?>>
     <legend>Štítky článku</legend>
-    <?php foreach ($allTags as $tag): ?>
-      <label style="display:inline-block;margin-right:1rem;font-weight:normal">
-        <input type="checkbox" name="tags[]" value="<?= (int)$tag['id'] ?>"
-               <?= in_array((int)$tag['id'], $articleTagIds, true) ? 'checked' : '' ?>>
-        <?= h($tag['name']) ?>
-      </label>
-    <?php endforeach; ?>
+    <div id="article-tags-options">
+      <?php foreach ($allTags as $tag): ?>
+        <label style="display:inline-block;margin-right:1rem;font-weight:normal">
+          <input type="checkbox" name="tags[]" value="<?= (int)$tag['id'] ?>"
+                 <?= in_array((int)$tag['id'], $articleTagIds, true) ? 'checked' : '' ?>>
+          <?= h($tag['name']) ?>
+        </label>
+      <?php endforeach; ?>
+    </div>
+    <?php if (isMultiBlog()): ?>
+      <small id="blog-tags-help" class="field-help">Dostupné štítky se mění podle vybraného blogu.</small>
+    <?php endif; ?>
   </fieldset>
-  <?php endif; ?>
 
   <fieldset>
     <legend>Text článku</legend>
@@ -244,7 +293,18 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
+    const blogSelect = document.getElementById('blog_id');
+    const categorySelect = document.getElementById('category_id');
+    const tagsFieldset = document.getElementById('article-tags-fieldset');
+    const tagsContainer = document.getElementById('article-tags-options');
+    const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     let slugManual = <?= $article && !empty($article['slug']) ? 'true' : 'false' ?>;
+    const rememberedSelections = {
+        '<?= (int)$currentBlogId ?>': {
+            categoryId: '<?= (int)($article['category_id'] ?? 0) ?>' !== '0' ? '<?= (int)($article['category_id'] ?? 0) ?>' : '',
+            tags: <?= json_encode(array_map('intval', $articleTagIds)) ?>,
+        }
+    };
 
     const slugify = (value) => value
         .toLowerCase()
@@ -252,6 +312,49 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
+
+    const rememberCurrentSelections = () => {
+        if (!blogSelect || !categorySelect || !tagsContainer) {
+            return;
+        }
+
+        rememberedSelections[blogSelect.value] = {
+            categoryId: categorySelect.value,
+            tags: Array.from(tagsContainer.querySelectorAll('input[name="tags[]"]:checked')).map((input) => Number(input.value)),
+        };
+    };
+
+    const renderBlogOptions = (blogId) => {
+        if (!categorySelect || !tagsContainer || !tagsFieldset || !blogOptions[blogId]) {
+            return;
+        }
+
+        const state = rememberedSelections[blogId] || { categoryId: '', tags: [] };
+        const selectedTags = new Set((state.tags || []).map((value) => Number(value)));
+        const categoryMarkup = ['<option value="">â€“ bez kategorie â€“</option>'];
+
+        (blogOptions[blogId].categories || []).forEach((category) => {
+            const selected = String(category.id) === String(state.categoryId) ? ' selected' : '';
+            categoryMarkup.push('<option value="' + String(category.id) + '"' + selected + '>' + String(category.name) + '</option>');
+        });
+        categorySelect.innerHTML = categoryMarkup.join('');
+
+        const tags = blogOptions[blogId].tags || [];
+        if (tags.length === 0) {
+            tagsContainer.innerHTML = '';
+            tagsFieldset.hidden = true;
+            return;
+        }
+
+        tagsFieldset.hidden = false;
+        tagsContainer.innerHTML = tags.map((tag) => {
+            const checked = selectedTags.has(Number(tag.id)) ? ' checked' : '';
+            return '<label style="display:inline-block;margin-right:1rem;font-weight:normal">'
+                + '<input type="checkbox" name="tags[]" value="' + String(tag.id) + '"' + checked + '>'
+                + ' ' + String(tag.name)
+                + '</label>';
+        }).join('');
+    };
 
     slugInput?.addEventListener('input', function () {
         slugManual = this.value.trim() !== '';
@@ -264,12 +367,15 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
         slugInput.value = slugify(this.value);
     });
 
-    var blogSelect = document.getElementById('blog_id');
-    if (blogSelect && blogSelect.dataset.blogSwitch) {
+    if (blogSelect) {
         blogSelect.addEventListener('change', function () {
-            location.href = blogSelect.dataset.blogSwitch.replace(/&amp;/g, '&') + this.value;
+            rememberCurrentSelections();
+            renderBlogOptions(this.value);
         });
     }
+
+    categorySelect?.addEventListener('change', rememberCurrentSelections);
+    tagsContainer?.addEventListener('change', rememberCurrentSelections);
 })();
 </script>
 

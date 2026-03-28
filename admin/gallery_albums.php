@@ -125,7 +125,7 @@ adminHeader('Alba galerie');
             <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>">Spravovat fotografie</a>
             <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>">Upravit</a>
             <?php if ((int)($album['is_published'] ?? 1) === 1 && ($album['status'] ?? 'published') === 'published'): ?>
-              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Web</a>
+              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
             <?php if (($album['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">

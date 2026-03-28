@@ -111,7 +111,7 @@ adminHeader('Blogy');
 
 <?php if (empty($articles)): ?>
   <p>
-    <?php if ($q !== '' || $cat !== ''): ?>
+    <?php if ($q !== '' || $cat !== '' || $blogFilter !== ''): ?>
       Pro zadaný filtr tu teď nejsou žádné články.
     <?php else: ?>
       Zatím tu nejsou žádné články. <a href="blog_form.php">Přidat první článek</a>.

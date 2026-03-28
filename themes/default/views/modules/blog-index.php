@@ -12,6 +12,21 @@ $renderAuthorName = static function (array $article): string {
 
     return '<span>' . $label . '</span>';
 };
+$filterLink = static function (array $params = []) use ($blog, $activeAuthor): string {
+    $query = [];
+    if (!empty($activeAuthor['author_slug'])) {
+        $query['autor'] = (string)$activeAuthor['author_slug'];
+    }
+    foreach ($params as $key => $value) {
+        if ($value === null || $value === '') {
+            continue;
+        }
+        $query[$key] = $value;
+    }
+
+    $base = blogIndexPath($blog);
+    return $query === [] ? $base : $base . '?' . http_build_query($query);
+};
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="blog-title">
@@ -30,10 +45,10 @@ $renderAuthorName = static function (array $article): string {
     <?php if (!empty($categories)): ?>
       <nav aria-label="Kategorie blogu" class="form-stack">
         <ul class="chip-list">
-          <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
+          <li><a class="chip-link" href="<?= h($filterLink()) ?>"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
           <?php foreach ($categories as $category): ?>
             <li>
-              <a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?kat=<?= (int)$category['id'] ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
+              <a class="chip-link" href="<?= h($filterLink(['kat' => (int)$category['id']])) ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
                 <?= h($category['name']) ?>
               </a>
             </li>
@@ -47,7 +62,7 @@ $renderAuthorName = static function (array $article): string {
         <ul class="chip-list">
           <?php foreach ($allTags as $tag): ?>
             <li>
-              <a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?tag=<?= rawurlencode($tag['slug']) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
+              <a class="chip-link" href="<?= h($filterLink(['tag' => $tag['slug']])) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
                 #<?= h($tag['name']) ?>
               </a>
             </li>
