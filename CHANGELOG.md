@@ -25,6 +25,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Opraveno
 - **Confirm dialogy nefungovaly** – CSP s nonce ignoruje `unsafe-inline`, proto `onclick="return confirm()"` inline handlery nikdy nefungovaly; 36 výskytů ve 32 souborech nahrazeno za `data-confirm` atribut s globálním JS event handlerem v admin footer
 - **Content reference picker – CSP nonce** – `<?= cspNonce() ?>` uvnitř heredoc `<<<HTML` se nevyhodnotilo; CSS nebylo aplikováno; opraveno na PHP concatenation
+- **Lazy loading + responsive obrázky** – `pictureTag()` automaticky přidává `loading="lazy"`; `generateResponsiveSizes()` vytváří varianty 400w, 800w, 1200w s WebP při uploadu článkových obrázků
 - **Interní poznámky k obsahu** – sloupec `admin_note` na článcích, novinkách, stránkách a událostech; textarea v admin formuláři; viditelná jen v administraci, ne na veřejném webu
 - **Upozornění na aktualizace** – admin dashboard kontroluje novou verzi přes GitHub API (1x za 24h, jen superadmin); vizuální oznámení s číslem nové verze
 - **Naplánované zálohy** – cron.php automaticky vytváří denní SQL zálohu do `uploads/backups/`; rotace starších než 7 dní; `.htaccess` ochrana adresáře

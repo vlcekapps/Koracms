@@ -103,6 +103,7 @@ if (!empty($_FILES['image']['name'])) {
             gallery_make_thumb($dir . $filename, $thumbDir . $filename, 400);
             generateWebp($dir . $filename);
             generateWebp($thumbDir . $filename);
+            generateResponsiveSizes($dir . $filename, $dir, $filename);
             $imageFile = $filename;
 
             if ($existingArticle && !empty($existingArticle['image_file'])) {

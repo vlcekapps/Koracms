@@ -178,15 +178,52 @@ function webpUrl(string $originalUrl): string
 /**
  * Vrátí <picture> element s WebP source pokud existuje, jinak prostý <img>.
  */
-function pictureTag(string $src, string $alt, string $class = '', string $attrs = ''): string
+function pictureTag(string $src, string $alt, string $class = '', string $attrs = '', bool $lazy = true): string
 {
     $webp = webpUrl($src);
     $classAttr = $class !== '' ? ' class="' . h($class) . '"' : '';
-    $img = '<img src="' . h($src) . '" alt="' . h($alt) . '"' . $classAttr . ($attrs !== '' ? ' ' . $attrs : '') . '>';
+    $lazyAttr = $lazy ? ' loading="lazy"' : '';
+    $img = '<img src="' . h($src) . '" alt="' . h($alt) . '"' . $classAttr . $lazyAttr . ($attrs !== '' ? ' ' . $attrs : '') . '>';
     if ($webp !== '') {
         return '<picture><source srcset="' . h($webp) . '" type="image/webp">' . $img . '</picture>';
     }
     return $img;
+}
+
+/**
+ * Vygeneruje responsive velikosti obrázku při uploadu.
+ * Vrátí pole vytvořených cest [šířka => cesta].
+ */
+function generateResponsiveSizes(string $srcPath, string $destDir, string $baseName): array
+{
+    $sizes = [400, 800, 1200];
+    $generated = [];
+    $info = @getimagesize($srcPath);
+    if (!$info) {
+        return [];
+    }
+    [$origW, $origH, $type] = $info;
+
+    foreach ($sizes as $maxW) {
+        if ($origW <= $maxW) {
+            continue;
+        }
+        $ext = pathinfo($baseName, PATHINFO_EXTENSION);
+        $name = pathinfo($baseName, PATHINFO_FILENAME);
+        $resizedName = $name . '-' . $maxW . 'w.' . $ext;
+        $destPath = $destDir . $resizedName;
+
+        if (is_file($destPath)) {
+            $generated[$maxW] = $resizedName;
+            continue;
+        }
+
+        if (gallery_make_thumb($srcPath, $destPath, $maxW)) {
+            generateWebp($destPath);
+            $generated[$maxW] = $resizedName;
+        }
+    }
+    return $generated;
 }
 
 /**
