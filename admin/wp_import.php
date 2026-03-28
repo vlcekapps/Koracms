@@ -435,7 +435,7 @@ adminHeader('Import z WordPressu');
       <label for="sql_path">Cesta k SQL dumpu na serveru <span aria-hidden="true">*</span></label>
       <input type="text" id="sql_path" name="sql_path" required aria-required="true"
              style="width:100%;max-width:600px"
-             placeholder="C:\Users\vlcek\Downloads\10_5_4_222.sql"
+             placeholder="/cesta/k/dump.sql"
              aria-describedby="sql-help">
       <small id="sql-help">Absolutní cesta k SQL souboru na tomto serveru (phpMyAdmin export).</small>
     </div>
@@ -444,7 +444,7 @@ adminHeader('Import z WordPressu');
       <label for="media_path">Cesta k WP uploads adresáři (nepovinné)</label>
       <input type="text" id="media_path" name="media_path"
              style="width:100%;max-width:600px"
-             placeholder="C:\Users\vlcek\wp\wp-content\uploads"
+             placeholder="/cesta/k/wp-content/uploads"
              aria-describedby="media-help">
       <small id="media-help">Pokud chcete importovat obrázky, zadejte cestu k adresáři <code>wp-content/uploads</code>.</small>
     </div>
