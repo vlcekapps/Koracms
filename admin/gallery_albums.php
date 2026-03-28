@@ -73,9 +73,29 @@ adminHeader('Alba galerie');
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <?= bulkFormOpen('gallery_albums', 'gallery_albums.php') ?>
-  <?= bulkActionBar(false) ?>
-  <?= bulkFormClose() ?>
+  <form method="post" action="<?= BASE_URL ?>/admin/bulk.php" id="bulk-form">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="module" value="gallery_albums">
+    <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/gallery_albums.php">
+    <div class="bulk-bar" style="margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap" hidden>
+      <span class="bulk-bar__count" aria-live="polite"></span>
+      <select name="action" id="bulk-action-select" aria-label="Hromadná akce" required>
+        <option value="">-- Vyberte akci --</option>
+        <option value="delete">Smazat vybrané</option>
+        <option value="export_zip">Exportovat do ZIP</option>
+      </select>
+      <button type="submit" class="btn" onclick="return confirm('Opravdu provést hromadnou akci?')">Provést</button>
+    </div>
+  </form>
+  <script nonce="<?= cspNonce() ?>">
+  document.getElementById('bulk-form').addEventListener('submit', function(e) {
+    var sel = document.getElementById('bulk-action-select');
+    if (sel.value === 'export_zip') {
+      this.action = '<?= BASE_URL ?>/admin/gallery_export_zip.php';
+      this.removeAttribute('id');
+    }
+  });
+  </script>
   <table>
     <caption>Přehled alb</caption>
     <thead>

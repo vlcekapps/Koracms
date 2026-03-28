@@ -9,28 +9,41 @@ verifyCsrf();
 
 set_time_limit(0);
 
-$albumId = inputInt('post', 'id');
-if ($albumId === null) {
+// Podpora jednoho alba (id) i více alb najednou (ids[])
+$albumIds = [];
+$singleId = inputInt('post', 'id');
+if ($singleId !== null) {
+    $albumIds = [$singleId];
+} else {
+    $albumIds = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
+}
+
+if ($albumIds === []) {
     header('Location: ' . BASE_URL . '/admin/gallery_albums.php');
     exit;
 }
 
 $pdo = db_connect();
+$galleryDir = dirname(__DIR__) . '/uploads/gallery/';
 
-// Ověříme, že album existuje
-$albumStmt = $pdo->prepare("SELECT id, name, slug FROM cms_gallery_albums WHERE id = ?");
-$albumStmt->execute([$albumId]);
-$album = $albumStmt->fetch();
-if (!$album) {
+// Sesbíráme soubory ze všech vybraných alb
+$entries = [];
+$albumNames = [];
+foreach ($albumIds as $aid) {
+    $albumStmt = $pdo->prepare("SELECT id, name, slug FROM cms_gallery_albums WHERE id = ?");
+    $albumStmt->execute([$aid]);
+    $album = $albumStmt->fetch();
+    if (!$album) continue;
+
+    $albumName = str_replace(['/', '\\', "\0"], '_', (string)$album['name']);
+    $albumNames[] = $albumName;
+    $entries = array_merge($entries, collectAlbumTree($pdo, $aid, $albumName, $galleryDir));
+}
+
+if (empty($albumNames)) {
     header('Location: ' . BASE_URL . '/admin/gallery_albums.php');
     exit;
 }
-
-$galleryDir = dirname(__DIR__) . '/uploads/gallery/';
-$albumName = str_replace(['/', '\\', "\0"], '_', (string)$album['name']);
-
-// Sesbíráme všechny soubory rekurzivně
-$entries = collectAlbumTree($pdo, $albumId, $albumName, $galleryDir);
 
 // Filtrujeme jen existující soubory + prázdné složky
 $filesToZip = [];
@@ -53,7 +66,8 @@ if (empty($filesToZip) && empty($emptyDirs)) {
     exit;
 }
 
-$zipFilename = 'galerie-' . slugify($albumName) . '-' . date('Y-m-d') . '.zip';
+$slugPart = count($albumNames) === 1 ? slugify($albumNames[0]) : 'vyber-' . count($albumNames) . '-alb';
+$zipFilename = 'galerie-' . $slugPart . '-' . date('Y-m-d') . '.zip';
 
 // ── ZipArchive (preferovaný) ──
 if (class_exists('ZipArchive')) {
@@ -88,7 +102,7 @@ if (class_exists('ZipArchive')) {
     readfile($tmpFile);
     @unlink($tmpFile);
 
-    logAction('gallery_export_zip', 'album_id=' . $albumId . ' files=' . count($filesToZip));
+    logAction('gallery_export_zip', 'ids=' . implode(',', $albumIds) . ' files=' . count($filesToZip));
     exit;
 }
 
@@ -222,5 +236,5 @@ fwrite($out, pack('V', 0x06054b50)   // signature
 
 fclose($out);
 
-logAction('gallery_export_zip', 'album_id=' . $albumId . ' files=' . count($filesToZip) . ' fallback=1');
+logAction('gallery_export_zip', 'ids=' . implode(',', $albumIds) . ' files=' . count($filesToZip) . ' method=fallback');
 exit;
