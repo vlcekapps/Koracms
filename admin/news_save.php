@@ -77,6 +77,9 @@ if ($existingItem) {
     )->execute([$title, $slug, $content, $status, $authorId]);
     $id = (int)$pdo->lastInsertId();
     logAction('news_add', "id={$id} title={$title} slug={$slug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Novinka', $title, '/admin/news.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/news.php');

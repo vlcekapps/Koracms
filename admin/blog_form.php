@@ -55,7 +55,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
       <input type="hidden" name="direction" value="article_to_page">
       <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
       <button type="submit" class="btn"
-              onclick="return confirm('Převést článek na statickou stránku? Článek bude smazán a nahrazen stránkou.')">Převést na stránku</button>
+              data-confirm="Převést článek na statickou stránku? Článek bude smazán a nahrazen stránkou.">Převést na stránku</button>
     </form>
   </p>
 <?php endif; ?>

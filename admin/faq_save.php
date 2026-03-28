@@ -82,6 +82,9 @@ if ($existingFaq) {
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('faq_add', "id={$id} question={$question} slug={$slug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Znalostní báze', $question, '/admin/faq.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/faq.php');

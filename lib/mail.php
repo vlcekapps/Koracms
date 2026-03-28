@@ -134,3 +134,96 @@ function sendMail(string $to, string $subject, string $body): bool
     }
     return $ok;
 }
+
+// ──────────────── Notifikační e-mail pro správce ─────────────────────────────
+
+/**
+ * Vrátí e-mail příjemce notifikací (admin_email → contact_email fallback).
+ */
+function notificationRecipient(): string
+{
+    $email = trim(getSetting('admin_email', ''));
+    if ($email === '') {
+        $email = trim(getSetting('contact_email', ''));
+    }
+    return $email;
+}
+
+/**
+ * Notifikace: nový formulář odeslán.
+ */
+function notifyFormSubmission(string $formTitle, array $data): void
+{
+    if (getSetting('notify_form_submission', '1') !== '1') {
+        return;
+    }
+    $recipient = notificationRecipient();
+    if ($recipient === '') {
+        return;
+    }
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $adminUrl = siteUrl('/admin/forms.php');
+    $body = 'Na webu ' . $siteName . ' byl odeslán formulář „' . $formTitle . "\".\n\n";
+
+    foreach ($data as $key => $value) {
+        $body .= $key . ': ' . $value . "\n";
+    }
+
+    $body .= "\nSprávce formulářů: " . $adminUrl . "\n";
+
+    if (!sendMail($recipient, 'Nové odeslání formuláře „' . $formTitle . '" – ' . $siteName, $body)) {
+        error_log("sendMail FAILED: notifikace formuláře pro {$recipient}");
+    }
+}
+
+/**
+ * Notifikace: obsah čeká na schválení.
+ */
+function notifyPendingContent(string $moduleLabel, string $title, string $adminPath): void
+{
+    if (getSetting('notify_pending_content', '1') !== '1') {
+        return;
+    }
+    $recipient = notificationRecipient();
+    if ($recipient === '') {
+        return;
+    }
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $adminUrl = siteUrl($adminPath);
+    $body = "Na webu {$siteName} čeká nový obsah na schválení.\n\n"
+        . "Typ: {$moduleLabel}\n"
+        . "Název: {$title}\n\n"
+        . "Ke schválení: {$adminUrl}\n";
+
+    if (!sendMail($recipient, "Obsah čeká na schválení: {$title} – {$siteName}", $body)) {
+        error_log("sendMail FAILED: notifikace pending obsahu pro {$recipient}");
+    }
+}
+
+/**
+ * Notifikace: nová zpráva v chatu (volitelné, výchozí vypnuto).
+ */
+function notifyChatMessage(string $authorName, string $message): void
+{
+    if (getSetting('notify_chat_message', '0') !== '1') {
+        return;
+    }
+    $recipient = notificationRecipient();
+    if ($recipient === '') {
+        return;
+    }
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $adminUrl = siteUrl('/admin/chat.php');
+    $preview = mb_substr($message, 0, 200, 'UTF-8');
+    $body = "Na webu {$siteName} přibyla nová zpráva v chatu.\n\n"
+        . "Autor: {$authorName}\n"
+        . "Zpráva: {$preview}\n\n"
+        . "Správa chatu: {$adminUrl}\n";
+
+    if (!sendMail($recipient, "Nová zpráva v chatu – {$siteName}", $body)) {
+        error_log("sendMail FAILED: notifikace chatu pro {$recipient}");
+    }
+}

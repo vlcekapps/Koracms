@@ -55,7 +55,7 @@ adminHeader('Formuláře');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat formulář včetně všech odpovědí?')">Smazat</button>
+                    data-confirm="Smazat formulář včetně všech odpovědí?">Smazat</button>
           </form>
         </td>
       </tr>

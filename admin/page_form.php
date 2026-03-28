@@ -44,7 +44,7 @@ adminHeader($pageTitle);
       <input type="hidden" name="direction" value="page_to_article">
       <input type="hidden" name="id" value="<?= (int)$id ?>">
       <button type="submit" class="btn"
-              onclick="return confirm('Převést stránku na článek blogu? Stránka bude smazána a nahrazena článkem.')">Převést na článek</button>
+              data-confirm="Převést stránku na článek blogu? Stránka bude smazána a nahrazena článkem.">Převést na článek</button>
     </form>
   </p>
 <?php endif; ?>

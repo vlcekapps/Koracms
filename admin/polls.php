@@ -122,7 +122,7 @@ adminHeader('Ankety');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$poll['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat anketu včetně všech hlasů?')">Smazat</button>
+                    data-confirm="Smazat anketu včetně všech hlasů?">Smazat</button>
           </form>
         </td>
       </tr>

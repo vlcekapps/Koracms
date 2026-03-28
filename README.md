@@ -113,7 +113,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 
 | Modul | Popis |
 |---|---|
-| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení, počet přečtení a veřejná author vrstva s profilem autora i přehledem všech autorů |
+| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení, počet přečtení a veřejná author vrstva s profilem autora i přehledem všech autorů; filtr článků podle kategorie včetně volby „Bez kategorie" |
 | **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
 | **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem, detailovým pohledem na zprávu a interními stavy `nová`, `přečtená`, `vyřízená` |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou, rate limitingem a moderátorským inboxem pro příchozí zprávy |
@@ -166,6 +166,7 @@ Nastavení je rozděleno do čtyř sekcí:
 - **Počty na hlavní stránce** – počet novinek, článků blogu a dokumentů úřední desky zobrazených na HP (0 = widget skrytý)
 - **Stránkování** – počet novinek, článků a událostí na stránku
 - **Komentáře blogu** – globální zapnutí komentářů, režim moderace (`vždy schvalovat`, `schválit známého autora`, `zveřejnit ihned`), automatické uzavření komentářů po zadaném počtu dnů, antispam pravidla (blokované e-maily a fráze), e-mailové upozornění na nové komentáře čekající na schválení a volitelné upozornění autorovi po schválení komentáře; používá se stejná mailová vrstva jako u registrace, resetu hesla a rezervací
+- **E-mailové notifikace** – upozornění na odeslání formuláře, obsah čekající na schválení a nové zprávy v chatu; každý typ lze zapnout/vypnout; chat je výchozí vypnutý (může generovat velký objem e-mailů)
 - **Sociální sítě** – odkazy na Facebook, YouTube, Instagram, X (Twitter)
 - **Cookie lišta** – zapnutí GDPR lišty s vlastním textem
 - **Režim údržby** – dočasně zobrazí návštěvníkům hlášku o údržbě; přihlášení admini vidí web normálně

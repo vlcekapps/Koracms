@@ -125,7 +125,7 @@ adminHeader('Kategorie znalostní báze');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat kategorii? Otázky bez kategorie se zobrazí v sekci „Ostatní“.')">Smazat</button>
+                    data-confirm=”Smazat kategorii? Otázky bez kategorie se zobrazí v sekci „Ostatní”.”>Smazat</button>
           </form>
         </td>
       </tr>

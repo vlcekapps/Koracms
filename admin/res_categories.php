@@ -111,7 +111,7 @@ adminHeader('Kategorie zdrojů rezervací');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat kategorii? Zdroje bez kategorie zůstanou zachovány.')">Smazat</button>
+                    data-confirm="Smazat kategorii? Zdroje bez kategorie zůstanou zachovány.">Smazat</button>
           </form>
         </td>
       </tr>

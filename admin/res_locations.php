@@ -113,7 +113,7 @@ adminHeader('Lokality rezervací');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$location['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat místo? Vazby na zdroje budou odebrány.')">Smazat</button>
+                    data-confirm="Smazat místo? Vazby na zdroje budou odebrány.">Smazat</button>
           </form>
         </td>
       </tr>

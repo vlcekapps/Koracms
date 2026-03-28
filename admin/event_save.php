@@ -74,6 +74,9 @@ if ($id !== null) {
     )->execute([$title, $slug, $description, $location, $eventDate, $eventEnd, $visible, $status]);
     $id = (int)$pdo->lastInsertId();
     logAction('event_add', "id={$id} title={$title} slug={$slug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Událost', $title, '/admin/events.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/events.php');

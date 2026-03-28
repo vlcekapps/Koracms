@@ -167,7 +167,7 @@ adminHeader('Ke stažení');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$download['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat položku ke stažení?')">Smazat</button>
+                    data-confirm="Smazat položku ke stažení?">Smazat</button>
           </form>
         </td>
       </tr>

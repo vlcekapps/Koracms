@@ -154,6 +154,9 @@ if ($existingArticle) {
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('article_add', "id={$id} title={$title} slug={$slug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Článek', $title, '/admin/blog.php');
+    }
 }
 
 try {

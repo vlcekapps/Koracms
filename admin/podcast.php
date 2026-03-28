@@ -167,7 +167,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
             <input type="hidden" name="id" value="<?= (int)$episode['id'] ?>">
             <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat epizodu?')">Smazat</button>
+                    data-confirm="Smazat epizodu?">Smazat</button>
           </form>
         </td>
       </tr>

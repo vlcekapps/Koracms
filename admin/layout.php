@@ -344,6 +344,10 @@ function adminFooter(): void
        . 'var m=document.querySelector(\'[role="status"]:not(#a11y-live),[role="alert"]\');'
        . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}'
        . '});</script>'
+       . '<script nonce="' . $nonce . '">document.addEventListener("click",function(e){'
+       . 'var b=e.target.closest("[data-confirm]");'
+       . 'if(b&&!confirm(b.dataset.confirm)){e.preventDefault();e.stopPropagation();}'
+       . '});</script>'
        . '</main>'
        . '<footer style="text-align:center;padding:.5rem;font-size:.75rem;color:#666">'
        . 'Kora CMS ' . $version

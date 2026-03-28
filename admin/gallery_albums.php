@@ -83,7 +83,7 @@ adminHeader('Alba galerie');
       <p id="bulk-status" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybrané žádné album.</p>
       <div class="button-row">
         <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
-                disabled onclick="return confirm('Smazat vybraná alba včetně fotografií?')">Smazat vybrané</button>
+                disabled data-confirm="Smazat vybraná alba včetně fotografií?">Smazat vybrané</button>
         <button type="submit" name="action" value="export_zip" class="btn bulk-action-btn"
                 disabled formaction="<?= BASE_URL ?>/admin/gallery_export_zip.php">Exportovat do ZIP</button>
       </div>

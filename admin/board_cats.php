@@ -90,7 +90,7 @@ adminHeader('Vývěska a oznámení – kategorie');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat kategorii? Dokumenty bez kategorie zůstanou na desce.')">Smazat</button>
+                    data-confirm="Smazat kategorii? Dokumenty bez kategorie zůstanou na desce.">Smazat</button>
           </form>
         </td>
       </tr>

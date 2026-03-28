@@ -158,7 +158,7 @@ adminHeader('Úřední deska');
           <form action="board_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Smazat položku?')">Smazat</button>
+            <button type="submit" class="btn btn-danger" data-confirm="Smazat položku?">Smazat</button>
           </form>
         </td>
       </tr>

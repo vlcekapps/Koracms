@@ -98,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (empty($errors)) {
                 $success = true;
+                notifyFormSubmission((string)$form['title'], $submissionData);
             }
         }
     }

@@ -140,7 +140,7 @@ adminHeader('Zajímavá místa');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$place['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat místo?')">Smazat</button>
+                    data-confirm="Smazat místo?">Smazat</button>
           </form>
         </td>
       </tr>

@@ -57,7 +57,7 @@ adminHeader('Uživatelé a role');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$account['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat uživatele <?= h(addslashes($account['email'])) ?>?')">
+                    data-confirm="Smazat uživatele <?= h(addslashes($account['email'])) ?>?">
               Smazat
             </button>
           </form>

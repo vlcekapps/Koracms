@@ -155,7 +155,7 @@ adminHeader('Jídelní a nápojový lístek');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat lístek &quot;<?= h(addslashes((string)$card['title'])) ?>&quot;?')">Smazat</button>
+                    data-confirm="Smazat lístek &quot;<?= h(addslashes((string)$card['title'])) ?>&quot;?">Smazat</button>
           </form>
         </td>
       </tr>

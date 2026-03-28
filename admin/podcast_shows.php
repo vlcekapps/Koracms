@@ -104,7 +104,7 @@ adminHeader('Podcasty');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$show['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat podcast včetně všech epizod?')">Smazat</button>
+                    data-confirm="Smazat podcast včetně všech epizod?">Smazat</button>
           </form>
         </td>
       </tr>

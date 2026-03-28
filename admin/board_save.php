@@ -192,6 +192,9 @@ if ($id !== null) {
 
     $id = (int)$pdo->lastInsertId();
     logAction('board_add', "id={$id} title={$title} slug={$slug} type={$boardType} status={$status} pinned={$isPinned}");
+    if ($status === 'pending') {
+        notifyPendingContent('Vývěska', $title, '/admin/board.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/board.php');

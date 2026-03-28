@@ -138,6 +138,9 @@ if ($id !== null) {
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('podcast_add', "id={$id} show_id={$showId} slug={$uniqueSlug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Podcast', $title, '/admin/podcast.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/podcast.php?show_id=' . (int)$showId);

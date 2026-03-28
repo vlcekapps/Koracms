@@ -254,7 +254,7 @@ function bulkActions(string $module, string $redirect, string $legend, string $i
          . '<legend>' . h($legend) . '</legend>'
          . '<p id="bulk-status" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná ' . h($itemLabel) . '.</p>'
          . '<div class="button-row">'
-         . '<button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled onclick="return confirm(\'Smazat vybrané?\')">Smazat vybrané</button>';
+         . '<button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled data-confirm="Smazat vybrané?">Smazat vybrané</button>';
     if ($showPublish) {
         $out .= '<button type="submit" name="action" value="publish" class="btn bulk-action-btn" disabled>Publikovat vybrané</button>'
               . '<button type="submit" name="action" value="hide" class="btn bulk-action-btn" disabled>Skrýt vybrané</button>';
@@ -296,6 +296,10 @@ function bulkCheckboxJs(): string
         . '}'
         . 'if(checkAll)checkAll.addEventListener("change",function(){cbs.forEach(function(cb){cb.checked=checkAll.checked;});u();});'
         . 'cbs.forEach(function(cb){cb.addEventListener("change",u);});'
+        . 'form.addEventListener("submit",function(e){'
+        . 'var btn=e.submitter||document.activeElement;'
+        . 'if(btn&&btn.dataset.confirm&&!confirm(btn.dataset.confirm)){e.preventDefault();}'
+        . '});'
         . '})();'
         . '</script>';
 }

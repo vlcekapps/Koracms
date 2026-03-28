@@ -132,7 +132,7 @@ adminHeader('Novinky');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat novinku?')">Smazat</button>
+                    data-confirm="Smazat novinku?">Smazat</button>
           </form>
         </td>
       </tr>

@@ -135,7 +135,7 @@ adminHeader('Znalostní báze');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$faq['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat otázku?')">Smazat</button>
+                    data-confirm="Smazat otázku?">Smazat</button>
           </form>
         </td>
       </tr>

@@ -194,6 +194,9 @@ if ($id !== null) {
         $authorId,
     ]);
     logAction('download_add', "title={$title} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Soubor ke stažení', $title, '/admin/downloads.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/downloads.php');

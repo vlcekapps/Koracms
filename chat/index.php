@@ -50,6 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  VALUES (?, ?, ?, ?, 'new')"
             )->execute([$name, $email, $web, $message]);
 
+            notifyChatMessage($name, $message);
+
             header('Location: ' . BASE_URL . '/chat/index.php');
             exit;
         } catch (\PDOException $e) {

@@ -52,6 +52,9 @@ if ($id !== null) {
     )->execute([$title, $slug, $content, $isPublished, $showInNav, $navOrder, $status]);
     $newId = (int)$pdo->lastInsertId();
     logAction('page_add', "id={$newId}, title=" . mb_substr($title, 0, 80));
+    if ($status === 'pending') {
+        notifyPendingContent('Stránka', $title, '/admin/pages.php');
+    }
 }
 
 header('Location: ' . $redirect);

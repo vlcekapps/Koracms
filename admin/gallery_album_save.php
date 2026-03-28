@@ -104,6 +104,9 @@ if ($id !== null) {
     )->execute([$name, $resolvedSlug, $description, $parentId, null, $status, $visible]);
     $id = (int)$pdo->lastInsertId();
     logAction('gallery_album_add', 'id=' . $id . ' status=' . $status);
+    if ($status === 'pending') {
+        notifyPendingContent('Fotoalbum', $name, '/admin/gallery_albums.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/gallery_albums.php');

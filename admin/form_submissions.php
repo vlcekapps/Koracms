@@ -120,7 +120,7 @@ adminHeader('Odpovědi – ' . mb_substr((string)$form['title'], 0, 50));
               <input type="hidden" name="id" value="<?= (int)$sub['id'] ?>">
               <input type="hidden" name="form_id" value="<?= $formId ?>">
               <button type="submit" class="btn btn-danger"
-                      onclick="return confirm('Smazat tuto odpověď?')">Smazat</button>
+                      data-confirm="Smazat tuto odpověď?">Smazat</button>
             </form>
           </td>
         </tr>

@@ -136,7 +136,7 @@ adminHeader('Chat');
           <button type="submit" form="chat-bulk-form" name="action" value="<?= h($bulkAction) ?>"
                   class="btn bulk-action-btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
                   disabled
-                  <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané chat zprávy trvale?')"<?php endif; ?>>
+                  <?php if ($bulkAction === 'delete'): ?>data-confirm="Smazat vybrané chat zprávy trvale?"<?php endif; ?>>
             <?= h($bulkLabel) ?>
           </button>
         <?php endforeach; ?>

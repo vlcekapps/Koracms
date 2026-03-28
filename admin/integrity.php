@@ -121,7 +121,7 @@ adminHeader('Kontrola integrity souborů');
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="action" value="generate">
     <button type="submit" class="btn"
-            onclick="return confirm('<?= $snapshot !== null ? 'Přepsat existující snapshot novým? Tím se aktuální stav označí jako důvěryhodný.' : 'Vytvořit první snapshot?' ?>')">
+            data-confirm="<?= $snapshot !== null ? 'Přepsat existující snapshot novým? Tím se aktuální stav označí jako důvěryhodný.' : 'Vytvořit první snapshot?' ?>">
       <?= $snapshot !== null ? 'Obnovit snapshot (nová baseline)' : 'Vytvořit první snapshot' ?>
     </button>
   </form>

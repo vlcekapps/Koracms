@@ -85,7 +85,7 @@ adminHeader('Štítky blogu');
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id"         value="<?= (int)$t['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat tag?')">Smazat</button>
+                    data-confirm="Smazat tag?">Smazat</button>
           </form>
         </td>
       </tr>

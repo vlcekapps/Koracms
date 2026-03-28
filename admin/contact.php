@@ -130,7 +130,7 @@ adminHeader('Kontakt');
           <button type="submit" form="contact-bulk-form" name="action" value="<?= h($bulkAction) ?>"
                   class="btn bulk-action-btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
                   disabled
-                  <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané kontaktní zprávy trvale?')"<?php endif; ?>>
+                  <?php if ($bulkAction === 'delete'): ?>data-confirm="Smazat vybrané kontaktní zprávy trvale?"<?php endif; ?>>
             <?= h($bulkLabel) ?>
           </button>
         <?php endforeach; ?>

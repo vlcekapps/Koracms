@@ -6,7 +6,14 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **Filtr článků podle kategorie** (`admin/blog.php`) – select „Všechny kategorie" / „Bez kategorie" / konkrétní kategorie vedle vyhledávání; kombinovatelné s textovým hledáním; admin rychle najde články bez přiřazené kategorie
+- **E-mailové notifikace** – 3 nové notifikační funkce v `lib/mail.php`: odeslání formuláře, obsah čekající na schválení, nová zpráva v chatu; nastavení v admin (Nastavení → E-mailové notifikace) s checkboxy pro každý typ; formulář a pending obsah výchozí zapnuté, chat výchozí vypnutý
+
 ### Opraveno
+- **Confirm dialogy nefungovaly** – CSP s nonce ignoruje `unsafe-inline`, proto `onclick="return confirm()"` inline handlery nikdy nefungovaly; 36 výskytů ve 32 souborech nahrazeno za `data-confirm` atribut s globálním JS event handlerem v admin footer
+
+
 - **WCAG 2.2 (1.3.5)** – doplněny `autocomplete` atributy na formulářová pole: `given-name`, `family-name`, `tel` v registraci, profilu a rezervacích; `email` v newsletteru, chatu a komentářích
 - **Prázdné catch bloky** – doplněn `error_log()` do catch bloků v `search.php`, `sitemap.php`, `blog/index.php`, `unsubscribe.php`, `subscribe_confirm.php`, `admin/blog_form.php`, `admin/blog_save.php`, `admin/statistics.php`, `admin/content_reference_search.php`
 - **`@` suppression** v `lib/presentation.php` – 6× `@unlink()` nahrazeno logovaným `unlink()` s `error_log()`

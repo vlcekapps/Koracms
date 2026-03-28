@@ -154,6 +154,9 @@ if ($id !== null) {
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('place_add', "id={$id} name={$name} slug={$slug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Místo', $name, '/admin/places.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/places.php');

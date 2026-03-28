@@ -4,6 +4,7 @@ requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
+$cat = trim($_GET['cat'] ?? '');
 $params = [];
 $whereParts = [];
 
@@ -13,12 +14,21 @@ if ($q !== '') {
     $params[] = '%' . $q . '%';
 }
 
+if ($cat === 'none') {
+    $whereParts[] = 'a.category_id IS NULL';
+} elseif ($cat !== '' && ctype_digit($cat)) {
+    $whereParts[] = 'a.category_id = ?';
+    $params[] = (int)$cat;
+}
+
 if (canManageOwnBlogOnly()) {
     $whereParts[] = 'a.author_id = ?';
     $params[] = currentUserId();
 }
 
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+
+$categories = $pdo->query("SELECT id, name FROM cms_categories ORDER BY name")->fetchAll();
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.title, a.slug, a.created_at, a.publish_at, a.preview_token,
@@ -36,7 +46,10 @@ $articles = $stmt->fetchAll();
 
 $canManageTaxonomies = currentUserHasCapability('blog_taxonomies_manage');
 $canApproveBlog = currentUserHasCapability('blog_approve');
-$currentRedirect = BASE_URL . '/admin/blog.php' . ($q !== '' ? '?q=' . urlencode($q) : '');
+$filterParams = [];
+if ($q !== '') { $filterParams['q'] = $q; }
+if ($cat !== '') { $filterParams['cat'] = $cat; }
+$currentRedirect = BASE_URL . '/admin/blog.php' . ($filterParams !== [] ? '?' . http_build_query($filterParams) : '');
 
 adminHeader('Blog');
 ?>
@@ -49,20 +62,28 @@ adminHeader('Blog');
   <?php endif; ?>
 </p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem">
+<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
   <label for="q" class="visually-hidden">Hledat</label>
   <input type="search" id="q" name="q" placeholder="Hledat v článcích…"
          value="<?= h($q) ?>" style="width:300px">
+  <label for="cat" class="visually-hidden">Kategorie</label>
+  <select id="cat" name="cat" style="min-width:180px">
+    <option value="">Všechny kategorie</option>
+    <option value="none"<?= $cat === 'none' ? ' selected' : '' ?>>Bez kategorie</option>
+    <?php foreach ($categories as $c): ?>
+      <option value="<?= (int)$c['id'] ?>"<?= $cat === (string)$c['id'] ? ' selected' : '' ?>><?= h($c['name']) ?></option>
+    <?php endforeach; ?>
+  </select>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== ''): ?>
+  <?php if ($q !== '' || $cat !== ''): ?>
     <a href="blog.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($articles)): ?>
   <p>
-    <?php if ($q !== ''): ?>
-      Pro zadané hledání tu teď nejsou žádné články.
+    <?php if ($q !== '' || $cat !== ''): ?>
+      Pro zadaný filtr tu teď nejsou žádné články.
     <?php else: ?>
       Zatím tu nejsou žádné články. <a href="blog_form.php">Přidat první článek</a>.
     <?php endif; ?>
@@ -76,7 +97,7 @@ adminHeader('Blog');
     <p data-selection-status="blog" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný článek.</p>
     <div class="button-row">
       <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
-              disabled onclick="return confirm('Smazat vybrané články?')">Smazat vybrané</button>
+              disabled data-confirm="Smazat vybrané články?">Smazat vybrané</button>
     </div>
   </fieldset>
   <table>
@@ -129,13 +150,13 @@ adminHeader('Blog');
             <input type="hidden" name="direction" value="article_to_page">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
             <button type="submit" class="btn"
-                    onclick="return confirm('Převést článek na statickou stránku?')">→ Stránka</button>
+                    data-confirm="Převést článek na statickou stránku?">→ Stránka</button>
           </form>
           <form action="blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('Smazat článek?')">Smazat</button>
+                    data-confirm="Smazat článek?">Smazat</button>
           </form>
         </td>
       </tr>

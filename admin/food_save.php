@@ -120,6 +120,9 @@ if ($existingCard) {
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('food_add', "id={$id} title={$title} type={$type} slug={$slug} status={$status}");
+    if ($status === 'pending') {
+        notifyPendingContent('Jídelníček', $title, '/admin/food.php');
+    }
 }
 
 header('Location: ' . BASE_URL . '/admin/food.php');

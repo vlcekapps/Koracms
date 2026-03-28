@@ -89,6 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('content_editor',   $contentEditor);
         $homeBoard     = max(0, (int)($_POST['home_board_count'] ?? 5));
         saveSetting('home_board_count', (string)$homeBoard);
+
+        // E-mailové notifikace
+        saveSetting('notify_form_submission', isset($_POST['notify_form_submission']) ? '1' : '0');
+        saveSetting('notify_pending_content', isset($_POST['notify_pending_content']) ? '1' : '0');
+        saveSetting('notify_chat_message', isset($_POST['notify_chat_message']) ? '1' : '0');
+
         logAction('settings_save');
 
         saveSetting('social_facebook',  trim($_POST['social_facebook']  ?? ''));
@@ -383,6 +389,39 @@ adminHeader('Nastavení webu');
     <small id="comment-spam-words-help" class="field-help">Jeden výraz na řádek. Když se objeví ve jméně autora nebo v textu komentáře, komentář skončí ve spamu.</small>
   </fieldset>
   <?php endif; ?>
+
+  <fieldset id="settings-notifications">
+    <legend>E-mailové notifikace</legend>
+    <p style="margin-top:.5rem;font-size:.9rem">Upozornění se odesílají na e-mail administrátora (případně kontaktní e-mail webu).</p>
+
+    <div style="margin-top:.5rem">
+      <input type="checkbox" id="notify_form_submission" name="notify_form_submission" value="1"
+             <?= getSetting('notify_form_submission', '1') === '1' ? 'checked' : '' ?>>
+      <label for="notify_form_submission" style="display:inline;font-weight:normal">
+        Upozornit na nové odeslání formuláře
+      </label>
+    </div>
+
+    <div style="margin-top:.5rem">
+      <input type="checkbox" id="notify_pending_content" name="notify_pending_content" value="1"
+             <?= getSetting('notify_pending_content', '1') === '1' ? 'checked' : '' ?>>
+      <label for="notify_pending_content" style="display:inline;font-weight:normal">
+        Upozornit, když nový obsah čeká na schválení
+      </label>
+    </div>
+
+    <?php if (isModuleEnabled('chat')): ?>
+    <div style="margin-top:.5rem">
+      <input type="checkbox" id="notify_chat_message" name="notify_chat_message" value="1"
+             aria-describedby="notify-chat-help"
+             <?= getSetting('notify_chat_message', '0') === '1' ? 'checked' : '' ?>>
+      <label for="notify_chat_message" style="display:inline;font-weight:normal">
+        Upozornit na novou zprávu v chatu
+      </label>
+    </div>
+    <small id="notify-chat-help" class="field-help">Může generovat velký počet e-mailů při aktivním chatu.</small>
+    <?php endif; ?>
+  </fieldset>
 
   <fieldset id="settings-editor">
     <legend>Obsah a editor</legend>

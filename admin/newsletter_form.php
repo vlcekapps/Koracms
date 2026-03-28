@@ -57,7 +57,7 @@ adminHeader('Nová rozesílka');
 
       <div class="button-row" style="margin-top:1.5rem">
         <button type="submit" class="btn"
-                onclick="return confirm('Opravdu odeslat newsletter <?= $confirmedCount ?> potvrzeným odběratelům?')">
+                data-confirm="Opravdu odeslat newsletter <?= $confirmedCount ?> potvrzeným odběratelům?">
           Odeslat rozesílku
         </button>
         <a href="newsletter.php" class="btn">Zrušit</a>

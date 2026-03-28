@@ -171,8 +171,8 @@ adminHeader('Newsletter');
             <button type="submit" form="newsletter-bulk-form" name="action" value="<?= h($bulkAction) ?>"
                     class="btn bulk-action-btn<?= $bulkAction === 'delete' ? ' btn-danger' : '' ?>"
                     disabled
-                    <?php if ($bulkAction === 'resend'): ?>onclick="return confirm('Opravdu znovu poslat potvrzovací e-mail vybraným odběratelům?')"<?php endif; ?>
-                    <?php if ($bulkAction === 'delete'): ?>onclick="return confirm('Smazat vybrané odběratele?')"<?php endif; ?>>
+                    <?php if ($bulkAction === 'resend'): ?>data-confirm="Opravdu znovu poslat potvrzovací e-mail vybraným odběratelům?"<?php endif; ?>
+                    <?php if ($bulkAction === 'delete'): ?>data-confirm="Smazat vybrané odběratele?"<?php endif; ?>>
               <?= h($bulkLabel) ?>
             </button>
           <?php endforeach; ?>
