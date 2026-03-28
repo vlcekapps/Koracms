@@ -48,16 +48,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             value TEXT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_blogs (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name        VARCHAR(255) NOT NULL,
+            slug        VARCHAR(100) NOT NULL UNIQUE,
+            description TEXT,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("INSERT IGNORE INTO cms_blogs (id, name, slug, sort_order) VALUES (1, 'Blog', 'blog', 0)");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_categories (
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             name       VARCHAR(255) NOT NULL,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            blog_id    INT          NOT NULL DEFAULT 1,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_categories_blog_id (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_articles (
             id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title            VARCHAR(255) NOT NULL,
-            slug             VARCHAR(255) NOT NULL UNIQUE,
+            slug             VARCHAR(255) NOT NULL,
+            blog_id          INT          NOT NULL DEFAULT 1,
             perex            TEXT,
             content          TEXT,
             comments_enabled TINYINT(1)   NOT NULL DEFAULT 1,
@@ -72,7 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             view_count       INT          NOT NULL DEFAULT 0,
             created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FULLTEXT INDEX ft_articles_search (title, perex, content)
+            FULLTEXT INDEX ft_articles_search (title, perex, content),
+            UNIQUE KEY uq_articles_blog_slug (blog_id, slug),
+            INDEX idx_articles_blog_id (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_news (
@@ -152,8 +169,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_tags (
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             name       VARCHAR(100) NOT NULL,
-            slug       VARCHAR(100) NOT NULL UNIQUE,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            slug       VARCHAR(100) NOT NULL,
+            blog_id    INT          NOT NULL DEFAULT 1,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_tags_blog_slug (blog_id, slug),
+            INDEX idx_tags_blog_id (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_article_tags (

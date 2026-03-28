@@ -53,8 +53,8 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         try {
             foreach ($ftSearch(
                 $pdo, $q, $like,
-                "SELECT id, title, slug, perex, created_at, 'blog' AS type",
-                "FROM cms_articles WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())",
+                "SELECT a.id, a.title, a.slug, a.perex, a.created_at, 'blog' AS type, b.slug AS blog_slug",
+                "FROM cms_articles a LEFT JOIN cms_blogs b ON b.id = a.blog_id WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())",
                 'title, perex, content',
                 [],
                 'created_at DESC',

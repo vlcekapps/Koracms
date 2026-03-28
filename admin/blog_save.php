@@ -15,6 +15,7 @@ $publishAt = trim($_POST['publish_at'] ?? '');
 $metaTitle = trim($_POST['meta_title'] ?? '');
 $metaDescription = trim($_POST['meta_description'] ?? '');
 $commentsEnabled = isset($_POST['comments_enabled']) ? 1 : 0;
+$blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 1);
 
 if ($title === '' || $content === '') {
     header('Location: blog_form.php' . ($id ? "?id={$id}" : ''));
@@ -43,7 +44,7 @@ if ($slug === '') {
     exit;
 }
 
-$uniqueSlug = uniqueArticleSlug($pdo, $slug, $id);
+$uniqueSlug = uniqueArticleSlug($pdo, $slug, $id, $blogId);
 if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
     header('Location: blog_form.php?err=slug' . ($id ? "&id={$id}" : ''));
     exit;
@@ -119,8 +120,8 @@ if ($existingArticle) {
         ]);
     }
 
-    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, meta_title=?, meta_description=?, author_id=COALESCE(author_id, ?), updated_at=NOW()";
-    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $metaTitle, $metaDescription, currentUserId()];
+    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, meta_title=?, meta_description=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
+    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $metaTitle, $metaDescription, currentUserId(), $blogId];
     if ($imageFile !== null) {
         $setClauses .= ", image_file=?";
         $params[] = $imageFile;
@@ -135,8 +136,8 @@ if ($existingArticle) {
     $pdo->prepare(
         "INSERT INTO cms_articles
          (title, slug, perex, content, category_id, comments_enabled, image_file, publish_at,
-          meta_title, meta_description, preview_token, author_id, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+          meta_title, meta_description, preview_token, author_id, status, blog_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -151,6 +152,7 @@ if ($existingArticle) {
         $previewToken,
         $authorId,
         $status,
+        $blogId,
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('article_add', "id={$id} title={$title} slug={$slug} status={$status}");

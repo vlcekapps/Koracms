@@ -73,8 +73,8 @@ function renderAdminContentReferencePicker(string $textareaId): void
 
     if (!$stylesPrinted) {
         $stylesPrinted = true;
-        echo <<<HTML
-<style nonce="<?= cspNonce() ?>">
+        $nonce = cspNonce();
+        echo '<style nonce="' . $nonce . '">'; ?>
   .content-reference-picker-launch {
     margin-top: 1rem;
   }
@@ -86,6 +86,10 @@ function renderAdminContentReferencePicker(string $textareaId): void
     z-index: 1000;
   }
 
+  .content-reference-picker-dialog[hidden],
+  .content-reference-picker-overlay[hidden] {
+    display: none !important;
+  }
   .content-reference-picker-dialog {
     position: fixed;
     inset: 50% auto auto 50%;
@@ -197,7 +201,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
     }
   }
 </style>
-HTML;
+<?php
     }
     ?>
     <div class="content-reference-picker-launch">
@@ -213,14 +217,15 @@ HTML;
       <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz, HTML blok, fotogalerii nebo přehrávač.</small>
     </div>
 
-    <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden></div>
+    <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden style="display:none"></div>
     <section id="<?= h($pickerId) ?>-picker-dialog"
              class="content-reference-picker-dialog"
              role="dialog"
              aria-modal="true"
              aria-labelledby="<?= h($pickerId) ?>-picker-title"
              aria-describedby="<?= h($pickerId) ?>-picker-description"
-             hidden>
+             hidden
+             style="display:none">
       <div class="content-reference-picker-dialog__header">
         <div>
           <h2 id="<?= h($pickerId) ?>-picker-title" class="content-reference-picker-dialog__title">Vložit odkaz nebo HTML z webu</h2>
@@ -255,7 +260,7 @@ HTML;
         <small id="<?= h($pickerId) ?>-picker-selection-help" class="field-help">Pokud máte v editoru označený text, při vložení odkazu se použije jako text odkazu. Jinak se vloží název nalezené položky.</small>
       </fieldset>
 
-      <p id="<?= h($pickerId) ?>-picker-status" role="status" aria-live="polite" aria-atomic="true" style="margin:.85rem 0 0;color:#555;font-size:.92rem;line-height:1.45">Zadejte alespoň 2 znaky a vyhledejte obsah.</p>
+      <p id="<?= h($pickerId) ?>-picker-status" aria-live="polite" aria-atomic="true" style="margin:.85rem 0 0;color:#555;font-size:.92rem;line-height:1.45"></p>
       <div id="<?= h($pickerId) ?>-picker-results" class="content-reference-picker-results" aria-live="polite"></div>
     </section>
 
@@ -385,7 +390,9 @@ HTML;
 
         const closeDialog = (restoreFocus = true) => {
             dialog.hidden = true;
+            dialog.style.display = 'none';
             overlay.hidden = true;
+            overlay.style.display = 'none';
             openButton.setAttribute('aria-expanded', 'false');
             document.body.style.overflow = previousBodyOverflow;
             if (restoreFocus) {
@@ -399,8 +406,13 @@ HTML;
             previousBodyOverflow = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             overlay.hidden = false;
+            overlay.style.display = '';
             dialog.hidden = false;
+            dialog.style.display = '';
             openButton.setAttribute('aria-expanded', 'true');
+            if (!statusNode.textContent.trim()) {
+                setStatus('Zadejte alespoň 2 znaky a vyhledejte obsah.');
+            }
             queryInput.focus();
             queryInput.select();
         };

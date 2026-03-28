@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $xmlPath = $_FILES['xml_file']['tmp_name'];
     $siteUrl = rtrim(trim($_POST['site_url'] ?? ''), '/');
+    $parentAlbumId = inputInt('post', 'parent_album_id');
 
     if (!is_uploaded_file($xmlPath) || $siteUrl === '') {
         $_SESSION['import_log'] = ['✗ Zadejte XML soubor a URL webu.'];
@@ -136,6 +137,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     }
     $log[] = "▸ Celkem fotek v záloze: {$totalPhotos}";
 
+    // Přesunout importované root alba pod vybrané cílové album
+    if ($parentAlbumId !== null && $parentAlbumId > 0) {
+        try {
+            $pdo->prepare(
+                "UPDATE cms_gallery_albums SET parent_id = ? WHERE parent_id IS NULL AND id IN (
+                    SELECT DISTINCT album_id FROM cms_gallery_photos WHERE album_id IS NOT NULL
+                ) AND id != ?"
+            )->execute([$parentAlbumId, $parentAlbumId]);
+            $parentName = $pdo->prepare("SELECT name FROM cms_gallery_albums WHERE id = ?");
+            $parentName->execute([$parentAlbumId]);
+            $log[] = '✓ Alba přesunuta pod „' . h((string)($parentName->fetchColumn() ?: '?')) . '"';
+        } catch (\PDOException $e) {
+            error_log('estranky parent album move: ' . $e->getMessage());
+        }
+    }
+
     logAction('estranky_download_photos', "total={$totalPhotos} downloaded={$downloaded} skipped={$skipped} failed={$failed}");
     @unlink($xmlPath);
 
@@ -182,6 +199,19 @@ adminHeader('Stažení fotografií z eStránek');
              placeholder="https://www.example.cz"
              aria-describedby="url-help">
       <small id="url-help">Hlavní URL webu na eStránkách (bez lomítka na konci).</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="parent_album_id">Importovat alba do:</label>
+      <select id="parent_album_id" name="parent_album_id" style="min-width:200px" aria-describedby="album-help">
+        <option value="0">Nikam (do kořene galerie)</option>
+        <?php
+        $albumsForSelect = $pdo->query("SELECT id, name FROM cms_gallery_albums ORDER BY name")->fetchAll();
+        foreach ($albumsForSelect as $alb): ?>
+          <option value="<?= (int)$alb['id'] ?>"><?= h((string)$alb['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <small id="album-help" class="field-help">Importovaná alba se vytvoří jako podalba vybraného alba. Volba „Nikam" zachová stávající chování.</small>
     </div>
   </fieldset>
 

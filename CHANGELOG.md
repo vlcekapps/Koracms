@@ -7,11 +7,18 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Multiblog** – podpora více blogů v jedné instalaci; nová tabulka `cms_blogs`; každý blog s vlastním názvem, slugem, popisem, kategoriemi a tagy; komentáře, schvalování a oprávnění zůstávají společné; admin správa blogů (`admin/blogs.php`); selektor blogu ve formuláři článku a filtry v přehledu; kategorie a tagy scoped per blog; dynamický URL routing přes `blog_router.php` s catch-all .htaccess pravidly; veřejná navigace s položkou za každý blog; popis blogu na veřejném indexu; per-blog RSS feed (`/feed.php?blog=slug`); zpětná kompatibilita – s jedním blogem se chování a URL nemění
+- **Importéry – blog selektor** – WordPress i eStránky importéry umožňují vybrat cílový blog nebo vytvořit nový z importu; název a popis z importu se zapisují do blogu (ne do globálních nastavení webu); kategorie a tagy scoped per blog
+- **eStránky photo downloader – výběr cílového alba** – volba „Nikam (do kořene galerie)" nebo existující album jako parent pro importovanou strukturu
 - **Filtr článků podle kategorie** (`admin/blog.php`) – select „Všechny kategorie" / „Bez kategorie" / konkrétní kategorie vedle vyhledávání; kombinovatelné s textovým hledáním; admin rychle najde články bez přiřazené kategorie
 - **E-mailové notifikace** – 3 nové notifikační funkce v `lib/mail.php`: odeslání formuláře, obsah čekající na schválení, nová zpráva v chatu; nastavení v admin (Nastavení → E-mailové notifikace) s checkboxy pro každý typ; formulář a pending obsah výchozí zapnuté, chat výchozí vypnutý
 
 ### Opraveno
 - **Confirm dialogy nefungovaly** – CSP s nonce ignoruje `unsafe-inline`, proto `onclick="return confirm()"` inline handlery nikdy nefungovaly; 36 výskytů ve 32 souborech nahrazeno za `data-confirm` atribut s globálním JS event handlerem v admin footer
+- **Content reference picker – CSP nonce** – `<?= cspNonce() ?>` uvnitř heredoc `<<<HTML` se nevyhodnotilo; CSS nebylo aplikováno; opraveno na PHP concatenation
+- **Content reference picker – čtečky** – `role="status"` na výchozí hlášce uvnitř skrytého dialogu způsobovalo nežádoucí oznamování čtečkami; výchozí text odstraněn, nastavuje se až při otevření dialogu
+- **Bezpečnostní audit** – rate limiting na `subscribe_confirm.php` a `unsubscribe.php`; blokování `.env` a `.git/` v `.htaccess`; oprava user enumeration v `subscribe.php`; rate limiting na `search.php`; HSTS hlavička při HTTPS; GDPR: GA4 se načítá až po udělení cookie souhlasu
+- **WCAG 2.2** – alt text na gallery covers a admin náhledech; autocomplete atributy na admin polích; focus-visible styly na veřejných formulářích a tlačítkách; duplicitní ID v `home.php`
 
 
 - **WCAG 2.2 (1.3.5)** – doplněny `autocomplete` atributy na formulářová pole: `given-name`, `family-name`, `tel` v registraci, profilu a rezervacích; `email` v newsletteru, chatu a komentářích

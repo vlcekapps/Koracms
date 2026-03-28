@@ -61,10 +61,22 @@ $tables = [
         value TEXT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_blogs' => "CREATE TABLE IF NOT EXISTS cms_blogs (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(255) NOT NULL,
+        slug        VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_categories' => "CREATE TABLE IF NOT EXISTS cms_categories (
         id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name       VARCHAR(255) NOT NULL,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        blog_id    INT          NOT NULL DEFAULT 1,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_categories_blog_id (blog_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_articles' => "CREATE TABLE IF NOT EXISTS cms_articles (
@@ -734,6 +746,10 @@ $addColumns = [
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
     // cms_articles – počítadlo zobrazení
     'cms_articles.view_count'        => "ALTER TABLE cms_articles ADD COLUMN view_count INT NOT NULL DEFAULT 0",
+    // Multiblog – blog_id sloupce
+    'cms_articles.blog_id'           => "ALTER TABLE cms_articles ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
+    'cms_categories.blog_id'         => "ALTER TABLE cms_categories ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
+    'cms_tags.blog_id'               => "ALTER TABLE cms_tags ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
     // cms_comments – stavový model moderace
     'cms_comments.status'            => "ALTER TABLE cms_comments ADD COLUMN status ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending'",
 ];
@@ -1788,7 +1804,68 @@ try {
     $log[] = "✗ Migrace stavů chat zpráv – CHYBA: " . h($e->getMessage());
 }
 
-// ── 6. FULLTEXT indexy pro vyhledávání ────────────────────────────────────────
+// ── 6. Multiblog – výchozí blog a přeindexování ──────────────────────────────
+
+try {
+    $blogCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_blogs")->fetchColumn();
+    if ($blogCount === 0) {
+        $pdo->exec("INSERT INTO cms_blogs (id, name, slug, sort_order) VALUES (1, 'Blog', 'blog', 0)");
+        $log[] = '· Vytvořen výchozí blog „Blog" (slug: blog)';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Tabulka cms_blogs – přeskočeno: ' . h($e->getMessage());
+}
+
+// Přeindexování: slug unikátní v rámci blogu (ne globálně)
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_articles WHERE Key_name = 'uq_articles_blog_slug'")->fetch();
+    if (!$idxCheck) {
+        try { $pdo->exec("ALTER TABLE cms_articles DROP INDEX slug"); } catch (\PDOException $e) {}
+        try { $pdo->exec("ALTER TABLE cms_articles DROP INDEX uq_cms_articles_slug"); } catch (\PDOException $e) {}
+        $pdo->exec("ALTER TABLE cms_articles ADD UNIQUE KEY uq_articles_blog_slug (blog_id, slug)");
+        $log[] = '· cms_articles: UNIQUE index změněn na (blog_id, slug)';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· cms_articles index – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_tags WHERE Key_name = 'uq_tags_blog_slug'")->fetch();
+    if (!$idxCheck) {
+        try { $pdo->exec("ALTER TABLE cms_tags DROP INDEX slug"); } catch (\PDOException $e) {}
+        try { $pdo->exec("ALTER TABLE cms_tags DROP INDEX uq_cms_tags_slug"); } catch (\PDOException $e) {}
+        $pdo->exec("ALTER TABLE cms_tags ADD UNIQUE KEY uq_tags_blog_slug (blog_id, slug)");
+        $log[] = '· cms_tags: UNIQUE index změněn na (blog_id, slug)';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· cms_tags index – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_articles WHERE Key_name = 'idx_articles_blog_id'")->fetch();
+    if (!$idxCheck) {
+        $pdo->exec("ALTER TABLE cms_articles ADD INDEX idx_articles_blog_id (blog_id)");
+        $log[] = '· cms_articles: přidán index idx_articles_blog_id';
+    }
+} catch (\PDOException $e) {}
+
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_categories WHERE Key_name = 'idx_categories_blog_id'")->fetch();
+    if (!$idxCheck) {
+        $pdo->exec("ALTER TABLE cms_categories ADD INDEX idx_categories_blog_id (blog_id)");
+        $log[] = '· cms_categories: přidán index idx_categories_blog_id';
+    }
+} catch (\PDOException $e) {}
+
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_tags WHERE Key_name = 'idx_tags_blog_id'")->fetch();
+    if (!$idxCheck) {
+        $pdo->exec("ALTER TABLE cms_tags ADD INDEX idx_tags_blog_id (blog_id)");
+        $log[] = '· cms_tags: přidán index idx_tags_blog_id';
+    }
+} catch (\PDOException $e) {}
+
+// ── 7. FULLTEXT indexy pro vyhledávání ────────────────────────────────────────
 
 $indexExists = static function (string $tableName, string $indexName) use ($pdo): bool {
     $stmt = $pdo->prepare(

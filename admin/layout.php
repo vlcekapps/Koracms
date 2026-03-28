@@ -87,6 +87,9 @@ function adminHeader(string $pageTitle): void
     $contentItems = [];
     if (isModuleEnabled('blog') && (currentUserHasCapability('blog_manage_own') || currentUserHasCapability('blog_taxonomies_manage'))) {
         $blogItems = [];
+        if (currentUserHasCapability('blog_taxonomies_manage')) {
+            $blogItems[] = ['url' => $baseUrl . '/admin/blogs.php', 'label' => 'Správa blogů'];
+        }
         if (currentUserHasCapability('blog_manage_own')) {
             $blogItems[] = ['url' => $baseUrl . '/admin/blog.php', 'label' => 'Články'];
         }

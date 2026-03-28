@@ -42,9 +42,11 @@ if (in_array($scope, ['all', 'content'], true)) {
     if (isModuleEnabled('blog') && currentUserHasCapability('blog_approve')) {
         $rows = $pdo->query(
             "SELECT a.id, a.title, a.created_at,
-                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                    b.name AS blog_name
              FROM cms_articles a
              LEFT JOIN cms_users u ON u.id = a.author_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
              WHERE a.status = 'pending'
              ORDER BY a.created_at DESC
              LIMIT 20"

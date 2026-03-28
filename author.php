@@ -30,9 +30,10 @@ $articles = [];
 if (isModuleEnabled('blog')) {
     $stmt = $pdo->prepare(
         "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.publish_at, a.view_count,
-                a.category_id, c.name AS category
+                a.category_id, c.name AS category, b.slug AS blog_slug
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id
+         LEFT JOIN cms_blogs b ON b.id = a.blog_id
          WHERE a.author_id = ?
            AND a.status = 'published'
            AND (a.publish_at IS NULL OR a.publish_at <= NOW())

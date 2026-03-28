@@ -22,11 +22,19 @@ if ($id !== null) {
     }
 }
 
-$categories = $pdo->query("SELECT id, name FROM cms_categories ORDER BY name")->fetchAll();
+$allBlogs = getAllBlogs();
+$currentBlogId = (int)($article['blog_id'] ?? ($_GET['blog_id'] ?? (getDefaultBlog()['id'] ?? 1)));
+
+$catStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name");
+$catStmt->execute([$currentBlogId]);
+$categories = $catStmt->fetchAll();
+
 $allTags = [];
 $articleTagIds = [];
 try {
-    $allTags = $pdo->query("SELECT id, name FROM cms_tags ORDER BY name")->fetchAll();
+    $tagStmt2 = $pdo->prepare("SELECT id, name FROM cms_tags WHERE blog_id = ? ORDER BY name");
+    $tagStmt2->execute([$currentBlogId]);
+    $allTags = $tagStmt2->fetchAll();
     if ($id !== null) {
         $tagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ?");
         $tagStmt->execute([$id]);
@@ -68,6 +76,17 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($article): ?>
     <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+  <?php endif; ?>
+
+  <?php if (isMultiBlog()): ?>
+    <label for="blog_id">Blog</label>
+    <select id="blog_id" name="blog_id" data-blog-switch="<?= $article ? 'blog_form.php?id=' . (int)$article['id'] . '&amp;blog_id=' : 'blog_form.php?blog_id=' ?>">
+      <?php foreach ($allBlogs as $b): ?>
+        <option value="<?= (int)$b['id'] ?>"<?= (int)$b['id'] === $currentBlogId ? ' selected' : '' ?>><?= h((string)$b['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+  <?php else: ?>
+    <input type="hidden" name="blog_id" value="<?= $currentBlogId ?>">
   <?php endif; ?>
 
   <?php if ($article && !empty($article['author_id'])): ?>
@@ -226,6 +245,13 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
         }
         slugInput.value = slugify(this.value);
     });
+
+    var blogSelect = document.getElementById('blog_id');
+    if (blogSelect && blogSelect.dataset.blogSwitch) {
+        blogSelect.addEventListener('change', function () {
+            location.href = blogSelect.dataset.blogSwitch.replace(/&amp;/g, '&') + this.value;
+        });
+    }
 })();
 </script>
 

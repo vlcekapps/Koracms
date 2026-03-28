@@ -338,12 +338,13 @@ $results = [];
 if (($requestedType === 'all' || $requestedType === 'blog') && isModuleEnabled('blog')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, perex, content, created_at, 'blog' AS type
-             FROM cms_articles
-             WHERE status = 'published'
-               AND (publish_at IS NULL OR publish_at <= NOW())
-               AND (title LIKE ? OR perex LIKE ? OR content LIKE ?)
-             ORDER BY created_at DESC
+            "SELECT a.id, a.title, a.slug, a.perex, a.content, a.created_at, 'blog' AS type, b.slug AS blog_slug
+             FROM cms_articles a
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.title LIKE ? OR a.perex LIKE ? OR a.content LIKE ?)
+             ORDER BY a.created_at DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like]);

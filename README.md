@@ -113,7 +113,7 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 
 | Modul | Popis |
 |---|---|
-| **Blog** | Články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení, počet přečtení a veřejná author vrstva s profilem autora i přehledem všech autorů; filtr článků podle kategorie včetně volby „Bez kategorie" |
+| **Blog (multiblog)** | Podpora více blogů – každý s vlastním názvem, slugem, popisem, kategoriemi a tagy; komentáře a schvalování společné; dynamický URL routing (`/blog-slug/article-slug`); články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení, počet přečtení a veřejná author vrstva; filtr článků podle kategorie a blogu; per-blog RSS feed |
 | **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
 | **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem, detailovým pohledem na zprávu a interními stavy `nová`, `přečtená`, `vyřízená` |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou, rate limitingem a moderátorským inboxem pro příchozí zprávy |
@@ -255,8 +255,8 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
 - **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie včetně slugů alb a fotografií, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
-- **WordPress importér** – import z WordPress XML exportu (WXR) s náhledem, filtrem kategorií, perex/content splittem na `<!--more-->` a automatickým odstraněním WP bloků
-- **eStránky importér** – import článků, kategorií, fotoalb a fotografií z XML zálohy eStránek.cz s base64 dekódováním a hierarchií alb; stahování fotografií z webu
+- **WordPress importér** – import z WordPress XML exportu (WXR) s náhledem, filtrem kategorií, výběrem cílového blogu, perex/content splittem na `<!--more-->` a automatickým odstraněním WP bloků
+- **eStránky importér** – import článků, kategorií, fotoalb a fotografií z XML zálohy eStránek.cz s base64 dekódováním, hierarchií alb, výběrem cílového blogu a cílového alba pro stažené fotografie
 - **Google Analytics 4** – nastavení GA4 Measurement ID v admin; gtag.js snippet se automaticky vloží do hlavičky
 - **Vlastní kód do head/footer** – textová pole v nastavení pro libovolný HTML/JS kód do `<head>` a před `</body>`
 - **Revize obsahu** – snapshot textových polí před každou úpravou; historie změn s uživatelem, datem a porovnáním starý/nový

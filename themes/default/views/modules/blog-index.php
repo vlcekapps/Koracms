@@ -18,6 +18,9 @@ $renderAuthorName = static function (array $article): string {
     <div class="section-heading">
       <div>
         <h1 id="blog-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
+        <?php if (!empty($blog['description'])): ?>
+          <p class="section-subtitle"><?= h((string)$blog['description']) ?></p>
+        <?php endif; ?>
       </div>
       <?php if (!empty($showAuthorsIndexLink)): ?>
         <a class="section-link" href="<?= authorIndexPath() ?>">Autoři <span aria-hidden="true">→</span></a>
@@ -27,10 +30,10 @@ $renderAuthorName = static function (array $article): string {
     <?php if (!empty($categories)): ?>
       <nav aria-label="Kategorie blogu" class="form-stack">
         <ul class="chip-list">
-          <li><a class="chip-link" href="<?= BASE_URL ?>/blog/index.php"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
+          <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
           <?php foreach ($categories as $category): ?>
             <li>
-              <a class="chip-link" href="<?= BASE_URL ?>/blog/index.php?kat=<?= (int)$category['id'] ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
+              <a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?kat=<?= (int)$category['id'] ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
                 <?= h($category['name']) ?>
               </a>
             </li>
@@ -44,7 +47,7 @@ $renderAuthorName = static function (array $article): string {
         <ul class="chip-list">
           <?php foreach ($allTags as $tag): ?>
             <li>
-              <a class="chip-link" href="<?= BASE_URL ?>/blog/index.php?tag=<?= rawurlencode($tag['slug']) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
+              <a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?tag=<?= rawurlencode($tag['slug']) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
                 #<?= h($tag['name']) ?>
               </a>
             </li>
@@ -57,7 +60,7 @@ $renderAuthorName = static function (array $article): string {
       <nav aria-label="Aktivní autor blogu" class="form-stack">
         <ul class="chip-list">
           <li><a class="chip-link" href="<?= authorIndexPath() ?>">Všichni autoři</a></li>
-          <li><a class="chip-link" href="<?= BASE_URL ?>/blog/index.php">Všechny články</a></li>
+          <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>">Všechny články</a></li>
           <li><span class="pill">Autor: <?= h($activeAuthor['author_display_name']) ?></span></li>
         </ul>
       </nav>

@@ -46,6 +46,15 @@ Options -Indexes
     RewriteRule ^places/([a-z0-9\-]+)/?$ places/place.php?slug=$1 [L,QSA,NC]
     RewriteRule ^podcast/([a-z0-9\-]+)/([a-z0-9\-]+)/?$ podcast/episode.php?show=$1&slug=$2 [L,QSA,NC]
     RewriteRule ^podcast/([a-z0-9\-]+)/?$ podcast/show.php?slug=$1 [L,QSA,NC]
+
+    # Multi-blog catch-all (MUSÍ být poslední – dynamické blog slugy)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([a-z0-9\-]+)/([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1&slug=$2 [L,QSA,NC]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1 [L,QSA,NC]
 </IfModule>
 
 # Volitelné: HTTPS redirect (odkomentujte pokud máte SSL)

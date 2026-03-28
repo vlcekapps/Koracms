@@ -5,6 +5,9 @@ requireLogin(BASE_URL . '/admin/login.php');
 $pdo = db_connect();
 $success = false;
 $error   = '';
+$allBlogs = getAllBlogs();
+$blogId = inputInt('get', 'blog_id') ?? inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 1);
+$currentBlog = getBlogById($blogId) ?? getDefaultBlog();
 
 $editId = inputInt('get', 'edit');
 
@@ -16,24 +19,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($name === '') {
         $error = 'Název kategorie je povinný.';
     } elseif ($updateId !== null) {
-        $pdo->prepare("UPDATE cms_categories SET name = ? WHERE id = ?")->execute([$name, $updateId]);
+        $pdo->prepare("UPDATE cms_categories SET name = ? WHERE id = ? AND blog_id = ?")->execute([$name, $updateId, $blogId]);
         $success = true;
         $editId  = null;
     } else {
-        $pdo->prepare("INSERT INTO cms_categories (name) VALUES (?)")->execute([$name]);
+        $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$name, $blogId]);
         $success = true;
     }
 }
 
-$categories = $pdo->query("SELECT id, name FROM cms_categories ORDER BY name")->fetchAll();
+$catStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name");
+$catStmt->execute([$blogId]);
+$categories = $catStmt->fetchAll();
 
-adminHeader('Kategorie blogu');
+adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $currentBlog['name'] : ''));
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie přidána.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 
+<?php if (isMultiBlog()): ?>
+<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
+  <label for="blog_id">Blog:</label>
+  <select id="blog_id" name="blog_id" style="min-width:150px">
+    <?php foreach ($allBlogs as $b): ?>
+      <option value="<?= (int)$b['id'] ?>"<?= (int)$b['id'] === $blogId ? ' selected' : '' ?>><?= h((string)$b['name']) ?></option>
+    <?php endforeach; ?>
+  </select>
+  <button type="submit" class="btn">Zobrazit</button>
+</form>
+<?php endif; ?>
+
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <input type="hidden" name="blog_id" value="<?= $blogId ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
     <label for="name">Název <span aria-hidden="true">*</span></label>
@@ -46,7 +64,7 @@ adminHeader('Kategorie blogu');
 <?php if (empty($categories)): ?>
   <p>Zatím tu nejsou žádné kategorie.</p>
 <?php else: ?>
-  <?= bulkActions('blog_categories', BASE_URL . '/admin/blog_cats.php', 'Hromadné akce s kategoriemi', 'kategorie', false) ?>
+  <?= bulkActions('blog_categories', BASE_URL . '/admin/blog_cats.php?blog_id=' . $blogId, 'Hromadné akce s kategoriemi', 'kategorie', false) ?>
   <table>
     <caption>Přehled kategorií blogu</caption>
     <thead><tr><th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
@@ -59,10 +77,11 @@ adminHeader('Kategorie blogu');
             <form method="post" style="display:flex;gap:.4rem;align-items:center">
               <input type="hidden" name="csrf_token"  value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id"   value="<?= (int)$cat['id'] ?>">
+              <input type="hidden" name="blog_id"     value="<?= $blogId ?>">
               <input type="text"   name="name" required aria-required="true" maxlength="255"
                      value="<?= h($cat['name']) ?>" style="width:auto">
               <button type="submit" class="btn">Uložit</button>
-              <a href="blog_cats.php">Zrušit</a>
+              <a href="blog_cats.php?blog_id=<?= $blogId ?>">Zrušit</a>
             </form>
           <?php else: ?>
             <?= h($cat['name']) ?>
@@ -70,7 +89,7 @@ adminHeader('Kategorie blogu');
         </td>
         <td class="actions">
           <?php if ($editId !== (int)$cat['id']): ?>
-            <a href="blog_cats.php?edit=<?= (int)$cat['id'] ?>" class="btn">Upravit</a>
+            <a href="blog_cats.php?edit=<?= (int)$cat['id'] ?>&amp;blog_id=<?= $blogId ?>" class="btn">Upravit</a>
           <?php endif; ?>
           <form action="blog_cat_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

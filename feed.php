@@ -7,6 +7,17 @@ $siteName = getSetting('site_name', 'Kora CMS');
 $siteDesc = getSetting('site_description', '');
 $pdo = db_connect();
 
+$feedBlogSlug = trim((string)($_GET['blog'] ?? ''));
+$feedBlogId = null;
+if ($feedBlogSlug !== '') {
+    $blogStmt = $pdo->prepare("SELECT id, name FROM cms_blogs WHERE slug = ?");
+    $blogStmt->execute([$feedBlogSlug]);
+    $feedBlog = $blogStmt->fetch();
+    if ($feedBlog) {
+        $feedBlogId = (int)$feedBlog['id'];
+    }
+}
+
 echo '<?xml version="1.0" encoding="UTF-8"?>';
 ?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
@@ -17,11 +28,26 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
   <atom:link href="<?= h(siteUrl('/feed.php')) ?>" rel="self" type="application/rss+xml"/>
 
 <?php if (isModuleEnabled('blog')):
-    $articles = $pdo->query(
-        "SELECT id, title, slug, perex, created_at FROM cms_articles
-         WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())
-         ORDER BY created_at DESC LIMIT 20"
-    )->fetchAll();
+    if ($feedBlogId !== null) {
+        $articleStmt = $pdo->prepare(
+            "SELECT a.id, a.title, a.slug, a.perex, a.created_at, b.slug AS blog_slug
+             FROM cms_articles a
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND a.blog_id = ?
+             ORDER BY a.created_at DESC LIMIT 20"
+        );
+        $articleStmt->execute([$feedBlogId]);
+        $articles = $articleStmt->fetchAll();
+    } else {
+        $articles = $pdo->query(
+            "SELECT a.id, a.title, a.slug, a.perex, a.created_at, b.slug AS blog_slug
+             FROM cms_articles a
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             ORDER BY a.created_at DESC LIMIT 20"
+        )->fetchAll();
+    }
     foreach ($articles as $article): ?>
   <item>
     <title><?= htmlspecialchars((string)$article['title'], ENT_XML1 | ENT_QUOTES, 'UTF-8') ?></title>

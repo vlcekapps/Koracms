@@ -27,7 +27,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
         <h1 id="clanek-nadpis" class="section-title section-title--hero"><?= h($article['title']) ?></h1>
         <p class="meta-row">
           <?php if (!empty($article['category'])): ?>
-            <a class="pill" href="<?= BASE_URL ?>/blog/index.php?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
+            <a class="pill" href="<?= h(blogIndexPath($blog)) ?>?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
           <?php endif; ?>
           <time datetime="<?= h(str_replace(' ', 'T', $article['created_at'])) ?>"><?= formatCzechDate($article['created_at']) ?></time>
           <?php if (!empty($article['author_name'])): ?>
@@ -55,7 +55,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
       <nav aria-label="Tagy článku">
         <ul class="chip-list">
           <?php foreach ($tags as $tag): ?>
-            <li><a class="chip-link" href="<?= BASE_URL ?>/blog/index.php?tag=<?= rawurlencode($tag['slug']) ?>">#<?= h($tag['name']) ?></a></li>
+            <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?tag=<?= rawurlencode($tag['slug']) ?>">#<?= h($tag['name']) ?></a></li>
           <?php endforeach; ?>
         </ul>
       </nav>
@@ -98,7 +98,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
     <?php endif; ?>
 
     <div class="article-actions">
-      <a class="button-secondary" href="<?= BASE_URL ?>/blog/index.php"><span aria-hidden="true">←</span> Zpět na seznam článků</a>
+      <a class="button-secondary" href="<?= h(blogIndexPath($blog)) ?>"><span aria-hidden="true">←</span> Zpět na seznam článků</a>
       <button type="button" class="button-secondary js-copy-link"
               data-url="<?= h(articlePublicUrl($article)) ?>"
               aria-label="Kopírovat odkaz na článek">Kopírovat odkaz</button>

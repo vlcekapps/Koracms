@@ -20,22 +20,24 @@ $previewToken = trim($_GET['preview'] ?? '');
 if ($previewToken !== '') {
     if ($slug !== '') {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id,
+            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
              WHERE a.slug = ? AND a.preview_token = ?"
         );
         $stmt->execute([$slug, $previewToken]);
     } else {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id,
+            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
              WHERE a.id = ? AND a.preview_token = ?"
         );
@@ -44,22 +46,24 @@ if ($previewToken !== '') {
 } else {
     if ($slug !== '') {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id,
+            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
              WHERE a.slug = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
         );
         $stmt->execute([$slug]);
     } else {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id,
+            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
              LEFT JOIN cms_categories c ON c.id = a.category_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
              WHERE a.id = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
         );
@@ -228,6 +232,7 @@ renderPublicPage([
     'view' => 'modules/blog-article',
     'view_data' => [
         'article' => $article,
+        'blog' => $GLOBALS['current_blog'] ?? getBlogById((int)($article['blog_id'] ?? 1)),
         'tags' => $tags,
         'comments' => $comments,
         'commentErrors' => $commentErrors,
@@ -240,7 +245,7 @@ renderPublicPage([
             'comment' => trim($_POST['comment'] ?? ''),
         ],
     ],
-    'current_nav' => 'blog',
+    'current_nav' => 'blog:' . articleBlogSlug($article),
     'body_class' => 'page-blog-article',
     'page_kind' => 'detail',
     'admin_edit_url' => BASE_URL . '/admin/blog_form.php?id=' . $articleId,

@@ -54,24 +54,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Tagy importovány.';
                 }
 
+                // Blogy
+                if (!empty($data['blogs']) && is_array($data['blogs'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_blogs (id, name, slug, description, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?)"
+                    );
+                    foreach ($data['blogs'] as $row) {
+                        $ins->execute([
+                            (int)$row['id'], $row['name'], $row['slug'],
+                            $row['description'] ?? '',
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
+                    }
+                    $summary[] = 'Blogy importovány.';
+                }
+
                 // Články
                 if (!empty($data['articles']) && is_array($data['articles'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_articles
-                         (id, title, slug, perex, content, category_id, comments_enabled, image_file,
+                         (id, title, slug, perex, content, category_id, blog_id, comments_enabled, image_file,
                           meta_title, meta_description, publish_at, status, created_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['articles'] as $row) {
+                        $importBlogId = (int)($row['blog_id'] ?? 1);
                         $importSlug = articleSlug((string)($row['slug'] ?? ''));
                         if ($importSlug === '') {
-                            $importSlug = uniqueArticleSlug($pdo, (string)($row['title'] ?? 'clanek'));
+                            $importSlug = uniqueArticleSlug($pdo, (string)($row['title'] ?? 'clanek'), null, $importBlogId);
                         } else {
-                            $importSlug = uniqueArticleSlug($pdo, $importSlug, (int)$row['id']);
+                            $importSlug = uniqueArticleSlug($pdo, $importSlug, (int)$row['id'], $importBlogId);
                         }
                         $ins->execute([
                             (int)$row['id'], $row['title'], $importSlug, $row['perex'] ?? '',
                             $row['content'] ?? '', $row['category_id'] ?: null,
+                            $importBlogId,
                             (int)($row['comments_enabled'] ?? 1),
                             $row['image_file'] ?? '',
                             $row['meta_title'] ?? '', $row['meta_description'] ?? '',

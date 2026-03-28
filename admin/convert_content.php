@@ -82,19 +82,21 @@ if ($direction === 'page_to_article') {
         exit;
     }
 
-    $slug = uniqueArticleSlug($pdo, articleSlug((string)$page['slug'] ?: (string)$page['title']));
+    $defaultBlogId = (int)(getDefaultBlog()['id'] ?? 1);
+    $slug = uniqueArticleSlug($pdo, articleSlug((string)$page['slug'] ?: (string)$page['title']), null, $defaultBlogId);
     $status = (string)($page['status'] ?? 'published');
     if ($status === '' || $status === 'published') {
         $status = (int)$page['is_published'] ? 'published' : 'pending';
     }
 
     $pdo->prepare(
-        "INSERT INTO cms_articles (title, slug, perex, content, status, comments_enabled, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, 1, ?, ?)"
+        "INSERT INTO cms_articles (title, slug, perex, content, blog_id, status, comments_enabled, created_at, updated_at)
+         VALUES (?, ?, '', ?, ?, ?, 1, ?, ?)"
     )->execute([
         (string)$page['title'],
         $slug,
         (string)$page['content'],
+        $defaultBlogId,
         $status,
         (string)$page['created_at'],
         (string)($page['updated_at'] ?: $page['created_at']),

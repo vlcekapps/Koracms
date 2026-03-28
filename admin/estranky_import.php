@@ -71,16 +71,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $esSiteTitle = trim($esSettings['s_title_text'] ?? '');
     $esSiteDesc = trim($esSettings['user_description'] ?? '');
-    if ($esSiteTitle !== '') {
-        saveSetting('site_name', $esSiteTitle);
-        $log[] = "✓ Název webu: " . $esSiteTitle;
+
+    // Cílový blog
+    $targetBlogId = inputInt('post', 'target_blog_id');
+    if ($targetBlogId !== null && $targetBlogId > 0) {
+        $targetBlog = getBlogById($targetBlogId);
+    } else {
+        $targetBlog = null;
     }
-    if ($esSiteDesc !== '') {
-        saveSetting('site_description', $esSiteDesc);
-        $log[] = "✓ Popis webu: " . mb_substr($esSiteDesc, 0, 80) . (mb_strlen($esSiteDesc) > 80 ? '…' : '');
+    if (!$targetBlog && $esSiteTitle !== '') {
+        $blogSlug = slugify($esSiteTitle) ?: 'import';
+        $blogSlug = substr($blogSlug, 0, 100);
+        try {
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order) VALUES (?, ?, ?, ?)")
+                ->execute([$esSiteTitle, $blogSlug, $esSiteDesc, (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn()]);
+            $targetBlog = getBlogById((int)$pdo->lastInsertId());
+            $log[] = "✓ Vytvořen blog: " . $esSiteTitle;
+        } catch (\PDOException $e) {
+            $targetBlog = getDefaultBlog();
+        }
     }
+    if (!$targetBlog) {
+        $targetBlog = getDefaultBlog();
+    }
+    $blogId = (int)$targetBlog['id'];
+
     if ($esSiteTitle !== '' || $esSiteDesc !== '') {
-        clearSettingsCache();
+        $pdo->prepare("UPDATE cms_blogs SET name = ?, description = ? WHERE id = ?")
+            ->execute([$esSiteTitle !== '' ? $esSiteTitle : $targetBlog['name'], $esSiteDesc !== '' ? $esSiteDesc : ($targetBlog['description'] ?? ''), $blogId]);
+        $log[] = "✓ Blog: " . ($esSiteTitle !== '' ? $esSiteTitle : $targetBlog['name']) . " (id={$blogId})";
     }
 
     // ── 1. Sekce → kategorie ──
@@ -92,13 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         $secTitle = esDecodeValue((string)($sec['title'] ?? ''));
         if ($secId <= 0 || $secTitle === '' || (int)($sec['lang'] ?? 1) !== 1) continue;
 
-        $existing = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ?");
-        $existing->execute([$secTitle]);
+        $existing = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ? AND blog_id = ?");
+        $existing->execute([$secTitle, $blogId]);
         $existingId = $existing->fetchColumn();
         if ($existingId) {
             $sectionMap[$secId] = (int)$existingId;
         } else {
-            $pdo->prepare("INSERT INTO cms_categories (name) VALUES (?)")->execute([$secTitle]);
+            $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$secTitle, $blogId]);
             $sectionMap[$secId] = (int)$pdo->lastInsertId();
             $insertedSections++;
         }
@@ -135,12 +154,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         }
 
         $slug = articleSlug($urlSlug !== '' ? $urlSlug : $title);
-        $slug = uniqueArticleSlug($pdo, $slug);
+        $slug = uniqueArticleSlug($pdo, $slug, null, $blogId);
         $categoryId = $sectionMap[$sectionId] ?? null;
 
         $pdo->prepare(
-            "INSERT INTO cms_articles (title, slug, perex, content, category_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        )->execute([$title, $slug, mb_substr($perex, 0, 500), $content, $categoryId, $published ? 'published' : 'pending', $createdAt, $updatedAt]);
+            "INSERT INTO cms_articles (title, slug, perex, content, category_id, blog_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )->execute([$title, $slug, mb_substr($perex, 0, 500), $content, $categoryId, $blogId, $published ? 'published' : 'pending', $createdAt, $updatedAt]);
         $insertedArticles++;
     }
     $log[] = "✓ Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (celkem " . count($articles) . ")";
@@ -260,6 +279,15 @@ adminHeader('Import z eStránek');
              accept=".xml,application/xml,text/xml"
              aria-describedby="xml-help">
       <small id="xml-help">Vyberte XML soubor zálohy exportovaný z eStránek.</small>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <label for="es_target_blog">Importovat články do blogu:</label>
+      <select id="es_target_blog" name="target_blog_id" style="min-width:200px">
+        <option value="0">Vytvořit nový blog z importu</option>
+        <?php foreach (getAllBlogs() as $b): ?>
+          <option value="<?= (int)$b['id'] ?>"><?= h((string)$b['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
     </div>
   </fieldset>
 

@@ -33,10 +33,12 @@ if (isModuleEnabled('blog')) {
     $featuredBlogStmt = db_connect()->prepare(
         "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.view_count, c.name AS category,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
-                u.author_public_enabled, u.author_slug, u.role AS author_role
+                u.author_public_enabled, u.author_slug, u.role AS author_role,
+                b.slug AS blog_slug
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_users u ON u.id = a.author_id
+         LEFT JOIN cms_blogs b ON b.id = a.blog_id
          WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
          ORDER BY a.view_count DESC, a.created_at DESC, a.id DESC
          LIMIT 1"
@@ -52,10 +54,12 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
         "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, c.name AS category,
                 a.view_count,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
-                u.author_public_enabled, u.author_slug, u.role AS author_role
+                u.author_public_enabled, u.author_slug, u.role AS author_role,
+                b.slug AS blog_slug
          FROM cms_articles a
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_users u ON u.id = a.author_id
+         LEFT JOIN cms_blogs b ON b.id = a.blog_id
          WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
          ORDER BY a.created_at DESC LIMIT ?"
     );

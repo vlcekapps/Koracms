@@ -61,17 +61,20 @@ try {
 ?>
 
 <?php if (isModuleEnabled('blog')): ?>
+<?php foreach (getAllBlogs() as $sitemapBlog): ?>
   <url>
-    <loc><?= h(siteUrl('/blog/index.php')) ?></loc>
+    <loc><?= h(blogIndexUrl($sitemapBlog)) ?></loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
+<?php endforeach; ?>
 <?php
     try {
         $articles = $pdo->query(
-            "SELECT id, slug, updated_at FROM cms_articles
-             WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())
-             ORDER BY created_at DESC"
+            "SELECT a.id, a.slug, a.updated_at, b.slug AS blog_slug FROM cms_articles a
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             ORDER BY a.created_at DESC"
         )->fetchAll();
         foreach ($articles as $a):
 ?>

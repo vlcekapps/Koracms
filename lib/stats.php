@@ -233,7 +233,18 @@ function siteNav(string $current = ''): string
 
     $moduleMap = navModuleDefaults();
     foreach (navModuleOrder() as $key) {
-        if (isModuleEnabled($key) && isset($moduleMap[$key])) {
+        if (!isModuleEnabled($key) || !isset($moduleMap[$key])) {
+            continue;
+        }
+        if ($key === 'blog' && isMultiBlog()) {
+            foreach (getAllBlogs() as $blogEntry) {
+                $blogHref = blogIndexPath($blogEntry);
+                $blogNavKey = 'blog:' . $blogEntry['slug'];
+                $nav .= '<li><a href="' . h($blogHref) . '"'
+                       . ($current === $blogNavKey ? ' aria-current="page"' : '')
+                       . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+            }
+        } else {
             [$href, $label] = $moduleMap[$key];
             $nav .= $li($href, $label, $key);
         }

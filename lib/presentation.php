@@ -1,6 +1,93 @@
 <?php
 // Prezentační funkce – slugy, URL, excerpty, hydratace, autoři – extrahováno z db.php
 
+// ──────────────────────── Multiblog helper funkce ────────────────────────────
+
+function getAllBlogs(): array
+{
+    static $blogs = null;
+    if ($blogs === null) {
+        try {
+            $blogs = db_connect()->query(
+                "SELECT * FROM cms_blogs ORDER BY sort_order, name"
+            )->fetchAll();
+        } catch (\PDOException $e) {
+            $blogs = [];
+        }
+    }
+    return $blogs;
+}
+
+function getBlogById(int $id): ?array
+{
+    foreach (getAllBlogs() as $blog) {
+        if ((int)$blog['id'] === $id) {
+            return $blog;
+        }
+    }
+    return null;
+}
+
+function getBlogBySlug(string $slug): ?array
+{
+    foreach (getAllBlogs() as $blog) {
+        if ((string)$blog['slug'] === $slug) {
+            return $blog;
+        }
+    }
+    return null;
+}
+
+function getDefaultBlog(): ?array
+{
+    $blogs = getAllBlogs();
+    return $blogs[0] ?? null;
+}
+
+function isMultiBlog(): bool
+{
+    return count(getAllBlogs()) > 1;
+}
+
+function articleBlogSlug(array $article): string
+{
+    if (!empty($article['blog_slug'])) {
+        return (string)$article['blog_slug'];
+    }
+    $blogId = (int)($article['blog_id'] ?? 1);
+    $blog = getBlogById($blogId);
+    return $blog ? (string)$blog['slug'] : 'blog';
+}
+
+function blogIndexPath(array $blog): string
+{
+    $slug = (string)($blog['slug'] ?? 'blog');
+    if ($slug === 'blog') {
+        return BASE_URL . '/blog/index.php';
+    }
+    return BASE_URL . '/' . rawurlencode($slug) . '/';
+}
+
+function blogIndexUrl(array $blog): string
+{
+    $path = (string)($blog['slug'] ?? 'blog');
+    if ($path === 'blog') {
+        return siteUrl('/blog/index.php');
+    }
+    return siteUrl('/' . rawurlencode($path) . '/');
+}
+
+function reservedBlogSlugs(): array
+{
+    return [
+        'admin', 'auth', 'authors', 'author', 'board', 'build', 'chat',
+        'contact', 'dist', 'docs', 'downloads', 'events', 'faq', 'feed',
+        'food', 'forms', 'gallery', 'lib', 'news', 'places', 'podcast',
+        'polls', 'public', 'reservations', 'search', 'sitemap', 'themes',
+        'uploads', 'index', 'page', 'register', 'subscribe', 'unsubscribe',
+    ];
+}
+
 function formatCzechDate(string $datetime): string
 {
     static $months = [
@@ -1010,8 +1097,9 @@ function appendUrlQuery(string $path, array $params): string
 function articlePublicRequestPath(array $article): string
 {
     $slug = articleSlug((string)($article['slug'] ?? ''));
+    $blogSlug = articleBlogSlug($article);
     if ($slug !== '') {
-        return '/blog/' . rawurlencode($slug);
+        return '/' . rawurlencode($blogSlug) . '/' . rawurlencode($slug);
     }
 
     return '/blog/article.php?id=' . (int)($article['id'] ?? 0);
@@ -1314,7 +1402,7 @@ function eventPublicUrl(array $event, array $query = []): string
     return siteUrl(appendUrlQuery(eventPublicRequestPath($event), $query));
 }
 
-function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null, int $blogId = 1): string
 {
     $baseSlug = articleSlug($candidate);
     if ($baseSlug === '') {
@@ -1323,10 +1411,10 @@ function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null):
 
     $slug = $baseSlug;
     $suffix = 2;
-    $stmt = $pdo->prepare("SELECT id FROM cms_articles WHERE slug = ? AND id != ?");
+    $stmt = $pdo->prepare("SELECT id FROM cms_articles WHERE slug = ? AND blog_id = ? AND id != ?");
 
     while (true) {
-        $stmt->execute([$slug, $excludeId ?? 0]);
+        $stmt->execute([$slug, $blogId, $excludeId ?? 0]);
         if (!$stmt->fetch()) {
             return $slug;
         }

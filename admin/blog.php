@@ -5,6 +5,8 @@ requireLogin(BASE_URL . '/admin/login.php');
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
 $cat = trim($_GET['cat'] ?? '');
+$blogFilter = trim($_GET['blog'] ?? '');
+$multiBlog = isMultiBlog();
 $params = [];
 $whereParts = [];
 
@@ -21,6 +23,11 @@ if ($cat === 'none') {
     $params[] = (int)$cat;
 }
 
+if ($blogFilter !== '' && ctype_digit($blogFilter)) {
+    $whereParts[] = 'a.blog_id = ?';
+    $params[] = (int)$blogFilter;
+}
+
 if (canManageOwnBlogOnly()) {
     $whereParts[] = 'a.author_id = ?';
     $params[] = currentUserId();
@@ -28,16 +35,27 @@ if (canManageOwnBlogOnly()) {
 
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
-$categories = $pdo->query("SELECT id, name FROM cms_categories ORDER BY name")->fetchAll();
+$catQuery = "SELECT id, name FROM cms_categories";
+$catParams = [];
+if ($blogFilter !== '' && ctype_digit($blogFilter)) {
+    $catQuery .= " WHERE blog_id = ?";
+    $catParams[] = (int)$blogFilter;
+}
+$catQuery .= " ORDER BY name";
+$catStmt = $pdo->prepare($catQuery);
+$catStmt->execute($catParams);
+$categories = $catStmt->fetchAll();
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.title, a.slug, a.created_at, a.publish_at, a.preview_token,
-            COALESCE(a.status,'published') AS status,
+            COALESCE(a.status,'published') AS status, a.blog_id,
             c.name AS category,
+            b.name AS blog_name, b.slug AS blog_slug,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_articles a
      LEFT JOIN cms_categories c ON c.id = a.category_id
      LEFT JOIN cms_users u ON u.id = a.author_id
+     LEFT JOIN cms_blogs b ON b.id = a.blog_id
      {$whereSql}
      ORDER BY a.created_at DESC"
 );
@@ -49,6 +67,7 @@ $canApproveBlog = currentUserHasCapability('blog_approve');
 $filterParams = [];
 if ($q !== '') { $filterParams['q'] = $q; }
 if ($cat !== '') { $filterParams['cat'] = $cat; }
+if ($blogFilter !== '') { $filterParams['blog'] = $blogFilter; }
 $currentRedirect = BASE_URL . '/admin/blog.php' . ($filterParams !== [] ? '?' . http_build_query($filterParams) : '');
 
 adminHeader('Blog');
@@ -57,6 +76,7 @@ adminHeader('Blog');
 <p>
   <a href="blog_form.php" class="btn">+ Přidat článek</a>
   <?php if ($canManageTaxonomies): ?>
+    <a href="blogs.php" style="margin-left:1rem">Správa blogů</a>
     <a href="blog_cats.php" style="margin-left:1rem">Kategorie blogu</a>
     <a href="blog_tags.php" style="margin-left:1rem">Štítky blogu</a>
   <?php endif; ?>
@@ -74,8 +94,17 @@ adminHeader('Blog');
       <option value="<?= (int)$c['id'] ?>"<?= $cat === (string)$c['id'] ? ' selected' : '' ?>><?= h($c['name']) ?></option>
     <?php endforeach; ?>
   </select>
+  <?php if ($multiBlog): ?>
+    <label for="blog" class="visually-hidden">Blog</label>
+    <select id="blog" name="blog" style="min-width:150px">
+      <option value="">Všechny blogy</option>
+      <?php foreach (getAllBlogs() as $b): ?>
+        <option value="<?= (int)$b['id'] ?>"<?= $blogFilter === (string)$b['id'] ? ' selected' : '' ?>><?= h((string)$b['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+  <?php endif; ?>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $cat !== ''): ?>
+  <?php if ($q !== '' || $cat !== '' || $blogFilter !== ''): ?>
     <a href="blog.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -106,6 +135,7 @@ adminHeader('Blog');
       <tr>
         <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
         <th scope="col">Titulek</th>
+        <?php if ($multiBlog): ?><th scope="col">Blog</th><?php endif; ?>
         <th scope="col">Autor</th>
         <th scope="col">Kategorie</th>
         <th scope="col">Datum</th>
@@ -118,6 +148,7 @@ adminHeader('Blog');
       <tr>
         <td><input type="checkbox" name="ids[]" value="<?= (int)$article['id'] ?>" aria-label="Vybrat článek <?= h($article['title']) ?>"></td>
         <td><?= h($article['title']) ?></td>
+        <?php if ($multiBlog): ?><td><?= h($article['blog_name'] ?? '–') ?></td><?php endif; ?>
         <td><?= $article['author_name'] ? h($article['author_name']) : '<em>–</em>' ?></td>
         <td><?= h($article['category'] ?? '–') ?></td>
         <td><?= h((string)$article['created_at']) ?></td>
