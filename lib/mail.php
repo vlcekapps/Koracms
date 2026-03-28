@@ -204,12 +204,15 @@ function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $
     $siteName = getSetting('site_name', 'Kora CMS');
     $subject = trim((string)($form['submitter_confirmation_subject'] ?? ''));
     if ($subject === '') {
-        $subject = 'Potvrzení odeslání formuláře „' . trim((string)($form['title'] ?? 'Formulář')) . '” – ' . $siteName;
+        $subject = formRenderTemplate(defaultFormSubmitterConfirmationSubjectTemplate(), [
+            '{{form_title}}' => trim((string)($form['title'] ?? 'Formulář')),
+            '{{site_name}}' => $siteName,
+        ]);
     }
 
     $bodyTemplate = trim((string)($form['submitter_confirmation_message'] ?? ''));
     if ($bodyTemplate === '') {
-        $bodyTemplate = "Děkujeme za odeslání formuláře „{{form_title}}\".\n\nVaše zpráva byla úspěšně přijata.\n\n— {{site_name}}";
+        $bodyTemplate = defaultFormSubmitterConfirmationMessageTemplate();
     }
 
     $body = formRenderTemplate($bodyTemplate, formTemplatePlaceholderMap($form, $fieldsByName, $submissionData));

@@ -939,18 +939,19 @@ if (isModuleEnabled('forms')) {
     $cleanup['form_ids'][] = $runtimeAuditFormId;
 
     $runtimeAuditFormFields = [
-        ['field_type' => 'hidden', 'label' => 'Zdroj hlášení', 'name' => 'zdroj_hlaseni', 'placeholder' => '', 'default_value' => 'runtime-audit', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 0],
-        ['field_type' => 'email', 'label' => 'E-mail odesílatele', 'name' => 'email_odesilatele', 'placeholder' => 'vas@email.cz', 'default_value' => '', 'help_text' => 'Na tuto adresu může přijít potvrzení o přijetí hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 10],
-        ['field_type' => 'text', 'label' => 'Název problému', 'name' => 'nazev-problemu', 'placeholder' => 'Stručný název chyby', 'default_value' => '', 'help_text' => 'Krátký souhrn toho, co se pokazilo.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 20],
-        ['field_type' => 'checkbox_group', 'label' => 'Dotčené oblasti', 'name' => 'dotcene_oblasti', 'placeholder' => '', 'default_value' => 'Administrace|Formuláře', 'help_text' => 'Můžete označit více oblastí.', 'options' => 'Administrace|Veřejný web|Formuláře', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 30],
-        ['field_type' => 'radio', 'label' => 'Závažnost', 'name' => 'zavaznost', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Vyberte, jak moc problém blokuje práci.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 40],
-        ['field_type' => 'textarea', 'label' => 'Doplňující kroky', 'name' => 'doplňujici_kroky', 'placeholder' => 'Popište přesně, co problému předcházelo.', 'default_value' => '', 'help_text' => 'Zobrazí se až při vyšší závažnosti.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => 'zavaznost', 'show_if_value' => 'Vysoká', 'is_required' => 0, 'sort_order' => 50],
-        ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů pro vyřízení hlášení.', 'name' => 'souhlas', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Povinné potvrzení pro vyřízení hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 60],
-        ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Volitelně můžete přiložit screenshot nebo log.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.txt,.log,.pdf', 'max_file_size_mb' => 10, 'allow_multiple' => 1, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 70],
+        ['field_type' => 'hidden', 'label' => 'Zdroj hlášení', 'name' => 'zdroj_hlaseni', 'placeholder' => '', 'default_value' => 'runtime-audit', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 0],
+        ['field_type' => 'email', 'label' => 'E-mail odesílatele', 'name' => 'email_odesilatele', 'placeholder' => 'vas@email.cz', 'default_value' => '', 'help_text' => 'Na tuto adresu může přijít potvrzení o přijetí hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'half', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 10],
+        ['field_type' => 'text', 'label' => 'Název problému', 'name' => 'nazev-problemu', 'placeholder' => 'Stručný název chyby', 'default_value' => '', 'help_text' => 'Krátký souhrn toho, co se pokazilo.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'half', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 20],
+        ['field_type' => 'checkbox_group', 'label' => 'Dotčené oblasti', 'name' => 'dotcene_oblasti', 'placeholder' => '', 'default_value' => 'Administrace|Formuláře', 'help_text' => 'Můžete označit více oblastí.', 'options' => 'Administrace|Veřejný web|Formuláře', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'half', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 30],
+        ['field_type' => 'radio', 'label' => 'Závažnost', 'name' => 'zavaznost', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Vyberte, jak moc problém blokuje práci.', 'options' => 'Nízká|Střední|Vysoká|Kritická', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'half', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 40],
+        ['field_type' => 'text', 'label' => 'Prohlížeč a zařízení', 'name' => 'prohlizec_a_zarizeni', 'placeholder' => 'Například Firefox 125 na Windows 11', 'default_value' => '', 'help_text' => 'Pomůže nám zjistit, jestli se problém týká konkrétního prostředí.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'half', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 50],
+        ['field_type' => 'textarea', 'label' => 'Dopad na práci', 'name' => 'dopad_na_praci', 'placeholder' => 'Popište, co je teď blokované nebo co nejde dokončit.', 'default_value' => '', 'help_text' => 'Zobrazí se u vysoké nebo kritické závažnosti.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'full', 'show_if_field' => 'zavaznost', 'show_if_operator' => 'contains', 'show_if_value' => 'Vysoká|Kritická', 'is_required' => 0, 'sort_order' => 60],
+        ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů pro vyřízení hlášení.', 'name' => 'souhlas', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Povinné potvrzení pro vyřízení hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'layout_width' => 'full', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 70],
+        ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Volitelně můžete přiložit screenshot nebo log.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.txt,.log,.pdf', 'max_file_size_mb' => 10, 'allow_multiple' => 1, 'layout_width' => 'half', 'show_if_field' => '', 'show_if_operator' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 80],
     ];
     $formFieldInsert = $pdo->prepare(
-        "INSERT INTO cms_form_fields (form_id, field_type, label, name, placeholder, default_value, help_text, options, accept_types, max_file_size_mb, allow_multiple, show_if_field, show_if_value, is_required, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO cms_form_fields (form_id, field_type, label, name, placeholder, default_value, help_text, options, accept_types, max_file_size_mb, allow_multiple, layout_width, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     foreach ($runtimeAuditFormFields as $fieldRow) {
         $formFieldInsert->execute([
@@ -965,7 +966,9 @@ if (isModuleEnabled('forms')) {
             $fieldRow['accept_types'],
             $fieldRow['max_file_size_mb'],
             $fieldRow['allow_multiple'] ?? 0,
+            $fieldRow['layout_width'] ?? 'full',
             $fieldRow['show_if_field'] ?? '',
+            $fieldRow['show_if_operator'] ?? '',
             $fieldRow['show_if_value'] ?? '',
             $fieldRow['is_required'],
             $fieldRow['sort_order'],
@@ -983,7 +986,8 @@ if (isModuleEnabled('forms')) {
             'nazev-problemu' => 'Runtime audit nahlášení',
             'dotcene_oblasti' => ['Administrace', 'Formuláře'],
             'zavaznost' => 'Vysoká',
-            'doplňujici_kroky' => 'Otevřít formulář, vybrat vysokou závažnost a doplnit kroky.',
+            'prohlizec_a_zarizeni' => 'Firefox 125 na Windows 11',
+            'dopad_na_praci' => 'Nelze dokončit odeslání formuláře bez reloadu stránky.',
             'souhlas' => '1',
             'priloha' => [
                 [
@@ -2692,9 +2696,12 @@ foreach ($pages as $page) {
             'name="submitter_email_field"',
             'name="submitter_confirmation_subject"',
             'name="submitter_confirmation_message"',
+            'name="fields[0][layout_width]"',
             'name="fields[0][allow_multiple]"',
             'name="fields[0][show_if_field]"',
+            'name="fields[0][show_if_operator]"',
             'name="fields[0][show_if_value]"',
+            'Ukázka potvrzovacího e-mailu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin form edit page is missing fragment: ' . $expectedFragment;
@@ -2714,7 +2721,8 @@ foreach ($pages as $page) {
             'Dotčené oblasti',
             'Administrace',
             'Formuláře',
-            'Doplňující kroky',
+            'Dopad na práci',
+            'Prohlížeč a zařízení',
             'Na tuto adresu může přijít potvrzení o přijetí hlášení.',
             'Souhlasím se zpracováním údajů pro vyřízení hlášení.',
             'type="file"',
@@ -2722,9 +2730,11 @@ foreach ($pages as $page) {
             'multipart/form-data',
             'name="hp_website"',
             'Krátký souhrn toho, co se pokazilo.',
+            'form-fields-grid',
             'data-conditional-form',
             'data-show-if-field="zavaznost"',
-            'data-show-if-value="Vysoká"',
+            'data-show-if-operator="contains"',
+            'data-show-if-value="Vysoká|Kritická"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'public form page is missing fragment: ' . $expectedFragment;

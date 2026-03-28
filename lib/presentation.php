@@ -2310,6 +2310,55 @@ function formFieldTypeDefinitions(): array
     ];
 }
 
+function formFieldLayoutWidthDefinitions(): array
+{
+    return [
+        'full' => ['label' => 'Celá šířka'],
+        'half' => ['label' => 'Polovina řádku'],
+        'third' => ['label' => 'Třetina řádku'],
+    ];
+}
+
+function normalizeFormFieldLayoutWidth(string $value): string
+{
+    $normalized = trim($value);
+    return array_key_exists($normalized, formFieldLayoutWidthDefinitions()) ? $normalized : 'full';
+}
+
+function formFieldLayoutWidthLabel(string $value): string
+{
+    $normalized = normalizeFormFieldLayoutWidth($value);
+    return formFieldLayoutWidthDefinitions()[$normalized]['label'] ?? 'Celá šířka';
+}
+
+function formConditionOperatorDefinitions(): array
+{
+    return [
+        'filled' => ['label' => 'je vyplněno', 'requires_value' => false],
+        'empty' => ['label' => 'je prázdné', 'requires_value' => false],
+        'equals' => ['label' => 'má hodnotu', 'requires_value' => true],
+        'not_equals' => ['label' => 'nemá hodnotu', 'requires_value' => true],
+        'contains' => ['label' => 'obsahuje některou z hodnot', 'requires_value' => true],
+        'not_contains' => ['label' => 'neobsahuje žádnou z hodnot', 'requires_value' => true],
+    ];
+}
+
+function normalizeFormConditionOperator(string $value, string $fallbackExpected = ''): string
+{
+    $normalized = trim($value);
+    if (array_key_exists($normalized, formConditionOperatorDefinitions())) {
+        return $normalized;
+    }
+
+    return trim($fallbackExpected) === '' ? 'filled' : 'equals';
+}
+
+function formConditionOperatorRequiresValue(string $operator): bool
+{
+    $normalized = normalizeFormConditionOperator($operator);
+    return (bool)(formConditionOperatorDefinitions()[$normalized]['requires_value'] ?? false);
+}
+
 function normalizeFormFieldType(string $type): string
 {
     $normalized = trim($type);
@@ -2343,7 +2392,7 @@ function formPresetDefinitions(): array
             'form' => [
                 'title' => 'Nahlášení chyby',
                 'slug' => 'nahlaseni-chyby',
-                'description' => 'Popište problém co nejkonkrétněji. Pomůže nám stručný název, závažnost, kroky k reprodukci i případný screenshot nebo log.',
+                'description' => 'Popište problém co nejkonkrétněji. Pomůže nám stručný název, závažnost, prostředí, kroky k reprodukci i případný screenshot nebo log.',
                 'success_message' => 'Děkujeme, hlášení bylo úspěšně odesláno.',
                 'submit_label' => 'Odeslat hlášení',
                 'notification_subject' => 'Nové hlášení chyby',
@@ -2353,7 +2402,7 @@ function formPresetDefinitions(): array
                 'submitter_confirmation_enabled' => 1,
                 'submitter_email_field' => 'email_pro_odpoved',
                 'submitter_confirmation_subject' => 'Potvrzení přijetí hlášení',
-                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}\".\n\nPotvrdili jsme přijetí hlášení „{{field:strucny_nazev_problemu}}\" a budeme se mu věnovat.\n\nPokud bude potřeba doplnění, ozveme se na tuto adresu.\n\n— {{site_name}}",
+                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nPotvrdili jsme přijetí hlášení „{{field:strucny_nazev_problemu}}“ se závažností {{field:zavaznost}}.\n\nPokud bude potřeba něco doplnit, ozveme se na tuto adresu.\n\n— {{site_name}}",
             ],
             'fields' => [
                 [
@@ -2366,6 +2415,7 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
                     'is_required' => 0,
                     'sort_order' => 0,
                 ],
@@ -2379,6 +2429,7 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
                     'is_required' => 1,
                     'sort_order' => 10,
                 ],
@@ -2392,6 +2443,7 @@ function formPresetDefinitions(): array
                     'options' => 'Nízká|Střední|Vysoká|Kritická',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
                     'is_required' => 1,
                     'sort_order' => 20,
                 ],
@@ -2402,9 +2454,10 @@ function formPresetDefinitions(): array
                     'default_value' => '',
                     'placeholder' => '',
                     'help_text' => 'Můžete označit více oblastí, kterých se problém týká.',
-                    'options' => 'Administrace|Veřejný web|Formuláře|Rezervace|Blogy',
+                    'options' => 'Administrace|Veřejný web|Formuláře|Rezervace|Blogy|Multiblog',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
                     'is_required' => 0,
                     'sort_order' => 30,
                 ],
@@ -2418,8 +2471,37 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
                     'is_required' => 0,
                     'sort_order' => 40,
+                ],
+                [
+                    'field_type' => 'text',
+                    'label' => 'Prohlížeč a zařízení',
+                    'name' => 'prohlizec_a_zarizeni',
+                    'default_value' => '',
+                    'placeholder' => 'Například Firefox 125 na Windows 11',
+                    'help_text' => 'Pomůže nám zjistit, jestli se problém týká konkrétního prostředí.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
+                    'is_required' => 0,
+                    'sort_order' => 50,
+                ],
+                [
+                    'field_type' => 'text',
+                    'label' => 'Verze aplikace nebo modulu',
+                    'name' => 'verze_aplikace',
+                    'default_value' => '',
+                    'placeholder' => 'Například 3.0.0-beta.6 nebo release 2026-03-28',
+                    'help_text' => 'Volitelné. Hodí se hlavně při hlášení chyby po aktualizaci.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
+                    'is_required' => 0,
+                    'sort_order' => 60,
                 ],
                 [
                     'field_type' => 'textarea',
@@ -2431,8 +2513,9 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
                     'is_required' => 1,
-                    'sort_order' => 50,
+                    'sort_order' => 70,
                 ],
                 [
                     'field_type' => 'textarea',
@@ -2444,8 +2527,9 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
                     'is_required' => 0,
-                    'sort_order' => 60,
+                    'sort_order' => 80,
                 ],
                 [
                     'field_type' => 'textarea',
@@ -2457,8 +2541,43 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
                     'is_required' => 1,
-                    'sort_order' => 70,
+                    'sort_order' => 90,
+                ],
+                [
+                    'field_type' => 'textarea',
+                    'label' => 'Dopad na práci',
+                    'name' => 'dopad_na_praci',
+                    'default_value' => '',
+                    'placeholder' => 'Popište, co je teď blokované nebo co nejde dokončit.',
+                    'help_text' => 'Zobrazí se jen u vysoké nebo kritické závažnosti.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
+                    'show_if_field' => 'zavaznost',
+                    'show_if_operator' => 'contains',
+                    'show_if_value' => 'Vysoká|Kritická',
+                    'is_required' => 0,
+                    'sort_order' => 100,
+                ],
+                [
+                    'field_type' => 'textarea',
+                    'label' => 'Dočasné obejití',
+                    'name' => 'docasne_obejiti',
+                    'default_value' => '',
+                    'placeholder' => 'Pokud jste našli náhradní postup, popište ho.',
+                    'help_text' => 'Volitelné. Hodí se hlavně tehdy, když chyba neblokuje práci úplně.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
+                    'show_if_field' => 'zavaznost',
+                    'show_if_operator' => 'contains',
+                    'show_if_value' => 'Nízká|Střední|Vysoká|Kritická',
+                    'is_required' => 0,
+                    'sort_order' => 110,
                 ],
                 [
                     'field_type' => 'email',
@@ -2470,8 +2589,9 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'half',
                     'is_required' => 0,
-                    'sort_order' => 80,
+                    'sort_order' => 120,
                 ],
                 [
                     'field_type' => 'file',
@@ -2484,8 +2604,9 @@ function formPresetDefinitions(): array
                     'accept_types' => '.png,.jpg,.jpeg,.webp,.txt,.log,.pdf',
                     'max_file_size_mb' => 10,
                     'allow_multiple' => 1,
+                    'layout_width' => 'half',
                     'is_required' => 0,
-                    'sort_order' => 90,
+                    'sort_order' => 130,
                 ],
                 [
                     'field_type' => 'consent',
@@ -2497,8 +2618,9 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '',
                     'max_file_size_mb' => 10,
+                    'layout_width' => 'full',
                     'is_required' => 1,
-                    'sort_order' => 100,
+                    'sort_order' => 140,
                 ],
             ],
         ],
@@ -2546,23 +2668,46 @@ function formFieldConditionMatches(array $field, array $submissionData): bool
     }
 
     $expected = trim((string)($field['show_if_value'] ?? ''));
+    $operator = normalizeFormConditionOperator((string)($field['show_if_operator'] ?? ''), $expected);
     $actual = $submissionData[$controller] ?? '';
 
     if (is_array($actual)) {
         $actualValues = array_values(array_filter(array_map(static fn($item): string => trim((string)$item), $actual), static fn(string $item): bool => $item !== ''));
-        if ($expected === '') {
-            return $actualValues !== [];
-        }
+        $expectedValues = formFieldOptionsList(str_replace(',', '|', $expected));
 
-        return in_array($expected, $actualValues, true);
+        return match ($operator) {
+            'filled' => $actualValues !== [],
+            'empty' => $actualValues === [],
+            'equals' => in_array($expected, $actualValues, true),
+            'not_equals' => !in_array($expected, $actualValues, true),
+            'contains' => array_intersect($expectedValues, $actualValues) !== [],
+            'not_contains' => array_intersect($expectedValues, $actualValues) === [],
+            default => in_array($expected, $actualValues, true),
+        };
     }
 
     $actualValue = trim((string)$actual);
-    if ($expected === '') {
-        return $actualValue !== '';
-    }
+    $expectedValues = formFieldOptionsList(str_replace(',', '|', $expected));
 
-    return $actualValue === $expected;
+    return match ($operator) {
+        'filled' => $actualValue !== '',
+        'empty' => $actualValue === '',
+        'equals' => $actualValue === $expected,
+        'not_equals' => $actualValue !== $expected,
+        'contains' => in_array($actualValue, $expectedValues, true),
+        'not_contains' => !in_array($actualValue, $expectedValues, true),
+        default => $actualValue === $expected,
+    };
+}
+
+function defaultFormSubmitterConfirmationSubjectTemplate(): string
+{
+    return 'Potvrzení odeslání formuláře „{{form_title}}“ – {{site_name}}';
+}
+
+function defaultFormSubmitterConfirmationMessageTemplate(): string
+{
+    return "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nVaše zpráva byla úspěšně přijata.\n\n— {{site_name}}";
 }
 
 function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $submissionData): array
@@ -2585,6 +2730,79 @@ function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $sub
 function formRenderTemplate(string $template, array $placeholderMap): string
 {
     return strtr($template, $placeholderMap);
+}
+
+function formPreviewSampleValueForField(array $field): mixed
+{
+    $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+    $defaultValue = trim((string)($field['default_value'] ?? ''));
+    $label = trim((string)($field['label'] ?? ''));
+    $options = formFieldOptionsList((string)($field['options'] ?? ''));
+
+    if ($defaultValue !== '' && !in_array($fieldType, ['checkbox_group', 'checkbox', 'consent', 'file'], true)) {
+        return $defaultValue;
+    }
+
+    return match ($fieldType) {
+        'hidden' => $defaultValue !== '' ? $defaultValue : 'ukazkova-hodnota',
+        'email' => $defaultValue !== '' ? $defaultValue : 'tester@example.com',
+        'tel' => $defaultValue !== '' ? $defaultValue : '+420 123 456 789',
+        'url' => $defaultValue !== '' ? $defaultValue : 'https://example.com/problemova-stranka',
+        'number' => $defaultValue !== '' ? $defaultValue : '42',
+        'date' => $defaultValue !== '' ? $defaultValue : date('Y-m-d'),
+        'textarea' => $defaultValue !== '' ? $defaultValue : ($label !== '' ? 'Ukázková odpověď pro pole „' . $label . '“.' : 'Ukázková odpověď.'),
+        'select', 'radio' => $options[0] ?? $defaultValue,
+        'checkbox_group' => $options === [] ? [] : array_slice($options, 0, min(2, count($options))),
+        'checkbox', 'consent' => '1',
+        'file' => formFieldAllowsMultipleFiles($field)
+            ? [['original_name' => 'ukazka-priloha.png']]
+            : ['original_name' => 'ukazka-priloha.png'],
+        default => $defaultValue !== '' ? $defaultValue : ($label !== '' ? 'Ukázka pro ' . mb_strtolower($label, 'UTF-8') : 'Ukázková hodnota'),
+    };
+}
+
+function formPreviewSubmissionData(array $fields): array
+{
+    $previewData = [];
+    foreach ($fields as $field) {
+        $name = trim((string)($field['name'] ?? ''));
+        if ($name === '') {
+            continue;
+        }
+        $previewData[$name] = formPreviewSampleValueForField($field);
+    }
+
+    return $previewData;
+}
+
+function formSubmitterConfirmationPreview(array $form, array $fields, string $subjectTemplate = '', string $messageTemplate = ''): array
+{
+    $fieldsByName = [];
+    foreach ($fields as $field) {
+        $name = trim((string)($field['name'] ?? ''));
+        if ($name !== '') {
+            $fieldsByName[$name] = $field;
+        }
+    }
+
+    $previewData = formPreviewSubmissionData($fields);
+    $placeholderMap = formTemplatePlaceholderMap($form, $fieldsByName, $previewData);
+
+    $normalizedSubjectTemplate = trim($subjectTemplate);
+    if ($normalizedSubjectTemplate === '') {
+        $normalizedSubjectTemplate = defaultFormSubmitterConfirmationSubjectTemplate();
+    }
+
+    $normalizedMessageTemplate = trim($messageTemplate);
+    if ($normalizedMessageTemplate === '') {
+        $normalizedMessageTemplate = defaultFormSubmitterConfirmationMessageTemplate();
+    }
+
+    return [
+        'subject' => formRenderTemplate($normalizedSubjectTemplate, $placeholderMap),
+        'message' => formRenderTemplate($normalizedMessageTemplate, $placeholderMap),
+        'placeholder_map' => $placeholderMap,
+    ];
 }
 
 function formUploadDirectory(): string

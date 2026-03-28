@@ -55,6 +55,7 @@
 
         <fieldset class="form-fieldset">
           <legend><?= h((string)$form['title']) ?></legend>
+          <div class="form-fields-grid">
 
           <?php foreach ($fields as $field): ?>
             <?php
@@ -76,9 +77,12 @@
               $optionList = formFieldOptionsList((string)($field['options'] ?? ''));
               $showIfField = trim((string)($field['show_if_field'] ?? ''));
               $showIfValue = trim((string)($field['show_if_value'] ?? ''));
+              $showIfOperator = normalizeFormConditionOperator((string)($field['show_if_operator'] ?? ''), $showIfValue);
               $isConditionallyVisible = formFieldConditionMatches($field, $displayStateData);
+              $fieldLayoutWidth = normalizeFormFieldLayoutWidth((string)($field['layout_width'] ?? 'full'));
+              $fieldClass = 'field form-field form-field--' . $fieldLayoutWidth . ' js-conditional-field';
               $conditionalAttributes = $showIfField !== ''
-                ? ' data-show-if-field="' . h($showIfField) . '" data-show-if-value="' . h($showIfValue) . '"'
+                ? ' data-show-if-field="' . h($showIfField) . '" data-show-if-operator="' . h($showIfOperator) . '" data-show-if-value="' . h($showIfValue) . '"'
                 : '';
               $conditionalHidden = !$isConditionallyVisible ? ' hidden aria-hidden="true"' : '';
             ?>
@@ -87,7 +91,7 @@
               <input type="hidden" name="<?= $name ?>" value="<?= h((string)$defaultValue) ?>">
 
             <?php elseif ($fieldType === 'checkbox_group'): ?>
-              <fieldset class="field form-fieldset js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
                 <?php foreach ($optionList as $index => $opt): ?>
                   <?php
@@ -107,7 +111,7 @@
               </fieldset>
 
             <?php elseif (in_array($fieldType, ['checkbox', 'consent'], true)): ?>
-              <div class="field js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label>
                   <input type="checkbox" name="<?= $name ?>" value="1"<?= ((string)$rawValue) === '1' ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
                   <?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?>
@@ -118,7 +122,7 @@
               </div>
 
             <?php elseif ($fieldType === 'select'): ?>
-              <div class="field js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <select id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
                   <option value="">Vyberte možnost</option>
@@ -132,7 +136,7 @@
               </div>
 
             <?php elseif ($fieldType === 'radio'): ?>
-              <fieldset class="field form-fieldset js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
                 <?php foreach ($optionList as $index => $opt): ?>
                   <?php $radioId = $fieldId . '-' . $index; ?>
@@ -149,7 +153,7 @@
               </fieldset>
 
             <?php elseif ($fieldType === 'textarea'): ?>
-              <div class="field js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <textarea id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>><?= $value ?></textarea>
                 <?php if ($helpText !== ''): ?>
@@ -158,7 +162,7 @@
               </div>
 
             <?php elseif ($fieldType === 'file'): ?>
-              <div class="field js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <input type="file" id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"
                        <?= $required ? ' required aria-required="true"' : '' ?>
@@ -188,7 +192,7 @@
                     default => '',
                 };
               ?>
-              <div class="field js-conditional-field"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <input type="<?= $inputType ?>" id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"
                        value="<?= $value ?>"<?= $required ? ' required aria-required="true"' : '' ?><?= $autocomplete ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
@@ -199,11 +203,12 @@
             <?php endif; ?>
           <?php endforeach; ?>
 
-          <div class="field">
+          <div class="field form-field form-field--full">
             <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
             <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
                    aria-required="true" inputmode="numeric" autocomplete="off" aria-describedby="captcha-help">
             <small id="captcha-help" class="field-help">Krátké ověření proti spamu. Zadejte jen výsledek příkladu.</small>
+          </div>
           </div>
 
           <div class="button-row button-row--start">
@@ -247,8 +252,28 @@
             conditionalFields.forEach((wrapper) => {
               const controller = wrapper.getAttribute('data-show-if-field') || '';
               const expected = wrapper.getAttribute('data-show-if-value') || '';
+              const operator = wrapper.getAttribute('data-show-if-operator') || 'filled';
               const values = currentValues(controller);
-              const isVisible = expected === '' ? values.length > 0 : values.includes(expected);
+              const expectedValues = expected === '' ? [] : expected.split('|').map((item) => item.trim()).filter(Boolean);
+              const scalarValue = values.length > 0 ? values[0] : '';
+              const isVisible = (() => {
+                switch (operator) {
+                  case 'filled':
+                    return values.length > 0;
+                  case 'empty':
+                    return values.length === 0;
+                  case 'equals':
+                    return values.includes(expected);
+                  case 'not_equals':
+                    return !values.includes(expected);
+                  case 'contains':
+                    return expectedValues.some((item) => values.includes(item) || scalarValue === item);
+                  case 'not_contains':
+                    return !expectedValues.some((item) => values.includes(item) || scalarValue === item);
+                  default:
+                    return expected === '' ? values.length > 0 : values.includes(expected);
+                }
+              })();
 
               wrapper.hidden = !isVisible;
               wrapper.setAttribute('aria-hidden', isVisible ? 'false' : 'true');

@@ -8,8 +8,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Form Builder 2.0 – základ pro skutečně použitelné formuláře** – modul `Formuláře` nově podporuje pole `radio`, `url`, `file`, `více voleb`, `souhlas` a `skryté pole`, per-field nápovědu, placeholder, výchozí hodnotu, omezení typů a velikosti souborů a per-form nastavení pro text tlačítka, notifikační e-mail, předmět notifikace, interní redirect a volitelný honeypot
-- **Šablona `Nahlášení chyby`** – v přehledu formulářů lze jedním kliknutím založit hotový issue-report formulář s doporučenými poli pro závažnost, dotčené oblasti, kroky k reprodukci, očekávané a skutečné chování, přílohu a souhlas se zpracováním údajů
-- **Form Builder 2.0 – podmínky, více příloh a potvrzení odesílateli** – formuláře nově umí potvrzovací e-mail odesílateli, výběr e-mailového pole pro odpověď, vlastní předmět a text potvrzení s placeholdery, více souborů u příloh a podmíněné zobrazování polí přes `Zobrazit jen když`
+- **Šablona `Nahlášení chyby`** – v přehledu formulářů lze jedním kliknutím založit hotový issue-report formulář s doporučenými poli pro závažnost, dotčené oblasti, prohlížeč a zařízení, kroky k reprodukci, očekávané a skutečné chování, dopad na práci, přílohu a souhlas se zpracováním údajů
+- **Form Builder 2.0 – podmínky, více příloh a potvrzení odesílateli** – formuláře nově umí potvrzovací e-mail odesílateli, výběr e-mailového pole pro odpověď, vlastní předmět a text potvrzení s placeholdery, živou ukázku potvrzovacího e-mailu v administraci, více souborů u příloh, šířku polí v rozvržení formuláře a podmíněné zobrazování polí přes `Zobrazit jen když` s operátory `je vyplněno`, `je prázdné`, `rovná se`, `nerovná se`, `obsahuje` a `neobsahuje`
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci

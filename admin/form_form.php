@@ -8,6 +8,8 @@ $id = inputInt('get', 'id');
 $form = null;
 $fields = [];
 $fieldTypes = formFieldTypeDefinitions();
+$fieldLayoutWidths = formFieldLayoutWidthDefinitions();
+$conditionOperators = formConditionOperatorDefinitions();
 $presetKey = '';
 $presetDefinition = null;
 if ($id !== null) {
@@ -37,6 +39,8 @@ $formDefaults = $presetDefinition['form'] ?? [];
 $presetFields = (array)($presetDefinition['fields'] ?? []);
 $fieldSourceForOptions = $fields !== [] ? $fields : $presetFields;
 $emailFieldOptions = formEmailFieldOptions($fieldSourceForOptions);
+$submitterConfirmationSubjectValue = (string)($form['submitter_confirmation_subject'] ?? ($formDefaults['submitter_confirmation_subject'] ?? ''));
+$submitterConfirmationMessageValue = (string)($form['submitter_confirmation_message'] ?? ($formDefaults['submitter_confirmation_message'] ?? ''));
 $conditionalFieldOptions = [];
 foreach ($fieldSourceForOptions as $candidateField) {
     $candidateName = trim((string)($candidateField['name'] ?? ''));
@@ -46,6 +50,16 @@ foreach ($fieldSourceForOptions as $candidateField) {
     $candidateLabel = trim((string)($candidateField['label'] ?? ''));
     $conditionalFieldOptions[$candidateName] = $candidateLabel !== '' ? $candidateLabel : $candidateName;
 }
+$formPreviewData = [
+    'title' => (string)($form['title'] ?? ($formDefaults['title'] ?? '')),
+    'success_message' => (string)($form['success_message'] ?? ($formDefaults['success_message'] ?? '')),
+];
+$submitterConfirmationPreview = formSubmitterConfirmationPreview(
+    $formPreviewData,
+    $fieldSourceForOptions,
+    $submitterConfirmationSubjectValue,
+    $submitterConfirmationMessageValue
+);
 
 adminHeader($pageTitle);
 ?>
@@ -76,7 +90,7 @@ adminHeader($pageTitle);
 <?php if ($form): ?>
   <p class="section-subtitle">Upravte nastavení formuláře, jeho pole a text, který se zobrazí po úspěšném odeslání.</p>
 <?php else: ?>
-  <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole, podmínky zobrazení, přílohy i potvrzovací e-mail pro odesílatele.</p>
+  <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole, podmínky zobrazení, rozložení polí, přílohy i potvrzovací e-mail pro odesílatele.</p>
   <?php if ($presetDefinition !== null): ?>
     <div class="notice notice-info" style="margin-bottom:1rem">
       <p><strong>Šablona:</strong> <?= h((string)$presetDefinition['label']) ?></p>
@@ -205,23 +219,47 @@ adminHeader($pageTitle);
     <div style="margin-bottom:.75rem">
       <label for="submitter_confirmation_subject">Předmět potvrzovacího e-mailu</label>
       <input type="text" id="submitter_confirmation_subject" name="submitter_confirmation_subject" maxlength="255"
-             value="<?= h((string)($form['submitter_confirmation_subject'] ?? ($formDefaults['submitter_confirmation_subject'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             value="<?= h($submitterConfirmationSubjectValue) ?>" style="width:100%;max-width:500px"
              aria-describedby="submitter-confirmation-subject-help">
-      <small id="submitter-confirmation-subject-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se výchozí předmět podle názvu formuláře.</small>
+      <small id="submitter-confirmation-subject-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se výchozí předmět podle názvu formuláře. Ukázku vidíte hned níže.</small>
     </div>
 
     <div style="margin-bottom:.75rem">
       <label for="submitter_confirmation_message">Text potvrzovacího e-mailu</label>
       <textarea id="submitter_confirmation_message" name="submitter_confirmation_message" rows="6" style="width:100%;max-width:700px"
-                aria-describedby="submitter-confirmation-message-help"><?= h((string)($form['submitter_confirmation_message'] ?? ($formDefaults['submitter_confirmation_message'] ?? ''))) ?></textarea>
+                aria-describedby="submitter-confirmation-message-help"><?= h($submitterConfirmationMessageValue) ?></textarea>
       <small id="submitter-confirmation-message-help" class="field-help">Můžete použít zástupné proměnné <code>{{site_name}}</code>, <code>{{form_title}}</code>, <code>{{success_message}}</code>, <code>{{submission_date}}</code> a také <code>{{field:nazev_pole}}</code> podle interního klíče pole.</small>
     </div>
+
+    <section id="submitter-confirmation-preview" aria-labelledby="submitter-confirmation-preview-title" style="margin-top:1rem;border:1px solid #d6d6d6;border-radius:8px;padding:1rem;background:#fafafa">
+      <h3 id="submitter-confirmation-preview-title" style="margin-top:0">Ukázka potvrzovacího e-mailu</h3>
+      <p class="field-help" style="margin-top:0">Ukázka používá názvy a vzorová data z aktuálně uložených nebo předpřipravených polí formuláře.</p>
+
+      <div style="margin-bottom:.75rem">
+        <strong>Předmět</strong>
+        <div id="submitter-confirmation-subject-preview" style="margin-top:.35rem;padding:.65rem .75rem;border:1px solid #d6d6d6;border-radius:6px;background:#fff"><?= nl2br(h($submitterConfirmationPreview['subject'])) ?></div>
+      </div>
+
+      <div style="margin-bottom:.75rem">
+        <strong>Text zprávy</strong>
+        <pre id="submitter-confirmation-message-preview" style="margin:.35rem 0 0;padding:.75rem;border:1px solid #d6d6d6;border-radius:6px;background:#fff;white-space:pre-wrap;font:inherit"><?= h($submitterConfirmationPreview['message']) ?></pre>
+      </div>
+
+      <details>
+        <summary>Dostupné proměnné a jejich ukázkové hodnoty</summary>
+        <ul style="margin:.75rem 0 0;padding-left:1.25rem">
+          <?php foreach ($submitterConfirmationPreview['placeholder_map'] as $token => $sampleValue): ?>
+            <li><code><?= h($token) ?></code> = <?= h($sampleValue !== '' ? $sampleValue : '—') ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </details>
+    </section>
   </fieldset>
 
   <?php if ($form): ?>
   <fieldset>
     <legend>Pole formuláře</legend>
-    <p class="field-help">U každého pole nastavte popisek, typ, pořadí a případné doplňující možnosti. Interní klíče se po uložení zachovají, takže starší odpovědi zůstanou čitelné i po úpravě formuláře.</p>
+    <p class="field-help">U každého pole nastavte popisek, typ, šířku, pořadí a případné doplňující možnosti. Interní klíče se po uložení zachovají, takže starší odpovědi zůstanou čitelné i po úpravě formuláře.</p>
 
     <div id="fields-container">
       <?php foreach ($fields as $i => $field): ?>
@@ -268,7 +306,7 @@ adminHeader($pageTitle);
                      value="<?= (int)$field['sort_order'] ?>" style="width:5rem">
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr) minmax(10rem,.8fr);gap:.5rem;align-items:end;margin-top:.5rem">
+          <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr) minmax(10rem,.8fr) minmax(11rem,.9fr);gap:.5rem;align-items:end;margin-top:.5rem">
             <div>
               <label for="field-default-value-<?= $i ?>">Výchozí hodnota</label>
               <input type="text" id="field-default-value-<?= $i ?>" name="fields[<?= $i ?>][default_value]"
@@ -290,8 +328,17 @@ adminHeader($pageTitle);
                      aria-describedby="field-max-size-help-<?= $i ?>">
               <small id="field-max-size-help-<?= $i ?>" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
             </div>
+            <div>
+              <label for="field-layout-width-<?= $i ?>">Šířka pole</label>
+              <select id="field-layout-width-<?= $i ?>" name="fields[<?= $i ?>][layout_width]" aria-describedby="field-layout-width-help-<?= $i ?>">
+                <?php foreach ($fieldLayoutWidths as $layoutWidth => $definition): ?>
+                  <option value="<?= h($layoutWidth) ?>"<?= normalizeFormFieldLayoutWidth((string)($field['layout_width'] ?? 'full')) === $layoutWidth ? ' selected' : '' ?>><?= h((string)$definition['label']) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <small id="field-layout-width-help-<?= $i ?>" class="field-help">Určuje šířku pole na veřejné stránce formuláře.</small>
+            </div>
           </div>
-          <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
+          <div data-condition-row style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,.9fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
             <div>
               <label for="field-show-if-field-<?= $i ?>">Zobrazit jen když</label>
               <select id="field-show-if-field-<?= $i ?>" name="fields[<?= $i ?>][show_if_field]" aria-describedby="field-show-if-field-help-<?= $i ?>">
@@ -303,11 +350,20 @@ adminHeader($pageTitle);
               <small id="field-show-if-field-help-<?= $i ?>" class="field-help">Vyberte pole, které má řídit zobrazení tohoto pole.</small>
             </div>
             <div>
+              <label for="field-show-if-operator-<?= $i ?>">Podmínka</label>
+              <select id="field-show-if-operator-<?= $i ?>" name="fields[<?= $i ?>][show_if_operator]" data-condition-operator aria-describedby="field-show-if-operator-help-<?= $i ?>">
+                <?php foreach ($conditionOperators as $operator => $definition): ?>
+                  <option value="<?= h($operator) ?>"<?= normalizeFormConditionOperator((string)($field['show_if_operator'] ?? ''), (string)($field['show_if_value'] ?? '')) === $operator ? ' selected' : '' ?> data-requires-value="<?= !empty($definition['requires_value']) ? '1' : '0' ?>"><?= h((string)$definition['label']) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <small id="field-show-if-operator-help-<?= $i ?>" class="field-help">Vyberte, jak se má vyhodnotit hodnota řídicího pole.</small>
+            </div>
+            <div>
               <label for="field-show-if-value-<?= $i ?>">Požadovaná hodnota</label>
-              <input type="text" id="field-show-if-value-<?= $i ?>" name="fields[<?= $i ?>][show_if_value]"
+              <input type="text" id="field-show-if-value-<?= $i ?>" name="fields[<?= $i ?>][show_if_value]" data-condition-value
                      value="<?= h((string)($field['show_if_value'] ?? '')) ?>"
                      aria-describedby="field-show-if-value-help-<?= $i ?>">
-              <small id="field-show-if-value-help-<?= $i ?>" class="field-help">Když ho necháte prázdné, pole se ukáže po jakékoli vyplněné hodnotě. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
+              <small id="field-show-if-value-help-<?= $i ?>" class="field-help">Pro více hodnot použijte oddělovač <code>|</code>. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
             </div>
           </div>
           <div style="margin-top:.5rem;display:flex;gap:1rem;align-items:center">
@@ -355,7 +411,7 @@ adminHeader($pageTitle);
           <input type="number" id="new-field-sort" name="new_field_sort" min="0" value="<?= $newFieldDefaultSort ?>" style="width:5rem">
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr) minmax(10rem,.8fr);gap:.5rem;align-items:end;margin-top:.5rem">
+      <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr) minmax(10rem,.8fr) minmax(11rem,.9fr);gap:.5rem;align-items:end;margin-top:.5rem">
         <div>
           <label for="new-field-default-value">Výchozí hodnota</label>
           <input type="text" id="new-field-default-value" name="new_field_default_value" aria-describedby="new-field-default-value-help">
@@ -372,8 +428,17 @@ adminHeader($pageTitle);
                  aria-describedby="new-field-max-size-help">
           <small id="new-field-max-size-help" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
         </div>
+        <div>
+          <label for="new-field-layout-width">Šířka pole</label>
+          <select id="new-field-layout-width" name="new_field_layout_width" aria-describedby="new-field-layout-width-help">
+            <?php foreach ($fieldLayoutWidths as $layoutWidth => $definition): ?>
+              <option value="<?= h($layoutWidth) ?>"<?= $layoutWidth === 'full' ? ' selected' : '' ?>><?= h((string)$definition['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <small id="new-field-layout-width-help" class="field-help">Určuje šířku pole na veřejné stránce formuláře.</small>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
+      <div data-condition-row style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,.9fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
         <div>
           <label for="new-field-show-if-field">Zobrazit jen když</label>
           <select id="new-field-show-if-field" name="new_field_show_if_field" aria-describedby="new-field-show-if-field-help">
@@ -385,9 +450,18 @@ adminHeader($pageTitle);
           <small id="new-field-show-if-field-help" class="field-help">Volitelné. Vyberte pole, které má řídit zobrazení nového pole.</small>
         </div>
         <div>
+          <label for="new-field-show-if-operator">Podmínka</label>
+          <select id="new-field-show-if-operator" name="new_field_show_if_operator" data-condition-operator aria-describedby="new-field-show-if-operator-help">
+            <?php foreach ($conditionOperators as $operator => $definition): ?>
+              <option value="<?= h($operator) ?>"<?= $operator === 'filled' ? ' selected' : '' ?> data-requires-value="<?= !empty($definition['requires_value']) ? '1' : '0' ?>"><?= h((string)$definition['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <small id="new-field-show-if-operator-help" class="field-help">Vyberte, jak se má vyhodnotit hodnota řídicího pole.</small>
+        </div>
+        <div>
           <label for="new-field-show-if-value">Požadovaná hodnota</label>
-          <input type="text" id="new-field-show-if-value" name="new_field_show_if_value" aria-describedby="new-field-show-if-value-help">
-          <small id="new-field-show-if-value-help" class="field-help">Když ho necháte prázdné, pole se ukáže po jakékoli vyplněné hodnotě. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
+          <input type="text" id="new-field-show-if-value" name="new_field_show_if_value" data-condition-value aria-describedby="new-field-show-if-value-help">
+          <small id="new-field-show-if-value-help" class="field-help">Pro více hodnot použijte oddělovač <code>|</code>. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
         </div>
       </div>
       <div style="margin-top:.5rem">
@@ -405,5 +479,86 @@ adminHeader($pageTitle);
     <a href="forms.php" class="btn">Zrušit</a>
   </div>
 </form>
+
+<script nonce="<?= h(cspNonce()) ?>">
+(function () {
+  const subjectInput = document.getElementById('submitter_confirmation_subject');
+  const messageInput = document.getElementById('submitter_confirmation_message');
+  const titleInput = document.getElementById('title');
+  const successMessageInput = document.getElementById('success_message');
+  const subjectPreview = document.getElementById('submitter-confirmation-subject-preview');
+  const messagePreview = document.getElementById('submitter-confirmation-message-preview');
+  const previewMap = <?= json_encode($submitterConfirmationPreview['placeholder_map'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  const defaultSubjectTemplate = <?= json_encode(defaultFormSubmitterConfirmationSubjectTemplate(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  const defaultMessageTemplate = <?= json_encode(defaultFormSubmitterConfirmationMessageTemplate(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+  const renderTemplate = (template, map) => {
+    let output = template;
+    Object.entries(map).forEach(([token, value]) => {
+      output = output.split(token).join(value);
+    });
+    return output;
+  };
+
+  const updateConfirmationPreview = () => {
+    if (!subjectPreview || !messagePreview) {
+      return;
+    }
+
+    const dynamicMap = {
+      ...previewMap,
+      '{{form_title}}': titleInput && titleInput.value.trim() !== '' ? titleInput.value.trim() : (previewMap['{{form_title}}'] || ''),
+      '{{success_message}}': successMessageInput && successMessageInput.value.trim() !== '' ? successMessageInput.value.trim() : (previewMap['{{success_message}}'] || '')
+    };
+
+    const subjectTemplate = subjectInput && subjectInput.value.trim() !== '' ? subjectInput.value : defaultSubjectTemplate;
+    const messageTemplate = messageInput && messageInput.value.trim() !== '' ? messageInput.value : defaultMessageTemplate;
+
+    subjectPreview.textContent = renderTemplate(subjectTemplate, dynamicMap);
+    messagePreview.textContent = renderTemplate(messageTemplate, dynamicMap);
+  };
+
+  [subjectInput, messageInput, titleInput, successMessageInput].forEach((input) => {
+    if (!input) {
+      return;
+    }
+    input.addEventListener('input', updateConfirmationPreview);
+    input.addEventListener('change', updateConfirmationPreview);
+  });
+  updateConfirmationPreview();
+
+  document.querySelectorAll('[data-condition-row]').forEach((row) => {
+    const controllerSelect = row.querySelector('select[name$="[show_if_field]"], select[name="new_field_show_if_field"]');
+    const operatorSelect = row.querySelector('[data-condition-operator]');
+    const valueInput = row.querySelector('[data-condition-value]');
+    if (!controllerSelect || !operatorSelect || !valueInput) {
+      return;
+    }
+
+    const syncConditionRow = () => {
+      const hasController = controllerSelect.value.trim() !== '';
+      const selectedOption = operatorSelect.options[operatorSelect.selectedIndex];
+      const requiresValue = selectedOption ? selectedOption.dataset.requiresValue === '1' : true;
+
+      operatorSelect.disabled = !hasController;
+      valueInput.disabled = !hasController || !requiresValue;
+
+      if (!hasController) {
+        valueInput.value = '';
+        valueInput.placeholder = 'Nejdřív vyberte řídicí pole';
+      } else if (!requiresValue) {
+        valueInput.value = '';
+        valueInput.placeholder = 'Tato podmínka nevyžaduje konkrétní hodnotu';
+      } else if (valueInput.getAttribute('placeholder') === '' || valueInput.getAttribute('placeholder') === 'Tato podmínka nevyžaduje konkrétní hodnotu' || valueInput.getAttribute('placeholder') === 'Nejdřív vyberte řídicí pole') {
+        valueInput.placeholder = 'Např. Vysoká|Kritická';
+      }
+    };
+
+    controllerSelect.addEventListener('change', syncConditionRow);
+    operatorSelect.addEventListener('change', syncConditionRow);
+    syncConditionRow();
+  });
+}());
+</script>
 
 <?php adminFooter(); ?>

@@ -587,6 +587,12 @@ body.theme-public textarea.form-control {
   color: var(--text-main);
 }
 
+.form-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .field {
   display: grid;
   gap: 0.45rem;
@@ -594,6 +600,23 @@ body.theme-public textarea.form-control {
 
 .field + .field {
   margin-top: 0.95rem;
+}
+
+.form-fields-grid > .field,
+.form-fields-grid > .form-fieldset {
+  margin-top: 0;
+}
+
+.form-field--full {
+  grid-column: 1 / -1;
+}
+
+.form-field--half {
+  grid-column: span 6;
+}
+
+.form-field--third {
+  grid-column: span 4;
 }
 
 .field label {
@@ -702,6 +725,18 @@ body.theme-public textarea.form-control {
 .form-control:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .form-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-field--full,
+  .form-field--half,
+  .form-field--third {
+    grid-column: auto;
+  }
 }
 
 .button-primary:focus-visible,

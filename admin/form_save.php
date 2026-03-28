@@ -126,9 +126,14 @@ if ($id !== null) {
         $fieldAcceptTypes = trim((string)($fieldData['accept_types'] ?? ''));
         $fieldMaxFileSize = max(1, min(100, (int)($fieldData['max_file_size_mb'] ?? 10)));
         $fieldAllowMultiple = isset($fieldData['allow_multiple']) && $fieldType === 'file' ? 1 : 0;
+        $fieldLayoutWidth = normalizeFormFieldLayoutWidth((string)($fieldData['layout_width'] ?? 'full'));
         $fieldShowIfField = trim((string)($fieldData['show_if_field'] ?? ''));
+        $fieldShowIfOperator = normalizeFormConditionOperator((string)($fieldData['show_if_operator'] ?? ''), trim((string)($fieldData['show_if_value'] ?? '')));
         $fieldShowIfValue = trim((string)($fieldData['show_if_value'] ?? ''));
         if ($fieldShowIfField === '') {
+            $fieldShowIfOperator = '';
+            $fieldShowIfValue = '';
+        } elseif (!formConditionOperatorRequiresValue($fieldShowIfOperator)) {
             $fieldShowIfValue = '';
         }
         $fieldRequired = isset($fieldData['is_required']) ? 1 : 0;
@@ -140,9 +145,9 @@ if ($id !== null) {
 
         $pdo->prepare(
             "UPDATE cms_form_fields
-             SET label = ?, name = ?, field_type = ?, options = ?, placeholder = ?, default_value = ?, help_text = ?, accept_types = ?, max_file_size_mb = ?, allow_multiple = ?, show_if_field = ?, show_if_value = ?, is_required = ?, sort_order = ?
+             SET label = ?, name = ?, field_type = ?, options = ?, placeholder = ?, default_value = ?, help_text = ?, accept_types = ?, max_file_size_mb = ?, allow_multiple = ?, layout_width = ?, show_if_field = ?, show_if_operator = ?, show_if_value = ?, is_required = ?, sort_order = ?
              WHERE id = ? AND form_id = ?"
-        )->execute([$fieldLabel, $fieldName, $fieldType, $fieldOptions, $fieldPlaceholder, $fieldDefaultValue, $fieldHelpText, $fieldAcceptTypes, $fieldMaxFileSize, $fieldAllowMultiple, $fieldShowIfField, $fieldShowIfValue, $fieldRequired, $fieldSort, $fieldId, $id]);
+        )->execute([$fieldLabel, $fieldName, $fieldType, $fieldOptions, $fieldPlaceholder, $fieldDefaultValue, $fieldHelpText, $fieldAcceptTypes, $fieldMaxFileSize, $fieldAllowMultiple, $fieldLayoutWidth, $fieldShowIfField, $fieldShowIfOperator, $fieldShowIfValue, $fieldRequired, $fieldSort, $fieldId, $id]);
     }
 
     // Nové pole
@@ -159,9 +164,14 @@ if ($id !== null) {
         $newAcceptTypes = trim($_POST['new_field_accept_types'] ?? '');
         $newMaxFileSize = max(1, min(100, (int)($_POST['new_field_max_file_size_mb'] ?? 10)));
         $newAllowMultiple = isset($_POST['new_field_allow_multiple']) && $newType === 'file' ? 1 : 0;
+        $newLayoutWidth = normalizeFormFieldLayoutWidth((string)($_POST['new_field_layout_width'] ?? 'full'));
         $newShowIfField = trim($_POST['new_field_show_if_field'] ?? '');
+        $newShowIfOperator = normalizeFormConditionOperator((string)($_POST['new_field_show_if_operator'] ?? ''), trim((string)($_POST['new_field_show_if_value'] ?? '')));
         $newShowIfValue = trim($_POST['new_field_show_if_value'] ?? '');
         if ($newShowIfField === '') {
+            $newShowIfOperator = '';
+            $newShowIfValue = '';
+        } elseif (!formConditionOperatorRequiresValue($newShowIfOperator)) {
             $newShowIfValue = '';
         }
         $newRequired = isset($_POST['new_field_required']) ? 1 : 0;
@@ -169,9 +179,9 @@ if ($id !== null) {
         $newName = adminUniqueFormFieldName($newLabel, $usedFieldNames, 'field_' . time());
 
         $pdo->prepare(
-            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, show_if_field, show_if_value, is_required, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newDefaultValue, $newHelpText, $newAcceptTypes, $newMaxFileSize, $newAllowMultiple, $newShowIfField, $newShowIfValue, $newRequired, $newSort]);
+            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, layout_width, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newDefaultValue, $newHelpText, $newAcceptTypes, $newMaxFileSize, $newAllowMultiple, $newLayoutWidth, $newShowIfField, $newShowIfOperator, $newShowIfValue, $newRequired, $newSort]);
     }
 
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $id);
@@ -185,8 +195,8 @@ if ($id !== null) {
     if ($presetDefinition !== null && !empty($presetDefinition['fields'])) {
         $usedFieldNames = [];
         $insertFieldStmt = $pdo->prepare(
-            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, show_if_field, show_if_value, is_required, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, allow_multiple, layout_width, show_if_field, show_if_operator, show_if_value, is_required, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         foreach ((array)$presetDefinition['fields'] as $presetField) {
@@ -214,7 +224,11 @@ if ($id !== null) {
                 trim((string)($presetField['accept_types'] ?? '')),
                 max(1, min(100, (int)($presetField['max_file_size_mb'] ?? 10))),
                 !empty($presetField['allow_multiple']) ? 1 : 0,
+                normalizeFormFieldLayoutWidth((string)($presetField['layout_width'] ?? 'full')),
                 trim((string)($presetField['show_if_field'] ?? '')),
+                trim((string)($presetField['show_if_field'] ?? '')) !== ''
+                    ? normalizeFormConditionOperator((string)($presetField['show_if_operator'] ?? ''), trim((string)($presetField['show_if_value'] ?? '')))
+                    : '',
                 trim((string)($presetField['show_if_value'] ?? '')),
                 !empty($presetField['is_required']) ? 1 : 0,
                 max(0, (int)($presetField['sort_order'] ?? 0)),
