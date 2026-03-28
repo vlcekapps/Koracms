@@ -76,14 +76,12 @@ adminHeader('Ankety');
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <?= bulkFormOpen('polls', 'polls.php') ?>
-  <?= bulkActionBar(false) ?>
-  <?= bulkFormClose() ?>
+  <?= bulkActions('polls', BASE_URL . '/admin/polls.php', 'Hromadné akce s anketami', 'anketa', false) ?>
   <table>
     <caption>Přehled anket</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
         <th scope="col">Otázka</th>
         <th scope="col">Stav</th>
         <th scope="col">Hlasy</th>
@@ -103,7 +101,7 @@ adminHeader('Ankety');
         };
       ?>
       <tr<?= $state === 'scheduled' ? ' style="background:#eef6ff"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
         <td>
           <strong><?= h((string)$poll['question']) ?></strong><br>
           <small style="color:#555">/polls/<?= h((string)$poll['slug']) ?></small>

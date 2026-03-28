@@ -235,64 +235,66 @@ function logAction(string $action, string $detail = ''): void
 }
 
 /**
- * Vrátí HTML pro bulk action bar – obalující form, checkboxy a tlačítka.
- * Použití: echo bulkFormOpen('news', 'news.php');
+ * Vrátí kompletní bulk akce fieldset + form (sjednocený vzor).
+ * Form se zavře hned za fieldsetem – checkboxy v tabulce mají form="bulk-form".
+ *
+ * @param string $module   Identifikátor modulu pro bulk.php
+ * @param string $redirect URL pro redirect po akci
+ * @param string $legend   Popisek fieldset legendy
+ * @param string $itemLabel Jednotné číslo položky pro status text (např. "článek", "album")
+ * @param bool   $showPublish Zobrazit tlačítka publikovat/skrýt
  */
-/**
- * Vrátí HTML pro bulk form – SAMOSTATNÝ formulář nad tabulkou (ne obalující).
- * Checkboxy v tabulce se propojí přes atribut form="bulk-form".
- */
-function bulkFormOpen(string $module, string $redirectPage): string
+function bulkActions(string $module, string $redirect, string $legend, string $itemLabel = 'položka', bool $showPublish = true): string
 {
-    $redirect = BASE_URL . '/admin/' . $redirectPage;
-    return '<form method="post" action="' . BASE_URL . '/admin/bulk.php" id="bulk-form">'
+    $out = '<form method="post" action="' . BASE_URL . '/admin/bulk.php" id="bulk-form">'
          . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
          . '<input type="hidden" name="module" value="' . h($module) . '">'
-         . '<input type="hidden" name="redirect" value="' . h($redirect) . '">';
-}
-
-function bulkFormClose(): string
-{
-    return '</form>';
-}
-
-/**
- * Vrátí HTML pro bulk action bar s tlačítky (smazat, publikovat, skrýt).
- * Umístí se UVNITŘ bulkFormOpen/Close.
- */
-function bulkActionBar(bool $showPublish = true): string
-{
-    $out = '<div class="bulk-bar" style="margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap" hidden>';
-    $out .= '<span class="bulk-bar__count" aria-live="polite"></span>';
-    $out .= '<select name="action" aria-label="Hromadná akce" required>';
-    $out .= '<option value="">-- Vyberte akci --</option>';
-    $out .= '<option value="delete">Smazat vybrané</option>';
+         . '<input type="hidden" name="redirect" value="' . h($redirect) . '">'
+         . '<fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">'
+         . '<legend>' . h($legend) . '</legend>'
+         . '<p id="bulk-status" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná ' . h($itemLabel) . '.</p>'
+         . '<div class="button-row">'
+         . '<button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled onclick="return confirm(\'Smazat vybrané?\')">Smazat vybrané</button>';
     if ($showPublish) {
-        $out .= '<option value="publish">Publikovat vybrané</option>';
-        $out .= '<option value="hide">Skrýt vybrané</option>';
+        $out .= '<button type="submit" name="action" value="publish" class="btn bulk-action-btn" disabled>Publikovat vybrané</button>'
+              . '<button type="submit" name="action" value="hide" class="btn bulk-action-btn" disabled>Skrýt vybrané</button>';
     }
-    $out .= '</select>';
-    $out .= '<button type="submit" class="btn" onclick="return confirm(\'Opravdu provést hromadnou akci?\')">Provést</button>';
-    $out .= '</div>';
+    $out .= '</div></fieldset></form>';
     return $out;
 }
 
+// Zachováme zpětnou kompatibilitu pro soubory, které ještě používají starý vzor
+function bulkFormOpen(string $module, string $redirectPage): string
+{
+    return bulkActions($module, BASE_URL . '/admin/' . $redirectPage, 'Hromadné akce', 'položka', true);
+}
+function bulkFormClose(): string { return ''; }
+function bulkActionBar(bool $showPublish = true): string { return ''; }
+
 /**
- * Vrátí JS pro select-all checkbox a zobrazení bulk baru.
- * Volat jednou na konci admin stránky (v adminFooter).
+ * Vrátí JS pro select-all a enable/disable bulk tlačítek.
+ * Checkboxy mají form="bulk-form", select-all má id="check-all".
  */
 function bulkCheckboxJs(): string
 {
     $nonce = cspNonce();
     return '<script nonce="' . $nonce . '">'
         . '(function(){'
-        . 'var f=document.getElementById("bulk-form");if(!f)return;'
-        . 'var bar=f.querySelector(".bulk-bar"),cnt=bar?bar.querySelector(".bulk-bar__count"):null;'
-        . 'var sa=f.querySelector(".bulk-select-all"),cbs=f.querySelectorAll(".bulk-checkbox");'
-        . 'function u(){var c=f.querySelectorAll(".bulk-checkbox:checked").length;'
-        . 'if(bar)bar.hidden=c===0;if(cnt)cnt.textContent="Vybráno: "+c;'
-        . 'if(sa)sa.checked=c===cbs.length&&c>0;}'
-        . 'if(sa)sa.addEventListener("change",function(){cbs.forEach(function(cb){cb.checked=sa.checked;});u();});'
+        . 'var form=document.getElementById("bulk-form");if(!form)return;'
+        . 'var checkAll=document.getElementById("check-all");'
+        . 'var cbs=document.querySelectorAll("input[name=\'ids[]\']");'
+        . 'var statusEl=document.getElementById("bulk-status");'
+        . 'var buttons=form.querySelectorAll(".bulk-action-btn");'
+        . 'function u(){'
+        . 'var c=document.querySelectorAll("input[name=\'ids[]\']:checked").length;'
+        . 'buttons.forEach(function(b){b.disabled=c===0;});'
+        . 'if(statusEl){'
+        . 'if(c===0)statusEl.textContent="Zatím není vybraná žádná položka.";'
+        . 'else statusEl.textContent="Vybráno: "+c;'
+        . '}'
+        . 'if(checkAll)checkAll.checked=c===cbs.length&&c>0;'
+        . '}'
+        . 'if(checkAll)checkAll.addEventListener("change",function(){cbs.forEach(function(cb){cb.checked=checkAll.checked;});u();});'
         . 'cbs.forEach(function(cb){cb.addEventListener("change",u);});'
         . '})();'
         . '</script>';

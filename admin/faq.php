@@ -84,14 +84,12 @@ adminHeader('Znalostní báze');
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <?= bulkFormOpen('faq', 'faq.php') ?>
-  <?= bulkActionBar() ?>
-  <?= bulkFormClose() ?>
+  <?= bulkActions('faq', BASE_URL . '/admin/faq.php', 'Hromadné akce se znalostní bází', 'položka') ?>
   <table>
     <caption>Přehled otázek FAQ</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
         <th scope="col">Otázka</th>
         <th scope="col">Kategorie</th>
         <th scope="col">Stav</th>
@@ -101,7 +99,7 @@ adminHeader('Znalostní báze');
     <tbody>
     <?php foreach ($faqs as $faq): ?>
       <tr<?= $faq['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$faq['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$faq['question']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$faq['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$faq['question']) ?>"></td>
         <td>
           <strong><?= h((string)$faq['question']) ?></strong><br>
           <small style="color:#555">/faq/<?= h((string)$faq['slug']) ?></small>
@@ -144,7 +142,6 @@ adminHeader('Znalostní báze');
     <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 
