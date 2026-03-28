@@ -1,41 +1,73 @@
 # Kora CMS
 
-Kora CMS je jednoduchý redakční systém bez frameworku. Vhodný pro osobní weby, spolky nebo menší projekty.
+Kora CMS je redakční systém bez frameworku zaměřený na stabilní provoz, přístupnost a praktické použití pro osobní weby, blogy, obce, spolky, menší firmy i komunitní projekty.
+
+Systém dnes stojí na těchto principech:
+
+- profilově řízené nasazení při instalaci (`Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma`, `Vlastní profil`)
+- first-party šablony s živým náhledem a bezpečným fallbackem
+- sjednocená administrace s capability modelem, schvalováním a audit logem
+- důraz na WCAG 2.2 AA, skip linky, focus stavy a čitelné formuláře
+- plný runtime audit přes `build/runtime_audit.php`
 
 ---
 
-## Lokální vývoj a testování
+## Co Kora CMS dnes umí
 
-Pro testování na vlastním počítači důrazně doporučujeme **[Laragon](https://laragon.org/)** s **PHP 8.4**.
+- **Multiblog** – více blogů v jedné instalaci, každý s vlastním názvem, slugem, popisem, kategoriemi a štítky
+- **Veřejní autoři** – veřejný profil autora, author archive i přehled autorů na `/authors/`
+- **Widgetová homepage** – homepage, sidebar a footer se skládají přes widgety
+- **Jednotná navigace webu** – moduly, blogy a statické stránky se řadí v jednom rozhraní
+- **Redakční workflow** – role, schvalování, fronta `Ke schválení`, moderátorské inboxy
+- **HTML editorové pomůcky** – content picker pro interní odkazy a vložení hotových bloků
+- **Snippety v HTML obsahu** – audio, video a galerie
+- **Form Builder 2.0** – formuláře s více typy polí, přílohami, podmínkami a e-mailovým workflow
+- **Portable theme packages** – import/export statických šablon bez PHP override
+- **Bezpečnost a audit** – 2FA, rate limiting, CAPTCHA, honeypot, audit log, kontrola integrity
 
-Laragon automaticky zajistí Apache, MySQL a PHP bez nutnosti ruční konfigurace. Stačí zkopírovat soubory do složky `laragon/www/`, vytvořit databázi přes phpMyAdmin a spustit `install.php`.
+---
+
+## Lokální vývoj
+
+Pro lokální vývoj doporučujeme **[Laragon](https://laragon.org/)** s **PHP 8.4**.
+
+Laragon pohodlně zajistí:
+
+- Apache
+- MySQL nebo MariaDB
+- PHP
+- phpMyAdmin
+
+Stačí zkopírovat projekt do `laragon/www/`, vytvořit databázi a spustit `install.php`.
 
 ---
 
 ## Minimální požadavky
 
 | Komponenta | Minimální verze | Doporučená verze |
-|---|---|---|
-| PHP | ≥ 8.0 | **8.4** |
-| MySQL | ≥ 5.7 | 8.0+ |
-| MariaDB | ≥ 10.3 *(alternativa k MySQL)* | 11+ |
-| Webový server | Apache ≥ 2.4 nebo Nginx | — |
+|---|---:|---:|
+| PHP | 8.0 | 8.4 |
+| MySQL | 5.7 | 8.0+ |
+| MariaDB | 10.3 | 11+ |
+| Apache | 2.4 | 2.4+ |
+| Nginx | podporováno | aktuální |
 
-**Vyžadovaná PHP rozšíření:** `pdo`, `pdo_mysql`, `fileinfo`, `gd`
+Vyžadovaná PHP rozšíření:
 
-> Na sdíleném hostingu tato rozšíření bývají povolena ve výchozím nastavení.
+- `pdo`
+- `pdo_mysql`
+- `fileinfo`
+- `gd`
 
 ---
 
 ## Instalace
 
-### 1. Zkopírujte soubory
+### 1. Nahrajte soubory
 
-Nahrajte obsah repozitáře do kořenového adresáře webu (nebo do podsložky).
+Zkopírujte obsah projektu do kořenového adresáře webu nebo do podsložky.
 
 ### 2. Vytvořte databázi
-
-Přihlaste se do MySQL a vytvořte prázdnou databázi:
 
 ```sql
 CREATE DATABASE nazev_databaze CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -43,43 +75,54 @@ CREATE DATABASE nazev_databaze CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ### 3. Vytvořte `config.php`
 
-Zkopírujte přiložený vzorový soubor a přejmenujte ho:
+Zkopírujte vzorový soubor:
 
-```
+```bash
 cp config.sample.php config.php
 ```
 
-Otevřete `config.php` a vyplňte přihlašovací údaje k databázi a základní URL:
+Vyplňte přístup k databázi a základní URL:
 
 ```php
 $server   = 'localhost';
-$user     = 'root';           // databázový uživatel
-$pass     = '';               // heslo (prázdné na lokálním serveru)
+$user     = 'root';
+$pass     = '';
 $database = 'nazev_databaze';
 
-// Pokud je web v kořeni domény, ponechte prázdné.
-// Pokud je ve složce, zadejte např. '/koracms'
 define('BASE_URL', '');
+```
+
+Pokud web běží v podsložce, nastavte například:
+
+```php
+define('BASE_URL', '/koracms');
 ```
 
 ### 4. Spusťte instalaci
 
-Otevřete v prohlížeči:
+Otevřete:
 
-```
+```text
 http://vas-web.cz/install.php
 ```
 
-Vyplňte název webu, e-mail a heslo hlavního administrátora a klikněte na **Nainstalovat**.
-Při instalaci si můžete rovnou vybrat i **profil webu** (`Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma`, `Vlastní profil`). První čtyři varianty přednastaví vhodné moduly, domovskou stránku a doporučenou šablonu, zatímco `Vlastní profil` ponechá CMS v neutrálním režimu pro ruční nastavení.
+Při instalaci můžete rovnou zvolit profil webu:
 
-### 5. Smažte instalační soubor
+- `Osobní web`
+- `Blog / magazín`
+- `Obec / spolek`
+- `Služby / firma`
+- `Vlastní profil`
 
-Po úspěšné instalaci **odstraňte** soubor `install.php` ze serveru – jinak by jej mohl kdokoli spustit znovu.
+První čtyři profily mohou jedním krokem přednastavit doporučené moduly, homepage, navigaci a vhodnou first-party šablonu. `Vlastní profil` ponechá CMS v neutrálním stavu pro ruční nastavení.
+
+### 5. Smažte `install.php`
+
+Po instalaci soubor odstraňte ze serveru.
 
 ### 6. Přihlaste se
 
-```
+```text
 http://vas-web.cz/admin/login.php
 ```
 
@@ -87,214 +130,296 @@ http://vas-web.cz/admin/login.php
 
 ## Aktualizace
 
-Při přechodu na novější verzi CMS postupujte takto:
-
 ### 1. Nahrajte nové soubory
 
-Přepište stávající soubory novými. Soubor `config.php` **nepřepisujte** – obsahuje vaše nastavení připojení k databázi.
+Přepište stávající soubory novou verzí. `config.php` nepřepisujte.
 
 ### 2. Spusťte migrace
 
-Otevřete v prohlížeči:
-
-```
+```text
 http://vas-web.cz/migrate.php
 ```
 
-Před spuštěním se přihlaste do administrace jako **superadmin**. Skript po potvrzení přidá případné nové tabulky, sloupce a výchozí nastavení. Existující data ani nastavení nepřepíše.
+Před spuštěním se přihlaste jako superadmin. Migrace doplní nové tabulky, sloupce a výchozí nastavení bez přepisu existujících dat.
 
-### 3. Smažte migrační soubor
+### 3. Smažte `migrate.php`
 
-Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
+Po dokončení migrace soubor opět odstraňte.
 
 ---
 
-## Dostupné moduly
+## Doporučené ověření po změnách
 
-| Modul | Popis |
+Před releasem nebo nasazením změn spusťte:
+
+```bash
+php build/runtime_audit.php
+```
+
+Při větších zásazích dává smysl přidat i PHP lint nad upravenými soubory:
+
+```bash
+php -l cesta/k/souboru.php
+```
+
+---
+
+## Přehled modulů
+
+| Modul | Co umí |
 |---|---|
-| **Blog (multiblog)** | Podpora více blogů – každý s vlastním názvem, slugem, popisem, kategoriemi a tagy; komentáře a schvalování společné; dynamický URL routing (`/blog-slug/article-slug`); články s kategoriemi, tagy, komentáři (s moderací), náhledem před zveřejněním a čistými slug URL; plánované publikování, odhad doby čtení, počet přečtení a veřejná author vrstva; filtr článků podle kategorie a blogu; per-blog RSS feed |
-| **Novinky** | Krátké zprávy s titulkem, autorem, detailovou stránkou a čistou slug URL |
-| **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem, detailovým pohledem na zprávu a interními stavy `nová`, `přečtená`, `vyřízená` |
-| **Kontakt** | Kontaktní formulář s CAPTCHA, honeypot ochranou, rate limitingem a moderátorským inboxem pro příchozí zprávy |
-| **Galerie** | Vnořená fotoalba s automatickým generováním náhledů, čistými slug URL pro alba i fotografie a výběrem obálky alba |
-| **Události** | Kalendář akcí s datem začátku, konce, místem konání, detailovou stránkou a čistou slug URL |
-| **Podcasty** | Správa více podcastů a jejich epizod; pořady i epizody mají čisté slug URL, veřejný detail a každý pořad má vlastní RSS feed (`/podcast/feed.php?slug=slug-poradu`) kompatibilní s podcastovými aplikacemi |
-| **Zajímavá místa** | Turistický adresář míst s typem, perexem, obrázkem, lokalitou, adresou, kontaktem, otevírací dobou a detailovou stránkou na čisté slug URL; veřejný výpis se řadí abecedně podle názvu |
-| **Newsletter** | Odběr novinek e-mailem s potvrzovacím odkazem a možností odhlášení; administrace nabízí přehled odběratelů, detail čekajících potvrzení, historii rozesílek i hromadné akce nad odběrateli |
-| **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem; položky se v kategoriích řadí automaticky od nejnovějších |
-| **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do, archivem, veřejným detailem a čistou slug URL |
-| **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |
-| **Znalostní báze** | Hierarchické kategorie s neomezenou hloubkou, breadcrumbs, stromová navigace, filtrování podle kategorií včetně podkategorií, krátkým perexem a detailovou stránkou na čisté slug URL |
-| **Formuláře** | Pokročilý form builder – admin definuje formuláře s poli typu text, email, tel, URL, textarea, select, radio, checkbox, více voleb, number, date, file, hidden a consent; per-form nastavení pro text tlačítka, notifikační e-mail, předmět notifikace, interní redirect a volitelný honeypot; veřejná stránka s CSRF, CAPTCHA a uploadem příloh; v administraci přehled odpovědí, CSV export a rychlá šablona `Nahlášení chyby` |
-| **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL, automatický archiv po datu sejmutí a přirozené řazení podle připnutí a data vyvěšení |
-| **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem a sjednocená administrace zdrojů, kategorií, míst i rezervací s capability guardy |
-| **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci, samostatná stránka pro pořadí v hlavní navigaci a sjednocená redakční administrace s filtrováním, bezpečným slug workflow a veřejným preview |
+| **Blogy** | Multiblog, články, kategorie, štítky, komentáře, preview, plánované publikování, odhad čtení, počet přečtení, veřejní autoři, author archive, author index, RSS feed |
+| **Novinky** | Krátké zprávy s autorem, detailem a čistou slug URL |
+| **Události** | Přehled akcí s datem, místem, detailem a slug URL |
+| **Galerie** | Alba a fotografie s detailovými URL, obálkou alba, exportem do ZIP a přístupnou veřejnou prezentací |
+| **Podcasty** | Více pořadů i epizod, detail pořadu, detail epizody a RSS feed pořadu |
+| **Zajímavá místa** | Turistický adresář s typem místa, perexem, obrázkem, adresou, GPS, kontaktem a otevírací dobou |
+| **Ke stažení** | Katalog dokumentů a software s typem položky, verzí, platformou, licencí, externím odkazem a bezpečným file endpointem |
+| **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek, archiv a detail přes slug URL |
+| **Ankety** | Aktivní anketa, archiv, detail přes slug URL a ochrana proti opakovanému hlasování |
+| **Znalostní báze** | FAQ / knowledge base s kategoriemi, detailem, slug URL a přehlednou veřejnou navigací |
+| **Formuláře** | Form builder s veřejnými formuláři, odpověďmi, CSV exportem, přílohami, podmínkami zobrazení a issue-report presetem |
+| **Vývěska / Oznámení** | Úřední deska nebo komunitní vývěska s typem položky, perexem, obrázkem, kontaktem, připnutím a archivem |
+| **Rezervace** | Zdroje, kategorie, lokality, veřejné rezervace, kalendáře, schvalování a storno přes token |
+| **Statické stránky** | Vlastní stránky se slug URL, volitelným zobrazením v navigaci a samostatným řazením |
+| **Kontakt** | Kontaktní formulář s CAPTCHA, honeypotem, rate limitingem a moderátorským inboxem |
+| **Chat** | Jednoduchá veřejná diskuse s moderátorským inboxem a interními stavy zpráv |
+| **Newsletter** | Odběr e-mailem, potvrzení, odhlášení, přehled odběratelů, historie rozesílek a hromadné akce |
 
-Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → Správa modulů**.
-
----
-
-## Widget systém a úvodní stránka
-
-Homepage i sidebar a footer jsou plně konfigurovatelné přes **widget systém** (*Nastavení → Widgety*). Admin přetahuje widgety do 3 zón (homepage, sidebar, footer), pojmenuje je a nastaví parametry. Widgety respektují stav modulů – vypnutý modul = nedostupný widget.
-
-Dostupné typy widgetů: úvodní text, nejnovější články (s volbou blogu), novinky, doporučený obsah, úřední deska, nadcházející události, anketa, newsletter, náhled galerie, vlastní HTML, vyhledávání, kontaktní údaje
+Moduly lze zapínat a vypínat v administraci v sekci **Obecná nastavení → Správa modulů**.
 
 ---
 
-## Nastavení
+## Widgety a homepage
 
-Nastavení je rozděleno do čtyř sekcí:
+Homepage, sidebar i footer se skládají přes widgetový systém.
 
-### Obecná nastavení
+V administraci lze:
 
-- **Název a popis webu** – zobrazí se v záhlaví a v SEO meta tazích
-- **Profil webu** – uloží zaměření webu a volitelně jedním krokem použije doporučené moduly, pořadí navigace, homepage bloky a vhodnou first-party šablonu; `Vlastní profil` slouží jako neutrální režim bez vnuceného presetu
-- **Veřejný název úřední desky** – umožní modul na webu zobrazovat jako `Úřední deska`, `Vývěska`, `Oznámení` nebo jiný krátký veřejný název bez změny interní struktury modulu
-- **Kontaktní e-mail** – příjemce zpráv z kontaktního formuláře
-- **Text úvodní stránky** – volitelný HTML úvod zobrazený na hlavní stránce
-- **Logo a favicon** – nahrání vlastního loga (JPEG, PNG, GIF, WebP, SVG) a faviconu (ICO, PNG, SVG)
-- **Výchozí OG obrázek** – obrázek pro náhledy při sdílení na sociálních sítích
-- **Editor obsahu** – volba mezi doporučeným HTML editorem (textarea) a volitelným WYSIWYG editorem (Quill); pro práci s asistivními technologiemi doporučujeme HTML variantu. V HTML polích, která se veřejně renderují přes CMS, je navíc dostupný přístupný dialog pro vložení odkazu, hotového HTML bloku, fotogalerie nebo přehrávače z existujícího veřejného obsahu webu
-- **Počty na hlavní stránce** – počet novinek, článků blogu a dokumentů úřední desky zobrazených na HP (0 = widget skrytý)
-- **Stránkování** – počet novinek, článků a událostí na stránku
-- **Komentáře blogu** – globální zapnutí komentářů, režim moderace (`vždy schvalovat`, `schválit známého autora`, `zveřejnit ihned`), automatické uzavření komentářů po zadaném počtu dnů, antispam pravidla (blokované e-maily a fráze), e-mailové upozornění na nové komentáře čekající na schválení a volitelné upozornění autorovi po schválení komentáře; používá se stejná mailová vrstva jako u registrace, resetu hesla a rezervací
-- **E-mailové notifikace** – upozornění na odeslání formuláře, obsah čekající na schválení a nové zprávy v chatu; každý typ lze zapnout/vypnout; chat je výchozí vypnutý (může generovat velký objem e-mailů)
-- **Sociální sítě** – odkazy na Facebook, YouTube, Instagram, X (Twitter)
-- **Cookie lišta** – zapnutí GDPR lišty s vlastním textem
-- **Režim údržby** – dočasně zobrazí návštěvníkům hlášku o údržbě; přihlášení admini vidí web normálně
+- přidávat widgety do zón `homepage`, `sidebar`, `footer`
+- měnit jejich pořadí
+- nastavovat parametry jednotlivých widgetů
+- kombinovat systémové widgety a vlastní HTML
 
-### Správa modulů
+Typické widgety:
 
-Zapínání a vypínání jednotlivých modulů jedním přepínačem.
+- úvodní text
+- nejnovější články
+- novinky
+- doporučený článek
+- vývěska
+- nadcházející události
+- anketa
+- newsletter
+- nápověda galerie
+- vyhledávání
+- kontaktní údaje
+- vlastní HTML
 
-### Navigace webu
-
-Jednotná správa pořadí modulů, statických stránek a blogů v hlavní navigaci (*Nastavení → Navigace webu*). Drag & drop nebo tlačítka Nahoru/Dolů. Libovolné kombinování – stránka mezi moduly, blog před novinkami.
-
-### Vzhled a šablony
-
-- Výběr aktivní veřejné šablony z adresáře `themes/`
-- Profil webu při instalaci i v administraci: `Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma`, `Vlastní profil`
-- Safe customizace aktivní šablony: paleta, hlavní akcenty, typografie a šířka obsahu
-- Varianta hlavičky přímo v administraci bez editace šablonových souborů
-- Živý náhled šablony a draft vzhledu bez aktivace na produkčním webu
-- Reset vzhledu aktivní šablony na výchozí hodnoty
-- Import/export portable ZIP balíčku šablony
-
-Součástí CMS jsou nyní tyto oficiální šablony:
-
-- `default` – vyvážený univerzální základ
-- `civic` – důvěryhodný styl pro obce, spolky a informační weby
-- `editorial` – magazínovější vzhled s výraznější typografií
-- `modern-service` – současný styl pro služby, firmy a projekty
-
-First-party šablony mají i vlastní vizuální rytmus a responzivní dolaďování, takže se neliší jen barvami, ale i charakterem hlavičky, karet a homepage sekcí.
+Widgety respektují stav modulů. Vypnutý modul se nenabízí.
 
 ---
 
-## Správa uživatelů
+## Navigace webu
 
-### Administrátoři a redakční role
+Kora CMS používá jednotné rozhraní pro správu pořadí navigace.
 
-Hlavní administrátor (účet vytvořený při instalaci) může v sekci **Nastavení → Správa uživatelů** přidávat další účty a přiřazovat jim roli. Administrace používá capability model, takže menu, dashboard i schvalovací akce se zobrazují jen tam, kde má účet opravdu oprávnění.
+V jedné správě lze řadit:
 
-K dispozici jsou tyto role:
+- moduly
+- blogy
+- statické stránky
 
-- **Veřejný uživatel** – nemá přístup do administrace; slouží pro rezervace, komentáře a veřejný profil
-- **Autor** – spravuje vlastní články blogu a vlastní novinky
-- **Editor** – spravuje a schvaluje blog, novinky i sdílený obsah
-- **Moderátor** – řeší komentáře, chat a kontaktní zprávy
-- **Správce rezervací** – spravuje zdroje, kalendáře a rezervace
-- **Admin** – běžná plná správa webu včetně nastavení, newsletteru, importu/exportu a uživatelů
-
-Starší role **Spolupracovník / Správce obsahu** zůstává kvůli kompatibilitě se staršími instalacemi zachovaná a chová se jako širší redakční role.
-
-Každý uživatel si může upravit svůj profil (jméno, příjmení, přezdívku, e-mail a heslo). Účty s přístupem do administrace mohou navíc zapnout i **veřejný autorský profil** s vlastním slugem, bio, webem a avatarem. Pokud je profil zapnutý, blog a homepage na něj mohou veřejně odkazovat přes URL typu `/author/jmeno-autora`. Veřejné autory lze zároveň procházet i přes společný přehled `/authors/`; odkaz na tento přehled v modulu blogu je volitelný a ve výchozím stavu vypnutý.
-
-Role se propsávají i do pracovního rozhraní administrace. Účet tak nově vidí jen moduly, dashboard a schvalovací akce, které opravdu potřebuje. Součástí administrace je i společná fronta **Ke schválení**, která sjednocuje čekající obsah, komentáře a rezervace na jedno místo.
-
-Administrace používá i sjednocené filtry, hromadné akce, civilnější prázdné stavy a role-based dashboard. Formuláře mají konkrétní názvy akcí, návraty na přehledy a helper texty pro slugy, zveřejnění, plánování i práci se soubory nebo médii, aby se v nich lépe orientoval i ne-technický správce.
-
-### Veřejní uživatelé
-
-Návštěvníci se mohou zaregistrovat přes veřejný formulář (`/register.php`). Registrace vyžaduje potvrzení e-mailem. Po přihlášení mají přístup k:
-
-- **Můj profil** – úprava osobních údajů a změna hesla
-- **Moje rezervace** – přehled vlastních rezervací s možností zrušení
-- **Obnovení hesla** – tokenový reset přes e-mail
-
-Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny uživatele (včetně veřejných) v přehledu se skutečnou rolí a stavem potvrzení.
+To znamená, že stránka může být mezi moduly a blog může být před novinkami. Řazení je oddělené od interních seznamů modulů – statické stránky a navigace webu jsou spravované jinak než obsah uvnitř modulů.
 
 ---
 
-## Další funkce
+## Šablony a vzhled
 
-- **Vyhledávání** – fulltextové vyhledávání napříč články, novinkami, stránkami, událostmi, podcasty i jejich epizodami, FAQ, galeriemi, místy, anketami a dokumenty úřední desky, vždy s odkazem na veřejný detail obsahu
-- **RSS feed** – automaticky generovaný feed nejnovějších článků a novinek (`/feed.php`) s čistými odkazy na detail obsahu
-- **XML sitemap** – sitemap pro vyhledávače (`/sitemap.php`) včetně slug URL článků, novinek, galerií, událostí, podcastů, epizod, anket, dokumentů úřední desky i veřejných profilů autorů
-- **SEO** – meta tagy (title, description), Open Graph a možnost nastavit vlastní meta pro jednotlivé články
-- **Vkládání interního obsahu do HTML polí** – v HTML textarea polích pro obsah, která se veřejně vykreslují přes CMS, je dostupný přístupný dialog `Vložit odkaz nebo HTML z webu` pro rychlé vložení odkazu nebo hotového HTML bloku z existujících článků, stránek a dalších veřejných modulů. Podle typu výsledku umí nabídnout i `Vložit fotogalerii`, `Vložit audio přehrávač` nebo `Vložit video přehrávač`
-- **Snippety v HTML/Markdown obsahu** – renderer podporuje i zápis `[audio]https://example.test/audio.mp3[/audio]`, `[video]https://example.test/video.mp4[/video]` a `[gallery]slug-alba[/gallery]` nebo `[gallery slug="slug-alba"][/gallery]`; fungují ve všech HTML/Markdown polích, která CMS na veřejném webu vykresluje přes `renderContent()`. Audio a video podporují i atributy `src` a volitelný `mime`, takže lze bezpečně použít i interní file endpointy, například `[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]`
-- **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
-- **Audit log** – záznam akcí administrátorů s filtry podle akce, uživatele a data; prohlížeč v administraci
-- **Centrální knihovna médií** – upload více souborů, grid zobrazení s thumbnaily, filtr podle typu, správa alt textů, kopírování URL; automatické WebP + thumbnail generování
-- **WebP konverze** – automatické generování WebP verze při uploadu obrázků ve všech modulech; `<picture>` element s lazy loading
-- **Responsive obrázky** – generování variant 400w, 800w, 1200w při uploadu článkových obrázků
-- **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie, místa, soubory, podcasty, ankety, FAQ, vývěska, komentáře, odběratelé, newslettery)
-- **WordPress importér** – import z WordPress XML exportu (WXR) s náhledem, filtrem kategorií, výběrem cílového blogu, perex/content splittem na `<!--more-->` a automatickým odstraněním WP bloků
-- **eStránky importér** – import článků, kategorií, fotoalb a fotografií z XML zálohy eStránek.cz s base64 dekódováním, hierarchií alb, výběrem cílového blogu a cílového alba pro stažené fotografie
-- **301/302 přesměrování** – správa přesměrování starých URL na nové s počítadlem přístupů; užitečné po importu nebo změně slug adres
-- **Google Analytics 4** – GA4 Measurement ID v admin; GDPR: gtag.js se načítá až po udělení cookie souhlasu
-- **Vlastní kód do head/footer** – textová pole v nastavení pro libovolný HTML/JS kód do `<head>` a před `</body>`
-- **Revize obsahu** – snapshot textových polí před každou úpravou; vizuální diff se zvýrazněním přidaných a odebraných částí
-- **Interní poznámky** – admin poznámka k článkům, novinkám, stránkám a událostem viditelná jen v administraci
-- **Plánované publikování a zrušení** – `publish_at` pro odložené zveřejnění, `unpublish_at` pro automatické skrytí po vypršení
-- **Převod článek ↔ stránka** – převod článku na statickou stránku a naopak jedním kliknutím
-- **Export fotoalba do ZIP** – rekurzivní export alba včetně podalb do ZIP s hierarchickou strukturou složek
-- **Koš (soft delete)** – smazání článků, novinek, stránek, událostí a FAQ je přesun do koše s možností obnovení
-- **Záloha databáze** – manuální export z admin + automatické denní zálohy přes cron s rotací 7 dní
-- **Cron endpoint** – plánované publikování, unpublish, čištění rate-limit/temp/logů, automatické zálohy
-- **Upozornění na aktualizace** – admin dashboard kontroluje novou verzi přes GitHub API
-- **Kontrola integrity souborů** – SHA-256 snapshot všech PHP souborů; detekce změn; varování na dashboardu
-- **FULLTEXT vyhledávání** – 10 FULLTEXT indexů na klíčových tabulkách; relevantní řazení výsledků s LIKE fallbackem
-- **Drag & drop řazení** – přetahování položek s AJAX uložením; WCAG fallback: Ctrl+šipka a tlačítka Nahoru/Dolů
+Součástí CMS jsou čtyři first-party šablony:
+
+- `default`
+- `civic`
+- `editorial`
+- `modern-service`
+
+Administrace umí:
+
+- aktivovat šablonu
+- spustit živý náhled bez ostré aktivace
+- upravit barvy, akcenty, typografii a šířku obsahu
+- měnit variantu hlavičky
+- importovat a exportovat portable ZIP balíčky šablon
+
+Pokud aktivní šablona neobsahuje konkrétní view, systém bezpečně fallbackuje na `default`.
+
+---
+
+## Role, workflow a administrace
+
+Administrace používá capability model, takže uživatelé vidí jen to, co opravdu potřebují.
+
+Typické role:
+
+- **Veřejný uživatel** – bez přístupu do administrace
+- **Autor** – vlastní články a novinky
+- **Editor** – širší práce s obsahem a schvalováním
+- **Moderátor** – komentáře, chat, kontaktní zprávy
+- **Správce rezervací** – rezervace, zdroje a lokality
+- **Admin** – běžná plná správa webu
+
+K dispozici je také fronta **Ke schválení**, která sjednocuje čekající obsah, komentáře nebo rezervace.
+
+Administrace má:
+
+- role-based dashboard
+- sjednocené filtry a hromadné akce
+- přehledné návratové odkazy
+- civilnější prázdné stavy a detailové obrazovky
+
+---
+
+## Blogy a autoři
+
+Blog vrstva je dnes výrazně dál než jen „modul článků“:
+
+- více blogů v jedné instalaci
+- veřejný detail článku přes čistou slug URL
+- veřejný profil autora
+- author archive
+- přehled autorů na `/authors/`
+- volitelný odkaz z blogu na veřejný seznam autorů
+- featured článek na homepage podle `view_count`
+- počet přečtení v metadatech článku
+
+Blog karty na homepage i ve veřejném výpisu používají stejné pořadí informací:
+
+1. nadpis
+2. metadata
+3. perex
+4. odkaz na článek
+
+---
+
+## HTML editor, content picker a snippety
+
+Kora CMS podporuje dva editory obsahu:
+
+- **HTML textarea** – doporučená a přístupnější výchozí varianta
+- **WYSIWYG (Quill)** – volitelný vizuální režim
+
+Pro HTML pole, která se veřejně renderují přes `renderContent()`, je k dispozici přístupný dialog:
+
+- vložení interního odkazu
+- vložení hotového HTML bloku
+- vložení galerie
+- vložení audio nebo video přehrávače
+
+### Podporované snippety
+
+| Snippet | Výstup |
+|---|---|
+| `[audio]https://example.test/audio.mp3[/audio]` | HTML5 audio přehrávač |
+| `[video]https://example.test/video.mp4[/video]` | HTML5 video přehrávač |
+| `[gallery]slug-alba[/gallery]` | vložená galerie podle slugu |
+| `[gallery slug="slug-alba"][/gallery]` | totéž s atributem |
+| `[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]` | audio přes interní endpoint |
+| `[video src="/downloads/file.php?id=456" mime="video/mp4"][/video]` | video přes interní endpoint |
+
+Tyto snippety fungují ve všech HTML/Markdown polích, která CMS veřejně renderuje přes `renderContent()`.
+
+---
+
+## Form Builder 2.0
+
+Modul `Formuláře` už dnes není jen jednoduchý kontaktní wrapper. Umí:
+
+- veřejné formuláře s vlastním názvem, popisem a slug URL
+- pole typu `text`, `email`, `tel`, `url`, `textarea`, `select`, `radio`, `checkbox`, `více voleb`, `number`, `date`, `file`, `hidden`, `consent`
+- per-field nápovědu, placeholder, výchozí hodnotu
+- omezení příloh podle typu a velikosti
+- více souborů u file pole
+- podmíněné zobrazování polí (`Zobrazit jen když`)
+- interní redirect po odeslání
+- notifikační e-mail správci
+- potvrzovací e-mail odesílateli
+- přehled odpovědí a CSV export
+
+Součástí modulu je i hotový preset **Nahlášení chyby**, který se hodí třeba pro issue reporting mimo GitHub.
+
+---
+
+## Další důležité funkce
+
+- fulltextové vyhledávání napříč veřejným obsahem
+- RSS feed
+- XML sitemap
+- audit log administrace
+- knihovna médií
+- WebP a responzivní varianty obrázků
+- revize obsahu
+- interní poznámky k obsahu
+- plánované publikování a zrušení publikace
+- import/export dat CMS
+- import z WordPressu
+- import z eStránek
+- přesměrování 301/302
+- ruční i automatické zálohy databáze
+- cron endpoint
+- kontrola integrity souborů
 
 ---
 
 ## Bezpečnost
 
-- **Dvoufázové ověření (2FA)** – volitelné TOTP přihlášení (FreeOTP, Authy, Google Authenticator); aktivace v profilu přes QR kód
-- CSRF ochrana na všech formulářích
-- Rate limiting (přihlášení, kontakt, odběr, chat, hlasování, vyhledávání)
-- Honeypot pole proti spambotům
-- Matematická CAPTCHA
-- Prepared statements proti SQL injection
-- HTML escapování proti XSS
-- Bezpečné hashování hesel (bcrypt)
-- Kontrola integrity souborů (SHA-256 snapshot s detekcí změn)
-- CSP nonce na všech inline skriptech
-- HSTS hlavička při HTTPS
-- Blokování `.env` a `.git/` v `.htaccess`
-- GDPR: GA4 podmíněno cookie souhlasem
+Kora CMS dnes používá mimo jiné:
+
+- volitelné 2FA přes TOTP
+- CSRF ochranu
+- rate limiting
+- honeypot pole
+- CAPTCHA
+- prepared statements
+- bezpečné hashování hesel
+- CSP nonce
+- HSTS při HTTPS
+- ochranu `.env` a `.git/`
+- audit log a kontrolu integrity
 
 ---
 
 ## Přístupnost
 
-CMS je navržen s ohledem na **WCAG 2.2 Level AA**:
+Projekt cílí na **WCAG 2.2 Level AA**.
 
-- Sémantické HTML (`<header>`, `<main>`, `<nav>`, `<article>`, `<section>`, `<details>`)
-- Formuláře seskupené pomocí `<fieldset>` / `<legend>` s `aria-required` a `role="alert"`
-- `autocomplete` atributy na všech relevantních polích (email, tel, name, password)
-- `focus-visible` styly na formulářích a tlačítkách
-- Confirm dialogy přes `data-confirm` + globální JS handler (kompatibilní s CSP nonce)
-- Drag & drop s klávesnicovým fallbackem (Ctrl+šipka)
-- Admin sidebar s rozbalovacími sekcemi, viditelným focusem a jen pro zapnuté moduly
-- Přístupný modal dialog pro content picker s `role="dialog"`, `aria-modal`, návratem fokusu
-- Skip link pro přeskočení na obsah
-- ARIA atributy (`aria-current`, `aria-hidden`, `aria-live`)
-- Ovladatelnost pouze klávesnicí
-- Nativní accordion bez závislosti na JavaScriptu
-- Alt texty na všech obsahových obrázcích
+Prakticky to znamená například:
+
+- skip link na obsah
+- viditelný focus stav
+- sémantické HTML
+- formuláře přes `label`, `fieldset`, `legend`
+- helper texty pod polem přes `aria-describedby`
+- přístupné dialogy s návratem fokusu
+- klávesnicovou ovladatelnost i tam, kde je drag & drop
+- průběžný audit přes `build/runtime_audit.php`
+
+UX a informační logiku průběžně doplňuje i dokument:
+
+- [docs/ux-audit-framework.md](C:/laragon/www/docs/ux-audit-framework.md)
+
+---
+
+## Poznámky k provozu
+
+- SMTP vrstva funguje přímo přes socketové připojení (`fsockopen`)
+- runtime audit v lokálním prostředí korektně hlásí `smtp_connectivity` jako `SKIP`, pokud SMTP není explicitně nastavené
+- při větších úpravách se vyplatí spustit `migrate.php` i na lokální databázi, aby se promítly nové sloupce a výchozí hodnoty
+
+---
+
+## Dokumentace změn
+
+Historie verzí je v:
+
+- [CHANGELOG.md](C:/laragon/www/CHANGELOG.md)
+

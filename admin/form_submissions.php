@@ -143,6 +143,19 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
                   ?>
                   <a href="<?= h((string)$value['url']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$value['original_name']) ?></a>
                   <?php
+              } elseif (is_array($value) && array_keys($value) === range(0, count($value) - 1)) {
+                  $fileLinks = [];
+                  foreach ($value as $item) {
+                      if (!is_array($item) || !isset($item['url'], $item['original_name'])) {
+                          continue;
+                      }
+                      $fileLinks[] = '<a href="' . h((string)$item['url']) . '" target="_blank" rel="noopener noreferrer">' . h((string)$item['original_name']) . '</a>';
+                  }
+                  if ($fileLinks !== []) {
+                      echo implode(', ', $fileLinks);
+                  } else {
+                      echo h(formSubmissionDisplayValueForField($fieldDefinitions[$name] ?? [], $value));
+                  }
               } else {
                   echo h(formSubmissionDisplayValueForField($fieldDefinitions[$name] ?? [], $value));
               }

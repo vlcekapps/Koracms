@@ -5,6 +5,7 @@ requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu blo
 $pdo = db_connect();
 $success = '';
 $error   = '';
+$message = trim($_GET['msg'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -50,6 +51,9 @@ $defaultBlogId = (int)(getDefaultBlog()['id'] ?? 0);
 
 adminHeader('Správa blogů');
 ?>
+<?php if ($message === 'no_blog'): ?>
+  <p role="status"><strong>Nejdřív vytvořte blog.</strong> Kategorie, štítky i články se spravují až uvnitř existujícího blogu.</p>
+<?php endif; ?>
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 

@@ -918,30 +918,39 @@ if (isModuleEnabled('chat')) {
 if (isModuleEnabled('forms')) {
     $runtimeAuditFormSlug = uniqueFormSlug($pdo, 'runtime-audit-form-' . bin2hex(random_bytes(4)));
     $pdo->prepare(
-        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_subject, use_honeypot, is_active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())"
+        "INSERT INTO cms_forms (
+            title, slug, description, success_message, submit_label, notification_subject,
+            use_honeypot, submitter_confirmation_enabled, submitter_email_field,
+            submitter_confirmation_subject, submitter_confirmation_message, is_active, created_at, updated_at
+         )
+         VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, 1, NOW(), NOW())"
     )->execute([
         'Runtime audit formulář',
         $runtimeAuditFormSlug,
-        'Testovací formulář pro ověření veřejného vykreslení, pole souboru a administračního workflow.',
+        'Testovací formulář pro ověření veřejného vykreslení, více příloh, podmíněných polí a administračního workflow.',
         'Děkujeme, hlášení bylo odesláno.',
         'Odeslat hlášení',
         'Runtime audit formulář',
+        'email_odesilatele',
+        'Potvrzení přijetí hlášení',
+        'Děkujeme za formulář {{form_title}}.',
     ]);
     $runtimeAuditFormId = (int)$pdo->lastInsertId();
     $cleanup['form_ids'][] = $runtimeAuditFormId;
 
     $runtimeAuditFormFields = [
         ['field_type' => 'hidden', 'label' => 'Zdroj hlášení', 'name' => 'zdroj_hlaseni', 'placeholder' => '', 'default_value' => 'runtime-audit', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 0],
-        ['field_type' => 'text', 'label' => 'Název problému', 'name' => 'nazev-problemu', 'placeholder' => 'Stručný název chyby', 'default_value' => '', 'help_text' => 'Krátký souhrn toho, co se pokazilo.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 1, 'sort_order' => 10],
-        ['field_type' => 'checkbox_group', 'label' => 'Dotčené oblasti', 'name' => 'dotcene_oblasti', 'placeholder' => '', 'default_value' => 'Administrace|Formuláře', 'help_text' => 'Můžete označit více oblastí.', 'options' => 'Administrace|Veřejný web|Formuláře', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 20],
-        ['field_type' => 'radio', 'label' => 'Závažnost', 'name' => 'zavaznost', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Vyberte, jak moc problém blokuje práci.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 1, 'sort_order' => 30],
-        ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů pro vyřízení hlášení.', 'name' => 'souhlas', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Povinné potvrzení pro vyřízení hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 1, 'sort_order' => 40],
-        ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Volitelně můžete přiložit screenshot nebo log.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.txt,.log,.pdf', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 50],
+        ['field_type' => 'email', 'label' => 'E-mail odesílatele', 'name' => 'email_odesilatele', 'placeholder' => 'vas@email.cz', 'default_value' => '', 'help_text' => 'Na tuto adresu může přijít potvrzení o přijetí hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 10],
+        ['field_type' => 'text', 'label' => 'Název problému', 'name' => 'nazev-problemu', 'placeholder' => 'Stručný název chyby', 'default_value' => '', 'help_text' => 'Krátký souhrn toho, co se pokazilo.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 20],
+        ['field_type' => 'checkbox_group', 'label' => 'Dotčené oblasti', 'name' => 'dotcene_oblasti', 'placeholder' => '', 'default_value' => 'Administrace|Formuláře', 'help_text' => 'Můžete označit více oblastí.', 'options' => 'Administrace|Veřejný web|Formuláře', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 30],
+        ['field_type' => 'radio', 'label' => 'Závažnost', 'name' => 'zavaznost', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Vyberte, jak moc problém blokuje práci.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 40],
+        ['field_type' => 'textarea', 'label' => 'Doplňující kroky', 'name' => 'doplňujici_kroky', 'placeholder' => 'Popište přesně, co problému předcházelo.', 'default_value' => '', 'help_text' => 'Zobrazí se až při vyšší závažnosti.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => 'zavaznost', 'show_if_value' => 'Vysoká', 'is_required' => 0, 'sort_order' => 50],
+        ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů pro vyřízení hlášení.', 'name' => 'souhlas', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Povinné potvrzení pro vyřízení hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'allow_multiple' => 0, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 1, 'sort_order' => 60],
+        ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Volitelně můžete přiložit screenshot nebo log.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.txt,.log,.pdf', 'max_file_size_mb' => 10, 'allow_multiple' => 1, 'show_if_field' => '', 'show_if_value' => '', 'is_required' => 0, 'sort_order' => 70],
     ];
     $formFieldInsert = $pdo->prepare(
-        "INSERT INTO cms_form_fields (form_id, field_type, label, name, placeholder, default_value, help_text, options, accept_types, max_file_size_mb, is_required, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO cms_form_fields (form_id, field_type, label, name, placeholder, default_value, help_text, options, accept_types, max_file_size_mb, allow_multiple, show_if_field, show_if_value, is_required, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     foreach ($runtimeAuditFormFields as $fieldRow) {
         $formFieldInsert->execute([
@@ -955,6 +964,9 @@ if (isModuleEnabled('forms')) {
             $fieldRow['options'],
             $fieldRow['accept_types'],
             $fieldRow['max_file_size_mb'],
+            $fieldRow['allow_multiple'] ?? 0,
+            $fieldRow['show_if_field'] ?? '',
+            $fieldRow['show_if_value'] ?? '',
             $fieldRow['is_required'],
             $fieldRow['sort_order'],
         ]);
@@ -967,16 +979,27 @@ if (isModuleEnabled('forms')) {
         $runtimeAuditFormId,
         json_encode([
             'zdroj_hlaseni' => 'runtime-audit',
+            'email_odesilatele' => 'runtime.audit@example.test',
             'nazev-problemu' => 'Runtime audit nahlášení',
             'dotcene_oblasti' => ['Administrace', 'Formuláře'],
-            'zavaznost' => 'Střední',
+            'zavaznost' => 'Vysoká',
+            'doplňujici_kroky' => 'Otevřít formulář, vybrat vysokou závažnost a doplnit kroky.',
             'souhlas' => '1',
             'priloha' => [
-                'original_name' => 'runtime-audit-log.txt',
-                'stored_name' => '',
-                'mime_type' => 'text/plain',
-                'file_size' => 128,
-                'url' => BASE_URL . '/uploads/forms/runtime-audit-log.txt',
+                [
+                    'original_name' => 'runtime-audit-log.txt',
+                    'stored_name' => '',
+                    'mime_type' => 'text/plain',
+                    'file_size' => 128,
+                    'url' => BASE_URL . '/uploads/forms/runtime-audit-log.txt',
+                ],
+                [
+                    'original_name' => 'runtime-audit-shot.png',
+                    'stored_name' => '',
+                    'mime_type' => 'image/png',
+                    'file_size' => 256,
+                    'url' => BASE_URL . '/uploads/forms/runtime-audit-shot.png',
+                ],
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         hash('sha256', 'runtime-audit-form'),
@@ -2055,8 +2078,8 @@ foreach ($pages as $page) {
 
     $adminFormCopyExpectations = [
         'admin_form_create' => ['Nejdřív vytvořte základ formuláře.', 'Necháte-li prázdné, adresa se vytvoří automaticky podle názvu formuláře.', 'Zobrazí se návštěvníkovi po úspěšném odeslání formuláře.', 'Zveřejnit formulář na webu', 'Neaktivní formulář zůstane uložený, ale návštěvníci ho na webu neuvidí.'],
-        'admin_form_issue_preset' => ['Šablona:', 'Nahlášení chyby', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas'],
-        'admin_form_edit' => ['Upravte nastavení formuláře, jeho pole a text, který se zobrazí po úspěšném odeslání.', 'Text tlačítka pro odeslání', 'E-mail pro notifikaci', 'Předmět notifikačního e-mailu', 'Kam přesměrovat po odeslání', 'Povolené typy souborů', 'Max. velikost souboru (MB)', 'Odpovědi formuláře'],
+        'admin_form_issue_preset' => ['Šablona:', 'Nahlášení chyby', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas', 'Potvrzení odesílateli'],
+        'admin_form_edit' => ['Upravte nastavení formuláře, jeho pole a text, který se zobrazí po úspěšném odeslání.', 'Text tlačítka pro odeslání', 'E-mail pro notifikaci', 'Předmět notifikačního e-mailu', 'Kam přesměrovat po odeslání', 'Povolené typy souborů', 'Max. velikost souboru (MB)', 'Odpovědi formuláře', 'Potvrzení odesílateli', 'Poslat odesílateli potvrzovací e-mail'],
         'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
@@ -2259,9 +2282,9 @@ foreach ($pages as $page) {
     }
 
     $adminFormSectionExpectations = [
-        'admin_form_create' => ['Základní údaje formuláře'],
-        'admin_form_issue_preset' => ['Základní údaje formuláře'],
-        'admin_form_edit' => ['Základní údaje formuláře', 'Pole formuláře'],
+        'admin_form_create' => ['Základní údaje formuláře', 'Potvrzení odesílateli'],
+        'admin_form_issue_preset' => ['Základní údaje formuláře', 'Potvrzení odesílateli'],
+        'admin_form_edit' => ['Základní údaje formuláře', 'Potvrzení odesílateli', 'Pole formuláře'],
         'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_news_form' => ['Obsah novinky'],
@@ -2665,6 +2688,13 @@ foreach ($pages as $page) {
             'value="url"',
             'name="use_honeypot"',
             'name="fields[0][default_value]"',
+            'name="submitter_confirmation_enabled"',
+            'name="submitter_email_field"',
+            'name="submitter_confirmation_subject"',
+            'name="submitter_confirmation_message"',
+            'name="fields[0][allow_multiple]"',
+            'name="fields[0][show_if_field]"',
+            'name="fields[0][show_if_value]"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin form edit page is missing fragment: ' . $expectedFragment;
@@ -2684,11 +2714,17 @@ foreach ($pages as $page) {
             'Dotčené oblasti',
             'Administrace',
             'Formuláře',
+            'Doplňující kroky',
+            'Na tuto adresu může přijít potvrzení o přijetí hlášení.',
             'Souhlasím se zpracováním údajů pro vyřízení hlášení.',
             'type="file"',
+            'multiple',
             'multipart/form-data',
             'name="hp_website"',
             'Krátký souhrn toho, co se pokazilo.',
+            'data-conditional-form',
+            'data-show-if-field="zavaznost"',
+            'data-show-if-value="Vysoká"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'public form page is missing fragment: ' . $expectedFragment;
@@ -5410,6 +5446,39 @@ if ($sendMailIssues === []) {
     $failures++;
     foreach ($sendMailIssues as $sendMailIssue) {
         echo '- ' . $sendMailIssue . "\n";
+    }
+}
+
+echo "=== blog_admin_guardrails ===\n";
+$blogAdminIssues = [];
+$blogLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
+$blogListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
+$blogCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php');
+$blogTagsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php');
+
+if (!str_contains($blogLayoutSource, "currentUserHasCapability('blog_taxonomies_manage') && hasAnyBlogs()")) {
+    $blogAdminIssues[] = 'admin menu still exposes blog taxonomies without existing blog guard';
+}
+if (!str_contains($blogListSource, 'Vytvořit první blog')) {
+    $blogAdminIssues[] = 'blog list is missing no-blog guidance';
+}
+if (!str_contains($blogFormSource, "blog.php?msg=no_blog")) {
+    $blogAdminIssues[] = 'article form no longer redirects back to blog list when no blog exists';
+}
+if (!str_contains($blogCatsSource, 'if (!hasAnyBlogs())')) {
+    $blogAdminIssues[] = 'blog categories page is missing no-blog redirect guard';
+}
+if (!str_contains($blogTagsSource, 'if (!hasAnyBlogs())')) {
+    $blogAdminIssues[] = 'blog tags page is missing no-blog redirect guard';
+}
+
+if ($blogAdminIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($blogAdminIssues as $blogAdminIssue) {
+        echo '- ' . $blogAdminIssue . "\n";
     }
 }
 

@@ -93,7 +93,13 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor): s
         <ul class="chip-list">
           <li><a class="chip-link" href="<?= authorIndexPath() ?>">Všichni autoři</a></li>
           <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>">Všechny články</a></li>
-          <li><span class="pill">Autor: <?= h($activeAuthor['author_display_name']) ?></span></li>
+          <li>
+            <?php if (!empty($activeAuthor['author_public_path'])): ?>
+              <a class="chip-link" href="<?= h((string)$activeAuthor['author_public_path']) ?>">Autor: <?= h($activeAuthor['author_display_name']) ?></a>
+            <?php else: ?>
+              <span class="pill">Autor: <?= h($activeAuthor['author_display_name']) ?></span>
+            <?php endif; ?>
+          </li>
         </ul>
       </nav>
     <?php endif; ?>

@@ -34,6 +34,18 @@ $pageTitle = $form
     : ($presetDefinition !== null ? 'Nový formulář – ' . (string)$presetDefinition['label'] : 'Nový formulář');
 $newFieldDefaultSort = $fields !== [] ? (max(array_map(static fn(array $field): int => (int)$field['sort_order'], $fields)) + 1) : 0;
 $formDefaults = $presetDefinition['form'] ?? [];
+$presetFields = (array)($presetDefinition['fields'] ?? []);
+$fieldSourceForOptions = $fields !== [] ? $fields : $presetFields;
+$emailFieldOptions = formEmailFieldOptions($fieldSourceForOptions);
+$conditionalFieldOptions = [];
+foreach ($fieldSourceForOptions as $candidateField) {
+    $candidateName = trim((string)($candidateField['name'] ?? ''));
+    if ($candidateName === '') {
+        continue;
+    }
+    $candidateLabel = trim((string)($candidateField['label'] ?? ''));
+    $conditionalFieldOptions[$candidateName] = $candidateLabel !== '' ? $candidateLabel : $candidateName;
+}
 
 adminHeader($pageTitle);
 ?>
@@ -44,6 +56,8 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Slug formuláře je už obsazený.</p>
 <?php elseif ($err === 'notification_email'): ?>
   <p role="alert" class="error" id="form-error">Zadejte platnou e-mailovou adresu pro notifikaci, nebo pole nechte prázdné.</p>
+<?php elseif ($err === 'submitter_email_field'): ?>
+  <p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -62,7 +76,7 @@ adminHeader($pageTitle);
 <?php if ($form): ?>
   <p class="section-subtitle">Upravte nastavení formuláře, jeho pole a text, který se zobrazí po úspěšném odeslání.</p>
 <?php else: ?>
-  <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole a nastavit jejich pořadí.</p>
+  <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole, podmínky zobrazení, přílohy i potvrzovací e-mail pro odesílatele.</p>
   <?php if ($presetDefinition !== null): ?>
     <div class="notice notice-info" style="margin-bottom:1rem">
       <p><strong>Šablona:</strong> <?= h((string)$presetDefinition['label']) ?></p>
@@ -166,6 +180,44 @@ adminHeader($pageTitle);
     </div>
   </fieldset>
 
+  <fieldset>
+    <legend>Potvrzení odesílateli</legend>
+
+    <div style="margin-bottom:.75rem">
+      <label for="submitter_confirmation_enabled">
+        <input type="checkbox" id="submitter_confirmation_enabled" name="submitter_confirmation_enabled" value="1"<?= ((int)($form['submitter_confirmation_enabled'] ?? ($formDefaults['submitter_confirmation_enabled'] ?? 0)) === 1) ? ' checked' : '' ?> aria-describedby="submitter-confirmation-enabled-help">
+        Poslat odesílateli potvrzovací e-mail
+      </label>
+      <small id="submitter-confirmation-enabled-help" class="field-help">Volitelné. Po odeslání formuláře odešle potvrzení na e-mail vybraný v jednom z polí formuláře.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="submitter_email_field">Pole s e-mailovou adresou odesílatele</label>
+      <select id="submitter_email_field" name="submitter_email_field" aria-describedby="submitter-email-field-help" style="width:100%;max-width:500px">
+        <option value="">Nevybráno</option>
+        <?php foreach ($emailFieldOptions as $fieldName => $fieldLabel): ?>
+          <option value="<?= h($fieldName) ?>"<?= (string)($form['submitter_email_field'] ?? ($formDefaults['submitter_email_field'] ?? '')) === $fieldName ? ' selected' : '' ?>><?= h($fieldLabel) ?> (<?= h($fieldName) ?>)</option>
+        <?php endforeach; ?>
+      </select>
+      <small id="submitter-email-field-help" class="field-help">Vyberte e-mailové pole, na které má přijít potvrzení. Když tu ještě žádné není, nejdřív ho přidejte mezi pole formuláře.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="submitter_confirmation_subject">Předmět potvrzovacího e-mailu</label>
+      <input type="text" id="submitter_confirmation_subject" name="submitter_confirmation_subject" maxlength="255"
+             value="<?= h((string)($form['submitter_confirmation_subject'] ?? ($formDefaults['submitter_confirmation_subject'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             aria-describedby="submitter-confirmation-subject-help">
+      <small id="submitter-confirmation-subject-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se výchozí předmět podle názvu formuláře.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="submitter_confirmation_message">Text potvrzovacího e-mailu</label>
+      <textarea id="submitter_confirmation_message" name="submitter_confirmation_message" rows="6" style="width:100%;max-width:700px"
+                aria-describedby="submitter-confirmation-message-help"><?= h((string)($form['submitter_confirmation_message'] ?? ($formDefaults['submitter_confirmation_message'] ?? ''))) ?></textarea>
+      <small id="submitter-confirmation-message-help" class="field-help">Můžete použít zástupné proměnné <code>{{site_name}}</code>, <code>{{form_title}}</code>, <code>{{success_message}}</code>, <code>{{submission_date}}</code> a také <code>{{field:nazev_pole}}</code> podle interního klíče pole.</small>
+    </div>
+  </fieldset>
+
   <?php if ($form): ?>
   <fieldset>
     <legend>Pole formuláře</legend>
@@ -239,8 +291,28 @@ adminHeader($pageTitle);
               <small id="field-max-size-help-<?= $i ?>" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
             </div>
           </div>
+          <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
+            <div>
+              <label for="field-show-if-field-<?= $i ?>">Zobrazit jen když</label>
+              <select id="field-show-if-field-<?= $i ?>" name="fields[<?= $i ?>][show_if_field]" aria-describedby="field-show-if-field-help-<?= $i ?>">
+                <option value="">Pole je vždy viditelné</option>
+                <?php foreach ($conditionalFieldOptions as $candidateName => $candidateLabel): ?>
+                  <option value="<?= h($candidateName) ?>"<?= (string)($field['show_if_field'] ?? '') === $candidateName ? ' selected' : '' ?>><?= h($candidateLabel) ?> (<?= h($candidateName) ?>)</option>
+                <?php endforeach; ?>
+              </select>
+              <small id="field-show-if-field-help-<?= $i ?>" class="field-help">Vyberte pole, které má řídit zobrazení tohoto pole.</small>
+            </div>
+            <div>
+              <label for="field-show-if-value-<?= $i ?>">Požadovaná hodnota</label>
+              <input type="text" id="field-show-if-value-<?= $i ?>" name="fields[<?= $i ?>][show_if_value]"
+                     value="<?= h((string)($field['show_if_value'] ?? '')) ?>"
+                     aria-describedby="field-show-if-value-help-<?= $i ?>">
+              <small id="field-show-if-value-help-<?= $i ?>" class="field-help">Když ho necháte prázdné, pole se ukáže po jakékoli vyplněné hodnotě. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
+            </div>
+          </div>
           <div style="margin-top:.5rem;display:flex;gap:1rem;align-items:center">
             <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?>> Povinné pole</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?>> Povolit více souborů</label>
             <label><input type="checkbox" name="fields[<?= $i ?>][delete]" value="1"> Odebrat pole po uložení</label>
           </div>
         </div>
@@ -301,8 +373,26 @@ adminHeader($pageTitle);
           <small id="new-field-max-size-help" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
         </div>
       </div>
+      <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
+        <div>
+          <label for="new-field-show-if-field">Zobrazit jen když</label>
+          <select id="new-field-show-if-field" name="new_field_show_if_field" aria-describedby="new-field-show-if-field-help">
+            <option value="">Pole je vždy viditelné</option>
+            <?php foreach ($conditionalFieldOptions as $candidateName => $candidateLabel): ?>
+              <option value="<?= h($candidateName) ?>"><?= h($candidateLabel) ?> (<?= h($candidateName) ?>)</option>
+            <?php endforeach; ?>
+          </select>
+          <small id="new-field-show-if-field-help" class="field-help">Volitelné. Vyberte pole, které má řídit zobrazení nového pole.</small>
+        </div>
+        <div>
+          <label for="new-field-show-if-value">Požadovaná hodnota</label>
+          <input type="text" id="new-field-show-if-value" name="new_field_show_if_value" aria-describedby="new-field-show-if-value-help">
+          <small id="new-field-show-if-value-help" class="field-help">Když ho necháte prázdné, pole se ukáže po jakékoli vyplněné hodnotě. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
+        </div>
+      </div>
       <div style="margin-top:.5rem">
         <label><input type="checkbox" name="new_field_required" value="1"> Povinné pole</label>
+        <label style="margin-left:1rem"><input type="checkbox" name="new_field_allow_multiple" value="1"> Povolit více souborů</label>
       </div>
     </div>
   </fieldset>

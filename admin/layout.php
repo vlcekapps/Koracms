@@ -93,7 +93,7 @@ function adminHeader(string $pageTitle): void
         if (currentUserHasCapability('blog_manage_own')) {
             $blogItems[] = ['url' => $baseUrl . '/admin/blog.php', 'label' => 'Články'];
         }
-        if (currentUserHasCapability('blog_taxonomies_manage')) {
+        if (currentUserHasCapability('blog_taxonomies_manage') && hasAnyBlogs()) {
             $blogItems[] = ['url' => $baseUrl . '/admin/blog_cats.php', 'label' => 'Kategorie'];
             $blogItems[] = ['url' => $baseUrl . '/admin/blog_tags.php', 'label' => 'Štítky'];
         }

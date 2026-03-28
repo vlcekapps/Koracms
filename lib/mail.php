@@ -185,6 +185,43 @@ function notifyFormSubmission(string $formTitle, array $data, string $recipientO
     }
 }
 
+function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $submissionData): bool
+{
+    if ((int)($form['submitter_confirmation_enabled'] ?? 0) !== 1) {
+        return false;
+    }
+
+    $emailField = trim((string)($form['submitter_email_field'] ?? ''));
+    if ($emailField === '') {
+        return false;
+    }
+
+    $recipient = trim((string)($submissionData[$emailField] ?? ''));
+    if ($recipient === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $subject = trim((string)($form['submitter_confirmation_subject'] ?? ''));
+    if ($subject === '') {
+        $subject = 'Potvrzení odeslání formuláře „' . trim((string)($form['title'] ?? 'Formulář')) . '” – ' . $siteName;
+    }
+
+    $bodyTemplate = trim((string)($form['submitter_confirmation_message'] ?? ''));
+    if ($bodyTemplate === '') {
+        $bodyTemplate = "Děkujeme za odeslání formuláře „{{form_title}}\".\n\nVaše zpráva byla úspěšně přijata.\n\n— {{site_name}}";
+    }
+
+    $body = formRenderTemplate($bodyTemplate, formTemplatePlaceholderMap($form, $fieldsByName, $submissionData));
+
+    if (!sendMail($recipient, $subject, $body)) {
+        error_log("sendMail FAILED: potvrzení odesílateli formuláře pro {$recipient}");
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * Notifikace: obsah čeká na schválení.
  */

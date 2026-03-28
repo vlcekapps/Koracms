@@ -7,8 +7,8 @@ $pdo = db_connect();
 $id = inputInt('get', 'id');
 $article = null;
 
-if ($id === null && empty(getAllBlogs())) {
-    header('Location: ' . BASE_URL . '/admin/blogs.php');
+if ($id === null && !hasAnyBlogs()) {
+    header('Location: ' . BASE_URL . '/admin/blog.php?msg=no_blog');
     exit;
 }
 

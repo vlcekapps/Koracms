@@ -86,6 +86,75 @@ function storePublicFormUpload(array $field, array $file): array
     ];
 }
 
+function publicFormUploadEntries(mixed $fileInput): array
+{
+    if (!is_array($fileInput) || !isset($fileInput['error'])) {
+        return [];
+    }
+
+    if (!is_array($fileInput['error'])) {
+        return [$fileInput];
+    }
+
+    $entries = [];
+    $names = (array)($fileInput['name'] ?? []);
+    $types = (array)($fileInput['type'] ?? []);
+    $tmpNames = (array)($fileInput['tmp_name'] ?? []);
+    $errors = (array)($fileInput['error'] ?? []);
+    $sizes = (array)($fileInput['size'] ?? []);
+
+    foreach ($errors as $index => $errorCode) {
+        $entries[] = [
+            'name' => $names[$index] ?? '',
+            'type' => $types[$index] ?? '',
+            'tmp_name' => $tmpNames[$index] ?? '',
+            'error' => $errorCode,
+            'size' => $sizes[$index] ?? 0,
+        ];
+    }
+
+    return $entries;
+}
+
+function publicFormUploadInputHasFile(mixed $fileInput): bool
+{
+    foreach (publicFormUploadEntries($fileInput) as $entry) {
+        if ((int)($entry['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function storePublicFormUploads(array $field, mixed $fileInput): array
+{
+    $uploadedFiles = [];
+    foreach (publicFormUploadEntries($fileInput) as $entry) {
+        if ((int)($entry['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+
+        $uploadResult = storePublicFormUpload($field, $entry);
+        if (isset($uploadResult['error'])) {
+            foreach ($uploadedFiles as $uploadedFile) {
+                foreach (formCollectUploadedFilesFromSubmissionData($uploadedFile) as $storedName) {
+                    formDeleteUploadedFile($storedName);
+                }
+            }
+            return $uploadResult;
+        }
+
+        $uploadedFiles[] = $uploadResult['value'] ?? '';
+    }
+
+    if (formFieldAllowsMultipleFiles($field)) {
+        return ['value' => $uploadedFiles];
+    }
+
+    return ['value' => $uploadedFiles[0] ?? ''];
+}
+
 if (!isModuleEnabled('forms')) {
     header('Location: ' . BASE_URL . '/index.php');
     exit;
@@ -131,6 +200,13 @@ if ($slug === '' && !empty($form['slug'])) {
 $fields = $pdo->prepare("SELECT * FROM cms_form_fields WHERE form_id = ? ORDER BY sort_order, id");
 $fields->execute([(int)$form['id']]);
 $fields = $fields->fetchAll();
+$fieldsByName = [];
+foreach ($fields as $fieldRow) {
+    $fieldName = trim((string)($fieldRow['name'] ?? ''));
+    if ($fieldName !== '') {
+        $fieldsByName[$fieldName] = $fieldRow;
+    }
+}
 
 $errors = [];
 $success = false;
@@ -149,6 +225,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Chybná odpověď na ověřovací otázku.';
         }
 
+        $previewData = [];
+        foreach ($fields as $field) {
+            $name = (string)$field['name'];
+            $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+            $defaultValue = trim((string)($field['default_value'] ?? ''));
+
+            if ($fieldType === 'hidden') {
+                $previewData[$name] = $defaultValue;
+                continue;
+            }
+
+            if ($fieldType === 'checkbox_group') {
+                $rawValues = $_POST[$name] ?? [];
+                $previewData[$name] = is_array($rawValues)
+                    ? array_values(array_filter(array_map(static fn($item): string => trim((string)$item), $rawValues), static fn(string $item): bool => $item !== ''))
+                    : [];
+                continue;
+            }
+
+            if (in_array($fieldType, ['checkbox', 'consent'], true)) {
+                $previewData[$name] = isset($_POST[$name]) ? '1' : '';
+                continue;
+            }
+
+            if ($fieldType === 'file') {
+                $previewData[$name] = publicFormUploadInputHasFile($_FILES[$name] ?? null) ? '__uploaded__' : '';
+                continue;
+            }
+
+            $rawValue = $_POST[$name] ?? '';
+            $previewData[$name] = is_array($rawValue) ? '' : trim((string)$rawValue);
+        }
+
         $submissionData = [];
         $notificationData = [];
         foreach ($fields as $field) {
@@ -158,6 +267,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $required = (int)($field['is_required'] ?? 0) === 1;
             $defaultValue = trim((string)($field['default_value'] ?? ''));
             $value = '';
+
+            if (!formFieldConditionMatches($field, $previewData)) {
+                $submissionData[$name] = $fieldType === 'checkbox_group' ? [] : '';
+                $notificationData[$label] = '';
+                continue;
+            }
 
             if ($fieldType === 'hidden') {
                 $submissionData[$name] = $defaultValue;
@@ -199,12 +314,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notificationData[$label] = formSubmissionDisplayValueForField($field, $value);
                 continue;
             } elseif ($fieldType === 'file') {
-                $uploadResult = storePublicFormUpload($field, $_FILES[$name] ?? []);
-                if (isset($uploadResult['error'])) {
-                    if ($required || (int)(($_FILES[$name]['error'] ?? UPLOAD_ERR_NO_FILE)) !== UPLOAD_ERR_NO_FILE) {
-                        $errors[] = 'Pole „' . $label . '": ' . $uploadResult['error'];
+                $hasUpload = publicFormUploadInputHasFile($_FILES[$name] ?? null);
+                if (!$hasUpload) {
+                    if ($required) {
+                        $errors[] = 'Pole „' . $label . '“ je povinné.';
                     }
-                    $submissionData[$name] = '';
+                    $emptyFileValue = formFieldAllowsMultipleFiles($field) ? [] : '';
+                    $submissionData[$name] = $emptyFileValue;
+                    $notificationData[$label] = '';
+                    continue;
+                }
+
+                $uploadResult = storePublicFormUploads($field, $_FILES[$name] ?? null);
+                if (isset($uploadResult['error'])) {
+                    $errors[] = 'Pole „' . $label . '“: ' . $uploadResult['error'];
+                    $submissionData[$name] = formFieldAllowsMultipleFiles($field) ? [] : '';
                     $notificationData[$label] = '';
                     continue;
                 }
@@ -212,8 +336,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $storedValue = $uploadResult['value'] ?? '';
                 $submissionData[$name] = $storedValue;
                 $notificationData[$label] = formSubmissionDisplayValueForField($field, $storedValue);
-                if (is_array($storedValue) && isset($storedValue['stored_name'])) {
-                    $storedUploads[] = (string)$storedValue['stored_name'];
+                foreach (formCollectUploadedFilesFromSubmissionData($storedValue) as $storedName) {
+                    $storedUploads[] = $storedName;
                 }
                 continue;
             } else {
@@ -267,6 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     trim((string)($form['notification_email'] ?? '')),
                     trim((string)($form['notification_subject'] ?? ''))
                 );
+                sendFormSubmitterConfirmation($form, $fieldsByName, $submissionData);
 
                 $redirectUrl = internalRedirectTarget((string)($form['redirect_url'] ?? ''), '');
                 if ($redirectUrl !== '') {

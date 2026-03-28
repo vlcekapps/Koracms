@@ -9,6 +9,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Přidáno
 - **Form Builder 2.0 – základ pro skutečně použitelné formuláře** – modul `Formuláře` nově podporuje pole `radio`, `url`, `file`, `více voleb`, `souhlas` a `skryté pole`, per-field nápovědu, placeholder, výchozí hodnotu, omezení typů a velikosti souborů a per-form nastavení pro text tlačítka, notifikační e-mail, předmět notifikace, interní redirect a volitelný honeypot
 - **Šablona `Nahlášení chyby`** – v přehledu formulářů lze jedním kliknutím založit hotový issue-report formulář s doporučenými poli pro závažnost, dotčené oblasti, kroky k reprodukci, očekávané a skutečné chování, přílohu a souhlas se zpracováním údajů
+- **Form Builder 2.0 – podmínky, více příloh a potvrzení odesílateli** – formuláře nově umí potvrzovací e-mail odesílateli, výběr e-mailového pole pro odpověď, vlastní předmět a text potvrzení s placeholdery, více souborů u příloh a podmíněné zobrazování polí přes `Zobrazit jen když`
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci
@@ -17,6 +18,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Přihlašovací obrazovky administrace** – `login.php` a `login_2fa.php` nově používají skip link a sjednocený focus-visible základ, aby se nechovaly hůř než zbytek administrace
 - **Portable theme package a runtime audit** – opraven falešný poplach u CSS validace (`scroll-behavior` vs. zakázané `behavior:`), aktualizován roundtrip test šablon a SMTP kontrola se v lokálním prostředí bez explicitní konfigurace korektně hlásí jako `SKIP`
 - **Formuláře a odpovědi** – odpovědi i CSV export nově správně zobrazují více voleb, souhlas a nahrané soubory; mazání formuláře nebo odpovědi uklízí i související uploady a runtime audit hlídá create/edit/submissions flow včetně veřejné stránky formuláře
+- **Blog administrace bez existujícího blogu** – kategorie a štítky už bez vytvořeného blogu nejsou nabízené v levém menu, jejich obrazovky se bezpečně vrací na správu blogů a přehled článků místo slepé cesty jasně navede na vytvoření prvního blogu
 
 ### Přidáno
 - **Jednotná správa navigace** (`admin/menu.php`) – nahrazuje oddělené stránky „Pozice modulů" a „Pozice stránek"; moduly, statické stránky a blogy v jednom přetahovatelném seznamu; libovolné pořadí a kombinace; drag & drop + Ctrl+šipka + tlačítka Nahoru/Dolů; nastavení `nav_order_unified` s fallbackem na starý systém

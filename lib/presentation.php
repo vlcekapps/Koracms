@@ -44,6 +44,11 @@ function getDefaultBlog(): ?array
     return $blogs[0] ?? null;
 }
 
+function hasAnyBlogs(): bool
+{
+    return getAllBlogs() !== [];
+}
+
 function isMultiBlog(): bool
 {
     return count(getAllBlogs()) > 1;
@@ -2345,6 +2350,10 @@ function formPresetDefinitions(): array
                 'redirect_url' => '',
                 'is_active' => 1,
                 'use_honeypot' => 1,
+                'submitter_confirmation_enabled' => 1,
+                'submitter_email_field' => 'email_pro_odpoved',
+                'submitter_confirmation_subject' => 'Potvrzení přijetí hlášení',
+                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}\".\n\nPotvrdili jsme přijetí hlášení „{{field:strucny_nazev_problemu}}\" a budeme se mu věnovat.\n\nPokud bude potřeba doplnění, ozveme se na tuto adresu.\n\n— {{site_name}}",
             ],
             'fields' => [
                 [
@@ -2474,6 +2483,7 @@ function formPresetDefinitions(): array
                     'options' => '',
                     'accept_types' => '.png,.jpg,.jpeg,.webp,.txt,.log,.pdf',
                     'max_file_size_mb' => 10,
+                    'allow_multiple' => 1,
                     'is_required' => 0,
                     'sort_order' => 90,
                 ],
@@ -2499,6 +2509,82 @@ function formPresetDefinition(string $key): ?array
 {
     $definitions = formPresetDefinitions();
     return $definitions[$key] ?? null;
+}
+
+function formEmailFieldOptions(array $fields): array
+{
+    $options = [];
+    foreach ($fields as $field) {
+        $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+        if ($fieldType !== 'email') {
+            continue;
+        }
+
+        $name = trim((string)($field['name'] ?? ''));
+        if ($name === '') {
+            continue;
+        }
+
+        $label = trim((string)($field['label'] ?? ''));
+        $options[$name] = $label !== '' ? $label : $name;
+    }
+
+    return $options;
+}
+
+function formFieldAllowsMultipleFiles(array $field): bool
+{
+    return normalizeFormFieldType((string)($field['field_type'] ?? 'text')) === 'file'
+        && (int)($field['allow_multiple'] ?? 0) === 1;
+}
+
+function formFieldConditionMatches(array $field, array $submissionData): bool
+{
+    $controller = trim((string)($field['show_if_field'] ?? ''));
+    if ($controller === '') {
+        return true;
+    }
+
+    $expected = trim((string)($field['show_if_value'] ?? ''));
+    $actual = $submissionData[$controller] ?? '';
+
+    if (is_array($actual)) {
+        $actualValues = array_values(array_filter(array_map(static fn($item): string => trim((string)$item), $actual), static fn(string $item): bool => $item !== ''));
+        if ($expected === '') {
+            return $actualValues !== [];
+        }
+
+        return in_array($expected, $actualValues, true);
+    }
+
+    $actualValue = trim((string)$actual);
+    if ($expected === '') {
+        return $actualValue !== '';
+    }
+
+    return $actualValue === $expected;
+}
+
+function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $submissionData): array
+{
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $map = [
+        '{{site_name}}' => $siteName,
+        '{{form_title}}' => trim((string)($form['title'] ?? '')),
+        '{{success_message}}' => trim((string)($form['success_message'] ?? '')),
+        '{{submission_date}}' => date('j. n. Y H:i'),
+    ];
+
+    foreach ($fieldsByName as $name => $field) {
+        $map['{{field:' . $name . '}}'] = formSubmissionDisplayValueForField($field, $submissionData[$name] ?? '');
+    }
+
+    return $map;
+}
+
+function formRenderTemplate(string $template, array $placeholderMap): string
+{
+    return strtr($template, $placeholderMap);
 }
 
 function formUploadDirectory(): string
