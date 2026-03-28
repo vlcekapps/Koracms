@@ -106,6 +106,7 @@ if ($canManageSharedContent) {
         ['module' => 'downloads', 'table' => 'cms_downloads', 'label' => 'Ke stažení', 'url' => 'downloads.php'],
         ['module' => 'food', 'table' => 'cms_food_cards', 'label' => 'Lístky', 'url' => 'food.php'],
         ['module' => 'faq', 'table' => 'cms_faqs', 'label' => 'Znalostní báze', 'url' => 'faq.php'],
+        ['module' => 'forms', 'table' => 'cms_forms', 'label' => 'Formuláře', 'url' => 'forms.php'],
         ['module' => 'board', 'table' => 'cms_board', 'label' => 'Úřední deska', 'url' => 'board.php'],
         ['module' => 'gallery', 'table' => 'cms_gallery_albums', 'label' => 'Galerie', 'url' => 'gallery_albums.php'],
         ['module' => 'polls', 'table' => 'cms_polls', 'label' => 'Ankety', 'url' => 'polls.php'],
@@ -353,6 +354,9 @@ if ($dashboardMode === 'content') {
     }
     if ($canManageSharedContent) {
         $appendQuickLink($quickLinks, 'pages.php', 'Stránky webu');
+        if (isModuleEnabled('forms')) {
+            $appendQuickLink($quickLinks, 'forms.php', 'Formuláře');
+        }
     }
 } elseif ($dashboardMode === 'moderation') {
     $dashboardFocusHeading = 'Co chcete vyřídit';
@@ -395,6 +399,9 @@ if ($dashboardMode === 'content') {
     }
     if ($canManageSettings) {
         $appendQuickLink($quickLinks, 'settings.php', 'Nastavení webu');
+    }
+    if ($canManageSharedContent && isModuleEnabled('forms')) {
+        $appendQuickLink($quickLinks, 'forms.php', 'Formuláře');
     }
     if ($canManageUsers) {
         $appendQuickLink($quickLinks, 'users.php', 'Uživatelé');

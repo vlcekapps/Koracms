@@ -325,7 +325,7 @@ session_write_close();
 $roleAuditUsers = [];
 foreach ([
     'author' => ['first_name' => 'Role', 'last_name' => 'Autor'],
-    'moderator' => ['first_name' => 'Role', 'last_name' => 'Moderátor'],
+    'moderator' => ['first_name' => 'Role', 'last_name' => 'ModerĂˇtor'],
     'booking_manager' => ['first_name' => 'Role', 'last_name' => 'Rezervace'],
 ] as $roleKey => $roleMeta) {
     $roleAuditEmail = 'runtimeaudit-' . $roleKey . '-' . bin2hex(random_bytes(6)) . '@example.test';
@@ -402,7 +402,7 @@ if (isModuleEnabled('newsletter')) {
          VALUES (?, ?, ?, NOW(), NOW())"
     )->execute([
         'Runtime audit newsletter',
-        "Testovací obsah rozesílky pro audit administrace newsletteru.",
+        "TestovacĂ­ obsah rozesĂ­lky pro audit administrace newsletteru.",
         1,
     ]);
     $newsletterHistoryId = (int)$pdo->lastInsertId();
@@ -419,11 +419,11 @@ $pdo->prepare(
 )->execute([
     $runtimeAuditAuthorEmail,
     password_hash('RuntimeAudit123!', PASSWORD_BCRYPT),
-    'Veřejný',
+    'VeĹ™ejnĂ˝',
     'Autor',
     'Runtime Audit',
     $runtimeAuditAuthorSlug,
-    'Krátký veřejný medailonek pro automatický audit autora.',
+    'KrĂˇtkĂ˝ veĹ™ejnĂ˝ medailonek pro automatickĂ˝ audit autora.',
     'https://example.test/autor',
 ]);
 $runtimeAuditAuthorId = (int)$pdo->lastInsertId();
@@ -460,9 +460,9 @@ saveThemeSettings($runtimeAuditThemeSettings, $runtimeAuditActiveTheme);
 clearSettingsCache();
 
 if (isModuleEnabled('board')) {
-    $runtimeAuditBoardTitle = 'Runtime audit vývěska';
+    $runtimeAuditBoardTitle = 'Runtime audit vĂ˝vÄ›ska';
     $runtimeAuditBoardSlug = uniqueBoardSlug($pdo, 'runtime-audit-vyveska-' . bin2hex(random_bytes(4)));
-    $runtimeAuditBoardExcerpt = 'Krátké shrnutí testovací položky pro audit vývěsky a oznámení.';
+    $runtimeAuditBoardExcerpt = 'KrĂˇtkĂ© shrnutĂ­ testovacĂ­ poloĹľky pro audit vĂ˝vÄ›sky a oznĂˇmenĂ­.';
     $runtimeAuditBoardPhone = '+420 777 123 456';
     $runtimeAuditBoardEmail = 'vyveska@example.test';
     $pdo->prepare(
@@ -475,7 +475,7 @@ if (isModuleEnabled('board')) {
         $runtimeAuditBoardTitle,
         $runtimeAuditBoardSlug,
         $runtimeAuditBoardExcerpt,
-        '<p>Detailní text runtime audit položky pro ověření veřejného detailu a výpisu.</p>',
+        '<p>DetailnĂ­ text runtime audit poloĹľky pro ovÄ›Ĺ™enĂ­ veĹ™ejnĂ©ho detailu a vĂ˝pisu.</p>',
         'Runtime Audit',
         $runtimeAuditBoardPhone,
         $runtimeAuditBoardEmail,
@@ -524,7 +524,7 @@ $cleanup['download_files'][] = $runtimeAuditDownloadStoredName;
 
 $runtimeAuditDownloadTitle = 'Runtime audit aplikace';
 $runtimeAuditDownloadSlug = uniqueDownloadSlug($pdo, 'runtime-audit-aplikace-' . bin2hex(random_bytes(4)));
-$runtimeAuditDownloadExcerpt = 'Krátký přehled testovací položky ke stažení pro ověření detailu, metadat a bezpečného file endpointu.';
+$runtimeAuditDownloadExcerpt = 'KrĂˇtkĂ˝ pĹ™ehled testovacĂ­ poloĹľky ke staĹľenĂ­ pro ovÄ›Ĺ™enĂ­ detailu, metadat a bezpeÄŤnĂ©ho file endpointu.';
 $pdo->prepare(
     "INSERT INTO cms_downloads (
         title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
@@ -536,7 +536,7 @@ $pdo->prepare(
     $runtimeAuditDownloadTitle,
     $runtimeAuditDownloadSlug,
     $runtimeAuditDownloadExcerpt,
-    '<p>Detailní text runtime audit položky ke stažení pro ověření veřejného detailu a CTA tlačítek.</p>',
+    '<p>DetailnĂ­ text runtime audit poloĹľky ke staĹľenĂ­ pro ovÄ›Ĺ™enĂ­ veĹ™ejnĂ©ho detailu a CTA tlaÄŤĂ­tek.</p>',
     'https://example.test/runtime-download',
     $runtimeAuditDownloadStoredName,
     'runtime-audit.txt',
@@ -687,7 +687,7 @@ if (isModuleEnabled('food')) {
 if (isModuleEnabled('faq')) {
     $runtimeAuditFaqQuestion = 'Jak funguje runtime audit FAQ?';
     $runtimeAuditFaqSlug = uniqueFaqSlug($pdo, 'runtime-audit-faq-' . bin2hex(random_bytes(4)));
-    $runtimeAuditFaqExcerpt = 'Krátké shrnutí testovací FAQ položky pro ověření veřejného detailu, vyhledávání a redakčního workflow.';
+    $runtimeAuditFaqExcerpt = 'KrĂˇtkĂ© shrnutĂ­ testovacĂ­ FAQ poloĹľky pro ovÄ›Ĺ™enĂ­ veĹ™ejnĂ©ho detailu, vyhledĂˇvĂˇnĂ­ a redakÄŤnĂ­ho workflow.';
     $pdo->prepare(
         "INSERT INTO cms_faqs (
             question, slug, excerpt, answer, category_id, sort_order, is_published, status, created_at, updated_at
@@ -696,7 +696,7 @@ if (isModuleEnabled('faq')) {
         $runtimeAuditFaqQuestion,
         $runtimeAuditFaqSlug,
         $runtimeAuditFaqExcerpt,
-        '<p>Detailní odpověď runtime audit položky FAQ pro ověření veřejného detailu a znalostní báze.</p>',
+        '<p>DetailnĂ­ odpovÄ›ÄŹ runtime audit poloĹľky FAQ pro ovÄ›Ĺ™enĂ­ veĹ™ejnĂ©ho detailu a znalostnĂ­ bĂˇze.</p>',
     ]);
     $runtimeAuditFaqId = (int)$pdo->lastInsertId();
     $cleanup['faq_ids'][] = $runtimeAuditFaqId;
@@ -720,9 +720,9 @@ if (isModuleEnabled('faq')) {
 }
 
 if (isModuleEnabled('places')) {
-    $runtimeAuditPlaceName = 'Runtime audit místo';
+    $runtimeAuditPlaceName = 'Runtime audit mĂ­sto';
     $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
-    $runtimeAuditPlaceExcerpt = 'Krátký přehled testovacího místa pro ověření detailu, praktických informací a veřejného výpisu.';
+    $runtimeAuditPlaceExcerpt = 'KrĂˇtkĂ˝ pĹ™ehled testovacĂ­ho mĂ­sta pro ovÄ›Ĺ™enĂ­ detailu, praktickĂ˝ch informacĂ­ a veĹ™ejnĂ©ho vĂ˝pisu.';
     $pdo->prepare(
         "INSERT INTO cms_places (
             name, slug, place_kind, category, excerpt, description, image_file, address, locality,
@@ -732,17 +732,17 @@ if (isModuleEnabled('places')) {
     )->execute([
         $runtimeAuditPlaceName,
         $runtimeAuditPlaceSlug,
-        'Testovací lokalita',
+        'TestovacĂ­ lokalita',
         $runtimeAuditPlaceExcerpt,
-        '<p>Detailní text runtime audit místa pro ověření veřejného detailu a praktických informací.</p>',
-        'Testovací 1',
+        '<p>DetailnĂ­ text runtime audit mĂ­sta pro ovÄ›Ĺ™enĂ­ veĹ™ejnĂ©ho detailu a praktickĂ˝ch informacĂ­.</p>',
+        'TestovacĂ­ 1',
         'Praha',
         50.0874510,
         14.4206710,
         'https://example.test/misto',
         '+420 777 987 654',
         'misto@example.test',
-        "Po–Pá: 9:00–17:00\nSo: 10:00–14:00",
+        "Poâ€“PĂˇ: 9:00â€“17:00\nSo: 10:00â€“14:00",
     ]);
     $runtimeAuditPlaceId = (int)$pdo->lastInsertId();
     $cleanup['place_ids'][] = $runtimeAuditPlaceId;
@@ -775,7 +775,7 @@ if (isModuleEnabled('polls')) {
     )->execute([
         $runtimeAuditPollQuestion,
         $runtimeAuditPollSlug,
-        'Krátké shrnutí testovací ankety pro ověření detailu, hlasování a čistých URL.',
+        'KrĂˇtkĂ© shrnutĂ­ testovacĂ­ ankety pro ovÄ›Ĺ™enĂ­ detailu, hlasovĂˇnĂ­ a ÄŤistĂ˝ch URL.',
         $runtimeAuditPollStartAt,
         $runtimeAuditPollEndAt,
     ]);
@@ -785,7 +785,7 @@ if (isModuleEnabled('polls')) {
     $pollOptionStmt = $pdo->prepare(
         "INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, ?)"
     );
-    foreach (['Ano', 'Ne', 'Ještě nevím'] as $pollOptionIndex => $pollOptionText) {
+    foreach (['Ano', 'Ne', 'JeĹˇtÄ› nevĂ­m'] as $pollOptionIndex => $pollOptionText) {
         $pollOptionStmt->execute([$runtimeAuditPollId, $pollOptionText, $pollOptionIndex]);
     }
 
@@ -824,7 +824,7 @@ if (isModuleEnabled('podcast')) {
     )->execute([
         $runtimeAuditPodcastShowTitle,
         $runtimeAuditPodcastShowSlug,
-        '<p>Testovací pořad pro runtime audit veřejných URL, RSS feedu a administrace podcastů.</p>',
+        '<p>TestovacĂ­ poĹ™ad pro runtime audit veĹ™ejnĂ˝ch URL, RSS feedu a administrace podcastĹŻ.</p>',
         'Runtime Audit',
         'Technologie',
         'https://example.test/podcast',
@@ -843,7 +843,7 @@ if (isModuleEnabled('podcast')) {
         $runtimeAuditPodcastShowId,
         $runtimeAuditPodcastEpisodeTitle,
         $runtimeAuditPodcastEpisodeSlug,
-        '<p>Detailní text testovací epizody pro runtime audit podcastů.</p>',
+        '<p>DetailnĂ­ text testovacĂ­ epizody pro runtime audit podcastĹŻ.</p>',
         'https://example.test/runtime-audit-episode.mp3',
     ]);
     $runtimeAuditPodcastEpisodeId = (int)$pdo->lastInsertId();
@@ -891,7 +891,7 @@ if (isModuleEnabled('contact')) {
     )->execute([
         'runtimeaudit-contact-' . bin2hex(random_bytes(4)) . '@example.test',
         'Runtime audit kontakt',
-        "Testovací kontaktní zpráva pro audit inboxu a detailu zprávy.",
+        "TestovacĂ­ kontaktnĂ­ zprĂˇva pro audit inboxu a detailu zprĂˇvy.",
     ]);
     $contactMessageId = (int)$pdo->lastInsertId();
     $cleanup['contact_ids'][] = $contactMessageId;
@@ -905,7 +905,7 @@ if (isModuleEnabled('chat')) {
         'Runtime Audit',
         'runtimeaudit-chat-' . bin2hex(random_bytes(4)) . '@example.test',
         'https://example.test/runtime-audit-chat',
-        'Testovací chat zpráva pro audit moderátorského inboxu.',
+        'TestovacĂ­ chat zprĂˇva pro audit moderĂˇtorskĂ©ho inboxu.',
     ]);
     $chatMessageId = (int)$pdo->lastInsertId();
     $cleanup['chat_ids'][] = $chatMessageId;
@@ -925,6 +925,7 @@ $pages = [
     ['label' => 'admin_index', 'url' => $baseUrl . '/admin/index.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_profile', 'url' => $baseUrl . '/admin/profile.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_settings', 'url' => $baseUrl . '/admin/settings.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_settings_modules', 'url' => $baseUrl . '/admin/settings_modules.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_comments', 'url' => $baseUrl . '/admin/comments.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_contact', 'url' => $baseUrl . '/admin/contact.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_chat', 'url' => $baseUrl . '/admin/chat.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -1596,7 +1597,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'class="visitor-counter__item"')) {
             $issues[] = 'visitor counter does not expose individual statistic items';
         }
-        if (str_contains($result['body'], ' · Dnes:') || str_contains($result['body'], ' · Měsíc:') || str_contains($result['body'], ' · Celkem:')) {
+        if (str_contains($result['body'], ' Â· Dnes:') || str_contains($result['body'], ' Â· MÄ›sĂ­c:') || str_contains($result['body'], ' Â· Celkem:')) {
             $issues[] = 'visitor counter still uses visual dot separators in footer output';
         }
     }
@@ -1604,10 +1605,10 @@ foreach ($pages as $page) {
     if ($page['label'] === 'home') {
         foreach ([
             'Featured modul',
-            'Další kroky',
-            'Co chcete udělat dál?',
-            'Rychlé akce pomohou návštěvníkovi dostat se k důležitému obsahu bez zbytečného hledání.',
-            'Přejít na blog',
+            'DalĹˇĂ­ kroky',
+            'Co chcete udÄ›lat dĂˇl?',
+            'RychlĂ© akce pomohou nĂˇvĹˇtÄ›vnĂ­kovi dostat se k dĹŻleĹľitĂ©mu obsahu bez zbyteÄŤnĂ©ho hledĂˇnĂ­.',
+            'PĹ™ejĂ­t na blog',
         ] as $legacySnippet) {
             if (str_contains($result['body'], $legacySnippet)) {
                 $issues[] = 'home still contains legacy copy: ' . $legacySnippet;
@@ -1623,11 +1624,11 @@ foreach ($pages as $page) {
     }
     if ($page['label'] === 'home') {
         $redundantHomeSnippets = [
-            'class="section-kicker">Vítejte</p>' => 'Vítejte',
-            'class="section-title section-title--hero">Úvodní stránka</h2>' => 'Úvodní stránka',
-            'class="section-kicker">Užitečné odkazy</p>' => 'Užitečné odkazy',
-            'class="section-kicker">Doporučujeme</p>' => 'Doporučujeme',
-            'class="section-kicker">Aktuálně</p>' => 'Aktuálně',
+            'class="section-kicker">VĂ­tejte</p>' => 'VĂ­tejte',
+            'class="section-title section-title--hero">ĂšvodnĂ­ strĂˇnka</h2>' => 'ĂšvodnĂ­ strĂˇnka',
+            'class="section-kicker">UĹľiteÄŤnĂ© odkazy</p>' => 'UĹľiteÄŤnĂ© odkazy',
+            'class="section-kicker">DoporuÄŤujeme</p>' => 'DoporuÄŤujeme',
+            'class="section-kicker">AktuĂˇlnÄ›</p>' => 'AktuĂˇlnÄ›',
         ];
         $redundantHomeSnippets = array_filter(
             $redundantHomeSnippets,
@@ -1683,7 +1684,7 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'search') {
-        foreach (['Navigace obsahem', 'Hledání pro „'] as $legacySnippet) {
+        foreach (['Navigace obsahem', 'HledĂˇnĂ­ pro â€ž'] as $legacySnippet) {
             if (str_contains($result['body'], $legacySnippet)) {
                 $issues[] = 'search still contains legacy copy: ' . $legacySnippet;
             }
@@ -1707,7 +1708,7 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'gallery_album') {
-        foreach (['Struktura', 'Obsah alba', 'Podsložky'] as $legacySnippet) {
+        foreach (['Struktura', 'Obsah alba', 'PodsloĹľky'] as $legacySnippet) {
             if (str_contains($result['body'], $legacySnippet)) {
                 $issues[] = 'gallery album still contains technical section label: ' . $legacySnippet;
             }
@@ -1731,8 +1732,8 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'admin_settings') {
         foreach ([
-            'Nastavení webu',
-            'Sekce nastavení webu',
+            'NastavenĂ­ webu',
+            'Sekce nastavenĂ­ webu',
             '#settings-homepage',
             '#settings-basics',
             '#settings-operation',
@@ -1783,9 +1784,9 @@ foreach ($pages as $page) {
             }
         }
         foreach ([
-            'Základní nastavení',
-            'Počty položek na domovské stránce',
-            'Cookie lišta (GDPR)',
+            'ZĂˇkladnĂ­ nastavenĂ­',
+            'PoÄŤty poloĹľek na domovskĂ© strĂˇnce',
+            'Cookie liĹˇta (GDPR)',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin settings still contains outdated phrase: ' . $forbiddenFragment;
@@ -1800,7 +1801,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], '?filter=trash')) {
             $issues[] = 'trash filter is missing in comment moderation';
         }
-        if (str_contains($result['body'], '<caption>Komentáře</caption>')) {
+        if (str_contains($result['body'], '<caption>KomentĂˇĹ™e</caption>')) {
             if (!str_contains($result['body'], 'bulk-action-btn')) {
                 $issues[] = 'comment moderation bulk actions helper is missing';
             }
@@ -1856,8 +1857,8 @@ foreach ($pages as $page) {
             $issues[] = 'author website field is missing in user form';
         }
         foreach ([
-            'Upravit uživatelský účet',
-            'Zpět na uživatele a role',
+            'Upravit uĹľivatelskĂ˝ ĂşÄŤet',
+            'ZpÄ›t na uĹľivatele a role',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'user form is missing fragment: ' . $expectedFragment;
@@ -1878,8 +1879,8 @@ foreach ($pages as $page) {
             $issues[] = 'legacy collaborator role is unexpectedly offered for new users';
         }
         foreach ([
-            'Nový uživatelský účet',
-            'Zpět na uživatele a role',
+            'NovĂ˝ uĹľivatelskĂ˝ ĂşÄŤet',
+            'ZpÄ›t na uĹľivatele a role',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'user create form is missing fragment: ' . $expectedFragment;
@@ -1887,43 +1888,43 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'admin_users' && !str_contains($result['body'], 'Veřejný autor')) {
+    if ($page['label'] === 'admin_users' && !str_contains($result['body'], 'VeĹ™ejnĂ˝ autor')) {
         $issues[] = 'public author badge is missing in user list';
     }
 
     $adminFormActionExpectations = [
-        'admin_blog_form' => ['Uložit změny', 'Zrušit'],
-        'admin_blog_create_form' => ['Přidat článek', 'Zrušit'],
-        'admin_news_form' => ['Uložit změny', 'Zrušit'],
-        'admin_news_create_form' => ['Přidat novinku', 'Zrušit'],
-        'admin_event_form' => ['Uložit změny', 'Zrušit'],
-        'admin_event_create_form' => ['Přidat událost', 'Zrušit'],
-        'admin_user_form' => ['Uložit změny', 'Zrušit'],
-        'admin_user_create_form' => ['Vytvořit účet', 'Zrušit'],
-        'admin_page_form' => ['Uložit změny', 'Zrušit'],
-        'admin_page_create_form' => ['Vytvořit stránku', 'Zrušit'],
-        'admin_board_form' => ['Uložit změny', 'Zrušit'],
-        'admin_board_create_form' => ['Přidat položku sekce', 'Zrušit'],
-        'admin_download_form' => ['Uložit změny', 'Zrušit'],
-        'admin_download_create_form' => ['Přidat položku ke stažení', 'Zrušit'],
-        'admin_food_form' => ['Uložit změny', 'Zrušit'],
-        'admin_food_create_form' => ['Přidat jídelní lístek', 'Zrušit'],
-        'admin_res_resource_form' => ['Uložit změny', 'Zrušit'],
-        'admin_res_resource_create_form' => ['Vytvořit zdroj rezervací', 'Zrušit'],
-        'admin_gallery_album_form' => ['Uložit změny', 'Zrušit'],
-        'admin_gallery_album_create_form' => ['Vytvořit album', 'Zrušit'],
-        'admin_gallery_photo_form' => ['Uložit změny', 'Zrušit'],
-        'admin_gallery_photo_create_form' => ['Nahrát fotografie', 'Zrušit'],
-        'admin_faq_form' => ['Uložit změny', 'Zrušit'],
-        'admin_faq_create_form' => ['Přidat otázku FAQ', 'Zrušit'],
-        'admin_place_form' => ['Uložit změny', 'Zrušit'],
-        'admin_place_create_form' => ['Přidat zajímavé místo', 'Zrušit'],
-        'admin_polls_form' => ['Uložit změny', 'Zrušit'],
-        'admin_polls_create_form' => ['Vytvořit anketu', 'Zrušit'],
-        'admin_podcast_show_form' => ['Uložit změny', 'Zrušit'],
-        'admin_podcast_show_create_form' => ['Vytvořit podcast', 'Zrušit'],
-        'admin_podcast_form' => ['Uložit změny', 'Zrušit'],
-        'admin_podcast_create_form' => ['Přidat epizodu podcastu', 'Zrušit'],
+        'admin_blog_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_blog_create_form' => ['PĹ™idat ÄŤlĂˇnek', 'ZruĹˇit'],
+        'admin_news_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_news_create_form' => ['PĹ™idat novinku', 'ZruĹˇit'],
+        'admin_event_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_event_create_form' => ['PĹ™idat udĂˇlost', 'ZruĹˇit'],
+        'admin_user_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_user_create_form' => ['VytvoĹ™it ĂşÄŤet', 'ZruĹˇit'],
+        'admin_page_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_page_create_form' => ['VytvoĹ™it strĂˇnku', 'ZruĹˇit'],
+        'admin_board_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_board_create_form' => ['PĹ™idat poloĹľku sekce', 'ZruĹˇit'],
+        'admin_download_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_download_create_form' => ['PĹ™idat poloĹľku ke staĹľenĂ­', 'ZruĹˇit'],
+        'admin_food_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_food_create_form' => ['PĹ™idat jĂ­delnĂ­ lĂ­stek', 'ZruĹˇit'],
+        'admin_res_resource_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_res_resource_create_form' => ['VytvoĹ™it zdroj rezervacĂ­', 'ZruĹˇit'],
+        'admin_gallery_album_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_gallery_album_create_form' => ['VytvoĹ™it album', 'ZruĹˇit'],
+        'admin_gallery_photo_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_gallery_photo_create_form' => ['NahrĂˇt fotografie', 'ZruĹˇit'],
+        'admin_faq_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_faq_create_form' => ['PĹ™idat otĂˇzku FAQ', 'ZruĹˇit'],
+        'admin_place_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_place_create_form' => ['PĹ™idat zajĂ­mavĂ© mĂ­sto', 'ZruĹˇit'],
+        'admin_polls_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_polls_create_form' => ['VytvoĹ™it anketu', 'ZruĹˇit'],
+        'admin_podcast_show_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_podcast_show_create_form' => ['VytvoĹ™it podcast', 'ZruĹˇit'],
+        'admin_podcast_form' => ['UloĹľit zmÄ›ny', 'ZruĹˇit'],
+        'admin_podcast_create_form' => ['PĹ™idat epizodu podcastu', 'ZruĹˇit'],
     ];
     if (isset($adminFormActionExpectations[$page['label']])) {
         foreach ($adminFormActionExpectations[$page['label']] as $expectedFragment) {
@@ -1942,19 +1943,19 @@ foreach ($pages as $page) {
     }
 
     $adminFormForbiddenFragments = [
-        'admin_event_form' => ['>Uložit<'],
-        'admin_page_form' => ['>Uložit<'],
-        'admin_user_form' => ['>Uložit<'],
-        'admin_board_form' => ['>Uložit<'],
-        'admin_place_form' => ['>Uložit<'],
-        'admin_res_resource_form' => ['>Uložit<'],
-        'admin_gallery_photo_create_form' => ['>Nahrát<'],
-        'admin_download_create_form' => ['Přidat položku</button>'],
-        'admin_food_create_form' => ['Přidat lístek</button>'],
-        'admin_faq_create_form' => ['Přidat otázku</button>'],
-        'admin_podcast_show_create_form' => ['Přidat podcast</button>'],
-        'admin_podcast_create_form' => ['Přidat epizodu</button>'],
-        'admin_place_create_form' => ['Přidat místo</button>'],
+        'admin_event_form' => ['>UloĹľit<'],
+        'admin_page_form' => ['>UloĹľit<'],
+        'admin_user_form' => ['>UloĹľit<'],
+        'admin_board_form' => ['>UloĹľit<'],
+        'admin_place_form' => ['>UloĹľit<'],
+        'admin_res_resource_form' => ['>UloĹľit<'],
+        'admin_gallery_photo_create_form' => ['>NahrĂˇt<'],
+        'admin_download_create_form' => ['PĹ™idat poloĹľku</button>'],
+        'admin_food_create_form' => ['PĹ™idat lĂ­stek</button>'],
+        'admin_faq_create_form' => ['PĹ™idat otĂˇzku</button>'],
+        'admin_podcast_show_create_form' => ['PĹ™idat podcast</button>'],
+        'admin_podcast_create_form' => ['PĹ™idat epizodu</button>'],
+        'admin_place_create_form' => ['PĹ™idat mĂ­sto</button>'],
     ];
     if (isset($adminFormForbiddenFragments[$page['label']])) {
         foreach ($adminFormForbiddenFragments[$page['label']] as $forbiddenFragment) {
@@ -1965,38 +1966,38 @@ foreach ($pages as $page) {
     }
 
     $adminFormCopyExpectations = [
-        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku nebo jiný veřejný obsah', 'Hledání prochází jen veřejně dostupný obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
-        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku nebo jiný veřejný obsah', 'Hledání prochází jen veřejně dostupný obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
-        'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_news_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
-        'admin_event_create_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
-        'admin_page_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
-        'admin_page_create_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
-        'admin_download_form' => ['Zveřejnit na webu', 'Můžete nahrát dokument, archiv nebo instalační balíček.'],
-        'admin_download_create_form' => ['Zveřejnit na webu', 'Můžete nahrát dokument, archiv nebo instalační balíček.'],
-        'admin_faq_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
-        'admin_faq_create_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
-        'admin_food_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu', 'Nechte prázdné, pokud má lístek platit bez data konce.'],
-        'admin_food_create_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu', 'Nechte prázdné, pokud má lístek platit bez data konce.'],
-        'admin_place_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.'],
-        'admin_place_create_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.'],
-        'admin_board_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
-        'admin_board_create_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
-        'admin_podcast_show_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_podcast_show_create_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_podcast_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.'],
-        'admin_podcast_create_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.'],
-        'admin_polls_form' => ['Vyplňte otázku, možnosti a případné časové omezení.', 'Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.'],
-        'admin_polls_create_form' => ['Vyplňte otázku, možnosti a případné časové omezení.', 'Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.'],
-        'admin_res_resource_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
-        'admin_res_resource_create_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
-        'admin_gallery_album_form' => ['Adresa se vyplní automaticky podle názvu alba.'],
-        'admin_gallery_album_create_form' => ['Adresa se vyplní automaticky podle názvu alba.'],
-        'admin_gallery_photo_form' => ['Adresa se vyplní automaticky podle titulku fotografie.'],
-        'admin_gallery_photo_create_form' => ['Můžete vybrat více fotografií najednou.'],
-        'admin_user_form' => ['Adresa autora se vyplní automaticky podle jména nebo přezdívky.'],
-        'admin_user_create_form' => ['Adresa autora se vyplní automaticky podle jména nebo přezdívky.'],
+        'admin_blog_form' => ['Adresa se vyplnĂ­ automaticky, dokud ji neupravĂ­te ruÄŤnÄ›.', 'Nechte prĂˇzdnĂ©, pokud se mĂˇ ÄŤlĂˇnek zveĹ™ejnit hned.', 'VloĹľit odkaz nebo HTML z webu', 'Vyhledejte existujĂ­cĂ­ ÄŤlĂˇnek, strĂˇnku nebo jinĂ˝ veĹ™ejnĂ˝ obsah', 'HledĂˇnĂ­ prochĂˇzĂ­ jen veĹ™ejnÄ› dostupnĂ˝ obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_blog_create_form' => ['Adresa se vyplnĂ­ automaticky, dokud ji neupravĂ­te ruÄŤnÄ›.', 'Nechte prĂˇzdnĂ©, pokud se mĂˇ ÄŤlĂˇnek zveĹ™ejnit hned.', 'VloĹľit odkaz nebo HTML z webu', 'Vyhledejte existujĂ­cĂ­ ÄŤlĂˇnek, strĂˇnku nebo jinĂ˝ veĹ™ejnĂ˝ obsah', 'HledĂˇnĂ­ prochĂˇzĂ­ jen veĹ™ejnÄ› dostupnĂ˝ obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_news_form' => ['Adresa se vyplnĂ­ automaticky, dokud ji neupravĂ­te ruÄŤnÄ›.'],
+        'admin_news_create_form' => ['Adresa se vyplnĂ­ automaticky, dokud ji neupravĂ­te ruÄŤnÄ›.'],
+        'admin_event_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k tĂ©to udĂˇlosti.', 'ZveĹ™ejnit na webu'],
+        'admin_event_create_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k tĂ©to udĂˇlosti.', 'ZveĹ™ejnit na webu'],
+        'admin_page_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje strĂˇnky a zvolte, jestli se mĂˇ zobrazit na webu a v hlavnĂ­ navigaci.', 'ZveĹ™ejnit na webu', 'Zobrazit v hlavnĂ­ navigaci'],
+        'admin_page_create_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje strĂˇnky a zvolte, jestli se mĂˇ zobrazit na webu a v hlavnĂ­ navigaci.', 'ZveĹ™ejnit na webu', 'Zobrazit v hlavnĂ­ navigaci'],
+        'admin_download_form' => ['ZveĹ™ejnit na webu', 'MĹŻĹľete nahrĂˇt dokument, archiv nebo instalaÄŤnĂ­ balĂ­ÄŤek.'],
+        'admin_download_create_form' => ['ZveĹ™ejnit na webu', 'MĹŻĹľete nahrĂˇt dokument, archiv nebo instalaÄŤnĂ­ balĂ­ÄŤek.'],
+        'admin_faq_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k otĂˇzce a odpovÄ›di.', 'ZveĹ™ejnit na webu'],
+        'admin_faq_create_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k otĂˇzce a odpovÄ›di.', 'ZveĹ™ejnit na webu'],
+        'admin_food_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k tomuto lĂ­stku a pak zvolte, jestli mĂˇ bĂ˝t aktuĂˇlnĂ­ a zveĹ™ejnÄ›nĂ˝.', 'PouĹľĂ­t jako aktuĂˇlnĂ­ lĂ­stek', 'ZveĹ™ejnit na webu', 'Nechte prĂˇzdnĂ©, pokud mĂˇ lĂ­stek platit bez data konce.'],
+        'admin_food_create_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k tomuto lĂ­stku a pak zvolte, jestli mĂˇ bĂ˝t aktuĂˇlnĂ­ a zveĹ™ejnÄ›nĂ˝.', 'PouĹľĂ­t jako aktuĂˇlnĂ­ lĂ­stek', 'ZveĹ™ejnit na webu', 'Nechte prĂˇzdnĂ©, pokud mĂˇ lĂ­stek platit bez data konce.'],
+        'admin_place_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o mĂ­stÄ› a nakonec zvolte, jestli se mĂˇ zobrazit na webu.', 'ZveĹ™ejnit na webu', 'VolitelnĂ©. PomĹŻĹľe s filtrovĂˇnĂ­m a orientacĂ­ ve vĂ˝pisu mĂ­st.'],
+        'admin_place_create_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o mĂ­stÄ› a nakonec zvolte, jestli se mĂˇ zobrazit na webu.', 'ZveĹ™ejnit na webu', 'VolitelnĂ©. PomĹŻĹľe s filtrovĂˇnĂ­m a orientacĂ­ ve vĂ˝pisu mĂ­st.'],
+        'admin_board_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k poloĹľce a zvolte, jestli se mĂˇ zveĹ™ejnit na webu.', 'ZveĹ™ejnit na webu', 'Nechte prĂˇzdnĂ©, pokud mĂˇ poloĹľka zĹŻstat bez data staĹľenĂ­.'],
+        'admin_board_create_form' => ['VyplĹte potĹ™ebnĂ© Ăşdaje k poloĹľce a zvolte, jestli se mĂˇ zveĹ™ejnit na webu.', 'ZveĹ™ejnit na webu', 'Nechte prĂˇzdnĂ©, pokud mĂˇ poloĹľka zĹŻstat bez data staĹľenĂ­.'],
+        'admin_podcast_show_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o podcastu.', 'Adresa se vyplnĂ­ automaticky, dokud ji neupravĂ­te ruÄŤnÄ›.'],
+        'admin_podcast_show_create_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o podcastu.', 'Adresa se vyplnĂ­ automaticky, dokud ji neupravĂ­te ruÄŤnÄ›.'],
+        'admin_podcast_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o epizodÄ›.', 'Adresa se vyplnĂ­ automaticky podle nĂˇzvu epizody.', 'Nechte prĂˇzdnĂ©, pokud se mĂˇ epizoda zveĹ™ejnit hned po uloĹľenĂ­ nebo schvĂˇlenĂ­.'],
+        'admin_podcast_create_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o epizodÄ›.', 'Adresa se vyplnĂ­ automaticky podle nĂˇzvu epizody.', 'Nechte prĂˇzdnĂ©, pokud se mĂˇ epizoda zveĹ™ejnit hned po uloĹľenĂ­ nebo schvĂˇlenĂ­.'],
+        'admin_polls_form' => ['VyplĹte otĂˇzku, moĹľnosti a pĹ™Ă­padnĂ© ÄŤasovĂ© omezenĂ­.', 'VyplĹte jen pokud mĂˇ anketa zaÄŤĂ­t nebo skonÄŤit v konkrĂ©tnĂ­ ÄŤas.'],
+        'admin_polls_create_form' => ['VyplĹte otĂˇzku, moĹľnosti a pĹ™Ă­padnĂ© ÄŤasovĂ© omezenĂ­.', 'VyplĹte jen pokud mĂˇ anketa zaÄŤĂ­t nebo skonÄŤit v konkrĂ©tnĂ­ ÄŤas.'],
+        'admin_res_resource_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o zdroji a pak nastavte zpĹŻsob rezervacĂ­.', 'NapĹ™Ă­klad 24 znamenĂˇ, Ĺľe rezervaci je nutnĂ© vytvoĹ™it nejpozdÄ›ji den pĹ™edem.'],
+        'admin_res_resource_create_form' => ['VyplĹte zĂˇkladnĂ­ Ăşdaje o zdroji a pak nastavte zpĹŻsob rezervacĂ­.', 'NapĹ™Ă­klad 24 znamenĂˇ, Ĺľe rezervaci je nutnĂ© vytvoĹ™it nejpozdÄ›ji den pĹ™edem.'],
+        'admin_gallery_album_form' => ['Adresa se vyplnĂ­ automaticky podle nĂˇzvu alba.'],
+        'admin_gallery_album_create_form' => ['Adresa se vyplnĂ­ automaticky podle nĂˇzvu alba.'],
+        'admin_gallery_photo_form' => ['Adresa se vyplnĂ­ automaticky podle titulku fotografie.'],
+        'admin_gallery_photo_create_form' => ['MĹŻĹľete vybrat vĂ­ce fotografiĂ­ najednou.'],
+        'admin_user_form' => ['Adresa autora se vyplnĂ­ automaticky podle jmĂ©na nebo pĹ™ezdĂ­vky.'],
+        'admin_user_create_form' => ['Adresa autora se vyplnĂ­ automaticky podle jmĂ©na nebo pĹ™ezdĂ­vky.'],
     ];
     if (isset($adminFormCopyExpectations[$page['label']])) {
         foreach ($adminFormCopyExpectations[$page['label']] as $expectedFragment) {
@@ -2056,10 +2057,10 @@ foreach ($pages as $page) {
     ];
     if (in_array($page['label'], $contentReferencePickerLabels, true)) {
         foreach ([
-            'Vložit odkaz nebo HTML z webu',
-            'Vyhledejte existující článek, stránku nebo jiný veřejný obsah',
-            'Hledání prochází jen veřejně dostupný obsah webu.',
-            'fotogalerii nebo přehrávač',
+            'VloĹľit odkaz nebo HTML z webu',
+            'Vyhledejte existujĂ­cĂ­ ÄŤlĂˇnek, strĂˇnku nebo jinĂ˝ veĹ™ejnĂ˝ obsah',
+            'HledĂˇnĂ­ prochĂˇzĂ­ jen veĹ™ejnÄ› dostupnĂ˝ obsah webu.',
+            'fotogalerii nebo pĹ™ehrĂˇvaÄŤ',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'content reference picker is missing fragment: ' . $expectedFragment;
@@ -2122,24 +2123,24 @@ foreach ($pages as $page) {
     }
 
     $adminFormCopyForbiddenFragments = [
-        'admin_blog_form' => ['<small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>', 'Prázdné pole znamená publikování ihned.'],
-        'admin_blog_create_form' => ['<small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>', 'Prázdné pole znamená publikování ihned.'],
-        'admin_news_form' => ['<small id="news-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>'],
-        'admin_news_create_form' => ['<small id="news-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>'],
-        'admin_event_form' => ['>Publikováno<'],
-        'admin_event_create_form' => ['>Publikováno<'],
-        'admin_page_form' => ['>Publikováno<', '>Zobrazit v navigaci<'],
-        'admin_page_create_form' => ['>Publikováno<', '>Zobrazit v navigaci<'],
-        'admin_download_form' => ['Použije se ve veřejné adrese'],
-        'admin_download_create_form' => ['Použije se ve veřejné adrese'],
-        'admin_food_form' => ['>Zobrazit v archivu<', 'Označit jako aktuální lístek'],
-        'admin_food_create_form' => ['>Zobrazit v archivu<', 'Označit jako aktuální lístek'],
-        'admin_place_form' => ['<small id="place-category-help" class="field-help">Nepovinné pole.</small>'],
-        'admin_place_create_form' => ['<small id="place-category-help" class="field-help">Nepovinné pole.</small>'],
-        'admin_polls_form' => ['<small id="poll-timing-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>'],
-        'admin_polls_create_form' => ['<small id="poll-timing-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>'],
-        'admin_board_form' => ['Prázdné pole znamená bez omezení.'],
-        'admin_board_create_form' => ['Prázdné pole znamená bez omezení.'],
+        'admin_blog_form' => ['<small id="blog-slug-help" class="field-help">PouĹľĂ­vejte malĂˇ pĂ­smena, ÄŤĂ­slice a pomlÄŤky.</small>', 'PrĂˇzdnĂ© pole znamenĂˇ publikovĂˇnĂ­ ihned.'],
+        'admin_blog_create_form' => ['<small id="blog-slug-help" class="field-help">PouĹľĂ­vejte malĂˇ pĂ­smena, ÄŤĂ­slice a pomlÄŤky.</small>', 'PrĂˇzdnĂ© pole znamenĂˇ publikovĂˇnĂ­ ihned.'],
+        'admin_news_form' => ['<small id="news-slug-help" class="field-help">PouĹľĂ­vejte malĂˇ pĂ­smena, ÄŤĂ­slice a pomlÄŤky.</small>'],
+        'admin_news_create_form' => ['<small id="news-slug-help" class="field-help">PouĹľĂ­vejte malĂˇ pĂ­smena, ÄŤĂ­slice a pomlÄŤky.</small>'],
+        'admin_event_form' => ['>PublikovĂˇno<'],
+        'admin_event_create_form' => ['>PublikovĂˇno<'],
+        'admin_page_form' => ['>PublikovĂˇno<', '>Zobrazit v navigaci<'],
+        'admin_page_create_form' => ['>PublikovĂˇno<', '>Zobrazit v navigaci<'],
+        'admin_download_form' => ['PouĹľije se ve veĹ™ejnĂ© adrese'],
+        'admin_download_create_form' => ['PouĹľije se ve veĹ™ejnĂ© adrese'],
+        'admin_food_form' => ['>Zobrazit v archivu<', 'OznaÄŤit jako aktuĂˇlnĂ­ lĂ­stek'],
+        'admin_food_create_form' => ['>Zobrazit v archivu<', 'OznaÄŤit jako aktuĂˇlnĂ­ lĂ­stek'],
+        'admin_place_form' => ['<small id="place-category-help" class="field-help">NepovinnĂ© pole.</small>'],
+        'admin_place_create_form' => ['<small id="place-category-help" class="field-help">NepovinnĂ© pole.</small>'],
+        'admin_polls_form' => ['<small id="poll-timing-help" class="field-help" style="margin-top:0">NepovinnĂ© pole.</small>'],
+        'admin_polls_create_form' => ['<small id="poll-timing-help" class="field-help" style="margin-top:0">NepovinnĂ© pole.</small>'],
+        'admin_board_form' => ['PrĂˇzdnĂ© pole znamenĂˇ bez omezenĂ­.'],
+        'admin_board_create_form' => ['PrĂˇzdnĂ© pole znamenĂˇ bez omezenĂ­.'],
     ];
     if (isset($adminFormCopyForbiddenFragments[$page['label']])) {
         foreach ($adminFormCopyForbiddenFragments[$page['label']] as $forbiddenFragment) {
@@ -2155,7 +2156,7 @@ foreach ($pages as $page) {
 
     if (in_array($page['label'], $htmlSnippetHelpLabels, true)) {
         foreach ([
-            'Můžete použít HTML nebo Markdown.',
+            'MĹŻĹľete pouĹľĂ­t HTML nebo Markdown.',
             'Podporuje HTML i Markdown syntaxi.',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -2165,34 +2166,34 @@ foreach ($pages as $page) {
     }
 
     $adminFormSectionExpectations = [
-        'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
-        'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
+        'admin_blog_form' => ['ZĂˇkladnĂ­ Ăşdaje ÄŤlĂˇnku', 'Text ÄŤlĂˇnku', 'VyhledĂˇnĂ­ obsahu', 'KomentĂˇĹ™e', 'VyhledĂˇvaÄŤe a sdĂ­lenĂ­'],
+        'admin_blog_create_form' => ['ZĂˇkladnĂ­ Ăşdaje ÄŤlĂˇnku', 'Text ÄŤlĂˇnku', 'VyhledĂˇnĂ­ obsahu', 'KomentĂˇĹ™e', 'VyhledĂˇvaÄŤe a sdĂ­lenĂ­'],
         'admin_news_form' => ['Obsah novinky'],
         'admin_news_create_form' => ['Obsah novinky'],
-        'admin_event_form' => ['Základní údaje události', 'Popis události'],
-        'admin_event_create_form' => ['Základní údaje události', 'Popis události'],
-        'admin_page_form' => ['Obsah a zobrazení stránky'],
-        'admin_page_create_form' => ['Obsah a zobrazení stránky'],
-        'admin_download_form' => ['Základní údaje položky', 'Náhled a zveřejnění'],
-        'admin_download_create_form' => ['Základní údaje položky', 'Náhled a zveřejnění'],
-        'admin_food_form' => ['Údaje o lístku', 'Aktualita a zveřejnění'],
-        'admin_food_create_form' => ['Údaje o lístku', 'Aktualita a zveřejnění'],
-        'admin_place_form' => ['Základní údaje místa', 'Poloha a kontakt', 'Obrázek a zveřejnění'],
-        'admin_place_create_form' => ['Základní údaje místa', 'Poloha a kontakt', 'Obrázek a zveřejnění'],
-        'admin_board_form' => ['Položka sekce', 'Příloha a zveřejnění'],
-        'admin_board_create_form' => ['Položka sekce', 'Příloha a zveřejnění'],
-        'admin_gallery_album_form' => ['Údaje o albu'],
-        'admin_gallery_album_create_form' => ['Údaje o albu'],
-        'admin_gallery_photo_form' => ['Údaje o fotografii'],
-        'admin_gallery_photo_create_form' => ['Nahrání fotografií do alba'],
-        'admin_podcast_show_form' => ['Základní údaje podcastu', 'Popis a titulní obrázek'],
-        'admin_podcast_show_create_form' => ['Základní údaje podcastu', 'Popis a titulní obrázek'],
-        'admin_podcast_form' => ['Základní údaje epizody', 'Audio a text epizody'],
-        'admin_podcast_create_form' => ['Základní údaje epizody', 'Audio a text epizody'],
-        'admin_polls_form' => ['Základní údaje ankety'],
-        'admin_polls_create_form' => ['Základní údaje ankety'],
-        'admin_res_resource_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
-        'admin_res_resource_create_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
+        'admin_event_form' => ['ZĂˇkladnĂ­ Ăşdaje udĂˇlosti', 'Popis udĂˇlosti'],
+        'admin_event_create_form' => ['ZĂˇkladnĂ­ Ăşdaje udĂˇlosti', 'Popis udĂˇlosti'],
+        'admin_page_form' => ['Obsah a zobrazenĂ­ strĂˇnky'],
+        'admin_page_create_form' => ['Obsah a zobrazenĂ­ strĂˇnky'],
+        'admin_download_form' => ['ZĂˇkladnĂ­ Ăşdaje poloĹľky', 'NĂˇhled a zveĹ™ejnÄ›nĂ­'],
+        'admin_download_create_form' => ['ZĂˇkladnĂ­ Ăşdaje poloĹľky', 'NĂˇhled a zveĹ™ejnÄ›nĂ­'],
+        'admin_food_form' => ['Ăšdaje o lĂ­stku', 'Aktualita a zveĹ™ejnÄ›nĂ­'],
+        'admin_food_create_form' => ['Ăšdaje o lĂ­stku', 'Aktualita a zveĹ™ejnÄ›nĂ­'],
+        'admin_place_form' => ['ZĂˇkladnĂ­ Ăşdaje mĂ­sta', 'Poloha a kontakt', 'ObrĂˇzek a zveĹ™ejnÄ›nĂ­'],
+        'admin_place_create_form' => ['ZĂˇkladnĂ­ Ăşdaje mĂ­sta', 'Poloha a kontakt', 'ObrĂˇzek a zveĹ™ejnÄ›nĂ­'],
+        'admin_board_form' => ['PoloĹľka sekce', 'PĹ™Ă­loha a zveĹ™ejnÄ›nĂ­'],
+        'admin_board_create_form' => ['PoloĹľka sekce', 'PĹ™Ă­loha a zveĹ™ejnÄ›nĂ­'],
+        'admin_gallery_album_form' => ['Ăšdaje o albu'],
+        'admin_gallery_album_create_form' => ['Ăšdaje o albu'],
+        'admin_gallery_photo_form' => ['Ăšdaje o fotografii'],
+        'admin_gallery_photo_create_form' => ['NahrĂˇnĂ­ fotografiĂ­ do alba'],
+        'admin_podcast_show_form' => ['ZĂˇkladnĂ­ Ăşdaje podcastu', 'Popis a titulnĂ­ obrĂˇzek'],
+        'admin_podcast_show_create_form' => ['ZĂˇkladnĂ­ Ăşdaje podcastu', 'Popis a titulnĂ­ obrĂˇzek'],
+        'admin_podcast_form' => ['ZĂˇkladnĂ­ Ăşdaje epizody', 'Audio a text epizody'],
+        'admin_podcast_create_form' => ['ZĂˇkladnĂ­ Ăşdaje epizody', 'Audio a text epizody'],
+        'admin_polls_form' => ['ZĂˇkladnĂ­ Ăşdaje ankety'],
+        'admin_polls_create_form' => ['ZĂˇkladnĂ­ Ăşdaje ankety'],
+        'admin_res_resource_form' => ['Lokality rezervacĂ­', 'ZpĹŻsob rezervacĂ­', 'ÄŚasy k rezervaci', 'HromadnĂ© pĹ™idĂˇnĂ­ slotĹŻ'],
+        'admin_res_resource_create_form' => ['Lokality rezervacĂ­', 'ZpĹŻsob rezervacĂ­', 'ÄŚasy k rezervaci', 'HromadnĂ© pĹ™idĂˇnĂ­ slotĹŻ'],
     ];
     if (isset($adminFormSectionExpectations[$page['label']])) {
         foreach ($adminFormSectionExpectations[$page['label']] as $expectedFragment) {
@@ -2203,34 +2204,34 @@ foreach ($pages as $page) {
     }
 
     $adminFormSectionForbiddenFragments = [
-        'admin_blog_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
-        'admin_blog_create_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
+        'admin_blog_form' => ['<legend>ÄŚlĂˇnek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
+        'admin_blog_create_form' => ['<legend>ÄŚlĂˇnek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_news_form' => ['<legend>Novinka</legend>'],
         'admin_news_create_form' => ['<legend>Novinka</legend>'],
-        'admin_event_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>'],
-        'admin_event_create_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>'],
-        'admin_page_form' => ['<legend>Vlastnosti stránky</legend>'],
-        'admin_page_create_form' => ['<legend>Vlastnosti stránky</legend>'],
-        'admin_download_form' => ['<legend>Položka ke stažení</legend>', '<legend>Náhled a zobrazení</legend>'],
-        'admin_download_create_form' => ['<legend>Položka ke stažení</legend>', '<legend>Náhled a zobrazení</legend>'],
-        'admin_food_form' => ['<legend>Lístek</legend>', '<legend>Publikování</legend>'],
-        'admin_food_create_form' => ['<legend>Lístek</legend>', '<legend>Publikování</legend>'],
-        'admin_place_form' => ['<legend>Místo</legend>', '<legend>Praktické informace</legend>', '<legend>Obrázek a zobrazení</legend>'],
-        'admin_place_create_form' => ['<legend>Místo</legend>', '<legend>Praktické informace</legend>', '<legend>Obrázek a zobrazení</legend>'],
-        'admin_board_form' => ['Položka modulu', '<legend>Příloha a zobrazení</legend>'],
-        'admin_board_create_form' => ['Položka modulu', '<legend>Příloha a zobrazení</legend>'],
+        'admin_event_form' => ['<legend>UdĂˇlost</legend>', '<legend>Podrobnosti</legend>'],
+        'admin_event_create_form' => ['<legend>UdĂˇlost</legend>', '<legend>Podrobnosti</legend>'],
+        'admin_page_form' => ['<legend>Vlastnosti strĂˇnky</legend>'],
+        'admin_page_create_form' => ['<legend>Vlastnosti strĂˇnky</legend>'],
+        'admin_download_form' => ['<legend>PoloĹľka ke staĹľenĂ­</legend>', '<legend>NĂˇhled a zobrazenĂ­</legend>'],
+        'admin_download_create_form' => ['<legend>PoloĹľka ke staĹľenĂ­</legend>', '<legend>NĂˇhled a zobrazenĂ­</legend>'],
+        'admin_food_form' => ['<legend>LĂ­stek</legend>', '<legend>PublikovĂˇnĂ­</legend>'],
+        'admin_food_create_form' => ['<legend>LĂ­stek</legend>', '<legend>PublikovĂˇnĂ­</legend>'],
+        'admin_place_form' => ['<legend>MĂ­sto</legend>', '<legend>PraktickĂ© informace</legend>', '<legend>ObrĂˇzek a zobrazenĂ­</legend>'],
+        'admin_place_create_form' => ['<legend>MĂ­sto</legend>', '<legend>PraktickĂ© informace</legend>', '<legend>ObrĂˇzek a zobrazenĂ­</legend>'],
+        'admin_board_form' => ['PoloĹľka modulu', '<legend>PĹ™Ă­loha a zobrazenĂ­</legend>'],
+        'admin_board_create_form' => ['PoloĹľka modulu', '<legend>PĹ™Ă­loha a zobrazenĂ­</legend>'],
         'admin_gallery_album_form' => ['<legend>Album</legend>'],
         'admin_gallery_album_create_form' => ['<legend>Album</legend>'],
         'admin_gallery_photo_form' => ['<legend>Vlastnosti fotografie</legend>'],
-        'admin_gallery_photo_create_form' => ['<legend>Nahrání fotografií</legend>'],
-        'admin_podcast_show_form' => ['<legend>Pořad</legend>', '<legend>Popis a cover</legend>'],
-        'admin_podcast_show_create_form' => ['<legend>Pořad</legend>', '<legend>Popis a cover</legend>'],
+        'admin_gallery_photo_create_form' => ['<legend>NahrĂˇnĂ­ fotografiĂ­</legend>'],
+        'admin_podcast_show_form' => ['<legend>PoĹ™ad</legend>', '<legend>Popis a cover</legend>'],
+        'admin_podcast_show_create_form' => ['<legend>PoĹ™ad</legend>', '<legend>Popis a cover</legend>'],
         'admin_podcast_form' => ['<legend>Epizoda</legend>', '<legend>Audio a popis</legend>'],
         'admin_podcast_create_form' => ['<legend>Epizoda</legend>', '<legend>Audio a popis</legend>'],
         'admin_polls_form' => ['<legend>Anketa</legend>'],
         'admin_polls_create_form' => ['<legend>Anketa</legend>'],
-        'admin_res_resource_form' => ['<legend>Místa konání</legend>', '<legend>Režim slotů', '<legend>Předdefinované sloty</legend>', '<legend>Hromadný generátor</legend>'],
-        'admin_res_resource_create_form' => ['<legend>Místa konání</legend>', '<legend>Režim slotů', '<legend>Předdefinované sloty</legend>', '<legend>Hromadný generátor</legend>'],
+        'admin_res_resource_form' => ['<legend>MĂ­sta konĂˇnĂ­</legend>', '<legend>ReĹľim slotĹŻ', '<legend>PĹ™eddefinovanĂ© sloty</legend>', '<legend>HromadnĂ˝ generĂˇtor</legend>'],
+        'admin_res_resource_create_form' => ['<legend>MĂ­sta konĂˇnĂ­</legend>', '<legend>ReĹľim slotĹŻ', '<legend>PĹ™eddefinovanĂ© sloty</legend>', '<legend>HromadnĂ˝ generĂˇtor</legend>'],
     ];
     if (isset($adminFormSectionForbiddenFragments[$page['label']])) {
         foreach ($adminFormSectionForbiddenFragments[$page['label']] as $forbiddenFragment) {
@@ -2242,21 +2243,21 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'admin_index') {
         foreach ([
-            'Na čem chcete pracovat',
-            'Přehled administrace',
+            'Na ÄŤem chcete pracovat',
+            'PĹ™ehled administrace',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin dashboard is missing fragment: ' . $expectedFragment;
             }
         }
         foreach ([
-            'Ostatní moduly',
-            'Nejčastější akce',
-            'Co můžete spravovat',
-            'Dostupné sekce administrace',
-            'Další části administrace',
-            'Sekce, které máte k dispozici',
-            'Otevřít přehled',
+            'OstatnĂ­ moduly',
+            'NejÄŤastÄ›jĹˇĂ­ akce',
+            'Co mĹŻĹľete spravovat',
+            'DostupnĂ© sekce administrace',
+            'DalĹˇĂ­ ÄŤĂˇsti administrace',
+            'Sekce, kterĂ© mĂˇte k dispozici',
+            'OtevĹ™Ă­t pĹ™ehled',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin dashboard still contains outdated phrase: ' . $forbiddenFragment;
@@ -2265,14 +2266,30 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], '<details role="group"')) {
             $issues[] = 'admin navigation still uses redundant grouped details semantics';
         }
-        if (str_contains($result['body'], 'aria-label="Blog"') || str_contains($result['body'], 'aria-label="Ke stažení"') || str_contains($result['body'], 'aria-label="FAQ"') || str_contains($result['body'], 'aria-label="Vývěska a oznámení"')) {
+        if (str_contains($result['body'], 'aria-label="Blog"') || str_contains($result['body'], 'aria-label="Ke staĹľenĂ­"') || str_contains($result['body'], 'aria-label="FAQ"') || str_contains($result['body'], 'aria-label="VĂ˝vÄ›ska a oznĂˇmenĂ­"')) {
             $issues[] = 'admin navigation still uses redundant aria-label on collapsible module groups';
         }
-        if (isModuleEnabled('downloads') && !str_contains($result['body'], 'Soubory a položky')) {
+        if (isModuleEnabled('downloads') && !str_contains($result['body'], 'Soubory a poloĹľky')) {
             $issues[] = 'admin navigation is missing the updated downloads section label';
         }
-        if (isModuleEnabled('board') && !str_contains($result['body'], 'Dokumenty a oznámení')) {
+        if (isModuleEnabled('board') && !str_contains($result['body'], 'Dokumenty a oznĂˇmenĂ­')) {
             $issues[] = 'admin navigation is missing the updated board section label';
+        }
+    }
+
+    if ($page['label'] === 'admin_index' && isModuleEnabled('forms') && !str_contains($result['body'], '/admin/forms.php')) {
+        $issues[] = 'admin dashboard/navigation is missing the forms entry';
+    }
+
+    if ($page['label'] === 'admin_settings_modules') {
+        foreach ([
+            'name="module_forms"',
+            'for="module_forms"',
+            'id="module_forms"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'module settings is missing forms fragment: ' . $expectedFragment;
+            }
         }
     }
 
@@ -2298,7 +2315,7 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'admin_review_queue') {
-        if (!str_contains($result['body'], 'Ke schválení')) {
+        if (!str_contains($result['body'], 'Ke schvĂˇlenĂ­')) {
             $issues[] = 'review queue heading is missing';
         }
         if (!str_contains($result['body'], 'review_queue.php?scope=content')) {
@@ -2310,17 +2327,17 @@ foreach ($pages as $page) {
         if (isModuleEnabled('reservations') && !str_contains($result['body'], 'review_queue.php?scope=reservations')) {
             $issues[] = 'review queue reservations filter is missing';
         }
-        if (str_contains($result['body'], 'queue-summary-heading') && !str_contains($result['body'], 'Rychlý přehled')) {
+        if (str_contains($result['body'], 'queue-summary-heading') && !str_contains($result['body'], 'RychlĂ˝ pĹ™ehled')) {
             $issues[] = 'review queue summary heading was not updated';
         }
-        if (str_contains($result['body'], 'queue-summary-heading') && !str_contains($result['body'], 'Přejít do seznamu')) {
+        if (str_contains($result['body'], 'queue-summary-heading') && !str_contains($result['body'], 'PĹ™ejĂ­t do seznamu')) {
             $issues[] = 'review queue summary link text was not updated';
         }
         foreach ([
-            'Souhrn čekajících položek',
+            'Souhrn ÄŤekajĂ­cĂ­ch poloĹľek',
             '>Modul<',
-            'Doplňující info',
-            'Přejít do správy',
+            'DoplĹujĂ­cĂ­ info',
+            'PĹ™ejĂ­t do sprĂˇvy',
             '>Moderace<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -2336,7 +2353,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin news status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled novinek')) {
+        if (!str_contains($result['body'], 'PĹ™ehled novinek')) {
             $issues[] = 'admin news table caption was not updated';
         }
     }
@@ -2350,13 +2367,13 @@ foreach ($pages as $page) {
         }
         foreach ([
             'Kategorie FAQ',
-            'Přehled otázek FAQ',
+            'PĹ™ehled otĂˇzek FAQ',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin faq page is missing fragment: ' . $expectedFragment;
             }
         }
-        if (str_contains($result['body'], 'Správa kategorií')) {
+        if (str_contains($result['body'], 'SprĂˇva kategoriĂ­')) {
             $issues[] = 'admin faq page still contains outdated category action wording';
         }
     }
@@ -2368,7 +2385,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin events status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled událostí')) {
+        if (!str_contains($result['body'], 'PĹ™ehled udĂˇlostĂ­')) {
             $issues[] = 'admin events table caption was not updated';
         }
     }
@@ -2378,8 +2395,8 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'contact_message.php',
-            'Označit jako přečtené',
-            'Označit jako vyřízené',
+            'OznaÄŤit jako pĹ™eÄŤtenĂ©',
+            'OznaÄŤit jako vyĹ™Ă­zenĂ©',
             'data-selection-status="contact"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -2389,10 +2406,10 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'admin_contact_message') {
-        if (!str_contains($result['body'], 'Označit jako nové')) {
+        if (!str_contains($result['body'], 'OznaÄŤit jako novĂ©')) {
             $issues[] = 'admin contact detail is missing "mark as new" action label';
         }
-        if (str_contains($result['body'], 'Vrátit jako nové')) {
+        if (str_contains($result['body'], 'VrĂˇtit jako novĂ©')) {
             $issues[] = 'admin contact detail still contains outdated "return as new" wording';
         }
     }
@@ -2402,8 +2419,8 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'chat_message.php',
-            'Označit jako přečtené',
-            'Označit jako vyřízené',
+            'OznaÄŤit jako pĹ™eÄŤtenĂ©',
+            'OznaÄŤit jako vyĹ™Ă­zenĂ©',
             'data-selection-status="chat"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -2413,10 +2430,10 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'admin_chat_message') {
-        if (!str_contains($result['body'], 'Označit jako nové')) {
+        if (!str_contains($result['body'], 'OznaÄŤit jako novĂ©')) {
             $issues[] = 'admin chat detail is missing "mark as new" action label';
         }
-        if (str_contains($result['body'], 'Vrátit jako nové')) {
+        if (str_contains($result['body'], 'VrĂˇtit jako novĂ©')) {
             $issues[] = 'admin chat detail still contains outdated "return as new" wording';
         }
     }
@@ -2428,12 +2445,12 @@ foreach ($pages as $page) {
             'newsletter_subscriber.php',
             'newsletter_bulk.php',
             'newsletter_history.php',
-            'Odběratelé newsletteru',
-            'Poslední rozesílky',
-            'Nová rozesílka',
-            'Hromadné akce s vybranými odběrateli',
+            'OdbÄ›ratelĂ© newsletteru',
+            'PoslednĂ­ rozesĂ­lky',
+            'NovĂˇ rozesĂ­lka',
+            'HromadnĂ© akce s vybranĂ˝mi odbÄ›rateli',
             'data-selection-status="newsletter-subscribers"',
-            'Vybrat všechny odběratele newsletteru',
+            'Vybrat vĹˇechny odbÄ›ratele newsletteru',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter overview is missing fragment: ' . $expectedFragment;
@@ -2441,14 +2458,14 @@ foreach ($pages as $page) {
         }
         foreach ([
             '+ Napsat newsletter',
-            '>Historie rozesílek<',
-            '>Odběratelé<',
+            '>Historie rozesĂ­lek<',
+            '>OdbÄ›ratelĂ©<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin newsletter overview still contains outdated phrase: ' . $forbiddenFragment;
             }
         }
-        if (str_contains($result['body'], 'zobrazených položek')) {
+        if (str_contains($result['body'], 'zobrazenĂ˝ch poloĹľek')) {
             $issues[] = 'admin newsletter overview still uses generic item count wording';
         }
     }
@@ -2457,9 +2474,9 @@ foreach ($pages as $page) {
         foreach ([
             'name="subject"',
             'name="body"',
-            'potvrzených odběratelů',
-            'Nová rozesílka',
-            'Odeslat rozesílku',
+            'potvrzenĂ˝ch odbÄ›ratelĹŻ',
+            'NovĂˇ rozesĂ­lka',
+            'Odeslat rozesĂ­lku',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter compose form is missing fragment: ' . $expectedFragment;
@@ -2474,19 +2491,19 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin board status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled položek sekce')) {
+        if (!str_contains($result['body'], 'PĹ™ehled poloĹľek sekce')) {
             $issues[] = 'admin board table caption was not updated';
         }
-        if (!str_contains($result['body'], 'Návštěvníci tuto sekci na webu vidí jako')) {
+        if (!str_contains($result['body'], 'NĂˇvĹˇtÄ›vnĂ­ci tuto sekci na webu vidĂ­ jako')) {
             $issues[] = 'admin board is missing visitor-facing public label helper text';
         }
-        if (!str_contains($result['body'], 'Kategorie vývěsky')) {
+        if (!str_contains($result['body'], 'Kategorie vĂ˝vÄ›sky')) {
             $issues[] = 'admin board category quick link was not updated';
         }
-        if (str_contains($result['body'], 'Veřejný název modulu je aktuálně')) {
+        if (str_contains($result['body'], 'VeĹ™ejnĂ˝ nĂˇzev modulu je aktuĂˇlnÄ›')) {
             $issues[] = 'admin board still contains outdated public label wording';
         }
-        if (str_contains($result['body'], 'Správa kategorií')) {
+        if (str_contains($result['body'], 'SprĂˇva kategoriĂ­')) {
             $issues[] = 'admin board still contains outdated category action wording';
         }
     }
@@ -2498,7 +2515,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin downloads status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled položek ke stažení')) {
+        if (!str_contains($result['body'], 'PĹ™ehled poloĹľek ke staĹľenĂ­')) {
             $issues[] = 'admin downloads table caption was not updated';
         }
     }
@@ -2510,7 +2527,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin pages status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled statických stránek')) {
+        if (!str_contains($result['body'], 'PĹ™ehled statickĂ˝ch strĂˇnek')) {
             $issues[] = 'admin pages table caption was not updated';
         }
     }
@@ -2541,8 +2558,8 @@ foreach ($pages as $page) {
             $issues[] = 'admin food status filter is missing';
         }
         foreach ([
-            'Přehled jídelních lístků',
-            'Přehled nápojových lístků',
+            'PĹ™ehled jĂ­delnĂ­ch lĂ­stkĹŻ',
+            'PĹ™ehled nĂˇpojovĂ˝ch lĂ­stkĹŻ',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin food page is missing fragment: ' . $expectedFragment;
@@ -2557,7 +2574,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin places status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled zajímavých míst')) {
+        if (!str_contains($result['body'], 'PĹ™ehled zajĂ­mavĂ˝ch mĂ­st')) {
             $issues[] = 'admin places table caption was not updated';
         }
     }
@@ -2567,9 +2584,9 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'res_resource_form.php',
-            'Kategorie zdrojů rezervací',
-            'Lokality rezervací',
-            'Přehled zdrojů rezervací',
+            'Kategorie zdrojĹŻ rezervacĂ­',
+            'Lokality rezervacĂ­',
+            'PĹ™ehled zdrojĹŻ rezervacĂ­',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin reservation resources is missing fragment: ' . $expectedFragment;
@@ -2592,7 +2609,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'podcast_show_form.php')) {
             $issues[] = 'admin podcast shows page is missing create link';
         }
-        if (!str_contains($result['body'], 'Přehled podcastů')) {
+        if (!str_contains($result['body'], 'PĹ™ehled podcastĹŻ')) {
             $issues[] = 'admin podcast shows table caption was not updated';
         }
         if (!str_contains($result['body'], 'Spravovat epizody')) {
@@ -2608,14 +2625,14 @@ foreach ($pages as $page) {
             $issues[] = 'admin podcast episode status filter is missing';
         }
         foreach ([
-            'Zpět na přehled podcastů',
-            'Přehled epizod podcastu',
+            'ZpÄ›t na pĹ™ehled podcastĹŻ',
+            'PĹ™ehled epizod podcastu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin podcast episode page is missing fragment: ' . $expectedFragment;
             }
         }
-        if (str_contains($result['body'], 'Zpět na podcasty')) {
+        if (str_contains($result['body'], 'ZpÄ›t na podcasty')) {
             $issues[] = 'admin podcast episode page still contains outdated return label';
         }
     }
@@ -2623,8 +2640,8 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_blog') {
         foreach ([
             'Kategorie blogu',
-            'Štítky blogu',
-            'Přehled článků blogu',
+            'Ĺ tĂ­tky blogu',
+            'PĹ™ehled ÄŤlĂˇnkĹŻ blogu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin blog page is missing fragment: ' . $expectedFragment;
@@ -2634,14 +2651,14 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'admin_users') {
         foreach ([
-            'Uživatelé a role',
-            'Přehled uživatelů',
+            'UĹľivatelĂ© a role',
+            'PĹ™ehled uĹľivatelĹŻ',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin users page is missing fragment: ' . $expectedFragment;
             }
         }
-        if (str_contains($result['body'], 'Správa uživatelů')) {
+        if (str_contains($result['body'], 'SprĂˇva uĹľivatelĹŻ')) {
             $issues[] = 'admin users page still contains outdated heading';
         }
     }
@@ -2683,41 +2700,41 @@ foreach ($pages as $page) {
         'admin_podcast_shows',
         'admin_podcast',
         'admin_polls',
-    ], true) && !str_contains($result['body'], 'Použít filtr')) {
-        $issues[] = 'admin list page is missing the unified "Použít filtr" action';
+    ], true) && !str_contains($result['body'], 'PouĹľĂ­t filtr')) {
+        $issues[] = 'admin list page is missing the unified "PouĹľĂ­t filtr" action';
     }
 
     if (str_starts_with($page['label'], 'admin_')) {
-        if (preg_match('/<(?:th|td|button|input|select|option|a)\b[^>]*\b(?:scope|type|class|aria-label|data-confirm)\s*=\s*[“”]/u', $result['body'])) {
+        if (preg_match('/<(?:th|td|button|input|select|option|a)\b[^>]*\b(?:scope|type|class|aria-label|data-confirm)\s*=\s*[â€śâ€ť]/u', $result['body'])) {
             $issues[] = 'admin page contains smart quotes inside HTML attributes';
         }
         if (preg_match('/\bdata-confirm="[^"]*"[^>\s][^>]*>/u', $result['body'])) {
             $issues[] = 'admin page contains broken data-confirm attribute quoting';
         }
         foreach ([
-            'Žádné články odpovídající hledání.',
-            'Žádné novinky pro zadaný filtr.',
-            'Žádné události pro zadaný filtr.',
-            'Žádné položky pro zadaný filtr.',
-            'Žádné otázky pro zadaný filtr.',
-            'Žádné statické stránky pro zadaný filtr.',
-            'Žádná místa pro zadaný filtr.',
-            'Žádné epizody pro zadaný filtr.',
-            'Žádné podcasty pro zadaný filtr.',
-            'Přidejte první podcast.',
-            'Žádné ankety pro zadaný filtr.',
-            'Žádné lístky pro zadaný filtr.',
-            'Žádné zdroje pro zadaný filtr.',
-            'Žádné kategorie pro zadaný filtr.',
-            'Žádné rezervace neodpovídají zadanému filtru.',
-            'Pro zadaný filtr nebyla nalezena žádná alba.',
-            'Pro zadaný filtr nebyly nalezeny žádné fotografie.',
-            'Zatím nebylo vytvořeno žádné album.',
-            'V tomto albu nejsou žádné fotografie.',
-            'Žádné kategorie.',
-            'Žádné tagy.',
-            'Tomuto účtu zatím není přidělena žádná část administrace.',
-            'Žádná místa. <a href="res_locations.php">Přidat místo</a>',
+            'Ĺ˝ĂˇdnĂ© ÄŤlĂˇnky odpovĂ­dajĂ­cĂ­ hledĂˇnĂ­.',
+            'Ĺ˝ĂˇdnĂ© novinky pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© udĂˇlosti pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© poloĹľky pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© otĂˇzky pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© statickĂ© strĂˇnky pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂˇ mĂ­sta pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© epizody pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© podcasty pro zadanĂ˝ filtr.',
+            'PĹ™idejte prvnĂ­ podcast.',
+            'Ĺ˝ĂˇdnĂ© ankety pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© lĂ­stky pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© zdroje pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© kategorie pro zadanĂ˝ filtr.',
+            'Ĺ˝ĂˇdnĂ© rezervace neodpovĂ­dajĂ­ zadanĂ©mu filtru.',
+            'Pro zadanĂ˝ filtr nebyla nalezena ĹľĂˇdnĂˇ alba.',
+            'Pro zadanĂ˝ filtr nebyly nalezeny ĹľĂˇdnĂ© fotografie.',
+            'ZatĂ­m nebylo vytvoĹ™eno ĹľĂˇdnĂ© album.',
+            'V tomto albu nejsou ĹľĂˇdnĂ© fotografie.',
+            'Ĺ˝ĂˇdnĂ© kategorie.',
+            'Ĺ˝ĂˇdnĂ© tagy.',
+            'Tomuto ĂşÄŤtu zatĂ­m nenĂ­ pĹ™idÄ›lena ĹľĂˇdnĂˇ ÄŤĂˇst administrace.',
+            'Ĺ˝ĂˇdnĂˇ mĂ­sta. <a href="res_locations.php">PĹ™idat mĂ­sto</a>',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin page still contains outdated empty-state wording: ' . $forbiddenFragment;
@@ -2727,10 +2744,10 @@ foreach ($pages as $page) {
 
     if (str_starts_with($page['label'], 'admin_')) {
         foreach ([
-            'VeĹ™ejnĂˇ strĂˇnka',
-            'VeĹ™ejnĂˇ strĂˇnka zdroje',
-            '>VĹˇechny podcasty<',
-            '>SprĂˇva zdrojĹŻ<',
+            'VeÄąâ„˘ejnÄ‚Ë‡ strÄ‚Ë‡nka',
+            'VeÄąâ„˘ejnÄ‚Ë‡ strÄ‚Ë‡nka zdroje',
+            '>VÄąË‡echny podcasty<',
+            '>SprÄ‚Ë‡va zdrojÄąĹ»<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin page still contains outdated action wording: ' . $forbiddenFragment;
@@ -2747,7 +2764,7 @@ foreach ($pages as $page) {
             'name="contact_phone"',
             'name="contact_email"',
             'name="is_pinned"',
-            'Zpět na přehled sekce',
+            'ZpÄ›t na pĹ™ehled sekce',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin board form is missing field: ' . $expectedField;
@@ -2766,7 +2783,7 @@ foreach ($pages as $page) {
             'name="license_label"',
             'name="external_url"',
             'name="file_delete"',
-            'Zpět na přehled ke stažení',
+            'ZpÄ›t na pĹ™ehled ke staĹľenĂ­',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin download form is missing field: ' . $expectedField;
@@ -2780,7 +2797,7 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="valid_from"',
             'name="valid_to"',
-            'Zpět na jídelní a nápojové lístky',
+            'ZpÄ›t na jĂ­delnĂ­ a nĂˇpojovĂ© lĂ­stky',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin food form is missing field: ' . $expectedField;
@@ -2793,8 +2810,8 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="show_in_nav"',
             'name="is_published"',
-            'Upravit statickou stránku',
-            'Zpět na statické stránky',
+            'Upravit statickou strĂˇnku',
+            'ZpÄ›t na statickĂ© strĂˇnky',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin page form is missing field: ' . $expectedField;
@@ -2822,15 +2839,15 @@ foreach ($pages as $page) {
         foreach ([
             'mailto:',
             'name="action" value="handled"',
-            'Zpět na přehled kontaktních zpráv',
-            'Co můžete udělat',
+            'ZpÄ›t na pĹ™ehled kontaktnĂ­ch zprĂˇv',
+            'Co mĹŻĹľete udÄ›lat',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin contact detail is missing fragment: ' . $expectedFragment;
             }
         }
         foreach ([
-            'Zpět na kontaktní zprávy',
+            'ZpÄ›t na kontaktnĂ­ zprĂˇvy',
             '>Akce<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -2843,15 +2860,15 @@ foreach ($pages as $page) {
         foreach ([
             'name="action" value="handled"',
             'Runtime Audit',
-            'Zpět na přehled chat zpráv',
-            'Co můžete udělat',
+            'ZpÄ›t na pĹ™ehled chat zprĂˇv',
+            'Co mĹŻĹľete udÄ›lat',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat detail is missing fragment: ' . $expectedFragment;
             }
         }
         foreach ([
-            'Zpět na chat zprávy',
+            'ZpÄ›t na chat zprĂˇvy',
             '>Akce<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -2865,17 +2882,17 @@ foreach ($pages as $page) {
             'mailto:',
             'name="action" value="resend"',
             'name="action" value="confirm"',
-            'Zpět na odběratele newsletteru',
-            'Potvrzení odběru',
-            'Co můžete udělat',
+            'ZpÄ›t na odbÄ›ratele newsletteru',
+            'PotvrzenĂ­ odbÄ›ru',
+            'Co mĹŻĹľete udÄ›lat',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter subscriber detail is missing fragment: ' . $expectedFragment;
             }
         }
         foreach ([
-            'Zpět na přehled newsletteru',
-            'Správa potvrzení',
+            'ZpÄ›t na pĹ™ehled newsletteru',
+            'SprĂˇva potvrzenĂ­',
             '>Akce<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -2887,8 +2904,8 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_newsletter_history') {
         foreach ([
             'Runtime audit newsletter',
-            'Příjemců',
-            'Testovací obsah rozesílky',
+            'PĹ™Ă­jemcĹŻ',
+            'TestovacĂ­ obsah rozesĂ­lky',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin newsletter history detail is missing fragment: ' . $expectedFragment;
@@ -2904,9 +2921,9 @@ foreach ($pages as $page) {
             'name="location_ids[]"',
             'name="allow_guests"',
             'name="max_concurrent"',
-            'Upravit zdroj rezervací',
-            'Zpět na zdroje rezervací',
-            'Spravovat lokality rezervací',
+            'Upravit zdroj rezervacĂ­',
+            'ZpÄ›t na zdroje rezervacĂ­',
+            'Spravovat lokality rezervacĂ­',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin reservation resource form is missing field: ' . $expectedField;
@@ -2919,8 +2936,8 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="excerpt"',
             'name="category_id"',
-            'Upravit položku znalostní báze',
-            'Zpět na FAQ',
+            'Upravit poloĹľku znalostnĂ­ bĂˇze',
+            'ZpÄ›t na FAQ',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin faq form is missing field: ' . $expectedField;
@@ -2944,8 +2961,8 @@ foreach ($pages as $page) {
             'name="contact_phone"',
             'name="contact_email"',
             'name="opening_hours"',
-            'Upravit zajímavé místo',
-            'Zpět na zajímavá místa',
+            'Upravit zajĂ­mavĂ© mĂ­sto',
+            'ZpÄ›t na zajĂ­mavĂˇ mĂ­sta',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin place form is missing field: ' . $expectedField;
@@ -2960,7 +2977,7 @@ foreach ($pages as $page) {
             'value="active"',
             'value="scheduled"',
             'value="closed"',
-            'Přehled anket',
+            'PĹ™ehled anket',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin polls page is missing field: ' . $expectedField;
@@ -2977,7 +2994,7 @@ foreach ($pages as $page) {
             'name="end_date"',
             'name="end_time"',
             'name="options[]"',
-            'Zpět na ankety',
+            'ZpÄ›t na ankety',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin polls form is missing field: ' . $expectedField;
@@ -2989,7 +3006,7 @@ foreach ($pages as $page) {
         foreach ([
             'name="q"',
             '/admin/gallery_album_form.php',
-            'Přehled alb',
+            'PĹ™ehled alb',
             'Spravovat fotografie',
             'Zobrazit na webu',
         ] as $expectedFragment) {
@@ -3026,7 +3043,7 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="parent_id"',
             'Upravit album galerie',
-            'Zpět na alba galerie',
+            'ZpÄ›t na alba galerie',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin gallery album form is missing field: ' . $expectedField;
@@ -3056,7 +3073,7 @@ foreach ($pages as $page) {
             'name="title"',
             'name="slug"',
             'name="sort_order"',
-            'Zpět na fotografie v albu',
+            'ZpÄ›t na fotografie v albu',
             'Zobrazit na webu',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
@@ -3073,7 +3090,7 @@ foreach ($pages as $page) {
             'name="category"',
             'name="website_url"',
             'name="cover_image"',
-            'Zpět na přehled podcastů',
+            'ZpÄ›t na pĹ™ehled podcastĹŻ',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin podcast show form is missing field: ' . $expectedField;
@@ -3090,7 +3107,7 @@ foreach ($pages as $page) {
             'name="audio_url"',
             'name="publish_at"',
             'Upravit epizodu podcastu',
-            'Zpět na epizody podcastu',
+            'ZpÄ›t na epizody podcastu',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin podcast form is missing field: ' . $expectedField;
@@ -3109,7 +3126,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Autor: Runtime Audit')) {
             $issues[] = 'filtered blog listing is missing active author label';
         }
-        if (!str_contains($result['body'], 'Všichni autoři')) {
+        if (!str_contains($result['body'], 'VĹˇichni autoĹ™i')) {
             $issues[] = 'filtered blog listing is missing link back to all authors';
         }
         if ($runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
@@ -3168,7 +3185,7 @@ foreach ($pages as $page) {
         if ($foodCardRow && !str_contains($result['body'], (string)($foodCardRow['title'] ?? ''))) {
             $issues[] = 'food card is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět do archivu')) {
+        if (!str_contains($result['body'], 'ZpÄ›t do archivu')) {
             $issues[] = 'food card is missing back link';
         }
     }
@@ -3177,7 +3194,7 @@ foreach ($pages as $page) {
         if ($faqRow && !str_contains($result['body'], (string)($faqRow['question'] ?? ''))) {
             $issues[] = 'faq article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na znalostní bázi')) {
+        if (!str_contains($result['body'], 'ZpÄ›t na znalostnĂ­ bĂˇzi')) {
             $issues[] = 'faq article is missing back link';
         }
         if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
@@ -3202,7 +3219,7 @@ foreach ($pages as $page) {
         if ($galleryPhotoRow && !str_contains($result['body'], (string)($galleryPhotoRow['label'] ?? ''))) {
             $issues[] = 'gallery photo is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět do alba')) {
+        if (!str_contains($result['body'], 'ZpÄ›t do alba')) {
             $issues[] = 'gallery photo is missing back link';
         }
     }
@@ -3215,10 +3232,10 @@ foreach ($pages as $page) {
         if ($eventRow && !str_contains($result['body'], (string)($eventRow['title'] ?? ''))) {
             $issues[] = 'events article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na události')) {
+        if (!str_contains($result['body'], 'ZpÄ›t na udĂˇlosti')) {
             $issues[] = 'events article is missing back link';
         }
-        foreach (['Praktické informace', 'O události'] as $legacySnippet) {
+        foreach (['PraktickĂ© informace', 'O udĂˇlosti'] as $legacySnippet) {
             if (str_contains($result['body'], $legacySnippet)) {
                 $issues[] = 'events article still contains redundant detail block: ' . $legacySnippet;
             }
@@ -3238,7 +3255,7 @@ foreach ($pages as $page) {
         if ($boardRow && !str_contains($result['body'], (string)($boardRow['contact_phone'] ?? ''))) {
             $issues[] = 'board article is missing contact phone';
         }
-        if (str_contains($result['body'], 'Důležité informace')) {
+        if (str_contains($result['body'], 'DĹŻleĹľitĂ© informace')) {
             $issues[] = 'board article still contains redundant detail block';
         }
         if ($boardAttachmentId !== false
@@ -3252,7 +3269,7 @@ foreach ($pages as $page) {
         if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['title'] ?? ''))) {
             $issues[] = 'downloads article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na přehled ke stažení')) {
+        if (!str_contains($result['body'], 'ZpÄ›t na pĹ™ehled ke staĹľenĂ­')) {
             $issues[] = 'downloads article is missing back link';
         }
         if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['version_label'] ?? ''))) {
@@ -3273,7 +3290,7 @@ foreach ($pages as $page) {
         if ($placeRow && !str_contains($result['body'], (string)($placeRow['name'] ?? ''))) {
             $issues[] = 'places article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na zajímavá místa')) {
+        if (!str_contains($result['body'], 'ZpÄ›t na zajĂ­mavĂˇ mĂ­sta')) {
             $issues[] = 'places article is missing back link';
         }
         if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
@@ -3300,7 +3317,7 @@ foreach ($pages as $page) {
         if ($pollRow && !str_contains($result['body'], (string)($pollRow['question'] ?? ''))) {
             $issues[] = 'poll detail is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na přehled anket')) {
+        if (!str_contains($result['body'], 'ZpÄ›t na pĹ™ehled anket')) {
             $issues[] = 'poll detail is missing back link';
         }
         if ($pollRow && !str_contains($result['body'], (string)($pollRow['excerpt'] ?? ''))) {
@@ -3340,7 +3357,7 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'authors_index') {
-        if (!str_contains($result['body'], 'Autoři')) {
+        if (!str_contains($result['body'], 'AutoĹ™i')) {
             $issues[] = 'authors index is missing title';
         }
         if ($runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
@@ -3352,10 +3369,10 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Runtime Audit')) {
             $issues[] = 'public author page is missing author identity';
         }
-        if (!str_contains($result['body'], 'Krátký veřejný medailonek pro automatický audit autora.')) {
+        if (!str_contains($result['body'], 'KrĂˇtkĂ˝ veĹ™ejnĂ˝ medailonek pro automatickĂ˝ audit autora.')) {
             $issues[] = 'public author page is missing author bio';
         }
-        if (!str_contains($result['body'], 'Všichni autoři')) {
+        if (!str_contains($result['body'], 'VĹˇichni autoĹ™i')) {
             $issues[] = 'public author page is missing back link to all authors';
         }
         if (!str_contains($result['body'], '>Blog<')) {
@@ -3365,8 +3382,8 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'reservations_resource') {
         foreach ([
-            'Zpět na přehled zdrojů',
-            'Jak rezervace fungují',
+            'ZpÄ›t na pĹ™ehled zdrojĹŻ',
+            'Jak rezervace fungujĂ­',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'reservations resource page is missing fragment: ' . $expectedFragment;
@@ -3985,7 +4002,7 @@ if ($articleId === false) {
             if (str_contains($globalDisabledProbe['body'], 'name="comment"')) {
                 $commentGuardIssues[] = 'comment form remained visible after disabling comments globally';
             }
-            if (!str_contains($globalDisabledProbe['body'], 'Komentáře jsou na tomto webu vypnuté.')) {
+            if (!str_contains($globalDisabledProbe['body'], 'KomentĂˇĹ™e jsou na tomto webu vypnutĂ©.')) {
                 $commentGuardIssues[] = 'missing public message for globally disabled comments';
             }
         }
@@ -4006,7 +4023,7 @@ if ($articleId === false) {
             if (str_contains($articleDisabledProbe['body'], 'name="comment"')) {
                 $commentGuardIssues[] = 'comment form remained visible after disabling comments on article';
             }
-            if (!str_contains($articleDisabledProbe['body'], 'Komentáře jsou u tohoto článku vypnuté.')) {
+            if (!str_contains($articleDisabledProbe['body'], 'KomentĂˇĹ™e jsou u tohoto ÄŤlĂˇnku vypnutĂ©.')) {
                 $commentGuardIssues[] = 'missing public message for article-level disabled comments';
             }
         }
@@ -4088,7 +4105,7 @@ if ($articleId === false) {
                     'csrf_token' => $blockedCsrf,
                     'author_name' => 'Runtime Audit Blocked',
                     'author_email' => $blockedEmail,
-                    'comment' => 'Tento komentář má skončit ve spamu kvůli blokovanému e-mailu.',
+                    'comment' => 'Tento komentĂˇĹ™ mĂˇ skonÄŤit ve spamu kvĹŻli blokovanĂ©mu e-mailu.',
                     'captcha' => (string)$blockedCaptcha,
                     'hp_website' => '',
                 ],
@@ -4135,7 +4152,7 @@ if ($articleId === false) {
                     'csrf_token' => $phraseCsrf,
                     'author_name' => 'Runtime Audit Phrase',
                     'author_email' => $phraseEmail,
-                    'comment' => 'Komentář obsahuje frázi ' . $spamPhrase . ' a má skončit ve spamu.',
+                    'comment' => 'KomentĂˇĹ™ obsahuje frĂˇzi ' . $spamPhrase . ' a mĂˇ skonÄŤit ve spamu.',
                     'captcha' => (string)$phraseCaptcha,
                     'hp_website' => '',
                 ],
@@ -4178,7 +4195,7 @@ if ($articleId === false) {
                     'csrf_token' => $pendingCsrf,
                     'author_name' => 'Runtime Audit Pending',
                     'author_email' => $pendingEmail,
-                    'comment' => 'Tento komentář má čekat na schválení.',
+                    'comment' => 'Tento komentĂˇĹ™ mĂˇ ÄŤekat na schvĂˇlenĂ­.',
                     'captcha' => (string)$pendingCaptcha,
                     'hp_website' => '',
                 ],
@@ -4454,7 +4471,7 @@ try {
     if (!str_contains($customProfileResult['status'], '200')) {
         $customProfileIssues[] = 'custom profile settings save did not return 200';
     }
-    if (!str_contains($customProfileResult['body'], 'Vlastní profil byl uložen bez zásahu do stávajících modulů a vzhledu.')) {
+    if (!str_contains($customProfileResult['body'], 'VlastnĂ­ profil byl uloĹľen bez zĂˇsahu do stĂˇvajĂ­cĂ­ch modulĹŻ a vzhledu.')) {
         $customProfileIssues[] = 'custom profile save did not confirm non-destructive apply';
     }
 
@@ -4625,9 +4642,9 @@ try {
         'name' => 'Runtime Audit Theme',
         'version' => '1.0.0',
         'author' => 'Runtime Audit',
-        'description' => 'Dočasný portable ZIP balíček pro runtime audit.',
+        'description' => 'DoÄŤasnĂ˝ portable ZIP balĂ­ÄŤek pro runtime audit.',
         'preview' => [
-            'summary' => 'Kontrola bezpečného importu a exportu šablon.',
+            'summary' => 'Kontrola bezpeÄŤnĂ©ho importu a exportu Ĺˇablon.',
             'colors' => ['#edf3ff', '#225577', '#a35c1a'],
         ],
         'settings_defaults' => [
@@ -4651,7 +4668,7 @@ try {
         ) . "\n",
         $roundtripThemeKey . '/assets/public.css' => $packageCss,
     ])) {
-        throw new RuntimeException('Nepodařilo se vytvořit ZIP balíček pro runtime audit.');
+        throw new RuntimeException('NepodaĹ™ilo se vytvoĹ™it ZIP balĂ­ÄŤek pro runtime audit.');
     }
 
     $roundtripIssues = [];
@@ -4696,7 +4713,7 @@ try {
     if (!str_contains($activateResult['status'], '200')) {
         $roundtripIssues[] = 'imported theme activation did not return 200';
     }
-    if (!str_contains($activateResult['body'], 'Profil webu byl přepnut na Vlastní profil')) {
+    if (!str_contains($activateResult['body'], 'Profil webu byl pĹ™epnut na VlastnĂ­ profil')) {
         $roundtripIssues[] = 'manual theme activation did not announce profile detachment';
     }
 
@@ -4999,7 +5016,7 @@ try {
     clearSettingsCache();
 }
 
-// ────────────────── Bezpečnostní testy (potvrzovací tokeny) ─────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ BezpeÄŤnostnĂ­ testy (potvrzovacĂ­ tokeny) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 echo "=== confirm_token_expired ===\n";
 $expiredConfirmEmail = 'runtimeaudit-expired-' . bin2hex(random_bytes(6)) . '@example.test';
@@ -5017,7 +5034,7 @@ $pdo->prepare(
 $cleanup['confirm_emails'][] = $expiredConfirmEmail;
 
 $expiredResult = fetchUrl($baseUrl . '/confirm_email.php?token=' . urlencode($expiredConfirmToken));
-if (str_contains($expiredResult['status'], '200') && str_contains($expiredResult['body'], 'Neplatný')) {
+if (str_contains($expiredResult['status'], '200') && str_contains($expiredResult['body'], 'NeplatnĂ˝')) {
     echo "OK\n";
 } else {
     $failures++;
@@ -5040,14 +5057,14 @@ $pdo->prepare(
 $cleanup['confirm_emails'][] = $freshConfirmEmail;
 
 $validConfirmResult = fetchUrl($baseUrl . '/confirm_email.php?token=' . urlencode($freshConfirmToken));
-if (str_contains($validConfirmResult['status'], '200') && str_contains($validConfirmResult['body'], 'úspěšně ověřen')) {
+if (str_contains($validConfirmResult['status'], '200') && str_contains($validConfirmResult['body'], 'ĂşspÄ›ĹˇnÄ› ovÄ›Ĺ™en')) {
     echo "OK\n";
 } else {
     $failures++;
     echo "- valid confirmation token was not accepted (status: {$validConfirmResult['status']})\n";
 }
 
-// ─────────────────────────────── SMTP konektivita ──────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SMTP konektivita â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 echo "=== smtp_connectivity ===\n";
 $smtpIssues = [];
@@ -5071,12 +5088,12 @@ $smtpConfigured = (
 $contactEmailConfigured = $contactEmail !== '' && $contactEmail !== 'noreply@localhost';
 
 if (!$smtpConfigured) {
-    echo "SKIP (SMTP není v tomto prostředí explicitně nakonfigurované)\n";
+    echo "SKIP (SMTP nenĂ­ v tomto prostĹ™edĂ­ explicitnÄ› nakonfigurovanĂ©)\n";
 } else {
     $smtpTarget = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
 $smtpSocket = @fsockopen($smtpTarget, $smtpPort, $smtpErrno, $smtpErrstr, 5);
 if (!$smtpSocket) {
-    $smtpIssues[] = "cannot connect to {$smtpTarget}:{$smtpPort} – {$smtpErrstr}";
+    $smtpIssues[] = "cannot connect to {$smtpTarget}:{$smtpPort} â€“ {$smtpErrstr}";
 } else {
     $smtpGreeting = '';
     while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
@@ -5169,7 +5186,7 @@ if (!$smtpSocket) {
     }
 }
 
-// ─────────────────────────── sendMail return value audit ────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ sendMail return value audit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 echo "=== sendmail_return_check ===\n";
 $sendMailIssues = [];
@@ -5182,7 +5199,7 @@ foreach ($sendMailCallFiles as $sendMailFile) {
     $sendMailPath = dirname(__DIR__) . '/' . $sendMailFile;
     if (!is_file($sendMailPath)) continue;
     $sendMailSrc = file_get_contents($sendMailPath);
-    // Hledáme volání sendMail() bez kontroly návratové hodnoty (řádek začíná jen sendMail)
+    // HledĂˇme volĂˇnĂ­ sendMail() bez kontroly nĂˇvratovĂ© hodnoty (Ĺ™Ăˇdek zaÄŤĂ­nĂˇ jen sendMail)
     if (preg_match('/^\s+sendMail\(/m', $sendMailSrc)) {
         $sendMailIssues[] = $sendMailFile . ': sendMail() return value not checked';
     }

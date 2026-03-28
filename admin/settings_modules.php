@@ -6,7 +6,7 @@ $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    foreach (['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'statistics'] as $m) {
+    foreach (['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms', 'statistics'] as $m) {
         saveSetting('module_' . $m, isset($_POST['module_' . $m]) ? '1' : '0');
     }
     saveSetting('visitor_tracking_enabled', isset($_POST['visitor_tracking_enabled']) ? '1' : '0');
@@ -47,6 +47,7 @@ adminHeader('Správa modulů');
       'faq'       => 'FAQ',
       'board'     => 'Úřední deska',
       'reservations' => 'Rezervace',
+      'forms'        => 'Formuláře',
       'statistics'   => 'Statistiky (admin dashboard)',
     ] as $k => $label): ?>
       <div>
