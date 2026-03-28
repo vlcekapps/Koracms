@@ -25,6 +25,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Opraveno
 - **Confirm dialogy nefungovaly** – CSP s nonce ignoruje `unsafe-inline`, proto `onclick="return confirm()"` inline handlery nikdy nefungovaly; 36 výskytů ve 32 souborech nahrazeno za `data-confirm` atribut s globálním JS event handlerem v admin footer
 - **Content reference picker – CSP nonce** – `<?= cspNonce() ?>` uvnitř heredoc `<<<HTML` se nevyhodnotilo; CSS nebylo aplikováno; opraveno na PHP concatenation
+- **Dvoufázové ověření (2FA TOTP)** – volitelné dvoufázové přihlášení přes TOTP (FreeOTP, Authy, Google Authenticator); aktivace v profilu přes QR kód nebo ruční zadání klíče; `lib/totp.php` s čistou PHP implementací RFC 6238 bez závislostí; `admin/login_2fa.php` pro zadání kódu po ověření hesla; sloupce `totp_secret` a `passkey_credentials` v `cms_users`
 - **Centrální knihovna médií** (`admin/media.php`) – upload více souborů naráz; grid zobrazení s thumbnaily; filtr podle typu a vyhledávání; správa alt textů; kopírování URL do schránky; mazání s potvrzením; automatické thumbnail + WebP generování; tabulka `cms_media` indexuje všechny soubory
 - **Vizuální diff revizí** (`admin/revisions.php`) – inline zvýrazňování změn: `<del>` pro odebrané a `<ins>` pro přidané části; sloučení starých/nových sloupců do jednoho „Změny"; skládání velkých diffů do `<details>`
 - **Lazy loading + responsive obrázky** – `pictureTag()` automaticky přidává `loading="lazy"`; `generateResponsiveSizes()` vytváří varianty 400w, 800w, 1200w s WebP při uploadu článkových obrázků

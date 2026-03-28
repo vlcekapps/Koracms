@@ -109,4 +109,5 @@ require_once __DIR__ . '/lib/stats.php';
 require_once __DIR__ . '/lib/pagination.php';
 require_once __DIR__ . '/lib/revisions.php';
 require_once __DIR__ . '/lib/widgets.php';
+require_once __DIR__ . '/lib/totp.php';
 

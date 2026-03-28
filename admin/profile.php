@@ -128,6 +128,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $setClauses .= ", password=?";
             $params[] = password_hash($newPass, PASSWORD_BCRYPT);
         }
+
+        // 2FA TOTP
+        if (isset($_POST['enable_2fa']) && $_POST['enable_2fa'] === '1') {
+            $totpSecret = trim($_POST['totp_secret'] ?? '');
+            $totpVerifyCode = trim($_POST['totp_verify'] ?? '');
+            if ($totpSecret !== '' && $totpVerifyCode !== '' && totpVerify($totpSecret, $totpVerifyCode)) {
+                $setClauses .= ", totp_secret=?";
+                $params[] = $totpSecret;
+            } else {
+                $errors[] = 'Ověřovací kód nesouhlasí. 2FA nebylo aktivováno.';
+            }
+        }
+        if (isset($_POST['disable_2fa']) && $_POST['disable_2fa'] === '1') {
+            $setClauses .= ", totp_secret=NULL";
+        }
+
         $params[] = $accountId;
         $pdo->prepare("UPDATE cms_users SET {$setClauses} WHERE id=?")->execute($params);
 
@@ -208,6 +224,44 @@ adminHeader('Můj profil');
 
     <label for="new_pass2">Nové heslo znovu</label>
     <input type="password" id="new_pass2" name="new_pass2" minlength="8" autocomplete="new-password" aria-describedby="profile-password-help">
+  </fieldset>
+
+  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Dvoufázové ověření (2FA)</legend>
+    <?php $hasTOTP = !empty($currentRow['totp_secret']); ?>
+    <?php if ($hasTOTP): ?>
+      <p style="color:#1b5e20"><strong>✓ TOTP ověření je aktivní.</strong></p>
+      <p class="field-help">Při přihlášení budete vyzváni k zadání kódu z autentizační aplikace.</p>
+      <label style="font-weight:normal">
+        <input type="checkbox" name="disable_2fa" value="1"> Deaktivovat dvoufázové ověření
+      </label>
+    <?php else: ?>
+      <p class="field-help">Zvyšte zabezpečení svého účtu. Použijte FreeOTP, Authy, Google Authenticator nebo jinou TOTP aplikaci.</p>
+      <label style="font-weight:normal">
+        <input type="checkbox" name="enable_2fa" value="1" id="enable_2fa_check"> Aktivovat dvoufázové ověření
+      </label>
+      <div id="totp-setup" style="display:none;margin-top:1rem;padding:1rem;background:#f8f9fb;border-radius:8px">
+        <?php
+          $newSecret = totpGenerateSecret();
+          $totpUri = totpUri($newSecret, $currentRow['email'], getSetting('site_name', 'Kora CMS'));
+          $qrUrl = totpQrUrl($totpUri);
+        ?>
+        <input type="hidden" name="totp_secret" value="<?= h($newSecret) ?>">
+        <p><strong>1.</strong> Naskenujte QR kód v autentizační aplikaci:</p>
+        <img src="<?= h($qrUrl) ?>" alt="QR kód pro TOTP nastavení" style="display:block;margin:.5rem 0">
+        <p><strong>2.</strong> Nebo ručně zadejte klíč: <code style="word-break:break-all"><?= h($newSecret) ?></code></p>
+        <p><strong>3.</strong> Zadejte ověřovací kód z aplikace pro potvrzení:</p>
+        <label for="totp_verify">Ověřovací kód <span aria-hidden="true">*</span></label>
+        <input type="text" id="totp_verify" name="totp_verify" inputmode="numeric" pattern="[0-9]{6}"
+               maxlength="6" placeholder="000000" autocomplete="one-time-code"
+               style="width:10rem;font-size:1.2rem;text-align:center;letter-spacing:.2rem">
+      </div>
+      <script nonce="<?= cspNonce() ?>">
+      document.getElementById('enable_2fa_check')?.addEventListener('change', function(){
+        document.getElementById('totp-setup').style.display = this.checked ? '' : 'none';
+      });
+      </script>
+    <?php endif; ?>
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">

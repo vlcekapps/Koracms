@@ -796,6 +796,9 @@ $addColumns = [
     'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_faqs.deleted_at'            => "ALTER TABLE cms_faqs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    // 2FA
+    'cms_users.totp_secret'          => "ALTER TABLE cms_users ADD COLUMN totp_secret VARCHAR(64) NULL DEFAULT NULL",
+    'cms_users.passkey_credentials'  => "ALTER TABLE cms_users ADD COLUMN passkey_credentials TEXT",
     // Interní poznámky
     'cms_articles.admin_note'        => "ALTER TABLE cms_articles ADD COLUMN admin_note TEXT",
     'cms_news.admin_note'            => "ALTER TABLE cms_news ADD COLUMN admin_note TEXT",

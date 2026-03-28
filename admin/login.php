@@ -32,6 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Veřejní uživatelé se nemohou přihlásit do administrace
             if ($role === 'public') {
                 $error = 'Tento účet nemá přístup do administrace. Použijte veřejné přihlášení.';
+            } elseif (!empty($userRow['totp_secret'])) {
+                // 2FA aktivní – uložit do session a přesměrovat na ověření
+                $_SESSION['2fa_pending_user_id'] = (int)$userRow['id'];
+                $_SESSION['2fa_pending_email'] = $inputEmail;
+                $_SESSION['2fa_pending_superadmin'] = (bool)$userRow['is_superadmin'];
+                $_SESSION['2fa_pending_role'] = $role;
+                $name = $userRow['nickname'] !== '' ? $userRow['nickname']
+                      : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
+                $_SESSION['2fa_pending_name'] = $name !== '' ? $name : $inputEmail;
+                header('Location: ' . BASE_URL . '/admin/login_2fa.php');
+                exit;
             } else {
                 $name = $userRow['nickname'] !== '' ? $userRow['nickname']
                       : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
