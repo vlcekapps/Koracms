@@ -17,6 +17,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **FULLTEXT vyhledávání** – 10 FULLTEXT indexů na klíčových tabulkách (články, novinky, stránky, akce, FAQ, vývěska, ke stažení, místa, ankety, jídelníčky); `search.php` využívá `MATCH … AGAINST` s relevančním řazením a automatickým LIKE fallbackem pro krátké dotazy nebo chybějící indexy
 - **Dashboard widget „Naplánovaný obsah"** – admin dashboard zobrazuje články s `publish_at` v budoucnu; tabulka s názvem, datem publikace a odkazem na editaci
 - **Tlačítko „Kopírovat odkaz"** – na detailových stránkách článků, novinek, událostí, vývěsky a míst; clipboard API s a11y feedbackem přes live region
+- **eStránky importér** (`admin/estranky_import.php`) – import článků, sekcí (→ kategorie), fotoalb a fotografií z XML zálohy eStránek.cz; automatická base64 dekódování; pouze český jazyk (lang=1); deduplikace
 - **WordPress importér** (`admin/wp_import.php`) – import článků s `<!--more-->` perex/content splitem, stránek, kategorií, tagů, komentářů a médií z WP SQL dumpu; automatická detekce prefixu, deduplikace, WP blokové komentáře se odstraní, dočasné tabulky se uklidí
 - **Google Analytics 4 integrace** – nastavení GA4 Measurement ID v admin; gtag.js snippet se automaticky vloží do `<head>` veřejných stránek
 - **Vlastní kód do head/footer** – dvě textová pole v admin nastavení pro libovolný HTML/JS kód do `<head>` a před `</body>` (náhrada za WPCode)

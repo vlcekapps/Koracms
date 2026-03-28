@@ -236,6 +236,7 @@ function adminHeader(string $pageTitle): void
     if (currentUserHasCapability('import_export_manage')) {
         $settingsItems[] = ['url' => $baseUrl . '/admin/import.php', 'label' => 'Export a import'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/wp_import.php', 'label' => 'Import z WordPressu'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/estranky_import.php', 'label' => 'Import z eStránek'];
     }
 
     $bottomItems = [
