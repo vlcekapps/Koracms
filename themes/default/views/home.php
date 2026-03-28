@@ -251,7 +251,8 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
         <div>
           <h2 id="blog-nadpis" class="section-title">Blog</h2>
         </div>
-        <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Všechny články <span aria-hidden="true">→</span></a>
+        <?php $homeBlog = getDefaultBlog(); ?>
+        <a class="section-link" href="<?= h(blogIndexPath($homeBlog ?? [])) ?>">Všechny články <span aria-hidden="true">→</span></a>
       </div>
 
       <?php if ($featureLead && count($items) > 1): ?>

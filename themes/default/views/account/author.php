@@ -31,7 +31,9 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
       <div class="button-row button-row--start">
         <a class="button-secondary" href="<?= authorIndexPath() ?>">Všichni autoři</a>
         <?php if ($blogEnabled): ?>
-          <a class="button-secondary" href="<?= BASE_URL ?>/blog/index.php">Blog</a>
+          <?php $defaultBlog = getDefaultBlog(); if ($defaultBlog): ?>
+            <a class="button-secondary" href="<?= h(blogIndexPath($defaultBlog)) ?>"><?= h($defaultBlog['name']) ?></a>
+          <?php endif; ?>
         <?php endif; ?>
         <?php if ($author['author_website_url'] !== ''): ?>
           <a class="button-secondary" href="<?= h($author['author_website_url']) ?>" rel="noopener noreferrer" target="_blank">Web autora</a>
@@ -63,7 +65,8 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
               <div class="card__body">
                 <?php if (!empty($article['category'])): ?>
                   <p class="meta-row meta-row--tight">
-                    <a class="pill" href="<?= BASE_URL ?>/blog/index.php?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
+                    <?php $artBlog = getBlogById((int)($article['blog_id'] ?? 1)); ?>
+                    <a class="pill" href="<?= h(blogIndexPath($artBlog ?? getDefaultBlog())) ?>?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
                   </p>
                 <?php endif; ?>
                 <h3 class="card__title">

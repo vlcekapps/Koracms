@@ -6,7 +6,9 @@
         <p class="section-subtitle">Poznejte autory, kteří na webu publikují články a další obsah.</p>
       </div>
       <?php if ($blogEnabled): ?>
-        <a class="section-link" href="<?= BASE_URL ?>/blog/index.php">Blog <span aria-hidden="true">→</span></a>
+        <?php $defBlog = getDefaultBlog(); if ($defBlog): ?>
+          <a class="section-link" href="<?= h(blogIndexPath($defBlog)) ?>"><?= h($defBlog['name']) ?> <span aria-hidden="true">→</span></a>
+        <?php endif; ?>
       <?php endif; ?>
     </div>
 
@@ -44,7 +46,8 @@
                   <div class="button-row button-row--start">
                     <a class="button-primary" href="<?= h($author['author_public_path']) ?>">Profil autora</a>
                     <?php if ($blogEnabled && (int)($author['article_count'] ?? 0) > 0): ?>
-                      <a class="button-secondary" href="<?= BASE_URL ?>/blog/index.php?autor=<?= rawurlencode((string)$author['author_slug']) ?>">Články autora</a>
+                      <?php $aBlog = getDefaultBlog(); ?>
+                      <a class="button-secondary" href="<?= h(blogIndexPath($aBlog ?? [])) ?>?autor=<?= rawurlencode((string)$author['author_slug']) ?>">Články autora</a>
                     <?php endif; ?>
                   </div>
                 </div>

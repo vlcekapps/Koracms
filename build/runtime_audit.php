@@ -949,6 +949,15 @@ $pages = [
     ['label' => 'admin_estranky_import', 'url' => $baseUrl . '/admin/estranky_import.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_estranky_photos', 'url' => $baseUrl . '/admin/estranky_download_photos.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_integrity', 'url' => $baseUrl . '/admin/integrity.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_blogs', 'url' => $baseUrl . '/admin/blogs.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_widgets', 'url' => $baseUrl . '/admin/widgets.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_redirects', 'url' => $baseUrl . '/admin/redirects.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_audit_log', 'url' => $baseUrl . '/admin/audit_log.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_backup', 'url' => $baseUrl . '/admin/backup.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_trash', 'url' => $baseUrl . '/admin/trash.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_menu', 'url' => $baseUrl . '/admin/menu.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_blog_cats', 'url' => $baseUrl . '/admin/blog_cats.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_blog_tags', 'url' => $baseUrl . '/admin/blog_tags.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
 ];
 
 if ($runtimeAuditAuthorId > 0) {

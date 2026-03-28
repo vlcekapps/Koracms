@@ -25,6 +25,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Opraveno
 - **Confirm dialogy nefungovaly** – CSP s nonce ignoruje `unsafe-inline`, proto `onclick="return confirm()"` inline handlery nikdy nefungovaly; 36 výskytů ve 32 souborech nahrazeno za `data-confirm` atribut s globálním JS event handlerem v admin footer
 - **Content reference picker – CSP nonce** – `<?= cspNonce() ?>` uvnitř heredoc `<<<HTML` se nevyhodnotilo; CSS nebylo aplikováno; opraveno na PHP concatenation
+- **runtime_audit.php** – přidány testy nových admin stránek: blogs, widgets, redirects, audit_log, backup, trash, menu, blog_cats, blog_tags
+- **Šablona default** – opraveny hardcoded `/blog/index.php` odkazy v author.php, authors.php a home.php na dynamický `blogIndexPath()`
 - **Content reference picker – čtečky** – `role="status"` na výchozí hlášce uvnitř skrytého dialogu způsobovalo nežádoucí oznamování čtečkami; výchozí text odstraněn, nastavuje se až při otevření dialogu
 - **Bezpečnostní audit** – rate limiting na `subscribe_confirm.php` a `unsubscribe.php`; blokování `.env` a `.git/` v `.htaccess`; oprava user enumeration v `subscribe.php`; rate limiting na `search.php`; HSTS hlavička při HTTPS; GDPR: GA4 se načítá až po udělení cookie souhlasu
 - **WCAG 2.2** – alt text na gallery covers a admin náhledech; autocomplete atributy na admin polích; focus-visible styly na veřejných formulářích a tlačítkách; duplicitní ID v `home.php`
