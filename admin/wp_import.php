@@ -99,12 +99,13 @@ function wpParseWxr(string $xmlPath): ?array
     }
 
     return [
-        'title'      => (string)($xml->channel->title ?? ''),
-        'wxr'        => (string)($wp->wxr_version ?? ''),
-        'categories' => $categories,
-        'tags'       => $tags,
-        'posts'      => $posts,
-        'pages'      => $pages,
+        'title'       => (string)($xml->channel->title ?? ''),
+        'description' => (string)($xml->channel->description ?? ''),
+        'wxr'         => (string)($wp->wxr_version ?? ''),
+        'categories'  => $categories,
+        'tags'        => $tags,
+        'posts'       => $posts,
+        'pages'       => $pages,
     ];
 }
 
@@ -131,9 +132,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     $selectedCats = (array)($_POST['import_cats'] ?? []);
     $importUncategorized = isset($_POST['import_uncategorized']);
     $importPages = isset($_POST['import_pages']);
+    $importSiteInfo = isset($_POST['import_site_info']);
 
     $log = [];
     $log[] = "✓ WXR načten: " . h($data['title']);
+
+    // Název a popis webu
+    if ($importSiteInfo && $data['title'] !== '') {
+        saveSetting('site_name', $data['title']);
+        if ($data['description'] !== '') {
+            saveSetting('site_description', $data['description']);
+        }
+        clearSettingsCache();
+        $log[] = "✓ Název webu: " . h($data['title']);
+    }
 
     // Kategorie
     $catMap = [];
@@ -329,10 +341,19 @@ adminHeader('Import z WordPressu');
 
       <fieldset style="margin-top:1rem">
         <legend>Další volby</legend>
-        <label>
-          <input type="checkbox" name="import_pages" value="1" checked>
-          Importovat statické stránky (<?= count($preview['pages']) ?>)
-        </label>
+        <div style="margin:.3rem 0">
+          <label>
+            <input type="checkbox" name="import_site_info" value="1" checked>
+            Převzít název a popis webu
+            <small style="color:#555">(<?= h($preview['title']) ?>)</small>
+          </label>
+        </div>
+        <div style="margin:.3rem 0">
+          <label>
+            <input type="checkbox" name="import_pages" value="1" checked>
+            Importovat statické stránky (<?= count($preview['pages']) ?>)
+          </label>
+        </div>
       </fieldset>
 
       <div style="margin-top:1rem">
