@@ -105,6 +105,46 @@ try {
     $log[] = 'Chyba čištění logu: ' . $e->getMessage();
 }
 
+// ── 5. Automatická záloha databáze (1x denně) ────────────────────────────────
+$backupDir = __DIR__ . '/uploads/backups/';
+if (!is_dir($backupDir)) {
+    @mkdir($backupDir, 0755, true);
+}
+$todayBackup = $backupDir . 'kora_backup_' . date('Y-m-d') . '.sql';
+if (!is_file($todayBackup)) {
+    try {
+        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+        $sql = "-- Kora CMS auto-backup " . date('Y-m-d H:i:s') . "\nSET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
+        foreach ($tables as $table) {
+            if (!str_starts_with($table, 'cms_')) continue;
+            $create = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch();
+            $sql .= "DROP TABLE IF EXISTS `{$table}`;\n" . $create['Create Table'] . ";\n\n";
+            $rows = $pdo->query("SELECT * FROM `{$table}`");
+            $first = true;
+            $cols = null;
+            foreach ($rows as $row) {
+                if ($first) { $cols = array_keys($row); $first = false; }
+                $vals = [];
+                foreach ($cols as $c) { $vals[] = $row[$c] === null ? 'NULL' : $pdo->quote($row[$c]); }
+                $sql .= "INSERT INTO `{$table}` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', $vals) . ");\n";
+            }
+            if (!$first) $sql .= "\n";
+        }
+        $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+        file_put_contents($todayBackup, $sql);
+        $log[] = 'Záloha databáze vytvořena: ' . basename($todayBackup);
+    } catch (\PDOException $e) {
+        $log[] = 'Chyba zálohy: ' . $e->getMessage();
+    }
+
+    // Rotace: smazat zálohy starší než 7 dní
+    foreach (glob($backupDir . 'kora_backup_*.sql') as $oldBackup) {
+        if (filemtime($oldBackup) < time() - 7 * 86400) {
+            @unlink($oldBackup);
+        }
+    }
+}
+
 // ── Výstup ───────────────────────────────────────────────────────────────────
 if ($log !== []) {
     $summary = implode('; ', $log);

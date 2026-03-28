@@ -25,6 +25,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Opraveno
 - **Confirm dialogy nefungovaly** – CSP s nonce ignoruje `unsafe-inline`, proto `onclick="return confirm()"` inline handlery nikdy nefungovaly; 36 výskytů ve 32 souborech nahrazeno za `data-confirm` atribut s globálním JS event handlerem v admin footer
 - **Content reference picker – CSP nonce** – `<?= cspNonce() ?>` uvnitř heredoc `<<<HTML` se nevyhodnotilo; CSS nebylo aplikováno; opraveno na PHP concatenation
+- **Naplánované zálohy** – cron.php automaticky vytváří denní SQL zálohu do `uploads/backups/`; rotace starších než 7 dní; `.htaccess` ochrana adresáře
 - **Plánované zrušení publikace** – sloupec `unpublish_at` na článcích, novinkách, stránkách a událostech; formulářové pole v admin; cron.php automaticky skryje obsah po vypršení; WCAG 2.2 kompatibilní
 - **runtime_audit.php** – přidány testy nových admin stránek: blogs, widgets, redirects, audit_log, backup, trash, menu, blog_cats, blog_tags
 - **Šablona default** – opraveny hardcoded `/blog/index.php` odkazy v author.php, authors.php a home.php na dynamický `blogIndexPath()`
