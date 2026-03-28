@@ -183,7 +183,6 @@ if ($detailRequested) {
     }
 } else {
     $perPage = 10;
-    $page = max(1, (int)($_GET['strana'] ?? 1));
 
     if ($archiv) {
         $pageTitle = 'Archiv anket';
@@ -212,12 +211,8 @@ if ($detailRequested) {
         $countParams = [':now1' => $now, ':now2' => $now];
     }
 
-    $countStmt = $pdo->prepare($countSql);
-    $countStmt->execute($countParams);
-    $total = (int)$countStmt->fetchColumn();
-    $totalPages = max(1, (int)ceil($total / $perPage));
-    $page = min($page, $totalPages);
-    $offset = ($page - 1) * $perPage;
+    $pag = paginate($pdo, $countSql, $countParams, $perPage);
+    ['totalPages' => $totalPages, 'page' => $page, 'offset' => $offset] = $pag;
 
     $listStmt = $pdo->prepare($listSql);
     foreach ($countParams as $key => $value) {

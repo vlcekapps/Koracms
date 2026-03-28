@@ -43,19 +43,19 @@
         <div class="field">
           <label for="first_name">Jméno <span aria-hidden="true">*</span></label>
           <input type="text" id="first_name" name="first_name" class="form-control" required aria-required="true"
-                 maxlength="100" value="<?= h($profileRow['first_name']) ?>">
+                 maxlength="100" value="<?= h($profileRow['first_name']) ?>" autocomplete="given-name">
         </div>
 
         <div class="field">
           <label for="last_name">Příjmení <span aria-hidden="true">*</span></label>
           <input type="text" id="last_name" name="last_name" class="form-control" required aria-required="true"
-                 maxlength="100" value="<?= h($profileRow['last_name']) ?>">
+                 maxlength="100" value="<?= h($profileRow['last_name']) ?>" autocomplete="family-name">
         </div>
 
         <div class="field">
           <label for="phone">Telefon <span aria-hidden="true">*</span></label>
           <input type="tel" id="phone" name="phone" class="form-control" required aria-required="true"
-                 maxlength="20" value="<?= h($profileRow['phone'] ?? '') ?>" aria-describedby="phone-hint">
+                 maxlength="20" value="<?= h($profileRow['phone'] ?? '') ?>" autocomplete="tel" aria-describedby="phone-hint">
           <small id="phone-hint">Nutné pro rezervace</small>
         </div>
 

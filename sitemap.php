@@ -27,7 +27,7 @@ try {
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {} ?>
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); } ?>
 
 <?php
 try {
@@ -57,7 +57,7 @@ try {
 <?php
         endforeach;
     endif;
-} catch (\PDOException $e) {}
+} catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 ?>
 
 <?php if (isModuleEnabled('blog')): ?>
@@ -81,7 +81,7 @@ try {
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('news')): ?>
@@ -106,7 +106,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('board')): ?>
@@ -131,7 +131,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('downloads')): ?>
@@ -156,7 +156,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('faq')): ?>
@@ -181,7 +181,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('food')): ?>
@@ -211,7 +211,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('reservations')): ?>
@@ -235,7 +235,7 @@ endif; ?>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('events')): ?>
@@ -260,7 +260,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('podcast')): ?>
@@ -284,7 +284,7 @@ endif; ?>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 
     try {
         $podcastEpisodes = $pdo->query(
@@ -303,7 +303,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('gallery')): ?>
@@ -327,7 +327,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 
     try {
         $galleryPhotos = $pdo->query(
@@ -343,7 +343,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('places')): ?>
@@ -368,7 +368,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 <?php if (isModuleEnabled('polls')): ?>
@@ -397,7 +397,7 @@ endif; ?>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
-<?php endforeach; } catch (\PDOException $e) {}
+<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
 endif; ?>
 
 </urlset>

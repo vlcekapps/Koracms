@@ -155,6 +155,7 @@ try {
         }
     }
 } catch (\PDOException $e) {
+    error_log('admin/blog_save tags: ' . $e->getMessage());
 }
 
 header('Location: ' . BASE_URL . '/admin/blog.php');

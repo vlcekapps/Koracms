@@ -34,7 +34,7 @@
           <div class="field">
             <label for="email">Váš e-mail <span aria-hidden="true">*</span></label>
             <input type="email" id="email" name="email" class="form-control" required aria-required="true"
-                   maxlength="255" value="<?= h($postedEmail) ?>">
+                   maxlength="255" value="<?= h($postedEmail) ?>" autocomplete="email">
           </div>
 
           <div class="field">

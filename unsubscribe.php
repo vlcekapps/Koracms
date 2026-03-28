@@ -14,6 +14,7 @@ if ($token !== '') {
         $stmt->execute([$token]);
         $ok = $stmt->rowCount() > 0;
     } catch (\PDOException $e) {
+        error_log('unsubscribe: ' . $e->getMessage());
     }
 }
 

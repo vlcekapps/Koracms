@@ -60,7 +60,7 @@
         <div class="field">
           <label for="email">E-mail</label>
           <input type="email" id="email" name="email" class="form-control" maxlength="255"
-                 aria-describedby="chat-email-help"
+                 aria-describedby="chat-email-help" autocomplete="email"
                  value="<?= h($formData['email']) ?>">
           <small id="chat-email-help" class="help-text">Nepovinné pole.</small>
         </div>

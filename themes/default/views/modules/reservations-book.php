@@ -103,19 +103,19 @@
             <div class="field">
               <label for="guest_name">Jméno a příjmení <span aria-hidden="true">*</span></label>
               <input type="text" id="guest_name" name="guest_name" class="form-control" required aria-required="true"
-                     maxlength="255" value="<?= h($formData['guest_name']) ?>">
+                     maxlength="255" value="<?= h($formData['guest_name']) ?>" autocomplete="name">
             </div>
 
             <div class="field">
               <label for="guest_email">E-mail <span aria-hidden="true">*</span></label>
               <input type="email" id="guest_email" name="guest_email" class="form-control" required aria-required="true"
-                     maxlength="255" value="<?= h($formData['guest_email']) ?>">
+                     maxlength="255" value="<?= h($formData['guest_email']) ?>" autocomplete="email">
             </div>
 
             <div class="field">
               <label for="guest_phone">Telefon <span aria-hidden="true">*</span></label>
               <input type="tel" id="guest_phone" name="guest_phone" class="form-control" required aria-required="true"
-                     maxlength="30" value="<?= h($formData['guest_phone']) ?>">
+                     maxlength="30" value="<?= h($formData['guest_phone']) ?>" autocomplete="tel">
             </div>
           </fieldset>
         <?php endif; ?>

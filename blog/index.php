@@ -32,6 +32,7 @@ $allTags = [];
 try {
     $allTags = $pdo->query("SELECT name, slug FROM cms_tags ORDER BY name")->fetchAll();
 } catch (\PDOException $e) {
+    error_log('blog/index tags: ' . $e->getMessage());
 }
 
 $where  = "WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())";
@@ -60,14 +61,8 @@ if ($authorSlug !== '') {
     }
 }
 
-$countStmt = $pdo->prepare(
-    "SELECT COUNT(*) FROM cms_articles a {$where}"
-);
-$countStmt->execute($params);
-$total  = (int)$countStmt->fetchColumn();
-$pages  = max(1, (int)ceil($total / $perPage));
-$page   = max(1, min($pages, (int)($_GET['strana'] ?? 1)));
-$offset = ($page - 1) * $perPage;
+$pag = paginate($pdo, "SELECT COUNT(*) FROM cms_articles a {$where}", $params, $perPage);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $pag;
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.category_id, c.name AS category,

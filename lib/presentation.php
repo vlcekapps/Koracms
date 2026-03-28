@@ -319,7 +319,9 @@ function deletePodcastCoverFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/podcasts/covers/' . $filename;
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
     }
 }
 
@@ -332,7 +334,9 @@ function deletePodcastAudioFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/podcasts/' . $filename;
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
     }
 }
 
@@ -502,7 +506,9 @@ function deleteDownloadImageFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/downloads/images/' . $filename;
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
     }
 }
 
@@ -515,7 +521,9 @@ function deleteDownloadStoredFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/downloads/' . $filename;
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
     }
 }
 
@@ -708,7 +716,9 @@ function deletePlaceImageFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/places/' . $filename;
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
     }
 }
 
@@ -860,7 +870,9 @@ function deleteBoardImageFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/board/images/' . $filename;
     if (is_file($path)) {
-        @unlink($path);
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
     }
 }
 

@@ -25,6 +25,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -41,6 +42,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -56,6 +58,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
             $results[] = $row;
         }
     } catch (\PDOException $e) {
+        error_log('search: ' . $e->getMessage());
     }
 
     if (isModuleEnabled('events')) {
@@ -72,6 +75,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -89,6 +93,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
 
         try {
@@ -108,6 +113,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -126,6 +132,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -146,6 +153,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
 
         try {
@@ -163,6 +171,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -183,6 +192,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -201,6 +211,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -220,6 +231,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -239,6 +251,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -262,6 +275,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 
@@ -283,6 +297,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
+            error_log('search: ' . $e->getMessage());
         }
     }
 }

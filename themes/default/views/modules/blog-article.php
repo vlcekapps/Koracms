@@ -173,7 +173,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
         <div class="field">
           <label for="author_email">E-mail</label>
           <input type="email" id="author_email" name="author_email" class="form-control" maxlength="255"
-                 aria-describedby="comment-author-email-help"
+                 aria-describedby="comment-author-email-help" autocomplete="email"
                  value="<?= h($formData['author_email']) ?>">
           <small id="comment-author-email-help" class="help-text">Nepovinné pole, nebude zveřejněno.</small>
         </div>

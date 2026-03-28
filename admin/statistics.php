@@ -50,7 +50,7 @@ try {
         )->fetchColumn();
         $dailyData[$today] = ['views' => $todayViews, 'uv' => $todayUv];
     }
-} catch (\PDOException $e) {}
+} catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 
 // Doplnit chybějící dny a spočítat maximum
 $chartDays = [];
@@ -79,7 +79,7 @@ if (isModuleEnabled('blog')) {
              WHERE status = 'published' AND view_count > 0
              ORDER BY view_count DESC LIMIT 20"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 }
 
 // ── Rezervace ───────────────────────────────────────────────────────────────
@@ -94,13 +94,13 @@ if (isModuleEnabled('reservations')) {
              WHERE booking_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 
     try {
         $resStatus = $pdo->query(
             "SELECT status, COUNT(*) AS cnt FROM cms_res_bookings GROUP BY status ORDER BY cnt DESC"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 
     try {
         $resTopRes = $pdo->query(
@@ -109,7 +109,7 @@ if (isModuleEnabled('reservations')) {
              JOIN cms_res_resources r ON r.id = b.resource_id
              GROUP BY b.resource_id ORDER BY cnt DESC LIMIT 10"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 }
 
 // ── Newsletter ──────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ if (isModuleEnabled('newsletter')) {
                AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 }
 
 // ── Komentáře ───────────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ if (isModuleEnabled('contact')) {
              WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
 }
 
 // ── Česky pojmenované měsíce ────────────────────────────────────────────────

@@ -106,4 +106,5 @@ require_once __DIR__ . '/lib/filedownloads.php';
 require_once __DIR__ . '/lib/ui.php';
 require_once __DIR__ . '/lib/mail.php';
 require_once __DIR__ . '/lib/stats.php';
+require_once __DIR__ . '/lib/pagination.php';
 

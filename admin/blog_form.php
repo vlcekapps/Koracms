@@ -33,6 +33,7 @@ try {
         $articleTagIds = array_column($tagStmt->fetchAll(), 'tag_id');
     }
 } catch (\PDOException $e) {
+    error_log('admin/blog_form tags: ' . $e->getMessage());
 }
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';

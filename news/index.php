@@ -11,10 +11,8 @@ $pdo      = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 $perPage  = max(1, (int)getSetting('news_per_page', '10'));
 
-$total  = (int)$pdo->query("SELECT COUNT(*) FROM cms_news WHERE status = 'published'")->fetchColumn();
-$pages  = max(1, (int)ceil($total / $perPage));
-$page   = max(1, min($pages, (int)($_GET['strana'] ?? 1)));
-$offset = ($page - 1) * $perPage;
+$pag = paginate($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'published'", [], $perPage);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $pag;
 
 $stmt = $pdo->prepare(
     "SELECT n.id, n.title, n.slug, n.content, n.created_at,

@@ -351,6 +351,7 @@ if (($requestedType === 'all' || $requestedType === 'blog') && isModuleEnabled('
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -369,6 +370,7 @@ if ($requestedType === 'all' || $requestedType === 'page') {
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -387,6 +389,7 @@ if (($requestedType === 'all' || $requestedType === 'news') && isModuleEnabled('
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -406,6 +409,7 @@ if (($requestedType === 'all' || $requestedType === 'event') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -425,6 +429,7 @@ if (($requestedType === 'all' || $requestedType === 'faq') && isModuleEnabled('f
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -461,6 +466,7 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -499,6 +505,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -518,6 +525,7 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -537,6 +545,7 @@ if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -557,6 +566,7 @@ if (($requestedType === 'all' || $requestedType === 'board') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 
@@ -576,6 +586,7 @@ if (($requestedType === 'all' || $requestedType === 'poll') && isModuleEnabled('
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
     }
 }
 

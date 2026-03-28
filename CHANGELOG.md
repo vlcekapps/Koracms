@@ -6,7 +6,14 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Opraveno
+- **WCAG 2.2 (1.3.5)** – doplněny `autocomplete` atributy na formulářová pole: `given-name`, `family-name`, `tel` v registraci, profilu a rezervacích; `email` v newsletteru, chatu a komentářích
+- **Prázdné catch bloky** – doplněn `error_log()` do catch bloků v `search.php`, `sitemap.php`, `blog/index.php`, `unsubscribe.php`, `subscribe_confirm.php`, `admin/blog_form.php`, `admin/blog_save.php`, `admin/statistics.php`, `admin/content_reference_search.php`
+- **`@` suppression** v `lib/presentation.php` – 6× `@unlink()` nahrazeno logovaným `unlink()` s `error_log()`
+- **Runtime audit** – testovací INSERT pro `confirm_email` nyní nastavuje `confirmation_expires`; přidány testy `confirm_token_expired` a `confirm_token_valid`
+
 ### Přidáno
+- **Sdílený stránkovací helper** (`lib/pagination.php`) – funkce `paginate()` a `renderPager()` nahrazují duplicitní stránkovací logiku v modulech; nasazeno na blog, news a polls
 - **Globální exception handler** (`db.php`) – neošetřené výjimky nyní zobrazí uživatelsky přívětivou chybovou stránku místo bílé obrazovky; v debug režimu (`display_errors=1`) zobrazí i stack trace
 - **Runtime audit** – nové sekce `smtp_connectivity` (ověří SMTP připojení, STARTTLS, AUTH LOGIN) a `sendmail_return_check` (hlídá, že žádné volání `sendMail()` neignoruje návratovou hodnotu)
 

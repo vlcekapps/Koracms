@@ -358,8 +358,8 @@ foreach ($roleAuditUsers as $roleKey => $roleAuditUser) {
 $confirmToken = bin2hex(random_bytes(32));
 $confirmEmail = 'runtimeaudit-confirm-' . bin2hex(random_bytes(6)) . '@example.test';
 $pdo->prepare(
-    "INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, confirmation_token, created_at)
-     VALUES (?, ?, ?, ?, 'public', 0, 0, ?, NOW())"
+    "INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, confirmation_token, confirmation_expires, created_at)
+     VALUES (?, ?, ?, ?, 'public', 0, 0, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW())"
 )->execute([
     $confirmEmail,
     password_hash('RuntimeAudit123!', PASSWORD_BCRYPT),
@@ -4900,6 +4900,54 @@ try {
 } finally {
     saveSetting($activeThemeSettingsKey, $originalThemeSettings);
     clearSettingsCache();
+}
+
+// ────────────────── Bezpečnostní testy (potvrzovací tokeny) ─────────────────
+
+echo "=== confirm_token_expired ===\n";
+$expiredConfirmEmail = 'runtimeaudit-expired-' . bin2hex(random_bytes(6)) . '@example.test';
+$expiredConfirmToken = bin2hex(random_bytes(32));
+$pdo->prepare(
+    "INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, confirmation_token, confirmation_expires, created_at)
+     VALUES (?, ?, ?, ?, 'public', 0, 0, ?, DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW())"
+)->execute([
+    $expiredConfirmEmail,
+    password_hash('RuntimeAudit123!', PASSWORD_BCRYPT),
+    'Expired',
+    'Token',
+    $expiredConfirmToken,
+]);
+$cleanup['confirm_emails'][] = $expiredConfirmEmail;
+
+$expiredResult = fetchUrl($baseUrl . '/confirm_email.php?token=' . urlencode($expiredConfirmToken));
+if (str_contains($expiredResult['status'], '200') && str_contains($expiredResult['body'], 'Neplatný')) {
+    echo "OK\n";
+} else {
+    $failures++;
+    echo "- expired confirmation token was not rejected (status: {$expiredResult['status']})\n";
+}
+
+echo "=== confirm_token_valid ===\n";
+$freshConfirmEmail = 'runtimeaudit-freshconfirm-' . bin2hex(random_bytes(6)) . '@example.test';
+$freshConfirmToken = bin2hex(random_bytes(32));
+$pdo->prepare(
+    "INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, confirmation_token, confirmation_expires, created_at)
+     VALUES (?, ?, ?, ?, 'public', 0, 0, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW())"
+)->execute([
+    $freshConfirmEmail,
+    password_hash('RuntimeAudit123!', PASSWORD_BCRYPT),
+    'Fresh',
+    'Confirm',
+    $freshConfirmToken,
+]);
+$cleanup['confirm_emails'][] = $freshConfirmEmail;
+
+$validConfirmResult = fetchUrl($baseUrl . '/confirm_email.php?token=' . urlencode($freshConfirmToken));
+if (str_contains($validConfirmResult['status'], '200') && str_contains($validConfirmResult['body'], 'úspěšně ověřen')) {
+    echo "OK\n";
+} else {
+    $failures++;
+    echo "- valid confirmation token was not accepted (status: {$validConfirmResult['status']})\n";
 }
 
 // ─────────────────────────────── SMTP konektivita ──────────────────────────

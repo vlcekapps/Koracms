@@ -44,27 +44,7 @@ $renderAuthorName = static function (array $item): string {
         <?php endforeach; ?>
       </div>
 
-      <?php if ($pages > 1): ?>
-        <nav aria-label="Stránkování novinek">
-          <ul class="pager">
-            <?php if ($page > 1): ?>
-              <li><a href="?strana=<?= $page - 1 ?>" rel="prev"><span aria-hidden="true">←</span> Starší</a></li>
-            <?php endif; ?>
-            <?php for ($p = 1; $p <= $pages; $p++): ?>
-              <li>
-                <?php if ($p === $page): ?>
-                  <span aria-current="page"><?= $p ?></span>
-                <?php else: ?>
-                  <a href="?strana=<?= $p ?>"><?= $p ?></a>
-                <?php endif; ?>
-              </li>
-            <?php endfor; ?>
-            <?php if ($page < $pages): ?>
-              <li><a href="?strana=<?= $page + 1 ?>" rel="next">Novější <span aria-hidden="true">→</span></a></li>
-            <?php endif; ?>
-          </ul>
-        </nav>
-      <?php endif; ?>
+      <?= renderPager($page, $pages, '?', 'Stránkování novinek', 'Starší', 'Novější') ?>
     <?php endif; ?>
   </section>
 </div>

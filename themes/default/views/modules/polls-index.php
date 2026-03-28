@@ -137,28 +137,7 @@
           <?php endforeach; ?>
         </div>
 
-        <?php if ($totalPages > 1): ?>
-          <nav aria-label="Stránkování anket">
-            <ul class="pager">
-              <?php $base = $archiv ? (BASE_URL . '/polls/index.php?archiv=1&strana=') : (BASE_URL . '/polls/index.php?strana='); ?>
-              <?php if ($page > 1): ?>
-                <li><a href="<?= h($base) . ($page - 1) ?>" rel="prev"><span aria-hidden="true">←</span> Předchozí</a></li>
-              <?php endif; ?>
-              <?php for ($pageNumber = 1; $pageNumber <= $totalPages; $pageNumber++): ?>
-                <li>
-                  <?php if ($pageNumber === $page): ?>
-                    <span aria-current="page"><?= $pageNumber ?></span>
-                  <?php else: ?>
-                    <a href="<?= h($base) . $pageNumber ?>"><?= $pageNumber ?></a>
-                  <?php endif; ?>
-                </li>
-              <?php endfor; ?>
-              <?php if ($page < $totalPages): ?>
-                <li><a href="<?= h($base) . ($page + 1) ?>" rel="next">Další <span aria-hidden="true">→</span></a></li>
-              <?php endif; ?>
-            </ul>
-          </nav>
-        <?php endif; ?>
+        <?= renderPager($page, $totalPages, $archiv ? (BASE_URL . '/polls/index.php?archiv=1&') : (BASE_URL . '/polls/index.php?'), 'Stránkování anket') ?>
       <?php endif; ?>
     </section>
   <?php endif; ?>
