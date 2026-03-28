@@ -510,6 +510,39 @@ adminHeader('Přehled');
 </section>
 <?php endif; ?>
 
+<?php
+// Kontrola aktualizací (jen superadmin, max 1x za 24 hodin)
+if (isSuperAdmin()) {
+    $updateAvailable = false;
+    $latestVersion = '';
+    $cacheFile = __DIR__ . '/../uploads/tmp/.update_check';
+    $cached = is_file($cacheFile) ? json_decode((string)file_get_contents($cacheFile), true) : null;
+
+    if ($cached && isset($cached['checked_at']) && $cached['checked_at'] > time() - 86400) {
+        $latestVersion = $cached['version'] ?? '';
+    } else {
+        $ctx = stream_context_create(['http' => ['method' => 'GET', 'header' => "User-Agent: KoraCMS/" . KORA_VERSION . "\r\n", 'timeout' => 5]]);
+        $response = @file_get_contents('https://api.github.com/repos/vlcekapps/Koracms/releases/latest', false, $ctx);
+        if ($response !== false) {
+            $data = json_decode($response, true);
+            $latestVersion = ltrim($data['tag_name'] ?? '', 'v');
+        }
+        @file_put_contents($cacheFile, json_encode(['version' => $latestVersion, 'checked_at' => time()]));
+    }
+
+    if ($latestVersion !== '' && version_compare($latestVersion, KORA_VERSION, '>')) {
+        $updateAvailable = true;
+    }
+
+    if ($updateAvailable): ?>
+    <section style="background:#e3f2fd;border:1px solid #1565c0;padding:1rem;margin:1rem 0;border-radius:8px" aria-labelledby="update-heading">
+      <h2 id="update-heading" style="margin-top:0;color:#1565c0">Dostupná aktualizace</h2>
+      <p>Je k dispozici nová verze Kora CMS: <strong><?= h($latestVersion) ?></strong> (nainstalovaná: <?= h(KORA_VERSION) ?>).</p>
+    </section>
+    <?php endif;
+}
+?>
+
 <?php if ($pendingReviewItems !== []): ?>
 <section style="background:#fffbe6;border:1px solid #d7b600;padding:1rem;margin:1rem 0" aria-labelledby="pending-attention-heading">
   <h2 id="pending-attention-heading" style="margin-top:0">Co potřebuje pozornost</h2>
