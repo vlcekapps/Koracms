@@ -3,26 +3,75 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu formulářů nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
+$query = trim((string)($_GET['q'] ?? ''));
+$statusFilter = trim((string)($_GET['status'] ?? 'all'));
+$allowedStatusFilters = ['all', 'active', 'inactive'];
+if (!in_array($statusFilter, $allowedStatusFilters, true)) {
+    $statusFilter = 'all';
+}
 
 $forms = [];
 try {
-    $forms = $pdo->query(
+    $where = [];
+    $params = [];
+    if ($query !== '') {
+        $where[] = '(f.title LIKE ? OR f.slug LIKE ? OR f.description LIKE ?)';
+        $params[] = '%' . $query . '%';
+        $params[] = '%' . $query . '%';
+        $params[] = '%' . $query . '%';
+    }
+    if ($statusFilter === 'active') {
+        $where[] = 'f.is_active = 1';
+    } elseif ($statusFilter === 'inactive') {
+        $where[] = 'f.is_active = 0';
+    }
+
+    $whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
+    $stmt = $pdo->prepare(
         "SELECT f.id, f.title, f.slug, f.is_active, f.created_at,
                 (SELECT COUNT(*) FROM cms_form_fields WHERE form_id = f.id) AS field_count,
                 (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id) AS submission_count
          FROM cms_forms f
+         {$whereSql}
          ORDER BY f.created_at DESC"
-    )->fetchAll();
+    );
+    $stmt->execute($params);
+    $forms = $stmt->fetchAll();
 } catch (\PDOException $e) {
     error_log('admin/forms: ' . $e->getMessage());
 }
 
 adminHeader('Formuláře');
 ?>
-<p><a href="form_form.php" class="btn">+ Nový formulář</a></p>
+<div class="button-row">
+  <a href="form_form.php" class="btn btn-primary">+ Vytvořit formulář</a>
+</div>
+
+<p class="section-subtitle">Na jednom místě připravíte veřejné formuláře, jejich pole i přehled doručených odpovědí.</p>
+
+<form method="get" class="filters" style="margin:1rem 0">
+  <label for="forms-q">Hledat formuláře</label>
+  <input type="search" id="forms-q" name="q" value="<?= h($query) ?>" placeholder="Název, adresa nebo popis">
+
+  <label for="forms-status">Stav</label>
+  <select id="forms-status" name="status">
+    <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Všechny formuláře</option>
+    <option value="active"<?= $statusFilter === 'active' ? ' selected' : '' ?>>Jen aktivní</option>
+    <option value="inactive"<?= $statusFilter === 'inactive' ? ' selected' : '' ?>>Jen neaktivní</option>
+  </select>
+
+  <button type="submit" class="btn">Použít filtr</button>
+  <?php if ($query !== '' || $statusFilter !== 'all'): ?>
+    <a href="forms.php" class="btn">Zrušit filtr</a>
+  <?php endif; ?>
+</form>
 
 <?php if (empty($forms)): ?>
-  <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a>.</p>
+  <?php if ($query !== '' || $statusFilter !== 'all'): ?>
+    <p>Pro zadaný filtr se nenašel žádný formulář. <a href="forms.php">Zobrazit všechny formuláře</a>.</p>
+  <?php else: ?>
+    <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a>.</p>
+  <?php endif; ?>
 <?php else: ?>
   <table>
     <caption>Přehled formulářů</caption>
@@ -44,7 +93,7 @@ adminHeader('Formuláře');
         </td>
         <td><?= (int)$form['field_count'] ?></td>
         <td><?= (int)$form['submission_count'] ?></td>
-        <td><?= (int)$form['is_active'] ? 'Aktivní' : '<strong>Neaktivní</strong>' ?></td>
+        <td><?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?></td>
         <td class="actions">
           <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit</a>
           <?php if ((int)$form['submission_count'] > 0): ?>
@@ -54,6 +103,7 @@ adminHeader('Formuláře');
           <form action="form_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
+            <input type="hidden" name="redirect" value="<?= h((string)($_SERVER['REQUEST_URI'] ?? (BASE_URL . '/admin/forms.php'))) ?>">
             <button type="submit" class="btn btn-danger"
                     data-confirm="Smazat formulář včetně všech odpovědí?">Smazat</button>
           </form>

@@ -1,6 +1,5 @@
 <div class="auth-shell">
   <section class="surface surface--narrow" aria-labelledby="form-title">
-    <p class="section-kicker">Formulář</p>
     <h1 id="form-title" class="section-title section-title--hero"><?= h((string)$form['title']) ?></h1>
 
     <?php if (trim((string)($form['description'] ?? '')) !== ''): ?>
@@ -49,7 +48,7 @@
               <div class="field">
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <select id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?>>
-                  <option value="">-- vyberte --</option>
+                  <option value="">Vyberte možnost</option>
                   <?php foreach (explode('|', (string)($field['options'] ?? '')) as $opt): ?>
                     <?php $opt = trim($opt); if ($opt === '') continue; ?>
                     <option value="<?= h($opt) ?>"<?= ($formData[$field['name']] ?? '') === $opt ? ' selected' : '' ?>><?= h($opt) ?></option>
@@ -89,7 +88,8 @@
           <div class="field">
             <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
             <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
-                   aria-required="true" inputmode="numeric" autocomplete="off">
+                   aria-required="true" inputmode="numeric" autocomplete="off" aria-describedby="captcha-help">
+            <small id="captcha-help" class="field-help">Krátké ověření proti spamu. Zadejte jen výsledek příkladu.</small>
           </div>
 
           <div class="button-row button-row--start">

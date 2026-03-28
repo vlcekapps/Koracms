@@ -28,11 +28,22 @@ foreach ($fields as $field) {
     $fieldNames[(string)$field['name']] = (string)$field['label'];
 }
 
-$submissions = $pdo->prepare(
-    "SELECT * FROM cms_form_submissions WHERE form_id = ? ORDER BY created_at DESC"
-);
-$submissions->execute([$formId]);
-$submissions = $submissions->fetchAll();
+$query = trim((string)($_GET['q'] ?? ''));
+$submissionSql = "SELECT * FROM cms_form_submissions WHERE form_id = ?";
+$submissionParams = [$formId];
+if ($query !== '') {
+    $submissionSql .= " AND data LIKE ?";
+    $submissionParams[] = '%' . $query . '%';
+}
+$submissionSql .= " ORDER BY created_at DESC";
+$submissionsStmt = $pdo->prepare($submissionSql);
+$submissionsStmt->execute($submissionParams);
+$submissions = $submissionsStmt->fetchAll();
+$allSubmissionCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = ?");
+$allSubmissionCountStmt->execute([$formId]);
+$allSubmissionCount = (int)$allSubmissionCountStmt->fetchColumn();
+$submissionCount = count($submissions);
+$currentUrl = BASE_URL . '/admin/form_submissions.php?id=' . $formId . ($query !== '' ? '&q=' . urlencode($query) : '');
 
 // CSV export
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
@@ -67,28 +78,50 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     exit;
 }
 
-adminHeader('Odpovědi – ' . mb_substr((string)$form['title'], 0, 50));
+adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'], 0, 50, '…', 'UTF-8'));
 ?>
 
 <div style="display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
-  <a href="form_form.php?id=<?= $formId ?>" class="btn">&larr; Zpět na formulář</a>
-  <a href="forms.php" class="btn">Všechny formuláře</a>
+  <a href="form_form.php?id=<?= $formId ?>" class="btn">Upravit formulář</a>
+  <a href="forms.php" class="btn">Zpět na formuláře</a>
+  <?php if ((int)($form['is_active'] ?? 0) === 1): ?>
+    <a href="<?= h(formPublicPath($form)) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+  <?php endif; ?>
   <?php if (!empty($submissions)): ?>
-    <a href="form_submissions.php?id=<?= $formId ?>&amp;export=csv" class="btn btn-primary">Exportovat CSV</a>
+    <a href="form_submissions.php?id=<?= $formId ?><?= $query !== '' ? '&amp;q=' . urlencode($query) : '' ?>&amp;export=csv" class="btn btn-primary">Exportovat CSV</a>
   <?php endif; ?>
 </div>
 
 <p>
   <strong>Formulář:</strong> <?= h((string)$form['title']) ?> ·
-  <strong>Odpovědí:</strong> <?= count($submissions) ?>
+  <strong>Zobrazeno odpovědí:</strong> <?= $submissionCount ?>
+  <?php if ($query !== ''): ?>
+    · <strong>Celkem odpovědí:</strong> <?= $allSubmissionCount ?>
+  <?php endif; ?>
 </p>
 
+<p class="section-subtitle">Tady najdete doručené odpovědi a můžete je vyhledat nebo exportovat do CSV.</p>
+
+<form method="get" class="filters" style="margin:1rem 0">
+  <input type="hidden" name="id" value="<?= $formId ?>">
+  <label for="submissions-q">Hledat v odpovědích</label>
+  <input type="search" id="submissions-q" name="q" value="<?= h($query) ?>" placeholder="Jméno, e-mail, telefon nebo jiná hodnota">
+  <button type="submit" class="btn">Použít filtr</button>
+  <?php if ($query !== ''): ?>
+    <a href="form_submissions.php?id=<?= $formId ?>" class="btn">Zrušit filtr</a>
+  <?php endif; ?>
+</form>
+
 <?php if (empty($submissions)): ?>
-  <p>Tento formulář zatím nemá žádné odpovědi.</p>
+  <?php if ($query !== ''): ?>
+    <p>Pro zadaný filtr se nenašla žádná odpověď. <a href="form_submissions.php?id=<?= $formId ?>">Zobrazit všechny odpovědi</a>.</p>
+  <?php else: ?>
+    <p>Tento formulář zatím nemá žádné odpovědi.</p>
+  <?php endif; ?>
 <?php else: ?>
   <div style="overflow-x:auto">
     <table>
-      <caption class="sr-only">Odpovědi formuláře <?= h((string)$form['title']) ?></caption>
+      <caption>Přehled odpovědí formuláře</caption>
       <thead>
         <tr>
           <th scope="col">Datum</th>
@@ -119,8 +152,9 @@ adminHeader('Odpovědi – ' . mb_substr((string)$form['title'], 0, 50));
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$sub['id'] ?>">
               <input type="hidden" name="form_id" value="<?= $formId ?>">
+              <input type="hidden" name="redirect" value="<?= h($currentUrl) ?>">
               <button type="submit" class="btn btn-danger"
-                      data-confirm="Smazat tuto odpověď?">Smazat</button>
+                      data-confirm="Smazat tuto odpověď?">Smazat odpověď</button>
             </form>
           </td>
         </tr>

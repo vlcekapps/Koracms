@@ -1894,6 +1894,7 @@ foreach ($pages as $page) {
     }
 
     $adminFormActionExpectations = [
+        'admin_form_create' => ['Vytvořit formulář', 'Zrušit'],
         'admin_blog_form' => ['Uložit změny', 'Zrušit'],
         'admin_blog_create_form' => ['Přidat článek', 'Zrušit'],
         'admin_news_form' => ['Uložit změny', 'Zrušit'],
@@ -1944,6 +1945,7 @@ foreach ($pages as $page) {
     }
 
     $adminFormForbiddenFragments = [
+        'admin_form_create' => ['>Uložit formulář<', 'Formulář je aktivní'],
         'admin_event_form' => ['>Uložit<'],
         'admin_page_form' => ['>Uložit<'],
         'admin_user_form' => ['>Uložit<'],
@@ -1967,6 +1969,7 @@ foreach ($pages as $page) {
     }
 
     $adminFormCopyExpectations = [
+        'admin_form_create' => ['Nejdřív vytvořte základ formuláře.', 'Necháte-li prázdné, adresa se vytvoří automaticky podle názvu formuláře.', 'Zobrazí se návštěvníkovi po úspěšném odeslání formuláře.', 'Zveřejnit formulář na webu', 'Neaktivní formulář zůstane uložený, ale návštěvníci ho na webu neuvidí.'],
         'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
@@ -2169,6 +2172,7 @@ foreach ($pages as $page) {
     }
 
     $adminFormSectionExpectations = [
+        'admin_form_create' => ['Základní údaje formuláře'],
         'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_news_form' => ['Obsah novinky'],
@@ -2207,6 +2211,7 @@ foreach ($pages as $page) {
     }
 
     $adminFormSectionForbiddenFragments = [
+        'admin_form_create' => ['<legend>Základní údaje</legend>'],
         'admin_blog_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_blog_create_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_news_form' => ['<legend>Novinka</legend>'],
@@ -2519,6 +2524,25 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'Přehled položek ke stažení')) {
             $issues[] = 'admin downloads table caption was not updated';
+        }
+    }
+
+    if ($page['label'] === 'admin_forms') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'Vytvořit formulář',
+            'Na jednom místě připravíte veřejné formuláře',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin forms page is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (
+            !str_contains($result['body'], 'Přehled formulářů')
+            && !str_contains($result['body'], 'Zatím tu nejsou žádné formuláře.')
+        ) {
+            $issues[] = 'admin forms page is missing both list caption and empty state';
         }
     }
 

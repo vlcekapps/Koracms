@@ -5,6 +5,12 @@ verifyCsrf();
 
 $id = inputInt('post', 'id');
 $formId = inputInt('post', 'form_id');
+$redirect = internalRedirectTarget(
+    $_POST['redirect'] ?? '',
+    $formId !== null
+        ? BASE_URL . '/admin/form_submissions.php?id=' . $formId
+        : BASE_URL . '/admin/forms.php'
+);
 
 if ($id !== null) {
     $pdo = db_connect();
@@ -12,8 +18,5 @@ if ($id !== null) {
     logAction('form_submission_delete', "id={$id}");
 }
 
-$redirect = $formId !== null
-    ? BASE_URL . '/admin/form_submissions.php?id=' . $formId
-    : BASE_URL . '/admin/forms.php';
 header('Location: ' . $redirect);
 exit;
