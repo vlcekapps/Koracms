@@ -1,4 +1,10 @@
 <?php
+// Widget systém – pokud existují widgety, použít je místo hardcoded sekcí
+if (!empty($useWidgets) && !empty($widgetHtml)) {
+    echo '<div class="page-stack">' . $widgetHtml . '</div>';
+    return;
+}
+
 $themeKey = $themeManifest['key'] ?? null;
 
 $readThemeSelect = static function (string $settingKey, string $fallback) use ($themeKey): string {

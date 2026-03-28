@@ -639,6 +639,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UNIQUE KEY uq_redirects_old_path (old_path(191))
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_widgets (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            zone        VARCHAR(50)  NOT NULL DEFAULT 'homepage',
+            widget_type VARCHAR(50)  NOT NULL,
+            title       VARCHAR(255) NOT NULL DEFAULT '',
+            settings    JSON,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_widgets_zone (zone, sort_order)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Výchozí nastavení ────────────────────────────────────────────────
         $defaults = [
             'site_name'       => $siteName,

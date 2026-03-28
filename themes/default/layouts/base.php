@@ -49,9 +49,19 @@ $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? 
 <div class="site-shell">
   <?= renderThemePartial('header', $headerData, $themeName) ?>
   <main id="obsah" class="<?= h($mainClass) ?>">
-    <div class="container">
-      <?= $contentHtml ?>
-    </div>
+    <?php $sidebarHtml = renderZone('sidebar', 'sidebar-widgets'); ?>
+    <?php if ($sidebarHtml !== ''): ?>
+      <div class="container">
+        <div class="article-shell article-shell--sidebar">
+          <div class="article-shell__content"><?= $contentHtml ?></div>
+          <aside class="article-shell__aside" aria-label="Postranní panel"><?= $sidebarHtml ?></aside>
+        </div>
+      </div>
+    <?php else: ?>
+      <div class="container">
+        <?= $contentHtml ?>
+      </div>
+    <?php endif; ?>
   </main>
   <?= renderThemePartial('footer', [], $themeName) ?>
 </div>

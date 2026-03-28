@@ -111,6 +111,9 @@ if (isModuleEnabled('polls')) {
     }
 }
 
+$widgetHtml = renderZone('homepage');
+$useWidgets = $widgetHtml !== '';
+
 renderPublicPage([
     'title' => $siteName,
     'meta' => [
@@ -118,6 +121,8 @@ renderPublicPage([
     ],
     'view' => 'home',
     'view_data' => [
+        'widgetHtml' => $widgetHtml,
+        'useWidgets' => $useWidgets,
         'homeIntro' => getSetting('home_intro', ''),
         'latestNews' => $latestNews,
         'latestArticles' => $latestArticles,

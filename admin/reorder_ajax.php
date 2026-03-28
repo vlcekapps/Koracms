@@ -31,10 +31,28 @@ if ($order === [] || $module === '') {
 
 $pdo = db_connect();
 
+// Podpora přesunu widgetů mezi zónami
+$zone = trim($_POST['zone'] ?? '');
+if ($module === 'widgets' && $zone !== '') {
+    if (!currentUserHasCapability('settings_manage')) {
+        http_response_code(403);
+        echo json_encode(['ok' => false]);
+        exit;
+    }
+    $stmt = $pdo->prepare("UPDATE cms_widgets SET sort_order = ?, zone = ? WHERE id = ?");
+    foreach ($order as $position => $id) {
+        $stmt->execute([$position + 1, $zone, $id]);
+    }
+    logAction('reorder', "module=widgets zone={$zone} order=" . implode(',', $order));
+    echo json_encode(['ok' => true]);
+    exit;
+}
+
 $config = match ($module) {
     'pages' => ['table' => 'cms_pages', 'column' => 'nav_order', 'capability' => 'content_manage_shared'],
     'blogs' => ['table' => 'cms_blogs', 'column' => 'sort_order', 'capability' => 'blog_taxonomies_manage'],
     'form_fields' => ['table' => 'cms_form_fields', 'column' => 'sort_order', 'capability' => 'content_manage_shared'],
+    'widgets' => ['table' => 'cms_widgets', 'column' => 'sort_order', 'capability' => 'settings_manage'],
     default => null,
 };
 

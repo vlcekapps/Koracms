@@ -618,6 +618,18 @@ $tables = [
         INDEX idx_entity (entity_type, entity_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_widgets' => "CREATE TABLE IF NOT EXISTS cms_widgets (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        zone        VARCHAR(50)  NOT NULL DEFAULT 'homepage',
+        widget_type VARCHAR(50)  NOT NULL,
+        title       VARCHAR(255) NOT NULL DEFAULT '',
+        settings    JSON,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_widgets_zone (zone, sort_order)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_redirects' => "CREATE TABLE IF NOT EXISTS cms_redirects (
         id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         old_path    VARCHAR(500) NOT NULL,
@@ -1822,7 +1834,56 @@ try {
     $log[] = "✗ Migrace stavů chat zpráv – CHYBA: " . h($e->getMessage());
 }
 
-// ── 6. Multiblog – výchozí blog a přeindexování ──────────────────────────────
+// ── 6. Widgety – migrace existujících homepage nastavení ─────────────────────
+
+try {
+    $widgetCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_widgets")->fetchColumn();
+    if ($widgetCount === 0) {
+        $wOrder = 1;
+        $wInsert = $pdo->prepare("INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order) VALUES ('homepage', ?, ?, ?, ?)");
+
+        $homeIntro = trim(getSetting('home_intro', ''));
+        if ($homeIntro !== '') {
+            $wInsert->execute(['intro', 'Úvodní text', json_encode(['text' => $homeIntro]), $wOrder++]);
+        }
+
+        $featuredModule = getSetting('home_featured_module', 'auto');
+        if ($featuredModule === '') { $featuredModule = 'auto'; }
+        if ($featuredModule === 'auto') { $featuredModule = 'blog'; }
+        if ($featuredModule !== 'none' && isModuleEnabled($featuredModule === 'blog' ? 'blog' : ($featuredModule === 'board' ? 'board' : ($featuredModule === 'poll' ? 'polls' : 'newsletter')))) {
+            $wInsert->execute(['featured_article', 'Doporučený obsah', json_encode(['source' => $featuredModule]), $wOrder++]);
+        }
+
+        $homeNewsCount = (int)getSetting('home_news_count', '5');
+        if ($homeNewsCount > 0 && isModuleEnabled('news')) {
+            $wInsert->execute(['latest_news', 'Nejnovější novinky', json_encode(['count' => $homeNewsCount]), $wOrder++]);
+        }
+
+        $homeBlogCount = (int)getSetting('home_blog_count', '5');
+        if ($homeBlogCount > 0 && isModuleEnabled('blog')) {
+            $wInsert->execute(['latest_articles', 'Nejnovější články', json_encode(['count' => $homeBlogCount]), $wOrder++]);
+        }
+
+        $homeBoardCount = (int)getSetting('home_board_count', '5');
+        if ($homeBoardCount > 0 && isModuleEnabled('board')) {
+            $wInsert->execute(['board', boardModulePublicLabel(), json_encode(['count' => $homeBoardCount]), $wOrder++]);
+        }
+
+        if (isModuleEnabled('polls')) {
+            $wInsert->execute(['poll', 'Aktuální anketa', '{}', $wOrder++]);
+        }
+
+        if (isModuleEnabled('newsletter')) {
+            $wInsert->execute(['newsletter', 'Newsletter', '{}', $wOrder++]);
+        }
+
+        $log[] = '· Vytvořeno ' . ($wOrder - 1) . ' výchozích widgetů z aktuálního nastavení homepage';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Widgety – přeskočeno: ' . h($e->getMessage());
+}
+
+// ── 7. Multiblog – výchozí blog a přeindexování ──────────────────────────────
 
 try {
     $blogCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_blogs")->fetchColumn();

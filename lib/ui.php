@@ -26,7 +26,10 @@ function siteFooter(): string
 
     $version = KORA_VERSION;
 
+    $footerWidgets = renderZone('footer', 'footer-widgets');
+
     return "<footer>\n"
+         . $footerWidgets
          . "  <p>&copy; {$year} {$siteName}</p>\n"
          . "  <p>{$links}</p>\n"
          . "  <p><a href=\"{$b}/search.php\">Vyhledávání</a>"

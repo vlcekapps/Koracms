@@ -245,6 +245,7 @@ function adminHeader(string $pageTitle): void
         $settingsItems[] = ['url' => $baseUrl . '/admin/backup.php', 'label' => 'Záloha databáze'];
     }
     if (currentUserHasCapability('settings_manage')) {
+        $settingsItems[] = ['url' => $baseUrl . '/admin/widgets.php', 'label' => 'Widgety'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/redirects.php', 'label' => 'Přesměrování'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/audit_log.php', 'label' => 'Audit log'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/trash.php', 'label' => 'Koš'];

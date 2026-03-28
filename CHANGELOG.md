@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Widget systém** (`admin/widgets.php`) – přetahovatelné bloky do 3 zón (homepage, sidebar, footer); 12 typů widgetů (úvodní text, nejnovější články, novinky, doporučený obsah, vývěska, nadcházející události, anketa, newsletter, galerie, vlastní HTML, vyhledávání, kontakt); drag & drop s WCAG klávesnicovým fallbackem (Ctrl+šipka); inline nastavení každého widgetu (počet položek, blog, album, zdroj); widgety respektují stav modulů – nedostupný modul = nedostupný widget; migrace existujících homepage nastavení do widgetů; `lib/widgets.php` s render funkcemi per typ a zónu
 - **Koš (soft delete)** (`admin/trash.php`) – smazání článků, novinek, stránek, událostí a FAQ je nyní přesun do koše; admin stránka s přehledem smazaných položek, tlačítky „Obnovit" a „Trvale smazat"; sloupec `deleted_at` na klíčových tabulkách; smazané položky se nezobrazují v admin přehledech ani na veřejném webu
 - **Drag & drop řazení** – přetahování položek myší s AJAX uložením pořadí; WCAG 2.2 fallback: stávající tlačítka Nahoru/Dolů + klávesnicový Ctrl+šipka; sdílená JS funkce `sortableJs()` v `lib/ui.php`; AJAX endpoint `admin/reorder_ajax.php`; nasazeno na pozice stránek a pořadí blogů
 - **Cron endpoint** (`cron.php`) – plánované úlohy: publikování článků s `publish_at`, čištění expirovaných rate-limit záznamů, mazání starých temp souborů (24h) a audit logů (90 dní); spuštění přes CLI nebo HTTP s tokenem (`CRON_TOKEN` v config.php); výsledky se logují do `cms_log`

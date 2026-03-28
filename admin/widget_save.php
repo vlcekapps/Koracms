@@ -1,0 +1,74 @@
+<?php
+require_once __DIR__ . '/../db.php';
+requireCapability('settings_manage', 'Přístup odepřen.');
+verifyCsrf();
+
+$id = inputInt('post', 'widget_id');
+if ($id === null) {
+    header('Location: ' . BASE_URL . '/admin/widgets.php');
+    exit;
+}
+
+$pdo = db_connect();
+$widget = $pdo->prepare("SELECT * FROM cms_widgets WHERE id = ?");
+$widget->execute([$id]);
+$widget = $widget->fetch();
+if (!$widget) {
+    header('Location: ' . BASE_URL . '/admin/widgets.php');
+    exit;
+}
+
+$title = trim($_POST['title'] ?? '');
+$zone = trim($_POST['zone'] ?? $widget['zone']);
+$isActive = isset($_POST['is_active']) ? 1 : 0;
+
+$zones = widgetZoneDefinitions();
+if (!isset($zones[$zone])) {
+    $zone = $widget['zone'];
+}
+
+// Sestavit settings JSON z POST dat specifických pro typ widgetu
+$settings = widgetSettings($widget);
+$type = $widget['widget_type'];
+
+switch ($type) {
+    case 'intro':
+        $settings['text'] = $_POST['widget_text'] ?? ($settings['text'] ?? '');
+        break;
+    case 'latest_articles':
+        $settings['count'] = max(1, min(50, (int)($_POST['widget_count'] ?? 5)));
+        $settings['blog_id'] = (int)($_POST['widget_blog_id'] ?? 0) ?: null;
+        break;
+    case 'latest_news':
+    case 'board':
+    case 'upcoming_events':
+        $settings['count'] = max(1, min(50, (int)($_POST['widget_count'] ?? 5)));
+        break;
+    case 'featured_article':
+        $settings['source'] = in_array($_POST['widget_source'] ?? '', ['blog', 'board', 'poll', 'newsletter'], true)
+            ? $_POST['widget_source'] : 'blog';
+        break;
+    case 'newsletter':
+        $settings['cta_text'] = trim($_POST['widget_cta_text'] ?? '');
+        break;
+    case 'gallery_preview':
+        $settings['album_id'] = (int)($_POST['widget_album_id'] ?? 0);
+        break;
+    case 'custom_html':
+        $settings['content'] = $_POST['widget_content'] ?? '';
+        break;
+}
+
+// Pokud se mění zóna, dát na konec nové zóny
+if ($zone !== $widget['zone']) {
+    $sortOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_widgets WHERE zone = " . $pdo->quote($zone))->fetchColumn();
+} else {
+    $sortOrder = (int)$widget['sort_order'];
+}
+
+$pdo->prepare("UPDATE cms_widgets SET title = ?, zone = ?, settings = ?, sort_order = ?, is_active = ? WHERE id = ?")
+    ->execute([$title, $zone, json_encode($settings, JSON_UNESCAPED_UNICODE), $sortOrder, $isActive, $id]);
+
+logAction('widget_save', "id={$id} type={$type} zone={$zone}");
+header('Location: ' . BASE_URL . '/admin/widgets.php');
+exit;

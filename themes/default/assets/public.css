@@ -1994,3 +1994,65 @@ body.theme-public textarea.form-control {
   color: var(--accent, #1a5fb4);
   background: var(--accent-surface, rgba(26, 95, 180, 0.08));
 }
+
+/* ── Widgety: sidebar a footer ────────────────────────────────── */
+
+.widget-card {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--border-soft, #c9d5e2);
+  border-radius: var(--radius-md, 1rem);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
+  margin-bottom: 1rem;
+}
+
+.widget-card__title {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.widget-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.widget-list li {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.widget-list li:last-child {
+  border-bottom: none;
+}
+
+.sidebar-widgets {
+  display: grid;
+  gap: 1rem;
+}
+
+.footer-widgets {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
+}
+
+.footer-widgets .widget-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f5f7fa;
+}
+
+.footer-widgets .widget-card__title {
+  color: #f5f7fa;
+}
+
+.footer-widgets .widget-card a {
+  color: #a8c8f0;
+}
+
+.footer-widgets .widget-list li {
+  border-color: rgba(255, 255, 255, 0.1);
+}
