@@ -421,6 +421,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $success = true;
             logAction('wp_import', 'sql=' . basename($sqlPath));
+
+            // Úklid nahraného souboru
+            if (is_file($sqlPath)) {
+                @unlink($sqlPath);
+            }
         }
     }
 }

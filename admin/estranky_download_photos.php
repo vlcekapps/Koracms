@@ -225,6 +225,11 @@ foreach ($photos as $i => $photo) {
 
 logAction('estranky_download_photos', "total={$totalPhotos} downloaded={$downloaded} skipped={$skipped} failed={$failed}");
 
+// Úklid nahraného souboru
+if (is_file($xmlPath)) {
+    @unlink($xmlPath);
+}
+
 $setBar($totalPhotos, $totalPhotos);
 echo '<script>document.getElementById("result").innerHTML=\'<div class="done"><h2>✓ Stahování dokončeno</h2>';
 echo '<ul><li>Staženo: <strong>' . $downloaded . '</strong></li>';

@@ -304,6 +304,11 @@ $emit("✓ Fotografie: <strong>{$insertedPhotos}</strong> záznamů (soubory st�
 
 logAction('estranky_import', 'xml=' . basename($xmlPath));
 
+// Úklid nahraného souboru
+if (is_file($xmlPath)) {
+    @unlink($xmlPath);
+}
+
 echo '<script>document.getElementById("result").innerHTML=\'<div class="done"><h2>✓ Import dokončen</h2>';
 echo '<p>Vše bylo úspěšně importováno.</p>';
 echo '<p><a href="estranky_import.php">Nový import</a> · <a href="estranky_download_photos.php">Stáhnout fotky</a> · <a href="blog.php">Články</a> · <a href="gallery_albums.php">Galerie</a> · <a href="index.php">Dashboard</a></p>';
