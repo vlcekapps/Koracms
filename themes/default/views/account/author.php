@@ -32,7 +32,7 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
         <a class="button-secondary" href="<?= authorIndexPath() ?>">Všichni autoři</a>
         <?php if ($blogEnabled): ?>
           <?php $defaultBlog = getDefaultBlog(); if ($defaultBlog): ?>
-            <a class="button-secondary" href="<?= h(blogIndexPath($defaultBlog)) ?>"><?= h($defaultBlog['name']) ?></a>
+            <a class="button-secondary" href="<?= h(blogIndexPath($defaultBlog)) ?>">Blog</a>
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($author['author_website_url'] !== ''): ?>

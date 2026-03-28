@@ -82,10 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     input { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; }
     button { margin-top: 1.5rem; padding: .5rem 1.5rem; }
     .error { color: #c00; }
+    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }
+    .skip-link { position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden; z-index:999; }
+    .skip-link:focus { position:fixed; top:0; left:0; width:auto; height:auto; padding:.75rem 1.5rem; background:#005fcc; color:#fff; text-decoration:none; z-index:9999; }
   </style>
 </head>
 <body>
-<main>
+<a href="#obsah" class="skip-link">Přeskočit na obsah</a>
+<main id="obsah">
   <h1>Přihlášení do administrace</h1>
 
   <?php if ($error !== ''): ?>

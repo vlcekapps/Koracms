@@ -54,6 +54,7 @@ adminHeader('Statické stránky');
 
 <p class="button-row button-row--start">
   <a href="<?= BASE_URL ?>/admin/page_form.php" class="btn">+ Nová stránka</a>
+  <a href="<?= BASE_URL ?>/admin/page_positions.php" class="btn">Pozice statických stránek</a>
   <a href="<?= BASE_URL ?>/admin/menu.php" class="btn">Navigace webu</a>
 </p>
 

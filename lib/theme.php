@@ -987,7 +987,7 @@ function themePortableCssIsSafe(string $css): bool
         '/@import\s+(?:url\()?\s*[\'"]?(?:https?:)?\/\//i',
         '/url\(\s*[\'"]?(?:https?:|data:|javascript:|\/\/)/i',
         '/expression\s*\(/i',
-        '/behavior\s*:/i',
+        '/(?:^|[;{]\s*)behavior\s*:/i',
     ];
 
     foreach ($blockedPatterns as $pattern) {

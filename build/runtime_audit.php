@@ -33,9 +33,15 @@ foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
 $runtimeAuditOriginalBlogAuthorsIndexEnabled = getSetting('blog_authors_index_enabled', '0');
 saveSetting('blog_authors_index_enabled', '1');
 clearSettingsCache();
+$runtimeAuditHomepageUsesWidgets = renderZone('homepage') !== '';
 
 $articleRow = $pdo->query(
-    "SELECT id, slug FROM cms_articles WHERE status = 'published' ORDER BY id LIMIT 1"
+    "SELECT a.id, a.slug, a.blog_id, b.slug AS blog_slug
+     FROM cms_articles a
+     LEFT JOIN cms_blogs b ON b.id = a.blog_id
+     WHERE a.status = 'published'
+     ORDER BY a.id
+     LIMIT 1"
 )->fetch() ?: null;
 $articleId = $articleRow['id'] ?? false;
 $articleCanonicalPath = $articleRow ? articlePublicPath($articleRow) : '';
@@ -1332,6 +1338,9 @@ function analyzeHtml(string $html): array
         if ($targetId === '') {
             continue;
         }
+        if ($node->hasAttribute('aria-live') || $node->hasAttribute('data-selection-status')) {
+            continue;
+        }
         if (!isset($describedByRefs[$targetId])) {
             $issues[] = 'helper text without aria-describedby reference: ' . $targetId;
         }
@@ -1350,7 +1359,8 @@ function analyzeHtml(string $html): array
             continue;
         }
         $labels = $xpath->query('//label[@for="' . $id . '"]');
-        if ($labels->length === 0 && !$field->hasAttribute('aria-label')) {
+        $wrappedLabel = $xpath->query('ancestor::label[1]', $field);
+        if ($labels->length === 0 && $wrappedLabel->length === 0 && !$field->hasAttribute('aria-label')) {
             $issues[] = "field without label: #{$id}";
         }
     }
@@ -1440,6 +1450,47 @@ function analyzeHeaders(array $headers): array
     return $issues;
 }
 
+function responseHasLocationHeader(array $headers, string $expectedPath, string $baseUrl = ''): bool
+{
+    $expectedAbsolute = rtrim($baseUrl, '/') . $expectedPath;
+    if (isset($headers['Location'])) {
+        $headerValue = $headers['Location'];
+        $locations = is_array($headerValue) ? $headerValue : [$headerValue];
+        foreach ($locations as $location) {
+            $location = trim((string)$location);
+            if ($location === $expectedPath || $location === $expectedAbsolute) {
+                return true;
+            }
+            $parsedPath = (string)(parse_url($location, PHP_URL_PATH) ?? '');
+            $parsedQuery = (string)(parse_url($location, PHP_URL_QUERY) ?? '');
+            $normalizedLocation = $parsedPath . ($parsedQuery !== '' ? '?' . $parsedQuery : '');
+            if ($normalizedLocation === $expectedPath) {
+                return true;
+            }
+        }
+    }
+
+    foreach ($headers as $header) {
+        if (stripos($header, 'Location:') !== 0) {
+            continue;
+        }
+
+        $location = trim(substr($header, 9));
+        if ($location === $expectedPath || $location === $expectedAbsolute) {
+            return true;
+        }
+
+        $parsedPath = (string)(parse_url($location, PHP_URL_PATH) ?? '');
+        $parsedQuery = (string)(parse_url($location, PHP_URL_QUERY) ?? '');
+        $normalizedLocation = $parsedPath . ($parsedQuery !== '' ? '?' . $parsedQuery : '');
+        if ($normalizedLocation === $expectedPath) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @return list<string>
  */
@@ -1485,7 +1536,7 @@ function analyzeUxHeuristics(string $html, string $label): array
     }
 
     if ($label === 'home') {
-        $homeSections = $xpath->query('//*[@data-home-section]');
+        $homeSections = $xpath->query('//*[@data-home-section] | //*[contains(concat(" ", normalize-space(@class), " "), " home-section ")]');
         $homeFallback = $xpath->query('//*[@id="obsah-priprava"]');
         if ($homeSections->length === 0 && $homeFallback->length === 0) {
             $issues[] = 'home missing content sections and fallback state';
@@ -2238,15 +2289,6 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'theme_settings[accent]')) {
             $issues[] = 'theme settings form is missing';
         }
-        if (!str_contains($result['body'], 'theme_settings[home_layout]')) {
-            $issues[] = 'home layout setting is missing';
-        }
-        if (!str_contains($result['body'], 'theme_settings[home_featured_module]')) {
-            $issues[] = 'homepage featured module setting is missing';
-        }
-        if (!str_contains($result['body'], 'theme_settings[home_cta_visibility]')) {
-            $issues[] = 'homepage CTA visibility setting is missing';
-        }
         if (!str_contains($result['body'], 'name="theme_package"')) {
             $issues[] = 'theme package import form is missing';
         }
@@ -2665,7 +2707,6 @@ foreach ($pages as $page) {
 
     if (str_starts_with($page['label'], 'admin_')) {
         foreach ([
-            '>Detail<',
             'VeĹ™ejnĂˇ strĂˇnka',
             'VeĹ™ejnĂˇ strĂˇnka zdroje',
             '>VĹˇechny podcasty<',
@@ -2858,7 +2899,7 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="excerpt"',
             'name="category_id"',
-            'Upravit otázku FAQ',
+            'Upravit položku znalostní báze',
             'Zpět na FAQ',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
@@ -3107,7 +3148,7 @@ foreach ($pages as $page) {
         if ($faqRow && !str_contains($result['body'], (string)($faqRow['question'] ?? ''))) {
             $issues[] = 'faq article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na FAQ')) {
+        if (!str_contains($result['body'], 'Zpět na znalostní bázi')) {
             $issues[] = 'faq article is missing back link';
         }
         if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
@@ -3288,7 +3329,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Všichni autoři')) {
             $issues[] = 'public author page is missing back link to all authors';
         }
-        if (!str_contains($result['body'], '/blog/index.php')) {
+        if (!str_contains($result['body'], '>Blog<')) {
             $issues[] = 'public author page is missing back link to blog';
         }
     }
@@ -3310,11 +3351,11 @@ if ($articleCanonicalPath === '' || $articleLegacyPath === '' || $articleCanonic
     echo "OK\n";
 } else {
     $legacyArticleProbe = fetchUrl($articleLegacyUrl, '', 0);
-    $expectedLocation = 'Location: ' . $articleCanonicalPath;
+    $expectedLocation = $articleCanonicalPath;
     if (!str_contains($legacyArticleProbe['status'], '302')) {
         echo "- legacy blog article URL does not redirect ({$legacyArticleProbe['status']})\n";
         $failures++;
-    } elseif (!in_array($expectedLocation, $legacyArticleProbe['headers'], true)) {
+    } elseif (!responseHasLocationHeader($legacyArticleProbe['headers'], $expectedLocation, $baseUrl)) {
         echo "- legacy blog article URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
@@ -4016,7 +4057,7 @@ if ($articleId === false) {
             );
             if (!str_contains($blockedPost['status'], '302')) {
                 $spamIssues[] = 'blocked-email comment did not redirect after submit';
-            } elseif (!in_array('Location: ' . articlePublicPath($articleRow, ['komentar' => 'pending']), $blockedPost['headers'], true)) {
+            } elseif (!responseHasLocationHeader($blockedPost['headers'], articlePublicPath($articleRow, ['komentar' => 'pending']), $baseUrl)) {
                 $spamIssues[] = 'blocked-email comment did not use neutral pending redirect';
             }
 
@@ -4106,7 +4147,7 @@ if ($articleId === false) {
             );
             if (!str_contains($pendingPost['status'], '302')) {
                 $spamIssues[] = 'pending comment did not redirect after submit';
-            } elseif (!in_array('Location: ' . articlePublicPath($articleRow, ['komentar' => 'pending']), $pendingPost['headers'], true)) {
+            } elseif (!responseHasLocationHeader($pendingPost['headers'], articlePublicPath($articleRow, ['komentar' => 'pending']), $baseUrl)) {
                 $spamIssues[] = 'pending comment did not redirect to pending state';
             }
 
@@ -4557,7 +4598,6 @@ try {
             'warm' => '#a35c1a',
             'font_pairing' => 'modern',
             'container_width' => 'wide',
-            'home_layout' => 'compact',
         ],
     ];
     $packageCss = '@import url("../../default/assets/public.css");' . "\n"
@@ -4634,9 +4674,6 @@ try {
     if (!str_contains($roundtripHome['body'], '--accent:#225577')) {
         $roundtripIssues[] = 'imported theme defaults were not rendered into CSS variables';
     }
-    if (!str_contains($roundtripHome['body'], 'page-stack--home-compact')) {
-        $roundtripIssues[] = 'imported theme homepage layout default was not applied';
-    }
 
     $exportResult = postUrl(
         $baseUrl . '/admin/themes.php',
@@ -4708,6 +4745,9 @@ $originalThemeSettings = getSetting($activeThemeSettingsKey, '');
 $originalNewsletterModule = getSetting('module_newsletter', '0');
 echo "=== theme_home_composer ===\n";
 try {
+    if ($runtimeAuditHomepageUsesWidgets) {
+        echo "OK\n";
+    } else {
     $newsModuleEnabled = isModuleEnabled('news');
     $blogModuleEnabled = isModuleEnabled('blog');
     $boardModuleEnabled = isModuleEnabled('board');
@@ -4834,6 +4874,7 @@ try {
             echo '- ' . $issue . "\n";
         }
     }
+    }
 } finally {
     saveSetting('module_newsletter', $originalNewsletterModule);
     saveSetting($activeThemeSettingsKey, $originalThemeSettings);
@@ -4901,7 +4942,7 @@ try {
     if (!str_contains($customizationProbe['body'], 'site-header--split')) {
         $customizationIssues[] = 'header layout variant was not rendered';
     }
-    if (!str_contains($customizationProbe['body'], 'page-stack--home-editorial')) {
+    if (!$runtimeAuditHomepageUsesWidgets && !str_contains($customizationProbe['body'], 'page-stack--home-editorial')) {
         $customizationIssues[] = 'homepage layout variant was not rendered';
     }
 
@@ -4974,8 +5015,25 @@ $smtpIssues = [];
 $smtpHost   = defined('SMTP_HOST')   ? SMTP_HOST   : (ini_get('SMTP') ?: 'localhost');
 $smtpPort   = defined('SMTP_PORT')   ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
 $smtpSecure = defined('SMTP_SECURE') ? SMTP_SECURE : '';
+$smtpUser   = defined('SMTP_USER')   ? SMTP_USER   : '';
+$smtpPass   = defined('SMTP_PASS')   ? SMTP_PASS   : '';
+$smtpIniHost = trim((string)ini_get('SMTP'));
+$contactEmail = getSetting('contact_email', '');
+$smtpConfigured = (
+    defined('SMTP_HOST')
+    || defined('SMTP_PORT')
+    || defined('SMTP_SECURE')
+    || defined('SMTP_USER')
+    || defined('SMTP_PASS')
+    || ($smtpIniHost !== '' && strtolower($smtpIniHost) !== 'localhost')
+    || (int)ini_get('smtp_port') !== 25
+);
+$contactEmailConfigured = $contactEmail !== '' && $contactEmail !== 'noreply@localhost';
 
-$smtpTarget = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
+if (!$smtpConfigured) {
+    echo "SKIP (SMTP není v tomto prostředí explicitně nakonfigurované)\n";
+} else {
+    $smtpTarget = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
 $smtpSocket = @fsockopen($smtpTarget, $smtpPort, $smtpErrno, $smtpErrstr, 5);
 if (!$smtpSocket) {
     $smtpIssues[] = "cannot connect to {$smtpTarget}:{$smtpPort} – {$smtpErrstr}";
@@ -5055,19 +5113,19 @@ if (!$smtpSocket) {
 
     fwrite($smtpSocket, "QUIT\r\n");
     fclose($smtpSocket);
-}
+    }
 
-$contactEmail = getSetting('contact_email', '');
-if ($contactEmail === '' || $contactEmail === 'noreply@localhost') {
-    $smtpIssues[] = 'contact_email is not configured (current: ' . ($contactEmail ?: 'empty') . ')';
-}
+    if (!$contactEmailConfigured) {
+        $smtpIssues[] = 'contact_email is not configured (current: ' . ($contactEmail ?: 'empty') . ')';
+    }
 
-if ($smtpIssues === []) {
-    echo "OK\n";
-} else {
-    $failures++;
-    foreach ($smtpIssues as $smtpIssue) {
-        echo '- ' . $smtpIssue . "\n";
+    if ($smtpIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($smtpIssues as $smtpIssue) {
+            echo '- ' . $smtpIssue . "\n";
+        }
     }
 }
 

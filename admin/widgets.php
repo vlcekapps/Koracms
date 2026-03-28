@@ -61,6 +61,9 @@ adminHeader('Widgety');
             <div style="display:flex;gap:.4rem;flex-wrap:wrap">
               <button type="button" class="btn widget-edit-btn" style="font-size:.85rem"
                       aria-label="Nastavení widgetu <?= h($w['title'] ?: $wTypeName) ?>"
+                      aria-haspopup="dialog"
+                      aria-controls="widget-dialog"
+                      aria-expanded="false"
                       data-widget-id="<?= (int)$w['id'] ?>"
                       data-widget-title="<?= h($w['title']) ?>"
                       data-widget-type="<?= h($w['widget_type']) ?>"
@@ -83,8 +86,8 @@ adminHeader('Widgety');
 <?php endforeach; ?>
 
 <!-- Modal dialog pro nastavení widgetu -->
-<div id="widget-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
-<section id="widget-dialog" role="dialog" aria-modal="true" aria-labelledby="widget-dialog-title"
+<div id="widget-overlay" hidden style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
+<section id="widget-dialog" role="dialog" aria-modal="true" aria-labelledby="widget-dialog-title" aria-describedby="widget-dialog-description" hidden
          style="display:none;position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
                 width:min(32rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto;
                 padding:1.2rem;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;
@@ -93,6 +96,7 @@ adminHeader('Widgety');
     <h2 id="widget-dialog-title" style="margin:0;font-size:1.15rem">Nastavení widgetu</h2>
     <button type="button" id="widget-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
   </div>
+  <p id="widget-dialog-description" class="field-help" style="margin-top:0">Upravte název, zónu a další nastavení vybraného widgetu.</p>
   <form method="post" action="widget_save.php" novalidate id="widget-dialog-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="widget_id" id="wd-id">
@@ -176,6 +180,7 @@ adminHeader('Widgety');
   var closeBtn = document.getElementById('widget-dialog-close');
   var cancelBtn = document.getElementById('widget-dialog-cancel');
   var lastTrigger = null;
+  var previousBodyOverflow = '';
   var countTypes = ['latest_articles','latest_news','board','upcoming_events'];
   var multiBlog = <?= count($allBlogs) > 1 ? 'true' : 'false' ?>;
 
@@ -224,14 +229,27 @@ adminHeader('Widgety');
       document.getElementById('wd-content').value = s.content || '';
     }
 
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    overlay.hidden = false;
+    dialog.hidden = false;
     overlay.style.display = '';
     dialog.style.display = '';
-    document.getElementById('wd-title').focus();
+    btn.setAttribute('aria-expanded', 'true');
+    window.requestAnimationFrame(function () {
+      document.getElementById('wd-title').focus();
+    });
   }
 
   function closeDialog() {
+    if (lastTrigger) {
+      lastTrigger.setAttribute('aria-expanded', 'false');
+    }
+    document.body.style.overflow = previousBodyOverflow;
     overlay.style.display = 'none';
     dialog.style.display = 'none';
+    overlay.hidden = true;
+    dialog.hidden = true;
     if (lastTrigger) lastTrigger.focus();
   }
 

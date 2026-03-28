@@ -6,6 +6,13 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Opraveno
+- **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci
+- **Hromadné akce a tabulky v administraci** – odstraněno duplicitní `id="check-all"` v jídelním lístku a bulk helper nyní bezpečně podporuje více tabulek se samostatným výběrem položek
+- **Modální dialogy Blogy a Widgety** – doplněny přístupnostní atributy, popis dialogu, řízení `aria-expanded`, návrat fokusu a zamykání scrollu podkladové stránky
+- **Přihlašovací obrazovky administrace** – `login.php` a `login_2fa.php` nově používají skip link a sjednocený focus-visible základ, aby se nechovaly hůř než zbytek administrace
+- **Portable theme package a runtime audit** – opraven falešný poplach u CSS validace (`scroll-behavior` vs. zakázané `behavior:`), aktualizován roundtrip test šablon a SMTP kontrola se v lokálním prostředí bez explicitní konfigurace korektně hlásí jako `SKIP`
+
 ### Přidáno
 - **Jednotná správa navigace** (`admin/menu.php`) – nahrazuje oddělené stránky „Pozice modulů" a „Pozice stránek"; moduly, statické stránky a blogy v jednom přetahovatelném seznamu; libovolné pořadí a kombinace; drag & drop + Ctrl+šipka + tlačítka Nahoru/Dolů; nastavení `nav_order_unified` s fallbackem na starý systém
 - **Widget systém** (`admin/widgets.php`) – přetahovatelné bloky do 3 zón (homepage, sidebar, footer); 12 typů widgetů (úvodní text, nejnovější články, novinky, doporučený obsah, vývěska, nadcházející události, anketa, newsletter, galerie, vlastní HTML, vyhledávání, kontakt); drag & drop s WCAG klávesnicovým fallbackem (Ctrl+šipka); inline nastavení každého widgetu (počet položek, blog, album, zdroj); widgety respektují stav modulů – nedostupný modul = nedostupný widget; migrace existujících homepage nastavení do widgetů; `lib/widgets.php` s render funkcemi per typ a zónu

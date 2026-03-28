@@ -111,6 +111,9 @@ adminHeader('Správa blogů');
         <td class="actions">
           <button type="button" class="btn blog-edit-btn" style="font-size:.85rem"
                   aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
+                  aria-haspopup="dialog"
+                  aria-controls="blog-dialog"
+                  aria-expanded="false"
                   data-blog-id="<?= (int)$blog['id'] ?>"
                   data-blog-name="<?= h((string)$blog['name']) ?>"
                   data-blog-slug="<?= h((string)$blog['slug']) ?>"
@@ -135,8 +138,8 @@ adminHeader('Správa blogů');
 <?php endif; ?>
 
 <!-- Modal dialog pro editaci blogu -->
-<div id="blog-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
-<section id="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title"
+<div id="blog-overlay" hidden style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
+<section id="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title" aria-describedby="blog-dialog-description" hidden
          style="display:none;position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
                 width:min(30rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto;
                 padding:1.2rem;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;
@@ -145,6 +148,7 @@ adminHeader('Správa blogů');
     <h2 id="blog-dialog-title" style="margin:0;font-size:1.15rem">Upravit blog</h2>
     <button type="button" id="blog-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
   </div>
+  <p id="blog-dialog-description" class="field-help" style="margin-top:0">Upravte název, adresu a viditelnost blogu v navigaci webu.</p>
   <form method="post" novalidate id="blog-dialog-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="update_id" id="bd-id">
@@ -177,6 +181,7 @@ adminHeader('Správa blogů');
     var closeBtn = document.getElementById('blog-dialog-close');
     var cancelBtn = document.getElementById('blog-dialog-cancel');
     var lastTrigger = null;
+    var previousBodyOverflow = '';
 
     function openDialog(btn) {
         lastTrigger = btn;
@@ -185,14 +190,27 @@ adminHeader('Správa blogů');
         document.getElementById('bd-slug').value = btn.dataset.blogSlug;
         document.getElementById('bd-desc').value = btn.dataset.blogDesc;
         document.getElementById('bd-nav').checked = btn.dataset.blogNav === '1';
+        previousBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        overlay.hidden = false;
+        dialog.hidden = false;
         overlay.style.display = '';
         dialog.style.display = '';
-        document.getElementById('bd-name').focus();
+        btn.setAttribute('aria-expanded', 'true');
+        window.requestAnimationFrame(function () {
+            document.getElementById('bd-name').focus();
+        });
     }
 
     function closeDialog() {
+        if (lastTrigger) {
+            lastTrigger.setAttribute('aria-expanded', 'false');
+        }
+        document.body.style.overflow = previousBodyOverflow;
         overlay.style.display = 'none';
         dialog.style.display = 'none';
+        overlay.hidden = true;
+        dialog.hidden = true;
         if (lastTrigger) lastTrigger.focus();
     }
 
