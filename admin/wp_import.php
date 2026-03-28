@@ -2,6 +2,8 @@
 /**
  * WordPress importér – importuje články, stránky, kategorie, tagy, komentáře a média z WP SQL dumpu.
  */
+ini_set('upload_max_filesize', '128M');
+ini_set('post_max_size', '128M');
 require_once __DIR__ . '/layout.php';
 requireCapability('import_export_manage', 'Přístup odepřen. Pro import z WordPressu nemáte potřebné oprávnění.');
 
@@ -14,12 +16,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     set_time_limit(600);
 
-    $sqlPath = trim($_POST['sql_path'] ?? '');
     $mediaPath = trim($_POST['media_path'] ?? '');
     $wpPrefix = trim($_POST['wp_prefix'] ?? 'wp_');
 
-    if ($sqlPath === '' || !is_file($sqlPath)) {
-        $log[] = '✗ Soubor SQL dumpu nebyl nalezen: ' . h($sqlPath);
+    $sqlPath = '';
+    if (!empty($_FILES['sql_file']['tmp_name']) && is_uploaded_file($_FILES['sql_file']['tmp_name'])) {
+        $sqlPath = $_FILES['sql_file']['tmp_name'];
+    }
+
+    if ($sqlPath === '') {
+        $log[] = '✗ Nahrajte SQL dump soubor.';
     } else {
         $showForm = false;
 
@@ -425,28 +431,26 @@ adminHeader('Import z WordPressu');
 <?php if ($showForm): ?>
 <p>Import obsahu z WordPress SQL dumpu (exportovaný přes phpMyAdmin). Importují se články, stránky, kategorie, tagy, komentáře a volitelně média.</p>
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
   <fieldset>
     <legend>Zdroj dat</legend>
 
     <div style="margin-bottom:.75rem">
-      <label for="sql_path">Cesta k SQL dumpu na serveru <span aria-hidden="true">*</span></label>
-      <input type="text" id="sql_path" name="sql_path" required aria-required="true"
-             style="width:100%;max-width:600px"
-             placeholder="/cesta/k/dump.sql"
+      <label for="sql_file">SQL dump z WordPressu <span aria-hidden="true">*</span></label>
+      <input type="file" id="sql_file" name="sql_file" required aria-required="true"
+             accept=".sql,.sql.gz,application/sql,text/plain"
              aria-describedby="sql-help">
-      <small id="sql-help">Absolutní cesta k SQL souboru na tomto serveru (phpMyAdmin export).</small>
+      <small id="sql-help">SQL soubor exportovaný z phpMyAdmin (WordPress databáze).</small>
     </div>
 
     <div style="margin-bottom:.75rem">
       <label for="media_path">Cesta k WP uploads adresáři (nepovinné)</label>
       <input type="text" id="media_path" name="media_path"
              style="width:100%;max-width:600px"
-             placeholder="/cesta/k/wp-content/uploads"
              aria-describedby="media-help">
-      <small id="media-help">Pokud chcete importovat obrázky, zadejte cestu k adresáři <code>wp-content/uploads</code>.</small>
+      <small id="media-help">Pokud máte na serveru adresář <code>wp-content/uploads</code>, zadejte cestu pro import obrázků.</small>
     </div>
 
     <div style="margin-bottom:.75rem">

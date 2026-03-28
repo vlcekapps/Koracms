@@ -35,10 +35,11 @@ function esParseRow(SimpleXMLElement $row): array
 
 $showForm = true;
 
+$xmlPath = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $xmlPath = trim($_POST['xml_path'] ?? '');
-    if ($xmlPath !== '' && is_file($xmlPath)) {
+    if (!empty($_FILES['xml_file']['tmp_name']) && is_uploaded_file($_FILES['xml_file']['tmp_name'])) {
+        $xmlPath = $_FILES['xml_file']['tmp_name'];
         $showForm = false;
     }
 }
@@ -53,18 +54,18 @@ if ($showForm) {
   <p role="alert" class="error">Zadejte platnou cestu k XML záloze.</p>
 <?php endif; ?>
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
   <fieldset>
     <legend>Zdroj dat</legend>
 
     <div style="margin-bottom:.75rem">
-      <label for="xml_path">Cesta k XML záloze na serveru <span aria-hidden="true">*</span></label>
-      <input type="text" id="xml_path" name="xml_path" required aria-required="true"
-             style="width:100%;max-width:600px"
+      <label for="xml_file">XML záloha z eStránek <span aria-hidden="true">*</span></label>
+      <input type="file" id="xml_file" name="xml_file" required aria-required="true"
+             accept=".xml,application/xml,text/xml"
              aria-describedby="xml-help">
-      <small id="xml-help">Absolutní cesta k XML souboru zálohy z eStránek.</small>
+      <small id="xml-help">Vyberte XML soubor zálohy exportovaný z eStránek.</small>
     </div>
   </fieldset>
 

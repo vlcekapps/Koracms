@@ -8,12 +8,14 @@ requireCapability('import_export_manage', 'Přístup odepřen.');
 
 $showForm = true;
 
+$xmlPath = '';
+$siteUrl = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $xmlPath = trim($_POST['xml_path'] ?? '');
     $siteUrl = rtrim(trim($_POST['site_url'] ?? ''), '/');
 
-    if ($xmlPath !== '' && is_file($xmlPath) && $siteUrl !== '') {
+    if (!empty($_FILES['xml_file']['tmp_name']) && is_uploaded_file($_FILES['xml_file']['tmp_name']) && $siteUrl !== '') {
+        $xmlPath = $_FILES['xml_file']['tmp_name'];
         $showForm = false;
     }
 }
@@ -28,18 +30,18 @@ if ($showForm) {
   <p role="alert" class="error">Zadejte platnou cestu k XML záloze a URL webu.</p>
 <?php endif; ?>
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
   <fieldset>
     <legend>Parametry stahování</legend>
 
     <div style="margin-bottom:.75rem">
-      <label for="xml_path">Cesta k XML záloze <span aria-hidden="true">*</span></label>
-      <input type="text" id="xml_path" name="xml_path" required aria-required="true"
-             style="width:100%;max-width:600px"
+      <label for="xml_file">XML záloha z eStránek <span aria-hidden="true">*</span></label>
+      <input type="file" id="xml_file" name="xml_file" required aria-required="true"
+             accept=".xml,application/xml,text/xml"
              aria-describedby="xml-help">
-      <small id="xml-help">Absolutní cesta k XML souboru zálohy z eStránek.</small>
+      <small id="xml-help">Stejný XML soubor zálohy, který jste použili pro import obsahu.</small>
     </div>
 
     <div style="margin-bottom:.75rem">
