@@ -30,6 +30,28 @@ if (function_exists('getSetting') && getSetting('ga4_measurement_id', '') !== ''
 }
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'{$_CSP_EXTRA_CONNECT}; frame-ancestors 'none'");
 
+// ── 301/302 přesměrování z tabulky cms_redirects ─────────────────────────────
+(function () {
+    $requestPath = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
+    if (str_starts_with($requestPath, BASE_URL . '/admin/')) {
+        return;
+    }
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT id, new_path, status_code FROM cms_redirects WHERE old_path = ? LIMIT 1"
+        );
+        $stmt->execute([$requestPath]);
+        $redirect = $stmt->fetch();
+        if ($redirect) {
+            db_connect()->prepare("UPDATE cms_redirects SET hit_count = hit_count + 1 WHERE id = ?")->execute([$redirect['id']]);
+            header('Location: ' . $redirect['new_path'], true, (int)$redirect['status_code']);
+            exit;
+        }
+    } catch (\PDOException $e) {
+        // Tabulka ještě neexistuje – přeskočit
+    }
+})();
+
 /**
  * Vrátí CSP nonce pro aktuální request.
  * Použití: <script nonce="<?= cspNonce() ?>"> nebo <style nonce="<?= cspNonce() ?>">

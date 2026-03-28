@@ -243,6 +243,9 @@ function adminHeader(string $pageTitle): void
         $settingsItems[] = ['url' => $baseUrl . '/admin/estranky_download_photos.php', 'label' => 'Stažení fotek z eStránek'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/integrity.php', 'label' => 'Kontrola integrity'];
     }
+    if (currentUserHasCapability('settings_manage')) {
+        $settingsItems[] = ['url' => $baseUrl . '/admin/redirects.php', 'label' => 'Přesměrování'];
+    }
 
     $bottomItems = [
         ['url' => $baseUrl . '/index.php', 'label' => '<span aria-hidden="true">←</span> Web'],

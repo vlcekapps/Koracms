@@ -618,6 +618,16 @@ $tables = [
         INDEX idx_entity (entity_type, entity_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_redirects' => "CREATE TABLE IF NOT EXISTS cms_redirects (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        old_path    VARCHAR(500) NOT NULL,
+        new_path    VARCHAR(500) NOT NULL,
+        status_code SMALLINT     NOT NULL DEFAULT 301,
+        hit_count   INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_redirects_old_path (old_path(191))
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {

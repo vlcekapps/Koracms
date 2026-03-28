@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **301/302 přesměrování** (`admin/redirects.php`) – správa přesměrování starých URL na nové; tabulka `cms_redirects` s počítadlem přístupů; automatická kontrola na každém requestu; podpora 301 (trvalé) a 302 (dočasné); užitečné po importu obsahu nebo změně slug adres
 - **Multiblog** – podpora více blogů v jedné instalaci; nová tabulka `cms_blogs`; každý blog s vlastním názvem, slugem, popisem, kategoriemi a tagy; komentáře, schvalování a oprávnění zůstávají společné; admin správa blogů (`admin/blogs.php`); selektor blogu ve formuláři článku a filtry v přehledu; kategorie a tagy scoped per blog; dynamický URL routing přes `blog_router.php` s catch-all .htaccess pravidly; veřejná navigace s položkou za každý blog; popis blogu na veřejném indexu; per-blog RSS feed (`/feed.php?blog=slug`); zpětná kompatibilita – s jedním blogem se chování a URL nemění
 - **Importéry – blog selektor** – WordPress i eStránky importéry umožňují vybrat cílový blog nebo vytvořit nový z importu; název a popis z importu se zapisují do blogu (ne do globálních nastavení webu); kategorie a tagy scoped per blog
 - **eStránky photo downloader – výběr cílového alba** – volba „Nikam (do kořene galerie)" nebo existující album jako parent pro importovanou strukturu
