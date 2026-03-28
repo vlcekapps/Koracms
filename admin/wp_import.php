@@ -44,11 +44,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['sql_file']['tmp_nam
     }
 
     $tmpPrefix = '_wpimp_';
-    $sqlModified = str_replace("`{$wpPrefix}", "`{$tmpPrefix}", $sql);
-    $sqlModified = preg_replace('/^(CREATE DATABASE|USE\s)[^;]+;/mi', '', $sqlModified);
+    $sqlModified = $sql;
+
+    // Odstranit CREATE DATABASE a USE (i s backticks)
+    $sqlModified = preg_replace('/^\s*(CREATE DATABASE|USE\s)[^;]*;/mi', '', $sqlModified);
+
+    // Detekovat název databáze z USE příkazu a odstranit kvalifikované názvy tabulek
+    if (preg_match('/USE\s+`([^`]+)`/i', $sql, $dbMatch)) {
+        $dbName = $dbMatch[1];
+        // `dbname`.`wp62_posts` → `_wpimp_posts`
+        $sqlModified = str_replace("`{$dbName}`.`{$wpPrefix}", "`{$tmpPrefix}", $sqlModified);
+        // Backup: i s mezerami kolem tečky
+        $sqlModified = str_replace("`{$dbName}` . `{$wpPrefix}", "`{$tmpPrefix}", $sqlModified);
+    }
+
+    // Nekvalifikované názvy: `wp62_posts` → `_wpimp_posts`
+    $sqlModified = str_replace("`{$wpPrefix}", "`{$tmpPrefix}", $sqlModified);
 
     $statements = preg_split('/;\s*$/m', $sqlModified);
     $tableCount = 0;
+    $sqlErrors = [];
     foreach ($statements as $stmt) {
         $stmt = trim($stmt);
         if ($stmt === '' || str_starts_with($stmt, '--') || str_starts_with($stmt, '/*')) continue;
@@ -56,10 +71,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['sql_file']['tmp_nam
             $pdo->exec($stmt);
             if (str_starts_with(strtoupper($stmt), 'CREATE TABLE')) $tableCount++;
         } catch (\PDOException $e) {
-            if (str_starts_with(strtoupper($stmt), 'CREATE TABLE') || str_starts_with(strtoupper($stmt), 'INSERT')) {
-                $log[] = '⚠ SQL: ' . mb_substr($e->getMessage(), 0, 100);
+            $code = $e->getCode();
+            if (!isset($sqlErrors[$code])) {
+                $sqlErrors[$code] = ['msg' => mb_substr($e->getMessage(), 0, 100), 'count' => 0];
             }
+            $sqlErrors[$code]['count']++;
         }
+    }
+    foreach ($sqlErrors as $err) {
+        $log[] = '⚠ SQL (' . $err['count'] . '×): ' . $err['msg'];
     }
     $log[] = "✓ SQL dump načten ({$tableCount} tabulek)";
     unset($sql, $sqlModified, $statements);
