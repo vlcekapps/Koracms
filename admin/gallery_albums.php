@@ -25,6 +25,7 @@ $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.name, a.slug, a.parent_id, a.description, a.cover_photo_id,
+            COALESCE(a.status,'published') AS status, COALESCE(a.is_published, 1) AS is_published,
             (SELECT COUNT(*) FROM cms_gallery_photos gp WHERE gp.album_id = a.id) AS photo_count,
             (SELECT COUNT(*) FROM cms_gallery_albums gs WHERE gs.parent_id = a.id) AS sub_count,
             p.name AS parent_name
@@ -66,7 +67,7 @@ adminHeader('Alba galerie');
 
 <?php if (empty($albums)): ?>
   <p>
-    <?php if ($q !== ''): ?>
+    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
       Pro zvolený filtr tu teď nejsou žádná alba.
     <?php else: ?>
       Zatím tu nejsou žádná alba. <a href="<?= BASE_URL ?>/admin/gallery_album_form.php">Přidat první album</a>.
@@ -77,56 +78,43 @@ adminHeader('Alba galerie');
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="module" value="gallery_albums">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/gallery_albums.php">
-    <div class="bulk-bar" style="margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap" hidden>
-      <span class="bulk-bar__count" aria-live="polite"></span>
-      <select name="action" id="bulk-action-select" aria-label="Hromadná akce" required>
-        <option value="">-- Vyberte akci --</option>
-        <option value="delete">Smazat vybrané</option>
-        <option value="export_zip">Exportovat do ZIP</option>
-      </select>
-      <button type="submit" class="btn" onclick="return confirm('Opravdu provést hromadnou akci?')">Provést</button>
-    </div>
+    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+      <legend>Hromadné akce s vybranými alby</legend>
+      <p id="bulk-status" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybrané žádné album.</p>
+      <div class="button-row">
+        <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
+                disabled onclick="return confirm('Smazat vybraná alba včetně fotografií?')">Smazat vybrané</button>
+        <button type="submit" name="action" value="export_zip" class="btn bulk-action-btn"
+                disabled formaction="<?= BASE_URL ?>/admin/gallery_export_zip.php">Exportovat do ZIP</button>
+      </div>
+    </fieldset>
   </form>
-  <script nonce="<?= cspNonce() ?>">
-  document.getElementById('bulk-form').addEventListener('submit', function(e) {
-    var sel = document.getElementById('bulk-action-select');
-    if (sel.value === 'export_zip') {
-      this.action = '<?= BASE_URL ?>/admin/gallery_export_zip.php';
-      this.removeAttribute('id');
-    }
-  });
-  </script>
+
   <table>
     <caption>Přehled alb</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
         <th scope="col">Název</th>
-        <th scope="col">Nadřazené album</th>
+        <th scope="col">Nadřazené</th>
         <th scope="col">Fotek</th>
-        <th scope="col">Podsložek</th>
         <th scope="col">Stav</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
     <tbody>
       <?php foreach ($albums as $album): ?>
-        <tr>
-          <td><input type="checkbox" name="ids[]" value="<?= (int)$album['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$album['name']) ?>"></td>
+        <tr<?= ($album['status'] ?? 'published') === 'pending' ? ' class="table-row--pending"' : '' ?>>
+          <td><input type="checkbox" name="ids[]" value="<?= (int)$album['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$album['name']) ?>"></td>
           <td>
-            <?= $album['parent_id'] ? '— ' : '' ?><strong><?= h($album['name']) ?></strong><br>
-            <small style="color:#555"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>
-            <?php if ($album['excerpt'] !== ''): ?>
-              <br><small style="color:#555"><?= h($album['excerpt']) ?></small>
-            <?php endif; ?>
+            <?= $album['parent_id'] ? '— ' : '' ?><strong><?= h($album['name']) ?></strong>
+            <br><small style="color:#555"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>
           </td>
-          <td><?= $album['parent_name'] !== null ? h((string)$album['parent_name']) : '(kořen)' ?></td>
-          <td><?= (int)$album['photo_count'] ?></td>
-          <td><?= (int)$album['sub_count'] ?></td>
+          <td><?= $album['parent_name'] !== null ? h((string)$album['parent_name']) : '–' ?></td>
+          <td><?= (int)$album['photo_count'] ?><?= (int)$album['sub_count'] > 0 ? ' <small>(+' . (int)$album['sub_count'] . ' podalb)</small>' : '' ?></td>
           <td>
-            <?php $albumStatus = (string)($album['status'] ?? 'published'); ?>
-            <?php if ($albumStatus === 'pending'): ?>
-              <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
+            <?php if (($album['status'] ?? 'published') === 'pending'): ?>
+              <strong class="status-badge status-badge--pending">Čeká</strong>
             <?php elseif ((int)($album['is_published'] ?? 1) === 1): ?>
               Publikováno
             <?php else: ?>
@@ -134,10 +122,10 @@ adminHeader('Alba galerie');
             <?php endif; ?>
           </td>
           <td class="actions">
-            <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Spravovat fotografie</a>
-            <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
+            <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>">Fotografie</a>
+            <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>">Upravit</a>
             <?php if ((int)($album['is_published'] ?? 1) === 1 && ($album['status'] ?? 'published') === 'published'): ?>
-              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Web</a>
             <?php endif; ?>
             <?php if (($album['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
@@ -148,23 +136,37 @@ adminHeader('Alba galerie');
                 <button type="submit" class="btn btn-success">Schválit</button>
               </form>
             <?php endif; ?>
-            <form method=”post” action=”<?= BASE_URL ?>/admin/gallery_export_zip.php” style=”display:inline”>
-              <input type=”hidden” name=”csrf_token” value=”<?= h(csrfToken()) ?>”>
-              <input type=”hidden” name=”id” value=”<?= (int)$album['id'] ?>”>
-              <button type=”submit” class=”btn” aria-label=”Exportovat album <?= h((string)$album['name']) ?> do ZIP”>Export ZIP</button>
-            </form>
-            <form method=”post” action=”<?= BASE_URL ?>/admin/gallery_album_delete.php”
-                  onsubmit=”return confirm('Smazat album „<?= h(addslashes($album['name'])) ?>” včetně všech fotografií a podsložek?')”>
-              <input type=”hidden” name=”csrf_token” value=”<?= h(csrfToken()) ?>”>
-              <input type=”hidden” name=”id” value=”<?= (int)$album['id'] ?>”>
-              <button type=”submit” class=”btn btn-danger”>Smazat</button>
-            </form>
           </td>
         </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkCheckboxJs() ?>
+
+  <script nonce="<?= cspNonce() ?>">
+  (function(){
+    var form = document.getElementById('bulk-form');
+    var checkAll = document.getElementById('check-all');
+    var checkboxes = document.querySelectorAll('input[name="ids[]"]');
+    var statusEl = document.getElementById('bulk-status');
+    var buttons = form.querySelectorAll('.bulk-action-btn');
+
+    function update() {
+      var checked = document.querySelectorAll('input[name="ids[]"]:checked').length;
+      buttons.forEach(function(btn) { btn.disabled = checked === 0; });
+      if (checked === 0) statusEl.textContent = 'Zatím není vybrané žádné album.';
+      else if (checked === 1) statusEl.textContent = 'Vybráno 1 album.';
+      else if (checked <= 4) statusEl.textContent = 'Vybrána ' + checked + ' alba.';
+      else statusEl.textContent = 'Vybráno ' + checked + ' alb.';
+      if (checkAll) checkAll.checked = checked === checkboxes.length && checked > 0;
+    }
+
+    if (checkAll) checkAll.addEventListener('change', function() {
+      checkboxes.forEach(function(cb) { cb.checked = checkAll.checked; });
+      update();
+    });
+    checkboxes.forEach(function(cb) { cb.addEventListener('change', update); });
+  })();
+  </script>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

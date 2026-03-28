@@ -66,8 +66,11 @@ if (empty($filesToZip) && empty($emptyDirs)) {
     exit;
 }
 
-$slugPart = count($albumNames) === 1 ? slugify($albumNames[0]) : 'vyber-' . count($albumNames) . '-alb';
-$zipFilename = 'galerie-' . $slugPart . '-' . date('Y-m-d') . '.zip';
+if (count($albumNames) === 1) {
+    $zipFilename = slugify($albumNames[0]) . '.zip';
+} else {
+    $zipFilename = 'export_photos.zip';
+}
 
 // ── ZipArchive (preferovaný) ──
 if (class_exists('ZipArchive')) {
