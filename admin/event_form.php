@@ -116,6 +116,21 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     </label>
     <small id="event-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, událost zůstane uložená jen v administraci.</small>
 
+    <label for="unpublish_at">Plánované zrušení publikace</label>
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at" aria-describedby="unpublish-at-help"
+           style="width:auto" value="<?= h(!empty($event['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['unpublish_at'])) : '') ?>">
+    <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
+  </fieldset>
+
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Interní poznámka</legend>
+    <label for="admin_note" class="visually-hidden">Interní poznámka</label>
+    <textarea id="admin_note" name="admin_note" rows="2" aria-describedby="admin-note-help"
+              style="min-height:0"><?= h($event['admin_note'] ?? '') ?></textarea>
+    <small id="admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
+  </fieldset>
+
+  <fieldset>
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat událost' ?></button>
       <a href="events.php" style="margin-left:1rem">Zrušit</a>

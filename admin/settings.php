@@ -133,6 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fname = 'favicon.' . $allowedFav[$mime];
                 if (move_uploaded_file($tmp, $siteDir . $fname)) {
                     saveSetting('site_favicon', $fname);
+                    if ($mime === 'image/png') {
+                        generateWebp($siteDir . $fname);
+                    }
                 }
             } else {
                 $errors[] = 'Favicon: nepodporovaný formát (povoleno: ICO, PNG, SVG).';
@@ -151,6 +154,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fname = 'logo.' . $ext;
                 if (move_uploaded_file($tmp, $siteDir . $fname)) {
                     saveSetting('site_logo', $fname);
+                    if ($mime !== 'image/svg+xml') {
+                        generateWebp($siteDir . $fname);
+                    }
                 }
             } else {
                 $errors[] = 'Logo: nepodporovaný formát (povoleno: JPEG, PNG, GIF, WebP, SVG).';

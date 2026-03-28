@@ -8,6 +8,16 @@ $id = inputInt('post', 'id');
 $title = trim($_POST['title'] ?? '');
 $submittedSlug = trim($_POST['slug'] ?? '');
 $content = trim($_POST['content'] ?? '');
+$adminNote = trim($_POST['admin_note'] ?? '');
+
+$unpublishAt = trim($_POST['unpublish_at'] ?? '');
+$unpublishAtSql = null;
+if ($unpublishAt !== '') {
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
+    if ($dateTime) {
+        $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+    }
+}
 
 if ($title === '' || $content === '') {
     header('Location: news_form.php?err=required' . ($id ? '&id=' . $id : ''));
@@ -56,25 +66,25 @@ if ($existingItem) {
     if (canManageOwnNewsOnly()) {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
-             SET title = ?, slug = ?, content = ?, author_id = COALESCE(author_id, ?), updated_at = NOW()
+             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, author_id = COALESCE(author_id, ?), updated_at = NOW()
              WHERE id = ? AND author_id = ?"
         );
-        $stmt->execute([$title, $slug, $content, currentUserId(), $id, currentUserId()]);
+        $stmt->execute([$title, $slug, $content, $unpublishAtSql, $adminNote, currentUserId(), $id, currentUserId()]);
     } else {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
-             SET title = ?, slug = ?, content = ?, author_id = COALESCE(author_id, ?), updated_at = NOW()
+             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, author_id = COALESCE(author_id, ?), updated_at = NOW()
              WHERE id = ?"
         );
-        $stmt->execute([$title, $slug, $content, currentUserId(), $id]);
+        $stmt->execute([$title, $slug, $content, $unpublishAtSql, $adminNote, currentUserId(), $id]);
     }
     logAction('news_edit', "id={$id} title={$title} slug={$slug}");
 } else {
     $status = currentUserHasCapability('news_approve') ? 'published' : 'pending';
     $authorId = currentUserId();
     $pdo->prepare(
-        "INSERT INTO cms_news (title, slug, content, status, author_id) VALUES (?,?,?,?,?)"
-    )->execute([$title, $slug, $content, $status, $authorId]);
+        "INSERT INTO cms_news (title, slug, content, unpublish_at, admin_note, status, author_id) VALUES (?,?,?,?,?,?,?)"
+    )->execute([$title, $slug, $content, $unpublishAtSql, $adminNote, $status, $authorId]);
     $id = (int)$pdo->lastInsertId();
     logAction('news_add', "id={$id} title={$title} slug={$slug} status={$status}");
     if ($status === 'pending') {

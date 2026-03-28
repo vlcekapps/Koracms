@@ -492,6 +492,7 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
             'error' => 'Cover obrázek se nepodařilo uložit.',
         ];
     }
+    generateWebp($directory . $filename);
 
     if ($existingFilename !== '' && $existingFilename !== $filename) {
         deletePodcastCoverFile($existingFilename);
@@ -679,6 +680,7 @@ function uploadDownloadImage(array $file, string $existingFilename = ''): array
             'error' => 'Obrázek se nepodařilo uložit.',
         ];
     }
+    generateWebp($directory . $filename);
 
     if ($existingFilename !== '' && $existingFilename !== $filename) {
         deleteDownloadImageFile($existingFilename);
@@ -874,6 +876,7 @@ function uploadPlaceImage(array $file, string $existingFilename = ''): array
             'error' => 'Obrázek se nepodařilo uložit.',
         ];
     }
+    generateWebp($directory . $filename);
 
     if ($existingFilename !== '' && $existingFilename !== $filename) {
         deletePlaceImageFile($existingFilename);
@@ -1028,6 +1031,7 @@ function uploadBoardImage(array $file, string $existingFilename = ''): array
             'error' => 'Obrázek se nepodařilo uložit.',
         ];
     }
+    generateWebp($directory . $filename);
 
     if ($existingFilename !== '' && $existingFilename !== $filename) {
         deleteBoardImageFile($existingFilename);
@@ -2244,6 +2248,7 @@ function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): 
             'error' => 'Avatar se nepodařilo uložit.',
         ];
     }
+    generateWebp($directory . $filename);
 
     if ($existingFilename !== '' && $existingFilename !== $filename) {
         deleteAuthorAvatarFile($existingFilename);

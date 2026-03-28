@@ -10,6 +10,16 @@ $submittedSlug = trim($_POST['slug'] ?? '');
 $description = $_POST['description'] ?? '';
 $location = trim($_POST['location'] ?? '');
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
+$adminNote = trim($_POST['admin_note'] ?? '');
+
+$unpublishAt = trim($_POST['unpublish_at'] ?? '');
+$unpublishAtSql = null;
+if ($unpublishAt !== '') {
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
+    if ($dateTime) {
+        $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+    }
+}
 
 $eventDate = null;
 if (!empty($_POST['event_date'])) {
@@ -61,17 +71,17 @@ if ($id !== null) {
 
     $pdo->prepare(
         "UPDATE cms_events
-         SET title = ?, slug = ?, description = ?, location = ?, event_date = ?, event_end = ?, is_published = ?, updated_at = NOW()
+         SET title = ?, slug = ?, description = ?, location = ?, event_date = ?, event_end = ?, is_published = ?, unpublish_at = ?, admin_note = ?, updated_at = NOW()
          WHERE id = ?"
-    )->execute([$title, $slug, $description, $location, $eventDate, $eventEnd, $isPublished, $id]);
+    )->execute([$title, $slug, $description, $location, $eventDate, $eventEnd, $isPublished, $unpublishAtSql, $adminNote, $id]);
     logAction('event_edit', "id={$id} title={$title} slug={$slug}");
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
-        "INSERT INTO cms_events (title, slug, description, location, event_date, event_end, is_published, status)
-         VALUES (?,?,?,?,?,?,?,?)"
-    )->execute([$title, $slug, $description, $location, $eventDate, $eventEnd, $visible, $status]);
+        "INSERT INTO cms_events (title, slug, description, location, event_date, event_end, is_published, unpublish_at, admin_note, status)
+         VALUES (?,?,?,?,?,?,?,?,?,?)"
+    )->execute([$title, $slug, $description, $location, $eventDate, $eventEnd, $visible, $unpublishAtSql, $adminNote, $status]);
     $id = (int)$pdo->lastInsertId();
     logAction('event_add', "id={$id} title={$title} slug={$slug} status={$status}");
     if ($status === 'pending') {
