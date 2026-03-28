@@ -135,8 +135,8 @@ function adminHeader(string $pageTitle): void
         if (isModuleEnabled('faq')) {
             $contentItems[] = [
                 'type' => 'details',
-                'label' => 'FAQ',
-                'label_plain' => 'FAQ',
+                'label' => 'Znalostní báze',
+                'label_plain' => 'Znalostní báze',
                 'items' => [
                     ['url' => $baseUrl . '/admin/faq.php', 'label' => 'Otázky'],
                     ['url' => $baseUrl . '/admin/faq_cats.php', 'label' => 'Kategorie'],

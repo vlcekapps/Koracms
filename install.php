@@ -383,6 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faq_categories (
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            parent_id  INT          NULL DEFAULT NULL,
             name       VARCHAR(255) NOT NULL,
             sort_order INT          NOT NULL DEFAULT 0,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -47,7 +47,7 @@ $faqs = array_map(
 
 $canApproveFaq = currentUserHasCapability('content_approve_shared');
 
-adminHeader('FAQ');
+adminHeader('Znalostní báze');
 ?>
 <p>
   <a href="faq_form.php" class="btn">+ Přidat otázku</a>

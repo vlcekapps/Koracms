@@ -13,21 +13,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
     $updateId = inputInt('post', 'update_id');
 
+    $parentId = inputInt('post', 'parent_id');
+
     if ($name === '') {
         $error = 'Název kategorie je povinný.';
     } elseif ($updateId !== null) {
-        $pdo->prepare("UPDATE cms_faq_categories SET name = ?, sort_order = ? WHERE id = ?")->execute([$name, $sortOrder, $updateId]);
+        if ($parentId === $updateId) {
+            $parentId = null;
+        }
+        $pdo->prepare("UPDATE cms_faq_categories SET name = ?, sort_order = ?, parent_id = ? WHERE id = ?")->execute([$name, $sortOrder, $parentId, $updateId]);
         $success = true;
         $editId = null;
     } else {
-        $pdo->prepare("INSERT INTO cms_faq_categories (name, sort_order) VALUES (?, ?)")->execute([$name, $sortOrder]);
+        $pdo->prepare("INSERT INTO cms_faq_categories (name, sort_order, parent_id) VALUES (?, ?, ?)")->execute([$name, $sortOrder, $parentId]);
         $success = true;
     }
 }
 
-$categories = $pdo->query("SELECT id, name, sort_order FROM cms_faq_categories ORDER BY sort_order, name")->fetchAll();
+$categories = $pdo->query("SELECT id, name, sort_order, parent_id FROM cms_faq_categories ORDER BY sort_order, name")->fetchAll();
 
-adminHeader('Kategorie FAQ');
+// Sestavíme strom kategorií
+$categoryTree = [];
+$categoryById = [];
+foreach ($categories as $cat) {
+    $categoryById[(int)$cat['id']] = $cat;
+}
+foreach ($categories as $cat) {
+    $pid = $cat['parent_id'] !== null ? (int)$cat['parent_id'] : 0;
+    $categoryTree[$pid][] = $cat;
+}
+
+function renderCategoryOptions(array $tree, array $byId, int $parentId = 0, int $depth = 0, ?int $excludeId = null): string
+{
+    $out = '';
+    foreach ($tree[$parentId] ?? [] as $cat) {
+        $cid = (int)$cat['id'];
+        if ($cid === $excludeId) {
+            continue;
+        }
+        $prefix = str_repeat('— ', $depth);
+        $out .= '<option value="' . $cid . '">' . h($prefix . $cat['name']) . '</option>';
+        $out .= renderCategoryOptions($tree, $byId, $cid, $depth + 1, $excludeId);
+    }
+    return $out;
+}
+
+adminHeader('Kategorie znalostní báze');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
@@ -42,6 +73,13 @@ adminHeader('Kategorie FAQ');
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
       </div>
       <div>
+        <label for="parent_id">Nadřazená kategorie</label>
+        <select id="parent_id" name="parent_id">
+          <option value="">— Kořenová —</option>
+          <?= renderCategoryOptions($categoryTree, $categoryById) ?>
+        </select>
+      </div>
+      <div>
         <label for="sort_order">Pořadí</label>
         <input type="number" id="sort_order" name="sort_order" min="0" style="width:5rem" value="0">
       </div>
@@ -50,12 +88,12 @@ adminHeader('Kategorie FAQ');
   </fieldset>
 </form>
 
-<h2>Přehled kategorií FAQ</h2>
+<h2>Přehled kategorií znalostní báze</h2>
 <?php if (empty($categories)): ?>
   <p>Zatím tu nejsou žádné kategorie.</p>
 <?php else: ?>
   <table>
-    <caption>Přehled kategorií FAQ</caption>
+    <caption>Přehled kategorií znalostní báze</caption>
     <thead><tr><th scope="col">Název</th><th scope="col">Pořadí</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($categories as $category): ?>
@@ -96,6 +134,6 @@ adminHeader('Kategorie FAQ');
   </table>
 <?php endif; ?>
 
-<p><a href="faq.php"><span aria-hidden="true">&larr;</span> Zpět na FAQ</a></p>
+<p><a href="faq.php"><span aria-hidden="true">&larr;</span> Zpět na znalostní bázi</a></p>
 
 <?php adminFooter(); ?>

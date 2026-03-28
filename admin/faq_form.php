@@ -36,7 +36,7 @@ $formError = match ($err) {
     default => '',
 };
 
-adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
+adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostní báze');
 ?>
 
 <?php if ($id): ?>

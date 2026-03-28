@@ -45,9 +45,9 @@ if (!$faq) {
         : BASE_URL . '/faq/item.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '');
 
     renderPublicPage([
-        'title' => 'FAQ nenalezeno - ' . $siteName,
+        'title' => 'Položka nenalezena – ' . $siteName,
         'meta' => [
-            'title' => 'FAQ nenalezeno - ' . $siteName,
+            'title' => 'Položka nenalezena – ' . $siteName,
             'url' => $missingPath,
         ],
         'view' => 'not-found',
@@ -57,6 +57,25 @@ if (!$faq) {
 }
 
 $faq = hydrateFaqPresentation($faq);
+
+// Breadcrumbs pro kategorii
+$faqBreadcrumbs = [];
+$faqCatId = (int)($faq['category_id'] ?? 0);
+if ($faqCatId > 0) {
+    $allCats = $pdo->query("SELECT id, name, parent_id FROM cms_faq_categories")->fetchAll();
+    $catsById = [];
+    foreach ($allCats as $c) {
+        $catsById[(int)$c['id']] = $c;
+    }
+    $current = $faqCatId;
+    $safety = 0;
+    while ($current > 0 && isset($catsById[$current]) && $safety < 20) {
+        $faqBreadcrumbs[] = $catsById[$current];
+        $current = (int)($catsById[$current]['parent_id'] ?? 0);
+        $safety++;
+    }
+    $faqBreadcrumbs = array_reverse($faqBreadcrumbs);
+}
 
 if ($slug === '' && !empty($faq['slug'])) {
     header('Location: ' . faqPublicPath($faq));
@@ -84,6 +103,7 @@ renderPublicPage([
     'view' => 'modules/faq-article',
     'view_data' => [
         'faq' => $faq,
+        'breadcrumbs' => $faqBreadcrumbs,
     ],
     'current_nav' => 'faq',
     'body_class' => 'page-faq-article',

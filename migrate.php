@@ -620,6 +620,8 @@ $addColumns = [
     // cms_contact
     'cms_contact.status'             => "ALTER TABLE cms_contact ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
     'cms_contact.updated_at'         => "ALTER TABLE cms_contact ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_faq_categories
+    'cms_faq_categories.parent_id'   => "ALTER TABLE cms_faq_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
     // cms_faqs
     'cms_faqs.slug'                  => "ALTER TABLE cms_faqs ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_faqs.excerpt'               => "ALTER TABLE cms_faqs ADD COLUMN excerpt TEXT",
