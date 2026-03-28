@@ -58,6 +58,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $totalRows = array_sum(array_map('count', $tables));
     $log[] = "✓ XML načteno (" . count($tables) . " tabulek, {$totalRows} řádků)";
 
+    // ── 0. Název a popis webu ze settings ──
+    $settings = $tables['settings'] ?? [];
+    $esSettings = [];
+    foreach ($settings as $s) {
+        $key = base64_decode((string)($s['identifier'] ?? ''));
+        $lang = (int)($s['lang'] ?? 0);
+        if ($key !== '' && $lang <= 1) {
+            $esSettings[$key] = (string)($s['data'] ?? '');
+        }
+    }
+
+    $esSiteTitle = trim($esSettings['s_title_text'] ?? '');
+    $esSiteDesc = trim($esSettings['user_description'] ?? '');
+    if ($esSiteTitle !== '') {
+        saveSetting('site_name', $esSiteTitle);
+        $log[] = "✓ Název webu: " . $esSiteTitle;
+    }
+    if ($esSiteDesc !== '') {
+        saveSetting('site_description', $esSiteDesc);
+        $log[] = "✓ Popis webu: " . mb_substr($esSiteDesc, 0, 80) . (mb_strlen($esSiteDesc) > 80 ? '…' : '');
+    }
+    if ($esSiteTitle !== '' || $esSiteDesc !== '') {
+        clearSettingsCache();
+    }
+
     // ── 1. Sekce → kategorie ──
     $sectionMap = [];
     $sections = $tables['a_sections'] ?? [];
