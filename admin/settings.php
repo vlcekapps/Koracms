@@ -18,8 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contactEmail= trim($_POST['contact_email']   ?? '');
     $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
     $boardPublicLabel = trim($_POST['board_public_label'] ?? $boardPublicLabel);
-    $homeBlog      = max(0, (int)($_POST['home_blog_count'] ?? 5));
-    $homeNews      = max(0, (int)($_POST['home_news_count'] ?? 5));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
@@ -72,8 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('contact_email',    $contactEmail);
         saveSetting('site_profile',     $siteProfile);
         saveSetting('board_public_label', $boardPublicLabel);
-        saveSetting('home_blog_count',  (string)$homeBlog);
-        saveSetting('home_news_count',  (string)$homeNews);
         saveSetting('news_per_page',    (string)$newsPerPage);
         saveSetting('blog_per_page',    (string)$blogPerPage);
         saveSetting('events_per_page',  (string)$eventsPerPage);
@@ -87,8 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('comment_blocked_emails', $commentBlockedEmails);
         saveSetting('comment_spam_words', $commentSpamWords);
         saveSetting('content_editor',   $contentEditor);
-        $homeBoard     = max(0, (int)($_POST['home_board_count'] ?? 5));
-        saveSetting('home_board_count', (string)$homeBoard);
 
         // E-mailové notifikace
         saveSetting('notify_form_submission', isset($_POST['notify_form_submission']) ? '1' : '0');
@@ -269,22 +263,6 @@ adminHeader('Nastavení webu');
       </label>
     </div>
     <small id="apply-site-profile-help" class="field-help">Bez zaškrtnutí se uloží jen zvolený profil webu a stávající konfigurace se nepřepíše. U vlastního profilu zůstane konfigurace beze změny i při použití této volby.</small>
-  </fieldset>
-
-  <fieldset id="settings-home-sections">
-    <legend>Sekce na domovské stránce</legend>
-    <p style="margin-top:.25rem;font-size:.9rem;color:#555">Hodnota 0 znamená, že se sekce na domovské stránce nezobrazí.</p>
-    <label for="home_blog_count">Počet článků na domovské stránce</label>
-    <input type="number" id="home_blog_count" name="home_blog_count" min="0" max="50"
-           value="<?= h(getSetting('home_blog_count', '5')) ?>">
-
-    <label for="home_news_count">Počet novinek na domovské stránce</label>
-    <input type="number" id="home_news_count" name="home_news_count" min="0" max="50"
-           value="<?= h(getSetting('home_news_count', '5')) ?>">
-
-    <label for="home_board_count">Počet položek sekce <?= h($boardPublicLabel) ?> na domovské stránce</label>
-    <input type="number" id="home_board_count" name="home_board_count" min="0" max="50"
-           value="<?= h(getSetting('home_board_count', '5')) ?>">
   </fieldset>
 
   <fieldset id="settings-pagination">
