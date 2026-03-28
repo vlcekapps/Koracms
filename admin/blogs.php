@@ -6,8 +6,6 @@ $pdo = db_connect();
 $success = '';
 $error   = '';
 
-$editId = inputInt('get', 'edit');
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $name     = trim($_POST['name'] ?? '');
@@ -28,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ? WHERE id = ?")
                 ->execute([$name, $slug, $desc, $updateId]);
             $success = 'Blog upraven.';
-            $editId = null;
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
         }
@@ -96,33 +93,20 @@ adminHeader('Správa blogů');
     <?php foreach ($blogs as $blog): ?>
       <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" style="cursor:grab">
         <td>
-          <?php if ($editId === (int)$blog['id']): ?>
-            <form method="post" style="display:flex;flex-direction:column;gap:.4rem">
-              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$blog['id'] ?>">
-              <input type="text" name="name" required aria-required="true" aria-label="Název blogu" maxlength="255"
-                     value="<?= h((string)$blog['name']) ?>" style="width:auto">
-              <input type="text" name="slug" required aria-required="true" aria-label="Slug blogu" maxlength="100"
-                     pattern="[a-z0-9\-]+" value="<?= h((string)$blog['slug']) ?>" style="width:auto">
-              <textarea name="description" rows="2" aria-label="Popis blogu" style="width:auto"><?= h((string)$blog['description']) ?></textarea>
-              <div class="button-row">
-                <button type="submit" class="btn">Uložit</button>
-                <a href="blogs.php">Zrušit</a>
-              </div>
-            </form>
-          <?php else: ?>
-            <?= h((string)$blog['name']) ?>
-            <?php if ((string)$blog['description'] !== ''): ?>
-              <br><small class="field-help"><?= h((string)$blog['description']) ?></small>
-            <?php endif; ?>
+          <?= h((string)$blog['name']) ?>
+          <?php if ((string)($blog['description'] ?? '') !== ''): ?>
+            <br><small class="field-help"><?= h((string)$blog['description']) ?></small>
           <?php endif; ?>
         </td>
         <td><code><?= h((string)$blog['slug']) ?></code></td>
         <td><?= (int)$blog['article_count'] ?></td>
         <td class="actions">
-          <?php if ($editId !== (int)$blog['id']): ?>
-            <a href="blogs.php?edit=<?= (int)$blog['id'] ?>" class="btn">Upravit</a>
-          <?php endif; ?>
+          <button type="button" class="btn blog-edit-btn" style="font-size:.85rem"
+                  aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
+                  data-blog-id="<?= (int)$blog['id'] ?>"
+                  data-blog-name="<?= h((string)$blog['name']) ?>"
+                  data-blog-slug="<?= h((string)$blog['slug']) ?>"
+                  data-blog-desc="<?= h((string)($blog['description'] ?? '')) ?>">Upravit</button>
           <form action="blog_blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
@@ -141,16 +125,84 @@ adminHeader('Správa blogů');
   </table>
 <?php endif; ?>
 
+<!-- Modal dialog pro editaci blogu -->
+<div id="blog-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
+<section id="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title"
+         style="display:none;position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
+                width:min(30rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto;
+                padding:1.2rem;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;
+                box-shadow:0 28px 60px rgba(15,23,42,.28);z-index:1001">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <h2 id="blog-dialog-title" style="margin:0;font-size:1.15rem">Upravit blog</h2>
+    <button type="button" id="blog-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
+  </div>
+  <form method="post" novalidate id="blog-dialog-form">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="update_id" id="bd-id">
+
+    <label for="bd-name">Název blogu <span aria-hidden="true">*</span></label>
+    <input type="text" id="bd-name" name="name" required aria-required="true" maxlength="255">
+
+    <label for="bd-slug">Slug (URL) <span aria-hidden="true">*</span></label>
+    <input type="text" id="bd-slug" name="slug" required aria-required="true" maxlength="100"
+           pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky">
+
+    <label for="bd-desc">Popis</label>
+    <textarea id="bd-desc" name="description" rows="2"></textarea>
+
+    <div class="button-row" style="margin-top:1rem">
+      <button type="submit" class="btn">Uložit</button>
+      <button type="button" id="blog-dialog-cancel" class="btn">Zrušit</button>
+    </div>
+  </form>
+</section>
+
 <script nonce="<?= cspNonce() ?>">
 (function () {
+    var overlay = document.getElementById('blog-overlay');
+    var dialog = document.getElementById('blog-dialog');
+    var closeBtn = document.getElementById('blog-dialog-close');
+    var cancelBtn = document.getElementById('blog-dialog-cancel');
+    var lastTrigger = null;
+
+    function openDialog(btn) {
+        lastTrigger = btn;
+        document.getElementById('bd-id').value = btn.dataset.blogId;
+        document.getElementById('bd-name').value = btn.dataset.blogName;
+        document.getElementById('bd-slug').value = btn.dataset.blogSlug;
+        document.getElementById('bd-desc').value = btn.dataset.blogDesc;
+        overlay.style.display = '';
+        dialog.style.display = '';
+        document.getElementById('bd-name').focus();
+    }
+
+    function closeDialog() {
+        overlay.style.display = 'none';
+        dialog.style.display = 'none';
+        if (lastTrigger) lastTrigger.focus();
+    }
+
+    document.querySelectorAll('.blog-edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() { openDialog(this); });
+    });
+    closeBtn.addEventListener('click', closeDialog);
+    cancelBtn.addEventListener('click', closeDialog);
+    overlay.addEventListener('click', closeDialog);
+    dialog.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { e.preventDefault(); closeDialog(); }
+        if (e.key === 'Tab') {
+            var focusable = Array.from(dialog.querySelectorAll('input:not([type=hidden]),textarea,button,select'));
+            if (focusable.length === 0) return;
+            if (e.shiftKey && document.activeElement === focusable[0]) { e.preventDefault(); focusable[focusable.length-1].focus(); }
+            else if (!e.shiftKey && document.activeElement === focusable[focusable.length-1]) { e.preventDefault(); focusable[0].focus(); }
+        }
+    });
+
+    // Auto-slug z názvu (nový blog formulář)
     var nameInput = document.getElementById('name');
     var slugInput = document.getElementById('slug');
     var slugManuallyEdited = false;
-
-    slugInput.addEventListener('input', function () {
-        slugManuallyEdited = true;
-    });
-
+    slugInput.addEventListener('input', function () { slugManuallyEdited = true; });
     nameInput.addEventListener('input', function () {
         if (slugManuallyEdited) return;
         slugInput.value = this.value
