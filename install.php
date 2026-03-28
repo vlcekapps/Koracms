@@ -192,7 +192,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             action     VARCHAR(100) NOT NULL,
             detail     TEXT,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            user_id    INT          NULL DEFAULT NULL,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_log_action (action),
+            INDEX idx_log_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_events (

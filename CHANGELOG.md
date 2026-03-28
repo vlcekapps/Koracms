@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Prohlížeč audit logu** (`admin/audit_log.php`) – výpis `cms_log` s filtry podle akce, uživatele a data; stránkování; sloupec `user_id` přidán do logu pro identifikaci autora akce
 - **Záloha databáze** (`admin/backup.php`) – export všech CMS tabulek jako SQL soubor ke stažení; generuje CREATE TABLE + INSERT přes PDO; bez závislosti na mysqldump
 - **301/302 přesměrování** (`admin/redirects.php`) – správa přesměrování starých URL na nové; tabulka `cms_redirects` s počítadlem přístupů; automatická kontrola na každém requestu; podpora 301 (trvalé) a 302 (dočasné); užitečné po importu obsahu nebo změně slug adres
 - **Multiblog** – podpora více blogů v jedné instalaci; nová tabulka `cms_blogs`; každý blog s vlastním názvem, slugem, popisem, kategoriemi a tagy; komentáře, schvalování a oprávnění zůstávají společné; admin správa blogů (`admin/blogs.php`); selektor blogu ve formuláři článku a filtry v přehledu; kategorie a tagy scoped per blog; dynamický URL routing přes `blog_router.php` s catch-all .htaccess pravidly; veřejná navigace s položkou za každý blog; popis blogu na veřejném indexu; per-blog RSS feed (`/feed.php?blog=slug`); zpětná kompatibilita – s jedním blogem se chování a URL nemění

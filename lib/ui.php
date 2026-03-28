@@ -227,8 +227,9 @@ function checkMaintenanceMode(): void
 function logAction(string $action, string $detail = ''): void
 {
     try {
-        db_connect()->prepare("INSERT INTO cms_log (action, detail) VALUES (?, ?)")
-            ->execute([$action, $detail]);
+        $userId = function_exists('currentUserId') ? currentUserId() : null;
+        db_connect()->prepare("INSERT INTO cms_log (action, detail, user_id) VALUES (?, ?, ?)")
+            ->execute([$action, $detail, $userId]);
     } catch (\PDOException $e) {
         // Tabulka ještě neexistuje
     }

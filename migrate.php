@@ -762,6 +762,8 @@ $addColumns = [
     'cms_tags.blog_id'               => "ALTER TABLE cms_tags ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
     // cms_comments – stavový model moderace
     'cms_comments.status'            => "ALTER TABLE cms_comments ADD COLUMN status ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending'",
+    // cms_log – user_id pro audit log
+    'cms_log.user_id'                => "ALTER TABLE cms_log ADD COLUMN user_id INT NULL DEFAULT NULL",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {

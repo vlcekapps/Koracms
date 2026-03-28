@@ -246,6 +246,7 @@ function adminHeader(string $pageTitle): void
     }
     if (currentUserHasCapability('settings_manage')) {
         $settingsItems[] = ['url' => $baseUrl . '/admin/redirects.php', 'label' => 'Přesměrování'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/audit_log.php', 'label' => 'Audit log'];
     }
 
     $bottomItems = [
