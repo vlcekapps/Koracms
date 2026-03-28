@@ -135,17 +135,11 @@ Každý modul lze zapnout nebo vypnout v administraci v sekci **Nastavení → S
 
 ---
 
-## Úvodní stránka
+## Widget systém a úvodní stránka
 
-Na hlavní stránce se zobrazují widgety zapnutých modulů:
+Homepage i sidebar a footer jsou plně konfigurovatelné přes **widget systém** (*Nastavení → Widgety*). Admin přetahuje widgety do 3 zón (homepage, sidebar, footer), pojmenuje je a nastaví parametry. Widgety respektují stav modulů – vypnutý modul = nedostupný widget.
 
-- **Úvodní text** – volitelný HTML text nastavitelný v administraci (*Nastavení → Obecná nastavení → Text úvodní stránky*)
-- **Nejnovější novinky** – počet položek lze nastavit; hodnota 0 widget skryje
-- **Nejnovější články blogu** – počet položek lze nastavit; hodnota 0 widget skryje a při zobrazení se vždy dodrží přesně nastavený počet položek
-- **Úřední deska / Vývěska / Oznámení** – nejnovější aktuální položky; počet položek lze nastavit; hodnota 0 widget skryje
-- **Aktuální anketa** – pokud je modul Ankety zapnutý a existuje aktivní anketa
-- **Doporučený článek** – volitelný zvýrazněný blok na domovské stránce; pokud je jako zdroj zvolen blog, použije se nejčtenější publikovaný článek podle počtu zobrazení
-- **Metadata článků** – blogové výpisy, detail článku i stránka autora ukazují odhad doby čtení a počet přečtení článku ve formátu `7 min čtení, přečteno 22 krát`
+Dostupné typy widgetů: úvodní text, nejnovější články (s volbou blogu), novinky, doporučený obsah, úřední deska, nadcházející události, anketa, newsletter, náhled galerie, vlastní HTML, vyhledávání, kontaktní údaje
 
 ---
 
@@ -175,28 +169,19 @@ Nastavení je rozděleno do čtyř sekcí:
 
 Zapínání a vypínání jednotlivých modulů jedním přepínačem.
 
-### Pozice modulů
+### Navigace webu
 
-Vlastní pořadí modulů v navigaci pro návštěvníky (přesun nahoru / dolů).
+Jednotná správa pořadí modulů, statických stránek a blogů v hlavní navigaci (*Nastavení → Navigace webu*). Drag & drop nebo tlačítka Nahoru/Dolů. Libovolné kombinování – stránka mezi moduly, blog před novinkami.
 
 ### Vzhled a šablony
 
 - Výběr aktivní veřejné šablony z adresáře `themes/`
 - Profil webu při instalaci i v administraci: `Osobní web`, `Blog / magazín`, `Obec / spolek`, `Služby / firma`, `Vlastní profil`
-- Zobrazení názvu, verze, autora a popisu dostupných šablon
-- Obrázkové preview karty šablon přímo v administraci pro rychlejší orientaci při výběru
-- Bezpečný fallback na `default`, pokud uložená šablona na serveru chybí nebo je neplatná
 - Safe customizace aktivní šablony: paleta, hlavní akcenty, typografie a šířka obsahu
-- Varianta hlavičky a homepage přímo v administraci bez editace šablonových souborů
-- Homepage composer pro default theme: zvýrazněný blok, pořadí hlavních sekcí a viditelnost bloků bez zásahu do kódu
-- Zvýrazněný blok podporuje smysluplné zdroje jako blog, úřední desku, anketu nebo newsletter; novinky se už jako featured zdroj nepoužívají
-- Homepage composer vždy respektuje globální stav modulů, takže nenabízí ani nevyrenderuje blok pro vypnutý modul
+- Varianta hlavičky přímo v administraci bez editace šablonových souborů
 - Živý náhled šablony a draft vzhledu bez aktivace na produkčním webu
-- Reset vzhledu aktivní šablony na výchozí hodnoty bez zásahu do souborů
-- Bezpečný import portable ZIP balíčku: `theme.json` + statické assety v `assets/`, bez PHP override souborů
-- Export portable ZIP balíčku z administrace včetně uložených výchozích theme settings
-- Portable balíčky záměrně nepřenášejí layouty, partialy a view override; veřejný web dál používá fallback kontrakt na `default`
-- UX audit má vlastní framework v `docs/ux-audit-framework.md`, praktický screen-by-screen audit v `docs/ux-intuition-audit.md` a prioritizovaný backlog v `docs/ux-intuition-backlog.md`; automatické guardrails běží přes `php build/runtime_audit.php`
+- Reset vzhledu aktivní šablony na výchozí hodnoty
+- Import/export portable ZIP balíčku šablony
 
 Součástí CMS jsou nyní tyto oficiální šablony:
 
@@ -253,24 +238,36 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 - **Vkládání interního obsahu do HTML polí** – v HTML textarea polích pro obsah, která se veřejně vykreslují přes CMS, je dostupný přístupný dialog `Vložit odkaz nebo HTML z webu` pro rychlé vložení odkazu nebo hotového HTML bloku z existujících článků, stránek a dalších veřejných modulů. Podle typu výsledku umí nabídnout i `Vložit fotogalerii`, `Vložit audio přehrávač` nebo `Vložit video přehrávač`
 - **Snippety v HTML/Markdown obsahu** – renderer podporuje i zápis `[audio]https://example.test/audio.mp3[/audio]`, `[video]https://example.test/video.mp4[/video]` a `[gallery]slug-alba[/gallery]` nebo `[gallery slug="slug-alba"][/gallery]`; fungují ve všech HTML/Markdown polích, která CMS na veřejném webu vykresluje přes `renderContent()`. Audio a video podporují i atributy `src` a volitelný `mime`, takže lze bezpečně použít i interní file endpointy, například `[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]`
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
-- **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
-- **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie včetně slugů alb a fotografií, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
+- **Audit log** – záznam akcí administrátorů s filtry podle akce, uživatele a data; prohlížeč v administraci
+- **Centrální knihovna médií** – upload více souborů, grid zobrazení s thumbnaily, filtr podle typu, správa alt textů, kopírování URL; automatické WebP + thumbnail generování
+- **WebP konverze** – automatické generování WebP verze při uploadu obrázků ve všech modulech; `<picture>` element s lazy loading
+- **Responsive obrázky** – generování variant 400w, 800w, 1200w při uploadu článkových obrázků
+- **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie, místa, soubory, podcasty, ankety, FAQ, vývěska, komentáře, odběratelé, newslettery)
 - **WordPress importér** – import z WordPress XML exportu (WXR) s náhledem, filtrem kategorií, výběrem cílového blogu, perex/content splittem na `<!--more-->` a automatickým odstraněním WP bloků
 - **eStránky importér** – import článků, kategorií, fotoalb a fotografií z XML zálohy eStránek.cz s base64 dekódováním, hierarchií alb, výběrem cílového blogu a cílového alba pro stažené fotografie
-- **Google Analytics 4** – nastavení GA4 Measurement ID v admin; gtag.js snippet se automaticky vloží do hlavičky
+- **301/302 přesměrování** – správa přesměrování starých URL na nové s počítadlem přístupů; užitečné po importu nebo změně slug adres
+- **Google Analytics 4** – GA4 Measurement ID v admin; GDPR: gtag.js se načítá až po udělení cookie souhlasu
 - **Vlastní kód do head/footer** – textová pole v nastavení pro libovolný HTML/JS kód do `<head>` a před `</body>`
-- **Revize obsahu** – snapshot textových polí před každou úpravou; historie změn s uživatelem, datem a porovnáním starý/nový
+- **Revize obsahu** – snapshot textových polí před každou úpravou; vizuální diff se zvýrazněním přidaných a odebraných částí
+- **Interní poznámky** – admin poznámka k článkům, novinkám, stránkám a událostem viditelná jen v administraci
+- **Plánované publikování a zrušení** – `publish_at` pro odložené zveřejnění, `unpublish_at` pro automatické skrytí po vypršení
 - **Převod článek ↔ stránka** – převod článku na statickou stránku a naopak jedním kliknutím
 - **Export fotoalba do ZIP** – rekurzivní export alba včetně podalb do ZIP s hierarchickou strukturou složek
-- **Kontrola integrity souborů** – SHA-256 snapshot všech PHP souborů; detekce nových, změněných a smazaných souborů; varování na admin dashboardu
+- **Koš (soft delete)** – smazání článků, novinek, stránek, událostí a FAQ je přesun do koše s možností obnovení
+- **Záloha databáze** – manuální export z admin + automatické denní zálohy přes cron s rotací 7 dní
+- **Cron endpoint** – plánované publikování, unpublish, čištění rate-limit/temp/logů, automatické zálohy
+- **Upozornění na aktualizace** – admin dashboard kontroluje novou verzi přes GitHub API
+- **Kontrola integrity souborů** – SHA-256 snapshot všech PHP souborů; detekce změn; varování na dashboardu
 - **FULLTEXT vyhledávání** – 10 FULLTEXT indexů na klíčových tabulkách; relevantní řazení výsledků s LIKE fallbackem
+- **Drag & drop řazení** – přetahování položek s AJAX uložením; WCAG fallback: Ctrl+šipka a tlačítka Nahoru/Dolů
 
 ---
 
 ## Bezpečnost
 
+- **Dvoufázové ověření (2FA)** – volitelné TOTP přihlášení (FreeOTP, Authy, Google Authenticator); aktivace v profilu přes QR kód
 - CSRF ochrana na všech formulářích
-- Rate limiting (přihlášení, kontakt, odběr, chat, hlasování)
+- Rate limiting (přihlášení, kontakt, odběr, chat, hlasování, vyhledávání)
 - Honeypot pole proti spambotům
 - Matematická CAPTCHA
 - Prepared statements proti SQL injection
@@ -278,18 +275,26 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 - Bezpečné hashování hesel (bcrypt)
 - Kontrola integrity souborů (SHA-256 snapshot s detekcí změn)
 - CSP nonce na všech inline skriptech
+- HSTS hlavička při HTTPS
+- Blokování `.env` a `.git/` v `.htaccess`
+- GDPR: GA4 podmíněno cookie souhlasem
 
 ---
 
 ## Přístupnost
 
-CMS je navržen s ohledem na **WCAG 2.2**:
+CMS je navržen s ohledem na **WCAG 2.2 Level AA**:
 
 - Sémantické HTML (`<header>`, `<main>`, `<nav>`, `<article>`, `<section>`, `<details>`)
 - Formuláře seskupené pomocí `<fieldset>` / `<legend>` s `aria-required` a `role="alert"`
-- Admin sidebar s rozbalovacími sekcemi, viditelným focusem a jen pro opravdu zapnuté a povolené moduly
-- Přístupný modal dialog pro HTML content picker s `role="dialog"`, `aria-modal`, návratem fokusu, klávesou `Escape` a konkrétními názvy akcí pro čtečky
+- `autocomplete` atributy na všech relevantních polích (email, tel, name, password)
+- `focus-visible` styly na formulářích a tlačítkách
+- Confirm dialogy přes `data-confirm` + globální JS handler (kompatibilní s CSP nonce)
+- Drag & drop s klávesnicovým fallbackem (Ctrl+šipka)
+- Admin sidebar s rozbalovacími sekcemi, viditelným focusem a jen pro zapnuté moduly
+- Přístupný modal dialog pro content picker s `role="dialog"`, `aria-modal`, návratem fokusu
 - Skip link pro přeskočení na obsah
 - ARIA atributy (`aria-current`, `aria-hidden`, `aria-live`)
 - Ovladatelnost pouze klávesnicí
-- Nativní accordion (FAQ, archiv úřední desky) bez závislosti na JavaScriptu
+- Nativní accordion bez závislosti na JavaScriptu
+- Alt texty na všech obsahových obrázcích
