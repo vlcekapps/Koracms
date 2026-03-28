@@ -42,6 +42,15 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
 $slug = $uniqueSlug;
 
 if ($existingFaq) {
+    $oldStmt = $pdo->prepare("SELECT question, slug, excerpt, answer FROM cms_faqs WHERE id = ?");
+    $oldStmt->execute([$id]);
+    $oldData = $oldStmt->fetch();
+    if ($oldData) {
+        saveRevision($pdo, 'faq', $id, $oldData, [
+            'question' => $question, 'slug' => $slug, 'excerpt' => $excerpt, 'answer' => $answer,
+        ]);
+    }
+
     $pdo->prepare(
         "UPDATE cms_faqs
          SET question = ?, slug = ?, excerpt = ?, answer = ?, category_id = ?, is_published = ?, updated_at = NOW()

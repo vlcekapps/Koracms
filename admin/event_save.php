@@ -50,6 +50,15 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
 $slug = $uniqueSlug;
 
 if ($id !== null) {
+    $oldStmt = $pdo->prepare("SELECT title, slug, description, location FROM cms_events WHERE id = ?");
+    $oldStmt->execute([$id]);
+    $oldData = $oldStmt->fetch();
+    if ($oldData) {
+        saveRevision($pdo, 'event', $id, $oldData, [
+            'title' => $title, 'slug' => $slug, 'description' => $description, 'location' => $location,
+        ]);
+    }
+
     $pdo->prepare(
         "UPDATE cms_events
          SET title = ?, slug = ?, description = ?, location = ?, event_date = ?, event_end = ?, is_published = ?, updated_at = NOW()

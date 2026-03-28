@@ -109,6 +109,16 @@ if ($existingArticle) {
         $pdo->prepare("UPDATE cms_articles SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
     }
 
+    // Revize – snapshot starých hodnot
+    $oldStmt = $pdo->prepare("SELECT title, slug, perex, content FROM cms_articles WHERE id = ?");
+    $oldStmt->execute([$id]);
+    $oldData = $oldStmt->fetch();
+    if ($oldData) {
+        saveRevision($pdo, 'article', $id, $oldData, [
+            'title' => $title, 'slug' => $slug, 'perex' => $perex, 'content' => $content,
+        ]);
+    }
+
     $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, meta_title=?, meta_description=?, author_id=COALESCE(author_id, ?), updated_at=NOW()";
     $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $metaTitle, $metaDescription, currentUserId()];
     if ($imageFile !== null) {

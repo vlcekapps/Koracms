@@ -552,6 +552,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unique_visitors INT  NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_revisions (
+            id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            entity_type VARCHAR(50)  NOT NULL,
+            entity_id   INT          NOT NULL,
+            field_name  VARCHAR(100) NOT NULL,
+            old_value   LONGTEXT,
+            new_value   LONGTEXT,
+            user_id     INT          NULL DEFAULT NULL,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_entity (entity_type, entity_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Výchozí nastavení ────────────────────────────────────────────────
         $defaults = [
             'site_name'       => $siteName,

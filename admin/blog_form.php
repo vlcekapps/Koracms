@@ -46,6 +46,10 @@ if (!empty($article['publish_at'])) {
 adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 ?>
 
+<?php if ($article): ?>
+  <p><a href="revisions.php?type=article&amp;id=<?= (int)$article['id'] ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <?php if ($err === 'slug'): ?>
   <p role="alert" class="error" id="form-error">Slug článku je povinný a musí být unikátní.</p>
 <?php endif; ?>

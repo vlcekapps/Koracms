@@ -39,6 +39,10 @@ $formError = match ($err) {
 adminHeader($id ? 'Upravit otázku FAQ' : 'Nová otázka FAQ');
 ?>
 
+<?php if ($id): ?>
+  <p><a href="revisions.php?type=faq&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>

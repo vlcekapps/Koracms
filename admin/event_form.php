@@ -28,6 +28,10 @@ $formError = match ($err) {
 adminHeader($id ? 'Upravit událost' : 'Nová událost');
 ?>
 
+<?php if ($id): ?>
+  <p><a href="revisions.php?type=event&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>

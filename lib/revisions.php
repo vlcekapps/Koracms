@@ -1,0 +1,80 @@
+<?php
+// Revize obsahu – ukládá snapshoty textových polí před každou úpravou
+
+/**
+ * Uloží revizi (snapshot starého obsahu) před uložením změn.
+ *
+ * @param string $entityType  Typ entity (article, news, page, event, faq, board, download, food, place)
+ * @param int    $entityId    ID entity
+ * @param array  $oldValues   Asociativní pole [field => old_value] – ukládají se jen změněná pole
+ * @param array  $newValues   Asociativní pole [field => new_value]
+ */
+function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldValues, array $newValues): void
+{
+    $userId = (int)(currentUserId() ?? 0);
+
+    foreach ($oldValues as $field => $oldValue) {
+        $newValue = $newValues[$field] ?? '';
+        $oldStr = trim((string)$oldValue);
+        $newStr = trim((string)$newValue);
+
+        if ($oldStr === $newStr) {
+            continue;
+        }
+
+        try {
+            $pdo->prepare(
+                "INSERT INTO cms_revisions (entity_type, entity_id, field_name, old_value, new_value, user_id, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW())"
+            )->execute([$entityType, $entityId, $field, $oldStr, $newStr, $userId ?: null]);
+        } catch (\PDOException $e) {
+            error_log('saveRevision: ' . $e->getMessage());
+        }
+    }
+}
+
+/**
+ * Načte historii revizí pro danou entitu.
+ *
+ * @return array Pole revizí seřazených od nejnovější
+ */
+function loadRevisions(PDO $pdo, string $entityType, int $entityId, int $limit = 50): array
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT r.id, r.field_name, r.old_value, r.new_value, r.created_at,
+                    COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email, 'Systém') AS user_name
+             FROM cms_revisions r
+             LEFT JOIN cms_users u ON u.id = r.user_id
+             WHERE r.entity_type = ? AND r.entity_id = ?
+             ORDER BY r.created_at DESC, r.id DESC
+             LIMIT ?"
+        );
+        $stmt->execute([$entityType, $entityId, $limit]);
+        return $stmt->fetchAll();
+    } catch (\PDOException $e) {
+        error_log('loadRevisions: ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Vrátí český label pro název pole revize.
+ */
+function revisionFieldLabel(string $entityType, string $fieldName): string
+{
+    $labels = [
+        'title'       => 'Název',
+        'question'    => 'Otázka',
+        'name'        => 'Název',
+        'content'     => 'Obsah',
+        'perex'       => 'Perex',
+        'excerpt'     => 'Shrnutí',
+        'answer'      => 'Odpověď',
+        'description' => 'Popis',
+        'slug'        => 'Slug (URL)',
+        'location'    => 'Místo konání',
+    ];
+
+    return $labels[$fieldName] ?? $fieldName;
+}

@@ -27,6 +27,15 @@ if ($uniqueSlug !== $slug) {
 }
 
 if ($id !== null) {
+    $oldStmt = $pdo->prepare("SELECT title, slug, content FROM cms_pages WHERE id = ?");
+    $oldStmt->execute([$id]);
+    $oldData = $oldStmt->fetch();
+    if ($oldData) {
+        saveRevision($pdo, 'page', $id, $oldData, [
+            'title' => $title, 'slug' => $slug, 'content' => $content,
+        ]);
+    }
+
     $pdo->prepare(
         "UPDATE cms_pages
          SET title = ?, slug = ?, content = ?, is_published = ?, show_in_nav = ?

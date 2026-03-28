@@ -35,6 +35,10 @@ $publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['s
 adminHeader($pageTitle);
 ?>
 
+<?php if ($id): ?>
+  <p><a href="revisions.php?type=page&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <?php if ($err === 'required'): ?>
   <p role="alert" class="error" id="form-error">Název stránky je povinný.</p>
 <?php elseif ($err === 'slug'): ?>

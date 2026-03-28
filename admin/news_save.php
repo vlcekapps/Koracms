@@ -44,6 +44,15 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
 $slug = $uniqueSlug;
 
 if ($existingItem) {
+    $oldStmt = $pdo->prepare("SELECT title, slug, content FROM cms_news WHERE id = ?");
+    $oldStmt->execute([$id]);
+    $oldData = $oldStmt->fetch();
+    if ($oldData) {
+        saveRevision($pdo, 'news', $id, $oldData, [
+            'title' => $title, 'slug' => $slug, 'content' => $content,
+        ]);
+    }
+
     if (canManageOwnNewsOnly()) {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
