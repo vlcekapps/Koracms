@@ -238,6 +238,7 @@ function adminHeader(string $pageTitle): void
         $settingsItems[] = ['url' => $baseUrl . '/admin/wp_import.php', 'label' => 'Import z WordPressu'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/estranky_import.php', 'label' => 'Import z eStránek'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/estranky_download_photos.php', 'label' => 'Stažení fotek z eStránek'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/integrity.php', 'label' => 'Kontrola integrity'];
     }
 
     $bottomItems = [

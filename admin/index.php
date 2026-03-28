@@ -465,6 +465,35 @@ if ($showContentSecondaryBlocks && $canManageBlog && isModuleEnabled('blog')) {
     }
 }
 
+// Kontrola integrity souborů (jen pro superadmina)
+$integrityWarning = false;
+if (isSuperAdmin()) {
+    $snapshotFile = dirname(__DIR__) . '/.integrity_snapshot.json';
+    if (is_file($snapshotFile)) {
+        $snapshot = json_decode(file_get_contents($snapshotFile), true);
+        if ($snapshot !== null && !empty($snapshot['files'])) {
+            $savedHashes = $snapshot['files'];
+            foreach ($savedHashes as $path => $hash) {
+                $fullPath = dirname(__DIR__) . '/' . $path;
+                if (!is_file($fullPath) || hash_file('sha256', $fullPath) !== $hash) {
+                    $integrityWarning = true;
+                    break;
+                }
+            }
+            // Rychlá kontrola nových PHP souborů v kořeni
+            if (!$integrityWarning) {
+                foreach (glob(dirname(__DIR__) . '/*.php') as $f) {
+                    $rel = basename($f);
+                    if (!isset($savedHashes[$rel])) {
+                        $integrityWarning = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
 adminHeader('Přehled');
 ?>
 
@@ -472,6 +501,14 @@ adminHeader('Přehled');
   Jste přihlášen jako <strong><?= h($accountName) ?></strong>.
   Role vašeho účtu: <strong><?= h($accountLabel) ?></strong>.
 </p>
+
+<?php if ($integrityWarning): ?>
+<section style="background:#fff0f0;border:2px solid #c62828;padding:1rem;margin:1rem 0;border-radius:8px" role="alert" aria-labelledby="integrity-warning-heading">
+  <h2 id="integrity-warning-heading" style="margin-top:0;color:#c62828">⚠ Změna integrity souborů</h2>
+  <p>Od posledního snapshotu byly detekovány změny v PHP souborech. To může být způsobeno legitimním nasazením nové verze, nebo neautorizovaným přístupem.</p>
+  <p><a href="integrity.php?action=check" class="btn" style="background:#c62828;color:#fff">Zkontrolovat integritu</a></p>
+</section>
+<?php endif; ?>
 
 <?php if ($pendingReviewItems !== []): ?>
 <section style="background:#fffbe6;border:1px solid #d7b600;padding:1rem;margin:1rem 0" aria-labelledby="pending-attention-heading">

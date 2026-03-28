@@ -5,6 +5,9 @@ aconfig.php
 # Uživatelsky nahraná média
 uploads/
 
+# Integrity snapshot (specifický pro instalaci)
+.integrity_snapshot.json
+
 # Vygenerované release zipy
 dist/
 
