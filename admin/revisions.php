@@ -32,6 +32,49 @@ if (!$entity) {
 
 $revisions = loadRevisions($pdo, $entityType, $entityId);
 
+/**
+ * Jednoduchý inline diff – zvýrazní přidané/odebrané věty.
+ */
+function simpleDiff(string $old, string $new): string
+{
+    if ($old === $new) {
+        return h($new);
+    }
+    $oldWords = preg_split('/(\s+)/', $old, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $newWords = preg_split('/(\s+)/', $new, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    $maxLen = max(count($oldWords), count($newWords));
+    $out = '';
+    $oi = 0;
+    $ni = 0;
+
+    while ($oi < count($oldWords) || $ni < count($newWords)) {
+        $ow = $oldWords[$oi] ?? '';
+        $nw = $newWords[$ni] ?? '';
+
+        if ($ow === $nw) {
+            $out .= h($nw);
+            $oi++;
+            $ni++;
+        } elseif ($oi < count($oldWords) && !in_array($ow, array_slice($newWords, $ni, 10), true)) {
+            $out .= '<del style="background:#fdd;text-decoration:line-through">' . h($ow) . '</del>';
+            $oi++;
+        } elseif ($ni < count($newWords)) {
+            $out .= '<ins style="background:#dfd;text-decoration:none">' . h($nw) . '</ins>';
+            $ni++;
+        } else {
+            $oi++;
+            $ni++;
+        }
+
+        if ($oi > 500 || $ni > 500) {
+            $out .= '…';
+            break;
+        }
+    }
+    return $out;
+}
+
 adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'], 0, 60));
 ?>
 
@@ -54,8 +97,7 @@ adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'],
         <th scope="col">Datum</th>
         <th scope="col">Uživatel</th>
         <th scope="col">Pole</th>
-        <th scope="col">Stará hodnota</th>
-        <th scope="col">Nová hodnota</th>
+        <th scope="col">Změny</th>
       </tr>
     </thead>
     <tbody>
@@ -64,20 +106,17 @@ adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'],
         <td><time datetime="<?= h(str_replace(' ', 'T', (string)$rev['created_at'])) ?>"><?= h(formatCzechDate((string)$rev['created_at'])) ?></time></td>
         <td><?= h((string)$rev['user_name']) ?></td>
         <td><?= h(revisionFieldLabel($entityType, (string)$rev['field_name'])) ?></td>
-        <td>
-          <?php $old = (string)$rev['old_value']; ?>
-          <?php if (mb_strlen($old) > 200): ?>
-            <details><summary><?= h(mb_substr($old, 0, 100)) ?>…</summary><pre style="white-space:pre-wrap;max-width:400px"><?= h($old) ?></pre></details>
+        <td style="max-width:600px;word-break:break-word">
+          <?php
+            $old = (string)$rev['old_value'];
+            $new = (string)$rev['new_value'];
+            if (mb_strlen($old) > 500 || mb_strlen($new) > 500): ?>
+            <details>
+              <summary>Zobrazit diff (<?= mb_strlen($old) ?> → <?= mb_strlen($new) ?> znaků)</summary>
+              <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5;margin-top:.5rem"><?= simpleDiff($old, $new) ?></div>
+            </details>
           <?php else: ?>
-            <?= h($old !== '' ? $old : '(prázdné)') ?>
-          <?php endif; ?>
-        </td>
-        <td>
-          <?php $new = (string)$rev['new_value']; ?>
-          <?php if (mb_strlen($new) > 200): ?>
-            <details><summary><?= h(mb_substr($new, 0, 100)) ?>…</summary><pre style="white-space:pre-wrap;max-width:400px"><?= h($new) ?></pre></details>
-          <?php else: ?>
-            <?= h($new !== '' ? $new : '(prázdné)') ?>
+            <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5"><?= simpleDiff($old, $new) ?></div>
           <?php endif; ?>
         </td>
       </tr>
