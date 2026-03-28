@@ -83,10 +83,13 @@ adminHeader('Ke stažení');
     <?php endif; ?>
   </p>
 <?php else: ?>
+  <?= bulkFormOpen('downloads', 'downloads.php') ?>
+  <?= bulkActionBar() ?>
   <table>
     <caption>Přehled položek ke stažení</caption>
     <thead>
       <tr>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
         <th scope="col">Položka</th>
         <th scope="col">Typ a metadata</th>
         <th scope="col">Zdroj</th>
@@ -98,6 +101,7 @@ adminHeader('Ke stažení');
     <tbody>
     <?php foreach ($items as $download): ?>
       <tr>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$download['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$download['title']) ?>"></td>
         <td>
           <strong><?= h((string)$download['title']) ?></strong><br>
           <small style="color:#555">/downloads/<?= h((string)$download['slug']) ?></small>
@@ -171,6 +175,8 @@ adminHeader('Ke stažení');
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?= bulkFormClose() ?>
+  <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 
 

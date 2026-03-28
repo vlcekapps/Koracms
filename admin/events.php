@@ -74,10 +74,13 @@ adminHeader('Události');
     <?php endif; ?>
   </p>
 <?php else: ?>
+  <?= bulkFormOpen('events', 'events.php') ?>
+  <?= bulkActionBar() ?>
   <table>
     <caption>Přehled událostí</caption>
     <thead>
       <tr>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
         <th scope="col">Název</th>
         <th scope="col">Datum konání</th>
         <th scope="col">Místo</th>
@@ -88,6 +91,7 @@ adminHeader('Události');
     <tbody>
     <?php foreach ($events as $event): ?>
       <tr>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$event['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$event['title']) ?>"></td>
         <td>
           <strong><?= h((string)$event['title']) ?></strong><br>
           <small style="color:#555">/events/<?= h((string)($event['slug'] ?? '')) ?></small>
@@ -128,8 +132,8 @@ adminHeader('Události');
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?= bulkFormClose() ?>
+  <?= bulkCheckboxJs() ?>
 <?php endif; ?>
-
-
 
 <?php adminFooter(); ?>

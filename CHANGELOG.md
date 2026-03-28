@@ -17,6 +17,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **FULLTEXT vyhledávání** – 10 FULLTEXT indexů na klíčových tabulkách (články, novinky, stránky, akce, FAQ, vývěska, ke stažení, místa, ankety, jídelníčky); `search.php` využívá `MATCH … AGAINST` s relevančním řazením a automatickým LIKE fallbackem pro krátké dotazy nebo chybějící indexy
 - **Dashboard widget „Naplánovaný obsah"** – admin dashboard zobrazuje články s `publish_at` v budoucnu; tabulka s názvem, datem publikace a odkazem na editaci
 - **Tlačítko „Kopírovat odkaz"** – na detailových stránkách článků, novinek, událostí, vývěsky a míst; clipboard API s a11y feedbackem přes live region
+- **Hromadné akce v admin výpisech** – generický `admin/bulk.php` handler s akcemi smazat / publikovat / skrýt; checkboxy a bulk action bar nasazeny na novinky, události, FAQ, vývěsku, ke stažení, místa, ankety a jídelníčky; UI helpery `bulkFormOpen()`, `bulkActionBar()`, `bulkCheckboxJs()` v `lib/ui.php`
 - **Globální exception handler** (`db.php`) – neošetřené výjimky nyní zobrazí uživatelsky přívětivou chybovou stránku místo bílé obrazovky; v debug režimu (`display_errors=1`) zobrazí i stack trace
 - **Runtime audit** – nové sekce `smtp_connectivity` (ověří SMTP připojení, STARTTLS, AUTH LOGIN) a `sendmail_return_check` (hlídá, že žádné volání `sendMail()` neignoruje návratovou hodnotu)
 

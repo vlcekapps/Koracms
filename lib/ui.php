@@ -233,3 +233,63 @@ function logAction(string $action, string $detail = ''): void
         // Tabulka ještě neexistuje
     }
 }
+
+/**
+ * Vrátí HTML pro bulk action bar – obalující form, checkboxy a tlačítka.
+ * Použití: echo bulkFormOpen('news', 'news.php');
+ */
+function bulkFormOpen(string $module, string $redirectPage): string
+{
+    $redirect = BASE_URL . '/admin/' . $redirectPage;
+    return '<form method="post" action="' . BASE_URL . '/admin/bulk.php" id="bulk-form">'
+         . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
+         . '<input type="hidden" name="module" value="' . h($module) . '">'
+         . '<input type="hidden" name="redirect" value="' . h($redirect) . '">';
+}
+
+function bulkFormClose(): string
+{
+    return '</form>';
+}
+
+/**
+ * Vrátí HTML pro bulk action bar s tlačítky (smazat, publikovat, skrýt).
+ * Umístí se nad tabulku.
+ */
+function bulkActionBar(bool $showPublish = true): string
+{
+    $out = '<div class="bulk-bar" style="margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap" hidden>';
+    $out .= '<span class="bulk-bar__count" aria-live="polite"></span>';
+    $out .= '<select name="action" aria-label="Hromadná akce" required>';
+    $out .= '<option value="">-- Vyberte akci --</option>';
+    $out .= '<option value="delete">Smazat vybrané</option>';
+    if ($showPublish) {
+        $out .= '<option value="publish">Publikovat vybrané</option>';
+        $out .= '<option value="hide">Skrýt vybrané</option>';
+    }
+    $out .= '</select>';
+    $out .= '<button type="submit" class="btn" onclick="return confirm(\'Opravdu provést hromadnou akci?\')">Provést</button>';
+    $out .= '</div>';
+    return $out;
+}
+
+/**
+ * Vrátí JS pro select-all checkbox a zobrazení bulk baru.
+ * Volat jednou na konci admin stránky (v adminFooter).
+ */
+function bulkCheckboxJs(): string
+{
+    $nonce = cspNonce();
+    return '<script nonce="' . $nonce . '">'
+        . '(function(){'
+        . 'var f=document.getElementById("bulk-form");if(!f)return;'
+        . 'var bar=f.querySelector(".bulk-bar"),cnt=bar?bar.querySelector(".bulk-bar__count"):null;'
+        . 'var sa=f.querySelector(".bulk-select-all"),cbs=f.querySelectorAll(".bulk-checkbox");'
+        . 'function u(){var c=f.querySelectorAll(".bulk-checkbox:checked").length;'
+        . 'if(bar)bar.hidden=c===0;if(cnt)cnt.textContent="Vybráno: "+c;'
+        . 'if(sa)sa.checked=c===cbs.length&&c>0;}'
+        . 'if(sa)sa.addEventListener("change",function(){cbs.forEach(function(cb){cb.checked=sa.checked;});u();});'
+        . 'cbs.forEach(function(cb){cb.addEventListener("change",u);});'
+        . '})();'
+        . '</script>';
+}

@@ -84,10 +84,13 @@ adminHeader('FAQ');
     <?php endif; ?>
   </p>
 <?php else: ?>
+  <?= bulkFormOpen('faq', 'faq.php') ?>
+  <?= bulkActionBar() ?>
   <table>
     <caption>Přehled otázek FAQ</caption>
     <thead>
       <tr>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
         <th scope="col">Otázka</th>
         <th scope="col">Kategorie</th>
         <th scope="col">Stav</th>
@@ -97,6 +100,7 @@ adminHeader('FAQ');
     <tbody>
     <?php foreach ($faqs as $faq): ?>
       <tr<?= $faq['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$faq['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$faq['question']) ?>"></td>
         <td>
           <strong><?= h((string)$faq['question']) ?></strong><br>
           <small style="color:#555">/faq/<?= h((string)$faq['slug']) ?></small>
@@ -139,7 +143,8 @@ adminHeader('FAQ');
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?= bulkFormClose() ?>
+  <?= bulkCheckboxJs() ?>
 <?php endif; ?>
-
 
 <?php adminFooter(); ?>
