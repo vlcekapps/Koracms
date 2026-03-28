@@ -67,6 +67,7 @@ $tables = [
         slug        VARCHAR(100) NOT NULL UNIQUE,
         description TEXT,
         sort_order  INT          NOT NULL DEFAULT 0,
+        show_in_nav TINYINT(1)   NOT NULL DEFAULT 1,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -740,6 +741,8 @@ $addColumns = [
     'cms_gallery_photos.is_published' => "ALTER TABLE cms_gallery_photos ADD COLUMN is_published TINYINT(1) NOT NULL DEFAULT 1",
     // cms_food_cards
     'cms_food_cards.slug'            => "ALTER TABLE cms_food_cards ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
+    // cms_blogs
+    'cms_blogs.show_in_nav'          => "ALTER TABLE cms_blogs ADD COLUMN show_in_nav TINYINT(1) NOT NULL DEFAULT 1",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_board

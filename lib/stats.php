@@ -241,6 +241,7 @@ function siteNav(string $current = ''): string
                 if ($mKey === 'blog') {
                     // V unified režimu se blog zobrazuje jako jednotlivé blogy
                     foreach (getAllBlogs() as $blogEntry) {
+                        if (!(int)($blogEntry['show_in_nav'] ?? 1)) continue;
                         $blogHref = blogIndexPath($blogEntry);
                         $blogNavKey = 'blog:' . $blogEntry['slug'];
                         $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
@@ -258,7 +259,7 @@ function siteNav(string $current = ''): string
             } elseif (str_starts_with($entry, 'blog:')) {
                 $blogId = (int)substr($entry, 5);
                 $blogEntry = getBlogById($blogId);
-                if ($blogEntry && isModuleEnabled('blog')) {
+                if ($blogEntry && isModuleEnabled('blog') && (int)($blogEntry['show_in_nav'] ?? 1)) {
                     $blogHref = blogIndexPath($blogEntry);
                     $blogNavKey = 'blog:' . $blogEntry['slug'];
                     $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
@@ -283,8 +284,13 @@ function siteNav(string $current = ''): string
         $moduleMap = navModuleDefaults();
         foreach (navModuleOrder() as $key) {
             if (!isModuleEnabled($key) || !isset($moduleMap[$key])) continue;
+            if ($key === 'blog') {
+                $visibleBlogs = array_filter(getAllBlogs(), fn($b) => (int)($b['show_in_nav'] ?? 1));
+                if (count($visibleBlogs) === 0) continue;
+            }
             if ($key === 'blog' && isMultiBlog()) {
                 foreach (getAllBlogs() as $blogEntry) {
+                    if (!(int)($blogEntry['show_in_nav'] ?? 1)) continue;
                     $blogHref = blogIndexPath($blogEntry);
                     $blogNavKey = 'blog:' . $blogEntry['slug'];
                     $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";

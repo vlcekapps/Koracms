@@ -488,17 +488,14 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
         }
 
         $episodeStmt = $pdo->prepare(
-            "SELECT e.id, e.title, e.slug, e.description, e.audio_file, e.audio_url, e.published_at AS created_at,
+            "SELECT e.id, e.title, e.slug, e.description, e.audio_file, e.audio_url, e.created_at,
                     s.slug AS show_slug, s.title AS show_title,
                     'podcast_episode' AS type
-             FROM cms_podcast_episodes e
+             FROM cms_podcasts e
              INNER JOIN cms_podcast_shows s ON s.id = e.show_id
              WHERE e.status = 'published'
-               AND e.is_published = 1
-               AND s.status = 'published'
-               AND s.is_published = 1
                AND (e.title LIKE ? OR e.description LIKE ? OR e.slug LIKE ? OR s.title LIKE ?)
-             ORDER BY e.published_at DESC
+             ORDER BY e.created_at DESC
              LIMIT 6"
         );
         $episodeStmt->execute([$like, $like, $like, $like]);

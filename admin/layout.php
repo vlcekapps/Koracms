@@ -100,8 +100,8 @@ function adminHeader(string $pageTitle): void
         if ($blogItems !== []) {
             $contentItems[] = [
                 'type' => 'details',
-                'label' => 'Blog',
-                'label_plain' => 'Blog',
+                'label' => 'Blogy',
+                'label_plain' => 'Blogy',
                 'items' => $blogItems,
             ];
         }

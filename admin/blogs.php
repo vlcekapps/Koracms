@@ -8,10 +8,11 @@ $error   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $name     = trim($_POST['name'] ?? '');
-    $slug     = slugify(trim($_POST['slug'] ?? ''));
-    $desc     = trim($_POST['description'] ?? '');
-    $updateId = inputInt('post', 'update_id');
+    $name      = trim($_POST['name'] ?? '');
+    $slug      = slugify(trim($_POST['slug'] ?? ''));
+    $desc      = trim($_POST['description'] ?? '');
+    $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
+    $updateId  = inputInt('post', 'update_id');
 
     if ($name === '') {
         $error = 'Název blogu je povinný.';
@@ -23,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Slug „' . h($slug) . '" koliduje s existujícím adresářem na serveru.';
     } elseif ($updateId !== null) {
         try {
-            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ? WHERE id = ?")
-                ->execute([$name, $slug, $desc, $updateId]);
+            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, show_in_nav = ? WHERE id = ?")
+                ->execute([$name, $slug, $desc, $showInNav, $updateId]);
             $success = 'Blog upraven.';
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
@@ -32,8 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $sortOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn();
         try {
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order) VALUES (?, ?, ?, ?)")
-                ->execute([$name, $slug, $desc, $sortOrder]);
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order, show_in_nav) VALUES (?, ?, ?, ?, ?)")
+                ->execute([$name, $slug, $desc, $sortOrder, $showInNav]);
             $success = 'Blog vytvořen.';
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
@@ -71,6 +72,10 @@ adminHeader('Správa blogů');
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="2"></textarea>
 
+    <div style="margin-top:.5rem">
+      <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
+    </div>
+
     <button type="submit" class="btn" style="margin-top:.5rem">Přidat blog</button>
   </fieldset>
 </form>
@@ -94,6 +99,9 @@ adminHeader('Správa blogů');
       <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" style="cursor:grab">
         <td>
           <?= h((string)$blog['name']) ?>
+          <?php if (!(int)($blog['show_in_nav'] ?? 1)): ?>
+            <small class="field-help">(mimo navigaci)</small>
+          <?php endif; ?>
           <?php if ((string)($blog['description'] ?? '') !== ''): ?>
             <br><small class="field-help"><?= h((string)$blog['description']) ?></small>
           <?php endif; ?>
@@ -106,7 +114,8 @@ adminHeader('Správa blogů');
                   data-blog-id="<?= (int)$blog['id'] ?>"
                   data-blog-name="<?= h((string)$blog['name']) ?>"
                   data-blog-slug="<?= h((string)$blog['slug']) ?>"
-                  data-blog-desc="<?= h((string)($blog['description'] ?? '')) ?>">Upravit</button>
+                  data-blog-desc="<?= h((string)($blog['description'] ?? '')) ?>"
+                  data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>">Upravit</button>
           <form action="blog_blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
@@ -150,6 +159,10 @@ adminHeader('Správa blogů');
     <label for="bd-desc">Popis</label>
     <textarea id="bd-desc" name="description" rows="2"></textarea>
 
+    <div style="margin-top:.5rem">
+      <label><input type="checkbox" name="show_in_nav" value="1" id="bd-nav"> Zobrazit v navigaci webu</label>
+    </div>
+
     <div class="button-row" style="margin-top:1rem">
       <button type="submit" class="btn">Uložit</button>
       <button type="button" id="blog-dialog-cancel" class="btn">Zrušit</button>
@@ -171,6 +184,7 @@ adminHeader('Správa blogů');
         document.getElementById('bd-name').value = btn.dataset.blogName;
         document.getElementById('bd-slug').value = btn.dataset.blogSlug;
         document.getElementById('bd-desc').value = btn.dataset.blogDesc;
+        document.getElementById('bd-nav').checked = btn.dataset.blogNav === '1';
         overlay.style.display = '';
         dialog.style.display = '';
         document.getElementById('bd-name').focus();

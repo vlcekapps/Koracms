@@ -70,7 +70,7 @@ if ($cat !== '') { $filterParams['cat'] = $cat; }
 if ($blogFilter !== '') { $filterParams['blog'] = $blogFilter; }
 $currentRedirect = BASE_URL . '/admin/blog.php' . ($filterParams !== [] ? '?' . http_build_query($filterParams) : '');
 
-adminHeader('Blog');
+adminHeader('Blogy');
 ?>
 
 <p>

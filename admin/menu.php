@@ -17,12 +17,13 @@ foreach (array_keys($moduleMap) as $mKey) {
     if ($mKey === 'blog') {
         // Multiblog: každý blog jako samostatná položka
         foreach (getAllBlogs() as $blogEntry) {
+            $blogNav = (int)($blogEntry['show_in_nav'] ?? 1);
             $navItems[] = [
                 'key' => 'blog:' . (int)$blogEntry['id'],
                 'type' => 'blog',
                 'label' => (string)$blogEntry['name'],
-                'sublabel' => 'Blog',
-                'enabled' => isModuleEnabled('blog'),
+                'sublabel' => 'Blog' . (!$blogNav ? ' · mimo navigaci' : ''),
+                'enabled' => isModuleEnabled('blog') && $blogNav,
             ];
         }
     } else {
