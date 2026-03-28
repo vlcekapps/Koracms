@@ -215,38 +215,84 @@ function siteNav(string $current = ''): string
     $nav  = '<nav aria-label="Hlavní navigace"><ul>' . "\n";
     $nav .= $li('/index.php', 'Domů', 'home');
 
-    // Statické stránky zobrazované v navigaci (za Domů, před moduly)
-    try {
-        $pages = db_connect()->query(
-            "SELECT title, slug FROM cms_pages
-             WHERE show_in_nav = 1 AND is_published = 1
-             ORDER BY nav_order, title"
-        )->fetchAll();
-        foreach ($pages as $p) {
-            $nav .= '<li><a href="' . pagePublicPath($p) . '"'
-                   . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '')
-                   . '>' . h($p['title']) . '</a></li>' . "\n";
-        }
-    } catch (\PDOException $e) {
-        // Tabulka cms_pages ještě neexistuje
-    }
+    $unifiedOrder = getSetting('nav_order_unified', '');
 
-    $moduleMap = navModuleDefaults();
-    foreach (navModuleOrder() as $key) {
-        if (!isModuleEnabled($key) || !isset($moduleMap[$key])) {
-            continue;
-        }
-        if ($key === 'blog' && isMultiBlog()) {
-            foreach (getAllBlogs() as $blogEntry) {
-                $blogHref = blogIndexPath($blogEntry);
-                $blogNavKey = 'blog:' . $blogEntry['slug'];
-                $nav .= '<li><a href="' . h($blogHref) . '"'
-                       . ($current === $blogNavKey ? ' aria-current="page"' : '')
-                       . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+    if ($unifiedOrder !== '') {
+        // Unified navigace – stránky, moduly a blogy dohromady
+        $moduleMap = navModuleDefaults();
+        $pagesMap = [];
+        try {
+            $pageRows = db_connect()->query(
+                "SELECT id, title, slug FROM cms_pages
+                 WHERE show_in_nav = 1 AND is_published = 1 AND COALESCE(status,'published') = 'published' AND deleted_at IS NULL"
+            )->fetchAll();
+            foreach ($pageRows as $p) {
+                $pagesMap[(int)$p['id']] = $p;
             }
-        } else {
-            [$href, $label] = $moduleMap[$key];
-            $nav .= $li($href, $label, $key);
+        } catch (\PDOException $e) {}
+
+        foreach (explode(',', $unifiedOrder) as $entry) {
+            $entry = trim($entry);
+            if ($entry === '') continue;
+
+            if (str_starts_with($entry, 'module:')) {
+                $mKey = substr($entry, 7);
+                if (!isModuleEnabled($mKey) || !isset($moduleMap[$mKey])) continue;
+                if ($mKey === 'blog') {
+                    // V unified režimu se blog zobrazuje jako jednotlivé blogy
+                    foreach (getAllBlogs() as $blogEntry) {
+                        $blogHref = blogIndexPath($blogEntry);
+                        $blogNavKey = 'blog:' . $blogEntry['slug'];
+                        $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+                    }
+                } else {
+                    [$href, $label] = $moduleMap[$mKey];
+                    $nav .= $li($href, $label, $mKey);
+                }
+            } elseif (str_starts_with($entry, 'page:')) {
+                $pageId = (int)substr($entry, 5);
+                if (isset($pagesMap[$pageId])) {
+                    $p = $pagesMap[$pageId];
+                    $nav .= '<li><a href="' . pagePublicPath($p) . '"' . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '') . '>' . h($p['title']) . '</a></li>' . "\n";
+                }
+            } elseif (str_starts_with($entry, 'blog:')) {
+                $blogId = (int)substr($entry, 5);
+                $blogEntry = getBlogById($blogId);
+                if ($blogEntry && isModuleEnabled('blog')) {
+                    $blogHref = blogIndexPath($blogEntry);
+                    $blogNavKey = 'blog:' . $blogEntry['slug'];
+                    $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+                }
+            }
+        }
+    } else {
+        // Fallback: starý systém (stránky, pak moduly)
+        try {
+            $pages = db_connect()->query(
+                "SELECT title, slug FROM cms_pages
+                 WHERE show_in_nav = 1 AND is_published = 1
+                 ORDER BY nav_order, title"
+            )->fetchAll();
+            foreach ($pages as $p) {
+                $nav .= '<li><a href="' . pagePublicPath($p) . '"'
+                       . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '')
+                       . '>' . h($p['title']) . '</a></li>' . "\n";
+            }
+        } catch (\PDOException $e) {}
+
+        $moduleMap = navModuleDefaults();
+        foreach (navModuleOrder() as $key) {
+            if (!isModuleEnabled($key) || !isset($moduleMap[$key])) continue;
+            if ($key === 'blog' && isMultiBlog()) {
+                foreach (getAllBlogs() as $blogEntry) {
+                    $blogHref = blogIndexPath($blogEntry);
+                    $blogNavKey = 'blog:' . $blogEntry['slug'];
+                    $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+                }
+            } else {
+                [$href, $label] = $moduleMap[$key];
+                $nav .= $li($href, $label, $key);
+            }
         }
     }
 

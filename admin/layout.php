@@ -225,7 +225,7 @@ function adminHeader(string $pageTitle): void
     if (currentUserHasCapability('settings_manage')) {
         $settingsItems[] = ['url' => $baseUrl . '/admin/settings.php', 'label' => 'Obecná nastavení'];
         $settingsItems[] = ['url' => $baseUrl . '/admin/settings_modules.php', 'label' => 'Správa modulů'];
-        $settingsItems[] = ['url' => $baseUrl . '/admin/settings_display.php', 'label' => 'Pozice modulů'];
+        $settingsItems[] = ['url' => $baseUrl . '/admin/menu.php', 'label' => 'Navigace webu'];
     }
     if (isSuperAdmin()) {
         $settingsItems[] = ['url' => $baseUrl . '/admin/themes.php', 'label' => 'Vzhled a šablony'];
