@@ -138,6 +138,30 @@ $moduleConfig = match ($module) {
         'log_prefix' => 'food',
         'cleanup'    => null,
     ],
+    'gallery_albums' => [
+        'table'      => 'cms_gallery_albums',
+        'capability' => 'content_manage_shared',
+        'own_column' => null,
+        'own_check'  => null,
+        'log_prefix' => 'gallery_album',
+        'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
+            $dir = dirname(__DIR__) . '/uploads/gallery/';
+            $thumbDir = $dir . 'thumbs/';
+            foreach ($deleteIds as $id) {
+                // Smazat fotografie alba
+                $photos = $pdo->prepare("SELECT id, filename FROM cms_gallery_photos WHERE album_id = ?");
+                $photos->execute([$id]);
+                foreach ($photos->fetchAll() as $photo) {
+                    $f = (string)$photo['filename'];
+                    if ($f !== '' && is_file($dir . $f)) { @unlink($dir . $f); }
+                    if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
+                }
+                $pdo->prepare("DELETE FROM cms_gallery_photos WHERE album_id = ?")->execute([$id]);
+                // Odpojit podřazená alba (nastavit parent_id = NULL)
+                $pdo->prepare("UPDATE cms_gallery_albums SET parent_id = NULL WHERE parent_id = ?")->execute([$id]);
+            }
+        },
+    ],
     'blog_categories' => [
         'table'      => 'cms_categories',
         'capability' => 'blog_manage_all',

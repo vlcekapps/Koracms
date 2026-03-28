@@ -58,10 +58,13 @@ adminHeader('Alba galerie');
     <?php endif; ?>
   </p>
 <?php else: ?>
+  <?= bulkFormOpen('gallery_albums', 'gallery_albums.php') ?>
+  <?= bulkActionBar(false) ?>
   <table>
     <caption>Přehled alb</caption>
     <thead>
       <tr>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
         <th scope="col">Název</th>
         <th scope="col">Nadřazené album</th>
         <th scope="col">Fotek</th>
@@ -72,6 +75,7 @@ adminHeader('Alba galerie');
     <tbody>
       <?php foreach ($albums as $album): ?>
         <tr>
+          <td><input type="checkbox" name="ids[]" value="<?= (int)$album['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$album['name']) ?>"></td>
           <td>
             <?= $album['parent_id'] ? '— ' : '' ?><strong><?= h($album['name']) ?></strong><br>
             <small style="color:#555"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>
@@ -97,8 +101,8 @@ adminHeader('Alba galerie');
       <?php endforeach; ?>
     </tbody>
   </table>
+  <?= bulkFormClose() ?>
+  <?= bulkCheckboxJs() ?>
 <?php endif; ?>
-
-
 
 <?php adminFooter(); ?>
