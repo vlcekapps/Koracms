@@ -48,6 +48,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         }
     }
 
+    // Kontrola: existují záznamy fotek v DB?
+    $dbPhotoCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_gallery_photos")->fetchColumn();
+    if ($dbPhotoCount === 0) {
+        $_SESSION['import_log'] = [
+            '<span aria-hidden="true">⚠</span> V databázi nejsou žádné záznamy fotografií.',
+            'Nejprve spusťte <a href="estranky_import.php">Import z eStránek</a>, který vytvoří alba a záznamy fotek. Pak se vraťte sem a stáhněte soubory.',
+        ];
+        header('Location: estranky_download_photos.php');
+        exit;
+    }
+
     // Uložit do session pro dávkové zpracování
     $_SESSION['photo_dl'] = [
         'photos' => $photoList,
