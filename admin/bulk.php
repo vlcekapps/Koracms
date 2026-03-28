@@ -138,6 +138,17 @@ $moduleConfig = match ($module) {
         'log_prefix' => 'food',
         'cleanup'    => null,
     ],
+    'blog_categories' => [
+        'table'      => 'cms_categories',
+        'capability' => 'blog_manage_all',
+        'own_column' => null,
+        'own_check'  => null,
+        'log_prefix' => 'blog_category',
+        'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
+            $ph = implode(',', array_fill(0, count($deleteIds), '?'));
+            $pdo->prepare("UPDATE cms_articles SET category_id = NULL WHERE category_id IN ({$ph})")->execute($deleteIds);
+        },
+    ],
     default => null,
 };
 
