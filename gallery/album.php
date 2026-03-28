@@ -63,6 +63,8 @@ $subAlbumsStmt = $pdo->prepare(
             (SELECT COUNT(*) FROM cms_gallery_albums s WHERE s.parent_id = a.id) AS sub_count
      FROM cms_gallery_albums a
      WHERE a.parent_id = ?
+       AND COALESCE(a.status, 'published') = 'published'
+       AND COALESCE(a.is_published, 1) = 1
      ORDER BY a.name"
 );
 $subAlbumsStmt->execute([(int)$album['id']]);
@@ -72,6 +74,8 @@ $photosStmt = $pdo->prepare(
     "SELECT id, filename, title, slug
      FROM cms_gallery_photos
      WHERE album_id = ?
+       AND COALESCE(status, 'published') = 'published'
+       AND COALESCE(is_published, 1) = 1
      ORDER BY sort_order, id"
 );
 $photosStmt->execute([(int)$album['id']]);

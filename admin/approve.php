@@ -18,6 +18,8 @@ $moduleConfig = [
     'downloads' => ['table' => 'cms_downloads', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'food' => ['table' => 'cms_food_cards', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'board' => ['table' => 'cms_board', 'has_published' => true, 'capability' => 'content_approve_shared'],
+    'gallery_albums' => ['table' => 'cms_gallery_albums', 'has_published' => true, 'capability' => 'content_approve_shared'],
+    'gallery_photos' => ['table' => 'cms_gallery_photos', 'has_published' => true, 'capability' => 'content_approve_shared'],
 ];
 
 if ($id !== null && isset($moduleConfig[$module])) {

@@ -86,20 +86,24 @@ if ($coverId !== null && $id !== null) {
     }
 }
 
+$isPublished = isset($_POST['is_published']) ? 1 : 0;
+
 if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_gallery_albums
-         SET name = ?, slug = ?, description = ?, parent_id = ?, cover_photo_id = ?, updated_at = NOW()
+         SET name = ?, slug = ?, description = ?, parent_id = ?, cover_photo_id = ?, is_published = ?, updated_at = NOW()
          WHERE id = ?"
-    )->execute([$name, $resolvedSlug, $description, $parentId, $coverPhotoId, $id]);
+    )->execute([$name, $resolvedSlug, $description, $parentId, $coverPhotoId, $isPublished, $id]);
     logAction('gallery_album_edit', 'id=' . $id);
 } else {
+    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
-        "INSERT INTO cms_gallery_albums (name, slug, description, parent_id, cover_photo_id)
-         VALUES (?, ?, ?, ?, ?)"
-    )->execute([$name, $resolvedSlug, $description, $parentId, null]);
+        "INSERT INTO cms_gallery_albums (name, slug, description, parent_id, cover_photo_id, status, is_published)
+         VALUES (?, ?, ?, ?, ?, ?, ?)"
+    )->execute([$name, $resolvedSlug, $description, $parentId, null, $status, $visible]);
     $id = (int)$pdo->lastInsertId();
-    logAction('gallery_album_add', 'id=' . $id);
+    logAction('gallery_album_add', 'id=' . $id . ' status=' . $status);
 }
 
 header('Location: ' . BASE_URL . '/admin/gallery_albums.php');

@@ -138,6 +138,24 @@ $moduleConfig = match ($module) {
         'log_prefix' => 'food',
         'cleanup'    => null,
     ],
+    'gallery_photos' => [
+        'table'      => 'cms_gallery_photos',
+        'capability' => 'content_manage_shared',
+        'own_column' => null,
+        'own_check'  => null,
+        'log_prefix' => 'gallery_photo',
+        'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
+            $dir = dirname(__DIR__) . '/uploads/gallery/';
+            $thumbDir = $dir . 'thumbs/';
+            foreach ($deleteIds as $id) {
+                $stmt = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE id = ?");
+                $stmt->execute([$id]);
+                $f = (string)$stmt->fetchColumn();
+                if ($f !== '' && is_file($dir . $f)) { @unlink($dir . $f); }
+                if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
+            }
+        },
+    ],
     'gallery_albums' => [
         'table'      => 'cms_gallery_albums',
         'capability' => 'content_manage_shared',

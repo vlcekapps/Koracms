@@ -685,7 +685,11 @@ $addColumns = [
     'cms_places.updated_at'          => "ALTER TABLE cms_places ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_gallery
     'cms_gallery_albums.slug'        => "ALTER TABLE cms_gallery_albums ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER name",
+    'cms_gallery_albums.status'      => "ALTER TABLE cms_gallery_albums ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_gallery_albums.is_published' => "ALTER TABLE cms_gallery_albums ADD COLUMN is_published TINYINT(1) NOT NULL DEFAULT 1",
     'cms_gallery_photos.slug'        => "ALTER TABLE cms_gallery_photos ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
+    'cms_gallery_photos.status'      => "ALTER TABLE cms_gallery_photos ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_gallery_photos.is_published' => "ALTER TABLE cms_gallery_photos ADD COLUMN is_published TINYINT(1) NOT NULL DEFAULT 1",
     // cms_food_cards
     'cms_food_cards.slug'            => "ALTER TABLE cms_food_cards ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
     // cms_pages

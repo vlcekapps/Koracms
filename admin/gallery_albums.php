@@ -4,18 +4,24 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu gale
 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
+$statusFilter = in_array($_GET['status'] ?? '', ['all', 'pending', 'published', 'hidden'], true)
+    ? (string)$_GET['status']
+    : 'all';
 
-$whereSql = '';
+$whereParts = [];
 $params = [];
 if ($q !== '') {
-    $whereSql = "WHERE a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ? OR COALESCE(p.name, '') LIKE ?";
-    $params = [
-        '%' . $q . '%',
-        '%' . $q . '%',
-        '%' . $q . '%',
-        '%' . $q . '%',
-    ];
+    $whereParts[] = '(a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ? OR COALESCE(p.name, \'\') LIKE ?)';
+    $params = ['%' . $q . '%', '%' . $q . '%', '%' . $q . '%', '%' . $q . '%'];
 }
+if ($statusFilter === 'pending') {
+    $whereParts[] = "COALESCE(a.status,'published') = 'pending'";
+} elseif ($statusFilter === 'published') {
+    $whereParts[] = "COALESCE(a.status,'published') = 'published' AND COALESCE(a.is_published, 1) = 1";
+} elseif ($statusFilter === 'hidden') {
+    $whereParts[] = "COALESCE(a.status,'published') = 'published' AND COALESCE(a.is_published, 1) = 0";
+}
+$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.name, a.slug, a.parent_id, a.description, a.cover_photo_id,
@@ -43,8 +49,17 @@ adminHeader('Alba galerie');
     <label for="q" class="visually-hidden">Hledat v albech</label>
     <input type="search" id="q" name="q" placeholder="Hledat v albech..." value="<?= h($q) ?>" style="width:320px">
   </div>
+  <div>
+    <label for="status">Stav</label>
+    <select id="status" name="status">
+      <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <option value="published"<?= $statusFilter === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
+      <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== ''): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
     <a href="gallery_albums.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -69,6 +84,7 @@ adminHeader('Alba galerie');
         <th scope="col">Nadřazené album</th>
         <th scope="col">Fotek</th>
         <th scope="col">Podsložek</th>
+        <th scope="col">Stav</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -86,10 +102,31 @@ adminHeader('Alba galerie');
           <td><?= $album['parent_name'] !== null ? h((string)$album['parent_name']) : '(kořen)' ?></td>
           <td><?= (int)$album['photo_count'] ?></td>
           <td><?= (int)$album['sub_count'] ?></td>
+          <td>
+            <?php $albumStatus = (string)($album['status'] ?? 'published'); ?>
+            <?php if ($albumStatus === 'pending'): ?>
+              <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
+            <?php elseif ((int)($album['is_published'] ?? 1) === 1): ?>
+              Publikováno
+            <?php else: ?>
+              <strong>Skryto</strong>
+            <?php endif; ?>
+          </td>
           <td class="actions">
             <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Spravovat fotografie</a>
             <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
-            <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+            <?php if ((int)($album['is_published'] ?? 1) === 1 && ($album['status'] ?? 'published') === 'published'): ?>
+              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+            <?php endif; ?>
+            <?php if (($album['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
+              <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
+                <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                <input type="hidden" name="module" value="gallery_albums">
+                <input type="hidden" name="id" value="<?= (int)$album['id'] ?>">
+                <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/gallery_albums.php">
+                <button type="submit" class="btn btn-success">Schválit</button>
+              </form>
+            <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_album_delete.php"
                   onsubmit="return confirm('Smazat album „<?= h(addslashes($album['name'])) ?>“ včetně všech fotografií a podsložek?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

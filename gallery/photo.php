@@ -60,6 +60,7 @@ $stmtPrev = $pdo->prepare(
     "SELECT id, slug, title, filename
      FROM cms_gallery_photos
      WHERE album_id = ? AND (sort_order < ? OR (sort_order = ? AND id < ?))
+       AND COALESCE(status, 'published') = 'published' AND COALESCE(is_published, 1) = 1
      ORDER BY sort_order DESC, id DESC
      LIMIT 1"
 );
@@ -73,6 +74,7 @@ $stmtNext = $pdo->prepare(
     "SELECT id, slug, title, filename
      FROM cms_gallery_photos
      WHERE album_id = ? AND (sort_order > ? OR (sort_order = ? AND id > ?))
+       AND COALESCE(status, 'published') = 'published' AND COALESCE(is_published, 1) = 1
      ORDER BY sort_order ASC, id ASC
      LIMIT 1"
 );

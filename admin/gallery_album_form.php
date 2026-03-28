@@ -114,6 +114,13 @@ adminHeader($pageTitle);
       </select>
     <?php endif; ?>
 
+    <div style="margin-top:.75rem">
+      <label>
+        <input type="checkbox" name="is_published" value="1"<?= (int)($album['is_published'] ?? 1) === 1 ? ' checked' : '' ?>>
+        Publikováno (viditelné na webu)
+      </label>
+    </div>
+
     <div style="margin-top:1.5rem">
       <button type="submit"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
       <a href="<?= BASE_URL ?>/admin/gallery_albums.php" style="margin-left:1rem">Zrušit</a>

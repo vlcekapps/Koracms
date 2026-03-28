@@ -21,6 +21,8 @@ $albums = $pdo->query(
             (SELECT COUNT(*) FROM cms_gallery_albums s WHERE s.parent_id = a.id) AS sub_count
      FROM cms_gallery_albums a
      WHERE a.parent_id IS NULL
+       AND COALESCE(a.status, 'published') = 'published'
+       AND COALESCE(a.is_published, 1) = 1
      ORDER BY a.name"
 )->fetchAll();
 

@@ -117,6 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             slug           VARCHAR(255) NOT NULL,
             description    TEXT,
             cover_photo_id INT          DEFAULT NULL,
+            status         ENUM('pending','published') NOT NULL DEFAULT 'published',
+            is_published   TINYINT(1)   NOT NULL DEFAULT 1,
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_gallery_albums_slug (slug)
@@ -326,8 +328,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             filename   VARCHAR(255) NOT NULL,
             title      VARCHAR(255) NOT NULL DEFAULT '',
             slug       VARCHAR(255) NOT NULL,
-            sort_order INT          NOT NULL DEFAULT 0,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            sort_order   INT          NOT NULL DEFAULT 0,
+            status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+            is_published TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_gallery_photos_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
