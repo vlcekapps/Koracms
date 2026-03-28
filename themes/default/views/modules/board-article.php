@@ -90,6 +90,9 @@ $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
       <?php if ((string)($document['filename'] ?? '') !== ''): ?>
         <a class="button-primary" href="<?= moduleFileUrl('board', (int)$document['id']) ?>" download="<?= h((string)$document['original_name']) ?>">Stáhnout přílohu</a>
       <?php endif; ?>
+      <button type="button" class="button-secondary js-copy-link"
+              data-url="<?= h(boardPublicUrl($document)) ?>"
+              aria-label="Kopírovat odkaz na dokument">Kopírovat odkaz</button>
     </div>
   </article>
 </div>

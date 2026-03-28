@@ -68,6 +68,31 @@ document.addEventListener('DOMContentLoaded', function () {
   }, 150);
   message.removeAttribute('role');
 });
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.js-copy-link');
+  if (!btn) return;
+  var url = btn.getAttribute('data-url') || window.location.href;
+  var live = document.getElementById('a11y-live');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function () {
+      btn.textContent = 'Zkopírováno!';
+      if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
+      setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Zkopírováno!';
+    if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
+    setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
+  }
+});
 </script>
 </body>
 </html>

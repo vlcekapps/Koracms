@@ -78,6 +78,9 @@ $placeLocality = trim((string)($place['locality'] ?? ''));
       <?php if ($place['url'] !== ''): ?>
         <a class="button-primary" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Navštívit web</a>
       <?php endif; ?>
+      <button type="button" class="button-secondary js-copy-link"
+              data-url="<?= h(placePublicUrl($place)) ?>"
+              aria-label="Kopírovat odkaz na místo">Kopírovat odkaz</button>
     </div>
   </article>
 </div>

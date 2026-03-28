@@ -37,6 +37,9 @@ $eventLead = $eventDescription !== '' ? mb_strimwidth($eventDescription, 0, 260,
 
     <div class="article-actions">
       <a class="button-secondary" href="<?= BASE_URL ?>/events/index.php"><span aria-hidden="true">&larr;</span> Zpět na události</a>
+      <button type="button" class="button-secondary js-copy-link"
+              data-url="<?= h(eventPublicUrl($event)) ?>"
+              aria-label="Kopírovat odkaz na událost">Kopírovat odkaz</button>
     </div>
   </article>
 </div>
