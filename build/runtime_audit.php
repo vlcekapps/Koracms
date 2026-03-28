@@ -938,6 +938,7 @@ $pages = [
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_board', 'url' => $baseUrl . '/admin/board.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_downloads', 'url' => $baseUrl . '/admin/downloads.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_media', 'url' => $baseUrl . '/admin/media.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_food', 'url' => $baseUrl . '/admin/food.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_gallery_albums', 'url' => $baseUrl . '/admin/gallery_albums.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_polls', 'url' => $baseUrl . '/admin/polls.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -1966,8 +1967,8 @@ foreach ($pages as $page) {
     }
 
     $adminFormCopyExpectations = [
-        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku nebo jiný veřejný obsah', 'Hledání prochází jen veřejně dostupný obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
-        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku nebo jiný veřejný obsah', 'Hledání prochází jen veřejně dostupný obsah webu.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_news_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
@@ -2058,9 +2059,11 @@ foreach ($pages as $page) {
     if (in_array($page['label'], $contentReferencePickerLabels, true)) {
         foreach ([
             'Vložit odkaz nebo HTML z webu',
-            'Vyhledejte existující článek, stránku nebo jiný veřejný obsah',
-            'Hledání prochází jen veřejně dostupný obsah webu.',
-            'fotogalerii nebo přehrávač',
+            'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah',
+            'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.',
+            'fotogalerii, obrázek nebo přehrávač',
+            'value="media"',
+            'Knihovna médií',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'content reference picker is missing fragment: ' . $expectedFragment;
@@ -2516,6 +2519,20 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'Přehled položek ke stažení')) {
             $issues[] = 'admin downloads table caption was not updated';
+        }
+    }
+
+    if ($page['label'] === 'admin_media') {
+        foreach ([
+            'name="media_files[]"',
+            'Knihovna médií',
+            '>Audio<',
+            '>Video<',
+            'Obrázky, audio, video a dokumenty.',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin media page is missing fragment: ' . $expectedFragment;
+            }
         }
     }
 

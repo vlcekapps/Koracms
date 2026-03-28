@@ -21,6 +21,7 @@ function contentReferenceAllowedTypes(): array
         'gallery',
         'podcast',
         'download',
+        'media',
         'place',
         'board',
         'poll',
@@ -40,6 +41,10 @@ function contentReferenceTypeLabel(string $type): string
         'podcast_show' => 'Podcast',
         'podcast_episode' => 'Epizoda podcastu',
         'download' => 'Položka ke stažení',
+        'media_image' => 'Obrázek z knihovny médií',
+        'media_audio' => 'Audio z knihovny médií',
+        'media_video' => 'Video z knihovny médií',
+        'media_file' => 'Soubor z knihovny médií',
         'place' => 'Zajímavé místo',
         'board' => boardModulePublicLabel(),
         'poll' => 'Anketa',
@@ -88,11 +93,59 @@ function contentReferenceExcerpt(array $row, int $limit = 180): string
         'podcast_show' => mb_strimwidth(normalizePlainText((string)($row['description'] ?? '')), 0, $limit, '…', 'UTF-8'),
         'podcast_episode' => podcastEpisodeExcerpt($row, $limit),
         'download' => downloadExcerpt($row, $limit),
+        'media_image', 'media_audio', 'media_video', 'media_file' => mediaReferenceExcerpt($row, $limit),
         'place' => placeExcerpt($row, $limit),
         'board' => boardExcerpt($row, $limit),
         'poll' => pollExcerpt($row, $limit),
         default => '',
     };
+}
+
+function mediaReferenceKind(array $row): string
+{
+    $mimeType = strtolower(trim((string)($row['mime_type'] ?? '')));
+    if (str_starts_with($mimeType, 'image/')) {
+        return 'media_image';
+    }
+    if (str_starts_with($mimeType, 'audio/')) {
+        return 'media_audio';
+    }
+    if (str_starts_with($mimeType, 'video/')) {
+        return 'media_video';
+    }
+
+    return 'media_file';
+}
+
+function mediaReferencePublicPath(array $row): string
+{
+    $folder = trim((string)($row['folder'] ?? 'media'));
+    $filename = trim((string)($row['filename'] ?? ''));
+    if ($filename === '') {
+        return BASE_URL . '/';
+    }
+
+    return BASE_URL . '/uploads/' . rawurlencode($folder) . '/' . rawurlencode($filename);
+}
+
+function mediaReferenceExcerpt(array $row, int $limit = 180): string
+{
+    $parts = [];
+    $altText = trim((string)($row['alt_text'] ?? ''));
+    $mimeType = trim((string)($row['mime_type'] ?? ''));
+    $fileSize = (int)($row['file_size'] ?? 0);
+
+    if ($altText !== '') {
+        $parts[] = 'Popis: ' . $altText;
+    }
+    if ($mimeType !== '') {
+        $parts[] = strtoupper($mimeType);
+    }
+    if ($fileSize > 0) {
+        $parts[] = number_format($fileSize / 1024, 0, ',', ' ') . ' KB';
+    }
+
+    return mb_strimwidth(implode(' · ', $parts), 0, $limit, '…', 'UTF-8');
 }
 
 function contentReferencePublicPath(array $row): string
@@ -108,6 +161,7 @@ function contentReferencePublicPath(array $row): string
         'podcast_show' => podcastShowPublicPath($row),
         'podcast_episode' => podcastEpisodePublicPath($row),
         'download' => downloadPublicPath($row),
+        'media_image', 'media_audio', 'media_video', 'media_file' => mediaReferencePublicPath($row),
         'place' => placePublicPath($row),
         'board' => boardPublicPath($row),
         'poll' => pollPublicPath($row),
@@ -142,6 +196,7 @@ function contentReferenceResult(array $row): array
         'url' => $path,
         'path' => $path,
         'excerpt' => contentReferenceExcerpt($row),
+        'media_alt' => trim((string)($row['alt_text'] ?? '')),
         'insert_actions' => contentReferenceInsertActions($row),
     ];
 }
@@ -281,6 +336,58 @@ function contentReferencePodcastEpisodeMediaAction(array $row): ?array
     );
 }
 
+function contentReferenceMediaLibraryAction(array $row): ?array
+{
+    $type = mediaReferenceKind($row);
+    $url = mediaReferencePublicPath($row);
+    $mimeType = trim((string)($row['mime_type'] ?? ''));
+
+    if ($url === '') {
+        return null;
+    }
+
+    if ($type === 'media_image') {
+        return contentReferenceBuildAction(
+            'image_html',
+            'Vložit obrázek',
+            'Do textu byl vložen obrázek.',
+            true
+        );
+    }
+
+    if ($type === 'media_audio') {
+        $normalizedMimeType = contentEmbedMediaMimeType($url, 'audio', $mimeType);
+        if ($normalizedMimeType === '') {
+            return null;
+        }
+
+        return contentReferenceBuildAction(
+            'audio_shortcode',
+            'Vložit audio přehrávač',
+            'Do textu byl vložen audio přehrávač.',
+            true,
+            contentReferenceAudioShortcode($url, $normalizedMimeType)
+        );
+    }
+
+    if ($type === 'media_video') {
+        $normalizedMimeType = contentEmbedMediaMimeType($url, 'video', $mimeType);
+        if ($normalizedMimeType === '') {
+            return null;
+        }
+
+        return contentReferenceBuildAction(
+            'video_shortcode',
+            'Vložit video přehrávač',
+            'Do textu byl vložen video přehrávač.',
+            true,
+            contentReferenceVideoShortcode($url, $normalizedMimeType)
+        );
+    }
+
+    return null;
+}
+
 function contentReferenceInsertActions(array $row): array
 {
     $actions = [
@@ -307,6 +414,11 @@ function contentReferenceInsertActions(array $row): array
         }
     } elseif ($type === 'download') {
         $mediaAction = contentReferenceDownloadMediaAction($row);
+        if ($mediaAction !== null) {
+            $actions[] = $mediaAction;
+        }
+    } elseif (str_starts_with($type, 'media_')) {
+        $mediaAction = contentReferenceMediaLibraryAction($row);
         if ($mediaAction !== null) {
             $actions[] = $mediaAction;
         }
@@ -520,6 +632,26 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
         );
         $stmt->execute([$like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
+            $results[] = contentReferenceResult($row);
+        }
+    } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
+    }
+}
+
+if ($requestedType === 'all' || $requestedType === 'media') {
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, filename, original_name, alt_text, mime_type, file_size, folder, created_at
+             FROM cms_media
+             WHERE original_name LIKE ? OR alt_text LIKE ? OR mime_type LIKE ?
+             ORDER BY created_at DESC
+             LIMIT 10"
+        );
+        $stmt->execute([$like, $like, $like]);
+        foreach ($stmt->fetchAll() as $row) {
+            $row['title'] = trim((string)($row['original_name'] ?? ''));
+            $row['type'] = mediaReferenceKind($row);
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {

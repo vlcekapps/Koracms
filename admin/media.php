@@ -23,6 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['media_files'])) {
 
     $allowedMime = [
         'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4', 'audio/aac', 'audio/flac',
+        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
         'application/pdf', 'application/zip',
         'text/plain', 'text/csv',
         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -146,8 +148,8 @@ adminHeader('Knihovna médií');
     <legend>Nahrát soubory</legend>
     <label for="media_files">Vyberte soubory <span aria-hidden="true">*</span></label>
     <input type="file" id="media_files" name="media_files[]" multiple required aria-required="true"
-           accept="image/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt" aria-describedby="media-upload-help">
-    <small id="media-upload-help" class="field-help">Obrázky (JPEG, PNG, GIF, WebP, SVG), dokumenty (PDF, Word, Excel, CSV). Max 10 MB na soubor.</small>
+           accept="image/*,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt" aria-describedby="media-upload-help">
+    <small id="media-upload-help" class="field-help">Obrázky, audio, video a dokumenty. Max 10 MB na soubor.</small>
     <button type="submit" class="btn" style="margin-top:.5rem">Nahrát</button>
   </fieldset>
 </form>
@@ -160,6 +162,8 @@ adminHeader('Knihovna médií');
   <select id="type" name="type" style="min-width:150px">
     <option value="">Všechny typy</option>
     <option value="image/"<?= $filterMime === 'image/' ? ' selected' : '' ?>>Obrázky</option>
+    <option value="audio/"<?= $filterMime === 'audio/' ? ' selected' : '' ?>>Audio</option>
+    <option value="video/"<?= $filterMime === 'video/' ? ' selected' : '' ?>>Video</option>
     <option value="application/pdf"<?= $filterMime === 'application/pdf' ? ' selected' : '' ?>>PDF</option>
     <option value="application/"<?= $filterMime === 'application/' ? ' selected' : '' ?>>Dokumenty</option>
   </select>
@@ -175,10 +179,13 @@ adminHeader('Knihovna médií');
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem">
     <?php foreach ($items as $m):
       $isImage = str_starts_with($m['mime_type'], 'image/');
+      $isAudio = str_starts_with($m['mime_type'], 'audio/');
+      $isVideo = str_starts_with($m['mime_type'], 'video/');
       $thumbUrl = $isImage
           ? BASE_URL . '/uploads/' . $m['folder'] . '/thumbs/' . rawurlencode($m['filename'])
           : '';
       $fullUrl = BASE_URL . '/uploads/' . $m['folder'] . '/' . rawurlencode($m['filename']);
+      $fileIcon = $isAudio ? 'AUDIO' : ($isVideo ? 'VIDEO' : 'FILE');
     ?>
       <div style="border:1px solid #d6d6d6;border-radius:.75rem;overflow:hidden;background:#fff">
         <?php if ($isImage && $thumbUrl !== ''): ?>
@@ -188,7 +195,7 @@ adminHeader('Knihovna médií');
           </a>
         <?php else: ?>
           <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#f0f2f5;font-size:2rem" aria-hidden="true">
-            📄
+            <?= h($fileIcon) ?>
           </div>
         <?php endif; ?>
         <div style="padding:.5rem;font-size:.82rem">
