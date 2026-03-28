@@ -159,41 +159,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $log[] = "✓ Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (celkem " . count($articles) . ")";
 
-            // ── 3. Import fotogalerií ──
+            // ── 3. Import fotogalerií s hierarchií ──
             $directories = $tables['p_directories'] ?? [];
             $dirLangs = $tables['p_directories_lang'] ?? [];
             $photos = $tables['p_photos'] ?? [];
             $photoLangs = $tables['p_photos_lang'] ?? [];
 
-            // Mapování dir_id → title (z p_directories_lang, lang=1)
+            // Mapování dir_id → title (z p_directories_lang, klíč = iid, lang=1)
             $dirTitles = [];
             foreach ($dirLangs as $dl) {
                 $lang = (int)($dl['lang'] ?? 0);
-                $dirId = (int)($dl['directory'] ?? 0);
+                $dirId = (int)($dl['iid'] ?? 0);
                 if ($lang === 1 && $dirId > 0) {
-                    $dirTitles[$dirId] = esDecodeValue((string)($dl['title'] ?? ''));
+                    $dirTitles[$dirId] = (string)($dl['title'] ?? '');
                 }
             }
 
-            // Mapování photo_id → title (z p_photos_lang, lang=1)
+            // Mapování photo_id → title (z p_photos_lang, klíč = iid, lang=1)
             $photoTitles = [];
             foreach ($photoLangs as $pl) {
                 $lang = (int)($pl['lang'] ?? 0);
-                $photoId = (int)($pl['photo'] ?? 0);
+                $photoId = (int)($pl['iid'] ?? 0);
                 if ($lang === 1 && $photoId > 0) {
-                    $photoTitles[$photoId] = esDecodeValue((string)($pl['title'] ?? ''));
+                    $photoTitles[$photoId] = (string)($pl['title'] ?? '');
                 }
             }
 
-            $albumMap = []; // es dir id → cms album id
-            $insertedAlbums = 0;
+            // Sestavíme hierarchii adresářů: id → {title, parent, slug}
+            $dirInfo = [];
             foreach ($directories as $dir) {
                 $dirId = (int)($dir['id'] ?? 0);
-                if ($dirId <= 0) {
-                    continue;
-                }
+                if ($dirId <= 0) continue;
+                $dirInfo[$dirId] = [
+                    'title'  => $dirTitles[$dirId] ?? ('Album ' . $dirId),
+                    'parent' => (int)($dir['parent_directory'] ?? 0),
+                    'slug'   => esDecodeValue((string)($dir['dir'] ?? '')),
+                ];
+            }
 
-                $albumTitle = $dirTitles[$dirId] ?? ('Album ' . $dirId);
+            // Importujeme alba ve dvou průchodech:
+            // 1. průchod: vložíme všechna alba (bez parent_id)
+            // 2. průchod: nastavíme parent_id
+            $albumMap = []; // es dir id → cms album id
+            $insertedAlbums = 0;
+
+            foreach ($dirInfo as $dirId => $info) {
+                $albumTitle = $info['title'];
                 if ($albumTitle === '') {
                     $albumTitle = 'Album ' . $dirId;
                 }
@@ -205,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($existingId) {
                     $albumMap[$dirId] = (int)$existingId;
                 } else {
-                    $albumSlug = uniqueGalleryAlbumSlug($pdo, slugify($albumTitle) ?: 'album-' . $dirId);
+                    $albumSlug = uniqueGalleryAlbumSlug($pdo, slugify($info['slug'] ?: $albumTitle) ?: 'album-' . $dirId);
                     $pdo->prepare(
                         "INSERT INTO cms_gallery_albums (name, slug, description) VALUES (?, ?, '')"
                     )->execute([$albumTitle, $albumSlug]);
@@ -213,7 +224,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $insertedAlbums++;
                 }
             }
-            $log[] = "✓ Fotoalba: {$insertedAlbums} nových (celkem " . count($directories) . ")";
+
+            // 2. průchod: nastavíme parent_id
+            $parentSet = 0;
+            foreach ($dirInfo as $dirId => $info) {
+                $parentEsId = $info['parent'];
+                if ($parentEsId <= 0 || !isset($albumMap[$parentEsId]) || !isset($albumMap[$dirId])) {
+                    continue;
+                }
+                $pdo->prepare("UPDATE cms_gallery_albums SET parent_id = ? WHERE id = ? AND (parent_id IS NULL OR parent_id = 0)")
+                    ->execute([$albumMap[$parentEsId], $albumMap[$dirId]]);
+                $parentSet++;
+            }
+            $log[] = "✓ Fotoalba: {$insertedAlbums} nových, {$parentSet} hierarchických vazeb (celkem " . count($directories) . ")";
 
             $insertedPhotos = 0;
             foreach ($photos as $photo) {
@@ -226,11 +249,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $photoTitle = $photoTitles[$photoId] ?? pathinfo($filename, PATHINFO_FILENAME);
+                $safeFilename = preg_replace('/[^a-z0-9_\-\.]/i', '_', $filename);
                 $albumId = $albumMap[$dirId];
 
                 // Deduplikace
-                $dupCheck = $pdo->prepare("SELECT id FROM cms_gallery_photos WHERE album_id = ? AND title = ?");
-                $dupCheck->execute([$albumId, $photoTitle]);
+                $dupCheck = $pdo->prepare("SELECT id FROM cms_gallery_photos WHERE album_id = ? AND (title = ? OR filename = ?)");
+                $dupCheck->execute([$albumId, $photoTitle, $safeFilename]);
                 if ($dupCheck->fetchColumn()) {
                     continue;
                 }
@@ -238,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $photoSlug = uniqueGalleryPhotoSlug($pdo, slugify($photoTitle) ?: 'foto-' . $photoId);
                 $pdo->prepare(
                     "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order) VALUES (?, ?, ?, ?, ?)"
-                )->execute([$albumId, $filename, $photoTitle, $photoSlug, (int)($photo['sort_order'] ?? 0)]);
+                )->execute([$albumId, $safeFilename, $photoTitle, $photoSlug, (int)($photo['sort_order'] ?? 0)]);
                 $insertedPhotos++;
             }
             $log[] = "✓ Fotografie: {$insertedPhotos} záznamů importováno (celkem " . count($photos) . "; samotné soubory je třeba zkopírovat ručně)";
