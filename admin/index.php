@@ -445,6 +445,25 @@ if ($showOperationalOverview && $canViewStatistics && isModuleEnabled('statistic
     }
 }
 
+$scheduledContent = [];
+if ($showContentSecondaryBlocks && $canManageBlog && isModuleEnabled('blog')) {
+    try {
+        $scopeWhere = $canManageAllBlog ? '' : ' AND author_id = ' . (int)currentUserId();
+        $scheduledArticles = $pdo->query(
+            "SELECT id, title, slug, publish_at
+             FROM cms_articles
+             WHERE status = 'published' AND publish_at IS NOT NULL AND publish_at > NOW(){$scopeWhere}
+             ORDER BY publish_at ASC
+             LIMIT 10"
+        )->fetchAll();
+        foreach ($scheduledArticles as $row) {
+            $scheduledContent[] = $row;
+        }
+    } catch (\PDOException $e) {
+        // publish_at může chybět ve starší instalaci
+    }
+}
+
 adminHeader('Přehled');
 ?>
 
@@ -499,6 +518,38 @@ adminHeader('Přehled');
       </section>
     <?php endforeach; ?>
   </div>
+</section>
+<?php endif; ?>
+
+<?php if ($scheduledContent !== []): ?>
+<section aria-labelledby="scheduled-heading" style="margin:1.5rem 0">
+  <h2 id="scheduled-heading">Naplánovaný obsah</h2>
+  <p style="margin-top:0;color:#555">Články, které se automaticky zveřejní v budoucnu.</p>
+  <table>
+    <caption class="sr-only">Naplánované publikace</caption>
+    <thead>
+      <tr>
+        <th scope="col">Název</th>
+        <th scope="col">Publikace</th>
+        <th scope="col">Akce</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($scheduledContent as $scheduled): ?>
+        <tr>
+          <td><?= h((string)$scheduled['title']) ?></td>
+          <td>
+            <time datetime="<?= h(str_replace(' ', 'T', (string)$scheduled['publish_at'])) ?>">
+              <?= formatCzechDate((string)$scheduled['publish_at']) ?>
+            </time>
+          </td>
+          <td>
+            <a href="blog_form.php?id=<?= (int)$scheduled['id'] ?>">Upravit <span aria-hidden="true">→</span></a>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
 </section>
 <?php endif; ?>
 
