@@ -8,7 +8,7 @@ $cat = trim($_GET['cat'] ?? '');
 $blogFilter = trim($_GET['blog'] ?? '');
 $multiBlog = isMultiBlog();
 $params = [];
-$whereParts = [];
+$whereParts = ['a.deleted_at IS NULL'];
 
 if ($q !== '') {
     $whereParts[] = "(a.title LIKE ? OR a.perex LIKE ?)";

@@ -5,7 +5,7 @@ verifyCsrf();
 
 $id = inputInt('post', 'id');
 if ($id !== null) {
-    db_connect()->prepare("DELETE FROM cms_faqs WHERE id = ?")->execute([$id]);
+    db_connect()->prepare("UPDATE cms_faqs SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
     logAction('faq_delete', "id={$id}");
 }
 

@@ -764,6 +764,12 @@ $addColumns = [
     'cms_comments.status'            => "ALTER TABLE cms_comments ADD COLUMN status ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending'",
     // cms_log – user_id pro audit log
     'cms_log.user_id'                => "ALTER TABLE cms_log ADD COLUMN user_id INT NULL DEFAULT NULL",
+    // Koš (soft delete)
+    'cms_articles.deleted_at'        => "ALTER TABLE cms_articles ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_news.deleted_at'            => "ALTER TABLE cms_news ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_faqs.deleted_at'            => "ALTER TABLE cms_faqs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {

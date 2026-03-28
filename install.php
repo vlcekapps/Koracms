@@ -85,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status           ENUM('pending','published') NOT NULL DEFAULT 'published',
             publish_at       DATETIME     NULL DEFAULT NULL,
             view_count       INT          NOT NULL DEFAULT 0,
+            deleted_at       DATETIME     NULL DEFAULT NULL,
             created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FULLTEXT INDEX ft_articles_search (title, perex, content),

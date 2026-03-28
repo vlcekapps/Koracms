@@ -7,9 +7,9 @@ $id = inputInt('post', 'id');
 if ($id !== null) {
     $pdo = db_connect();
     if (canManageOwnNewsOnly()) {
-        $pdo->prepare("DELETE FROM cms_news WHERE id = ? AND author_id = ?")->execute([$id, currentUserId()]);
+        $pdo->prepare("UPDATE cms_news SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL AND author_id = ?")->execute([$id, currentUserId()]);
     } else {
-        $pdo->prepare("DELETE FROM cms_news WHERE id = ?")->execute([$id]);
+        $pdo->prepare("UPDATE cms_news SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
     }
     logAction('news_delete', "id={$id}");
 }

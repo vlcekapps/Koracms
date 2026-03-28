@@ -10,7 +10,7 @@ if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
 
-$whereParts = [];
+$whereParts = ['n.deleted_at IS NULL'];
 $params = [];
 
 if (canManageOwnNewsOnly()) {

@@ -10,7 +10,7 @@ if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
 
-$whereParts = [];
+$whereParts = ['f.deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {

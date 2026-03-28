@@ -6,32 +6,16 @@ verifyCsrf();
 $id = inputInt('post', 'id');
 if ($id !== null) {
     $pdo = db_connect();
+
+    // Soft delete – přesun do koše
     if (canManageOwnBlogOnly()) {
-        $row = $pdo->prepare("SELECT image_file FROM cms_articles WHERE id = ? AND author_id = ?");
-        $row->execute([$id, currentUserId()]);
+        $pdo->prepare("UPDATE cms_articles SET deleted_at = NOW() WHERE id = ? AND author_id = ? AND deleted_at IS NULL")
+            ->execute([$id, currentUserId()]);
     } else {
-        $row = $pdo->prepare("SELECT image_file FROM cms_articles WHERE id = ?");
-        $row->execute([$id]);
+        $pdo->prepare("UPDATE cms_articles SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")
+            ->execute([$id]);
     }
-    $imageFile = $row->fetchColumn();
-    if ($imageFile !== false) {
-        $dir = __DIR__ . '/../uploads/articles/';
-        if ($imageFile) {
-            @unlink($dir . $imageFile);
-            @unlink($dir . 'thumbs/' . $imageFile);
-        }
-        $deleteParams = canManageOwnBlogOnly() ? [$id, currentUserId()] : [$id];
-        $deleteSql = canManageOwnBlogOnly()
-            ? "DELETE FROM cms_article_tags WHERE article_id = ?"
-            : "DELETE FROM cms_article_tags WHERE article_id = ?";
-        $pdo->prepare($deleteSql)->execute([$id]);
-        if (canManageOwnBlogOnly()) {
-            $pdo->prepare("DELETE FROM cms_articles WHERE id = ? AND author_id = ?")->execute($deleteParams);
-        } else {
-            $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$id]);
-        }
-        logAction('article_delete', "id={$id}");
-    }
+    logAction('article_delete', "id={$id} soft=true");
 }
 
 header('Location: ' . BASE_URL . '/admin/blog.php');

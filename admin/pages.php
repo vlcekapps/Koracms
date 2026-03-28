@@ -8,7 +8,7 @@ $statusFilter = in_array($_GET['status'] ?? '', ['all', 'pending', 'published', 
     ? (string)$_GET['status']
     : 'all';
 
-$where = [];
+$where = ['deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {
