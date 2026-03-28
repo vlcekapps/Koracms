@@ -110,6 +110,7 @@ function adminHeader(string $pageTitle): void
         $contentItems[] = ['url' => $baseUrl . '/admin/news.php', 'label' => 'Novinky'];
     }
     if (currentUserHasCapability('content_manage_shared')) {
+        $contentItems[] = ['url' => $baseUrl . '/admin/media.php', 'label' => 'Knihovna médií'];
         $contentItems[] = ['url' => $baseUrl . '/admin/pages.php', 'label' => 'Stránky'];
         if (isModuleEnabled('events')) {
             $contentItems[] = ['url' => $baseUrl . '/admin/events.php', 'label' => 'Události'];

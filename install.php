@@ -639,6 +639,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UNIQUE KEY uq_redirects_old_path (old_path(191))
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_media (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            filename    VARCHAR(255) NOT NULL,
+            original_name VARCHAR(255) NOT NULL DEFAULT '',
+            mime_type   VARCHAR(100) NOT NULL DEFAULT '',
+            file_size   INT          NOT NULL DEFAULT 0,
+            folder      VARCHAR(100) NOT NULL DEFAULT 'media',
+            alt_text    VARCHAR(500) NOT NULL DEFAULT '',
+            uploaded_by INT          NULL DEFAULT NULL,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_media_folder (folder),
+            INDEX idx_media_mime (mime_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_widgets (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             zone        VARCHAR(50)  NOT NULL DEFAULT 'homepage',
