@@ -94,5 +94,8 @@ document.addEventListener('click', function (e) {
   }
 });
 </script>
+<?php $customFooter = getSetting('custom_footer_code', ''); if ($customFooter !== ''): ?>
+<?= $customFooter ?>
+<?php endif; ?>
 </body>
 </html>

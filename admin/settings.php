@@ -96,6 +96,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('social_instagram', trim($_POST['social_instagram'] ?? ''));
         saveSetting('social_twitter',   trim($_POST['social_twitter']   ?? ''));
 
+        // Google Analytics 4 / vlastní kód
+        saveSetting('ga4_measurement_id', trim($_POST['ga4_measurement_id'] ?? ''));
+        saveSetting('custom_head_code',   $_POST['custom_head_code'] ?? '');
+        saveSetting('custom_footer_code', $_POST['custom_footer_code'] ?? '');
+
         // Maintenance mód
         saveSetting('maintenance_mode', isset($_POST['maintenance_mode']) ? '1' : '0');
         saveSetting('maintenance_text', trim($_POST['maintenance_text'] ?? ''));
@@ -398,6 +403,30 @@ adminHeader('Nastavení webu');
       </label>
     </p>
     <small id="content-editor-help" class="field-help">Pokud používáte čtečku obrazovky nebo jinou asistivní technologii, doporučujeme ponechat čisté HTML (textarea).</small>
+  </fieldset>
+
+  <fieldset id="settings-analytics">
+    <legend>Google Analytics a vlastní kód</legend>
+    <div style="margin-bottom:.75rem">
+      <label for="ga4_measurement_id">GA4 Measurement ID</label>
+      <input type="text" id="ga4_measurement_id" name="ga4_measurement_id"
+             value="<?= h(getSetting('ga4_measurement_id', '')) ?>"
+             placeholder="G-XXXXXXXXXX" style="width:20rem"
+             aria-describedby="ga4-help">
+      <small id="ga4-help" class="field-help">Zadejte Google Analytics 4 Measurement ID (např. G-8EV9896EKZ). Snippet se automaticky vloží do hlavičky webu.</small>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <label for="custom_head_code">Vlastní kód do &lt;head&gt;</label>
+      <textarea id="custom_head_code" name="custom_head_code" rows="4" style="width:100%;max-width:600px;font-family:monospace;font-size:.85rem"
+                aria-describedby="head-code-help"><?= h(getSetting('custom_head_code', '')) ?></textarea>
+      <small id="head-code-help" class="field-help">HTML/JS kód vložený před &lt;/head&gt;. Slouží pro Google Tag Manager, meta tagy, ověřovací kódy apod.</small>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <label for="custom_footer_code">Vlastní kód před &lt;/body&gt;</label>
+      <textarea id="custom_footer_code" name="custom_footer_code" rows="4" style="width:100%;max-width:600px;font-family:monospace;font-size:.85rem"
+                aria-describedby="footer-code-help"><?= h(getSetting('custom_footer_code', '')) ?></textarea>
+      <small id="footer-code-help" class="field-help">HTML/JS kód vložený před zavírací &lt;/body&gt;. Slouží pro analytické skripty, chat widgety apod.</small>
+    </div>
   </fieldset>
 
   <fieldset id="settings-social">
