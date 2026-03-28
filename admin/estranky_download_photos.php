@@ -22,14 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $parentAlbumId = inputInt('post', 'parent_album_id');
 
     if (!is_uploaded_file($xmlPath) || $siteUrl === '') {
-        $_SESSION['import_log'] = ['✗ Zadejte XML soubor a URL webu.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span>Zadejte XML soubor a URL webu.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
 
     $xml = @simplexml_load_file($xmlPath);
     if ($xml === false) {
-        $_SESSION['import_log'] = ['✗ Nepodařilo se načíst XML soubor.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span>Nepodařilo se načíst XML soubor.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
@@ -48,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $totalPhotos = count($photos);
     $log = [];
-    $log[] = "▸ Nalezeno {$totalPhotos} fotografií v záloze";
-    $log[] = '▸ Zdroj: ' . h($siteUrl);
+    $log[] = '<span aria-hidden="true">▸</span> Nalezeno ' . $totalPhotos . ' fotografií v záloze';
+    $log[] = '<span aria-hidden="true">▸</span> Zdroj: ' . h($siteUrl);
 
     $destDir = dirname(__DIR__) . '/uploads/gallery/';
     $thumbDir = $destDir . 'thumbs/';
@@ -135,12 +135,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         }
     }
 
-    $log[] = "✓ Staženo: <strong>{$downloaded}</strong>";
-    $log[] = "▸ Přeskočeno (už existují): {$skipped}";
+    $log[] = '<span aria-hidden="true">✓</span> Staženo: <strong>' . $downloaded . '</strong>';
+    $log[] = '<span aria-hidden="true">▸</span> Přeskočeno (už existují): ' . $skipped;
     if ($failed > 0) {
-        $log[] = "⚠ Neúspěšných: {$failed}";
+        $log[] = '<span aria-hidden="true">⚠</span> Neúspěšných: ' . $failed;
     }
-    $log[] = "▸ Celkem fotek v záloze: {$totalPhotos}";
+    $log[] = '<span aria-hidden="true">▸</span> Celkem fotek v záloze: ' . $totalPhotos;
 
     // Přesunout importované root alba pod vybrané cílové album
     if ($parentAlbumId !== null && $parentAlbumId > 0) {
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
             )->execute([$parentAlbumId, $parentAlbumId]);
             $parentName = $pdo->prepare("SELECT name FROM cms_gallery_albums WHERE id = ?");
             $parentName->execute([$parentAlbumId]);
-            $log[] = '✓ Alba přesunuta pod „' . h((string)($parentName->fetchColumn() ?: '?')) . '"';
+            $log[] = '<span aria-hidden="true">✓</span> Alba přesunuta pod „' . h((string)($parentName->fetchColumn() ?: '?')) . '"';
         } catch (\PDOException $e) {
             error_log('estranky parent album move: ' . $e->getMessage());
         }
@@ -171,7 +171,7 @@ adminHeader('Stažení fotografií z eStránek');
 
 <?php if ($log !== null): ?>
   <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="dl-result-heading">
-    <h2 id="dl-result-heading" style="margin-top:0">✓ Stahování dokončeno</h2>
+    <h2 id="dl-result-heading" style="margin-top:0"><span aria-hidden="true">✓</span> Stahování dokončeno</h2>
     <ul style="margin:0">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>

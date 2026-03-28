@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $xmlPath = $_FILES['xml_file']['tmp_name'];
     if (!is_uploaded_file($xmlPath)) {
-        $_SESSION['import_log'] = ['✗ Neplatný soubor.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Neplatný soubor.'];
         header('Location: estranky_import.php');
         exit;
     }
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $log = [];
     $xml = @simplexml_load_file($xmlPath);
     if ($xml === false) {
-        $log[] = '✗ Nepodařilo se načíst XML soubor.';
+        $log[] = '<span aria-hidden="true">✗</span> Nepodařilo se načíst XML soubor.';
         $_SESSION['import_log'] = $log;
         header('Location: estranky_import.php');
         exit;
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     }
 
     $totalRows = array_sum(array_map('count', $tables));
-    $log[] = "✓ XML načteno (" . count($tables) . " tabulek, {$totalRows} řádků)";
+    $log[] = '<span aria-hidden="true">✓</span> XML načteno (' . count($tables) . " tabulek, {$totalRows} řádků)";
 
     // ── 0. Název a popis webu ze settings ──
     $settings = $tables['settings'] ?? [];
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
             $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order) VALUES (?, ?, ?, ?)")
                 ->execute([$esSiteTitle, $blogSlug, $esSiteDesc, (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn()]);
             $targetBlog = getBlogById((int)$pdo->lastInsertId());
-            $log[] = "✓ Vytvořen blog: " . $esSiteTitle;
+            $log[] = '<span aria-hidden="true">✓</span> Vytvořen blog: ' . $esSiteTitle;
         } catch (\PDOException $e) {
             $targetBlog = getDefaultBlog();
         }
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     if ($esSiteTitle !== '' || $esSiteDesc !== '') {
         $pdo->prepare("UPDATE cms_blogs SET name = ?, description = ? WHERE id = ?")
             ->execute([$esSiteTitle !== '' ? $esSiteTitle : $targetBlog['name'], $esSiteDesc !== '' ? $esSiteDesc : ($targetBlog['description'] ?? ''), $blogId]);
-        $log[] = "✓ Blog: " . ($esSiteTitle !== '' ? $esSiteTitle : $targetBlog['name']) . " (id={$blogId})";
+        $log[] = '<span aria-hidden="true">✓</span> Blog: ' . ($esSiteTitle !== '' ? $esSiteTitle : $targetBlog['name']) . " (id={$blogId})";
     }
 
     // ── 1. Sekce → kategorie ──
@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
             $insertedSections++;
         }
     }
-    $log[] = "✓ Sekce → kategorie: {$insertedSections} nových (celkem " . count($sections) . ")";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Sekce → kategorie: {$insertedSections} nových (celkem " . count($sections) . ")";
 
     // ── 2. Články ──
     $articles = $tables['a_articles'] ?? [];
@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         )->execute([$title, $slug, mb_substr($perex, 0, 500), $content, $categoryId, $blogId, $published ? 'published' : 'pending', $createdAt, $updatedAt]);
         $insertedArticles++;
     }
-    $log[] = "✓ Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (celkem " . count($articles) . ")";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (celkem " . count($articles) . ")";
 
     // ── 3. Fotoalba s hierarchií ──
     $directories = $tables['p_directories'] ?? [];
@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
             ->execute([$albumMap[$info['parent']], $albumMap[$dirId]]);
         $parentSet++;
     }
-    $log[] = "✓ Fotoalba: {$insertedAlbums} nových, {$parentSet} hierarchických vazeb";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Fotoalba: {$insertedAlbums} nových, {$parentSet} hierarchických vazeb";
 
     // ── 4. Fotografie ──
     $insertedPhotos = 0;
@@ -241,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
             ->execute([$albumId, $safeFilename, $photoTitle, $photoSlug, (int)($photo['sort_order'] ?? 0)]);
         $insertedPhotos++;
     }
-    $log[] = "✓ Fotografie: {$insertedPhotos} záznamů (soubory stáhněte přes Stažení fotek z eStránek)";
+    $log[] = '<span aria-hidden="true">✓</span> Fotografie: ' . $insertedPhotos . ' záznamů (soubory stáhněte přes Stažení fotek z eStránek)';
 
     logAction('estranky_import', 'xml=' . basename((string)($_FILES['xml_file']['name'] ?? 'unknown')));
     @unlink($xmlPath);
@@ -256,7 +256,7 @@ adminHeader('Import z eStránek');
 
 <?php if ($log !== null): ?>
   <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="import-result-heading">
-    <h2 id="import-result-heading" style="margin-top:0">✓ Import dokončen</h2>
+    <h2 id="import-result-heading" style="margin-top:0"><span aria-hidden="true">✓</span> Import dokončen</h2>
     <ul style="margin:0">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>

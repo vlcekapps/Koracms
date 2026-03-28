@@ -116,14 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
 
     $cachedPath = $_POST['wxr_cached'];
     if ($cachedPath === '' || !is_file($cachedPath) || !str_contains(basename($cachedPath), 'kora_wp_import_')) {
-        $_SESSION['import_log'] = ['✗ Dočasný soubor nenalezen. Zkuste import znovu.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Dočasný soubor nenalezen. Zkuste import znovu.'];
         header('Location: wp_import.php');
         exit;
     }
 
     $data = wpParseWxr($cachedPath);
     if ($data === null) {
-        $_SESSION['import_log'] = ['✗ Nepodařilo se parsovat XML.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se parsovat XML.'];
         @unlink($cachedPath);
         header('Location: wp_import.php');
         exit;
@@ -158,13 +158,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     $blogId = (int)$targetBlog['id'];
 
     $log = [];
-    $log[] = "✓ WXR načten: " . h($data['title']);
+    $log[] = '<span aria-hidden="true">✓</span> WXR načten: ' . h($data['title']);
 
     // Název a popis blogu
     if ($importSiteInfo && $data['title'] !== '') {
         $pdo->prepare("UPDATE cms_blogs SET name = ?, description = ? WHERE id = ?")
             ->execute([$data['title'], $data['description'] ?? '', $blogId]);
-        $log[] = "✓ Blog: " . h($data['title']) . " (id={$blogId})";
+        $log[] = '<span aria-hidden="true">✓</span> Blog: ' . h($data['title']) . " (id={$blogId})";
     }
 
     // Kategorie
@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         if ($eid = $ex->fetchColumn()) { $catMap[$slug] = (int)$eid; }
         else { $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$name, $blogId]); $catMap[$slug] = (int)$pdo->lastInsertId(); $insertedCats++; }
     }
-    $log[] = "✓ Kategorie: {$insertedCats} nových";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Kategorie: {$insertedCats} nových";
 
     // Tagy
     $tagMap = [];
@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         if ($eid = $ex->fetchColumn()) { $tagMap[$slug] = (int)$eid; }
         else { $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $cmsSlug, $blogId]); $tagMap[$slug] = (int)$pdo->lastInsertId(); $insertedTags++; }
     }
-    $log[] = "✓ Tagy: {$insertedTags} nových";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Tagy: {$insertedTags} nových";
 
     // Články
     $insertedArticles = 0;
@@ -244,8 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
             $insertedComments++;
         }
     }
-    $log[] = "✓ Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (filtr/duplikát)";
-    $log[] = "✓ Komentáře: {$insertedComments} importováno";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (filtr/duplikát)";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Komentáře: {$insertedComments} importováno";
 
     // Stránky
     $insertedPages = 0;
@@ -260,7 +260,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
             $insertedPages++;
         }
     }
-    $log[] = "✓ Stránky: {$insertedPages} importováno";
+    $log[] = "<span aria-hidden=\"true\">✓</span> Stránky: {$insertedPages} importováno";
 
     logAction('wp_import', 'wxr, articles=' . $insertedArticles);
     @unlink($cachedPath);
@@ -297,7 +297,7 @@ adminHeader('Import z WordPressu');
 
 <?php if ($log !== null): ?>
   <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="import-result-heading">
-    <h2 id="import-result-heading" style="margin-top:0">✓ Import dokončen</h2>
+    <h2 id="import-result-heading" style="margin-top:0"><span aria-hidden="true">✓</span> Import dokončen</h2>
     <ul style="margin:0">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
