@@ -88,6 +88,7 @@ adminHeader('Galerie – ' . $album['name']);
 <?php else: ?>
   <?= bulkFormOpen('gallery_photos', 'gallery_photos.php?album_id=' . (int)$album['id']) ?>
   <?= bulkActionBar() ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Fotografie v albu „<?= h($album['name']) ?>”</caption>
     <thead>
@@ -103,7 +104,7 @@ adminHeader('Galerie – ' . $album['name']);
     <tbody>
       <?php foreach ($photos as $photo): ?>
         <tr>
-          <td><input type="checkbox" name="ids[]" value="<?= (int)$photo['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$photo['label']) ?>"></td>
+          <td><input type="checkbox" name="ids[]" value="<?= (int)$photo['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$photo['label']) ?>"></td>
           <td>
             <img src="<?= h((string)$photo['thumb_url']) ?>"
                  alt="<?= h((string)$photo['label']) ?>"
@@ -150,7 +151,6 @@ adminHeader('Galerie – ' . $album['name']);
       <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

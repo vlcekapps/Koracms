@@ -87,6 +87,7 @@ adminHeader('Jídelní a nápojový lístek');
 <?php else: ?>
   <?= bulkFormOpen('food', 'food.php') ?>
   <?= bulkActionBar() ?>
+  <?= bulkFormClose() ?>
   <?php
   $groups = ['food' => [], 'beverage' => []];
   foreach ($items as $item) {
@@ -104,7 +105,7 @@ adminHeader('Jídelní a nápojový lístek');
     <caption><?= h($captions[$type]) ?></caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
         <th scope="col">Název</th>
         <th scope="col">Platnost</th>
         <th scope="col">Autor</th>
@@ -115,7 +116,7 @@ adminHeader('Jídelní a nápojový lístek');
     <tbody>
     <?php foreach ($rows as $card): ?>
       <tr<?= $card['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$card['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$card['title']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$card['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$card['title']) ?>"></td>
         <td>
           <?php if ($card['is_current']): ?>
             <strong>★ <?= h((string)$card['title']) ?></strong>
@@ -164,7 +165,6 @@ adminHeader('Jídelní a nápojový lístek');
     </tbody>
   </table>
   <?php endforeach; ?>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

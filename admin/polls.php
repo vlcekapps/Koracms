@@ -78,11 +78,12 @@ adminHeader('Ankety');
 <?php else: ?>
   <?= bulkFormOpen('polls', 'polls.php') ?>
   <?= bulkActionBar(false) ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Přehled anket</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
         <th scope="col">Otázka</th>
         <th scope="col">Stav</th>
         <th scope="col">Hlasy</th>
@@ -102,7 +103,7 @@ adminHeader('Ankety');
         };
       ?>
       <tr<?= $state === 'scheduled' ? ' style="background:#eef6ff"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
         <td>
           <strong><?= h((string)$poll['question']) ?></strong><br>
           <small style="color:#555">/polls/<?= h((string)$poll['slug']) ?></small>
@@ -130,7 +131,6 @@ adminHeader('Ankety');
     <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

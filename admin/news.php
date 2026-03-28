@@ -83,11 +83,12 @@ adminHeader('Novinky');
 <?php else: ?>
   <?= bulkFormOpen('news', 'news.php') ?>
   <?= bulkActionBar() ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Přehled novinek</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
         <th scope="col">Titulek</th>
         <th scope="col">Autor</th>
         <th scope="col">Datum</th>
@@ -98,7 +99,7 @@ adminHeader('Novinky');
     <tbody>
     <?php foreach ($items as $item): ?>
       <tr<?= $item['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$item['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$item['title']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$item['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$item['title']) ?>"></td>
         <td>
           <strong><?= h((string)$item['title']) ?></strong><br>
           <small style="color:#555">/news/<?= h((string)$item['slug']) ?></small>
@@ -140,7 +141,6 @@ adminHeader('Novinky');
     <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

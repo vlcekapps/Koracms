@@ -48,13 +48,14 @@ adminHeader('Kategorie blogu');
 <?php else: ?>
   <?= bulkFormOpen('blog_categories', 'blog_cats.php') ?>
   <?= bulkActionBar(false) ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Přehled kategorií blogu</caption>
-    <thead><tr><th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
+    <thead><tr><th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($categories as $cat): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$cat['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$cat['name']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$cat['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$cat['name']) ?>"></td>
         <td>
           <?php if ($editId === (int)$cat['id']): ?>
             <form method="post" style="display:flex;gap:.4rem;align-items:center">

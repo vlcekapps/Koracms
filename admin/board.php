@@ -82,11 +82,12 @@ adminHeader('Úřední deska');
 <?php else: ?>
   <?= bulkFormOpen('board', 'board.php') ?>
   <?= bulkActionBar() ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Přehled položek sekce <?= h($publicLabel) ?></caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
         <th scope="col">Nadpis</th>
         <th scope="col">Typ</th>
         <th scope="col">Kategorie</th>
@@ -100,7 +101,7 @@ adminHeader('Úřední deska');
     <tbody>
     <?php foreach ($items as $document): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$document['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$document['title']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$document['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$document['title']) ?>"></td>
         <td>
           <strong><?= h((string)$document['title']) ?></strong>
           <?php if ((int)($document['is_pinned'] ?? 0) === 1): ?>
@@ -166,7 +167,6 @@ adminHeader('Úřední deska');
     <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

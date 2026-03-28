@@ -238,6 +238,10 @@ function logAction(string $action, string $detail = ''): void
  * Vrátí HTML pro bulk action bar – obalující form, checkboxy a tlačítka.
  * Použití: echo bulkFormOpen('news', 'news.php');
  */
+/**
+ * Vrátí HTML pro bulk form – SAMOSTATNÝ formulář nad tabulkou (ne obalující).
+ * Checkboxy v tabulce se propojí přes atribut form="bulk-form".
+ */
 function bulkFormOpen(string $module, string $redirectPage): string
 {
     $redirect = BASE_URL . '/admin/' . $redirectPage;
@@ -254,7 +258,7 @@ function bulkFormClose(): string
 
 /**
  * Vrátí HTML pro bulk action bar s tlačítky (smazat, publikovat, skrýt).
- * Umístí se nad tabulku.
+ * Umístí se UVNITŘ bulkFormOpen/Close.
  */
 function bulkActionBar(bool $showPublish = true): string
 {

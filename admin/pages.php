@@ -88,11 +88,12 @@ adminHeader('Statické stránky');
 <?php else: ?>
   <?= bulkFormOpen('pages', 'pages.php') ?>
   <?= bulkActionBar() ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Přehled statických stránek</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
         <th scope="col">Název</th>
         <th scope="col">Stav</th>
         <th scope="col">V navigaci</th>
@@ -104,7 +105,7 @@ adminHeader('Statické stránky');
       <?php foreach ($pages as $page): ?>
         <?php $publicPath = pagePublicPath($page); ?>
         <tr>
-          <td><input type="checkbox" name="ids[]" value="<?= (int)$page['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$page['title']) ?>"></td>
+          <td><input type="checkbox" name="ids[]" value="<?= (int)$page['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$page['title']) ?>"></td>
           <td>
             <strong><?= h((string)$page['title']) ?></strong>
             <br><small><?= h((string)$page['slug']) ?></small>
@@ -149,7 +150,6 @@ adminHeader('Statické stránky');
       <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

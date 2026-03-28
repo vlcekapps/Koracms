@@ -80,11 +80,12 @@ adminHeader('Zajímavá místa');
 <?php else: ?>
   <?= bulkFormOpen('places', 'places.php') ?>
   <?= bulkActionBar() ?>
+  <?= bulkFormClose() ?>
   <table>
     <caption>Přehled zajímavých míst</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><input type="checkbox" class="bulk-select-all" form="bulk-form" aria-label="Vybrat vše"></th>
         <th scope="col">Místo</th>
         <th scope="col">Typ a lokalita</th>
         <th scope="col">Stav</th>
@@ -94,7 +95,7 @@ adminHeader('Zajímavá místa');
     <tbody>
     <?php foreach ($places as $place): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$place['id'] ?>" class="bulk-checkbox" aria-label="Vybrat <?= h((string)$place['name']) ?>"></td>
+        <td><input type="checkbox" name="ids[]" value="<?= (int)$place['id'] ?>" class="bulk-checkbox" form="bulk-form" aria-label="Vybrat <?= h((string)$place['name']) ?>"></td>
         <td>
           <strong><?= h((string)$place['name']) ?></strong><br>
           <small style="color:#555">/places/<?= h((string)$place['slug']) ?></small>
@@ -148,7 +149,6 @@ adminHeader('Zajímavá místa');
     <?php endforeach; ?>
     </tbody>
   </table>
-  <?= bulkFormClose() ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 
