@@ -1,7 +1,7 @@
 <?php
 /**
  * eStránky – stažení fotografií z webu.
- * Projde XML zálohu, zjistí ID a filename fotek a stáhne originály z /img/original/{id}/{filename}.
+ * Dávkové stahování (20 fotek naráz) s automatickým pokračováním.
  */
 require_once __DIR__ . '/layout.php';
 requireCapability('import_export_manage', 'Přístup odepřen.');
@@ -9,10 +9,11 @@ requireCapability('import_export_manage', 'Přístup odepřen.');
 $pdo = db_connect();
 $log = $_SESSION['import_log'] ?? null;
 unset($_SESSION['import_log']);
+$batchSize = 20;
 
+// ── Krok 1: Upload XML a příprava ────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_name'])) {
     verifyCsrf();
-    set_time_limit(1800);
 
     $xmlPath = $_FILES['xml_file']['tmp_name'];
     $siteUrl = rtrim(trim($_POST['site_url'] ?? ''), '/');
@@ -22,19 +23,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $parentAlbumId = inputInt('post', 'parent_album_id');
 
     if (!is_uploaded_file($xmlPath) || $siteUrl === '') {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span>Zadejte XML soubor a URL webu.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Zadejte XML soubor a URL webu.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
 
     $xml = @simplexml_load_file($xmlPath);
     if ($xml === false) {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span>Nepodařilo se načíst XML soubor.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se načíst XML soubor.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
 
-    $photos = [];
+    // Sestavit seznam fotek k stažení
+    $photoList = [];
     foreach ($xml->table as $table) {
         if ((string)$table['name'] !== 'p_photos') continue;
         foreach ($table->tablerow as $row) {
@@ -42,23 +44,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
             foreach ($row->tablecolumn as $col) {
                 $data[(string)$col['name']] = (string)$col;
             }
-            $photos[] = $data;
+            $photoList[] = $data;
         }
     }
 
-    $totalPhotos = count($photos);
-    $log = [];
-    $log[] = '<span aria-hidden="true">▸</span> Nalezeno ' . $totalPhotos . ' fotografií v záloze';
-    $log[] = '<span aria-hidden="true">▸</span> Zdroj: ' . h($siteUrl);
+    // Uložit do session pro dávkové zpracování
+    $_SESSION['photo_dl'] = [
+        'photos' => $photoList,
+        'site_url' => $siteUrl,
+        'parent_album_id' => $parentAlbumId,
+        'offset' => 0,
+        'downloaded' => 0,
+        'skipped' => 0,
+        'failed' => 0,
+        'total' => count($photoList),
+        'csrf' => csrfToken(),
+    ];
+
+    header('Location: estranky_download_photos.php?batch=1');
+    exit;
+}
+
+// ── Krok 2: Dávkové stahování ───────────────────────────────────────────────
+if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
+    set_time_limit(120);
+    $dl = &$_SESSION['photo_dl'];
+    $siteUrl = $dl['site_url'];
+    $offset = $dl['offset'];
+    $photos = array_slice($dl['photos'], $offset, $batchSize);
 
     $destDir = dirname(__DIR__) . '/uploads/gallery/';
     $thumbDir = $destDir . 'thumbs/';
     if (!is_dir($destDir)) mkdir($destDir, 0755, true);
     if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-
-    $downloaded = 0;
-    $skipped = 0;
-    $failed = 0;
 
     foreach ($photos as $photo) {
         $photoId = (int)($photo['id'] ?? 0);
@@ -72,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         }
 
         if ($photoId <= 0 || $filename === '') {
-            $failed++;
+            $dl['failed']++;
             continue;
         }
 
@@ -80,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         $destFile = $destDir . $safeFilename;
 
         if (is_file($destFile)) {
-            $skipped++;
+            $dl['skipped']++;
             continue;
         }
 
@@ -102,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         $data = @file_get_contents($url, false, $ctx);
 
         if ($data === false || strlen($data) < 100) {
-            $failed++;
+            $dl['failed']++;
             continue;
         }
 
@@ -113,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
                 || str_starts_with($header, "RIFF");
 
         if (!$isImage) {
-            $failed++;
+            $dl['failed']++;
             continue;
         }
 
@@ -129,45 +147,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
                 )->execute([$safeFilename, $filename, $origTitle]);
             } catch (\PDOException $e) {}
 
-            $downloaded++;
+            $dl['downloaded']++;
         } else {
-            $failed++;
+            $dl['failed']++;
         }
     }
 
-    $log[] = '<span aria-hidden="true">✓</span> Staženo: <strong>' . $downloaded . '</strong>';
-    $log[] = '<span aria-hidden="true">▸</span> Přeskočeno (už existují): ' . $skipped;
-    if ($failed > 0) {
-        $log[] = '<span aria-hidden="true">⚠</span> Neúspěšných: ' . $failed;
-    }
-    $log[] = '<span aria-hidden="true">▸</span> Celkem fotek v záloze: ' . $totalPhotos;
+    $dl['offset'] += $batchSize;
 
-    // Přesunout importované root alba pod vybrané cílové album
-    if ($parentAlbumId !== null && $parentAlbumId > 0) {
+    // Další dávka nebo dokončení?
+    if ($dl['offset'] < $dl['total']) {
+        header('Location: estranky_download_photos.php?batch=1');
+        exit;
+    }
+
+    // Hotovo – přesun alb pod parent
+    if ($dl['parent_album_id'] !== null && $dl['parent_album_id'] > 0) {
         try {
             $pdo->prepare(
                 "UPDATE cms_gallery_albums SET parent_id = ? WHERE parent_id IS NULL AND id IN (
                     SELECT DISTINCT album_id FROM cms_gallery_photos WHERE album_id IS NOT NULL
                 ) AND id != ?"
-            )->execute([$parentAlbumId, $parentAlbumId]);
-            $parentName = $pdo->prepare("SELECT name FROM cms_gallery_albums WHERE id = ?");
-            $parentName->execute([$parentAlbumId]);
-            $log[] = '<span aria-hidden="true">✓</span> Alba přesunuta pod „' . h((string)($parentName->fetchColumn() ?: '?')) . '"';
+            )->execute([$dl['parent_album_id'], $dl['parent_album_id']]);
         } catch (\PDOException $e) {
             error_log('estranky parent album move: ' . $e->getMessage());
         }
     }
 
-    logAction('estranky_download_photos', "total={$totalPhotos} downloaded={$downloaded} skipped={$skipped} failed={$failed}");
-    @unlink($xmlPath);
+    $resultLog = [];
+    $resultLog[] = '<span aria-hidden="true">▸</span> Celkem fotek v záloze: ' . $dl['total'];
+    $resultLog[] = '<span aria-hidden="true">✓</span> Staženo: <strong>' . $dl['downloaded'] . '</strong>';
+    $resultLog[] = '<span aria-hidden="true">▸</span> Přeskočeno (už existují): ' . $dl['skipped'];
+    if ($dl['failed'] > 0) {
+        $resultLog[] = '<span aria-hidden="true">⚠</span> Neúspěšných: ' . $dl['failed'];
+    }
 
-    $_SESSION['import_log'] = $log;
+    logAction('estranky_download_photos', "total={$dl['total']} downloaded={$dl['downloaded']} skipped={$dl['skipped']} failed={$dl['failed']}");
+
+    $_SESSION['import_log'] = $resultLog;
+    unset($_SESSION['photo_dl']);
     header('Location: estranky_download_photos.php');
     exit;
 }
 
+// ── Zobrazení stránky ────────────────────────────────────────────────────────
+$isDownloading = isset($_SESSION['photo_dl']);
+
 adminHeader('Stažení fotografií z eStránek');
 ?>
+
+<?php if ($isDownloading): ?>
+  <?php $dl = $_SESSION['photo_dl']; $progress = $dl['total'] > 0 ? round($dl['offset'] / $dl['total'] * 100) : 0; ?>
+  <section style="background:#e3f2fd;border:1px solid #1565c0;border-radius:8px;padding:1rem;margin-bottom:1.5rem" role="status" aria-live="polite" aria-labelledby="dl-progress-heading">
+    <h2 id="dl-progress-heading" style="margin-top:0">Stahování probíhá…</h2>
+    <p>Zpracováno <?= (int)$dl['offset'] ?> z <?= (int)$dl['total'] ?> fotografií (<?= $progress ?>%).</p>
+    <p>Staženo: <?= (int)$dl['downloaded'] ?> | Přeskočeno: <?= (int)$dl['skipped'] ?> | Neúspěšných: <?= (int)$dl['failed'] ?></p>
+    <progress value="<?= (int)$dl['offset'] ?>" max="<?= (int)$dl['total'] ?>" style="width:100%;height:1.5rem"><?= $progress ?>%</progress>
+    <p style="margin-bottom:0"><small>Stránka se automaticky obnovuje po každé dávce <?= $batchSize ?> fotek.</small></p>
+  </section>
+<?php endif; ?>
 
 <?php if ($log !== null): ?>
   <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="dl-result-heading">
@@ -181,6 +219,7 @@ adminHeader('Stažení fotografií z eStránek');
   </section>
 <?php endif; ?>
 
+<?php if (!$isDownloading): ?>
 <p>Stáhne originální fotografie z webu eStránek podle XML zálohy. Fotky se uloží do <code>uploads/gallery/</code> a propojí se s importovanými záznamy galerie.</p>
 
 <form method="post" enctype="multipart/form-data" novalidate>
@@ -203,7 +242,7 @@ adminHeader('Stažení fotografií z eStránek');
              style="width:100%;max-width:600px"
              placeholder="https://www.example.cz"
              aria-describedby="url-help">
-      <small id="url-help">Hlavní URL webu na eStránkách (bez lomítka na konci).</small>
+      <small id="url-help">Hlavní URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky.</small>
     </div>
 
     <div style="margin-bottom:.75rem">
@@ -221,8 +260,7 @@ adminHeader('Stažení fotografií z eStránek');
   </fieldset>
 
   <div style="margin-top:1rem">
-    <button type="submit" class="btn btn-primary"
-            onclick="this.disabled=true;this.textContent='Stahuji fotografie, čekejte prosím…';this.form.submit();return true;">Spustit stahování</button>
+    <button type="submit" class="btn">Spustit stahování</button>
     <a href="index.php" class="btn">Zpět</a>
   </div>
 </form>
@@ -232,11 +270,11 @@ adminHeader('Stažení fotografií z eStránek');
   <ul>
     <li>Skript projde XML zálohu a zjistí ID a název každé fotky</li>
     <li>Stáhne originál z <code>/img/original/{id}/{filename}</code></li>
-    <li>Uloží do <code>uploads/gallery/</code> a vytvoří thumbnail</li>
-    <li>Aktualizuje filename v DB záznamech galerie</li>
+    <li>Stahování probíhá po dávkách (<?= $batchSize ?> fotek), stránka se automaticky obnovuje</li>
+    <li>Uloží do <code>uploads/gallery/</code>, vytvoří thumbnail a WebP verzi</li>
     <li>Existující soubory se přeskočí (bezpečné pro opakované spuštění)</li>
   </ul>
-  <p><strong>Poznámka:</strong> Stahování může trvat několik minut (závisí na počtu fotek a rychlosti připojení). Tlačítko se deaktivuje a po dokončení se zobrazí výsledek.</p>
 </section>
+<?php endif; ?>
 
 <?php adminFooter(); ?>
