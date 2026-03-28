@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     set_time_limit(600);
 
     $cachedPath = $_POST['wxr_cached'];
-    if (!is_file($cachedPath) || !str_starts_with(realpath($cachedPath), realpath(sys_get_temp_dir()))) {
+    if ($cachedPath === '' || !is_file($cachedPath) || !str_contains(basename($cachedPath), 'kora_wp_import_')) {
         $_SESSION['import_log'] = ['✗ Dočasný soubor nenalezen. Zkuste import znovu.'];
         header('Location: wp_import.php');
         exit;
@@ -245,12 +245,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['wxr_file']['tmp_nam
     verifyCsrf();
     $xmlPath = $_FILES['wxr_file']['tmp_name'];
     if (is_uploaded_file($xmlPath)) {
-        // Přesuneme do temp s trvalým názvem (upload temp se smaže po requestu)
-        $cachedPath = sys_get_temp_dir() . '/kora_wp_import_' . bin2hex(random_bytes(8)) . '.xml';
-        move_uploaded_file($xmlPath, $cachedPath);
+        // Uložíme do uploads/tmp (spolehlivější než sys temp na Windows)
+        $tmpDir = dirname(__DIR__) . '/uploads/tmp';
+        if (!is_dir($tmpDir)) mkdir($tmpDir, 0755, true);
+        $cachedPath = $tmpDir . '/kora_wp_import_' . bin2hex(random_bytes(8)) . '.xml';
+        if (!move_uploaded_file($xmlPath, $cachedPath)) {
+            copy($xmlPath, $cachedPath);
+        }
         $preview = wpParseWxr($cachedPath);
         if ($preview === null) {
             @unlink($cachedPath);
+            $cachedPath = '';
         }
     }
 }
