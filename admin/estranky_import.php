@@ -95,8 +95,19 @@ if ($showForm) {
 // ── Streaming progress ──────────────────────────────────────────────────────
 
 set_time_limit(300);
+
+// Vypnout všechny output buffery pro okamžitý streaming
+while (ob_get_level()) {
+    ob_end_clean();
+}
+if (function_exists('apache_setenv')) {
+    @apache_setenv('no-gzip', '1');
+}
+ini_set('zlib.output_compression', '0');
+ini_set('implicit_flush', '1');
+
 header('Content-Type: text/html; charset=utf-8');
-header('Cache-Control: no-cache');
+header('Cache-Control: no-cache, no-store');
 header('X-Accel-Buffering: no');
 
 echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>Import z eStránek</title>';
@@ -104,12 +115,15 @@ echo '<style>body{font-family:system-ui,sans-serif;max-width:700px;margin:2rem a
 echo '#progress{background:#f5f7fa;border:1px solid #d6d6d6;border-radius:8px;padding:1rem;margin:1rem 0;min-height:150px;max-height:400px;overflow-y:auto;font-size:.9rem;line-height:1.6}';
 echo '.done{background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-top:1rem}</style></head><body>';
 echo '<h1>Import z eStránek</h1>';
-echo '<div id="progress" role="log" aria-live="polite" aria-label="Průběh importu"></div>';
+// Padding pro vynucení odeslání prvního chunku (některé proxy/servery bufferují první 1-4 KB)
+echo str_repeat(' ', 4096);
+echo '<div id="progress" role="log" aria-live="polite" aria-label="Průběh importu"><p>Probíhá import, čekejte prosím…</p></div>';
 echo '<div id="result"></div>';
+flush();
 
 $emit = function (string $message) {
     echo '<script>document.getElementById("progress").innerHTML+="' . addslashes($message) . '<br>";document.getElementById("progress").scrollTop=999999;</script>';
-    if (ob_get_level()) ob_flush();
+    echo str_repeat(' ', 256);
     flush();
 };
 

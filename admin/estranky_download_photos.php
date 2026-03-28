@@ -80,8 +80,18 @@ if ($showForm) {
 // ── Streaming progress ──────────────────────────────────────────────────────
 
 set_time_limit(1800);
+
+while (ob_get_level()) {
+    ob_end_clean();
+}
+if (function_exists('apache_setenv')) {
+    @apache_setenv('no-gzip', '1');
+}
+ini_set('zlib.output_compression', '0');
+ini_set('implicit_flush', '1');
+
 header('Content-Type: text/html; charset=utf-8');
-header('Cache-Control: no-cache');
+header('Cache-Control: no-cache, no-store');
 header('X-Accel-Buffering: no');
 
 echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>Stahování fotek – eStránky</title>';
@@ -89,21 +99,22 @@ echo '<style>body{font-family:system-ui,sans-serif;max-width:700px;margin:2rem a
 echo '#progress{background:#f5f7fa;border:1px solid #d6d6d6;border-radius:8px;padding:1rem;margin:1rem 0;min-height:200px;max-height:500px;overflow-y:auto;font-size:.9rem;line-height:1.6}';
 echo '.bar{background:#e2e8f0;border-radius:4px;height:24px;margin:1rem 0;overflow:hidden}.bar-fill{background:#1a5fb4;height:100%;transition:width .3s;text-align:center;color:#fff;font-size:.8rem;line-height:24px}';
 echo '.done{background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-top:1rem}</style></head><body>';
+echo str_repeat(' ', 4096);
 echo '<h1>Stahování fotografií z eStránek</h1>';
 echo '<div class="bar"><div class="bar-fill" id="bar" style="width:0%">0 %</div></div>';
-echo '<div id="progress" role="log" aria-live="polite" aria-label="Průběh stahování"></div>';
+echo '<div id="progress" role="log" aria-live="polite" aria-label="Průběh stahování"><p>Probíhá stahování, čekejte prosím…</p></div>';
 echo '<div id="result"></div>';
+flush();
 
 $emit = function (string $message) {
     echo '<script>document.getElementById("progress").innerHTML+="' . addslashes($message) . '<br>";document.getElementById("progress").scrollTop=999999;</script>';
-    if (ob_get_level()) ob_flush();
+    echo str_repeat(' ', 256);
     flush();
 };
 
 $setBar = function (int $current, int $total) {
     $pct = $total > 0 ? min(100, (int)round($current / $total * 100)) : 0;
     echo "<script>document.getElementById('bar').style.width='{$pct}%';document.getElementById('bar').textContent='{$pct} %';</script>";
-    if (ob_get_level()) ob_flush();
     flush();
 };
 
