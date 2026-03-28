@@ -7,6 +7,7 @@ $q        = trim($_GET['q'] ?? '');
 $results  = [];
 
 if ($q !== '' && mb_strlen($q) >= 2) {
+    rateLimit('search', 30, 60);
     $pdo  = db_connect();
     $like = '%' . $q . '%';
 

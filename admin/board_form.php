@@ -147,7 +147,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <label for="board_image">Obrázek oznámení</label>
     <?php if (!empty($document['image_file'])): ?>
       <div style="margin:.5rem 0">
-        <img src="<?= h(boardImageUrl($document)) ?>" alt=""
+        <img src="<?= h(boardImageUrl($document)) ?>" alt="Náhled obrázku"
              style="display:block;max-width:280px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>

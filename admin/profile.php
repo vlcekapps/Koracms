@@ -197,7 +197,7 @@ adminHeader('Můj profil');
 
     <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
     <input type="email" id="email" name="email" required aria-required="true"
-           value="<?= h($currentRow['email']) ?>">
+           autocomplete="email" value="<?= h($currentRow['email']) ?>">
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">

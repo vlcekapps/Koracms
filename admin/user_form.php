@@ -72,7 +72,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
 
     <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
     <input type="email" id="email" name="email" required aria-required="true"
-           value="<?= h((string)$account['email']) ?>">
+           autocomplete="email" value="<?= h((string)$account['email']) ?>">
 
     <label for="first_name">Jméno</label>
     <input type="text" id="first_name" name="first_name" maxlength="100"

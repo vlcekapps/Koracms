@@ -146,13 +146,13 @@ $notes       = $_POST['notes'] ?? '';
 
   <div id="guest-fields" style="<?= $mode !== 'guest' ? 'display:none' : '' ?>">
     <label for="guest_name">Jméno hosta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="guest_name" name="guest_name" maxlength="255" value="<?= h($guestName) ?>">
+    <input type="text" id="guest_name" name="guest_name" maxlength="255" autocomplete="name" value="<?= h($guestName) ?>">
 
     <label for="guest_email">E-mail hosta</label>
-    <input type="email" id="guest_email" name="guest_email" maxlength="255" value="<?= h($guestEmail) ?>">
+    <input type="email" id="guest_email" name="guest_email" maxlength="255" autocomplete="email" value="<?= h($guestEmail) ?>">
 
     <label for="guest_phone">Telefon hosta</label>
-    <input type="text" id="guest_phone" name="guest_phone" maxlength="50" value="<?= h($guestPhone) ?>">
+    <input type="text" id="guest_phone" name="guest_phone" maxlength="50" autocomplete="tel" value="<?= h($guestPhone) ?>">
   </div>
 
   <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">

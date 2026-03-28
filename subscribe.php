@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $state = 'ok';
                 }
             } catch (\PDOException $e) {
-                $state = 'exists';
+                $state = 'ok';
             }
         }
     }

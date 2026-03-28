@@ -7,6 +7,7 @@ $ok       = false;
 $token    = trim($_GET['token'] ?? '');
 
 if ($token !== '') {
+    rateLimit('subscribe_confirm', 5, 300);
     try {
         $stmt = db_connect()->prepare(
             "UPDATE cms_subscribers SET confirmed = 1 WHERE token = ? AND confirmed = 0"

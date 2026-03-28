@@ -166,7 +166,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <label for="place_image">Hlavní obrázek</label>
     <?php if (!empty($place['image_file'])): ?>
       <div style="margin:.5rem 0">
-        <img src="<?= h(placeImageUrl($place)) ?>" alt=""
+        <img src="<?= h(placeImageUrl($place)) ?>" alt="Náhled obrázku"
              style="display:block;max-width:320px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>

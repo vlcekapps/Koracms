@@ -699,6 +699,18 @@ body.theme-public textarea.form-control {
   border-color: var(--border-soft);
 }
 
+.form-control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.button-primary:focus-visible,
+.button-secondary:focus-visible,
+.button-danger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .button-secondary--disabled {
   color: var(--text-muted);
   opacity: 0.65;

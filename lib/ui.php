@@ -108,7 +108,7 @@ function cookieBanner(): string
          . '  var dc=document.getElementById(\'cookie-decline\');' . "\n"
          . '  if(!getCk(\'cms_cookie\')){b.style.display=\'block\';setTimeout(function(){ac.focus();},50);}' . "\n"
          . '  function hide(v){setCk(\'cms_cookie\',v,365);b.style.display=\'none\';}' . "\n"
-         . '  ac.addEventListener(\'click\',function(){hide(\'1\');});' . "\n"
+         . '  ac.addEventListener(\'click\',function(){hide(\'1\');if(window._koraGa4Id){var s=document.createElement(\'script\');s.async=true;s.src=\'https://www.googletagmanager.com/gtag/js?id=\'+window._koraGa4Id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag(\'js\',new Date());gtag(\'config\',window._koraGa4Id);}});' . "\n"
          . '  dc.addEventListener(\'click\',function(){hide(\'0\');});' . "\n"
          . '  b.addEventListener(\'keydown\',function(e){' . "\n"
          . '    if(e.key!==\'Tab\')return;' . "\n"

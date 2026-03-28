@@ -7,6 +7,7 @@ $token    = trim($_GET['token'] ?? '');
 $ok       = false;
 
 if ($token !== '') {
+    rateLimit('unsubscribe', 5, 300);
     try {
         $stmt = db_connect()->prepare(
             "DELETE FROM cms_subscribers WHERE token = ?"

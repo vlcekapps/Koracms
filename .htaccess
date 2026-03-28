@@ -6,9 +6,17 @@ Options -Indexes
 </FilesMatch>
 
 # Blokovat ploché datové soubory
-<FilesMatch "\.(inc|txt|log|sql|bak|sh|cfg)$">
+<FilesMatch "\.(inc|txt|log|sql|bak|sh|cfg|env)$">
     Require all denied
 </FilesMatch>
+
+# Blokovat přístup k .env a .git
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+<IfModule mod_rewrite.c>
+    RewriteRule ^\.git - [F,L]
+</IfModule>
 
 # Bezpečnostní hlavičky
 <IfModule mod_headers.c>

@@ -14,12 +14,21 @@ if (session_status() === PHP_SESSION_NONE) {
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
 
 // CSP nonce – per-request nonce pro inline skripty a styly.
 // 'unsafe-inline' zůstává jako fallback pro prohlížeče bez podpory nonce
 // a pro inline style atributy (nonce nepokrývá style="...").
 $_CSP_NONCE = base64_encode(random_bytes(16));
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'");
+$_CSP_EXTRA_SCRIPT = '';
+$_CSP_EXTRA_CONNECT = '';
+if (function_exists('getSetting') && getSetting('ga4_measurement_id', '') !== '') {
+    $_CSP_EXTRA_SCRIPT = ' https://www.googletagmanager.com';
+    $_CSP_EXTRA_CONNECT = ' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com';
+}
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'{$_CSP_EXTRA_CONNECT}; frame-ancestors 'none'");
 
 /**
  * Vrátí CSP nonce pro aktuální request.

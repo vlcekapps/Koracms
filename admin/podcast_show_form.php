@@ -117,7 +117,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <label for="cover_image">Cover obrázek</label>
     <?php if ((string)$show['cover_url'] !== ''): ?>
       <div style="margin:.75rem 0">
-        <img src="<?= h((string)$show['cover_url']) ?>" alt="" style="display:block;max-width:18rem;width:100%;border-radius:1rem;border:1px solid #d6d6d6">
+        <img src="<?= h((string)$show['cover_url']) ?>" alt="Náhled obalu podcastu" style="display:block;max-width:18rem;width:100%;border-radius:1rem;border:1px solid #d6d6d6">
       </div>
       <small id="podcast-show-cover-current" class="field-help">Aktuální titulní obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>

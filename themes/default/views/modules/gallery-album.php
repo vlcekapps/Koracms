@@ -36,7 +36,7 @@
           <article class="card gallery-card">
             <a class="gallery-card__link" href="<?= h((string)$subAlbum['public_path']) ?>">
               <?php if ($subAlbum['cover_url'] !== ''): ?>
-                <img class="gallery-card__image" src="<?= h($subAlbum['cover_url']) ?>" alt="">
+                <img class="gallery-card__image" src="<?= h($subAlbum['cover_url']) ?>" alt="<?= h($subAlbum['name']) ?>">
               <?php else: ?>
                 <div class="gallery-card__placeholder" aria-hidden="true">Bez náhledu</div>
               <?php endif; ?>

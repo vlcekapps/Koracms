@@ -162,7 +162,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <input type="file" id="download_image" name="download_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg">
     <?php if ((string)$download['image_url'] !== ''): ?>
       <div style="margin:.75rem 0">
-        <img src="<?= h((string)$download['image_url']) ?>" alt="" style="max-width:16rem;height:auto;border:1px solid #d6d6d6;border-radius:.75rem">
+        <img src="<?= h((string)$download['image_url']) ?>" alt="Náhled obrázku" style="max-width:16rem;height:auto;border:1px solid #d6d6d6;border-radius:.75rem">
       </div>
       <label style="font-weight:normal">
         <input type="checkbox" name="download_image_delete" value="1">

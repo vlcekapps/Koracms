@@ -525,10 +525,10 @@ $renderFeaturedSection = static function () use (
                 break;
             }
             ?>
-            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="blog" aria-labelledby="featured-nadpis">
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="blog" aria-labelledby="featured-nadpis-blog">
               <div class="section-heading">
                 <div>
-                  <h2 id="featured-nadpis" class="section-title">Doporučený článek</h2>
+                  <h2 id="featured-nadpis-blog" class="section-title">Doporučený článek</h2>
                 </div>
               </div>
               <article class="card card--feature">
@@ -562,11 +562,11 @@ $renderFeaturedSection = static function () use (
             $featuredBoardPath = boardPublicPath($featuredBoardItem);
             $featuredBoardSummary = (string)($featuredBoardItem['excerpt_plain'] ?? '');
             ?>
-            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="board" aria-labelledby="featured-nadpis">
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="board" aria-labelledby="featured-nadpis-board">
               <div class="section-heading">
                 <div>
                   <p class="section-kicker"><?= h(boardModuleSectionKicker()) ?></p>
-                  <h2 id="featured-nadpis" class="section-title">Zvýrazněná položka</h2>
+                  <h2 id="featured-nadpis-board" class="section-title">Zvýrazněná položka</h2>
                 </div>
                 <a class="section-link" href="<?= BASE_URL ?>/board/index.php"><?= h(boardModuleAllItemsLabel()) ?> <span aria-hidden="true">→</span></a>
               </div>
@@ -627,8 +627,8 @@ $renderFeaturedSection = static function () use (
                 break;
             }
             ?>
-            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="poll" aria-labelledby="featured-nadpis">
-              <h2 id="featured-nadpis" class="section-title">Aktuální anketa</h2>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="poll" aria-labelledby="featured-nadpis-poll">
+              <h2 id="featured-nadpis-poll" class="section-title">Aktuální anketa</h2>
               <p><strong><?= h($homePoll['question']) ?></strong></p>
               <p class="meta-row"><span><?= (int)$homePoll['vote_count'] ?> hlasů</span></p>
               <div class="button-row button-row--start">
@@ -644,8 +644,8 @@ $renderFeaturedSection = static function () use (
                 break;
             }
             ?>
-            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="newsletter" aria-labelledby="featured-nadpis">
-              <h2 id="featured-nadpis" class="section-title">Zůstaňte v kontaktu</h2>
+            <section class="surface surface--accent home-section home-section--featured-module" data-home-section="featured" data-feature-source="newsletter" aria-labelledby="featured-nadpis-newsletter">
+              <h2 id="featured-nadpis-newsletter" class="section-title">Zůstaňte v kontaktu</h2>
               <p class="section-subtitle">Přihlaste se k odběru a dostávejte nové články, aktuality a pozvánky přímo e-mailem.</p>
               <div class="button-row button-row--start">
                 <a class="button-primary" href="<?= BASE_URL ?>/subscribe.php">Přihlásit odběr</a>
