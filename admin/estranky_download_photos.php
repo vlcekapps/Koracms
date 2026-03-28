@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $xmlPath = $_FILES['xml_file']['tmp_name'];
     $siteUrl = rtrim(trim($_POST['site_url'] ?? ''), '/');
+    if ($siteUrl !== '' && !str_starts_with($siteUrl, 'http://') && !str_starts_with($siteUrl, 'https://')) {
+        $siteUrl = 'https://' . $siteUrl;
+    }
     $parentAlbumId = inputInt('post', 'parent_album_id');
 
     if (!is_uploaded_file($xmlPath) || $siteUrl === '') {
