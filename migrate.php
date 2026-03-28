@@ -782,6 +782,11 @@ $addColumns = [
     'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_faqs.deleted_at'            => "ALTER TABLE cms_faqs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    // Plánované zrušení publikace
+    'cms_articles.unpublish_at'      => "ALTER TABLE cms_articles ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    'cms_news.unpublish_at'          => "ALTER TABLE cms_news ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    'cms_pages.unpublish_at'         => "ALTER TABLE cms_pages ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    'cms_events.unpublish_at'        => "ALTER TABLE cms_events ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {

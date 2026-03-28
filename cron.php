@@ -42,7 +42,30 @@ try {
     $log[] = 'Chyba plánované publikace: ' . $e->getMessage();
 }
 
-// ── 2. Čištění starých rate-limit záznamů (starší než 1 hodina) ─────────────
+// ── 2. Plánované zrušení publikace ────────────────────────────────────────────
+$unpublishTables = [
+    'cms_articles'  => ['has_published' => false],
+    'cms_news'      => ['has_published' => false],
+    'cms_pages'     => ['has_published' => true],
+    'cms_events'    => ['has_published' => true],
+];
+$totalUnpublished = 0;
+foreach ($unpublishTables as $uTable => $uCfg) {
+    try {
+        if ($uCfg['has_published']) {
+            $stmt = $pdo->prepare("UPDATE {$uTable} SET is_published = 0, unpublish_at = NULL WHERE unpublish_at IS NOT NULL AND unpublish_at <= NOW() AND is_published = 1");
+        } else {
+            $stmt = $pdo->prepare("UPDATE {$uTable} SET status = 'pending', unpublish_at = NULL WHERE unpublish_at IS NOT NULL AND unpublish_at <= NOW() AND status = 'published'");
+        }
+        $stmt->execute();
+        $totalUnpublished += $stmt->rowCount();
+    } catch (\PDOException $e) {}
+}
+if ($totalUnpublished > 0) {
+    $log[] = "Zrušena publikace {$totalUnpublished} položek (unpublish_at)";
+}
+
+// ── 3. Čištění starých rate-limit záznamů (starší než 1 hodina) ─────────────
 try {
     $stmt = $pdo->prepare("DELETE FROM cms_rate_limit WHERE expires_at < NOW() - INTERVAL 1 HOUR");
     $stmt->execute();

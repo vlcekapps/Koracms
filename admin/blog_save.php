@@ -64,6 +64,15 @@ if ($publishAt !== '') {
     }
 }
 
+$unpublishAt = trim($_POST['unpublish_at'] ?? '');
+$unpublishAtSql = null;
+if ($unpublishAt !== '') {
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
+    if ($dateTime) {
+        $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+    }
+}
+
 $imageFile = null;
 if (!empty($_FILES['image']['name'])) {
     $tmp = $_FILES['image']['tmp_name'];
@@ -127,8 +136,8 @@ if ($existingArticle) {
         ]);
     }
 
-    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, meta_title=?, meta_description=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
-    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $metaTitle, $metaDescription, currentUserId(), $blogId];
+    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
+    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, currentUserId(), $blogId];
     if ($imageFile !== null) {
         $setClauses .= ", image_file=?";
         $params[] = $imageFile;
@@ -142,9 +151,9 @@ if ($existingArticle) {
     $status = currentUserHasCapability('blog_approve') ? 'published' : 'pending';
     $pdo->prepare(
         "INSERT INTO cms_articles
-         (title, slug, perex, content, category_id, comments_enabled, image_file, publish_at,
+         (title, slug, perex, content, category_id, comments_enabled, image_file, publish_at, unpublish_at,
           meta_title, meta_description, preview_token, author_id, status, blog_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -154,6 +163,7 @@ if ($existingArticle) {
         $commentsEnabled,
         $imageFile ?? '',
         $publishAtSql,
+        $unpublishAtSql,
         $metaTitle,
         $metaDescription,
         $previewToken,

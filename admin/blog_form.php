@@ -7,6 +7,11 @@ $pdo = db_connect();
 $id = inputInt('get', 'id');
 $article = null;
 
+if ($id === null && empty(getAllBlogs())) {
+    header('Location: ' . BASE_URL . '/admin/blogs.php');
+    exit;
+}
+
 if ($id !== null) {
     if (canManageOwnBlogOnly()) {
         $stmt = $pdo->prepare("SELECT * FROM cms_articles WHERE id = ? AND author_id = ?");
@@ -185,6 +190,11 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     <input type="datetime-local" id="publish_at" name="publish_at" aria-describedby="blog-publish-at-help"
            style="width:auto" value="<?= h($publishAtInput) ?>">
     <small id="blog-publish-at-help" class="field-help">Nechte prázdné, pokud se má článek zveřejnit hned.</small>
+
+    <label for="unpublish_at">Plánované zrušení publikace</label>
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at" aria-describedby="blog-unpublish-at-help"
+           style="width:auto" value="<?= h(!empty($article['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$article['unpublish_at'])) : '') ?>">
+    <small id="blog-unpublish-at-help" class="field-help">Volitelné. Článek se v zadaný čas automaticky skryje z veřejného webu.</small>
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
