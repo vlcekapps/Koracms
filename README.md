@@ -98,6 +98,29 @@ Pokud web běží v podsložce, nastavte například:
 define('BASE_URL', '/koracms');
 ```
 
+### 3a. Doplňte SMTP konfiguraci
+
+Pro produkční web doporučujeme v `config.php` rovnou nastavit i SMTP, protože Kora CMS používá e-maily pro:
+
+- registraci a potvrzení účtu
+- obnovení hesla
+- newsletter
+- rezervace
+- formuláře
+- interní notifikace administrace
+
+Ukázka:
+
+```php
+define('SMTP_HOST', 'smtp.example.com');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'uzivatel@example.com');
+define('SMTP_PASS', 'heslo-nebo-app-password');
+define('SMTP_SECURE', 'tls'); // '', 'tls', 'ssl'
+```
+
+Pokud SMTP konstanty nenastavíte, CMS se pokusí použít `localhost:25` bez autentizace. To může fungovat na lokálním serveru nebo některých hostingech, ale pro běžný produkční provoz je lepší explicitní SMTP konfigurace.
+
 ### 4. Spusťte instalaci
 
 Otevřete:
@@ -422,4 +445,3 @@ UX a informační logiku průběžně doplňuje i dokument:
 Historie verzí je v:
 
 - [CHANGELOG.md](C:/laragon/www/CHANGELOG.md)
-
