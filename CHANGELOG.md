@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Cron endpoint** (`cron.php`) – plánované úlohy: publikování článků s `publish_at`, čištění expirovaných rate-limit záznamů, mazání starých temp souborů (24h) a audit logů (90 dní); spuštění přes CLI nebo HTTP s tokenem (`CRON_TOKEN` v config.php); výsledky se logují do `cms_log`
 - **WebP konverze** – automatické generování WebP verze při uploadu obrázků (galerie, články, eStránky import); helper funkce `generateWebp()`, `webpUrl()` a `pictureTag()` v `lib/gallery.php`; `<picture>` element s WebP source ve veřejných views
 - **Prohlížeč audit logu** (`admin/audit_log.php`) – výpis `cms_log` s filtry podle akce, uživatele a data; stránkování; sloupec `user_id` přidán do logu pro identifikaci autora akce
 - **Záloha databáze** (`admin/backup.php`) – export všech CMS tabulek jako SQL soubor ke stažení; generuje CREATE TABLE + INSERT přes PDO; bez závislosti na mysqldump
