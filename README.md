@@ -125,7 +125,8 @@ Po dokončení **odstraňte** soubor `migrate.php` ze serveru.
 | **Ke stažení** | Katalog dokumentů, software a dalších materiálů s typem položky, verzí, platformou, licencí, detailovou stránkou a bezpečným file endpointem; položky se v kategoriích řadí automaticky od nejnovějších |
 | **Jídelní lístek** | Správa jídelních a nápojových karet s platností od–do, archivem, veřejným detailem a čistou slug URL |
 | **Ankety** | Hlasování s výsledky, archivem, čistými slug URL, volitelným časovým omezením a ochranou proti opakovanému hlasování |
-| **FAQ** | Znalostní báze s kategoriemi, krátkým perexem, detailovou stránkou na čisté slug URL a veřejným FAQ rozcestníkem; otázky se v kategoriích řadí automaticky od nejnovějších |
+| **Znalostní báze** | Hierarchické kategorie s neomezenou hloubkou, breadcrumbs, stromová navigace, filtrování podle kategorií včetně podkategorií, krátkým perexem a detailovou stránkou na čisté slug URL |
+| **Formuláře** | Dynamický form builder – admin definuje formuláře s libovolnými poli (text, email, tel, textarea, select, checkbox, number, date); veřejná stránka s CSRF, honeypot a CAPTCHA; prohlížení odpovědí v admin + CSV export |
 | **Úřední deska / Vývěska / Oznámení** | Dokumenty i krátká oznámení s datem vyvěšení/sejmutí, typem položky, perexem, volitelným obrázkem, kontaktem, detailovou stránkou a přílohami; čisté slug URL, automatický archiv po datu sejmutí a přirozené řazení podle připnutí a data vyvěšení |
 | **Rezervace** | Univerzální rezervační systém – 3 režimy slotů, veřejný kalendář, e-mailové notifikace, zrušení přes tokenový odkaz, podpora hostů i registrovaných uživatelů, schvalování správcem a sjednocená administrace zdrojů, kategorií, míst i rezervací s capability guardy |
 | **Statické stránky** | Vlastní stránky se slug URL; volitelné zobrazení v navigaci, samostatná stránka pro pořadí v hlavní navigaci a sjednocená redakční administrace s filtrováním, bezpečným slug workflow a veřejným preview |
@@ -253,6 +254,15 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 - **E-maily** – odesílání přes přímé SMTP (`fsockopen`); automatická detekce serveru z `php.ini`; spolehlivé na PHP 8.4 NTS/FastCGI i na Windows
 - **Audit log** – záznam akcí administrátorů (přihlášení, úpravy obsahu, změny nastavení)
 - **Import / Export** – export a import dat CMS (články, novinky, stránky, události, galerie včetně slugů alb a fotografií, místa, soubory ke stažení, jídelní lístky, podcasty, ankety, FAQ, úřední deska, komentáře, odběratelé, newslettery)
+- **WordPress importér** – import z WordPress XML exportu (WXR) s náhledem, filtrem kategorií, perex/content splittem na `<!--more-->` a automatickým odstraněním WP bloků
+- **eStránky importér** – import článků, kategorií, fotoalb a fotografií z XML zálohy eStránek.cz s base64 dekódováním a hierarchií alb; stahování fotografií z webu
+- **Google Analytics 4** – nastavení GA4 Measurement ID v admin; gtag.js snippet se automaticky vloží do hlavičky
+- **Vlastní kód do head/footer** – textová pole v nastavení pro libovolný HTML/JS kód do `<head>` a před `</body>`
+- **Revize obsahu** – snapshot textových polí před každou úpravou; historie změn s uživatelem, datem a porovnáním starý/nový
+- **Převod článek ↔ stránka** – převod článku na statickou stránku a naopak jedním kliknutím
+- **Export fotoalba do ZIP** – rekurzivní export alba včetně podalb do ZIP s hierarchickou strukturou složek
+- **Kontrola integrity souborů** – SHA-256 snapshot všech PHP souborů; detekce nových, změněných a smazaných souborů; varování na admin dashboardu
+- **FULLTEXT vyhledávání** – 10 FULLTEXT indexů na klíčových tabulkách; relevantní řazení výsledků s LIKE fallbackem
 
 ---
 
@@ -265,6 +275,8 @@ Veřejní uživatelé nemají přístup do administrace. Správce vidí všechny
 - Prepared statements proti SQL injection
 - HTML escapování proti XSS
 - Bezpečné hashování hesel (bcrypt)
+- Kontrola integrity souborů (SHA-256 snapshot s detekcí změn)
+- CSP nonce na všech inline skriptech
 
 ---
 

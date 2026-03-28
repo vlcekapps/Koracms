@@ -25,6 +25,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_places' => getSetting('module_places', '0'),
     'module_polls' => getSetting('module_polls', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
+    'module_forms' => getSetting('module_forms', '0'),
 ];
 foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
     saveSetting($moduleSettingKey, '1');
@@ -942,6 +943,12 @@ $pages = [
     ['label' => 'admin_users', 'url' => $baseUrl . '/admin/users.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_review_queue', 'url' => $baseUrl . '/admin/review_queue.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_user_create_form', 'url' => $baseUrl . '/admin/user_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_forms', 'url' => $baseUrl . '/admin/forms.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_form_create', 'url' => $baseUrl . '/admin/form_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_wp_import', 'url' => $baseUrl . '/admin/wp_import.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_estranky_import', 'url' => $baseUrl . '/admin/estranky_import.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_estranky_photos', 'url' => $baseUrl . '/admin/estranky_download_photos.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_integrity', 'url' => $baseUrl . '/admin/integrity.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
 ];
 
 if ($runtimeAuditAuthorId > 0) {

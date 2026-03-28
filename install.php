@@ -646,6 +646,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'module_faq'        => '0',
             'module_board'      => '0',
             'module_reservations' => '0',
+            'module_forms'        => '0',
             'module_statistics'   => '0',
             'visitor_tracking_enabled' => '0',
             'visitor_counter_enabled'  => '0',
