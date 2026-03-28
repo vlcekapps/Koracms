@@ -116,6 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
         if (file_put_contents($destFile, $data) !== false) {
             gallery_make_thumb($destFile, $thumbDir . $safeFilename, 400);
+            generateWebp($destFile);
+            generateWebp($thumbDir . $safeFilename);
 
             try {
                 $origTitle = pathinfo($filename, PATHINFO_FILENAME);

@@ -108,6 +108,8 @@ if (!empty($files['name'])) {
         }
 
         gallery_make_thumb($uploadDir . $filename, $thumbDir . $filename, 300);
+        generateWebp($uploadDir . $filename);
+        generateWebp($thumbDir . $filename);
 
         $slugCandidate = pathinfo((string)$origName, PATHINFO_FILENAME);
         $resolvedSlug = uniqueGalleryPhotoSlug($pdo, $slugCandidate);

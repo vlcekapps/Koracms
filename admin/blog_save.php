@@ -15,7 +15,12 @@ $publishAt = trim($_POST['publish_at'] ?? '');
 $metaTitle = trim($_POST['meta_title'] ?? '');
 $metaDescription = trim($_POST['meta_description'] ?? '');
 $commentsEnabled = isset($_POST['comments_enabled']) ? 1 : 0;
-$blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 1);
+$blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 0);
+
+if ($blogId <= 0 || !getBlogById($blogId)) {
+    header('Location: ' . BASE_URL . '/admin/blogs.php');
+    exit;
+}
 
 if ($title === '' || $content === '') {
     header('Location: blog_form.php' . ($id ? "?id={$id}" : ''));
@@ -86,6 +91,8 @@ if (!empty($_FILES['image']['name'])) {
 
         if (move_uploaded_file($tmp, $dir . $filename)) {
             gallery_make_thumb($dir . $filename, $thumbDir . $filename, 400);
+            generateWebp($dir . $filename);
+            generateWebp($thumbDir . $filename);
             $imageFile = $filename;
 
             if ($existingArticle && !empty($existingArticle['image_file'])) {

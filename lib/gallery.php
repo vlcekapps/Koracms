@@ -117,6 +117,79 @@ function gallery_make_thumb(string $src, string $dst, int $maxDim = 300): bool
 }
 
 /**
+ * Vygeneruje WebP verzi obrázku vedle originálu.
+ * Vrátí cestu k WebP souboru nebo '' při selhání.
+ */
+function generateWebp(string $srcPath, int $quality = 80): string
+{
+    if (!function_exists('imagewebp')) {
+        return '';
+    }
+    $info = @getimagesize($srcPath);
+    if (!$info) {
+        return '';
+    }
+    [$w, $h, $type] = $info;
+    if ($type === IMAGETYPE_WEBP) {
+        return $srcPath;
+    }
+
+    $image = match ($type) {
+        IMAGETYPE_JPEG => @imagecreatefromjpeg($srcPath),
+        IMAGETYPE_PNG  => @imagecreatefrompng($srcPath),
+        IMAGETYPE_GIF  => @imagecreatefromgif($srcPath),
+        default        => false,
+    };
+    if (!$image) {
+        return '';
+    }
+
+    $webpPath = preg_replace('/\.[a-z]+$/i', '.webp', $srcPath);
+    if ($webpPath === $srcPath) {
+        $webpPath .= '.webp';
+    }
+
+    if ($type === IMAGETYPE_PNG || $type === IMAGETYPE_GIF) {
+        imagealphablending($image, true);
+        imagesavealpha($image, true);
+    }
+
+    $ok = @imagewebp($image, $webpPath, $quality);
+    imagedestroy($image);
+    return $ok ? $webpPath : '';
+}
+
+/**
+ * Vrátí URL webp verze obrázku, pokud soubor existuje.
+ */
+function webpUrl(string $originalUrl): string
+{
+    $webpUrl = preg_replace('/\.[a-z]+$/i', '.webp', $originalUrl);
+    $docRoot = rtrim($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__), '/\\');
+    $basePath = rtrim(BASE_URL, '/');
+    $relativePath = $basePath !== '' ? str_replace($basePath, '', parse_url($webpUrl, PHP_URL_PATH) ?? '') : (parse_url($webpUrl, PHP_URL_PATH) ?? '');
+    $webpPath = $docRoot . $relativePath;
+    if ($webpUrl !== $originalUrl && is_file($webpPath)) {
+        return $webpUrl;
+    }
+    return '';
+}
+
+/**
+ * Vrátí <picture> element s WebP source pokud existuje, jinak prostý <img>.
+ */
+function pictureTag(string $src, string $alt, string $class = '', string $attrs = ''): string
+{
+    $webp = webpUrl($src);
+    $classAttr = $class !== '' ? ' class="' . h($class) . '"' : '';
+    $img = '<img src="' . h($src) . '" alt="' . h($alt) . '"' . $classAttr . ($attrs !== '' ? ' ' . $attrs : '') . '>';
+    if ($webp !== '') {
+        return '<picture><source srcset="' . h($webp) . '" type="image/webp">' . $img . '</picture>';
+    }
+    return $img;
+}
+
+/**
  * Sestaví cestu ke složce alba z hierarchie parent_id.
  * Např. album "MyDva Kafé" pod "2024" pod "Výlety" → "Výlety/2024/MyDva Kafé"
  */

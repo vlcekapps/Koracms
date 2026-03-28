@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **WebP konverze** – automatické generování WebP verze při uploadu obrázků (galerie, články, eStránky import); helper funkce `generateWebp()`, `webpUrl()` a `pictureTag()` v `lib/gallery.php`; `<picture>` element s WebP source ve veřejných views
 - **Prohlížeč audit logu** (`admin/audit_log.php`) – výpis `cms_log` s filtry podle akce, uživatele a data; stránkování; sloupec `user_id` přidán do logu pro identifikaci autora akce
 - **Záloha databáze** (`admin/backup.php`) – export všech CMS tabulek jako SQL soubor ke stažení; generuje CREATE TABLE + INSERT přes PDO; bez závislosti na mysqldump
 - **301/302 přesměrování** (`admin/redirects.php`) – správa přesměrování starých URL na nové; tabulka `cms_redirects` s počítadlem přístupů; automatická kontrola na každém requestu; podpora 301 (trvalé) a 302 (dočasné); užitečné po importu obsahu nebo změně slug adres
