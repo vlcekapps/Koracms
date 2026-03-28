@@ -136,6 +136,13 @@ adminHeader('Statické stránky');
             <?php if ((int)$page['is_published'] === 1): ?>
               <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
+            <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php" style="display:inline"
+                  onsubmit="return confirm('Převést stránku na článek blogu?')">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="direction" value="page_to_article">
+              <input type="hidden" name="id" value="<?= (int)$page['id'] ?>">
+              <button type="submit" class="btn">→ Článek</button>
+            </form>
             <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
                   onsubmit="return confirm('Smazat tuto stránku?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

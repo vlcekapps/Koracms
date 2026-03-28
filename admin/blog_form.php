@@ -47,7 +47,17 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 ?>
 
 <?php if ($article): ?>
-  <p><a href="revisions.php?type=article&amp;id=<?= (int)$article['id'] ?>">Historie revizí</a></p>
+  <p>
+    <a href="revisions.php?type=article&amp;id=<?= (int)$article['id'] ?>">Historie revizí</a>
+    ·
+    <form action="convert_content.php" method="post" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="direction" value="article_to_page">
+      <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+      <button type="submit" class="btn"
+              onclick="return confirm('Převést článek na statickou stránku? Článek bude smazán a nahrazen stránkou.')">Převést na stránku</button>
+    </form>
+  </p>
 <?php endif; ?>
 
 <?php if ($err === 'slug'): ?>

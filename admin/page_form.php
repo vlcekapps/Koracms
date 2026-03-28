@@ -36,7 +36,17 @@ adminHeader($pageTitle);
 ?>
 
 <?php if ($id): ?>
-  <p><a href="revisions.php?type=page&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+  <p>
+    <a href="revisions.php?type=page&amp;id=<?= (int)$id ?>">Historie revizí</a>
+    ·
+    <form action="convert_content.php" method="post" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="direction" value="page_to_article">
+      <input type="hidden" name="id" value="<?= (int)$id ?>">
+      <button type="submit" class="btn"
+              onclick="return confirm('Převést stránku na článek blogu? Stránka bude smazána a nahrazena článkem.')">Převést na článek</button>
+    </form>
+  </p>
 <?php endif; ?>
 
 <?php if ($err === 'required'): ?>

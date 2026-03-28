@@ -124,6 +124,13 @@ adminHeader('Blog');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
+          <form action="convert_content.php" method="post" style="display:inline">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="direction" value="article_to_page">
+            <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+            <button type="submit" class="btn"
+                    onclick="return confirm('Převést článek na statickou stránku?')">→ Stránka</button>
+          </form>
           <form action="blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
