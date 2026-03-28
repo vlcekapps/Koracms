@@ -71,7 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             publish_at       DATETIME     NULL DEFAULT NULL,
             view_count       INT          NOT NULL DEFAULT 0,
             created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FULLTEXT INDEX ft_articles_search (title, perex, content)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_news (
@@ -83,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status     ENUM('pending','published') NOT NULL DEFAULT 'published',
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_news_slug (slug)
+            UNIQUE KEY uq_cms_news_slug (slug),
+            FULLTEXT INDEX ft_news_search (title, content)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat (
@@ -141,7 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FULLTEXT INDEX ft_pages_search (title, content)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_tags (
@@ -182,7 +185,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status      ENUM('pending','published') NOT NULL DEFAULT 'published',
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_events_slug (slug)
+            UNIQUE KEY uq_cms_events_slug (slug),
+            FULLTEXT INDEX ft_events_search (title, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_subscribers (
@@ -286,7 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             author_id       INT          NULL DEFAULT NULL,
             created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_downloads_slug (slug)
+            UNIQUE KEY uq_cms_downloads_slug (slug),
+            FULLTEXT INDEX ft_downloads_search (title, excerpt, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_places (
@@ -311,7 +316,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sort_order  INT          NOT NULL DEFAULT 0,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_places_slug (slug)
+            UNIQUE KEY uq_cms_places_slug (slug),
+            FULLTEXT INDEX ft_places_search (name, excerpt, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_gallery_photos (
@@ -340,7 +346,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             author_id    INT          NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_food_cards_slug (slug)
+            UNIQUE KEY uq_cms_food_cards_slug (slug),
+            FULLTEXT INDEX ft_food_search (title, description, content)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_polls (
@@ -353,7 +360,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             end_date    DATETIME     NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_polls_slug (slug)
+            UNIQUE KEY uq_cms_polls_slug (slug),
+            FULLTEXT INDEX ft_polls_search (question, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_poll_options (
@@ -392,7 +400,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_faqs_slug (slug)
+            UNIQUE KEY uq_cms_faqs_slug (slug),
+            FULLTEXT INDEX ft_faqs_search (question, excerpt, answer)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_categories (
@@ -425,7 +434,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status         ENUM('pending','published') NOT NULL DEFAULT 'published',
             author_id      INT          NULL DEFAULT NULL,
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_cms_board_slug (slug)
+            UNIQUE KEY uq_cms_board_slug (slug),
+            FULLTEXT INDEX ft_board_search (title, excerpt, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         // ── Rezervační systém ───────────────────────────────────────────────

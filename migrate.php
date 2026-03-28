@@ -1728,6 +1728,43 @@ try {
     $log[] = "✗ Migrace stavů chat zpráv – CHYBA: " . h($e->getMessage());
 }
 
+// ── 6. FULLTEXT indexy pro vyhledávání ────────────────────────────────────────
+
+$indexExists = static function (string $tableName, string $indexName) use ($pdo): bool {
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?"
+    );
+    $stmt->execute([$tableName, $indexName]);
+    return (int)$stmt->fetchColumn() > 0;
+};
+
+$fulltextIndexes = [
+    ['cms_articles',   'ft_articles_search',   '(title, perex, content)'],
+    ['cms_news',       'ft_news_search',       '(title, content)'],
+    ['cms_pages',      'ft_pages_search',      '(title, content)'],
+    ['cms_events',     'ft_events_search',     '(title, description)'],
+    ['cms_faqs',       'ft_faqs_search',       '(question, excerpt, answer)'],
+    ['cms_board',      'ft_board_search',      '(title, excerpt, description)'],
+    ['cms_downloads',  'ft_downloads_search',  '(title, excerpt, description)'],
+    ['cms_places',     'ft_places_search',     '(name, excerpt, description)'],
+    ['cms_polls',      'ft_polls_search',      '(question, description)'],
+    ['cms_food_cards', 'ft_food_search',       '(title, description, content)'],
+];
+
+foreach ($fulltextIndexes as [$ftTable, $ftIndex, $ftColumns]) {
+    try {
+        if ($indexExists($ftTable, $ftIndex)) {
+            $log[] = "· FULLTEXT index <code>{$ftIndex}</code> již existuje – přeskočeno";
+            continue;
+        }
+        $pdo->exec("ALTER TABLE {$ftTable} ADD FULLTEXT INDEX {$ftIndex} {$ftColumns}");
+        $log[] = "✓ FULLTEXT index <code>{$ftIndex}</code> přidán – OK";
+    } catch (\PDOException $e) {
+        $log[] = "✗ FULLTEXT index <code>{$ftIndex}</code> – CHYBA: " . h($e->getMessage());
+    }
+}
+
 if ($isCli) {
     foreach ($log as $line) {
         echo trim(strip_tags(html_entity_decode($line, ENT_QUOTES | ENT_HTML5, 'UTF-8'))) . PHP_EOL;

@@ -10,72 +10,111 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     $pdo  = db_connect();
     $like = '%' . $q . '%';
 
+    // Pomocná funkce: fulltextový dotaz s fallback na LIKE
+    $ftSearch = static function (
+        PDO $pdo,
+        string $query,
+        string $like,
+        string $selectSql,
+        string $fromWhere,
+        string $ftColumns,
+        array $extraParams,
+        string $orderBy,
+        int $limit
+    ): array {
+        // Zkusíme FULLTEXT (NATURAL LANGUAGE MODE, min 3 znaky v MySQL)
+        if (mb_strlen($query) >= 3) {
+            try {
+                $sql = "{$selectSql}, MATCH({$ftColumns}) AGAINST(? IN NATURAL LANGUAGE MODE) AS _relevance"
+                     . " {$fromWhere} AND MATCH({$ftColumns}) AGAINST(? IN NATURAL LANGUAGE MODE)"
+                     . " ORDER BY _relevance DESC LIMIT {$limit}";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(array_merge($extraParams, [$query, $query]));
+                $rows = $stmt->fetchAll();
+                if (!empty($rows)) {
+                    return $rows;
+                }
+            } catch (\PDOException $e) {
+                // FULLTEXT index nemusí existovat – fallback na LIKE
+            }
+        }
+
+        // Fallback: LIKE
+        $likeColumns = array_map('trim', explode(',', $ftColumns));
+        $likeConds = implode(' OR ', array_map(fn(string $col) => "{$col} LIKE ?", $likeColumns));
+        $sql = $selectSql . " {$fromWhere} AND ({$likeConds}) ORDER BY {$orderBy} LIMIT {$limit}";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array_merge($extraParams, array_fill(0, count($likeColumns), $like)));
+        return $stmt->fetchAll();
+    };
+
     if (isModuleEnabled('blog')) {
         try {
-            $stmt = $pdo->prepare(
-                "SELECT id, title, slug, perex, created_at, 'blog' AS type
-                 FROM cms_articles
-                 WHERE status = 'published'
-                   AND (publish_at IS NULL OR publish_at <= NOW())
-                   AND (title LIKE ? OR perex LIKE ? OR content LIKE ?)
-                 ORDER BY created_at DESC LIMIT 10"
-            );
-            $stmt->execute([$like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+            foreach ($ftSearch(
+                $pdo, $q, $like,
+                "SELECT id, title, slug, perex, created_at, 'blog' AS type",
+                "FROM cms_articles WHERE status = 'published' AND (publish_at IS NULL OR publish_at <= NOW())",
+                'title, perex, content',
+                [],
+                'created_at DESC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search blog: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('news')) {
         try {
-            $stmt = $pdo->prepare(
-                "SELECT id, title, slug, content AS perex, created_at, 'news' AS type
-                 FROM cms_news
-                 WHERE status = 'published' AND (title LIKE ? OR content LIKE ?)
-                 ORDER BY created_at DESC LIMIT 5"
-            );
-            $stmt->execute([$like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+            foreach ($ftSearch(
+                $pdo, $q, $like,
+                "SELECT id, title, slug, content AS perex, created_at, 'news' AS type",
+                "FROM cms_news WHERE status = 'published'",
+                'title, content',
+                [],
+                'created_at DESC',
+                5
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search news: ' . $e->getMessage());
         }
     }
 
     try {
-        $stmt = $pdo->prepare(
-            "SELECT id, title, '' AS perex, created_at, 'page' AS type, slug
-             FROM cms_pages
-             WHERE is_published = 1 AND (title LIKE ? OR content LIKE ?)
-             ORDER BY title LIMIT 5"
-        );
-        $stmt->execute([$like, $like]);
-        foreach ($stmt->fetchAll() as $row) {
+        foreach ($ftSearch(
+            $pdo, $q, $like,
+            "SELECT id, title, '' AS perex, created_at, 'page' AS type, slug",
+            "FROM cms_pages WHERE is_published = 1",
+            'title, content',
+            [],
+            'title',
+            5
+        ) as $row) {
             $results[] = $row;
         }
     } catch (\PDOException $e) {
-        error_log('search: ' . $e->getMessage());
+        error_log('search pages: ' . $e->getMessage());
     }
 
     if (isModuleEnabled('events')) {
         try {
-            $stmt = $pdo->prepare(
-                "SELECT id, title, slug, description AS perex, event_date AS created_at, 'event' AS type
-                 FROM cms_events
-                 WHERE status = 'published' AND is_published = 1
-                   AND (title LIKE ? OR description LIKE ? OR location LIKE ?)
-                 ORDER BY event_date DESC LIMIT 5"
-            );
-            $stmt->execute([$like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+            foreach ($ftSearch(
+                $pdo, $q, $like,
+                "SELECT id, title, slug, description AS perex, event_date AS created_at, 'event' AS type",
+                "FROM cms_events WHERE status = 'published' AND is_published = 1",
+                'title, description',
+                [],
+                'event_date DESC',
+                5
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search events: ' . $e->getMessage());
         }
     }
 
@@ -93,7 +132,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search podcast_shows: ' . $e->getMessage());
         }
 
         try {
@@ -113,26 +152,26 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search podcast_episodes: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('faq')) {
         try {
-            $stmt = $pdo->prepare(
+            foreach ($ftSearch(
+                $pdo, $q, $like,
                 "SELECT id, question AS title, slug, COALESCE(NULLIF(excerpt, ''), answer) AS perex,
-                        COALESCE(updated_at, created_at) AS created_at, 'faq' AS type
-                 FROM cms_faqs
-                 WHERE COALESCE(status,'published') = 'published' AND is_published = 1
-                   AND (question LIKE ? OR excerpt LIKE ? OR answer LIKE ?)
-                 ORDER BY created_at DESC, id DESC LIMIT 10"
-            );
-            $stmt->execute([$like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+                        COALESCE(updated_at, created_at) AS created_at, 'faq' AS type",
+                "FROM cms_faqs WHERE COALESCE(status,'published') = 'published' AND is_published = 1",
+                'question, excerpt, answer',
+                [],
+                'created_at DESC, id DESC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search faq: ' . $e->getMessage());
         }
     }
 
@@ -153,7 +192,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search gallery_albums: ' . $e->getMessage());
         }
 
         try {
@@ -171,111 +210,106 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search gallery_photos: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('food')) {
         try {
-            $stmt = $pdo->prepare(
+            foreach ($ftSearch(
+                $pdo, $q, $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(description, ''), title) AS perex,
-                        COALESCE(valid_from, updated_at, created_at) AS created_at,
-                        'food_card' AS type
-                 FROM cms_food_cards
-                 WHERE status = 'published' AND is_published = 1
-                   AND (title LIKE ? OR slug LIKE ? OR description LIKE ? OR content LIKE ?)
-                 ORDER BY COALESCE(valid_from, created_at) DESC, id DESC
-                 LIMIT 10"
-            );
-            $stmt->execute([$like, $like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+                        COALESCE(valid_from, updated_at, created_at) AS created_at, 'food_card' AS type",
+                "FROM cms_food_cards WHERE status = 'published' AND is_published = 1",
+                'title, description, content',
+                [],
+                'COALESCE(valid_from, created_at) DESC, id DESC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search food: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('board')) {
         try {
-            $stmt = $pdo->prepare(
+            foreach ($ftSearch(
+                $pdo, $q, $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
-                        posted_date AS created_at, 'board' AS type
-                 FROM cms_board
-                 WHERE status = 'published' AND is_published = 1
-                   AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR contact_name LIKE ? OR contact_phone LIKE ? OR contact_email LIKE ?)
-                 ORDER BY posted_date DESC LIMIT 10"
-            );
-            $stmt->execute([$like, $like, $like, $like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+                        posted_date AS created_at, 'board' AS type",
+                "FROM cms_board WHERE status = 'published' AND is_published = 1",
+                'title, excerpt, description',
+                [],
+                'posted_date DESC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search board: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('downloads')) {
         try {
-            $stmt = $pdo->prepare(
+            foreach ($ftSearch(
+                $pdo, $q, $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
-                        created_at, 'download' AS type
-                 FROM cms_downloads
-                 WHERE status = 'published' AND is_published = 1
-                   AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR version_label LIKE ? OR platform_label LIKE ? OR license_label LIKE ?)
-                 ORDER BY created_at DESC, id DESC
-                 LIMIT 10"
-            );
-            $stmt->execute([$like, $like, $like, $like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+                        created_at, 'download' AS type",
+                "FROM cms_downloads WHERE status = 'published' AND is_published = 1",
+                'title, excerpt, description',
+                [],
+                'created_at DESC, id DESC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search downloads: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('places')) {
         try {
-            $stmt = $pdo->prepare(
+            foreach ($ftSearch(
+                $pdo, $q, $like,
                 "SELECT id, name AS title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
-                        created_at, 'place' AS type
-                 FROM cms_places
-                 WHERE status = 'published' AND is_published = 1
-                   AND (name LIKE ? OR excerpt LIKE ? OR description LIKE ? OR category LIKE ? OR locality LIKE ? OR address LIKE ?)
-                 ORDER BY name ASC
-                 LIMIT 10"
-            );
-            $stmt->execute([$like, $like, $like, $like, $like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+                        created_at, 'place' AS type",
+                "FROM cms_places WHERE status = 'published' AND is_published = 1",
+                'name, excerpt, description',
+                [],
+                'name ASC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search places: ' . $e->getMessage());
         }
     }
 
     if (isModuleEnabled('polls')) {
         try {
-            $stmt = $pdo->prepare(
+            foreach ($ftSearch(
+                $pdo, $q, $like,
                 "SELECT id, question AS title, slug, COALESCE(NULLIF(description, ''), question) AS perex,
-                        COALESCE(updated_at, created_at) AS created_at, 'poll' AS type
-                 FROM cms_polls
-                 WHERE (
+                        COALESCE(updated_at, created_at) AS created_at, 'poll' AS type",
+                "FROM cms_polls WHERE (
                         (status = 'active' AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date > NOW()))
                         OR status = 'closed'
                         OR (end_date IS NOT NULL AND end_date <= NOW())
-                   )
-                   AND (question LIKE ? OR description LIKE ?)
-                 ORDER BY COALESCE(start_date, created_at) DESC, id DESC
-                 LIMIT 10"
-            );
-            $stmt->execute([$like, $like]);
-            foreach ($stmt->fetchAll() as $row) {
+                   )",
+                'question, description',
+                [],
+                'COALESCE(start_date, created_at) DESC, id DESC',
+                10
+            ) as $row) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search polls: ' . $e->getMessage());
         }
     }
 
@@ -297,7 +331,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search: ' . $e->getMessage());
+            error_log('search reservations: ' . $e->getMessage());
         }
     }
 }
