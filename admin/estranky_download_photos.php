@@ -79,10 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 // ── Krok 2: Dávkové stahování ───────────────────────────────────────────────
 if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
     set_time_limit(120);
-    $dl = &$_SESSION['photo_dl'];
+    $dl = $_SESSION['photo_dl'];
     $siteUrl = $dl['site_url'];
     $offset = $dl['offset'];
     $photos = array_slice($dl['photos'], $offset, $batchSize);
+
+    // Uvolnit session – browser může navigovat jiné stránky během stahování
+    session_write_close();
 
     $destDir = dirname(__DIR__) . '/uploads/gallery/';
     $thumbDir = $destDir . 'thumbs/';
@@ -166,8 +169,13 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
 
     $dl['offset'] += $batchSize;
 
+    // Znovu otevřít session pro zápis progress
+    session_start();
+    $_SESSION['photo_dl'] = $dl;
+
     // Další dávka nebo dokončení?
     if ($dl['offset'] < $dl['total']) {
+        session_write_close();
         header('Location: estranky_download_photos.php?batch=1');
         exit;
     }
