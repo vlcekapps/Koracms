@@ -284,7 +284,7 @@ adminHeader('Import z eStránek');
     <li><strong>Články</strong> – z tabulky <code>a_articles</code> (pouze český jazyk); base64-dekódovaný obsah a titulek</li>
     <li><strong>Sekce → Kategorie</strong> – z tabulky <code>a_sections</code> → kategorie blogu v Kora CMS</li>
     <li><strong>Fotoalba</strong> – z tabulky <code>p_directories</code> → galerie alba</li>
-    <li><strong>Fotografie</strong> – záznamy z <code>p_photos</code> (soubory je třeba zkopírovat ručně do <code>uploads/gallery/</code>)</li>
+    <li><strong>Fotografie</strong> – záznamy z <code>p_photos</code> (samotné soubory stáhněte přes <a href="estranky_download_photos.php">Stažení fotek z eStránek</a>)</li>
   </ul>
   <p>Duplikáty (stejný název + datum) se automaticky přeskočí. Importují se pouze záznamy v českém jazyce (lang=1).</p>
 </section>
