@@ -128,11 +128,16 @@ adminHeader('Alba galerie');
                 <button type="submit" class="btn btn-success">Schválit</button>
               </form>
             <?php endif; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/gallery_album_delete.php"
-                  onsubmit="return confirm('Smazat album „<?= h(addslashes($album['name'])) ?>“ včetně všech fotografií a podsložek?')">
-              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="id" value="<?= (int)$album['id'] ?>">
-              <button type="submit" class="btn btn-danger">Smazat</button>
+            <form method=”post” action=”<?= BASE_URL ?>/admin/gallery_export_zip.php” style=”display:inline”>
+              <input type=”hidden” name=”csrf_token” value=”<?= h(csrfToken()) ?>”>
+              <input type=”hidden” name=”id” value=”<?= (int)$album['id'] ?>”>
+              <button type=”submit” class=”btn” aria-label=”Exportovat album <?= h((string)$album['name']) ?> do ZIP”>Export ZIP</button>
+            </form>
+            <form method=”post” action=”<?= BASE_URL ?>/admin/gallery_album_delete.php”
+                  onsubmit=”return confirm('Smazat album „<?= h(addslashes($album['name'])) ?>” včetně všech fotografií a podsložek?')”>
+              <input type=”hidden” name=”csrf_token” value=”<?= h(csrfToken()) ?>”>
+              <input type=”hidden” name=”id” value=”<?= (int)$album['id'] ?>”>
+              <button type=”submit” class=”btn btn-danger”>Smazat</button>
             </form>
           </td>
         </tr>

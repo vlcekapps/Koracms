@@ -115,3 +115,72 @@ function gallery_make_thumb(string $src, string $dst, int $maxDim = 300): bool
     imagedestroy($thumb);
     return (bool)$ok;
 }
+
+/**
+ * Sestaví cestu ke složce alba z hierarchie parent_id.
+ * Např. album "MyDva Kafé" pod "2024" pod "Výlety" → "Výlety/2024/MyDva Kafé"
+ */
+function buildAlbumPath(PDO $pdo, int $albumId): string
+{
+    $parts = [];
+    $id = $albumId;
+    $seen = [];
+    while ($id !== null && !in_array($id, $seen, true)) {
+        $seen[] = $id;
+        $stmt = $pdo->prepare("SELECT id, name, parent_id FROM cms_gallery_albums WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) break;
+        $name = str_replace(['/', '\\', "\0"], '_', (string)$row['name']);
+        array_unshift($parts, $name);
+        $id = $row['parent_id'] !== null ? (int)$row['parent_id'] : null;
+    }
+    return implode('/', $parts);
+}
+
+/**
+ * Rekurzivně sesbírá všechny fotky z alba a jeho podalb.
+ * Vrací pole [['zip_path' => 'Album/Sub/photo.jpg', 'disk_path' => '/abs/path/photo.jpg'], ...]
+ * Prázdná alba vrací záznam s 'empty_dir' => true.
+ */
+function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $galleryDir): array
+{
+    $entries = [];
+    $seen = [];
+
+    $collect = static function (int $id, string $path) use ($pdo, $galleryDir, &$entries, &$seen, &$collect): void {
+        if (in_array($id, $seen, true)) return;
+        $seen[] = $id;
+
+        // Fotky tohoto alba
+        $stmt = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE album_id = ? ORDER BY sort_order, id");
+        $stmt->execute([$id]);
+        $photos = $stmt->fetchAll();
+
+        if (empty($photos)) {
+            $entries[] = ['zip_path' => $path . '/', 'disk_path' => '', 'empty_dir' => true];
+        }
+
+        foreach ($photos as $photo) {
+            $filename = (string)$photo['filename'];
+            if ($filename === '') continue;
+            $diskPath = $galleryDir . $filename;
+            $entries[] = [
+                'zip_path' => $path . '/' . $filename,
+                'disk_path' => $diskPath,
+                'empty_dir' => false,
+            ];
+        }
+
+        // Podřazená alba
+        $subStmt = $pdo->prepare("SELECT id, name FROM cms_gallery_albums WHERE parent_id = ? ORDER BY name");
+        $subStmt->execute([$id]);
+        foreach ($subStmt->fetchAll() as $sub) {
+            $subName = str_replace(['/', '\\', "\0"], '_', (string)$sub['name']);
+            $collect((int)$sub['id'], $path . '/' . $subName);
+        }
+    };
+
+    $collect($albumId, $basePath);
+    return $entries;
+}
