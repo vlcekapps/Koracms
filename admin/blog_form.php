@@ -221,6 +221,14 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
               style="min-height:0"><?= h($article['meta_description'] ?? '') ?></textarea>
   </fieldset>
 
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Interní poznámka</legend>
+    <label for="admin_note" class="visually-hidden">Interní poznámka</label>
+    <textarea id="admin_note" name="admin_note" rows="2" aria-describedby="admin-note-help"
+              style="min-height:0"><?= h($article['admin_note'] ?? '') ?></textarea>
+    <small id="admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
+  </fieldset>
+
   <div style="margin-top:1.5rem">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
     <a href="blog.php" style="margin-left:1rem">Zrušit</a>

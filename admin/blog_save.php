@@ -15,6 +15,7 @@ $publishAt = trim($_POST['publish_at'] ?? '');
 $metaTitle = trim($_POST['meta_title'] ?? '');
 $metaDescription = trim($_POST['meta_description'] ?? '');
 $commentsEnabled = isset($_POST['comments_enabled']) ? 1 : 0;
+$adminNote = trim($_POST['admin_note'] ?? '');
 $blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 0);
 
 if ($blogId <= 0 || !getBlogById($blogId)) {
@@ -136,8 +137,8 @@ if ($existingArticle) {
         ]);
     }
 
-    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
-    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, currentUserId(), $blogId];
+    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
+    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId];
     if ($imageFile !== null) {
         $setClauses .= ", image_file=?";
         $params[] = $imageFile;

@@ -782,6 +782,11 @@ $addColumns = [
     'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_faqs.deleted_at'            => "ALTER TABLE cms_faqs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    // Interní poznámky
+    'cms_articles.admin_note'        => "ALTER TABLE cms_articles ADD COLUMN admin_note TEXT",
+    'cms_news.admin_note'            => "ALTER TABLE cms_news ADD COLUMN admin_note TEXT",
+    'cms_pages.admin_note'           => "ALTER TABLE cms_pages ADD COLUMN admin_note TEXT",
+    'cms_events.admin_note'          => "ALTER TABLE cms_events ADD COLUMN admin_note TEXT",
     // Plánované zrušení publikace
     'cms_articles.unpublish_at'      => "ALTER TABLE cms_articles ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_news.unpublish_at'          => "ALTER TABLE cms_news ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
