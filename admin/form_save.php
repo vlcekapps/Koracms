@@ -5,7 +5,7 @@ verifyCsrf();
 
 function adminAllowedFormFieldTypes(): array
 {
-    return ['text', 'email', 'tel', 'textarea', 'select', 'checkbox', 'number', 'date'];
+    return array_keys(formFieldTypeDefinitions());
 }
 
 function adminUniqueFormFieldName(string $baseName, array &$usedNames, string $fallbackPrefix = 'field'): string
@@ -32,7 +32,23 @@ $title = trim($_POST['title'] ?? '');
 $submittedSlug = trim($_POST['slug'] ?? '');
 $description = trim($_POST['description'] ?? '');
 $successMessage = trim($_POST['success_message'] ?? '');
+$submitLabel = trim($_POST['submit_label'] ?? '');
+$notificationEmail = trim($_POST['notification_email'] ?? '');
+$notificationSubject = trim($_POST['notification_subject'] ?? '');
+$redirectUrl = trim($_POST['redirect_url'] ?? '');
+$useHoneypot = isset($_POST['use_honeypot']) ? 1 : 0;
 $isActive = isset($_POST['is_active']) ? 1 : 0;
+$presetKey = trim((string)($_POST['preset'] ?? ''));
+$presetDefinition = $id === null ? formPresetDefinition($presetKey) : null;
+
+if ($submitLabel === '') {
+    $submitLabel = 'Odeslat formulář';
+}
+if ($notificationEmail !== '' && !filter_var($notificationEmail, FILTER_VALIDATE_EMAIL)) {
+    header('Location: form_form.php?err=notification_email' . ($id ? '&id=' . $id : ''));
+    exit;
+}
+$redirectUrl = $redirectUrl !== '' ? internalRedirectTarget($redirectUrl, '') : '';
 
 if ($title === '') {
     header('Location: form_form.php?err=required' . ($id ? '&id=' . $id : ''));
@@ -61,8 +77,10 @@ if ($id !== null) {
     }
 
     $pdo->prepare(
-        "UPDATE cms_forms SET title = ?, slug = ?, description = ?, success_message = ?, is_active = ?, updated_at = NOW() WHERE id = ?"
-    )->execute([$title, $slug, $description, $successMessage, $isActive, $id]);
+        "UPDATE cms_forms
+         SET title = ?, slug = ?, description = ?, success_message = ?, submit_label = ?, notification_email = ?, notification_subject = ?, redirect_url = ?, use_honeypot = ?, is_active = ?, updated_at = NOW()
+         WHERE id = ?"
+    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $useHoneypot, $isActive, $id]);
     logAction('form_edit', "id={$id} title={$title}");
 
     // Zpracování existujících polí
@@ -94,6 +112,10 @@ if ($id !== null) {
         }
         $fieldOptions = trim((string)($fieldData['options'] ?? ''));
         $fieldPlaceholder = trim((string)($fieldData['placeholder'] ?? ''));
+        $fieldDefaultValue = trim((string)($fieldData['default_value'] ?? ''));
+        $fieldHelpText = trim((string)($fieldData['help_text'] ?? ''));
+        $fieldAcceptTypes = trim((string)($fieldData['accept_types'] ?? ''));
+        $fieldMaxFileSize = max(1, min(100, (int)($fieldData['max_file_size_mb'] ?? 10)));
         $fieldRequired = isset($fieldData['is_required']) ? 1 : 0;
         $fieldSort = max(0, (int)($fieldData['sort_order'] ?? 0));
         $fieldName = trim((string)($existingNames[$fieldId] ?? ''));
@@ -102,8 +124,10 @@ if ($id !== null) {
         }
 
         $pdo->prepare(
-            "UPDATE cms_form_fields SET label = ?, name = ?, field_type = ?, options = ?, placeholder = ?, is_required = ?, sort_order = ? WHERE id = ? AND form_id = ?"
-        )->execute([$fieldLabel, $fieldName, $fieldType, $fieldOptions, $fieldPlaceholder, $fieldRequired, $fieldSort, $fieldId, $id]);
+            "UPDATE cms_form_fields
+             SET label = ?, name = ?, field_type = ?, options = ?, placeholder = ?, default_value = ?, help_text = ?, accept_types = ?, max_file_size_mb = ?, is_required = ?, sort_order = ?
+             WHERE id = ? AND form_id = ?"
+        )->execute([$fieldLabel, $fieldName, $fieldType, $fieldOptions, $fieldPlaceholder, $fieldDefaultValue, $fieldHelpText, $fieldAcceptTypes, $fieldMaxFileSize, $fieldRequired, $fieldSort, $fieldId, $id]);
     }
 
     // Nové pole
@@ -115,21 +139,65 @@ if ($id !== null) {
         }
         $newOptions = trim($_POST['new_field_options'] ?? '');
         $newPlaceholder = trim($_POST['new_field_placeholder'] ?? '');
+        $newDefaultValue = trim($_POST['new_field_default_value'] ?? '');
+        $newHelpText = trim($_POST['new_field_help_text'] ?? '');
+        $newAcceptTypes = trim($_POST['new_field_accept_types'] ?? '');
+        $newMaxFileSize = max(1, min(100, (int)($_POST['new_field_max_file_size_mb'] ?? 10)));
         $newRequired = isset($_POST['new_field_required']) ? 1 : 0;
         $newSort = max(0, (int)($_POST['new_field_sort'] ?? 0));
         $newName = adminUniqueFormFieldName($newLabel, $usedFieldNames, 'field_' . time());
 
         $pdo->prepare(
-            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, is_required, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newRequired, $newSort]);
+            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, is_required, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newDefaultValue, $newHelpText, $newAcceptTypes, $newMaxFileSize, $newRequired, $newSort]);
     }
 
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $id);
 } else {
     $pdo->prepare(
-        "INSERT INTO cms_forms (title, slug, description, success_message, is_active) VALUES (?, ?, ?, ?, ?)"
-    )->execute([$title, $slug, $description, $successMessage, $isActive]);
+        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_email, notification_subject, redirect_url, use_honeypot, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $useHoneypot, $isActive]);
     $newId = (int)$pdo->lastInsertId();
+
+    if ($presetDefinition !== null && !empty($presetDefinition['fields'])) {
+        $usedFieldNames = [];
+        $insertFieldStmt = $pdo->prepare(
+            "INSERT INTO cms_form_fields (form_id, field_type, label, name, options, placeholder, default_value, help_text, accept_types, max_file_size_mb, is_required, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        foreach ((array)$presetDefinition['fields'] as $presetField) {
+            $presetFieldType = normalizeFormFieldType((string)($presetField['field_type'] ?? 'text'));
+            $presetFieldLabel = trim((string)($presetField['label'] ?? ''));
+            if ($presetFieldLabel === '') {
+                continue;
+            }
+
+            $presetFieldName = adminUniqueFormFieldName(
+                trim((string)($presetField['name'] ?? '')) !== '' ? (string)$presetField['name'] : $presetFieldLabel,
+                $usedFieldNames,
+                'field'
+            );
+
+            $insertFieldStmt->execute([
+                $newId,
+                $presetFieldType,
+                $presetFieldLabel,
+                $presetFieldName,
+                trim((string)($presetField['options'] ?? '')),
+                trim((string)($presetField['placeholder'] ?? '')),
+                trim((string)($presetField['default_value'] ?? '')),
+                trim((string)($presetField['help_text'] ?? '')),
+                trim((string)($presetField['accept_types'] ?? '')),
+                max(1, min(100, (int)($presetField['max_file_size_mb'] ?? 10))),
+                !empty($presetField['is_required']) ? 1 : 0,
+                max(0, (int)($presetField['sort_order'] ?? 0)),
+            ]);
+        }
+    }
+
     logAction('form_add', "id={$newId} title={$title}");
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $newId);
 }

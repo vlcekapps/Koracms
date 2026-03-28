@@ -24,8 +24,10 @@ $fields->execute([$formId]);
 $fields = $fields->fetchAll();
 
 $fieldNames = [];
+$fieldDefinitions = [];
 foreach ($fields as $field) {
     $fieldNames[(string)$field['name']] = (string)$field['label'];
+    $fieldDefinitions[(string)$field['name']] = $field;
 }
 
 $query = trim((string)($_GET['q'] ?? ''));
@@ -66,10 +68,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         $csvRow = [formatCzechDate((string)$sub['created_at'])];
         foreach ($fieldNames as $name => $label) {
             $value = $data[$name] ?? '';
-            if (is_array($value)) {
-                $value = implode(', ', $value);
-            }
-            $csvRow[] = (string)$value;
+            $csvRow[] = formSubmissionDisplayValueForField($fieldDefinitions[$name] ?? [], $value);
         }
         fputcsv($out, $csvRow, ';');
     }
@@ -140,10 +139,13 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
             <td>
               <?php
               $value = $data[$name] ?? '';
-              if (is_array($value)) {
-                  $value = implode(', ', $value);
+              if (is_array($value) && isset($value['url'], $value['original_name'])) {
+                  ?>
+                  <a href="<?= h((string)$value['url']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$value['original_name']) ?></a>
+                  <?php
+              } else {
+                  echo h(formSubmissionDisplayValueForField($fieldDefinitions[$name] ?? [], $value));
               }
-              echo h((string)$value);
               ?>
             </td>
           <?php endforeach; ?>

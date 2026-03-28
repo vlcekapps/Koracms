@@ -45,6 +45,7 @@ adminHeader('Formuláře');
 ?>
 <div class="button-row">
   <a href="form_form.php" class="btn btn-primary">+ Vytvořit formulář</a>
+  <a href="form_form.php?preset=issue_report" class="btn">+ Nahlášení chyby</a>
 </div>
 
 <p class="section-subtitle">Na jednom místě připravíte veřejné formuláře, jejich pole i přehled doručených odpovědí.</p>
@@ -70,7 +71,7 @@ adminHeader('Formuláře');
   <?php if ($query !== '' || $statusFilter !== 'all'): ?>
     <p>Pro zadaný filtr se nenašel žádný formulář. <a href="forms.php">Zobrazit všechny formuláře</a>.</p>
   <?php else: ?>
-    <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a>.</p>
+    <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a> nebo <a href="form_form.php?preset=issue_report">připravit formulář pro nahlášení chyby</a>.</p>
   <?php endif; ?>
 <?php else: ?>
   <table>

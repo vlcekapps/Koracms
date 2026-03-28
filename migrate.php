@@ -577,6 +577,11 @@ $tables = [
         slug        VARCHAR(255) NOT NULL,
         description TEXT,
         success_message TEXT,
+        submit_label VARCHAR(100) NOT NULL DEFAULT 'Odeslat formulář',
+        notification_email VARCHAR(255) NOT NULL DEFAULT '',
+        notification_subject VARCHAR(255) NOT NULL DEFAULT '',
+        redirect_url VARCHAR(500) NOT NULL DEFAULT '',
+        use_honeypot TINYINT(1) NOT NULL DEFAULT 1,
         is_active   TINYINT(1)   NOT NULL DEFAULT 1,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -590,7 +595,11 @@ $tables = [
         label       VARCHAR(255) NOT NULL,
         name        VARCHAR(100) NOT NULL,
         placeholder VARCHAR(255) NOT NULL DEFAULT '',
+        default_value VARCHAR(500) NOT NULL DEFAULT '',
+        help_text   TEXT,
         options     TEXT,
+        accept_types VARCHAR(255) NOT NULL DEFAULT '',
+        max_file_size_mb INT     NOT NULL DEFAULT 10,
         is_required TINYINT(1)   NOT NULL DEFAULT 0,
         sort_order  INT          NOT NULL DEFAULT 0,
         INDEX idx_form (form_id, sort_order)
@@ -785,6 +794,17 @@ $addColumns = [
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
     // cms_articles – počítadlo zobrazení
     'cms_articles.view_count'        => "ALTER TABLE cms_articles ADD COLUMN view_count INT NOT NULL DEFAULT 0",
+    // cms_forms
+    'cms_forms.submit_label'         => "ALTER TABLE cms_forms ADD COLUMN submit_label VARCHAR(100) NOT NULL DEFAULT 'Odeslat formulář'",
+    'cms_forms.notification_email'   => "ALTER TABLE cms_forms ADD COLUMN notification_email VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_forms.notification_subject' => "ALTER TABLE cms_forms ADD COLUMN notification_subject VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_forms.redirect_url'         => "ALTER TABLE cms_forms ADD COLUMN redirect_url VARCHAR(500) NOT NULL DEFAULT ''",
+    'cms_forms.use_honeypot'         => "ALTER TABLE cms_forms ADD COLUMN use_honeypot TINYINT(1) NOT NULL DEFAULT 1",
+    // cms_form_fields
+    'cms_form_fields.default_value'  => "ALTER TABLE cms_form_fields ADD COLUMN default_value VARCHAR(500) NOT NULL DEFAULT ''",
+    'cms_form_fields.help_text'      => "ALTER TABLE cms_form_fields ADD COLUMN help_text TEXT",
+    'cms_form_fields.accept_types'   => "ALTER TABLE cms_form_fields ADD COLUMN accept_types VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_form_fields.max_file_size_mb' => "ALTER TABLE cms_form_fields ADD COLUMN max_file_size_mb INT NOT NULL DEFAULT 10",
     // Multiblog – blog_id sloupce
     'cms_articles.blog_id'           => "ALTER TABLE cms_articles ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
     'cms_categories.blog_id'         => "ALTER TABLE cms_categories ADD COLUMN blog_id INT NOT NULL DEFAULT 1",

@@ -19,9 +19,11 @@
         </div>
       <?php endif; ?>
 
-      <form method="post" novalidate class="form-stack"<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
+      <form method="post" enctype="multipart/form-data" novalidate class="form-stack"<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-        <?= honeypotField() ?>
+        <?php if ((int)($form['use_honeypot'] ?? 1) === 1): ?>
+          <?= honeypotField() ?>
+        <?php endif; ?>
 
         <fieldset class="form-fieldset">
           <legend><?= h((string)$form['title']) ?></legend>
@@ -31,56 +33,131 @@
               $name = h((string)$field['name']);
               $label = h((string)$field['label']);
               $required = (int)$field['is_required'];
-              $value = h((string)($formData[$field['name']] ?? ''));
+              $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+              $defaultValue = (string)($field['default_value'] ?? '');
+              $rawValue = $formData[$field['name']] ?? (
+                $fieldType === 'checkbox_group'
+                  ? ($defaultValue !== '' ? formFieldOptionsList(str_replace(',', '|', $defaultValue)) : [])
+                  : $defaultValue
+              );
+              $value = h((string)$rawValue);
               $fieldId = 'field-' . $name;
               $placeholder = h((string)($field['placeholder'] ?? ''));
+              $helpText = trim((string)($field['help_text'] ?? ''));
+              $describedBy = $helpText !== '' ? $fieldId . '-help' : '';
+              $optionList = formFieldOptionsList((string)($field['options'] ?? ''));
             ?>
 
-            <?php if ($field['field_type'] === 'checkbox'): ?>
+            <?php if ($fieldType === 'hidden'): ?>
+              <input type="hidden" name="<?= $name ?>" value="<?= h((string)$defaultValue) ?>">
+
+            <?php elseif ($fieldType === 'checkbox_group'): ?>
+              <fieldset class="field form-fieldset">
+                <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
+                <?php foreach ($optionList as $index => $opt): ?>
+                  <?php
+                    $checkboxId = $fieldId . '-' . $index;
+                    $isChecked = is_array($rawValue) && in_array($opt, $rawValue, true);
+                  ?>
+                  <div>
+                    <label for="<?= $checkboxId ?>">
+                      <input type="checkbox" id="<?= $checkboxId ?>" name="<?= $name ?>[]" value="<?= h($opt) ?>"<?= $isChecked ? ' checked' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $required && $index === 0 ? ' aria-required="true"' : '' ?>>
+                      <?= h($opt) ?>
+                    </label>
+                  </div>
+                <?php endforeach; ?>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+              </fieldset>
+
+            <?php elseif (in_array($fieldType, ['checkbox', 'consent'], true)): ?>
               <div class="field">
                 <label>
-                  <input type="checkbox" name="<?= $name ?>" value="1"<?= ($formData[$field['name']] ?? '') === '1' ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?>>
+                  <input type="checkbox" name="<?= $name ?>" value="1"<?= ((string)$rawValue) === '1' ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>>
                   <?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?>
                 </label>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
               </div>
 
-            <?php elseif ($field['field_type'] === 'select'): ?>
+            <?php elseif ($fieldType === 'select'): ?>
               <div class="field">
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
-                <select id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?>>
+                <select id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>>
                   <option value="">Vyberte možnost</option>
-                  <?php foreach (explode('|', (string)($field['options'] ?? '')) as $opt): ?>
-                    <?php $opt = trim($opt); if ($opt === '') continue; ?>
+                  <?php foreach ($optionList as $opt): ?>
                     <option value="<?= h($opt) ?>"<?= ($formData[$field['name']] ?? '') === $opt ? ' selected' : '' ?>><?= h($opt) ?></option>
                   <?php endforeach; ?>
                 </select>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
               </div>
 
-            <?php elseif ($field['field_type'] === 'textarea'): ?>
+            <?php elseif ($fieldType === 'radio'): ?>
+              <fieldset class="field form-fieldset">
+                <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
+                <?php foreach ($optionList as $index => $opt): ?>
+                  <?php $radioId = $fieldId . '-' . $index; ?>
+                  <div>
+                    <label for="<?= $radioId ?>">
+                      <input type="radio" id="<?= $radioId ?>" name="<?= $name ?>" value="<?= h($opt) ?>"<?= ($rawValue ?? '') === $opt ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>>
+                      <?= h($opt) ?>
+                    </label>
+                  </div>
+                <?php endforeach; ?>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+              </fieldset>
+
+            <?php elseif ($fieldType === 'textarea'): ?>
               <div class="field">
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
-                <textarea id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?>><?= $value ?></textarea>
+                <textarea id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>><?= $value ?></textarea>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+              </div>
+
+            <?php elseif ($fieldType === 'file'): ?>
+              <div class="field">
+                <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
+                <input type="file" id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"
+                       <?= $required ? ' required aria-required="true"' : '' ?>
+                       <?= trim((string)($field['accept_types'] ?? '')) !== '' ? ' accept="' . h((string)$field['accept_types']) . '"' : '' ?>
+                       <?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
               </div>
 
             <?php else: ?>
               <?php
-                $inputType = match ($field['field_type']) {
+                $inputType = match ($fieldType) {
                     'email' => 'email',
                     'tel' => 'tel',
                     'number' => 'number',
                     'date' => 'date',
+                    'url' => 'url',
                     default => 'text',
                 };
-                $autocomplete = match ($field['field_type']) {
+                $autocomplete = match ($fieldType) {
                     'email' => ' autocomplete="email"',
                     'tel' => ' autocomplete="tel"',
+                    'url' => ' autocomplete="url"',
                     default => '',
                 };
               ?>
               <div class="field">
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <input type="<?= $inputType ?>" id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"
-                       value="<?= $value ?>"<?= $required ? ' required aria-required="true"' : '' ?><?= $autocomplete ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?>>
+                       value="<?= $value ?>"<?= $required ? ' required aria-required="true"' : '' ?><?= $autocomplete ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>>
+                <?php if ($helpText !== ''): ?>
+                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
               </div>
             <?php endif; ?>
           <?php endforeach; ?>
@@ -93,7 +170,7 @@
           </div>
 
           <div class="button-row button-row--start">
-            <button type="submit" class="button-primary">Odeslat formulář</button>
+            <button type="submit" class="button-primary"><?= h(trim((string)($form['submit_label'] ?? '')) !== '' ? (string)$form['submit_label'] : 'Odeslat formulář') ?></button>
           </div>
         </fieldset>
       </form>

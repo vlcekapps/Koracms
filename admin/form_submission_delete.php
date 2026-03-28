@@ -14,6 +14,13 @@ $redirect = internalRedirectTarget(
 
 if ($id !== null) {
     $pdo = db_connect();
+    $submissionStmt = $pdo->prepare("SELECT data FROM cms_form_submissions WHERE id = ?");
+    $submissionStmt->execute([$id]);
+    $submission = $submissionStmt->fetch();
+    if ($submission) {
+        $submissionData = json_decode((string)($submission['data'] ?? ''), true);
+        formDeleteUploadedFilesFromSubmissionData($submissionData);
+    }
     $pdo->prepare("DELETE FROM cms_form_submissions WHERE id = ?")->execute([$id]);
     logAction('form_submission_delete', "id={$id}");
 }

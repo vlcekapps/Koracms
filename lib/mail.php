@@ -152,12 +152,15 @@ function notificationRecipient(): string
 /**
  * Notifikace: nový formulář odeslán.
  */
-function notifyFormSubmission(string $formTitle, array $data): void
+function notifyFormSubmission(string $formTitle, array $data, string $recipientOverride = '', string $subjectOverride = ''): void
 {
     if (getSetting('notify_form_submission', '1') !== '1') {
         return;
     }
-    $recipient = notificationRecipient();
+    $recipient = trim($recipientOverride);
+    if ($recipient === '') {
+        $recipient = notificationRecipient();
+    }
     if ($recipient === '') {
         return;
     }
@@ -172,7 +175,12 @@ function notifyFormSubmission(string $formTitle, array $data): void
 
     $body .= "\nSprávce formulářů: " . $adminUrl . "\n";
 
-    if (!sendMail($recipient, 'Nové odeslání formuláře „' . $formTitle . '" – ' . $siteName, $body)) {
+    $subject = trim($subjectOverride);
+    if ($subject === '') {
+        $subject = 'Nové odeslání formuláře „' . $formTitle . '" – ' . $siteName;
+    }
+
+    if (!sendMail($recipient, $subject, $body)) {
         error_log("sendMail FAILED: notifikace formuláře pro {$recipient}");
     }
 }

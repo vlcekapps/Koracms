@@ -133,6 +133,8 @@ $newsletterConfirmedSubscriberId = false;
 $newsletterHistoryId = false;
 $contactMessageId = false;
 $chatMessageId = false;
+$runtimeAuditFormId = 0;
+$runtimeAuditFormPath = '';
 $foodCardRow = $pdo->query(
     "SELECT id, type, title, slug, description, valid_from, valid_to, is_current, is_published,
             status, created_at, updated_at
@@ -266,6 +268,8 @@ $cleanup = [
     'poll_ids' => [],
     'podcast_show_ids' => [],
     'podcast_episode_ids' => [],
+    'form_ids' => [],
+    'form_submission_ids' => [],
 ];
 
 $runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
@@ -911,6 +915,77 @@ if (isModuleEnabled('chat')) {
     $cleanup['chat_ids'][] = $chatMessageId;
 }
 
+if (isModuleEnabled('forms')) {
+    $runtimeAuditFormSlug = uniqueFormSlug($pdo, 'runtime-audit-form-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_subject, use_honeypot, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())"
+    )->execute([
+        'Runtime audit formulář',
+        $runtimeAuditFormSlug,
+        'Testovací formulář pro ověření veřejného vykreslení, pole souboru a administračního workflow.',
+        'Děkujeme, hlášení bylo odesláno.',
+        'Odeslat hlášení',
+        'Runtime audit formulář',
+    ]);
+    $runtimeAuditFormId = (int)$pdo->lastInsertId();
+    $cleanup['form_ids'][] = $runtimeAuditFormId;
+
+    $runtimeAuditFormFields = [
+        ['field_type' => 'hidden', 'label' => 'Zdroj hlášení', 'name' => 'zdroj_hlaseni', 'placeholder' => '', 'default_value' => 'runtime-audit', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 0],
+        ['field_type' => 'text', 'label' => 'Název problému', 'name' => 'nazev-problemu', 'placeholder' => 'Stručný název chyby', 'default_value' => '', 'help_text' => 'Krátký souhrn toho, co se pokazilo.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 1, 'sort_order' => 10],
+        ['field_type' => 'checkbox_group', 'label' => 'Dotčené oblasti', 'name' => 'dotcene_oblasti', 'placeholder' => '', 'default_value' => 'Administrace|Formuláře', 'help_text' => 'Můžete označit více oblastí.', 'options' => 'Administrace|Veřejný web|Formuláře', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 20],
+        ['field_type' => 'radio', 'label' => 'Závažnost', 'name' => 'zavaznost', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Vyberte, jak moc problém blokuje práci.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 1, 'sort_order' => 30],
+        ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů pro vyřízení hlášení.', 'name' => 'souhlas', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Povinné potvrzení pro vyřízení hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'is_required' => 1, 'sort_order' => 40],
+        ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'placeholder' => '', 'default_value' => '', 'help_text' => 'Volitelně můžete přiložit screenshot nebo log.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.txt,.log,.pdf', 'max_file_size_mb' => 10, 'is_required' => 0, 'sort_order' => 50],
+    ];
+    $formFieldInsert = $pdo->prepare(
+        "INSERT INTO cms_form_fields (form_id, field_type, label, name, placeholder, default_value, help_text, options, accept_types, max_file_size_mb, is_required, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    foreach ($runtimeAuditFormFields as $fieldRow) {
+        $formFieldInsert->execute([
+            $runtimeAuditFormId,
+            $fieldRow['field_type'],
+            $fieldRow['label'],
+            $fieldRow['name'],
+            $fieldRow['placeholder'],
+            $fieldRow['default_value'],
+            $fieldRow['help_text'],
+            $fieldRow['options'],
+            $fieldRow['accept_types'],
+            $fieldRow['max_file_size_mb'],
+            $fieldRow['is_required'],
+            $fieldRow['sort_order'],
+        ]);
+    }
+
+    $pdo->prepare(
+        "INSERT INTO cms_form_submissions (form_id, data, ip_hash, created_at)
+         VALUES (?, ?, ?, NOW())"
+    )->execute([
+        $runtimeAuditFormId,
+        json_encode([
+            'zdroj_hlaseni' => 'runtime-audit',
+            'nazev-problemu' => 'Runtime audit nahlášení',
+            'dotcene_oblasti' => ['Administrace', 'Formuláře'],
+            'zavaznost' => 'Střední',
+            'souhlas' => '1',
+            'priloha' => [
+                'original_name' => 'runtime-audit-log.txt',
+                'stored_name' => '',
+                'mime_type' => 'text/plain',
+                'file_size' => 128,
+                'url' => BASE_URL . '/uploads/forms/runtime-audit-log.txt',
+            ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        hash('sha256', 'runtime-audit-form'),
+    ]);
+    $cleanup['form_submission_ids'][] = (int)$pdo->lastInsertId();
+
+    $runtimeAuditFormPath = $baseUrl . formPublicPath(['id' => $runtimeAuditFormId, 'slug' => $runtimeAuditFormSlug]);
+}
+
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
@@ -953,6 +1028,7 @@ $pages = [
     ['label' => 'admin_user_create_form', 'url' => $baseUrl . '/admin/user_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_forms', 'url' => $baseUrl . '/admin/forms.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_form_create', 'url' => $baseUrl . '/admin/form_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
+    ['label' => 'admin_form_issue_preset', 'url' => $baseUrl . '/admin/form_form.php?preset=issue_report', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_wp_import', 'url' => $baseUrl . '/admin/wp_import.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_estranky_import', 'url' => $baseUrl . '/admin/estranky_import.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_estranky_photos', 'url' => $baseUrl . '/admin/estranky_download_photos.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -1005,6 +1081,11 @@ if ($pageId !== false) {
     $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
  $pages[] = ['label' => 'admin_page_create_form', 'url' => $baseUrl . '/admin/page_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+if ($runtimeAuditFormId > 0) {
+    $pages[] = ['label' => 'admin_form_edit', 'url' => $baseUrl . '/admin/form_form.php?id=' . urlencode((string)$runtimeAuditFormId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_form_submissions', 'url' => $baseUrl . '/admin/form_submissions.php?id=' . urlencode((string)$runtimeAuditFormId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'public_form', 'url' => $runtimeAuditFormPath];
+}
 if ($boardId !== false) {
     $pages[] = ['label' => 'admin_board_form', 'url' => $baseUrl . '/admin/board_form.php?id=' . urlencode((string)$boardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
     $pages[] = ['label' => 'admin_board_create_form', 'url' => $baseUrl . '/admin/board_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -1895,6 +1976,8 @@ foreach ($pages as $page) {
 
     $adminFormActionExpectations = [
         'admin_form_create' => ['Vytvořit formulář', 'Zrušit'],
+        'admin_form_issue_preset' => ['Vytvořit formulář', 'Zrušit'],
+        'admin_form_edit' => ['Uložit změny', 'Zrušit'],
         'admin_blog_form' => ['Uložit změny', 'Zrušit'],
         'admin_blog_create_form' => ['Přidat článek', 'Zrušit'],
         'admin_news_form' => ['Uložit změny', 'Zrušit'],
@@ -1946,6 +2029,8 @@ foreach ($pages as $page) {
 
     $adminFormForbiddenFragments = [
         'admin_form_create' => ['>Uložit formulář<', 'Formulář je aktivní'],
+        'admin_form_issue_preset' => ['>Uložit formulář<', 'Formulář je aktivní'],
+        'admin_form_edit' => ['>Uložit formulář<', 'Vytvořit formulář'],
         'admin_event_form' => ['>Uložit<'],
         'admin_page_form' => ['>Uložit<'],
         'admin_user_form' => ['>Uložit<'],
@@ -1970,6 +2055,8 @@ foreach ($pages as $page) {
 
     $adminFormCopyExpectations = [
         'admin_form_create' => ['Nejdřív vytvořte základ formuláře.', 'Necháte-li prázdné, adresa se vytvoří automaticky podle názvu formuláře.', 'Zobrazí se návštěvníkovi po úspěšném odeslání formuláře.', 'Zveřejnit formulář na webu', 'Neaktivní formulář zůstane uložený, ale návštěvníci ho na webu neuvidí.'],
+        'admin_form_issue_preset' => ['Šablona:', 'Nahlášení chyby', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas'],
+        'admin_form_edit' => ['Upravte nastavení formuláře, jeho pole a text, který se zobrazí po úspěšném odeslání.', 'Text tlačítka pro odeslání', 'E-mail pro notifikaci', 'Předmět notifikačního e-mailu', 'Kam přesměrovat po odeslání', 'Povolené typy souborů', 'Max. velikost souboru (MB)', 'Odpovědi formuláře'],
         'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
@@ -2173,6 +2260,8 @@ foreach ($pages as $page) {
 
     $adminFormSectionExpectations = [
         'admin_form_create' => ['Základní údaje formuláře'],
+        'admin_form_issue_preset' => ['Základní údaje formuláře'],
+        'admin_form_edit' => ['Základní údaje formuláře', 'Pole formuláře'],
         'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_news_form' => ['Obsah novinky'],
@@ -2212,6 +2301,8 @@ foreach ($pages as $page) {
 
     $adminFormSectionForbiddenFragments = [
         'admin_form_create' => ['<legend>Základní údaje</legend>'],
+        'admin_form_issue_preset' => ['<legend>Základní údaje</legend>'],
+        'admin_form_edit' => ['<legend>Základní údaje</legend>'],
         'admin_blog_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_blog_create_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_news_form' => ['<legend>Novinka</legend>'],
@@ -2532,6 +2623,7 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'Vytvořit formulář',
+            'Nahlášení chyby',
             'Na jednom místě připravíte veřejné formuláře',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -2543,6 +2635,64 @@ foreach ($pages as $page) {
             && !str_contains($result['body'], 'Zatím tu nejsou žádné formuláře.')
         ) {
             $issues[] = 'admin forms page is missing both list caption and empty state';
+        }
+    }
+
+    if ($page['label'] === 'admin_form_submissions') {
+        foreach ([
+            'Přehled odpovědí formuláře',
+            'Hledat v odpovědích',
+            'Exportovat CSV',
+            'runtime-audit-log.txt',
+            'Zobrazit na webu',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin form submissions page is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_form_edit') {
+        foreach ([
+            'Zpět na formuláře',
+            'Odpovědi formuláře',
+            'Zobrazit na webu',
+            'value="radio"',
+            'value="checkbox_group"',
+            'value="consent"',
+            'value="file"',
+            'value="hidden"',
+            'value="url"',
+            'name="use_honeypot"',
+            'name="fields[0][default_value]"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin form edit page is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'public_form') {
+        foreach ([
+            'Runtime audit formulář',
+            'Odeslat hlášení',
+            'Název problému',
+            'Závažnost',
+            'Nízká',
+            'Střední',
+            'Vysoká',
+            'Dotčené oblasti',
+            'Administrace',
+            'Formuláře',
+            'Souhlasím se zpracováním údajů pro vyřízení hlášení.',
+            'type="file"',
+            'multipart/form-data',
+            'name="hp_website"',
+            'Krátký souhrn toho, co se pokazilo.',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'public form page is missing fragment: ' . $expectedFragment;
+            }
         }
     }
 
@@ -4372,6 +4522,16 @@ foreach ($cleanup['gallery_files'] as $galleryFile) {
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_places WHERE id IN ({$placeholders})")->execute($cleanup['place_ids']);
+}
+if (!empty($cleanup['form_submission_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['form_submission_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_form_submissions WHERE id IN ({$placeholders})")->execute($cleanup['form_submission_ids']);
+}
+if (!empty($cleanup['form_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['form_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_form_submissions WHERE form_id IN ({$placeholders})")->execute($cleanup['form_ids']);
+    $pdo->prepare("DELETE FROM cms_form_fields WHERE form_id IN ({$placeholders})")->execute($cleanup['form_ids']);
+    $pdo->prepare("DELETE FROM cms_forms WHERE id IN ({$placeholders})")->execute($cleanup['form_ids']);
 }
 if (!empty($cleanup['poll_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['poll_ids']), '?'));

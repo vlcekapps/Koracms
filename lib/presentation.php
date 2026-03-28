@@ -2285,6 +2285,320 @@ function formSlug(string $input): string
     return slugify($input);
 }
 
+function formFieldTypeDefinitions(): array
+{
+    return [
+        'text' => ['label' => 'Krátký text'],
+        'email' => ['label' => 'E-mail'],
+        'tel' => ['label' => 'Telefon'],
+        'textarea' => ['label' => 'Delší text'],
+        'select' => ['label' => 'Výběr'],
+        'radio' => ['label' => 'Jedna volba'],
+        'checkbox_group' => ['label' => 'Více voleb'],
+        'checkbox' => ['label' => 'Zaškrtávací pole'],
+        'consent' => ['label' => 'Souhlas'],
+        'number' => ['label' => 'Číslo'],
+        'date' => ['label' => 'Datum'],
+        'url' => ['label' => 'Webová adresa'],
+        'file' => ['label' => 'Soubor'],
+        'hidden' => ['label' => 'Skryté pole'],
+    ];
+}
+
+function normalizeFormFieldType(string $type): string
+{
+    $normalized = trim($type);
+    return array_key_exists($normalized, formFieldTypeDefinitions()) ? $normalized : 'text';
+}
+
+function formFieldTypeLabel(string $type): string
+{
+    $normalized = normalizeFormFieldType($type);
+    return formFieldTypeDefinitions()[$normalized]['label'] ?? 'Krátký text';
+}
+
+function formFieldOptionsList(string $rawOptions): array
+{
+    $items = [];
+    foreach (explode('|', $rawOptions) as $option) {
+        $option = trim($option);
+        if ($option !== '') {
+            $items[] = $option;
+        }
+    }
+    return $items;
+}
+
+function formPresetDefinitions(): array
+{
+    return [
+        'issue_report' => [
+            'label' => 'Nahlášení chyby',
+            'description' => 'Připraví formulář pro hlášení chyb a problémů bez nutnosti používat GitHub.',
+            'form' => [
+                'title' => 'Nahlášení chyby',
+                'slug' => 'nahlaseni-chyby',
+                'description' => 'Popište problém co nejkonkrétněji. Pomůže nám stručný název, závažnost, kroky k reprodukci i případný screenshot nebo log.',
+                'success_message' => 'Děkujeme, hlášení bylo úspěšně odesláno.',
+                'submit_label' => 'Odeslat hlášení',
+                'notification_subject' => 'Nové hlášení chyby',
+                'redirect_url' => '',
+                'is_active' => 1,
+                'use_honeypot' => 1,
+            ],
+            'fields' => [
+                [
+                    'field_type' => 'hidden',
+                    'label' => 'Zdroj hlášení',
+                    'name' => 'zdroj_hlaseni',
+                    'default_value' => 'web-form',
+                    'placeholder' => '',
+                    'help_text' => '',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 0,
+                    'sort_order' => 0,
+                ],
+                [
+                    'field_type' => 'text',
+                    'label' => 'Stručný název problému',
+                    'name' => 'strucny_nazev_problemu',
+                    'default_value' => '',
+                    'placeholder' => 'Například Nelze uložit profil',
+                    'help_text' => 'Jedna krátká věta, podle které problém rychle poznáme.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 1,
+                    'sort_order' => 10,
+                ],
+                [
+                    'field_type' => 'radio',
+                    'label' => 'Závažnost',
+                    'name' => 'zavaznost',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Vyberte, jak moc problém blokuje práci.',
+                    'options' => 'Nízká|Střední|Vysoká|Kritická',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 1,
+                    'sort_order' => 20,
+                ],
+                [
+                    'field_type' => 'checkbox_group',
+                    'label' => 'Kde se problém projevil',
+                    'name' => 'kde_se_problem_projevil',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Můžete označit více oblastí, kterých se problém týká.',
+                    'options' => 'Administrace|Veřejný web|Formuláře|Rezervace|Blogy',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 0,
+                    'sort_order' => 30,
+                ],
+                [
+                    'field_type' => 'url',
+                    'label' => 'Adresa stránky',
+                    'name' => 'adresa_stranky',
+                    'default_value' => '',
+                    'placeholder' => 'https://example.com/problemova-stranka',
+                    'help_text' => 'Volitelné. Vložte adresu stránky, kde se problém projevil.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 0,
+                    'sort_order' => 40,
+                ],
+                [
+                    'field_type' => 'textarea',
+                    'label' => 'Jak problém vyvolat',
+                    'name' => 'jak_problem_vyvolat',
+                    'default_value' => '',
+                    'placeholder' => 'Popište jednotlivé kroky od otevření stránky po vznik chyby.',
+                    'help_text' => 'Ideálně krok po kroku, aby šlo problém znovu nasimulovat.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 1,
+                    'sort_order' => 50,
+                ],
+                [
+                    'field_type' => 'textarea',
+                    'label' => 'Co jste očekávali',
+                    'name' => 'co_jste_ocekavali',
+                    'default_value' => '',
+                    'placeholder' => 'Jak se měla aplikace nebo web zachovat správně?',
+                    'help_text' => '',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 0,
+                    'sort_order' => 60,
+                ],
+                [
+                    'field_type' => 'textarea',
+                    'label' => 'Co se stalo místo toho',
+                    'name' => 'co_se_stalo',
+                    'default_value' => '',
+                    'placeholder' => 'Popište chybu, hlášku nebo nečekané chování.',
+                    'help_text' => '',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 1,
+                    'sort_order' => 70,
+                ],
+                [
+                    'field_type' => 'email',
+                    'label' => 'E-mail pro případnou odpověď',
+                    'name' => 'email_pro_odpoved',
+                    'default_value' => '',
+                    'placeholder' => 'vas@email.cz',
+                    'help_text' => 'Volitelné. Vyplňte ho, jen pokud chcete poslat doplňující dotaz nebo vyřešení.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 0,
+                    'sort_order' => 80,
+                ],
+                [
+                    'field_type' => 'file',
+                    'label' => 'Příloha',
+                    'name' => 'priloha',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Volitelné. Můžete přiložit screenshot, PDF nebo textový log.',
+                    'options' => '',
+                    'accept_types' => '.png,.jpg,.jpeg,.webp,.txt,.log,.pdf',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 0,
+                    'sort_order' => 90,
+                ],
+                [
+                    'field_type' => 'consent',
+                    'label' => 'Souhlasím se zpracováním údajů z tohoto formuláře pro vyřízení hlášení.',
+                    'name' => 'souhlas_se_zpracovanim',
+                    'default_value' => '',
+                    'placeholder' => '',
+                    'help_text' => 'Povinné potvrzení pro vyřízení nahlášeného problému.',
+                    'options' => '',
+                    'accept_types' => '',
+                    'max_file_size_mb' => 10,
+                    'is_required' => 1,
+                    'sort_order' => 100,
+                ],
+            ],
+        ],
+    ];
+}
+
+function formPresetDefinition(string $key): ?array
+{
+    $definitions = formPresetDefinitions();
+    return $definitions[$key] ?? null;
+}
+
+function formUploadDirectory(): string
+{
+    return dirname(__DIR__) . '/uploads/forms/';
+}
+
+function formUploadPublicPath(string $storedName): string
+{
+    return BASE_URL . '/uploads/forms/' . rawurlencode($storedName);
+}
+
+function formDeleteUploadedFile(string $storedName): void
+{
+    $storedName = trim($storedName);
+    if ($storedName === '') {
+        return;
+    }
+
+    $path = formUploadDirectory() . $storedName;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+function formSubmissionDisplayValue(mixed $value): string
+{
+    if (is_array($value)) {
+        $isAssoc = array_keys($value) !== range(0, count($value) - 1);
+        if ($isAssoc) {
+            if (isset($value['original_name'])) {
+                return trim((string)$value['original_name']);
+            }
+            $parts = [];
+            foreach ($value as $item) {
+                if (is_scalar($item) || $item === null) {
+                    $parts[] = (string)$item;
+                }
+            }
+            return implode(', ', array_filter($parts, static fn(string $item): bool => $item !== ''));
+        }
+
+        $parts = [];
+        foreach ($value as $item) {
+            $rendered = formSubmissionDisplayValue($item);
+            if ($rendered !== '') {
+                $parts[] = $rendered;
+            }
+        }
+        return implode(', ', $parts);
+    }
+
+    return trim((string)$value);
+}
+
+function formSubmissionDisplayValueForField(array $field, mixed $value): string
+{
+    $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+
+    if ($fieldType === 'checkbox_group') {
+        return formSubmissionDisplayValue(is_array($value) ? $value : [$value]);
+    }
+
+    if (in_array($fieldType, ['checkbox', 'consent'], true)) {
+        return trim((string)$value) === '1' ? 'Ano' : '';
+    }
+
+    return formSubmissionDisplayValue($value);
+}
+
+function formCollectUploadedFilesFromSubmissionData(mixed $value): array
+{
+    $files = [];
+
+    if (is_array($value)) {
+        $isAssoc = array_keys($value) !== range(0, count($value) - 1);
+        if ($isAssoc && isset($value['stored_name'])) {
+            $storedName = trim((string)$value['stored_name']);
+            if ($storedName !== '') {
+                $files[] = $storedName;
+            }
+        }
+
+        foreach ($value as $item) {
+            foreach (formCollectUploadedFilesFromSubmissionData($item) as $storedName) {
+                $files[] = $storedName;
+            }
+        }
+    }
+
+    return array_values(array_unique($files));
+}
+
+function formDeleteUploadedFilesFromSubmissionData(mixed $value): void
+{
+    foreach (formCollectUploadedFilesFromSubmissionData($value) as $storedName) {
+        formDeleteUploadedFile($storedName);
+    }
+}
+
 function uniqueFormSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
 {
     $baseSlug = formSlug($candidate);
