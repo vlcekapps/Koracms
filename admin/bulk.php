@@ -165,9 +165,23 @@ $moduleConfig = match ($module) {
         'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
             $dir = dirname(__DIR__) . '/uploads/gallery/';
             $thumbDir = $dir . 'thumbs/';
-            foreach ($deleteIds as $id) {
-                // Smazat fotografie alba
-                $photos = $pdo->prepare("SELECT id, filename FROM cms_gallery_photos WHERE album_id = ?");
+            // Rekurzivní sběr všech podalb
+            $allIds = $deleteIds;
+            $queue = $deleteIds;
+            while ($queue !== []) {
+                $ph = implode(',', array_fill(0, count($queue), '?'));
+                $sub = $pdo->prepare("SELECT id FROM cms_gallery_albums WHERE parent_id IN ({$ph})");
+                $sub->execute($queue);
+                $queue = [];
+                foreach ($sub->fetchAll(PDO::FETCH_COLUMN) as $subId) {
+                    if (!in_array((int)$subId, $allIds, true)) {
+                        $allIds[] = (int)$subId;
+                        $queue[] = (int)$subId;
+                    }
+                }
+            }
+            foreach ($allIds as $id) {
+                $photos = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE album_id = ?");
                 $photos->execute([$id]);
                 foreach ($photos->fetchAll() as $photo) {
                     $f = (string)$photo['filename'];
@@ -175,8 +189,7 @@ $moduleConfig = match ($module) {
                     if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
                 }
                 $pdo->prepare("DELETE FROM cms_gallery_photos WHERE album_id = ?")->execute([$id]);
-                // Odpojit podřazená alba (nastavit parent_id = NULL)
-                $pdo->prepare("UPDATE cms_gallery_albums SET parent_id = NULL WHERE parent_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$id]);
             }
         },
     ],
