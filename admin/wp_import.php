@@ -1,9 +1,8 @@
 <?php
 /**
- * WordPress importér – importuje články, stránky, kategorie, tagy, komentáře a média z WP SQL dumpu.
+ * WordPress importér – importuje z WordPress XML exportu (WXR formát).
+ * WordPress admin → Nástroje → Export → Veškerý obsah → Stáhnout soubor exportu.
  */
-ini_set('upload_max_filesize', '128M');
-ini_set('post_max_size', '128M');
 require_once __DIR__ . '/layout.php';
 requireCapability('import_export_manage', 'Přístup odepřen. Pro import z WordPressu nemáte potřebné oprávnění.');
 
@@ -11,15 +10,12 @@ $pdo = db_connect();
 $log = $_SESSION['import_log'] ?? null;
 unset($_SESSION['import_log']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['sql_file']['tmp_name'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['wxr_file']['tmp_name'])) {
     verifyCsrf();
     set_time_limit(600);
 
-    $sqlPath = $_FILES['sql_file']['tmp_name'];
-    $mediaPath = trim($_POST['media_path'] ?? '');
-    $wpPrefix = trim($_POST['wp_prefix'] ?? 'wp_');
-
-    if (!is_uploaded_file($sqlPath)) {
+    $xmlPath = $_FILES['wxr_file']['tmp_name'];
+    if (!is_uploaded_file($xmlPath)) {
         $_SESSION['import_log'] = ['✗ Neplatný soubor.'];
         header('Location: wp_import.php');
         exit;
@@ -27,197 +23,192 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['sql_file']['tmp_nam
 
     $log = [];
 
-    $sql = file_get_contents($sqlPath);
-    if ($sql === false) {
-        $_SESSION['import_log'] = ['✗ Nepodařilo se přečíst SQL soubor.'];
+    // WXR je RSS-based XML s WordPress namespace
+    $xmlContent = file_get_contents($xmlPath);
+    if ($xmlContent === false) {
+        $_SESSION['import_log'] = ['✗ Nepodařilo se přečíst soubor.'];
         header('Location: wp_import.php');
         exit;
     }
 
-    // Detekce prefixu
-    if (preg_match('/CREATE TABLE `(' . preg_quote($wpPrefix, '/') . '\w*?)posts`/', $sql, $m)) {
-        $detectedPrefix = str_replace('posts', '', $m[1]);
-        if ($detectedPrefix !== $wpPrefix) {
-            $log[] = "▸ Detekován prefix: {$detectedPrefix}";
-            $wpPrefix = $detectedPrefix;
+    // Registrace namespace
+    $xml = @simplexml_load_string($xmlContent);
+    if ($xml === false) {
+        $_SESSION['import_log'] = ['✗ Nepodařilo se parsovat XML. Ujistěte se, že jde o WordPress XML export.'];
+        header('Location: wp_import.php');
+        exit;
+    }
+
+    $namespaces = $xml->getNamespaces(true);
+    $wp = $xml->channel->children($namespaces['wp'] ?? 'http://wordpress.org/export/1.2/');
+    $dc = isset($namespaces['dc']) ? $namespaces['dc'] : 'http://purl.org/dc/elements/1.1/';
+    $content_ns = isset($namespaces['content']) ? $namespaces['content'] : 'http://purl.org/rss/1.0/modules/content/';
+    $excerpt_ns = isset($namespaces['excerpt']) ? $namespaces['excerpt'] : 'http://wordpress.org/export/1.2/excerpt/';
+
+    $wxrVersion = (string)($wp->wxr_version ?? '');
+    $log[] = "✓ WordPress XML export načten (WXR verze: " . ($wxrVersion ?: 'neznámá') . ")";
+    $log[] = "▸ Web: " . h((string)($xml->channel->title ?? ''));
+
+    // ── 1. Kategorie ──
+    $catMap = []; // wp slug → cms category id
+    $insertedCats = 0;
+    foreach ($wp->category as $wpCat) {
+        $catName = (string)($wpCat->cat_name ?? '');
+        $catSlug = (string)($wpCat->category_nicename ?? '');
+        if ($catName === '' || $catName === 'Nezařazené' || $catName === 'Uncategorized') continue;
+
+        $existing = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ?");
+        $existing->execute([$catName]);
+        $existingId = $existing->fetchColumn();
+        if ($existingId) {
+            $catMap[$catSlug] = (int)$existingId;
+        } else {
+            $pdo->prepare("INSERT INTO cms_categories (name) VALUES (?)")->execute([$catName]);
+            $catMap[$catSlug] = (int)$pdo->lastInsertId();
+            $insertedCats++;
         }
     }
+    $log[] = "✓ Kategorie: {$insertedCats} nových";
 
-    $tmpPrefix = '_wpimp_';
-    $sqlModified = $sql;
+    // ── 2. Tagy ──
+    $tagMap = []; // wp slug → cms tag id
+    $insertedTags = 0;
+    foreach ($wp->tag as $wpTag) {
+        $tagName = (string)($wpTag->tag_name ?? '');
+        $tagSlug = (string)($wpTag->tag_slug ?? '');
+        if ($tagName === '' || $tagSlug === '') continue;
 
-    // Odstranit CREATE DATABASE a USE (i s backticks)
-    $sqlModified = preg_replace('/^\s*(CREATE DATABASE|USE\s)[^;]*;/mi', '', $sqlModified);
-
-    // Detekovat název databáze z USE příkazu a odstranit kvalifikované názvy tabulek
-    if (preg_match('/USE\s+`([^`]+)`/i', $sql, $dbMatch)) {
-        $dbName = $dbMatch[1];
-        // `dbname`.`wp62_posts` → `_wpimp_posts`
-        $sqlModified = str_replace("`{$dbName}`.`{$wpPrefix}", "`{$tmpPrefix}", $sqlModified);
-        // Backup: i s mezerami kolem tečky
-        $sqlModified = str_replace("`{$dbName}` . `{$wpPrefix}", "`{$tmpPrefix}", $sqlModified);
+        $existing = $pdo->prepare("SELECT id FROM cms_tags WHERE slug = ?");
+        $existing->execute([$tagSlug]);
+        $existingId = $existing->fetchColumn();
+        if ($existingId) {
+            $tagMap[$tagSlug] = (int)$existingId;
+        } else {
+            $cmsSlug = slugify($tagName) ?: $tagSlug;
+            $pdo->prepare("INSERT INTO cms_tags (name, slug) VALUES (?, ?)")->execute([$tagName, $cmsSlug]);
+            $tagMap[$tagSlug] = (int)$pdo->lastInsertId();
+            $insertedTags++;
+        }
     }
+    $log[] = "✓ Tagy: {$insertedTags} nových";
 
-    // Nekvalifikované názvy: `wp62_posts` → `_wpimp_posts`
-    $sqlModified = str_replace("`{$wpPrefix}", "`{$tmpPrefix}", $sqlModified);
+    // ── 3. Články a stránky ──
+    $insertedArticles = 0;
+    $skippedArticles = 0;
+    $insertedPages = 0;
+    $insertedComments = 0;
+    $articleMap = []; // wp post_id → cms article_id
 
-    $statements = preg_split('/;\s*$/m', $sqlModified);
-    $tableCount = 0;
-    $sqlErrors = [];
-    foreach ($statements as $stmt) {
-        $stmt = trim($stmt);
-        if ($stmt === '' || str_starts_with($stmt, '--') || str_starts_with($stmt, '/*')) continue;
-        try {
-            $pdo->exec($stmt);
-            if (str_starts_with(strtoupper($stmt), 'CREATE TABLE')) $tableCount++;
-        } catch (\PDOException $e) {
-            $code = $e->getCode();
-            if (!isset($sqlErrors[$code])) {
-                $sqlErrors[$code] = ['msg' => mb_substr($e->getMessage(), 0, 100), 'count' => 0];
+    foreach ($xml->channel->item as $item) {
+        $wpNs = $item->children($namespaces['wp'] ?? 'http://wordpress.org/export/1.2/');
+        $contentNs = $item->children($content_ns);
+        $excerptNs = $item->children($excerpt_ns);
+
+        $postType = (string)($wpNs->post_type ?? 'post');
+        $postStatus = (string)($wpNs->status ?? 'publish');
+        $wpPostId = (int)($wpNs->post_id ?? 0);
+
+        if (!in_array($postType, ['post', 'page'], true)) continue;
+        if (!in_array($postStatus, ['publish', 'draft', 'pending'], true)) continue;
+
+        $title = trim((string)($item->title ?? ''));
+        if ($title === '') { $skippedArticles++; continue; }
+
+        $content = (string)($contentNs->encoded ?? '');
+        $excerpt = trim((string)($excerptNs->encoded ?? ''));
+        $postName = (string)($wpNs->post_name ?? '');
+        $postDate = (string)($wpNs->post_date ?? '');
+        $commentStatus = (string)($wpNs->comment_status ?? 'open');
+        $menuOrder = (int)($wpNs->menu_order ?? 0);
+
+        // <!--more--> split
+        if (str_contains($content, '<!--more-->')) {
+            $parts = explode('<!--more-->', $content, 2);
+            if ($excerpt === '') {
+                $excerpt = trim(strip_tags($parts[0]));
             }
-            $sqlErrors[$code]['count']++;
+            $content = trim($parts[1]);
         }
-    }
-    foreach ($sqlErrors as $err) {
-        $log[] = '⚠ SQL (' . $err['count'] . '×): ' . $err['msg'];
-    }
-    $log[] = "✓ SQL dump načten ({$tableCount} tabulek)";
-    unset($sql, $sqlModified, $statements);
 
-    $t = $tmpPrefix;
+        // Odstranění WP bloků
+        $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $content);
+        $content = trim($content);
 
-    // ── Kategorie ──
-    $catMap = [];
-    try {
-        $wpCats = $pdo->query("SELECT t.term_id, t.name FROM {$t}terms t INNER JOIN {$t}term_taxonomy tt ON tt.term_id = t.term_id WHERE tt.taxonomy = 'category' AND t.name != 'Nezařazené'")->fetchAll();
-        $insertedCats = 0;
-        foreach ($wpCats as $c) {
-            $ex = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ?"); $ex->execute([(string)$c['name']]);
-            if ($eid = $ex->fetchColumn()) { $catMap[(int)$c['term_id']] = (int)$eid; }
-            else { $pdo->prepare("INSERT INTO cms_categories (name) VALUES (?)")->execute([(string)$c['name']]); $catMap[(int)$c['term_id']] = (int)$pdo->lastInsertId(); $insertedCats++; }
-        }
-        $log[] = "✓ Kategorie: {$insertedCats} nových (celkem " . count($wpCats) . ")";
-    } catch (\PDOException $e) { $log[] = '✗ Kategorie: ' . $e->getMessage(); }
-
-    // ── Tagy ──
-    $tagMap = [];
-    try {
-        $wpTags = $pdo->query("SELECT t.term_id, t.name FROM {$t}terms t INNER JOIN {$t}term_taxonomy tt ON tt.term_id = t.term_id WHERE tt.taxonomy = 'post_tag'")->fetchAll();
-        $insertedTags = 0;
-        foreach ($wpTags as $tg) {
-            $slug = slugify((string)$tg['name']) ?: 'tag-' . (int)$tg['term_id'];
-            $ex = $pdo->prepare("SELECT id FROM cms_tags WHERE slug = ?"); $ex->execute([$slug]);
-            if ($eid = $ex->fetchColumn()) { $tagMap[(int)$tg['term_id']] = (int)$eid; }
-            else { $pdo->prepare("INSERT INTO cms_tags (name, slug) VALUES (?, ?)")->execute([(string)$tg['name'], $slug]); $tagMap[(int)$tg['term_id']] = (int)$pdo->lastInsertId(); $insertedTags++; }
-        }
-        $log[] = "✓ Tagy: {$insertedTags} nových (celkem " . count($wpTags) . ")";
-    } catch (\PDOException $e) { $log[] = '✗ Tagy: ' . $e->getMessage(); }
-
-    // ── Term taxonomy mapa ──
-    $ttMap = [];
-    try {
-        foreach ($pdo->query("SELECT term_taxonomy_id, term_id, taxonomy FROM {$t}term_taxonomy")->fetchAll() as $r) {
-            $ttMap[(int)$r['term_taxonomy_id']] = ['term_id' => (int)$r['term_id'], 'taxonomy' => (string)$r['taxonomy']];
-        }
-    } catch (\PDOException $e) {}
-
-    // ── Články ──
-    $articleMap = [];
-    try {
-        $wpPosts = $pdo->query("SELECT ID, post_title, post_name, post_content, post_excerpt, post_date, post_modified, post_status, comment_status FROM {$t}posts WHERE post_type = 'post' AND post_status IN ('publish','draft','pending') ORDER BY post_date ASC")->fetchAll();
-        $inserted = 0; $skipped = 0;
-        foreach ($wpPosts as $p) {
-            $title = trim((string)$p['post_title']);
-            if ($title === '') { $skipped++; continue; }
-            $dup = $pdo->prepare("SELECT id FROM cms_articles WHERE title = ? AND DATE(created_at) = DATE(?)"); $dup->execute([$title, (string)$p['post_date']]);
-            if ($dup->fetchColumn()) { $skipped++; $articleMap[(int)$p['ID']] = 0; continue; }
-
-            $content = (string)$p['post_content']; $perex = trim((string)$p['post_excerpt']);
-            if (str_contains($content, '<!--more-->')) { $parts = explode('<!--more-->', $content, 2); if ($perex === '') $perex = trim(strip_tags($parts[0])); $content = trim($parts[1]); }
-            $content = preg_replace('/<!-- wp:[a-z\/\-]+ (\{[^}]*\} )?-->/', '', $content);
-            $content = preg_replace('/<!-- \/wp:[a-z\/\-]+ -->/', '', $content);
-            $content = trim($content);
-
-            $slug = uniqueArticleSlug($pdo, articleSlug((string)$p['post_name'] ?: $title));
-            $pdo->prepare("INSERT INTO cms_articles (title, slug, perex, content, comments_enabled, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)")
-                ->execute([$title, $slug, mb_substr($perex, 0, 500), $content, $p['comment_status'] === 'open' ? 1 : 0, $p['post_status'] === 'publish' ? 'published' : 'pending', (string)$p['post_date'], (string)$p['post_modified']]);
-            $articleMap[(int)$p['ID']] = (int)$pdo->lastInsertId(); $inserted++;
-        }
-        $log[] = "✓ Články: {$inserted} importováno, {$skipped} přeskočeno (celkem " . count($wpPosts) . ")";
-    } catch (\PDOException $e) { $log[] = '✗ Články: ' . $e->getMessage(); }
-
-    // ── Vazby ──
-    try {
-        $rels = $pdo->query("SELECT object_id, term_taxonomy_id FROM {$t}term_relationships")->fetchAll();
-        $ac = 0; $at = 0;
-        foreach ($rels as $r) {
-            $aid = $articleMap[(int)$r['object_id']] ?? 0; $ttId = (int)$r['term_taxonomy_id'];
-            if ($aid <= 0 || !isset($ttMap[$ttId])) continue;
-            $tid = $ttMap[$ttId]['term_id']; $tax = $ttMap[$ttId]['taxonomy'];
-            if ($tax === 'category' && isset($catMap[$tid])) { $pdo->prepare("UPDATE cms_articles SET category_id = ? WHERE id = ? AND (category_id IS NULL OR category_id = 0)")->execute([$catMap[$tid], $aid]); $ac++; }
-            elseif ($tax === 'post_tag' && isset($tagMap[$tid])) { try { $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?,?)")->execute([$aid, $tagMap[$tid]]); $at++; } catch (\PDOException $e) {} }
-        }
-        $log[] = "✓ Vazby: {$ac} kategorií, {$at} tagů";
-    } catch (\PDOException $e) { $log[] = '✗ Vazby: ' . $e->getMessage(); }
-
-    // ── Stránky ──
-    try {
-        $wpPages = $pdo->query("SELECT post_title, post_name, post_content, post_date, post_modified, post_status, menu_order FROM {$t}posts WHERE post_type = 'page' AND post_status IN ('publish','draft') ORDER BY menu_order")->fetchAll();
-        $ip = 0;
-        foreach ($wpPages as $pg) {
-            $title = trim((string)$pg['post_title']); if ($title === '') continue;
-            $dup = $pdo->prepare("SELECT id FROM cms_pages WHERE title = ?"); $dup->execute([$title]); if ($dup->fetchColumn()) continue;
-            $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', (string)$pg['post_content']);
-            $slug = uniquePageSlug($pdo, pageSlug((string)$pg['post_name'] ?: $title));
-            $pdo->prepare("INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, created_at, updated_at) VALUES (?,?,?,?,1,?,?,?)")
-                ->execute([$title, $slug, trim($content), $pg['post_status'] === 'publish' ? 1 : 0, (int)$pg['menu_order'], (string)$pg['post_date'], (string)$pg['post_modified']]);
-            $ip++;
-        }
-        $log[] = "✓ Stránky: {$ip} importováno (celkem " . count($wpPages) . ")";
-    } catch (\PDOException $e) { $log[] = '✗ Stránky: ' . $e->getMessage(); }
-
-    // ── Komentáře ──
-    try {
-        $wpComments = $pdo->query("SELECT comment_post_ID, comment_author, comment_author_email, comment_date, comment_content, comment_approved FROM {$t}comments WHERE comment_type IN ('','comment') AND comment_approved IN ('1','0')")->fetchAll();
-        $ic = 0;
-        foreach ($wpComments as $cm) {
-            $aid = $articleMap[(int)$cm['comment_post_ID']] ?? 0; if ($aid <= 0) continue;
-            $txt = trim((string)$cm['comment_content']); if ($txt === '') continue;
-            $pdo->prepare("INSERT INTO cms_comments (article_id, author_name, author_email, content, is_approved, created_at) VALUES (?,?,?,?,?,?)")
-                ->execute([$aid, trim((string)$cm['comment_author']), trim((string)$cm['comment_author_email']), $txt, $cm['comment_approved'] === '1' ? 1 : 0, (string)$cm['comment_date']]);
-            $ic++;
-        }
-        $log[] = "✓ Komentáře: {$ic} importováno (celkem " . count($wpComments) . ")";
-    } catch (\PDOException $e) { $log[] = '✗ Komentáře: ' . $e->getMessage(); }
-
-    // ── Média ──
-    if ($mediaPath !== '' && is_dir($mediaPath)) {
-        try {
-            $atts = $pdo->query("SELECT p.ID, pm.meta_value AS file_path FROM {$t}posts p LEFT JOIN {$t}postmeta pm ON pm.post_id = p.ID AND pm.meta_key = '_wp_attached_file' WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE 'image/%'")->fetchAll();
-            $destDir = dirname(__DIR__) . '/uploads/articles/'; $thumbDir = $destDir . 'thumbs/';
-            if (!is_dir($destDir)) mkdir($destDir, 0755, true); if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-            $cm = 0;
-            foreach ($atts as $att) {
-                $fp = trim((string)($att['file_path'] ?? '')); if ($fp === '') continue;
-                $src = rtrim($mediaPath, '/\\') . '/' . $fp; if (!is_file($src)) continue;
-                $ext = strtolower(pathinfo($fp, PATHINFO_EXTENSION)); if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) continue;
-                $fn = uniqid('wp_', true) . '.' . $ext;
-                if (copy($src, $destDir . $fn)) { gallery_make_thumb($destDir . $fn, $thumbDir . $fn, 400); $cm++; }
+        if ($postType === 'post') {
+            // Deduplikace
+            $dupCheck = $pdo->prepare("SELECT id FROM cms_articles WHERE title = ? AND DATE(created_at) = DATE(?)");
+            $dupCheck->execute([$title, $postDate]);
+            if ($dupCheck->fetchColumn()) {
+                $skippedArticles++;
+                continue;
             }
-            $log[] = "✓ Média: {$cm} obrázků (celkem " . count($atts) . ")";
-        } catch (\PDOException $e) { $log[] = '✗ Média: ' . $e->getMessage(); }
-    } else {
-        $log[] = '▸ Média: přeskočeno';
+
+            $slug = uniqueArticleSlug($pdo, articleSlug($postName ?: $title));
+            $status = $postStatus === 'publish' ? 'published' : 'pending';
+
+            $pdo->prepare(
+                "INSERT INTO cms_articles (title, slug, perex, content, comments_enabled, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            )->execute([$title, $slug, mb_substr($excerpt, 0, 500), $content, $commentStatus === 'open' ? 1 : 0, $status, $postDate]);
+            $articleId = (int)$pdo->lastInsertId();
+            $articleMap[$wpPostId] = $articleId;
+            $insertedArticles++;
+
+            // Přiřazení kategorií a tagů z <category> elementů
+            foreach ($item->category as $cat) {
+                $domain = (string)$cat['domain'];
+                $nicename = (string)$cat['nicename'];
+
+                if ($domain === 'category' && isset($catMap[$nicename])) {
+                    $pdo->prepare("UPDATE cms_articles SET category_id = ? WHERE id = ? AND (category_id IS NULL OR category_id = 0)")
+                        ->execute([$catMap[$nicename], $articleId]);
+                } elseif ($domain === 'post_tag' && isset($tagMap[$nicename])) {
+                    try {
+                        $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)")
+                            ->execute([$articleId, $tagMap[$nicename]]);
+                    } catch (\PDOException $e) {}
+                }
+            }
+
+            // Komentáře
+            foreach ($wpNs->comment as $wpComment) {
+                $commentContent = trim((string)($wpComment->comment_content ?? ''));
+                $commentApproved = (string)($wpComment->comment_approved ?? '0');
+                $commentType = (string)($wpComment->comment_type ?? '');
+
+                if ($commentContent === '' || !in_array($commentApproved, ['0', '1'], true)) continue;
+                if ($commentType !== '' && $commentType !== 'comment') continue;
+
+                $pdo->prepare(
+                    "INSERT INTO cms_comments (article_id, author_name, author_email, content, is_approved, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+                )->execute([
+                    $articleId,
+                    trim((string)($wpComment->comment_author ?? '')),
+                    trim((string)($wpComment->comment_author_email ?? '')),
+                    $commentContent,
+                    $commentApproved === '1' ? 1 : 0,
+                    (string)($wpComment->comment_date ?? $postDate),
+                ]);
+                $insertedComments++;
+            }
+        } elseif ($postType === 'page') {
+            $dupCheck = $pdo->prepare("SELECT id FROM cms_pages WHERE title = ?");
+            $dupCheck->execute([$title]);
+            if ($dupCheck->fetchColumn()) continue;
+
+            $slug = uniquePageSlug($pdo, pageSlug($postName ?: $title));
+            $pdo->prepare(
+                "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, created_at) VALUES (?, ?, ?, ?, 1, ?, ?)"
+            )->execute([$title, $slug, $content, $postStatus === 'publish' ? 1 : 0, $menuOrder, $postDate]);
+            $insertedPages++;
+        }
     }
 
-    // ── Úklid ──
-    $tmpTables = [];
-    try { $s = $pdo->query("SHOW TABLES LIKE '{$tmpPrefix}%'"); while ($tb = $s->fetchColumn()) $tmpTables[] = $tb; } catch (\PDOException $e) {}
-    foreach ($tmpTables as $tb) { try { $pdo->exec("DROP TABLE IF EXISTS `{$tb}`"); } catch (\PDOException $e) {} }
-    $log[] = "✓ Dočasné tabulky odstraněny (" . count($tmpTables) . ")";
+    $log[] = "✓ Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno";
+    $log[] = "✓ Stránky: {$insertedPages} importováno";
+    $log[] = "✓ Komentáře: {$insertedComments} importováno";
 
-    logAction('wp_import', 'sql=' . basename((string)($_FILES['sql_file']['name'] ?? 'unknown')));
-    @unlink($sqlPath);
+    logAction('wp_import', 'wxr=' . basename((string)($_FILES['wxr_file']['name'] ?? 'unknown')));
+    @unlink($xmlPath);
 
     $_SESSION['import_log'] = $log;
     header('Location: wp_import.php');
@@ -239,7 +230,7 @@ adminHeader('Import z WordPressu');
   </section>
 <?php endif; ?>
 
-<p>Import obsahu z WordPress SQL dumpu (exportovaný přes phpMyAdmin). Importují se články, stránky, kategorie, tagy, komentáře a volitelně média.</p>
+<p>Import obsahu z WordPress XML exportu. V administraci WordPressu přejděte na <strong>Nástroje → Export → Veškerý obsah</strong> a stáhněte XML soubor.</p>
 
 <form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -248,22 +239,11 @@ adminHeader('Import z WordPressu');
     <legend>Zdroj dat</legend>
 
     <div style="margin-bottom:.75rem">
-      <label for="sql_file">SQL dump z WordPressu <span aria-hidden="true">*</span></label>
-      <input type="file" id="sql_file" name="sql_file" required aria-required="true"
-             accept=".sql,.sql.gz,application/sql,text/plain" aria-describedby="sql-help">
-      <small id="sql-help">SQL soubor exportovaný z phpMyAdmin (WordPress databáze).</small>
-    </div>
-
-    <div style="margin-bottom:.75rem">
-      <label for="media_path">Cesta k WP uploads adresáři (nepovinné)</label>
-      <input type="text" id="media_path" name="media_path" style="width:100%;max-width:600px" aria-describedby="media-help">
-      <small id="media-help">Pokud máte na serveru adresář <code>wp-content/uploads</code>, zadejte cestu pro import obrázků.</small>
-    </div>
-
-    <div style="margin-bottom:.75rem">
-      <label for="wp_prefix">Prefix WP tabulek</label>
-      <input type="text" id="wp_prefix" name="wp_prefix" value="wp_" style="width:10rem" aria-describedby="prefix-help">
-      <small id="prefix-help">Obvykle <code>wp_</code>. Autodetekce z SQL souboru.</small>
+      <label for="wxr_file">WordPress XML export (WXR) <span aria-hidden="true">*</span></label>
+      <input type="file" id="wxr_file" name="wxr_file" required aria-required="true"
+             accept=".xml,application/xml,text/xml"
+             aria-describedby="wxr-help">
+      <small id="wxr-help">XML soubor exportovaný z WordPress admin → Nástroje → Export.</small>
     </div>
   </fieldset>
 
@@ -275,16 +255,23 @@ adminHeader('Import z WordPressu');
 </form>
 
 <section style="margin-top:2rem;padding:1rem;background:#fffbe6;border:1px solid #d7b600;border-radius:8px" aria-labelledby="import-info-heading">
-  <h2 id="import-info-heading" style="margin-top:0">Co se importuje</h2>
+  <h2 id="import-info-heading" style="margin-top:0">Jak získat export z WordPressu</h2>
+  <ol>
+    <li>Přihlaste se do administrace WordPressu</li>
+    <li>Přejděte na <strong>Nástroje → Export</strong></li>
+    <li>Vyberte <strong>Veškerý obsah</strong></li>
+    <li>Klikněte na <strong>Stáhnout soubor exportu</strong></li>
+    <li>Stažený XML soubor nahrajte sem</li>
+  </ol>
+  <h3>Co se importuje</h3>
   <ul>
-    <li><strong>Články</strong> – WP <code>post_type = 'post'</code> → Kora CMS články s perex/content splittem na <code>&lt;!--more--&gt;</code></li>
-    <li><strong>Stránky</strong> – WP <code>post_type = 'page'</code> → statické stránky</li>
-    <li><strong>Kategorie</strong> – WP taxonomie <code>category</code> → kategorie blogu</li>
-    <li><strong>Tagy</strong> – WP taxonomie <code>post_tag</code> → tagy článků</li>
-    <li><strong>Komentáře</strong> – schválené i čekající komentáře k článkům</li>
-    <li><strong>Média</strong> – obrázky z WP uploads (pokud zadáte cestu)</li>
+    <li><strong>Články</strong> – s perex/content splittem na <code>&lt;!--more--&gt;</code>; WP bloky se odstraní</li>
+    <li><strong>Stránky</strong> – statické stránky</li>
+    <li><strong>Kategorie</strong> → kategorie blogu</li>
+    <li><strong>Tagy</strong> → tagy článků s vazbami</li>
+    <li><strong>Komentáře</strong> – schválené i čekající</li>
   </ul>
-  <p>Duplicitní záznamy se automaticky přeskočí. WP blokové komentáře se odstraní. Import je bezpečný pro opakované spuštění.</p>
+  <p>Duplicitní záznamy se automaticky přeskočí. Import je bezpečný pro opakované spuštění.</p>
 </section>
 
 <?php adminFooter(); ?>
