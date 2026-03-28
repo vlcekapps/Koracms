@@ -47,6 +47,17 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
 <?php if ($success): ?><p class="success" role="status">Tag uložen.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 
+<p class="button-row button-row--start">
+  <a href="blog.php?blog=<?= (int)$blogId ?>"><span aria-hidden="true">←</span> Zpět na články</a>
+  <?php if (isMultiBlog()): ?>
+    <a href="blogs.php">Správa blogů</a>
+  <?php endif; ?>
+  <a href="blog_cats.php?blog_id=<?= (int)$blogId ?>">Kategorie blogu</a>
+  <?php if ($currentBlog): ?>
+    <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
+  <?php endif; ?>
+</p>
+
 <?php if (isMultiBlog()): ?>
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
   <label for="blog_id">Blog:</label>
@@ -112,5 +123,4 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
     </tbody>
   </table>
 <?php endif; ?>
-<p><a href="blog.php"><span aria-hidden="true">←</span> Zpět na blog</a></p>
 <?php adminFooter(); ?>

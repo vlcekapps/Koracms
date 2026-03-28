@@ -49,6 +49,23 @@ function isMultiBlog(): bool
     return count(getAllBlogs()) > 1;
 }
 
+function getPublicBlogNavigationBlogs(?array $currentBlog = null): array
+{
+    $currentBlogId = (int)($currentBlog['id'] ?? 0);
+    $visibleBlogs = [];
+
+    foreach (getAllBlogs() as $blog) {
+        $blogId = (int)($blog['id'] ?? 0);
+        $showInNav = (int)($blog['show_in_nav'] ?? 1) === 1;
+        if (!$showInNav && $blogId !== $currentBlogId) {
+            continue;
+        }
+        $visibleBlogs[] = $blog;
+    }
+
+    return $visibleBlogs;
+}
+
 function articleBlogSlug(array $article): string
 {
     if (!empty($article['blog_slug'])) {

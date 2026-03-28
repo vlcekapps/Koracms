@@ -7,6 +7,7 @@ $q = trim($_GET['q'] ?? '');
 $cat = trim($_GET['cat'] ?? '');
 $blogFilter = trim($_GET['blog'] ?? '');
 $multiBlog = isMultiBlog();
+$activeBlog = ($blogFilter !== '' && ctype_digit($blogFilter)) ? getBlogById((int)$blogFilter) : null;
 $params = [];
 $whereParts = ['a.deleted_at IS NULL'];
 
@@ -69,18 +70,31 @@ if ($q !== '') { $filterParams['q'] = $q; }
 if ($cat !== '') { $filterParams['cat'] = $cat; }
 if ($blogFilter !== '') { $filterParams['blog'] = $blogFilter; }
 $currentRedirect = BASE_URL . '/admin/blog.php' . ($filterParams !== [] ? '?' . http_build_query($filterParams) : '');
+$newArticleUrl = 'blog_form.php' . ($activeBlog ? '?blog_id=' . (int)$activeBlog['id'] : '');
+$blogTaxonomySuffix = $activeBlog ? '?blog_id=' . (int)$activeBlog['id'] : '';
+$blogCaptionTitle = $activeBlog ? 'Články blogu – ' . (string)$activeBlog['name'] : 'Blogy';
 
-adminHeader('Blogy');
+adminHeader($blogCaptionTitle);
 ?>
 
-<p>
-  <a href="blog_form.php" class="btn">+ Přidat článek</a>
+<p class="button-row button-row--start">
+  <a href="<?= h($newArticleUrl) ?>" class="btn">+ Přidat článek</a>
   <?php if ($canManageTaxonomies): ?>
-    <a href="blogs.php" style="margin-left:1rem">Správa blogů</a>
-    <a href="blog_cats.php" style="margin-left:1rem">Kategorie blogu</a>
-    <a href="blog_tags.php" style="margin-left:1rem">Štítky blogu</a>
+    <a href="blogs.php">Správa blogů</a>
+    <a href="blog_cats.php<?= h($blogTaxonomySuffix) ?>">Kategorie blogu</a>
+    <a href="blog_tags.php<?= h($blogTaxonomySuffix) ?>">Štítky blogu</a>
+  <?php endif; ?>
+  <?php if ($activeBlog): ?>
+    <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
   <?php endif; ?>
 </p>
+
+<?php if ($activeBlog): ?>
+  <p class="field-help">
+    Právě spravujete články blogu <strong><?= h((string)$activeBlog['name']) ?></strong>.
+    Kategorie, štítky i nový článek se teď vztahují k tomuto blogu.
+  </p>
+<?php endif; ?>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
   <label for="q" class="visually-hidden">Hledat</label>
@@ -112,7 +126,11 @@ adminHeader('Blogy');
 <?php if (empty($articles)): ?>
   <p>
     <?php if ($q !== '' || $cat !== '' || $blogFilter !== ''): ?>
-      Pro zadaný filtr tu teď nejsou žádné články.
+      <?php if ($activeBlog && $q === '' && $cat === ''): ?>
+        V blogu <?= h((string)$activeBlog['name']) ?> zatím nejsou žádné články.
+      <?php else: ?>
+        Pro zadaný filtr tu teď nejsou žádné články.
+      <?php endif; ?>
     <?php else: ?>
       Zatím tu nejsou žádné články. <a href="blog_form.php">Přidat první článek</a>.
     <?php endif; ?>

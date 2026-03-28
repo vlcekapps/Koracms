@@ -42,6 +42,23 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor): s
       <?php endif; ?>
     </div>
 
+    <?php if (!empty($publicBlogs) && count($publicBlogs) > 1): ?>
+      <nav aria-label="Další blogy webu" class="form-stack">
+        <ul class="chip-list">
+          <?php foreach ($publicBlogs as $publicBlog): ?>
+            <?php $isCurrentBlog = (int)($publicBlog['id'] ?? 0) === (int)($blog['id'] ?? 0); ?>
+            <li>
+              <?php if ($isCurrentBlog): ?>
+                <span class="pill"><?= h((string)$publicBlog['name']) ?></span>
+              <?php else: ?>
+                <a class="chip-link" href="<?= h(blogIndexPath($publicBlog)) ?>"><?= h((string)$publicBlog['name']) ?></a>
+              <?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      </nav>
+    <?php endif; ?>
+
     <?php if (!empty($categories)): ?>
       <nav aria-label="Kategorie blogu" class="form-stack">
         <ul class="chip-list">

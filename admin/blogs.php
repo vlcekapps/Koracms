@@ -46,6 +46,7 @@ $blogs = $pdo->query(
     "SELECT b.*, (SELECT COUNT(*) FROM cms_articles WHERE blog_id = b.id) AS article_count
      FROM cms_blogs b ORDER BY b.sort_order, b.name"
 )->fetchAll();
+$defaultBlogId = (int)(getDefaultBlog()['id'] ?? 0);
 
 adminHeader('Správa blogů');
 ?>
@@ -71,12 +72,13 @@ adminHeader('Správa blogů');
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="2"></textarea>
+    <small class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
 
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
     </div>
 
-    <button type="submit" class="btn" style="margin-top:.5rem">Přidat blog</button>
+    <button type="submit" class="btn" style="margin-top:.5rem">Vytvořit blog</button>
   </fieldset>
 </form>
 
@@ -99,6 +101,9 @@ adminHeader('Správa blogů');
       <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" style="cursor:grab">
         <td>
           <?= h((string)$blog['name']) ?>
+          <?php if ((int)$blog['id'] === $defaultBlogId): ?>
+            <small class="field-help">(výchozí blog)</small>
+          <?php endif; ?>
           <?php if (!(int)($blog['show_in_nav'] ?? 1)): ?>
             <small class="field-help">(mimo navigaci)</small>
           <?php endif; ?>
@@ -109,6 +114,7 @@ adminHeader('Správa blogů');
         <td><code><?= h((string)$blog['slug']) ?></code></td>
         <td><?= (int)$blog['article_count'] ?></td>
         <td class="actions">
+          <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener">Zobrazit na webu</a>
           <button type="button" class="btn blog-edit-btn" style="font-size:.85rem"
                   aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
                   aria-haspopup="dialog"
@@ -168,7 +174,7 @@ adminHeader('Správa blogů');
     </div>
 
     <div class="button-row" style="margin-top:1rem">
-      <button type="submit" class="btn">Uložit</button>
+      <button type="submit" class="btn">Uložit změny</button>
       <button type="button" id="blog-dialog-cancel" class="btn">Zrušit</button>
     </div>
   </form>

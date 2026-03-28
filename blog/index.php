@@ -30,6 +30,7 @@ $categories = $catStmt->fetchAll();
 
 $activeAuthor = $authorSlug !== '' ? fetchPublicAuthorBySlug($pdo, $authorSlug) : null;
 $showAuthorsIndexLink = false;
+$publicBlogs = isMultiBlog() ? getPublicBlogNavigationBlogs($blog) : [];
 if (getSetting('blog_authors_index_enabled', '0') === '1') {
     try {
         $showAuthorsIndexLink = (int)$pdo->query(
@@ -138,6 +139,7 @@ renderPublicPage([
         'tagSlug' => $tagSlug,
         'activeAuthor' => $activeAuthor,
         'showAuthorsIndexLink' => $showAuthorsIndexLink,
+        'publicBlogs' => $publicBlogs,
         'paginBase' => $paginBase,
         'blog' => $blog,
     ],

@@ -17,6 +17,8 @@ $metaDescription = trim($_POST['meta_description'] ?? '');
 $commentsEnabled = isset($_POST['comments_enabled']) ? 1 : 0;
 $adminNote = trim($_POST['admin_note'] ?? '');
 $blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 0);
+$defaultRedirect = BASE_URL . '/admin/blog.php' . ($blogId > 0 ? '?blog=' . $blogId : '');
+$redirect = internalRedirectTarget($_POST['redirect'] ?? '', $defaultRedirect);
 
 if ($blogId <= 0 || !getBlogById($blogId)) {
     header('Location: ' . BASE_URL . '/admin/blogs.php');
@@ -24,7 +26,9 @@ if ($blogId <= 0 || !getBlogById($blogId)) {
 }
 
 if ($title === '' || $content === '') {
-    header('Location: blog_form.php' . ($id ? "?id={$id}" : ''));
+    $fallbackFormUrl = BASE_URL . '/admin/blog_form.php'
+        . ($id ? '?id=' . $id : '?blog_id=' . $blogId);
+    header('Location: ' . $fallbackFormUrl);
     exit;
 }
 
@@ -46,13 +50,17 @@ if ($id !== null) {
 
 $slug = articleSlug($submittedSlug !== '' ? $submittedSlug : $title);
 if ($slug === '') {
-    header('Location: blog_form.php?err=slug' . ($id ? "&id={$id}" : ''));
+    $slugFormUrl = BASE_URL . '/admin/blog_form.php?err=slug'
+        . ($id ? '&id=' . $id : '&blog_id=' . $blogId);
+    header('Location: ' . $slugFormUrl);
     exit;
 }
 
 $uniqueSlug = uniqueArticleSlug($pdo, $slug, $id, $blogId);
 if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
-    header('Location: blog_form.php?err=slug' . ($id ? "&id={$id}" : ''));
+    $slugFormUrl = BASE_URL . '/admin/blog_form.php?err=slug'
+        . ($id ? '&id=' . $id : '&blog_id=' . $blogId);
+    header('Location: ' . $slugFormUrl);
     exit;
 }
 $slug = $uniqueSlug;
@@ -192,5 +200,5 @@ try {
     error_log('admin/blog_save tags: ' . $e->getMessage());
 }
 
-header('Location: ' . BASE_URL . '/admin/blog.php');
+header('Location: ' . $redirect);
 exit;

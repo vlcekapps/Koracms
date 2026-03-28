@@ -29,6 +29,12 @@ if ($id !== null) {
 
 $allBlogs = getAllBlogs();
 $currentBlogId = (int)($article['blog_id'] ?? ($_GET['blog_id'] ?? (getDefaultBlog()['id'] ?? 1)));
+$currentBlog = getBlogById($currentBlogId) ?? getDefaultBlog();
+$currentBlogId = (int)($currentBlog['id'] ?? $currentBlogId);
+$articleListUrl = BASE_URL . '/admin/blog.php' . (isMultiBlog() ? '?blog=' . $currentBlogId : '');
+$blogCategoriesUrl = BASE_URL . '/admin/blog_cats.php?blog_id=' . $currentBlogId;
+$blogTagsUrl = BASE_URL . '/admin/blog_tags.php?blog_id=' . $currentBlogId;
+$blogPublicUrl = $currentBlog ? blogIndexPath($currentBlog) : '';
 
 $catStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name");
 $catStmt->execute([$currentBlogId]);
@@ -98,8 +104,28 @@ if (!empty($article['publish_at'])) {
     $publishAtInput = date('Y-m-d\TH:i', strtotime((string)$article['publish_at']));
 }
 
-adminHeader($article ? 'Upravit článek' : 'Přidat článek');
+$pageTitle = $article ? 'Upravit článek' : 'Přidat článek';
+if (isMultiBlog() && $currentBlog) {
+    $pageTitle .= ' – ' . (string)$currentBlog['name'];
+}
+adminHeader($pageTitle);
 ?>
+
+<p class="button-row button-row--start">
+  <a href="<?= h($articleListUrl) ?>"><span aria-hidden="true">←</span> Zpět na články</a>
+  <?php if (isMultiBlog() && $currentBlog): ?>
+    <a id="blog-link-categories" href="<?= h($blogCategoriesUrl) ?>">Kategorie blogu</a>
+    <a id="blog-link-tags" href="<?= h($blogTagsUrl) ?>">Štítky blogu</a>
+    <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
+  <?php endif; ?>
+</p>
+
+<?php if (isMultiBlog() && $currentBlog): ?>
+  <p class="field-help" id="blog-form-context">
+    Článek právě patří do blogu <strong id="blog-context-name"><?= h((string)$currentBlog['name']) ?></strong>.
+    Pokud blog změníte, upraví se i dostupné kategorie, štítky a odkazy nahoře.
+  </p>
+<?php endif; ?>
 
 <?php if ($article): ?>
   <p>
@@ -121,13 +147,14 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
 <form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err === 'slug' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <input type="hidden" name="redirect" id="blog-redirect" value="<?= h($articleListUrl) ?>">
   <?php if ($article): ?>
     <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
   <?php endif; ?>
 
   <?php if (isMultiBlog()): ?>
     <label for="blog_id">Blog</label>
-    <select id="blog_id" name="blog_id" aria-describedby="blog-id-help">
+    <select id="blog_id" name="blog_id" aria-describedby="blog-id-help blog-form-context">
       <?php foreach ($allBlogs as $b): ?>
         <option value="<?= (int)$b['id'] ?>"<?= (int)$b['id'] === $currentBlogId ? ' selected' : '' ?>><?= h((string)$b['name']) ?></option>
       <?php endforeach; ?>
@@ -280,7 +307,7 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
 
   <div style="margin-top:1.5rem">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
-    <a href="blog.php" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($articleListUrl) ?>" style="margin-left:1rem">Zrušit</a>
     <?php if ($article && !empty($article['preview_token'])): ?>
       <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
     <?php elseif ($article): ?>
@@ -294,10 +321,23 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
     const blogSelect = document.getElementById('blog_id');
+    const redirectInput = document.getElementById('blog-redirect');
+    const contextName = document.getElementById('blog-context-name');
+    const categoryLink = document.getElementById('blog-link-categories');
+    const tagLink = document.getElementById('blog-link-tags');
+    const publicLink = document.getElementById('blog-link-public');
     const categorySelect = document.getElementById('category_id');
     const tagsFieldset = document.getElementById('article-tags-fieldset');
     const tagsContainer = document.getElementById('article-tags-options');
     const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const blogMeta = <?= json_encode(array_values(array_map(static function (array $blogEntry): array {
+        return [
+            'id' => (int)$blogEntry['id'],
+            'name' => (string)$blogEntry['name'],
+            'publicUrl' => blogIndexPath($blogEntry),
+        ];
+    }, $allBlogs)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const blogMetaById = Object.fromEntries(blogMeta.map((blogEntry) => [String(blogEntry.id), blogEntry]));
     let slugManual = <?= $article && !empty($article['slug']) ? 'true' : 'false' ?>;
     const rememberedSelections = {
         '<?= (int)$currentBlogId ?>': {
@@ -354,6 +394,23 @@ adminHeader($article ? 'Upravit článek' : 'Přidat článek');
                 + ' ' + String(tag.name)
                 + '</label>';
         }).join('');
+
+        const selectedBlog = blogMetaById[String(blogId)] || null;
+        if (contextName && selectedBlog) {
+            contextName.textContent = selectedBlog.name;
+        }
+        if (redirectInput) {
+            redirectInput.value = '<?= h(BASE_URL . '/admin/blog.php') ?>' + '?blog=' + encodeURIComponent(String(blogId));
+        }
+        if (categoryLink) {
+            categoryLink.href = '<?= h(BASE_URL . '/admin/blog_cats.php?blog_id=') ?>' + encodeURIComponent(String(blogId));
+        }
+        if (tagLink) {
+            tagLink.href = '<?= h(BASE_URL . '/admin/blog_tags.php?blog_id=') ?>' + encodeURIComponent(String(blogId));
+        }
+        if (publicLink && selectedBlog) {
+            publicLink.href = selectedBlog.publicUrl;
+        }
     };
 
     slugInput?.addEventListener('input', function () {
