@@ -92,9 +92,9 @@ adminHeader('Správa blogů');
         <th scope="col">Akce</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody data-sortable="blogs">
     <?php foreach ($blogs as $blog): ?>
-      <tr>
+      <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" style="cursor:grab">
         <td>
           <?php if ($editId === (int)$blog['id']): ?>
             <form method="post" style="display:flex;flex-direction:column;gap:.4rem">
@@ -162,4 +162,5 @@ adminHeader('Správa blogů');
 })();
 </script>
 
+<?= sortableJs() ?>
 <?php adminFooter(); ?>

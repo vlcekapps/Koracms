@@ -304,3 +304,61 @@ function bulkCheckboxJs(): string
         . '})();'
         . '</script>';
 }
+
+/**
+ * Vrátí JS pro drag & drop řazení seznamu s AJAX uložením.
+ * Seznam musí mít data-sortable="module" a položky data-sort-id="X".
+ * Tlačítka Nahoru/Dolů zůstávají jako WCAG fallback.
+ */
+function sortableJs(): string
+{
+    $nonce = cspNonce();
+    $endpoint = BASE_URL . '/admin/reorder_ajax.php';
+    $csrf = csrfToken();
+    return '<script nonce="' . $nonce . '">'
+        . '(function(){'
+        . 'document.querySelectorAll("[data-sortable]").forEach(function(list){'
+        . 'var module=list.dataset.sortable;'
+        . 'var items=function(){return Array.from(list.querySelectorAll("[data-sort-id]"));};'
+        . 'var dragged=null;'
+        // Drag events
+        . 'items().forEach(function(el){el.setAttribute("draggable","true");});'
+        . 'list.addEventListener("dragstart",function(e){'
+        . 'var t=e.target.closest("[data-sort-id]");if(!t)return;'
+        . 'dragged=t;t.style.opacity="0.4";'
+        . 'e.dataTransfer.effectAllowed="move";'
+        . '});'
+        . 'list.addEventListener("dragover",function(e){'
+        . 'e.preventDefault();e.dataTransfer.dropEffect="move";'
+        . 'var t=e.target.closest("[data-sort-id]");'
+        . 'if(t&&t!==dragged){var r=t.getBoundingClientRect();'
+        . 'var mid=r.top+r.height/2;'
+        . 'if(e.clientY<mid)list.insertBefore(dragged,t);else list.insertBefore(dragged,t.nextSibling);'
+        . '}'
+        . '});'
+        . 'list.addEventListener("dragend",function(){'
+        . 'if(dragged)dragged.style.opacity="";dragged=null;save();'
+        . '});'
+        // Save function
+        . 'function save(){'
+        . 'var order=items().map(function(el){return el.dataset.sortId;});'
+        . 'var fd=new FormData();fd.append("csrf_token",' . json_encode($csrf) . ');'
+        . 'fd.append("module",module);'
+        . 'order.forEach(function(id){fd.append("order[]",id);});'
+        . 'fetch(' . json_encode($endpoint) . ',{method:"POST",body:fd,credentials:"same-origin"})'
+        . '.then(function(r){return r.json();})'
+        . '.then(function(d){if(!d.ok)alert("Uložení pořadí selhalo.");});'
+        . '}'
+        // Keyboard: Ctrl+Arrow
+        . 'list.addEventListener("keydown",function(e){'
+        . 'if(!e.ctrlKey||!["ArrowUp","ArrowDown"].includes(e.key))return;'
+        . 'var t=e.target.closest("[data-sort-id]");if(!t)return;'
+        . 'e.preventDefault();'
+        . 'if(e.key==="ArrowUp"&&t.previousElementSibling)list.insertBefore(t,t.previousElementSibling);'
+        . 'else if(e.key==="ArrowDown"&&t.nextElementSibling)list.insertBefore(t.nextElementSibling,t);'
+        . 'save();t.focus();'
+        . '});'
+        . '});'
+        . '})();'
+        . '</script>';
+}

@@ -28,7 +28,7 @@ adminHeader('Pozice statických stránek');
 <?php if ($pages === []): ?>
   <p>Zatím tu nejsou žádné statické stránky. <a href="<?= BASE_URL ?>/admin/page_form.php">Přidat první stránku</a>.</p>
 <?php else: ?>
-  <ol style="list-style:none;padding:0;margin:0;max-width:62rem">
+  <ol style="list-style:none;padding:0;margin:0;max-width:62rem" data-sortable="pages">
     <?php $total = count($pages); ?>
     <?php foreach ($pages as $index => $page): ?>
       <?php
@@ -39,7 +39,7 @@ adminHeader('Pozice statických stránek');
             $statusParts[] = 'čeká na schválení';
         }
       ?>
-      <li style="display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid #eee;flex-wrap:wrap">
+      <li style="display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab" data-sort-id="<?= (int)$page['id'] ?>" tabindex="0">
         <div style="min-width:16rem;flex:1 1 18rem">
           <strong><?= h((string)$page['title']) ?></strong>
           <br><small><?= h((string)$page['slug']) ?></small>
@@ -76,4 +76,5 @@ adminHeader('Pozice statických stránek');
   </ol>
 <?php endif; ?>
 
+<?= sortableJs() ?>
 <?php adminFooter(); ?>

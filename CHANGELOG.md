@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Drag & drop řazení** – přetahování položek myší s AJAX uložením pořadí; WCAG 2.2 fallback: stávající tlačítka Nahoru/Dolů + klávesnicový Ctrl+šipka; sdílená JS funkce `sortableJs()` v `lib/ui.php`; AJAX endpoint `admin/reorder_ajax.php`; nasazeno na pozice stránek a pořadí blogů
 - **Cron endpoint** (`cron.php`) – plánované úlohy: publikování článků s `publish_at`, čištění expirovaných rate-limit záznamů, mazání starých temp souborů (24h) a audit logů (90 dní); spuštění přes CLI nebo HTTP s tokenem (`CRON_TOKEN` v config.php); výsledky se logují do `cms_log`
 - **WebP konverze** – automatické generování WebP verze při uploadu obrázků (galerie, články, eStránky import); helper funkce `generateWebp()`, `webpUrl()` a `pictureTag()` v `lib/gallery.php`; `<picture>` element s WebP source ve veřejných views
 - **Prohlížeč audit logu** (`admin/audit_log.php`) – výpis `cms_log` s filtry podle akce, uživatele a data; stránkování; sloupec `user_id` přidán do logu pro identifikaci autora akce
