@@ -153,6 +153,29 @@ function renderAdminContentReferencePicker(string $textareaId): void
     background: #f8fafc;
   }
 
+  .content-reference-picker-result--with-thumb {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: .9rem;
+    align-items: start;
+  }
+
+  .content-reference-picker-result__thumb {
+    width: 5.5rem;
+    aspect-ratio: 1 / 1;
+    border-radius: .6rem;
+    overflow: hidden;
+    background: #e2e8f0;
+    border: 1px solid #d0d5dd;
+  }
+
+  .content-reference-picker-result__thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .content-reference-picker-result__meta {
     margin: 0 0 .35rem;
     color: #475467;
@@ -199,6 +222,15 @@ function renderAdminContentReferencePicker(string $textareaId): void
 
     .content-reference-picker-toolbar {
       grid-template-columns: 1fr;
+    }
+
+    .content-reference-picker-result--with-thumb {
+      grid-template-columns: 1fr;
+    }
+
+    .content-reference-picker-result__thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
     }
   }
 </style>
@@ -366,8 +398,10 @@ function renderAdminContentReferencePicker(string $textareaId): void
             return lines.join('\n');
         };
 
-        const buildImageBlock = (item) => {
-            const imageUrl = typeof item.url === 'string' ? item.url : '';
+        const buildImageBlock = (item, imageUrlOverride = '') => {
+            const imageUrl = typeof imageUrlOverride === 'string' && imageUrlOverride.trim() !== ''
+                ? imageUrlOverride
+                : (typeof item.url === 'string' ? item.url : '');
             if (!imageUrl) {
                 return '';
             }
@@ -395,7 +429,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
                 case 'html_block':
                     return buildHtmlBlock(item);
                 case 'image_html':
-                    return buildImageBlock(item);
+                    return buildImageBlock(item, typeof action.url === 'string' ? action.url : '');
                 default:
                     return typeof action.snippet === 'string' ? action.snippet : '';
             }
@@ -456,27 +490,44 @@ function renderAdminContentReferencePicker(string $textareaId): void
                 const listItem = document.createElement('li');
                 const article = document.createElement('article');
                 article.className = 'content-reference-picker-result';
+                let contentRoot = article;
+
+                if (typeof item.thumbnail_url === 'string' && item.thumbnail_url.trim() !== '') {
+                    article.classList.add('content-reference-picker-result--with-thumb');
+
+                    const thumb = document.createElement('div');
+                    thumb.className = 'content-reference-picker-result__thumb';
+                    const thumbImage = document.createElement('img');
+                    thumbImage.src = item.thumbnail_url;
+                    thumbImage.alt = '';
+                    thumbImage.loading = 'lazy';
+                    thumb.appendChild(thumbImage);
+                    article.appendChild(thumb);
+
+                    contentRoot = document.createElement('div');
+                    article.appendChild(contentRoot);
+                }
 
                 const meta = document.createElement('p');
                 meta.className = 'content-reference-picker-result__meta';
                 meta.textContent = item.kind_label;
-                article.appendChild(meta);
+                contentRoot.appendChild(meta);
 
                 const heading = document.createElement('h3');
                 heading.className = 'content-reference-picker-result__title';
                 heading.textContent = item.title;
-                article.appendChild(heading);
+                contentRoot.appendChild(heading);
 
                 const path = document.createElement('code');
                 path.className = 'content-reference-picker-result__path';
                 path.textContent = item.path;
-                article.appendChild(path);
+                contentRoot.appendChild(path);
 
                 if (item.excerpt) {
                     const excerpt = document.createElement('p');
                     excerpt.className = 'content-reference-picker-result__excerpt';
                     excerpt.textContent = item.excerpt;
-                    article.appendChild(excerpt);
+                    contentRoot.appendChild(excerpt);
                 }
 
                 const actions = document.createElement('div');
@@ -516,7 +567,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
                 previewLink.setAttribute('aria-label', 'Zobrazit na webu: ' + item.title + ' (otevře se v novém okně)');
                 actions.appendChild(previewLink);
 
-                article.appendChild(actions);
+                contentRoot.appendChild(actions);
                 listItem.appendChild(article);
                 list.appendChild(listItem);
             });

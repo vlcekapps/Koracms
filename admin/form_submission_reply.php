@@ -42,6 +42,13 @@ $submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
 $recipient = formSubmissionRecipient([
     'submitter_email_field' => (string)($submission['submitter_email_field'] ?? ''),
 ], $fieldsByName, $submissionData);
+$formStmt = $pdo->prepare("SELECT * FROM cms_forms WHERE id = ?");
+$formStmt->execute([(int)$submission['form_id']]);
+$form = $formStmt->fetch() ?: [
+    'id' => (int)$submission['form_id'],
+    'title' => (string)($submission['form_title'] ?? ''),
+    'slug' => (string)($submission['form_slug'] ?? ''),
+];
 
 if ($recipient === []) {
     header('Location: ' . appendUrlQuery($redirect, ['reply' => 'missing']));
@@ -69,6 +76,19 @@ formSubmissionHistoryCreate(
 );
 
 logAction('form_submission_reply', 'id=' . $submissionId . ' recipient=' . (string)$recipient['email']);
+
+dispatchFormWebhook(
+    $form,
+    'reply_sent',
+    $submission,
+    $fieldsByName,
+    $submissionData,
+    [
+        'recipient' => (string)$recipient['email'],
+        'subject' => $subject,
+        'message' => $message,
+    ]
+);
 
 header('Location: ' . appendUrlQuery($redirect, ['reply' => 'sent']));
 exit;

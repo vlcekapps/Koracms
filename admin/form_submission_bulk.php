@@ -21,6 +21,23 @@ if ($ids === []) {
 
 $pdo = db_connect();
 $placeholders = implode(',', array_fill(0, count($ids), '?'));
+$form = null;
+$fieldsByName = [];
+if ($formId !== null) {
+    $formStmt = $pdo->prepare("SELECT * FROM cms_forms WHERE id = ?");
+    $formStmt->execute([$formId]);
+    $form = $formStmt->fetch() ?: null;
+    if ($form) {
+        $fieldsStmt = $pdo->prepare("SELECT * FROM cms_form_fields WHERE form_id = ? ORDER BY sort_order, id");
+        $fieldsStmt->execute([$formId]);
+        foreach ($fieldsStmt->fetchAll() as $field) {
+            $fieldName = trim((string)($field['name'] ?? ''));
+            if ($fieldName !== '') {
+                $fieldsByName[$fieldName] = $field;
+            }
+        }
+    }
+}
 
 if ($action === 'delete') {
     $submissionStmt = $pdo->prepare("SELECT id, data FROM cms_form_submissions WHERE id IN ({$placeholders})");
@@ -60,6 +77,26 @@ foreach ($ids as $submissionId) {
         'bulk_workflow',
         'Stav odpovědi byl hromadně změněn na „' . formSubmissionStatusLabel($action) . '“.'
     );
+
+    if ($form) {
+        $submissionWebhookStmt = $pdo->prepare("SELECT * FROM cms_form_submissions WHERE id = ?");
+        $submissionWebhookStmt->execute([$submissionId]);
+        $submissionRow = $submissionWebhookStmt->fetch() ?: null;
+        if ($submissionRow) {
+            $submissionData = json_decode((string)($submissionRow['data'] ?? ''), true) ?: [];
+            dispatchFormWebhook(
+                $form,
+                'workflow_updated',
+                $submissionRow,
+                $fieldsByName,
+                $submissionData,
+                [
+                    'bulk' => true,
+                    'status' => $action,
+                ]
+            );
+        }
+    }
 }
 
 logAction('form_submission_bulk_update', 'status=' . $action . ' ids=' . implode(',', $ids));

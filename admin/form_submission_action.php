@@ -13,7 +13,8 @@ if ($submissionId === null) {
 
 $pdo = db_connect();
 $submissionStmt = $pdo->prepare(
-    "SELECT s.id, s.form_id, s.reference_code, s.created_at, s.status, s.priority, s.labels, s.assigned_user_id, s.internal_note,
+    "SELECT s.id, s.form_id, s.reference_code, s.created_at, s.updated_at, s.status, s.priority, s.labels, s.assigned_user_id, s.internal_note,
+            s.data, s.ip_hash, s.github_issue_repository, s.github_issue_number, s.github_issue_url,
             f.title AS form_title, f.slug AS form_slug
      FROM cms_form_submissions s
      INNER JOIN cms_forms f ON f.id = s.form_id
@@ -27,11 +28,58 @@ if (!$submission) {
     exit;
 }
 
-$status = normalizeFormSubmissionStatus((string)($_POST['status'] ?? 'new'));
-$priority = normalizeFormSubmissionPriority((string)($_POST['priority'] ?? 'medium'));
-$labels = formSubmissionNormalizeLabels((string)($_POST['labels'] ?? ''));
-$assignedUserId = inputInt('post', 'assigned_user_id');
-$internalNote = trim((string)($_POST['internal_note'] ?? ''));
+$formStmt = $pdo->prepare("SELECT * FROM cms_forms WHERE id = ?");
+$formStmt->execute([(int)$submission['form_id']]);
+$form = $formStmt->fetch() ?: [
+    'id' => (int)$submission['form_id'],
+    'title' => (string)($submission['form_title'] ?? ''),
+    'slug' => (string)($submission['form_slug'] ?? ''),
+];
+
+$fieldsStmt = $pdo->prepare("SELECT * FROM cms_form_fields WHERE form_id = ? ORDER BY sort_order, id");
+$fieldsStmt->execute([(int)$submission['form_id']]);
+$fields = $fieldsStmt->fetchAll();
+$fieldsByName = [];
+foreach ($fields as $field) {
+    $fieldName = trim((string)($field['name'] ?? ''));
+    if ($fieldName !== '') {
+        $fieldsByName[$fieldName] = $field;
+    }
+}
+$submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
+
+$currentStatus = normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new'));
+$currentPriority = normalizeFormSubmissionPriority((string)($submission['priority'] ?? 'medium'));
+$currentLabels = formSubmissionNormalizeLabels((string)($submission['labels'] ?? ''));
+$currentAssignedUserId = (int)($submission['assigned_user_id'] ?? 0) > 0 ? (int)$submission['assigned_user_id'] : null;
+$currentInternalNote = trim((string)($submission['internal_note'] ?? ''));
+$quickAction = trim((string)($_POST['quick_action'] ?? ''));
+
+$status = array_key_exists('status', $_POST)
+    ? normalizeFormSubmissionStatus((string)($_POST['status'] ?? 'new'))
+    : $currentStatus;
+$priority = array_key_exists('priority', $_POST)
+    ? normalizeFormSubmissionPriority((string)($_POST['priority'] ?? 'medium'))
+    : $currentPriority;
+$labels = array_key_exists('labels', $_POST)
+    ? formSubmissionNormalizeLabels((string)($_POST['labels'] ?? ''))
+    : $currentLabels;
+$assignedUserPosted = array_key_exists('assigned_user_id', $_POST);
+$assignedUserId = $assignedUserPosted ? inputInt('post', 'assigned_user_id') : $currentAssignedUserId;
+$internalNote = array_key_exists('internal_note', $_POST)
+    ? trim((string)($_POST['internal_note'] ?? ''))
+    : $currentInternalNote;
+
+if ($quickAction === 'take' && currentUserId() !== null) {
+    $assignedUserId = currentUserId();
+    $status = 'in_progress';
+} elseif ($quickAction === 'start') {
+    $status = 'in_progress';
+} elseif ($quickAction === 'resolve') {
+    $status = 'resolved';
+} elseif ($quickAction === 'close') {
+    $status = 'closed';
+}
 
 if ($assignedUserId !== null) {
     $assigneeCheckStmt = $pdo->prepare(
@@ -66,25 +114,28 @@ $pdo->prepare(
 ]);
 
 $historyParts = [];
-if ($status !== normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new'))) {
+if ($quickAction === 'take' && $currentAssignedUserId !== $assignedUserId) {
+    $historyParts[] = 'Hlášení bylo převzato k řešení.';
+}
+if ($status !== $currentStatus) {
     $historyParts[] = 'Stav změněn na „' . formSubmissionStatusLabel($status) . '“.';
 }
-if ($priority !== normalizeFormSubmissionPriority((string)($submission['priority'] ?? 'medium'))) {
+if ($priority !== $currentPriority) {
     $historyParts[] = 'Priorita změněna na „' . formSubmissionPriorityLabel($priority) . '“.';
 }
-if ($labels !== formSubmissionNormalizeLabels((string)($submission['labels'] ?? ''))) {
+if ($labels !== $currentLabels) {
     $historyParts[] = $labels !== ''
         ? 'Štítky upraveny na „' . $labels . '“.'
         : 'Štítky byly vyčištěny.';
 }
-if (($assignedUserId ?? 0) !== (int)($submission['assigned_user_id'] ?? 0)) {
+if (($assignedUserId ?? 0) !== ($currentAssignedUserId ?? 0)) {
     if ($assignedUserId === null) {
         $historyParts[] = 'Přiřazení řešiteli bylo zrušeno.';
-    } else {
+    } elseif ($quickAction !== 'take') {
         $historyParts[] = 'Změněn přiřazený řešitel.';
     }
 }
-if ($internalNote !== trim((string)($submission['internal_note'] ?? ''))) {
+if ($internalNote !== $currentInternalNote) {
     $historyParts[] = $internalNote !== ''
         ? 'Interní poznámka byla upravena.'
         : 'Interní poznámka byla smazána.';
@@ -97,6 +148,26 @@ if ($historyParts !== []) {
         currentUserId(),
         'workflow',
         implode(' ', $historyParts)
+    );
+
+    dispatchFormWebhook(
+        $form,
+        'workflow_updated',
+        array_merge($submission, [
+            'reference_code' => $resolvedReference,
+            'status' => $status,
+            'priority' => $priority,
+            'labels' => $labels,
+            'assigned_user_id' => $assignedUserId,
+            'internal_note' => $internalNote,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]),
+        $fieldsByName,
+        $submissionData,
+        [
+            'quick_action' => $quickAction,
+            'changes' => $historyParts,
+        ]
     );
 }
 

@@ -9,6 +9,8 @@ $successMessage = '';
 $siteProfiles = siteProfileDefinitions();
 $selectedSiteProfile = currentSiteProfileKey();
 $boardPublicLabel = trim($_POST['board_public_label'] ?? getSetting('board_public_label', boardModulePublicLabel()));
+$githubIssuesEnabled = isset($_POST['github_issues_enabled']) ? '1' : getSetting('github_issues_enabled', '0');
+$githubIssuesRepository = trim($_POST['github_issues_repository'] ?? getSetting('github_issues_repository', ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -18,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contactEmail= trim($_POST['contact_email']   ?? '');
     $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
     $boardPublicLabel = trim($_POST['board_public_label'] ?? $boardPublicLabel);
+    $githubIssuesEnabled = isset($_POST['github_issues_enabled']) ? '1' : '0';
+    $githubIssuesRepository = trim((string)($_POST['github_issues_repository'] ?? $githubIssuesRepository));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
@@ -51,6 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Vyberte platný profil webu.';
         $siteProfile = currentSiteProfileKey();
     }
+    $normalizedGitHubRepository = normalizeGitHubRepository($githubIssuesRepository);
+    if ($githubIssuesRepository !== '' && $normalizedGitHubRepository === '') {
+        $errors[] = 'Výchozí repozitář pro GitHub issue bridge musí být ve formátu owner/repo.';
+    } else {
+        $githubIssuesRepository = $normalizedGitHubRepository;
+    }
     if ($boardPublicLabel === '') {
         $boardPublicLabel = defaultBoardPublicLabelForProfile($siteProfile);
     }
@@ -70,6 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('contact_email',    $contactEmail);
         saveSetting('site_profile',     $siteProfile);
         saveSetting('board_public_label', $boardPublicLabel);
+        saveSetting('github_issues_enabled', $githubIssuesEnabled);
+        saveSetting('github_issues_repository', $githubIssuesRepository);
         saveSetting('news_per_page',    (string)$newsPerPage);
         saveSetting('blog_per_page',    (string)$blogPerPage);
         saveSetting('events_per_page',  (string)$eventsPerPage);
@@ -184,6 +196,7 @@ $settingsSections[] = ['id' => 'settings-editor', 'label' => 'Obsah a editor'];
 $settingsSections[] = ['id' => 'settings-social', 'label' => 'Sociální sítě'];
 $settingsSections[] = ['id' => 'settings-brand', 'label' => 'Logo a sdílení'];
 $settingsSections[] = ['id' => 'settings-privacy', 'label' => 'Soukromí a cookies'];
+$settingsSections[] = ['id' => 'settings-integrations', 'label' => 'Integrace'];
 $settingsSections[] = ['id' => 'settings-operation', 'label' => 'Provoz webu'];
 
 adminHeader('Nastavení webu');
@@ -515,6 +528,34 @@ adminHeader('Nastavení webu');
     <textarea id="cookie_consent_text" name="cookie_consent_text"
               rows="2"><?= h(getSetting('cookie_consent_text',
               'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.')) ?></textarea>
+  </fieldset>
+
+  <fieldset id="settings-integrations">
+    <legend>Integrace</legend>
+    <div>
+      <input type="checkbox" id="github_issues_enabled" name="github_issues_enabled" value="1" aria-describedby="github-issues-enabled-help"
+             <?= $githubIssuesEnabled === '1' ? 'checked' : '' ?>>
+      <label for="github_issues_enabled" style="display:inline;font-weight:normal">
+        Povolit vytváření GitHub issues z odpovědí formulářů
+      </label>
+    </div>
+    <small id="github-issues-enabled-help" class="field-help">
+      Přímé vytvoření issue funguje jen při nastavené konstantě <code>GITHUB_ISSUES_TOKEN</code> v <code>config.php</code>.
+      Bez tokenu zůstane v detailu hlášení připravený návrh pro ruční otevření na GitHubu nebo pro zkopírování.
+    </small>
+
+    <label for="github_issues_repository">Výchozí repozitář pro issue bridge</label>
+    <input type="text" id="github_issues_repository" name="github_issues_repository"
+           value="<?= h($githubIssuesRepository) ?>"
+           placeholder="owner/repo"
+           aria-describedby="github-issues-repository-help">
+    <small id="github-issues-repository-help" class="field-help">
+      Nepovinné. Hodnota se předvyplní v detailu odpovědi formuláře a můžete ji tam případně upravit ručně.
+      Formát je <code>owner/repo</code>.
+      <?= githubIssueBridgeHasToken()
+          ? 'Přístupový token je v konfiguraci dostupný.'
+          : 'Přístupový token zatím v konfiguraci chybí, takže přímé vytvoření issue ještě nebude dostupné.' ?>
+    </small>
   </fieldset>
 
   <fieldset id="settings-operation">

@@ -119,6 +119,18 @@ $replyMessage = "Dobrý den,\n\nreagujeme na vaše hlášení "
         'slug' => (string)($submission['form_slug'] ?? ''),
     ], $submission)
     . ".\n\n";
+$formMeta = [
+    'id' => $formId,
+    'title' => (string)($submission['form_title'] ?? ''),
+    'slug' => (string)($submission['form_slug'] ?? ''),
+];
+$githubIssueDraftRepository = githubIssueBridgeRepository();
+$githubIssueDraftLabels = githubIssueLabelsCsv(githubIssueLabelsFromSubmission($submission));
+$githubIssueDraftTitle = githubIssueDefaultTitle($formMeta, $submission, $fieldsByName, $submissionData);
+$githubIssueDraftBody = githubIssueDefaultBody($formMeta, $submission, $fieldsByName, $submissionData);
+$hasGitHubIssue = formSubmissionHasGitHubIssue($submission);
+$githubIssueLinkLabel = formSubmissionGitHubIssueLabel($submission);
+$currentAdminUserId = currentUserId();
 
 adminHeader('Detail odpovědi formuláře');
 ?>
@@ -134,6 +146,28 @@ adminHeader('Detail odpovědi formuláře');
   <p class="error" role="alert">Vyplňte předmět i text odpovědi.</p>
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
   <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
+<?php endif; ?>
+<?php if (isset($_GET['issue']) && $_GET['issue'] === 'created'): ?>
+  <p class="success" role="status">GitHub issue bylo úspěšně vytvořeno a připojeno k tomuto hlášení.</p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'linked'): ?>
+  <p class="success" role="status">Existující GitHub issue bylo k tomuto hlášení úspěšně připojeno.</p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'exists'): ?>
+  <p class="error" role="alert">Toto hlášení už má GitHub issue připojené.</p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'invalid'): ?>
+  <p class="error" role="alert">Vyplňte repozitář, název i text GitHub issue.</p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'invalid_link'): ?>
+  <p class="error" role="alert">Zadejte platnou adresu GitHub issue ve formátu <code>https://github.com/owner/repo/issues/123</code>.</p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'not_ready'): ?>
+  <p class="error" role="alert">Přímé vytvoření GitHub issue teď není dostupné. Zkontrolujte nastavení mostu a přístupový token.</p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'failed'): ?>
+  <p class="error" role="alert">
+    GitHub issue se nepodařilo vytvořit.
+    <?php if (trim((string)($_GET['issue_message'] ?? '')) !== ''): ?>
+      Důvod: <?= h((string)$_GET['issue_message']) ?>.
+    <?php endif; ?>
+  </p>
+<?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'missing'): ?>
+  <p class="error" role="alert">Požadované hlášení se nepodařilo najít.</p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -190,6 +224,16 @@ adminHeader('Detail odpovědi formuláře');
       <th scope="row">Interní poznámka</th>
       <td><?= nl2br(h(trim((string)($submission['internal_note'] ?? '')) !== '' ? (string)$submission['internal_note'] : '–')) ?></td>
     </tr>
+    <tr>
+      <th scope="row">GitHub issue</th>
+      <td>
+        <?php if ($hasGitHubIssue): ?>
+          <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h($githubIssueLinkLabel) ?></a>
+        <?php else: ?>
+          –
+        <?php endif; ?>
+      </td>
+    </tr>
   </tbody>
 </table>
 
@@ -209,6 +253,42 @@ adminHeader('Detail odpovědi formuláře');
     <?php endforeach; ?>
   </tbody>
 </table>
+
+<h2>Rychlé kroky</h2>
+<div class="button-row">
+  <?php if ($currentAdminUserId !== null && (int)($submission['assigned_user_id'] ?? 0) !== (int)$currentAdminUserId): ?>
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+      <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+      <button type="submit" name="quick_action" value="take" class="btn">Převzít řešení</button>
+    </form>
+  <?php endif; ?>
+  <?php if (normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) !== 'in_progress'): ?>
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+      <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+      <button type="submit" name="quick_action" value="start" class="btn">Označit jako rozpracované</button>
+    </form>
+  <?php endif; ?>
+  <?php if (normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) !== 'resolved'): ?>
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+      <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+      <button type="submit" name="quick_action" value="resolve" class="btn">Označit jako vyřešené</button>
+    </form>
+  <?php endif; ?>
+  <?php if (normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) !== 'closed'): ?>
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+      <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+      <button type="submit" name="quick_action" value="close" class="btn">Uzavřít hlášení</button>
+    </form>
+  <?php endif; ?>
+</div>
 
 <h2>Co můžete udělat</h2>
 <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php">
@@ -266,6 +346,170 @@ adminHeader('Detail odpovědi formuláře');
     <a href="<?= h($redirect) ?>" class="btn">Zrušit</a>
   </div>
 </form>
+
+<h2>GitHub issue</h2>
+<?php if ($hasGitHubIssue): ?>
+  <p>Toto hlášení už má připojené issue <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h($githubIssueLinkLabel) ?></a>.</p>
+<?php else: ?>
+  <p class="field-help" style="margin-bottom:.75rem">
+    Z tohoto hlášení si můžete připravit GitHub issue. Návrh lze otevřít ručně na GitHubu, zkopírovat do schránky
+    a při zapnutém issue bridge i vytvořit přímo z administrace.
+  </p>
+
+  <?php if (!githubIssueBridgeEnabled()): ?>
+    <p class="field-help">Přímé vytváření issue je zatím vypnuté v <a href="settings.php#settings-integrations">nastavení integrací</a>. Ruční otevření návrhu ale funguje i bez něj.</p>
+  <?php elseif (!githubIssueBridgeHasToken()): ?>
+    <p class="field-help">Přímé vytvoření issue bude dostupné po doplnění konstanty <code>GITHUB_ISSUES_TOKEN</code> do <code>config.php</code>.</p>
+  <?php endif; ?>
+
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_issue.php" id="github-issue-form">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+    <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+    <fieldset>
+      <legend>Připravit issue</legend>
+
+      <div style="margin-bottom:.75rem">
+        <label for="github-issue-repository">Repozitář</label>
+        <input type="text"
+               id="github-issue-repository"
+               name="repository"
+               value="<?= h($githubIssueDraftRepository) ?>"
+               placeholder="owner/repo"
+               style="width:100%;max-width:32rem"
+               aria-describedby="github-issue-repository-help">
+        <small id="github-issue-repository-help" class="field-help">Můžete ponechat výchozí repozitář z nastavení webu, nebo sem zadat jiný ve formátu <code>owner/repo</code>.</small>
+      </div>
+
+      <div style="margin-bottom:.75rem">
+        <label for="github-issue-title">Název issue</label>
+        <input type="text"
+               id="github-issue-title"
+               name="title"
+               value="<?= h($githubIssueDraftTitle) ?>"
+               maxlength="180"
+               style="width:100%;max-width:52rem">
+      </div>
+
+      <div style="margin-bottom:.75rem">
+        <label for="github-issue-labels">GitHub štítky</label>
+        <input type="text"
+               id="github-issue-labels"
+               name="labels"
+               value="<?= h($githubIssueDraftLabels) ?>"
+               style="width:100%;max-width:52rem"
+               aria-describedby="github-issue-labels-help">
+        <small id="github-issue-labels-help" class="field-help">Priorita z hlášení je do návrhu doplněná automaticky jako štítek <code>priority:…</code>. Štítky můžete před vytvořením issue upravit.</small>
+      </div>
+
+      <div style="margin-bottom:.75rem">
+        <label for="github-issue-body">Tělo issue</label>
+        <textarea id="github-issue-body"
+                  name="body"
+                  rows="18"
+                  style="width:100%;max-width:60rem"
+                  aria-describedby="github-issue-body-help"><?= h($githubIssueDraftBody) ?></textarea>
+        <small id="github-issue-body-help" class="field-help">Interní poznámka správce se do issue nevkládá automaticky. Pokud ji chcete zveřejnit, přidejte ji sem ručně.</small>
+      </div>
+
+      <div class="button-row">
+        <?php if (githubIssueBridgeReady()): ?>
+          <button type="submit" name="issue_action" value="create" class="btn btn-primary">Vytvořit GitHub issue</button>
+        <?php endif; ?>
+        <button type="button" class="btn" id="github-issue-open">Otevřít návrh na GitHubu</button>
+        <button type="button" class="btn" id="github-issue-copy">Zkopírovat jako GitHub issue</button>
+      </div>
+      <p id="github-issue-copy-status" class="field-help" aria-live="polite" style="margin-top:.75rem"></p>
+    </fieldset>
+  </form>
+
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_issue.php" style="margin-top:1rem">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+    <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+    <fieldset>
+      <legend>Připojit existující issue</legend>
+      <label for="existing-issue-url">Adresa existující GitHub issue</label>
+      <input type="url"
+             id="existing-issue-url"
+             name="existing_issue_url"
+             placeholder="https://github.com/owner/repo/issues/123"
+             style="width:100%;max-width:52rem"
+             aria-describedby="existing-issue-url-help">
+      <small id="existing-issue-url-help" class="field-help">To se hodí hlavně tehdy, když si issue otevřete ručně přes tlačítko výše a potom ho chcete k hlášení uložit zpět.</small>
+      <div class="button-row" style="margin-top:.75rem">
+        <button type="submit" name="issue_action" value="link" class="btn">Připojit issue</button>
+      </div>
+    </fieldset>
+  </form>
+
+  <script nonce="<?= h(cspNonce()) ?>">
+  (() => {
+      const repositoryInput = document.getElementById('github-issue-repository');
+      const titleInput = document.getElementById('github-issue-title');
+      const labelsInput = document.getElementById('github-issue-labels');
+      const bodyInput = document.getElementById('github-issue-body');
+      const openButton = document.getElementById('github-issue-open');
+      const copyButton = document.getElementById('github-issue-copy');
+      const copyStatus = document.getElementById('github-issue-copy-status');
+
+      const getDraft = () => ({
+          repository: (repositoryInput?.value || '').trim(),
+          title: (titleInput?.value || '').trim(),
+          labels: (labelsInput?.value || '').trim(),
+          body: (bodyInput?.value || '').trim(),
+      });
+
+      const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+
+      openButton?.addEventListener('click', () => {
+          const draft = getDraft();
+          if (!repositoryPattern.test(draft.repository)) {
+              copyStatus.textContent = 'Nejdřív zadejte repozitář ve formátu owner/repo.';
+              repositoryInput?.focus();
+              return;
+          }
+          if (draft.title === '' || draft.body === '') {
+              copyStatus.textContent = 'Pro otevření návrhu na GitHubu vyplňte název i text issue.';
+              if (draft.title === '') {
+                  titleInput?.focus();
+              } else {
+                  bodyInput?.focus();
+              }
+              return;
+          }
+
+          const query = new URLSearchParams({
+              title: draft.title,
+              body: draft.body,
+          });
+          if (draft.labels !== '') {
+              query.set('labels', draft.labels);
+          }
+          window.open('https://github.com/' + draft.repository + '/issues/new?' + query.toString(), '_blank', 'noopener');
+          copyStatus.textContent = 'Návrh issue byl otevřen na GitHubu v novém panelu.';
+      });
+
+      copyButton?.addEventListener('click', async () => {
+          const draft = getDraft();
+          const payload = [
+              'Repozitář: ' + (draft.repository !== '' ? draft.repository : 'owner/repo'),
+              'Název: ' + draft.title,
+              draft.labels !== '' ? 'Štítky: ' + draft.labels : '',
+              '',
+              draft.body,
+          ].filter((line) => line !== '').join('\n');
+
+          try {
+              await navigator.clipboard.writeText(payload);
+              copyStatus.textContent = 'Návrh GitHub issue byl zkopírován do schránky.';
+          } catch (error) {
+              copyStatus.textContent = 'Návrh issue se nepodařilo zkopírovat. Zkuste to prosím ručně.';
+          }
+      });
+  })();
+  </script>
+<?php endif; ?>
 
 <?php if ($replyRecipient !== []): ?>
   <h2>Odpověď odesílateli</h2>

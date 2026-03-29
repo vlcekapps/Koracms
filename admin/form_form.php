@@ -11,6 +11,7 @@ $fieldTypes = formFieldTypeDefinitions();
 $fieldLayoutWidths = formFieldLayoutWidthDefinitions();
 $conditionOperators = formConditionOperatorDefinitions();
 $successBehaviors = formSuccessBehaviorDefinitions();
+$webhookEventDefinitions = formWebhookEventDefinitions();
 $presetKey = '';
 $presetDefinition = null;
 if ($id !== null) {
@@ -50,6 +51,10 @@ $successPrimaryLabelValue = (string)($form['success_primary_label'] ?? ($formDef
 $successPrimaryUrlValue = (string)($form['success_primary_url'] ?? ($formDefaults['success_primary_url'] ?? ''));
 $successSecondaryLabelValue = (string)($form['success_secondary_label'] ?? ($formDefaults['success_secondary_label'] ?? ''));
 $successSecondaryUrlValue = (string)($form['success_secondary_url'] ?? ($formDefaults['success_secondary_url'] ?? ''));
+$webhookEnabledValue = (int)($form['webhook_enabled'] ?? ($formDefaults['webhook_enabled'] ?? 0)) === 1;
+$webhookUrlValue = (string)($form['webhook_url'] ?? ($formDefaults['webhook_url'] ?? ''));
+$webhookSecretValue = (string)($form['webhook_secret'] ?? ($formDefaults['webhook_secret'] ?? ''));
+$webhookEventsValue = formWebhookEventList((string)($form['webhook_events'] ?? ($formDefaults['webhook_events'] ?? '')));
 $conditionalFieldOptions = [];
 foreach ($fieldSourceForOptions as $candidateField) {
     $candidateName = trim((string)($candidateField['name'] ?? ''));
@@ -89,6 +94,8 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Zadejte platnou e-mailovou adresu pro notifikaci, nebo pole nechte prázdné.</p>
 <?php elseif ($err === 'submitter_email_field'): ?>
   <p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>
+<?php elseif ($err === 'webhook_url'): ?>
+  <p role="alert" class="error" id="form-error">Zadejte platnou adresu webhooku začínající <code>http://</code> nebo <code>https://</code>.</p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -317,6 +324,52 @@ adminHeader($pageTitle);
         <small id="success-secondary-url-help" class="field-help">Volitelné. Hodí se pro návrat na domovskou stránku, další formulář nebo nápovědu.</small>
       </div>
     </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Webhooky a automatizace</legend>
+    <p class="field-help">Webhook umí po klíčových událostech formuláře poslat JSON do externí služby, třeba do vlastního issue trackeru, automatizačního nástroje nebo helpdesku.</p>
+
+    <div style="margin-bottom:.75rem">
+      <label for="webhook_enabled">
+        <input type="checkbox" id="webhook_enabled" name="webhook_enabled" value="1"<?= $webhookEnabledValue ? ' checked' : '' ?> aria-describedby="webhook-enabled-help">
+        Zapnout webhook pro tento formulář
+      </label>
+      <small id="webhook-enabled-help" class="field-help">Když je webhook vypnutý, formulář funguje normálně dál a žádná data nikam neposílá.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="webhook_url">Adresa webhooku</label>
+      <input type="url" id="webhook_url" name="webhook_url" maxlength="500"
+             value="<?= h($webhookUrlValue) ?>" style="width:100%;max-width:52rem"
+             aria-describedby="webhook-url-help" placeholder="https://example.test/hooks/forms">
+      <small id="webhook-url-help" class="field-help">Použijte adresu služby, která má přijímat JSON POST. Formulář nikdy neselže jen kvůli tomu, že webhook dočasně neodpoví.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <label for="webhook_secret">Tajný klíč pro podpis</label>
+      <input type="text" id="webhook_secret" name="webhook_secret" maxlength="255"
+             value="<?= h($webhookSecretValue) ?>" style="width:100%;max-width:32rem"
+             aria-describedby="webhook-secret-help" autocomplete="off">
+      <small id="webhook-secret-help" class="field-help">Volitelné. Pokud ho vyplníte, webhook dostane hlavičku <code>X-Kora-Signature</code> s HMAC SHA-256 podpisem.</small>
+    </div>
+
+    <fieldset style="border:1px solid #ddd;padding:.75rem 1rem">
+      <legend>Kdy webhook spustit</legend>
+      <p class="field-help" style="margin-top:0">Vyberte události, které mají do externí služby posílat nový payload.</p>
+      <?php foreach ($webhookEventDefinitions as $webhookEventKey => $webhookEventDefinition): ?>
+        <?php $webhookEventId = 'webhook-event-' . preg_replace('/[^a-z0-9_-]+/i', '-', $webhookEventKey); ?>
+        <div style="margin:.35rem 0">
+          <label for="<?= h($webhookEventId) ?>" style="font-weight:normal">
+            <input type="checkbox"
+                   id="<?= h($webhookEventId) ?>"
+                   name="webhook_events[]"
+                   value="<?= h($webhookEventKey) ?>"<?= in_array($webhookEventKey, $webhookEventsValue, true) ? ' checked' : '' ?>>
+            <?= h((string)$webhookEventDefinition['label']) ?>
+          </label>
+        </div>
+      <?php endforeach; ?>
+    </fieldset>
   </fieldset>
 
   <?php if ($form): ?>

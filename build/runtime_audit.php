@@ -32,6 +32,10 @@ foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
 }
 $runtimeAuditOriginalBlogAuthorsIndexEnabled = getSetting('blog_authors_index_enabled', '0');
 saveSetting('blog_authors_index_enabled', '1');
+$runtimeAuditOriginalGitHubIssuesEnabled = getSetting('github_issues_enabled', '0');
+$runtimeAuditOriginalGitHubIssuesRepository = getSetting('github_issues_repository', '');
+saveSetting('github_issues_enabled', '1');
+saveSetting('github_issues_repository', 'vlcekapps/Koracms');
 clearSettingsCache();
 $runtimeAuditHomepageUsesWidgets = renderZone('homepage') !== '';
 
@@ -1927,6 +1931,12 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="board_public_label"')) {
             $issues[] = 'board public label setting is missing';
         }
+        if (!str_contains($result['body'], 'name="github_issues_enabled"')) {
+            $issues[] = 'github issues bridge toggle is missing';
+        }
+        if (!str_contains($result['body'], 'name="github_issues_repository"')) {
+            $issues[] = 'github issues repository setting is missing';
+        }
         if (isModuleEnabled('blog')) {
             if (!str_contains($result['body'], 'name="blog_authors_index_enabled"')) {
                 $issues[] = 'blog authors index setting is missing';
@@ -2768,6 +2778,7 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'admin_form_submissions') {
         foreach ([
+            'GitHub',
             'Přehled odpovědí formuláře',
             'Hledat v odpovědích',
             'Exportovat CSV',
@@ -2775,6 +2786,7 @@ foreach ($pages as $page) {
             'Priorita',
             'Štítky',
             'Přiřazeno',
+            'GitHub issue',
             'Hromadné akce s vybranými odpověďmi',
             'Rozpracované',
             'Runtime audit workflow poznámka',
@@ -2789,6 +2801,11 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'admin_form_submission_detail') {
         foreach ([
+            'GitHub issue',
+            'PĹ™ipravit issue',
+            'OtevĹ™Ă­t nĂˇvrh na GitHubu',
+            'PĹ™ipojit existujĂ­cĂ­ issue',
+            'RepozitĂˇĹ™',
             'Referenční kód',
             'Workflow hlášení',
             'Priorita',
@@ -2805,8 +2822,34 @@ foreach ($pages as $page) {
             'Odpověď byla přijata přes veřejný formulář.',
             'Odeslána odpověď odesílateli',
             'Zpět na odpovědi formuláře',
+            'Rychlé kroky',
+            'Převzít řešení',
+            'Označit jako vyřešené',
+            'Uzavřít hlášení',
             'Uložit změny workflow',
             'Smazat odpověď',
+        ] as $expectedFragment) {
+            if (
+                (str_contains($expectedFragment, 'issue') && $expectedFragment !== 'GitHub issue')
+                || str_contains($expectedFragment, 'GitHubu')
+                || str_contains($expectedFragment, 'Repozit')
+            ) {
+                continue;
+            }
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin form submission detail is missing fragment: ' . $expectedFragment;
+            }
+        }
+
+        foreach ([
+            'id="github-issue-form"',
+            'id="github-issue-open"',
+            'id="github-issue-copy"',
+            'name="existing_issue_url"',
+            'name="repository"',
+            'name="quick_action" value="take"',
+            'name="quick_action" value="resolve"',
+            'name="quick_action" value="close"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin form submission detail is missing fragment: ' . $expectedFragment;
@@ -2838,6 +2881,10 @@ foreach ($pages as $page) {
             'name="submitter_email_field"',
             'name="submitter_confirmation_subject"',
             'name="submitter_confirmation_message"',
+            'name="webhook_enabled"',
+            'name="webhook_url"',
+            'name="webhook_secret"',
+            'name="webhook_events[]"',
             'name="fields[0][layout_width]"',
             'name="fields[0][allow_multiple]"',
             'name="fields[0][show_if_field]"',
@@ -4642,6 +4689,8 @@ if ($articleId === false) {
 
 saveSetting('home_author_user_id', $runtimeAuditOriginalHomeAuthorUserId);
 saveSetting('blog_authors_index_enabled', $runtimeAuditOriginalBlogAuthorsIndexEnabled);
+saveSetting('github_issues_enabled', $runtimeAuditOriginalGitHubIssuesEnabled);
+saveSetting('github_issues_repository', $runtimeAuditOriginalGitHubIssuesRepository);
 saveSetting($runtimeAuditThemeSettingsKey, $runtimeAuditOriginalThemeSettings);
 foreach ($runtimeAuditOriginalModuleSettings as $moduleSettingKey => $moduleSettingValue) {
     saveSetting($moduleSettingKey, $moduleSettingValue);

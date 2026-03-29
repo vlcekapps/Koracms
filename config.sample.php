@@ -19,3 +19,7 @@ define('SMTP_PORT', 587);
 define('SMTP_USER', '');          // prázdné = bez autentizace
 define('SMTP_PASS', '');
 define('SMTP_SECURE', 'tls');     // '' (žádné), 'tls' (STARTTLS), 'ssl'
+
+// GitHub issue bridge pro odpovědi formulářů
+// Fine-grained token by měl mít oprávnění Issues: Read and write
+define('GITHUB_ISSUES_TOKEN', '');

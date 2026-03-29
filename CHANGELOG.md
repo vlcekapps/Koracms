@@ -13,6 +13,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Form Builder 2.0 – sekce, rozložení a navazující kroky po odeslání** – formuláře nově podporují sekce s vlastním mezititulkem a nápovědou, rozložení polí po řádcích a šířkách a také volbu, co se má stát po úspěšném odeslání: potvrzení na stejné stránce nebo interní přesměrování, včetně až dvou navazujících tlačítek
 - **Form Builder 2.0 – pracovní inbox odpovědí** – odpovědi formulářů se nově chovají jako malý helpdesk: mají referenční kód, stavy `nové / rozpracované / vyřešené / uzavřené`, prioritu, štítky, přiřazení řešiteli, interní poznámku, detail jedné odpovědi, interní historii změn a možnost odpovědět odesílateli přímo z detailu hlášení
 - **Další hotové šablony formulářů** – k issue-reportingu přibyly i preset šablony `Návrh nové funkce`, `Žádost o podporu`, `Obecný kontaktní formulář` a `Nahlášení problému s obsahem`
+- **Form Builder 2.0 – GitHub issue bridge a webhooky** – z detailu odpovědi lze nově vytvořit GitHub issue, otevřít připravený návrh na GitHubu nebo ručně napojit existující issue; formuláře současně podporují webhooky po odeslání, změně workflow, odpovědi odesílateli a po vytvoření nebo napojení GitHub issue
+- **Form Builder 2.0 – jemnější ticket workflow** – přehled odpovědí nově podporuje filtry `Jen moje`, `Nepřiřazené` a `S GitHub issue` a detail hlášení přidává rychlé kroky `Převzít řešení`, `Označit jako rozpracované`, `Označit jako vyřešené` a `Uzavřít hlášení`
+- **HTML content tools – Media Picker 2.0** – content picker nově umí náhledy výsledků, vkládání fotografií a galerií podle typu obsahu, přímý odkaz ke stažení a chytřejší akce pro audio a video obsah
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci

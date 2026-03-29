@@ -104,6 +104,8 @@ require_once __DIR__ . '/lib/gallery.php';
 require_once __DIR__ . '/lib/content.php';
 require_once __DIR__ . '/lib/filedownloads.php';
 require_once __DIR__ . '/lib/ui.php';
+require_once __DIR__ . '/lib/github.php';
+require_once __DIR__ . '/lib/webhooks.php';
 require_once __DIR__ . '/lib/mail.php';
 require_once __DIR__ . '/lib/stats.php';
 require_once __DIR__ . '/lib/pagination.php';

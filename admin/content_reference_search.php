@@ -197,6 +197,7 @@ function contentReferenceResult(array $row): array
         'path' => $path,
         'excerpt' => contentReferenceExcerpt($row),
         'media_alt' => trim((string)($row['alt_text'] ?? '')),
+        'thumbnail_url' => contentReferenceThumbnailUrl($row),
         'insert_actions' => contentReferenceInsertActions($row),
     ];
 }
@@ -236,7 +237,8 @@ function contentReferenceBuildAction(
     string $label,
     string $status,
     bool $block = false,
-    string $snippet = ''
+    string $snippet = '',
+    array $extra = []
 ): array {
     $action = [
         'kind' => $kind,
@@ -249,7 +251,36 @@ function contentReferenceBuildAction(
         $action['snippet'] = $snippet;
     }
 
-    return $action;
+    return array_merge($action, $extra);
+}
+
+function contentReferenceThumbnailUrl(array $row): string
+{
+    $type = (string)($row['type'] ?? '');
+
+    if ($type === 'gallery_album') {
+        return (string)(hydrateGalleryAlbumPresentation($row)['cover_url'] ?? '');
+    }
+    if ($type === 'gallery_photo') {
+        return (string)(hydrateGalleryPhotoPresentation($row)['thumb_url'] ?? '');
+    }
+    if ($type === 'podcast_show') {
+        return podcastCoverUrl($row);
+    }
+    if ($type === 'download') {
+        return downloadImageUrl($row);
+    }
+    if ($type === 'place') {
+        return placeImageUrl($row);
+    }
+    if ($type === 'board') {
+        return boardImageUrl($row);
+    }
+    if (str_starts_with($type, 'media_') && mediaReferenceKind($row) === 'media_image') {
+        return mediaReferencePublicPath($row);
+    }
+
+    return '';
 }
 
 function contentReferenceDownloadMediaAction(array $row): ?array
@@ -313,6 +344,31 @@ function contentReferenceDownloadMediaAction(array $row): ?array
     }
 
     return null;
+}
+
+function contentReferenceDownloadDirectLinkAction(array $row): ?array
+{
+    $linkUrl = '';
+    if (normalizeDownloadExternalUrl((string)($row['external_url'] ?? '')) !== '') {
+        $linkUrl = normalizeDownloadExternalUrl((string)($row['external_url'] ?? ''));
+    } elseif ((int)($row['id'] ?? 0) > 0 && (trim((string)($row['filename'] ?? '')) !== '' || trim((string)($row['original_name'] ?? '')) !== '')) {
+        $linkUrl = BASE_URL . '/downloads/file.php?id=' . (int)$row['id'];
+    }
+
+    if ($linkUrl === '') {
+        return null;
+    }
+
+    $linkTitle = contentReferenceTitle($row);
+    $snippet = '<a href="' . htmlspecialchars($linkUrl, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($linkTitle, ENT_QUOTES, 'UTF-8') . '</a>';
+
+    return contentReferenceBuildAction(
+        'snippet',
+        'Vložit odkaz ke stažení',
+        'Do textu byl vložen odkaz ke stažení.',
+        false,
+        $snippet
+    );
 }
 
 function contentReferencePodcastEpisodeMediaAction(array $row): ?array
@@ -388,6 +444,24 @@ function contentReferenceMediaLibraryAction(array $row): ?array
     return null;
 }
 
+function contentReferenceGalleryPhotoImageAction(array $row): ?array
+{
+    $photo = hydrateGalleryPhotoPresentation($row);
+    $imageUrl = trim((string)($photo['image_url'] ?? ''));
+    if ($imageUrl === '') {
+        return null;
+    }
+
+    return contentReferenceBuildAction(
+        'image_html',
+        'Vložit fotografii',
+        'Do textu byla vložena fotografie.',
+        true,
+        '',
+        ['url' => $imageUrl]
+    );
+}
+
 function contentReferenceInsertActions(array $row): array
 {
     $actions = [
@@ -416,6 +490,15 @@ function contentReferenceInsertActions(array $row): array
         $mediaAction = contentReferenceDownloadMediaAction($row);
         if ($mediaAction !== null) {
             $actions[] = $mediaAction;
+        }
+        $downloadLinkAction = contentReferenceDownloadDirectLinkAction($row);
+        if ($downloadLinkAction !== null) {
+            $actions[] = $downloadLinkAction;
+        }
+    } elseif ($type === 'gallery_photo') {
+        $galleryPhotoAction = contentReferenceGalleryPhotoImageAction($row);
+        if ($galleryPhotoAction !== null) {
+            $actions[] = $galleryPhotoAction;
         }
     } elseif (str_starts_with($type, 'media_')) {
         $mediaAction = contentReferenceMediaLibraryAction($row);
@@ -563,7 +646,7 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
         }
 
         $photoStmt = $pdo->prepare(
-            "SELECT p.id, p.slug, p.caption, p.alt_text, p.created_at, a.name AS album_title,
+            "SELECT p.id, p.slug, p.caption, p.alt_text, p.filename, p.created_at, a.name AS album_title,
                     COALESCE(NULLIF(p.caption, ''), NULLIF(p.alt_text, ''), a.name, CONCAT('Fotografie #', p.id)) AS title,
                     'gallery_photo' AS type
              FROM cms_gallery_photos p
@@ -586,7 +669,7 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
 if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnabled('podcast')) {
     try {
         $showStmt = $pdo->prepare(
-            "SELECT id, title, slug, description, created_at, 'podcast_show' AS type
+            "SELECT id, title, slug, description, cover_image, created_at, 'podcast_show' AS type
              FROM cms_podcast_shows
              WHERE status = 'published'
                AND is_published = 1
@@ -622,7 +705,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
 if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabled('downloads')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, excerpt, description, external_url, filename, original_name, created_at, 'download' AS type
+            "SELECT id, title, slug, excerpt, description, external_url, filename, original_name, image_file, created_at, 'download' AS type
              FROM cms_downloads
              WHERE status = 'published'
                AND is_published = 1
@@ -662,7 +745,7 @@ if ($requestedType === 'all' || $requestedType === 'media') {
 if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled('places')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, name AS title, slug, excerpt, description, created_at, 'place' AS type
+            "SELECT id, name AS title, slug, excerpt, description, image_file, created_at, 'place' AS type
              FROM cms_places
              WHERE status = 'published'
                AND is_published = 1
@@ -682,7 +765,7 @@ if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled(
 if (($requestedType === 'all' || $requestedType === 'board') && isModuleEnabled('board')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, excerpt, description, posted_at AS created_at, 'board' AS type
+            "SELECT id, title, slug, excerpt, description, image_file, posted_at AS created_at, 'board' AS type
              FROM cms_board
              WHERE status = 'published'
                AND is_published = 1

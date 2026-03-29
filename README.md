@@ -19,9 +19,9 @@ Systém dnes stojí na těchto principech:
 - **Widgetová homepage** – homepage, sidebar a footer se skládají přes widgety
 - **Jednotná navigace webu** – moduly, blogy a statické stránky se řadí v jednom rozhraní
 - **Redakční workflow** – role, schvalování, fronta `Ke schválení`, moderátorské inboxy
-- **HTML editorové pomůcky** – content picker pro interní odkazy a vložení hotových bloků
+- **HTML editorové pomůcky** – content picker pro interní odkazy, galerie, média a vložení hotových bloků
 - **Snippety v HTML obsahu** – audio, video a galerie
-- **Form Builder 2.0** – formuláře s více typy polí, přílohami, podmínkami a e-mailovým workflow
+- **Form Builder 2.0** – formuláře s více typy polí, přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge
 - **Portable theme packages** – import/export statických šablon bez PHP override
 - **Bezpečnost a audit** – 2FA, rate limiting, CAPTCHA, honeypot, audit log, kontrola integrity
 
@@ -201,7 +201,7 @@ php -l cesta/k/souboru.php
 | **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek, archiv a detail přes slug URL |
 | **Ankety** | Aktivní anketa, archiv, detail přes slug URL a ochrana proti opakovanému hlasování |
 | **Znalostní báze** | FAQ / knowledge base s kategoriemi, detailem, slug URL a přehlednou veřejnou navigací |
-| **Formuláře** | Form builder s veřejnými formuláři, odpověďmi, CSV exportem, přílohami, podmínkami zobrazení a issue-report presetem |
+| **Formuláře** | Form builder s veřejnými formuláři, helpdesk inboxem odpovědí, CSV exportem, přílohami, podmínkami zobrazení, webhooky, GitHub issue bridge a issue-report presety |
 | **Vývěska / Oznámení** | Úřední deska nebo komunitní vývěska s typem položky, perexem, obrázkem, kontaktem, připnutím a archivem |
 | **Rezervace** | Zdroje, kategorie, lokality, veřejné rezervace, kalendáře, schvalování a storno přes token |
 | **Statické stránky** | Vlastní stránky se slug URL, volitelným zobrazením v navigaci a samostatným řazením |
@@ -374,6 +374,10 @@ Modul `Formuláře` už dnes není jen jednoduchý kontaktní wrapper. Umí:
 - workflow odpovědí se stavy `nové / rozpracované / vyřešené / uzavřené`
 - prioritu, štítky, přiřazení řešiteli a interní poznámku
 - detail odpovědi, interní historii a odpověď odesílateli přímo z administrace
+- rychlé kroky `Převzít řešení`, `Označit jako rozpracované`, `Označit jako vyřešené` a `Uzavřít hlášení`
+- filtry `Jen moje`, `Nepřiřazené` a `S GitHub issue`
+- propojení hlášení s GitHub issue včetně vytvoření, ručního napojení a uložení odkazu zpět do odpovědi
+- webhooky po odeslání, změně workflow, odpovědi odesílateli a vytvoření nebo napojení GitHub issue
 
 Součástí modulu jsou i hotové preset šablony:
 
@@ -384,6 +388,29 @@ Součástí modulu jsou i hotové preset šablony:
 - **Nahlášení problému s obsahem**
 
 Pro issue reporting mimo GitHub je teď builder použitelný i jako lehký helpdesk inbox.
+
+Stejný formulářový workflow lze navíc napojit i na GitHub nebo vlastní automatizace:
+
+- **GitHub issue bridge** – z detailu odpovědi lze vytvořit nové GitHub issue, otevřít připravený návrh na GitHubu nebo ručně připojit už existující issue URL
+- **Webhooky** – formulář může po odeslání nebo změně workflow poslat JSON payload na vlastní endpoint, Discord/Slack bridge nebo další integrační vrstvu
+
+---
+
+## HTML content tools
+
+Čistý HTML editor dnes umí víc než jen ruční psaní kódu:
+
+- vyhledat existující články, stránky a další veřejný obsah
+- vložit interní odkaz nebo hotový HTML blok
+- vložit galerii, fotografii nebo přímý odkaz ke stažení podle typu obsahu
+- vložit audio/video přehrávač přes snippety nebo přímé akce z pickeru
+
+Podporované snippety:
+
+- `[audio]https://example.com/audio.mp3[/audio]`
+- `[video]https://example.com/video.mp4[/video]`
+- `[gallery]slug-alba[/gallery]`
+- `[gallery slug="slug-alba"][/gallery]`
 
 ---
 

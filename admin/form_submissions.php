@@ -43,6 +43,14 @@ $priorityFilter = trim((string)($_GET['priority'] ?? 'all'));
 if (!in_array($priorityFilter, $allowedPriorityFilters, true)) {
     $priorityFilter = 'all';
 }
+$assignedFilter = trim((string)($_GET['assigned'] ?? 'all'));
+if (!in_array($assignedFilter, ['all', 'mine', 'unassigned'], true)) {
+    $assignedFilter = 'all';
+}
+$githubFilter = trim((string)($_GET['github'] ?? 'all'));
+if (!in_array($githubFilter, ['all', 'linked', 'unlinked'], true)) {
+    $githubFilter = 'all';
+}
 
 $query = trim((string)($_GET['q'] ?? ''));
 $statusCounts = formSubmissionStatusCounts($pdo, $formId);
@@ -57,6 +65,17 @@ if ($statusFilter !== 'all') {
 if ($priorityFilter !== 'all') {
     $where .= ' AND s.priority = ?';
     $params[] = $priorityFilter;
+}
+if ($assignedFilter === 'mine' && currentUserId() !== null) {
+    $where .= ' AND s.assigned_user_id = ?';
+    $params[] = currentUserId();
+} elseif ($assignedFilter === 'unassigned') {
+    $where .= ' AND s.assigned_user_id IS NULL';
+}
+if ($githubFilter === 'linked') {
+    $where .= " AND COALESCE(s.github_issue_url, '') <> ''";
+} elseif ($githubFilter === 'unlinked') {
+    $where .= " AND COALESCE(s.github_issue_url, '') = ''";
 }
 if ($query !== '') {
     $where .= " AND (
@@ -96,6 +115,12 @@ if ($statusFilter !== 'all') {
 }
 if ($priorityFilter !== 'all') {
     $currentParams['priority'] = $priorityFilter;
+}
+if ($assignedFilter !== 'all') {
+    $currentParams['assigned'] = $assignedFilter;
+}
+if ($githubFilter !== 'all') {
+    $currentParams['github'] = $githubFilter;
 }
 if ($query !== '') {
     $currentParams['q'] = $query;
@@ -156,6 +181,7 @@ $bulkOptions = [
     'closed' => 'Označit jako uzavřené',
     'delete' => 'Smazat trvale',
 ];
+$hasAdditionalFilters = $query !== '' || $priorityFilter !== 'all' || $assignedFilter !== 'all' || $githubFilter !== 'all';
 
 $emptyStateText = match ($statusFilter) {
     'new' => 'Zatím tu nejsou žádné nové odpovědi tohoto formuláře.',
@@ -194,19 +220,19 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 <p class="section-subtitle">Z přijatých odpovědí můžete udělat skutečný pracovní inbox: přiřadit řešitele, přidat interní poznámku, měnit stav a otevřít detail jednotlivého hlášení.</p>
 
 <nav aria-label="Filtr odpovědí formuláře" class="button-row" style="margin-bottom:1rem">
-  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'new', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'new' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'new', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'new' ? ' aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>
-  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'in_progress', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'in_progress' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'in_progress', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'in_progress' ? ' aria-current="page"' : '' ?>>
     Rozpracované (<?= $statusCounts['in_progress'] ?>)
   </a>
-  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'resolved', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'resolved' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'resolved', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'resolved' ? ' aria-current="page"' : '' ?>>
     Vyřešené (<?= $statusCounts['resolved'] ?>)
   </a>
-  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'closed', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'closed' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'closed', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'closed' ? ' aria-current="page"' : '' ?>>
     Uzavřené (<?= $statusCounts['closed'] ?>)
   </a>
-  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'all', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'all' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'all', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'all' ? ' aria-current="page"' : '' ?>>
     Všechny (<?= $allSubmissionCount ?>)
   </a>
 </nav>
@@ -223,15 +249,27 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
       <option value="<?= h($priorityKey) ?>"<?= $priorityFilter === $priorityKey ? ' selected' : '' ?>><?= h((string)$priorityDefinition['label']) ?></option>
     <?php endforeach; ?>
   </select>
+  <label for="submissions-assigned">Přiřazení</label>
+  <select id="submissions-assigned" name="assigned">
+    <option value="all"<?= $assignedFilter === 'all' ? ' selected' : '' ?>>Všechna přiřazení</option>
+    <option value="mine"<?= $assignedFilter === 'mine' ? ' selected' : '' ?>>Jen moje</option>
+    <option value="unassigned"<?= $assignedFilter === 'unassigned' ? ' selected' : '' ?>>Jen nepřiřazené</option>
+  </select>
+  <label for="submissions-github">GitHub issue</label>
+  <select id="submissions-github" name="github">
+    <option value="all"<?= $githubFilter === 'all' ? ' selected' : '' ?>>Všechna hlášení</option>
+    <option value="linked"<?= $githubFilter === 'linked' ? ' selected' : '' ?>>Jen s GitHub issue</option>
+    <option value="unlinked"<?= $githubFilter === 'unlinked' ? ' selected' : '' ?>>Jen bez GitHub issue</option>
+  </select>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($query !== '' || $priorityFilter !== 'all'): ?>
+  <?php if ($query !== '' || $priorityFilter !== 'all' || $assignedFilter !== 'all' || $githubFilter !== 'all'): ?>
     <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => $statusFilter])) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($submissions)): ?>
-  <?php if ($query !== ''): ?>
-    <p>Pro zadaný filtr se nenašla žádná odpověď. <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => $statusFilter])) ?>">Zobrazit odpovědi bez hledání</a>.</p>
+  <?php if ($hasAdditionalFilters): ?>
+    <p>Pro zadaný filtr se nenašla žádná odpověď. <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => $statusFilter])) ?>">Zobrazit odpovědi bez dalších filtrů</a>.</p>
   <?php else: ?>
     <p><?= h($emptyStateText) ?></p>
   <?php endif; ?>
@@ -274,6 +312,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
         <th scope="col">Štítky</th>
         <th scope="col">Přiřazeno</th>
         <th scope="col">Stav</th>
+        <th scope="col">GitHub</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -325,6 +364,13 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
           <td><?= h(($normalizedSubmissionLabels = formSubmissionNormalizeLabels((string)($submission['labels'] ?? ''))) !== '' ? $normalizedSubmissionLabels : '–') ?></td>
           <td><?= h($assigneeLabel) ?></td>
           <td><strong><?= h(formSubmissionStatusLabel((string)($submission['status'] ?? 'new'))) ?></strong></td>
+          <td>
+            <?php if (formSubmissionHasGitHubIssue($submission)): ?>
+              <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h(formSubmissionGitHubIssueLabel($submission)) ?></a>
+            <?php else: ?>
+              –
+            <?php endif; ?>
+          </td>
           <td class="actions">
             <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
             <form action="form_submission_delete.php" method="post" style="display:inline">

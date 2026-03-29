@@ -382,6 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ipHash = hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0') . '|form_' . (int)$form['id']);
             $submissionId = 0;
             $submissionReference = '';
+            $savedSubmission = null;
             $submissionPriority = formSubmissionInferPriority($fieldsByName, $submissionData);
             try {
                 $pdo->prepare(
@@ -402,6 +403,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $submissionReference,
                     $submissionId,
                 ]);
+                $savedSubmissionStmt = $pdo->prepare("SELECT * FROM cms_form_submissions WHERE id = ?");
+                $savedSubmissionStmt->execute([$submissionId]);
+                $savedSubmission = $savedSubmissionStmt->fetch() ?: null;
                 formSubmissionHistoryCreate(
                     $pdo,
                     $submissionId,
@@ -427,6 +431,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 sendFormSubmitterConfirmation($form, $fieldsByName, $submissionData, [
                     '{{submission_reference}}' => $submissionReference,
                 ]);
+                if (is_array($savedSubmission)) {
+                    dispatchFormWebhook(
+                        $form,
+                        'submission_created',
+                        $savedSubmission,
+                        $fieldsByName,
+                        $submissionData,
+                        [
+                            'source' => 'public_form',
+                            'detail_url' => $detailUrl,
+                            'notification_email' => trim((string)($form['notification_email'] ?? '')),
+                        ]
+                    );
+                }
 
                 $effectiveSuccessBehavior = normalizeFormSuccessBehavior(
                     (string)($form['success_behavior'] ?? ''),
