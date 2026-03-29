@@ -43,6 +43,14 @@ if ($id !== null) {
         if ($logoFile !== '') {
             deleteBlogLogoFile($logoFile);
         }
+
+        resetAutoIncrementIfEmpty($pdo, 'cms_blogs');
+        if (!$fallbackId) {
+            resetAutoIncrementIfEmpty($pdo, 'cms_articles');
+            resetAutoIncrementIfEmpty($pdo, 'cms_categories');
+            resetAutoIncrementIfEmpty($pdo, 'cms_tags');
+            resetAutoIncrementIfEmpty($pdo, 'cms_comments');
+        }
     }
 }
 

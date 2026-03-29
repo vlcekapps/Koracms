@@ -129,6 +129,26 @@ function koraEnsureDirectory(string $path, int $permissions = 0755): bool
     return @mkdir($path, $permissions, true) || is_dir($path);
 }
 
+function resetAutoIncrementIfEmpty(PDO $pdo, string $tableName): void
+{
+    static $allowedTables = [
+        'cms_articles',
+        'cms_blogs',
+        'cms_categories',
+        'cms_comments',
+        'cms_tags',
+    ];
+
+    if (!in_array($tableName, $allowedTables, true)) {
+        return;
+    }
+
+    $rowCount = (int)$pdo->query("SELECT COUNT(*) FROM `{$tableName}`")->fetchColumn();
+    if ($rowCount === 0) {
+        $pdo->exec("ALTER TABLE `{$tableName}` AUTO_INCREMENT = 1");
+    }
+}
+
 // ──────────────────────────── Moduly (lib/) ────────────────────────────────
 // Funkce rozděleny do tematických souborů pro lepší přehlednost a údržbu.
 require_once __DIR__ . '/lib/definitions.php';

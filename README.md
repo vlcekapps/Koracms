@@ -172,6 +172,7 @@ http://vas-web.cz/migrate.php
 ```
 
 Před spuštěním se přihlaste jako superadmin. Migrace doplní nové tabulky, sloupce a výchozí nastavení bez přepisu existujících dat.
+Čerstvá instalace přes `install.php` už má aktuální schéma databáze a `migrate.php` po ní není potřeba; migrace slouží jen pro upgrade již existujícího webu.
 
 ### 3. Smažte `migrate.php`
 
@@ -435,6 +436,7 @@ Administrace má:
 Blog vrstva je dnes výrazně dál než jen „modul článků“:
 
 - více blogů v jedné instalaci
+- po smazání úplně posledního blogu se blogová vrstva vrátí do čistého stavu a nový blog znovu začíná od `id = 1`
 - veřejný detail článku přes čistou slug URL
 - veřejný profil autora
 - author archive

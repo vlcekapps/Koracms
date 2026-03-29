@@ -5923,6 +5923,8 @@ $blogListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php'
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $blogCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php');
 $blogTagsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php');
+$blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_blog_delete.php');
+$dbSource = (string)file_get_contents(dirname(__DIR__) . '/db.php');
 
 if (!str_contains($blogLayoutSource, "currentUserHasCapability('blog_taxonomies_manage') && hasAnyBlogs()")) {
     $blogAdminIssues[] = 'admin menu still exposes blog taxonomies without existing blog guard';
@@ -5938,6 +5940,12 @@ if (!str_contains($blogCatsSource, 'if (!hasAnyBlogs())')) {
 }
 if (!str_contains($blogTagsSource, 'if (!hasAnyBlogs())')) {
     $blogAdminIssues[] = 'blog tags page is missing no-blog redirect guard';
+}
+if (!str_contains($dbSource, 'function resetAutoIncrementIfEmpty')) {
+    $blogAdminIssues[] = 'database helpers are missing auto-increment reset helper for empty blog tables';
+}
+if (!str_contains($blogDeleteSource, "resetAutoIncrementIfEmpty(\$pdo, 'cms_blogs')")) {
+    $blogAdminIssues[] = 'last blog deletion no longer resets blog auto-increment counter';
 }
 
 if ($blogAdminIssues === []) {

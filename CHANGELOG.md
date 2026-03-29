@@ -4,6 +4,13 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [3.0.0-rc.2] – 2026-03-29
+
+### Opraveno
+- **Fresh install schéma** – `install.php` je znovu sladěný s aktuálními migracemi, takže čerstvá instalace už po prvním přihlášení nevyžaduje spuštění `migrate.php`, aby fungovaly stránky jako `admin/pages.php`
+- **Mazání posledního blogu** – po smazání úplně posledního blogu se multiblog vrátí do čistého stavu a další nově vytvořený blog znovu začíná od `id = 1`; stejně se při prázdném stavu srovnají i navázané blogové tabulky pro články, kategorie, štítky a komentáře
+- **Runtime audit** – nový `install_schema_guard` hlídá drift mezi `install.php` a `migrate.php` a blog guardrails nově kryjí i reset čítače po smazání posledního blogu
+
 ## [3.0.0-rc.1] – 2026-03-29
 
 ### Přidáno
