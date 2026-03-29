@@ -5,6 +5,7 @@ checkMaintenanceMode();
 $siteName = getSetting('site_name', 'Kora CMS');
 $success  = false;
 $error    = false;
+$publicRegistrationEnabled = publicRegistrationEnabled();
 
 $token = trim($_GET['token'] ?? '');
 
@@ -46,9 +47,14 @@ renderPublicPage([
             ? [
                 ['href' => BASE_URL . '/public_login.php', 'label' => 'Přejít na přihlášení', 'class' => 'button-primary'],
               ]
-            : [
-                ['href' => BASE_URL . '/register.php', 'label' => 'Zaregistrovat se znovu', 'class' => 'button-primary'],
-              ],
+            : ($publicRegistrationEnabled
+                ? [
+                    ['href' => BASE_URL . '/register.php', 'label' => 'Zaregistrovat se znovu', 'class' => 'button-primary'],
+                  ]
+                : [
+                    ['href' => BASE_URL . '/public_login.php', 'label' => 'Přejít na přihlášení', 'class' => 'button-primary'],
+                    ['href' => BASE_URL . '/', 'label' => 'Zpět na úvodní stránku', 'class' => 'button-secondary'],
+                  ]),
     ],
     'body_class' => 'page-status page-confirm-email',
     'page_kind' => 'utility',

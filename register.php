@@ -11,6 +11,35 @@ if (isLoggedIn()) {
     exit;
 }
 
+if (!publicRegistrationEnabled()) {
+    http_response_code(403);
+
+    renderPublicPage([
+        'title' => 'Registrace je vypnutá – ' . getSetting('site_name', 'Kora CMS'),
+        'meta' => [
+            'title' => 'Registrace je vypnutá – ' . getSetting('site_name', 'Kora CMS'),
+        ],
+        'view' => 'utility/status',
+        'view_data' => [
+            'kicker' => 'Uživatelský účet',
+            'title' => 'Veřejná registrace je momentálně vypnutá',
+            'variant' => 'warning',
+            'announceRole' => 'alert',
+            'messages' => [
+                'Nové veřejné účty se na tomto webu momentálně nevytvářejí.',
+                'Pokud už účet máte, můžete se přihlásit. V opačném případě kontaktujte správce webu.',
+            ],
+            'actions' => [
+                ['href' => BASE_URL . '/public_login.php', 'label' => 'Přejít na přihlášení', 'class' => 'button-primary'],
+                ['href' => BASE_URL . '/', 'label' => 'Zpět na úvodní stránku', 'class' => 'button-secondary'],
+            ],
+        ],
+        'body_class' => 'page-status page-register-disabled',
+        'page_kind' => 'utility',
+    ]);
+    exit;
+}
+
 $siteName   = getSetting('site_name', 'Kora CMS');
 $errors     = [];
 $success    = false;

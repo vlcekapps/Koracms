@@ -9,6 +9,7 @@ function siteFooter(): string
     $siteName = h(getSetting('site_name', 'Kora CMS'));
     $b        = BASE_URL;
     $links    = '';
+    $publicRegistrationEnabled = publicRegistrationEnabled();
 
     $socials = [
         'social_facebook'  => ['Facebook',  'https://www.facebook.com/'],
@@ -35,7 +36,7 @@ function siteFooter(): string
          . "  <p><a href=\"{$b}/search.php\">Vyhledávání</a>"
          . (isModuleEnabled('newsletter') ? " · <a href=\"{$b}/subscribe.php\">Odběr novinek</a>" : '')
          . "</p>\n"
-         . (isModuleEnabled('reservations')
+         . (isModuleEnabled('reservations') && ($publicRegistrationEnabled || (isLoggedIn() && isPublicUser()))
              ? "  <p>"
                . (isLoggedIn()
                    ? (isPublicUser()

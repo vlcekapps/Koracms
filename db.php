@@ -94,6 +94,11 @@ function isModuleEnabled(string $module): bool
     return getSetting('module_' . $module, '0') === '1';
 }
 
+function publicRegistrationEnabled(): bool
+{
+    return getSetting('public_registration_enabled', '1') === '1';
+}
+
 // ──────────────────────────── Moduly (lib/) ────────────────────────────────
 // Funkce rozděleny do tematických souborů pro lepší přehlednost a údržbu.
 require_once __DIR__ . '/lib/definitions.php';

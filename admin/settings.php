@@ -9,6 +9,7 @@ $successMessage = '';
 $siteProfiles = siteProfileDefinitions();
 $selectedSiteProfile = currentSiteProfileKey();
 $boardPublicLabel = trim($_POST['board_public_label'] ?? getSetting('board_public_label', boardModulePublicLabel()));
+$publicRegistrationEnabled = isset($_POST['public_registration_enabled']) ? '1' : getSetting('public_registration_enabled', '1');
 $githubIssuesEnabled = isset($_POST['github_issues_enabled']) ? '1' : getSetting('github_issues_enabled', '0');
 $githubIssuesRepository = trim($_POST['github_issues_repository'] ?? getSetting('github_issues_repository', ''));
 
@@ -20,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contactEmail= trim($_POST['contact_email']   ?? '');
     $siteProfile = trim($_POST['site_profile'] ?? $selectedSiteProfile);
     $boardPublicLabel = trim($_POST['board_public_label'] ?? $boardPublicLabel);
+    $publicRegistrationEnabled = isset($_POST['public_registration_enabled']) ? '1' : '0';
     $githubIssuesEnabled = isset($_POST['github_issues_enabled']) ? '1' : '0';
     $githubIssuesRepository = trim((string)($_POST['github_issues_repository'] ?? $githubIssuesRepository));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
@@ -80,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('contact_email',    $contactEmail);
         saveSetting('site_profile',     $siteProfile);
         saveSetting('board_public_label', $boardPublicLabel);
+        saveSetting('public_registration_enabled', $publicRegistrationEnabled);
         saveSetting('github_issues_enabled', $githubIssuesEnabled);
         saveSetting('github_issues_repository', $githubIssuesRepository);
         saveSetting('news_per_page',    (string)$newsPerPage);
@@ -251,6 +254,16 @@ adminHeader('Nastavení webu');
     <label for="contact_email">E-mail pro kontaktní formulář</label>
     <input type="email" id="contact_email" name="contact_email"
            value="<?= h(getSetting('contact_email')) ?>">
+
+    <div style="margin-top:1rem">
+      <input type="checkbox" id="public_registration_enabled" name="public_registration_enabled" value="1"
+             aria-describedby="public-registration-help"
+             <?= $publicRegistrationEnabled === '1' ? 'checked' : '' ?>>
+      <label for="public_registration_enabled" style="display:inline;font-weight:normal">
+        Povolit veřejnou registraci uživatelů
+      </label>
+    </div>
+    <small id="public-registration-help" class="field-help">Když volbu vypnete, veřejná registrace se zablokuje a panel s přihlášením a registrací se návštěvníkům nezobrazí. Nové účty pak může ručně přidávat jen hlavní administrátor.</small>
 
     <label for="board_public_label">Veřejný název sekce vývěsky</label>
     <input type="text" id="board_public_label" name="board_public_label" maxlength="60"

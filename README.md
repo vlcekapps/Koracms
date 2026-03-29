@@ -187,6 +187,56 @@ php -l cesta/k/souboru.php
 
 ---
 
+## Plánované úlohy (`cron.php`)
+
+Kora CMS obsahuje endpoint `cron.php`, který slouží pro pravidelné úlohy na pozadí. Typicky přes něj chcete řešit:
+
+- plánované zrušení publikace obsahu
+- úklid starých dočasných souborů
+- úklid starých audit logů
+- automatickou denní zálohu databáze
+
+### Doporučený způsob spuštění
+
+Preferovaný způsob je **CLI cron**, ne veřejné HTTP volání.
+
+Příklad systémového cronu každých 5 minut:
+
+```bash
+*/5 * * * * php /cesta/k/webu/cron.php
+```
+
+Na Windows Serveru lze použít Plánovač úloh a spouštět:
+
+```text
+php C:\cesta\k\webu\cron.php
+```
+
+### Volitelný HTTP režim
+
+Pokud nemáte k dispozici systémový cron a musíte používat webový cron, nastavte v `config.php` token:
+
+```php
+define('CRON_TOKEN', 'dlouhy-nahodny-retezec');
+```
+
+Pak lze endpoint volat například takto:
+
+```bash
+curl "https://vas-web.cz/cron.php?token=VAS_CRON_TOKEN"
+```
+
+HTTP režim berte jako náhradní řešení. Pro produkční provoz je bezpečnější i spolehlivější CLI cron.
+
+### Co je dobré vědět
+
+- `cron.php` není určený pro běžné návštěvníky ani pro ruční klikání v prohlížeči.
+- Po nastavení doporučujeme spustit cron ručně jednou z příkazové řádky a zkontrolovat výstup.
+- Denní automatická záloha databáze se ukládá do `uploads/backups/` a staré soubory se průběžně rotují.
+- Pokud používáte HTTP režim, nenechávejte `CRON_TOKEN` prázdný.
+
+---
+
 ## Přehled modulů
 
 | Modul | Co umí |

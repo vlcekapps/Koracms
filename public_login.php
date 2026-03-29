@@ -14,6 +14,7 @@ if (isLoggedIn()) {
 $siteName     = getSetting('site_name', 'Kora CMS');
 $errors       = [];
 $notConfirmed = false;
+$publicRegistrationEnabled = publicRegistrationEnabled();
 $redirect     = internalRedirectTarget(trim($_GET['redirect'] ?? $_POST['redirect'] ?? ''), '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -76,6 +77,7 @@ renderPublicPage([
     'view_data' => [
         'errors' => $errors,
         'notConfirmed' => $notConfirmed,
+        'publicRegistrationEnabled' => $publicRegistrationEnabled,
         'redirect' => $redirect,
         'postedEmail' => trim($_POST['email'] ?? ''),
     ],

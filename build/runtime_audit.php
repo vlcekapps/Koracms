@@ -32,6 +32,8 @@ foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
 }
 $runtimeAuditOriginalBlogAuthorsIndexEnabled = getSetting('blog_authors_index_enabled', '0');
 saveSetting('blog_authors_index_enabled', '1');
+$runtimeAuditOriginalPublicRegistrationEnabled = getSetting('public_registration_enabled', '1');
+saveSetting('public_registration_enabled', '1');
 $runtimeAuditOriginalGitHubIssuesEnabled = getSetting('github_issues_enabled', '0');
 $runtimeAuditOriginalGitHubIssuesRepository = getSetting('github_issues_repository', '');
 saveSetting('github_issues_enabled', '1');
@@ -1947,6 +1949,9 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="board_public_label"')) {
             $issues[] = 'board public label setting is missing';
+        }
+        if (!str_contains($result['body'], 'name="public_registration_enabled"')) {
+            $issues[] = 'public registration toggle is missing';
         }
         if (!str_contains($result['body'], 'name="github_issues_enabled"')) {
             $issues[] = 'github issues bridge toggle is missing';
@@ -4199,6 +4204,44 @@ if ($runtimeAuditAuthorUrl === '') {
     }
 }
 
+echo "=== public_registration_toggle ===\n";
+$publicRegistrationIssues = [];
+saveSetting('public_registration_enabled', '0');
+clearSettingsCache();
+
+$disabledRegisterProbe = fetchUrl($baseUrl . '/register.php', '', 0);
+if (!str_contains($disabledRegisterProbe['status'], '403')) {
+    $publicRegistrationIssues[] = 'register page does not return 403 when public registration is disabled';
+}
+if (!str_contains($disabledRegisterProbe['body'], 'Veřejná registrace je momentálně vypnutá')) {
+    $publicRegistrationIssues[] = 'register page does not show disabled registration notice';
+}
+if (str_contains($disabledRegisterProbe['body'], 'name="password2"')) {
+    $publicRegistrationIssues[] = 'register page still renders registration form when public registration is disabled';
+}
+
+$disabledLoginProbe = fetchUrl($baseUrl . '/public_login.php');
+if (str_contains($disabledLoginProbe['body'], '/register.php')) {
+    $publicRegistrationIssues[] = 'public login still exposes registration link when public registration is disabled';
+}
+
+$disabledHomeProbe = fetchUrl($baseUrl . '/');
+if (str_contains($disabledHomeProbe['body'], '/register.php')) {
+    $publicRegistrationIssues[] = 'home still exposes registration link when public registration is disabled';
+}
+
+saveSetting('public_registration_enabled', '1');
+clearSettingsCache();
+
+if ($publicRegistrationIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($publicRegistrationIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
 echo "=== role_access_matrix ===\n";
 $roleAccessIssues = [];
 
@@ -4801,6 +4844,7 @@ if ($articleId === false) {
 
 saveSetting('home_author_user_id', $runtimeAuditOriginalHomeAuthorUserId);
 saveSetting('blog_authors_index_enabled', $runtimeAuditOriginalBlogAuthorsIndexEnabled);
+saveSetting('public_registration_enabled', $runtimeAuditOriginalPublicRegistrationEnabled);
 saveSetting('github_issues_enabled', $runtimeAuditOriginalGitHubIssuesEnabled);
 saveSetting('github_issues_repository', $runtimeAuditOriginalGitHubIssuesRepository);
 saveSetting($runtimeAuditThemeSettingsKey, $runtimeAuditOriginalThemeSettings);

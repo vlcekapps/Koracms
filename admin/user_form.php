@@ -6,6 +6,11 @@ requireLogin(BASE_URL . '/admin/login.php');
 $pdo = db_connect();
 $accountId = inputInt('get', 'id');
 $account = null;
+$publicRegistrationEnabled = publicRegistrationEnabled();
+
+if ($accountId === null && !$publicRegistrationEnabled) {
+    requireSuperAdmin();
+}
 
 if ($accountId !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_users WHERE id = ? AND is_superadmin = 0");
@@ -60,6 +65,10 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
 <?php endif; ?>
 
 <p><a href="users.php"><span aria-hidden="true">←</span> Zpět na uživatele a role</a></p>
+
+<?php if ($accountId === null && !$publicRegistrationEnabled): ?>
+  <p class="field-help">Veřejná registrace je vypnutá. Nový účet proto může ručně přidávat jen hlavní administrátor.</p>
+<?php endif; ?>
 
 <form method="post" action="user_save.php" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

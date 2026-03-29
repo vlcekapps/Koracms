@@ -23,3 +23,9 @@ define('SMTP_SECURE', 'tls');     // '' (žádné), 'tls' (STARTTLS), 'ssl'
 // GitHub issue bridge pro odpovědi formulářů
 // Fine-grained token by měl mít oprávnění Issues: Read and write
 define('GITHUB_ISSUES_TOKEN', '');
+
+// Token pro volitelný HTTP přístup ke cron.php
+// Doporučený způsob spouštění je CLI cron: php /cesta/k/webu/cron.php
+// Pokud musíte používat webový cron, nastavte sem dlouhý náhodný řetězec
+// a volejte např. https://vas-web.cz/cron.php?token=VAS_CRON_TOKEN
+define('CRON_TOKEN', '');

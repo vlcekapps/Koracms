@@ -7,7 +7,11 @@
     <?php if ($notConfirmed): ?>
       <div id="form-errors" class="status-message status-message--warning" role="alert" aria-atomic="true">
         <p><strong>Váš účet dosud nebyl aktivován.</strong></p>
-        <p>Zkontrolujte e-mail s potvrzovacím odkazem, nebo se <a href="<?= h(BASE_URL) ?>/register.php">zaregistrujte znovu</a> pro odeslání nového odkazu.</p>
+        <?php if ($publicRegistrationEnabled): ?>
+          <p>Zkontrolujte e-mail s potvrzovacím odkazem, nebo se <a href="<?= h(BASE_URL) ?>/register.php">zaregistrujte znovu</a> pro odeslání nového odkazu.</p>
+        <?php else: ?>
+          <p>Zkontrolujte e-mail s potvrzovacím odkazem. Pokud už zprávu nemůžete dohledat, kontaktujte správce webu.</p>
+        <?php endif; ?>
       </div>
     <?php elseif (!empty($errors)): ?>
       <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true">
@@ -43,6 +47,8 @@
       </fieldset>
     </form>
 
-    <p class="inline-links">Nemáte účet? <a href="<?= BASE_URL ?>/register.php">Zaregistrujte se</a></p>
+    <?php if ($publicRegistrationEnabled): ?>
+      <p class="inline-links">Nemáte účet? <a href="<?= BASE_URL ?>/register.php">Zaregistrujte se</a></p>
+    <?php endif; ?>
   </section>
 </div>

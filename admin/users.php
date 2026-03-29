@@ -3,6 +3,8 @@ require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
+$publicRegistrationEnabled = publicRegistrationEnabled();
+$canCreateUsers = $publicRegistrationEnabled || isSuperAdmin();
 $accounts = $pdo->query(
     "SELECT id, email, first_name, last_name, nickname, role, is_superadmin, is_confirmed,
             author_public_enabled, author_slug, created_at
@@ -12,7 +14,13 @@ $accounts = $pdo->query(
 adminHeader('Uživatelé a role');
 ?>
 
-<p><a href="user_form.php" class="btn">+ Přidat uživatele</a></p>
+<?php if (!$publicRegistrationEnabled): ?>
+  <p class="notice" role="status">Veřejná registrace je vypnutá. Nové účty může ručně přidávat jen hlavní administrátor.</p>
+<?php endif; ?>
+
+<?php if ($canCreateUsers): ?>
+  <p><a href="user_form.php" class="btn">+ Přidat uživatele</a></p>
+<?php endif; ?>
 
 <table>
   <caption>Přehled uživatelů</caption>

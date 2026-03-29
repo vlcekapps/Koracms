@@ -14,6 +14,10 @@ $newPass2 = $_POST['new_pass2'] ?? '';
 $submittedRole = normalizeUserRole($_POST['role'] ?? 'author');
 
 $existingAccount = null;
+if ($accountId === null && !publicRegistrationEnabled()) {
+    requireSuperAdmin();
+}
+
 if ($accountId !== null) {
     $existingStmt = $pdo->prepare("SELECT * FROM cms_users WHERE id = ? AND is_superadmin = 0");
     $existingStmt->execute([$accountId]);
