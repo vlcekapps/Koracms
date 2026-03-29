@@ -220,6 +220,7 @@ Homepage, sidebar i footer se skládají přes widgetový systém.
 V administraci lze:
 
 - přidávat widgety do zón `homepage`, `sidebar`, `footer`
+- při přidání rovnou zvolit cílovou zónu
 - měnit jejich pořadí
 - nastavovat parametry jednotlivých widgetů
 - kombinovat systémové widgety a vlastní HTML
@@ -229,17 +230,23 @@ Typické widgety:
 - úvodní text
 - nejnovější články
 - novinky
-- doporučený článek
+- doporučený obsah z blogu, vývěsky, ankety nebo newsletteru
 - vývěska
 - nadcházející události
 - anketa
 - newsletter
+- ke stažení
+- FAQ
+- zajímavá místa
+- nejnovější epizody podcastu
+- vybraný formulář
 - nápověda galerie
 - vyhledávání
 - kontaktní údaje
 - vlastní HTML
 
 Widgety respektují stav modulů. Vypnutý modul se nenabízí.
+Widget `Vybraný formulář` se nabídne jen tehdy, když existuje alespoň jeden aktivní veřejný formulář.
 
 ---
 

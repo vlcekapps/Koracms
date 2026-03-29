@@ -7,11 +7,35 @@ $allWidgets = getAllWidgetsByZone();
 $available = availableWidgetTypes();
 $zones = widgetZoneDefinitions();
 $types = widgetTypeDefinitions();
+$selectedAddZone = trim((string)($_GET['zone'] ?? 'homepage'));
+if (!isset($zones[$selectedAddZone])) {
+    $selectedAddZone = 'homepage';
+}
 
 $allBlogs = getAllBlogs();
 $allAlbums = [];
+$allShows = [];
+$allForms = [];
+$featuredSourceOptions = [
+    'blog' => 'Blog (nejčtenější)',
+];
+if (isModuleEnabled('board')) {
+    $featuredSourceOptions['board'] = 'Vývěska (nejnovější)';
+}
+if (isModuleEnabled('polls')) {
+    $featuredSourceOptions['poll'] = 'Anketa';
+}
+if (isModuleEnabled('newsletter')) {
+    $featuredSourceOptions['newsletter'] = 'Newsletter';
+}
 try {
     $allAlbums = $pdo->query("SELECT id, name FROM cms_gallery_albums ORDER BY name")->fetchAll();
+} catch (\PDOException $e) {}
+try {
+    $allShows = $pdo->query("SELECT id, title FROM cms_podcast_shows ORDER BY title ASC")->fetchAll();
+} catch (\PDOException $e) {}
+try {
+    $allForms = $pdo->query("SELECT id, title FROM cms_forms WHERE is_active = 1 ORDER BY title ASC")->fetchAll();
 } catch (\PDOException $e) {}
 
 adminHeader('Widgety');
@@ -19,15 +43,23 @@ adminHeader('Widgety');
 
 <p style="font-size:.9rem">Přidávejte, přesouvejte a nastavujte widgety v jednotlivých zónách webu. Přetažením myší nebo klávesou Ctrl+šipka změníte pořadí.</p>
 
-<fieldset style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
-  <legend>Přidat widget</legend>
+<fieldset id="widget-add" style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+  <legend>Přidat widget do zóny</legend>
+  <div style="margin-bottom:.75rem;max-width:18rem">
+    <label for="widget-add-zone">Cílová zóna</label>
+    <select id="widget-add-zone" name="widget_add_zone">
+      <?php foreach ($zones as $zoneKey => $zoneLabel): ?>
+        <option value="<?= h($zoneKey) ?>"<?= $selectedAddZone === $zoneKey ? ' selected' : '' ?>><?= h($zoneLabel) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
   <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center">
     <?php foreach ($available as $wType => $wDef): ?>
       <form method="post" action="widget_add.php" style="display:inline">
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <input type="hidden" name="widget_type" value="<?= h($wType) ?>">
-        <input type="hidden" name="zone" value="homepage">
-        <button type="submit" class="btn" style="font-size:.85rem">+ <?= h($wDef['name']) ?></button>
+        <input type="hidden" name="zone" value="<?= h($selectedAddZone) ?>" class="widget-add-zone-input">
+        <button type="submit" class="btn" style="font-size:.85rem">Přidat <?= h($wDef['name']) ?></button>
       </form>
     <?php endforeach; ?>
     <?php if (empty($available)): ?>
@@ -41,7 +73,7 @@ adminHeader('Widgety');
     <legend><?= h($zoneLabel) ?></legend>
 
     <?php if (empty($allWidgets[$zoneKey])): ?>
-      <p class="field-help" style="margin:0">Žádné widgety v této zóně. Použijte tlačítka nahoře pro přidání.</p>
+      <p class="field-help" style="margin:0">Žádné widgety v této zóně. <a href="widgets.php?zone=<?= h($zoneKey) ?>#widget-add">Vyberte <?= h(mb_strtolower($zoneLabel)) ?> a přidejte první widget</a>.</p>
     <?php else: ?>
       <ol style="list-style:none;padding:0;margin:0" data-sortable="widgets" data-zone="<?= h($zoneKey) ?>">
         <?php foreach ($allWidgets[$zoneKey] as $w):
@@ -134,10 +166,9 @@ adminHeader('Widgety');
     <div id="wd-field-source" style="display:none;margin-top:.75rem">
       <label for="wd-source">Zdroj</label>
       <select id="wd-source" name="widget_source">
-        <option value="blog">Blog (nejčtenější)</option>
-        <option value="board">Vývěska (nejnovější)</option>
-        <option value="poll">Anketa</option>
-        <option value="newsletter">Newsletter</option>
+        <?php foreach ($featuredSourceOptions as $sourceKey => $sourceLabel): ?>
+          <option value="<?= h($sourceKey) ?>"><?= h($sourceLabel) ?></option>
+        <?php endforeach; ?>
       </select>
     </div>
 
@@ -154,6 +185,27 @@ adminHeader('Widgety');
           <option value="<?= (int)$alb['id'] ?>"><?= h($alb['name']) ?></option>
         <?php endforeach; ?>
       </select>
+    </div>
+
+    <div id="wd-field-show" style="display:none;margin-top:.75rem">
+      <label for="wd-show">Pořad</label>
+      <select id="wd-show" name="widget_show_id">
+        <option value="0">Všechny pořady</option>
+        <?php foreach ($allShows as $show): ?>
+          <option value="<?= (int)$show['id'] ?>"><?= h($show['title']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+
+    <div id="wd-field-form" style="display:none;margin-top:.75rem">
+      <label for="wd-form">Formulář</label>
+      <select id="wd-form" name="widget_form_id">
+        <option value="0">Vyberte formulář</option>
+        <?php foreach ($allForms as $form): ?>
+          <option value="<?= (int)$form['id'] ?>"><?= h($form['title']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <small class="field-help">Na webu se zobrazí jen aktivní formulář.</small>
     </div>
 
     <div id="wd-field-text" style="display:none;margin-top:.75rem">
@@ -179,10 +231,23 @@ adminHeader('Widgety');
   var dialog = document.getElementById('widget-dialog');
   var closeBtn = document.getElementById('widget-dialog-close');
   var cancelBtn = document.getElementById('widget-dialog-cancel');
+  var addZoneSelect = document.getElementById('widget-add-zone');
   var lastTrigger = null;
   var previousBodyOverflow = '';
-  var countTypes = ['latest_articles','latest_news','board','upcoming_events'];
+  var countTypes = ['latest_articles','latest_news','board','upcoming_events','latest_downloads','latest_faq','latest_places','latest_podcast_episodes'];
   var multiBlog = <?= count($allBlogs) > 1 ? 'true' : 'false' ?>;
+
+  function syncAddZoneInputs() {
+    if (!addZoneSelect) return;
+    document.querySelectorAll('.widget-add-zone-input').forEach(function(input){
+      input.value = addZoneSelect.value;
+    });
+  }
+
+  syncAddZoneInputs();
+  if (addZoneSelect) {
+    addZoneSelect.addEventListener('change', syncAddZoneInputs);
+  }
 
   function openDialog(btn) {
     lastTrigger = btn;
@@ -195,7 +260,7 @@ adminHeader('Widgety');
     document.getElementById('wd-active').checked = btn.dataset.widgetActive === '1';
 
     // Skrýt všechna dynamická pole
-    ['count','blog','source','cta','album','text','content'].forEach(function(f){
+    ['count','blog','source','cta','album','show','form','text','content'].forEach(function(f){
       document.getElementById('wd-field-'+f).style.display = 'none';
     });
 
@@ -219,6 +284,14 @@ adminHeader('Widgety');
     if (type === 'gallery_preview') {
       document.getElementById('wd-field-album').style.display = '';
       document.getElementById('wd-album').value = s.album_id || 0;
+    }
+    if (type === 'latest_podcast_episodes') {
+      document.getElementById('wd-field-show').style.display = '';
+      document.getElementById('wd-show').value = s.show_id || 0;
+    }
+    if (type === 'selected_form') {
+      document.getElementById('wd-field-form').style.display = '';
+      document.getElementById('wd-form').value = s.form_id || 0;
     }
     if (type === 'intro') {
       document.getElementById('wd-field-text').style.display = '';

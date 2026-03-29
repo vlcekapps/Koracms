@@ -16,6 +16,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Form Builder 2.0 – GitHub issue bridge a webhooky** – z detailu odpovědi lze nově vytvořit GitHub issue, otevřít připravený návrh na GitHubu nebo ručně napojit existující issue; formuláře současně podporují webhooky po odeslání, změně workflow, odpovědi odesílateli a po vytvoření nebo napojení GitHub issue
 - **Form Builder 2.0 – jemnější ticket workflow** – přehled odpovědí nově podporuje filtry `Jen moje`, `Nepřiřazené` a `S GitHub issue` a detail hlášení přidává rychlé kroky `Převzít řešení`, `Označit jako rozpracované`, `Označit jako vyřešené` a `Uzavřít hlášení`
 - **HTML content tools – Media Picker 2.0** – content picker nově umí náhledy výsledků, vkládání fotografií a galerií podle typu obsahu, přímý odkaz ke stažení a chytřejší akce pro audio a video obsah
+- **Widgety – rozšířený registr a lepší vazba na moduly** – widget systém nově nabízí i bloky `Ke stažení`, `FAQ`, `Zajímavá místa`, `Nejnovější epizody podcastu` a `Vybraný formulář`, přidávání widgetu rovnou respektuje cílovou zónu a widget `Vybraný formulář` je dostupný jen tehdy, když existuje alespoň jeden aktivní veřejný formulář
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci
@@ -26,6 +27,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Formuláře a odpovědi** – odpovědi i CSV export nově správně zobrazují více voleb, souhlas a nahrané soubory; mazání formuláře nebo odpovědi uklízí i související uploady a runtime audit hlídá create/edit/submissions flow včetně veřejné stránky formuláře
 - **WCAG 2.2 ve Form Builderu** – přehled formulářů už nepoužívá tlačítka se čteným znakem `+`, editor polí dává opakovaným checkboxům jasný kontext pro čtečky a veřejný formulář už nečte název formuláře duplicitně přes vnější legendu
 - **Blog administrace bez existujícího blogu** – kategorie a štítky už bez vytvořeného blogu nejsou nabízené v levém menu, jejich obrazovky se bezpečně vrací na správu blogů a přehled článků místo slepé cesty jasně navede na vytvoření prvního blogu
+- **Widgety a jejich guardrails** – `Doporučený obsah` už skutečně umí blog, vývěsku, anketu i newsletter, vyhledávací widget negeneruje duplicitní `id`, kontaktní údaje už nejsou zbytečně svázané s modulem `Kontakt` a runtime audit nově hlídá i nové widgety a jejich WCAG/UX regresní vzory
 
 ### Přidáno
 - **Jednotná správa navigace** (`admin/menu.php`) – nahrazuje oddělené stránky „Pozice modulů" a „Pozice stránek"; moduly, statické stránky a blogy v jednom přetahovatelném seznamu; libovolné pořadí a kombinace; drag & drop + Ctrl+šipka + tlačítka Nahoru/Dolů; nastavení `nav_order_unified` s fallbackem na starý systém

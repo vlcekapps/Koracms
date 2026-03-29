@@ -5694,4 +5694,123 @@ if ($blogAdminIssues === []) {
     }
 }
 
+echo "=== widget_registry ===\n";
+$widgetRegistryIssues = [];
+$widgetDefs = widgetTypeDefinitions();
+$requiredWidgetTypes = [
+    'latest_downloads',
+    'latest_faq',
+    'latest_places',
+    'latest_podcast_episodes',
+    'selected_form',
+];
+foreach ($requiredWidgetTypes as $requiredWidgetType) {
+    if (!isset($widgetDefs[$requiredWidgetType])) {
+        $widgetRegistryIssues[] = 'missing widget type: ' . $requiredWidgetType;
+    }
+}
+if (($widgetDefs['contact_info']['requires_module'] ?? null) !== null) {
+    $widgetRegistryIssues[] = 'contact_info widget is still incorrectly bound to contact module';
+}
+if (isModuleEnabled('forms')) {
+    $activeFormCount = 0;
+    try {
+        $activeFormCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_forms WHERE is_active = 1")->fetchColumn();
+    } catch (\PDOException $e) {
+        $activeFormCount = 0;
+    }
+    if ($activeFormCount > 0) {
+        $availableWidgetDefs = availableWidgetTypes();
+        if (!isset($availableWidgetDefs['selected_form'])) {
+            $widgetRegistryIssues[] = 'selected_form widget is not available even with active forms';
+        }
+    }
+}
+if ($widgetRegistryIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($widgetRegistryIssues as $widgetRegistryIssue) {
+        echo '- ' . $widgetRegistryIssue . "\n";
+    }
+}
+
+echo "=== widget_render_guardrails ===\n";
+$widgetRenderIssues = [];
+$widgetRenderNow = date('Y-m-d H:i:s');
+$widgetSearchOne = renderWidget_search(['id' => 101, 'title' => 'Vyhledávání'], [], 'sidebar');
+$widgetSearchTwo = renderWidget_search(['id' => 202, 'title' => 'Vyhledávání'], [], 'sidebar');
+if (!str_contains($widgetSearchOne, 'widget-search-q-101')) {
+    $widgetRenderIssues[] = 'search widget does not use unique input id for first instance';
+}
+if (!str_contains($widgetSearchTwo, 'widget-search-q-202')) {
+    $widgetRenderIssues[] = 'search widget does not use unique input id for second instance';
+}
+if (str_contains($widgetSearchOne . $widgetSearchTwo, 'id="widget-search-q"')) {
+    $widgetRenderIssues[] = 'search widget still renders legacy duplicate input id';
+}
+if (isModuleEnabled('board')) {
+    $featuredBoardWidget = renderWidget_featured_article(['id' => 301, 'title' => 'Doporučený obsah'], ['source' => 'board'], 'homepage');
+    if ($featuredBoardWidget === '') {
+        $widgetRenderIssues[] = 'featured board widget does not render any output';
+    }
+}
+if (isModuleEnabled('polls')) {
+    $activePollStmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM cms_polls
+         WHERE status = 'active'
+           AND (start_date IS NULL OR start_date <= ?)
+           AND (end_date IS NULL OR end_date > ?)"
+    );
+    $activePollStmt->execute([$widgetRenderNow, $widgetRenderNow]);
+    $activePollCount = (int)$activePollStmt->fetchColumn();
+    if ($activePollCount > 0) {
+        $featuredPollWidget = renderWidget_featured_article(['id' => 302, 'title' => 'Doporučený obsah'], ['source' => 'poll'], 'homepage');
+        if ($featuredPollWidget === '') {
+            $widgetRenderIssues[] = 'featured poll widget does not render any output';
+        }
+    }
+}
+if (isModuleEnabled('newsletter')) {
+    $featuredNewsletterWidget = renderWidget_featured_article(['id' => 303, 'title' => 'Doporučený obsah'], ['source' => 'newsletter'], 'homepage');
+    if ($featuredNewsletterWidget === '') {
+        $widgetRenderIssues[] = 'featured newsletter widget does not render any output';
+    }
+}
+if (isModuleEnabled('forms')) {
+    try {
+        $activeWidgetFormId = (int)$pdo->query("SELECT id FROM cms_forms WHERE is_active = 1 ORDER BY id DESC LIMIT 1")->fetchColumn();
+    } catch (\PDOException $e) {
+        $activeWidgetFormId = 0;
+    }
+    if ($activeWidgetFormId > 0) {
+        $selectedFormWidget = renderWidget_selected_form(['id' => 304, 'title' => 'Vybraný formulář'], ['form_id' => $activeWidgetFormId], 'homepage');
+        if ($selectedFormWidget === '') {
+            $widgetRenderIssues[] = 'selected form widget does not render active form';
+        }
+    }
+}
+$widgetsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
+if (!str_contains($widgetsAdminSource, 'id="widget-add-zone"')) {
+    $widgetRenderIssues[] = 'admin widgets page is missing target zone selector';
+}
+if (str_contains($widgetsAdminSource, '>+ <?= h($wDef[\'name\']) ?>')) {
+    $widgetRenderIssues[] = 'admin widgets page still uses plus-sign add buttons';
+}
+if (!str_contains($widgetsAdminSource, 'name="widget_form_id"')) {
+    $widgetRenderIssues[] = 'admin widgets page is missing selected form widget settings';
+}
+if (!str_contains($widgetsAdminSource, 'name="widget_show_id"')) {
+    $widgetRenderIssues[] = 'admin widgets page is missing podcast show widget settings';
+}
+if ($widgetRenderIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($widgetRenderIssues as $widgetRenderIssue) {
+        echo '- ' . $widgetRenderIssue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

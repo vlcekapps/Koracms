@@ -21,5 +21,5 @@ $pdo->prepare("INSERT INTO cms_widgets (zone, widget_type, title, settings, sort
     ->execute([$zone, $type, $defaultTitle, $sortOrder]);
 
 logAction('widget_add', "type={$type} zone={$zone}");
-header('Location: ' . BASE_URL . '/admin/widgets.php');
+header('Location: ' . BASE_URL . '/admin/widgets.php?zone=' . urlencode($zone) . '#widget-add');
 exit;

@@ -26,6 +26,30 @@ function widgetTypeDefinitions(): array
             'requires_module' => 'news',
             'requires_setting' => null,
         ],
+        'latest_downloads' => [
+            'name' => 'Nejnovější položky ke stažení',
+            'default_title' => 'Ke stažení',
+            'requires_module' => 'downloads',
+            'requires_setting' => null,
+        ],
+        'latest_faq' => [
+            'name' => 'Nejnovější otázky',
+            'default_title' => 'Nejčastější dotazy',
+            'requires_module' => 'faq',
+            'requires_setting' => null,
+        ],
+        'latest_places' => [
+            'name' => 'Zajímavá místa',
+            'default_title' => 'Zajímavá místa',
+            'requires_module' => 'places',
+            'requires_setting' => null,
+        ],
+        'latest_podcast_episodes' => [
+            'name' => 'Nejnovější epizody podcastu',
+            'default_title' => 'Nejnovější epizody',
+            'requires_module' => 'podcast',
+            'requires_setting' => null,
+        ],
         'featured_article' => [
             'name' => 'Doporučený obsah',
             'default_title' => 'Doporučený obsah',
@@ -62,6 +86,12 @@ function widgetTypeDefinitions(): array
             'requires_module' => 'gallery',
             'requires_setting' => null,
         ],
+        'selected_form' => [
+            'name' => 'Vybraný formulář',
+            'default_title' => 'Vybraný formulář',
+            'requires_module' => 'forms',
+            'requires_setting' => null,
+        ],
         'custom_html' => [
             'name' => 'Vlastní HTML',
             'default_title' => 'Vlastní blok',
@@ -77,7 +107,7 @@ function widgetTypeDefinitions(): array
         'contact_info' => [
             'name' => 'Kontaktní údaje',
             'default_title' => 'Kontakt',
-            'requires_module' => 'contact',
+            'requires_module' => null,
             'requires_setting' => null,
         ],
     ];
@@ -96,6 +126,16 @@ function availableWidgetTypes(): array
         }
         if ($def['requires_setting'] !== null && trim(getSetting($def['requires_setting'], '')) === '') {
             continue;
+        }
+        if ($type === 'selected_form') {
+            try {
+                $hasActiveForms = (int)db_connect()->query("SELECT COUNT(*) FROM cms_forms WHERE is_active = 1")->fetchColumn() > 0;
+            } catch (\PDOException $e) {
+                $hasActiveForms = false;
+            }
+            if (!$hasActiveForms) {
+                continue;
+            }
         }
         $available[$type] = $def;
     }
@@ -329,16 +369,275 @@ function renderWidget_latest_news(array $widget, array $settings, string $zone):
     return $out;
 }
 
+function renderWidget_latest_downloads(array $widget, array $settings, string $zone): string
+{
+    $count = max(1, (int)($settings['count'] ?? 5));
+    $pdo = db_connect();
+    $stmt = $pdo->prepare(
+        "SELECT d.id, d.title, d.slug, d.download_type, d.excerpt, d.description, d.image_file,
+                d.version_label, d.platform_label, d.created_at, d.filename, d.original_name, d.file_size, d.external_url
+         FROM cms_downloads d
+         WHERE d.status = 'published' AND d.is_published = 1
+         ORDER BY d.created_at DESC, d.id DESC
+         LIMIT ?"
+    );
+    $stmt->execute([$count]);
+    $items = array_map(
+        static fn(array $download): array => hydrateDownloadPresentation($download),
+        $stmt->fetchAll()
+    );
+
+    if ($items === []) {
+        return '';
+    }
+
+    $title = h($widget['title'] ?: 'Ke stažení');
+
+    if ($zone === 'sidebar' || $zone === 'footer') {
+        $out = '<section class="widget-card" aria-label="' . $title . '">';
+        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        foreach ($items as $download) {
+            $meta = [];
+            if ($download['version_label'] !== '') {
+                $meta[] = $download['version_label'];
+            }
+            if ($download['platform_label'] !== '') {
+                $meta[] = $download['platform_label'];
+            }
+            $out .= '<li><a href="' . h(downloadPublicPath($download)) . '">' . h($download['title']) . '</a>';
+            if ($meta !== []) {
+                $out .= '<br><small>' . h(implode(' · ', $meta)) . '</small>';
+            }
+            $out .= '</li>';
+        }
+        $out .= '</ul></section>';
+        return $out;
+    }
+
+    $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+    $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+    $out .= '<div class="card-grid card-grid--compact">';
+    foreach ($items as $download) {
+        $out .= '<article class="card">';
+        if (!empty($download['image_url'])) {
+            $out .= '<a class="card__media" href="' . h(downloadPublicPath($download)) . '">'
+                  . '<img src="' . h((string)$download['image_url']) . '" alt="" loading="lazy">'
+                  . '</a>';
+        }
+        $out .= '<div class="card__body">';
+        $out .= '<h3 class="card__title"><a href="' . h(downloadPublicPath($download)) . '">' . h($download['title']) . '</a></h3>';
+        $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$download['download_type_label']) . '</span>';
+        if ($download['version_label'] !== '') {
+            $out .= '<span>' . h($download['version_label']) . '</span>';
+        }
+        if ($download['platform_label'] !== '') {
+            $out .= '<span>' . h($download['platform_label']) . '</span>';
+        }
+        $out .= '</p>';
+        if ($download['excerpt_plain'] !== '') {
+            $out .= '<p>' . h(mb_substr((string)$download['excerpt_plain'], 0, 150)) . '</p>';
+        }
+        $out .= '<p><a class="section-link" href="' . h(downloadPublicPath($download)) . '">Zobrazit položku <span aria-hidden="true">→</span></a></p>';
+        $out .= '</div></article>';
+    }
+    $out .= '</div></section>';
+    return $out;
+}
+
+function renderWidget_latest_faq(array $widget, array $settings, string $zone): string
+{
+    $count = max(1, (int)($settings['count'] ?? 5));
+    $pdo = db_connect();
+    $stmt = $pdo->prepare(
+        "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.updated_at,
+                COALESCE(c.name, '') AS category_name
+         FROM cms_faqs f
+         LEFT JOIN cms_faq_categories c ON c.id = f.category_id
+         WHERE COALESCE(f.status,'published') = 'published' AND f.is_published = 1
+         ORDER BY f.updated_at DESC, f.created_at DESC, f.id DESC
+         LIMIT ?"
+    );
+    $stmt->execute([$count]);
+    $items = array_map(
+        static fn(array $faq): array => hydrateFaqPresentation($faq),
+        $stmt->fetchAll()
+    );
+
+    if ($items === []) {
+        return '';
+    }
+
+    $title = h($widget['title'] ?: 'Nejčastější dotazy');
+
+    if ($zone === 'sidebar' || $zone === 'footer') {
+        $out = '<section class="widget-card" aria-label="' . $title . '">';
+        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        foreach ($items as $faq) {
+            $out .= '<li><a href="' . h(faqPublicPath($faq)) . '">' . h($faq['question']) . '</a></li>';
+        }
+        $out .= '</ul></section>';
+        return $out;
+    }
+
+    $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+    $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+    $out .= '<ul class="link-list">';
+    foreach ($items as $faq) {
+        $out .= '<li class="link-list__item">';
+        $out .= '<a class="link-list__title" href="' . h(faqPublicPath($faq)) . '">' . h($faq['question']) . '</a>';
+        if (!empty($faq['category_name'])) {
+            $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$faq['category_name']) . '</span></p>';
+        }
+        if (!empty($faq['excerpt'])) {
+            $out .= '<p>' . h(mb_substr((string)$faq['excerpt'], 0, 170)) . '</p>';
+        }
+        $out .= '</li>';
+    }
+    $out .= '</ul></section>';
+    return $out;
+}
+
+function renderWidget_latest_places(array $widget, array $settings, string $zone): string
+{
+    $count = max(1, (int)($settings['count'] ?? 5));
+    $pdo = db_connect();
+    $stmt = $pdo->prepare(
+        "SELECT *
+         FROM cms_places
+         WHERE status = 'published' AND is_published = 1
+         ORDER BY name ASC
+         LIMIT ?"
+    );
+    $stmt->execute([$count]);
+    $places = array_map(
+        static fn(array $place): array => hydratePlacePresentation($place),
+        $stmt->fetchAll()
+    );
+
+    if ($places === []) {
+        return '';
+    }
+
+    $title = h($widget['title'] ?: 'Zajímavá místa');
+
+    if ($zone === 'sidebar' || $zone === 'footer') {
+        $out = '<section class="widget-card" aria-label="' . $title . '">';
+        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        foreach ($places as $place) {
+            $out .= '<li><a href="' . h(placePublicPath($place)) . '">' . h($place['name']) . '</a>';
+            if ($place['locality'] !== '') {
+                $out .= '<br><small>' . h($place['locality']) . '</small>';
+            }
+            $out .= '</li>';
+        }
+        $out .= '</ul></section>';
+        return $out;
+    }
+
+    $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+    $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+    $out .= '<div class="card-grid card-grid--compact">';
+    foreach ($places as $place) {
+        $out .= '<article class="card">';
+        if (!empty($place['image_url'])) {
+            $out .= '<a class="card__media" href="' . h(placePublicPath($place)) . '">'
+                  . '<img src="' . h((string)$place['image_url']) . '" alt="" loading="lazy">'
+                  . '</a>';
+        }
+        $out .= '<div class="card__body">';
+        $out .= '<h3 class="card__title"><a href="' . h(placePublicPath($place)) . '">' . h($place['name']) . '</a></h3>';
+        $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$place['place_kind_label']) . '</span>';
+        if ($place['locality'] !== '') {
+            $out .= '<span>' . h($place['locality']) . '</span>';
+        }
+        $out .= '</p>';
+        if ($place['excerpt_plain'] !== '') {
+            $out .= '<p>' . h(mb_substr((string)$place['excerpt_plain'], 0, 150)) . '</p>';
+        }
+        $out .= '<p><a class="section-link" href="' . h(placePublicPath($place)) . '">Zobrazit místo <span aria-hidden="true">→</span></a></p>';
+        $out .= '</div></article>';
+    }
+    $out .= '</div></section>';
+    return $out;
+}
+
+function renderWidget_latest_podcast_episodes(array $widget, array $settings, string $zone): string
+{
+    $count = max(1, (int)($settings['count'] ?? 5));
+    $showId = (int)($settings['show_id'] ?? 0);
+    $pdo = db_connect();
+
+    $where = "WHERE p.status = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())";
+    $params = [];
+    if ($showId > 0) {
+        $where .= " AND p.show_id = ?";
+        $params[] = $showId;
+    }
+    $params[] = $count;
+
+    $stmt = $pdo->prepare(
+        "SELECT p.*, s.slug AS show_slug, s.title AS show_title
+         FROM cms_podcasts p
+         INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+         {$where}
+         ORDER BY COALESCE(p.publish_at, p.created_at) DESC, COALESCE(p.episode_num, 0) DESC, p.id DESC
+         LIMIT ?"
+    );
+    $stmt->execute($params);
+    $episodes = array_map(
+        static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
+        $stmt->fetchAll()
+    );
+
+    if ($episodes === []) {
+        return '';
+    }
+
+    $title = h($widget['title'] ?: 'Nejnovější epizody');
+
+    if ($zone === 'sidebar' || $zone === 'footer') {
+        $out = '<section class="widget-card" aria-label="' . $title . '">';
+        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        foreach ($episodes as $episode) {
+            $out .= '<li><a href="' . h(podcastEpisodePublicPath($episode)) . '">' . h($episode['title']) . '</a>';
+            $out .= '<br><small>' . h((string)$episode['show_title']) . ' · ' . h(formatCzechDate((string)$episode['display_date'])) . '</small></li>';
+        }
+        $out .= '</ul></section>';
+        return $out;
+    }
+
+    $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+    $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+    $out .= '<ul class="link-list">';
+    foreach ($episodes as $episode) {
+        $out .= '<li class="link-list__item">';
+        $out .= '<a class="link-list__title" href="' . h(podcastEpisodePublicPath($episode)) . '">' . h($episode['title']) . '</a>';
+        $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$episode['show_title']) . '</span><time datetime="' . h(str_replace(' ', 'T', (string)$episode['display_date'])) . '">' . formatCzechDate((string)$episode['display_date']) . '</time></p>';
+        if ($episode['excerpt'] !== '') {
+            $out .= '<p>' . h(mb_substr((string)$episode['excerpt'], 0, 170)) . '</p>';
+        }
+        $out .= '</li>';
+    }
+    $out .= '</ul></section>';
+    return $out;
+}
+
 function renderWidget_poll(array $widget, array $settings, string $zone): string
 {
     $pdo = db_connect();
+    $now = date('Y-m-d H:i:s');
     try {
-        $poll = $pdo->query(
-            "SELECT id, question, slug FROM cms_polls
-             WHERE is_published = 1 AND status = 'published'
-             AND (deadline IS NULL OR deadline > NOW())
-             ORDER BY created_at DESC LIMIT 1"
-        )->fetch();
+        $stmt = $pdo->prepare(
+            "SELECT id, question, slug
+             FROM cms_polls
+             WHERE status = 'active'
+               AND (start_date IS NULL OR start_date <= ?)
+               AND (end_date IS NULL OR end_date > ?)
+             ORDER BY COALESCE(start_date, created_at) DESC, id DESC
+             LIMIT 1"
+        );
+        $stmt->execute([$now, $now]);
+        $poll = $stmt->fetch();
     } catch (\PDOException $e) {
         return '';
     }
@@ -482,12 +781,23 @@ function renderWidget_custom_html(array $widget, array $settings, string $zone):
 function renderWidget_search(array $widget, array $settings, string $zone): string
 {
     $title = h($widget['title'] ?: 'Vyhledávání');
-    $nonce = cspNonce();
+    $inputId = 'widget-search-q-' . (int)($widget['id'] ?? 0);
+
+    if ($zone === 'homepage') {
+        return '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
+             . '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>'
+             . '<form action="' . BASE_URL . '/search.php" method="get">'
+             . '<label for="' . h($inputId) . '" class="visually-hidden">Hledat</label>'
+             . '<input type="search" id="' . h($inputId) . '" name="q" class="form-control" placeholder="Hledat na webu…">'
+             . '<button type="submit" class="button-primary" style="margin-top:.5rem">Hledat</button>'
+             . '</form></section>';
+    }
+
     return '<section class="widget-card" aria-label="' . $title . '">'
          . '<h3 class="widget-card__title">' . $title . '</h3>'
          . '<form action="' . BASE_URL . '/search.php" method="get">'
-         . '<label for="widget-search-q" class="visually-hidden">Hledat</label>'
-         . '<input type="search" id="widget-search-q" name="q" class="form-control" placeholder="Hledat na webu…">'
+         . '<label for="' . h($inputId) . '" class="visually-hidden">Hledat</label>'
+         . '<input type="search" id="' . h($inputId) . '" name="q" class="form-control" placeholder="Hledat na webu…">'
          . '<button type="submit" class="button-primary" style="margin-top:.5rem">Hledat</button>'
          . '</form></section>';
 }
@@ -500,8 +810,12 @@ function renderWidget_contact_info(array $widget, array $settings, string $zone)
         return '';
     }
     $title = h($widget['title'] ?: 'Kontakt');
-    $out = '<section class="widget-card" aria-label="' . $title . '">';
-    $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+    $tag = $zone === 'homepage' ? 'h2' : 'h3';
+    $wrapperStart = $zone === 'homepage'
+        ? '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
+        : '<section class="widget-card" aria-label="' . $title . '">';
+    $out = $wrapperStart;
+    $out .= '<' . $tag . ($zone === 'homepage' ? ' id="w-' . (int)$widget['id'] . '-title" class="section-title"' : ' class="widget-card__title"') . '>' . $title . '</' . $tag . '>';
     if ($siteName !== '') {
         $out .= '<p><strong>' . h($siteName) . '</strong></p>';
     }
@@ -519,6 +833,66 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
 {
     $source = $settings['source'] ?? 'blog';
     $pdo = db_connect();
+    $rawWidgetTitle = trim((string)($widget['title'] ?? ''));
+    $useSourceSpecificTitle = $rawWidgetTitle === '' || $rawWidgetTitle === 'Doporučený obsah';
+
+    if ($source === 'poll' && isModuleEnabled('polls')) {
+        $pollWidget = $widget;
+        if ($useSourceSpecificTitle) {
+            $pollWidget['title'] = 'Aktuální anketa';
+        }
+        return renderWidget_poll($pollWidget, $settings, $zone);
+    }
+
+    if ($source === 'newsletter' && isModuleEnabled('newsletter')) {
+        $newsletterWidget = $widget;
+        if ($useSourceSpecificTitle) {
+            $newsletterWidget['title'] = 'Zůstaňte v kontaktu';
+        }
+        return renderWidget_newsletter($newsletterWidget, $settings, $zone);
+    }
+
+    if ($source === 'board' && isModuleEnabled('board')) {
+        $stmt = $pdo->prepare(
+            "SELECT b.id, b.title, b.slug, b.board_type, b.posted_date, b.created_at, b.excerpt, b.description,
+                    b.image_file, b.filename, b.original_name, b.file_size, b.contact_name, b.contact_phone, b.contact_email,
+                    b.is_pinned, COALESCE(c.name, '') AS category_name
+             FROM cms_board b
+             LEFT JOIN cms_board_categories c ON c.id = b.category_id
+             WHERE b.is_published = 1 AND COALESCE(b.status, 'published') = 'published'
+             ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC
+             LIMIT 1"
+        );
+        $stmt->execute();
+        $document = $stmt->fetch();
+        if (!$document) {
+            return '';
+        }
+        $document = hydrateBoardPresentation($document);
+        $title = h($useSourceSpecificTitle ? 'Zvýrazněná položka' : $rawWidgetTitle);
+
+        if ($zone === 'sidebar' || $zone === 'footer') {
+            $out = '<section class="widget-card" aria-label="' . $title . '">';
+            $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+            $out .= '<p><a href="' . h(boardPublicPath($document)) . '"><strong>' . h($document['title']) . '</strong></a></p>';
+            if ($document['excerpt_plain'] !== '') {
+                $out .= '<p>' . h(mb_substr((string)$document['excerpt_plain'], 0, 160)) . '</p>';
+            }
+            $out .= '<p><a href="' . h(boardPublicPath($document)) . '">Zobrazit detail</a></p>';
+            $out .= '</section>';
+            return $out;
+        }
+
+        return '<section class="surface surface--accent home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
+             . '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>'
+             . '<p class="meta-row meta-row--tight"><span class="pill">' . h((string)$document['board_type_label']) . '</span>'
+             . ($document['category_name'] !== '' ? '<span>' . h((string)$document['category_name']) . '</span>' : '')
+             . '<time datetime="' . h((string)$document['posted_date']) . '">' . formatCzechDate((string)$document['posted_date']) . '</time></p>'
+             . '<h3 class="card__title card__title--feature"><a href="' . h(boardPublicPath($document)) . '">' . h($document['title']) . '</a></h3>'
+             . ($document['excerpt_plain'] !== '' ? '<p>' . h(mb_substr((string)$document['excerpt_plain'], 0, 200)) . '</p>' : '')
+             . '<div class="button-row button-row--start"><a class="button-primary" href="' . h(boardPublicPath($document)) . '">Zobrazit detail</a></div>'
+             . '</section>';
+    }
 
     if ($source === 'blog' && isModuleEnabled('blog')) {
         $article = $pdo->query(
@@ -530,7 +904,7 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
         if (!$article) {
             return '';
         }
-        $title = h($widget['title'] ?: 'Doporučený článek');
+        $title = h($useSourceSpecificTitle ? 'Doporučený článek' : $rawWidgetTitle);
         if ($zone === 'sidebar' || $zone === 'footer') {
             return '<section class="widget-card" aria-label="' . $title . '">'
                  . '<h3 class="widget-card__title">' . $title . '</h3>'
@@ -593,6 +967,50 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     }
     $out .= '</div>';
     $out .= '<div class="button-row button-row--start" style="margin-top:.75rem"><a class="button-secondary" href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></div>';
+    $out .= '</section>';
+    return $out;
+}
+
+function renderWidget_selected_form(array $widget, array $settings, string $zone): string
+{
+    $formId = (int)($settings['form_id'] ?? 0);
+    if ($formId <= 0) {
+        return '';
+    }
+
+    $stmt = db_connect()->prepare(
+        "SELECT id, title, slug, description
+         FROM cms_forms
+         WHERE id = ? AND is_active = 1
+         LIMIT 1"
+    );
+    $stmt->execute([$formId]);
+    $form = $stmt->fetch();
+    if (!$form) {
+        return '';
+    }
+
+    $rawWidgetTitle = trim((string)($widget['title'] ?? ''));
+    $title = h(($rawWidgetTitle !== '' && $rawWidgetTitle !== 'Vybraný formulář') ? $rawWidgetTitle : (string)$form['title']);
+    $description = trim((string)($form['description'] ?? ''));
+
+    if ($zone === 'sidebar' || $zone === 'footer') {
+        $out = '<section class="widget-card" aria-label="' . $title . '">';
+        $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+        if ($description !== '') {
+            $out .= '<p>' . h(mb_substr(strip_tags($description), 0, 180)) . '</p>';
+        }
+        $out .= '<p><a href="' . h(formPublicPath($form)) . '">Vyplnit formulář</a></p>';
+        $out .= '</section>';
+        return $out;
+    }
+
+    $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+    $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+    if ($description !== '') {
+        $out .= '<div class="prose"><p>' . h(mb_substr(strip_tags($description), 0, 260)) . '</p></div>';
+    }
+    $out .= '<div class="button-row button-row--start"><a class="button-primary" href="' . h(formPublicPath($form)) . '">Vyplnit formulář</a></div>';
     $out .= '</section>';
     return $out;
 }

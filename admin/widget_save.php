@@ -42,7 +42,14 @@ switch ($type) {
     case 'latest_news':
     case 'board':
     case 'upcoming_events':
+    case 'latest_downloads':
+    case 'latest_faq':
+    case 'latest_places':
         $settings['count'] = max(1, min(50, (int)($_POST['widget_count'] ?? 5)));
+        break;
+    case 'latest_podcast_episodes':
+        $settings['count'] = max(1, min(50, (int)($_POST['widget_count'] ?? 5)));
+        $settings['show_id'] = (int)($_POST['widget_show_id'] ?? 0) ?: 0;
         break;
     case 'featured_article':
         $settings['source'] = in_array($_POST['widget_source'] ?? '', ['blog', 'board', 'poll', 'newsletter'], true)
@@ -53,6 +60,9 @@ switch ($type) {
         break;
     case 'gallery_preview':
         $settings['album_id'] = (int)($_POST['widget_album_id'] ?? 0);
+        break;
+    case 'selected_form':
+        $settings['form_id'] = (int)($_POST['widget_form_id'] ?? 0) ?: 0;
         break;
     case 'custom_html':
         $settings['content'] = $_POST['widget_content'] ?? '';
