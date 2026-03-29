@@ -30,7 +30,9 @@ try {
     $stmt = $pdo->prepare(
         "SELECT f.id, f.title, f.slug, f.is_active, f.created_at,
                 (SELECT COUNT(*) FROM cms_form_fields WHERE form_id = f.id) AS field_count,
-                (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id) AS submission_count
+                (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id) AS submission_count,
+                (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id AND status = 'new') AS new_submission_count,
+                (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id AND status IN ('new', 'in_progress')) AS open_submission_count
          FROM cms_forms f
          {$whereSql}
          ORDER BY f.created_at DESC"
@@ -46,6 +48,10 @@ adminHeader('Formuláře');
 <div class="button-row">
   <a href="form_form.php" class="btn btn-primary">+ Vytvořit formulář</a>
   <a href="form_form.php?preset=issue_report" class="btn">+ Nahlášení chyby</a>
+  <a href="form_form.php?preset=feature_request" class="btn">+ Návrh nové funkce</a>
+  <a href="form_form.php?preset=support_request" class="btn">+ Žádost o podporu</a>
+  <a href="form_form.php?preset=contact_basic" class="btn">+ Kontaktní formulář</a>
+  <a href="form_form.php?preset=content_report" class="btn">+ Nahlášení problému s obsahem</a>
 </div>
 
 <p class="section-subtitle">Na jednom místě připravíte veřejné formuláře, jejich pole i přehled doručených odpovědí.</p>
@@ -71,7 +77,7 @@ adminHeader('Formuláře');
   <?php if ($query !== '' || $statusFilter !== 'all'): ?>
     <p>Pro zadaný filtr se nenašel žádný formulář. <a href="forms.php">Zobrazit všechny formuláře</a>.</p>
   <?php else: ?>
-    <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a> nebo <a href="form_form.php?preset=issue_report">připravit formulář pro nahlášení chyby</a>.</p>
+    <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a>, <a href="form_form.php?preset=issue_report">připravit formulář pro nahlášení chyby</a> nebo sáhnout po některé z připravených šablon.</p>
   <?php endif; ?>
 <?php else: ?>
   <table>
@@ -81,6 +87,7 @@ adminHeader('Formuláře');
         <th scope="col">Název</th>
         <th scope="col">Pole</th>
         <th scope="col">Odpovědi</th>
+        <th scope="col">Otevřené</th>
         <th scope="col">Stav</th>
         <th scope="col">Akce</th>
       </tr>
@@ -94,6 +101,16 @@ adminHeader('Formuláře');
         </td>
         <td><?= (int)$form['field_count'] ?></td>
         <td><?= (int)$form['submission_count'] ?></td>
+        <td>
+          <?php if ((int)$form['open_submission_count'] > 0): ?>
+            <strong><?= (int)$form['open_submission_count'] ?></strong>
+            <?php if ((int)$form['new_submission_count'] > 0): ?>
+              <br><small style="color:#9a3412">nové: <?= (int)$form['new_submission_count'] ?></small>
+            <?php endif; ?>
+          <?php else: ?>
+            0
+          <?php endif; ?>
+        </td>
         <td><?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?></td>
         <td class="actions">
           <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit</a>

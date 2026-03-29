@@ -152,7 +152,14 @@ function notificationRecipient(): string
 /**
  * Notifikace: nový formulář odeslán.
  */
-function notifyFormSubmission(string $formTitle, array $data, string $recipientOverride = '', string $subjectOverride = ''): void
+function notifyFormSubmission(
+    string $formTitle,
+    array $data,
+    string $recipientOverride = '',
+    string $subjectOverride = '',
+    string $referenceCode = '',
+    string $detailUrl = ''
+): void
 {
     if (getSetting('notify_form_submission', '1') !== '1') {
         return;
@@ -169,11 +176,18 @@ function notifyFormSubmission(string $formTitle, array $data, string $recipientO
     $adminUrl = siteUrl('/admin/forms.php');
     $body = 'Na webu ' . $siteName . ' byl odeslán formulář „' . $formTitle . "\".\n\n";
 
+    if ($referenceCode !== '') {
+        $body .= "Referenční kód: {$referenceCode}\n\n";
+    }
+
     foreach ($data as $key => $value) {
         $body .= $key . ': ' . $value . "\n";
     }
 
     $body .= "\nSprávce formulářů: " . $adminUrl . "\n";
+    if ($detailUrl !== '') {
+        $body .= "Detail odpovědi: " . $detailUrl . "\n";
+    }
 
     $subject = trim($subjectOverride);
     if ($subject === '') {
@@ -185,7 +199,7 @@ function notifyFormSubmission(string $formTitle, array $data, string $recipientO
     }
 }
 
-function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $submissionData): bool
+function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $submissionData, array $extraPlaceholders = []): bool
 {
     if ((int)($form['submitter_confirmation_enabled'] ?? 0) !== 1) {
         return false;
@@ -215,7 +229,7 @@ function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $
         $bodyTemplate = defaultFormSubmitterConfirmationMessageTemplate();
     }
 
-    $body = formRenderTemplate($bodyTemplate, formTemplatePlaceholderMap($form, $fieldsByName, $submissionData));
+    $body = formRenderTemplate($bodyTemplate, formTemplatePlaceholderMap($form, $fieldsByName, $submissionData, $extraPlaceholders));
 
     if (!sendMail($recipient, $subject, $body)) {
         error_log("sendMail FAILED: potvrzení odesílateli formuláře pro {$recipient}");

@@ -2311,6 +2311,166 @@ function formFieldTypeDefinitions(): array
     ];
 }
 
+function formSubmissionStatusDefinitions(): array
+{
+    return [
+        'new' => [
+            'label' => 'Nové',
+            'is_open' => true,
+        ],
+        'in_progress' => [
+            'label' => 'Rozpracované',
+            'is_open' => true,
+        ],
+        'resolved' => [
+            'label' => 'Vyřešené',
+            'is_open' => false,
+        ],
+        'closed' => [
+            'label' => 'Uzavřené',
+            'is_open' => false,
+        ],
+    ];
+}
+
+function normalizeFormSubmissionStatus(string $status): string
+{
+    $status = trim($status);
+    $definitions = formSubmissionStatusDefinitions();
+    return isset($definitions[$status]) ? $status : 'new';
+}
+
+function formSubmissionStatusLabel(string $status): string
+{
+    $definitions = formSubmissionStatusDefinitions();
+    $normalized = normalizeFormSubmissionStatus($status);
+    return $definitions[$normalized]['label'];
+}
+
+function formSubmissionOpenStatuses(): array
+{
+    return array_keys(array_filter(
+        formSubmissionStatusDefinitions(),
+        static fn(array $definition): bool => !empty($definition['is_open'])
+    ));
+}
+
+function formSubmissionStatusCounts(PDO $pdo, int $formId): array
+{
+    $counts = array_fill_keys(array_keys(formSubmissionStatusDefinitions()), 0);
+    $stmt = $pdo->prepare(
+        "SELECT status, COUNT(*) AS total
+         FROM cms_form_submissions
+         WHERE form_id = ?
+         GROUP BY status"
+    );
+    $stmt->execute([$formId]);
+
+    foreach ($stmt->fetchAll() as $row) {
+        $status = normalizeFormSubmissionStatus((string)($row['status'] ?? 'new'));
+        $counts[$status] = (int)($row['total'] ?? 0);
+    }
+
+    return $counts;
+}
+
+function formSubmissionReferencePrefix(array $form): string
+{
+    $slug = formSlug((string)($form['slug'] ?? ''));
+    $title = slugify((string)($form['title'] ?? ''));
+    $source = $slug . ' ' . $title;
+    foreach (['issue', 'bug', 'chyb', 'problem', 'report'] as $needle) {
+        if (str_contains($source, $needle)) {
+            return 'ISSUE';
+        }
+    }
+
+    return 'FORM';
+}
+
+function formSubmissionBuildReference(array $form, int $submissionId, string $createdAt = ''): string
+{
+    $year = date('Y');
+    if ($createdAt !== '') {
+        try {
+            $year = (new DateTime($createdAt))->format('Y');
+        } catch (Exception $e) {
+            $year = date('Y');
+        }
+    }
+
+    return formSubmissionReferencePrefix($form)
+        . '-' . $year
+        . '-' . str_pad((string)max(1, $submissionId), 4, '0', STR_PAD_LEFT);
+}
+
+function formSubmissionReference(array $form, array $submission): string
+{
+    $storedReference = trim((string)($submission['reference_code'] ?? ''));
+    if ($storedReference !== '') {
+        return $storedReference;
+    }
+
+    return formSubmissionBuildReference(
+        $form,
+        (int)($submission['id'] ?? 0),
+        (string)($submission['created_at'] ?? '')
+    );
+}
+
+function formSubmissionAssignableUsers(PDO $pdo): array
+{
+    $stmt = $pdo->query(
+        "SELECT id, email, first_name, last_name, nickname, role, is_superadmin
+         FROM cms_users
+         WHERE is_confirmed = 1 AND role <> 'public'
+         ORDER BY is_superadmin DESC, role ASC, first_name ASC, last_name ASC, email ASC"
+    );
+
+    return $stmt ? $stmt->fetchAll() : [];
+}
+
+function formSubmissionAssigneeDisplayName(array $user): string
+{
+    $displayName = trim((string)($user['nickname'] ?? ''));
+    if ($displayName === '') {
+        $displayName = trim((string)($user['first_name'] ?? '') . ' ' . (string)($user['last_name'] ?? ''));
+    }
+    if ($displayName === '') {
+        $displayName = trim((string)($user['email'] ?? ''));
+    }
+
+    $roleLabel = (int)($user['is_superadmin'] ?? 0) === 1
+        ? 'Hlavní admin'
+        : userRoleLabel((string)($user['role'] ?? 'collaborator'));
+
+    return $displayName . ' · ' . $roleLabel;
+}
+
+function formSubmissionSummary(array $fieldsByName, array $submissionData, int $maxParts = 2): string
+{
+    $parts = [];
+
+    foreach ($fieldsByName as $fieldName => $field) {
+        $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
+        if (!formFieldStoresSubmissionValue($field) || in_array($fieldType, ['hidden', 'consent'], true)) {
+            continue;
+        }
+
+        $displayValue = trim(formSubmissionDisplayValueForField($field, $submissionData[$fieldName] ?? ''));
+        if ($displayValue === '') {
+            continue;
+        }
+
+        $parts[] = trim((string)($field['label'] ?? $fieldName)) . ': ' . $displayValue;
+        if (count($parts) >= $maxParts) {
+            break;
+        }
+    }
+
+    return implode(' · ', $parts);
+}
+
 function formFieldLayoutWidthDefinitions(): array
 {
     return [
@@ -2708,6 +2868,155 @@ function formPresetDefinitions(): array
                 ],
             ],
         ],
+        'feature_request' => [
+            'label' => 'Návrh nové funkce',
+            'description' => 'Připraví formulář pro sběr nápadů, zlepšení a nových funkcí od uživatelů nebo editorů.',
+            'form' => [
+                'title' => 'Návrh nové funkce',
+                'slug' => 'navrh-nove-funkce',
+                'description' => 'Popište, co by nová funkce měla řešit, komu pomůže a jak by se podle vás měla chovat v praxi.',
+                'success_message' => 'Děkujeme, návrh nové funkce byl odeslán.',
+                'submit_label' => 'Odeslat návrh',
+                'notification_subject' => 'Nový návrh funkce',
+                'redirect_url' => '',
+                'success_behavior' => 'message',
+                'success_primary_label' => '',
+                'success_primary_url' => '',
+                'success_secondary_label' => '',
+                'success_secondary_url' => '',
+                'is_active' => 1,
+                'use_honeypot' => 1,
+                'submitter_confirmation_enabled' => 1,
+                'submitter_email_field' => 'email_pro_odpoved',
+                'submitter_confirmation_subject' => 'Potvrzení přijetí návrhu nové funkce',
+                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nPotvrdili jsme přijetí návrhu „{{field:strucny_nazev_navrhu}}“.\n\nPokud bude potřeba něco doplnit, ozveme se na tuto adresu.\n\n— {{site_name}}",
+            ],
+            'fields' => [
+                ['field_type' => 'hidden', 'label' => 'Zdroj návrhu', 'name' => 'zdroj_navrhu', 'default_value' => 'web-feature-request', 'placeholder' => '', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 0],
+                ['field_type' => 'section', 'label' => 'O návrhu', 'name' => 'o_navrhu', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Nejdřív stručně shrňte, co navrhujete a komu to pomůže.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 5],
+                ['field_type' => 'text', 'label' => 'Stručný název návrhu', 'name' => 'strucny_nazev_navrhu', 'default_value' => '', 'placeholder' => 'Například Přidat export odpovědí do JSON', 'help_text' => 'Jedna krátká věta, podle které návrh rychle poznáme.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 10],
+                ['field_type' => 'radio', 'label' => 'Typ návrhu', 'name' => 'typ_navrhu', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Vyberte, jestli jde o novou funkci, zlepšení nebo úpravu rozhraní.', 'options' => 'Nová funkce|Zlepšení stávající funkce|Úprava rozhraní', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 1, 'sort_order' => 20],
+                ['field_type' => 'checkbox_group', 'label' => 'Komu by to pomohlo', 'name' => 'komu_by_to_pomohlo', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Můžete označit víc skupin, kterým by nová funkce pomohla.', 'options' => 'Správci webu|Autoři obsahu|Moderátoři|Návštěvníci webu|Vývojáři', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 30],
+                ['field_type' => 'radio', 'label' => 'Priorita návrhu', 'name' => 'priorita_navrhu', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Pomůže nám odhadnout, jak moc je návrh důležitý.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 0, 'sort_order' => 40],
+                ['field_type' => 'email', 'label' => 'E-mail pro odpověď', 'name' => 'email_pro_odpoved', 'default_value' => '', 'placeholder' => 'vas@email.cz', 'help_text' => 'Volitelné. Pokud vyplníte kontakt, můžeme se k návrhu vrátit s doplňující otázkou.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 50],
+                ['field_type' => 'section', 'label' => 'Popis a dopad', 'name' => 'popis_a_dopad', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Tady popište, co má nová funkce řešit a jak si ji představujete v běžném použití.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 55],
+                ['field_type' => 'textarea', 'label' => 'Jaký problém to řeší', 'name' => 'jaky_problem_to_resi', 'default_value' => '', 'placeholder' => 'Popište, co dnes nejde, je pomalé nebo zbytečně složité.', 'help_text' => 'Zaměřte se na konkrétní problém nebo situaci z praxe.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 60],
+                ['field_type' => 'textarea', 'label' => 'Jak by se to mělo chovat', 'name' => 'jak_by_se_to_melo_chovat', 'default_value' => '', 'placeholder' => 'Popište ideální chování nebo podobu nové funkce.', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 1, 'sort_order' => 70],
+                ['field_type' => 'textarea', 'label' => 'Příklad použití', 'name' => 'priklad_pouziti', 'default_value' => '', 'placeholder' => 'Na jaké konkrétní situaci nebo workflow by se nová funkce hodila?', 'help_text' => 'Volitelné. Jeden krátký scénář pomůže víc než obecný popis.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 80],
+                ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Volitelné. Můžete přiložit skicu, screenshot nebo dokument s návrhem.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.webp,.pdf,.txt,.doc,.docx', 'max_file_size_mb' => 10, 'allow_multiple' => 1, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 0, 'sort_order' => 90],
+                ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů z tohoto formuláře pro vyřízení návrhu.', 'name' => 'souhlas_se_zpracovanim', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Povinné potvrzení pro zpracování návrhu.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 1, 'sort_order' => 100],
+            ],
+        ],
+        'support_request' => [
+            'label' => 'Žádost o podporu',
+            'description' => 'Připraví formulář pro podporu, dotazy k používání a řešení blokujících situací.',
+            'form' => [
+                'title' => 'Žádost o podporu',
+                'slug' => 'zadost-o-podporu',
+                'description' => 'Popište, s čím potřebujete pomoct, kde se problém projevil a co už jste zkusili.',
+                'success_message' => 'Děkujeme, žádost o podporu byla odeslána.',
+                'submit_label' => 'Odeslat žádost',
+                'notification_subject' => 'Nová žádost o podporu',
+                'redirect_url' => '',
+                'success_behavior' => 'message',
+                'success_primary_label' => '',
+                'success_primary_url' => '',
+                'success_secondary_label' => '',
+                'success_secondary_url' => '',
+                'is_active' => 1,
+                'use_honeypot' => 1,
+                'submitter_confirmation_enabled' => 1,
+                'submitter_email_field' => 'email_odesilatele',
+                'submitter_confirmation_subject' => 'Potvrzení přijetí žádosti o podporu',
+                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nPotvrdili jsme přijetí žádosti „{{field:tema_pozadavku}}“.\n\nKdyž bude potřeba něco doplnit, ozveme se na tuto adresu.\n\n— {{site_name}}",
+            ],
+            'fields' => [
+                ['field_type' => 'hidden', 'label' => 'Zdroj podpory', 'name' => 'zdroj_podpory', 'default_value' => 'web-support-request', 'placeholder' => '', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 0],
+                ['field_type' => 'section', 'label' => 'Základ žádosti', 'name' => 'zaklad_zadosti', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Začněte krátkým tématem a kontaktem, na který se můžeme ozvat.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 5],
+                ['field_type' => 'text', 'label' => 'Téma požadavku', 'name' => 'tema_pozadavku', 'default_value' => '', 'placeholder' => 'Například Nejde nastavit domovská stránka', 'help_text' => 'Jedna krátká věta, co potřebujete vyřešit.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 10],
+                ['field_type' => 'email', 'label' => 'E-mail odesílatele', 'name' => 'email_odesilatele', 'default_value' => '', 'placeholder' => 'vas@email.cz', 'help_text' => 'Na tuto adresu můžeme poslat doplňující otázky i řešení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 1, 'sort_order' => 20],
+                ['field_type' => 'radio', 'label' => 'Jak moc to spěchá', 'name' => 'nalehavost', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Pomůže nám správně seřadit příchozí žádosti.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 30],
+                ['field_type' => 'checkbox_group', 'label' => 'Čeho se žádost týká', 'name' => 'ceho_se_zadost_tyka', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Můžete označit víc oblastí, pokud se dotaz týká více částí systému.', 'options' => 'Administrace|Veřejný web|Formuláře|Rezervace|Blogy|Šablony|Import a export', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 0, 'sort_order' => 40],
+                ['field_type' => 'url', 'label' => 'Adresa stránky nebo místa v systému', 'name' => 'adresa_mista', 'default_value' => '', 'placeholder' => 'https://example.com/admin/... nebo /blog/index.php', 'help_text' => 'Volitelné. Pomůže nám rychleji najít, čeho se problém týká.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 50],
+                ['field_type' => 'section', 'label' => 'Popis a co už jste zkusili', 'name' => 'popis_a_co_uz_jste_zkusili', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Čím konkrétněji žádost popíšete, tím rychleji se v ní zorientujeme.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 55],
+                ['field_type' => 'textarea', 'label' => 'Co potřebujete vyřešit', 'name' => 'co_potrebujete_vyresit', 'default_value' => '', 'placeholder' => 'Popište, s čím potřebujete pomoct nebo co nejde dokončit.', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 60],
+                ['field_type' => 'textarea', 'label' => 'Co jste už zkusili', 'name' => 'co_jste_uz_zkusili', 'default_value' => '', 'placeholder' => 'Například změna nastavení, odhlášení, jiný prohlížeč nebo znovunačtení stránky.', 'help_text' => 'Volitelné. Pomůže nám to nepokládat stejné první otázky znovu.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 70],
+                ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Volitelné. Screenshot, PDF nebo log často pomůže víc než dlouhý popis.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.webp,.pdf,.txt,.log', 'max_file_size_mb' => 10, 'allow_multiple' => 1, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 80],
+                ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů z tohoto formuláře pro vyřízení žádosti o podporu.', 'name' => 'souhlas_se_zpracovanim', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Povinné potvrzení pro zpracování žádosti.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 1, 'sort_order' => 90],
+            ],
+        ],
+        'contact_basic' => [
+            'label' => 'Obecný kontaktní formulář',
+            'description' => 'Připraví jednoduchý formulář pro běžný kontakt, dotazy a nezávazné zprávy.',
+            'form' => [
+                'title' => 'Kontaktní formulář',
+                'slug' => 'kontaktni-formular',
+                'description' => 'Napište nám zprávu. Pokud chcete odpověď, nezapomeňte uvést kontakt.',
+                'success_message' => 'Děkujeme, zpráva byla odeslána.',
+                'submit_label' => 'Odeslat zprávu',
+                'notification_subject' => 'Nová zpráva z kontaktního formuláře',
+                'redirect_url' => '',
+                'success_behavior' => 'message',
+                'success_primary_label' => '',
+                'success_primary_url' => '',
+                'success_secondary_label' => '',
+                'success_secondary_url' => '',
+                'is_active' => 1,
+                'use_honeypot' => 1,
+                'submitter_confirmation_enabled' => 1,
+                'submitter_email_field' => 'email',
+                'submitter_confirmation_subject' => 'Potvrzení přijetí zprávy',
+                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nVaše zpráva „{{field:tema_zpravy}}“ byla úspěšně přijata.\n\n— {{site_name}}",
+            ],
+            'fields' => [
+                ['field_type' => 'section', 'label' => 'Kontakt na vás', 'name' => 'kontakt_na_vas', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Vyplňte alespoň jméno a e-mail, pokud chcete odpověď.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 5],
+                ['field_type' => 'text', 'label' => 'Jméno', 'name' => 'jmeno', 'default_value' => '', 'placeholder' => 'Vaše jméno', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 10],
+                ['field_type' => 'email', 'label' => 'E-mail', 'name' => 'email', 'default_value' => '', 'placeholder' => 'vas@email.cz', 'help_text' => 'Na tuto adresu můžeme odpovědět.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 1, 'sort_order' => 20],
+                ['field_type' => 'tel', 'label' => 'Telefon', 'name' => 'telefon', 'default_value' => '', 'placeholder' => '+420 123 456 789', 'help_text' => 'Volitelné. Hodí se, pokud chcete, abychom zavolali zpět.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 0, 'sort_order' => 30],
+                ['field_type' => 'radio', 'label' => 'Důvod kontaktu', 'name' => 'duvod_kontaktu', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Vyberte, čeho se zpráva týká.', 'options' => 'Dotaz|Zpětná vazba|Spolupráce|Jiné', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 40],
+                ['field_type' => 'section', 'label' => 'Vaše zpráva', 'name' => 'vase_zprava', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Teď už stačí napsat, co potřebujete nebo co nám chcete sdělit.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 45],
+                ['field_type' => 'text', 'label' => 'Téma zprávy', 'name' => 'tema_zpravy', 'default_value' => '', 'placeholder' => 'Krátký předmět zprávy', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 50],
+                ['field_type' => 'textarea', 'label' => 'Zpráva', 'name' => 'zprava', 'default_value' => '', 'placeholder' => 'Napište svou zprávu.', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 1, 'sort_order' => 60],
+                ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů z tohoto formuláře pro vyřízení zprávy.', 'name' => 'souhlas_se_zpracovanim', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Povinné potvrzení pro zpracování zprávy.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 1, 'sort_order' => 70],
+            ],
+        ],
+        'content_report' => [
+            'label' => 'Nahlášení problému s obsahem',
+            'description' => 'Připraví formulář pro hlášení chyb v článcích, stránkách, novinkách, galeriích nebo jiném obsahu.',
+            'form' => [
+                'title' => 'Nahlášení problému s obsahem',
+                'slug' => 'nahlaseni-problemu-s-obsahem',
+                'description' => 'Pomozte nám udržet obsah přesný a aktuální. Napište, co je špatně a kde se to nachází.',
+                'success_message' => 'Děkujeme, nahlášení problému s obsahem bylo odesláno.',
+                'submit_label' => 'Odeslat hlášení',
+                'notification_subject' => 'Nové hlášení problému s obsahem',
+                'redirect_url' => '',
+                'success_behavior' => 'message',
+                'success_primary_label' => '',
+                'success_primary_url' => '',
+                'success_secondary_label' => '',
+                'success_secondary_url' => '',
+                'is_active' => 1,
+                'use_honeypot' => 1,
+                'submitter_confirmation_enabled' => 1,
+                'submitter_email_field' => 'email_pro_odpoved',
+                'submitter_confirmation_subject' => 'Potvrzení přijetí hlášení o obsahu',
+                'submitter_confirmation_message' => "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nPotvrdili jsme přijetí hlášení „{{field:strucne_shrnuti}}“.\n\n— {{site_name}}",
+            ],
+            'fields' => [
+                ['field_type' => 'hidden', 'label' => 'Zdroj hlášení obsahu', 'name' => 'zdroj_hlaseni_obsahu', 'default_value' => 'web-content-report', 'placeholder' => '', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 0],
+                ['field_type' => 'section', 'label' => 'Kde je problém', 'name' => 'kde_je_problem', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Nejdřív nám pomozte rychle najít stránku a typ obsahu, kterého se hlášení týká.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 5],
+                ['field_type' => 'url', 'label' => 'Adresa stránky s problémem', 'name' => 'adresa_stranky_s_problemem', 'default_value' => '', 'placeholder' => 'https://example.com/clanek-nebo-stranka', 'help_text' => 'Ideálně vložte přesnou adresu stránky, na které je problém vidět.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 10],
+                ['field_type' => 'radio', 'label' => 'Čeho se problém týká', 'name' => 'ceho_se_problem_tyka', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Vyberte typ obsahu, který je podle vás potřeba opravit.', 'options' => 'Článek|Statická stránka|Novinka|Událost|Fotogalerie|Místo|Soubor ke stažení|Jiné', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 1, 'sort_order' => 20],
+                ['field_type' => 'checkbox_group', 'label' => 'Druh problému', 'name' => 'druh_problemu', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Můžete označit víc typů problému, pokud se jich na stránce objevuje více.', 'options' => 'Neplatná informace|Překlep nebo jazyková chyba|Nefunkční odkaz|Chybějící obrázek nebo příloha|Nevhodný obsah|Jiné', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 30],
+                ['field_type' => 'section', 'label' => 'Co je potřeba opravit', 'name' => 'co_je_potreba_opravit', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Teď popište, co je na obsahu špatně a jak jste na to narazili.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 35],
+                ['field_type' => 'text', 'label' => 'Stručné shrnutí', 'name' => 'strucne_shrnuti', 'default_value' => '', 'placeholder' => 'Například Na stránce je neplatný odkaz na PDF', 'help_text' => 'Jedna krátká věta, podle které problém rychle poznáme.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 40],
+                ['field_type' => 'textarea', 'label' => 'Podrobnosti', 'name' => 'podrobnosti', 'default_value' => '', 'placeholder' => 'Popište, co je špatně, co by mělo být jinak a případně kde jste na problém narazili.', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 1, 'sort_order' => 50],
+                ['field_type' => 'email', 'label' => 'E-mail pro odpověď', 'name' => 'email_pro_odpoved', 'default_value' => '', 'placeholder' => 'vas@email.cz', 'help_text' => 'Volitelné. Pokud chcete vědět, jak bylo hlášení vyřešeno, nechte na sebe kontakt.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 0, 'sort_order' => 60],
+                ['field_type' => 'file', 'label' => 'Příloha', 'name' => 'priloha', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Volitelné. Screenshot nebo dokument pomůže rychleji ověřit nahlášený problém.', 'options' => '', 'accept_types' => '.png,.jpg,.jpeg,.webp,.pdf,.txt', 'max_file_size_mb' => 10, 'allow_multiple' => 1, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 70],
+                ['field_type' => 'consent', 'label' => 'Souhlasím se zpracováním údajů z tohoto formuláře pro vyřízení hlášení o obsahu.', 'name' => 'souhlas_se_zpracovanim', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Povinné potvrzení pro zpracování hlášení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 1, 'sort_order' => 80],
+            ],
+        ],
     ];
 }
 
@@ -2794,7 +3103,7 @@ function defaultFormSubmitterConfirmationMessageTemplate(): string
     return "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nVaše zpráva byla úspěšně přijata.\n\n— {{site_name}}";
 }
 
-function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $submissionData): array
+function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $submissionData, array $extraPlaceholders = []): array
 {
     $siteName = getSetting('site_name', 'Kora CMS');
     $map = [
@@ -2808,7 +3117,7 @@ function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $sub
         $map['{{field:' . $name . '}}'] = formSubmissionDisplayValueForField($field, $submissionData[$name] ?? '');
     }
 
-    return $map;
+    return array_merge($map, $extraPlaceholders);
 }
 
 function formRenderTemplate(string $template, array $placeholderMap): string
@@ -2882,7 +3191,9 @@ function formSubmitterConfirmationPreview(array $form, array $fields, string $su
     }
 
     $previewData = formPreviewSubmissionData($fields);
-    $placeholderMap = formTemplatePlaceholderMap($form, $fieldsByName, $previewData);
+    $placeholderMap = formTemplatePlaceholderMap($form, $fieldsByName, $previewData, [
+        '{{submission_reference}}' => 'FORM-' . date('Y') . '-0001',
+    ]);
 
     $normalizedSubjectTemplate = trim($subjectTemplate);
     if ($normalizedSubjectTemplate === '') {

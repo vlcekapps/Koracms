@@ -623,10 +623,17 @@ $tables = [
     'cms_form_submissions' => "CREATE TABLE IF NOT EXISTS cms_form_submissions (
         id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
         form_id     INT          NOT NULL,
+        reference_code VARCHAR(50) NOT NULL DEFAULT '',
+        status      VARCHAR(20)  NOT NULL DEFAULT 'new',
+        assigned_user_id INT     NULL DEFAULT NULL,
+        internal_note TEXT,
         data        JSON         NOT NULL,
         ip_hash     VARCHAR(64)  NOT NULL DEFAULT '',
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_form_date (form_id, created_at)
+        INDEX idx_form_date (form_id, created_at),
+        INDEX idx_form_status (form_id, status, created_at),
+        INDEX idx_form_assignee (assigned_user_id, status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     // ── Revize obsahu ──
@@ -835,6 +842,12 @@ $addColumns = [
     'cms_form_fields.show_if_field'  => "ALTER TABLE cms_form_fields ADD COLUMN show_if_field VARCHAR(100) NOT NULL DEFAULT ''",
     'cms_form_fields.show_if_operator' => "ALTER TABLE cms_form_fields ADD COLUMN show_if_operator VARCHAR(20) NOT NULL DEFAULT ''",
     'cms_form_fields.show_if_value'  => "ALTER TABLE cms_form_fields ADD COLUMN show_if_value VARCHAR(255) NOT NULL DEFAULT ''",
+    // cms_form_submissions
+    'cms_form_submissions.reference_code' => "ALTER TABLE cms_form_submissions ADD COLUMN reference_code VARCHAR(50) NOT NULL DEFAULT ''",
+    'cms_form_submissions.status' => "ALTER TABLE cms_form_submissions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'new'",
+    'cms_form_submissions.assigned_user_id' => "ALTER TABLE cms_form_submissions ADD COLUMN assigned_user_id INT NULL DEFAULT NULL",
+    'cms_form_submissions.internal_note' => "ALTER TABLE cms_form_submissions ADD COLUMN internal_note TEXT",
+    'cms_form_submissions.updated_at' => "ALTER TABLE cms_form_submissions ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // Multiblog – blog_id sloupce
     'cms_articles.blog_id'           => "ALTER TABLE cms_articles ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
     'cms_categories.blog_id'         => "ALTER TABLE cms_categories ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
@@ -1912,6 +1925,83 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Migrace stavů chat zpráv – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $formSubmissionRows = $pdo->query(
+        "SELECT fs.id, fs.form_id, fs.reference_code, fs.status, fs.created_at,
+                f.title AS form_title, f.slug AS form_slug
+         FROM cms_form_submissions fs
+         LEFT JOIN cms_forms f ON f.id = fs.form_id
+         ORDER BY fs.id"
+    )->fetchAll();
+
+    $updateFormSubmissionStmt = $pdo->prepare(
+        "UPDATE cms_form_submissions
+         SET reference_code = ?, status = ?
+         WHERE id = ?"
+    );
+    $normalizedSubmissionCount = 0;
+
+    foreach ($formSubmissionRows as $formSubmissionRow) {
+        $formMeta = [
+            'title' => (string)($formSubmissionRow['form_title'] ?? ''),
+            'slug' => (string)($formSubmissionRow['form_slug'] ?? ''),
+        ];
+        $resolvedReference = trim((string)($formSubmissionRow['reference_code'] ?? ''));
+        if ($resolvedReference === '') {
+            $resolvedReference = formSubmissionBuildReference(
+                $formMeta,
+                (int)$formSubmissionRow['id'],
+                (string)($formSubmissionRow['created_at'] ?? '')
+            );
+        }
+
+        $resolvedStatus = normalizeFormSubmissionStatus((string)($formSubmissionRow['status'] ?? 'new'));
+        if (
+            $resolvedReference !== (string)($formSubmissionRow['reference_code'] ?? '')
+            || $resolvedStatus !== (string)($formSubmissionRow['status'] ?? 'new')
+        ) {
+            $updateFormSubmissionStmt->execute([
+                $resolvedReference,
+                $resolvedStatus,
+                (int)$formSubmissionRow['id'],
+            ]);
+            $normalizedSubmissionCount++;
+        }
+    }
+
+    $formSubmissionStatusIndexCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'cms_form_submissions'
+           AND INDEX_NAME = 'idx_form_status'"
+    );
+    $formSubmissionStatusIndexCheck->execute();
+    if ((int)$formSubmissionStatusIndexCheck->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE cms_form_submissions ADD INDEX idx_form_status (form_id, status, created_at)");
+        $log[] = "✓ Index <code>idx_form_status</code> pro odpovědi formulářů přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_form_status</code> pro odpovědi formulářů již existuje – přeskočeno";
+    }
+
+    $formSubmissionAssigneeIndexCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'cms_form_submissions'
+           AND INDEX_NAME = 'idx_form_assignee'"
+    );
+    $formSubmissionAssigneeIndexCheck->execute();
+    if ((int)$formSubmissionAssigneeIndexCheck->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE cms_form_submissions ADD INDEX idx_form_assignee (assigned_user_id, status)");
+        $log[] = "✓ Index <code>idx_form_assignee</code> pro odpovědi formulářů přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_form_assignee</code> pro odpovědi formulářů již existuje – přeskočeno";
+    }
+
+    $log[] = "✓ Workflow odpovědí formulářů sjednocen – OK ({$normalizedSubmissionCount} upravených záznamů)";
+} catch (\PDOException $e) {
+    $log[] = "✗ Workflow odpovědí formulářů – CHYBA: " . h($e->getMessage());
 }
 
 // ── 6. Widgety – migrace existujících homepage nastavení ─────────────────────

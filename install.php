@@ -636,10 +636,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_form_submissions (
             id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
             form_id     INT          NOT NULL,
+            reference_code VARCHAR(50) NOT NULL DEFAULT '',
+            status      VARCHAR(20)  NOT NULL DEFAULT 'new',
+            assigned_user_id INT     NULL DEFAULT NULL,
+            internal_note TEXT,
             data        JSON         NOT NULL,
             ip_hash     VARCHAR(64)  NOT NULL DEFAULT '',
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_form_date (form_id, created_at)
+            INDEX idx_form_date (form_id, created_at),
+            INDEX idx_form_status (form_id, status, created_at),
+            INDEX idx_form_assignee (assigned_user_id, status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_revisions (

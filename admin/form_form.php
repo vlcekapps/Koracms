@@ -222,7 +222,7 @@ adminHeader($pageTitle);
       <label for="submitter_confirmation_message">Text potvrzovacího e-mailu</label>
       <textarea id="submitter_confirmation_message" name="submitter_confirmation_message" rows="6" style="width:100%;max-width:700px"
                 aria-describedby="submitter-confirmation-message-help"><?= h($submitterConfirmationMessageValue) ?></textarea>
-      <small id="submitter-confirmation-message-help" class="field-help">Můžete použít zástupné proměnné <code>{{site_name}}</code>, <code>{{form_title}}</code>, <code>{{success_message}}</code>, <code>{{submission_date}}</code> a také <code>{{field:nazev_pole}}</code> podle interního klíče pole.</small>
+      <small id="submitter-confirmation-message-help" class="field-help">Můžete použít zástupné proměnné <code>{{site_name}}</code>, <code>{{form_title}}</code>, <code>{{success_message}}</code>, <code>{{submission_date}}</code>, <code>{{submission_reference}}</code> a také <code>{{field:nazev_pole}}</code> podle interního klíče pole.</small>
     </div>
 
     <section id="submitter-confirmation-preview" aria-labelledby="submitter-confirmation-preview-title" style="margin-top:1rem;border:1px solid #d6d6d6;border-radius:8px;padding:1rem;background:#fafafa">

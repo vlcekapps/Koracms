@@ -380,6 +380,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             $ipHash = hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0') . '|form_' . (int)$form['id']);
+            $submissionId = 0;
+            $submissionReference = '';
             try {
                 $pdo->prepare(
                     "INSERT INTO cms_form_submissions (form_id, data, ip_hash) VALUES (?, ?, ?)"
@@ -388,19 +390,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     json_encode($submissionData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     $ipHash,
                 ]);
+                $submissionId = (int)$pdo->lastInsertId();
+                $submissionReference = formSubmissionBuildReference($form, $submissionId);
+                $pdo->prepare(
+                    "UPDATE cms_form_submissions
+                     SET reference_code = ?
+                     WHERE id = ?"
+                )->execute([
+                    $submissionReference,
+                    $submissionId,
+                ]);
             } catch (\PDOException $e) {
                 error_log('form submit: ' . $e->getMessage());
                 $errors[] = 'Odeslání formuláře se nezdařilo. Zkuste to prosím později.';
             }
 
             if (empty($errors)) {
+                $detailUrl = siteUrl('/admin/form_submission.php?id=' . $submissionId . '&form_id=' . (int)$form['id']);
                 notifyFormSubmission(
                     (string)$form['title'],
                     $notificationData,
                     trim((string)($form['notification_email'] ?? '')),
-                    trim((string)($form['notification_subject'] ?? ''))
+                    trim((string)($form['notification_subject'] ?? '')),
+                    $submissionReference,
+                    $detailUrl
                 );
-                sendFormSubmitterConfirmation($form, $fieldsByName, $submissionData);
+                sendFormSubmitterConfirmation($form, $fieldsByName, $submissionData, [
+                    '{{submission_reference}}' => $submissionReference,
+                ]);
 
                 $effectiveSuccessBehavior = normalizeFormSuccessBehavior(
                     (string)($form['success_behavior'] ?? ''),
