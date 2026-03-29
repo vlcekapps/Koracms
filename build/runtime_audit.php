@@ -5026,6 +5026,51 @@ if (!str_contains($installProbe['status'], '302')) {
     echo "OK\n";
 }
 
+echo "=== install_schema_guard ===\n";
+$installSource = (string) file_get_contents(__DIR__ . '/../install.php');
+$installTableContains = static function (string $tableName, string $needle) use ($installSource): bool {
+    $marker = 'CREATE TABLE IF NOT EXISTS ' . $tableName;
+    $start = strpos($installSource, $marker);
+    if ($start === false) {
+        return false;
+    }
+    $end = strpos($installSource, "ENGINE=InnoDB", $start);
+    if ($end === false) {
+        return false;
+    }
+    $tableSql = substr($installSource, $start, $end - $start);
+    return str_contains($tableSql, $needle);
+};
+$installSchemaChecks = [
+    'cms_articles contains unpublish_at' => $installTableContains('cms_articles', 'unpublish_at'),
+    'cms_articles contains admin_note' => $installTableContains('cms_articles', 'admin_note'),
+    'cms_news contains unpublish_at' => $installTableContains('cms_news', 'unpublish_at'),
+    'cms_news contains deleted_at' => $installTableContains('cms_news', 'deleted_at'),
+    'cms_pages contains unpublish_at' => $installTableContains('cms_pages', 'unpublish_at'),
+    'cms_pages contains admin_note' => $installTableContains('cms_pages', 'admin_note'),
+    'cms_pages contains deleted_at' => $installTableContains('cms_pages', 'deleted_at'),
+    'cms_events contains unpublish_at' => $installTableContains('cms_events', 'unpublish_at'),
+    'cms_events contains admin_note' => $installTableContains('cms_events', 'admin_note'),
+    'cms_events contains deleted_at' => $installTableContains('cms_events', 'deleted_at'),
+    'cms_faqs contains deleted_at' => $installTableContains('cms_faqs', 'deleted_at'),
+    'cms_users contains totp_secret' => $installTableContains('cms_users', 'totp_secret'),
+    'cms_users contains passkey_credentials' => $installTableContains('cms_users', 'passkey_credentials'),
+];
+$installSchemaIssues = [];
+foreach ($installSchemaChecks as $label => $present) {
+    if (!$present) {
+        $installSchemaIssues[] = $label;
+    }
+}
+if ($installSchemaIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($installSchemaIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
 $migrateProbe = fetchUrl($baseUrl . '/migrate.php', '', 0);
 echo "=== migrate_guard ===\n";
 if (!str_contains($migrateProbe['status'], '302')) {
