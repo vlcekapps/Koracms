@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.1] – 2026-03-29
 
 ### Přidáno
 - **Automatická XML sitemapa** – veřejná adresa `sitemap.xml` nově funguje jako čistá canonical URL pro sitemapu, ale obsah se dál generuje dynamicky přes `sitemap.php`; sitemapa teď zahrnuje i veřejné formuláře a lépe respektuje aktuální publikační stav statických stránek, galerií a dalších veřejných modulů
