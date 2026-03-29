@@ -3,122 +3,118 @@ require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/xml; charset=UTF-8');
 
-$pdo  = db_connect();
+$pdo = db_connect();
+
+/**
+ * @param string|null $value
+ */
+function sitemapLastmod(?string $value): string
+{
+    $normalized = trim((string)$value);
+    if ($normalized === '') {
+        return '';
+    }
+
+    $timestamp = strtotime($normalized);
+    if ($timestamp === false) {
+        return '';
+    }
+
+    return date('Y-m-d', $timestamp);
+}
+
+function sitemapWriteUrl(string $location, string $changefreq, string $priority, string $lastmod = ''): void
+{
+    echo "  <url>\n";
+    echo '    <loc>' . h($location) . "</loc>\n";
+    if ($lastmod !== '') {
+        echo '    <lastmod>' . h($lastmod) . "</lastmod>\n";
+    }
+    echo '    <changefreq>' . h($changefreq) . "</changefreq>\n";
+    echo '    <priority>' . h($priority) . "</priority>\n";
+    echo "  </url>\n";
+}
 
 echo '<?xml version="1.0" encoding="UTF-8"?>';
-?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc><?= h(siteUrl('/index.php')) ?></loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-
+?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <?php
-// Statické stránky
+sitemapWriteUrl(siteUrl('/'), 'daily', '1.0');
+
 try {
     $pages = $pdo->query(
-        "SELECT slug, updated_at FROM cms_pages WHERE is_published = 1 ORDER BY nav_order, title"
+        "SELECT slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+         FROM cms_pages
+         WHERE status = 'published' AND is_published = 1
+         ORDER BY nav_order, title"
     )->fetchAll();
-    foreach ($pages as $p):
-?>
-  <url>
-    <loc><?= h(pagePublicUrl($p)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime($p['updated_at'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); } ?>
+    foreach ($pages as $page) {
+        sitemapWriteUrl(pagePublicUrl($page), 'monthly', '0.8', sitemapLastmod((string)($page['sitemap_lastmod'] ?? '')));
+    }
+} catch (\PDOException $e) {
+    error_log('sitemap pages: ' . $e->getMessage());
+}
 
-<?php
 try {
     $authors = $pdo->query(
-        "SELECT author_slug AS slug, author_public_enabled, role,
+        "SELECT author_slug AS slug, role,
                 COALESCE(updated_at, created_at) AS sitemap_lastmod
          FROM cms_users
          WHERE author_public_enabled = 1 AND role != 'public'
          ORDER BY is_superadmin DESC, id ASC"
     )->fetchAll();
-    if ($authors !== []):
-?>
-  <url>
-    <loc><?= h(authorIndexUrl()) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
-        foreach ($authors as $author):
-?>
-  <url>
-    <loc><?= h(authorPublicUrl($author)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$author['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php
-        endforeach;
-    endif;
-} catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-?>
+    if ($authors !== []) {
+        sitemapWriteUrl(authorIndexUrl(), 'weekly', '0.6');
+        foreach ($authors as $author) {
+            sitemapWriteUrl(authorPublicUrl($author), 'monthly', '0.5', sitemapLastmod((string)($author['sitemap_lastmod'] ?? '')));
+        }
+    }
+} catch (\PDOException $e) {
+    error_log('sitemap authors: ' . $e->getMessage());
+}
 
-<?php if (isModuleEnabled('blog')): ?>
-<?php foreach (getAllBlogs() as $sitemapBlog): ?>
-  <url>
-    <loc><?= h(blogIndexUrl($sitemapBlog)) ?></loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-<?php endforeach; ?>
-<?php
+if (isModuleEnabled('blog')) {
+    foreach (getAllBlogs() as $sitemapBlog) {
+        sitemapWriteUrl(blogIndexUrl($sitemapBlog), 'daily', '0.8');
+    }
+
     try {
         $articles = $pdo->query(
-            "SELECT a.id, a.slug, a.updated_at, b.slug AS blog_slug FROM cms_articles a
+            "SELECT a.id, a.slug, a.updated_at, b.slug AS blog_slug
+             FROM cms_articles a
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
              WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
-             ORDER BY a.created_at DESC"
+             ORDER BY COALESCE(a.publish_at, a.created_at) DESC, a.id DESC"
         )->fetchAll();
-        foreach ($articles as $a):
-?>
-  <url>
-    <loc><?= h(articlePublicUrl($a)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime($a['updated_at'])) ?></lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($articles as $article) {
+            sitemapWriteUrl(articlePublicUrl($article), 'weekly', '0.7', sitemapLastmod((string)($article['updated_at'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap blog: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('news')): ?>
-  <url>
-    <loc><?= h(siteUrl('/news/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('news')) {
+    sitemapWriteUrl(siteUrl('/news/'), 'weekly', '0.6');
+
     try {
         $newsItems = $pdo->query(
-            "SELECT id, slug, updated_at
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_news
              WHERE status = 'published'
              ORDER BY created_at DESC"
         )->fetchAll();
-        foreach ($newsItems as $newsItem):
-?>
-  <url>
-    <loc><?= h(newsPublicUrl($newsItem)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$newsItem['updated_at'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($newsItems as $newsItem) {
+            sitemapWriteUrl(newsPublicUrl($newsItem), 'monthly', '0.5', sitemapLastmod((string)($newsItem['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap news: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('board')): ?>
-  <url>
-    <loc><?= h(siteUrl('/board/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('board')) {
+    sitemapWriteUrl(siteUrl('/board/'), 'weekly', '0.6');
+
     try {
         $documents = $pdo->query(
             "SELECT id, slug, COALESCE(created_at, CONCAT(posted_date, ' 00:00:00')) AS sitemap_lastmod
@@ -126,24 +122,17 @@ endif; ?>
              WHERE status = 'published' AND is_published = 1
              ORDER BY posted_date DESC, id DESC"
         )->fetchAll();
-        foreach ($documents as $document):
-?>
-  <url>
-    <loc><?= h(boardPublicUrl($document)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$document['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($documents as $document) {
+            sitemapWriteUrl(boardPublicUrl($document), 'monthly', '0.5', sitemapLastmod((string)($document['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap board: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('downloads')): ?>
-  <url>
-    <loc><?= h(siteUrl('/downloads/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('downloads')) {
+    sitemapWriteUrl(siteUrl('/downloads/'), 'weekly', '0.6');
+
     try {
         $downloads = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
@@ -151,54 +140,36 @@ endif; ?>
              WHERE status = 'published' AND is_published = 1
              ORDER BY created_at DESC, id DESC"
         )->fetchAll();
-        foreach ($downloads as $download):
-?>
-  <url>
-    <loc><?= h(downloadPublicUrl($download)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$download['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($downloads as $download) {
+            sitemapWriteUrl(downloadPublicUrl($download), 'monthly', '0.5', sitemapLastmod((string)($download['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap downloads: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('faq')): ?>
-  <url>
-    <loc><?= h(siteUrl('/faq/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('faq')) {
+    sitemapWriteUrl(siteUrl('/faq/'), 'weekly', '0.6');
+
     try {
         $faqs = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_faqs
-             WHERE COALESCE(status,'published') = 'published' AND is_published = 1
+             WHERE COALESCE(status, 'published') = 'published' AND is_published = 1
              ORDER BY created_at DESC, id DESC"
         )->fetchAll();
-        foreach ($faqs as $faq):
-?>
-  <url>
-    <loc><?= h(faqPublicUrl($faq)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$faq['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($faqs as $faq) {
+            sitemapWriteUrl(faqPublicUrl($faq), 'monthly', '0.5', sitemapLastmod((string)($faq['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap faq: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('food')): ?>
-  <url>
-    <loc><?= h(siteUrl('/food/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc><?= h(siteUrl('/food/archive.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php
+if (isModuleEnabled('food')) {
+    sitemapWriteUrl(siteUrl('/food/'), 'weekly', '0.6');
+    sitemapWriteUrl(siteUrl('/food/archive.php'), 'weekly', '0.5');
+
     try {
         $foodCards = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at, valid_from) AS sitemap_lastmod
@@ -206,24 +177,17 @@ endif; ?>
              WHERE status = 'published' AND is_published = 1
              ORDER BY COALESCE(valid_from, created_at) DESC, id DESC"
         )->fetchAll();
-        foreach ($foodCards as $foodCard):
-?>
-  <url>
-    <loc><?= h(foodCardPublicUrl($foodCard)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$foodCard['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($foodCards as $foodCard) {
+            sitemapWriteUrl(foodCardPublicUrl($foodCard), 'monthly', '0.5', sitemapLastmod((string)($foodCard['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap food: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('reservations')): ?>
-  <url>
-    <loc><?= h(siteUrl('/reservations/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('reservations')) {
+    sitemapWriteUrl(siteUrl('/reservations/'), 'weekly', '0.6');
+
     try {
         $reservationResources = $pdo->query(
             "SELECT id, slug
@@ -231,23 +195,17 @@ endif; ?>
              WHERE is_active = 1
              ORDER BY name"
         )->fetchAll();
-        foreach ($reservationResources as $reservationResource):
-?>
-  <url>
-    <loc><?= h(reservationResourcePublicUrl($reservationResource)) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($reservationResources as $reservationResource) {
+            sitemapWriteUrl(reservationResourcePublicUrl($reservationResource), 'weekly', '0.5');
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap reservations: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('events')): ?>
-  <url>
-    <loc><?= h(siteUrl('/events/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('events')) {
+    sitemapWriteUrl(siteUrl('/events/'), 'weekly', '0.6');
+
     try {
         $events = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at, event_date) AS sitemap_lastmod
@@ -255,39 +213,29 @@ endif; ?>
              WHERE status = 'published' AND is_published = 1
              ORDER BY event_date DESC"
         )->fetchAll();
-        foreach ($events as $event):
-?>
-  <url>
-    <loc><?= h(eventPublicUrl($event)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$event['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($events as $event) {
+            sitemapWriteUrl(eventPublicUrl($event), 'monthly', '0.5', sitemapLastmod((string)($event['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap events: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('podcast')): ?>
-  <url>
-    <loc><?= h(siteUrl('/podcast/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('podcast')) {
+    sitemapWriteUrl(siteUrl('/podcast/'), 'weekly', '0.6');
+
     try {
         $podcastShows = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_podcast_shows
              ORDER BY updated_at DESC, title ASC"
         )->fetchAll();
-        foreach ($podcastShows as $podcastShow):
-?>
-  <url>
-    <loc><?= h(podcastShowPublicUrl($podcastShow)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$podcastShow['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
+        foreach ($podcastShows as $podcastShow) {
+            sitemapWriteUrl(podcastShowPublicUrl($podcastShow), 'weekly', '0.5', sitemapLastmod((string)($podcastShow['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap podcast shows: ' . $e->getMessage());
+    }
 
     try {
         $podcastEpisodes = $pdo->query(
@@ -298,64 +246,51 @@ endif; ?>
              WHERE p.status = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())
              ORDER BY COALESCE(p.publish_at, p.created_at) DESC, p.id DESC"
         )->fetchAll();
-        foreach ($podcastEpisodes as $podcastEpisode):
-?>
-  <url>
-    <loc><?= h(podcastEpisodePublicUrl($podcastEpisode)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$podcastEpisode['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($podcastEpisodes as $podcastEpisode) {
+            sitemapWriteUrl(podcastEpisodePublicUrl($podcastEpisode), 'monthly', '0.5', sitemapLastmod((string)($podcastEpisode['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap podcast episodes: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('gallery')): ?>
-  <url>
-    <loc><?= h(siteUrl('/gallery/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('gallery')) {
+    sitemapWriteUrl(siteUrl('/gallery/'), 'weekly', '0.6');
+
     try {
         $galleryAlbums = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_gallery_albums
+             WHERE COALESCE(status, 'published') = 'published'
+               AND COALESCE(is_published, 1) = 1
              ORDER BY updated_at DESC, id DESC"
         )->fetchAll();
-        foreach ($galleryAlbums as $galleryAlbum):
-?>
-  <url>
-    <loc><?= h(galleryAlbumPublicUrl($galleryAlbum)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$galleryAlbum['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
+        foreach ($galleryAlbums as $galleryAlbum) {
+            sitemapWriteUrl(galleryAlbumPublicUrl($galleryAlbum), 'monthly', '0.5', sitemapLastmod((string)($galleryAlbum['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap gallery albums: ' . $e->getMessage());
+    }
 
     try {
         $galleryPhotos = $pdo->query(
             "SELECT id, slug, created_at AS sitemap_lastmod
              FROM cms_gallery_photos
+             WHERE COALESCE(status, 'published') = 'published'
+               AND COALESCE(is_published, 1) = 1
              ORDER BY created_at DESC, id DESC"
         )->fetchAll();
-        foreach ($galleryPhotos as $galleryPhoto):
-?>
-  <url>
-    <loc><?= h(galleryPhotoPublicUrl($galleryPhoto)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$galleryPhoto['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($galleryPhotos as $galleryPhoto) {
+            sitemapWriteUrl(galleryPhotoPublicUrl($galleryPhoto), 'monthly', '0.4', sitemapLastmod((string)($galleryPhoto['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap gallery photos: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('places')): ?>
-  <url>
-    <loc><?= h(siteUrl('/places/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('places')) {
+    sitemapWriteUrl(siteUrl('/places/'), 'weekly', '0.6');
+
     try {
         $places = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
@@ -363,24 +298,17 @@ endif; ?>
              WHERE status = 'published' AND is_published = 1
              ORDER BY name ASC"
         )->fetchAll();
-        foreach ($places as $place):
-?>
-  <url>
-    <loc><?= h(placePublicUrl($place)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$place['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($places as $place) {
+            sitemapWriteUrl(placePublicUrl($place), 'monthly', '0.5', sitemapLastmod((string)($place['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap places: ' . $e->getMessage());
+    }
+}
 
-<?php if (isModuleEnabled('polls')): ?>
-  <url>
-    <loc><?= h(siteUrl('/polls/index.php')) ?></loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-<?php
+if (isModuleEnabled('polls')) {
+    sitemapWriteUrl(siteUrl('/polls/'), 'weekly', '0.6');
+
     try {
         $polls = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
@@ -392,15 +320,28 @@ endif; ?>
                   )
              ORDER BY COALESCE(start_date, created_at) DESC, id DESC"
         )->fetchAll();
-        foreach ($polls as $poll):
-?>
-  <url>
-    <loc><?= h(pollPublicUrl($poll)) ?></loc>
-    <lastmod><?= date('Y-m-d', strtotime((string)$poll['sitemap_lastmod'])) ?></lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-<?php endforeach; } catch (\PDOException $e) { error_log('sitemap: ' . $e->getMessage()); }
-endif; ?>
+        foreach ($polls as $poll) {
+            sitemapWriteUrl(pollPublicUrl($poll), 'monthly', '0.5', sitemapLastmod((string)($poll['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap polls: ' . $e->getMessage());
+    }
+}
 
+if (isModuleEnabled('forms')) {
+    try {
+        $forms = $pdo->query(
+            "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
+             FROM cms_forms
+             WHERE is_active = 1
+             ORDER BY updated_at DESC, id DESC"
+        )->fetchAll();
+        foreach ($forms as $form) {
+            sitemapWriteUrl(formPublicUrl($form), 'monthly', '0.5', sitemapLastmod((string)($form['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        error_log('sitemap forms: ' . $e->getMessage());
+    }
+}
+?>
 </urlset>

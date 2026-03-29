@@ -227,6 +227,20 @@ To je praktické hlavně pro samostatné odběry jednotlivých tematických blog
 
 ---
 
+## XML sitemap
+
+Kora CMS nově udržuje automaticky generovanou sitemapu bez nutnosti ručně vytvářet statický soubor.
+
+- veřejná adresa pro vyhledávače je `sitemap.xml`
+- interně se obsah dál generuje dynamicky přes `sitemap.php`
+- sitemapa zahrnuje domovskou stránku, statické stránky, blogy a články, novinky, události, vývěsku, ke stažení, FAQ, podcasty, galerii, místa, ankety, rezervační zdroje, veřejné autory i veřejné formuláře
+- blogy zůstávají rozdělené i na úrovni samostatných RSS feedů, ale sitemapa pořád pokrývá celý veřejný web jako jeden celek
+- galerie a další moduly se do sitemapy propisují jen z publikovaného veřejného obsahu
+
+To je vhodné pro běžné nasazení na veřejný web, protože není potřeba řešit ruční generování ani synchronizaci `sitemap.xml` po každé změně obsahu.
+
+---
+
 ## Podcast artwork
 
 Každý podcastový pořad může mít vlastní volitelný cover obrázek a každá epizoda může mít i svůj samostatný artwork.

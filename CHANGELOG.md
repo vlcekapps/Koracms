@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Automatická XML sitemapa** – veřejná adresa `sitemap.xml` nově funguje jako čistá canonical URL pro sitemapu, ale obsah se dál generuje dynamicky přes `sitemap.php`; sitemapa teď zahrnuje i veřejné formuláře a lépe respektuje aktuální publikační stav statických stránek, galerií a dalších veřejných modulů
 - **Blogy – globální i samostatné RSS feedy** – globální `feed.php` zůstává pro celý web a každý blog v multiblog režimu má nově i vlastní feed přes `feed.php?blog=slug`; blogový feed používá vlastní název, popis a self odkaz a nepromíchává do sebe novinky z celého webu
 - **Podcasty – feed metadata a limity pořadů** – každý podcastový pořad nově umí nastavit počet epizod v RSS feedu, krátký podtitul pro katalogy, vlastníka feedu a jeho e-mail, explicit režim, typ pořadu `episodic / serial` a příznak `complete`; epizody nově podporují podtitul, číslo série, typ `full / trailer / bonus`, vlastní explicit režim a možnost skrýt konkrétní epizodu z RSS feedu
 - **Podcasty – artwork pořadů i epizod** – každý podcastový pořad může mít nově vlastní volitelný cover a každá epizoda i svůj samostatný obrázek; cover pořadu i epizody používají čtvercový `JPG` nebo `PNG` v rozmezí `1024×1024` až `3000×3000 px`, veřejný detail epizody umí fallback na cover pořadu a RSS feed nově publikuje i `<itunes:image>` pro jednotlivé epizody

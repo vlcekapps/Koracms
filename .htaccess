@@ -33,6 +33,10 @@ Options -Indexes
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^sitemap\.xml$ sitemap.php [L,QSA,NC]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^authors/?$ authors/index.php [L,QSA,NC]
     RewriteRule ^author/([a-z0-9\-]+)/?$ author.php?slug=$1 [L,QSA,NC]
     RewriteRule ^blog/([a-z0-9\-]+)/?$ blog/article.php?slug=$1 [L,QSA,NC]

@@ -1074,6 +1074,8 @@ if (isModuleEnabled('forms')) {
 
 $pages = [
     ['label' => 'home', 'url' => $baseUrl . '/'],
+    ['label' => 'sitemap_php', 'url' => $baseUrl . '/sitemap.php'],
+    ['label' => 'sitemap_xml', 'url' => $baseUrl . '/sitemap.xml'],
     ['label' => 'search', 'url' => $baseUrl . '/search.php?q=test'],
     ['label' => 'public_login', 'url' => $baseUrl . '/public_login.php'],
     ['label' => 'register', 'url' => $baseUrl . '/register.php'],
@@ -1767,8 +1769,11 @@ foreach ($pages as $page) {
     if (!str_contains($result['status'], '200')) {
         $issues[] = 'unexpected status: ' . $result['status'];
     }
-    $issues = array_merge($issues, analyzeHtml($result['body']));
-    $issues = array_merge($issues, analyzeUxHeuristics($result['body'], $page['label']));
+    $isXmlPage = in_array($page['label'], ['sitemap_php', 'sitemap_xml'], true);
+    if (!$isXmlPage) {
+        $issues = array_merge($issues, analyzeHtml($result['body']));
+        $issues = array_merge($issues, analyzeUxHeuristics($result['body'], $page['label']));
+    }
 
     if ($page['label'] === 'public_login') {
         $issues = array_merge($issues, analyzeHeaders($result['headers']));
@@ -3635,6 +3640,31 @@ foreach ($pages as $page) {
         }
         if (!empty($articleRow['blog_slug']) && !str_contains($result['body'], '?blog=' . rawurlencode((string)$articleRow['blog_slug']))) {
             $issues[] = 'blog-specific feed is missing its self link query parameter';
+        }
+    }
+
+    if ($page['label'] === 'sitemap_php' || $page['label'] === 'sitemap_xml') {
+        $contentTypeOk = false;
+        foreach ($result['headers'] as $headerLine) {
+            if (stripos($headerLine, 'Content-Type: application/xml') === 0) {
+                $contentTypeOk = true;
+                break;
+            }
+        }
+        if (!$contentTypeOk) {
+            $issues[] = 'sitemap response is missing application/xml content type';
+        }
+        foreach ([
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+            '<loc>' . h($baseUrl . '/') . '</loc>',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'sitemap is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($runtimeAuditFormPath !== '' && !str_contains($result['body'], h($runtimeAuditFormPath))) {
+            $issues[] = 'sitemap is missing active public form URL';
         }
     }
 
