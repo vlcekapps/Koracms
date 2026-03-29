@@ -4,6 +4,13 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [3.0.0-rc.4] – 2026-03-29
+
+### Opraveno
+- **Stažení fotek z eStránek na hostingu** – dávkový downloader nově umí bezpečně uložit stav i na hostingu, kde není zapisovatelný privátní storage mimo webroot; pokud primární batch úložiště selže, použije fallback v `uploads/tmp/estranky_photos/`
+- **eStránky downloader** – batch metadata nově drží jen lehký stav dávky a informaci o použitém storage backendu, takže se po pádu nebo nedokončeném běhu umí bezpečně vyčistit a znovu spustit
+- **Runtime audit** – `estranky_photo_guardrails` nově hlídá i fallback storage pro batch soubory
+
 ## [3.0.0-rc.3] – 2026-03-29
 
 ### Opraveno

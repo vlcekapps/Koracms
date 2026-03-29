@@ -5960,8 +5960,11 @@ if ($blogAdminIssues === []) {
 echo "=== estranky_photo_guardrails ===\n";
 $estrankyPhotoIssues = [];
 $estrankyPhotoSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
-if (!str_contains($estrankyPhotoSource, "'batch_id' => \$batchId")) {
+if (!str_contains($estrankyPhotoSource, "'batch_id' => \$batchInfo['id']")) {
     $estrankyPhotoIssues[] = 'eStránky photo downloader no longer stores lightweight batch state';
+}
+if (!str_contains($estrankyPhotoSource, "'batch_storage' => \$batchInfo['storage']")) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader no longer tracks batch storage backend';
 }
 if (str_contains($estrankyPhotoSource, "'photos' => \$photoList")) {
     $estrankyPhotoIssues[] = 'eStránky photo downloader stores full photo list in session again';
@@ -5971,6 +5974,9 @@ if (!str_contains($estrankyPhotoSource, 'function estrankyFetchRemotePhoto')) {
 }
 if (!str_contains($estrankyPhotoSource, 'function_exists(\'curl_init\')')) {
     $estrankyPhotoIssues[] = 'eStránky photo downloader is missing cURL fallback for stricter hosting';
+}
+if (!str_contains($estrankyPhotoSource, 'function estrankyFallbackPhotoBatchDirectory')) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader is missing uploads/tmp fallback for batch storage';
 }
 
 if ($estrankyPhotoIssues === []) {

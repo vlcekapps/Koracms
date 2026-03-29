@@ -6,35 +6,59 @@
 require_once __DIR__ . '/layout.php';
 requireCapability('import_export_manage', 'Přístup odepřen.');
 
-function estrankyPhotoBatchDirectory(): string
+function estrankyPrivatePhotoBatchDirectory(): string
 {
     return rtrim(koraStoragePath('imports/estranky_photos'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 }
 
-function estrankyEnsurePhotoBatchDirectory(): bool
+function estrankyFallbackPhotoBatchDirectory(): string
 {
-    return koraEnsureDirectory(estrankyPhotoBatchDirectory());
+    return dirname(__DIR__) . '/uploads/tmp/estranky_photos/';
 }
 
-function estrankyCreatePhotoBatch(array $photoList): ?string
+function estrankyPhotoBatchDirectory(string $storageKey): string
 {
-    if (!estrankyEnsurePhotoBatchDirectory()) {
+    if ($storageKey === 'private') {
+        return estrankyPrivatePhotoBatchDirectory();
+    }
+
+    return estrankyFallbackPhotoBatchDirectory();
+}
+
+function estrankyResolvePhotoBatchStorage(): ?string
+{
+    if (koraEnsureDirectory(estrankyPrivatePhotoBatchDirectory())) {
+        return 'private';
+    }
+    if (koraEnsureDirectory(estrankyFallbackPhotoBatchDirectory())) {
+        return 'fallback';
+    }
+
+    return null;
+}
+
+function estrankyCreatePhotoBatch(array $photoList): ?array
+{
+    $storageKey = estrankyResolvePhotoBatchStorage();
+    if ($storageKey === null) {
         return null;
     }
 
     $batchId = 'estranky_' . bin2hex(random_bytes(16));
-    $batchPath = estrankyPhotoBatchDirectory() . $batchId . '.json';
+    $batchPath = estrankyPhotoBatchDirectory($storageKey) . $batchId . '.json';
     $encoded = json_encode($photoList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($encoded === false) {
         return null;
     }
 
-    return file_put_contents($batchPath, $encoded) !== false ? $batchId : null;
+    return file_put_contents($batchPath, $encoded) !== false
+        ? ['id' => $batchId, 'storage' => $storageKey]
+        : null;
 }
 
-function estrankyLoadPhotoBatch(string $batchId): array
+function estrankyLoadPhotoBatch(string $batchId, string $storageKey): array
 {
-    $batchPath = estrankyPhotoBatchDirectory() . basename($batchId) . '.json';
+    $batchPath = estrankyPhotoBatchDirectory($storageKey) . basename($batchId) . '.json';
     if (!is_file($batchPath)) {
         return [];
     }
@@ -43,13 +67,13 @@ function estrankyLoadPhotoBatch(string $batchId): array
     return is_array($decoded) ? $decoded : [];
 }
 
-function estrankyDeletePhotoBatch(?string $batchId): void
+function estrankyDeletePhotoBatch(?string $batchId, ?string $storageKey): void
 {
-    if ($batchId === null || $batchId === '') {
+    if ($batchId === null || $batchId === '' || $storageKey === null || $storageKey === '') {
         return;
     }
 
-    $batchPath = estrankyPhotoBatchDirectory() . basename($batchId) . '.json';
+    $batchPath = estrankyPhotoBatchDirectory($storageKey) . basename($batchId) . '.json';
     if (is_file($batchPath) && !@unlink($batchPath)) {
         error_log('estranky photo batch cleanup failed: ' . $batchPath);
     }
@@ -148,15 +172,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     }
 
     // Uložit do session pro dávkové zpracování
-    $batchId = estrankyCreatePhotoBatch($photoList);
-    if ($batchId === null) {
+    $batchInfo = estrankyCreatePhotoBatch($photoList);
+    if ($batchInfo === null) {
         $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se připravit dávkové stahování fotografií.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
 
     $_SESSION['photo_dl'] = [
-        'batch_id' => $batchId,
+        'batch_id' => $batchInfo['id'],
+        'batch_storage' => $batchInfo['storage'],
         'site_url' => $siteUrl,
         'parent_album_id' => $parentAlbumId,
         'offset' => 0,
@@ -177,7 +202,8 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
     $dl = $_SESSION['photo_dl'];
     $siteUrl = $dl['site_url'];
     $offset = $dl['offset'];
-    $allPhotos = estrankyLoadPhotoBatch((string)($dl['batch_id'] ?? ''));
+    $batchStorage = (string)($dl['batch_storage'] ?? '');
+    $allPhotos = estrankyLoadPhotoBatch((string)($dl['batch_id'] ?? ''), $batchStorage);
 
     if ($allPhotos === []) {
         unset($_SESSION['photo_dl']);
@@ -197,7 +223,7 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
         session_start();
         $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se vytvořit cílové adresáře galerie.'];
         unset($_SESSION['photo_dl']);
-        estrankyDeletePhotoBatch((string)($dl['batch_id'] ?? ''));
+        estrankyDeletePhotoBatch((string)($dl['batch_id'] ?? ''), $batchStorage);
         header('Location: estranky_download_photos.php');
         exit;
     }
@@ -302,7 +328,7 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
 
     $_SESSION['import_log'] = $resultLog;
     unset($_SESSION['photo_dl']);
-    estrankyDeletePhotoBatch((string)($dl['batch_id'] ?? ''));
+    estrankyDeletePhotoBatch((string)($dl['batch_id'] ?? ''), $batchStorage);
     header('Location: estranky_download_photos.php');
     exit;
 }
@@ -311,9 +337,11 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
 $isDownloading = false;
 if (isset($_SESSION['photo_dl'])) {
     $currentBatchId = (string)($_SESSION['photo_dl']['batch_id'] ?? '');
-    if ($currentBatchId !== '' && estrankyLoadPhotoBatch($currentBatchId) !== []) {
+    $currentBatchStorage = (string)($_SESSION['photo_dl']['batch_storage'] ?? '');
+    if ($currentBatchId !== '' && $currentBatchStorage !== '' && estrankyLoadPhotoBatch($currentBatchId, $currentBatchStorage) !== []) {
         $isDownloading = true;
     } else {
+        estrankyDeletePhotoBatch($currentBatchId, $currentBatchStorage);
         unset($_SESSION['photo_dl']);
         if ($log === null) {
             $log = ['<span aria-hidden="true">⚠</span> Předchozí dávka fotografií nebyla dokončena a byla vyčištěna. Nahrajte prosím XML znovu.'];
