@@ -39,9 +39,12 @@ $formError = match ($err) {
     'slug' => 'Slug pořadu musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už používá jiný pořad.',
     'url' => 'Web pořadu musí mít platný formát.',
-    'cover' => 'Cover obrázek se nepodařilo uložit.',
+    'cover' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     default => '',
 };
+$coverHelpIds = (string)$show['cover_url'] !== ''
+    ? 'podcast-show-cover-current podcast-show-cover-help'
+    : 'podcast-show-cover-help';
 
 adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 ?>
@@ -54,7 +57,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   Vyplňte základní údaje o podcastu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
-<p><a href="podcast_shows.php"><span aria-hidden="true">←</span> Zpět na přehled podcastů</a></p>
+<p><a href="podcast_shows.php"><span aria-hidden="true">&larr;</span> Zpět na přehled podcastů</a></p>
 
 <form method="post" action="podcast_show_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -121,11 +124,9 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       </div>
       <small id="podcast-show-cover-current" class="field-help">Aktuální titulní obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
-    <input type="file" id="cover_image" name="cover_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
-           aria-describedby="<?= (string)$show['cover_url'] !== '' ? 'podcast-show-cover-current' : 'podcast-show-cover-help' ?>">
-    <?php if ((string)$show['cover_url'] === ''): ?>
-      <small id="podcast-show-cover-help" class="field-help">Volitelné. Hodí se pro titulní obrázek pořadu.</small>
-    <?php endif; ?>
+    <input type="file" id="cover_image" name="cover_image" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+           aria-describedby="<?= h($coverHelpIds) ?>">
+    <small id="podcast-show-cover-help" class="field-help">Volitelné, ale doporučené. Pro podcastové aplikace a Apple Podcasts nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.</small>
     <?php if ((string)$show['cover_image'] !== ''): ?>
       <label for="cover_image_delete" style="font-weight:normal;margin-top:.5rem">
         <input type="checkbox" id="cover_image_delete" name="cover_image_delete" value="1">
@@ -143,7 +144,6 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <?php endif; ?>
   </div>
 </form>
-
 
 <script nonce="<?= cspNonce() ?>">
 (function () {

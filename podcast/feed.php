@@ -23,7 +23,7 @@ if (!$show) {
 $show = hydratePodcastShowPresentation($show);
 
 $episodesStmt = $pdo->prepare(
-    "SELECT p.*, s.slug AS show_slug, s.title AS show_title
+    "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
      FROM cms_podcasts p
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
      WHERE p.show_id = ?
@@ -99,6 +99,11 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     $pubDate = date(DATE_RSS, strtotime($pubDateSource));
     $itemLink = (string)$episode['public_url'];
     $description = podcastEpisodeExcerpt($episode, 400);
+    $episodeImageUrl = (string)(
+        !empty($episode['image_file'])
+            ? siteUrl('/uploads/podcasts/images/' . rawurlencode((string)$episode['image_file']))
+            : $coverUrl
+    );
 ?>
     <item>
       <title><?= htmlspecialchars((string)$episode['title'], ENT_XML1, 'UTF-8') ?></title>
@@ -113,6 +118,9 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
       <enclosure url="<?= htmlspecialchars($audioSrc, ENT_XML1, 'UTF-8') ?>"
                  type="<?= htmlspecialchars($audioType, ENT_XML1, 'UTF-8') ?>"
                  length="0"/>
+<?php endif; ?>
+<?php if ($episodeImageUrl !== ''): ?>
+      <itunes:image href="<?= htmlspecialchars($episodeImageUrl, ENT_XML1, 'UTF-8') ?>"/>
 <?php endif; ?>
 <?php if (!empty($episode['duration'])): ?>
       <itunes:duration><?= htmlspecialchars((string)$episode['duration'], ENT_XML1, 'UTF-8') ?></itunes:duration>

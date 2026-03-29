@@ -1,3 +1,9 @@
+<?php
+$episodeHeroImageUrl = (string)($episode['display_image_url'] ?? '');
+$episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
+    ? (string)$episode['title']
+    : (string)$show['title'];
+?>
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="podcast-episode-title">
     <nav aria-label="Drobečková navigace">
@@ -9,9 +15,9 @@
     </nav>
 
     <div class="podcast-hero">
-      <?php if (!empty($show['cover_url'])): ?>
+      <?php if ($episodeHeroImageUrl !== ''): ?>
         <div class="podcast-cover podcast-cover--large">
-          <img src="<?= h((string)$show['cover_url']) ?>" alt="<?= h((string)$show['title']) ?>" loading="lazy">
+          <img src="<?= h($episodeHeroImageUrl) ?>" alt="<?= h($episodeHeroAlt) ?>" loading="lazy">
         </div>
       <?php endif; ?>
 
@@ -41,7 +47,7 @@
         <?php endif; ?>
 
         <div class="button-row button-row--start">
-          <a class="button-secondary" href="<?= h((string)$show['public_path']) ?>"><span aria-hidden="true">←</span> Zpět na pořad</a>
+          <a class="button-secondary" href="<?= h((string)$show['public_path']) ?>"><span aria-hidden="true">&larr;</span> Zpět na pořad</a>
           <a class="button-secondary" href="<?= h($feedUrl) ?>">RSS feed</a>
           <?php if (!empty($show['website_url'])): ?>
             <a class="button-secondary" href="<?= h((string)$show['website_url']) ?>" target="_blank" rel="noopener noreferrer">Web pořadu</a>

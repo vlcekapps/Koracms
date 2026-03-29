@@ -1,7 +1,7 @@
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="podcast-show-title">
     <div class="button-row button-row--start">
-      <a class="button-secondary" href="<?= BASE_URL ?>/podcast/index.php"><span aria-hidden="true">←</span> Všechny podcasty</a>
+      <a class="button-secondary" href="<?= BASE_URL ?>/podcast/index.php"><span aria-hidden="true">&larr;</span> Všechny podcasty</a>
     </div>
 
     <div class="podcast-hero">
@@ -50,33 +50,41 @@
     <?php else: ?>
       <div class="episode-list">
         <?php foreach ($episodes as $episode): ?>
-          <article class="episode-card">
-            <header class="episode-card__header">
-              <?php if (!empty($episode['episode_num'])): ?>
-                <p class="section-kicker">Epizoda <?= (int)$episode['episode_num'] ?></p>
-              <?php endif; ?>
-              <h3 class="card__title">
-                <a href="<?= h((string)$episode['public_path']) ?>"><?= h((string)$episode['title']) ?></a>
-              </h3>
-              <p class="meta-row meta-row--tight">
-                <?php if ((string)$episode['display_date'] !== ''): ?>
-                  <time datetime="<?= h(str_replace(' ', 'T', (string)$episode['display_date'])) ?>">
-                    <?= h(formatCzechDate((string)$episode['display_date'])) ?>
-                  </time>
-                <?php endif; ?>
-                <?php if ((string)$episode['duration'] !== ''): ?>
-                  <span><?= h((string)$episode['duration']) ?></span>
-                <?php endif; ?>
-              </p>
-            </header>
-
-            <?php if ((string)$episode['excerpt'] !== ''): ?>
-              <p class="card__description"><?= h((string)$episode['excerpt']) ?></p>
+          <article class="episode-card<?= (string)($episode['image_url'] ?? '') !== '' ? ' episode-card--with-image' : '' ?>">
+            <?php if ((string)($episode['image_url'] ?? '') !== ''): ?>
+              <a class="episode-card__media podcast-cover" href="<?= h((string)$episode['public_path']) ?>">
+                <img src="<?= h((string)$episode['image_url']) ?>" alt="<?= h((string)$episode['title']) ?>" loading="lazy">
+              </a>
             <?php endif; ?>
 
-            <footer class="episode-card__footer">
-              <a class="section-link" href="<?= h((string)$episode['public_path']) ?>">Zobrazit epizodu <span aria-hidden="true">→</span></a>
-            </footer>
+            <div class="episode-card__body">
+              <header class="episode-card__header">
+                <?php if (!empty($episode['episode_num'])): ?>
+                  <p class="section-kicker">Epizoda <?= (int)$episode['episode_num'] ?></p>
+                <?php endif; ?>
+                <h3 class="card__title">
+                  <a href="<?= h((string)$episode['public_path']) ?>"><?= h((string)$episode['title']) ?></a>
+                </h3>
+                <p class="meta-row meta-row--tight">
+                  <?php if ((string)$episode['display_date'] !== ''): ?>
+                    <time datetime="<?= h(str_replace(' ', 'T', (string)$episode['display_date'])) ?>">
+                      <?= h(formatCzechDate((string)$episode['display_date'])) ?>
+                    </time>
+                  <?php endif; ?>
+                  <?php if ((string)$episode['duration'] !== ''): ?>
+                    <span><?= h((string)$episode['duration']) ?></span>
+                  <?php endif; ?>
+                </p>
+              </header>
+
+              <?php if ((string)$episode['excerpt'] !== ''): ?>
+                <p class="card__description"><?= h((string)$episode['excerpt']) ?></p>
+              <?php endif; ?>
+
+              <footer class="episode-card__footer">
+                <a class="section-link" href="<?= h((string)$episode['public_path']) ?>">Zobrazit epizodu <span aria-hidden="true">&rarr;</span></a>
+              </footer>
+            </div>
           </article>
         <?php endforeach; ?>
       </div>

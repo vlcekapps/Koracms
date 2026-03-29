@@ -15,6 +15,7 @@ $episode = [
     'slug' => '',
     'description' => '',
     'audio_file' => '',
+    'image_file' => '',
     'audio_url' => '',
     'duration' => '',
     'episode_num' => null,
@@ -25,7 +26,7 @@ $episode = [
 
 if ($id !== null) {
     $stmt = $pdo->prepare(
-        "SELECT p.*, s.slug AS show_slug, s.title AS show_title
+        "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
          FROM cms_podcasts p
          INNER JOIN cms_podcast_shows s ON s.id = p.show_id
          WHERE p.id = ?"
@@ -58,6 +59,7 @@ $show = hydratePodcastShowPresentation($show);
 $episode['show_id'] = (int)$show['id'];
 $episode['show_slug'] = (string)$show['slug'];
 $episode['show_title'] = (string)$show['title'];
+$episode['show_cover_image'] = (string)($show['cover_image'] ?? '');
 $episode = hydratePodcastEpisodePresentation($episode);
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
@@ -69,8 +71,12 @@ $formError = match ($err) {
     'slug_taken' => 'Tento slug už v rámci pořadu používá jiná epizoda.',
     'url' => 'Externí audio odkaz musí mít platný formát.',
     'audio' => 'Audio soubor se nepodařilo uložit.',
+    'image' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     default => '',
 };
+$imageHelpIds = (string)$episode['image_url'] !== ''
+    ? 'podcast-episode-image-current podcast-episode-image-help'
+    : 'podcast-episode-image-help';
 
 adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu');
 ?>
@@ -79,7 +85,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">←</span> Zpět na epizody podcastu</a></p>
+<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">&larr;</span> Zpět na epizody podcastu</a></p>
 
 <p style="margin-top:0;font-size:.9rem">
   Vyplňte základní údaje o epizodě. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
@@ -149,6 +155,23 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
            value="<?= h((string)$episode['audio_url']) ?>">
     <small id="podcast-episode-audio-url-help" class="field-help">Hodí se pro externí hosting nebo přímý odkaz na audio soubor.</small>
 
+    <label for="image_file">Obrázek epizody</label>
+    <?php if ((string)$episode['image_url'] !== ''): ?>
+      <div style="margin:.75rem 0">
+        <img src="<?= h((string)$episode['image_url']) ?>" alt="Náhled obrázku epizody" style="display:block;max-width:18rem;width:100%;border-radius:1rem;border:1px solid #d6d6d6">
+      </div>
+      <small id="podcast-episode-image-current" class="field-help">Aktuální obrázek epizody je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
+    <?php endif; ?>
+    <input type="file" id="image_file" name="image_file" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+           aria-describedby="<?= h($imageHelpIds) ?>">
+    <small id="podcast-episode-image-help" class="field-help">Volitelné. Pokud chcete pro epizodu vlastní artwork, nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.</small>
+    <?php if ((string)$episode['image_file'] !== ''): ?>
+      <label for="image_file_delete" style="font-weight:normal;margin-top:.5rem">
+        <input type="checkbox" id="image_file_delete" name="image_file_delete" value="1">
+        Odebrat stávající obrázek epizody
+      </label>
+    <?php endif; ?>
+
     <label for="description">Popis epizody</label>
     <?php if ($useWysiwyg): ?>
       <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
@@ -169,7 +192,6 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php endif; ?>
   </div>
 </form>
-
 
 <script nonce="<?= cspNonce() ?>">
 (function () {

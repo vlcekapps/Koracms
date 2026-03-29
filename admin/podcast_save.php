@@ -13,6 +13,7 @@ $audioUrlInput = trim((string)($_POST['audio_url'] ?? ''));
 $duration = trim((string)($_POST['duration'] ?? ''));
 $episodeNum = !empty($_POST['episode_num']) ? max(1, (int)$_POST['episode_num']) : null;
 $deleteAudioFile = isset($_POST['audio_file_delete']);
+$deleteImageFile = isset($_POST['image_file_delete']);
 
 if ($showId === null && $id !== null) {
     $showLookup = $pdo->prepare("SELECT show_id FROM cms_podcasts WHERE id = ?");
@@ -48,9 +49,10 @@ if (!$showStmt->fetchColumn()) {
 
 $existing = [
     'audio_file' => '',
+    'image_file' => '',
 ];
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT audio_file FROM cms_podcasts WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT audio_file, image_file FROM cms_podcasts WHERE id = ?");
     $existingStmt->execute([$id]);
     $existingRow = $existingStmt->fetch();
     if (!$existingRow) {
@@ -87,6 +89,18 @@ if ($deleteAudioFile && empty($_FILES['audio_file']['name']) && $audioFilename !
     $audioFilename = '';
 }
 
+$imageFilename = (string)$existing['image_file'];
+$imageUpload = uploadPodcastEpisodeImage($_FILES['image_file'] ?? [], $imageFilename);
+if ($imageUpload['error'] !== '') {
+    $redirectWithError('image');
+}
+$imageFilename = $imageUpload['filename'];
+
+if ($deleteImageFile && empty($_FILES['image_file']['name']) && $imageFilename !== '') {
+    deletePodcastEpisodeImageFile($imageFilename);
+    $imageFilename = '';
+}
+
 if (!empty($_FILES['audio_file']['name'])) {
     $audioUrl = '';
 }
@@ -102,7 +116,7 @@ if (!empty($_POST['publish_at'])) {
 if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_podcasts
-         SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, audio_url = ?,
+         SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, image_file = ?, audio_url = ?,
              duration = ?, episode_num = ?, publish_at = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([
@@ -111,6 +125,7 @@ if ($id !== null) {
         $uniqueSlug,
         $description,
         $audioFilename,
+        $imageFilename,
         $audioUrl,
         $duration,
         $episodeNum,
@@ -122,14 +137,15 @@ if ($id !== null) {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $pdo->prepare(
         "INSERT INTO cms_podcasts
-         (show_id, title, slug, description, audio_file, audio_url, duration, episode_num, publish_at, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?)"
+         (show_id, title, slug, description, audio_file, image_file, audio_url, duration, episode_num, publish_at, status)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $showId,
         $title,
         $uniqueSlug,
         $description,
         $audioFilename,
+        $imageFilename,
         $audioUrl,
         $duration,
         $episodeNum,

@@ -248,6 +248,7 @@ $tables = [
         slug        VARCHAR(255) NOT NULL,
         description TEXT,
         audio_file  VARCHAR(255) NOT NULL DEFAULT '',
+        image_file  VARCHAR(255) NOT NULL DEFAULT '',
         audio_url   VARCHAR(500) NOT NULL DEFAULT '',
         duration    VARCHAR(20)  NOT NULL DEFAULT '',
         episode_num INT          NULL DEFAULT NULL,
@@ -764,6 +765,7 @@ $addColumns = [
     // cms_podcasts
     'cms_podcasts.show_id'           => "ALTER TABLE cms_podcasts ADD COLUMN show_id INT NOT NULL DEFAULT 1",
     'cms_podcasts.slug'              => "ALTER TABLE cms_podcasts ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
+    'cms_podcasts.image_file'        => "ALTER TABLE cms_podcasts ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_podcasts.status'            => "ALTER TABLE cms_podcasts ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_events
     'cms_events.slug'                => "ALTER TABLE cms_events ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",

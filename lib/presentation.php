@@ -385,6 +385,16 @@ function podcastCoverUrl(array $show): string
     return BASE_URL . '/uploads/podcasts/covers/' . rawurlencode($filename);
 }
 
+function podcastEpisodeImageUrl(array $episode): string
+{
+    $filename = trim((string)($episode['image_file'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/podcasts/images/' . rawurlencode($filename);
+}
+
 function podcastEpisodeAudioUrl(array $episode): string
 {
     $audioFile = trim((string)($episode['audio_file'] ?? ''));
@@ -427,6 +437,21 @@ function deletePodcastCoverFile(string $filename): void
     }
 
     $path = dirname(__DIR__) . '/uploads/podcasts/covers/' . $filename;
+    if (is_file($path)) {
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
+    }
+}
+
+function deletePodcastEpisodeImageFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = dirname(__DIR__) . '/uploads/podcasts/images/' . $filename;
     if (is_file($path)) {
         if (!unlink($path)) {
             error_log('presentation: nelze smazat soubor ' . $path);
@@ -483,9 +508,6 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
     $allowedTypes = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -493,7 +515,26 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Cover musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Cover musí být ve formátu JPG nebo PNG.',
+        ];
+    }
+
+    $imageInfo = @getimagesize($tmpPath);
+    if (!is_array($imageInfo) || empty($imageInfo[0]) || empty($imageInfo[1])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Cover obrázek se nepodařilo zkontrolovat.',
+        ];
+    }
+
+    $width = (int)$imageInfo[0];
+    $height = (int)$imageInfo[1];
+    if ($width !== $height || $width < 1024 || $width > 3000) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
         ];
     }
 
@@ -518,6 +559,100 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
 
     if ($existingFilename !== '' && $existingFilename !== $filename) {
         deletePodcastCoverFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadPodcastEpisodeImage(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek epizody se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek epizody se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek epizody musí být ve formátu JPG nebo PNG.',
+        ];
+    }
+
+    $imageInfo = @getimagesize($tmpPath);
+    if (!is_array($imageInfo) || empty($imageInfo[0]) || empty($imageInfo[1])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek epizody se nepodařilo zkontrolovat.',
+        ];
+    }
+
+    $width = (int)$imageInfo[0];
+    $height = (int)$imageInfo[1];
+    if ($width !== $height || $width < 1024 || $width > 3000) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
+        ];
+    }
+
+    $directory = dirname(__DIR__) . '/uploads/podcasts/images/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro obrázky epizod se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('podcast_episode_image_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek epizody se nepodařilo uložit.',
+        ];
+    }
+    generateWebp($directory . $filename);
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deletePodcastEpisodeImageFile($existingFilename);
     }
 
     return [
@@ -2083,6 +2218,11 @@ function hydratePodcastEpisodePresentation(array $episode): array
     $episode['public_path'] = podcastEpisodePublicPath($episode);
     $episode['public_url'] = podcastEpisodePublicUrl($episode);
     $episode['audio_src'] = podcastEpisodeAudioUrl($episode);
+    $episode['image_url'] = podcastEpisodeImageUrl($episode);
+    $fallbackShowCover = trim((string)($episode['show_cover_image'] ?? ''));
+    $episode['display_image_url'] = $episode['image_url'] !== ''
+        ? $episode['image_url']
+        : ($fallbackShowCover !== '' ? podcastCoverUrl(['cover_image' => $fallbackShowCover]) : '');
     $displayDate = trim((string)($episode['publish_at'] ?? ''));
     if ($displayDate === '') {
         $displayDate = trim((string)($episode['created_at'] ?? ''));

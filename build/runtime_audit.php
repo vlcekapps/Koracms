@@ -3557,6 +3557,7 @@ foreach ($pages as $page) {
             'name="episode_num"',
             'name="duration"',
             'name="audio_file"',
+            'name="image_file"',
             'name="audio_url"',
             'name="publish_at"',
             'Upravit epizodu podcastu',

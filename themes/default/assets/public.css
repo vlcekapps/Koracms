@@ -1428,6 +1428,19 @@ body.theme-public textarea.form-control {
   background: rgba(255, 255, 255, 0.94);
 }
 
+.episode-card--with-image {
+  display: grid;
+  gap: 1rem;
+}
+
+.episode-card__media {
+  width: min(100%, 8rem);
+}
+
+.episode-card__body {
+  min-width: 0;
+}
+
 .episode-card__header {
   margin-bottom: 0.9rem;
 }
@@ -1987,6 +2000,11 @@ body.theme-public textarea.form-control {
 
   .podcast-card__body,
   .podcast-hero {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+  }
+
+  .episode-card--with-image {
     grid-template-columns: auto 1fr;
     align-items: start;
   }

@@ -255,6 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             slug         VARCHAR(255) NOT NULL,
             description  TEXT,
             audio_file   VARCHAR(255) NOT NULL DEFAULT '',
+            image_file   VARCHAR(255) NOT NULL DEFAULT '',
             audio_url    VARCHAR(500) NOT NULL DEFAULT '',
             duration     VARCHAR(20)  NOT NULL DEFAULT '',
             episode_num  INT          NULL DEFAULT NULL,

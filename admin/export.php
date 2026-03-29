@@ -41,7 +41,7 @@ $tables = [
                                is_current, is_published, status, created_at, updated_at FROM cms_food_cards",
     'podcast_shows' => "SELECT id, title, slug, description, author, cover_image,
                                language, category, website_url, created_at, updated_at FROM cms_podcast_shows",
-    'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, audio_url,
+    'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, image_file, audio_url,
                                duration, episode_num, publish_at, status, created_at, updated_at FROM cms_podcasts",
     'polls'         => "SELECT id, question, slug, description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
     'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",

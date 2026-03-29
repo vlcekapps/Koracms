@@ -195,7 +195,7 @@ php -l cesta/k/souboru.php
 | **Novinky** | Krátké zprávy s autorem, detailem a čistou slug URL |
 | **Události** | Přehled akcí s datem, místem, detailem a slug URL |
 | **Galerie** | Alba a fotografie s detailovými URL, obálkou alba, exportem do ZIP a přístupnou veřejnou prezentací |
-| **Podcasty** | Více pořadů i epizod, detail pořadu, detail epizody a RSS feed pořadu |
+| **Podcasty** | Více pořadů i epizod, detail pořadu, detail epizody, RSS feed pořadu a volitelný artwork pořadu i epizod; cover pořadu podporuje doporučený čtvercový JPG/PNG v rozmezí 1024×1024 až 3000×3000 px |
 | **Zajímavá místa** | Turistický adresář s typem místa, perexem, obrázkem, adresou, GPS, kontaktem a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s typem položky, verzí, platformou, licencí, externím odkazem a bezpečným file endpointem |
 | **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek, archiv a detail přes slug URL |
@@ -210,6 +210,20 @@ php -l cesta/k/souboru.php
 | **Newsletter** | Odběr e-mailem, potvrzení, odhlášení, přehled odběratelů, historie rozesílek a hromadné akce |
 
 Moduly lze zapínat a vypínat v administraci v sekci **Obecná nastavení → Správa modulů**.
+
+---
+
+## Podcast artwork
+
+Každý podcastový pořad může mít vlastní volitelný cover obrázek a každá epizoda může mít i svůj samostatný artwork.
+
+- cover pořadu je nepovinný, ale doporučený
+- CMS přijímá čtvercový `JPG` nebo `PNG`
+- minimální podporovaný rozměr je `1024×1024 px`
+- maximální podporovaný rozměr je `3000×3000 px`
+- pokud epizoda nemá vlastní obrázek, veřejný detail epizody i RSS feed použijí cover pořadu
+
+Tento formát odpovídá běžným požadavkům podcastových adresářů včetně Apple Podcasts.
 
 ---
 
