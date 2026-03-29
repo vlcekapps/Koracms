@@ -12,159 +12,222 @@
  */
 require_once __DIR__ . '/db.php';
 
-$isCli = PHP_SAPI === 'cli';
+function cronTempDirectory(): string
+{
+    return __DIR__ . '/uploads/tmp/';
+}
 
-if (!$isCli) {
-    $token = trim($_GET['token'] ?? '');
-    $configToken = defined('CRON_TOKEN') ? CRON_TOKEN : '';
-    if ($configToken === '' || !hash_equals($configToken, $token)) {
-        http_response_code(403);
-        echo 'Forbidden';
-        exit;
+function cronBackupDirectory(): string
+{
+    return rtrim(koraStoragePath('backups'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+}
+
+function cronAppendLog(array &$log, string $message): void
+{
+    $message = trim($message);
+    if ($message !== '') {
+        $log[] = $message;
     }
 }
 
-$pdo = db_connect();
-$log = [];
+function runKoraCron(PDO $pdo): array
+{
+    $log = [];
 
-// ── 1. Plánované publikování článků ──────────────────────────────────────────
-try {
-    $stmt = $pdo->prepare(
-        "UPDATE cms_articles SET status = 'published'
-         WHERE status = 'published' AND publish_at IS NOT NULL AND publish_at <= NOW()"
-    );
-    $stmt->execute();
-    $count = $stmt->rowCount();
-    if ($count > 0) {
-        $log[] = "Publikováno {$count} naplánovaných článků";
-    }
-} catch (\PDOException $e) {
-    $log[] = 'Chyba plánované publikace: ' . $e->getMessage();
-}
-
-// ── 2. Plánované zrušení publikace ────────────────────────────────────────────
-$unpublishTables = [
-    'cms_articles'  => ['has_published' => false],
-    'cms_news'      => ['has_published' => false],
-    'cms_pages'     => ['has_published' => true],
-    'cms_events'    => ['has_published' => true],
-];
-$totalUnpublished = 0;
-foreach ($unpublishTables as $uTable => $uCfg) {
-    try {
-        if ($uCfg['has_published']) {
-            $stmt = $pdo->prepare("UPDATE {$uTable} SET is_published = 0, unpublish_at = NULL WHERE unpublish_at IS NOT NULL AND unpublish_at <= NOW() AND is_published = 1");
-        } else {
-            $stmt = $pdo->prepare("UPDATE {$uTable} SET status = 'pending', unpublish_at = NULL WHERE unpublish_at IS NOT NULL AND unpublish_at <= NOW() AND status = 'published'");
-        }
-        $stmt->execute();
-        $totalUnpublished += $stmt->rowCount();
-    } catch (\PDOException $e) {}
-}
-if ($totalUnpublished > 0) {
-    $log[] = "Zrušena publikace {$totalUnpublished} položek (unpublish_at)";
-}
-
-// ── 3. Čištění starých rate-limit záznamů (starší než 1 hodina) ─────────────
-try {
-    $stmt = $pdo->prepare("DELETE FROM cms_rate_limit WHERE expires_at < NOW() - INTERVAL 1 HOUR");
-    $stmt->execute();
-    $count = $stmt->rowCount();
-    if ($count > 0) {
-        $log[] = "Smazáno {$count} expirovaných rate-limit záznamů";
-    }
-} catch (\PDOException $e) {
-    $log[] = 'Chyba čištění rate-limit: ' . $e->getMessage();
-}
-
-// ── 3. Čištění temp souborů starších než 24 hodin ────────────────────────────
-$tmpDir = __DIR__ . '/uploads/tmp/';
-if (is_dir($tmpDir)) {
-    $cleaned = 0;
-    foreach (glob($tmpDir . '*') as $file) {
-        if (is_file($file) && filemtime($file) < time() - 86400) {
-            if (@unlink($file)) {
-                $cleaned++;
+    // 1. Plánované zrušení publikace
+    $unpublishTables = [
+        'cms_articles' => ['has_published' => false],
+        'cms_news' => ['has_published' => false],
+        'cms_pages' => ['has_published' => true],
+        'cms_events' => ['has_published' => true],
+    ];
+    $totalUnpublished = 0;
+    foreach ($unpublishTables as $tableName => $config) {
+        try {
+            if ($config['has_published']) {
+                $statement = $pdo->prepare(
+                    "UPDATE {$tableName}
+                     SET is_published = 0, unpublish_at = NULL
+                     WHERE unpublish_at IS NOT NULL
+                       AND unpublish_at <= NOW()
+                       AND is_published = 1"
+                );
+            } else {
+                $statement = $pdo->prepare(
+                    "UPDATE {$tableName}
+                     SET status = 'pending', unpublish_at = NULL
+                     WHERE unpublish_at IS NOT NULL
+                       AND unpublish_at <= NOW()
+                       AND status = 'published'"
+                );
             }
+            $statement->execute();
+            $totalUnpublished += $statement->rowCount();
+        } catch (\PDOException $e) {
+            cronAppendLog($log, 'Chyba zrušení publikace: ' . $e->getMessage());
         }
     }
-    if ($cleaned > 0) {
-        $log[] = "Smazáno {$cleaned} starých temp souborů";
+    if ($totalUnpublished > 0) {
+        cronAppendLog($log, "Zrušena publikace {$totalUnpublished} položek");
     }
-}
 
-// ── 4. Čištění starých audit logů (starší než 90 dní) ───────────────────────
-try {
-    $stmt = $pdo->prepare("DELETE FROM cms_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY)");
-    $stmt->execute();
-    $count = $stmt->rowCount();
-    if ($count > 0) {
-        $log[] = "Smazáno {$count} starých audit log záznamů (90+ dní)";
-    }
-} catch (\PDOException $e) {
-    $log[] = 'Chyba čištění logu: ' . $e->getMessage();
-}
-
-// ── 5. Automatická záloha databáze (1x denně) ────────────────────────────────
-$backupDir = __DIR__ . '/uploads/backups/';
-if (!is_dir($backupDir)) {
-    @mkdir($backupDir, 0755, true);
-}
-$todayBackup = $backupDir . 'kora_backup_' . date('Y-m-d') . '.sql';
-if (!is_file($todayBackup)) {
+    // 2. Čištění starých rate-limit záznamů
     try {
-        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-        $sql = "-- Kora CMS auto-backup " . date('Y-m-d H:i:s') . "\nSET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
-        foreach ($tables as $table) {
-            if (!str_starts_with($table, 'cms_')) continue;
-            $create = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch();
-            $sql .= "DROP TABLE IF EXISTS `{$table}`;\n" . $create['Create Table'] . ";\n\n";
-            $rows = $pdo->query("SELECT * FROM `{$table}`");
-            $first = true;
-            $cols = null;
-            foreach ($rows as $row) {
-                if ($first) { $cols = array_keys($row); $first = false; }
-                $vals = [];
-                foreach ($cols as $c) { $vals[] = $row[$c] === null ? 'NULL' : $pdo->quote($row[$c]); }
-                $sql .= "INSERT INTO `{$table}` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', $vals) . ");\n";
-            }
-            if (!$first) $sql .= "\n";
+        $statement = $pdo->prepare(
+            "DELETE FROM cms_rate_limit
+             WHERE window_start < DATE_SUB(NOW(), INTERVAL 1 HOUR)"
+        );
+        $statement->execute();
+        $deletedCount = $statement->rowCount();
+        if ($deletedCount > 0) {
+            cronAppendLog($log, "Smazáno {$deletedCount} expirovaných rate-limit záznamů");
         }
-        $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
-        file_put_contents($todayBackup, $sql);
-        $log[] = 'Záloha databáze vytvořena: ' . basename($todayBackup);
     } catch (\PDOException $e) {
-        $log[] = 'Chyba zálohy: ' . $e->getMessage();
+        cronAppendLog($log, 'Chyba čištění rate-limit: ' . $e->getMessage());
     }
 
-    // Rotace: smazat zálohy starší než 7 dní
-    foreach (glob($backupDir . 'kora_backup_*.sql') as $oldBackup) {
-        if (filemtime($oldBackup) < time() - 7 * 86400) {
-            @unlink($oldBackup);
+    // 3. Čištění temp souborů starších než 24 hodin
+    $tempDirectory = cronTempDirectory();
+    if (is_dir($tempDirectory)) {
+        $cleanedFiles = 0;
+        foreach (glob($tempDirectory . '*') ?: [] as $tempFile) {
+            if (!is_file($tempFile)) {
+                continue;
+            }
+            if ((int)@filemtime($tempFile) >= (time() - 86400)) {
+                continue;
+            }
+            if (@unlink($tempFile)) {
+                $cleanedFiles++;
+            }
+        }
+        if ($cleanedFiles > 0) {
+            cronAppendLog($log, "Smazáno {$cleanedFiles} starých temp souborů");
         }
     }
+
+    // 4. Čištění starých audit logů
+    try {
+        $statement = $pdo->prepare(
+            "DELETE FROM cms_log
+             WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY)"
+        );
+        $statement->execute();
+        $deletedCount = $statement->rowCount();
+        if ($deletedCount > 0) {
+            cronAppendLog($log, "Smazáno {$deletedCount} starých audit log záznamů");
+        }
+    } catch (\PDOException $e) {
+        cronAppendLog($log, 'Chyba čištění logu: ' . $e->getMessage());
+    }
+
+    // 5. Automatická záloha databáze (1x denně)
+    $backupDirectory = cronBackupDirectory();
+    if (koraEnsureDirectory($backupDirectory)) {
+        $todayBackup = $backupDirectory . 'kora_backup_' . date('Y-m-d') . '.sql';
+        if (!is_file($todayBackup)) {
+            try {
+                $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+                $sqlDump = "-- Kora CMS auto-backup " . date('Y-m-d H:i:s') . "\n";
+                $sqlDump .= "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+                foreach ($tables as $tableName) {
+                    if (!str_starts_with((string)$tableName, 'cms_')) {
+                        continue;
+                    }
+
+                    $createTable = $pdo->query("SHOW CREATE TABLE `{$tableName}`")->fetch();
+                    $sqlDump .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
+                    $sqlDump .= $createTable['Create Table'] . ";\n\n";
+
+                    $rows = $pdo->query("SELECT * FROM `{$tableName}`");
+                    $firstRow = true;
+                    $columnNames = null;
+                    foreach ($rows as $row) {
+                        if ($firstRow) {
+                            $columnNames = array_keys($row);
+                            $firstRow = false;
+                        }
+                        $values = [];
+                        foreach ($columnNames as $columnName) {
+                            $values[] = $row[$columnName] === null ? 'NULL' : $pdo->quote((string)$row[$columnName]);
+                        }
+                        $sqlDump .= "INSERT INTO `{$tableName}` (`" . implode('`, `', $columnNames) . "`) VALUES (" . implode(', ', $values) . ");\n";
+                    }
+
+                    if (!$firstRow) {
+                        $sqlDump .= "\n";
+                    }
+                }
+
+                $sqlDump .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+                $written = @file_put_contents($todayBackup, $sqlDump);
+                if ($written === false) {
+                    cronAppendLog($log, 'Chyba zálohy: nepodařilo se uložit SQL dump do privátního úložiště');
+                } else {
+                    cronAppendLog($log, 'Záloha databáze vytvořena: ' . basename($todayBackup));
+                }
+            } catch (\Throwable $e) {
+                cronAppendLog($log, 'Chyba zálohy: ' . $e->getMessage());
+            }
+        }
+
+        foreach (glob($backupDirectory . 'kora_backup_*.sql') ?: [] as $oldBackup) {
+            if (!is_file($oldBackup)) {
+                continue;
+            }
+            if ((int)@filemtime($oldBackup) < (time() - (7 * 86400))) {
+                @unlink($oldBackup);
+            }
+        }
+    } else {
+        cronAppendLog($log, 'Chyba zálohy: nepodařilo se vytvořit privátní adresář pro zálohy');
+    }
+
+    return $log;
 }
 
-// ── Výstup ───────────────────────────────────────────────────────────────────
-if ($log !== []) {
-    $summary = implode('; ', $log);
-    try {
-        $pdo->prepare("INSERT INTO cms_log (action, detail) VALUES ('cron', ?)")->execute([$summary]);
-    } catch (\PDOException $e) {}
+$currentScript = realpath($_SERVER['SCRIPT_FILENAME'] ?? '') ?: '';
+$isDirectRun = $currentScript === __FILE__;
 
-    if ($isCli) {
-        foreach ($log as $line) {
-            echo $line . PHP_EOL;
+if ($isDirectRun) {
+    $isCli = PHP_SAPI === 'cli';
+
+    if (!$isCli) {
+        $token = trim($_GET['token'] ?? '');
+        $configToken = defined('CRON_TOKEN') ? trim((string)CRON_TOKEN) : '';
+        if ($configToken === '' || !hash_equals($configToken, $token)) {
+            http_response_code(403);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Forbidden';
+            exit;
+        }
+    }
+
+    $pdo = db_connect();
+    $log = runKoraCron($pdo);
+
+    if ($log !== []) {
+        $summary = implode('; ', $log);
+        try {
+            $pdo->prepare("INSERT INTO cms_log (action, detail) VALUES ('cron', ?)")->execute([$summary]);
+        } catch (\PDOException $e) {
+        }
+
+        if ($isCli) {
+            foreach ($log as $line) {
+                echo $line . PHP_EOL;
+            }
+        } else {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo implode("\n", $log) . "\n";
         }
     } else {
-        header('Content-Type: text/plain; charset=utf-8');
-        echo implode("\n", $log) . "\n";
-    }
-} else {
-    if ($isCli) {
-        echo "Žádné úlohy k provedení.\n";
-    } else {
-        header('Content-Type: text/plain; charset=utf-8');
-        echo "OK\n";
+        if ($isCli) {
+            echo "Žádné úlohy k provedení." . PHP_EOL;
+        } else {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo "OK\n";
+        }
     }
 }

@@ -61,7 +61,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Lazy loading + responsive obrázky** – `pictureTag()` automaticky přidává `loading="lazy"`; `generateResponsiveSizes()` vytváří varianty 400w, 800w, 1200w s WebP při uploadu článkových obrázků
 - **Interní poznámky k obsahu** – sloupec `admin_note` na článcích, novinkách, stránkách a událostech; textarea v admin formuláři; viditelná jen v administraci, ne na veřejném webu
 - **Upozornění na aktualizace** – admin dashboard kontroluje novou verzi přes GitHub API (1x za 24h, jen superadmin); vizuální oznámení s číslem nové verze
-- **Naplánované zálohy** – cron.php automaticky vytváří denní SQL zálohu do `uploads/backups/`; rotace starších než 7 dní; `.htaccess` ochrana adresáře
+- **Naplánované zálohy** – cron.php automaticky vytváří denní SQL zálohu do privátního úložiště mimo webroot; rotace starších než 7 dní
 - **Plánované zrušení publikace** – sloupec `unpublish_at` na článcích, novinkách, stránkách a událostech; formulářové pole v admin; cron.php automaticky skryje obsah po vypršení; WCAG 2.2 kompatibilní
 - **runtime_audit.php** – přidány testy nových admin stránek: blogs, widgets, redirects, audit_log, backup, trash, menu, blog_cats, blog_tags
 - **Šablona default** – opraveny hardcoded `/blog/index.php` odkazy v author.php, authors.php a home.php na dynamický `blogIndexPath()`

@@ -30,6 +30,8 @@ Options -Indexes
 
     # Přílohy formulářů se stahují jen přes chráněný admin endpoint
     RewriteRule ^uploads/forms/ - [F,L,NC]
+    # Staré databázové zálohy nesmí být přímo dostupné z webu
+    RewriteRule ^uploads/backups/ - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

@@ -99,6 +99,36 @@ function publicRegistrationEnabled(): bool
     return getSetting('public_registration_enabled', '1') === '1';
 }
 
+function koraStorageDirectory(): string
+{
+    $configuredPath = defined('KORA_STORAGE_DIR') ? trim((string)KORA_STORAGE_DIR) : '';
+    if ($configuredPath !== '') {
+        return rtrim($configuredPath, "\\/");
+    }
+
+    return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'kora_storage';
+}
+
+function koraStoragePath(string $subpath = ''): string
+{
+    $storageRoot = koraStorageDirectory();
+    $normalizedSubpath = trim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $subpath), DIRECTORY_SEPARATOR);
+    if ($normalizedSubpath === '') {
+        return $storageRoot;
+    }
+
+    return $storageRoot . DIRECTORY_SEPARATOR . $normalizedSubpath;
+}
+
+function koraEnsureDirectory(string $path, int $permissions = 0755): bool
+{
+    if (is_dir($path)) {
+        return true;
+    }
+
+    return @mkdir($path, $permissions, true) || is_dir($path);
+}
+
 // ──────────────────────────── Moduly (lib/) ────────────────────────────────
 // Funkce rozděleny do tematických souborů pro lepší přehlednost a údržbu.
 require_once __DIR__ . '/lib/definitions.php';

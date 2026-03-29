@@ -2244,6 +2244,75 @@ foreach ($fulltextIndexes as [$ftTable, $ftIndex, $ftColumns]) {
     }
 }
 
+// Přesun citlivých souborů do privátního úložiště mimo webroot
+try {
+    $legacyFormDir = __DIR__ . '/uploads/forms/';
+    $privateFormDir = rtrim(koraStoragePath('forms'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    $movedFormFiles = 0;
+
+    if (is_dir($legacyFormDir) && koraEnsureDirectory($privateFormDir)) {
+        foreach (glob($legacyFormDir . '*') ?: [] as $legacyFormFile) {
+            if (!is_file($legacyFormFile)) {
+                continue;
+            }
+
+            $targetFile = $privateFormDir . basename($legacyFormFile);
+            if (is_file($targetFile)) {
+                if (@unlink($legacyFormFile)) {
+                    $movedFormFiles++;
+                }
+                continue;
+            }
+
+            if (@rename($legacyFormFile, $targetFile) || (@copy($legacyFormFile, $targetFile) && @unlink($legacyFormFile))) {
+                $movedFormFiles++;
+            }
+        }
+    }
+
+    if ($movedFormFiles > 0) {
+        $log[] = "✓ Přesunuto {$movedFormFiles} příloh formulářů do privátního úložiště – OK";
+    } else {
+        $log[] = '· Přílohy formulářů již používají privátní úložiště – přeskočeno';
+    }
+} catch (\Throwable $e) {
+    $log[] = '✗ Přesun příloh formulářů – CHYBA: ' . h($e->getMessage());
+}
+
+try {
+    $legacyBackupDir = __DIR__ . '/uploads/backups/';
+    $privateBackupDir = rtrim(koraStoragePath('backups'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    $movedBackupFiles = 0;
+
+    if (is_dir($legacyBackupDir) && koraEnsureDirectory($privateBackupDir)) {
+        foreach (glob($legacyBackupDir . '*') ?: [] as $legacyBackupFile) {
+            if (!is_file($legacyBackupFile)) {
+                continue;
+            }
+
+            $targetFile = $privateBackupDir . basename($legacyBackupFile);
+            if (is_file($targetFile)) {
+                if (@unlink($legacyBackupFile)) {
+                    $movedBackupFiles++;
+                }
+                continue;
+            }
+
+            if (@rename($legacyBackupFile, $targetFile) || (@copy($legacyBackupFile, $targetFile) && @unlink($legacyBackupFile))) {
+                $movedBackupFiles++;
+            }
+        }
+    }
+
+    if ($movedBackupFiles > 0) {
+        $log[] = "✓ Přesunuto {$movedBackupFiles} SQL záloh do privátního úložiště – OK";
+    } else {
+        $log[] = '· SQL zálohy již používají privátní úložiště – přeskočeno';
+    }
+} catch (\Throwable $e) {
+    $log[] = '✗ Přesun SQL záloh – CHYBA: ' . h($e->getMessage());
+}
+
 if ($isCli) {
     foreach ($log as $line) {
         echo trim(strip_tags(html_entity_decode($line, ENT_QUOTES | ENT_HTML5, 'UTF-8'))) . PHP_EOL;

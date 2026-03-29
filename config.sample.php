@@ -12,6 +12,12 @@ $database = 'nazev_databaze';
 // Pokud je ve složce, zadejte např. '/koracms'
 define('BASE_URL', '');
 
+// Privátní úložiště mimo webroot
+// Výchozí umístění je o úroveň výš než webroot, např. ../kora_storage
+// Používá se pro citlivé přílohy formulářů a denní SQL zálohy z cron.php
+// Při vlastním nastavení zadejte absolutní cestu.
+define('KORA_STORAGE_DIR', '');
+
 // SMTP odesílání e-mailů
 // Pokud konstanty nejsou definovány, použije se localhost:25 bez autentizace.
 define('SMTP_HOST', 'smtp.example.com');

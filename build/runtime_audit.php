@@ -6,6 +6,7 @@ ini_set('display_errors', '1');
 ob_start();
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../cron.php';
 
 $baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
 $pdo     = db_connect();
@@ -4958,6 +4959,59 @@ if (!empty($cleanup['author_user_ids'])) {
 if (!empty($cleanup['staff_user_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['staff_user_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_users WHERE id IN ({$placeholders})")->execute($cleanup['staff_user_ids']);
+}
+
+echo "=== cron_runtime ===\n";
+try {
+    $cronIssues = [];
+    $cronRateLimitId = 'runtime_audit_' . bin2hex(random_bytes(8));
+    $cronBackupFile = cronBackupDirectory() . 'kora_backup_' . date('Y-m-d') . '.sql';
+    $legacyBackupFile = __DIR__ . '/../uploads/backups/kora_backup_' . date('Y-m-d') . '.sql';
+    $storageRoot = str_replace('\\', '/', rtrim(koraStorageDirectory(), '\\/'));
+    $webRoot = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: dirname(__DIR__));
+
+    if ($storageRoot === $webRoot || str_starts_with($storageRoot . '/', rtrim($webRoot, '/') . '/')) {
+        $cronIssues[] = 'private storage directory still points inside the public webroot';
+    }
+
+    $pdo->prepare(
+        "INSERT INTO cms_rate_limit (id, attempts, window_start)
+         VALUES (?, 1, DATE_SUB(NOW(), INTERVAL 2 HOUR))
+         ON DUPLICATE KEY UPDATE attempts = VALUES(attempts), window_start = VALUES(window_start)"
+    )->execute([$cronRateLimitId]);
+
+    $cronLog = runKoraCron($pdo);
+    $rateLimitCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_rate_limit WHERE id = ?");
+    $rateLimitCheckStmt->execute([$cronRateLimitId]);
+    $remainingRateLimit = (int)$rateLimitCheckStmt->fetchColumn();
+
+    if ($remainingRateLimit !== 0) {
+        $cronIssues[] = 'cron did not clean expired rate-limit records';
+        $pdo->prepare("DELETE FROM cms_rate_limit WHERE id = ?")->execute([$cronRateLimitId]);
+    }
+    if (!is_file($cronBackupFile)) {
+        $cronIssues[] = 'cron did not keep SQL backups in private storage';
+    }
+    if (is_file($legacyBackupFile)) {
+        $cronIssues[] = 'cron still writes SQL backups into public uploads/backups';
+    }
+    foreach ($cronLog as $cronLine) {
+        if (str_starts_with($cronLine, 'Chyba')) {
+            $cronIssues[] = 'cron reported an error: ' . $cronLine;
+        }
+    }
+
+    if ($cronIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($cronIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
+    }
+} catch (\Throwable $e) {
+    $failures++;
+    echo '- cron runtime check failed: ' . $e->getMessage() . "\n";
 }
 
 $installProbe = fetchUrl($baseUrl . '/install.php', '', 0);

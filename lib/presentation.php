@@ -3748,6 +3748,11 @@ function formSubmitterConfirmationPreview(array $form, array $fields, string $su
 
 function formUploadDirectory(): string
 {
+    return rtrim(koraStoragePath('forms'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+}
+
+function formUploadLegacyDirectory(): string
+{
     return dirname(__DIR__) . '/uploads/forms/';
 }
 
@@ -3768,12 +3773,22 @@ function formUploadFilePath(string $storedName): string
         return '';
     }
 
-    return formUploadDirectory() . $normalizedName;
+    $privatePath = formUploadDirectory() . $normalizedName;
+    if (is_file($privatePath)) {
+        return $privatePath;
+    }
+
+    $legacyPath = formUploadLegacyDirectory() . $normalizedName;
+    if (is_file($legacyPath)) {
+        return $legacyPath;
+    }
+
+    return $privatePath;
 }
 
 function formUploadPublicPath(string $storedName): string
 {
-    return BASE_URL . '/uploads/forms/' . rawurlencode($storedName);
+    return '';
 }
 
 function formDeleteUploadedFile(string $storedName): void
