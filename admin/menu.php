@@ -125,6 +125,9 @@ adminHeader('Navigace webu');
 <?php if (isset($_GET['saved'])): ?>
   <p class="success" role="status">Pořadí navigace bylo uloženo.</p>
 <?php endif; ?>
+<?php if (isset($_GET['page_positions'])): ?>
+  <p class="success" role="status">Pořadí statických stránek se nyní spravuje tady společně s moduly a blogy.</p>
+<?php endif; ?>
 
 <p style="font-size:.9rem">Tady určujete skutečné pořadí hlavní navigace webu napříč moduly, blogy a statickými stránkami. Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. Položky označené jako mimo navigaci nebo nezveřejněné tu zůstávají kvůli přehledu, ale návštěvníkům se teď nezobrazí.</p>
 

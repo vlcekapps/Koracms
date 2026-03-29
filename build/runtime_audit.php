@@ -1098,7 +1098,6 @@ $pages = [
     ['label' => 'admin_newsletter', 'url' => $baseUrl . '/admin/newsletter.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_newsletter_form', 'url' => $baseUrl . '/admin/newsletter_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_pages', 'url' => $baseUrl . '/admin/pages.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
-    ['label' => 'admin_page_positions', 'url' => $baseUrl . '/admin/page_positions.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_faq', 'url' => $baseUrl . '/admin/faq.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_news', 'url' => $baseUrl . '/admin/news.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
     ['label' => 'admin_events', 'url' => $baseUrl . '/admin/events.php', 'cookie' => 'PHPSESSID=' . $auditSessionId],
@@ -2147,14 +2146,6 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'admin_page_positions') {
-        foreach (['name="dir" value="up"', 'name="dir" value="down"', 'page_form.php?id='] as $expectedFragment) {
-            if (!str_contains($result['body'], $expectedFragment)) {
-                $issues[] = 'admin page positions is missing action fragment: ' . $expectedFragment;
-            }
-        }
-    }
-
     $adminFormForbiddenFragments = [
         'admin_form_create' => ['>Uložit formulář<', 'Formulář je aktivní'],
         'admin_form_issue_preset' => ['>Uložit formulář<', 'Formulář je aktivní'],
@@ -2234,22 +2225,8 @@ foreach ($pages as $page) {
         }
     }
 
-    if (in_array($page['label'], ['admin_page_form', 'admin_page_create_form'], true) && !str_contains($result['body'], 'page_positions.php')) {
-        $issues[] = 'admin page form is missing the page positions helper link';
-    }
-
-    if ($page['label'] === 'admin_page_positions') {
-        foreach ([
-            'page_reorder.php',
-            '/admin/pages.php',
-            '/admin/page_form.php',
-            'name="dir" value="up"',
-            'name="dir" value="down"',
-        ] as $expectedFragment) {
-            if (!str_contains($result['body'], $expectedFragment)) {
-                $issues[] = 'admin page positions is missing helper copy fragment: ' . $expectedFragment;
-            }
-        }
+    if (in_array($page['label'], ['admin_page_form', 'admin_page_create_form'], true) && !str_contains($result['body'], '/admin/menu.php')) {
+        $issues[] = 'admin page form is missing the navigation management helper link';
     }
 
     $contentReferencePickerLabels = [
@@ -3008,22 +2985,8 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'admin_pages' && !str_contains($result['body'], 'page_positions.php')) {
-        $issues[] = 'admin pages list is missing the page positions link';
-    }
-
-    if ($page['label'] === 'admin_page_positions') {
-        foreach ([
-            'page_reorder.php',
-            '/admin/pages.php',
-            '/admin/page_form.php',
-            'name="dir" value="up"',
-            'name="dir" value="down"',
-        ] as $expectedFragment) {
-            if (!str_contains($result['body'], $expectedFragment)) {
-                $issues[] = 'admin page positions is missing fragment: ' . $expectedFragment;
-            }
-        }
+    if ($page['label'] === 'admin_pages' && !str_contains($result['body'], '/admin/menu.php')) {
+        $issues[] = 'admin pages list is missing the unified navigation link';
     }
 
     if ($page['label'] === 'admin_food') {
@@ -3300,7 +3263,7 @@ foreach ($pages as $page) {
             'name="slug"',
             'name="show_in_nav"',
             'name="is_published"',
-            'page_positions.php',
+            '/admin/menu.php',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin page form is missing fragment: ' . $expectedFragment;
@@ -6120,17 +6083,17 @@ if (!str_contains($adminMenuSource, 'id="nav-order-status"')) {
 if (!str_contains($adminMenuSource, 'aria-disabled')) {
     $menuAdminIssues[] = 'admin menu does not expose aria-disabled states on move buttons';
 }
-if (!str_contains($adminMenuSource, 'Správa blogů') || !str_contains($adminMenuSource, 'Správa modulů') || !str_contains($adminMenuSource, 'Upravit stránku')) {
+if (!str_contains($adminMenuSource, '/admin/blogs.php') || !str_contains($adminMenuSource, '/admin/settings_modules.php') || !str_contains($adminMenuSource, '/admin/page_form.php?id=')) {
     $menuAdminIssues[] = 'admin menu is missing quick links for fixing disabled items';
 }
-if (!str_contains($adminPagesSource, 'Základní pořadí stránek')) {
-    $menuAdminIssues[] = 'pages overview still uses outdated static page ordering wording';
+if (!str_contains($adminPagesSource, '/admin/menu.php') || str_contains($adminPagesSource, 'page_positions.php')) {
+    $menuAdminIssues[] = 'pages overview still points static page ordering to the wrong screen';
 }
-if (!str_contains($pageFormSource, '/admin/menu.php') || str_contains($pageFormSource, 'Pořadí statických stránek upravíte na stránce')) {
+if (!str_contains($pageFormSource, '/admin/menu.php') || str_contains($pageFormSource, 'page_positions.php')) {
     $menuAdminIssues[] = 'page form help still points navigation ordering to the wrong screen';
 }
-if (!str_contains($pagePositionsSource, 'Pro skutečné pořadí hlavní navigace webu použijte stránku')) {
-    $menuAdminIssues[] = 'page positions page does not clarify that main navigation is managed elsewhere';
+if (!str_contains($pagePositionsSource, '/admin/menu.php?page_positions=1')) {
+    $menuAdminIssues[] = 'page positions compatibility screen does not redirect to unified navigation management';
 }
 if (!str_contains($publicNavSource, '$renderUnifiedEntry') || !str_contains($publicNavSource, 'foreach (array_keys($pagesMap) as $pageId)')) {
     $menuAdminIssues[] = 'public navigation does not append missing unified entries safely';
@@ -6142,6 +6105,18 @@ if ($menuAdminIssues === []) {
     foreach ($menuAdminIssues as $menuAdminIssue) {
         echo '- ' . $menuAdminIssue . "\n";
     }
+}
+
+echo "=== page_positions_redirect ===\n";
+$pagePositionsRedirectProbe = fetchUrl($baseUrl . '/admin/page_positions.php', 'PHPSESSID=' . $auditSessionId, 0);
+if (!preg_match('/\s30[12378]\s/', $pagePositionsRedirectProbe['status'])) {
+    echo "- admin/page_positions.php does not redirect to unified navigation management\n";
+    $failures++;
+} elseif (!responseHasLocationHeader($pagePositionsRedirectProbe['headers'], '/admin/menu.php?page_positions=1', $baseUrl)) {
+    echo "- admin/page_positions.php does not point to /admin/menu.php?page_positions=1\n";
+    $failures++;
+} else {
+    echo "OK\n";
 }
 
 exit($failures > 0 ? 1 : 0);

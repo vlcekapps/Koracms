@@ -378,9 +378,9 @@ V jedné správě lze řadit:
 - blogy
 - statické stránky
 
-To znamená, že stránka může být mezi moduly a blog může být před novinkami. `Navigace webu` je hlavní autorita pro skutečné pořadí položek v menu návštěvníka.
+To znamená, že stránka může být mezi moduly a blog může být před novinkami. `Navigace webu` je jediná autorita pro skutečné pořadí položek v menu návštěvníka i pro pořadí statických stránek v admin přehledu.
 
-Samostatná stránka `Základní pořadí stránek` slouží už jen jako fallback pořadí mezi statickými stránkami samotnými. Hodí se pro interní přehledy a jako výchozí stabilní řazení, ale neřídí přímo hlavní menu webu.
+Historická adresa `admin/page_positions.php` zůstává už jen jako kompatibilitní přesměrování na `Navigaci webu`, aby se nerozbily staré odkazy nebo uložené záložky v prohlížeči.
 
 Řazení navigace je oddělené od interních seznamů modulů – navigace webu se spravuje jinak než obsah uvnitř modulů.
 

@@ -57,7 +57,6 @@ adminHeader($pageTitle);
 
   <p class="button-row button-row--start">
     <a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a>
-    <a href="<?= BASE_URL ?>/admin/page_positions.php">Základní pořadí stránek</a>
     <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>
   </p>
 <p style="margin-top:0;font-size:.9rem">Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.</p>
@@ -98,7 +97,7 @@ adminHeader($pageTitle);
       <input type="checkbox" name="show_in_nav" value="1" aria-describedby="page-nav-help"<?= !empty($page['show_in_nav']) ? ' checked' : '' ?>>
       Zobrazit v hlavní navigaci
     </label>
-    <small id="page-nav-help" class="field-help">Použije se jen u zveřejněné stránky. Skutečné pořadí v hlavní navigaci upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>. Základní pořadí mezi statickými stránkami můžete srovnat zvlášť na stránce <a href="<?= BASE_URL ?>/admin/page_positions.php">Základní pořadí stránek</a>.</small>
+    <small id="page-nav-help" class="field-help">Použije se jen u zveřejněné stránky. Skutečné pořadí v hlavní navigaci upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>.</small>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at" aria-describedby="unpublish-at-help"

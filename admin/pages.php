@@ -28,17 +28,91 @@ if ($statusFilter === 'pending') {
 
 $whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
 
-normalizePageNavigationOrder($pdo);
-
 $stmt = $pdo->prepare(
     "SELECT id, title, slug, is_published, show_in_nav, nav_order,
             COALESCE(status,'published') AS status, created_at
      FROM cms_pages
      {$whereSql}
-     ORDER BY nav_order, title"
+     ORDER BY title, id"
 );
 $stmt->execute($params);
 $pages = $stmt->fetchAll();
+
+$navigationKeys = [];
+$navigationLookup = [];
+foreach (array_keys(navModuleDefaults()) as $moduleKey) {
+    if ($moduleKey === 'blog') {
+        foreach (getAllBlogs() as $blogEntry) {
+            $key = 'blog:' . (int)($blogEntry['id'] ?? 0);
+            $navigationKeys[] = $key;
+            $navigationLookup[$key] = true;
+        }
+        continue;
+    }
+
+    $key = 'module:' . $moduleKey;
+    $navigationKeys[] = $key;
+    $navigationLookup[$key] = true;
+}
+
+$pageIds = [];
+foreach ($pages as $pageRow) {
+    $pageId = (int)$pageRow['id'];
+    $pageIds[$pageId] = true;
+    $key = 'page:' . $pageId;
+    $navigationKeys[] = $key;
+    $navigationLookup[$key] = true;
+}
+
+$savedNavigationOrder = array_values(array_filter(array_map(
+    'trim',
+    explode(',', getSetting('nav_order_unified', ''))
+), static fn(string $value): bool => $value !== ''));
+
+$normalizedNavigationKeys = [];
+$seenNavigationKeys = [];
+foreach ($savedNavigationOrder as $key) {
+    if (!isset($navigationLookup[$key]) || isset($seenNavigationKeys[$key])) {
+        continue;
+    }
+    $normalizedNavigationKeys[] = $key;
+    $seenNavigationKeys[$key] = true;
+}
+foreach ($navigationKeys as $key) {
+    if (isset($seenNavigationKeys[$key])) {
+        continue;
+    }
+    $normalizedNavigationKeys[] = $key;
+    $seenNavigationKeys[$key] = true;
+}
+
+$pageNavigationPositions = [];
+$navigationPosition = 1;
+foreach ($normalizedNavigationKeys as $key) {
+    if (str_starts_with($key, 'page:')) {
+        $pageId = (int)substr($key, 5);
+        if (isset($pageIds[$pageId])) {
+            $pageNavigationPositions[$pageId] = $navigationPosition;
+        }
+    }
+    $navigationPosition++;
+}
+
+usort($pages, static function (array $left, array $right) use ($pageNavigationPositions): int {
+    $leftPosition = $pageNavigationPositions[(int)$left['id']] ?? PHP_INT_MAX;
+    $rightPosition = $pageNavigationPositions[(int)$right['id']] ?? PHP_INT_MAX;
+
+    if ($leftPosition !== $rightPosition) {
+        return $leftPosition <=> $rightPosition;
+    }
+
+    $titleComparison = strcasecmp((string)$left['title'], (string)$right['title']);
+    if ($titleComparison !== 0) {
+        return $titleComparison;
+    }
+
+    return ((int)$left['id']) <=> ((int)$right['id']);
+});
 
 $currentRedirect = BASE_URL . '/admin/pages.php';
 $queryArgs = array_filter([
@@ -54,11 +128,10 @@ adminHeader('Statické stránky');
 
 <p class="button-row button-row--start">
   <a href="<?= BASE_URL ?>/admin/page_form.php" class="btn">+ Nová stránka</a>
-  <a href="<?= BASE_URL ?>/admin/page_positions.php" class="btn">Základní pořadí stránek</a>
   <a href="<?= BASE_URL ?>/admin/menu.php" class="btn">Navigace webu</a>
 </p>
 
-<p class="field-help" style="margin-top:0">Pro skutečné pořadí položek v hlavní navigaci použijte stránku <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>. Tady vidíte i základní pořadí statických stránek mezi sebou.</p>
+<p class="field-help" style="margin-top:0">Skutečné pořadí statických stránek v hlavní navigaci i mezi ostatními položkami webu upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>. Pořadí v tomto přehledu se řídí stejným nastavením.</p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <div>
@@ -98,7 +171,7 @@ adminHeader('Statické stránky');
         <th scope="col">Název</th>
         <th scope="col">Stav</th>
         <th scope="col">V navigaci</th>
-        <th scope="col">Základní pořadí</th>
+        <th scope="col">Pořadí v navigaci</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -124,7 +197,7 @@ adminHeader('Statické stránky');
             <?php endif; ?>
           </td>
           <td><?= (int)$page['show_in_nav'] === 1 ? 'Ano' : '–' ?></td>
-          <td><?= (int)$page['nav_order'] ?></td>
+          <td><?= (int)$page['show_in_nav'] === 1 ? (int)($pageNavigationPositions[(int)$page['id']] ?? 0) : '–' ?></td>
           <td class="actions">
             <a href="<?= BASE_URL ?>/admin/page_form.php?id=<?= (int)$page['id'] ?>&amp;redirect=<?= rawurlencode($currentRedirect) ?>" class="btn">Upravit</a>
             <?php if ($page['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
