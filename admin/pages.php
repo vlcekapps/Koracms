@@ -54,9 +54,11 @@ adminHeader('Statické stránky');
 
 <p class="button-row button-row--start">
   <a href="<?= BASE_URL ?>/admin/page_form.php" class="btn">+ Nová stránka</a>
-  <a href="<?= BASE_URL ?>/admin/page_positions.php" class="btn">Pozice statických stránek</a>
+  <a href="<?= BASE_URL ?>/admin/page_positions.php" class="btn">Základní pořadí stránek</a>
   <a href="<?= BASE_URL ?>/admin/menu.php" class="btn">Navigace webu</a>
 </p>
+
+<p class="field-help" style="margin-top:0">Pro skutečné pořadí položek v hlavní navigaci použijte stránku <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>. Tady vidíte i základní pořadí statických stránek mezi sebou.</p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <div>
@@ -96,7 +98,7 @@ adminHeader('Statické stránky');
         <th scope="col">Název</th>
         <th scope="col">Stav</th>
         <th scope="col">V navigaci</th>
-        <th scope="col">Pořadí</th>
+        <th scope="col">Základní pořadí</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>

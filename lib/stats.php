@@ -220,6 +220,15 @@ function siteNav(string $current = ''): string
     if ($unifiedOrder !== '') {
         // Unified navigace – stránky, moduly a blogy dohromady
         $moduleMap = navModuleDefaults();
+        $visibleBlogEntries = [];
+        if (isModuleEnabled('blog')) {
+            foreach (getAllBlogs() as $blogEntry) {
+                if (!(int)($blogEntry['show_in_nav'] ?? 1)) {
+                    continue;
+                }
+                $visibleBlogEntries[(int)$blogEntry['id']] = $blogEntry;
+            }
+        }
         $pagesMap = [];
         try {
             $pageRows = db_connect()->query(
@@ -231,40 +240,78 @@ function siteNav(string $current = ''): string
             }
         } catch (\PDOException $e) {}
 
-        foreach (explode(',', $unifiedOrder) as $entry) {
-            $entry = trim($entry);
-            if ($entry === '') continue;
+        $renderedEntries = [];
+        $renderUnifiedEntry = static function (string $entry) use (&$nav, &$renderedEntries, $moduleMap, $pagesMap, $visibleBlogEntries, $li, $cur, $current): void {
+            if ($entry === '' || isset($renderedEntries[$entry])) {
+                return;
+            }
 
             if (str_starts_with($entry, 'module:')) {
                 $mKey = substr($entry, 7);
-                if (!isModuleEnabled($mKey) || !isset($moduleMap[$mKey])) continue;
+                if (!isModuleEnabled($mKey) || !isset($moduleMap[$mKey])) {
+                    return;
+                }
                 if ($mKey === 'blog') {
-                    // V unified režimu se blog zobrazuje jako jednotlivé blogy
-                    foreach (getAllBlogs() as $blogEntry) {
-                        if (!(int)($blogEntry['show_in_nav'] ?? 1)) continue;
+                    foreach ($visibleBlogEntries as $blogId => $blogEntry) {
+                        $blogEntryKey = 'blog:' . $blogId;
+                        if (isset($renderedEntries[$blogEntryKey])) {
+                            continue;
+                        }
                         $blogHref = blogIndexPath($blogEntry);
                         $blogNavKey = 'blog:' . $blogEntry['slug'];
                         $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+                        $renderedEntries[$blogEntryKey] = true;
                     }
-                } else {
-                    [$href, $label] = $moduleMap[$mKey];
-                    $nav .= $li($href, $label, $mKey);
+                    $renderedEntries[$entry] = true;
+                    return;
                 }
-            } elseif (str_starts_with($entry, 'page:')) {
-                $pageId = (int)substr($entry, 5);
-                if (isset($pagesMap[$pageId])) {
-                    $p = $pagesMap[$pageId];
-                    $nav .= '<li><a href="' . pagePublicPath($p) . '"' . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '') . '>' . h($p['title']) . '</a></li>' . "\n";
-                }
-            } elseif (str_starts_with($entry, 'blog:')) {
-                $blogId = (int)substr($entry, 5);
-                $blogEntry = getBlogById($blogId);
-                if ($blogEntry && isModuleEnabled('blog') && (int)($blogEntry['show_in_nav'] ?? 1)) {
-                    $blogHref = blogIndexPath($blogEntry);
-                    $blogNavKey = 'blog:' . $blogEntry['slug'];
-                    $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
-                }
+
+                [$href, $label] = $moduleMap[$mKey];
+                $nav .= $li($href, $label, $mKey);
+                $renderedEntries[$entry] = true;
+                return;
             }
+
+            if (str_starts_with($entry, 'page:')) {
+                $pageId = (int)substr($entry, 5);
+                if (!isset($pagesMap[$pageId])) {
+                    return;
+                }
+                $p = $pagesMap[$pageId];
+                $nav .= '<li><a href="' . pagePublicPath($p) . '"' . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '') . '>' . h($p['title']) . '</a></li>' . "\n";
+                $renderedEntries[$entry] = true;
+                return;
+            }
+
+            if (str_starts_with($entry, 'blog:')) {
+                $blogId = (int)substr($entry, 5);
+                if (!isset($visibleBlogEntries[$blogId])) {
+                    return;
+                }
+                $blogEntry = $visibleBlogEntries[$blogId];
+                $blogHref = blogIndexPath($blogEntry);
+                $blogNavKey = 'blog:' . $blogEntry['slug'];
+                $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
+                $renderedEntries[$entry] = true;
+            }
+        };
+
+        foreach (explode(',', $unifiedOrder) as $entry) {
+            $entry = trim($entry);
+            $renderUnifiedEntry($entry);
+        }
+
+        foreach (array_keys($moduleMap) as $mKey) {
+            if ($mKey === 'blog') {
+                foreach (array_keys($visibleBlogEntries) as $blogId) {
+                    $renderUnifiedEntry('blog:' . $blogId);
+                }
+                continue;
+            }
+            $renderUnifiedEntry('module:' . $mKey);
+        }
+        foreach (array_keys($pagesMap) as $pageId) {
+            $renderUnifiedEntry('page:' . $pageId);
         }
     } else {
         // Fallback: starý systém (stránky, pak moduly)

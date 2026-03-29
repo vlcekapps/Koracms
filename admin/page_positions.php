@@ -11,19 +11,20 @@ $pages = $pdo->query(
      ORDER BY nav_order, title, id"
 )->fetchAll();
 
-adminHeader('Pozice statických stránek');
+adminHeader('Základní pořadí stránek');
 ?>
 
 <?php if (isset($_GET['nav_saved'])): ?>
-  <p class="success" role="status">Pořadí statických stránek bylo uloženo.</p>
+  <p class="success" role="status">Základní pořadí statických stránek bylo uloženo.</p>
 <?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="<?= BASE_URL ?>/admin/pages.php"><span aria-hidden="true">←</span> Zpět na statické stránky</a>
   <a href="<?= BASE_URL ?>/admin/page_form.php" class="btn">+ Nová stránka</a>
+  <a href="<?= BASE_URL ?>/admin/menu.php" class="btn">Navigace webu</a>
 </p>
 
-<p>Tlačítky měňte pořadí, v jakém se statické stránky zobrazují návštěvníkům v hlavní navigaci webu. Stránky skryté z navigace nebo nezveřejněné tu zůstávají také, aby měly připravené stabilní pořadí pro případné pozdější zobrazení.</p>
+<p>Tady upravujete základní pořadí statických stránek mezi sebou. Používá se v přehledech a jako výchozí fallback. Pro skutečné pořadí hlavní navigace webu použijte stránku <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>.</p>
 
 <?php if ($pages === []): ?>
   <p>Zatím tu nejsou žádné statické stránky. <a href="<?= BASE_URL ?>/admin/page_form.php">Přidat první stránku</a>.</p>

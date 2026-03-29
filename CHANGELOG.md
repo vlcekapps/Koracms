@@ -20,6 +20,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci
+- **Navigace webu a statické stránky** – `Navigace webu` je teď skutečná autorita pro veřejné pořadí menu, ukládání sjednoceného pořadí doplňuje chybějící položky bezpečně na konec, stránka hlásí změny přes live region a copy u statických stránek nově jasně odlišuje hlavní navigaci od základního pořadí stránek
 - **Hromadné akce a tabulky v administraci** – odstraněno duplicitní `id="check-all"` v jídelním lístku a bulk helper nyní bezpečně podporuje více tabulek se samostatným výběrem položek
 - **Modální dialogy Blogy a Widgety** – doplněny přístupnostní atributy, popis dialogu, řízení `aria-expanded`, návrat fokusu a zamykání scrollu podkladové stránky
 - **Přihlašovací obrazovky administrace** – `login.php` a `login_2fa.php` nově používají skip link a sjednocený focus-visible základ, aby se nechovaly hůř než zbytek administrace

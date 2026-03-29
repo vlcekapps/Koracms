@@ -5813,4 +5813,41 @@ if ($widgetRenderIssues === []) {
     }
 }
 
+echo "=== menu_admin_guardrails ===\n";
+$menuAdminIssues = [];
+$adminMenuSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');
+$adminPagesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.php');
+$pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
+$pagePositionsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_positions.php');
+$publicNavSource = (string)file_get_contents(dirname(__DIR__) . '/lib/stats.php');
+if (!str_contains($adminMenuSource, 'id="nav-order-status"')) {
+    $menuAdminIssues[] = 'admin menu is missing live status region for keyboard reorder feedback';
+}
+if (!str_contains($adminMenuSource, 'aria-disabled')) {
+    $menuAdminIssues[] = 'admin menu does not expose aria-disabled states on move buttons';
+}
+if (!str_contains($adminMenuSource, 'Správa blogů') || !str_contains($adminMenuSource, 'Správa modulů') || !str_contains($adminMenuSource, 'Upravit stránku')) {
+    $menuAdminIssues[] = 'admin menu is missing quick links for fixing disabled items';
+}
+if (!str_contains($adminPagesSource, 'Základní pořadí stránek')) {
+    $menuAdminIssues[] = 'pages overview still uses outdated static page ordering wording';
+}
+if (!str_contains($pageFormSource, '/admin/menu.php') || str_contains($pageFormSource, 'Pořadí statických stránek upravíte na stránce')) {
+    $menuAdminIssues[] = 'page form help still points navigation ordering to the wrong screen';
+}
+if (!str_contains($pagePositionsSource, 'Pro skutečné pořadí hlavní navigace webu použijte stránku')) {
+    $menuAdminIssues[] = 'page positions page does not clarify that main navigation is managed elsewhere';
+}
+if (!str_contains($publicNavSource, '$renderUnifiedEntry') || !str_contains($publicNavSource, 'foreach (array_keys($pagesMap) as $pageId)')) {
+    $menuAdminIssues[] = 'public navigation does not append missing unified entries safely';
+}
+if ($menuAdminIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($menuAdminIssues as $menuAdminIssue) {
+        echo '- ' . $menuAdminIssue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

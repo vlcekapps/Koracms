@@ -260,7 +260,11 @@ V jedné správě lze řadit:
 - blogy
 - statické stránky
 
-To znamená, že stránka může být mezi moduly a blog může být před novinkami. Řazení je oddělené od interních seznamů modulů – statické stránky a navigace webu jsou spravované jinak než obsah uvnitř modulů.
+To znamená, že stránka může být mezi moduly a blog může být před novinkami. `Navigace webu` je hlavní autorita pro skutečné pořadí položek v menu návštěvníka.
+
+Samostatná stránka `Základní pořadí stránek` slouží už jen jako fallback pořadí mezi statickými stránkami samotnými. Hodí se pro interní přehledy a jako výchozí stabilní řazení, ale neřídí přímo hlavní menu webu.
+
+Řazení navigace je oddělené od interních seznamů modulů – navigace webu se spravuje jinak než obsah uvnitř modulů.
 
 ---
 
