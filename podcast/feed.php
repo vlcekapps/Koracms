@@ -21,16 +21,18 @@ if (!$show) {
     exit;
 }
 $show = hydratePodcastShowPresentation($show);
+$feedEpisodeLimit = (int)$show['feed_episode_limit'];
 
 $episodesStmt = $pdo->prepare(
     "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
      FROM cms_podcasts p
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
      WHERE p.show_id = ?
+       AND COALESCE(p.block_from_feed, 0) = 0
        AND p.status = 'published'
        AND (p.publish_at IS NULL OR p.publish_at <= NOW())
      ORDER BY COALESCE(p.publish_at, p.created_at) DESC, COALESCE(p.episode_num, 0) DESC, p.id DESC
-     LIMIT 100"
+     LIMIT {$feedEpisodeLimit}"
 );
 $episodesStmt->execute([(int)$show['id']]);
 $episodes = array_map(
@@ -43,6 +45,8 @@ $selfUrl = siteUrl('/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'
 $coverUrl = (string)($show['cover_image'] !== ''
     ? siteUrl('/uploads/podcasts/covers/' . rawurlencode((string)$show['cover_image']))
     : '');
+$showSubtitle = (string)($show['feed_subtitle'] ?? '');
+$showSummary = (string)($show['feed_summary'] ?? '');
 $buildDateSource = $episodes[0]['display_date'] ?? ($show['updated_at'] ?? $show['created_at'] ?? 'now');
 $buildDate = date(DATE_RSS, strtotime((string)$buildDateSource));
 
@@ -59,12 +63,28 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     <title><?= htmlspecialchars((string)$show['title'], ENT_XML1, 'UTF-8') ?></title>
     <link><?= htmlspecialchars($showUrl, ENT_XML1, 'UTF-8') ?></link>
     <description><?= htmlspecialchars((string)($show['description_plain'] ?? ''), ENT_XML1, 'UTF-8') ?></description>
+<?php if ($showSummary !== ''): ?>
+    <itunes:summary><?= htmlspecialchars($showSummary, ENT_XML1, 'UTF-8') ?></itunes:summary>
+<?php endif; ?>
+<?php if ($showSubtitle !== ''): ?>
+    <itunes:subtitle><?= htmlspecialchars($showSubtitle, ENT_XML1, 'UTF-8') ?></itunes:subtitle>
+<?php endif; ?>
     <language><?= htmlspecialchars((string)($show['language'] ?: 'cs'), ENT_XML1, 'UTF-8') ?></language>
     <lastBuildDate><?= $buildDate ?></lastBuildDate>
     <atom:link href="<?= htmlspecialchars($selfUrl, ENT_XML1, 'UTF-8') ?>" rel="self" type="application/rss+xml"/>
 <?php if (!empty($show['author'])): ?>
     <itunes:author><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></itunes:author>
     <managingEditor><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></managingEditor>
+<?php endif; ?>
+<?php if (!empty($show['owner_name']) || !empty($show['owner_email'])): ?>
+    <itunes:owner>
+<?php if (!empty($show['owner_name'])): ?>
+      <itunes:name><?= htmlspecialchars((string)$show['owner_name'], ENT_XML1, 'UTF-8') ?></itunes:name>
+<?php endif; ?>
+<?php if (!empty($show['owner_email'])): ?>
+      <itunes:email><?= htmlspecialchars((string)$show['owner_email'], ENT_XML1, 'UTF-8') ?></itunes:email>
+<?php endif; ?>
+    </itunes:owner>
 <?php endif; ?>
 <?php if (!empty($show['category'])): ?>
     <itunes:category text="<?= htmlspecialchars((string)$show['category'], ENT_XML1, 'UTF-8') ?>"/>
@@ -77,7 +97,11 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     </image>
     <itunes:image href="<?= htmlspecialchars($coverUrl, ENT_XML1, 'UTF-8') ?>"/>
 <?php endif; ?>
-    <itunes:explicit>no</itunes:explicit>
+    <itunes:explicit><?= htmlspecialchars((string)$show['explicit_mode'], ENT_XML1, 'UTF-8') ?></itunes:explicit>
+    <itunes:type><?= htmlspecialchars((string)$show['show_type'], ENT_XML1, 'UTF-8') ?></itunes:type>
+<?php if (!empty($show['feed_complete'])): ?>
+    <itunes:complete>yes</itunes:complete>
+<?php endif; ?>
 <?php foreach ($episodes as $episode):
     $audioSrc = '';
     $audioType = 'audio/mpeg';
@@ -99,6 +123,9 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     $pubDate = date(DATE_RSS, strtotime($pubDateSource));
     $itemLink = (string)$episode['public_url'];
     $description = podcastEpisodeExcerpt($episode, 400);
+    $itemSummary = (string)($episode['feed_summary'] ?? '');
+    $itemSubtitle = (string)($episode['feed_subtitle'] ?? '');
+    $itemExplicit = (string)($episode['explicit_mode'] === 'inherit' ? $show['explicit_mode'] : $episode['explicit_mode']);
     $episodeImageUrl = (string)(
         !empty($episode['image_file'])
             ? siteUrl('/uploads/podcasts/images/' . rawurlencode((string)$episode['image_file']))
@@ -114,6 +141,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php if (!empty($episode['description'])): ?>
       <content:encoded><![CDATA[<?= (string)$episode['description'] ?>]]></content:encoded>
 <?php endif; ?>
+<?php if ($itemSummary !== ''): ?>
+      <itunes:summary><?= htmlspecialchars($itemSummary, ENT_XML1, 'UTF-8') ?></itunes:summary>
+<?php endif; ?>
+<?php if ($itemSubtitle !== ''): ?>
+      <itunes:subtitle><?= htmlspecialchars($itemSubtitle, ENT_XML1, 'UTF-8') ?></itunes:subtitle>
+<?php endif; ?>
 <?php if ($audioSrc !== ''): ?>
       <enclosure url="<?= htmlspecialchars($audioSrc, ENT_XML1, 'UTF-8') ?>"
                  type="<?= htmlspecialchars($audioType, ENT_XML1, 'UTF-8') ?>"
@@ -122,11 +155,18 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php if ($episodeImageUrl !== ''): ?>
       <itunes:image href="<?= htmlspecialchars($episodeImageUrl, ENT_XML1, 'UTF-8') ?>"/>
 <?php endif; ?>
+      <itunes:explicit><?= htmlspecialchars($itemExplicit, ENT_XML1, 'UTF-8') ?></itunes:explicit>
 <?php if (!empty($episode['duration'])): ?>
       <itunes:duration><?= htmlspecialchars((string)$episode['duration'], ENT_XML1, 'UTF-8') ?></itunes:duration>
 <?php endif; ?>
 <?php if (!empty($episode['episode_num'])): ?>
       <itunes:episode><?= (int)$episode['episode_num'] ?></itunes:episode>
+<?php endif; ?>
+<?php if (!empty($episode['season_num'])): ?>
+      <itunes:season><?= (int)$episode['season_num'] ?></itunes:season>
+<?php endif; ?>
+<?php if (!empty($episode['episode_type'])): ?>
+      <itunes:episodeType><?= htmlspecialchars((string)$episode['episode_type'], ENT_XML1, 'UTF-8') ?></itunes:episodeType>
 <?php endif; ?>
 <?php if (!empty($show['author'])): ?>
       <itunes:author><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></itunes:author>

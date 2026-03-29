@@ -11,9 +11,16 @@ $show = [
     'slug' => '',
     'description' => '',
     'author' => '',
+    'subtitle' => '',
     'cover_image' => '',
     'language' => 'cs',
     'category' => '',
+    'owner_name' => '',
+    'owner_email' => '',
+    'explicit_mode' => 'no',
+    'show_type' => 'episodic',
+    'feed_complete' => 0,
+    'feed_episode_limit' => 100,
     'website_url' => '',
 ];
 
@@ -39,6 +46,8 @@ $formError = match ($err) {
     'slug' => 'Slug pořadu musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už používá jiný pořad.',
     'url' => 'Web pořadu musí mít platný formát.',
+    'owner_email' => 'E-mail vlastníka feedu musí mít platný formát.',
+    'feed_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
     'cover' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     default => '',
 };
@@ -82,6 +91,11 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <input type="text" id="author" name="author" maxlength="255"
            value="<?= h((string)$show['author']) ?>">
 
+    <label for="subtitle">Krátký podtitul pro katalogy</label>
+    <input type="text" id="subtitle" name="subtitle" maxlength="255" aria-describedby="podcast-show-subtitle-help"
+           value="<?= h((string)$show['subtitle']) ?>">
+    <small id="podcast-show-subtitle-help" class="field-help">Volitelné. Hodí se pro Apple Podcasts a další aplikace jako krátké shrnutí pořadu.</small>
+
     <label for="language">Jazyk</label>
     <input type="text" id="language" name="language" maxlength="10" style="width:8rem"
            aria-describedby="podcast-show-language-help"
@@ -101,6 +115,58 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <input type="url" id="website_url" name="website_url" maxlength="500"
            placeholder="https://example.com/podcast"
            value="<?= h((string)$show['website_url']) ?>">
+  </fieldset>
+
+  <fieldset>
+    <legend>Feed a katalogy podcastů</legend>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1 1 12rem">
+        <label for="feed_episode_limit">Počet epizod v RSS feedu</label>
+        <input type="number" id="feed_episode_limit" name="feed_episode_limit" min="1" max="1000"
+               aria-describedby="podcast-show-feed-limit-help"
+               value="<?= (int)$show['feed_episode_limit'] ?>">
+        <small id="podcast-show-feed-limit-help" class="field-help">Běžné podcast hostingy omezují feed na poslední epizody. Zadejte počet od 1 do 1000.</small>
+      </div>
+
+      <div style="flex:1 1 12rem">
+        <label for="show_type">Typ pořadu</label>
+        <select id="show_type" name="show_type" aria-describedby="podcast-show-type-help">
+          <option value="episodic"<?= (string)$show['show_type'] === 'episodic' ? ' selected' : '' ?>>Epizodický</option>
+          <option value="serial"<?= (string)$show['show_type'] === 'serial' ? ' selected' : '' ?>>Seriálový</option>
+        </select>
+        <small id="podcast-show-type-help" class="field-help">Apple Podcasts používá typ pořadu pro lepší řazení a zobrazování epizod.</small>
+      </div>
+
+      <div style="flex:1 1 12rem">
+        <label for="explicit_mode">Explicitní obsah</label>
+        <select id="explicit_mode" name="explicit_mode">
+          <option value="no"<?= (string)$show['explicit_mode'] === 'no' ? ' selected' : '' ?>>Ne</option>
+          <option value="clean"<?= (string)$show['explicit_mode'] === 'clean' ? ' selected' : '' ?>>Clean</option>
+          <option value="yes"<?= (string)$show['explicit_mode'] === 'yes' ? ' selected' : '' ?>>Ano</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1 1 18rem">
+        <label for="owner_name">Vlastník feedu</label>
+        <input type="text" id="owner_name" name="owner_name" maxlength="255"
+               value="<?= h((string)$show['owner_name']) ?>">
+      </div>
+
+      <div style="flex:1 1 18rem">
+        <label for="owner_email">E-mail vlastníka feedu</label>
+        <input type="email" id="owner_email" name="owner_email" maxlength="255" aria-describedby="podcast-show-owner-email-help"
+               value="<?= h((string)$show['owner_email']) ?>">
+        <small id="podcast-show-owner-email-help" class="field-help">Používá se v RSS feedu jako kontakt pro podcast katalogy.</small>
+      </div>
+    </div>
+
+    <label for="feed_complete" style="font-weight:normal;margin-top:.5rem">
+      <input type="checkbox" id="feed_complete" name="feed_complete" value="1"<?= !empty($show['feed_complete']) ? ' checked' : '' ?>>
+      Označit feed jako dokončený
+    </label>
   </fieldset>
 
   <fieldset>

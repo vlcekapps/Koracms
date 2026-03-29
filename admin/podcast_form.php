@@ -17,8 +17,13 @@ $episode = [
     'audio_file' => '',
     'image_file' => '',
     'audio_url' => '',
+    'subtitle' => '',
     'duration' => '',
     'episode_num' => null,
+    'season_num' => null,
+    'episode_type' => 'full',
+    'explicit_mode' => 'inherit',
+    'block_from_feed' => 0,
     'publish_at' => null,
     'created_at' => null,
     'status' => 'published',
@@ -111,11 +116,21 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
            value="<?= h((string)$episode['slug']) ?>">
     <small id="podcast-episode-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu epizody. V rámci pořadu musí zůstat jedinečná.</small>
 
+    <label for="subtitle">Krátký podtitul pro katalogy</label>
+    <input type="text" id="subtitle" name="subtitle" maxlength="255" aria-describedby="podcast-episode-subtitle-help"
+           value="<?= h((string)$episode['subtitle']) ?>">
+    <small id="podcast-episode-subtitle-help" class="field-help">Volitelné. Hodí se pro Apple Podcasts a další aplikace jako krátký doplněk názvu epizody.</small>
+
     <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1 1 12rem">
         <label for="episode_num">Číslo epizody</label>
         <input type="number" id="episode_num" name="episode_num" min="1" style="width:100%"
                value="<?= !empty($episode['episode_num']) ? (int)$episode['episode_num'] : '' ?>">
+      </div>
+      <div style="flex:1 1 12rem">
+        <label for="season_num">Číslo série</label>
+        <input type="number" id="season_num" name="season_num" min="1" style="width:100%"
+               value="<?= !empty($episode['season_num']) ? (int)$episode['season_num'] : '' ?>">
       </div>
       <div style="flex:1 1 12rem">
         <label for="duration">Délka</label>
@@ -130,6 +145,32 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       </div>
     </div>
     <small id="podcast-episode-publish-help" class="field-help">Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.</small>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1 1 12rem">
+        <label for="episode_type">Typ epizody</label>
+        <select id="episode_type" name="episode_type">
+          <option value="full"<?= (string)$episode['episode_type'] === 'full' ? ' selected' : '' ?>>Plná epizoda</option>
+          <option value="trailer"<?= (string)$episode['episode_type'] === 'trailer' ? ' selected' : '' ?>>Trailer</option>
+          <option value="bonus"<?= (string)$episode['episode_type'] === 'bonus' ? ' selected' : '' ?>>Bonus</option>
+        </select>
+      </div>
+
+      <div style="flex:1 1 12rem">
+        <label for="explicit_mode">Explicitní obsah</label>
+        <select id="explicit_mode" name="explicit_mode">
+          <option value="inherit"<?= (string)$episode['explicit_mode'] === 'inherit' ? ' selected' : '' ?>>Převzít z pořadu</option>
+          <option value="no"<?= (string)$episode['explicit_mode'] === 'no' ? ' selected' : '' ?>>Ne</option>
+          <option value="clean"<?= (string)$episode['explicit_mode'] === 'clean' ? ' selected' : '' ?>>Clean</option>
+          <option value="yes"<?= (string)$episode['explicit_mode'] === 'yes' ? ' selected' : '' ?>>Ano</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="block_from_feed" style="font-weight:normal;margin-top:.5rem">
+      <input type="checkbox" id="block_from_feed" name="block_from_feed" value="1"<?= !empty($episode['block_from_feed']) ? ' checked' : '' ?>>
+      Skrýt epizodu z RSS feedu
+    </label>
   </fieldset>
 
   <fieldset>

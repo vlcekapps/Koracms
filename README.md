@@ -195,7 +195,7 @@ php -l cesta/k/souboru.php
 | **Novinky** | Krátké zprávy s autorem, detailem a čistou slug URL |
 | **Události** | Přehled akcí s datem, místem, detailem a slug URL |
 | **Galerie** | Alba a fotografie s detailovými URL, obálkou alba, exportem do ZIP a přístupnou veřejnou prezentací |
-| **Podcasty** | Více pořadů i epizod, detail pořadu, detail epizody, RSS feed pořadu a volitelný artwork pořadu i epizod; cover pořadu podporuje doporučený čtvercový JPG/PNG v rozmezí 1024×1024 až 3000×3000 px |
+| **Podcasty** | Více pořadů i epizod, detail pořadu, detail epizody, RSS feed pořadu, volitelný artwork pořadu i epizod a feed metadata pro podcast katalogy; cover pořadu podporuje doporučený čtvercový JPG/PNG v rozmezí 1024×1024 až 3000×3000 px |
 | **Zajímavá místa** | Turistický adresář s typem místa, perexem, obrázkem, adresou, GPS, kontaktem a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s typem položky, verzí, platformou, licencí, externím odkazem a bezpečným file endpointem |
 | **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek, archiv a detail přes slug URL |
@@ -224,6 +224,22 @@ Každý podcastový pořad může mít vlastní volitelný cover obrázek a kaž
 - pokud epizoda nemá vlastní obrázek, veřejný detail epizody i RSS feed použijí cover pořadu
 
 Tento formát odpovídá běžným požadavkům podcastových adresářů včetně Apple Podcasts.
+
+---
+
+## Podcast RSS feed a katalogy
+
+Každý podcastový pořad má nově i vlastní feed nastavení pro podcastové aplikace a katalogy.
+
+- počet epizod ve feedu je nastavitelný samostatně pro každý pořad
+- pořad může mít krátký podtitul pro katalogy
+- pořad může mít vlastníka feedu a kontaktní e-mail
+- pořad podporuje `explicit` režim, typ `episodic / serial` a příznak `complete`
+- epizoda může mít vlastní podtitul, číslo série, typ `full / trailer / bonus`
+- epizoda může přepsat explicit režim pořadu nebo se z feedu úplně skrýt
+- RSS feed generuje iTunes značky jako `itunes:summary`, `itunes:subtitle`, `itunes:owner`, `itunes:type`, `itunes:explicit`, `itunes:season` a `itunes:episodeType`
+
+To pomáhá držet feed kompatibilní s běžnými podcast hostingy a katalogy bez závislosti na externí službě.
 
 ---
 

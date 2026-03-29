@@ -8,8 +8,15 @@ $id = inputInt('post', 'id');
 $title = trim((string)($_POST['title'] ?? ''));
 $slugInput = trim((string)($_POST['slug'] ?? ''));
 $author = trim((string)($_POST['author'] ?? ''));
+$subtitle = trim((string)($_POST['subtitle'] ?? ''));
 $language = trim((string)($_POST['language'] ?? 'cs'));
 $category = trim((string)($_POST['category'] ?? ''));
+$ownerName = trim((string)($_POST['owner_name'] ?? ''));
+$ownerEmailInput = trim((string)($_POST['owner_email'] ?? ''));
+$explicitMode = normalizePodcastExplicitMode((string)($_POST['explicit_mode'] ?? 'no'));
+$showType = normalizePodcastShowType((string)($_POST['show_type'] ?? 'episodic'));
+$feedComplete = isset($_POST['feed_complete']) ? 1 : 0;
+$feedEpisodeLimitInput = trim((string)($_POST['feed_episode_limit'] ?? '100'));
 $websiteUrlInput = trim((string)($_POST['website_url'] ?? ''));
 $description = (string)($_POST['description'] ?? '');
 $deleteCover = isset($_POST['cover_image_delete']);
@@ -56,6 +63,16 @@ if ($websiteUrlInput !== '' && $websiteUrl === '') {
     $redirectWithError('url');
 }
 
+$ownerEmail = normalizePodcastOwnerEmail($ownerEmailInput);
+if ($ownerEmailInput !== '' && $ownerEmail === '') {
+    $redirectWithError('owner_email');
+}
+
+$feedEpisodeLimit = normalizePodcastFeedEpisodeLimit($feedEpisodeLimitInput);
+if ($feedEpisodeLimitInput !== '' && (!preg_match('/^\d+$/', $feedEpisodeLimitInput) || (int)$feedEpisodeLimitInput < 1 || (int)$feedEpisodeLimitInput > 1000)) {
+    $redirectWithError('feed_limit');
+}
+
 $coverFilename = (string)$existing['cover_image'];
 $coverUpload = uploadPodcastCoverImage($_FILES['cover_image'] ?? [], $coverFilename);
 if ($coverUpload['error'] !== '') {
@@ -71,17 +88,25 @@ if ($deleteCover && empty($_FILES['cover_image']['name']) && $coverFilename !== 
 if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_podcast_shows
-         SET title = ?, slug = ?, description = ?, author = ?, cover_image = ?, language = ?,
-             category = ?, website_url = ?, updated_at = NOW()
+         SET title = ?, slug = ?, description = ?, author = ?, subtitle = ?, cover_image = ?, language = ?,
+             category = ?, owner_name = ?, owner_email = ?, explicit_mode = ?, show_type = ?, feed_complete = ?,
+             feed_episode_limit = ?, website_url = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([
         $title,
         $uniqueSlug,
         $description,
         $author,
+        $subtitle,
         $coverFilename,
         $language !== '' ? $language : 'cs',
         $category,
+        $ownerName,
+        $ownerEmail,
+        $explicitMode,
+        $showType,
+        $feedComplete,
+        $feedEpisodeLimit,
         $websiteUrl,
         $id,
     ]);
@@ -89,16 +114,24 @@ if ($id !== null) {
 } else {
     $pdo->prepare(
         "INSERT INTO cms_podcast_shows
-         (title, slug, description, author, cover_image, language, category, website_url)
-         VALUES (?,?,?,?,?,?,?,?)"
+         (title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
+          explicit_mode, show_type, feed_complete, feed_episode_limit, website_url)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $uniqueSlug,
         $description,
         $author,
+        $subtitle,
         $coverFilename,
         $language !== '' ? $language : 'cs',
         $category,
+        $ownerName,
+        $ownerEmail,
+        $explicitMode,
+        $showType,
+        $feedComplete,
+        $feedEpisodeLimit,
         $websiteUrl,
     ]);
     $id = (int)$pdo->lastInsertId();

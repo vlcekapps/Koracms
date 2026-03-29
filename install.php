@@ -240,9 +240,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             slug        VARCHAR(100) NOT NULL UNIQUE,
             description TEXT,
             author      VARCHAR(255) NOT NULL DEFAULT '',
+            subtitle    VARCHAR(255) NOT NULL DEFAULT '',
             cover_image VARCHAR(255) NOT NULL DEFAULT '',
             language    VARCHAR(10)  NOT NULL DEFAULT 'cs',
             category    VARCHAR(100) NOT NULL DEFAULT '',
+            owner_name  VARCHAR(255) NOT NULL DEFAULT '',
+            owner_email VARCHAR(255) NOT NULL DEFAULT '',
+            explicit_mode ENUM('no','clean','yes') NOT NULL DEFAULT 'no',
+            show_type   ENUM('episodic','serial') NOT NULL DEFAULT 'episodic',
+            feed_complete TINYINT(1) NOT NULL DEFAULT 0,
+            feed_episode_limit INT NOT NULL DEFAULT 100,
             website_url VARCHAR(500) NOT NULL DEFAULT '',
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -257,8 +264,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audio_file   VARCHAR(255) NOT NULL DEFAULT '',
             image_file   VARCHAR(255) NOT NULL DEFAULT '',
             audio_url    VARCHAR(500) NOT NULL DEFAULT '',
+            subtitle     VARCHAR(255) NOT NULL DEFAULT '',
             duration     VARCHAR(20)  NOT NULL DEFAULT '',
             episode_num  INT          NULL DEFAULT NULL,
+            season_num   INT          NULL DEFAULT NULL,
+            episode_type ENUM('full','trailer','bonus') NOT NULL DEFAULT 'full',
+            explicit_mode ENUM('inherit','no','clean','yes') NOT NULL DEFAULT 'inherit',
+            block_from_feed TINYINT(1) NOT NULL DEFAULT 0,
             publish_at   DATETIME     NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -818,6 +830,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'uploads/board/images',
             'uploads/podcasts',
             'uploads/podcasts/covers',
+            'uploads/podcasts/images',
         ];
         foreach ($uploadDirs as $dir) {
             $path = __DIR__ . '/' . $dir;

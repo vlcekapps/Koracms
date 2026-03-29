@@ -10,8 +10,13 @@ $title = trim((string)($_POST['title'] ?? ''));
 $slugInput = trim((string)($_POST['slug'] ?? ''));
 $description = (string)($_POST['description'] ?? '');
 $audioUrlInput = trim((string)($_POST['audio_url'] ?? ''));
+$subtitle = trim((string)($_POST['subtitle'] ?? ''));
 $duration = trim((string)($_POST['duration'] ?? ''));
 $episodeNum = !empty($_POST['episode_num']) ? max(1, (int)$_POST['episode_num']) : null;
+$seasonNum = !empty($_POST['season_num']) ? max(1, (int)$_POST['season_num']) : null;
+$episodeType = normalizePodcastEpisodeType((string)($_POST['episode_type'] ?? 'full'));
+$explicitMode = normalizePodcastEpisodeExplicitMode((string)($_POST['explicit_mode'] ?? 'inherit'));
+$blockFromFeed = isset($_POST['block_from_feed']) ? 1 : 0;
 $deleteAudioFile = isset($_POST['audio_file_delete']);
 $deleteImageFile = isset($_POST['image_file_delete']);
 
@@ -117,7 +122,8 @@ if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_podcasts
          SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, image_file = ?, audio_url = ?,
-             duration = ?, episode_num = ?, publish_at = ?, updated_at = NOW()
+             subtitle = ?, duration = ?, episode_num = ?, season_num = ?, episode_type = ?, explicit_mode = ?,
+             block_from_feed = ?, publish_at = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([
         $showId,
@@ -127,8 +133,13 @@ if ($id !== null) {
         $audioFilename,
         $imageFilename,
         $audioUrl,
+        $subtitle,
         $duration,
         $episodeNum,
+        $seasonNum,
+        $episodeType,
+        $explicitMode,
+        $blockFromFeed,
         $publishAt,
         $id,
     ]);
@@ -137,8 +148,9 @@ if ($id !== null) {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $pdo->prepare(
         "INSERT INTO cms_podcasts
-         (show_id, title, slug, description, audio_file, image_file, audio_url, duration, episode_num, publish_at, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+         (show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
+          episode_type, explicit_mode, block_from_feed, publish_at, status)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $showId,
         $title,
@@ -147,8 +159,13 @@ if ($id !== null) {
         $audioFilename,
         $imageFilename,
         $audioUrl,
+        $subtitle,
         $duration,
         $episodeNum,
+        $seasonNum,
+        $episodeType,
+        $explicitMode,
+        $blockFromFeed,
         $publishAt,
         $status,
     ]);

@@ -429,6 +429,70 @@ function normalizePodcastEpisodeAudioUrl(string $value): string
     return normalizePodcastWebsiteUrl($value);
 }
 
+function normalizePodcastOwnerEmail(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    $validated = filter_var($value, FILTER_VALIDATE_EMAIL);
+    return is_string($validated) ? $validated : '';
+}
+
+function normalizePodcastExplicitMode(string $value, string $default = 'no'): string
+{
+    $value = trim(strtolower($value));
+    return in_array($value, ['no', 'clean', 'yes'], true) ? $value : $default;
+}
+
+function normalizePodcastEpisodeExplicitMode(string $value): string
+{
+    $value = trim(strtolower($value));
+    return in_array($value, ['inherit', 'no', 'clean', 'yes'], true) ? $value : 'inherit';
+}
+
+function normalizePodcastShowType(string $value): string
+{
+    $value = trim(strtolower($value));
+    return in_array($value, ['episodic', 'serial'], true) ? $value : 'episodic';
+}
+
+function normalizePodcastEpisodeType(string $value): string
+{
+    $value = trim(strtolower($value));
+    return in_array($value, ['full', 'trailer', 'bonus'], true) ? $value : 'full';
+}
+
+function normalizePodcastFeedEpisodeLimit(mixed $value): int
+{
+    $limit = (int)$value;
+    if ($limit < 1) {
+        return 100;
+    }
+    return min($limit, 1000);
+}
+
+function podcastFeedSubtitle(string $value, int $limit = 255): string
+{
+    $value = normalizePlainText($value);
+    if ($value === '') {
+        return '';
+    }
+
+    return mb_strimwidth($value, 0, $limit, '...', 'UTF-8');
+}
+
+function podcastFeedSummary(string $value, int $limit = 4000): string
+{
+    $value = normalizePlainText($value);
+    if ($value === '') {
+        return '';
+    }
+
+    return mb_strimwidth($value, 0, $limit, '...', 'UTF-8');
+}
+
 function deletePodcastCoverFile(string $filename): void
 {
     $filename = basename($filename);
@@ -2203,10 +2267,19 @@ function hydratePodcastShowPresentation(array $show): array
 {
     $show['slug'] = podcastShowSlug((string)($show['slug'] ?? ''));
     $show['website_url'] = normalizePodcastWebsiteUrl((string)($show['website_url'] ?? ''));
+    $show['subtitle'] = trim((string)($show['subtitle'] ?? ''));
+    $show['owner_name'] = trim((string)($show['owner_name'] ?? ''));
+    $show['owner_email'] = normalizePodcastOwnerEmail((string)($show['owner_email'] ?? ''));
+    $show['explicit_mode'] = normalizePodcastExplicitMode((string)($show['explicit_mode'] ?? 'no'));
+    $show['show_type'] = normalizePodcastShowType((string)($show['show_type'] ?? 'episodic'));
+    $show['feed_complete'] = !empty($show['feed_complete']) ? 1 : 0;
+    $show['feed_episode_limit'] = normalizePodcastFeedEpisodeLimit($show['feed_episode_limit'] ?? 100);
     $show['cover_url'] = podcastCoverUrl($show);
     $show['public_path'] = podcastShowPublicPath($show);
     $show['public_url'] = podcastShowPublicUrl($show);
     $show['description_plain'] = normalizePlainText((string)($show['description'] ?? ''));
+    $show['feed_subtitle'] = podcastFeedSubtitle((string)($show['subtitle'] !== '' ? $show['subtitle'] : $show['description_plain']));
+    $show['feed_summary'] = podcastFeedSummary((string)($show['description_plain'] ?? ''));
     return $show;
 }
 
@@ -2214,6 +2287,11 @@ function hydratePodcastEpisodePresentation(array $episode): array
 {
     $episode['slug'] = podcastEpisodeSlug((string)($episode['slug'] ?? ''));
     $episode['audio_url'] = normalizePodcastEpisodeAudioUrl((string)($episode['audio_url'] ?? ''));
+    $episode['subtitle'] = trim((string)($episode['subtitle'] ?? ''));
+    $episode['season_num'] = !empty($episode['season_num']) ? (int)$episode['season_num'] : null;
+    $episode['episode_type'] = normalizePodcastEpisodeType((string)($episode['episode_type'] ?? 'full'));
+    $episode['explicit_mode'] = normalizePodcastEpisodeExplicitMode((string)($episode['explicit_mode'] ?? 'inherit'));
+    $episode['block_from_feed'] = !empty($episode['block_from_feed']) ? 1 : 0;
     $episode['excerpt'] = podcastEpisodeExcerpt($episode);
     $episode['public_path'] = podcastEpisodePublicPath($episode);
     $episode['public_url'] = podcastEpisodePublicUrl($episode);
@@ -2228,6 +2306,8 @@ function hydratePodcastEpisodePresentation(array $episode): array
         $displayDate = trim((string)($episode['created_at'] ?? ''));
     }
     $episode['display_date'] = $displayDate;
+    $episode['feed_subtitle'] = podcastFeedSubtitle((string)($episode['subtitle'] !== '' ? $episode['subtitle'] : $episode['excerpt']));
+    $episode['feed_summary'] = podcastFeedSummary((string)($episode['description'] ?? ''));
     $episode['is_scheduled'] = trim((string)($episode['publish_at'] ?? '')) !== ''
         && strtotime((string)$episode['publish_at']) > time();
     return $episode;

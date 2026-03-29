@@ -829,14 +829,18 @@ if (isModuleEnabled('podcast')) {
     $runtimeAuditPodcastShowSlug = uniquePodcastShowSlug($pdo, 'runtime-audit-podcast-' . bin2hex(random_bytes(4)));
     $pdo->prepare(
         "INSERT INTO cms_podcast_shows (
-            title, slug, description, author, cover_image, language, category, website_url, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, '', 'cs', ?, ?, NOW(), NOW())"
+            title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
+            explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, '', 'cs', ?, ?, ?, 'clean', 'episodic', 0, 25, ?, NOW(), NOW())"
     )->execute([
         $runtimeAuditPodcastShowTitle,
         $runtimeAuditPodcastShowSlug,
         '<p>Testovací pořad pro runtime audit veřejných URL, RSS feedu a administrace podcastů.</p>',
         'Runtime Audit',
+        'Krátký podtitul testovacího pořadu.',
         'Technologie',
+        'Runtime Audit Owner',
+        'runtime.audit.owner@example.test',
         'https://example.test/podcast',
     ]);
     $runtimeAuditPodcastShowId = (int)$pdo->lastInsertId();
@@ -846,15 +850,16 @@ if (isModuleEnabled('podcast')) {
     $runtimeAuditPodcastEpisodeSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditPodcastShowId, 'runtime-audit-epizoda-' . bin2hex(random_bytes(4)));
     $pdo->prepare(
         "INSERT INTO cms_podcasts (
-            show_id, title, slug, description, audio_file, audio_url, duration, episode_num,
-            publish_at, status, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, '', ?, '12:34', 1, NOW(), 'published', NOW(), NOW())"
+            show_id, title, slug, description, audio_file, audio_url, subtitle, duration, episode_num, season_num,
+            episode_type, explicit_mode, block_from_feed, publish_at, status, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, '', ?, ?, '12:34', 1, 2, 'bonus', 'yes', 0, NOW(), 'published', NOW(), NOW())"
     )->execute([
         $runtimeAuditPodcastShowId,
         $runtimeAuditPodcastEpisodeTitle,
         $runtimeAuditPodcastEpisodeSlug,
         '<p>Detailní text testovací epizody pro runtime audit podcastů.</p>',
         'https://example.test/runtime-audit-episode.mp3',
+        'Krátký podtitul testovací epizody.',
     ]);
     $runtimeAuditPodcastEpisodeId = (int)$pdo->lastInsertId();
     $cleanup['podcast_episode_ids'][] = $runtimeAuditPodcastEpisodeId;
@@ -1280,6 +1285,7 @@ if (isModuleEnabled('podcast')) {
     $pages[] = ['label' => 'podcast_index', 'url' => $baseUrl . '/podcast/index.php'];
     if ($podcastShowSlug) {
         $pages[] = ['label' => 'podcast_show', 'url' => $baseUrl . '/podcast/' . urlencode((string)$podcastShowSlug)];
+        $pages[] = ['label' => 'podcast_feed', 'url' => $baseUrl . '/podcast/feed.php?slug=' . urlencode((string)$podcastShowSlug)];
     }
 }
 if (isModuleEnabled('polls')) {
@@ -1673,6 +1679,9 @@ function responseHasLocationHeader(array $headers, string $expectedPath, string 
 function analyzeUxHeuristics(string $html, string $label): array
 {
     $issues = [];
+    if ($label === 'podcast_feed') {
+        return $issues;
+    }
     libxml_use_internal_errors(true);
     $dom = new DOMDocument();
     $dom->loadHTML($html);
@@ -2188,10 +2197,10 @@ foreach ($pages as $page) {
         'admin_place_create_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.'],
         'admin_board_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
         'admin_board_create_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
-        'admin_podcast_show_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_podcast_show_create_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_podcast_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.'],
-        'admin_podcast_create_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.'],
+        'admin_podcast_show_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Počet epizod v RSS feedu', 'E-mail vlastníka feedu'],
+        'admin_podcast_show_create_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Počet epizod v RSS feedu', 'E-mail vlastníka feedu'],
+        'admin_podcast_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.', 'Krátký podtitul pro katalogy', 'Skrýt epizodu z RSS feedu'],
+        'admin_podcast_create_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.', 'Krátký podtitul pro katalogy', 'Skrýt epizodu z RSS feedu'],
         'admin_polls_form' => ['Vyplňte otázku, možnosti a případné časové omezení.', 'Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.'],
         'admin_polls_create_form' => ['Vyplňte otázku, možnosti a případné časové omezení.', 'Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.'],
         'admin_res_resource_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
@@ -2399,8 +2408,8 @@ foreach ($pages as $page) {
         'admin_gallery_album_create_form' => ['Údaje o albu'],
         'admin_gallery_photo_form' => ['Údaje o fotografii'],
         'admin_gallery_photo_create_form' => ['Nahrání fotografií do alba'],
-        'admin_podcast_show_form' => ['Základní údaje podcastu', 'Popis a titulní obrázek'],
-        'admin_podcast_show_create_form' => ['Základní údaje podcastu', 'Popis a titulní obrázek'],
+        'admin_podcast_show_form' => ['Základní údaje podcastu', 'Feed a katalogy podcastů', 'Popis a titulní obrázek'],
+        'admin_podcast_show_create_form' => ['Základní údaje podcastu', 'Feed a katalogy podcastů', 'Popis a titulní obrázek'],
         'admin_podcast_form' => ['Základní údaje epizody', 'Audio a text epizody'],
         'admin_podcast_create_form' => ['Základní údaje epizody', 'Audio a text epizody'],
         'admin_polls_form' => ['Základní údaje ankety'],
@@ -3539,8 +3548,15 @@ foreach ($pages as $page) {
         foreach ([
             'name="slug"',
             'name="author"',
+            'name="subtitle"',
             'name="language"',
             'name="category"',
+            'name="owner_name"',
+            'name="owner_email"',
+            'name="explicit_mode"',
+            'name="show_type"',
+            'name="feed_complete"',
+            'name="feed_episode_limit"',
             'name="website_url"',
             'name="cover_image"',
             'Zpět na přehled podcastů',
@@ -3554,7 +3570,12 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_podcast_form') {
         foreach ([
             'name="slug"',
+            'name="subtitle"',
             'name="episode_num"',
+            'name="season_num"',
+            'name="episode_type"',
+            'name="explicit_mode"',
+            'name="block_from_feed"',
             'name="duration"',
             'name="audio_file"',
             'name="image_file"',
@@ -3565,6 +3586,24 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin podcast form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'podcast_feed') {
+        foreach ([
+            '<itunes:summary>',
+            '<itunes:subtitle>',
+            '<itunes:owner>',
+            '<itunes:email>runtime.audit.owner@example.test</itunes:email>',
+            '<itunes:type>episodic</itunes:type>',
+            '<itunes:explicit>clean</itunes:explicit>',
+            '<itunes:season>2</itunes:season>',
+            '<itunes:episodeType>bonus</itunes:episodeType>',
+            '<itunes:explicit>yes</itunes:explicit>',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'podcast feed is missing fragment: ' . $expectedFragment;
             }
         }
     }
