@@ -35,6 +35,7 @@ $articleListUrl = BASE_URL . '/admin/blog.php' . (isMultiBlog() ? '?blog=' . $cu
 $blogCategoriesUrl = BASE_URL . '/admin/blog_cats.php?blog_id=' . $currentBlogId;
 $blogTagsUrl = BASE_URL . '/admin/blog_tags.php?blog_id=' . $currentBlogId;
 $blogPublicUrl = $currentBlog ? blogIndexPath($currentBlog) : '';
+$blogFeedUrl = $currentBlog ? blogFeedPath($currentBlog) : '';
 
 $catStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name");
 $catStmt->execute([$currentBlogId]);
@@ -117,6 +118,7 @@ adminHeader($pageTitle);
     <a id="blog-link-categories" href="<?= h($blogCategoriesUrl) ?>">Kategorie blogu</a>
     <a id="blog-link-tags" href="<?= h($blogTagsUrl) ?>">Štítky blogu</a>
     <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
+    <a id="blog-link-feed" href="<?= h($blogFeedUrl) ?>" target="_blank" rel="noopener">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 
@@ -326,6 +328,7 @@ adminHeader($pageTitle);
     const categoryLink = document.getElementById('blog-link-categories');
     const tagLink = document.getElementById('blog-link-tags');
     const publicLink = document.getElementById('blog-link-public');
+    const feedLink = document.getElementById('blog-link-feed');
     const categorySelect = document.getElementById('category_id');
     const tagsFieldset = document.getElementById('article-tags-fieldset');
     const tagsContainer = document.getElementById('article-tags-options');
@@ -335,6 +338,7 @@ adminHeader($pageTitle);
             'id' => (int)$blogEntry['id'],
             'name' => (string)$blogEntry['name'],
             'publicUrl' => blogIndexPath($blogEntry),
+            'feedUrl' => blogFeedPath($blogEntry),
         ];
     }, $allBlogs)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMetaById = Object.fromEntries(blogMeta.map((blogEntry) => [String(blogEntry.id), blogEntry]));
@@ -394,6 +398,9 @@ adminHeader($pageTitle);
         }
         if (publicLink && selectedBlog) {
             publicLink.href = selectedBlog.publicUrl;
+        }
+        if (feedLink && selectedBlog) {
+            feedLink.href = selectedBlog.feedUrl;
         }
 
         const tags = blogOptions[blogId].tags || [];

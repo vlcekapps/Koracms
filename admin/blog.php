@@ -102,6 +102,7 @@ adminHeader($blogCaptionTitle);
   <?php endif; ?>
   <?php if ($activeBlog): ?>
     <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
+    <a href="<?= h(blogFeedPath($activeBlog)) ?>" target="_blank" rel="noopener">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 

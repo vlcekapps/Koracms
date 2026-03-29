@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Blogy – globální i samostatné RSS feedy** – globální `feed.php` zůstává pro celý web a každý blog v multiblog režimu má nově i vlastní feed přes `feed.php?blog=slug`; blogový feed používá vlastní název, popis a self odkaz a nepromíchává do sebe novinky z celého webu
 - **Podcasty – feed metadata a limity pořadů** – každý podcastový pořad nově umí nastavit počet epizod v RSS feedu, krátký podtitul pro katalogy, vlastníka feedu a jeho e-mail, explicit režim, typ pořadu `episodic / serial` a příznak `complete`; epizody nově podporují podtitul, číslo série, typ `full / trailer / bonus`, vlastní explicit režim a možnost skrýt konkrétní epizodu z RSS feedu
 - **Podcasty – artwork pořadů i epizod** – každý podcastový pořad může mít nově vlastní volitelný cover a každá epizoda i svůj samostatný obrázek; cover pořadu i epizody používají čtvercový `JPG` nebo `PNG` v rozmezí `1024×1024` až `3000×3000 px`, veřejný detail epizody umí fallback na cover pořadu a RSS feed nově publikuje i `<itunes:image>` pro jednotlivé epizody
 - **Form Builder 2.0 – základ pro skutečně použitelné formuláře** – modul `Formuláře` nově podporuje pole `radio`, `url`, `file`, `více voleb`, `souhlas` a `skryté pole`, per-field nápovědu, placeholder, výchozí hodnotu, omezení typů a velikosti souborů a per-form nastavení pro text tlačítka, notifikační e-mail, předmět notifikace, interní redirect a volitelný honeypot

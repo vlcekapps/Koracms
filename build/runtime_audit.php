@@ -1248,6 +1248,9 @@ if (isModuleEnabled('blog')) {
     if ($runtimeAuditAuthorSlug !== '') {
         $pages[] = ['label' => 'blog_author_filter', 'url' => $baseUrl . '/blog/index.php?autor=' . urlencode($runtimeAuditAuthorSlug)];
     }
+    if (!empty($articleRow['blog_slug'])) {
+        $pages[] = ['label' => 'blog_feed', 'url' => $baseUrl . '/feed.php?blog=' . urlencode((string)$articleRow['blog_slug'])];
+    }
 }
 if (isModuleEnabled('board')) {
     $pages[] = ['label' => 'board_index', 'url' => $baseUrl . '/board/index.php'];
@@ -3613,6 +3616,26 @@ foreach ($pages as $page) {
     }
     if ($page['label'] === 'blog_index' && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], authorIndexPath())) {
         $issues[] = 'blog listing is missing authors index link';
+    }
+    if ($page['label'] === 'blog_index' && !str_contains($result['body'], '/feed.php?blog=')) {
+        $issues[] = 'blog listing is missing blog-specific RSS link';
+    }
+
+    if ($page['label'] === 'blog_feed') {
+        foreach ([
+            '<rss version="2.0"',
+            '<atom:link href=',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'blog feed is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '/news/') || str_contains($result['body'], '<title>Runtime audit zpráva')) {
+            $issues[] = 'blog-specific feed still includes global news items';
+        }
+        if (!empty($articleRow['blog_slug']) && !str_contains($result['body'], '?blog=' . rawurlencode((string)$articleRow['blog_slug']))) {
+            $issues[] = 'blog-specific feed is missing its self link query parameter';
+        }
     }
 
     if ($page['label'] === 'blog_author_filter') {

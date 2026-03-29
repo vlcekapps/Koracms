@@ -61,6 +61,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
   <a href="blog_cats.php?blog_id=<?= (int)$blogId ?>">Kategorie blogu</a>
   <?php if ($currentBlog): ?>
     <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
+    <a href="<?= h(blogFeedPath($currentBlog)) ?>" target="_blank" rel="noopener">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 

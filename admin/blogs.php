@@ -151,6 +151,7 @@ adminHeader('Správa blogů');
         <td><?= (int)$blog['article_count'] ?></td>
         <td class="actions">
           <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener">Zobrazit na webu</a>
+          <a href="<?= h(blogFeedPath($blog)) ?>" class="btn" target="_blank" rel="noopener">RSS feed</a>
           <button type="button" class="btn blog-edit-btn" style="font-size:.85rem"
                   aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
                   aria-haspopup="dialog"

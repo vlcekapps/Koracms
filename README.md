@@ -191,7 +191,7 @@ php -l cesta/k/souboru.php
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Multiblog, články, kategorie, štítky, komentáře, preview, plánované publikování, odhad čtení, počet přečtení, veřejní autoři, author archive, author index, RSS feed a volitelné logo každého blogu |
+| **Blogy** | Multiblog, články, kategorie, štítky, komentáře, preview, plánované publikování, odhad čtení, počet přečtení, veřejní autoři, author archive, author index, globální RSS feed i samostatný RSS feed každého blogu a volitelné logo každého blogu |
 | **Novinky** | Krátké zprávy s autorem, detailem a čistou slug URL |
 | **Události** | Přehled akcí s datem, místem, detailem a slug URL |
 | **Galerie** | Alba a fotografie s detailovými URL, obálkou alba, exportem do ZIP a přístupnou veřejnou prezentací |
@@ -210,6 +210,20 @@ php -l cesta/k/souboru.php
 | **Newsletter** | Odběr e-mailem, potvrzení, odhlášení, přehled odběratelů, historie rozesílek a hromadné akce |
 
 Moduly lze zapínat a vypínat v administraci v sekci **Obecná nastavení → Správa modulů**.
+
+---
+
+## Blog RSS feedy
+
+Kora CMS zachovává jak společný RSS feed pro celý web, tak i samostatné feedy jednotlivých blogů.
+
+- globální feed zůstává na `feed.php`
+- každý blog má vlastní feed přes `feed.php?blog=slug-blogu`
+- blogový feed používá vlastní název, popis i self odkaz podle konkrétního blogu
+- v blogovém feedu jsou jen články daného blogu, ne novinky z celého webu
+- odkazy na RSS feed blogu jsou dostupné na veřejném indexu blogu i v blog administraci
+
+To je praktické hlavně pro samostatné odběry jednotlivých tematických blogů v multiblog instalaci.
 
 ---
 

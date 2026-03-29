@@ -43,9 +43,12 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor): s
           <p class="section-subtitle"><?= h((string)$blog['description']) ?></p>
         <?php endif; ?>
       </div>
-      <?php if (!empty($showAuthorsIndexLink)): ?>
-        <a class="section-link" href="<?= authorIndexPath() ?>">Autoři <span aria-hidden="true">→</span></a>
-      <?php endif; ?>
+      <div class="button-row button-row--wrap button-row--start">
+        <a class="section-link" href="<?= h(blogFeedPath($blog)) ?>">RSS feed <span aria-hidden="true">→</span></a>
+        <?php if (!empty($showAuthorsIndexLink)): ?>
+          <a class="section-link" href="<?= authorIndexPath() ?>">Autoři <span aria-hidden="true">→</span></a>
+        <?php endif; ?>
+      </div>
     </div>
 
     <?php if (!empty($publicBlogs) && count($publicBlogs) > 1): ?>

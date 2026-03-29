@@ -99,6 +99,18 @@ function blogIndexUrl(array $blog): string
     return siteUrl('/' . rawurlencode($path) . '/');
 }
 
+function blogFeedPath(array $blog): string
+{
+    $slug = (string)($blog['slug'] ?? 'blog');
+    return BASE_URL . '/feed.php?blog=' . rawurlencode($slug);
+}
+
+function blogFeedUrl(array $blog): string
+{
+    $slug = (string)($blog['slug'] ?? 'blog');
+    return siteUrl('/feed.php?blog=' . rawurlencode($slug));
+}
+
 function reservedBlogSlugs(): array
 {
     return [
