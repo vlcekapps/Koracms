@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             name        VARCHAR(255) NOT NULL,
             slug        VARCHAR(100) NOT NULL UNIQUE,
             description TEXT,
+            logo_file   VARCHAR(255) NOT NULL DEFAULT '',
             sort_order  INT          NOT NULL DEFAULT 0,
             show_in_nav TINYINT(1)   NOT NULL DEFAULT 1,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,

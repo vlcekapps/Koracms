@@ -17,6 +17,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Form Builder 2.0 – jemnější ticket workflow** – přehled odpovědí nově podporuje filtry `Jen moje`, `Nepřiřazené` a `S GitHub issue` a detail hlášení přidává rychlé kroky `Převzít řešení`, `Označit jako rozpracované`, `Označit jako vyřešené` a `Uzavřít hlášení`
 - **HTML content tools – Media Picker 2.0** – content picker nově umí náhledy výsledků, vkládání fotografií a galerií podle typu obsahu, přímý odkaz ke stažení a chytřejší akce pro audio a video obsah
 - **Widgety – rozšířený registr a lepší vazba na moduly** – widget systém nově nabízí i bloky `Ke stažení`, `FAQ`, `Zajímavá místa`, `Nejnovější epizody podcastu` a `Vybraný formulář`, přidávání widgetu rovnou respektuje cílovou zónu a widget `Vybraný formulář` je dostupný jen tehdy, když existuje alespoň jeden aktivní veřejný formulář
+- **Multiblog – volitelné logo blogu** – každý blog nově může mít vlastní volitelné logo, které se zobrazuje nad popisem na jeho veřejném indexu; administrace umí logo nahrát, zobrazit, odebrat a při smazání blogu i uklidit, a kompatibilita je dopsaná i do install/migrate a export/import workflow
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci

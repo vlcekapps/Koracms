@@ -792,6 +792,7 @@ $addColumns = [
     // cms_food_cards
     'cms_food_cards.slug'            => "ALTER TABLE cms_food_cards ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
     // cms_blogs
+    'cms_blogs.logo_file'            => "ALTER TABLE cms_blogs ADD COLUMN logo_file VARCHAR(255) NOT NULL DEFAULT '' AFTER description",
     'cms_blogs.show_in_nav'          => "ALTER TABLE cms_blogs ADD COLUMN show_in_nav TINYINT(1) NOT NULL DEFAULT 1",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",

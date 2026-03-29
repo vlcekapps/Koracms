@@ -14,7 +14,7 @@ Systém dnes stojí na těchto principech:
 
 ## Co Kora CMS dnes umí
 
-- **Multiblog** – více blogů v jedné instalaci, každý s vlastním názvem, slugem, popisem, kategoriemi a štítky
+- **Multiblog** – více blogů v jedné instalaci, každý s vlastním názvem, slugem, popisem, volitelným logem, kategoriemi a štítky
 - **Veřejní autoři** – veřejný profil autora, author archive i přehled autorů na `/authors/`
 - **Widgetová homepage** – homepage, sidebar a footer se skládají přes widgety
 - **Jednotná navigace webu** – moduly, blogy a statické stránky se řadí v jednom rozhraní
@@ -191,7 +191,7 @@ php -l cesta/k/souboru.php
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Multiblog, články, kategorie, štítky, komentáře, preview, plánované publikování, odhad čtení, počet přečtení, veřejní autoři, author archive, author index, RSS feed |
+| **Blogy** | Multiblog, články, kategorie, štítky, komentáře, preview, plánované publikování, odhad čtení, počet přečtení, veřejní autoři, author archive, author index, RSS feed a volitelné logo každého blogu |
 | **Novinky** | Krátké zprávy s autorem, detailem a čistou slug URL |
 | **Události** | Přehled akcí s datem, místem, detailem a slug URL |
 | **Galerie** | Alba a fotografie s detailovými URL, obálkou alba, exportem do ZIP a přístupnou veřejnou prezentací |

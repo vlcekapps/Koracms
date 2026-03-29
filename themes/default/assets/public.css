@@ -2137,3 +2137,15 @@ body.theme-public textarea.form-control {
 .footer-widgets .widget-list li {
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+.blog-brand-mark {
+  margin-top: 0.9rem;
+}
+
+.blog-brand-mark__image {
+  display: block;
+  max-width: min(100%, 22rem);
+  max-height: 8rem;
+  width: auto;
+  height: auto;
+}

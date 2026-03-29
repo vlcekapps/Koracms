@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Blogy
                 if (!empty($data['blogs']) && is_array($data['blogs'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_blogs (id, name, slug, description, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?)"
+                        "INSERT IGNORE INTO cms_blogs (id, name, slug, description, logo_file, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?)"
                     );
                     foreach ($data['blogs'] as $row) {
                         $ins->execute([
@@ -655,7 +655,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_newsletters
                          (id, subject, body, recipient_count, sent_at, created_at)
-                         VALUES (?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?)"
                     );
                     foreach ($data['newsletters'] as $row) {
                         $ins->execute([

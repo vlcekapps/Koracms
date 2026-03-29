@@ -1,4 +1,5 @@
 <?php
+$blogLogo = blogLogoUrl($blog);
 $articleLink = static fn(array $article): string => articlePublicPath($article);
 $renderAuthorName = static function (array $article): string {
     if (empty($article['author_name'])) {
@@ -33,6 +34,11 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor): s
     <div class="section-heading">
       <div>
         <h1 id="blog-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
+        <?php if ($blogLogo !== ''): ?>
+          <div class="blog-brand-mark">
+            <img class="blog-brand-mark__image" src="<?= h($blogLogo) ?>" alt="" loading="eager" decoding="async" style="display:block;max-width:min(100%,22rem);max-height:8rem;width:auto;height:auto">
+          </div>
+        <?php endif; ?>
         <?php if (!empty($blog['description'])): ?>
           <p class="section-subtitle"><?= h((string)$blog['description']) ?></p>
         <?php endif; ?>

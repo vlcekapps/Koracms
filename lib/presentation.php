@@ -808,6 +808,109 @@ function hydrateFoodCardPresentation(array $card): array
     return $card;
 }
 
+function blogLogoUrl(array $blog): string
+{
+    $filename = trim((string)($blog['logo_file'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/blogs/' . rawurlencode($filename);
+}
+
+function deleteBlogLogoFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = dirname(__DIR__) . '/uploads/blogs/' . $filename;
+    if (is_file($path)) {
+        if (!unlink($path)) {
+            error_log('presentation: nelze smazat soubor ' . $path);
+        }
+    }
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadBlogLogo(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Logo blogu se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Logo blogu se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Logo blogu musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = dirname(__DIR__) . '/uploads/blogs/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro loga blogů se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('blog_logo_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Logo blogu se nepodařilo uložit.',
+        ];
+    }
+    generateWebp($directory . $filename);
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deleteBlogLogoFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
 function placeImageUrl(array $place): string
 {
     $filename = trim((string)($place['image_file'] ?? ''));

@@ -15,27 +15,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
     $updateId  = inputInt('post', 'update_id');
 
-    if ($name === '') {
-        $error = 'Název blogu je povinný.';
-    } elseif ($slug === '') {
-        $error = 'Slug blogu je povinný.';
-    } elseif (in_array($slug, reservedBlogSlugs(), true)) {
-        $error = 'Slug „' . $slug . '“ je rezervovaný a nelze ho použít.';
-    } elseif (is_dir(__DIR__ . '/../' . $slug) && ($updateId === null || getBlogBySlug($slug) === null || (int)getBlogBySlug($slug)['id'] !== $updateId)) {
-        $error = 'Slug „' . $slug . '“ koliduje s existujícím adresářem na serveru.';
-    } elseif ($updateId !== null) {
+    $existingBlog = null;
+    if ($updateId !== null) {
+        $existingStmt = $pdo->prepare("SELECT * FROM cms_blogs WHERE id = ?");
+        $existingStmt->execute([$updateId]);
+        $existingBlog = $existingStmt->fetch() ?: null;
+        if (!$existingBlog) {
+            $error = 'Vybraný blog nebyl nalezen.';
+        }
+    }
+
+    if ($error === '') {
+        if ($name === '') {
+            $error = 'Název blogu je povinný.';
+        } elseif ($slug === '') {
+            $error = 'Slug blogu je povinný.';
+        } elseif (in_array($slug, reservedBlogSlugs(), true)) {
+            $error = 'Slug „' . $slug . '“ je rezervovaný a nelze ho použít.';
+        } elseif (is_dir(__DIR__ . '/../' . $slug) && ($updateId === null || getBlogBySlug($slug) === null || (int)getBlogBySlug($slug)['id'] !== $updateId)) {
+            $error = 'Slug „' . $slug . '“ koliduje s existujícím adresářem na serveru.';
+        }
+    }
+
+    $logoFile = trim((string)($existingBlog['logo_file'] ?? ''));
+    if ($error === '') {
+        $logoUpload = uploadBlogLogo($_FILES['logo_file'] ?? [], $logoFile);
+        if ($logoUpload['error'] !== '') {
+            $error = $logoUpload['error'];
+        } else {
+            $logoFile = $logoUpload['filename'];
+            if (isset($_POST['logo_file_delete']) && empty($_FILES['logo_file']['name']) && $logoFile !== '') {
+                deleteBlogLogoFile($logoFile);
+                $logoFile = '';
+            }
+        }
+    }
+
+    if ($error === '' && $updateId !== null) {
         try {
-            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, show_in_nav = ? WHERE id = ?")
-                ->execute([$name, $slug, $desc, $showInNav, $updateId]);
+            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, logo_file = ?, show_in_nav = ? WHERE id = ?")
+                ->execute([$name, $slug, $desc, $logoFile, $showInNav, $updateId]);
             $success = 'Blog upraven.';
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
         }
-    } else {
+    } elseif ($error === '') {
         $sortOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn();
         try {
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order, show_in_nav) VALUES (?, ?, ?, ?, ?)")
-                ->execute([$name, $slug, $desc, $sortOrder, $showInNav]);
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, logo_file, sort_order, show_in_nav) VALUES (?, ?, ?, ?, ?, ?)")
+                ->execute([$name, $slug, $desc, $logoFile, $sortOrder, $showInNav]);
             $success = 'Blog vytvořen.';
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
@@ -61,7 +89,7 @@ adminHeader('Správa blogů');
   <a href="blog.php"><span aria-hidden="true">←</span> Zpět na články</a>
 </p>
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nový blog</legend>
@@ -77,6 +105,10 @@ adminHeader('Správa blogů');
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="2"></textarea>
     <small class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
+
+    <label for="logo_file">Logo blogu</label>
+    <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" aria-describedby="blog-logo-help">
+    <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF, WebP a SVG; pevný rozměr není nutný.</small>
 
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
@@ -128,7 +160,8 @@ adminHeader('Správa blogů');
                   data-blog-name="<?= h((string)$blog['name']) ?>"
                   data-blog-slug="<?= h((string)$blog['slug']) ?>"
                   data-blog-desc="<?= h((string)($blog['description'] ?? '')) ?>"
-                  data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>">Upravit</button>
+                  data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>"
+                  data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit</button>
           <form action="blog_blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
@@ -147,7 +180,6 @@ adminHeader('Správa blogů');
   </table>
 <?php endif; ?>
 
-<!-- Modal dialog pro editaci blogu -->
 <div id="blog-overlay" hidden style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
 <section id="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title" aria-describedby="blog-dialog-description" hidden
          style="display:none;position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
@@ -158,8 +190,8 @@ adminHeader('Správa blogů');
     <h2 id="blog-dialog-title" style="margin:0;font-size:1.15rem">Upravit blog</h2>
     <button type="button" id="blog-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
   </div>
-  <p id="blog-dialog-description" class="field-help" style="margin-top:0">Upravte název, adresu a viditelnost blogu v navigaci webu.</p>
-  <form method="post" novalidate id="blog-dialog-form">
+  <p id="blog-dialog-description" class="field-help" style="margin-top:0">Upravte název, adresu, logo a viditelnost blogu v navigaci webu.</p>
+  <form method="post" enctype="multipart/form-data" novalidate id="blog-dialog-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="update_id" id="bd-id">
 
@@ -172,6 +204,19 @@ adminHeader('Správa blogů');
 
     <label for="bd-desc">Popis</label>
     <textarea id="bd-desc" name="description" rows="2"></textarea>
+
+    <div id="bd-logo-current" hidden style="margin-top:.75rem">
+      <span class="field-help">Aktuální logo</span><br>
+      <img id="bd-logo-preview" src="" alt="" style="display:block;margin-top:.4rem;max-width:min(100%,20rem);max-height:7rem;height:auto;width:auto">
+    </div>
+
+    <label for="bd-logo-file" style="margin-top:.75rem">Logo blogu</label>
+    <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" aria-describedby="bd-logo-help">
+    <small id="bd-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu.</small>
+
+    <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>
+      <label><input type="checkbox" name="logo_file_delete" value="1" id="bd-logo-delete"> Odebrat aktuální logo</label>
+    </div>
 
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="show_in_nav" value="1" id="bd-nav"> Zobrazit v navigaci webu</label>
@@ -192,6 +237,11 @@ adminHeader('Správa blogů');
     var cancelBtn = document.getElementById('blog-dialog-cancel');
     var lastTrigger = null;
     var previousBodyOverflow = '';
+    var logoPreviewWrap = document.getElementById('bd-logo-current');
+    var logoPreview = document.getElementById('bd-logo-preview');
+    var logoDeleteWrap = document.getElementById('bd-logo-delete-wrap');
+    var logoDelete = document.getElementById('bd-logo-delete');
+    var logoFileInput = document.getElementById('bd-logo-file');
 
     function openDialog(btn) {
         lastTrigger = btn;
@@ -200,6 +250,17 @@ adminHeader('Správa blogů');
         document.getElementById('bd-slug').value = btn.dataset.blogSlug;
         document.getElementById('bd-desc').value = btn.dataset.blogDesc;
         document.getElementById('bd-nav').checked = btn.dataset.blogNav === '1';
+        logoDelete.checked = false;
+        logoFileInput.value = '';
+        if (btn.dataset.blogLogoUrl) {
+            logoPreview.src = btn.dataset.blogLogoUrl;
+            logoPreviewWrap.hidden = false;
+            logoDeleteWrap.hidden = false;
+        } else {
+            logoPreview.src = '';
+            logoPreviewWrap.hidden = true;
+            logoDeleteWrap.hidden = true;
+        }
         previousBodyOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         overlay.hidden = false;
@@ -240,7 +301,6 @@ adminHeader('Správa blogů');
         }
     });
 
-    // Auto-slug z názvu (nový blog formulář)
     var nameInput = document.getElementById('name');
     var slugInput = document.getElementById('slug');
     var slugManuallyEdited = false;
