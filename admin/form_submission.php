@@ -35,6 +35,33 @@ function renderAdminFormSubmissionValue(array $field, mixed $value): string
     return nl2br(h($displayValue));
 }
 
+function renderAdminFormSubmissionFiles(array $field, mixed $value, int $submissionId): string
+{
+    $fieldName = trim((string)($field['name'] ?? ''));
+    if ($fieldName === '') {
+        return '–';
+    }
+
+    $links = [];
+    foreach (formSubmissionFileItems($value) as $index => $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $storedName = formSubmissionStoredFileName($item);
+        $originalName = trim((string)($item['original_name'] ?? ''));
+        if ($storedName === '' || $originalName === '') {
+            continue;
+        }
+
+        $links[] = '<a href="' . h(formSubmissionFileDownloadPath($submissionId, $fieldName, (int)$index)) . '" target="_blank" rel="noopener noreferrer">'
+            . h($originalName)
+            . '</a>';
+    }
+
+    return $links !== [] ? implode(', ', $links) : '–';
+}
+
 $pdo = db_connect();
 $submissionId = inputInt('get', 'id');
 $formId = inputInt('get', 'form_id');
@@ -131,6 +158,7 @@ $githubIssueDraftBody = githubIssueDefaultBody($formMeta, $submission, $fieldsBy
 $hasGitHubIssue = formSubmissionHasGitHubIssue($submission);
 $githubIssueLinkLabel = formSubmissionGitHubIssueLabel($submission);
 $currentAdminUserId = currentUserId();
+$canManageFormIntegrations = currentUserHasCapability('settings_manage');
 
 adminHeader('Detail odpovědi formuláře');
 ?>
@@ -248,7 +276,13 @@ adminHeader('Detail odpovědi formuláře');
       <?php $fieldName = (string)($field['name'] ?? ''); ?>
       <tr>
         <th scope="row"><?= h((string)($field['label'] ?? $fieldName)) ?></th>
-        <td><?= renderAdminFormSubmissionValue($field, $submissionData[$fieldName] ?? '') ?></td>
+        <td>
+          <?php if (normalizeFormFieldType((string)($field['field_type'] ?? 'text')) === 'file'): ?>
+            <?= renderAdminFormSubmissionFiles($field, $submissionData[$fieldName] ?? '', (int)$submission['id']) ?>
+          <?php else: ?>
+            <?= renderAdminFormSubmissionValue($field, $submissionData[$fieldName] ?? '') ?>
+          <?php endif; ?>
+        </td>
       </tr>
     <?php endforeach; ?>
   </tbody>
@@ -347,6 +381,7 @@ adminHeader('Detail odpovědi formuláře');
   </div>
 </form>
 
+<?php if ($canManageFormIntegrations): ?>
 <h2>GitHub issue</h2>
 <?php if ($hasGitHubIssue): ?>
   <p>Toto hlášení už má připojené issue <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h($githubIssueLinkLabel) ?></a>.</p>
@@ -509,6 +544,7 @@ adminHeader('Detail odpovědi formuláře');
       });
   })();
   </script>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php if ($replyRecipient !== []): ?>

@@ -69,7 +69,7 @@ adminHeader('Widgety');
 </fieldset>
 
 <?php foreach ($zones as $zoneKey => $zoneLabel): ?>
-  <fieldset style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+  <fieldset id="widget-zone-<?= h($zoneKey) ?>" style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
     <legend><?= h($zoneLabel) ?></legend>
 
     <?php if (empty($allWidgets[$zoneKey])): ?>

@@ -28,6 +28,9 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Přílohy formulářů se stahují jen přes chráněný admin endpoint
+    RewriteRule ^uploads/forms/ - [F,L,NC]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^authors/?$ authors/index.php [L,QSA,NC]

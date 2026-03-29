@@ -139,23 +139,25 @@ function githubIssueDefaultTitle(array $form, array $submission, array $fieldsBy
     return trim(mb_strimwidth($title, 0, 180, '…', 'UTF-8'));
 }
 
-function githubIssueMarkdownFileList(mixed $value): array
+function githubIssueMarkdownFileList(int $submissionId, string $fieldName, mixed $value): array
 {
-    $items = [];
-    if (is_array($value) && array_keys($value) === range(0, count($value) - 1)) {
-        $items = $value;
-    } elseif (is_array($value)) {
-        $items = [$value];
+    $items = formSubmissionFileItems($value);
+    $fieldName = trim($fieldName);
+    if ($submissionId <= 0 || $fieldName === '') {
+        return [];
     }
 
     $links = [];
-    foreach ($items as $item) {
+    foreach ($items as $index => $item) {
         if (!is_array($item)) {
             continue;
         }
 
         $originalName = trim((string)($item['original_name'] ?? ''));
-        $url = githubIssueAbsoluteUrl((string)($item['url'] ?? ''));
+        $storedName = formSubmissionStoredFileName($item);
+        $url = $storedName !== ''
+            ? githubIssueAbsoluteUrl(formSubmissionFileDownloadPath($submissionId, $fieldName, (int)$index))
+            : '';
         if ($originalName === '' || $url === '') {
             continue;
         }
@@ -203,7 +205,7 @@ function githubIssueDefaultBody(array $form, array $submission, array $fieldsByN
 
         $label = trim((string)($field['label'] ?? $fieldName));
         if ($fieldType === 'file') {
-            $fileLinks = githubIssueMarkdownFileList($submissionData[$fieldName] ?? []);
+            $fileLinks = githubIssueMarkdownFileList((int)($submission['id'] ?? 0), $fieldName, $submissionData[$fieldName] ?? []);
             if ($fileLinks === []) {
                 continue;
             }

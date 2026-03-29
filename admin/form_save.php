@@ -27,6 +27,7 @@ function adminUniqueFormFieldName(string $baseName, array &$usedNames, string $f
 }
 
 $pdo = db_connect();
+$canManageFormIntegrations = currentUserHasCapability('settings_manage');
 $id = inputInt('post', 'id');
 $title = trim($_POST['title'] ?? '');
 $submittedSlug = trim($_POST['slug'] ?? '');
@@ -54,6 +55,17 @@ $isActive = isset($_POST['is_active']) ? 1 : 0;
 $presetKey = trim((string)($_POST['preset'] ?? ''));
 $presetDefinition = $id === null ? formPresetDefinition($presetKey) : null;
 $errorSuffix = $id !== null ? '&id=' . $id : ($presetKey !== '' ? '&preset=' . urlencode($presetKey) : '');
+$existingForm = null;
+
+if ($id !== null) {
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_forms WHERE id = ?");
+    $existingStmt->execute([$id]);
+    $existingForm = $existingStmt->fetch() ?: null;
+    if (!$existingForm) {
+        header('Location: ' . BASE_URL . '/admin/forms.php');
+        exit;
+    }
+}
 
 if ($submitLabel === '') {
     $submitLabel = 'Odeslat formulář';
@@ -69,12 +81,24 @@ if ($submitterConfirmationEnabled === 1 && $submitterEmailField === '') {
 $redirectUrl = $redirectUrl !== '' ? internalRedirectTarget($redirectUrl, '') : '';
 $successPrimaryUrl = $successPrimaryUrl !== '' ? internalRedirectTarget($successPrimaryUrl, '') : '';
 $successSecondaryUrl = $successSecondaryUrl !== '' ? internalRedirectTarget($successSecondaryUrl, '') : '';
-$webhookUrl = normalizeFormWebhookUrl($webhookUrl);
 $successBehavior = normalizeFormSuccessBehavior($successBehavior, $redirectUrl);
 
-if ($webhookEnabled === 1 && $webhookUrl === '') {
-    header('Location: form_form.php?err=webhook_url' . $errorSuffix);
-    exit;
+if ($canManageFormIntegrations) {
+    $webhookUrl = normalizeFormWebhookUrl($webhookUrl);
+    if ($webhookEnabled === 1 && $webhookUrl === '') {
+        header('Location: form_form.php?err=webhook_url' . $errorSuffix);
+        exit;
+    }
+} elseif ($existingForm !== null) {
+    $webhookEnabled = (int)($existingForm['webhook_enabled'] ?? 0);
+    $webhookUrl = (string)($existingForm['webhook_url'] ?? '');
+    $webhookSecret = (string)($existingForm['webhook_secret'] ?? '');
+    $webhookEvents = (string)($existingForm['webhook_events'] ?? '');
+} else {
+    $webhookEnabled = 0;
+    $webhookUrl = '';
+    $webhookSecret = '';
+    $webhookEvents = '';
 }
 
 if ($title === '') {
@@ -96,13 +120,6 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
 $slug = $uniqueSlug;
 
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT id FROM cms_forms WHERE id = ?");
-    $existingStmt->execute([$id]);
-    if (!$existingStmt->fetch()) {
-        header('Location: ' . BASE_URL . '/admin/forms.php');
-        exit;
-    }
-
     $pdo->prepare(
         "UPDATE cms_forms
          SET title = ?, slug = ?, description = ?, success_message = ?, submit_label = ?, notification_email = ?, notification_subject = ?, redirect_url = ?, success_behavior = ?, success_primary_label = ?, success_primary_url = ?, success_secondary_label = ?, success_secondary_url = ?, webhook_enabled = ?, webhook_url = ?, webhook_secret = ?, webhook_events = ?, use_honeypot = ?, submitter_confirmation_enabled = ?, submitter_email_field = ?, submitter_confirmation_subject = ?, submitter_confirmation_message = ?, is_active = ?, updated_at = NOW()

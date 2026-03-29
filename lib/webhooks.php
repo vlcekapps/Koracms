@@ -27,6 +27,54 @@ function formWebhookEventLabel(string $event): string
     return $definitions[$event]['label'] ?? $event;
 }
 
+function formWebhookIpAllowed(string $ip): bool
+{
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+}
+
+function formWebhookHostAllowed(string $host): bool
+{
+    $host = strtolower(rtrim(trim($host), '.'));
+    if ($host === '' || $host === 'localhost') {
+        return false;
+    }
+
+    if (preg_match('/(^|\.)localhost$/', $host)) {
+        return false;
+    }
+
+    foreach (['.local', '.localdomain', '.internal', '.lan', '.home', '.test'] as $suffix) {
+        if (str_ends_with($host, $suffix)) {
+            return false;
+        }
+    }
+
+    if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+        return formWebhookIpAllowed($host);
+    }
+
+    if (!str_contains($host, '.')) {
+        return false;
+    }
+
+    if (function_exists('dns_get_record')) {
+        $dnsRecords = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if (is_array($dnsRecords) && $dnsRecords !== []) {
+            foreach ($dnsRecords as $dnsRecord) {
+                $resolvedIp = trim((string)($dnsRecord['ip'] ?? $dnsRecord['ipv6'] ?? ''));
+                if ($resolvedIp === '') {
+                    continue;
+                }
+                if (!formWebhookIpAllowed($resolvedIp)) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
 function normalizeFormWebhookUrl(string $url): string
 {
     $url = trim($url);
@@ -35,7 +83,18 @@ function normalizeFormWebhookUrl(string $url): string
     }
 
     $validated = filter_var($url, FILTER_VALIDATE_URL);
-    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
+    if (!is_string($validated)) {
+        return '';
+    }
+
+    $parts = parse_url($validated);
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    $host = trim((string)($parts['host'] ?? ''));
+    if ($scheme !== 'https' || $host === '' || !formWebhookHostAllowed($host)) {
         return '';
     }
 

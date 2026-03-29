@@ -3416,6 +3416,26 @@ function formUploadDirectory(): string
     return dirname(__DIR__) . '/uploads/forms/';
 }
 
+function formUploadStoredName(string $storedName): string
+{
+    $storedName = trim($storedName);
+    if ($storedName === '' || preg_match('#[\\\\/]#', $storedName)) {
+        return '';
+    }
+
+    return $storedName;
+}
+
+function formUploadFilePath(string $storedName): string
+{
+    $normalizedName = formUploadStoredName($storedName);
+    if ($normalizedName === '') {
+        return '';
+    }
+
+    return formUploadDirectory() . $normalizedName;
+}
+
 function formUploadPublicPath(string $storedName): string
 {
     return BASE_URL . '/uploads/forms/' . rawurlencode($storedName);
@@ -3423,15 +3443,56 @@ function formUploadPublicPath(string $storedName): string
 
 function formDeleteUploadedFile(string $storedName): void
 {
-    $storedName = trim($storedName);
-    if ($storedName === '') {
+    $path = formUploadFilePath($storedName);
+    if ($path === '') {
         return;
     }
 
-    $path = formUploadDirectory() . $storedName;
     if (is_file($path)) {
         @unlink($path);
     }
+}
+
+function formSubmissionStoredFileName(array $item): string
+{
+    $storedName = formUploadStoredName((string)($item['stored_name'] ?? ''));
+    if ($storedName !== '') {
+        return $storedName;
+    }
+
+    $legacyUrl = trim((string)($item['url'] ?? ''));
+    if ($legacyUrl === '') {
+        return '';
+    }
+
+    $legacyPath = parse_url($legacyUrl, PHP_URL_PATH);
+    if (!is_string($legacyPath) || !str_contains($legacyPath, '/uploads/forms/')) {
+        return '';
+    }
+
+    return formUploadStoredName(rawurldecode((string)basename($legacyPath)));
+}
+
+function formSubmissionFileItems(mixed $value): array
+{
+    if (!is_array($value)) {
+        return [];
+    }
+
+    if (array_keys($value) === range(0, count($value) - 1)) {
+        return array_values(array_filter($value, static fn(mixed $item): bool => is_array($item)));
+    }
+
+    return [$value];
+}
+
+function formSubmissionFileDownloadPath(int $submissionId, string $fieldName, int $index = 0): string
+{
+    return appendUrlQuery('/admin/form_submission_file.php', [
+        'id' => $submissionId,
+        'field' => trim($fieldName),
+        'index' => max(0, $index),
+    ]);
 }
 
 function formSubmissionDisplayValue(mixed $value): string
@@ -3489,8 +3550,8 @@ function formCollectUploadedFilesFromSubmissionData(mixed $value): array
 
     if (is_array($value)) {
         $isAssoc = array_keys($value) !== range(0, count($value) - 1);
-        if ($isAssoc && isset($value['stored_name'])) {
-            $storedName = trim((string)$value['stored_name']);
+        if ($isAssoc) {
+            $storedName = formSubmissionStoredFileName($value);
             if ($storedName !== '') {
                 $files[] = $storedName;
             }

@@ -55,6 +55,7 @@ $webhookEnabledValue = (int)($form['webhook_enabled'] ?? ($formDefaults['webhook
 $webhookUrlValue = (string)($form['webhook_url'] ?? ($formDefaults['webhook_url'] ?? ''));
 $webhookSecretValue = (string)($form['webhook_secret'] ?? ($formDefaults['webhook_secret'] ?? ''));
 $webhookEventsValue = formWebhookEventList((string)($form['webhook_events'] ?? ($formDefaults['webhook_events'] ?? '')));
+$canManageFormIntegrations = currentUserHasCapability('settings_manage');
 $conditionalFieldOptions = [];
 foreach ($fieldSourceForOptions as $candidateField) {
     $candidateName = trim((string)($candidateField['name'] ?? ''));
@@ -95,7 +96,7 @@ adminHeader($pageTitle);
 <?php elseif ($err === 'submitter_email_field'): ?>
   <p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>
 <?php elseif ($err === 'webhook_url'): ?>
-  <p role="alert" class="error" id="form-error">Zadejte platnou adresu webhooku začínající <code>http://</code> nebo <code>https://</code>.</p>
+  <p role="alert" class="error" id="form-error">Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.</p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -326,6 +327,7 @@ adminHeader($pageTitle);
     </div>
   </fieldset>
 
+  <?php if ($canManageFormIntegrations): ?>
   <fieldset>
     <legend>Webhooky a automatizace</legend>
     <p class="field-help">Webhook umí po klíčových událostech formuláře poslat JSON do externí služby, třeba do vlastního issue trackeru, automatizačního nástroje nebo helpdesku.</p>
@@ -343,7 +345,7 @@ adminHeader($pageTitle);
       <input type="url" id="webhook_url" name="webhook_url" maxlength="500"
              value="<?= h($webhookUrlValue) ?>" style="width:100%;max-width:52rem"
              aria-describedby="webhook-url-help" placeholder="https://example.test/hooks/forms">
-      <small id="webhook-url-help" class="field-help">Použijte adresu služby, která má přijímat JSON POST. Formulář nikdy neselže jen kvůli tomu, že webhook dočasně neodpoví.</small>
+      <small id="webhook-url-help" class="field-help">Použijte HTTPS adresu služby, která má přijímat JSON POST. Lokální a privátní adresy formulář z bezpečnostních důvodů nepovolí.</small>
     </div>
 
     <div style="margin-bottom:.75rem">
@@ -371,6 +373,12 @@ adminHeader($pageTitle);
       <?php endforeach; ?>
     </fieldset>
   </fieldset>
+  <?php else: ?>
+  <fieldset>
+    <legend>Webhooky a automatizace</legend>
+    <p class="field-help">Webhooky a GitHub bridge může nastavovat jen správce webu. Běžná práce s formulářem, poli a workflow zůstává dostupná i bez těchto integrací.</p>
+  </fieldset>
+  <?php endif; ?>
 
   <?php if ($form): ?>
   <fieldset>

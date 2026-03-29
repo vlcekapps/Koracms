@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireCapability('content_manage_shared', 'Přístup odepřen.');
+requireCapability('settings_manage', 'Přístup odepřen. GitHub bridge mohou spravovat jen správci webu.');
 verifyCsrf();
 
 $submissionId = inputInt('post', 'id');

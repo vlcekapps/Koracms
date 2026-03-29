@@ -379,22 +379,6 @@ adminHeader($pageTitle);
         });
         categorySelect.innerHTML = categoryMarkup.join('');
 
-        const tags = blogOptions[blogId].tags || [];
-        if (tags.length === 0) {
-            tagsContainer.innerHTML = '';
-            tagsFieldset.hidden = true;
-            return;
-        }
-
-        tagsFieldset.hidden = false;
-        tagsContainer.innerHTML = tags.map((tag) => {
-            const checked = selectedTags.has(Number(tag.id)) ? ' checked' : '';
-            return '<label style="display:inline-block;margin-right:1rem;font-weight:normal">'
-                + '<input type="checkbox" name="tags[]" value="' + String(tag.id) + '"' + checked + '>'
-                + ' ' + String(tag.name)
-                + '</label>';
-        }).join('');
-
         const selectedBlog = blogMetaById[String(blogId)] || null;
         if (contextName && selectedBlog) {
             contextName.textContent = selectedBlog.name;
@@ -411,6 +395,22 @@ adminHeader($pageTitle);
         if (publicLink && selectedBlog) {
             publicLink.href = selectedBlog.publicUrl;
         }
+
+        const tags = blogOptions[blogId].tags || [];
+        if (tags.length === 0) {
+            tagsContainer.innerHTML = '';
+            tagsFieldset.hidden = true;
+            return;
+        }
+
+        tagsFieldset.hidden = false;
+        tagsContainer.innerHTML = tags.map((tag) => {
+            const checked = selectedTags.has(Number(tag.id)) ? ' checked' : '';
+            return '<label style="display:inline-block;margin-right:1rem;font-weight:normal">'
+                + '<input type="checkbox" name="tags[]" value="' + String(tag.id) + '"' + checked + '>'
+                + ' ' + String(tag.name)
+                + '</label>';
+        }).join('');
     };
 
     slugInput?.addEventListener('input', function () {

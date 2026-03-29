@@ -192,7 +192,9 @@ if (isModuleEnabled('blog')) {
     $settingsSections[] = ['id' => 'settings-blog-authors', 'label' => 'Veřejní autoři'];
     $settingsSections[] = ['id' => 'settings-comments', 'label' => 'Komentáře blogu'];
 }
+$settingsSections[] = ['id' => 'settings-notifications', 'label' => 'E-mailové notifikace'];
 $settingsSections[] = ['id' => 'settings-editor', 'label' => 'Obsah a editor'];
+$settingsSections[] = ['id' => 'settings-analytics', 'label' => 'Google Analytics a vlastní kód'];
 $settingsSections[] = ['id' => 'settings-social', 'label' => 'Sociální sítě'];
 $settingsSections[] = ['id' => 'settings-brand', 'label' => 'Logo a sdílení'];
 $settingsSections[] = ['id' => 'settings-privacy', 'label' => 'Soukromí a cookies'];

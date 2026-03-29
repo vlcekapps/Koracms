@@ -1008,17 +1008,15 @@ if (isModuleEnabled('forms')) {
             'priloha' => [
                 [
                     'original_name' => 'runtime-audit-log.txt',
-                    'stored_name' => '',
+                    'stored_name' => 'runtime-audit-log.txt',
                     'mime_type' => 'text/plain',
                     'file_size' => 128,
-                    'url' => BASE_URL . '/uploads/forms/runtime-audit-log.txt',
                 ],
                 [
                     'original_name' => 'runtime-audit-shot.png',
-                    'stored_name' => '',
+                    'stored_name' => 'runtime-audit-shot.png',
                     'mime_type' => 'image/png',
                     'file_size' => 256,
-                    'url' => BASE_URL . '/uploads/forms/runtime-audit-shot.png',
                 ],
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -1913,6 +1911,8 @@ foreach ($pages as $page) {
             'Sekce nastavení webu',
             '#settings-homepage',
             '#settings-basics',
+            '#settings-notifications',
+            '#settings-analytics',
             '#settings-operation',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -2776,6 +2776,19 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_widgets') {
+        foreach ([
+            'id="widget-zone-homepage"',
+            'id="widget-zone-sidebar"',
+            'id="widget-zone-footer"',
+            'id="widget-add-zone"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin widgets page is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_form_submissions') {
         foreach ([
             'GitHub',
@@ -2854,6 +2867,12 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin form submission detail is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (!str_contains($result['body'], '/admin/form_submission_file.php?id=')) {
+            $issues[] = 'admin form submission detail is missing protected attachment download links';
+        }
+        if (str_contains($result['body'], '/uploads/forms/')) {
+            $issues[] = 'admin form submission detail still exposes direct public form upload paths';
         }
     }
 

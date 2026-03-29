@@ -64,8 +64,8 @@ function storePublicFormUpload(array $field, array $file): array
     }
 
     $uploadDir = formUploadDirectory();
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        return ['error' => 'Soubor se nepodařilo připravit pro uložení na serveru.'];
     }
 
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
@@ -81,7 +81,6 @@ function storePublicFormUpload(array $field, array $file): array
             'stored_name' => $storedName,
             'mime_type' => $mimeType,
             'file_size' => $fileSize,
-            'url' => formUploadPublicPath($storedName),
         ],
     ];
 }

@@ -80,5 +80,5 @@ $pdo->prepare("UPDATE cms_widgets SET title = ?, zone = ?, settings = ?, sort_or
     ->execute([$title, $zone, json_encode($settings, JSON_UNESCAPED_UNICODE), $sortOrder, $isActive, $id]);
 
 logAction('widget_save', "id={$id} type={$type} zone={$zone}");
-header('Location: ' . BASE_URL . '/admin/widgets.php');
+header('Location: ' . appendUrlQuery(BASE_URL . '/admin/widgets.php', ['zone' => $zone]) . '#widget-zone-' . rawurlencode($zone));
 exit;
