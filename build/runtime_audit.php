@@ -988,8 +988,8 @@ if (isModuleEnabled('forms')) {
     }
 
     $pdo->prepare(
-        "INSERT INTO cms_form_submissions (form_id, data, ip_hash, created_at)
-         VALUES (?, ?, ?, NOW())"
+        "INSERT INTO cms_form_submissions (form_id, data, ip_hash, priority, labels, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW())"
     )->execute([
         $runtimeAuditFormId,
         json_encode([
@@ -1019,6 +1019,8 @@ if (isModuleEnabled('forms')) {
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         hash('sha256', 'runtime-audit-form'),
+        'high',
+        'Administrace, Formuláře',
     ]);
     $runtimeAuditFormSubmissionId = (int)$pdo->lastInsertId();
     $runtimeAuditFormSubmissionReference = formSubmissionBuildReference([
@@ -1038,6 +1040,27 @@ if (isModuleEnabled('forms')) {
         'Runtime audit workflow poznámka pro ověření detailu odpovědi.',
         $runtimeAuditFormSubmissionId,
     ]);
+    formSubmissionHistoryCreate(
+        $pdo,
+        $runtimeAuditFormSubmissionId,
+        null,
+        'created',
+        'Odpověď byla přijata přes veřejný formulář.'
+    );
+    formSubmissionHistoryCreate(
+        $pdo,
+        $runtimeAuditFormSubmissionId,
+        $runtimeAuditAssignedUserId,
+        'workflow',
+        'Stav změněn na „Rozpracované“. Priorita změněna na „Vysoká“. Štítky upraveny na „Administrace, Formuláře“. Změněn přiřazený řešitel. Interní poznámka byla upravena.'
+    );
+    formSubmissionHistoryCreate(
+        $pdo,
+        $runtimeAuditFormSubmissionId,
+        $runtimeAuditAssignedUserId,
+        'reply',
+        'Odeslána odpověď odesílateli „runtime.audit@example.test“ s předmětem „Re: Runtime audit formulář (' . $runtimeAuditFormSubmissionReference . ')“.'
+    );
 
     $runtimeAuditFormPath = $baseUrl . formPublicPath(['id' => $runtimeAuditFormId, 'slug' => $runtimeAuditFormSlug]);
 }
@@ -2729,6 +2752,18 @@ foreach ($pages as $page) {
         ) {
             $issues[] = 'admin forms page is missing both list caption and empty state';
         }
+        foreach ([
+            '>+ Vytvořit formulář<',
+            '>+ Nahlášení chyby<',
+            '>+ Návrh nové funkce<',
+            '>+ Žádost o podporu<',
+            '>+ Kontaktní formulář<',
+            '>+ Nahlášení problému s obsahem<',
+        ] as $forbiddenFragment) {
+            if (str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'admin forms page still contains spoken plus sign in create action: ' . $forbiddenFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'admin_form_submissions') {
@@ -2737,10 +2772,13 @@ foreach ($pages as $page) {
             'Hledat v odpovědích',
             'Exportovat CSV',
             'Reference',
+            'Priorita',
+            'Štítky',
             'Přiřazeno',
             'Hromadné akce s vybranými odpověďmi',
             'Rozpracované',
             'Runtime audit workflow poznámka',
+            'Administrace, Formuláře',
             'Zobrazit na webu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -2753,11 +2791,19 @@ foreach ($pages as $page) {
         foreach ([
             'Referenční kód',
             'Workflow hlášení',
+            'Priorita',
+            'Štítky',
             'Interní poznámka',
             'Přiřadit řešiteli',
             'Runtime audit workflow poznámka pro ověření detailu odpovědi.',
             'runtime-audit-log.txt',
             'runtime-audit-shot.png',
+            'Odpověď odesílateli',
+            'runtime.audit@example.test',
+            'Poslat odpověď',
+            'Interní historie',
+            'Odpověď byla přijata přes veřejný formulář.',
+            'Odeslána odpověď odesílateli',
             'Zpět na odpovědi formuláře',
             'Uložit změny workflow',
             'Smazat odpověď',
@@ -2798,6 +2844,7 @@ foreach ($pages as $page) {
             'name="fields[0][show_if_operator]"',
             'name="fields[0][show_if_value]"',
             'Ukázka potvrzovacího e-mailu',
+            'Nastavení pole:',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin form edit page is missing fragment: ' . $expectedFragment;
@@ -2840,6 +2887,9 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'public form page is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], '<legend>Runtime audit formulář</legend>')) {
+            $issues[] = 'public form still repeats the page title inside an outer legend';
         }
     }
 
@@ -4672,10 +4722,12 @@ if (!empty($cleanup['place_ids'])) {
 }
 if (!empty($cleanup['form_submission_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['form_submission_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id IN ({$placeholders})")->execute($cleanup['form_submission_ids']);
     $pdo->prepare("DELETE FROM cms_form_submissions WHERE id IN ({$placeholders})")->execute($cleanup['form_submission_ids']);
 }
 if (!empty($cleanup['form_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['form_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id IN (SELECT id FROM cms_form_submissions WHERE form_id IN ({$placeholders}))")->execute($cleanup['form_ids']);
     $pdo->prepare("DELETE FROM cms_form_submissions WHERE form_id IN ({$placeholders})")->execute($cleanup['form_ids']);
     $pdo->prepare("DELETE FROM cms_form_fields WHERE form_id IN ({$placeholders})")->execute($cleanup['form_ids']);
     $pdo->prepare("DELETE FROM cms_forms WHERE id IN ({$placeholders})")->execute($cleanup['form_ids']);

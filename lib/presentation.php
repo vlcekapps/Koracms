@@ -2374,6 +2374,152 @@ function formSubmissionStatusCounts(PDO $pdo, int $formId): array
     return $counts;
 }
 
+function formSubmissionPriorityDefinitions(): array
+{
+    return [
+        'low' => [
+            'label' => 'Nízká',
+        ],
+        'medium' => [
+            'label' => 'Střední',
+        ],
+        'high' => [
+            'label' => 'Vysoká',
+        ],
+        'critical' => [
+            'label' => 'Kritická',
+        ],
+    ];
+}
+
+function normalizeFormSubmissionPriority(string $priority): string
+{
+    $priority = trim($priority);
+    $definitions = formSubmissionPriorityDefinitions();
+    return isset($definitions[$priority]) ? $priority : 'medium';
+}
+
+function formSubmissionPriorityLabel(string $priority): string
+{
+    $definitions = formSubmissionPriorityDefinitions();
+    $normalized = normalizeFormSubmissionPriority($priority);
+    return $definitions[$normalized]['label'];
+}
+
+function formSubmissionPriorityFromText(string $value): string
+{
+    $normalized = mb_strtolower(trim($value), 'UTF-8');
+    if ($normalized === '') {
+        return 'medium';
+    }
+
+    foreach (['krit', 'critical', 'urgent', 'blok'] as $needle) {
+        if (str_contains($normalized, $needle)) {
+            return 'critical';
+        }
+    }
+    foreach (['vysok', 'high'] as $needle) {
+        if (str_contains($normalized, $needle)) {
+            return 'high';
+        }
+    }
+    foreach (['střed', 'stred', 'medium', 'normal'] as $needle) {
+        if (str_contains($normalized, $needle)) {
+            return 'medium';
+        }
+    }
+    foreach (['nízk', 'nizk', 'low', 'minor'] as $needle) {
+        if (str_contains($normalized, $needle)) {
+            return 'low';
+        }
+    }
+
+    return 'medium';
+}
+
+function formSubmissionInferPriority(array $fieldsByName, array $submissionData): string
+{
+    $candidates = $fieldsByName !== []
+        ? array_keys($fieldsByName)
+        : array_keys($submissionData);
+
+    foreach ($candidates as $fieldName) {
+        $normalizedName = mb_strtolower(trim((string)$fieldName), 'UTF-8');
+        if (
+            !str_contains($normalizedName, 'priorita')
+            && !str_contains($normalizedName, 'zavaz')
+            && !str_contains($normalizedName, 'závaž')
+            && !str_contains($normalizedName, 'nalehav')
+            && !str_contains($normalizedName, 'naléhav')
+        ) {
+            continue;
+        }
+
+        $rawValue = $submissionData[$fieldName] ?? '';
+        if (is_array($rawValue)) {
+            $rawValue = implode(' ', array_map(static fn($item): string => trim((string)$item), $rawValue));
+        }
+
+        $resolved = formSubmissionPriorityFromText((string)$rawValue);
+        if ($resolved !== 'medium' || trim((string)$rawValue) !== '') {
+            return $resolved;
+        }
+    }
+
+    return 'medium';
+}
+
+function formSubmissionLabelsFromString(string $value): array
+{
+    $parts = preg_split('/[,;\n\r]+/u', $value) ?: [];
+    $labels = [];
+    foreach ($parts as $part) {
+        $label = trim((string)$part);
+        if ($label === '') {
+            continue;
+        }
+        $labels[mb_strtolower($label, 'UTF-8')] = $label;
+    }
+
+    return array_values($labels);
+}
+
+function formSubmissionNormalizeLabels(string $value): string
+{
+    return implode(', ', formSubmissionLabelsFromString($value));
+}
+
+function formSubmissionRecipient(array $form, array $fieldsByName, array $submissionData): array
+{
+    $emailField = trim((string)($form['submitter_email_field'] ?? ''));
+    if ($emailField !== '') {
+        $recipient = trim((string)($submissionData[$emailField] ?? ''));
+        if ($recipient !== '' && filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return [
+                'email' => $recipient,
+                'field_name' => $emailField,
+                'field_label' => trim((string)($fieldsByName[$emailField]['label'] ?? $emailField)),
+            ];
+        }
+    }
+
+    foreach ($fieldsByName as $fieldName => $field) {
+        if (normalizeFormFieldType((string)($field['field_type'] ?? 'text')) !== 'email') {
+            continue;
+        }
+        $recipient = trim((string)($submissionData[$fieldName] ?? ''));
+        if ($recipient !== '' && filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return [
+                'email' => $recipient,
+                'field_name' => $fieldName,
+                'field_label' => trim((string)($field['label'] ?? $fieldName)),
+            ];
+        }
+    }
+
+    return [];
+}
+
 function formSubmissionReferencePrefix(array $form): string
 {
     $slug = formSlug((string)($form['slug'] ?? ''));
@@ -2469,6 +2615,59 @@ function formSubmissionSummary(array $fieldsByName, array $submissionData, int $
     }
 
     return implode(' · ', $parts);
+}
+
+function formSubmissionHistoryCreate(PDO $pdo, int $submissionId, ?int $actorUserId, string $eventType, string $message): void
+{
+    $normalizedMessage = trim($message);
+    if ($submissionId <= 0 || $normalizedMessage === '') {
+        return;
+    }
+
+    $pdo->prepare(
+        "INSERT INTO cms_form_submission_history (submission_id, actor_user_id, event_type, message)
+         VALUES (?, ?, ?, ?)"
+    )->execute([
+        $submissionId,
+        $actorUserId,
+        trim($eventType) !== '' ? trim($eventType) : 'note',
+        $normalizedMessage,
+    ]);
+}
+
+function formSubmissionHistoryEntries(PDO $pdo, int $submissionId): array
+{
+    $stmt = $pdo->prepare(
+        "SELECT h.*,
+                u.email AS actor_email,
+                u.first_name AS actor_first_name,
+                u.last_name AS actor_last_name,
+                u.nickname AS actor_nickname,
+                u.role AS actor_role,
+                u.is_superadmin AS actor_is_superadmin
+         FROM cms_form_submission_history h
+         LEFT JOIN cms_users u ON u.id = h.actor_user_id
+         WHERE h.submission_id = ?
+         ORDER BY h.created_at DESC, h.id DESC"
+    );
+    $stmt->execute([$submissionId]);
+    return $stmt->fetchAll();
+}
+
+function formSubmissionHistoryActorLabel(array $historyRow): string
+{
+    if ((int)($historyRow['actor_user_id'] ?? 0) <= 0) {
+        return 'Systém';
+    }
+
+    return formSubmissionAssigneeDisplayName([
+        'email' => (string)($historyRow['actor_email'] ?? ''),
+        'first_name' => (string)($historyRow['actor_first_name'] ?? ''),
+        'last_name' => (string)($historyRow['actor_last_name'] ?? ''),
+        'nickname' => (string)($historyRow['actor_nickname'] ?? ''),
+        'role' => (string)($historyRow['actor_role'] ?? ''),
+        'is_superadmin' => (int)($historyRow['actor_is_superadmin'] ?? 0),
+    ]);
 }
 
 function formFieldLayoutWidthDefinitions(): array

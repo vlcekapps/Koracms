@@ -7,11 +7,18 @@ $id = inputInt('post', 'id');
 $redirect = internalRedirectTarget($_POST['redirect'] ?? '', BASE_URL . '/admin/forms.php');
 if ($id !== null) {
     $pdo = db_connect();
-    $submissionStmt = $pdo->prepare("SELECT data FROM cms_form_submissions WHERE form_id = ?");
-    $submissionStmt->execute([$id]);
-    foreach ($submissionStmt->fetchAll() as $submission) {
+    $submissionIdsStmt = $pdo->prepare("SELECT id, data FROM cms_form_submissions WHERE form_id = ?");
+    $submissionIdsStmt->execute([$id]);
+    $submissionRows = $submissionIdsStmt->fetchAll();
+    $submissionIds = [];
+    foreach ($submissionRows as $submission) {
+        $submissionIds[] = (int)($submission['id'] ?? 0);
         $submissionData = json_decode((string)($submission['data'] ?? ''), true);
         formDeleteUploadedFilesFromSubmissionData($submissionData);
+    }
+    if ($submissionIds !== []) {
+        $placeholders = implode(',', array_fill(0, count($submissionIds), '?'));
+        $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id IN ({$placeholders})")->execute($submissionIds);
     }
     $pdo->prepare("DELETE FROM cms_form_submissions WHERE form_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM cms_form_fields WHERE form_id = ?")->execute([$id]);

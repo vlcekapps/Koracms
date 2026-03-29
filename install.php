@@ -638,6 +638,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             form_id     INT          NOT NULL,
             reference_code VARCHAR(50) NOT NULL DEFAULT '',
             status      VARCHAR(20)  NOT NULL DEFAULT 'new',
+            priority    VARCHAR(20)  NOT NULL DEFAULT 'medium',
+            labels      VARCHAR(500) NOT NULL DEFAULT '',
             assigned_user_id INT     NULL DEFAULT NULL,
             internal_note TEXT,
             data        JSON         NOT NULL,
@@ -647,6 +649,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_form_date (form_id, created_at),
             INDEX idx_form_status (form_id, status, created_at),
             INDEX idx_form_assignee (assigned_user_id, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_form_submission_history (
+            id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            submission_id BIGINT       NOT NULL,
+            actor_user_id INT          NULL DEFAULT NULL,
+            event_type    VARCHAR(50)  NOT NULL DEFAULT 'note',
+            message       TEXT         NOT NULL,
+            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_submission_created (submission_id, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_revisions (

@@ -69,6 +69,14 @@ $submitterConfirmationPreview = formSubmitterConfirmationPreview(
     $submitterConfirmationSubjectValue,
     $submitterConfirmationMessageValue
 );
+$fieldEditorLegend = static function (array $field, int $index): string {
+    $fieldLabel = trim((string)($field['label'] ?? ''));
+    if ($fieldLabel !== '') {
+        return 'Nastavení pole: ' . $fieldLabel;
+    }
+
+    return 'Nastavení pole č. ' . ($index + 1);
+};
 
 adminHeader($pageTitle);
 ?>
@@ -318,7 +326,9 @@ adminHeader($pageTitle);
 
     <div id="fields-container">
       <?php foreach ($fields as $i => $field): ?>
-        <div class="field-row" style="border:1px solid #d6d6d6;border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:#fafafa">
+        <?php $fieldEditorContext = $fieldEditorLegend($field, $i); ?>
+        <fieldset class="field-row" style="border:1px solid #d6d6d6;border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:#fafafa">
+          <legend class="sr-only"><?= h($fieldEditorContext) ?></legend>
           <input type="hidden" name="fields[<?= $i ?>][id]" value="<?= (int)$field['id'] ?>">
           <div style="display:grid;grid-template-columns:minmax(12rem,1.4fr) minmax(10rem,.9fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(11rem,.9fr) 6rem;gap:.5rem;align-items:end">
             <div>
@@ -422,18 +432,19 @@ adminHeader($pageTitle);
             </div>
           </div>
           <div style="margin-top:.5rem;display:flex;gap:1rem;align-items:center">
-            <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?>> Povinné pole</label>
-            <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?>> Povolit více souborů</label>
-            <label><input type="checkbox" name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field['start_new_row'] ?? 0) === 1 ? ' checked' : '' ?>> Začít na novém řádku</label>
-            <label><input type="checkbox" name="fields[<?= $i ?>][delete]" value="1"> Odebrat pole po uložení</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?> aria-label="<?= h('Povinné pole: ' . $fieldEditorContext) ?>"> Povinné pole</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?> aria-label="<?= h('Povolit více souborů: ' . $fieldEditorContext) ?>"> Povolit více souborů</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field['start_new_row'] ?? 0) === 1 ? ' checked' : '' ?> aria-label="<?= h('Začít na novém řádku: ' . $fieldEditorContext) ?>"> Začít na novém řádku</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][delete]" value="1" aria-label="<?= h('Odebrat pole po uložení: ' . $fieldEditorContext) ?>"> Odebrat pole po uložení</label>
           </div>
-        </div>
+        </fieldset>
       <?php endforeach; ?>
     </div>
 
     <h3>Přidat nové pole</h3>
     <p class="field-help">Nové pole se po uložení přidá na konec formuláře. Typ <strong>Sekce formuláře</strong> použijte pro nový blok s mezititulkem a nápovědou. Pořadí, šířku i řádek pak můžete případně upravit přímo tady.</p>
-    <div style="border:1px dashed #b8b0a4;border-radius:8px;padding:.75rem;background:#fff">
+    <fieldset style="border:1px dashed #b8b0a4;border-radius:8px;padding:.75rem;background:#fff">
+      <legend class="sr-only">Nastavení nového pole formuláře</legend>
       <div style="display:grid;grid-template-columns:minmax(12rem,1.4fr) minmax(10rem,.9fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(11rem,.9fr) 6rem;gap:.5rem;align-items:end">
         <div>
           <label for="new-field-label">Popisek</label>
@@ -521,11 +532,11 @@ adminHeader($pageTitle);
         </div>
       </div>
       <div style="margin-top:.5rem">
-        <label><input type="checkbox" name="new_field_required" value="1"> Povinné pole</label>
-        <label style="margin-left:1rem"><input type="checkbox" name="new_field_allow_multiple" value="1"> Povolit více souborů</label>
-        <label style="margin-left:1rem"><input type="checkbox" name="new_field_start_new_row" value="1"> Začít na novém řádku</label>
+        <label><input type="checkbox" name="new_field_required" value="1" aria-label="Povinné nové pole"> Povinné pole</label>
+        <label style="margin-left:1rem"><input type="checkbox" name="new_field_allow_multiple" value="1" aria-label="Povolit více souborů u nového pole"> Povolit více souborů</label>
+        <label style="margin-left:1rem"><input type="checkbox" name="new_field_start_new_row" value="1" aria-label="Začít nové pole na novém řádku"> Začít na novém řádku</label>
       </div>
-    </div>
+    </fieldset>
   </fieldset>
   <?php else: ?>
     <p><em>Po vytvoření formuláře budete moci přidat jeho pole, jejich pořadí i potvrzovací zprávu.</em></p>

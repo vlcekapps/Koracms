@@ -10,6 +10,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Form Builder 2.0 – základ pro skutečně použitelné formuláře** – modul `Formuláře` nově podporuje pole `radio`, `url`, `file`, `více voleb`, `souhlas` a `skryté pole`, per-field nápovědu, placeholder, výchozí hodnotu, omezení typů a velikosti souborů a per-form nastavení pro text tlačítka, notifikační e-mail, předmět notifikace, interní redirect a volitelný honeypot
 - **Šablona `Nahlášení chyby`** – v přehledu formulářů lze jedním kliknutím založit hotový issue-report formulář s doporučenými poli pro závažnost, dotčené oblasti, prohlížeč a zařízení, kroky k reprodukci, očekávané a skutečné chování, dopad na práci, přílohu a souhlas se zpracováním údajů
 - **Form Builder 2.0 – podmínky, více příloh a potvrzení odesílateli** – formuláře nově umí potvrzovací e-mail odesílateli, výběr e-mailového pole pro odpověď, vlastní předmět a text potvrzení s placeholdery, živou ukázku potvrzovacího e-mailu v administraci, více souborů u příloh, šířku polí v rozvržení formuláře a podmíněné zobrazování polí přes `Zobrazit jen když` s operátory `je vyplněno`, `je prázdné`, `rovná se`, `nerovná se`, `obsahuje` a `neobsahuje`
+- **Form Builder 2.0 – sekce, rozložení a navazující kroky po odeslání** – formuláře nově podporují sekce s vlastním mezititulkem a nápovědou, rozložení polí po řádcích a šířkách a také volbu, co se má stát po úspěšném odeslání: potvrzení na stejné stránce nebo interní přesměrování, včetně až dvou navazujících tlačítek
+- **Form Builder 2.0 – pracovní inbox odpovědí** – odpovědi formulářů se nově chovají jako malý helpdesk: mají referenční kód, stavy `nové / rozpracované / vyřešené / uzavřené`, prioritu, štítky, přiřazení řešiteli, interní poznámku, detail jedné odpovědi, interní historii změn a možnost odpovědět odesílateli přímo z detailu hlášení
+- **Další hotové šablony formulářů** – k issue-reportingu přibyly i preset šablony `Návrh nové funkce`, `Žádost o podporu`, `Obecný kontaktní formulář` a `Nahlášení problému s obsahem`
 
 ### Opraveno
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci
@@ -18,6 +21,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Přihlašovací obrazovky administrace** – `login.php` a `login_2fa.php` nově používají skip link a sjednocený focus-visible základ, aby se nechovaly hůř než zbytek administrace
 - **Portable theme package a runtime audit** – opraven falešný poplach u CSS validace (`scroll-behavior` vs. zakázané `behavior:`), aktualizován roundtrip test šablon a SMTP kontrola se v lokálním prostředí bez explicitní konfigurace korektně hlásí jako `SKIP`
 - **Formuláře a odpovědi** – odpovědi i CSV export nově správně zobrazují více voleb, souhlas a nahrané soubory; mazání formuláře nebo odpovědi uklízí i související uploady a runtime audit hlídá create/edit/submissions flow včetně veřejné stránky formuláře
+- **WCAG 2.2 ve Form Builderu** – přehled formulářů už nepoužívá tlačítka se čteným znakem `+`, editor polí dává opakovaným checkboxům jasný kontext pro čtečky a veřejný formulář už nečte název formuláře duplicitně přes vnější legendu
 - **Blog administrace bez existujícího blogu** – kategorie a štítky už bez vytvořeného blogu nejsou nabízené v levém menu, jejich obrazovky se bezpečně vrací na správu blogů a přehled článků místo slepé cesty jasně navede na vytvoření prvního blogu
 
 ### Přidáno

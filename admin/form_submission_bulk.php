@@ -30,6 +30,7 @@ if ($action === 'delete') {
         formDeleteUploadedFilesFromSubmissionData($submissionData);
     }
 
+    $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id IN ({$placeholders})")->execute($ids);
     $deleteStmt = $pdo->prepare("DELETE FROM cms_form_submissions WHERE id IN ({$placeholders})");
     $deleteStmt->execute($ids);
     logAction('form_submission_bulk_delete', 'ids=' . implode(',', $ids));
@@ -50,6 +51,16 @@ $statusUpdateStmt = $pdo->prepare(
      WHERE id IN ({$placeholders})"
 );
 $statusUpdateStmt->execute($statusUpdateParams);
+
+foreach ($ids as $submissionId) {
+    formSubmissionHistoryCreate(
+        $pdo,
+        $submissionId,
+        currentUserId(),
+        'bulk_workflow',
+        'Stav odpovědi byl hromadně změněn na „' . formSubmissionStatusLabel($action) . '“.'
+    );
+}
 
 logAction('form_submission_bulk_update', 'status=' . $action . ' ids=' . implode(',', $ids));
 

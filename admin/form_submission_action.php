@@ -13,7 +13,8 @@ if ($submissionId === null) {
 
 $pdo = db_connect();
 $submissionStmt = $pdo->prepare(
-    "SELECT s.id, s.form_id, s.reference_code, s.created_at, f.title AS form_title, f.slug AS form_slug
+    "SELECT s.id, s.form_id, s.reference_code, s.created_at, s.status, s.priority, s.labels, s.assigned_user_id, s.internal_note,
+            f.title AS form_title, f.slug AS form_slug
      FROM cms_form_submissions s
      INNER JOIN cms_forms f ON f.id = s.form_id
      WHERE s.id = ?"
@@ -27,6 +28,8 @@ if (!$submission) {
 }
 
 $status = normalizeFormSubmissionStatus((string)($_POST['status'] ?? 'new'));
+$priority = normalizeFormSubmissionPriority((string)($_POST['priority'] ?? 'medium'));
+$labels = formSubmissionNormalizeLabels((string)($_POST['labels'] ?? ''));
 $assignedUserId = inputInt('post', 'assigned_user_id');
 $internalNote = trim((string)($_POST['internal_note'] ?? ''));
 
@@ -50,20 +53,59 @@ $resolvedReference = formSubmissionReference([
 
 $pdo->prepare(
     "UPDATE cms_form_submissions
-     SET reference_code = ?, status = ?, assigned_user_id = ?, internal_note = ?, updated_at = NOW()
+     SET reference_code = ?, status = ?, priority = ?, labels = ?, assigned_user_id = ?, internal_note = ?, updated_at = NOW()
      WHERE id = ?"
 )->execute([
     $resolvedReference,
     $status,
+    $priority,
+    $labels,
     $assignedUserId,
     $internalNote,
     $submissionId,
 ]);
 
+$historyParts = [];
+if ($status !== normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new'))) {
+    $historyParts[] = 'Stav změněn na „' . formSubmissionStatusLabel($status) . '“.';
+}
+if ($priority !== normalizeFormSubmissionPriority((string)($submission['priority'] ?? 'medium'))) {
+    $historyParts[] = 'Priorita změněna na „' . formSubmissionPriorityLabel($priority) . '“.';
+}
+if ($labels !== formSubmissionNormalizeLabels((string)($submission['labels'] ?? ''))) {
+    $historyParts[] = $labels !== ''
+        ? 'Štítky upraveny na „' . $labels . '“.'
+        : 'Štítky byly vyčištěny.';
+}
+if (($assignedUserId ?? 0) !== (int)($submission['assigned_user_id'] ?? 0)) {
+    if ($assignedUserId === null) {
+        $historyParts[] = 'Přiřazení řešiteli bylo zrušeno.';
+    } else {
+        $historyParts[] = 'Změněn přiřazený řešitel.';
+    }
+}
+if ($internalNote !== trim((string)($submission['internal_note'] ?? ''))) {
+    $historyParts[] = $internalNote !== ''
+        ? 'Interní poznámka byla upravena.'
+        : 'Interní poznámka byla smazána.';
+}
+
+if ($historyParts !== []) {
+    formSubmissionHistoryCreate(
+        $pdo,
+        $submissionId,
+        currentUserId(),
+        'workflow',
+        implode(' ', $historyParts)
+    );
+}
+
 logAction(
     'form_submission_update',
     'id=' . $submissionId
     . ' status=' . $status
+    . ' priority=' . $priority
+    . ' labels=' . ($labels !== '' ? $labels : '-')
     . ' assigned_user_id=' . ($assignedUserId !== null ? (string)$assignedUserId : 'null')
 );
 

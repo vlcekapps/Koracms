@@ -625,6 +625,8 @@ $tables = [
         form_id     INT          NOT NULL,
         reference_code VARCHAR(50) NOT NULL DEFAULT '',
         status      VARCHAR(20)  NOT NULL DEFAULT 'new',
+        priority    VARCHAR(20)  NOT NULL DEFAULT 'medium',
+        labels      VARCHAR(500) NOT NULL DEFAULT '',
         assigned_user_id INT     NULL DEFAULT NULL,
         internal_note TEXT,
         data        JSON         NOT NULL,
@@ -634,6 +636,16 @@ $tables = [
         INDEX idx_form_date (form_id, created_at),
         INDEX idx_form_status (form_id, status, created_at),
         INDEX idx_form_assignee (assigned_user_id, status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_form_submission_history' => "CREATE TABLE IF NOT EXISTS cms_form_submission_history (
+        id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        submission_id BIGINT       NOT NULL,
+        actor_user_id INT          NULL DEFAULT NULL,
+        event_type    VARCHAR(50)  NOT NULL DEFAULT 'note',
+        message       TEXT         NOT NULL,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_submission_created (submission_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     // ── Revize obsahu ──
@@ -845,9 +857,20 @@ $addColumns = [
     // cms_form_submissions
     'cms_form_submissions.reference_code' => "ALTER TABLE cms_form_submissions ADD COLUMN reference_code VARCHAR(50) NOT NULL DEFAULT ''",
     'cms_form_submissions.status' => "ALTER TABLE cms_form_submissions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'new'",
+    'cms_form_submissions.priority' => "ALTER TABLE cms_form_submissions ADD COLUMN priority VARCHAR(20) NOT NULL DEFAULT 'medium'",
+    'cms_form_submissions.labels' => "ALTER TABLE cms_form_submissions ADD COLUMN labels VARCHAR(500) NOT NULL DEFAULT ''",
     'cms_form_submissions.assigned_user_id' => "ALTER TABLE cms_form_submissions ADD COLUMN assigned_user_id INT NULL DEFAULT NULL",
     'cms_form_submissions.internal_note' => "ALTER TABLE cms_form_submissions ADD COLUMN internal_note TEXT",
     'cms_form_submissions.updated_at' => "ALTER TABLE cms_form_submissions ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    'cms_form_submission_history.id' => "CREATE TABLE IF NOT EXISTS cms_form_submission_history (
+        id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        submission_id BIGINT       NOT NULL,
+        actor_user_id INT          NULL DEFAULT NULL,
+        event_type    VARCHAR(50)  NOT NULL DEFAULT 'note',
+        message       TEXT         NOT NULL,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_submission_created (submission_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     // Multiblog – blog_id sloupce
     'cms_articles.blog_id'           => "ALTER TABLE cms_articles ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
     'cms_categories.blog_id'         => "ALTER TABLE cms_categories ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
@@ -1929,7 +1952,7 @@ try {
 
 try {
     $formSubmissionRows = $pdo->query(
-        "SELECT fs.id, fs.form_id, fs.reference_code, fs.status, fs.created_at,
+        "SELECT fs.id, fs.form_id, fs.reference_code, fs.status, fs.priority, fs.labels, fs.data, fs.created_at,
                 f.title AS form_title, f.slug AS form_slug
          FROM cms_form_submissions fs
          LEFT JOIN cms_forms f ON f.id = fs.form_id
@@ -1938,10 +1961,11 @@ try {
 
     $updateFormSubmissionStmt = $pdo->prepare(
         "UPDATE cms_form_submissions
-         SET reference_code = ?, status = ?
+         SET reference_code = ?, status = ?, priority = ?, labels = ?
          WHERE id = ?"
     );
     $normalizedSubmissionCount = 0;
+    $historySeededCount = 0;
 
     foreach ($formSubmissionRows as $formSubmissionRow) {
         $formMeta = [
@@ -1958,16 +1982,39 @@ try {
         }
 
         $resolvedStatus = normalizeFormSubmissionStatus((string)($formSubmissionRow['status'] ?? 'new'));
+        $submissionData = json_decode((string)($formSubmissionRow['data'] ?? ''), true) ?: [];
+        $resolvedPriority = normalizeFormSubmissionPriority((string)($formSubmissionRow['priority'] ?? ''));
+        if (trim((string)($formSubmissionRow['priority'] ?? '')) === '') {
+            $resolvedPriority = formSubmissionInferPriority([], $submissionData);
+        }
+        $resolvedLabels = formSubmissionNormalizeLabels((string)($formSubmissionRow['labels'] ?? ''));
         if (
             $resolvedReference !== (string)($formSubmissionRow['reference_code'] ?? '')
             || $resolvedStatus !== (string)($formSubmissionRow['status'] ?? 'new')
+            || $resolvedPriority !== normalizeFormSubmissionPriority((string)($formSubmissionRow['priority'] ?? ''))
+            || $resolvedLabels !== (string)($formSubmissionRow['labels'] ?? '')
         ) {
             $updateFormSubmissionStmt->execute([
                 $resolvedReference,
                 $resolvedStatus,
+                $resolvedPriority,
+                $resolvedLabels,
                 (int)$formSubmissionRow['id'],
             ]);
             $normalizedSubmissionCount++;
+        }
+
+        $historyCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ?");
+        $historyCheckStmt->execute([(int)$formSubmissionRow['id']]);
+        if ((int)$historyCheckStmt->fetchColumn() === 0) {
+            formSubmissionHistoryCreate(
+                $pdo,
+                (int)$formSubmissionRow['id'],
+                null,
+                'created',
+                'Historie byla inicializována pro dříve uloženou odpověď formuláře.'
+            );
+            $historySeededCount++;
         }
     }
 
@@ -1999,7 +2046,7 @@ try {
         $log[] = "· Index <code>idx_form_assignee</code> pro odpovědi formulářů již existuje – přeskočeno";
     }
 
-    $log[] = "✓ Workflow odpovědí formulářů sjednocen – OK ({$normalizedSubmissionCount} upravených záznamů)";
+    $log[] = "✓ Workflow odpovědí formulářů sjednocen – OK ({$normalizedSubmissionCount} upravených záznamů, {$historySeededCount} inicializovaných historií)";
 } catch (\PDOException $e) {
     $log[] = "✗ Workflow odpovědí formulářů – CHYBA: " . h($e->getMessage());
 }

@@ -60,8 +60,7 @@
           <?= honeypotField() ?>
         <?php endif; ?>
 
-        <fieldset class="form-fieldset">
-          <legend><?= h((string)$form['title']) ?></legend>
+        <div class="form-fieldset" aria-labelledby="form-title">
           <?php $currentFieldsContainer = null; ?>
 
           <?php foreach ($fields as $field): ?>
@@ -262,7 +261,7 @@
           <div class="button-row button-row--start">
             <button type="submit" class="button-primary"><?= h(trim((string)($form['submit_label'] ?? '')) !== '' ? (string)$form['submit_label'] : 'Odeslat formulář') ?></button>
           </div>
-        </fieldset>
+        </div>
       </form>
 
       <script nonce="<?= h(cspNonce()) ?>">

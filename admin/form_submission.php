@@ -53,6 +53,7 @@ $submissionStmt = $pdo->prepare(
             f.title AS form_title,
             f.slug AS form_slug,
             f.is_active AS form_is_active,
+            f.submitter_email_field AS form_submitter_email_field,
             u.email AS assigned_email,
             u.first_name AS assigned_first_name,
             u.last_name AS assigned_last_name,
@@ -80,6 +81,13 @@ $selfRedirect = BASE_URL . '/admin/form_submission.php?id=' . (int)$submission['
 $fieldsStmt = $pdo->prepare("SELECT * FROM cms_form_fields WHERE form_id = ? ORDER BY sort_order, id");
 $fieldsStmt->execute([$formId]);
 $fields = $fieldsStmt->fetchAll();
+$fieldsByName = [];
+foreach ($fields as $field) {
+    $fieldName = trim((string)($field['name'] ?? ''));
+    if ($fieldName !== '') {
+        $fieldsByName[$fieldName] = $field;
+    }
+}
 $submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
 $assignableUsers = formSubmissionAssignableUsers($pdo);
 $assigneeLabel = trim((string)($submission['assigned_email'] ?? '')) !== ''
@@ -93,12 +101,39 @@ $assigneeLabel = trim((string)($submission['assigned_email'] ?? '')) !== ''
     ])
     : 'Nepřiřazeno';
 $statusDefinitions = formSubmissionStatusDefinitions();
+$priorityDefinitions = formSubmissionPriorityDefinitions();
+$normalizedLabels = formSubmissionNormalizeLabels((string)($submission['labels'] ?? ''));
+$historyEntries = formSubmissionHistoryEntries($pdo, $submissionId);
+$replyRecipient = formSubmissionRecipient([
+    'submitter_email_field' => (string)($submission['form_submitter_email_field'] ?? ''),
+], $fieldsByName, $submissionData);
+$replySubject = trim((string)($submission['form_title'] ?? '')) !== ''
+    ? 'Re: ' . trim((string)$submission['form_title']) . ' (' . formSubmissionReference([
+        'title' => (string)($submission['form_title'] ?? ''),
+        'slug' => (string)($submission['form_slug'] ?? ''),
+    ], $submission) . ')'
+    : 'Re: odpověď formuláře';
+$replyMessage = "Dobrý den,\n\nreagujeme na vaše hlášení "
+    . formSubmissionReference([
+        'title' => (string)($submission['form_title'] ?? ''),
+        'slug' => (string)($submission['form_slug'] ?? ''),
+    ], $submission)
+    . ".\n\n";
 
 adminHeader('Detail odpovědi formuláře');
 ?>
 
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Workflow odpovědi formuláře byl aktualizován.</p>
+<?php endif; ?>
+<?php if (isset($_GET['reply']) && $_GET['reply'] === 'sent'): ?>
+  <p class="success" role="status">Odpověď odesílateli byla úspěšně odeslána.</p>
+<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'missing'): ?>
+  <p class="error" role="alert">U této odpovědi není dostupná žádná platná e-mailová adresa pro odpověď.</p>
+<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'invalid'): ?>
+  <p class="error" role="alert">Vyplňte předmět i text odpovědi.</p>
+<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
+  <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -126,6 +161,14 @@ adminHeader('Detail odpovědi formuláře');
     <tr>
       <th scope="row">Stav</th>
       <td><strong><?= h(formSubmissionStatusLabel((string)($submission['status'] ?? 'new'))) ?></strong></td>
+    </tr>
+    <tr>
+      <th scope="row">Priorita</th>
+      <td><strong><?= h(formSubmissionPriorityLabel((string)($submission['priority'] ?? 'medium'))) ?></strong></td>
+    </tr>
+    <tr>
+      <th scope="row">Štítky</th>
+      <td><?= h($normalizedLabels !== '' ? $normalizedLabels : '–') ?></td>
     </tr>
     <tr>
       <th scope="row">Přiřazeno</th>
@@ -174,7 +217,7 @@ adminHeader('Detail odpovědi formuláře');
   <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
   <fieldset>
     <legend>Workflow hlášení</legend>
-    <div style="display:grid;grid-template-columns:minmax(14rem,1fr) minmax(18rem,1.1fr);gap:1rem;align-items:start">
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(14rem,1fr));gap:1rem;align-items:start">
       <div>
         <label for="submission-status">Stav odpovědi</label>
         <select id="submission-status" name="status" style="width:100%">
@@ -196,6 +239,21 @@ adminHeader('Detail odpovědi formuláře');
           <?php endforeach; ?>
         </select>
       </div>
+      <div>
+        <label for="submission-priority">Priorita</label>
+        <select id="submission-priority" name="priority" style="width:100%">
+          <?php foreach ($priorityDefinitions as $priorityKey => $priorityDefinition): ?>
+            <option value="<?= h($priorityKey) ?>"<?= normalizeFormSubmissionPriority((string)($submission['priority'] ?? 'medium')) === $priorityKey ? ' selected' : '' ?>>
+              <?= h((string)$priorityDefinition['label']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div>
+        <label for="submission-labels">Štítky</label>
+        <input type="text" id="submission-labels" name="labels" value="<?= h($normalizedLabels) ?>" style="width:100%" aria-describedby="submission-labels-help">
+        <small id="submission-labels-help" class="field-help">Oddělujte je čárkou. Hodí se třeba pro modul, oblast nebo typ požadavku.</small>
+      </div>
     </div>
     <div style="margin-top:1rem">
       <label for="submission-internal-note">Interní poznámka</label>
@@ -208,6 +266,46 @@ adminHeader('Detail odpovědi formuláře');
     <a href="<?= h($redirect) ?>" class="btn">Zrušit</a>
   </div>
 </form>
+
+<?php if ($replyRecipient !== []): ?>
+  <h2>Odpověď odesílateli</h2>
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_reply.php">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+    <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+    <fieldset>
+      <legend>Poslat odpověď e-mailem</legend>
+      <p class="field-help">Odpověď odejde na <strong><?= h((string)$replyRecipient['email']) ?></strong><?php if (trim((string)($replyRecipient['field_label'] ?? '')) !== ''): ?> z pole „<?= h((string)$replyRecipient['field_label']) ?>“<?php endif; ?>.</p>
+      <div style="margin-bottom:.75rem">
+        <label for="reply-subject">Předmět odpovědi</label>
+        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" style="width:100%;max-width:52rem">
+      </div>
+      <div style="margin-bottom:.75rem">
+        <label for="reply-message">Text odpovědi</label>
+        <textarea id="reply-message" name="message" rows="8" style="width:100%;max-width:52rem" aria-describedby="reply-message-help"><?= h($replyMessage) ?></textarea>
+        <small id="reply-message-help" class="field-help">Tato odpověď se zároveň uloží do interní historie hlášení.</small>
+      </div>
+      <div class="button-row">
+        <button type="submit" class="btn btn-primary">Poslat odpověď</button>
+      </div>
+    </fieldset>
+  </form>
+<?php endif; ?>
+
+<h2>Interní historie</h2>
+<?php if ($historyEntries === []): ?>
+  <p>Zatím tu není žádná interní historie tohoto hlášení.</p>
+<?php else: ?>
+  <ul style="padding-left:1.25rem">
+    <?php foreach ($historyEntries as $historyEntry): ?>
+      <li style="margin-bottom:.75rem">
+        <strong><?= h(formSubmissionHistoryActorLabel($historyEntry)) ?></strong>
+        <span class="field-help">· <time datetime="<?= h(str_replace(' ', 'T', (string)$historyEntry['created_at'])) ?>"><?= formatCzechDate((string)$historyEntry['created_at']) ?></time></span><br>
+        <?= nl2br(h((string)($historyEntry['message'] ?? ''))) ?>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+<?php endif; ?>
 
 <form method="post" action="<?= BASE_URL ?>/admin/form_submission_delete.php" style="margin-top:1rem">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

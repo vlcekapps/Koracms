@@ -362,13 +362,28 @@ Modul `Formuláře` už dnes není jen jednoduchý kontaktní wrapper. Umí:
 - per-field nápovědu, placeholder, výchozí hodnotu
 - omezení příloh podle typu a velikosti
 - více souborů u file pole
+- sekce formuláře s vlastním mezititulkem a úvodním textem
+- rozložení polí po řádcích a šířkách
 - podmíněné zobrazování polí (`Zobrazit jen když`)
 - interní redirect po odeslání
+- potvrzení na stejné stránce nebo interní přesměrování po odeslání
+- až dvě navazující tlačítka po úspěšném odeslání
 - notifikační e-mail správci
 - potvrzovací e-mail odesílateli
 - přehled odpovědí a CSV export
+- workflow odpovědí se stavy `nové / rozpracované / vyřešené / uzavřené`
+- prioritu, štítky, přiřazení řešiteli a interní poznámku
+- detail odpovědi, interní historii a odpověď odesílateli přímo z administrace
 
-Součástí modulu je i hotový preset **Nahlášení chyby**, který se hodí třeba pro issue reporting mimo GitHub.
+Součástí modulu jsou i hotové preset šablony:
+
+- **Nahlášení chyby**
+- **Návrh nové funkce**
+- **Žádost o podporu**
+- **Obecný kontaktní formulář**
+- **Nahlášení problému s obsahem**
+
+Pro issue reporting mimo GitHub je teď builder použitelný i jako lehký helpdesk inbox.
 
 ---
 

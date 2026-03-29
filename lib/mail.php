@@ -239,6 +239,27 @@ function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $
     return true;
 }
 
+function sendFormSubmissionReply(string $recipient, string $subject, string $message): bool
+{
+    $normalizedRecipient = trim($recipient);
+    $normalizedSubject = trim($subject);
+    $normalizedMessage = trim($message);
+
+    if ($normalizedRecipient === '' || !filter_var($normalizedRecipient, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    if ($normalizedSubject === '' || $normalizedMessage === '') {
+        return false;
+    }
+
+    if (!sendMail($normalizedRecipient, $normalizedSubject, $normalizedMessage)) {
+        error_log("sendMail FAILED: odpověď odesílateli formuláře pro {$normalizedRecipient}");
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * Notifikace: obsah čeká na schválení.
  */

@@ -21,6 +21,7 @@ if ($id !== null) {
         $submissionData = json_decode((string)($submission['data'] ?? ''), true);
         formDeleteUploadedFilesFromSubmissionData($submissionData);
     }
+    $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM cms_form_submissions WHERE id = ?")->execute([$id]);
     logAction('form_submission_delete', "id={$id}");
 }

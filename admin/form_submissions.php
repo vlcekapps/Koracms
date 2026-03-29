@@ -32,10 +32,16 @@ foreach ($fields as $field) {
 }
 
 $statusDefinitions = formSubmissionStatusDefinitions();
+$priorityDefinitions = formSubmissionPriorityDefinitions();
 $allowedStatusFilters = array_merge(['all'], array_keys($statusDefinitions));
 $statusFilter = trim((string)($_GET['status'] ?? 'new'));
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'new';
+}
+$allowedPriorityFilters = array_merge(['all'], array_keys($priorityDefinitions));
+$priorityFilter = trim((string)($_GET['priority'] ?? 'all'));
+if (!in_array($priorityFilter, $allowedPriorityFilters, true)) {
+    $priorityFilter = 'all';
 }
 
 $query = trim((string)($_GET['q'] ?? ''));
@@ -47,6 +53,10 @@ $params = [$formId];
 if ($statusFilter !== 'all') {
     $where .= ' AND s.status = ?';
     $params[] = $statusFilter;
+}
+if ($priorityFilter !== 'all') {
+    $where .= ' AND s.priority = ?';
+    $params[] = $priorityFilter;
 }
 if ($query !== '') {
     $where .= " AND (
@@ -71,7 +81,10 @@ $submissionsStmt = $pdo->prepare(
      FROM cms_form_submissions s
      LEFT JOIN cms_users u ON u.id = s.assigned_user_id
      {$where}
-     ORDER BY FIELD(s.status, 'new', 'in_progress', 'resolved', 'closed'), s.created_at DESC, s.id DESC"
+     ORDER BY FIELD(s.status, 'new', 'in_progress', 'resolved', 'closed'),
+              FIELD(s.priority, 'critical', 'high', 'medium', 'low'),
+              s.created_at DESC,
+              s.id DESC"
 );
 $submissionsStmt->execute($params);
 $submissions = $submissionsStmt->fetchAll();
@@ -80,6 +93,9 @@ $submissionCount = count($submissions);
 $currentParams = ['id' => $formId];
 if ($statusFilter !== 'all') {
     $currentParams['status'] = $statusFilter;
+}
+if ($priorityFilter !== 'all') {
+    $currentParams['priority'] = $priorityFilter;
 }
 if ($query !== '') {
     $currentParams['q'] = $query;
@@ -93,7 +109,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     $out = fopen('php://output', 'w');
     fprintf($out, "\xEF\xBB\xBF");
 
-    $headerRow = ['Reference', 'Datum', 'Stav', 'Přiřazeno', 'Interní poznámka'];
+    $headerRow = ['Reference', 'Datum', 'Stav', 'Priorita', 'Štítky', 'Přiřazeno', 'Interní poznámka'];
     foreach ($fieldDefinitions as $field) {
         $headerRow[] = (string)($field['label'] ?? '');
     }
@@ -116,6 +132,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             formSubmissionReference($form, $submission),
             formatCzechDate((string)$submission['created_at']),
             formSubmissionStatusLabel((string)($submission['status'] ?? 'new')),
+            formSubmissionPriorityLabel((string)($submission['priority'] ?? 'medium')),
+            formSubmissionNormalizeLabels((string)($submission['labels'] ?? '')),
             $assigneeLabel,
             trim((string)($submission['internal_note'] ?? '')),
         ];
@@ -168,7 +186,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 <p>
   <strong>Formulář:</strong> <?= h((string)$form['title']) ?> ·
   <strong>Zobrazeno odpovědí:</strong> <?= $submissionCount ?>
-  <?php if ($query !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($query !== '' || $statusFilter !== 'all' || $priorityFilter !== 'all'): ?>
     · <strong>Celkem odpovědí:</strong> <?= $allSubmissionCount ?>
   <?php endif; ?>
 </p>
@@ -176,19 +194,19 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 <p class="section-subtitle">Z přijatých odpovědí můžete udělat skutečný pracovní inbox: přiřadit řešitele, přidat interní poznámku, měnit stav a otevřít detail jednotlivého hlášení.</p>
 
 <nav aria-label="Filtr odpovědí formuláře" class="button-row" style="margin-bottom:1rem">
-  <a href="?id=<?= (int)$formId ?>&amp;status=new"<?= $statusFilter === 'new' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'new', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'new' ? ' aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>
-  <a href="?id=<?= (int)$formId ?>&amp;status=in_progress"<?= $statusFilter === 'in_progress' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'in_progress', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'in_progress' ? ' aria-current="page"' : '' ?>>
     Rozpracované (<?= $statusCounts['in_progress'] ?>)
   </a>
-  <a href="?id=<?= (int)$formId ?>&amp;status=resolved"<?= $statusFilter === 'resolved' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'resolved', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'resolved' ? ' aria-current="page"' : '' ?>>
     Vyřešené (<?= $statusCounts['resolved'] ?>)
   </a>
-  <a href="?id=<?= (int)$formId ?>&amp;status=closed"<?= $statusFilter === 'closed' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'closed', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'closed' ? ' aria-current="page"' : '' ?>>
     Uzavřené (<?= $statusCounts['closed'] ?>)
   </a>
-  <a href="?id=<?= (int)$formId ?>&amp;status=all"<?= $statusFilter === 'all' ? ' aria-current="page"' : '' ?>>
+  <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'all', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'all' ? ' aria-current="page"' : '' ?>>
     Všechny (<?= $allSubmissionCount ?>)
   </a>
 </nav>
@@ -198,8 +216,15 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
   <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
   <label for="submissions-q">Hledat v odpovědích</label>
   <input type="search" id="submissions-q" name="q" value="<?= h($query) ?>" placeholder="Reference, obsah odpovědi nebo interní poznámka">
+  <label for="submissions-priority">Priorita</label>
+  <select id="submissions-priority" name="priority">
+    <option value="all">Všechny priority</option>
+    <?php foreach ($priorityDefinitions as $priorityKey => $priorityDefinition): ?>
+      <option value="<?= h($priorityKey) ?>"<?= $priorityFilter === $priorityKey ? ' selected' : '' ?>><?= h((string)$priorityDefinition['label']) ?></option>
+    <?php endforeach; ?>
+  </select>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($query !== ''): ?>
+  <?php if ($query !== '' || $priorityFilter !== 'all'): ?>
     <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => $statusFilter])) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -245,6 +270,8 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
         <th scope="col">Reference</th>
         <th scope="col">Shrnutí</th>
         <th scope="col">Přijato</th>
+        <th scope="col">Priorita</th>
+        <th scope="col">Štítky</th>
         <th scope="col">Přiřazeno</th>
         <th scope="col">Stav</th>
         <th scope="col">Akce</th>
@@ -294,6 +321,8 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
               <?= formatCzechDate((string)$submission['created_at']) ?>
             </time>
           </td>
+          <td><strong><?= h(formSubmissionPriorityLabel((string)($submission['priority'] ?? 'medium'))) ?></strong></td>
+          <td><?= h(($normalizedSubmissionLabels = formSubmissionNormalizeLabels((string)($submission['labels'] ?? ''))) !== '' ? $normalizedSubmissionLabels : '–') ?></td>
           <td><?= h($assigneeLabel) ?></td>
           <td><strong><?= h(formSubmissionStatusLabel((string)($submission['status'] ?? 'new'))) ?></strong></td>
           <td class="actions">

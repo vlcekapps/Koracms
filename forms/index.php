@@ -382,13 +382,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ipHash = hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0') . '|form_' . (int)$form['id']);
             $submissionId = 0;
             $submissionReference = '';
+            $submissionPriority = formSubmissionInferPriority($fieldsByName, $submissionData);
             try {
                 $pdo->prepare(
-                    "INSERT INTO cms_form_submissions (form_id, data, ip_hash) VALUES (?, ?, ?)"
+                    "INSERT INTO cms_form_submissions (form_id, data, ip_hash, priority, labels) VALUES (?, ?, ?, ?, '')"
                 )->execute([
                     (int)$form['id'],
                     json_encode($submissionData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     $ipHash,
+                    $submissionPriority,
                 ]);
                 $submissionId = (int)$pdo->lastInsertId();
                 $submissionReference = formSubmissionBuildReference($form, $submissionId);
@@ -400,6 +402,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $submissionReference,
                     $submissionId,
                 ]);
+                formSubmissionHistoryCreate(
+                    $pdo,
+                    $submissionId,
+                    null,
+                    'created',
+                    'Odpověď byla přijata přes veřejný formulář.'
+                );
             } catch (\PDOException $e) {
                 error_log('form submit: ' . $e->getMessage());
                 $errors[] = 'Odeslání formuláře se nezdařilo. Zkuste to prosím později.';

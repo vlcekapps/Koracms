@@ -46,12 +46,12 @@ try {
 adminHeader('Formuláře');
 ?>
 <div class="button-row">
-  <a href="form_form.php" class="btn btn-primary">+ Vytvořit formulář</a>
-  <a href="form_form.php?preset=issue_report" class="btn">+ Nahlášení chyby</a>
-  <a href="form_form.php?preset=feature_request" class="btn">+ Návrh nové funkce</a>
-  <a href="form_form.php?preset=support_request" class="btn">+ Žádost o podporu</a>
-  <a href="form_form.php?preset=contact_basic" class="btn">+ Kontaktní formulář</a>
-  <a href="form_form.php?preset=content_report" class="btn">+ Nahlášení problému s obsahem</a>
+  <a href="form_form.php" class="btn btn-primary">Vytvořit formulář</a>
+  <a href="form_form.php?preset=issue_report" class="btn">Nahlášení chyby</a>
+  <a href="form_form.php?preset=feature_request" class="btn">Návrh nové funkce</a>
+  <a href="form_form.php?preset=support_request" class="btn">Žádost o podporu</a>
+  <a href="form_form.php?preset=contact_basic" class="btn">Kontaktní formulář</a>
+  <a href="form_form.php?preset=content_report" class="btn">Nahlášení problému s obsahem</a>
 </div>
 
 <p class="section-subtitle">Na jednom místě připravíte veřejné formuláře, jejich pole i přehled doručených odpovědí.</p>
