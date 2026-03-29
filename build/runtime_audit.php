@@ -5957,6 +5957,31 @@ if ($blogAdminIssues === []) {
     }
 }
 
+echo "=== estranky_photo_guardrails ===\n";
+$estrankyPhotoIssues = [];
+$estrankyPhotoSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
+if (!str_contains($estrankyPhotoSource, "'batch_id' => \$batchId")) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader no longer stores lightweight batch state';
+}
+if (str_contains($estrankyPhotoSource, "'photos' => \$photoList")) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader stores full photo list in session again';
+}
+if (!str_contains($estrankyPhotoSource, 'function estrankyFetchRemotePhoto')) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader is missing resilient remote download helper';
+}
+if (!str_contains($estrankyPhotoSource, 'function_exists(\'curl_init\')')) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader is missing cURL fallback for stricter hosting';
+}
+
+if ($estrankyPhotoIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($estrankyPhotoIssues as $estrankyPhotoIssue) {
+        echo '- ' . $estrankyPhotoIssue . "\n";
+    }
+}
+
 echo "=== widget_registry ===\n";
 $widgetRegistryIssues = [];
 $widgetDefs = widgetTypeDefinitions();

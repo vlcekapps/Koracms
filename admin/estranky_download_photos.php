@@ -6,6 +6,94 @@
 require_once __DIR__ . '/layout.php';
 requireCapability('import_export_manage', 'Přístup odepřen.');
 
+function estrankyPhotoBatchDirectory(): string
+{
+    return rtrim(koraStoragePath('imports/estranky_photos'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+}
+
+function estrankyEnsurePhotoBatchDirectory(): bool
+{
+    return koraEnsureDirectory(estrankyPhotoBatchDirectory());
+}
+
+function estrankyCreatePhotoBatch(array $photoList): ?string
+{
+    if (!estrankyEnsurePhotoBatchDirectory()) {
+        return null;
+    }
+
+    $batchId = 'estranky_' . bin2hex(random_bytes(16));
+    $batchPath = estrankyPhotoBatchDirectory() . $batchId . '.json';
+    $encoded = json_encode($photoList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false) {
+        return null;
+    }
+
+    return file_put_contents($batchPath, $encoded) !== false ? $batchId : null;
+}
+
+function estrankyLoadPhotoBatch(string $batchId): array
+{
+    $batchPath = estrankyPhotoBatchDirectory() . basename($batchId) . '.json';
+    if (!is_file($batchPath)) {
+        return [];
+    }
+
+    $decoded = json_decode((string)file_get_contents($batchPath), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function estrankyDeletePhotoBatch(?string $batchId): void
+{
+    if ($batchId === null || $batchId === '') {
+        return;
+    }
+
+    $batchPath = estrankyPhotoBatchDirectory() . basename($batchId) . '.json';
+    if (is_file($batchPath) && !@unlink($batchPath)) {
+        error_log('estranky photo batch cleanup failed: ' . $batchPath);
+    }
+}
+
+function estrankyFetchRemotePhoto(string $url): string|false
+{
+    if (function_exists('curl_init')) {
+        $curlHandle = curl_init($url);
+        if ($curlHandle !== false) {
+            curl_setopt_array($curlHandle, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_USERAGENT => 'KoraCMS-eStrankyImport/1.0',
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+            ]);
+            $data = curl_exec($curlHandle);
+            $httpCode = (int)curl_getinfo($curlHandle, CURLINFO_RESPONSE_CODE);
+            curl_close($curlHandle);
+            if (is_string($data) && $httpCode >= 200 && $httpCode < 400) {
+                return $data;
+            }
+        }
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "User-Agent: KoraCMS-eStrankyImport/1.0\r\n",
+            'timeout' => 30,
+            'ignore_errors' => true,
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        ],
+    ]);
+
+    return @file_get_contents($url, false, $context);
+}
+
 $pdo = db_connect();
 $log = $_SESSION['import_log'] ?? null;
 unset($_SESSION['import_log']);
@@ -60,8 +148,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     }
 
     // Uložit do session pro dávkové zpracování
+    $batchId = estrankyCreatePhotoBatch($photoList);
+    if ($batchId === null) {
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se připravit dávkové stahování fotografií.'];
+        header('Location: estranky_download_photos.php');
+        exit;
+    }
+
     $_SESSION['photo_dl'] = [
-        'photos' => $photoList,
+        'batch_id' => $batchId,
         'site_url' => $siteUrl,
         'parent_album_id' => $parentAlbumId,
         'offset' => 0,
@@ -82,15 +177,30 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
     $dl = $_SESSION['photo_dl'];
     $siteUrl = $dl['site_url'];
     $offset = $dl['offset'];
-    $photos = array_slice($dl['photos'], $offset, $batchSize);
+    $allPhotos = estrankyLoadPhotoBatch((string)($dl['batch_id'] ?? ''));
+
+    if ($allPhotos === []) {
+        unset($_SESSION['photo_dl']);
+        $_SESSION['import_log'] = ['<span aria-hidden="true">⚠</span> Dávka fotografií už není k dispozici. Nahrajte prosím XML znovu.'];
+        header('Location: estranky_download_photos.php');
+        exit;
+    }
+
+    $photos = array_slice($allPhotos, $offset, $batchSize);
 
     // Uvolnit session – browser může navigovat jiné stránky během stahování
     session_write_close();
 
     $destDir = dirname(__DIR__) . '/uploads/gallery/';
     $thumbDir = $destDir . 'thumbs/';
-    if (!is_dir($destDir)) mkdir($destDir, 0755, true);
-    if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
+    if (!koraEnsureDirectory($destDir) || !koraEnsureDirectory($thumbDir)) {
+        session_start();
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se vytvořit cílové adresáře galerie.'];
+        unset($_SESSION['photo_dl']);
+        estrankyDeletePhotoBatch((string)($dl['batch_id'] ?? ''));
+        header('Location: estranky_download_photos.php');
+        exit;
+    }
 
     foreach ($photos as $photo) {
         $photoId = (int)($photo['id'] ?? 0);
@@ -118,20 +228,7 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
 
         $url = $siteUrl . '/img/original/' . $photoId . '/' . rawurlencode($filename);
 
-        $ctx = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => "User-Agent: KoraCMS-eStrankyImport/1.0\r\n",
-                'timeout' => 30,
-                'ignore_errors' => true,
-            ],
-            'ssl' => [
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-            ],
-        ]);
-
-        $data = @file_get_contents($url, false, $ctx);
+        $data = estrankyFetchRemotePhoto($url);
 
         if ($data === false || strlen($data) < 100) {
             $dl['failed']++;
@@ -205,12 +302,24 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
 
     $_SESSION['import_log'] = $resultLog;
     unset($_SESSION['photo_dl']);
+    estrankyDeletePhotoBatch((string)($dl['batch_id'] ?? ''));
     header('Location: estranky_download_photos.php');
     exit;
 }
 
 // ── Zobrazení stránky ────────────────────────────────────────────────────────
-$isDownloading = isset($_SESSION['photo_dl']);
+$isDownloading = false;
+if (isset($_SESSION['photo_dl'])) {
+    $currentBatchId = (string)($_SESSION['photo_dl']['batch_id'] ?? '');
+    if ($currentBatchId !== '' && estrankyLoadPhotoBatch($currentBatchId) !== []) {
+        $isDownloading = true;
+    } else {
+        unset($_SESSION['photo_dl']);
+        if ($log === null) {
+            $log = ['<span aria-hidden="true">⚠</span> Předchozí dávka fotografií nebyla dokončena a byla vyčištěna. Nahrajte prosím XML znovu.'];
+        }
+    }
+}
 
 adminHeader('Stažení fotografií z eStránek');
 ?>
