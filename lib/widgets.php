@@ -954,7 +954,7 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
 {
     $albumId = (int)($settings['album_id'] ?? 0);
     $pdo = db_connect();
-    $where = "WHERE COALESCE(p.status,'published') = 'published' AND COALESCE(p.is_published, 1) = 1";
+    $where = "WHERE " . galleryPhotoPublicVisibilitySql('p', 'a');
     $params = [];
     if ($albumId > 0) {
         $where .= " AND p.album_id = ?";
@@ -963,10 +963,18 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     $params[] = 6;
 
     $stmt = $pdo->prepare(
-        "SELECT p.id, p.filename, p.title, p.slug FROM cms_gallery_photos p {$where} ORDER BY p.id DESC LIMIT ?"
+        "SELECT p.id, p.album_id, p.filename, p.title, p.slug
+         FROM cms_gallery_photos p
+         INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+         {$where}
+         ORDER BY p.id DESC
+         LIMIT ?"
     );
     $stmt->execute($params);
-    $photos = $stmt->fetchAll();
+    $photos = array_map(
+        static fn(array $photo): array => hydrateGalleryPhotoPresentation($photo),
+        $stmt->fetchAll()
+    );
 
     if (empty($photos)) {
         return '';
@@ -979,7 +987,7 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
         $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
         $out .= '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem">';
         foreach ($photos as $p) {
-            $out .= '<img src="' . BASE_URL . '/uploads/gallery/thumbs/' . rawurlencode($p['filename']) . '" alt="' . h($p['title'] ?? '') . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.3rem">';
+            $out .= '<img src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.3rem">';
         }
         $out .= '</div>';
         $out .= '<p style="margin-top:.5rem"><a href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></p>';
@@ -991,7 +999,7 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
     $out .= '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem">';
     foreach ($photos as $p) {
-        $out .= '<img src="' . BASE_URL . '/uploads/gallery/thumbs/' . rawurlencode($p['filename']) . '" alt="' . h($p['title'] ?? '') . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.5rem">';
+        $out .= '<img src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.5rem">';
     }
     $out .= '</div>';
     $out .= '<div class="button-row button-row--start" style="margin-top:.75rem"><a class="button-secondary" href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></div>';

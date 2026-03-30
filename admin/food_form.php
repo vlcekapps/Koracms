@@ -45,6 +45,10 @@ $foodTypeLabel = $card['type'] === 'beverage' ? 'nápojový lístek' : 'jídeln�
 adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 ?>
 
+<?php if ($id !== null): ?>
+  <p><a href="revisions.php?type=food&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
@@ -103,7 +107,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
         <label for="valid_to">Platí do</label>
         <input type="date" id="valid_to" name="valid_to" style="width:auto" aria-describedby="food-valid-to-help"
                value="<?= h((string)($card['valid_to'] ?? '')) ?>">
-        <small id="food-valid-to-help" class="field-help">Nechte prázdné, pokud má lístek platit bez data konce.</small>
+        <small id="food-valid-to-help" class="field-help">Nechte prázdné, pokud má lístek platit bez data konce. Platnost se používá i pro rozlišení aktuálních, připravovaných a archivních lístků na webu.</small>
       </div>
     </div>
   </fieldset>

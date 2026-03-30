@@ -12,13 +12,17 @@ $siteName = getSetting('site_name', 'Kora CMS');
 
 $foodCardRow = $pdo->query(
     "SELECT * FROM cms_food_cards
-     WHERE type = 'food' AND is_current = 1 AND status = 'published' AND is_published = 1
+     WHERE type = 'food' AND is_current = 1
+       AND " . foodCardPublicVisibilitySql() . "
+       AND " . foodCardCurrentWindowSql() . "
      ORDER BY COALESCE(valid_from, created_at) DESC, id DESC
      LIMIT 1"
 )->fetch() ?: null;
 $beverageCardRow = $pdo->query(
     "SELECT * FROM cms_food_cards
-     WHERE type = 'beverage' AND is_current = 1 AND status = 'published' AND is_published = 1
+     WHERE type = 'beverage' AND is_current = 1
+       AND " . foodCardPublicVisibilitySql() . "
+       AND " . foodCardCurrentWindowSql() . "
      ORDER BY COALESCE(valid_from, created_at) DESC, id DESC
      LIMIT 1"
 )->fetch() ?: null;

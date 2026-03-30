@@ -38,27 +38,45 @@ function gallery_cover_url(int $albumId, int $depth = 0): string
 {
     if ($depth > 4) return '';
     $pdo  = db_connect();
-    $base = BASE_URL . '/uploads/gallery/thumbs/';
 
     $stmt = $pdo->prepare("SELECT cover_photo_id FROM cms_gallery_albums WHERE id = ?");
     $stmt->execute([$albumId]);
     $album = $stmt->fetch();
     if ($album && $album['cover_photo_id']) {
-        $s = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE id = ?");
+        $s = $pdo->prepare(
+            "SELECT id
+             FROM cms_gallery_photos
+             WHERE id = ?
+               AND " . galleryPhotoPublicVisibilitySql()
+        );
         $s->execute([$album['cover_photo_id']]);
         $p = $s->fetch();
-        if ($p) return $base . rawurlencode($p['filename']);
+        if ($p) {
+            return galleryPhotoMediaPath($p, 'thumb');
+        }
     }
 
     $stmt = $pdo->prepare(
-        "SELECT filename FROM cms_gallery_photos WHERE album_id = ? ORDER BY sort_order, id LIMIT 1"
+        "SELECT id
+         FROM cms_gallery_photos
+         WHERE album_id = ?
+           AND " . galleryPhotoPublicVisibilitySql() . "
+         ORDER BY sort_order, id
+         LIMIT 1"
     );
     $stmt->execute([$albumId]);
     $photo = $stmt->fetch();
-    if ($photo) return $base . rawurlencode($photo['filename']);
+    if ($photo) {
+        return galleryPhotoMediaPath($photo, 'thumb');
+    }
 
     $stmt = $pdo->prepare(
-        "SELECT id FROM cms_gallery_albums WHERE parent_id = ? ORDER BY name LIMIT 1"
+        "SELECT id
+         FROM cms_gallery_albums
+         WHERE parent_id = ?
+           AND " . galleryAlbumPublicVisibilitySql() . "
+         ORDER BY name
+         LIMIT 1"
     );
     $stmt->execute([$albumId]);
     $sub = $stmt->fetch();

@@ -13,7 +13,7 @@ function galleryCountLabel(int $count, string $one, string $few, string $many): 
 }
 
 $albumId = inputInt('get', 'id');
-$albumSlug = galleryAlbumSlug(trim($_GET['slug'] ?? ''));
+$albumSlug = galleryAlbumSlug(trim((string)($_GET['slug'] ?? '')));
 if ($albumId === null && $albumSlug === '') {
     header('Location: ' . BASE_URL . '/gallery/index.php');
     exit;
@@ -21,12 +21,26 @@ if ($albumId === null && $albumSlug === '') {
 
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
+$searchQuery = trim((string)($_GET['q'] ?? ''));
+$perPage = 18;
 
 if ($albumSlug !== '') {
-    $stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE slug = ? LIMIT 1");
+    $stmt = $pdo->prepare(
+        "SELECT a.*
+         FROM cms_gallery_albums a
+         WHERE a.slug = ?
+           AND " . galleryAlbumPublicVisibilitySql('a') . "
+         LIMIT 1"
+    );
     $stmt->execute([$albumSlug]);
 } else {
-    $stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ? LIMIT 1");
+    $stmt = $pdo->prepare(
+        "SELECT a.*
+         FROM cms_gallery_albums a
+         WHERE a.id = ?
+           AND " . galleryAlbumPublicVisibilitySql('a') . "
+         LIMIT 1"
+    );
     $stmt->execute([$albumId]);
 }
 $album = $stmt->fetch() ?: null;
@@ -50,36 +64,44 @@ if ($album === null) {
 }
 
 $album = hydrateGalleryAlbumPresentation($album);
+$listingQuery = array_filter([
+    'q' => $searchQuery !== '' ? $searchQuery : null,
+    'strana' => null,
+], static fn($value): bool => $value !== null && $value !== '');
+
 if ($albumSlug === '') {
-    header('Location: ' . $album['public_path']);
+    header('Location: ' . galleryAlbumPublicPath($album, $listingQuery));
     exit;
 }
 
 $trail = gallery_breadcrumb((int)$album['id']);
 
+$subAlbumWhereParts = [
+    'a.parent_id = ?',
+    galleryAlbumPublicVisibilitySql('a'),
+];
+$subAlbumParams = [(int)$album['id']];
+if ($searchQuery !== '') {
+    $subAlbumWhereParts[] = '(a.name LIKE ? OR a.description LIKE ?)';
+    $subAlbumParams[] = '%' . $searchQuery . '%';
+    $subAlbumParams[] = '%' . $searchQuery . '%';
+}
 $subAlbumsStmt = $pdo->prepare(
-    "SELECT a.id, a.name, a.slug, a.description,
-            (SELECT COUNT(*) FROM cms_gallery_photos p WHERE p.album_id = a.id) AS photo_count,
-            (SELECT COUNT(*) FROM cms_gallery_albums s WHERE s.parent_id = a.id) AS sub_count
+    "SELECT a.id, a.name, a.slug, a.description, a.parent_id,
+            (SELECT COUNT(*)
+             FROM cms_gallery_photos p
+             WHERE p.album_id = a.id
+               AND " . galleryPhotoPublicVisibilitySql('p') . ") AS photo_count,
+            (SELECT COUNT(*)
+             FROM cms_gallery_albums s
+             WHERE s.parent_id = a.id
+               AND " . galleryAlbumPublicVisibilitySql('s') . ") AS sub_count
      FROM cms_gallery_albums a
-     WHERE a.parent_id = ?
-       AND COALESCE(a.status, 'published') = 'published'
-       AND COALESCE(a.is_published, 1) = 1
+     WHERE " . implode(' AND ', $subAlbumWhereParts) . "
      ORDER BY a.name"
 );
-$subAlbumsStmt->execute([(int)$album['id']]);
+$subAlbumsStmt->execute($subAlbumParams);
 $subAlbums = $subAlbumsStmt->fetchAll();
-
-$photosStmt = $pdo->prepare(
-    "SELECT id, filename, title, slug
-     FROM cms_gallery_photos
-     WHERE album_id = ?
-       AND COALESCE(status, 'published') = 'published'
-       AND COALESCE(is_published, 1) = 1
-     ORDER BY sort_order, id"
-);
-$photosStmt->execute([(int)$album['id']]);
-$photos = $photosStmt->fetchAll();
 
 foreach ($subAlbums as &$subAlbum) {
     $subAlbum = hydrateGalleryAlbumPresentation($subAlbum);
@@ -88,17 +110,92 @@ foreach ($subAlbums as &$subAlbum) {
 }
 unset($subAlbum);
 
+$photoWhereParts = [
+    'album_id = ?',
+    galleryPhotoPublicVisibilitySql(),
+];
+$photoParams = [(int)$album['id']];
+if ($searchQuery !== '') {
+    $photoWhereParts[] = '(title LIKE ? OR slug LIKE ? OR filename LIKE ?)';
+    $photoParams[] = '%' . $searchQuery . '%';
+    $photoParams[] = '%' . $searchQuery . '%';
+    $photoParams[] = '%' . $searchQuery . '%';
+}
+$photoWhereSql = 'WHERE ' . implode(' AND ', $photoWhereParts);
+$photoPagination = paginate(
+    $pdo,
+    "SELECT COUNT(*)
+     FROM cms_gallery_photos
+     {$photoWhereSql}",
+    $photoParams,
+    $perPage
+);
+['total' => $totalPhotos, 'totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $photoPagination;
+
+$photosStmt = $pdo->prepare(
+    "SELECT id, album_id, filename, title, slug, sort_order, created_at
+     FROM cms_gallery_photos
+     {$photoWhereSql}
+     ORDER BY sort_order, id
+     LIMIT ? OFFSET ?"
+);
+$photosStmt->execute(array_merge($photoParams, [$perPage, $offset]));
+$photos = $photosStmt->fetchAll();
+
+$albumListingQuery = array_filter([
+    'q' => $searchQuery !== '' ? $searchQuery : null,
+    'strana' => $page > 1 ? (string)$page : null,
+], static fn($value): bool => $value !== null && $value !== '');
+
 foreach ($photos as &$photo) {
     $photo = hydrateGalleryPhotoPresentation($photo);
+    $photo['public_path'] = galleryPhotoPublicPath($photo, $albumListingQuery);
 }
 unset($photo);
 
+$buildAlbumUrl = static function (array $overrides = []) use ($album, $searchQuery): string {
+    $query = [];
+    $merged = array_merge([
+        'q' => $searchQuery,
+    ], $overrides);
+
+    foreach ($merged as $key => $value) {
+        if ($value === null || $value === '') {
+            continue;
+        }
+        $query[$key] = $value;
+    }
+
+    return galleryAlbumPublicPath($album, $query);
+};
+
+$pagerBase = $buildAlbumUrl(['strana' => null]);
+$pagerBase .= str_contains($pagerBase, '?') ? '&' : '?';
+$filterSummary = [];
+if ($searchQuery !== '') {
+    $filterSummary[] = 'hledání: „' . $searchQuery . '“';
+}
+
+$resultParts = [];
+if (!empty($subAlbums)) {
+    $resultParts[] = galleryCountLabel(count($subAlbums), 'podalbum', 'podalba', 'podalb');
+}
+if ($totalPhotos > 0) {
+    $resultParts[] = galleryCountLabel($totalPhotos, 'fotografie', 'fotografie', 'fotografií');
+}
+$resultCountLabel = $resultParts !== [] ? implode(' · ', $resultParts) : 'Žádné položky';
+
+$metaTitle = $album['name'] . ' – Galerie – ' . $siteName;
+if ($searchQuery !== '') {
+    $metaTitle = $album['name'] . ' – hledání „' . $searchQuery . '“ – ' . $siteName;
+}
+
 renderPublicPage([
-    'title' => $album['name'] . ' – Galerie – ' . $siteName,
+    'title' => $metaTitle,
     'meta' => [
-        'title' => $album['name'] . ' – Galerie – ' . $siteName,
+        'title' => $metaTitle,
         'description' => $album['excerpt'] !== '' ? $album['excerpt'] : '',
-        'url' => $album['public_path'],
+        'url' => galleryAlbumPublicUrl($album, ['q' => $searchQuery !== '' ? $searchQuery : null]),
     ],
     'view' => 'modules/gallery-album',
     'view_data' => [
@@ -106,9 +203,16 @@ renderPublicPage([
         'trail' => $trail,
         'subAlbums' => $subAlbums,
         'photos' => $photos,
+        'searchQuery' => $searchQuery,
+        'filterSummary' => $filterSummary,
+        'resultCountLabel' => $resultCountLabel,
+        'pagerHtml' => renderPager($page, $pages, $pagerBase, 'Stránkování alba galerie', 'Předchozí stránka', 'Další stránka'),
+        'hasActiveFilters' => $searchQuery !== '',
+        'clearUrl' => galleryAlbumPublicPath($album),
     ],
     'current_nav' => 'gallery',
     'body_class' => 'page-gallery-album',
     'page_kind' => 'detail',
     'admin_edit_url' => BASE_URL . '/admin/gallery_album_form.php?id=' . (int)$album['id'],
+    'extra_head_html' => galleryAlbumStructuredData($album, $photos),
 ]);

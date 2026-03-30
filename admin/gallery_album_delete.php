@@ -16,13 +16,20 @@ $pdo = db_connect();
  */
 function deleteAlbumRecursive(PDO $pdo, int $albumId): void
 {
+    $albumStmt = $pdo->prepare("SELECT id, slug FROM cms_gallery_albums WHERE id = ?");
+    $albumStmt->execute([$albumId]);
+    $album = $albumStmt->fetch() ?: null;
+
     // Smazat fotografie v tomto albu
-    $stmt = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE album_id = ?");
+    $stmt = $pdo->prepare("SELECT id, filename, slug FROM cms_gallery_photos WHERE album_id = ?");
     $stmt->execute([$albumId]);
     foreach ($stmt->fetchAll() as $photo) {
         $base = __DIR__ . '/../uploads/gallery/';
         @unlink($base . $photo['filename']);
         @unlink($base . 'thumbs/' . $photo['filename']);
+        $photoPath = galleryPhotoPublicPath($photo);
+        $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([$photoPath]);
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
     }
     $pdo->prepare("DELETE FROM cms_gallery_photos WHERE album_id = ?")->execute([$albumId]);
 
@@ -34,6 +41,11 @@ function deleteAlbumRecursive(PDO $pdo, int $albumId): void
     }
 
     // Smazat toto album
+    if ($album) {
+        $albumPath = galleryAlbumPublicPath($album);
+        $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([$albumPath]);
+    }
+    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$albumId]);
     $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$albumId]);
 }
 

@@ -8,7 +8,7 @@ $albumId = inputInt('post', 'album_id');
 
 if ($id !== null) {
     $pdo  = db_connect();
-    $stmt = $pdo->prepare("SELECT filename, album_id FROM cms_gallery_photos WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT id, filename, album_id, slug FROM cms_gallery_photos WHERE id = ?");
     $stmt->execute([$id]);
     $photo = $stmt->fetch();
 
@@ -23,6 +23,9 @@ if ($id !== null) {
             "UPDATE cms_gallery_albums SET cover_photo_id = NULL WHERE cover_photo_id = ?"
         )->execute([$id]);
 
+        $photoPath = galleryPhotoPublicPath($photo);
+        $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([$photoPath]);
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$id]);
         $pdo->prepare("DELETE FROM cms_gallery_photos WHERE id = ?")->execute([$id]);
         logAction('gallery_photo_delete', 'id=' . $id);
     }

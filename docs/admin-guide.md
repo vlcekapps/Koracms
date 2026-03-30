@@ -212,6 +212,123 @@ Kora CMS poskytuje globální RSS feed i samostatné feedy jednotlivých blogů.
 
 ---
 
+## Jídelní a nápojové lístky
+
+Modul jídelních a nápojových lístků je vhodný pro restaurace, kavárny, spolkové klubovny i provozy, které potřebují rozlišovat aktuální, připravované a archivní menu.
+
+### Co se nastavuje u lístku
+
+Každý lístek může mít:
+
+- typ `Jídelní lístek` nebo `Nápojový lístek`
+- název, slug a krátkou poznámku
+- plný obsah v HTML editoru
+- datum `Platí od` a `Platí do`
+- příznak `Použít jako aktuální lístek`
+- zveřejnění na webu
+
+Pokud je u typu označený nový aktuální lístek, předchozí aktuální lístek stejného typu se při uložení automaticky odznačí.
+
+### Jak funguje platnost na webu
+
+- Stránka `Jídelní a nápojový lístek` zobrazuje jen lístky, které jsou zároveň označené jako aktuální a časově právě platí.
+- Archiv nově rozlišuje scope:
+  - `Platí nyní`
+  - `Připravujeme`
+  - `Archivní`
+  - `Všechny lístky`
+- Scope vychází z polí `Platí od / do`.
+- Pokud pole platnosti nejsou vyplněná, lístek se bere jako časově neomezený a spadá do scope `Platí nyní`.
+
+### Co je nové v admin workflow
+
+- Přehled lístků nově umí hledání, workflow stav, filtr podle typu i filtr podle časové platnosti.
+- Z detailu i ze seznamu vede odkaz na historii revizí.
+- Revize zachycují změny typu, názvu, slugu, popisu, obsahu, platnosti, stavu aktuálnosti i zveřejnění.
+- Při změně slugu se automaticky uloží redirect ze staré adresy na novou.
+
+### Veřejný archiv a detail
+
+Veřejný archiv nově podporuje:
+
+- fulltextové hledání
+- filtrování podle typu
+- přepínání scope `Platí nyní / Připravujeme / Archivní / Všechny lístky`
+- stránkování
+
+Detail lístku nově:
+
+- ukazuje jasný stav `Platí nyní / Připravujeme / Archivní`
+- zachovává návrat do původního archivního kontextu
+- nabízí akci `Vytisknout`
+- vkládá structured data typu `Menu`
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) stručně říká, že modul podporuje platnost, archiv, hledání a revize.
+- Tento dokument popisuje konkrétní redakční workflow, chování scope filtrů a pravidla viditelnosti aktuálních lístků.
+
+---
+
+## Galerie
+
+Modul galerie je vhodný pro fotoalba, kroniky, dokumentaci akcí i menší obrazové archivy. Nově je dotažený jak po redakční stránce, tak po stránce veřejné viditelnosti a bezpečnosti souborů.
+
+### Co se nastavuje u alba
+
+Každé album může mít:
+
+- název, slug a popis
+- volitelné nadřazené album
+- náhledovou fotografii alba
+- zveřejnění na webu
+
+Formulář alba nově obsahuje i odkaz na historii revizí.
+
+### Co se nastavuje u fotografie
+
+Každá fotografie může mít:
+
+- titulek
+- slug
+- pořadí v albu
+- zveřejnění na webu
+
+Fotografie lze rychle přesouvat i přímo v přehledu alba pomocí tlačítek `Nahoru` a `Dolů`, bez nutnosti ručně přepisovat pořadí.
+
+### Veřejná viditelnost a bezpečnost
+
+- Veřejné stránky alba i fotografie nově zobrazují jen publikovaná alba a publikované fotografie.
+- Skrytá alba a skryté fotografie se nevracejí ani ve vyhledávání a nejsou ani v sitemapě.
+- Obrázky se nově zobrazují přes serverový endpoint `gallery/image.php`, takže veřejný HTML výstup už neodkazuje přímo do `/uploads/gallery/`.
+- Přímý přístup do `/uploads/gallery/` je zablokovaný na úrovni serveru.
+
+To znamená, že „skryté“ už neznamená jen „není v přehledu“, ale skutečně se neukazuje ani přes detail, vyhledávání a běžné veřejné odkazy.
+
+### Veřejný výpis a detail
+
+Veřejná galerie nově podporuje:
+
+- hledání v přehledu alb
+- hledání uvnitř konkrétního alba
+- stránkování přehledu i alba
+- zachování filtračního kontextu při návratu z detailu fotografie
+- související fotografie v detailu
+- akci `Kopírovat odkaz`
+- structured data `ImageGallery` a `ImageObject`
+
+### Revize a změny slugů
+
+- Změny alba i fotografie se zapisují do historie revizí.
+- Pokud se změní slug alba nebo fotografie, stará veřejná adresa se uloží jako redirect na nový canonical tvar.
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) stručně říká, že galerie podporuje detailová URL, hledání, stránkování, revize a bezpečný media endpoint.
+- Tento dokument popisuje konkrétní workflow galerie, pravidla veřejné viditelnosti, práci s pořadím fotografií a bezpečnostní model doručování obrázků.
+
+---
+
 ## Vývěska / Úřední deska
 
 Modul vývěsky je určený pro oznámení, dokumenty a další veřejné položky, které se mají zobrazit od určitého data a případně po čase spadnout do archivu.

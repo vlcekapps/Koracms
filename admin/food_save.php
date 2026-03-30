@@ -27,7 +27,7 @@ if ($title === '') {
 
 $existingCard = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT id, status FROM cms_food_cards WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_food_cards WHERE id = ?");
     $existingStmt->execute([$id]);
     $existingCard = $existingStmt->fetch() ?: null;
     if (!$existingCard) {
@@ -61,6 +61,9 @@ if ($isCurrent) {
 }
 
 if ($existingCard) {
+    $oldSnapshot = foodRevisionSnapshot($existingCard);
+    $oldPath = foodCardPublicPath($existingCard);
+
     if ($canApproveContent) {
         $pdo->prepare(
             "UPDATE cms_food_cards
@@ -93,9 +96,23 @@ if ($existingCard) {
             $content,
             $validFrom,
             $validTo,
-            $id,
+                $id,
         ]);
     }
+
+    saveRevision($pdo, 'food', $id, $oldSnapshot, foodRevisionSnapshot([
+        'type' => $type,
+        'title' => $title,
+        'slug' => $slug,
+        'description' => $description,
+        'content' => $content,
+        'valid_from' => $validFrom,
+        'valid_to' => $validTo,
+        'is_current' => $canApproveContent ? $isCurrent : (int)($existingCard['is_current'] ?? 0),
+        'is_published' => $canApproveContent ? $isPublished : (int)($existingCard['is_published'] ?? 0),
+        'status' => (string)($existingCard['status'] ?? 'published'),
+    ]));
+    upsertPathRedirect($pdo, $oldPath, foodCardPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('food_edit', "id={$id} type={$type} slug={$slug}");
 } else {
     $status = $canApproveContent ? 'published' : 'pending';

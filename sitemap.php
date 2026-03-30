@@ -261,8 +261,7 @@ if (isModuleEnabled('gallery')) {
         $galleryAlbums = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_gallery_albums
-             WHERE COALESCE(status, 'published') = 'published'
-               AND COALESCE(is_published, 1) = 1
+             WHERE " . galleryAlbumPublicVisibilitySql() . "
              ORDER BY updated_at DESC, id DESC"
         )->fetchAll();
         foreach ($galleryAlbums as $galleryAlbum) {
@@ -274,10 +273,10 @@ if (isModuleEnabled('gallery')) {
 
     try {
         $galleryPhotos = $pdo->query(
-            "SELECT id, slug, created_at AS sitemap_lastmod
-             FROM cms_gallery_photos
-             WHERE COALESCE(status, 'published') = 'published'
-               AND COALESCE(is_published, 1) = 1
+            "SELECT p.id, p.slug, p.created_at AS sitemap_lastmod
+             FROM cms_gallery_photos p
+             INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+             WHERE " . galleryPhotoPublicVisibilitySql('p', 'a') . "
              ORDER BY created_at DESC, id DESC"
         )->fetchAll();
         foreach ($galleryPhotos as $galleryPhoto) {

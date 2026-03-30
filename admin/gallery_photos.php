@@ -22,6 +22,9 @@ $q = trim($_GET['q'] ?? '');
 $statusFilter = in_array($_GET['status'] ?? '', ['all', 'pending', 'published', 'hidden'], true)
     ? (string)$_GET['status']
     : 'all';
+$sortFilter = in_array($_GET['sort'] ?? '', ['position', 'newest', 'title'], true)
+    ? (string)$_GET['sort']
+    : 'position';
 
 $whereSql = 'WHERE album_id = ?';
 $params = [$albumId];
@@ -39,8 +42,14 @@ if ($statusFilter === 'pending') {
     $whereSql .= " AND COALESCE(status,'published') = 'published' AND COALESCE(is_published, 1) = 0";
 }
 
+$orderBySql = match ($sortFilter) {
+    'newest' => 'ORDER BY id DESC',
+    'title' => 'ORDER BY COALESCE(NULLIF(title, \'\'), filename), id',
+    default => 'ORDER BY sort_order, id',
+};
+
 $photosStmt = $pdo->prepare(
-    "SELECT * FROM cms_gallery_photos {$whereSql} ORDER BY sort_order, id"
+    "SELECT * FROM cms_gallery_photos {$whereSql} {$orderBySql}"
 );
 $photosStmt->execute($params);
 $photos = array_map(
@@ -49,6 +58,13 @@ $photos = array_map(
 );
 
 adminHeader('Galerie – ' . $album['name']);
+
+$currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_filter([
+    'album_id' => (int)$album['id'],
+    'q' => $q,
+    'status' => $statusFilter !== 'all' ? $statusFilter : null,
+    'sort' => $sortFilter !== 'position' ? $sortFilter : null,
+], static fn($value): bool => $value !== null && $value !== ''));
 ?>
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na seznam alb</a></p>
@@ -70,8 +86,16 @@ adminHeader('Galerie – ' . $album['name']);
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
     </select>
   </div>
+  <div>
+    <label for="sort">Řazení</label>
+    <select id="sort" name="sort">
+      <option value="position"<?= $sortFilter === 'position' ? ' selected' : '' ?>>Podle pořadí</option>
+      <option value="newest"<?= $sortFilter === 'newest' ? ' selected' : '' ?>>Nejnovější první</option>
+      <option value="title"<?= $sortFilter === 'title' ? ' selected' : '' ?>>Podle názvu</option>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $sortFilter !== 'position'): ?>
     <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -125,9 +149,26 @@ adminHeader('Galerie – ' . $album['name']);
           </td>
           <td class="actions">
             <a href="<?= BASE_URL ?>/admin/gallery_photo_form.php?id=<?= (int)$photo['id'] ?>&amp;album_id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
+            <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_photo&amp;id=<?= (int)$photo['id'] ?>">Historie revizí</a>
             <?php if ((int)($photo['is_published'] ?? 1) === 1 && ($photo['status'] ?? 'published') === 'published'): ?>
               <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
+            <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php" style="display:inline">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
+              <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
+              <input type="hidden" name="direction" value="up">
+              <input type="hidden" name="redirect" value="<?= h($currentUrl) ?>">
+              <button type="submit" class="btn"<?= $sortFilter !== 'position' ? ' disabled aria-disabled="true" title="Rychlé přesuny fungují při řazení podle pořadí."' : '' ?>>Nahoru</button>
+            </form>
+            <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php" style="display:inline">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
+              <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
+              <input type="hidden" name="direction" value="down">
+              <input type="hidden" name="redirect" value="<?= h($currentUrl) ?>">
+              <button type="submit" class="btn"<?= $sortFilter !== 'position' ? ' disabled aria-disabled="true" title="Rychlé přesuny fungují při řazení podle pořadí."' : '' ?>>Dolů</button>
+            </form>
             <?php if (($photo['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

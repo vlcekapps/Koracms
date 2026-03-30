@@ -31,12 +31,14 @@ if ($mode === 'edit') {
     $title = trim($_POST['title'] ?? '');
     $slugInput = trim($_POST['slug'] ?? '');
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
+    $canApproveContent = currentUserHasCapability('content_approve_shared');
+    $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
     if ($id === null) {
         $redirectToAlbumPhotos($albumId);
     }
 
-    $photoStmt = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE id = ? AND album_id = ?");
+    $photoStmt = $pdo->prepare("SELECT * FROM cms_gallery_photos WHERE id = ? AND album_id = ?");
     $photoStmt->execute([$id, $albumId]);
     $existingPhoto = $photoStmt->fetch();
     if (!$existingPhoto) {
@@ -57,9 +59,33 @@ if ($mode === 'edit') {
         exit;
     }
 
+    $albumNameStmt = $pdo->prepare("SELECT name FROM cms_gallery_albums WHERE id = ?");
+    $albumNameStmt->execute([$albumId]);
+    $albumName = trim((string)$albumNameStmt->fetchColumn());
+    $oldPath = galleryPhotoPublicPath($existingPhoto);
+    $oldRevision = galleryPhotoRevisionSnapshot($existingPhoto, $albumName);
+
     $pdo->prepare(
-        "UPDATE cms_gallery_photos SET title = ?, slug = ?, sort_order = ? WHERE id = ?"
-    )->execute([$title, $resolvedSlug, $sortOrder, $id]);
+        "UPDATE cms_gallery_photos
+         SET title = ?, slug = ?, sort_order = ?, is_published = ?
+         WHERE id = ?"
+    )->execute([
+        $title,
+        $resolvedSlug,
+        $sortOrder,
+        $canApproveContent ? $isPublished : (int)($existingPhoto['is_published'] ?? 1),
+        $id,
+    ]);
+
+    $newRevision = galleryPhotoRevisionSnapshot([
+        'title' => $title,
+        'slug' => $resolvedSlug,
+        'sort_order' => $sortOrder,
+        'is_published' => $canApproveContent ? $isPublished : (int)($existingPhoto['is_published'] ?? 1),
+        'status' => $existingPhoto['status'] ?? 'published',
+    ], $albumName);
+    saveRevision($pdo, 'gallery_photo', $id, $oldRevision, $newRevision);
+    upsertPathRedirect($pdo, $oldPath, galleryPhotoPublicPath(['id' => $id, 'slug' => $resolvedSlug]));
 
     logAction('gallery_photo_edit', 'id=' . $id);
     $redirectToAlbumPhotos($albumId);
@@ -76,6 +102,12 @@ $allowedMime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 $maxBytes = 10 * 1024 * 1024;
 $files = $_FILES['photos'] ?? [];
 $uploadedCount = 0;
+$canApproveContent = currentUserHasCapability('content_approve_shared');
+$uploadStatus = $canApproveContent ? 'published' : 'pending';
+$uploadVisibility = $canApproveContent ? 1 : 0;
+$sortOrderStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), -1) FROM cms_gallery_photos WHERE album_id = ?");
+$sortOrderStmt->execute([$albumId]);
+$nextSortOrder = (int)$sortOrderStmt->fetchColumn() + 1;
 
 if (!empty($files['name'])) {
     $count = count($files['name']);
@@ -114,14 +146,19 @@ if (!empty($files['name'])) {
         $slugCandidate = pathinfo((string)$origName, PATHINFO_FILENAME);
         $resolvedSlug = uniqueGalleryPhotoSlug($pdo, $slugCandidate);
         $pdo->prepare(
-            "INSERT INTO cms_gallery_photos (album_id, filename, title, slug) VALUES (?, ?, ?, ?)"
-        )->execute([$albumId, $filename, '', $resolvedSlug]);
+            "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order, is_published, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )->execute([$albumId, $filename, '', $resolvedSlug, $nextSortOrder, $uploadVisibility, $uploadStatus]);
         $uploadedCount++;
+        $nextSortOrder++;
     }
 }
 
 if ($uploadedCount > 0) {
-    logAction('gallery_photo_upload', 'album_id=' . $albumId . ';count=' . $uploadedCount);
+    logAction('gallery_photo_upload', 'album_id=' . $albumId . ';count=' . $uploadedCount . ';status=' . $uploadStatus);
+    if ($uploadStatus === 'pending') {
+        notifyPendingContent('Fotografie galerie', 'Nové fotografie v albu', '/admin/gallery_photos.php?album_id=' . $albumId);
+    }
 }
 
 $redirectToAlbumPhotos($albumId);

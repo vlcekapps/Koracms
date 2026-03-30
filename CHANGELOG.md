@@ -14,6 +14,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Vývěska – hledání, filtry a stránkování** – veřejný výpis vývěsky nově umí hledání, filtr podle kategorie, filtr podle období vyvěšení, přepínání `aktuální / archiv / vše` a stránkování, takže je použitelnější i pro větší úřední desku nebo delší archiv
 - **Ke stažení – katalog verzí a rozšířená metadata** – položky ke stažení nově podporují domovskou stránku projektu, datum vydání, požadavky a kompatibilitu, SHA-256 checksum, skupiny verzí, počítadlo stažení a příznak doporučené položky
 - **Ke stažení – veřejné hledání, filtry a stránkování** – veřejný katalog nově umí hledání, filtrování podle kategorie, typu, platformy, zdroje a doporučených položek a také stránkování výpisu
+- **Jídelní lístky – scope archiv a structured data** – modul jídelních a nápojových lístků nově umí veřejné hledání, přepínání `Platí nyní / Připravujeme / Archivní / Všechny lístky`, stránkování archivu, tisk detailu a structured data typu `Menu`
+- **Galerie – veřejné hledání, stránkování a detail fotografie** – galerie nově umí hledání v přehledu alb i uvnitř konkrétního alba, stránkování výpisů, související fotografie, zachování kontextu při návratu z detailu a akci `Kopírovat odkaz`
 
 ### Změněno
 - **FAQ – admin workflow, SEO a migrace** – editor FAQ nově obsahuje `meta title` a `meta description`, přehled FAQ umí filtr podle kategorie, změna slugu ukládá redirect, revize zachycují i kategorii a SEO metadata a `install.php` i `migrate.php` nově drží stejné FAQ schéma včetně `parent_id`, `meta_title` a `meta_description`
@@ -25,6 +27,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Vývěska – revize, redirecty a formulářové vedení** – úpravy položek se nově zapisují do historie revizí, změna slugu ukládá redirect na nový canonical tvar a editor položky dostal i typovou nápovědu a kontextovější veřejný odkaz
 - **Ke stažení – admin workflow a bezpečnost souborů** – správa downloadů nově nabízí širší filtry v administraci, historii revizí, redirect po změně slugu a přísnější přístup k neveřejným souborům; ty už nestáhne libovolný přihlášený účet, ale jen správce obsahu nebo schvalovatel
 - **Ke stažení – widgety, vyhledávání a detail položky** – widget posledních položek, interní vyhledávání i veřejný detail položky teď respektují doporučené položky, datum vydání, skupiny verzí a praktická metadata katalogu
+- **Jídelní lístky – platnost, redirecty a revize** – aktuální výpis teď respektuje `Platí od / do`, admin přehled nabízí filtry podle typu a časové platnosti, změna slugu ukládá redirect, formulář i seznam vedou na historii revizí a detail lístku vrací návštěvníka zpět do správného archivního kontextu
+- **Galerie – viditelnost, redirecty a revize** – skrytá alba a fotografie se nově neukazují ani přes detail, vyhledávání a sitemapu, změna slugu ukládá redirect, editor alba i fotografie vede na historii revizí a widgety i veřejné výpisy už neodkazují přímo do `/uploads/gallery/`
 
 ## [3.0.0-rc.7] – 2026-03-30
 

@@ -5,9 +5,19 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jíd
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
+$typeFilter = trim($_GET['type'] ?? 'all');
+$scopeFilter = trim($_GET['scope'] ?? 'all');
 $allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
+}
+$allowedTypeFilters = ['all', 'food', 'beverage'];
+if (!in_array($typeFilter, $allowedTypeFilters, true)) {
+    $typeFilter = 'all';
+}
+$allowedScopeFilters = ['all', 'current', 'upcoming', 'archive'];
+if (!in_array($scopeFilter, $allowedScopeFilters, true)) {
+    $scopeFilter = 'all';
 }
 
 $whereParts = [];
@@ -27,8 +37,20 @@ if ($statusFilter === 'pending') {
 } elseif ($statusFilter === 'hidden') {
     $whereParts[] = "COALESCE(c.status,'published') = 'published' AND c.is_published = 0";
 }
+if ($typeFilter !== 'all') {
+    $whereParts[] = 'c.type = ?';
+    $params[] = $typeFilter;
+}
+if ($scopeFilter !== 'all') {
+    $whereParts[] = '(' . foodCardScopeVisibilitySql($scopeFilter, 'c') . ')';
+}
 
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$stateOrderSql = "CASE
+    WHEN c.valid_from IS NOT NULL AND c.valid_from > CURDATE() THEN 1
+    WHEN c.valid_to IS NOT NULL AND c.valid_to < CURDATE() THEN 2
+    ELSE 0
+  END";
 
 $stmt = $pdo->prepare(
     "SELECT c.id, c.type, c.title, c.slug, c.description, c.valid_from, c.valid_to, c.is_current,
@@ -37,7 +59,13 @@ $stmt = $pdo->prepare(
      FROM cms_food_cards c
      LEFT JOIN cms_users u ON u.id = c.author_id
      {$whereSql}
-     ORDER BY c.type, c.is_current DESC, COALESCE(c.valid_from, c.created_at) DESC, c.id DESC"
+     ORDER BY c.type,
+              {$stateOrderSql},
+              c.is_current DESC,
+              CASE WHEN c.valid_from IS NOT NULL AND c.valid_from > CURDATE() THEN c.valid_from END ASC,
+              CASE WHEN c.valid_to IS NOT NULL AND c.valid_to < CURDATE() THEN c.valid_to END DESC,
+              COALESCE(c.valid_from, c.created_at) DESC,
+              c.id DESC"
 );
 $stmt->execute($params);
 $items = array_map(
@@ -69,15 +97,32 @@ adminHeader('Jídelní a nápojový lístek');
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
     </select>
   </div>
+  <div>
+    <label for="type">Typ</label>
+    <select id="type" name="type">
+      <option value="all"<?= $typeFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <option value="food"<?= $typeFilter === 'food' ? ' selected' : '' ?>>Jídelní lístky</option>
+      <option value="beverage"<?= $typeFilter === 'beverage' ? ' selected' : '' ?>>Nápojové lístky</option>
+    </select>
+  </div>
+  <div>
+    <label for="scope">Platnost</label>
+    <select id="scope" name="scope">
+      <option value="all"<?= $scopeFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <option value="current"<?= $scopeFilter === 'current' ? ' selected' : '' ?>>Platí nyní</option>
+      <option value="upcoming"<?= $scopeFilter === 'upcoming' ? ' selected' : '' ?>>Připravujeme</option>
+      <option value="archive"<?= $scopeFilter === 'archive' ? ' selected' : '' ?>>Archivní</option>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $typeFilter !== 'all' || $scopeFilter !== 'all'): ?>
     <a href="food.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($items)): ?>
   <p>
-    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+    <?php if ($q !== '' || $statusFilter !== 'all' || $typeFilter !== 'all' || $scopeFilter !== 'all'): ?>
       Pro zvolený filtr tu teď nejsou žádné jídelní ani nápojové lístky.
     <?php else: ?>
       Zatím tu nejsou žádné jídelní ani nápojové lístky.
@@ -126,7 +171,10 @@ adminHeader('Jídelní a nápojový lístek');
             <br><small style="color:#555"><?= h((string)$card['description']) ?></small>
           <?php endif; ?>
         </td>
-        <td><?= h((string)($card['validity_label'] !== '' ? $card['validity_label'] : 'Bez omezení')) ?></td>
+        <td>
+          <strong><?= h((string)($card['state_label'] ?? 'Platí nyní')) ?></strong>
+          <br><small style="color:#555"><?= h((string)($card['validity_label'] !== '' ? $card['validity_label'] : 'Bez omezení')) ?></small>
+        </td>
         <td><?= h((string)($card['author_name'] ?: '–')) ?></td>
         <td>
           <?php if ($card['status'] === 'pending'): ?>
@@ -139,6 +187,7 @@ adminHeader('Jídelní a nápojový lístek');
         </td>
         <td class="actions">
           <a href="food_form.php?id=<?= (int)$card['id'] ?>" class="btn">Upravit</a>
+          <a href="revisions.php?type=food&amp;id=<?= (int)$card['id'] ?>">Historie revizí</a>
           <?php if ($card['is_publicly_visible']): ?>
             <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>

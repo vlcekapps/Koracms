@@ -148,11 +148,17 @@ $moduleConfig = match ($module) {
             $dir = dirname(__DIR__) . '/uploads/gallery/';
             $thumbDir = $dir . 'thumbs/';
             foreach ($deleteIds as $id) {
-                $stmt = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE id = ?");
+                $stmt = $pdo->prepare("SELECT id, filename, slug FROM cms_gallery_photos WHERE id = ?");
                 $stmt->execute([$id]);
-                $f = (string)$stmt->fetchColumn();
+                $photo = $stmt->fetch() ?: null;
+                if ($photo === null) {
+                    continue;
+                }
+                $f = (string)$photo['filename'];
                 if ($f !== '' && is_file($dir . $f)) { @unlink($dir . $f); }
                 if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
+                $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
             }
         },
     ],
@@ -181,14 +187,24 @@ $moduleConfig = match ($module) {
                 }
             }
             foreach ($allIds as $id) {
-                $photos = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE album_id = ?");
+                $albumStmt = $pdo->prepare("SELECT id, slug FROM cms_gallery_albums WHERE id = ?");
+                $albumStmt->execute([$id]);
+                $album = $albumStmt->fetch() ?: null;
+
+                $photos = $pdo->prepare("SELECT id, filename, slug FROM cms_gallery_photos WHERE album_id = ?");
                 $photos->execute([$id]);
                 foreach ($photos->fetchAll() as $photo) {
                     $f = (string)$photo['filename'];
                     if ($f !== '' && is_file($dir . $f)) { @unlink($dir . $f); }
                     if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
+                    $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
                 }
                 $pdo->prepare("DELETE FROM cms_gallery_photos WHERE album_id = ?")->execute([$id]);
+                if ($album) {
+                    $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryAlbumPublicPath($album)]);
+                }
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$id]);
                 $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$id]);
             }
         },

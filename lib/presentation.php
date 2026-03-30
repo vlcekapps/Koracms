@@ -1369,6 +1369,149 @@ function foodCardMetaLabel(array $card): string
     return implode(' | ', $parts);
 }
 
+function foodCardPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "{$prefix}status = 'published'"
+        . " AND {$prefix}is_published = 1";
+}
+
+function foodCardCurrentWindowSql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "({$prefix}valid_from IS NULL OR {$prefix}valid_from <= CURDATE())"
+        . " AND ({$prefix}valid_to IS NULL OR {$prefix}valid_to >= CURDATE())";
+}
+
+function foodCardScopeVisibilitySql(string $scope, string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return match ($scope) {
+        'upcoming' => "{$prefix}valid_from IS NOT NULL AND {$prefix}valid_from > CURDATE()",
+        'archive' => "{$prefix}valid_to IS NOT NULL AND {$prefix}valid_to < CURDATE()",
+        'all' => '1 = 1',
+        default => foodCardCurrentWindowSql($alias),
+    };
+}
+
+function foodCardCurrentState(array $card): string
+{
+    $today = new \DateTimeImmutable('today');
+    $validFrom = trim((string)($card['valid_from'] ?? ''));
+    $validTo = trim((string)($card['valid_to'] ?? ''));
+
+    if ($validFrom !== '') {
+        try {
+            if ((new \DateTimeImmutable($validFrom)) > $today) {
+                return 'upcoming';
+            }
+        } catch (\Exception) {
+            // Ignore invalid date in state classification.
+        }
+    }
+
+    if ($validTo !== '') {
+        try {
+            if ((new \DateTimeImmutable($validTo)) < $today) {
+                return 'archive';
+            }
+        } catch (\Exception) {
+            // Ignore invalid date in state classification.
+        }
+    }
+
+    return 'current';
+}
+
+function foodCardStateLabel(string $state): string
+{
+    return match ($state) {
+        'upcoming' => 'Připravujeme',
+        'archive' => 'Archivní',
+        default => 'Platí nyní',
+    };
+}
+
+function foodRevisionSnapshot(array $card): array
+{
+    return [
+        'type' => (string)($card['type'] ?? ''),
+        'title' => (string)($card['title'] ?? ''),
+        'slug' => (string)($card['slug'] ?? ''),
+        'description' => (string)($card['description'] ?? ''),
+        'content' => (string)($card['content'] ?? ''),
+        'valid_from' => (string)($card['valid_from'] ?? ''),
+        'valid_to' => (string)($card['valid_to'] ?? ''),
+        'is_current' => (string)(int)($card['is_current'] ?? 0),
+        'is_published' => (string)(int)($card['is_published'] ?? 0),
+        'status' => (string)($card['status'] ?? 'published'),
+    ];
+}
+
+function foodCardStructuredData(array $card): string
+{
+    $name = trim((string)($card['title'] ?? ''));
+    if ($name === '') {
+        return '';
+    }
+
+    $description = trim((string)($card['description'] ?? ''));
+    if ($description === '') {
+        $description = trim(preg_replace('/\s+/u', ' ', strip_tags((string)($card['content'] ?? ''))) ?? '');
+    }
+    if (mb_strlen($description) > 300) {
+        $description = mb_substr($description, 0, 297) . '...';
+    }
+
+    $data = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Menu',
+        'name' => $name,
+        'url' => foodCardPublicUrl($card),
+        'description' => $description,
+        'inLanguage' => 'cs-CZ',
+    ];
+
+    $createdAt = trim((string)($card['created_at'] ?? ''));
+    if ($createdAt !== '') {
+        try {
+            $data['datePublished'] = (new \DateTimeImmutable($createdAt))->format(DATE_ATOM);
+        } catch (\Exception) {
+            // Ignore invalid published date in structured data.
+        }
+    }
+
+    $updatedAt = trim((string)($card['updated_at'] ?? ''));
+    if ($updatedAt !== '') {
+        try {
+            $data['dateModified'] = (new \DateTimeImmutable($updatedAt))->format(DATE_ATOM);
+        } catch (\Exception) {
+            // Ignore invalid updated date in structured data.
+        }
+    }
+
+    $validFrom = trim((string)($card['valid_from'] ?? ''));
+    if ($validFrom !== '') {
+        try {
+            $data['temporalCoverage'] = (new \DateTimeImmutable($validFrom))->format('Y-m-d');
+            $validTo = trim((string)($card['valid_to'] ?? ''));
+            if ($validTo !== '') {
+                $data['temporalCoverage'] .= '/' . (new \DateTimeImmutable($validTo))->format('Y-m-d');
+            }
+        } catch (\Exception) {
+            unset($data['temporalCoverage']);
+        }
+    }
+
+    return '<script type="application/ld+json">' . json_encode(
+        $data,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    ) . '</script>';
+}
+
 function hydrateFoodCardPresentation(array $card): array
 {
     $card['slug'] = foodCardSlug((string)($card['slug'] ?? ''));
@@ -1378,9 +1521,12 @@ function hydrateFoodCardPresentation(array $card): array
     $card['type_label'] = foodCardTypeLabel((string)$card['type']);
     $card['validity_label'] = foodCardValidityLabel($card);
     $card['meta_label'] = foodCardMetaLabel($card);
+    $card['state_key'] = foodCardCurrentState($card);
+    $card['state_label'] = foodCardStateLabel((string)$card['state_key']);
     $card['public_path'] = foodCardPublicPath($card);
     $card['is_publicly_visible'] = ((string)($card['status'] ?? 'published') === 'published')
         && (int)($card['is_published'] ?? 1) === 1;
+    $card['is_temporally_active'] = (string)($card['state_key'] ?? 'current') === 'current';
 
     return $card;
 }
@@ -2100,6 +2246,14 @@ function galleryAlbumPublicUrl(array $album, array $query = []): string
     return siteUrl(appendUrlQuery(galleryAlbumPublicRequestPath($album), $query));
 }
 
+function galleryAlbumPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "COALESCE({$prefix}status, 'published') = 'published'"
+        . " AND COALESCE({$prefix}is_published, 1) = 1";
+}
+
 function galleryPhotoPublicRequestPath(array $photo): string
 {
     $slug = galleryPhotoSlug((string)($photo['slug'] ?? ''));
@@ -2118,6 +2272,127 @@ function galleryPhotoPublicPath(array $photo, array $query = []): string
 function galleryPhotoPublicUrl(array $photo, array $query = []): string
 {
     return siteUrl(appendUrlQuery(galleryPhotoPublicRequestPath($photo), $query));
+}
+
+function galleryPhotoPublicVisibilitySql(string $photoAlias = '', string $albumAlias = ''): string
+{
+    $photoPrefix = $photoAlias !== '' ? rtrim($photoAlias, '.') . '.' : '';
+    $conditions = "COALESCE({$photoPrefix}status, 'published') = 'published'"
+        . " AND COALESCE({$photoPrefix}is_published, 1) = 1";
+
+    if ($albumAlias !== '') {
+        $conditions .= ' AND ' . galleryAlbumPublicVisibilitySql($albumAlias);
+    }
+
+    return $conditions;
+}
+
+function galleryPhotoMediaRequestPath(array $photo, string $size = 'full'): string
+{
+    $photoId = (int)($photo['id'] ?? 0);
+    if ($photoId <= 0) {
+        return '';
+    }
+
+    $normalizedSize = $size === 'thumb' ? 'thumb' : 'full';
+    return '/gallery/image.php?id=' . $photoId . '&size=' . $normalizedSize;
+}
+
+function galleryPhotoMediaPath(array $photo, string $size = 'full'): string
+{
+    $requestPath = galleryPhotoMediaRequestPath($photo, $size);
+    return $requestPath !== '' ? BASE_URL . $requestPath : '';
+}
+
+function galleryPhotoMediaUrl(array $photo, string $size = 'full'): string
+{
+    $requestPath = galleryPhotoMediaRequestPath($photo, $size);
+    return $requestPath !== '' ? siteUrl($requestPath) : '';
+}
+
+function galleryAlbumRevisionSnapshot(array $album, array $albumNames = [], array $photoLabels = []): array
+{
+    $parentId = isset($album['parent_id']) && (int)$album['parent_id'] > 0 ? (int)$album['parent_id'] : 0;
+    $coverPhotoId = isset($album['cover_photo_id']) && (int)$album['cover_photo_id'] > 0 ? (int)$album['cover_photo_id'] : 0;
+
+    return [
+        'name' => trim((string)($album['name'] ?? '')),
+        'slug' => galleryAlbumSlug((string)($album['slug'] ?? '')),
+        'description' => trim((string)($album['description'] ?? '')),
+        'parent_album' => $parentId > 0 ? trim((string)($albumNames[$parentId] ?? '')) : '',
+        'cover_photo' => $coverPhotoId > 0 ? trim((string)($photoLabels[$coverPhotoId] ?? '')) : '',
+        'is_published' => (string)((int)($album['is_published'] ?? 1)),
+        'status' => (string)($album['status'] ?? 'published'),
+    ];
+}
+
+function galleryPhotoRevisionSnapshot(array $photo, string $albumName = ''): array
+{
+    return [
+        'title' => trim((string)($photo['title'] ?? '')),
+        'slug' => galleryPhotoSlug((string)($photo['slug'] ?? '')),
+        'album' => trim($albumName),
+        'sort_order' => (string)((int)($photo['sort_order'] ?? 0)),
+        'is_published' => (string)((int)($photo['is_published'] ?? 1)),
+        'status' => (string)($photo['status'] ?? 'published'),
+    ];
+}
+
+function galleryAlbumStructuredData(array $album, array $photos = []): string
+{
+    $items = [];
+    foreach ($photos as $photo) {
+        $imageUrl = trim((string)($photo['image_url'] ?? galleryPhotoMediaUrl($photo, 'full')));
+        if ($imageUrl === '') {
+            continue;
+        }
+
+        $items[] = array_filter([
+            '@type' => 'ImageObject',
+            'name' => galleryPhotoLabel($photo),
+            'contentUrl' => $imageUrl,
+            'thumbnailUrl' => trim((string)($photo['thumb_url'] ?? galleryPhotoMediaUrl($photo, 'thumb'))),
+            'url' => galleryPhotoPublicUrl($photo),
+            'caption' => trim((string)($photo['title'] ?? '')),
+        ], static fn($value): bool => $value !== '');
+    }
+
+    $data = array_filter([
+        '@context' => 'https://schema.org',
+        '@type' => 'ImageGallery',
+        'name' => trim((string)($album['name'] ?? 'Album')),
+        'description' => trim((string)($album['excerpt'] ?? galleryAlbumExcerpt($album, 500))),
+        'url' => galleryAlbumPublicUrl($album),
+        'image' => trim((string)($album['cover_url'] ?? '')),
+        'associatedMedia' => $items !== [] ? $items : null,
+    ], static fn($value): bool => $value !== '' && $value !== null);
+
+    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+}
+
+function galleryPhotoStructuredData(array $photo, array $album = []): string
+{
+    $imageUrl = trim((string)($photo['image_url'] ?? galleryPhotoMediaUrl($photo, 'full')));
+    if ($imageUrl === '') {
+        return '';
+    }
+
+    $data = array_filter([
+        '@context' => 'https://schema.org',
+        '@type' => 'ImageObject',
+        'name' => galleryPhotoLabel($photo),
+        'caption' => trim((string)($photo['title'] ?? '')),
+        'contentUrl' => $imageUrl,
+        'thumbnailUrl' => trim((string)($photo['thumb_url'] ?? galleryPhotoMediaUrl($photo, 'thumb'))),
+        'url' => galleryPhotoPublicUrl($photo),
+        'isPartOf' => !empty($album) ? array_filter([
+            '@type' => 'ImageGallery',
+            'name' => trim((string)($album['name'] ?? 'Galerie')),
+            'url' => galleryAlbumPublicUrl($album),
+        ], static fn($value): bool => $value !== '') : null,
+    ], static fn($value): bool => $value !== '' && $value !== null);
+
+    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
 function newsPublicPath(array $news, array $query = []): string
@@ -3233,10 +3508,10 @@ function hydrateGalleryPhotoPresentation(array $photo): array
     $photo['public_path'] = galleryPhotoPublicPath($photo);
     $photo['public_url'] = galleryPhotoPublicUrl($photo);
     if (!isset($photo['image_url'])) {
-        $photo['image_url'] = BASE_URL . '/uploads/gallery/' . rawurlencode((string)($photo['filename'] ?? ''));
+        $photo['image_url'] = galleryPhotoMediaPath($photo, 'full');
     }
     if (!isset($photo['thumb_url'])) {
-        $photo['thumb_url'] = BASE_URL . '/uploads/gallery/thumbs/' . rawurlencode((string)($photo['filename'] ?? ''));
+        $photo['thumb_url'] = galleryPhotoMediaPath($photo, 'thumb');
     }
     return $photo;
 }

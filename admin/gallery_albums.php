@@ -7,6 +7,9 @@ $q = trim($_GET['q'] ?? '');
 $statusFilter = in_array($_GET['status'] ?? '', ['all', 'pending', 'published', 'hidden'], true)
     ? (string)$_GET['status']
     : 'all';
+$hierarchyFilter = in_array($_GET['scope'] ?? '', ['all', 'root', 'nested'], true)
+    ? (string)$_GET['scope']
+    : 'all';
 
 $whereParts = [];
 $params = [];
@@ -20,6 +23,11 @@ if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(a.status,'published') = 'published' AND COALESCE(a.is_published, 1) = 1";
 } elseif ($statusFilter === 'hidden') {
     $whereParts[] = "COALESCE(a.status,'published') = 'published' AND COALESCE(a.is_published, 1) = 0";
+}
+if ($hierarchyFilter === 'root') {
+    $whereParts[] = 'a.parent_id IS NULL';
+} elseif ($hierarchyFilter === 'nested') {
+    $whereParts[] = 'a.parent_id IS NOT NULL';
 }
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
@@ -59,15 +67,23 @@ adminHeader('Alba galerie');
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
     </select>
   </div>
+  <div>
+    <label for="scope">Typ alba</label>
+    <select id="scope" name="scope">
+      <option value="all"<?= $hierarchyFilter === 'all' ? ' selected' : '' ?>>Všechna alba</option>
+      <option value="root"<?= $hierarchyFilter === 'root' ? ' selected' : '' ?>>Jen hlavní alba</option>
+      <option value="nested"<?= $hierarchyFilter === 'nested' ? ' selected' : '' ?>>Jen podalba</option>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $hierarchyFilter !== 'all'): ?>
     <a href="gallery_albums.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($albums)): ?>
   <p>
-    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+    <?php if ($q !== '' || $statusFilter !== 'all' || $hierarchyFilter !== 'all'): ?>
       Pro zvolený filtr tu teď nejsou žádná alba.
     <?php else: ?>
       Zatím tu nejsou žádná alba. <a href="<?= BASE_URL ?>/admin/gallery_album_form.php">Přidat první album</a>.
@@ -124,6 +140,7 @@ adminHeader('Alba galerie');
           <td class="actions">
             <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>">Spravovat fotografie</a>
             <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>">Upravit</a>
+            <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_album&amp;id=<?= (int)$album['id'] ?>">Historie revizí</a>
             <?php if ((int)($album['is_published'] ?? 1) === 1 && ($album['status'] ?? 'published') === 'published'): ?>
               <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>

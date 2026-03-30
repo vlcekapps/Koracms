@@ -233,11 +233,11 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, author archive, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem a slug URL |
 | **Události** | Přehled akcí s datem, místem a detailem |
-| **Galerie** | Alba a fotografie s detailovými URL, export do ZIP |
+| **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
 | **Podcasty** | Více pořadů, epizody, artwork, RSS feed s iTunes značkami |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s verzemi, kompatibilitou, historií změn a veřejnými filtry |
-| **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek a archiv |
+| **Jídelní lístek** | Karty jídel a nápojů s platností, archivem, hledáním a revizemi |
 | **Ankety** | Hlasování s ochranou proti opakovanému hlasu |
 | **Znalostní báze** | FAQ s kategoriemi, hledáním, stránkováním, SEO a FAQPage strukturovanými daty |
 | **Formuláře** | Form Builder s přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge |
@@ -253,6 +253,10 @@ README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a
 Modul **Ke stažení** nově pokrývá i praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje.
 
 Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle kategorie, stránkování, přepínání `karty / rozbalené odpovědi`, per-FAQ SEO metadata, redirecty při změně slugu a `FAQPage` strukturovaná data pro vyhledávače.
+
+Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / archivní` lístky podle `Platí od / do`, podporuje veřejné hledání, scope filtry, stránkování archivu, redirecty při změně slugu, historii revizí a structured data pro detail lístku.
+
+Modul **Galerie** nově chrání neveřejná alba i fotografie i na úrovni detailu, vyhledávání a sitemapy, používá bezpečný media endpoint místo přímých `/uploads/gallery/` cest, podporuje redirecty po změně slugu, historii revizí, veřejné hledání, stránkování alb i detailu a structured data pro alba i fotografie.
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 

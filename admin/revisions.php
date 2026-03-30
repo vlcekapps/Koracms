@@ -13,6 +13,9 @@ $allowedTypes = [
     'faq'     => ['table' => 'cms_faqs',     'label' => 'FAQ', 'title_col' => 'question', 'back' => 'faq_form.php'],
     'board'   => ['table' => 'cms_board',    'label' => 'Položka vývěsky', 'title_col' => 'title', 'back' => 'board_form.php'],
     'download'=> ['table' => 'cms_downloads','label' => 'Položka ke stažení', 'title_col' => 'title', 'back' => 'download_form.php'],
+    'food'    => ['table' => 'cms_food_cards','label' => 'Jídelní nebo nápojový lístek', 'title_col' => 'title', 'back' => 'food_form.php'],
+    'gallery_album' => ['table' => 'cms_gallery_albums', 'label' => 'Album galerie', 'title_col' => 'name', 'back' => 'gallery_album_form.php'],
+    'gallery_photo' => ['table' => 'cms_gallery_photos', 'label' => 'Fotografie', 'title_col' => 'title', 'back' => 'gallery_photo_form.php'],
 ];
 
 if ($entityType === '' || $entityId === null || !isset($allowedTypes[$entityType])) {

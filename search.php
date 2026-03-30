@@ -184,7 +184,8 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                         COALESCE(a.updated_at, a.created_at) AS created_at,
                         'gallery_album' AS type
                  FROM cms_gallery_albums a
-                 WHERE a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ?
+                 WHERE " . galleryAlbumPublicVisibilitySql('a') . "
+                   AND (a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ?)
                  ORDER BY a.updated_at DESC, a.name ASC
                  LIMIT 8"
             );
@@ -202,7 +203,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                         p.created_at, 'gallery_photo' AS type
                  FROM cms_gallery_photos p
                  INNER JOIN cms_gallery_albums a ON a.id = p.album_id
-                 WHERE p.title <> '' AND (p.title LIKE ? OR p.slug LIKE ? OR a.name LIKE ?)
+                 WHERE " . galleryPhotoPublicVisibilitySql('p', 'a') . "
+                   AND p.title <> ''
+                   AND (p.title LIKE ? OR p.slug LIKE ? OR a.name LIKE ?)
                  ORDER BY p.created_at DESC, p.id DESC
                  LIMIT 8"
             );

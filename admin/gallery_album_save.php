@@ -89,11 +89,43 @@ if ($coverId !== null && $id !== null) {
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 if ($id !== null) {
+    $existingAlbumStmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ?");
+    $existingAlbumStmt->execute([$id]);
+    $existingAlbum = $existingAlbumStmt->fetch() ?: null;
+    if ($existingAlbum === null) {
+        $redirectBack(null, 'required');
+    }
+
+    $albumNames = [];
+    foreach ($allAlbums as $existingAlbumRow) {
+        $albumNames[(int)$existingAlbumRow['id']] = trim((string)($existingAlbumRow['name'] ?? ''));
+    }
+
+    $photoLabels = [];
+    $photoLabelsStmt = $pdo->query("SELECT id, title, filename FROM cms_gallery_photos");
+    foreach ($photoLabelsStmt->fetchAll() as $existingPhotoRow) {
+        $photoLabels[(int)$existingPhotoRow['id']] = galleryPhotoLabel($existingPhotoRow);
+    }
+
+    $oldPath = galleryAlbumPublicPath($existingAlbum);
+    $oldRevision = galleryAlbumRevisionSnapshot($existingAlbum, $albumNames, $photoLabels);
+
     $pdo->prepare(
         "UPDATE cms_gallery_albums
          SET name = ?, slug = ?, description = ?, parent_id = ?, cover_photo_id = ?, is_published = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([$name, $resolvedSlug, $description, $parentId, $coverPhotoId, $isPublished, $id]);
+    $newRevision = galleryAlbumRevisionSnapshot([
+        'name' => $name,
+        'slug' => $resolvedSlug,
+        'description' => $description,
+        'parent_id' => $parentId,
+        'cover_photo_id' => $coverPhotoId,
+        'is_published' => $isPublished,
+        'status' => $existingAlbum['status'] ?? 'published',
+    ], $albumNames, $photoLabels);
+    saveRevision($pdo, 'gallery_album', $id, $oldRevision, $newRevision);
+    upsertPathRedirect($pdo, $oldPath, galleryAlbumPublicPath(['id' => $id, 'slug' => $resolvedSlug]));
     logAction('gallery_album_edit', 'id=' . $id);
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';

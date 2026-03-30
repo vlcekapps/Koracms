@@ -174,10 +174,13 @@ $foodCardCanonicalPath = $foodCardRow ? foodCardPublicPath($foodCardRow) : '';
 $foodCardLegacyPath = $foodCardId !== false ? BASE_URL . '/food/card.php?id=' . urlencode((string)$foodCardId) : '';
 $foodCardCanonicalUrl = $foodCardCanonicalPath !== '' ? $baseUrl . $foodCardCanonicalPath : '';
 $foodCardLegacyUrl = $foodCardLegacyPath !== '' ? $baseUrl . $foodCardLegacyPath : '';
+$runtimeAuditFoodFutureTitle = '';
+$runtimeAuditFoodArchiveTitle = '';
 $galleryAlbumRow = $pdo->query(
     "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
      FROM cms_gallery_albums
      WHERE parent_id IS NULL
+       AND " . galleryAlbumPublicVisibilitySql() . "
      ORDER BY id
      LIMIT 1"
 )->fetch() ?: null;
@@ -185,6 +188,7 @@ if (!$galleryAlbumRow) {
     $galleryAlbumRow = $pdo->query(
         "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
          FROM cms_gallery_albums
+         WHERE " . galleryAlbumPublicVisibilitySql() . "
          ORDER BY id
          LIMIT 1"
     )->fetch() ?: null;
@@ -204,6 +208,7 @@ if ($galleryAlbumId !== false) {
         "SELECT id, album_id, filename, title, slug, sort_order, created_at
          FROM cms_gallery_photos
          WHERE album_id = ?
+           AND " . galleryPhotoPublicVisibilitySql() . "
          ORDER BY id
          LIMIT 1"
     );
@@ -215,9 +220,11 @@ if ($galleryAlbumId !== false) {
     }
 }
 $galleryPhotoRow = $pdo->query(
-    "SELECT id, album_id, filename, title, slug, sort_order, created_at
-     FROM cms_gallery_photos
-     ORDER BY id
+    "SELECT p.id, p.album_id, p.filename, p.title, p.slug, p.sort_order, p.created_at
+     FROM cms_gallery_photos p
+     INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+     WHERE " . galleryPhotoPublicVisibilitySql('p', 'a') . "
+     ORDER BY p.id
      LIMIT 1"
 )->fetch() ?: null;
 $galleryPhotoId = $galleryPhotoRow['id'] ?? false;
@@ -229,6 +236,13 @@ $galleryPhotoCanonicalPath = $galleryPhotoRow ? galleryPhotoPublicPath($galleryP
 $galleryPhotoLegacyPath = $galleryPhotoId !== false ? BASE_URL . '/gallery/photo.php?id=' . urlencode((string)$galleryPhotoId) : '';
 $galleryPhotoCanonicalUrl = $galleryPhotoCanonicalPath !== '' ? $baseUrl . $galleryPhotoCanonicalPath : '';
 $galleryPhotoLegacyUrl = $galleryPhotoLegacyPath !== '' ? $baseUrl . $galleryPhotoLegacyPath : '';
+$galleryHiddenAlbumPath = '';
+$galleryHiddenAlbumUrl = '';
+$galleryHiddenAlbumTitle = '';
+$galleryHiddenPhotoPath = '';
+$galleryHiddenPhotoUrl = '';
+$galleryHiddenPhotoTitle = '';
+$galleryPhotoMediaCanonicalUrl = '';
 $pollDetailId = false;
 $resourceRow = $pdo->query(
     "SELECT id, slug, max_advance_days FROM cms_res_resources WHERE is_active = 1 ORDER BY id LIMIT 1"
@@ -840,10 +854,53 @@ if (isModuleEnabled('gallery')) {
     $runtimeAuditGalleryPhotoId = (int)$pdo->lastInsertId();
     $cleanup['gallery_photo_ids'][] = $runtimeAuditGalleryPhotoId;
 
+    $runtimeAuditGalleryRelatedPhotoSlug = uniqueGalleryPhotoSlug($pdo, 'runtime-audit-fotka-related-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order, created_at)
+         VALUES (?, ?, ?, ?, 1, NOW())"
+    )->execute([
+        $runtimeAuditGalleryAlbumId,
+        $runtimeAuditGalleryFilename,
+        'Runtime audit doplňková fotka',
+        $runtimeAuditGalleryRelatedPhotoSlug,
+    ]);
+    $cleanup['gallery_photo_ids'][] = (int)$pdo->lastInsertId();
+
     $pdo->prepare("UPDATE cms_gallery_albums SET cover_photo_id = ? WHERE id = ?")->execute([
         $runtimeAuditGalleryPhotoId,
         $runtimeAuditGalleryAlbumId,
     ]);
+
+    $galleryHiddenAlbumTitle = 'Runtime audit skryté album';
+    $runtimeAuditHiddenGalleryAlbumSlug = uniqueGalleryAlbumSlug($pdo, 'runtime-audit-skryte-album-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_albums (parent_id, name, slug, description, cover_photo_id, is_published, created_at, updated_at)
+         VALUES (NULL, ?, ?, ?, NULL, 0, NOW(), NOW())"
+    )->execute([
+        $galleryHiddenAlbumTitle,
+        $runtimeAuditHiddenGalleryAlbumSlug,
+        'Skryté album jen pro ověření veřejné viditelnosti galerie.',
+    ]);
+    $runtimeAuditHiddenGalleryAlbumId = (int)$pdo->lastInsertId();
+    $cleanup['gallery_album_ids'][] = $runtimeAuditHiddenGalleryAlbumId;
+    $galleryHiddenAlbumPath = BASE_URL . '/gallery/' . rawurlencode($runtimeAuditHiddenGalleryAlbumSlug);
+    $galleryHiddenAlbumUrl = $baseUrl . $galleryHiddenAlbumPath;
+
+    $galleryHiddenPhotoTitle = 'Runtime audit skrytá fotka';
+    $runtimeAuditHiddenGalleryPhotoSlug = uniqueGalleryPhotoSlug($pdo, 'runtime-audit-skryta-fotka-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order, is_published, created_at)
+         VALUES (?, ?, ?, ?, 0, 0, NOW())"
+    )->execute([
+        $runtimeAuditHiddenGalleryAlbumId,
+        $runtimeAuditGalleryFilename,
+        $galleryHiddenPhotoTitle,
+        $runtimeAuditHiddenGalleryPhotoSlug,
+    ]);
+    $runtimeAuditHiddenGalleryPhotoId = (int)$pdo->lastInsertId();
+    $cleanup['gallery_photo_ids'][] = $runtimeAuditHiddenGalleryPhotoId;
+    $galleryHiddenPhotoPath = BASE_URL . '/gallery/foto/' . rawurlencode($runtimeAuditHiddenGalleryPhotoSlug);
+    $galleryHiddenPhotoUrl = $baseUrl . $galleryHiddenPhotoPath;
 
     $galleryAlbumStmt = $pdo->prepare(
         "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
@@ -877,6 +934,7 @@ if (isModuleEnabled('gallery')) {
     $galleryPhotoLegacyPath = $galleryPhotoId !== false ? BASE_URL . '/gallery/photo.php?id=' . urlencode((string)$galleryPhotoId) : '';
     $galleryPhotoCanonicalUrl = $galleryPhotoCanonicalPath !== '' ? $baseUrl . $galleryPhotoCanonicalPath : '';
     $galleryPhotoLegacyUrl = $galleryPhotoLegacyPath !== '' ? $baseUrl . $galleryPhotoLegacyPath : '';
+    $galleryPhotoMediaCanonicalUrl = $galleryPhotoRow ? ($baseUrl . galleryPhotoMediaRequestPath($galleryPhotoRow, 'thumb')) : '';
 
     $galleryAlbumPhotoRow = $galleryPhotoRow;
     $galleryAlbumPhotoCanonicalPath = $galleryPhotoCanonicalPath;
@@ -915,6 +973,38 @@ if (isModuleEnabled('food')) {
     $foodCardLegacyPath = $foodCardId !== false ? BASE_URL . '/food/card.php?id=' . urlencode((string)$foodCardId) : '';
     $foodCardCanonicalUrl = $foodCardCanonicalPath !== '' ? $baseUrl . $foodCardCanonicalPath : '';
     $foodCardLegacyUrl = $foodCardLegacyPath !== '' ? $baseUrl . $foodCardLegacyPath : '';
+
+    $runtimeAuditFoodFutureTitle = 'Runtime audit budoucí lístek';
+    $runtimeAuditFoodFutureSlug = uniqueFoodCardSlug($pdo, 'runtime-audit-budouci-listek-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_food_cards (
+            type, title, slug, description, content, valid_from, valid_to,
+            is_current, is_published, status, author_id, created_at, updated_at
+         ) VALUES ('food', ?, ?, ?, ?, DATE_ADD(CURDATE(), INTERVAL 3 DAY), DATE_ADD(CURDATE(), INTERVAL 10 DAY), 0, 1, 'published', ?, NOW(), NOW())"
+    )->execute([
+        $runtimeAuditFoodFutureTitle,
+        $runtimeAuditFoodFutureSlug,
+        'Budoucí testovací karta pro ověření scope filtrů jídelních lístků.',
+        '<p>Budoucí obsah pro ověření scope upcoming.</p>',
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $cleanup['food_ids'][] = (int)$pdo->lastInsertId();
+
+    $runtimeAuditFoodArchiveTitle = 'Runtime audit archivní lístek';
+    $runtimeAuditFoodArchiveSlug = uniqueFoodCardSlug($pdo, 'runtime-audit-archivni-listek-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_food_cards (
+            type, title, slug, description, content, valid_from, valid_to,
+            is_current, is_published, status, author_id, created_at, updated_at
+         ) VALUES ('beverage', ?, ?, ?, ?, DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 2 DAY), 0, 1, 'published', ?, NOW(), NOW())"
+    )->execute([
+        $runtimeAuditFoodArchiveTitle,
+        $runtimeAuditFoodArchiveSlug,
+        'Archivní testovací karta pro ověření scope archivních lístků.',
+        '<p>Archivní obsah pro ověření scope archive.</p>',
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $cleanup['food_ids'][] = (int)$pdo->lastInsertId();
 }
 
 if (isModuleEnabled('faq')) {
@@ -3251,9 +3341,16 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin food status filter is missing';
         }
+        if (!str_contains($result['body'], 'name="type"')) {
+            $issues[] = 'admin food type filter is missing';
+        }
+        if (!str_contains($result['body'], 'name="scope"')) {
+            $issues[] = 'admin food scope filter is missing';
+        }
         foreach ([
             'Přehled jídelních lístků',
             'Přehled nápojových lístků',
+            'Historie revizí',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin food page is missing fragment: ' . $expectedFragment;
@@ -3532,6 +3629,7 @@ foreach ($pages as $page) {
             'name="valid_from"',
             'name="valid_to"',
             'Zpět na jídelní a nápojové lístky',
+            'Historie revizí',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin food form is missing field: ' . $expectedField;
@@ -3998,17 +4096,41 @@ foreach ($pages as $page) {
     if ($page['label'] === 'food' && $foodCardCanonicalPath !== '' && !str_contains($result['body'], $foodCardCanonicalPath)) {
         $issues[] = 'food index is missing detail links';
     }
+    if ($page['label'] === 'food' && $runtimeAuditFoodFutureTitle !== '' && str_contains($result['body'], $runtimeAuditFoodFutureTitle)) {
+        $issues[] = 'food index incorrectly shows upcoming food fixture';
+    }
 
     if ($page['label'] === 'food_archive' && $foodCardCanonicalPath !== '' && !str_contains($result['body'], $foodCardCanonicalPath)) {
         $issues[] = 'food archive is missing detail links';
+    }
+
+    if ($page['label'] === 'food_archive') {
+        foreach ([
+            'name="q"',
+            'name="typ"',
+            'Platí nyní',
+            'Připravujeme',
+            'Archivní',
+            'Všechny lístky',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'food archive is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($runtimeAuditFoodFutureTitle !== '' && !str_contains($result['body'], $runtimeAuditFoodFutureTitle)) {
+            $issues[] = 'food archive is missing upcoming food fixture';
+        }
     }
 
     if ($page['label'] === 'food_card') {
         if ($foodCardRow && !str_contains($result['body'], (string)($foodCardRow['title'] ?? ''))) {
             $issues[] = 'food card is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět do archivu')) {
-            $issues[] = 'food card is missing back link';
+        if (!str_contains($result['body'], 'Vytisknout')) {
+            $issues[] = 'food card is missing print action';
+        }
+        if (!str_contains($result['body'], 'Zpět na aktuální lístek') && !str_contains($result['body'], 'Zpět do archivu')) {
+            $issues[] = 'food card is missing back navigation';
         }
     }
 
@@ -4030,6 +4152,19 @@ foreach ($pages as $page) {
     if ($page['label'] === 'gallery_index' && $galleryAlbumCanonicalPath !== '' && !str_contains($result['body'], $galleryAlbumCanonicalPath)) {
         $issues[] = 'gallery listing is missing album detail links';
     }
+    if ($page['label'] === 'gallery_index') {
+        foreach ([
+            'name="q"',
+            'Hledat v galerii',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'gallery listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '/uploads/gallery/')) {
+            $issues[] = 'gallery listing still exposes uploads/gallery paths';
+        }
+    }
 
     if ($page['label'] === 'gallery_album') {
         if ($galleryAlbumRow && !str_contains($result['body'], (string)($galleryAlbumRow['name'] ?? ''))) {
@@ -4037,6 +4172,17 @@ foreach ($pages as $page) {
         }
         if ($galleryAlbumPhotoCanonicalPath !== '' && !str_contains($result['body'], $galleryAlbumPhotoCanonicalPath)) {
             $issues[] = 'gallery album is missing photo detail links';
+        }
+        foreach ([
+            'name="q"',
+            'Hledat v albu',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'gallery album is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '/uploads/gallery/')) {
+            $issues[] = 'gallery album still exposes uploads/gallery paths';
         }
     }
 
@@ -4046,6 +4192,17 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'Zpět do alba')) {
             $issues[] = 'gallery photo is missing back link';
+        }
+        foreach ([
+            'Kopírovat odkaz',
+            'Další fotografie v albu',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'gallery photo is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '/uploads/gallery/')) {
+            $issues[] = 'gallery photo still exposes uploads/gallery paths';
         }
     }
 
@@ -4396,6 +4553,61 @@ if ($galleryPhotoCanonicalPath === '' || $galleryPhotoLegacyPath === '' || $gall
         $failures++;
     } else {
         echo "OK\n";
+    }
+}
+
+echo "=== gallery_visibility_guards ===\n";
+$galleryVisibilityIssues = [];
+if ($galleryHiddenAlbumUrl !== '') {
+    $hiddenAlbumProbe = fetchUrl($galleryHiddenAlbumUrl, '', 0);
+    if (!preg_match('/\s404\s/', $hiddenAlbumProbe['status'])) {
+        $galleryVisibilityIssues[] = 'hidden gallery album does not return 404';
+    }
+}
+if ($galleryHiddenPhotoUrl !== '') {
+    $hiddenPhotoProbe = fetchUrl($galleryHiddenPhotoUrl, '', 0);
+    if (!preg_match('/\s404\s/', $hiddenPhotoProbe['status'])) {
+        $galleryVisibilityIssues[] = 'hidden gallery photo does not return 404';
+    }
+}
+if ($galleryPhotoMediaCanonicalUrl !== '') {
+    $galleryMediaProbe = fetchUrl($galleryPhotoMediaCanonicalUrl, '', 0);
+    if (!str_contains($galleryMediaProbe['status'], '200')) {
+        $galleryVisibilityIssues[] = 'gallery image endpoint does not serve public thumbnails';
+    } else {
+        $hasImageContentType = false;
+        foreach ($galleryMediaProbe['headers'] as $galleryMediaHeader) {
+            if (stripos((string)$galleryMediaHeader, 'Content-Type: image/') === 0) {
+                $hasImageContentType = true;
+                break;
+            }
+        }
+        if (!$hasImageContentType) {
+            $galleryVisibilityIssues[] = 'gallery image endpoint is missing image content type';
+        }
+    }
+}
+$galleryDirectUploadProbe = fetchUrl($baseUrl . '/uploads/gallery/' . rawurlencode($runtimeAuditGalleryFilename), '', 0);
+if (!preg_match('/\s40[34]\s/', $galleryDirectUploadProbe['status'])) {
+    $galleryVisibilityIssues[] = 'direct uploads/gallery path is still publicly reachable';
+}
+$gallerySearchProbe = fetchUrl($baseUrl . '/gallery/index.php?q=' . urlencode('Runtime audit skryté'), '', 0);
+if (!str_contains($gallerySearchProbe['status'], '200')) {
+    $galleryVisibilityIssues[] = 'gallery search page did not load for visibility audit';
+} else {
+    if (str_contains($gallerySearchProbe['body'], $galleryHiddenAlbumTitle)) {
+        $galleryVisibilityIssues[] = 'gallery search still exposes hidden album';
+    }
+    if (str_contains($gallerySearchProbe['body'], $galleryHiddenPhotoTitle)) {
+        $galleryVisibilityIssues[] = 'gallery search still exposes hidden photo';
+    }
+}
+if ($galleryVisibilityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($galleryVisibilityIssues as $galleryVisibilityIssue) {
+        echo '- ' . $galleryVisibilityIssue . "\n";
     }
 }
 
@@ -6763,6 +6975,83 @@ if ($boardSourceIssues === []) {
     $failures++;
     foreach ($boardSourceIssues as $boardSourceIssue) {
         echo '- ' . $boardSourceIssue . "\n";
+    }
+}
+
+echo "=== gallery_source_guardrails ===\n";
+$gallerySourceIssues = [];
+$galleryAlbumSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_save.php');
+$galleryPhotoSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_save.php');
+$galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
+$galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
+$galleryIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/gallery/index.php');
+$galleryAlbumControllerSource = (string)file_get_contents(dirname(__DIR__) . '/gallery/album.php');
+$galleryPhotoControllerSource = (string)file_get_contents(dirname(__DIR__) . '/gallery/photo.php');
+$galleryPhotoViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/gallery-photo.php');
+$galleryImageSource = (string)file_get_contents(dirname(__DIR__) . '/gallery/image.php');
+$gallerySearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
+$galleryWidgetSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$htaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
+if (!str_contains($galleryAlbumSaveSource, "saveRevision(\$pdo, 'gallery_album'")) {
+    $gallerySourceIssues[] = 'gallery album save is missing revision persistence';
+}
+if (!str_contains($galleryAlbumSaveSource, 'upsertPathRedirect')) {
+    $gallerySourceIssues[] = 'gallery album save is missing slug redirect persistence';
+}
+if (!str_contains($galleryPhotoSaveSource, "saveRevision(\$pdo, 'gallery_photo'")) {
+    $gallerySourceIssues[] = 'gallery photo save is missing revision persistence';
+}
+if (!str_contains($galleryPhotoSaveSource, 'upsertPathRedirect')) {
+    $gallerySourceIssues[] = 'gallery photo save is missing slug redirect persistence';
+}
+if (!str_contains($galleryAlbumFormSource, 'revisions.php?type=gallery_album')) {
+    $gallerySourceIssues[] = 'gallery album form is missing revisions link';
+}
+if (!str_contains($galleryPhotoFormSource, 'revisions.php?type=gallery_photo')) {
+    $gallerySourceIssues[] = 'gallery photo form is missing revisions link';
+}
+if (!str_contains($galleryPhotoFormSource, 'name="is_published"')) {
+    $gallerySourceIssues[] = 'gallery photo form is missing visibility toggle';
+}
+if (!str_contains($galleryIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
+    $gallerySourceIssues[] = 'gallery index is missing public search support';
+}
+if (!str_contains($galleryIndexControllerSource, 'paginate(')) {
+    $gallerySourceIssues[] = 'gallery index is missing pagination support';
+}
+if (!str_contains($galleryAlbumControllerSource, "galleryAlbumPublicVisibilitySql('a')")) {
+    $gallerySourceIssues[] = 'gallery album controller is missing public visibility guard';
+}
+if (!str_contains($galleryAlbumControllerSource, 'renderPager(')) {
+    $gallerySourceIssues[] = 'gallery album controller is missing pager support';
+}
+if (!str_contains($galleryPhotoControllerSource, "galleryPhotoPublicVisibilitySql('p', 'a')")) {
+    $gallerySourceIssues[] = 'gallery photo controller is missing public visibility guard';
+}
+if (!str_contains($galleryPhotoControllerSource, '$relatedPhotos')) {
+    $gallerySourceIssues[] = 'gallery photo controller is missing related photos support';
+}
+if (!str_contains($galleryPhotoViewSource, 'data-copy-gallery-link')) {
+    $gallerySourceIssues[] = 'gallery photo view is missing copy-link action';
+}
+if (!str_contains($galleryImageSource, "currentUserHasCapability('content_manage_shared')")) {
+    $gallerySourceIssues[] = 'gallery image endpoint is missing private visibility guard';
+}
+if (!str_contains($gallerySearchSource, "galleryPhotoPublicVisibilitySql('p', 'a')")) {
+    $gallerySourceIssues[] = 'search no longer protects gallery photo visibility';
+}
+if (str_contains($galleryWidgetSource, '/uploads/gallery/thumbs/')) {
+    $gallerySourceIssues[] = 'gallery widget still exposes direct uploads paths';
+}
+if (!str_contains($htaccessSource, 'RewriteRule ^uploads/gallery/ - [F,L,NC]')) {
+    $gallerySourceIssues[] = 'htaccess is missing gallery uploads deny rule';
+}
+if ($gallerySourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($gallerySourceIssues as $gallerySourceIssue) {
+        echo '- ' . $gallerySourceIssue . "\n";
     }
 }
 

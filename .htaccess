@@ -32,6 +32,8 @@ Options -Indexes
     RewriteRule ^uploads/forms/ - [F,L,NC]
     # Staré databázové zálohy nesmí být přímo dostupné z webu
     RewriteRule ^uploads/backups/ - [F,L,NC]
+    # Fotografie galerie se zobrazují jen přes gallery/image.php
+    RewriteRule ^uploads/gallery/ - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

@@ -83,10 +83,19 @@ adminHeader($pageTitle);
 
       <label for="sort_order">Pořadí</label>
       <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">
+      <small class="field-help">Pořadí můžete rychle upravit i přímo v přehledu fotografií pomocí tlačítek Nahoru a Dolů.</small>
+
+      <div style="margin-top:.75rem">
+        <label>
+          <input type="checkbox" name="is_published" value="1"<?= (int)($photo['is_published'] ?? 1) === 1 ? ' checked' : '' ?>>
+          Publikováno (viditelné na webu)
+        </label>
+      </div>
 
       <div style="margin-top:1.5rem">
         <button type="submit">Uložit změny</button>
         <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Zrušit</a>
+        <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_photo&amp;id=<?= (int)$photo['id'] ?>" style="margin-left:1rem">Historie revizí</a>
         <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
       </div>
     </fieldset>

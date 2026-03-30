@@ -76,6 +76,7 @@ function revisionFieldLabel(string $entityType, string $fieldName): string
         'meta_title'  => 'Meta titulek',
         'meta_description' => 'Meta popis',
         'status'      => 'Workflow stav',
+        'type'        => 'Typ',
         'location'    => 'Místo konání',
         'event_kind'  => 'Typ akce',
         'event_date'  => 'Začátek akce',
@@ -108,6 +109,13 @@ function revisionFieldLabel(string $entityType, string $fieldName): string
         'contact_email' => 'E-mail',
         'is_pinned'   => 'Připnuto mezi důležité',
         'is_published'=> 'Zveřejnění na webu',
+        'valid_from'  => 'Platí od',
+        'valid_to'    => 'Platí do',
+        'is_current'  => 'Použít jako aktuální lístek',
+        'parent_album' => 'Nadřazené album',
+        'cover_photo' => 'Náhledová fotka alba',
+        'album' => 'Album',
+        'sort_order' => 'Pořadí',
     ];
 
     return $labels[$fieldName] ?? $fieldName;

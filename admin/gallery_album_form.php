@@ -125,6 +125,7 @@ adminHeader($pageTitle);
       <button type="submit"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
       <a href="<?= BASE_URL ?>/admin/gallery_albums.php" style="margin-left:1rem">Zrušit</a>
       <?php if ($id !== null): ?>
+        <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_album&amp;id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Historie revizí</a>
         <?php $albumPublicPath = galleryAlbumPublicPath($album); ?>
         <a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
       <?php endif; ?>
