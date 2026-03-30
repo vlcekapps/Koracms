@@ -4,6 +4,18 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- **Multiblog – týmy blogů a jemnější oprávnění** – každý blog může mít vlastní tým autorů a správců blogu; autoři nově vidí jen přidělené blogy a správa kategorií a štítků se umí omezit jen na konkrétní blog
+- **Multiblog – per-blog metadata a veřejný index** – blogy nově podporují `meta title`, `meta description`, RSS podtitulek, rozšířený intro blok, výchozí komentáře pro nové články, počet položek v RSS feedu a doporučený článek přímo na indexu blogu
+- **Multiblog – hledání, archiv a current-blog widget kontext** – veřejný index blogu nově umí hledání v rámci konkrétního blogu, archiv po měsících a widget „Nejnovější články“ se umí na blogových stránkách přepnout na právě otevřený blog
+
+### Změněno
+- **Blogové URL a feedy** – při změně slug blogu se staré adresy i per-blog RSS feed bezpečně přesměrují na nový canonical tvar
+- **Export / import** – balíčky nově zahrnují i blog membership, redirecty starých slugů, rozšířená metadata blogů a featured flag článků
+- **Dokumentace** – README nově drží jen vysokou úroveň instalace, provozu a přehledu funkcí; detailní administrátorské workflow pro multiblog, formuláře a podcasty je přesunuté do `docs/admin-guide.md`
+
 ## [3.0.0-rc.7] – 2026-03-30
 
 ### Přidáno

@@ -85,15 +85,18 @@ function adminHeader(string $pageTitle): void
     }
 
     $contentItems = [];
-    if (isModuleEnabled('blog') && (currentUserHasCapability('blog_manage_own') || currentUserHasCapability('blog_taxonomies_manage'))) {
+    if (isModuleEnabled('blog') && (currentUserHasCapability('blog_manage_own') || canCurrentUserManageAnyBlogTaxonomies())) {
         $blogItems = [];
         if (currentUserHasCapability('blog_taxonomies_manage')) {
             $blogItems[] = ['url' => $baseUrl . '/admin/blogs.php', 'label' => 'Správa blogů'];
         }
+        if (canCurrentUserManageAnyBlogTaxonomies()) {
+            $blogItems[] = ['url' => $baseUrl . '/admin/blog_members.php', 'label' => 'Týmy blogů'];
+        }
         if (currentUserHasCapability('blog_manage_own')) {
             $blogItems[] = ['url' => $baseUrl . '/admin/blog.php', 'label' => 'Články'];
         }
-        if (currentUserHasCapability('blog_taxonomies_manage') && hasAnyBlogs()) {
+        if (canCurrentUserManageAnyBlogTaxonomies() && hasAnyBlogs()) {
             $blogItems[] = ['url' => $baseUrl . '/admin/blog_cats.php', 'label' => 'Kategorie'];
             $blogItems[] = ['url' => $baseUrl . '/admin/blog_tags.php', 'label' => 'Štítky'];
         }

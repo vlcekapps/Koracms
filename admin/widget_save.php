@@ -37,7 +37,8 @@ switch ($type) {
         break;
     case 'latest_articles':
         $settings['count'] = max(1, min(50, (int)($_POST['widget_count'] ?? 5)));
-        $settings['blog_id'] = (int)($_POST['widget_blog_id'] ?? 0) ?: null;
+        $rawBlogId = (int)($_POST['widget_blog_id'] ?? 0);
+        $settings['blog_id'] = $rawBlogId === -1 ? -1 : ($rawBlogId > 0 ? $rawBlogId : null);
         break;
     case 'latest_news':
     case 'board':

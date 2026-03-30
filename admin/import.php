@@ -38,18 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Kategorie (přidá jen chybějící podle jména)
                 if (!empty($data['categories']) && is_array($data['categories'])) {
-                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_categories (id, name) VALUES (?,?)");
+                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_categories (id, name, blog_id) VALUES (?,?,?)");
                     foreach ($data['categories'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name']]);
+                        $ins->execute([(int)$row['id'], $row['name'], max(1, (int)($row['blog_id'] ?? 1))]);
                     }
                     $summary[] = 'Kategorie importovány.';
                 }
 
                 // Tagy
                 if (!empty($data['tags']) && is_array($data['tags'])) {
-                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_tags (id, name, slug) VALUES (?,?,?)");
+                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_tags (id, name, slug, blog_id) VALUES (?,?,?,?)");
                     foreach ($data['tags'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name'], $row['slug']]);
+                        $ins->execute([(int)$row['id'], $row['name'], $row['slug'], max(1, (int)($row['blog_id'] ?? 1))]);
                     }
                     $summary[] = 'Tagy importovány.';
                 }
@@ -57,13 +57,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Blogy
                 if (!empty($data['blogs']) && is_array($data['blogs'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_blogs (id, name, slug, description, logo_file, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?)"
+                        "INSERT IGNORE INTO cms_blogs
+                         (id, name, slug, description, intro_content, logo_file, meta_title, meta_description,
+                          rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['blogs'] as $row) {
                         $ins->execute([
                             (int)$row['id'], $row['name'], $row['slug'],
                             $row['description'] ?? '',
+                            $row['intro_content'] ?? '',
+                            $row['logo_file'] ?? '',
+                            $row['meta_title'] ?? '',
+                            $row['meta_description'] ?? '',
+                            $row['rss_subtitle'] ?? '',
+                            (int)($row['comments_default'] ?? 1),
+                            max(1, min(100, (int)($row['feed_item_limit'] ?? 20))),
+                            (int)($row['sort_order'] ?? 0),
+                            (int)($row['show_in_nav'] ?? 1),
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                             $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);
@@ -71,13 +82,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Blogy importovány.';
                 }
 
+                if (!empty($data['blog_members']) && is_array($data['blog_members'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_blog_members (blog_id, user_id, member_role, created_at)
+                         VALUES (?,?,?,?)"
+                    );
+                    foreach ($data['blog_members'] as $row) {
+                        $userId = (int)($row['user_id'] ?? 0);
+                        if ($userId <= 0) {
+                            continue;
+                        }
+                        $memberRole = in_array((string)($row['member_role'] ?? ''), ['author', 'manager'], true)
+                            ? (string)$row['member_role']
+                            : 'author';
+                        $ins->execute([
+                            max(1, (int)($row['blog_id'] ?? 1)),
+                            $userId,
+                            $memberRole,
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Členové týmů blogů importováni.';
+                }
+
+                if (!empty($data['blog_slug_redirects']) && is_array($data['blog_slug_redirects'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_blog_slug_redirects (blog_id, old_slug, created_at)
+                         VALUES (?,?,?)"
+                    );
+                    foreach ($data['blog_slug_redirects'] as $row) {
+                        $oldSlug = slugify((string)($row['old_slug'] ?? ''));
+                        if ($oldSlug === '') {
+                            continue;
+                        }
+                        $ins->execute([
+                            max(1, (int)($row['blog_id'] ?? 1)),
+                            $oldSlug,
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Redirecty starých slugů blogů importovány.';
+                }
+
                 // Články
                 if (!empty($data['articles']) && is_array($data['articles'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_articles
                          (id, title, slug, perex, content, category_id, blog_id, comments_enabled, image_file,
-                          meta_title, meta_description, publish_at, status, created_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          meta_title, meta_description, publish_at, unpublish_at, admin_note, is_featured_in_blog, status, created_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['articles'] as $row) {
                         $importBlogId = (int)($row['blog_id'] ?? 1);
@@ -95,6 +148,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['image_file'] ?? '',
                             $row['meta_title'] ?? '', $row['meta_description'] ?? '',
                             $row['publish_at'] ?: null,
+                            $row['unpublish_at'] ?: null,
+                            $row['admin_note'] ?? '',
+                            (int)($row['is_featured_in_blog'] ?? 0),
                             $row['status'] ?? 'published', $row['created_at'],
                         ]);
                     }

@@ -15,6 +15,7 @@ $publishAt = trim($_POST['publish_at'] ?? '');
 $metaTitle = trim($_POST['meta_title'] ?? '');
 $metaDescription = trim($_POST['meta_description'] ?? '');
 $commentsEnabled = isset($_POST['comments_enabled']) ? 1 : 0;
+$isFeaturedInBlog = isset($_POST['is_featured_in_blog']) ? 1 : 0;
 $adminNote = trim($_POST['admin_note'] ?? '');
 $blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 0);
 $defaultRedirect = BASE_URL . '/admin/blog.php' . ($blogId > 0 ? '?blog=' . $blogId : '');
@@ -22,6 +23,11 @@ $redirect = internalRedirectTarget($_POST['redirect'] ?? '', $defaultRedirect);
 
 if ($blogId <= 0 || !getBlogById($blogId)) {
     header('Location: ' . BASE_URL . '/admin/blogs.php');
+    exit;
+}
+
+if (!canCurrentUserWriteToBlog($blogId)) {
+    header('Location: ' . BASE_URL . '/admin/blog.php?msg=no_blog_access');
     exit;
 }
 
@@ -64,6 +70,22 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
     exit;
 }
 $slug = $uniqueSlug;
+
+if ($categoryId !== null) {
+    $categoryCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_categories WHERE id = ? AND blog_id = ?");
+    $categoryCheckStmt->execute([$categoryId, $blogId]);
+    if ((int)$categoryCheckStmt->fetchColumn() === 0) {
+        $categoryId = null;
+    }
+}
+
+$validTagIds = [];
+if ($tagIds !== []) {
+    $tagCheckStmt = $pdo->prepare("SELECT id FROM cms_tags WHERE blog_id = ? ORDER BY id");
+    $tagCheckStmt->execute([$blogId]);
+    $allowedTagIds = array_map('intval', array_column($tagCheckStmt->fetchAll(), 'id'));
+    $validTagIds = array_values(array_intersect($allowedTagIds, $tagIds));
+}
 
 $publishAtSql = null;
 if ($publishAt !== '') {
@@ -146,14 +168,21 @@ if ($existingArticle) {
         ]);
     }
 
-    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
-    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId];
+    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, is_featured_in_blog=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
+    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $isFeaturedInBlog, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId];
     if ($imageFile !== null) {
         $setClauses .= ", image_file=?";
         $params[] = $imageFile;
     }
     $params[] = $id;
     $pdo->prepare("UPDATE cms_articles SET {$setClauses} WHERE id = ?")->execute($params);
+    if ($isFeaturedInBlog === 1) {
+        $pdo->prepare(
+            "UPDATE cms_articles
+             SET is_featured_in_blog = 0
+             WHERE blog_id = ? AND id <> ?"
+        )->execute([$blogId, $id]);
+    }
     logAction('article_edit', "id={$id} title={$title} slug={$slug}");
 } else {
     $previewToken = bin2hex(random_bytes(16));
@@ -161,9 +190,9 @@ if ($existingArticle) {
     $status = currentUserHasCapability('blog_approve') ? 'published' : 'pending';
     $pdo->prepare(
         "INSERT INTO cms_articles
-         (title, slug, perex, content, category_id, comments_enabled, image_file, publish_at, unpublish_at,
+         (title, slug, perex, content, category_id, comments_enabled, is_featured_in_blog, image_file, publish_at, unpublish_at,
           meta_title, meta_description, preview_token, author_id, status, blog_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -171,6 +200,7 @@ if ($existingArticle) {
         $content,
         $categoryId,
         $commentsEnabled,
+        $isFeaturedInBlog,
         $imageFile ?? '',
         $publishAtSql,
         $unpublishAtSql,
@@ -188,11 +218,19 @@ if ($existingArticle) {
     }
 }
 
+if ($isFeaturedInBlog === 1 && !$existingArticle) {
+    $pdo->prepare(
+        "UPDATE cms_articles
+         SET is_featured_in_blog = 0
+         WHERE blog_id = ? AND id <> ?"
+    )->execute([$blogId, $id]);
+}
+
 try {
     $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$id]);
-    if ($tagIds !== []) {
+    if ($validTagIds !== []) {
         $insertTag = $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)");
-        foreach ($tagIds as $tagId) {
+        foreach ($validTagIds as $tagId) {
             $insertTag->execute([$id, $tagId]);
         }
     }

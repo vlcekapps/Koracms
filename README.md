@@ -230,7 +230,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, author archive, globální i per-blog RSS feed |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, author archive, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem a slug URL |
 | **Události** | Přehled akcí s datem, místem a detailem |
 | **Galerie** | Alba a fotografie s detailovými URL, export do ZIP |
@@ -248,7 +248,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Chat** | Veřejná diskuse s moderátorským inboxem |
 | **Newsletter** | Odběr e-mailem s potvrzením, odhlášením a historií rozesílek |
 
-Podrobný popis modulů Form Builder a Podcasty: [docs/admin-guide.md](docs/admin-guide.md)
+README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 
@@ -485,5 +485,5 @@ php -l cesta/k/souboru.php
 ## Další dokumentace
 
 - [CHANGELOG.md](CHANGELOG.md) – historie verzí
-- [docs/admin-guide.md](docs/admin-guide.md) – podrobný průvodce moduly a funkcemi
+- [docs/admin-guide.md](docs/admin-guide.md) – detailní práce v administraci: Form Builder, podcasty, multiblog, widgety a content picker
 - [docs/ux-audit-framework.md](docs/ux-audit-framework.md) – framework pro UX a přístupnostní audit

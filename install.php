@@ -53,7 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             name        VARCHAR(255) NOT NULL,
             slug        VARCHAR(100) NOT NULL UNIQUE,
             description TEXT,
+            intro_content TEXT,
             logo_file   VARCHAR(255) NOT NULL DEFAULT '',
+            meta_title  VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            rss_subtitle VARCHAR(255) NOT NULL DEFAULT '',
+            comments_default TINYINT(1) NOT NULL DEFAULT 1,
+            feed_item_limit INT NOT NULL DEFAULT 20,
             sort_order  INT          NOT NULL DEFAULT 0,
             show_in_nav TINYINT(1)   NOT NULL DEFAULT 1,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -68,6 +74,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             blog_id    INT          NOT NULL DEFAULT 1,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_categories_blog_id (blog_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_blog_members (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            blog_id      INT         NOT NULL,
+            user_id      INT         NOT NULL,
+            member_role  ENUM('author','manager') NOT NULL DEFAULT 'author',
+            created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_blog_members (blog_id, user_id),
+            INDEX idx_cms_blog_members_user (user_id),
+            INDEX idx_cms_blog_members_blog (blog_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_blog_slug_redirects (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            blog_id      INT         NOT NULL,
+            old_slug     VARCHAR(100) NOT NULL,
+            created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_blog_slug_redirects_old_slug (old_slug),
+            INDEX idx_cms_blog_slug_redirects_blog (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_articles (
@@ -89,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unpublish_at     DATETIME     NULL DEFAULT NULL,
             admin_note       TEXT,
             view_count       INT          NOT NULL DEFAULT 0,
+            is_featured_in_blog TINYINT(1) NOT NULL DEFAULT 0,
             deleted_at       DATETIME     NULL DEFAULT NULL,
             created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

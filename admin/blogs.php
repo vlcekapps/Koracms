@@ -12,6 +12,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name      = trim($_POST['name'] ?? '');
     $slug      = slugify(trim($_POST['slug'] ?? ''));
     $desc      = trim($_POST['description'] ?? '');
+    $introContent = trim($_POST['intro_content'] ?? '');
+    $metaTitle = trim($_POST['meta_title'] ?? '');
+    $metaDescription = trim($_POST['meta_description'] ?? '');
+    $rssSubtitle = trim($_POST['rss_subtitle'] ?? '');
+    $commentsDefault = isset($_POST['comments_default']) ? 1 : 0;
+    $feedItemLimit = max(1, min(100, (int)($_POST['feed_item_limit'] ?? 20)));
     $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
     $updateId  = inputInt('post', 'update_id');
 
@@ -53,8 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($error === '' && $updateId !== null) {
         try {
-            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, logo_file = ?, show_in_nav = ? WHERE id = ?")
-                ->execute([$name, $slug, $desc, $logoFile, $showInNav, $updateId]);
+            $oldSlug = (string)($existingBlog['slug'] ?? '');
+            if ($oldSlug !== '' && $oldSlug !== $slug) {
+                saveBlogSlugRedirect($pdo, $updateId, $oldSlug);
+            }
+            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, intro_content = ?, logo_file = ?, meta_title = ?, meta_description = ?, rss_subtitle = ?, comments_default = ?, feed_item_limit = ?, show_in_nav = ? WHERE id = ?")
+                ->execute([$name, $slug, $desc, $introContent, $logoFile, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $showInNav, $updateId]);
+            clearBlogCache();
             $success = 'Blog upraven.';
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
@@ -62,8 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($error === '') {
         $sortOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn();
         try {
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, logo_file, sort_order, show_in_nav) VALUES (?, ?, ?, ?, ?, ?)")
-                ->execute([$name, $slug, $desc, $logoFile, $sortOrder, $showInNav]);
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, intro_content, logo_file, meta_title, meta_description, rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$name, $slug, $desc, $introContent, $logoFile, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $sortOrder, $showInNav]);
+            clearBlogCache();
             $success = 'Blog vytvořen.';
         } catch (\PDOException $e) {
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
@@ -106,9 +118,31 @@ adminHeader('Správa blogů');
     <textarea id="description" name="description" rows="2"></textarea>
     <small class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
 
+    <label for="intro_content">Rozšířený úvod blogu</label>
+    <textarea id="intro_content" name="intro_content" rows="5" aria-describedby="blog-intro-help"></textarea>
+    <small id="blog-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu, vhodný třeba pro úvod, CTA nebo vysvětlení zaměření blogu.</small>
+
+    <label for="meta_title">Meta titulek</label>
+    <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-meta-help">
+
+    <label for="meta_description">Meta popis</label>
+    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="blog-meta-help"></textarea>
+    <small id="blog-meta-help" class="field-help">Volitelně. Když je nevyplníte, blog použije svůj název a popis.</small>
+
+    <label for="rss_subtitle">Podtitulek RSS feedu</label>
+    <input type="text" id="rss_subtitle" name="rss_subtitle" maxlength="255" aria-describedby="blog-feed-help">
+
+    <label for="feed_item_limit">Počet článků v RSS feedu</label>
+    <input type="number" id="feed_item_limit" name="feed_item_limit" min="1" max="100" value="20" style="width:auto" aria-describedby="blog-feed-help">
+    <small id="blog-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
+
     <label for="logo_file">Logo blogu</label>
     <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" aria-describedby="blog-logo-help">
     <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF, WebP a SVG; pevný rozměr není nutný.</small>
+
+    <div style="margin-top:.5rem">
+      <label><input type="checkbox" name="comments_default" value="1" checked> Ve výchozím stavu povolit komentáře u nových článků</label>
+    </div>
 
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
@@ -161,8 +195,15 @@ adminHeader('Správa blogů');
                   data-blog-name="<?= h((string)$blog['name']) ?>"
                   data-blog-slug="<?= h((string)$blog['slug']) ?>"
                   data-blog-desc="<?= h((string)($blog['description'] ?? '')) ?>"
+                  data-blog-intro-content="<?= h((string)($blog['intro_content'] ?? '')) ?>"
+                  data-blog-meta-title="<?= h((string)($blog['meta_title'] ?? '')) ?>"
+                  data-blog-meta-description="<?= h((string)($blog['meta_description'] ?? '')) ?>"
+                  data-blog-rss-subtitle="<?= h((string)($blog['rss_subtitle'] ?? '')) ?>"
+                  data-blog-comments-default="<?= (int)($blog['comments_default'] ?? 1) ?>"
+                  data-blog-feed-item-limit="<?= (int)($blog['feed_item_limit'] ?? 20) ?>"
                   data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>"
                   data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit</button>
+          <a href="blog_members.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Tým blogu</a>
           <form action="blog_blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
@@ -206,6 +247,21 @@ adminHeader('Správa blogů');
     <label for="bd-desc">Popis</label>
     <textarea id="bd-desc" name="description" rows="2"></textarea>
 
+    <label for="bd-intro-content">Rozšířený úvod blogu</label>
+    <textarea id="bd-intro-content" name="intro_content" rows="5"></textarea>
+
+    <label for="bd-meta-title">Meta titulek</label>
+    <input type="text" id="bd-meta-title" name="meta_title" maxlength="160">
+
+    <label for="bd-meta-description">Meta popis</label>
+    <textarea id="bd-meta-description" name="meta_description" rows="2"></textarea>
+
+    <label for="bd-rss-subtitle">Podtitulek RSS feedu</label>
+    <input type="text" id="bd-rss-subtitle" name="rss_subtitle" maxlength="255">
+
+    <label for="bd-feed-item-limit">Počet článků v RSS feedu</label>
+    <input type="number" id="bd-feed-item-limit" name="feed_item_limit" min="1" max="100" style="width:auto">
+
     <div id="bd-logo-current" hidden style="margin-top:.75rem">
       <span class="field-help">Aktuální logo</span><br>
       <img id="bd-logo-preview" src="" alt="" style="display:block;margin-top:.4rem;max-width:min(100%,20rem);max-height:7rem;height:auto;width:auto">
@@ -217,6 +273,10 @@ adminHeader('Správa blogů');
 
     <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>
       <label><input type="checkbox" name="logo_file_delete" value="1" id="bd-logo-delete"> Odebrat aktuální logo</label>
+    </div>
+
+    <div style="margin-top:.5rem">
+      <label><input type="checkbox" name="comments_default" value="1" id="bd-comments-default"> Ve výchozím stavu povolit komentáře u nových článků</label>
     </div>
 
     <div style="margin-top:.5rem">
@@ -250,6 +310,12 @@ adminHeader('Správa blogů');
         document.getElementById('bd-name').value = btn.dataset.blogName;
         document.getElementById('bd-slug').value = btn.dataset.blogSlug;
         document.getElementById('bd-desc').value = btn.dataset.blogDesc;
+        document.getElementById('bd-intro-content').value = btn.dataset.blogIntroContent || '';
+        document.getElementById('bd-meta-title').value = btn.dataset.blogMetaTitle || '';
+        document.getElementById('bd-meta-description').value = btn.dataset.blogMetaDescription || '';
+        document.getElementById('bd-rss-subtitle').value = btn.dataset.blogRssSubtitle || '';
+        document.getElementById('bd-comments-default').checked = btn.dataset.blogCommentsDefault !== '0';
+        document.getElementById('bd-feed-item-limit').value = btn.dataset.blogFeedItemLimit || '20';
         document.getElementById('bd-nav').checked = btn.dataset.blogNav === '1';
         logoDelete.checked = false;
         logoFileInput.value = '';

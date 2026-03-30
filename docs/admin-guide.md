@@ -118,6 +118,79 @@ Tyto rozměry odpovídají požadavkům Apple Podcasts a dalších katalogů.
 
 ---
 
+## Multiblog – týmy, metadata a veřejný výstup
+
+Multiblog je určený pro situace, kdy má jeden web více samostatných blogů s vlastní identitou, RSS feedem a týmem autorů.
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) popisuje, že Kora CMS multiblog umí a jak zapadá do celého systému.
+- Tento dokument popisuje, jak se multiblog skutečně spravuje v administraci a co jednotlivé volby dělají.
+
+### Správa blogu
+
+U každého blogu lze nastavit:
+
+- název, slug a krátký popis
+- volitelné logo blogu
+- rozšířený úvod blogu nad výpisem článků
+- `meta title` a `meta description`
+- RSS podtitulek
+- výchozí stav komentářů pro nové články
+- počet položek v RSS feedu daného blogu
+- zobrazení blogu v hlavní navigaci
+
+Pokud blog změní slug, Kora CMS si uloží starý slug jako redirect a staré URL i RSS feed se přesměrují na nový tvar.
+
+### Týmy blogů
+
+Každý blog může mít vlastní tým v obrazovce **Tým blogu**.
+
+Role v blogu:
+
+- `Autor blogu` – může psát a upravovat články ve svých přidělených blogech
+- `Správce blogu` – navíc může spravovat kategorie a štítky daného blogu
+
+Jakmile začnete používat přiřazení blogů, autor už neuvidí všechny blogy v systému, ale jen ty, do kterých patří.
+
+### Články v rámci blogu
+
+Editor článku respektuje vybraný blog:
+
+- nabídne jen kategorie a štítky tohoto blogu
+- horní odkazy vedou na správný veřejný blog, jeho RSS feed a správu taxonomií
+- nové články mohou převzít výchozí komentáře z blogu
+- jeden článek v blogu lze označit jako `Doporučený článek blogu`
+
+Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
+
+### Veřejný blog index
+
+Každý blog může mít na svém indexu:
+
+- název a volitelné logo
+- krátký popis
+- rozšířený intro blok
+- přímý odkaz na RSS feed
+- vlastní vyhledávání jen v rámci daného blogu
+- archiv po měsících
+- filtr podle autora, kategorie a štítků
+
+### Per-blog RSS
+
+Každý blog má vlastní feed:
+
+- `feed.php?blog=slug-blogu`
+
+Feed respektuje:
+
+- název a metadata blogu
+- RSS podtitulek
+- počet epizod/položek nastavený pro konkrétní blog
+- aktuální slug blogu i staré redirecty
+
+---
+
 ## Blog RSS feedy
 
 Kora CMS poskytuje globální RSS feed i samostatné feedy jednotlivých blogů.

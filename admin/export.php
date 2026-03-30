@@ -12,12 +12,18 @@ $data = [
 
 $tables = [
     'settings'    => "SELECT `key`, value FROM cms_settings WHERE `key` NOT IN ('admin_password')",
-    'categories'  => "SELECT id, name, created_at FROM cms_categories",
-    'blogs'       => "SELECT id, name, slug, description, logo_file, created_at, updated_at FROM cms_blogs",
+    'categories'  => "SELECT id, name, blog_id, created_at FROM cms_categories",
+    'blogs'       => "SELECT id, name, slug, description, intro_content, logo_file, meta_title, meta_description,
+                             rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav,
+                             created_at, updated_at
+                      FROM cms_blogs",
+    'blog_members'=> "SELECT blog_id, user_id, member_role, created_at FROM cms_blog_members",
+    'blog_slug_redirects' => "SELECT blog_id, old_slug, created_at FROM cms_blog_slug_redirects",
     'articles'    => "SELECT id, title, slug, perex, content, category_id, blog_id, comments_enabled, image_file,
-                             meta_title, meta_description, publish_at, status, created_at FROM cms_articles",
+                             meta_title, meta_description, publish_at, unpublish_at, admin_note, is_featured_in_blog,
+                             status, created_at FROM cms_articles",
     'article_tags'=> "SELECT article_id, tag_id FROM cms_article_tags",
-    'tags'        => "SELECT id, name, slug, created_at FROM cms_tags",
+    'tags'        => "SELECT id, name, slug, blog_id, created_at FROM cms_tags",
     'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
     'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",

@@ -15,15 +15,18 @@ if ($action === 'delete' && $ids !== []) {
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $params = array_merge($ids, [currentUserId()]);
         $stmt = $pdo->prepare(
-            "SELECT id, image_file FROM cms_articles
+            "SELECT id, image_file, blog_id FROM cms_articles
              WHERE id IN ({$placeholders}) AND author_id = ?"
         );
         $stmt->execute($params);
-        $articles = $stmt->fetchAll();
+        $articles = array_values(array_filter(
+            $stmt->fetchAll(),
+            static fn(array $article): bool => canCurrentUserWriteToBlog((int)($article['blog_id'] ?? 0))
+        ));
     } else {
         $articles = [];
         foreach ($ids as $id) {
-            $stmt = $pdo->prepare("SELECT id, image_file FROM cms_articles WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, image_file, blog_id FROM cms_articles WHERE id = ?");
             $stmt->execute([$id]);
             $article = $stmt->fetch();
             if ($article) {

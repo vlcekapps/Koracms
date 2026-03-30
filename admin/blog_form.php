@@ -25,11 +25,28 @@ if ($id !== null) {
         header('Location: blog.php');
         exit;
     }
+
+    if (canManageOwnBlogOnly() && !canCurrentUserWriteToBlog((int)($article['blog_id'] ?? 0))) {
+        header('Location: ' . BASE_URL . '/admin/blog.php?msg=no_blog_access');
+        exit;
+    }
 }
 
-$allBlogs = getAllBlogs();
-$currentBlogId = (int)($article['blog_id'] ?? ($_GET['blog_id'] ?? (getDefaultBlog()['id'] ?? 1)));
-$currentBlog = getBlogById($currentBlogId) ?? getDefaultBlog();
+$allBlogs = canManageOwnBlogOnly() ? getWritableBlogsForUser() : getAllBlogs();
+if ($allBlogs === []) {
+    header('Location: ' . BASE_URL . '/admin/blog.php?msg=no_blog_access');
+    exit;
+}
+
+$accessibleBlogIds = array_map(static fn(array $blogEntry): int => (int)$blogEntry['id'], $allBlogs);
+$defaultAccessibleBlog = $allBlogs[0] ?? null;
+$requestedBlogId = (int)($article['blog_id'] ?? ($_GET['blog_id'] ?? ($defaultAccessibleBlog['id'] ?? 1)));
+if (!in_array($requestedBlogId, $accessibleBlogIds, true)) {
+    $requestedBlogId = (int)($defaultAccessibleBlog['id'] ?? $requestedBlogId);
+}
+
+$currentBlogId = $requestedBlogId;
+$currentBlog = getBlogById($currentBlogId) ?? $defaultAccessibleBlog ?? getDefaultBlog();
 $currentBlogId = (int)($currentBlog['id'] ?? $currentBlogId);
 $articleListUrl = BASE_URL . '/admin/blog.php' . (isMultiBlog() ? '?blog=' . $currentBlogId : '');
 $blogCategoriesUrl = BASE_URL . '/admin/blog_cats.php?blog_id=' . $currentBlogId;
@@ -63,6 +80,7 @@ if (isMultiBlog()) {
         $blogFormOptions[(int)$blogEntry['id']] = [
             'categories' => [],
             'tags' => [],
+            'comments_default' => (int)($blogEntry['comments_default'] ?? 1),
         ];
     }
 
@@ -99,6 +117,10 @@ if (isMultiBlog()) {
     }
 }
 
+$defaultCommentsEnabled = $article
+    ? (int)($article['comments_enabled'] ?? 1)
+    : (int)($currentBlog['comments_default'] ?? 1);
+
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');
 $publishAtInput = '';
@@ -115,9 +137,11 @@ adminHeader($pageTitle);
 
 <p class="button-row button-row--start">
   <a href="<?= h($articleListUrl) ?>"><span aria-hidden="true">←</span> Zpět na články</a>
-  <?php if (isMultiBlog() && $currentBlog): ?>
+  <?php if (isMultiBlog() && $currentBlog && canCurrentUserManageBlogTaxonomies($currentBlogId)): ?>
     <a id="blog-link-categories" href="<?= h($blogCategoriesUrl) ?>">Kategorie blogu</a>
     <a id="blog-link-tags" href="<?= h($blogTagsUrl) ?>">Štítky blogu</a>
+  <?php endif; ?>
+  <?php if (isMultiBlog() && $currentBlog): ?>
     <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
     <a id="blog-link-feed" href="<?= h($blogFeedUrl) ?>" target="_blank" rel="noopener">RSS feed blogu</a>
   <?php endif; ?>
@@ -280,12 +304,24 @@ adminHeader($pageTitle);
     <legend>Komentáře</legend>
     <div>
       <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1" aria-describedby="blog-comments-help"
-             <?= (int)($article['comments_enabled'] ?? 1) === 1 ? 'checked' : '' ?>>
+             <?= $defaultCommentsEnabled === 1 ? 'checked' : '' ?>>
       <label for="comments_enabled" style="display:inline;font-weight:normal">
         Povolit komentáře u tohoto článku
       </label>
     </div>
     <small id="blog-comments-help" class="field-help">Globální pravidla moderace nastavíte v základním nastavení webu.</small>
+  </fieldset>
+
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Zvýraznění v blogu</legend>
+    <div>
+      <input type="checkbox" id="is_featured_in_blog" name="is_featured_in_blog" value="1" aria-describedby="blog-featured-help"
+             <?= (int)($article['is_featured_in_blog'] ?? 0) === 1 ? 'checked' : '' ?>>
+      <label for="is_featured_in_blog" style="display:inline;font-weight:normal">
+        Zvýraznit jako doporučený článek tohoto blogu
+      </label>
+    </div>
+    <small id="blog-featured-help" class="field-help">Na hlavním indexu blogu se bez aktivních filtrů zobrazí jako doporučený článek jen jedna položka. Pokud tuto volbu zapnete zde, předchozí doporučený článek stejného blogu se automaticky vypne.</small>
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
@@ -333,6 +369,7 @@ adminHeader($pageTitle);
     const categorySelect = document.getElementById('category_id');
     const tagsFieldset = document.getElementById('article-tags-fieldset');
     const tagsContainer = document.getElementById('article-tags-options');
+    const commentsCheckbox = document.getElementById('comments_enabled');
     const noCategoryLabel = <?= json_encode($noCategoryLabel, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMeta = <?= json_encode(array_values(array_map(static function (array $blogEntry): array {
@@ -344,7 +381,9 @@ adminHeader($pageTitle);
         ];
     }, $allBlogs)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMetaById = Object.fromEntries(blogMeta.map((blogEntry) => [String(blogEntry.id), blogEntry]));
+    const isNewArticle = <?= $article ? 'false' : 'true' ?>;
     let slugManual = <?= $article && !empty($article['slug']) ? 'true' : 'false' ?>;
+    let commentsTouched = <?= $article ? 'true' : 'false' ?>;
     const rememberedSelections = {
         '<?= (int)$currentBlogId ?>': {
             categoryId: '<?= (int)($article['category_id'] ?? 0) ?>' !== '0' ? '<?= (int)($article['category_id'] ?? 0) ?>' : '',
@@ -413,6 +452,9 @@ adminHeader($pageTitle);
         if (feedLink && selectedBlog) {
             feedLink.href = selectedBlog.feedUrl;
         }
+        if (isNewArticle && commentsCheckbox && !commentsTouched) {
+            commentsCheckbox.checked = (blogOptions[blogId].comments_default || 0) === 1;
+        }
 
         const tags = blogOptions[blogId].tags || [];
         if (tags.length === 0) {
@@ -449,6 +491,9 @@ adminHeader($pageTitle);
         });
     }
 
+    commentsCheckbox?.addEventListener('change', function () {
+        commentsTouched = true;
+    });
     categorySelect?.addEventListener('change', rememberCurrentSelections);
     tagsContainer?.addEventListener('change', rememberCurrentSelections);
 })();

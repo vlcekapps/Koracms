@@ -5,17 +5,23 @@
 
 function getAllBlogs(): array
 {
-    static $blogs = null;
-    if ($blogs === null) {
+    global $_CMS_BLOGS_CACHE;
+    if (!isset($_CMS_BLOGS_CACHE)) {
         try {
-            $blogs = db_connect()->query(
+            $_CMS_BLOGS_CACHE = db_connect()->query(
                 "SELECT * FROM cms_blogs ORDER BY sort_order, name"
             )->fetchAll();
         } catch (\PDOException $e) {
-            $blogs = [];
+            $_CMS_BLOGS_CACHE = [];
         }
     }
-    return $blogs;
+    return $_CMS_BLOGS_CACHE;
+}
+
+function clearBlogCache(): void
+{
+    global $_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE;
+    unset($_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE);
 }
 
 function getBlogById(int $id): ?array
@@ -38,6 +44,30 @@ function getBlogBySlug(string $slug): ?array
     return null;
 }
 
+function getBlogByLegacySlug(string $slug): ?array
+{
+    $slug = slugify(trim($slug));
+    if ($slug === '') {
+        return null;
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT b.*
+             FROM cms_blog_slug_redirects r
+             INNER JOIN cms_blogs b ON b.id = r.blog_id
+             WHERE r.old_slug = ?
+             ORDER BY r.id DESC
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+        $blog = $stmt->fetch() ?: null;
+        return $blog ?: null;
+    } catch (\PDOException $e) {
+        return null;
+    }
+}
+
 function getDefaultBlog(): ?array
 {
     $blogs = getAllBlogs();
@@ -52,6 +82,207 @@ function hasAnyBlogs(): bool
 function isMultiBlog(): bool
 {
     return count(getAllBlogs()) > 1;
+}
+
+function blogMembershipRoleDefinitions(): array
+{
+    return [
+        'author' => 'Autor blogu',
+        'manager' => 'Správce blogu',
+    ];
+}
+
+function blogMembershipsEnabled(): bool
+{
+    global $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE;
+    if (!isset($_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE)) {
+        try {
+            $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE = (int)db_connect()->query(
+                "SELECT COUNT(*) FROM cms_blog_members"
+            )->fetchColumn() > 0;
+        } catch (\PDOException $e) {
+            $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE = false;
+        }
+    }
+
+    return $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE;
+}
+
+function getUserBlogMemberships(?int $userId = null): array
+{
+    global $_CMS_BLOG_MEMBERSHIP_CACHE;
+
+    $userId = $userId ?? currentUserId();
+    if ($userId === null || $userId <= 0) {
+        return [];
+    }
+
+    if (!isset($_CMS_BLOG_MEMBERSHIP_CACHE)) {
+        $_CMS_BLOG_MEMBERSHIP_CACHE = [];
+    }
+
+    if (!array_key_exists($userId, $_CMS_BLOG_MEMBERSHIP_CACHE)) {
+        try {
+            $stmt = db_connect()->prepare(
+                "SELECT blog_id, member_role
+                 FROM cms_blog_members
+                 WHERE user_id = ?
+                 ORDER BY blog_id"
+            );
+            $stmt->execute([$userId]);
+            $_CMS_BLOG_MEMBERSHIP_CACHE[$userId] = $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            $_CMS_BLOG_MEMBERSHIP_CACHE[$userId] = [];
+        }
+    }
+
+    return $_CMS_BLOG_MEMBERSHIP_CACHE[$userId];
+}
+
+function getUserBlogMembershipMap(?int $userId = null): array
+{
+    $map = [];
+    foreach (getUserBlogMemberships($userId) as $membership) {
+        $map[(int)($membership['blog_id'] ?? 0)] = (string)($membership['member_role'] ?? 'author');
+    }
+
+    return $map;
+}
+
+function getWritableBlogsForUser(?int $userId = null): array
+{
+    $userId = $userId ?? currentUserId();
+    if ($userId === null || $userId <= 0) {
+        return [];
+    }
+
+    if (currentUserHasCapability('blog_manage_all')) {
+        return getAllBlogs();
+    }
+
+    if (!currentUserHasCapability('blog_manage_own')) {
+        return [];
+    }
+
+    if (!blogMembershipsEnabled()) {
+        return getAllBlogs();
+    }
+
+    $memberships = getUserBlogMembershipMap($userId);
+    if ($memberships === []) {
+        return [];
+    }
+
+    return array_values(array_filter(
+        getAllBlogs(),
+        static fn(array $blog): bool => isset($memberships[(int)($blog['id'] ?? 0)])
+    ));
+}
+
+function getTaxonomyManagedBlogsForUser(?int $userId = null): array
+{
+    $userId = $userId ?? currentUserId();
+    if ($userId === null || $userId <= 0) {
+        return [];
+    }
+
+    if (currentUserHasCapability('blog_taxonomies_manage')) {
+        return getAllBlogs();
+    }
+
+    if (!blogMembershipsEnabled()) {
+        return [];
+    }
+
+    $memberships = getUserBlogMembershipMap($userId);
+    if ($memberships === []) {
+        return [];
+    }
+
+    return array_values(array_filter(
+        getAllBlogs(),
+        static function (array $blog) use ($memberships): bool {
+            $blogId = (int)($blog['id'] ?? 0);
+            return ($memberships[$blogId] ?? '') === 'manager';
+        }
+    ));
+}
+
+function canCurrentUserWriteToBlog(int $blogId): bool
+{
+    if ($blogId <= 0 || !getBlogById($blogId)) {
+        return false;
+    }
+
+    if (currentUserHasCapability('blog_manage_all')) {
+        return true;
+    }
+
+    if (!currentUserHasCapability('blog_manage_own')) {
+        return false;
+    }
+
+    if (!blogMembershipsEnabled()) {
+        return true;
+    }
+
+    $memberships = getUserBlogMembershipMap();
+    return isset($memberships[$blogId]);
+}
+
+function canCurrentUserManageBlogTaxonomies(int $blogId): bool
+{
+    if ($blogId <= 0 || !getBlogById($blogId)) {
+        return false;
+    }
+
+    if (currentUserHasCapability('blog_taxonomies_manage')) {
+        return true;
+    }
+
+    if (!blogMembershipsEnabled()) {
+        return false;
+    }
+
+    $memberships = getUserBlogMembershipMap();
+    return ($memberships[$blogId] ?? '') === 'manager';
+}
+
+function canCurrentUserManageAnyBlogTaxonomies(): bool
+{
+    if (currentUserHasCapability('blog_taxonomies_manage')) {
+        return hasAnyBlogs();
+    }
+
+    foreach (getUserBlogMembershipMap() as $memberRole) {
+        if ($memberRole === 'manager') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function getBlogMembers(int $blogId): array
+{
+    if ($blogId <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT m.blog_id, m.user_id, m.member_role,
+                    u.email, u.first_name, u.last_name, u.nickname, u.role, u.is_superadmin
+             FROM cms_blog_members m
+             INNER JOIN cms_users u ON u.id = m.user_id
+             WHERE m.blog_id = ?
+             ORDER BY m.member_role DESC, COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email)"
+        );
+        $stmt->execute([$blogId]);
+        return $stmt->fetchAll();
+    } catch (\PDOException $e) {
+        return [];
+    }
 }
 
 function getPublicBlogNavigationBlogs(?array $currentBlog = null): array
@@ -111,6 +342,29 @@ function blogFeedUrl(array $blog): string
     return siteUrl('/feed.php?blog=' . rawurlencode($slug));
 }
 
+function saveBlogSlugRedirect(PDO $pdo, int $blogId, string $oldSlug): void
+{
+    $oldSlug = slugify(trim($oldSlug));
+    if ($blogId <= 0 || $oldSlug === '') {
+        return;
+    }
+
+    try {
+        $currentBlog = getBlogById($blogId);
+        if ($currentBlog && (string)($currentBlog['slug'] ?? '') === $oldSlug) {
+            return;
+        }
+
+        $stmt = $pdo->prepare(
+            "INSERT IGNORE INTO cms_blog_slug_redirects (blog_id, old_slug)
+             VALUES (?, ?)"
+        );
+        $stmt->execute([$blogId, $oldSlug]);
+    } catch (\PDOException $e) {
+        error_log('presentation: nelze ulozit redirect stareho blog slug: ' . $e->getMessage());
+    }
+}
+
 function reservedBlogSlugs(): array
 {
     return [
@@ -131,6 +385,16 @@ function formatCzechDate(string $datetime): string
     try { $dt = new \DateTime($datetime); } catch (\Exception $e) { return h($datetime); }
     return $dt->format('j') . '. ' . $months[(int)$dt->format('n')]
          . ' ' . $dt->format('Y, H:i');
+}
+
+function formatCzechMonthYear(\DateTimeInterface $date): string
+{
+    static $months = [
+        '', 'leden', 'únor', 'březen', 'duben', 'květen', 'červen',
+        'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec',
+    ];
+
+    return $months[(int)$date->format('n')] . ' ' . $date->format('Y');
 }
 
 /**

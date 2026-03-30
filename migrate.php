@@ -66,10 +66,37 @@ $tables = [
         name        VARCHAR(255) NOT NULL,
         slug        VARCHAR(100) NOT NULL UNIQUE,
         description TEXT,
+        intro_content TEXT,
+        logo_file   VARCHAR(255) NOT NULL DEFAULT '',
+        meta_title  VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
+        rss_subtitle VARCHAR(255) NOT NULL DEFAULT '',
+        comments_default TINYINT(1) NOT NULL DEFAULT 1,
+        feed_item_limit INT NOT NULL DEFAULT 20,
         sort_order  INT          NOT NULL DEFAULT 0,
         show_in_nav TINYINT(1)   NOT NULL DEFAULT 1,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_blog_members' => "CREATE TABLE IF NOT EXISTS cms_blog_members (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        blog_id      INT         NOT NULL,
+        user_id      INT         NOT NULL,
+        member_role  ENUM('author','manager') NOT NULL DEFAULT 'author',
+        created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_blog_members (blog_id, user_id),
+        INDEX idx_cms_blog_members_user (user_id),
+        INDEX idx_cms_blog_members_blog (blog_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_blog_slug_redirects' => "CREATE TABLE IF NOT EXISTS cms_blog_slug_redirects (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        blog_id      INT         NOT NULL,
+        old_slug     VARCHAR(100) NOT NULL,
+        created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_blog_slug_redirects_old_slug (old_slug),
+        INDEX idx_cms_blog_slug_redirects_blog (blog_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_categories' => "CREATE TABLE IF NOT EXISTS cms_categories (
@@ -84,6 +111,7 @@ $tables = [
         id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title            VARCHAR(255) NOT NULL,
         slug             VARCHAR(255) NOT NULL UNIQUE,
+        blog_id          INT          NOT NULL DEFAULT 1,
         perex            TEXT,
         content          TEXT,
         comments_enabled TINYINT(1)   NOT NULL DEFAULT 1,
@@ -95,6 +123,11 @@ $tables = [
         preview_token    VARCHAR(32)  NOT NULL DEFAULT '',
         status           ENUM('pending','published') NOT NULL DEFAULT 'published',
         publish_at       DATETIME     NULL DEFAULT NULL,
+        unpublish_at     DATETIME     NULL DEFAULT NULL,
+        admin_note       TEXT,
+        view_count       INT          NOT NULL DEFAULT 0,
+        is_featured_in_blog TINYINT(1) NOT NULL DEFAULT 0,
+        deleted_at       DATETIME     NULL DEFAULT NULL,
         created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -820,6 +853,12 @@ $addColumns = [
     'cms_food_cards.slug'            => "ALTER TABLE cms_food_cards ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER title",
     // cms_blogs
     'cms_blogs.logo_file'            => "ALTER TABLE cms_blogs ADD COLUMN logo_file VARCHAR(255) NOT NULL DEFAULT '' AFTER description",
+    'cms_blogs.intro_content'        => "ALTER TABLE cms_blogs ADD COLUMN intro_content TEXT AFTER description",
+    'cms_blogs.meta_title'           => "ALTER TABLE cms_blogs ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER logo_file",
+    'cms_blogs.meta_description'     => "ALTER TABLE cms_blogs ADD COLUMN meta_description TEXT AFTER meta_title",
+    'cms_blogs.rss_subtitle'         => "ALTER TABLE cms_blogs ADD COLUMN rss_subtitle VARCHAR(255) NOT NULL DEFAULT '' AFTER meta_description",
+    'cms_blogs.comments_default'     => "ALTER TABLE cms_blogs ADD COLUMN comments_default TINYINT(1) NOT NULL DEFAULT 1 AFTER rss_subtitle",
+    'cms_blogs.feed_item_limit'      => "ALTER TABLE cms_blogs ADD COLUMN feed_item_limit INT NOT NULL DEFAULT 20 AFTER comments_default",
     'cms_blogs.show_in_nav'          => "ALTER TABLE cms_blogs ADD COLUMN show_in_nav TINYINT(1) NOT NULL DEFAULT 1",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
@@ -863,6 +902,7 @@ $addColumns = [
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
     // cms_articles – počítadlo zobrazení
     'cms_articles.view_count'        => "ALTER TABLE cms_articles ADD COLUMN view_count INT NOT NULL DEFAULT 0",
+    'cms_articles.is_featured_in_blog' => "ALTER TABLE cms_articles ADD COLUMN is_featured_in_blog TINYINT(1) NOT NULL DEFAULT 0",
     // cms_forms
     'cms_forms.submit_label'         => "ALTER TABLE cms_forms ADD COLUMN submit_label VARCHAR(100) NOT NULL DEFAULT 'Odeslat formulář'",
     'cms_forms.notification_email'   => "ALTER TABLE cms_forms ADD COLUMN notification_email VARCHAR(255) NOT NULL DEFAULT ''",

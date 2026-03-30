@@ -270,7 +270,15 @@ function renderWidget_intro(array $widget, array $settings, string $zone): strin
 function renderWidget_latest_articles(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
-    $blogId = isset($settings['blog_id']) && (int)$settings['blog_id'] > 0 ? (int)$settings['blog_id'] : null;
+    $rawBlogId = isset($settings['blog_id']) ? (int)$settings['blog_id'] : 0;
+    if ($rawBlogId === -1) {
+        $blogId = (int)($GLOBALS['current_blog']['id'] ?? 0);
+        if ($blogId <= 0) {
+            $blogId = null;
+        }
+    } else {
+        $blogId = $rawBlogId > 0 ? $rawBlogId : null;
+    }
 
     $pdo = db_connect();
     $where = "WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND a.deleted_at IS NULL";

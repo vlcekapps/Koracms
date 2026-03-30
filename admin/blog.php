@@ -9,8 +9,15 @@ $blogFilter = trim($_GET['blog'] ?? '');
 $message = trim($_GET['msg'] ?? '');
 $hasBlogs = hasAnyBlogs();
 $allBlogs = $hasBlogs ? getAllBlogs() : [];
-$multiBlog = count($allBlogs) > 1;
-$activeBlog = ($hasBlogs && $blogFilter !== '' && ctype_digit($blogFilter)) ? getBlogById((int)$blogFilter) : null;
+$availableBlogs = $hasBlogs
+    ? (canManageOwnBlogOnly() ? getWritableBlogsForUser() : $allBlogs)
+    : [];
+$availableBlogIds = array_map(static fn(array $blog): int => (int)$blog['id'], $availableBlogs);
+if ($blogFilter !== '' && ctype_digit($blogFilter) && !in_array((int)$blogFilter, $availableBlogIds, true)) {
+    $blogFilter = '';
+}
+$multiBlog = count($availableBlogs) > 1;
+$activeBlog = ($availableBlogs !== [] && $blogFilter !== '' && ctype_digit($blogFilter)) ? getBlogById((int)$blogFilter) : null;
 $params = [];
 $whereParts = ['a.deleted_at IS NULL'];
 
@@ -35,6 +42,16 @@ if ($blogFilter !== '' && ctype_digit($blogFilter)) {
 if (canManageOwnBlogOnly()) {
     $whereParts[] = 'a.author_id = ?';
     $params[] = currentUserId();
+    if (blogMembershipsEnabled()) {
+        if ($availableBlogIds === []) {
+            $whereParts[] = '1 = 0';
+        } else {
+            $whereParts[] = 'a.blog_id IN (' . implode(',', array_fill(0, count($availableBlogIds), '?')) . ')';
+            foreach ($availableBlogIds as $availableBlogId) {
+                $params[] = $availableBlogId;
+            }
+        }
+    }
 }
 
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
@@ -46,6 +63,15 @@ if ($hasBlogs) {
     if ($blogFilter !== '' && ctype_digit($blogFilter)) {
         $catQuery .= " WHERE blog_id = ?";
         $catParams[] = (int)$blogFilter;
+    } elseif (canManageOwnBlogOnly() && blogMembershipsEnabled()) {
+        if ($availableBlogIds === []) {
+            $catQuery .= " WHERE 1 = 0";
+        } else {
+            $catQuery .= " WHERE blog_id IN (" . implode(',', array_fill(0, count($availableBlogIds), '?')) . ")";
+            foreach ($availableBlogIds as $availableBlogId) {
+                $catParams[] = $availableBlogId;
+            }
+        }
     }
     $catQuery .= " ORDER BY name";
     $catStmt = $pdo->prepare($catQuery);
@@ -69,7 +95,9 @@ $stmt = $pdo->prepare(
 $stmt->execute($params);
 $articles = $stmt->fetchAll();
 
-$canManageTaxonomies = currentUserHasCapability('blog_taxonomies_manage');
+$canManageTaxonomies = $activeBlog
+    ? canCurrentUserManageBlogTaxonomies((int)$activeBlog['id'])
+    : canCurrentUserManageAnyBlogTaxonomies();
 $canApproveBlog = currentUserHasCapability('blog_approve');
 $filterParams = [];
 if ($q !== '') {
@@ -82,7 +110,8 @@ if ($blogFilter !== '') {
     $filterParams['blog'] = $blogFilter;
 }
 $currentRedirect = BASE_URL . '/admin/blog.php' . ($filterParams !== [] ? '?' . http_build_query($filterParams) : '');
-$newArticleUrl = 'blog_form.php' . ($activeBlog ? '?blog_id=' . (int)$activeBlog['id'] : '');
+$newArticleTargetBlog = $activeBlog ?? ($availableBlogs[0] ?? null);
+$newArticleUrl = 'blog_form.php' . ($newArticleTargetBlog ? '?blog_id=' . (int)$newArticleTargetBlog['id'] : '');
 $blogTaxonomySuffix = $activeBlog ? '?blog_id=' . (int)$activeBlog['id'] : '';
 $blogCaptionTitle = $activeBlog ? 'Články blogu – ' . (string)$activeBlog['name'] : 'Blogy';
 
@@ -90,11 +119,16 @@ adminHeader($blogCaptionTitle);
 ?>
 
 <p class="button-row button-row--start">
-  <?php if ($hasBlogs): ?>
+  <?php if ($availableBlogs !== []): ?>
     <a href="<?= h($newArticleUrl) ?>" class="btn">+ Přidat článek</a>
   <?php endif; ?>
   <?php if ($canManageTaxonomies): ?>
-    <a href="blogs.php">Správa blogů</a>
+    <?php if (currentUserHasCapability('blog_taxonomies_manage') || currentUserHasCapability('settings_manage')): ?>
+      <a href="blogs.php">Správa blogů</a>
+    <?php endif; ?>
+    <?php if ($activeBlog): ?>
+      <a href="blog_members.php?blog_id=<?= (int)$activeBlog['id'] ?>">Tým blogu</a>
+    <?php endif; ?>
     <?php if ($hasBlogs): ?>
       <a href="blog_cats.php<?= h($blogTaxonomySuffix) ?>">Kategorie blogu</a>
       <a href="blog_tags.php<?= h($blogTaxonomySuffix) ?>">Štítky blogu</a>
@@ -110,6 +144,10 @@ adminHeader($blogCaptionTitle);
   <p role="status"><strong>Nejdřív vytvořte blog.</strong> Kategorie, štítky i články se spravují až uvnitř existujícího blogu.</p>
 <?php endif; ?>
 
+<?php if ($message === 'no_blog_access'): ?>
+  <p role="status"><strong>Zatím nemáte přiřazený žádný blog.</strong> Jakmile vás správce přidá do týmu některého blogu, půjde v něm vytvářet a upravovat články.</p>
+<?php endif; ?>
+
 <?php if (!$hasBlogs): ?>
   <p>
     <?php if ($canManageTaxonomies): ?>
@@ -118,6 +156,10 @@ adminHeader($blogCaptionTitle);
       Zatím tu není vytvořený žádný blog. Jakmile správce založí první blog, půjde do něj přidávat články.
     <?php endif; ?>
   </p>
+<?php elseif ($availableBlogs === []): ?>
+  <p>
+    Zatím nemáte přiřazený žádný blog. Jakmile vás správce přidá do týmu některého blogu, uvidíte tady své články i dostupné blogy.
+  </p>
 <?php elseif ($activeBlog): ?>
   <p class="field-help">
     Právě spravujete články blogu <strong><?= h((string)$activeBlog['name']) ?></strong>.
@@ -125,7 +167,7 @@ adminHeader($blogCaptionTitle);
   </p>
 <?php endif; ?>
 
-<?php if ($hasBlogs): ?>
+<?php if ($availableBlogs !== []): ?>
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
   <label for="q" class="visually-hidden">Hledat</label>
   <input type="search" id="q" name="q" placeholder="Hledat v článcích…"
@@ -142,7 +184,7 @@ adminHeader($blogCaptionTitle);
     <label for="blog" class="visually-hidden">Blog</label>
     <select id="blog" name="blog" style="min-width:150px">
       <option value="">Všechny blogy</option>
-      <?php foreach ($allBlogs as $blog): ?>
+      <?php foreach ($availableBlogs as $blog): ?>
         <option value="<?= (int)$blog['id'] ?>"<?= $blogFilter === (string)$blog['id'] ? ' selected' : '' ?>><?= h((string)$blog['name']) ?></option>
       <?php endforeach; ?>
     </select>
@@ -154,7 +196,7 @@ adminHeader($blogCaptionTitle);
 </form>
 <?php endif; ?>
 
-<?php if ($hasBlogs && empty($articles)): ?>
+<?php if ($availableBlogs !== [] && empty($articles)): ?>
   <p>
     <?php if ($q !== '' || $cat !== '' || $blogFilter !== ''): ?>
       <?php if ($activeBlog && $q === '' && $cat === ''): ?>
@@ -163,7 +205,7 @@ adminHeader($blogCaptionTitle);
         Pro zadaný filtr tu teď nejsou žádné články.
       <?php endif; ?>
     <?php else: ?>
-      Zatím tu nejsou žádné články. <a href="blog_form.php">Přidat první článek</a>.
+      Zatím tu nejsou žádné články. <a href="<?= h($newArticleUrl) ?>">Přidat první článek</a>.
     <?php endif; ?>
   </p>
 <?php elseif ($hasBlogs): ?>

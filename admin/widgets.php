@@ -157,10 +157,14 @@ adminHeader('Widgety');
       <label for="wd-blog">Blog</label>
       <select id="wd-blog" name="widget_blog_id">
         <option value="0">Všechny blogy</option>
+        <?php if (count($allBlogs) > 1): ?>
+          <option value="-1">Aktuální blog (na blogových stránkách)</option>
+        <?php endif; ?>
         <?php foreach ($allBlogs as $b): ?>
           <option value="<?= (int)$b['id'] ?>"><?= h($b['name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <small class="field-help">Vyberte konkrétní blog, nebo nechte widget reagovat na právě otevřený blog.</small>
     </div>
 
     <div id="wd-field-source" style="display:none;margin-top:.75rem">

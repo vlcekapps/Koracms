@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu štítků blogu nemáte potřebné oprávnění.');
+requireLogin(BASE_URL . '/admin/login.php');
 
 if (!hasAnyBlogs()) {
     header('Location: ' . BASE_URL . '/admin/blogs.php?msg=no_blog');
@@ -10,9 +10,18 @@ if (!hasAnyBlogs()) {
 $pdo = db_connect();
 $success = false;
 $error = '';
-$allBlogs = getAllBlogs();
-$blogId = inputInt('get', 'blog_id') ?? inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 1);
-$currentBlog = getBlogById($blogId) ?? getDefaultBlog();
+$allBlogs = getTaxonomyManagedBlogsForUser();
+if ($allBlogs === []) {
+    requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu štítků blogu nemáte potřebné oprávnění.');
+}
+
+$allowedBlogIds = array_map(static fn(array $blog): int => (int)$blog['id'], $allBlogs);
+$blogId = inputInt('get', 'blog_id') ?? inputInt('post', 'blog_id') ?? (int)($allBlogs[0]['id'] ?? 0);
+if (!in_array($blogId, $allowedBlogIds, true)) {
+    $blogId = (int)($allBlogs[0]['id'] ?? 0);
+}
+
+$currentBlog = getBlogById($blogId) ?? ($allBlogs[0] ?? getDefaultBlog());
 $blogId = (int)($currentBlog['id'] ?? $blogId);
 $editId = inputInt('get', 'edit');
 
@@ -23,18 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($name === '') {
         $error = 'Název štítku je povinný.';
+    } elseif (!canCurrentUserManageBlogTaxonomies($blogId)) {
+        $error = 'Vybraný blog nemůžete spravovat.';
     } else {
         $slug = slugify($name);
         if ($updateId !== null) {
             $pdo->prepare("UPDATE cms_tags SET name = ?, slug = ? WHERE id = ? AND blog_id = ?")
                 ->execute([$name, $slug, $updateId, $blogId]);
-            logAction('tag_edit', "id={$updateId} name={$name}");
+            logAction('tag_edit', 'id=' . $updateId . ' name=' . $name);
             $editId = null;
         } else {
             try {
                 $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")
                     ->execute([$name, $slug, $blogId]);
-                logAction('tag_add', "name={$name} blog_id={$blogId}");
+                logAction('tag_add', 'name=' . $name . ' blog_id=' . $blogId);
             } catch (\PDOException $e) {
                 $error = 'Štítek s tímto názvem nebo slugem už v tomto blogu existuje.';
             }
@@ -58,6 +69,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
 <p class="button-row button-row--start">
   <a href="blog.php?blog=<?= (int)$blogId ?>"><span aria-hidden="true">←</span> Zpět na články</a>
   <a href="blogs.php">Správa blogů</a>
+  <a href="blog_members.php?blog_id=<?= (int)$blogId ?>">Tým blogu</a>
   <a href="blog_cats.php?blog_id=<?= (int)$blogId ?>">Kategorie blogu</a>
   <?php if ($currentBlog): ?>
     <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
@@ -65,7 +77,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
   <?php endif; ?>
 </p>
 
-<?php if (isMultiBlog()): ?>
+<?php if (count($allBlogs) > 1): ?>
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
   <label for="blog_id">Blog:</label>
   <select id="blog_id" name="blog_id" style="min-width:150px">
@@ -105,15 +117,15 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
               <input type="hidden" name="update_id" value="<?= (int)$tag['id'] ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
               <input type="text" name="name" required aria-required="true" maxlength="100"
-                     value="<?= h($tag['name']) ?>" style="width:auto">
+                     value="<?= h((string)$tag['name']) ?>" style="width:auto">
               <button type="submit" class="btn">Uložit</button>
               <a href="blog_tags.php?blog_id=<?= $blogId ?>">Zrušit</a>
             </form>
           <?php else: ?>
-            <?= h($tag['name']) ?>
+            <?= h((string)$tag['name']) ?>
           <?php endif; ?>
         </td>
-        <td><code><?= h($tag['slug']) ?></code></td>
+        <td><code><?= h((string)$tag['slug']) ?></code></td>
         <td class="actions">
           <?php if ($editId !== (int)$tag['id']): ?>
             <a href="blog_tags.php?edit=<?= (int)$tag['id'] ?>&amp;blog_id=<?= $blogId ?>" class="btn">Upravit</a>

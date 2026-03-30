@@ -5923,13 +5923,40 @@ $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form
 $blogCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php');
 $blogTagsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php');
 $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_blog_delete.php');
+$blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
+$blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
+$blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
+$blogExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
+$blogImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
+$blogIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/index.php');
+$blogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
+$blogFeedSource = (string)file_get_contents(dirname(__DIR__) . '/feed.php');
+$blogRouterSource = (string)file_get_contents(dirname(__DIR__) . '/blog_router.php');
+$blogWidgetAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
+$blogWidgetSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_save.php');
+$blogWidgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$blogPresentationSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
+$blogInstallSource = (string)file_get_contents(dirname(__DIR__) . '/install.php');
+$blogMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
 $dbSource = (string)file_get_contents(dirname(__DIR__) . '/db.php');
 
-if (!str_contains($blogLayoutSource, "currentUserHasCapability('blog_taxonomies_manage') && hasAnyBlogs()")) {
+if (!str_contains($blogLayoutSource, 'canCurrentUserManageAnyBlogTaxonomies() && hasAnyBlogs()')) {
     $blogAdminIssues[] = 'admin menu still exposes blog taxonomies without existing blog guard';
+}
+if (!str_contains($blogLayoutSource, 'blog_members.php')) {
+    $blogAdminIssues[] = 'admin menu is missing blog team navigation';
 }
 if (!str_contains($blogListSource, 'Vytvořit první blog')) {
     $blogAdminIssues[] = 'blog list is missing no-blog guidance';
+}
+if (!str_contains($blogListSource, 'getWritableBlogsForUser()')) {
+    $blogAdminIssues[] = 'blog list is missing writable-blog filtering for own-only users';
+}
+if (!str_contains($blogListSource, "\$message === 'no_blog_access'")) {
+    $blogAdminIssues[] = 'blog list is missing no-blog-access feedback';
+}
+if (!str_contains($blogListSource, 'Tým blogu')) {
+    $blogAdminIssues[] = 'blog list is missing blog team quick link';
 }
 if (!str_contains($blogFormSource, "blog.php?msg=no_blog")) {
     $blogAdminIssues[] = 'article form no longer redirects back to blog list when no blog exists';
@@ -5943,17 +5970,149 @@ if (!str_contains($blogFormSource, 'categorySelect.options[0].textContent = noCa
 if (!str_contains($blogFormSource, "categoryMarkup.push('<option value=\"\">' + noCategoryLabel + '</option>');")) {
     $blogAdminIssues[] = 'article form no longer rebuilds empty category option from the shared PHP label';
 }
+if (!str_contains($blogFormSource, 'comments_default')) {
+    $blogAdminIssues[] = 'article form is missing per-blog default comments metadata';
+}
+if (!str_contains($blogFormSource, 'name="is_featured_in_blog"')) {
+    $blogAdminIssues[] = 'article form is missing per-blog featured article toggle';
+}
+if (!str_contains($blogFormSource, 'canCurrentUserManageBlogTaxonomies($currentBlogId)')) {
+    $blogAdminIssues[] = 'article form is missing taxonomy management guard for multiblog links';
+}
 if (!str_contains($blogCatsSource, 'if (!hasAnyBlogs())')) {
     $blogAdminIssues[] = 'blog categories page is missing no-blog redirect guard';
 }
+if (!str_contains($blogCatsSource, 'getTaxonomyManagedBlogsForUser()')) {
+    $blogAdminIssues[] = 'blog categories page is missing manageable-blog filtering';
+}
 if (!str_contains($blogTagsSource, 'if (!hasAnyBlogs())')) {
     $blogAdminIssues[] = 'blog tags page is missing no-blog redirect guard';
+}
+if (!str_contains($blogTagsSource, 'getTaxonomyManagedBlogsForUser()')) {
+    $blogAdminIssues[] = 'blog tags page is missing manageable-blog filtering';
+}
+if (!str_contains($blogMembersSource, 'cms_blog_members')) {
+    $blogAdminIssues[] = 'blog team management page is missing membership persistence';
+}
+if (!str_contains($blogMembersSource, 'blogMembershipRoleDefinitions()')) {
+    $blogAdminIssues[] = 'blog team management page is missing role definitions';
+}
+if (!str_contains($blogMembersSource, 'canCurrentUserManageBlogTaxonomies($blogId)')) {
+    $blogAdminIssues[] = 'blog team management page is missing capability enforcement';
+}
+if (!str_contains($blogSaveSource, 'canCurrentUserWriteToBlog($blogId)')) {
+    $blogAdminIssues[] = 'article save is missing writable-blog enforcement';
+}
+if (!str_contains($blogSaveSource, 'cms_categories WHERE id = ? AND blog_id = ?')) {
+    $blogAdminIssues[] = 'article save no longer validates category within selected blog';
+}
+if (!str_contains($blogSaveSource, 'cms_tags WHERE blog_id = ? ORDER BY id')) {
+    $blogAdminIssues[] = 'article save no longer scopes tags to selected blog';
+}
+if (!str_contains($blogSaveSource, 'is_featured_in_blog')) {
+    $blogAdminIssues[] = 'article save is missing featured-in-blog persistence';
+}
+if (!str_contains($blogSaveSource, 'WHERE blog_id = ? AND id <> ?')) {
+    $blogAdminIssues[] = 'article save no longer resets previous featured article within a blog';
+}
+if (!str_contains($blogsAdminSource, 'name="meta_title"') || !str_contains($blogsAdminSource, 'name="meta_description"')) {
+    $blogAdminIssues[] = 'blog editor is missing per-blog SEO fields';
+}
+if (!str_contains($blogsAdminSource, 'name="rss_subtitle"') || !str_contains($blogsAdminSource, 'name="feed_item_limit"')) {
+    $blogAdminIssues[] = 'blog editor is missing per-blog RSS metadata';
+}
+if (!str_contains($blogsAdminSource, 'name="comments_default"')) {
+    $blogAdminIssues[] = 'blog editor is missing per-blog default comments toggle';
+}
+if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
+    $blogAdminIssues[] = 'blog editor is missing extended intro content';
+}
+if (!str_contains($blogsAdminSource, 'saveBlogSlugRedirect')) {
+    $blogAdminIssues[] = 'blog editor no longer stores legacy slug redirects';
 }
 if (!str_contains($dbSource, 'function resetAutoIncrementIfEmpty')) {
     $blogAdminIssues[] = 'database helpers are missing auto-increment reset helper for empty blog tables';
 }
 if (!str_contains($blogDeleteSource, "resetAutoIncrementIfEmpty(\$pdo, 'cms_blogs')")) {
     $blogAdminIssues[] = 'last blog deletion no longer resets blog auto-increment counter';
+}
+if (!str_contains($blogPresentationSource, 'function getBlogByLegacySlug')) {
+    $blogAdminIssues[] = 'blog helpers are missing legacy slug lookup';
+}
+if (!str_contains($blogPresentationSource, 'function getWritableBlogsForUser')) {
+    $blogAdminIssues[] = 'blog helpers are missing writable-blog membership resolution';
+}
+if (!str_contains($blogPresentationSource, 'function getTaxonomyManagedBlogsForUser')) {
+    $blogAdminIssues[] = 'blog helpers are missing taxonomy-managed blog resolution';
+}
+if (!str_contains($blogPresentationSource, 'function saveBlogSlugRedirect')) {
+    $blogAdminIssues[] = 'blog helpers are missing slug redirect persistence';
+}
+if (!str_contains($blogIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
+    $blogAdminIssues[] = 'public blog index is missing in-blog search';
+}
+if (!str_contains($blogIndexControllerSource, "trim((string)(\$_GET['archiv'] ?? ''))")) {
+    $blogAdminIssues[] = 'public blog index is missing archive filter support';
+}
+if (!str_contains($blogIndexControllerSource, 'is_featured_in_blog = 1')) {
+    $blogAdminIssues[] = 'public blog index is missing featured article selection';
+}
+if (!str_contains($blogIndexControllerSource, 'extra_head_html')) {
+    $blogAdminIssues[] = 'public blog index is missing RSS discovery link injection';
+}
+if (!str_contains($blogIndexViewSource, 'blog-search-q')) {
+    $blogAdminIssues[] = 'blog index view is missing blog-local search form';
+}
+if (!str_contains($blogIndexViewSource, 'Archiv blogu')) {
+    $blogAdminIssues[] = 'blog index view is missing archive navigation';
+}
+if (!str_contains($blogIndexViewSource, 'Doporučený článek')) {
+    $blogAdminIssues[] = 'blog index view is missing featured article hero';
+}
+if (!str_contains($blogIndexViewSource, "renderContent((string)\$blog['intro_content'])")) {
+    $blogAdminIssues[] = 'blog index view is missing extended intro content rendering';
+}
+if (!str_contains($blogFeedSource, 'getBlogByLegacySlug($feedBlogSlug)')) {
+    $blogAdminIssues[] = 'RSS feed is missing legacy blog slug redirects';
+}
+if (!str_contains($blogFeedSource, 'feed_item_limit')) {
+    $blogAdminIssues[] = 'RSS feed is missing per-blog item limit';
+}
+if (!str_contains($blogFeedSource, 'rss_subtitle')) {
+    $blogAdminIssues[] = 'RSS feed is missing per-blog subtitle support';
+}
+if (!str_contains($blogRouterSource, 'getBlogByLegacySlug($blogSlug)')) {
+    $blogAdminIssues[] = 'blog router is missing legacy slug redirect lookup';
+}
+if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExportSource, "'blog_slug_redirects'")) {
+    $blogAdminIssues[] = 'export is missing blog membership and slug redirect datasets';
+}
+if (!str_contains($blogImportSource, 'cms_blog_members') || !str_contains($blogImportSource, 'cms_blog_slug_redirects')) {
+    $blogAdminIssues[] = 'import is missing blog membership or slug redirect restore';
+}
+if (!str_contains($blogWidgetAdminSource, 'value="-1">Aktuální blog (na blogových stránkách)')) {
+    $blogAdminIssues[] = 'widget editor is missing current-blog context option for latest articles';
+}
+if (!str_contains($blogWidgetSaveSource, '$rawBlogId === -1 ? -1')) {
+    $blogAdminIssues[] = 'widget save is missing current-blog context persistence';
+}
+if (!str_contains($blogWidgetLibSource, "\$rawBlogId === -1")) {
+    $blogAdminIssues[] = 'latest articles widget is missing current-blog rendering context';
+}
+if (!str_contains($blogInstallSource, 'cms_blog_members') || !str_contains($blogInstallSource, 'cms_blog_slug_redirects')) {
+    $blogAdminIssues[] = 'fresh install is missing multiblog membership tables';
+}
+if (!str_contains($blogInstallSource, 'intro_content TEXT')) {
+    $blogAdminIssues[] = 'fresh install is missing extended blog intro field';
+}
+if (!str_contains($blogInstallSource, 'is_featured_in_blog TINYINT(1) NOT NULL DEFAULT 0')) {
+    $blogAdminIssues[] = 'fresh install is missing per-blog featured article field';
+}
+if (!str_contains($blogMigrateSource, 'cms_blogs.intro_content')) {
+    $blogAdminIssues[] = 'migrations are missing extended blog intro field';
+}
+if (!str_contains($blogMigrateSource, 'cms_articles.is_featured_in_blog')) {
+    $blogAdminIssues[] = 'migrations are missing per-blog featured article field';
 }
 
 if ($blogAdminIssues === []) {
@@ -5962,6 +6121,25 @@ if ($blogAdminIssues === []) {
     $failures++;
     foreach ($blogAdminIssues as $blogAdminIssue) {
         echo '- ' . $blogAdminIssue . "\n";
+    }
+}
+
+echo "=== blog_public_guardrails ===\n";
+$blogPublicIssues = [];
+$blogFeedProbe = fetchUrl($baseUrl . '/feed.php?blog=__neexistujici__', '', 0);
+if (!preg_match('/\s404\s/', $blogFeedProbe['status'])) {
+    $blogPublicIssues[] = 'per-blog RSS feed does not return 404 for unknown blog slug';
+}
+$blogRouterProbe = fetchUrl($baseUrl . '/__neexistujici_blog__/', '', 0);
+if (!preg_match('/\s404\s/', $blogRouterProbe['status'])) {
+    $blogPublicIssues[] = 'blog router does not return 404 for unknown blog slug';
+}
+if ($blogPublicIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($blogPublicIssues as $blogPublicIssue) {
+        echo '- ' . $blogPublicIssue . "\n";
     }
 }
 
@@ -6093,6 +6271,8 @@ if (isModuleEnabled('forms')) {
         }
     }
 }
+$widgetSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_save.php');
+$widgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
 $widgetsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
 if (!str_contains($widgetsAdminSource, 'id="widget-add-zone"')) {
     $widgetRenderIssues[] = 'admin widgets page is missing target zone selector';
@@ -6105,6 +6285,15 @@ if (!str_contains($widgetsAdminSource, 'name="widget_form_id"')) {
 }
 if (!str_contains($widgetsAdminSource, 'name="widget_show_id"')) {
     $widgetRenderIssues[] = 'admin widgets page is missing podcast show widget settings';
+}
+if (!str_contains($widgetsAdminSource, 'Aktuální blog (na blogových stránkách)')) {
+    $widgetRenderIssues[] = 'admin widgets page is missing current-blog option for latest articles';
+}
+if (!str_contains($widgetSaveSource, '$rawBlogId === -1 ? -1')) {
+    $widgetRenderIssues[] = 'widget save is missing current-blog persistence for latest articles';
+}
+if (!str_contains($widgetLibSource, "\$rawBlogId === -1")) {
+    $widgetRenderIssues[] = 'latest articles widget is missing current-blog render fallback';
 }
 if ($widgetRenderIssues === []) {
     echo "OK\n";

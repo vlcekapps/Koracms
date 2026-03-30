@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu kategorií blogu nemáte potřebné oprávnění.');
+requireLogin(BASE_URL . '/admin/login.php');
 verifyCsrf();
 
 if (!hasAnyBlogs()) {
@@ -9,11 +9,20 @@ if (!hasAnyBlogs()) {
 }
 
 $id = inputInt('post', 'id');
+$redirect = BASE_URL . '/admin/blog_cats.php';
+
 if ($id !== null) {
     $pdo = db_connect();
-    $pdo->prepare("UPDATE cms_articles SET category_id = NULL WHERE category_id = ?")->execute([$id]);
-    $pdo->prepare("DELETE FROM cms_categories WHERE id = ?")->execute([$id]);
+    $categoryStmt = $pdo->prepare("SELECT id, blog_id FROM cms_categories WHERE id = ?");
+    $categoryStmt->execute([$id]);
+    $category = $categoryStmt->fetch() ?: null;
+
+    if ($category && canCurrentUserManageBlogTaxonomies((int)$category['blog_id'])) {
+        $pdo->prepare("UPDATE cms_articles SET category_id = NULL WHERE category_id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM cms_categories WHERE id = ?")->execute([$id]);
+        $redirect = BASE_URL . '/admin/blog_cats.php?blog_id=' . (int)$category['blog_id'];
+    }
 }
 
-header('Location: ' . BASE_URL . '/admin/blog_cats.php');
+header('Location: ' . $redirect);
 exit;

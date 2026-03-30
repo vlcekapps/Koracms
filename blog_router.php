@@ -18,8 +18,8 @@ if (!isModuleEnabled('blog')) {
     exit;
 }
 
-$blogSlug = slugify(trim($_GET['blog_slug'] ?? ''));
-$articleSlug = articleSlug(trim($_GET['slug'] ?? ''));
+$blogSlug = slugify(trim((string)($_GET['blog_slug'] ?? '')));
+$articleSlug = articleSlug(trim((string)($_GET['slug'] ?? '')));
 
 if ($blogSlug === '') {
     http_response_code(404);
@@ -35,6 +35,29 @@ if ($blogSlug === '') {
 
 $blog = getBlogBySlug($blogSlug);
 if (!$blog) {
+    $legacyBlog = getBlogByLegacySlug($blogSlug);
+    if ($legacyBlog) {
+        if ($articleSlug !== '') {
+            $pdo = db_connect();
+            $articleStmt = $pdo->prepare(
+                "SELECT a.id, a.slug, a.blog_id, b.slug AS blog_slug
+                 FROM cms_articles a
+                 LEFT JOIN cms_blogs b ON b.id = a.blog_id
+                 WHERE a.blog_id = ? AND a.slug = ?
+                 LIMIT 1"
+            );
+            $articleStmt->execute([(int)$legacyBlog['id'], $articleSlug]);
+            $legacyArticle = $articleStmt->fetch() ?: null;
+            if ($legacyArticle) {
+                header('Location: ' . articlePublicPath($legacyArticle), true, 301);
+                exit;
+            }
+        }
+
+        header('Location: ' . blogIndexPath($legacyBlog), true, 301);
+        exit;
+    }
+
     http_response_code(404);
     $siteName = getSetting('site_name', 'Kora CMS');
     renderPublicPage([
