@@ -17,10 +17,17 @@ $download = [
     'version_label' => '',
     'platform_label' => '',
     'license_label' => '',
+    'project_url' => '',
+    'release_date' => '',
+    'requirements' => '',
+    'checksum_sha256' => '',
+    'series_key' => '',
     'external_url' => '',
     'filename' => '',
     'original_name' => '',
     'file_size' => 0,
+    'download_count' => 0,
+    'is_featured' => 0,
     'is_published' => 1,
     'status' => 'published',
 ];
@@ -47,6 +54,10 @@ $errorMessage = match ($err) {
     'slug_taken' => 'Tento slug už používá jiná položka ke stažení.',
     'source' => 'Položka musí mít alespoň nahraný soubor nebo externí odkaz.',
     'url' => 'Externí odkaz musí být platná adresa začínající na http:// nebo https://.',
+    'project_url' => 'Domovská stránka projektu musí být platná adresa začínající na http:// nebo https://.',
+    'release_date' => 'Datum vydání nemá platný formát.',
+    'series' => 'Skupina verzí může obsahovat jen malá písmena, číslice a pomlčky.',
+    'checksum' => 'SHA-256 checksum musí obsahovat 64 hexadecimálních znaků.',
     'image' => 'Náhledový obrázek se nepodařilo uložit.',
     'file' => 'Soubor se nepodařilo uložit nebo má nepovolený formát.',
     default => '',
@@ -59,7 +70,14 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   <p class="error" role="alert"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
+<?php if ($id !== null): ?>
+  <p><a href="revisions.php?type=download&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <p><a href="downloads.php"><span aria-hidden="true">←</span> Zpět na přehled ke stažení</a></p>
+<p style="margin-top:0;color:#555">
+  Vytvořte přehlednou kartu ke stažení. Může odkazovat na lokální soubor, externí stránku projektu, nebo na obojí zároveň.
+</p>
 
 <form method="post" action="download_save.php" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -100,25 +118,10 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       <?php endforeach; ?>
     </select>
 
-    <label for="version_label">Verze</label>
-    <input type="text" id="version_label" name="version_label" maxlength="100"
-           placeholder="např. 2.4.1"
-           value="<?= h((string)$download['version_label']) ?>">
-
-    <label for="platform_label">Platforma / cílové prostředí</label>
-    <input type="text" id="platform_label" name="platform_label" maxlength="100"
-           placeholder="např. Windows, Android, PDF, Web"
-           value="<?= h((string)$download['platform_label']) ?>">
-
-    <label for="license_label">Licence</label>
-    <input type="text" id="license_label" name="license_label" maxlength="100"
-           placeholder="např. MIT, GPL, freeware"
-           value="<?= h((string)$download['license_label']) ?>">
-
     <label for="excerpt">Krátký perex</label>
     <textarea id="excerpt" name="excerpt" rows="3"><?= h((string)$download['excerpt']) ?></textarea>
 
-    <label for="description">Popis</label>
+    <label for="description">Popis položky</label>
     <?php if ($editorMode === 'wysiwyg'): ?>
       <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
       <textarea id="description" name="description" rows="10" class="visually-hidden" aria-describedby="download-description-help"><?= h((string)$download['description']) ?></textarea>
@@ -137,7 +140,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <input type="file" id="file" name="file"
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.7z,.tar,.gz,.bz2,.txt,.exe,.msi,.apk,.jar,.dmg,.pkg,.deb,.rpm,.appimage"
            aria-describedby="download-file-help<?= (string)$download['original_name'] !== '' ? ' download-file-current' : '' ?>">
-    <small id="download-file-help" class="field-help">Můžete nahrát dokument, archiv nebo instalační balíček.</small>
+    <small id="download-file-help" class="field-help">Můžete nahrát dokument, archiv nebo instalační balíček. U lokálního souboru se SHA-256 checksum dopočítá automaticky.</small>
     <?php if ((string)$download['original_name'] !== ''): ?>
       <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
@@ -148,11 +151,56 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       </label>
     <?php endif; ?>
 
-    <label for="external_url">Externí odkaz</label>
+    <label for="external_url">Externí odkaz ke stažení</label>
     <input type="url" id="external_url" name="external_url" maxlength="255" aria-describedby="download-external-url-help"
            placeholder="https://example.com/download"
            value="<?= h((string)$download['external_url']) ?>">
-    <small id="download-external-url-help" class="field-help">Hodí se třeba pro GitHub Releases, App Store nebo produktovou stránku.</small>
+    <small id="download-external-url-help" class="field-help">Hodí se třeba pro GitHub Releases, App Store nebo veřejnou stránku balíčku.</small>
+
+    <label for="project_url">Domovská stránka projektu</label>
+    <input type="url" id="project_url" name="project_url" maxlength="255" aria-describedby="download-project-url-help"
+           placeholder="https://example.com"
+           value="<?= h((string)$download['project_url']) ?>">
+    <small id="download-project-url-help" class="field-help">Volitelný odkaz na web projektu, dokumentaci nebo produktovou stránku.</small>
+  </fieldset>
+
+  <fieldset>
+    <legend>Praktické informace a kompatibilita</legend>
+
+    <label for="version_label">Verze</label>
+    <input type="text" id="version_label" name="version_label" maxlength="100"
+           placeholder="např. 2.4.1"
+           value="<?= h((string)$download['version_label']) ?>">
+
+    <label for="release_date">Datum vydání</label>
+    <input type="date" id="release_date" name="release_date"
+           value="<?= h((string)$download['release_date']) ?>">
+
+    <label for="platform_label">Platforma / cílové prostředí</label>
+    <input type="text" id="platform_label" name="platform_label" maxlength="100"
+           placeholder="např. Windows, Android, PDF, Web"
+           value="<?= h((string)$download['platform_label']) ?>">
+
+    <label for="license_label">Licence</label>
+    <input type="text" id="license_label" name="license_label" maxlength="100"
+           placeholder="např. MIT, GPL, freeware"
+           value="<?= h((string)$download['license_label']) ?>">
+
+    <label for="checksum_sha256">SHA-256 checksum</label>
+    <input type="text" id="checksum_sha256" name="checksum_sha256" maxlength="64" aria-describedby="download-checksum-help"
+           placeholder="64 hexadecimálních znaků"
+           value="<?= h((string)$download['checksum_sha256']) ?>">
+    <small id="download-checksum-help" class="field-help">Pro lokální soubor se vyplní automaticky při nahrání. U externího odkazu ho můžete doplnit ručně.</small>
+
+    <label for="series_key">Skupina verzí</label>
+    <input type="text" id="series_key" name="series_key" maxlength="150" aria-describedby="download-series-help"
+           placeholder="např. moje-aplikace"
+           value="<?= h((string)$download['series_key']) ?>">
+    <small id="download-series-help" class="field-help">Pokud více položek patří do jedné řady verzí, použijte stejný klíč. Na detailu se pak zobrazí i další verze.</small>
+
+    <label for="requirements">Požadavky a kompatibilita</label>
+    <textarea id="requirements" name="requirements" rows="4" aria-describedby="download-requirements-help"><?= h((string)$download['requirements']) ?></textarea>
+    <small id="download-requirements-help" class="field-help">Uveďte třeba požadovaný systém, závislosti, podporované verze nebo instalační poznámky.</small>
   </fieldset>
 
   <fieldset>
@@ -171,12 +219,17 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
+      <input type="checkbox" name="is_featured" value="1"<?= (int)($download['is_featured'] ?? 0) === 1 ? ' checked' : '' ?>>
+      Doporučená položka
+    </label>
+    <small class="field-help">Doporučené položky se ve výpisech řadí výš a můžete na ně cílit i filtry.</small>
+
+    <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="download-published-help"
              <?= (int)($download['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
       Zveřejnit na webu
     </label>
     <small id="download-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, položka se na veřejném webu nezobrazí.</small>
-
   </fieldset>
 
   <div style="margin-top:1.5rem">
@@ -188,30 +241,30 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   </div>
 </form>
 
-
-
 <script nonce="<?= cspNonce() ?>">
 (() => {
   const titleField = document.getElementById('title');
   const slugField = document.getElementById('slug');
-  if (titleField && slugField) {
-    const slugify = (value) => value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-    let slugTouched = slugField.value.trim() !== '';
-    slugField.addEventListener('input', () => {
-      slugTouched = slugField.value.trim() !== '';
-    });
-    titleField.addEventListener('input', () => {
-      if (!slugTouched) {
-        slugField.value = slugify(titleField.value);
-      }
-    });
+  if (!titleField || !slugField) {
+    return;
   }
+
+  const slugify = (value) => value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  let slugTouched = slugField.value.trim() !== '';
+  slugField.addEventListener('input', () => {
+    slugTouched = slugField.value.trim() !== '';
+  });
+  titleField.addEventListener('input', () => {
+    if (!slugTouched) {
+      slugField.value = slugify(titleField.value);
+    }
+  });
 })();
 </script>
 

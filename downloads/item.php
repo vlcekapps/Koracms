@@ -63,6 +63,26 @@ if ($slug === '' && (string)$download['slug'] !== '') {
     exit;
 }
 
+$otherVersions = [];
+if ((string)$download['series_key'] !== '') {
+    $versionsStmt = $pdo->prepare(
+        "SELECT d.*, COALESCE(c.name, '') AS category_name
+         FROM cms_downloads d
+         LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+         WHERE d.series_key = ?
+           AND d.id <> ?
+           AND d.status = 'published'
+           AND d.is_published = 1
+         ORDER BY d.is_featured DESC, COALESCE(d.release_date, DATE(d.created_at)) DESC, d.created_at DESC, d.id DESC
+         LIMIT 8"
+    );
+    $versionsStmt->execute([(string)$download['series_key'], (int)$download['id']]);
+    $otherVersions = array_map(
+        static fn(array $version): array => hydrateDownloadPresentation($version),
+        $versionsStmt->fetchAll()
+    );
+}
+
 if (!isset($_SESSION['cms_user_id'])) {
     trackPageView('download', (int)$download['id']);
 }
@@ -84,6 +104,7 @@ renderPublicPage([
     'view' => 'modules/downloads-article',
     'view_data' => [
         'download' => $download,
+        'otherVersions' => $otherVersions,
     ],
     'current_nav' => 'downloads',
     'body_class' => 'page-downloads-article',

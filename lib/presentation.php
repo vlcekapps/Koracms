@@ -471,6 +471,24 @@ function downloadSlug(string $value): string
     return slugify(trim($value));
 }
 
+function normalizeDownloadSeriesKey(string $value): string
+{
+    return downloadSlug(trim($value));
+}
+
+function normalizeDownloadChecksum(string $value): string
+{
+    $value = strtolower(trim($value));
+    $value = preg_replace('/\s+/u', '', $value);
+    $value = is_string($value) ? $value : '';
+
+    if ($value === '') {
+        return '';
+    }
+
+    return preg_match('/^[a-f0-9]{64}$/', $value) ? $value : '';
+}
+
 function boardSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1209,6 +1227,29 @@ function normalizeDownloadExternalUrl(string $value): string
     return $validated;
 }
 
+function downloadRevisionSnapshot(array $download): array
+{
+    return [
+        'title' => trim((string)($download['title'] ?? '')),
+        'slug' => downloadSlug((string)($download['slug'] ?? '')),
+        'download_type' => normalizeDownloadType((string)($download['download_type'] ?? 'document')),
+        'category' => (string)($download['dl_category_id'] ?? ''),
+        'excerpt' => trim((string)($download['excerpt'] ?? '')),
+        'description' => trim((string)($download['description'] ?? '')),
+        'version_label' => trim((string)($download['version_label'] ?? '')),
+        'platform_label' => trim((string)($download['platform_label'] ?? '')),
+        'license_label' => trim((string)($download['license_label'] ?? '')),
+        'project_url' => normalizeDownloadExternalUrl((string)($download['project_url'] ?? '')),
+        'release_date' => trim((string)($download['release_date'] ?? '')),
+        'requirements' => trim((string)($download['requirements'] ?? '')),
+        'checksum_sha256' => normalizeDownloadChecksum((string)($download['checksum_sha256'] ?? '')),
+        'series_key' => normalizeDownloadSeriesKey((string)($download['series_key'] ?? '')),
+        'external_url' => normalizeDownloadExternalUrl((string)($download['external_url'] ?? '')),
+        'is_featured' => (string)((int)($download['is_featured'] ?? 0)),
+        'is_published' => (string)((int)($download['is_published'] ?? 1)),
+    ];
+}
+
 function hydrateDownloadPresentation(array $download): array
 {
     $download['slug'] = downloadSlug((string)($download['slug'] ?? ''));
@@ -1220,10 +1261,28 @@ function hydrateDownloadPresentation(array $download): array
     $download['platform_label'] = trim((string)($download['platform_label'] ?? ''));
     $download['license_label'] = trim((string)($download['license_label'] ?? ''));
     $download['external_url'] = normalizeDownloadExternalUrl((string)($download['external_url'] ?? ''));
+    $download['project_url'] = normalizeDownloadExternalUrl((string)($download['project_url'] ?? ''));
+    $download['release_date'] = trim((string)($download['release_date'] ?? ''));
+    $download['requirements'] = trim((string)($download['requirements'] ?? ''));
+    $download['checksum_sha256'] = normalizeDownloadChecksum((string)($download['checksum_sha256'] ?? ''));
+    $download['series_key'] = normalizeDownloadSeriesKey((string)($download['series_key'] ?? ''));
+    $download['is_featured'] = (int)($download['is_featured'] ?? 0) === 1 ? 1 : 0;
+    $download['download_count'] = max(0, (int)($download['download_count'] ?? 0));
+    $download['release_date_label'] = $download['release_date'] !== ''
+        ? formatCzechDate((string)$download['release_date'])
+        : '';
+    $download['download_count_label'] = $download['download_count'] === 1
+        ? 'Staženo 1×'
+        : 'Staženo ' . $download['download_count'] . '×';
     $download['has_external_url'] = $download['external_url'] !== '';
+    $download['has_project_url'] = $download['project_url'] !== '';
     $download['filename'] = trim((string)($download['filename'] ?? ''));
     $download['original_name'] = trim((string)($download['original_name'] ?? ''));
     $download['has_file'] = $download['filename'] !== '';
+    $download['has_requirements'] = $download['requirements'] !== '';
+    $download['has_checksum'] = $download['checksum_sha256'] !== '';
+    $download['is_publicly_visible'] = ((string)($download['status'] ?? 'published') === 'published')
+        && (int)($download['is_published'] ?? 1) === 1;
 
     return $download;
 }

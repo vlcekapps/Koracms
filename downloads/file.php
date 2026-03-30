@@ -7,7 +7,7 @@ if ($id === null) {
     sendFileDownloadNotFound();
 }
 
-$allowPrivateAccess = isLoggedIn() && !isPublicUser();
+$allowPrivateAccess = currentUserHasCapability('content_manage_shared') || currentUserHasCapability('content_approve_shared');
 if (!$allowPrivateAccess && !isModuleEnabled('downloads')) {
     sendFileDownloadNotFound();
 }
@@ -24,7 +24,13 @@ if (!$file) {
     sendFileDownloadNotFound();
 }
 
-if (!$allowPrivateAccess && ($file['status'] !== 'published' || !(int)$file['is_published'])) {
+if (
+    !$allowPrivateAccess
+    && (
+        $file['status'] !== 'published'
+        || !(int)$file['is_published']
+    )
+) {
     sendFileDownloadNotFound();
 }
 
@@ -38,6 +44,18 @@ if ($downloadName === trim((string)$file['title'])) {
     $extension = pathinfo($storedName, PATHINFO_EXTENSION);
     if ($extension !== '' && !str_ends_with(strtolower($downloadName), '.' . strtolower($extension))) {
         $downloadName .= '.' . $extension;
+    }
+}
+
+if (!$allowPrivateAccess && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
+    try {
+        db_connect()->prepare(
+            "UPDATE cms_downloads
+             SET download_count = download_count + 1
+             WHERE id = ?"
+        )->execute([$id]);
+    } catch (\PDOException $e) {
+        error_log('downloads/file download_count: ' . $e->getMessage());
     }
 }
 

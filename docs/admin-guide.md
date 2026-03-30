@@ -258,6 +258,56 @@ Formulář nově zobrazuje i kontextovou nápovědu podle typu položky a odkaz 
 
 ---
 
+## Ke stažení – katalog verzí a veřejné filtry
+
+Modul **Ke stažení** už neslouží jen jako jednoduchý seznam souborů. Je připravený i pro katalog dokumentů, aplikací a instalačních balíčků, kde je potřeba držet verze, kompatibilitu a bezpečnější download workflow.
+
+### Co se nastavuje u položky
+
+Každá položka může mít:
+
+- typ položky
+- kategorii
+- krátký perex a plný popis
+- lokální soubor, externí odkaz nebo obojí zároveň
+- domovskou stránku projektu
+- verzi a datum vydání
+- platformu a licenci
+- požadavky a kompatibilitu
+- SHA-256 checksum
+- skupinu verzí pro propojení více vydání stejné aplikace nebo dokumentu
+- volitelný náhledový obrázek
+- příznak `Doporučená položka`
+- zveřejnění na webu
+
+### Co je nové v admin workflow
+
+- Přehled `Ke stažení` umí hledání i filtry podle stavu, kategorie, typu, zdroje, platformy a doporučených položek.
+- U detailnějších položek lze otevřít historii revizí stejně jako u dalších obsahových modulů.
+- Při změně slugu se stará veřejná adresa uloží jako redirect na nový canonical tvar.
+- Přehled ukazuje i základní statistiku stažení a praktická metadata, takže správce nemusí otevírat každou položku zvlášť.
+
+### Veřejný katalog
+
+- Veřejný výpis podporuje hledání a filtry podle kategorie, typu, platformy, zdroje a doporučených položek.
+- Výsledky jsou stránkované a řadí se přirozeně: doporučené položky výš, pak novější vydání.
+- Detail položky zobrazuje i praktické informace jako verzi, datum vydání, velikost souboru, checksum, požadavky a kompatibilitu.
+- Pokud více položek sdílí stejnou `Skupinu verzí`, detail ukáže i další dostupné verze ke stažení.
+
+### Přílohy a přístupová práva
+
+- Veřejně viditelné položky lze stahovat přes serverový download endpoint.
+- Neveřejné nebo neschválené soubory nestáhne libovolný přihlášený účet.
+- Přístup k neveřejným souborům má jen správce obsahu nebo schvalovatel.
+- Počet veřejných stažení se zapisuje do statistiky položky.
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) jen stručně říká, že modul `Ke stažení` umí katalog verzí, metadata a veřejné filtrování.
+- Tento dokument popisuje, jak správce pracuje s položkami, verzemi, revizemi a přístupem k neveřejným souborům.
+
+---
+
 ## Kompletní seznam widgetů
 
 Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.

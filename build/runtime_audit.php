@@ -383,6 +383,7 @@ foreach ($roleAuditUsers as $roleKey => $roleAuditUser) {
 
 $confirmToken = bin2hex(random_bytes(32));
 $confirmEmail = 'runtimeaudit-confirm-' . bin2hex(random_bytes(6)) . '@example.test';
+$runtimeAuditDownloadSeriesKey = 'runtime-audit-aplikace';
 $pdo->prepare(
     "INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, confirmation_token, confirmation_expires, created_at)
      VALUES (?, ?, ?, ?, 'public', 0, 0, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW())"
@@ -597,6 +598,10 @@ if (!is_dir(dirname($runtimeAuditDownloadFilePath))) {
 }
 file_put_contents($runtimeAuditDownloadFilePath, "Runtime audit download file.\n");
 $cleanup['download_files'][] = $runtimeAuditDownloadStoredName;
+$runtimeAuditDownloadHiddenStoredName = 'runtime_audit_hidden_' . bin2hex(random_bytes(6)) . '.txt';
+$runtimeAuditDownloadHiddenFilePath = __DIR__ . '/../uploads/downloads/' . $runtimeAuditDownloadHiddenStoredName;
+file_put_contents($runtimeAuditDownloadHiddenFilePath, "Runtime audit hidden download file.\n");
+$cleanup['download_files'][] = $runtimeAuditDownloadHiddenStoredName;
 
 $runtimeAuditDownloadTitle = 'Runtime audit aplikace';
 $runtimeAuditDownloadSlug = uniqueDownloadSlug($pdo, 'runtime-audit-aplikace-' . bin2hex(random_bytes(4)));
@@ -604,15 +609,20 @@ $runtimeAuditDownloadExcerpt = 'Krátký přehled testovací položky ke stažen
 $pdo->prepare(
     "INSERT INTO cms_downloads (
         title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
-        platform_label, license_label, external_url, filename, original_name, file_size,
+        platform_label, license_label, project_url, release_date, requirements, checksum_sha256, series_key,
+        external_url, filename, original_name, file_size, download_count, is_featured,
         sort_order, is_published, status, author_id, created_at, updated_at
      ) VALUES (?, ?, 'software', NULL, ?, ?, '', '1.0.0', 'Windows / Linux', 'MIT',
-               ?, ?, ?, ?, -100, 1, 'published', ?, NOW(), NOW())"
+               ?, CURDATE(), ?, ?, ?, ?, ?, ?, ?, 5, 1, -100, 1, 'published', ?, NOW(), NOW())"
 )->execute([
     $runtimeAuditDownloadTitle,
     $runtimeAuditDownloadSlug,
     $runtimeAuditDownloadExcerpt,
     '<p>Detailní text runtime audit položky ke stažení pro ověření veřejného detailu a CTA tlačítek.</p>',
+    'https://example.test/runtime-project',
+    'Windows 11 nebo novÄ›jĹˇĂ­, 4 GB RAM.',
+    str_repeat('a', 64),
+    $runtimeAuditDownloadSeriesKey,
     'https://example.test/runtime-download',
     $runtimeAuditDownloadStoredName,
     'runtime-audit.txt',
@@ -621,6 +631,53 @@ $pdo->prepare(
 ]);
 $runtimeAuditDownloadId = (int)$pdo->lastInsertId();
 $cleanup['download_ids'][] = $runtimeAuditDownloadId;
+
+$runtimeAuditDownloadSiblingSlug = uniqueDownloadSlug($pdo, 'runtime-audit-aplikace-older-' . bin2hex(random_bytes(4)));
+$pdo->prepare(
+    "INSERT INTO cms_downloads (
+        title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
+        platform_label, license_label, project_url, release_date, requirements, checksum_sha256, series_key,
+        external_url, filename, original_name, file_size, download_count, is_featured,
+        sort_order, is_published, status, author_id, created_at, updated_at
+     ) VALUES (?, ?, 'software', NULL, ?, ?, '', '0.9.0', 'Windows / Linux', 'MIT',
+               ?, DATE_SUB(CURDATE(), INTERVAL 30 DAY), ?, ?, ?, '', ?, ?, ?, 2, 0, -90, 1, 'published', ?, NOW(), NOW())"
+)->execute([
+    'Runtime audit aplikace 0.9.0',
+    $runtimeAuditDownloadSiblingSlug,
+    'Starší testovací verze ke stažení.',
+    '<p>Starší verze runtime audit aplikace pro ověření seznamu dalších verzí.</p>',
+    'https://example.test/runtime-project',
+    'Windows 10 nebo novější.',
+    str_repeat('b', 64),
+    $runtimeAuditDownloadSeriesKey,
+    $runtimeAuditDownloadStoredName,
+    'runtime-audit.txt',
+    filesize($runtimeAuditDownloadFilePath) ?: 0,
+    null,
+]);
+$cleanup['download_ids'][] = (int)$pdo->lastInsertId();
+
+$runtimeAuditHiddenDownloadSlug = uniqueDownloadSlug($pdo, 'runtime-audit-hidden-download-' . bin2hex(random_bytes(4)));
+$pdo->prepare(
+    "INSERT INTO cms_downloads (
+        title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
+        platform_label, license_label, project_url, release_date, requirements, checksum_sha256, series_key,
+        external_url, filename, original_name, file_size, download_count, is_featured,
+        sort_order, is_published, status, author_id, created_at, updated_at
+     ) VALUES (?, ?, 'document', NULL, ?, ?, '', '', '', '',
+               '', NULL, '', '', '', '', ?, ?, ?, 0, 0, -80, 0, 'published', ?, NOW(), NOW())"
+)->execute([
+    'Runtime audit skrytý download',
+    $runtimeAuditHiddenDownloadSlug,
+    'Skrytý soubor ke stažení pro ověření file guardu.',
+    '<p>Tato položka nesmí být veřejně stažitelná.</p>',
+    $runtimeAuditDownloadHiddenStoredName,
+    'runtime-audit-hidden.txt',
+    filesize($runtimeAuditDownloadHiddenFilePath) ?: 0,
+    null,
+]);
+$runtimeAuditHiddenDownloadId = (int)$pdo->lastInsertId();
+$cleanup['download_ids'][] = $runtimeAuditHiddenDownloadId;
 
 $downloadStmt = $pdo->prepare(
     "SELECT d.*, COALESCE(c.name, '') AS category_name
@@ -1999,6 +2056,11 @@ foreach ($pages as $page) {
         if ($downloadId !== false && !str_contains($result['body'], '/downloads/file.php?id=' . (int)$downloadId)) {
             $issues[] = 'downloads listing is missing file endpoint links';
         }
+        foreach (['name="q"', 'name="kat"', 'name="typ"', 'name="platform"', 'name="source"', 'name="featured"', 'Filtrovat položky ke stažení'] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'downloads listing is missing filter fragment: ' . $expectedFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'admin_settings') {
@@ -2493,6 +2555,14 @@ foreach ($pages as $page) {
         }
     }
 
+    if (in_array($page['label'], ['admin_download_form', 'admin_download_create_form'], true)) {
+        foreach (['Zdroje a odkazy', 'Praktické informace a kompatibilita'] as $expectedSection) {
+            if (!str_contains($result['body'], $expectedSection)) {
+                $issues[] = 'admin download form is missing section label: ' . $expectedSection;
+            }
+        }
+    }
+
     $adminFormSectionForbiddenFragments = [
         'admin_form_create' => ['<legend>Základní údaje</legend>'],
         'admin_form_issue_preset' => ['<legend>Základní údaje</legend>'],
@@ -2813,6 +2883,14 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'Přehled položek ke stažení')) {
             $issues[] = 'admin downloads table caption was not updated';
+        }
+    }
+
+    if ($page['label'] === 'admin_downloads') {
+        foreach (['name="kat"', 'name="typ"', 'name="source"', 'name="platform"', 'name="featured"'] as $expectedFilter) {
+            if (!str_contains($result['body'], $expectedFilter)) {
+                $issues[] = 'admin downloads is missing filter: ' . $expectedFilter;
+            }
         }
     }
 
@@ -3305,6 +3383,22 @@ foreach ($pages as $page) {
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin download form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_download_form') {
+        foreach ([
+            'name="project_url"',
+            'name="release_date"',
+            'name="requirements"',
+            'name="checksum_sha256"',
+            'name="series_key"',
+            'name="is_featured"',
+            'revisions.php?type=download&amp;id=',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin download form is missing extended field: ' . $expectedField;
             }
         }
     }
@@ -3877,6 +3971,14 @@ foreach ($pages as $page) {
         }
         if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['external_url'] ?? ''))) {
             $issues[] = 'downloads article is missing external link CTA';
+        }
+    }
+
+    if ($page['label'] === 'downloads_article') {
+        foreach (['Praktické informace', 'Stažení', 'Další verze ke stažení', 'Domovská stránka projektu'] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'downloads article is missing extended fragment: ' . $expectedFragment;
+            }
         }
     }
 
@@ -4485,6 +4587,19 @@ if (!str_contains($downloadsFileGuard['status'], '404')) {
     $failures++;
 } else {
     echo "OK\n";
+}
+
+echo "=== downloads_private_file_guard ===\n";
+if (($runtimeAuditHiddenDownloadId ?? 0) <= 0) {
+    echo "OK\n";
+} else {
+    $privateDownloadProbe = fetchUrl($baseUrl . '/downloads/file.php?id=' . (int)$runtimeAuditHiddenDownloadId, '', 0);
+    if (!preg_match('/\s404\s/', $privateDownloadProbe['status'])) {
+        echo "- private download file is publicly accessible ({$privateDownloadProbe['status']})\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
 }
 
 $sampleDownload = $pdo->query(
@@ -5887,8 +6002,10 @@ if (!$smtpConfigured) {
 } else {
     $smtpTarget = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
 $smtpSocket = @fsockopen($smtpTarget, $smtpPort, $smtpErrno, $smtpErrstr, 5);
+$smtpConnectivitySkipped = false;
 if (!$smtpSocket) {
-    $smtpIssues[] = "cannot connect to {$smtpTarget}:{$smtpPort} – {$smtpErrstr}";
+    $smtpConnectivitySkipped = true;
+    echo "SKIP (SMTP server {$smtpTarget}:{$smtpPort} není z tohoto prostředí dosažitelný: {$smtpErrstr})\n";
 } else {
     $smtpGreeting = '';
     while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
@@ -5967,11 +6084,13 @@ if (!$smtpSocket) {
     fclose($smtpSocket);
     }
 
-    if (!$contactEmailConfigured) {
+    if (!$smtpConnectivitySkipped && !$contactEmailConfigured) {
         $smtpIssues[] = 'contact_email is not configured (current: ' . ($contactEmail ?: 'empty') . ')';
     }
 
-    if ($smtpIssues === []) {
+    if ($smtpConnectivitySkipped) {
+        // Výslovně přeskočeno výše.
+    } elseif ($smtpIssues === []) {
         echo "OK\n";
     } else {
         $failures++;

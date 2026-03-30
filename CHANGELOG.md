@@ -11,6 +11,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Multiblog – per-blog metadata a veřejný index** – blogy nově podporují `meta title`, `meta description`, RSS podtitulek, rozšířený intro blok, výchozí komentáře pro nové články, počet položek v RSS feedu a doporučený článek přímo na indexu blogu
 - **Multiblog – hledání, archiv a current-blog widget kontext** – veřejný index blogu nově umí hledání v rámci konkrétního blogu, archiv po měsících a widget „Nejnovější články“ se umí na blogových stránkách přepnout na právě otevřený blog
 - **Vývěska – hledání, filtry a stránkování** – veřejný výpis vývěsky nově umí hledání, filtr podle kategorie, filtr podle období vyvěšení, přepínání `aktuální / archiv / vše` a stránkování, takže je použitelnější i pro větší úřední desku nebo delší archiv
+- **Ke stažení – katalog verzí a rozšířená metadata** – položky ke stažení nově podporují domovskou stránku projektu, datum vydání, požadavky a kompatibilitu, SHA-256 checksum, skupiny verzí, počítadlo stažení a příznak doporučené položky
+- **Ke stažení – veřejné hledání, filtry a stránkování** – veřejný katalog nově umí hledání, filtrování podle kategorie, typu, platformy, zdroje a doporučených položek a také stránkování výpisu
 
 ### Změněno
 - **Blogové URL a feedy** – při změně slug blogu se staré adresy i per-blog RSS feed bezpečně přesměrují na nový canonical tvar
@@ -19,6 +21,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Dokumentace** – README nově drží jen vysokou úroveň instalace, provozu a přehledu funkcí; detailní administrátorské workflow pro multiblog, formuláře a podcasty je přesunuté do `docs/admin-guide.md`
 - **Vývěska – veřejná viditelnost a bezpečnost příloh** – položky se nově na veřejném webu zobrazí až od `Data vyvěšení`, budoucí položky nejsou vidět ani na homepage, ve widgetech, vyhledávání a sitemapě a neveřejné přílohy už nestáhne libovolný přihlášený účet, ale jen správce obsahu nebo schvalovatel
 - **Vývěska – revize, redirecty a formulářové vedení** – úpravy položek se nově zapisují do historie revizí, změna slugu ukládá redirect na nový canonical tvar a editor položky dostal i typovou nápovědu a kontextovější veřejný odkaz
+- **Ke stažení – admin workflow a bezpečnost souborů** – správa downloadů nově nabízí širší filtry v administraci, historii revizí, redirect po změně slugu a přísnější přístup k neveřejným souborům; ty už nestáhne libovolný přihlášený účet, ale jen správce obsahu nebo schvalovatel
+- **Ke stažení – widgety, vyhledávání a detail položky** – widget posledních položek, interní vyhledávání i veřejný detail položky teď respektují doporučené položky, datum vydání, skupiny verzí a praktická metadata katalogu
 
 ## [3.0.0-rc.7] – 2026-03-30
 

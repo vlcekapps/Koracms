@@ -14,6 +14,7 @@ if ($id !== null) {
         deleteDownloadImageFile((string)($download['image_file'] ?? ''));
     }
     $pdo->prepare("DELETE FROM cms_downloads WHERE id = ?")->execute([$id]);
+    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$id]);
     logAction('download_delete', "id={$id}");
 }
 

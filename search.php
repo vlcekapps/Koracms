@@ -258,11 +258,11 @@ if ($q !== '' && mb_strlen($q) >= 2) {
             foreach ($ftSearch(
                 $pdo, $q, $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
-                        created_at, 'download' AS type",
+                        COALESCE(release_date, created_at) AS created_at, 'download' AS type",
                 "FROM cms_downloads WHERE status = 'published' AND is_published = 1",
                 'title, excerpt, description',
                 [],
-                'created_at DESC, id DESC',
+                'is_featured DESC, COALESCE(release_date, created_at) DESC, id DESC',
                 10
             ) as $row) {
                 $results[] = $row;

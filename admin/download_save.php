@@ -14,8 +14,14 @@ $description = trim((string)($_POST['description'] ?? ''));
 $versionLabel = trim((string)($_POST['version_label'] ?? ''));
 $platformLabel = trim((string)($_POST['platform_label'] ?? ''));
 $licenseLabel = trim((string)($_POST['license_label'] ?? ''));
+$projectUrlInput = trim((string)($_POST['project_url'] ?? ''));
+$releaseDateInput = trim((string)($_POST['release_date'] ?? ''));
+$requirements = trim((string)($_POST['requirements'] ?? ''));
+$checksumInput = trim((string)($_POST['checksum_sha256'] ?? ''));
+$seriesKeyInput = trim((string)($_POST['series_key'] ?? ''));
 $externalUrlInput = trim((string)($_POST['external_url'] ?? ''));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
+$isFeatured = isset($_POST['is_featured']) ? 1 : 0;
 $deleteStoredFile = isset($_POST['file_delete']);
 $deleteImage = isset($_POST['download_image_delete']);
 
@@ -37,25 +43,47 @@ if ($resolvedSlug === '') {
     $redirectWithError('slug');
 }
 
+$seriesKey = normalizeDownloadSeriesKey($seriesKeyInput);
+if ($seriesKeyInput !== '' && $seriesKey === '') {
+    $redirectWithError('series');
+}
+
+$checksumSha256 = normalizeDownloadChecksum($checksumInput);
+if ($checksumInput !== '' && $checksumSha256 === '') {
+    $redirectWithError('checksum');
+}
+
+$projectUrl = normalizeDownloadExternalUrl($projectUrlInput);
+if ($projectUrlInput !== '' && $projectUrl === '') {
+    $redirectWithError('project_url');
+}
+
+$releaseDate = null;
+if ($releaseDateInput !== '') {
+    $releaseDateTime = DateTimeImmutable::createFromFormat('Y-m-d', $releaseDateInput);
+    if (!$releaseDateTime || $releaseDateTime->format('Y-m-d') !== $releaseDateInput) {
+        $redirectWithError('release_date');
+    }
+    $releaseDate = $releaseDateTime->format('Y-m-d');
+}
+
 $existing = [
     'filename' => '',
     'original_name' => '',
     'file_size' => 0,
     'image_file' => '',
+    'checksum_sha256' => '',
 ];
+$existingDownload = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare(
-        "SELECT filename, original_name, file_size, image_file
-         FROM cms_downloads
-         WHERE id = ?"
-    );
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_downloads WHERE id = ?");
     $existingStmt->execute([$id]);
-    $existingRow = $existingStmt->fetch();
-    if (!$existingRow) {
+    $existingDownload = $existingStmt->fetch();
+    if (!$existingDownload) {
         header('Location: ' . BASE_URL . '/admin/downloads.php');
         exit;
     }
-    $existing = array_merge($existing, $existingRow);
+    $existing = array_merge($existing, $existingDownload);
 }
 
 $uniqueSlug = uniqueDownloadSlug($pdo, $resolvedSlug, $id);
@@ -82,12 +110,18 @@ if ($deleteImage && $imageFilename !== '') {
 $storedFilename = (string)$existing['filename'];
 $originalName = (string)$existing['original_name'];
 $fileSize = (int)$existing['file_size'];
+if ($checksumSha256 === '') {
+    $checksumSha256 = normalizeDownloadChecksum((string)$existing['checksum_sha256']);
+}
 
 if ($deleteStoredFile && $storedFilename !== '') {
     deleteDownloadStoredFile($storedFilename);
     $storedFilename = '';
     $originalName = '';
     $fileSize = 0;
+    if ($checksumInput === '') {
+        $checksumSha256 = '';
+    }
 }
 
 $allowedExtensions = [
@@ -118,7 +152,14 @@ if (is_array($fileField) && ($fileField['name'] ?? '') !== '' && (int)($fileFiel
     }
 
     $newStoredFilename = uniqid('dl_', true) . '.' . $extension;
-    if (!move_uploaded_file($tmpPath, $directory . $newStoredFilename)) {
+    $targetPath = $directory . $newStoredFilename;
+    if (!move_uploaded_file($tmpPath, $targetPath)) {
+        $redirectWithError('file');
+    }
+
+    $newChecksum = hash_file('sha256', $targetPath);
+    if (!is_string($newChecksum) || $newChecksum === '') {
+        @unlink($targetPath);
         $redirectWithError('file');
     }
 
@@ -129,18 +170,27 @@ if (is_array($fileField) && ($fileField['name'] ?? '') !== '' && (int)($fileFiel
     $storedFilename = $newStoredFilename;
     $originalName = basename((string)$fileField['name']);
     $fileSize = (int)($fileField['size'] ?? 0);
+    $checksumSha256 = normalizeDownloadChecksum($newChecksum);
 }
 
 if ($storedFilename === '' && $externalUrl === '') {
     $redirectWithError('source');
 }
 
+if ($storedFilename === '' && $checksumInput === '') {
+    $checksumSha256 = '';
+}
+
 if ($id !== null) {
+    $oldSnapshot = $existingDownload ? downloadRevisionSnapshot($existingDownload) : [];
+    $oldPath = $existingDownload ? downloadPublicPath($existingDownload) : '';
+
     $stmt = $pdo->prepare(
         "UPDATE cms_downloads
          SET title = ?, slug = ?, download_type = ?, dl_category_id = ?, excerpt = ?, description = ?,
-             image_file = ?, version_label = ?, platform_label = ?, license_label = ?, external_url = ?,
-             filename = ?, original_name = ?, file_size = ?, is_published = ?,
+             image_file = ?, version_label = ?, platform_label = ?, license_label = ?, project_url = ?,
+             release_date = ?, requirements = ?, checksum_sha256 = ?, series_key = ?, external_url = ?,
+             filename = ?, original_name = ?, file_size = ?, is_featured = ?, is_published = ?,
              author_id = COALESCE(author_id, ?), updated_at = NOW()
          WHERE id = ?"
     );
@@ -155,24 +205,52 @@ if ($id !== null) {
         $versionLabel,
         $platformLabel,
         $licenseLabel,
+        $projectUrl,
+        $releaseDate,
+        $requirements,
+        $checksumSha256,
+        $seriesKey,
         $externalUrl,
         $storedFilename,
         $originalName,
         $fileSize,
+        $isFeatured,
         $isPublished,
         currentUserId(),
         $id,
     ]);
-    logAction('download_edit', "id={$id}");
+
+    saveRevision($pdo, 'download', $id, $oldSnapshot, downloadRevisionSnapshot([
+        'title' => $title,
+        'slug' => $uniqueSlug,
+        'download_type' => $downloadType,
+        'dl_category_id' => $dlCategoryId,
+        'excerpt' => $excerpt,
+        'description' => $description,
+        'version_label' => $versionLabel,
+        'platform_label' => $platformLabel,
+        'license_label' => $licenseLabel,
+        'project_url' => $projectUrl,
+        'release_date' => $releaseDate,
+        'requirements' => $requirements,
+        'checksum_sha256' => $checksumSha256,
+        'series_key' => $seriesKey,
+        'external_url' => $externalUrl,
+        'is_featured' => $isFeatured,
+        'is_published' => $isPublished,
+    ]));
+    upsertPathRedirect($pdo, $oldPath, downloadPublicPath(['id' => $id, 'slug' => $uniqueSlug]));
+    logAction('download_edit', "id={$id} title={$title} slug={$uniqueSlug} featured={$isFeatured}");
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $authorId = currentUserId();
     $stmt = $pdo->prepare(
         "INSERT INTO cms_downloads
          (title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
-          platform_label, license_label, external_url, filename, original_name, file_size,
+          platform_label, license_label, project_url, release_date, requirements, checksum_sha256,
+          series_key, external_url, filename, original_name, file_size, is_featured,
           is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
         $title,
@@ -185,15 +263,21 @@ if ($id !== null) {
         $versionLabel,
         $platformLabel,
         $licenseLabel,
+        $projectUrl,
+        $releaseDate,
+        $requirements,
+        $checksumSha256,
+        $seriesKey,
         $externalUrl,
         $storedFilename,
         $originalName,
         $fileSize,
+        $isFeatured,
         currentUserHasCapability('content_approve_shared') ? $isPublished : 0,
         $status,
         $authorId,
     ]);
-    logAction('download_add', "title={$title} status={$status}");
+    logAction('download_add', "title={$title} status={$status} featured={$isFeatured}");
     if ($status === 'pending') {
         notifyPendingContent('Soubor ke stažení', $title, '/admin/downloads.php');
     }

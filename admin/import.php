@@ -371,10 +371,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_downloads
                          (id, title, slug, download_type, dl_category_id, excerpt, description,
-                          image_file, version_label, platform_label, license_label, external_url,
-                          filename, original_name, file_size, sort_order, is_published, status,
+                          image_file, version_label, platform_label, license_label, project_url,
+                          release_date, requirements, checksum_sha256, series_key, external_url,
+                          filename, original_name, file_size, download_count, is_featured, sort_order, is_published, status,
                           created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['downloads'] as $row) {
                         $catId = $row['dl_category_id'] ?? null;
@@ -398,10 +399,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['version_label'] ?? '',
                             $row['platform_label'] ?? '',
                             $row['license_label'] ?? '',
+                            normalizeDownloadExternalUrl((string)($row['project_url'] ?? '')),
+                            !empty($row['release_date']) ? (string)$row['release_date'] : null,
+                            $row['requirements'] ?? '',
+                            normalizeDownloadChecksum((string)($row['checksum_sha256'] ?? '')),
+                            normalizeDownloadSeriesKey((string)($row['series_key'] ?? '')),
                             normalizeDownloadExternalUrl((string)($row['external_url'] ?? '')),
                             $row['filename'] ?? '',
                             $row['original_name'] ?? '',
                             (int)($row['file_size'] ?? 0),
+                            (int)($row['download_count'] ?? 0),
+                            (int)($row['is_featured'] ?? 0),
                             (int)($row['sort_order'] ?? 0),
                             (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',

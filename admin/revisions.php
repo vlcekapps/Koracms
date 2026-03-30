@@ -12,6 +12,7 @@ $allowedTypes = [
     'event'   => ['table' => 'cms_events',   'label' => 'Událost', 'title_col' => 'title', 'back' => 'event_form.php'],
     'faq'     => ['table' => 'cms_faqs',     'label' => 'FAQ', 'title_col' => 'question', 'back' => 'faq_form.php'],
     'board'   => ['table' => 'cms_board',    'label' => 'Položka vývěsky', 'title_col' => 'title', 'back' => 'board_form.php'],
+    'download'=> ['table' => 'cms_downloads','label' => 'Položka ke stažení', 'title_col' => 'title', 'back' => 'download_form.php'],
 ];
 
 if ($entityType === '' || $entityId === null || !isset($allowedTypes[$entityType])) {

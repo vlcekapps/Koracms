@@ -1,3 +1,6 @@
+<?php
+$otherVersions = $otherVersions ?? [];
+?>
 <div class="page-stack page-stack--detail">
   <article class="surface surface--hero">
     <div class="article-shell">
@@ -6,11 +9,17 @@
         <h1 class="section-title section-title--hero"><?= h((string)$download['title']) ?></h1>
 
         <p class="meta-row">
+          <?php if ((int)$download['is_featured'] === 1): ?>
+            <span>Doporučená položka</span>
+          <?php endif; ?>
           <?php if ($download['category_name'] !== ''): ?>
             <span><?= h((string)$download['category_name']) ?></span>
           <?php endif; ?>
           <?php if ($download['version_label'] !== ''): ?>
             <span>Verze <?= h((string)$download['version_label']) ?></span>
+          <?php endif; ?>
+          <?php if ($download['release_date_label'] !== ''): ?>
+            <span>Vydáno <?= h((string)$download['release_date_label']) ?></span>
           <?php endif; ?>
           <?php if ($download['platform_label'] !== ''): ?>
             <span><?= h((string)$download['platform_label']) ?></span>
@@ -18,6 +27,7 @@
           <?php if ($download['license_label'] !== ''): ?>
             <span>Licence: <?= h((string)$download['license_label']) ?></span>
           <?php endif; ?>
+          <span><?= h((string)$download['download_count_label']) ?></span>
         </p>
 
         <?php if ($download['excerpt_plain'] !== ''): ?>
@@ -46,6 +56,37 @@
         <?php else: ?>
           <p class="empty-state">Tato položka zatím nemá doplněný podrobný popis.</p>
         <?php endif; ?>
+
+        <?php if ($download['has_requirements']): ?>
+          <section class="surface" style="margin-top:1.5rem" aria-labelledby="download-requirements-title">
+            <h2 id="download-requirements-title" class="section-title section-title--compact">Požadavky a kompatibilita</h2>
+            <div class="prose"><p><?= nl2br(h((string)$download['requirements'])) ?></p></div>
+          </section>
+        <?php endif; ?>
+
+        <?php if ($otherVersions !== []): ?>
+          <section class="surface" style="margin-top:1.5rem" aria-labelledby="download-versions-title">
+            <h2 id="download-versions-title" class="section-title section-title--compact">Další verze ke stažení</h2>
+            <ul class="link-list">
+              <?php foreach ($otherVersions as $version): ?>
+                <li class="link-list__item">
+                  <a class="link-list__title" href="<?= h(downloadPublicPath($version)) ?>"><?= h((string)$version['title']) ?></a>
+                  <p class="meta-row meta-row--tight">
+                    <?php if ($version['version_label'] !== ''): ?>
+                      <span>Verze <?= h((string)$version['version_label']) ?></span>
+                    <?php endif; ?>
+                    <?php if ($version['release_date_label'] !== ''): ?>
+                      <span><?= h((string)$version['release_date_label']) ?></span>
+                    <?php endif; ?>
+                    <?php if ($version['platform_label'] !== ''): ?>
+                      <span><?= h((string)$version['platform_label']) ?></span>
+                    <?php endif; ?>
+                  </p>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </section>
+        <?php endif; ?>
       </div>
 
       <aside class="article-shell__aside">
@@ -54,6 +95,9 @@
           <dl class="info-list">
             <?php if ($download['version_label'] !== ''): ?>
               <div><dt>Verze</dt><dd><?= h((string)$download['version_label']) ?></dd></div>
+            <?php endif; ?>
+            <?php if ($download['release_date_label'] !== ''): ?>
+              <div><dt>Datum vydání</dt><dd><?= h((string)$download['release_date_label']) ?></dd></div>
             <?php endif; ?>
             <?php if ($download['platform_label'] !== ''): ?>
               <div><dt>Platforma</dt><dd><?= h((string)$download['platform_label']) ?></dd></div>
@@ -64,6 +108,10 @@
             <?php if ((int)$download['file_size'] > 0): ?>
               <div><dt>Velikost</dt><dd><?= h(formatFileSize((int)$download['file_size'])) ?></dd></div>
             <?php endif; ?>
+            <?php if ($download['has_checksum']): ?>
+              <div><dt>SHA-256</dt><dd><code><?= h((string)$download['checksum_sha256']) ?></code></dd></div>
+            <?php endif; ?>
+            <div><dt>Stažení</dt><dd><?= h((string)$download['download_count_label']) ?></dd></div>
             <div><dt>Aktualizováno</dt><dd><?= formatCzechDate((string)($download['updated_at'] ?? $download['created_at'])) ?></dd></div>
           </dl>
 
@@ -74,6 +122,9 @@
             <?php endif; ?>
             <?php if ($download['has_external_url']): ?>
               <a class="btn btn-secondary" href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít externí odkaz</a>
+            <?php endif; ?>
+            <?php if ($download['has_project_url']): ?>
+              <a class="btn btn-secondary" href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer">Domovská stránka projektu</a>
             <?php endif; ?>
           </div>
         </section>

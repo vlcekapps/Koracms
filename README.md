@@ -236,7 +236,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Galerie** | Alba a fotografie s detailovými URL, export do ZIP |
 | **Podcasty** | Více pořadů, epizody, artwork, RSS feed s iTunes značkami |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
-| **Ke stažení** | Katalog dokumentů s verzí, platformou a licencí |
+| **Ke stažení** | Katalog dokumentů a software s verzemi, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek a archiv |
 | **Ankety** | Hlasování s ochranou proti opakovanému hlasu |
 | **Znalostní báze** | FAQ s kategoriemi a přehlednou navigací |
@@ -249,6 +249,8 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Newsletter** | Odběr e-mailem s potvrzením, odhlášením a historií rozesílek |
 
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
+
+Modul **Ke stažení** nově pokrývá i praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje.
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 

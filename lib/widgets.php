@@ -383,10 +383,11 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
     $pdo = db_connect();
     $stmt = $pdo->prepare(
         "SELECT d.id, d.title, d.slug, d.download_type, d.excerpt, d.description, d.image_file,
-                d.version_label, d.platform_label, d.created_at, d.filename, d.original_name, d.file_size, d.external_url
+                d.version_label, d.platform_label, d.release_date, d.filename, d.original_name, d.file_size,
+                d.external_url, d.is_featured, d.download_count
          FROM cms_downloads d
          WHERE d.status = 'published' AND d.is_published = 1
-         ORDER BY d.created_at DESC, d.id DESC
+         ORDER BY d.is_featured DESC, COALESCE(d.release_date, DATE(d.created_at)) DESC, d.created_at DESC, d.id DESC
          LIMIT ?"
     );
     $stmt->execute([$count]);
@@ -408,6 +409,9 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
             $meta = [];
             if ($download['version_label'] !== '') {
                 $meta[] = $download['version_label'];
+            }
+            if ($download['release_date_label'] !== '') {
+                $meta[] = $download['release_date_label'];
             }
             if ($download['platform_label'] !== '') {
                 $meta[] = $download['platform_label'];
@@ -435,8 +439,14 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
         $out .= '<div class="card__body">';
         $out .= '<h3 class="card__title"><a href="' . h(downloadPublicPath($download)) . '">' . h($download['title']) . '</a></h3>';
         $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$download['download_type_label']) . '</span>';
+        if ((int)$download['is_featured'] === 1) {
+            $out .= '<span>Doporučené</span>';
+        }
         if ($download['version_label'] !== '') {
             $out .= '<span>' . h($download['version_label']) . '</span>';
+        }
+        if ($download['release_date_label'] !== '') {
+            $out .= '<span>' . h($download['release_date_label']) . '</span>';
         }
         if ($download['platform_label'] !== '') {
             $out .= '<span>' . h($download['platform_label']) . '</span>';
