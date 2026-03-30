@@ -62,6 +62,44 @@ function downloadTypeDefinitions(): array
     ];
 }
 
+function eventKindDefinitions(): array
+{
+    return [
+        'general' => [
+            'label' => 'Obecná akce',
+            'help' => 'Univerzální typ pro běžnou událost, která nepotřebuje specifičtější zařazení.',
+        ],
+        'community' => [
+            'label' => 'Komunitní setkání',
+            'help' => 'Hodí se pro klubová, sousedská nebo komunitní setkání, kde je důležitý kontakt, místo a stručný program.',
+        ],
+        'workshop' => [
+            'label' => 'Workshop / dílna',
+            'help' => 'Vhodné pro praktickou akci, kurz nebo workshop. Často se hodí registrační odkaz, kapacita a bližší program.',
+        ],
+        'lecture' => [
+            'label' => 'Přednáška / beseda',
+            'help' => 'Počítá s jasným začátkem, místem a volitelně i představením pořadatele nebo hosta.',
+        ],
+        'webinar' => [
+            'label' => 'Online akce / webinář',
+            'help' => 'Použijte pro online stream, videohovor nebo webinář. Uveďte registrační odkaz a případně platformu v popisu.',
+        ],
+        'performance' => [
+            'label' => 'Koncert / vystoupení',
+            'help' => 'Vhodné pro kulturní program, koncert, divadelní nebo jiné veřejné vystoupení.',
+        ],
+        'training' => [
+            'label' => 'Školení / kurz',
+            'help' => 'Hodí se pro vzdělávací akci, kde bývají důležité požadavky na účastníky, cena a přihlášení.',
+        ],
+        'other' => [
+            'label' => 'Jiný typ akce',
+            'help' => 'Použijte, když žádný z nabízených typů přesně nesedí, ale chcete typ akce přesto odlišit.',
+        ],
+    ];
+}
+
 function normalizeBoardType(string $type): string
 {
     $definitions = boardTypeDefinitions();
@@ -86,6 +124,20 @@ function normalizeDownloadType(string $type): string
 {
     $definitions = downloadTypeDefinitions();
     return isset($definitions[$type]) ? $type : 'document';
+}
+
+function normalizeEventKind(string $kind): string
+{
+    $definitions = eventKindDefinitions();
+    return isset($definitions[$kind]) ? $kind : 'general';
+}
+
+function eventKindHelp(string $kind): string
+{
+    $definitions = eventKindDefinitions();
+    $normalized = normalizeEventKind($kind);
+
+    return (string)($definitions[$normalized]['help'] ?? '');
 }
 
 function siteProfileDefinitions(): array

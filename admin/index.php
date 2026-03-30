@@ -267,10 +267,13 @@ $upcomingEvents = [];
 if ($canManageSharedContent && isModuleEnabled('events')) {
     try {
         $upcomingEvents = $pdo->query(
-            "SELECT title, event_date, location
+            "SELECT title, event_date, event_end, location
              FROM cms_events
-             WHERE is_published = 1 AND event_date >= NOW()
-             ORDER BY event_date ASC
+             WHERE " . eventPublicVisibilitySql() . "
+               AND " . eventEffectiveEndSql() . " >= NOW()
+             ORDER BY
+               CASE WHEN event_date <= NOW() AND " . eventEffectiveEndSql() . " >= NOW() THEN 0 ELSE 1 END,
+               event_date ASC
              LIMIT 5"
         )->fetchAll();
     } catch (\PDOException $e) {

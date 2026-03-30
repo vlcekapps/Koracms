@@ -8,10 +8,18 @@ if (!isModuleEnabled('events')) {
 }
 
 $id = inputInt('get', 'id');
-$slug = eventSlug(trim($_GET['slug'] ?? ''));
+$slug = eventSlug(trim((string)($_GET['slug'] ?? '')));
 if ($id === null && $slug === '') {
     header('Location: ' . BASE_URL . '/events/index.php');
     exit;
+}
+
+$listingQuery = [];
+foreach (['q', 'misto', 'typ', 'period', 'scope', 'strana'] as $queryKey) {
+    $queryValue = trim((string)($_GET[$queryKey] ?? ''));
+    if ($queryValue !== '') {
+        $listingQuery[$queryKey] = $queryValue;
+    }
 }
 
 $pdo = db_connect();
@@ -20,7 +28,7 @@ if ($slug !== '') {
     $stmt = $pdo->prepare(
         "SELECT *
          FROM cms_events
-         WHERE slug = ? AND status = 'published' AND is_published = 1
+         WHERE slug = ? AND " . eventPublicVisibilitySql() . "
          LIMIT 1"
     );
     $stmt->execute([$slug]);
@@ -28,7 +36,7 @@ if ($slug !== '') {
     $stmt = $pdo->prepare(
         "SELECT *
          FROM cms_events
-         WHERE id = ? AND status = 'published' AND is_published = 1
+         WHERE id = ? AND " . eventPublicVisibilitySql() . "
          LIMIT 1"
     );
     $stmt->execute([$id]);
@@ -54,8 +62,10 @@ if (!$event) {
     exit;
 }
 
-if ($slug === '' && !empty($event['slug'])) {
-    header('Location: ' . eventPublicPath($event));
+$event = hydrateEventPresentation($event);
+
+if ($slug === '' && (string)$event['slug'] !== '') {
+    header('Location: ' . eventPublicPath($event, $listingQuery));
     exit;
 }
 
@@ -64,17 +74,22 @@ if (!isset($_SESSION['cms_user_id'])) {
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');
-$metaDescription = normalizePlainText((string)($event['description'] ?? ''));
+$metaDescription = eventExcerpt($event, 180);
 if ($metaDescription === '') {
     $metaDescription = 'Detail události ' . (string)$event['title'];
-} else {
-    $metaDescription = mb_strimwidth($metaDescription, 0, 180, '...', 'UTF-8');
 }
 
+$backQuery = $listingQuery;
+if ($backQuery === [] && (string)$event['event_status_key'] === 'past') {
+    $backQuery['scope'] = 'past';
+}
+$backUrl = BASE_URL . '/events/index.php' . ($backQuery !== [] ? '?' . http_build_query($backQuery) : '');
+$extraHeadHtml = eventStructuredData($event);
+
 renderPublicPage([
-    'title' => $event['title'] . ' - ' . $siteName,
+    'title' => (string)$event['title'] . ' - ' . $siteName,
     'meta' => [
-        'title' => $event['title'] . ' - ' . $siteName,
+        'title' => (string)$event['title'] . ' - ' . $siteName,
         'description' => $metaDescription,
         'url' => eventPublicUrl($event),
         'type' => 'article',
@@ -82,9 +97,11 @@ renderPublicPage([
     'view' => 'modules/events-article',
     'view_data' => [
         'event' => $event,
+        'backUrl' => $backUrl,
     ],
     'current_nav' => 'events',
     'body_class' => 'page-events-article',
     'page_kind' => 'detail',
     'admin_edit_url' => BASE_URL . '/admin/event_form.php?id=' . (int)$event['id'],
+    'extra_head_html' => $extraHeadHtml,
 ]);

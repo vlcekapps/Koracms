@@ -5,7 +5,14 @@ verifyCsrf();
 
 $id = inputInt('post', 'id');
 if ($id !== null) {
-    db_connect()->prepare("UPDATE cms_events SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
+    $pdo = db_connect();
+    $stmt = $pdo->prepare("SELECT image_file FROM cms_events WHERE id = ?");
+    $stmt->execute([$id]);
+    $event = $stmt->fetch() ?: null;
+    if ($event) {
+        deleteEventImageFile((string)($event['image_file'] ?? ''));
+    }
+    $pdo->prepare("UPDATE cms_events SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
     logAction('event_delete', "id={$id}");
 }
 

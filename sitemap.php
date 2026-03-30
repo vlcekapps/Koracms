@@ -210,7 +210,7 @@ if (isModuleEnabled('events')) {
         $events = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at, event_date) AS sitemap_lastmod
              FROM cms_events
-             WHERE status = 'published' AND is_published = 1
+             WHERE " . eventPublicVisibilitySql() . "
              ORDER BY event_date DESC"
         )->fetchAll();
         foreach ($events as $event) {

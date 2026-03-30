@@ -27,8 +27,10 @@ $tables = [
     'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
     'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",
-    'events'        => "SELECT id, title, slug, description, location, event_date, event_end,
-                               is_published, status, created_at, updated_at FROM cms_events",
+    'events'        => "SELECT id, title, slug, event_kind, excerpt, description, program_note, location,
+                               organizer_name, organizer_email, registration_url, price_note, accessibility_note,
+                               image_file, event_date, event_end, is_published, status, unpublish_at, admin_note,
+                               created_at, updated_at FROM cms_events",
     'places'        => "SELECT id, name, slug, place_kind, excerpt, description, url, image_file, category,
                                address, locality, latitude, longitude, contact_phone, contact_email,
                                opening_hours, is_published, sort_order, status, created_at, updated_at

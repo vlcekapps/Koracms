@@ -240,8 +240,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title       VARCHAR(255) NOT NULL,
             slug        VARCHAR(255) NOT NULL,
+            event_kind  VARCHAR(50)  NOT NULL DEFAULT 'general',
+            excerpt     TEXT,
             description TEXT,
+            program_note TEXT,
             location    VARCHAR(255) NOT NULL DEFAULT '',
+            organizer_name VARCHAR(255) NOT NULL DEFAULT '',
+            organizer_email VARCHAR(255) NOT NULL DEFAULT '',
+            registration_url VARCHAR(500) NOT NULL DEFAULT '',
+            price_note  VARCHAR(255) NOT NULL DEFAULT '',
+            accessibility_note TEXT,
+            image_file  VARCHAR(255) NOT NULL DEFAULT '',
             event_date  DATETIME     NOT NULL,
             event_end   DATETIME     NULL DEFAULT NULL,
             is_published TINYINT(1)  NOT NULL DEFAULT 1,
@@ -252,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_events_slug (slug),
-            FULLTEXT INDEX ft_events_search (title, description)
+            FULLTEXT INDEX ft_events_search (title, excerpt, description, program_note, location, organizer_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_subscribers (

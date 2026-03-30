@@ -743,12 +743,20 @@ function renderWidget_upcoming_events(array $widget, array $settings, string $zo
     $count = max(1, (int)($settings['count'] ?? 5));
     $pdo = db_connect();
     $stmt = $pdo->prepare(
-        "SELECT id, title, slug, event_date FROM cms_events
-         WHERE is_published = 1 AND status = 'published' AND event_date >= CURDATE()
-         ORDER BY event_date ASC LIMIT ?"
+        "SELECT id, title, slug, event_kind, excerpt, description, location, event_date, event_end
+         FROM cms_events
+         WHERE " . eventPublicVisibilitySql() . "
+           AND " . eventEffectiveEndSql() . " >= NOW()
+         ORDER BY
+           CASE WHEN event_date <= NOW() AND " . eventEffectiveEndSql() . " >= NOW() THEN 0 ELSE 1 END,
+           event_date ASC
+         LIMIT ?"
     );
     $stmt->execute([$count]);
-    $items = $stmt->fetchAll();
+    $items = array_map(
+        static fn(array $event): array => hydrateEventPresentation($event),
+        $stmt->fetchAll()
+    );
 
     if (empty($items)) {
         return '';
@@ -761,7 +769,7 @@ function renderWidget_upcoming_events(array $widget, array $settings, string $zo
         $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
         foreach ($items as $e) {
             $out .= '<li><a href="' . h(eventPublicPath($e)) . '">' . h($e['title']) . '</a>'
-                   . '<br><small>' . formatCzechDate($e['event_date']) . '</small></li>';
+                   . '<br><small>' . h($e['event_status_label']) . ' · ' . formatCzechDate($e['event_date']) . '</small></li>';
         }
         $out .= '</ul></section>';
         return $out;
@@ -772,7 +780,7 @@ function renderWidget_upcoming_events(array $widget, array $settings, string $zo
     $out .= '<ul class="link-list">';
     foreach ($items as $e) {
         $out .= '<li class="link-list__item"><a class="link-list__title" href="' . h(eventPublicPath($e)) . '">' . h($e['title']) . '</a>'
-               . '<time class="meta-row">' . formatCzechDate($e['event_date']) . '</time></li>';
+               . '<p class="meta-row meta-row--tight"><span class="pill">' . h($e['event_status_label']) . '</span><time>' . formatCzechDate($e['event_date']) . '</time></p></li>';
     }
     $out .= '</ul></section>';
     return $out;

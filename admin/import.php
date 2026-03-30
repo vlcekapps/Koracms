@@ -216,8 +216,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['events']) && is_array($data['events'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_events
-                         (id, title, slug, description, location, event_date, event_end, is_published, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                         (id, title, slug, event_kind, excerpt, description, program_note, location,
+                          organizer_name, organizer_email, registration_url, price_note, accessibility_note,
+                          image_file, event_date, event_end, is_published, status, unpublish_at, admin_note,
+                          created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['events'] as $row) {
                         $importTitle = trim((string)($row['title'] ?? ''));
@@ -234,12 +237,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (int)$row['id'],
                             $importTitle,
                             $importSlug,
+                            normalizeEventKind((string)($row['event_kind'] ?? 'general')),
+                            $row['excerpt'] ?? '',
                             $row['description'] ?? '',
+                            $row['program_note'] ?? '',
                             $row['location'] ?? '',
+                            trim((string)($row['organizer_name'] ?? '')),
+                            trim((string)($row['organizer_email'] ?? '')),
+                            normalizeDownloadExternalUrl((string)($row['registration_url'] ?? '')),
+                            trim((string)($row['price_note'] ?? '')),
+                            $row['accessibility_note'] ?? '',
+                            trim((string)($row['image_file'] ?? '')),
                             $row['event_date'],
                             $row['event_end'] ?: null,
                             (int)($row['is_published'] ?? 1),
-                            $row['status'] ?? 'published',
+                            in_array(($row['status'] ?? 'published'), ['pending', 'published'], true) ? $row['status'] : 'published',
+                            !empty($row['unpublish_at']) ? $row['unpublish_at'] : null,
+                            $row['admin_note'] ?? '',
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                             $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);

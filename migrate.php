@@ -232,8 +232,17 @@ $tables = [
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title        VARCHAR(255) NOT NULL,
         slug         VARCHAR(255) NOT NULL,
+        event_kind   VARCHAR(50)  NOT NULL DEFAULT 'general',
+        excerpt      TEXT,
         description  TEXT,
+        program_note TEXT,
         location     VARCHAR(255) NOT NULL DEFAULT '',
+        organizer_name VARCHAR(255) NOT NULL DEFAULT '',
+        organizer_email VARCHAR(255) NOT NULL DEFAULT '',
+        registration_url VARCHAR(500) NOT NULL DEFAULT '',
+        price_note   VARCHAR(255) NOT NULL DEFAULT '',
+        accessibility_note TEXT,
+        image_file   VARCHAR(255) NOT NULL DEFAULT '',
         event_date   DATETIME     NOT NULL,
         event_end    DATETIME     NULL DEFAULT NULL,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
@@ -981,6 +990,15 @@ $addColumns = [
     'cms_news.deleted_at'            => "ALTER TABLE cms_news ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_events.event_kind'          => "ALTER TABLE cms_events ADD COLUMN event_kind VARCHAR(50) NOT NULL DEFAULT 'general'",
+    'cms_events.excerpt'             => "ALTER TABLE cms_events ADD COLUMN excerpt TEXT",
+    'cms_events.program_note'        => "ALTER TABLE cms_events ADD COLUMN program_note TEXT",
+    'cms_events.organizer_name'      => "ALTER TABLE cms_events ADD COLUMN organizer_name VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_events.organizer_email'     => "ALTER TABLE cms_events ADD COLUMN organizer_email VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_events.registration_url'    => "ALTER TABLE cms_events ADD COLUMN registration_url VARCHAR(500) NOT NULL DEFAULT ''",
+    'cms_events.price_note'          => "ALTER TABLE cms_events ADD COLUMN price_note VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_events.accessibility_note'  => "ALTER TABLE cms_events ADD COLUMN accessibility_note TEXT",
+    'cms_events.image_file'          => "ALTER TABLE cms_events ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_faqs.deleted_at'            => "ALTER TABLE cms_faqs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     // 2FA
     'cms_users.totp_secret'          => "ALTER TABLE cms_users ADD COLUMN totp_secret VARCHAR(64) NULL DEFAULT NULL",
@@ -2277,7 +2295,7 @@ $fulltextIndexes = [
     ['cms_articles',   'ft_articles_search',   '(title, perex, content)'],
     ['cms_news',       'ft_news_search',       '(title, content)'],
     ['cms_pages',      'ft_pages_search',      '(title, content)'],
-    ['cms_events',     'ft_events_search',     '(title, description)'],
+    ['cms_events',     'ft_events_search',     '(title, excerpt, description, program_note, location, organizer_name)'],
     ['cms_faqs',       'ft_faqs_search',       '(question, excerpt, answer)'],
     ['cms_board',      'ft_board_search',      '(title, excerpt, description)'],
     ['cms_downloads',  'ft_downloads_search',  '(title, excerpt, description)'],
@@ -2301,6 +2319,26 @@ foreach ($fulltextIndexes as [$ftTable, $ftIndex, $ftColumns]) {
 
 // Přesun citlivých souborů do privátního úložiště mimo webroot
 try {
+    try {
+        $eventFtColumns = $pdo->query(
+            "SELECT COLUMN_NAME
+             FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'cms_events'
+               AND INDEX_NAME = 'ft_events_search'
+             ORDER BY SEQ_IN_INDEX"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $expectedEventFtColumns = ['title', 'excerpt', 'description', 'program_note', 'location', 'organizer_name'];
+
+        if ($eventFtColumns !== [] && $eventFtColumns !== $expectedEventFtColumns) {
+            $pdo->exec("ALTER TABLE cms_events DROP INDEX ft_events_search");
+            $pdo->exec("ALTER TABLE cms_events ADD FULLTEXT INDEX ft_events_search (title, excerpt, description, program_note, location, organizer_name)");
+            $log[] = '✅ FULLTEXT index <code>ft_events_search</code> aktualizován na nové sloupce pro vyhledávání událostí – OK';
+        }
+    } catch (\PDOException $e) {
+        $log[] = '✗ FULLTEXT index <code>ft_events_search</code> – CHYBA při aktualizaci: ' . h($e->getMessage());
+    }
+
     $legacyFormDir = __DIR__ . '/uploads/forms/';
     $privateFormDir = rtrim(koraStoragePath('forms'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
     $movedFormFiles = 0;

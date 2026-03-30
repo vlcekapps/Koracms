@@ -81,6 +81,15 @@ $eventCanonicalPath = $eventRow ? eventPublicPath($eventRow) : '';
 $eventLegacyPath = $eventId !== false ? BASE_URL . '/events/event.php?id=' . urlencode((string)$eventId) : '';
 $eventCanonicalUrl = $eventCanonicalPath !== '' ? $baseUrl . $eventCanonicalPath : '';
 $eventLegacyUrl = $eventLegacyPath !== '' ? $baseUrl . $eventLegacyPath : '';
+$eventIcsPath = '';
+$eventIcsUrl = '';
+$eventOngoingRow = null;
+$eventOngoingPath = '';
+$eventOngoingUrl = '';
+$eventFutureTitle = '';
+$eventOngoingTitle = '';
+$eventLegacySlugPath = '';
+$eventLegacySlugUrl = '';
 $boardRow = null;
 $boardId = false;
 $boardCanonicalPath = '';
@@ -274,6 +283,7 @@ $cleanup = [
     'board_files' => [],
     'download_ids' => [],
     'download_files' => [],
+    'event_ids' => [],
     'faq_ids' => [],
     'food_ids' => [],
     'gallery_album_ids' => [],
@@ -285,6 +295,7 @@ $cleanup = [
     'podcast_episode_ids' => [],
     'form_ids' => [],
     'form_submission_ids' => [],
+    'redirect_paths' => [],
 ];
 
 $runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
@@ -478,6 +489,95 @@ if ($newsId !== false && $runtimeAuditAuthorId > 0) {
 $runtimeAuditThemeSettings = themePersistedSettingsValues($runtimeAuditActiveTheme);
 saveThemeSettings($runtimeAuditThemeSettings, $runtimeAuditActiveTheme);
 clearSettingsCache();
+
+if (isModuleEnabled('events')) {
+    $runtimeAuditEventTitle = 'Runtime audit konference';
+    $runtimeAuditEventSlug = uniqueEventSlug($pdo, 'runtime-audit-konference-' . bin2hex(random_bytes(4)));
+    $runtimeAuditEventOldSlug = uniqueEventSlug($pdo, 'runtime-audit-konference-stary-' . bin2hex(random_bytes(4)));
+    $runtimeAuditEventDate = (new DateTimeImmutable('+10 days 18:00'))->format('Y-m-d H:i:s');
+    $runtimeAuditEventEnd = (new DateTimeImmutable('+10 days 20:30'))->format('Y-m-d H:i:s');
+    $runtimeAuditEventTitle = 'Runtime audit konference';
+    $runtimeAuditEventFutureExcerpt = 'Krátké shrnutí připravované akce pro audit filtrů, detailu a kalendářového exportu.';
+    $runtimeAuditEventOngoingSlug = uniqueEventSlug($pdo, 'runtime-audit-ziva-dilna-' . bin2hex(random_bytes(4)));
+    $runtimeAuditEventOngoingDate = (new DateTimeImmutable('-1 day 10:00'))->format('Y-m-d H:i:s');
+    $runtimeAuditEventOngoingEnd = (new DateTimeImmutable('+1 day 14:00'))->format('Y-m-d H:i:s');
+    $runtimeAuditEventOngoingTitle = 'Runtime audit živá dílna';
+
+    $pdo->prepare(
+        "INSERT INTO cms_events (
+            title, slug, event_kind, excerpt, description, program_note, location,
+            organizer_name, organizer_email, registration_url, price_note, accessibility_note,
+            image_file, event_date, event_end, is_published, status, admin_note, unpublish_at, created_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 1, 'published', ?, NULL, NOW())"
+    )->execute([
+        $runtimeAuditEventTitle,
+        $runtimeAuditEventSlug,
+        'lecture',
+        $runtimeAuditEventFutureExcerpt,
+        '<p>Detailní text runtime audit konference pro ověření veřejného detailu události a filtrů ve výpisu.</p>',
+        '<p>18:00 Otevření sálu<br>18:30 Hlavní program<br>20:00 Diskuse</p>',
+        'Praha, Klubovna',
+        'Runtime Audit Team',
+        'events@example.test',
+        'https://example.test/runtime-audit-registrace',
+        'Vstup zdarma po registraci',
+        "Bezbariérový vstup z ulice.\nMožnost doprovodu se služebním psem.",
+        $runtimeAuditEventDate,
+        $runtimeAuditEventEnd,
+        'Runtime audit poznámka k plánované akci.',
+    ]);
+    $runtimeAuditEventId = (int)$pdo->lastInsertId();
+    $cleanup['event_ids'][] = $runtimeAuditEventId;
+
+    $eventStmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ?");
+    $eventStmt->execute([$runtimeAuditEventId]);
+    $eventRow = $eventStmt->fetch() ?: null;
+    if ($eventRow) {
+        $eventRow = hydrateEventPresentation($eventRow);
+        $eventId = $eventRow['id'] ?? false;
+        $eventCanonicalPath = eventPublicPath($eventRow);
+        $eventLegacyPath = $eventId !== false ? BASE_URL . '/events/event.php?id=' . urlencode((string)$eventId) : '';
+        $eventCanonicalUrl = $eventCanonicalPath !== '' ? $baseUrl . $eventCanonicalPath : '';
+        $eventLegacyUrl = $eventLegacyPath !== '' ? $baseUrl . $eventLegacyPath : '';
+        $eventIcsPath = eventIcsPath($eventRow);
+        $eventIcsUrl = $baseUrl . $eventIcsPath;
+        $eventFutureTitle = (string)($eventRow['title'] ?? '');
+        $eventLegacySlugPath = BASE_URL . '/events/' . rawurlencode($runtimeAuditEventOldSlug);
+        $eventLegacySlugUrl = $baseUrl . $eventLegacySlugPath;
+        upsertPathRedirect($pdo, $eventLegacySlugPath, $eventCanonicalPath);
+        $cleanup['redirect_paths'][] = $eventLegacySlugPath;
+    }
+
+    $pdo->prepare(
+        "INSERT INTO cms_events (
+            title, slug, event_kind, excerpt, description, program_note, location,
+            organizer_name, organizer_email, registration_url, price_note, accessibility_note,
+            image_file, event_date, event_end, is_published, status, admin_note, unpublish_at, created_at
+         ) VALUES (?, ?, ?, ?, ?, '', ?, '', '', '', 'Pouze pro zvané hosty', '', '', ?, ?, 1, 'published', ?, NULL, NOW())"
+    )->execute([
+        $runtimeAuditEventOngoingTitle,
+        $runtimeAuditEventOngoingSlug,
+        'workshop',
+        'Probíhající akce pro audit sekce právě probíhá.',
+        '<p>Tato akce právě probíhá a musí se ve veřejném výpisu objevit v samostatném přehledu.</p>',
+        'Brno, učebna 2',
+        $runtimeAuditEventOngoingDate,
+        $runtimeAuditEventOngoingEnd,
+        'Runtime audit poznámka k probíhající akci.',
+    ]);
+    $runtimeAuditOngoingEventId = (int)$pdo->lastInsertId();
+    $cleanup['event_ids'][] = $runtimeAuditOngoingEventId;
+
+    $eventOngoingStmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ?");
+    $eventOngoingStmt->execute([$runtimeAuditOngoingEventId]);
+    $eventOngoingRow = $eventOngoingStmt->fetch() ?: null;
+    if ($eventOngoingRow) {
+        $eventOngoingRow = hydrateEventPresentation($eventOngoingRow);
+        $eventOngoingPath = eventPublicPath($eventOngoingRow);
+        $eventOngoingUrl = $baseUrl . $eventOngoingPath;
+        $eventOngoingTitle = (string)($eventOngoingRow['title'] ?? $runtimeAuditEventOngoingTitle);
+    }
+}
 
 if (isModuleEnabled('board')) {
     $runtimeAuditBoardTitle = 'Runtime audit vývěska';
@@ -1382,6 +1482,9 @@ if (isModuleEnabled('board')) {
 $pages[] = ['label' => 'downloads_index', 'url' => $baseUrl . '/downloads/index.php'];
 if (isModuleEnabled('events')) {
     $pages[] = ['label' => 'events_index', 'url' => $baseUrl . '/events/index.php'];
+    if ($eventOngoingTitle !== '') {
+        $pages[] = ['label' => 'events_index_ongoing', 'url' => $baseUrl . '/events/index.php?scope=ongoing'];
+    }
 }
 if (isModuleEnabled('faq')) {
     $pages[] = ['label' => 'faq_index', 'url' => $baseUrl . '/faq/index.php'];
@@ -1430,6 +1533,9 @@ if ($newsCanonicalUrl !== '') {
 }
 if ($eventCanonicalUrl !== '') {
     $pages[] = ['label' => 'events_article', 'url' => $eventCanonicalUrl];
+}
+if ($eventIcsUrl !== '') {
+    $pages[] = ['label' => 'events_ics', 'url' => $eventIcsUrl];
 }
 if ($boardCanonicalUrl !== '') {
     $pages[] = ['label' => 'board_article', 'url' => $boardCanonicalUrl];
@@ -1891,8 +1997,8 @@ foreach ($pages as $page) {
     if (!str_contains($result['status'], '200')) {
         $issues[] = 'unexpected status: ' . $result['status'];
     }
-    $isXmlPage = in_array($page['label'], ['sitemap_php', 'sitemap_xml'], true);
-    if (!$isXmlPage) {
+    $isStructuredResponse = in_array($page['label'], ['sitemap_php', 'sitemap_xml', 'events_ics'], true);
+    if (!$isStructuredResponse) {
         $issues = array_merge($issues, analyzeHtml($result['body']));
         $issues = array_merge($issues, analyzeUxHeuristics($result['body'], $page['label']));
     }
@@ -2327,8 +2433,8 @@ foreach ($pages as $page) {
         'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_news_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
-        'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
-        'admin_event_create_form' => ['Vyplňte potřebné údaje k této události.', 'Zveřejnit na webu'],
+        'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Krátké shrnutí', 'Registrační odkaz', 'Plánované zrušení publikace', 'Zveřejnit na webu'],
+        'admin_event_create_form' => ['Vyplňte potřebné údaje k této události.', 'Krátké shrnutí', 'Registrační odkaz', 'Plánované zrušení publikace', 'Zveřejnit na webu'],
         'admin_page_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
         'admin_page_create_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
         'admin_download_form' => ['Zveřejnit na webu', 'Můžete nahrát dokument, archiv nebo instalační balíček.'],
@@ -2522,8 +2628,8 @@ foreach ($pages as $page) {
         'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_news_form' => ['Obsah novinky'],
         'admin_news_create_form' => ['Obsah novinky'],
-        'admin_event_form' => ['Základní údaje události', 'Popis události'],
-        'admin_event_create_form' => ['Základní údaje události', 'Popis události'],
+        'admin_event_form' => ['Základní údaje události', 'Termín konání', 'Obsah události', 'Pořadatel, registrace a dostupnost', 'Obrázek a zveřejnění', 'Interní poznámka'],
+        'admin_event_create_form' => ['Základní údaje události', 'Termín konání', 'Obsah události', 'Pořadatel, registrace a dostupnost', 'Obrázek a zveřejnění', 'Interní poznámka'],
         'admin_page_form' => ['Obsah a zobrazení stránky'],
         'admin_page_create_form' => ['Obsah a zobrazení stránky'],
         'admin_download_form' => ['Základní údaje položky', 'Náhled a zveřejnění'],
@@ -2575,8 +2681,8 @@ foreach ($pages as $page) {
         'admin_blog_create_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_news_form' => ['<legend>Novinka</legend>'],
         'admin_news_create_form' => ['<legend>Novinka</legend>'],
-        'admin_event_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>'],
-        'admin_event_create_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>'],
+        'admin_event_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>', '<legend>Popis události</legend>'],
+        'admin_event_create_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>', '<legend>Popis události</legend>'],
         'admin_page_form' => ['<legend>Vlastnosti stránky</legend>'],
         'admin_page_create_form' => ['<legend>Vlastnosti stránky</legend>'],
         'admin_download_form' => ['<legend>Položka ke stažení</legend>', '<legend>Náhled a zobrazení</legend>'],
@@ -3403,6 +3509,28 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'admin_event_form') {
+        foreach ([
+            'name="slug"',
+            'name="event_kind"',
+            'name="excerpt"',
+            'name="program_note"',
+            'name="organizer_name"',
+            'name="organizer_email"',
+            'name="registration_url"',
+            'name="price_note"',
+            'name="accessibility_note"',
+            'name="event_image"',
+            'name="unpublish_at"',
+            'revisions.php?type=event&amp;id=',
+            'Zpět na přehled událostí',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin event form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
     if ($page['label'] === 'admin_food_form') {
         foreach ([
             'name="type"',
@@ -3912,20 +4040,81 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'events_index' && $eventCanonicalPath !== '' && !str_contains($result['body'], $eventCanonicalPath)) {
-        $issues[] = 'events listing is missing detail links';
+    if ($page['label'] === 'events_index') {
+        if ($eventCanonicalPath !== '' && !str_contains($result['body'], $eventCanonicalPath)) {
+            $issues[] = 'events listing is missing detail links';
+        }
+        foreach ([
+            'Filtrovat akce',
+            'Hledat v akcích',
+            'Typ akce',
+            'Období',
+            'Přidat do kalendáře',
+            'Připravujeme',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'events listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($eventFutureTitle !== '' && !str_contains($result['body'], $eventFutureTitle)) {
+            $issues[] = 'events listing is missing the runtime audit future event';
+        }
+    }
+
+    if ($page['label'] === 'events_index_ongoing') {
+        foreach ([
+            'Právě probíhající akce',
+            'Právě probíhá',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'ongoing events listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($eventOngoingTitle !== '' && !str_contains($result['body'], $eventOngoingTitle)) {
+            $issues[] = 'ongoing events listing is missing the runtime audit ongoing event';
+        }
     }
 
     if ($page['label'] === 'events_article') {
         if ($eventRow && !str_contains($result['body'], (string)($eventRow['title'] ?? ''))) {
             $issues[] = 'events article is missing title';
         }
-        if (!str_contains($result['body'], 'Zpět na události')) {
-            $issues[] = 'events article is missing back link';
+        foreach ([
+            'Zpět na události',
+            'O události',
+            'Program a doplňující informace',
+            'Praktické informace',
+            'Registrovat se',
+            'Přidat do kalendáře',
+            'application/ld+json',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'events article is missing fragment: ' . $expectedFragment;
+            }
         }
-        foreach (['Praktické informace', 'O události'] as $legacySnippet) {
-            if (str_contains($result['body'], $legacySnippet)) {
-                $issues[] = 'events article still contains redundant detail block: ' . $legacySnippet;
+    }
+
+    if ($page['label'] === 'events_ics') {
+        $contentTypeOk = false;
+        foreach ($result['headers'] as $headerLine) {
+            if (stripos($headerLine, 'Content-Type: text/calendar') === 0) {
+                $contentTypeOk = true;
+                break;
+            }
+        }
+        if (!$contentTypeOk) {
+            $issues[] = 'event ICS response is missing text/calendar content type';
+        }
+        foreach ([
+            'BEGIN:VCALENDAR',
+            'BEGIN:VEVENT',
+            'SUMMARY:' . $eventFutureTitle,
+            'END:VCALENDAR',
+        ] as $expectedFragment) {
+            if ($expectedFragment !== 'SUMMARY:' && !str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'event ICS response is missing fragment: ' . $expectedFragment;
+            } elseif ($expectedFragment === 'SUMMARY:' . $eventFutureTitle && $eventFutureTitle !== '' && !str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'event ICS response is missing summary title';
             }
         }
     }
@@ -4212,6 +4401,22 @@ if ($eventCanonicalPath === '' || $eventLegacyPath === '' || $eventCanonicalPath
         $failures++;
     } elseif (!in_array($expectedLocation, $legacyEventProbe['headers'], true)) {
         echo "- legacy event URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== events_article_slug_redirect ===\n";
+if ($eventLegacySlugPath === '' || $eventCanonicalPath === '' || $eventLegacySlugPath === $eventCanonicalPath) {
+    echo "OK\n";
+} else {
+    $legacyEventSlugProbe = fetchUrl($eventLegacySlugUrl, '', 0);
+    if (!str_contains($legacyEventSlugProbe['status'], '301') && !str_contains($legacyEventSlugProbe['status'], '302')) {
+        echo "- legacy event slug URL does not redirect ({$legacyEventSlugProbe['status']})\n";
+        $failures++;
+    } elseif (!responseHasLocationHeader($legacyEventSlugProbe['headers'], $eventCanonicalPath, $baseUrl)) {
+        echo "- legacy event slug URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";
@@ -5109,6 +5314,14 @@ if (!empty($cleanup['download_ids'])) {
 foreach ($cleanup['download_files'] as $downloadFile) {
     deleteDownloadStoredFile((string)$downloadFile);
 }
+if (!empty($cleanup['event_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['event_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_events WHERE id IN ({$placeholders})")->execute($cleanup['event_ids']);
+}
+if (!empty($cleanup['redirect_paths'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['redirect_paths']), '?'));
+    $pdo->prepare("DELETE FROM cms_redirects WHERE old_path IN ({$placeholders})")->execute($cleanup['redirect_paths']);
+}
 if (!empty($cleanup['faq_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['faq_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_faqs WHERE id IN ({$placeholders})")->execute($cleanup['faq_ids']);
@@ -5256,6 +5469,15 @@ $installSchemaChecks = [
     'cms_pages contains unpublish_at' => $installTableContains('cms_pages', 'unpublish_at'),
     'cms_pages contains admin_note' => $installTableContains('cms_pages', 'admin_note'),
     'cms_pages contains deleted_at' => $installTableContains('cms_pages', 'deleted_at'),
+    'cms_events contains event_kind' => $installTableContains('cms_events', 'event_kind'),
+    'cms_events contains excerpt' => $installTableContains('cms_events', 'excerpt'),
+    'cms_events contains program_note' => $installTableContains('cms_events', 'program_note'),
+    'cms_events contains organizer_name' => $installTableContains('cms_events', 'organizer_name'),
+    'cms_events contains organizer_email' => $installTableContains('cms_events', 'organizer_email'),
+    'cms_events contains registration_url' => $installTableContains('cms_events', 'registration_url'),
+    'cms_events contains price_note' => $installTableContains('cms_events', 'price_note'),
+    'cms_events contains accessibility_note' => $installTableContains('cms_events', 'accessibility_note'),
+    'cms_events contains image_file' => $installTableContains('cms_events', 'image_file'),
     'cms_events contains unpublish_at' => $installTableContains('cms_events', 'unpublish_at'),
     'cms_events contains admin_note' => $installTableContains('cms_events', 'admin_note'),
     'cms_events contains deleted_at' => $installTableContains('cms_events', 'deleted_at'),

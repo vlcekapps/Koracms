@@ -561,6 +561,20 @@ function newsExcerpt(string $content, int $limit = 220): string
     return mb_strimwidth($plain, 0, $limit, '…', 'UTF-8');
 }
 
+function eventExcerpt(array $event, int $limit = 220): string
+{
+    $excerpt = normalizePlainText((string)($event['excerpt'] ?? ''));
+    if ($excerpt === '') {
+        $excerpt = normalizePlainText((string)($event['description'] ?? ''));
+    }
+
+    if ($excerpt === '') {
+        return '';
+    }
+
+    return mb_strimwidth($excerpt, 0, $limit, '…', 'UTF-8');
+}
+
 function boardTypeLabel(string $type): string
 {
     $definitions = boardTypeDefinitions();
@@ -1548,6 +1562,107 @@ function uploadPlaceImage(array $file, string $existingFilename = ''): array
     ];
 }
 
+function eventImageUrl(array $event): string
+{
+    $filename = trim((string)($event['image_file'] ?? ''));
+    if ($filename === '') {
+        return '';
+    }
+
+    return BASE_URL . '/uploads/events/images/' . rawurlencode($filename);
+}
+
+function deleteEventImageFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = dirname(__DIR__) . '/uploads/events/images/' . $filename;
+    if (is_file($path) && !unlink($path)) {
+        error_log('presentation: nelze smazat soubor ' . $path);
+    }
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadEventImage(array $file, string $existingFilename = ''): array
+{
+    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek akce se nepodařilo nahrát.',
+        ];
+    }
+
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek akce se nepodařilo zpracovat.',
+        ];
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'image/svg+xml' => 'svg',
+    ];
+
+    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
+    if (!isset($allowedTypes[$mimeType])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek akce musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+        ];
+    }
+
+    $directory = dirname(__DIR__) . '/uploads/events/images/';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro obrázky akcí se nepodařilo vytvořit.',
+        ];
+    }
+
+    $filename = uniqid('event_image_', true) . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Obrázek akce se nepodařilo uložit.',
+        ];
+    }
+    generateWebp($directory . $filename);
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deleteEventImageFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
 function normalizePlaceUrl(string $value): string
 {
     $value = trim($value);
@@ -2102,6 +2217,273 @@ function eventPublicPath(array $event, array $query = []): string
 function eventPublicUrl(array $event, array $query = []): string
 {
     return siteUrl(appendUrlQuery(eventPublicRequestPath($event), $query));
+}
+
+function eventIcsRequestPath(array $event): string
+{
+    $slug = eventSlug((string)($event['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/events/' . rawurlencode($slug) . '.ics';
+    }
+
+    return '/events/ics.php?id=' . (int)($event['id'] ?? 0);
+}
+
+function eventIcsPath(array $event, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(eventIcsRequestPath($event), $query);
+}
+
+function eventIcsUrl(array $event, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(eventIcsRequestPath($event), $query));
+}
+
+function eventRevisionSnapshot(array $event): array
+{
+    return [
+        'title' => trim((string)($event['title'] ?? '')),
+        'slug' => eventSlug((string)($event['slug'] ?? '')),
+        'event_kind' => normalizeEventKind((string)($event['event_kind'] ?? 'general')),
+        'excerpt' => trim((string)($event['excerpt'] ?? '')),
+        'description' => trim((string)($event['description'] ?? '')),
+        'program_note' => trim((string)($event['program_note'] ?? '')),
+        'location' => trim((string)($event['location'] ?? '')),
+        'event_date' => trim((string)($event['event_date'] ?? '')),
+        'event_end' => trim((string)($event['event_end'] ?? '')),
+        'organizer_name' => trim((string)($event['organizer_name'] ?? '')),
+        'organizer_email' => trim((string)($event['organizer_email'] ?? '')),
+        'registration_url' => normalizeDownloadExternalUrl((string)($event['registration_url'] ?? '')),
+        'price_note' => trim((string)($event['price_note'] ?? '')),
+        'accessibility_note' => trim((string)($event['accessibility_note'] ?? '')),
+        'unpublish_at' => trim((string)($event['unpublish_at'] ?? '')),
+        'admin_note' => trim((string)($event['admin_note'] ?? '')),
+        'is_published' => (string)((int)($event['is_published'] ?? 1)),
+    ];
+}
+
+function hydrateEventPresentation(array $event): array
+{
+    $event['slug'] = eventSlug((string)($event['slug'] ?? ''));
+    $event['event_kind'] = normalizeEventKind((string)($event['event_kind'] ?? 'general'));
+    $event['event_kind_label'] = (string)(eventKindDefinitions()[$event['event_kind']]['label'] ?? 'Akce');
+    $event['event_kind_help'] = eventKindHelp((string)$event['event_kind']);
+    $event['excerpt_plain'] = eventExcerpt($event);
+    $event['image_url'] = eventImageUrl($event);
+    $event['location'] = trim((string)($event['location'] ?? ''));
+    $event['organizer_name'] = trim((string)($event['organizer_name'] ?? ''));
+    $event['organizer_email'] = trim((string)($event['organizer_email'] ?? ''));
+    $event['registration_url'] = normalizeDownloadExternalUrl((string)($event['registration_url'] ?? ''));
+    $event['price_note'] = trim((string)($event['price_note'] ?? ''));
+    $event['accessibility_note'] = trim((string)($event['accessibility_note'] ?? ''));
+    $event['program_note'] = trim((string)($event['program_note'] ?? ''));
+    $event['has_registration_url'] = $event['registration_url'] !== '';
+    $event['has_organizer'] = $event['organizer_name'] !== '' || $event['organizer_email'] !== '';
+    $event['has_accessibility_note'] = $event['accessibility_note'] !== '';
+    $event['has_program_note'] = $event['program_note'] !== '';
+    $event['has_price_note'] = $event['price_note'] !== '';
+    $event['event_status_key'] = eventCurrentStatus($event);
+    $event['event_status_label'] = match ($event['event_status_key']) {
+        'ongoing' => 'Právě probíhá',
+        'past' => 'Proběhlo',
+        default => 'Připravujeme',
+    };
+
+    return $event;
+}
+
+function eventCurrentStatus(array $event, ?\DateTimeInterface $now = null): string
+{
+    $nowTs = $now ? $now->getTimestamp() : time();
+    $startRaw = trim((string)($event['event_date'] ?? ''));
+    if ($startRaw === '') {
+        return 'upcoming';
+    }
+
+    try {
+        $startTs = (new \DateTimeImmutable($startRaw))->getTimestamp();
+    } catch (\Exception) {
+        return 'upcoming';
+    }
+
+    $endRaw = trim((string)($event['event_end'] ?? ''));
+    if ($endRaw !== '') {
+        try {
+            $endTs = (new \DateTimeImmutable($endRaw))->getTimestamp();
+        } catch (\Exception) {
+            $endTs = $startTs;
+        }
+    } else {
+        $endTs = $startTs;
+    }
+
+    if ($startTs <= $nowTs && $endTs >= $nowTs) {
+        return 'ongoing';
+    }
+
+    if ($endTs < $nowTs) {
+        return 'past';
+    }
+
+    return 'upcoming';
+}
+
+function eventPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "{$prefix}status = 'published'"
+        . " AND {$prefix}is_published = 1"
+        . " AND {$prefix}deleted_at IS NULL"
+        . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())";
+}
+
+function eventEffectiveEndSql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+    return "COALESCE({$prefix}event_end, {$prefix}event_date)";
+}
+
+function eventScopeVisibilitySql(string $scope, string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+    $effectiveEnd = eventEffectiveEndSql($alias);
+
+    return match ($scope) {
+        'ongoing' => "{$prefix}event_date <= NOW() AND {$effectiveEnd} >= NOW()",
+        'past' => "{$effectiveEnd} < NOW()",
+        'all' => '1 = 1',
+        default => "{$prefix}event_date > NOW()",
+    };
+}
+
+function eventStructuredData(array $event): string
+{
+    $data = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Event',
+        'name' => trim((string)($event['title'] ?? '')),
+        'startDate' => '',
+        'url' => eventPublicUrl($event),
+        'description' => eventExcerpt($event, 500),
+        'eventStatus' => match (eventCurrentStatus($event)) {
+            'ongoing' => 'https://schema.org/EventScheduled',
+            'past' => 'https://schema.org/EventCompleted',
+            default => 'https://schema.org/EventScheduled',
+        },
+    ];
+
+    try {
+        $start = new \DateTimeImmutable((string)($event['event_date'] ?? ''));
+        $data['startDate'] = $start->format(DATE_ATOM);
+    } catch (\Exception) {
+        $data['startDate'] = '';
+    }
+
+    if ($data['startDate'] === '') {
+        return '';
+    }
+
+    $endRaw = trim((string)($event['event_end'] ?? ''));
+    if ($endRaw !== '') {
+        try {
+            $data['endDate'] = (new \DateTimeImmutable($endRaw))->format(DATE_ATOM);
+        } catch (\Exception) {
+            // Ignore invalid end date in structured data.
+        }
+    }
+
+    $imageUrl = trim((string)($event['image_url'] ?? eventImageUrl($event)));
+    if ($imageUrl !== '') {
+        $data['image'] = [siteUrl(str_replace(BASE_URL, '', $imageUrl))];
+    }
+
+    $location = trim((string)($event['location'] ?? ''));
+    if ($location !== '') {
+        $data['location'] = [
+            '@type' => 'Place',
+            'name' => $location,
+        ];
+    }
+
+    $organizerName = trim((string)($event['organizer_name'] ?? ''));
+    $organizerEmail = trim((string)($event['organizer_email'] ?? ''));
+    if ($organizerName !== '' || $organizerEmail !== '') {
+        $data['organizer'] = array_filter([
+            '@type' => 'Organization',
+            'name' => $organizerName,
+            'email' => $organizerEmail !== '' ? 'mailto:' . $organizerEmail : '',
+        ], static fn($value): bool => $value !== '');
+    }
+
+    $registrationUrl = trim((string)($event['registration_url'] ?? ''));
+    if ($registrationUrl !== '') {
+        $data['offers'] = [
+            '@type' => 'Offer',
+            'url' => $registrationUrl,
+            'availability' => 'https://schema.org/InStock',
+        ];
+    }
+
+    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+}
+
+function eventIcsFilename(array $event): string
+{
+    $slug = eventSlug((string)($event['slug'] ?? ''));
+    if ($slug === '') {
+        $slug = 'udalost-' . (int)($event['id'] ?? 0);
+    }
+
+    return $slug . '.ics';
+}
+
+function eventIcsContent(array $event): string
+{
+    $siteHost = (string)(parse_url(siteUrl('/'), PHP_URL_HOST) ?: 'localhost');
+    $uid = 'event-' . (int)($event['id'] ?? 0) . '@' . $siteHost;
+    $dtStamp = gmdate('Ymd\THis\Z');
+
+    $escape = static function (string $value): string {
+        return str_replace(
+            ["\\", ';', ',', "\r\n", "\n", "\r"],
+            ['\\\\', '\;', '\,', '\n', '\n', '\n'],
+            $value
+        );
+    };
+
+    $toUtc = static function (string $value): string {
+        return (new \DateTimeImmutable($value))->setTimezone(new \DateTimeZone('UTC'))->format('Ymd\THis\Z');
+    };
+
+    $lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Kora CMS//Events//CS',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        'UID:' . $uid,
+        'DTSTAMP:' . $dtStamp,
+        'DTSTART:' . $toUtc((string)($event['event_date'] ?? '')),
+        'SUMMARY:' . $escape(trim((string)($event['title'] ?? 'Událost'))),
+        'DESCRIPTION:' . $escape(eventExcerpt($event, 800)),
+        'URL:' . eventPublicUrl($event),
+    ];
+
+    $endRaw = trim((string)($event['event_end'] ?? ''));
+    if ($endRaw !== '') {
+        $lines[] = 'DTEND:' . $toUtc($endRaw);
+    }
+
+    $location = trim((string)($event['location'] ?? ''));
+    if ($location !== '') {
+        $lines[] = 'LOCATION:' . $escape($location);
+    }
+
+    $lines[] = 'END:VEVENT';
+    $lines[] = 'END:VCALENDAR';
+
+    return implode("\r\n", $lines) . "\r\n";
 }
 
 function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null, int $blogId = 1): string

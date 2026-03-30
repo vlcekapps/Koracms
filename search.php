@@ -105,9 +105,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         try {
             foreach ($ftSearch(
                 $pdo, $q, $like,
-                "SELECT id, title, slug, description AS perex, event_date AS created_at, 'event' AS type",
-                "FROM cms_events WHERE status = 'published' AND is_published = 1",
-                'title, description',
+                "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex, event_date AS created_at, 'event' AS type",
+                "FROM cms_events WHERE " . eventPublicVisibilitySql(),
+                'title, excerpt, description, program_note, location, organizer_name',
                 [],
                 'event_date DESC',
                 5
