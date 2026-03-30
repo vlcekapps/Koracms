@@ -35,6 +35,18 @@ $eligibleUsersStmt = $pdo->query(
      ORDER BY COALESCE(NULLIF(nickname,''), NULLIF(TRIM(CONCAT(first_name,' ',last_name)),''), email)"
 );
 $eligibleUsers = $eligibleUsersStmt->fetchAll();
+$allMembershipRows = [];
+try {
+    $allMembershipStmt = $pdo->query(
+        "SELECT bm.user_id, bm.blog_id, bm.member_role, b.name AS blog_name
+         FROM cms_blog_members bm
+         INNER JOIN cms_blogs b ON b.id = bm.blog_id
+         ORDER BY b.name ASC, bm.member_role ASC"
+    );
+    $allMembershipRows = $allMembershipStmt->fetchAll();
+} catch (\PDOException $e) {
+    $allMembershipRows = [];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -75,6 +87,18 @@ $memberMap = [];
 foreach (getBlogMembers($blogId) as $memberRow) {
     $memberMap[(int)($memberRow['user_id'] ?? 0)] = (string)($memberRow['member_role'] ?? 'author');
 }
+$allMembershipsByUser = [];
+foreach ($allMembershipRows as $membershipRow) {
+    $membershipUserId = (int)($membershipRow['user_id'] ?? 0);
+    if ($membershipUserId <= 0) {
+        continue;
+    }
+    $allMembershipsByUser[$membershipUserId][] = [
+        'blog_id' => (int)($membershipRow['blog_id'] ?? 0),
+        'blog_name' => (string)($membershipRow['blog_name'] ?? ''),
+        'member_role' => (string)($membershipRow['member_role'] ?? 'author'),
+    ];
+}
 
 $displayName = static function (array $userRow): string {
     $nickname = trim((string)($userRow['nickname'] ?? ''));
@@ -89,6 +113,21 @@ $displayName = static function (array $userRow): string {
 
     return (string)($userRow['email'] ?? '');
 };
+$roleLabel = static fn(string $roleKey): string => $roleOptions[$roleKey] ?? 'Autor blogu';
+
+usort($eligibleUsers, static function (array $leftUser, array $rightUser) use ($memberMap, $displayName): int {
+    $leftAssigned = isset($memberMap[(int)($leftUser['id'] ?? 0)]) ? 0 : 1;
+    $rightAssigned = isset($memberMap[(int)($rightUser['id'] ?? 0)]) ? 0 : 1;
+    if ($leftAssigned !== $rightAssigned) {
+        return $leftAssigned <=> $rightAssigned;
+    }
+
+    return strcasecmp($displayName($leftUser), $displayName($rightUser));
+});
+
+$assignedCount = count($memberMap);
+$managerCount = count(array_filter($memberMap, static fn(string $memberRole): bool => $memberRole === 'manager'));
+$authorCount = count(array_filter($memberMap, static fn(string $memberRole): bool => $memberRole === 'author'));
 
 adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'] : ''));
 ?>
@@ -122,6 +161,15 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
   </form>
 <?php endif; ?>
 
+<?php if ($currentBlog): ?>
+  <p class="field-help">
+    Přehled pro <strong><?= h((string)$currentBlog['name']) ?></strong>:
+    přiřazeno <?= $assignedCount ?> <?= $assignedCount === 1 ? 'uživatel' : (($assignedCount >= 2 && $assignedCount <= 4) ? 'uživatelé' : 'uživatelů') ?>,
+    z toho <?= $managerCount ?> správc<?= $managerCount === 1 ? 'e' : 'ů' ?> blogu a
+    <?= $authorCount ?> autor<?= $authorCount === 1 ? '' : (($authorCount >= 2 && $authorCount <= 4) ? 'i' : 'ů') ?>.
+  </p>
+<?php endif; ?>
+
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="blog_id" value="<?= $blogId ?>">
@@ -143,6 +191,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
             <th scope="col">Uživatel</th>
             <th scope="col">Systémová role</th>
             <th scope="col">E-mail</th>
+            <th scope="col">Další blogy uživatele</th>
             <th scope="col">Zařadit do blogu</th>
             <th scope="col">Role v blogu</th>
           </tr>
@@ -153,6 +202,10 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
             $userId = (int)($eligibleUser['id'] ?? 0);
             $assignedRole = $memberMap[$userId] ?? '';
             $isAssigned = $assignedRole !== '';
+            $otherMemberships = array_values(array_filter(
+                $allMembershipsByUser[$userId] ?? [],
+                static fn(array $membership): bool => (int)($membership['blog_id'] ?? 0) !== $blogId
+            ));
             ?>
             <tr>
               <td>
@@ -163,6 +216,20 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
               </td>
               <td><?= h((string)($eligibleUser['role'] ?? '')) ?></td>
               <td><?= h((string)($eligibleUser['email'] ?? '')) ?></td>
+              <td>
+                <?php if ($otherMemberships === []): ?>
+                  <small class="field-help">Jen tento blog nebo zatím bez dalších přiřazení.</small>
+                <?php else: ?>
+                  <ul style="margin:0;padding-left:1rem">
+                    <?php foreach ($otherMemberships as $membership): ?>
+                      <li>
+                        <?= h((string)$membership['blog_name']) ?>
+                        <small class="field-help">(<?= h($roleLabel((string)$membership['member_role'])) ?>)</small>
+                      </li>
+                    <?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+              </td>
               <td>
                 <label for="member-<?= $userId ?>" class="visually-hidden">Zařadit uživatele do blogu</label>
                 <input type="checkbox" id="member-<?= $userId ?>" name="member_<?= $userId ?>" value="1"<?= $isAssigned ? ' checked' : '' ?>>

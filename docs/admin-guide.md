@@ -153,6 +153,16 @@ Role v blogu:
 
 Jakmile začnete používat přiřazení blogů, autor už neuvidí všechny blogy v systému, ale jen ty, do kterých patří.
 
+### Přehled přiřazení
+
+Správa týmů je teď viditelná i z více míst:
+
+- **Tým blogu** ukazuje u každého uživatele i jeho další blogová přiřazení, takže je hned jasné, kdo píše do více blogů
+- **Uživatelé a role** nově obsahují sloupec `Blogy`, kde je vidět přiřazení každého interního účtu
+- **Správa blogů** zobrazuje i počet členů týmu u každého blogu
+
+To je užitečné hlavně ve chvíli, kdy jeden autor spravuje více blogů nebo když chcete rychle zkontrolovat, zda má nový redaktor přístup opravdu jen tam, kam patří.
+
 ### Články v rámci blogu
 
 Editor článku respektuje vybraný blog:

@@ -84,7 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $blogs = $pdo->query(
-    "SELECT b.*, (SELECT COUNT(*) FROM cms_articles WHERE blog_id = b.id) AS article_count
+    "SELECT b.*,
+            (SELECT COUNT(*) FROM cms_articles WHERE blog_id = b.id) AS article_count,
+            (SELECT COUNT(*) FROM cms_blog_members WHERE blog_id = b.id) AS member_count
      FROM cms_blogs b ORDER BY b.sort_order, b.name"
 )->fetchAll();
 $defaultBlogId = (int)(getDefaultBlog()['id'] ?? 0);
@@ -163,6 +165,7 @@ adminHeader('Správa blogů');
         <th scope="col">Název</th>
         <th scope="col">Slug</th>
         <th scope="col">Články</th>
+        <th scope="col">Tým</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -183,6 +186,14 @@ adminHeader('Správa blogů');
         </td>
         <td><code><?= h((string)$blog['slug']) ?></code></td>
         <td><?= (int)$blog['article_count'] ?></td>
+        <td>
+          <?= (int)($blog['member_count'] ?? 0) ?>
+          <?php if ((int)($blog['member_count'] ?? 0) > 0): ?>
+            <br><small class="field-help">Přiřazených autorů a správců</small>
+          <?php else: ?>
+            <br><small class="field-help">Bez týmu</small>
+          <?php endif; ?>
+        </td>
         <td class="actions">
           <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener">Zobrazit na webu</a>
           <a href="<?= h(blogFeedPath($blog)) ?>" class="btn" target="_blank" rel="noopener">RSS feed</a>

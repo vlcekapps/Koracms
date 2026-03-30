@@ -14,6 +14,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Změněno
 - **Blogové URL a feedy** – při změně slug blogu se staré adresy i per-blog RSS feed bezpečně přesměrují na nový canonical tvar
 - **Export / import** – balíčky nově zahrnují i blog membership, redirecty starých slugů, rozšířená metadata blogů a featured flag článků
+- **Multiblog – přehlednější správa týmů** – obrazovka `Tým blogu` nově ukazuje i další blogy daného uživatele, přehled uživatelů zobrazuje jejich blogová přiřazení a správa blogů přidává i počet členů týmu u každého blogu
 - **Dokumentace** – README nově drží jen vysokou úroveň instalace, provozu a přehledu funkcí; detailní administrátorské workflow pro multiblog, formuláře a podcasty je přesunuté do `docs/admin-guide.md`
 
 ## [3.0.0-rc.7] – 2026-03-30

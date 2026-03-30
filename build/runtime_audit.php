@@ -5926,6 +5926,7 @@ $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bl
 $blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
 $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
 $blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
+$usersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
 $blogExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
 $blogImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
 $blogIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/index.php');
@@ -6000,6 +6001,9 @@ if (!str_contains($blogMembersSource, 'blogMembershipRoleDefinitions()')) {
 if (!str_contains($blogMembersSource, 'canCurrentUserManageBlogTaxonomies($blogId)')) {
     $blogAdminIssues[] = 'blog team management page is missing capability enforcement';
 }
+if (!str_contains($blogMembersSource, 'Další blogy uživatele')) {
+    $blogAdminIssues[] = 'blog team management page is missing cross-blog membership overview';
+}
 if (!str_contains($blogSaveSource, 'canCurrentUserWriteToBlog($blogId)')) {
     $blogAdminIssues[] = 'article save is missing writable-blog enforcement';
 }
@@ -6027,8 +6031,14 @@ if (!str_contains($blogsAdminSource, 'name="comments_default"')) {
 if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
     $blogAdminIssues[] = 'blog editor is missing extended intro content';
 }
+if (!str_contains($blogsAdminSource, 'member_count')) {
+    $blogAdminIssues[] = 'blog overview is missing assigned team counts';
+}
 if (!str_contains($blogsAdminSource, 'saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog editor no longer stores legacy slug redirects';
+}
+if (!str_contains($usersAdminSource, 'Bez přiřazení k blogům')) {
+    $blogAdminIssues[] = 'users overview is missing blog assignment visibility';
 }
 if (!str_contains($dbSource, 'function resetAutoIncrementIfEmpty')) {
     $blogAdminIssues[] = 'database helpers are missing auto-increment reset helper for empty blog tables';
