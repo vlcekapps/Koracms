@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **README.md** – kompletní revize: srozumitelnější jazyk pro administrátory, obsah (TOC), sjednocená sekce Konfigurace (SMTP, GA4, režim údržby, GitHub token, privátní úložiště), nové sekce Zálohování a údržba, Řešení problémů a ukázková Nginx konfigurace; opraveny chybějící PHP rozšíření `mbstring` a `zip` v požadavcích; odstraněny duplicitní sekce a changelogový tón; detailní popis modulů přesunut do `docs/admin-guide.md`
+
 ## [3.0.0-rc.6] – 2026-03-30
 
 ### Přidáno
