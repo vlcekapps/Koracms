@@ -22,6 +22,7 @@ function contentReferenceAllowedTypes(): array
         'podcast',
         'download',
         'media',
+        'forms',
         'place',
         'board',
         'poll',
@@ -41,6 +42,7 @@ function contentReferenceTypeLabel(string $type): string
         'podcast_show' => 'Podcast',
         'podcast_episode' => 'Epizoda podcastu',
         'download' => 'Položka ke stažení',
+        'form' => 'Formulář',
         'media_image' => 'Obrázek z knihovny médií',
         'media_audio' => 'Audio z knihovny médií',
         'media_video' => 'Video z knihovny médií',
@@ -64,6 +66,7 @@ function contentReferenceTitle(array $row): string
         'podcast_show',
         'podcast_episode',
         'download',
+        'form',
         'place',
         'board',
         'faq',
@@ -93,6 +96,7 @@ function contentReferenceExcerpt(array $row, int $limit = 180): string
         'podcast_show' => mb_strimwidth(normalizePlainText((string)($row['description'] ?? '')), 0, $limit, '…', 'UTF-8'),
         'podcast_episode' => podcastEpisodeExcerpt($row, $limit),
         'download' => downloadExcerpt($row, $limit),
+        'form' => mb_strimwidth(normalizePlainText((string)($row['description'] ?? '')), 0, $limit, '…', 'UTF-8'),
         'media_image', 'media_audio', 'media_video', 'media_file' => mediaReferenceExcerpt($row, $limit),
         'place' => placeExcerpt($row, $limit),
         'board' => boardExcerpt($row, $limit),
@@ -161,6 +165,7 @@ function contentReferencePublicPath(array $row): string
         'podcast_show' => podcastShowPublicPath($row),
         'podcast_episode' => podcastEpisodePublicPath($row),
         'download' => downloadPublicPath($row),
+        'form' => formPublicPath($row),
         'media_image', 'media_audio', 'media_video', 'media_file' => mediaReferencePublicPath($row),
         'place' => placePublicPath($row),
         'board' => boardPublicPath($row),
@@ -230,6 +235,16 @@ function contentReferenceVideoShortcode(string $url, string $mimeType = ''): str
 function contentReferenceGalleryShortcode(string $slug): string
 {
     return '[gallery]' . $slug . '[/gallery]';
+}
+
+function contentReferenceSimpleEntityShortcode(string $tag, string $slug): string
+{
+    return '[' . $tag . ']' . $slug . '[/' . $tag . ']';
+}
+
+function contentReferencePodcastEpisodeShortcode(string $showSlug, string $episodeSlug): string
+{
+    return '[podcast_episode]' . $showSlug . '/' . $episodeSlug . '[/podcast_episode]';
 }
 
 function contentReferenceBuildAction(
@@ -470,7 +485,29 @@ function contentReferenceInsertActions(array $row): array
     ];
 
     $type = (string)($row['type'] ?? '');
-    if ($type === 'gallery_album') {
+    if ($type === 'form') {
+        $slug = formSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit formulář',
+                'Do textu byl vložen formulář.',
+                true,
+                contentReferenceSimpleEntityShortcode('form', $slug)
+            );
+        }
+    } elseif ($type === 'poll') {
+        $slug = pollSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit anketu',
+                'Do textu byla vložena anketa.',
+                true,
+                contentReferenceSimpleEntityShortcode('poll', $slug)
+            );
+        }
+    } elseif ($type === 'gallery_album') {
         $slug = galleryAlbumSlug((string)($row['slug'] ?? ''));
         if ($slug !== '') {
             $actions[] = contentReferenceBuildAction(
@@ -482,11 +519,43 @@ function contentReferenceInsertActions(array $row): array
             );
         }
     } elseif ($type === 'podcast_episode') {
+        $showSlug = podcastShowSlug((string)($row['show_slug'] ?? ''));
+        $episodeSlug = podcastEpisodeSlug((string)($row['slug'] ?? ''));
+        if ($showSlug !== '' && $episodeSlug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit epizodu podcastu',
+                'Do textu byla vložena epizoda podcastu.',
+                true,
+                contentReferencePodcastEpisodeShortcode($showSlug, $episodeSlug)
+            );
+        }
         $mediaAction = contentReferencePodcastEpisodeMediaAction($row);
         if ($mediaAction !== null) {
             $actions[] = $mediaAction;
         }
+    } elseif ($type === 'podcast_show') {
+        $slug = podcastShowSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit podcast',
+                'Do textu byl vložen podcast.',
+                true,
+                contentReferenceSimpleEntityShortcode('podcast', $slug)
+            );
+        }
     } elseif ($type === 'download') {
+        $slug = downloadSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit blok ke stažení',
+                'Do textu byl vložen blok ke stažení.',
+                true,
+                contentReferenceSimpleEntityShortcode('download', $slug)
+            );
+        }
         $mediaAction = contentReferenceDownloadMediaAction($row);
         if ($mediaAction !== null) {
             $actions[] = $mediaAction;
@@ -494,6 +563,39 @@ function contentReferenceInsertActions(array $row): array
         $downloadLinkAction = contentReferenceDownloadDirectLinkAction($row);
         if ($downloadLinkAction !== null) {
             $actions[] = $downloadLinkAction;
+        }
+    } elseif ($type === 'place') {
+        $slug = placeSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit místo',
+                'Do textu bylo vloženo místo.',
+                true,
+                contentReferenceSimpleEntityShortcode('place', $slug)
+            );
+        }
+    } elseif ($type === 'event') {
+        $slug = eventSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit událost',
+                'Do textu byla vložena událost.',
+                true,
+                contentReferenceSimpleEntityShortcode('event', $slug)
+            );
+        }
+    } elseif ($type === 'board') {
+        $slug = boardSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit oznámení',
+                'Do textu bylo vloženo oznámení.',
+                true,
+                contentReferenceSimpleEntityShortcode('board', $slug)
+            );
         }
     } elseif ($type === 'gallery_photo') {
         $galleryPhotoAction = contentReferenceGalleryPhotoImageAction($row);
@@ -594,8 +696,7 @@ if (($requestedType === 'all' || $requestedType === 'event') && isModuleEnabled(
         $stmt = $pdo->prepare(
             "SELECT id, title, slug, description, event_date AS created_at, 'event' AS type
              FROM cms_events
-             WHERE status = 'published'
-               AND is_published = 1
+             WHERE " . eventPublicVisibilitySql() . "
                AND (title LIKE ? OR description LIKE ? OR location LIKE ? OR slug LIKE ?)
              ORDER BY event_date DESC
              LIMIT 10"
@@ -671,8 +772,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
         $showStmt = $pdo->prepare(
             "SELECT id, title, slug, description, cover_image, created_at, 'podcast_show' AS type
              FROM cms_podcast_shows
-             WHERE status = 'published'
-               AND is_published = 1
+             WHERE " . podcastShowPublicVisibilitySql() . "
                AND (title LIKE ? OR description LIKE ? OR slug LIKE ?)
              ORDER BY created_at DESC
              LIMIT 6"
@@ -684,11 +784,12 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
 
         $episodeStmt = $pdo->prepare(
             "SELECT e.id, e.title, e.slug, e.description, e.audio_file, e.audio_url, e.created_at,
-                    s.slug AS show_slug, s.title AS show_title,
+                    s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image,
+                    s.status AS show_status, s.is_published AS show_is_published,
                     'podcast_episode' AS type
              FROM cms_podcasts e
              INNER JOIN cms_podcast_shows s ON s.id = e.show_id
-             WHERE e.status = 'published'
+             WHERE " . podcastEpisodePublicVisibilitySql('e', 's') . "
                AND (e.title LIKE ? OR e.description LIKE ? OR e.slug LIKE ? OR s.title LIKE ?)
              ORDER BY e.created_at DESC
              LIMIT 6"
@@ -722,6 +823,25 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
     }
 }
 
+if (($requestedType === 'all' || $requestedType === 'forms') && isModuleEnabled('forms')) {
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, title, slug, description, updated_at AS created_at, 'form' AS type
+             FROM cms_forms
+             WHERE is_active = 1
+               AND (title LIKE ? OR description LIKE ? OR slug LIKE ?)
+             ORDER BY updated_at DESC, id DESC
+             LIMIT 10"
+        );
+        $stmt->execute([$like, $like, $like]);
+        foreach ($stmt->fetchAll() as $row) {
+            $results[] = contentReferenceResult($row);
+        }
+    } catch (\PDOException $e) {
+        error_log('content_reference_search: ' . $e->getMessage());
+    }
+}
+
 if ($requestedType === 'all' || $requestedType === 'media') {
     try {
         $stmt = $pdo->prepare(
@@ -745,10 +865,9 @@ if ($requestedType === 'all' || $requestedType === 'media') {
 if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled('places')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, name AS title, slug, excerpt, description, image_file, created_at, 'place' AS type
+            "SELECT id, name AS title, slug, excerpt, description, image_file, locality, category, place_kind, created_at, 'place' AS type
              FROM cms_places
-             WHERE status = 'published'
-               AND is_published = 1
+             WHERE " . placePublicVisibilitySql() . "
                AND (name LIKE ? OR excerpt LIKE ? OR description LIKE ? OR locality LIKE ? OR slug LIKE ?)
              ORDER BY COALESCE(updated_at, created_at) DESC
              LIMIT 10"

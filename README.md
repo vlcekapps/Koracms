@@ -234,7 +234,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s datem, místem a detailem |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
-| **Podcasty** | Více pořadů, epizody, artwork, RSS feed s iTunes značkami |
+| **Podcasty** | Více pořadů, epizody, artwork, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s verzemi, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů s platností, archivem, hledáním a revizemi |
@@ -305,7 +305,7 @@ Kora CMS podporuje dva editory:
 - **HTML textarea** – výchozí, přístupnější varianta
 - **WYSIWYG (Quill)** – volitelný vizuální režim
 
-Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložení interních odkazů, galerií, médií a hotových HTML bloků.
+Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložení interních odkazů, galerií, médií, formulářů, anket a hotových HTML bloků.
 
 ### Podporované snippety
 
@@ -314,8 +314,16 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 | `[audio]https://example.test/audio.mp3[/audio]` | HTML5 audio přehrávač |
 | `[video]https://example.test/video.mp4[/video]` | HTML5 video přehrávač |
 | `[gallery]slug-alba[/gallery]` | Vložená galerie podle slugu |
+| `[form]slug-formulare[/form]` | Živý embed veřejného formuláře |
+| `[poll]slug-ankety[/poll]` | Živý embed veřejné ankety |
+| `[download]slug-polozky[/download]` | Teaser karta položky ke stažení |
+| `[podcast]slug-poradu[/podcast]` | Teaser karta podcastového pořadu |
+| `[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]` | Teaser karta epizody podcastu |
+| `[place]slug-mista[/place]` | Teaser karta zajímavého místa |
+| `[event]slug-udalosti[/event]` | Teaser karta události |
+| `[board]slug-oznameni[/board]` | Teaser karta položky vývěsky |
 
-Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`.
+Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, ostatní nové snippety jako sjednocené obsahové karty.
 
 ---
 

@@ -28,6 +28,9 @@ function adminContentReferencePickerTypes(): array
         $types['download'] = 'Ke stažení';
     }
     $types['media'] = 'Knihovna médií';
+    if (isModuleEnabled('forms')) {
+        $types['forms'] = 'Formuláře';
+    }
     if (isModuleEnabled('places')) {
         $types['place'] = 'Zajímavá místa';
     }
@@ -50,6 +53,28 @@ function adminHtmlSnippetSupportMarkup(): string
 
     if (isModuleEnabled('gallery')) {
         $snippets[] = '<code>[gallery]slug-alba[/gallery]</code>';
+    }
+    if (isModuleEnabled('forms')) {
+        $snippets[] = '<code>[form]slug-formulare[/form]</code>';
+    }
+    if (isModuleEnabled('polls')) {
+        $snippets[] = '<code>[poll]slug-ankety[/poll]</code>';
+    }
+    if (isModuleEnabled('downloads')) {
+        $snippets[] = '<code>[download]slug-polozky[/download]</code>';
+    }
+    if (isModuleEnabled('podcast')) {
+        $snippets[] = '<code>[podcast]slug-poradu[/podcast]</code>';
+        $snippets[] = '<code>[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]</code>';
+    }
+    if (isModuleEnabled('places')) {
+        $snippets[] = '<code>[place]slug-mista[/place]</code>';
+    }
+    if (isModuleEnabled('events')) {
+        $snippets[] = '<code>[event]slug-udalosti[/event]</code>';
+    }
+    if (isModuleEnabled('board')) {
+        $snippets[] = '<code>[board]slug-oznameni[/board]</code>';
     }
 
     $last = array_pop($snippets);
@@ -247,7 +272,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
               aria-describedby="<?= h($pickerId) ?>-picker-launch-help">
         Vložit odkaz nebo HTML z webu
       </button>
-      <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz, HTML blok, fotogalerii, obrázek nebo přehrávač.</small>
+      <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku, formulář, anketu, médium nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz, HTML blok, fotogalerii, obrázek, přehrávač nebo obsahový snippet.</small>
     </div>
 
     <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden style="display:none"></div>
@@ -262,7 +287,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
       <div class="content-reference-picker-dialog__header">
         <div>
           <h2 id="<?= h($pickerId) ?>-picker-title" class="content-reference-picker-dialog__title">Vložit odkaz nebo HTML z webu</h2>
-          <p id="<?= h($pickerId) ?>-picker-description" class="field-help" style="margin-top:.35rem">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz, HTML blok a podle typu výsledku i jako fotogalerii, obrázek nebo přehrávač.</p>
+          <p id="<?= h($pickerId) ?>-picker-description" class="field-help" style="margin-top:.35rem">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz, HTML blok a podle typu výsledku i jako fotogalerii, obrázek, přehrávač, formulář, anketu nebo obsahovou kartu.</p>
         </div>
         <button type="button" class="btn" id="<?= h($pickerId) ?>-picker-close">Zavřít</button>
       </div>
@@ -289,7 +314,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
             <button type="button" class="btn" id="<?= h($pickerId) ?>-picker-submit">Vyhledat</button>
           </div>
         </div>
-        <small id="<?= h($pickerId) ?>-picker-query-help" class="field-help">Hledání prochází veřejně dostupný obsah webu i knihovnu médií.</small>
+        <small id="<?= h($pickerId) ?>-picker-query-help" class="field-help">Hledání prochází veřejně dostupný obsah webu, formuláře, ankety i knihovnu médií.</small>
         <small id="<?= h($pickerId) ?>-picker-selection-help" class="field-help">Pokud máte v editoru označený text, při vložení odkazu se použije jako text odkazu. Jinak se vloží název nalezené položky.</small>
       </fieldset>
 

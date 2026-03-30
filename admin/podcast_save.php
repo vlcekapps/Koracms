@@ -19,6 +19,10 @@ $explicitMode = normalizePodcastEpisodeExplicitMode((string)($_POST['explicit_mo
 $blockFromFeed = isset($_POST['block_from_feed']) ? 1 : 0;
 $deleteAudioFile = isset($_POST['audio_file_delete']);
 $deleteImageFile = isset($_POST['image_file_delete']);
+$backUrl = internalRedirectTarget(
+    (string)($_POST['redirect'] ?? ''),
+    BASE_URL . '/admin/podcast.php?show_id=' . (int)($showId ?? 0)
+);
 
 if ($showId === null && $id !== null) {
     $showLookup = $pdo->prepare("SELECT show_id FROM cms_podcasts WHERE id = ?");
@@ -32,11 +36,12 @@ if ($showId === null || $showId < 1) {
 }
 
 $redirectBase = BASE_URL . '/admin/podcast_form.php';
-$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $showId): never {
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $showId, $backUrl): never {
     $query = '?show_id=' . $showId . '&err=' . rawurlencode($errorCode);
     if ($id !== null) {
         $query .= '&id=' . $id;
     }
+    $query .= '&redirect=' . rawurlencode($backUrl);
     header('Location: ' . $redirectBase . $query);
     exit;
 };
@@ -45,26 +50,31 @@ if ($title === '') {
     $redirectWithError('required');
 }
 
-$showStmt = $pdo->prepare("SELECT id FROM cms_podcast_shows WHERE id = ?");
+$showStmt = $pdo->prepare("SELECT * FROM cms_podcast_shows WHERE id = ?");
 $showStmt->execute([$showId]);
-if (!$showStmt->fetchColumn()) {
+$show = $showStmt->fetch() ?: null;
+if (!$show) {
     header('Location: ' . BASE_URL . '/admin/podcast_shows.php');
     exit;
 }
+$show = hydratePodcastShowPresentation($show);
 
 $existing = [
     'audio_file' => '',
     'image_file' => '',
+    'status' => 'published',
 ];
+$oldData = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT audio_file, image_file FROM cms_podcasts WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_podcasts WHERE id = ?");
     $existingStmt->execute([$id]);
     $existingRow = $existingStmt->fetch();
     if (!$existingRow) {
-        header('Location: ' . BASE_URL . '/admin/podcast.php?show_id=' . (int)$showId);
+        header('Location: ' . $backUrl);
         exit;
     }
     $existing = array_merge($existing, $existingRow);
+    $oldData = $existingRow;
 }
 
 $resolvedSlug = podcastEpisodeSlug($slugInput !== '' ? $slugInput : $title);
@@ -119,6 +129,34 @@ if (!empty($_POST['publish_at'])) {
 }
 
 if ($id !== null) {
+    if ($oldData) {
+        saveRevision(
+            $pdo,
+            'podcast_episode',
+            $id,
+            podcastEpisodeRevisionSnapshot($oldData),
+            podcastEpisodeRevisionSnapshot([
+                'title' => $title,
+                'slug' => $uniqueSlug,
+                'description' => $description,
+                'audio_url' => $audioUrl,
+                'subtitle' => $subtitle,
+                'duration' => $duration,
+                'episode_num' => $episodeNum,
+                'season_num' => $seasonNum,
+                'episode_type' => $episodeType,
+                'explicit_mode' => $explicitMode,
+                'block_from_feed' => $blockFromFeed,
+                'publish_at' => $publishAt,
+                'status' => (string)($oldData['status'] ?? 'published'),
+            ])
+        );
+    }
+
+    $oldPath = $oldData ? podcastEpisodePublicPath([
+        'show_slug' => (string)($show['slug'] ?? ''),
+        'slug' => (string)($oldData['slug'] ?? ''),
+    ]) : '';
     $pdo->prepare(
         "UPDATE cms_podcasts
          SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, image_file = ?, audio_url = ?,
@@ -143,6 +181,10 @@ if ($id !== null) {
         $publishAt,
         $id,
     ]);
+    upsertPathRedirect($pdo, $oldPath, podcastEpisodePublicPath([
+        'show_slug' => (string)$show['slug'],
+        'slug' => $uniqueSlug,
+    ]));
     logAction('podcast_edit', "id={$id} show_id={$showId} slug={$uniqueSlug}");
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
@@ -176,5 +218,5 @@ if ($id !== null) {
     }
 }
 
-header('Location: ' . BASE_URL . '/admin/podcast.php?show_id=' . (int)$showId);
+header('Location: ' . $backUrl);
 exit;

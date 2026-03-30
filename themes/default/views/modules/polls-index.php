@@ -1,10 +1,11 @@
-<div class="listing-shell">
+<?php $isEmbedded = !empty($isEmbedded); ?>
+<div class="<?= $isEmbedded ? 'listing-shell listing-shell--embed' : 'listing-shell' ?>">
   <?php if ($poll !== null): ?>
-    <section class="surface" aria-labelledby="poll-title">
+    <section class="surface<?= $isEmbedded ? ' surface--embed' : '' ?>" aria-labelledby="poll-title">
       <div class="section-heading">
         <div>
           <p class="section-kicker">Anketa</p>
-          <h1 id="poll-title" class="section-title section-title--hero"><?= h($poll['question']) ?></h1>
+          <h1 id="poll-title" class="section-title <?= $isEmbedded ? 'section-title--compact' : 'section-title--hero' ?>"><?= h($poll['question']) ?></h1>
         </div>
       </div>
 
@@ -25,7 +26,7 @@
       <?php endif; ?>
 
       <?php if ($showForm): ?>
-        <form method="post" action="<?= h((string)$poll['public_path']) ?>" class="form-stack poll-vote-form" novalidate>
+        <form method="post" action="<?= h(pollPublicPath($poll, $isEmbedded ? ['embed' => '1'] : [])) ?>" class="form-stack poll-vote-form" novalidate>
           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
           <?= honeypotField() ?>
 
@@ -76,9 +77,11 @@
         </section>
       <?php endif; ?>
 
-      <div class="article-actions">
-        <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php"><span aria-hidden="true">←</span> Zpět na přehled anket</a>
-      </div>
+      <?php if (!$isEmbedded): ?>
+        <div class="article-actions">
+          <a class="button-secondary" href="<?= BASE_URL ?>/polls/index.php"><span aria-hidden="true">←</span> Zpět na přehled anket</a>
+        </div>
+      <?php endif; ?>
     </section>
   <?php else: ?>
     <section class="surface" aria-labelledby="polls-title">

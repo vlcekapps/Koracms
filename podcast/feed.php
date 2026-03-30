@@ -21,6 +21,10 @@ if (!$show) {
     exit;
 }
 $show = hydratePodcastShowPresentation($show);
+if (empty($show['is_public']) && !currentUserHasCapability('content_manage_shared')) {
+    http_response_code(404);
+    exit;
+}
 $feedEpisodeLimit = (int)$show['feed_episode_limit'];
 
 $episodesStmt = $pdo->prepare(
@@ -29,8 +33,7 @@ $episodesStmt = $pdo->prepare(
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
      WHERE p.show_id = ?
        AND COALESCE(p.block_from_feed, 0) = 0
-       AND p.status = 'published'
-       AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+       AND " . podcastEpisodePublicVisibilitySql('p') . "
      ORDER BY COALESCE(p.publish_at, p.created_at) DESC, COALESCE(p.episode_num, 0) DESC, p.id DESC
      LIMIT {$feedEpisodeLimit}"
 );
@@ -42,8 +45,8 @@ $episodes = array_map(
 
 $showUrl = $show['website_url'] !== '' ? (string)$show['website_url'] : $show['public_url'];
 $selfUrl = siteUrl('/podcast/feed.php?slug=' . rawurlencode((string)$show['slug']));
-$coverUrl = (string)($show['cover_image'] !== ''
-    ? siteUrl('/uploads/podcasts/covers/' . rawurlencode((string)$show['cover_image']))
+$coverUrl = (string)($show['cover_url'] !== ''
+    ? siteUrl(str_starts_with((string)$show['cover_url'], BASE_URL) ? substr((string)$show['cover_url'], strlen(BASE_URL)) : (string)$show['cover_url'])
     : '');
 $showSubtitle = (string)($show['feed_subtitle'] ?? '');
 $showSummary = (string)($show['feed_summary'] ?? '');
@@ -74,7 +77,9 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     <atom:link href="<?= htmlspecialchars($selfUrl, ENT_XML1, 'UTF-8') ?>" rel="self" type="application/rss+xml"/>
 <?php if (!empty($show['author'])): ?>
     <itunes:author><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></itunes:author>
-    <managingEditor><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></managingEditor>
+<?php endif; ?>
+<?php if (podcastFeedManagingEditor($show) !== ''): ?>
+    <managingEditor><?= htmlspecialchars(podcastFeedManagingEditor($show), ENT_XML1, 'UTF-8') ?></managingEditor>
 <?php endif; ?>
 <?php if (!empty($show['owner_name']) || !empty($show['owner_email'])): ?>
     <itunes:owner>
@@ -105,16 +110,11 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php foreach ($episodes as $episode):
     $audioSrc = '';
     $audioType = 'audio/mpeg';
+    $enclosureLength = 0;
     if ((string)$episode['audio_file'] !== '') {
-        $audioSrc = siteUrl('/uploads/podcasts/' . rawurlencode((string)$episode['audio_file']));
-        $extension = strtolower(pathinfo((string)$episode['audio_file'], PATHINFO_EXTENSION));
-        $audioType = match ($extension) {
-            'ogg' => 'audio/ogg',
-            'wav' => 'audio/wav',
-            'aac' => 'audio/aac',
-            'm4a' => 'audio/mp4',
-            default => 'audio/mpeg',
-        };
+        $audioSrc = siteUrl(str_starts_with((string)$episode['audio_src'], BASE_URL) ? substr((string)$episode['audio_src'], strlen(BASE_URL)) : (string)$episode['audio_src']);
+        $audioType = podcastAudioMimeType((string)$episode['audio_file']);
+        $enclosureLength = podcastEpisodeEnclosureLength($episode);
     } elseif ((string)$episode['audio_url'] !== '') {
         $audioSrc = (string)$episode['audio_url'];
     }
@@ -127,8 +127,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     $itemSubtitle = (string)($episode['feed_subtitle'] ?? '');
     $itemExplicit = (string)($episode['explicit_mode'] === 'inherit' ? $show['explicit_mode'] : $episode['explicit_mode']);
     $episodeImageUrl = (string)(
-        !empty($episode['image_file'])
-            ? siteUrl('/uploads/podcasts/images/' . rawurlencode((string)$episode['image_file']))
+        !empty($episode['image_url'])
+            ? siteUrl(str_starts_with((string)$episode['image_url'], BASE_URL) ? substr((string)$episode['image_url'], strlen(BASE_URL)) : (string)$episode['image_url'])
             : $coverUrl
     );
 ?>
@@ -150,7 +150,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php if ($audioSrc !== ''): ?>
       <enclosure url="<?= htmlspecialchars($audioSrc, ENT_XML1, 'UTF-8') ?>"
                  type="<?= htmlspecialchars($audioType, ENT_XML1, 'UTF-8') ?>"
-                 length="0"/>
+                 length="<?= $enclosureLength > 0 ? $enclosureLength : 0 ?>"/>
 <?php endif; ?>
 <?php if ($episodeImageUrl !== ''): ?>
       <itunes:image href="<?= htmlspecialchars($episodeImageUrl, ENT_XML1, 'UTF-8') ?>"/>

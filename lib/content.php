@@ -149,21 +149,24 @@ function renderContentGalleryShortcode(string $slug): ?string
             "SELECT id, name, slug, description, COALESCE(updated_at, created_at) AS updated_at
              FROM cms_gallery_albums
              WHERE slug = ?
+               AND " . galleryAlbumPublicVisibilitySql() . "
              LIMIT 1"
         );
         $albumStmt->execute([$normalizedSlug]);
         $album = $albumStmt->fetch();
         if (!$album) {
-            return null;
+            return '';
         }
 
         $album = hydrateGalleryAlbumPresentation($album);
 
         $photoStmt = $pdo->prepare(
-            "SELECT id, album_id, filename, title, slug, sort_order, created_at
-             FROM cms_gallery_photos
-             WHERE album_id = ?
-             ORDER BY sort_order, id
+            "SELECT p.id, p.album_id, p.filename, p.title, p.slug, p.sort_order, p.created_at
+             FROM cms_gallery_photos p
+             INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+             WHERE p.album_id = ?
+               AND " . galleryPhotoPublicVisibilitySql('p', 'a') . "
+             ORDER BY p.sort_order, p.id
              LIMIT 4"
         );
         $photoStmt->execute([(int)$album['id']]);
@@ -171,8 +174,8 @@ function renderContentGalleryShortcode(string $slug): ?string
         foreach ($photoStmt->fetchAll() as $photo) {
             $photos[] = hydrateGalleryPhotoPresentation($photo);
         }
-    } catch (\PDOException $e) {
-        return null;
+    } catch (\PDOException) {
+        return '';
     }
 
     $html = "\n\n"
@@ -202,6 +205,511 @@ function renderContentGalleryShortcode(string $slug): ?string
         . "\n\n";
 
     return $html;
+}
+
+function contentShortcodeResolvedValue(array $attributes, string $body, array $attributeKeys = ['slug']): string
+{
+    foreach ($attributeKeys as $attributeKey) {
+        $attributeValue = trim((string)($attributes[$attributeKey] ?? ''));
+        if ($attributeValue !== '') {
+            return $attributeValue;
+        }
+    }
+
+    return trim($body);
+}
+
+function contentShortcodePodcastEpisodeParts(array $attributes, string $body): ?array
+{
+    $resolved = contentShortcodeResolvedValue($attributes, $body, ['slug', 'path']);
+    if ($resolved === '' && !empty($attributes['show']) && !empty($attributes['episode'])) {
+        $resolved = trim((string)$attributes['show']) . '/' . trim((string)$attributes['episode']);
+    }
+
+    if ($resolved === '' || !str_contains($resolved, '/')) {
+        return null;
+    }
+
+    [$showSlug, $episodeSlug] = array_map('trim', explode('/', $resolved, 2));
+    $showSlug = podcastShowSlug($showSlug);
+    $episodeSlug = podcastEpisodeSlug($episodeSlug);
+
+    if ($showSlug === '' || $episodeSlug === '') {
+        return null;
+    }
+
+    return [
+        'show_slug' => $showSlug,
+        'episode_slug' => $episodeSlug,
+    ];
+}
+
+function contentEmbedMetaHtml(array $items): string
+{
+    $items = array_values(array_filter(array_map(
+        static fn($item): string => trim((string)$item),
+        $items
+    ), static fn(string $item): bool => $item !== ''));
+
+    if ($items === []) {
+        return '';
+    }
+
+    $html = '<p class="meta-row meta-row--tight content-embed-card__meta">';
+    foreach ($items as $item) {
+        $html .= '<span>' . h($item) . '</span>';
+    }
+    $html .= '</p>';
+
+    return $html;
+}
+
+function renderContentEmbedCard(array $config): string
+{
+    $title = trim((string)($config['title'] ?? ''));
+    $url = trim((string)($config['url'] ?? ''));
+    if ($title === '' || $url === '') {
+        return '';
+    }
+
+    $eyebrow = trim((string)($config['eyebrow'] ?? 'Obsah webu'));
+    $excerpt = trim((string)($config['excerpt'] ?? ''));
+    $ctaLabel = trim((string)($config['cta_label'] ?? 'Zobrazit detail'));
+    $modifier = trim((string)($config['modifier'] ?? ''));
+    $mediaUrl = trim((string)($config['media_url'] ?? ''));
+    $mediaAlt = trim((string)($config['media_alt'] ?? ''));
+    $extraHtml = trim((string)($config['extra_html'] ?? ''));
+    $metaHtml = contentEmbedMetaHtml(is_array($config['meta_items'] ?? null) ? $config['meta_items'] : []);
+
+    $classes = 'content-embed-card';
+    if ($modifier !== '') {
+        $classes .= ' content-embed-card--' . preg_replace('/[^a-z0-9_-]+/i', '-', $modifier);
+    }
+    if ($mediaUrl !== '') {
+        $classes .= ' content-embed-card--with-media';
+    }
+
+    $html = "\n\n" . '<section class="' . h($classes) . '" aria-label="' . h($eyebrow . ': ' . $title) . '">';
+
+    if ($mediaUrl !== '') {
+        $html .= '<div class="content-embed-card__media">'
+            . '<a href="' . h($url) . '">';
+        $html .= '<img src="' . h($mediaUrl) . '" alt="' . h($mediaAlt !== '' ? $mediaAlt : $title) . '" loading="lazy">';
+        $html .= '</a></div>';
+    }
+
+    $html .= '<div class="content-embed-card__content">'
+        . '<p class="content-embed-card__eyebrow">' . h($eyebrow) . '</p>'
+        . '<p class="content-embed-card__title"><a href="' . h($url) . '">' . h($title) . '</a></p>'
+        . $metaHtml;
+
+    if ($excerpt !== '') {
+        $html .= '<p class="content-embed-card__excerpt">' . h($excerpt) . '</p>';
+    }
+
+    if ($extraHtml !== '') {
+        $html .= '<div class="content-embed-card__extra">' . $extraHtml . '</div>';
+    }
+
+    $html .= '<div class="content-embed-card__actions">'
+        . '<a class="button-secondary" href="' . h($url) . '">' . h($ctaLabel) . '</a>'
+        . '</div>'
+        . '</div>'
+        . '</section>'
+        . "\n\n";
+
+    return $html;
+}
+
+function renderContentInteractiveEmbed(array $config): string
+{
+    $title = trim((string)($config['title'] ?? ''));
+    $url = trim((string)($config['url'] ?? ''));
+    $embedUrl = trim((string)($config['embed_url'] ?? ''));
+    if ($title === '' || $url === '' || $embedUrl === '') {
+        return '';
+    }
+
+    $eyebrow = trim((string)($config['eyebrow'] ?? 'Interaktivní obsah'));
+    $excerpt = trim((string)($config['excerpt'] ?? ''));
+    $openLabel = trim((string)($config['open_label'] ?? 'Otevřít samostatně'));
+    $modifier = trim((string)($config['modifier'] ?? 'interactive'));
+    $frameModifier = trim((string)($config['frame_modifier'] ?? $modifier));
+
+    $classes = 'content-embed-card content-embed-card--interactive';
+    if ($modifier !== '') {
+        $classes .= ' content-embed-card--' . preg_replace('/[^a-z0-9_-]+/i', '-', $modifier);
+    }
+
+    $html = "\n\n"
+        . '<section class="' . h($classes) . '" aria-label="' . h($eyebrow . ': ' . $title) . '">'
+        . '<div class="content-embed-card__content">'
+        . '<p class="content-embed-card__eyebrow">' . h($eyebrow) . '</p>'
+        . '<p class="content-embed-card__title"><a href="' . h($url) . '">' . h($title) . '</a></p>';
+
+    if ($excerpt !== '') {
+        $html .= '<p class="content-embed-card__excerpt">' . h($excerpt) . '</p>';
+    }
+
+    $html .= '<div class="content-embed-frame content-embed-frame--' . h(preg_replace('/[^a-z0-9_-]+/i', '-', $frameModifier)) . '">'
+        . '<iframe src="' . h($embedUrl) . '" title="' . h($eyebrow . ': ' . $title) . '" loading="lazy"></iframe>'
+        . '</div>'
+        . '<div class="content-embed-card__actions">'
+        . '<a class="button-secondary" href="' . h($url) . '">' . h($openLabel) . '</a>'
+        . '</div>'
+        . '</div>'
+        . '</section>'
+        . "\n\n";
+
+    return $html;
+}
+
+function renderContentFormShortcode(string $slug): string
+{
+    $normalizedSlug = formSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT id, title, slug, description
+             FROM cms_forms
+             WHERE slug = ?
+               AND is_active = 1
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $form = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$form) {
+        return '';
+    }
+
+    return renderContentInteractiveEmbed([
+        'eyebrow' => 'Formulář',
+        'title' => (string)$form['title'],
+        'excerpt' => trim((string)($form['description'] ?? '')),
+        'url' => formPublicPath($form),
+        'embed_url' => formPublicPath($form, ['embed' => '1']),
+        'open_label' => 'Otevřít formulář samostatně',
+        'modifier' => 'form',
+        'frame_modifier' => 'form',
+    ]);
+}
+
+function renderContentPollShortcode(string $slug): string
+{
+    $normalizedSlug = pollSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
+             FROM cms_polls p
+             WHERE p.slug = ?
+               AND (
+                    (p.status = 'active' AND (p.start_date IS NULL OR p.start_date <= NOW()) AND (p.end_date IS NULL OR p.end_date > NOW()))
+                    OR p.status = 'closed'
+                    OR (p.end_date IS NOT NULL AND p.end_date <= NOW())
+               )
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $poll = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$poll) {
+        return '';
+    }
+
+    $poll = hydratePollPresentation($poll);
+
+    return renderContentInteractiveEmbed([
+        'eyebrow' => 'Anketa',
+        'title' => (string)$poll['question'],
+        'excerpt' => (string)($poll['excerpt'] ?? ''),
+        'url' => pollPublicPath($poll),
+        'embed_url' => pollPublicPath($poll, ['embed' => '1']),
+        'open_label' => 'Otevřít anketu samostatně',
+        'modifier' => 'poll',
+        'frame_modifier' => 'poll',
+    ]);
+}
+
+function renderContentDownloadShortcode(string $slug): string
+{
+    $normalizedSlug = downloadSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT *
+             FROM cms_downloads
+             WHERE slug = ?
+               AND status = 'published'
+               AND is_published = 1
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $download = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$download) {
+        return '';
+    }
+
+    $download = hydrateDownloadPresentation($download);
+
+    return renderContentEmbedCard([
+        'eyebrow' => 'Ke stažení',
+        'title' => (string)$download['title'],
+        'excerpt' => (string)($download['excerpt_plain'] ?? ''),
+        'url' => downloadPublicPath($download),
+        'media_url' => (string)($download['image_url'] ?? ''),
+        'media_alt' => (string)$download['title'],
+        'meta_items' => [
+            (string)($download['download_type_label'] ?? ''),
+            (string)($download['version_label'] ?? ''),
+            (string)($download['platform_label'] ?? ''),
+        ],
+        'cta_label' => 'Zobrazit detail',
+        'modifier' => 'download',
+    ]);
+}
+
+function renderContentPodcastShowShortcode(string $slug): string
+{
+    $normalizedSlug = podcastShowSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT *
+             FROM cms_podcast_shows
+             WHERE slug = ?
+               AND " . podcastShowPublicVisibilitySql() . "
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $show = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$show) {
+        return '';
+    }
+
+    $show = hydratePodcastShowPresentation($show);
+    $excerpt = $show['subtitle'] !== ''
+        ? (string)$show['subtitle']
+        : (string)($show['description_plain'] ?? '');
+
+    return renderContentEmbedCard([
+        'eyebrow' => 'Podcast',
+        'title' => (string)$show['title'],
+        'excerpt' => $excerpt,
+        'url' => podcastShowPublicPath($show),
+        'media_url' => (string)($show['cover_url'] ?? ''),
+        'media_alt' => (string)$show['title'],
+        'cta_label' => 'Otevřít podcast',
+        'modifier' => 'podcast',
+    ]);
+}
+
+function renderContentPodcastEpisodeShortcode(string $showSlug, string $episodeSlug): string
+{
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT
+                p.*,
+                s.slug AS show_slug,
+                s.title AS show_title,
+                s.cover_image AS show_cover_image,
+                s.status AS show_status,
+                s.is_published AS show_is_published
+             FROM cms_podcasts p
+             INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+             WHERE s.slug = ?
+               AND p.slug = ?
+               AND " . podcastEpisodePublicVisibilitySql('p', 's') . "
+             LIMIT 1"
+        );
+        $stmt->execute([$showSlug, $episodeSlug]);
+        $episode = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$episode) {
+        return '';
+    }
+
+    $episode = hydratePodcastEpisodePresentation($episode);
+    $extraHtml = '';
+    if (!empty($episode['audio_src'])) {
+        $extraHtml = trim((string)(renderContentAudioShortcode((string)$episode['audio_src']) ?? ''));
+    }
+
+    return renderContentEmbedCard([
+        'eyebrow' => 'Epizoda podcastu',
+        'title' => (string)$episode['title'],
+        'excerpt' => (string)($episode['excerpt'] ?? ''),
+        'url' => podcastEpisodePublicPath($episode),
+        'media_url' => (string)($episode['display_image_url'] ?? ''),
+        'media_alt' => (string)$episode['title'],
+        'meta_items' => [
+            (string)($episode['show_title'] ?? ''),
+            trim((string)($episode['display_date'] ?? '')) !== '' ? formatCzechDate((string)$episode['display_date']) : '',
+        ],
+        'extra_html' => $extraHtml,
+        'cta_label' => 'Otevřít epizodu',
+        'modifier' => 'podcast-episode',
+    ]);
+}
+
+function renderContentPlaceShortcode(string $slug): string
+{
+    $normalizedSlug = placeSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT *
+             FROM cms_places
+             WHERE slug = ?
+               AND " . placePublicVisibilitySql() . "
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $place = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$place) {
+        return '';
+    }
+
+    $place = hydratePlacePresentation($place);
+
+    return renderContentEmbedCard([
+        'eyebrow' => 'Zajímavé místo',
+        'title' => (string)$place['name'],
+        'excerpt' => (string)($place['excerpt_plain'] ?? ''),
+        'url' => placePublicPath($place),
+        'media_url' => (string)($place['image_url'] ?? ''),
+        'media_alt' => (string)$place['name'],
+        'meta_items' => [
+            (string)($place['place_kind_label'] ?? ''),
+            (string)($place['locality'] ?? ''),
+        ],
+        'cta_label' => 'Zobrazit místo',
+        'modifier' => 'place',
+    ]);
+}
+
+function renderContentEventShortcode(string $slug): string
+{
+    $normalizedSlug = eventSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT *
+             FROM cms_events
+             WHERE slug = ?
+               AND " . eventPublicVisibilitySql() . "
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $event = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$event) {
+        return '';
+    }
+
+    $event = hydrateEventPresentation($event);
+
+    return renderContentEmbedCard([
+        'eyebrow' => 'Událost',
+        'title' => (string)$event['title'],
+        'excerpt' => (string)($event['excerpt_plain'] ?? ''),
+        'url' => eventPublicPath($event),
+        'media_url' => (string)($event['image_url'] ?? ''),
+        'media_alt' => (string)$event['title'],
+        'meta_items' => [
+            trim((string)($event['event_date'] ?? '')) !== '' ? formatCzechDate((string)$event['event_date']) : '',
+            (string)($event['location'] ?? ''),
+        ],
+        'cta_label' => 'Zobrazit událost',
+        'modifier' => 'event',
+    ]);
+}
+
+function renderContentBoardShortcode(string $slug): string
+{
+    $normalizedSlug = boardSlug($slug);
+    if ($normalizedSlug === '') {
+        return '';
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT b.*, COALESCE(c.name, '') AS category_name
+             FROM cms_board b
+             LEFT JOIN cms_board_categories c ON c.id = b.category_id
+             WHERE b.slug = ?
+               AND " . boardPublicVisibilitySql('b') . "
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $document = $stmt->fetch() ?: null;
+    } catch (\PDOException) {
+        return '';
+    }
+
+    if (!$document) {
+        return '';
+    }
+
+    $document = hydrateBoardPresentation($document);
+
+    return renderContentEmbedCard([
+        'eyebrow' => boardModulePublicLabel(),
+        'title' => (string)$document['title'],
+        'excerpt' => (string)($document['excerpt_plain'] ?? ''),
+        'url' => boardPublicPath($document),
+        'media_url' => (string)($document['image_url'] ?? ''),
+        'media_alt' => (string)$document['title'],
+        'meta_items' => [
+            (string)($document['board_type_label'] ?? ''),
+            trim((string)($document['posted_date'] ?? '')) !== '' ? formatCzechDate((string)$document['posted_date']) : '',
+        ],
+        'cta_label' => 'Zobrazit oznámení',
+        'modifier' => 'board',
+    ]);
 }
 
 function renderContentShortcodes(string $text): string
@@ -258,9 +766,124 @@ function renderContentShortcodes(string $text): string
         '/\[gallery(?:\s+([^\]]*))?\](.*?)\[\/gallery\]/is',
         static function (array $matches): string {
             $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = trim((string)($attributes['slug'] ?? $attributes['album'] ?? ($matches[2] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug', 'album']);
+            if (galleryAlbumSlug($slug) === '') {
+                return $matches[0];
+            }
 
-            return renderContentGalleryShortcode($slug) ?? $matches[0];
+            return renderContentGalleryShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[form(?:\s+([^\]]*))?\](.*?)\[\/form\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug', 'form']);
+            if (formSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentFormShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[poll(?:\s+([^\]]*))?\](.*?)\[\/poll\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            if (pollSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentPollShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[download(?:\s+([^\]]*))?\](.*?)\[\/download\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            if (downloadSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentDownloadShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[podcast(?:\s+([^\]]*))?\](.*?)\[\/podcast\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug', 'show']);
+            if (podcastShowSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentPodcastShowShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[podcast_episode(?:\s+([^\]]*))?\](.*?)\[\/podcast_episode\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $parts = contentShortcodePodcastEpisodeParts($attributes, (string)($matches[2] ?? ''));
+            if ($parts === null) {
+                return $matches[0];
+            }
+
+            return renderContentPodcastEpisodeShortcode($parts['show_slug'], $parts['episode_slug']);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[place(?:\s+([^\]]*))?\](.*?)\[\/place\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            if (placeSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentPlaceShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[event(?:\s+([^\]]*))?\](.*?)\[\/event\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            if (eventSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentEventShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[board(?:\s+([^\]]*))?\](.*?)\[\/board\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            if (boardSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentBoardShortcode($slug);
         },
         $text
     ) ?? $text;
@@ -281,7 +904,11 @@ function renderContent(string $text): string
 
 function formatFileSize(int $bytes): string
 {
-    if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
-    if ($bytes >= 1024)    return round($bytes / 1024, 0) . ' kB';
+    if ($bytes >= 1048576) {
+        return round($bytes / 1048576, 1) . ' MB';
+    }
+    if ($bytes >= 1024) {
+        return round($bytes / 1024, 0) . ' kB';
+    }
     return $bytes . ' B';
 }

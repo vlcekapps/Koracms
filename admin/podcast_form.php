@@ -61,6 +61,7 @@ if (!$show) {
     exit;
 }
 $show = hydratePodcastShowPresentation($show);
+$backUrl = internalRedirectTarget((string)($_GET['redirect'] ?? ''), BASE_URL . '/admin/podcast.php?show_id=' . (int)$showId);
 $episode['show_id'] = (int)$show['id'];
 $episode['show_slug'] = (string)$show['slug'];
 $episode['show_title'] = (string)$show['title'];
@@ -90,7 +91,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p><a href="podcast.php?show_id=<?= (int)$showId ?>"><span aria-hidden="true">&larr;</span> Zpět na epizody podcastu</a></p>
+<p><a href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na epizody podcastu</a></p>
 
 <p style="margin-top:0;font-size:.9rem">
   Vyplňte základní údaje o epizodě. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
@@ -99,6 +100,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 <form method="post" action="podcast_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
+  <input type="hidden" name="redirect" value="<?= h($backUrl) ?>">
   <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
@@ -227,9 +229,12 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat epizodu podcastu' ?></button>
-    <a href="podcast.php?show_id=<?= (int)$showId ?>" style="margin-left:1rem">Zrušit</a>
-    <?php if ($id !== null && (string)$episode['status'] === 'published' && empty($episode['is_scheduled'])): ?>
+    <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>
+    <?php if ($id !== null && (string)$episode['status'] === 'published' && empty($episode['is_scheduled']) && !empty($show['is_public'])): ?>
       <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+    <?php endif; ?>
+    <?php if ($id !== null): ?>
+      <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_episode&id=' . (int)$episode['id']) ?>" style="margin-left:1rem">Historie změn</a>
     <?php endif; ?>
   </div>
 </form>

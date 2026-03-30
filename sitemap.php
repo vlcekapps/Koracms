@@ -228,6 +228,7 @@ if (isModuleEnabled('podcast')) {
         $podcastShows = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_podcast_shows
+             WHERE " . podcastShowPublicVisibilitySql() . "
              ORDER BY updated_at DESC, title ASC"
         )->fetchAll();
         foreach ($podcastShows as $podcastShow) {
@@ -243,7 +244,7 @@ if (isModuleEnabled('podcast')) {
                     COALESCE(p.publish_at, p.updated_at, p.created_at) AS sitemap_lastmod
              FROM cms_podcasts p
              INNER JOIN cms_podcast_shows s ON s.id = p.show_id
-             WHERE p.status = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+             WHERE " . podcastEpisodePublicVisibilitySql('p', 's') . "
              ORDER BY COALESCE(p.publish_at, p.created_at) DESC, p.id DESC"
         )->fetchAll();
         foreach ($podcastEpisodes as $podcastEpisode) {

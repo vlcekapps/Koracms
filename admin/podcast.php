@@ -17,6 +17,7 @@ if (!$show) {
     exit;
 }
 $show = hydratePodcastShowPresentation($show);
+$perPage = 20;
 
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
@@ -44,21 +45,52 @@ if ($statusFilter === 'pending') {
 }
 
 $whereSql = 'WHERE ' . implode(' AND ', $whereParts);
+$pagination = paginate(
+    $pdo,
+    "SELECT COUNT(*)
+     FROM cms_podcasts p
+     INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+     {$whereSql}",
+    $params,
+    $perPage
+);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset, 'total' => $totalEpisodes] = $pagination;
 
 $episodesStmt = $pdo->prepare(
     "SELECT p.*, s.slug AS show_slug, s.title AS show_title
      FROM cms_podcasts p
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
      {$whereSql}
-     ORDER BY COALESCE(p.episode_num, 0) DESC, COALESCE(p.publish_at, p.created_at) DESC, p.id DESC"
+     ORDER BY COALESCE(p.episode_num, 0) DESC, COALESCE(p.publish_at, p.created_at) DESC, p.id DESC
+     LIMIT ? OFFSET ?"
 );
-$episodesStmt->execute($params);
+$episodesStmt->execute(array_merge($params, [$perPage, $offset]));
 $episodes = array_map(
     static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
 );
 
 $canApprovePodcast = currentUserHasCapability('content_approve_shared');
+$currentListUrl = BASE_URL . '/admin/podcast.php?show_id=' . (int)$showId;
+$currentQuery = ['show_id' => $showId];
+if ($q !== '') {
+    $currentQuery['q'] = $q;
+}
+if ($statusFilter !== 'all') {
+    $currentQuery['status'] = $statusFilter;
+}
+if ($page > 1) {
+    $currentQuery['strana'] = $page;
+}
+$currentListUrl = BASE_URL . '/admin/podcast.php?' . http_build_query($currentQuery);
+$pagerQuery = ['show_id' => $showId];
+if ($q !== '') {
+    $pagerQuery['q'] = $q;
+}
+if ($statusFilter !== 'all') {
+    $pagerQuery['status'] = $statusFilter;
+}
+$pagerHtml = renderPager($page, $pages, BASE_URL . '/admin/podcast.php?' . http_build_query($pagerQuery) . '&', 'Stránkování epizod podcastu v administraci');
 
 adminHeader('Epizody podcastu: ' . (string)$show['title']);
 ?>
@@ -72,7 +104,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
   <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed</a>
 </p>
 
-<p><a href="podcast_form.php?show_id=<?= (int)$showId ?>" class="btn">+ Přidat epizodu</a></p>
+<p><a href="podcast_form.php?show_id=<?= (int)$showId ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">+ Přidat epizodu</a></p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
@@ -106,6 +138,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
     <?php endif; ?>
   </p>
 <?php else: ?>
+  <p class="meta-row meta-row--tight"><?= $totalEpisodes ?> epizod</p>
   <table>
     <caption>Přehled epizod podcastu</caption>
     <thead>
@@ -149,8 +182,8 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
           <?php endif; ?>
         </td>
         <td class="actions">
-          <a href="podcast_form.php?id=<?= (int)$episode['id'] ?>&amp;show_id=<?= (int)$showId ?>" class="btn">Upravit</a>
-          <?php if ((string)$episode['status'] === 'published' && empty($episode['is_scheduled'])): ?>
+          <a href="podcast_form.php?id=<?= (int)$episode['id'] ?>&amp;show_id=<?= (int)$showId ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">Upravit</a>
+          <?php if ((string)$episode['status'] === 'published' && empty($episode['is_scheduled']) && !empty($show['is_public'])): ?>
             <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ((string)$episode['status'] === 'pending' && $canApprovePodcast): ?>
@@ -158,7 +191,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="podcasts">
               <input type="hidden" name="id" value="<?= (int)$episode['id'] ?>">
-              <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/podcast.php?show_id=<?= (int)$showId ?>">
+              <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
@@ -166,6 +199,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$episode['id'] ?>">
             <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
+            <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
             <button type="submit" class="btn btn-danger"
                     data-confirm="Smazat epizodu?">Smazat</button>
           </form>
@@ -174,6 +208,11 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?php if ($pagerHtml !== ''): ?>
+    <div style="margin-top:1rem">
+      <?= $pagerHtml ?>
+    </div>
+  <?php endif; ?>
 <?php endif; ?>
 
 

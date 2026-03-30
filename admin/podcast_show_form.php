@@ -22,6 +22,8 @@ $show = [
     'feed_complete' => 0,
     'feed_episode_limit' => 100,
     'website_url' => '',
+    'is_published' => 1,
+    'status' => 'published',
 ];
 
 if ($id !== null) {
@@ -36,6 +38,7 @@ if ($id !== null) {
 }
 
 $show = hydratePodcastShowPresentation($show);
+$backUrl = internalRedirectTarget((string)($_GET['redirect'] ?? ''), BASE_URL . '/admin/podcast_shows.php');
 $categories = $pdo->query(
     "SELECT DISTINCT category FROM cms_podcast_shows WHERE category <> '' ORDER BY category"
 )->fetchAll(\PDO::FETCH_COLUMN);
@@ -66,10 +69,11 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
   Vyplňte základní údaje o podcastu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
-<p><a href="podcast_shows.php"><span aria-hidden="true">&larr;</span> Zpět na přehled podcastů</a></p>
+<p><a href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na přehled podcastů</a></p>
 
 <form method="post" action="podcast_show_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <input type="hidden" name="redirect" value="<?= h($backUrl) ?>">
   <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
@@ -167,6 +171,16 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <input type="checkbox" id="feed_complete" name="feed_complete" value="1"<?= !empty($show['feed_complete']) ? ' checked' : '' ?>>
       Označit feed jako dokončený
     </label>
+
+    <label for="is_published" style="font-weight:normal;margin-top:.5rem">
+      <input type="checkbox" id="is_published" name="is_published" value="1"<?= !empty($show['is_published']) ? ' checked' : '' ?>>
+      Zobrazit pořad veřejně na webu
+    </label>
+    <small class="field-help">Když volbu vypnete, pořad zůstane v administraci, ale nebude veřejně dostupný ani se neobjeví ve vyhledávání, sitemapě a indexu podcastů.</small>
+
+    <?php if ((string)$show['status'] === 'pending'): ?>
+      <p class="field-help" style="margin-top:.75rem">Tento pořad aktuálně čeká na schválení.</p>
+    <?php endif; ?>
   </fieldset>
 
   <fieldset>
@@ -203,10 +217,13 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit podcast' ?></button>
-    <a href="podcast_shows.php" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>
     <?php if ($id !== null && (string)$show['slug'] !== ''): ?>
-      <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <?php if (!empty($show['is_public'])): ?>
+        <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <?php endif; ?>
       <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">RSS feed</a>
+      <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_show&id=' . (int)$show['id']) ?>" style="margin-left:1rem">Historie změn</a>
     <?php endif; ?>
   </div>
 </form>

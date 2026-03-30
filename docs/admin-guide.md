@@ -118,6 +118,18 @@ Tyto rozměry odpovídají požadavkům Apple Podcasts a dalších katalogů.
 
 ---
 
+## Podcasty – viditelnost, historie a veřejný výstup
+
+- Pořad nově může být skrytý z veřejného webu i při zachování rozpracované administrace.
+- Změna slugu pořadu i epizody ukládá redirect ze staré URL na nový canonical tvar.
+- Editor pořadu i epizody má odkaz na historii revizí.
+- Seznam pořadů i epizod v administraci používá stránkování a drží návrat do stejného filtrovaného kontextu.
+- Veřejné audio, cover a obrázky epizod už nejdou přímo z `/uploads/podcasts/...`, ale přes kontrolované endpointy.
+- RSS feed pořadu publikuje přesnější metadata pro katalogy včetně správného `managingEditor` a délky lokálního `enclosure`.
+- Veřejný detail pořadu i epizody doplňuje structured data a epizody respektují i veřejnou viditelnost samotného pořadu.
+
+---
+
 ## Multiblog – týmy, metadata a veřejný výstup
 
 Multiblog je určený pro situace, kdy má jeden web více samostatných blogů s vlastní identitou, RSS feedem a týmem autorů.
@@ -630,5 +642,21 @@ Content picker je přístupný dialog v HTML editoru, který umožňuje:
 - Vložit interní odkaz na nalezený obsah
 - Vložit hotový HTML blok
 - Vložit galerii nebo fotografii podle typu obsahu
+- Vložit veřejný formulář nebo anketu jako živý embed
+- Vložit obsahovou kartu pro download, podcast, epizodu, místo, událost nebo oznámení
 - Vložit přímý odkaz ke stažení
 - Vložit audio/video přehrávač přes snippety nebo přímé akce
+
+Podporované obsahové snippety v HTML editoru:
+
+- `[audio]...[/audio]`
+- `[video]...[/video]`
+- `[gallery]slug-alba[/gallery]`
+- `[form]slug-formulare[/form]`
+- `[poll]slug-ankety[/poll]`
+- `[download]slug-polozky[/download]`
+- `[podcast]slug-poradu[/podcast]`
+- `[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]`
+- `[place]slug-mista[/place]`
+- `[event]slug-udalosti[/event]`
+- `[board]slug-oznameni[/board]`

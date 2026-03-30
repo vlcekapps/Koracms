@@ -585,6 +585,129 @@ function newsRevisionSnapshot(array $news): array
     ];
 }
 
+function podcastShowPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "COALESCE({$prefix}status, 'published') = 'published'"
+        . " AND COALESCE({$prefix}is_published, 1) = 1";
+}
+
+function podcastEpisodePublicVisibilitySql(string $episodeAlias = '', string $showAlias = ''): string
+{
+    $episodePrefix = $episodeAlias !== '' ? rtrim($episodeAlias, '.') . '.' : '';
+    $visibility = "COALESCE({$episodePrefix}status, 'published') = 'published'"
+        . " AND ({$episodePrefix}publish_at IS NULL OR {$episodePrefix}publish_at <= NOW())";
+
+    if ($showAlias !== '') {
+        $visibility .= ' AND ' . podcastShowPublicVisibilitySql($showAlias);
+    }
+
+    return $visibility;
+}
+
+function databaseDateTimeIsInFuture(string $dateTime): bool
+{
+    static $cache = [];
+
+    $dateTime = trim($dateTime);
+    if ($dateTime === '') {
+        return false;
+    }
+
+    if (array_key_exists($dateTime, $cache)) {
+        return $cache[$dateTime];
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT CASE WHEN CAST(? AS DATETIME) > NOW() THEN 1 ELSE 0 END"
+        );
+        $stmt->execute([$dateTime]);
+        $cache[$dateTime] = (int)$stmt->fetchColumn() === 1;
+        return $cache[$dateTime];
+    } catch (\Throwable) {
+        $timestamp = strtotime($dateTime);
+        $cache[$dateTime] = $timestamp !== false && $timestamp > time();
+        return $cache[$dateTime];
+    }
+}
+
+function podcastShowIsPublic(array $show): bool
+{
+    return trim((string)($show['status'] ?? 'published')) === 'published'
+        && (int)($show['is_published'] ?? 1) === 1;
+}
+
+function podcastEpisodeIsScheduled(array $episode): bool
+{
+    $publishAt = trim((string)($episode['publish_at'] ?? ''));
+    if ($publishAt === '') {
+        return false;
+    }
+
+    return databaseDateTimeIsInFuture($publishAt);
+}
+
+function podcastEpisodeIsPublic(array $episode): bool
+{
+    if (trim((string)($episode['status'] ?? 'published')) !== 'published') {
+        return false;
+    }
+
+    if (podcastEpisodeIsScheduled($episode)) {
+        return false;
+    }
+
+    if (array_key_exists('show_status', $episode) || array_key_exists('show_is_published', $episode)) {
+        return trim((string)($episode['show_status'] ?? 'published')) === 'published'
+            && (int)($episode['show_is_published'] ?? 1) === 1;
+    }
+
+    return true;
+}
+
+function podcastShowRevisionSnapshot(array $show): array
+{
+    return [
+        'title' => trim((string)($show['title'] ?? '')),
+        'slug' => podcastShowSlug((string)($show['slug'] ?? '')),
+        'description' => (string)($show['description'] ?? ''),
+        'author' => trim((string)($show['author'] ?? '')),
+        'subtitle' => trim((string)($show['subtitle'] ?? '')),
+        'language' => trim((string)($show['language'] ?? 'cs')),
+        'category' => trim((string)($show['category'] ?? '')),
+        'owner_name' => trim((string)($show['owner_name'] ?? '')),
+        'owner_email' => normalizePodcastOwnerEmail((string)($show['owner_email'] ?? '')),
+        'explicit_mode' => normalizePodcastExplicitMode((string)($show['explicit_mode'] ?? 'no')),
+        'show_type' => normalizePodcastShowType((string)($show['show_type'] ?? 'episodic')),
+        'feed_complete' => (string)((int)!empty($show['feed_complete'])),
+        'feed_episode_limit' => (string)normalizePodcastFeedEpisodeLimit($show['feed_episode_limit'] ?? 100),
+        'website_url' => normalizePodcastWebsiteUrl((string)($show['website_url'] ?? '')),
+        'status' => trim((string)($show['status'] ?? 'published')),
+        'is_published' => (string)((int)($show['is_published'] ?? 1)),
+    ];
+}
+
+function podcastEpisodeRevisionSnapshot(array $episode): array
+{
+    return [
+        'title' => trim((string)($episode['title'] ?? '')),
+        'slug' => podcastEpisodeSlug((string)($episode['slug'] ?? '')),
+        'description' => (string)($episode['description'] ?? ''),
+        'audio_url' => normalizePodcastEpisodeAudioUrl((string)($episode['audio_url'] ?? '')),
+        'subtitle' => trim((string)($episode['subtitle'] ?? '')),
+        'duration' => trim((string)($episode['duration'] ?? '')),
+        'episode_num' => (string)($episode['episode_num'] ?? ''),
+        'season_num' => (string)($episode['season_num'] ?? ''),
+        'episode_type' => normalizePodcastEpisodeType((string)($episode['episode_type'] ?? 'full')),
+        'explicit_mode' => normalizePodcastEpisodeExplicitMode((string)($episode['explicit_mode'] ?? 'inherit')),
+        'block_from_feed' => (string)((int)!empty($episode['block_from_feed'])),
+        'publish_at' => trim((string)($episode['publish_at'] ?? '')),
+        'status' => trim((string)($episode['status'] ?? 'published')),
+    ];
+}
+
 function eventExcerpt(array $event, int $limit = 220): string
 {
     $excerpt = normalizePlainText((string)($event['excerpt'] ?? ''));
@@ -845,31 +968,60 @@ function downloadImageUrl(array $download): string
 function podcastCoverUrl(array $show): string
 {
     $filename = trim((string)($show['cover_image'] ?? ''));
-    if ($filename === '') {
+    $showId = isset($show['id']) ? (int)$show['id'] : 0;
+    if ($filename === '' || $showId < 1) {
         return '';
     }
 
-    return BASE_URL . '/uploads/podcasts/covers/' . rawurlencode($filename);
+    return BASE_URL . '/podcast/cover.php?id=' . $showId;
 }
 
 function podcastEpisodeImageUrl(array $episode): string
 {
     $filename = trim((string)($episode['image_file'] ?? ''));
-    if ($filename === '') {
+    $episodeId = isset($episode['id']) ? (int)$episode['id'] : 0;
+    if ($filename === '' || $episodeId < 1) {
         return '';
     }
 
-    return BASE_URL . '/uploads/podcasts/images/' . rawurlencode($filename);
+    return BASE_URL . '/podcast/image.php?id=' . $episodeId;
 }
 
 function podcastEpisodeAudioUrl(array $episode): string
 {
     $audioFile = trim((string)($episode['audio_file'] ?? ''));
-    if ($audioFile !== '') {
-        return BASE_URL . '/uploads/podcasts/' . rawurlencode($audioFile);
+    $episodeId = isset($episode['id']) ? (int)$episode['id'] : 0;
+    if ($audioFile !== '' && $episodeId > 0) {
+        return BASE_URL . '/podcast/audio.php?id=' . $episodeId;
     }
 
     return trim((string)($episode['audio_url'] ?? ''));
+}
+
+function podcastAudioMimeType(string $filename): string
+{
+    return match (strtolower(pathinfo($filename, PATHINFO_EXTENSION))) {
+        'ogg' => 'audio/ogg',
+        'wav' => 'audio/wav',
+        'aac' => 'audio/aac',
+        'm4a' => 'audio/mp4',
+        default => 'audio/mpeg',
+    };
+}
+
+function podcastCoverFilePath(string $filename): string
+{
+    return dirname(__DIR__) . '/uploads/podcasts/covers/' . basename($filename);
+}
+
+function podcastEpisodeImageFilePath(string $filename): string
+{
+    return dirname(__DIR__) . '/uploads/podcasts/images/' . basename($filename);
+}
+
+function podcastAudioFilePath(string $filename): string
+{
+    return dirname(__DIR__) . '/uploads/podcasts/' . basename($filename);
 }
 
 function normalizePodcastWebsiteUrl(string $value): string
@@ -960,6 +1112,121 @@ function podcastFeedSummary(string $value, int $limit = 4000): string
     return mb_strimwidth($value, 0, $limit, '...', 'UTF-8');
 }
 
+function podcastFeedManagingEditor(array $show): string
+{
+    $ownerEmail = normalizePodcastOwnerEmail((string)($show['owner_email'] ?? ''));
+    if ($ownerEmail !== '') {
+        $ownerName = trim((string)($show['owner_name'] ?? ''));
+        return $ownerName !== '' ? $ownerEmail . ' (' . $ownerName . ')' : $ownerEmail;
+    }
+
+    return trim((string)($show['author'] ?? ''));
+}
+
+function podcastEpisodeEnclosureLength(array $episode): int
+{
+    $filename = trim((string)($episode['audio_file'] ?? ''));
+    if ($filename === '') {
+        return 0;
+    }
+
+    $path = podcastAudioFilePath($filename);
+    if (!is_file($path)) {
+        return 0;
+    }
+
+    $size = filesize($path);
+    return $size === false ? 0 : (int)$size;
+}
+
+function podcastShowStructuredData(array $show): string
+{
+    $data = [
+        '@context' => 'https://schema.org',
+        '@type' => 'PodcastSeries',
+        'name' => (string)($show['title'] ?? ''),
+        'url' => podcastShowPublicUrl($show),
+        'inLanguage' => (string)($show['language'] ?? 'cs'),
+    ];
+
+    $description = trim((string)($show['description_plain'] ?? ''));
+    if ($description !== '') {
+        $data['description'] = $description;
+    }
+
+    $imageUrl = podcastCoverUrl($show);
+    if ($imageUrl !== '') {
+        $data['image'] = siteUrl(str_starts_with($imageUrl, BASE_URL) ? substr($imageUrl, strlen(BASE_URL)) : $imageUrl);
+    }
+
+    $author = trim((string)($show['author'] ?? ''));
+    if ($author !== '') {
+        $data['author'] = [
+            '@type' => 'Organization',
+            'name' => $author,
+        ];
+    }
+
+    $websiteUrl = normalizePodcastWebsiteUrl((string)($show['website_url'] ?? ''));
+    if ($websiteUrl !== '') {
+        $data['sameAs'] = [$websiteUrl];
+    }
+
+    return '  <script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>' . PHP_EOL;
+}
+
+function podcastEpisodeStructuredData(array $show, array $episode): string
+{
+    $data = [
+        '@context' => 'https://schema.org',
+        '@type' => 'PodcastEpisode',
+        'name' => (string)($episode['title'] ?? ''),
+        'url' => podcastEpisodePublicUrl($episode),
+        'partOfSeries' => [
+            '@type' => 'PodcastSeries',
+            'name' => (string)($show['title'] ?? ''),
+            'url' => podcastShowPublicUrl($show),
+        ],
+    ];
+
+    $description = trim((string)($episode['excerpt'] ?? ''));
+    if ($description === '') {
+        $description = podcastFeedSummary((string)($episode['description'] ?? ''), 4000);
+    }
+    if ($description !== '') {
+        $data['description'] = $description;
+    }
+
+    $imageUrl = trim((string)($episode['display_image_url'] ?? ''));
+    if ($imageUrl !== '') {
+        $data['image'] = siteUrl(str_starts_with($imageUrl, BASE_URL) ? substr($imageUrl, strlen(BASE_URL)) : $imageUrl);
+    }
+
+    $publishedAt = trim((string)($episode['display_date'] ?? ''));
+    if ($publishedAt !== '') {
+        $data['datePublished'] = date(DATE_ATOM, strtotime($publishedAt));
+    }
+
+    $audioUrl = trim((string)($episode['audio_src'] ?? ''));
+    if ($audioUrl !== '') {
+        $data['associatedMedia'] = [
+            '@type' => 'MediaObject',
+            'contentUrl' => siteUrl(str_starts_with($audioUrl, BASE_URL) ? substr($audioUrl, strlen(BASE_URL)) : $audioUrl),
+            'encodingFormat' => 'audio/mpeg',
+        ];
+    }
+
+    $duration = trim((string)($episode['duration'] ?? ''));
+    if ($duration !== '' && preg_match('/^(?:(\d+):)?(\d{1,2}):(\d{2})$/', $duration, $matches)) {
+        $hours = isset($matches[1]) && $matches[1] !== '' ? (int)$matches[1] : 0;
+        $minutes = (int)$matches[2];
+        $seconds = (int)$matches[3];
+        $data['duration'] = sprintf('PT%dH%dM%dS', $hours, $minutes, $seconds);
+    }
+
+    return '  <script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>' . PHP_EOL;
+}
+
 function deletePodcastCoverFile(string $filename): void
 {
     $filename = basename($filename);
@@ -967,7 +1234,7 @@ function deletePodcastCoverFile(string $filename): void
         return;
     }
 
-    $path = dirname(__DIR__) . '/uploads/podcasts/covers/' . $filename;
+    $path = podcastCoverFilePath($filename);
     if (is_file($path)) {
         if (!unlink($path)) {
             error_log('presentation: nelze smazat soubor ' . $path);
@@ -982,7 +1249,7 @@ function deletePodcastEpisodeImageFile(string $filename): void
         return;
     }
 
-    $path = dirname(__DIR__) . '/uploads/podcasts/images/' . $filename;
+    $path = podcastEpisodeImageFilePath($filename);
     if (is_file($path)) {
         if (!unlink($path)) {
             error_log('presentation: nelze smazat soubor ' . $path);
@@ -997,7 +1264,7 @@ function deletePodcastAudioFile(string $filename): void
         return;
     }
 
-    $path = dirname(__DIR__) . '/uploads/podcasts/' . $filename;
+    $path = podcastAudioFilePath($filename);
     if (is_file($path)) {
         if (!unlink($path)) {
             error_log('presentation: nelze smazat soubor ' . $path);
@@ -3568,12 +3835,15 @@ function hydratePodcastShowPresentation(array $show): array
     $show['show_type'] = normalizePodcastShowType((string)($show['show_type'] ?? 'episodic'));
     $show['feed_complete'] = !empty($show['feed_complete']) ? 1 : 0;
     $show['feed_episode_limit'] = normalizePodcastFeedEpisodeLimit($show['feed_episode_limit'] ?? 100);
+    $show['status'] = trim((string)($show['status'] ?? 'published'));
+    $show['is_published'] = (int)($show['is_published'] ?? 1);
     $show['cover_url'] = podcastCoverUrl($show);
     $show['public_path'] = podcastShowPublicPath($show);
     $show['public_url'] = podcastShowPublicUrl($show);
     $show['description_plain'] = normalizePlainText((string)($show['description'] ?? ''));
     $show['feed_subtitle'] = podcastFeedSubtitle((string)($show['subtitle'] !== '' ? $show['subtitle'] : $show['description_plain']));
     $show['feed_summary'] = podcastFeedSummary((string)($show['description_plain'] ?? ''));
+    $show['is_public'] = podcastShowIsPublic($show);
     return $show;
 }
 
@@ -3586,6 +3856,7 @@ function hydratePodcastEpisodePresentation(array $episode): array
     $episode['episode_type'] = normalizePodcastEpisodeType((string)($episode['episode_type'] ?? 'full'));
     $episode['explicit_mode'] = normalizePodcastEpisodeExplicitMode((string)($episode['explicit_mode'] ?? 'inherit'));
     $episode['block_from_feed'] = !empty($episode['block_from_feed']) ? 1 : 0;
+    $episode['status'] = trim((string)($episode['status'] ?? 'published'));
     $episode['excerpt'] = podcastEpisodeExcerpt($episode);
     $episode['public_path'] = podcastEpisodePublicPath($episode);
     $episode['public_url'] = podcastEpisodePublicUrl($episode);
@@ -3594,7 +3865,10 @@ function hydratePodcastEpisodePresentation(array $episode): array
     $fallbackShowCover = trim((string)($episode['show_cover_image'] ?? ''));
     $episode['display_image_url'] = $episode['image_url'] !== ''
         ? $episode['image_url']
-        : ($fallbackShowCover !== '' ? podcastCoverUrl(['cover_image' => $fallbackShowCover]) : '');
+        : ($fallbackShowCover !== '' ? podcastCoverUrl([
+            'id' => (int)($episode['show_id'] ?? 0),
+            'cover_image' => $fallbackShowCover,
+        ]) : '');
     $displayDate = trim((string)($episode['publish_at'] ?? ''));
     if ($displayDate === '') {
         $displayDate = trim((string)($episode['created_at'] ?? ''));
@@ -3602,8 +3876,8 @@ function hydratePodcastEpisodePresentation(array $episode): array
     $episode['display_date'] = $displayDate;
     $episode['feed_subtitle'] = podcastFeedSubtitle((string)($episode['subtitle'] !== '' ? $episode['subtitle'] : $episode['excerpt']));
     $episode['feed_summary'] = podcastFeedSummary((string)($episode['description'] ?? ''));
-    $episode['is_scheduled'] = trim((string)($episode['publish_at'] ?? '')) !== ''
-        && strtotime((string)$episode['publish_at']) > time();
+    $episode['is_scheduled'] = podcastEpisodeIsScheduled($episode);
+    $episode['is_public'] = podcastEpisodeIsPublic($episode);
     return $episode;
 }
 

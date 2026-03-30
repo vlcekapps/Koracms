@@ -125,7 +125,8 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 "SELECT id, title, slug, description AS perex,
                         COALESCE(updated_at, created_at) AS created_at, 'podcast_show' AS type
                  FROM cms_podcast_shows
-                 WHERE title LIKE ? OR description LIKE ? OR author LIKE ? OR category LIKE ?
+                 WHERE " . podcastShowPublicVisibilitySql() . "
+                   AND (title LIKE ? OR description LIKE ? OR author LIKE ? OR category LIKE ?)
                  ORDER BY updated_at DESC, title ASC LIMIT 5"
             );
             $stmt->execute([$like, $like, $like, $like]);
@@ -143,8 +144,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                         'podcast_episode' AS type, s.slug AS show_slug, s.title AS show_title
                  FROM cms_podcasts p
                  INNER JOIN cms_podcast_shows s ON s.id = p.show_id
-                 WHERE p.status = 'published'
-                   AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+                 WHERE " . podcastEpisodePublicVisibilitySql('p', 's') . "
                    AND (p.title LIKE ? OR p.description LIKE ? OR s.title LIKE ?)
                  ORDER BY COALESCE(p.publish_at, p.created_at) DESC LIMIT 8"
             );

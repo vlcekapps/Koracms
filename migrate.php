@@ -309,6 +309,8 @@ $tables = [
         feed_complete TINYINT(1) NOT NULL DEFAULT 0,
         feed_episode_limit INT NOT NULL DEFAULT 100,
         website_url VARCHAR(500) NOT NULL DEFAULT '',
+        is_published TINYINT(1)   NOT NULL DEFAULT 1,
+        status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -882,6 +884,8 @@ $addColumns = [
     'cms_podcast_shows.show_type'         => "ALTER TABLE cms_podcast_shows ADD COLUMN show_type ENUM('episodic','serial') NOT NULL DEFAULT 'episodic'",
     'cms_podcast_shows.feed_complete'     => "ALTER TABLE cms_podcast_shows ADD COLUMN feed_complete TINYINT(1) NOT NULL DEFAULT 0",
     'cms_podcast_shows.feed_episode_limit'=> "ALTER TABLE cms_podcast_shows ADD COLUMN feed_episode_limit INT NOT NULL DEFAULT 100",
+    'cms_podcast_shows.is_published'      => "ALTER TABLE cms_podcast_shows ADD COLUMN is_published TINYINT(1) NOT NULL DEFAULT 1",
+    'cms_podcast_shows.status'            => "ALTER TABLE cms_podcast_shows ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_podcasts
     'cms_podcasts.show_id'           => "ALTER TABLE cms_podcasts ADD COLUMN show_id INT NOT NULL DEFAULT 1",
     'cms_podcasts.slug'              => "ALTER TABLE cms_podcasts ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",

@@ -18,6 +18,7 @@ $now = date('Y-m-d H:i:s');
 $pollId = inputInt('get', 'id');
 $pollSlugValue = pollSlug(trim($_GET['slug'] ?? ''));
 $archiv = isset($_GET['archiv']);
+$isEmbedded = (string)($_GET['embed'] ?? '') === '1';
 
 $fetchPoll = static function (bool $onlyActive) use ($pdo, $pollId, $pollSlugValue, $now): ?array {
     if ($pollId === null && $pollSlugValue === '') {
@@ -82,7 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['v
 
     if (honeypotTriggered()) {
         if ($votePoll !== null) {
-            header('Location: ' . pollPublicPath($votePoll, ['voted' => '1']));
+            $redirectQuery = ['voted' => '1'];
+            if ($isEmbedded) {
+                $redirectQuery['embed'] = '1';
+            }
+            header('Location: ' . pollPublicPath($votePoll, $redirectQuery));
         } else {
             header('Location: ' . BASE_URL . '/polls/index.php');
         }
@@ -109,7 +114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['v
                 $pdo->prepare(
                     "INSERT INTO cms_poll_votes (poll_id, option_id, ip_hash) VALUES (?, ?, ?)"
                 )->execute([(int)$votePoll['id'], $optionId, $ipHash]);
-                header('Location: ' . pollPublicPath($votePoll, ['voted' => '1']));
+                $redirectQuery = ['voted' => '1'];
+                if ($isEmbedded) {
+                    $redirectQuery['embed'] = '1';
+                }
+                header('Location: ' . pollPublicPath($votePoll, $redirectQuery));
                 exit;
             } catch (\PDOException $e) {
                 $voteError = 'already_voted';
@@ -148,6 +157,9 @@ if ($detailRequested) {
         $redirectQuery = [];
         if ($voted) {
             $redirectQuery['voted'] = '1';
+        }
+        if ($isEmbedded) {
+            $redirectQuery['embed'] = '1';
         }
         header('Location: ' . pollPublicPath($poll, $redirectQuery));
         exit;
@@ -243,7 +255,7 @@ $voteErrorMessages = [
     'already_voted' => 'Z této IP adresy už bylo hlasováno.',
 ];
 
-renderPublicPage([
+$pageData = [
     'title' => $pageMetaTitle,
     'meta' => [
         'title' => $pageMetaTitle,
@@ -267,6 +279,7 @@ renderPublicPage([
         'isActive' => $isActive,
         'showForm' => $showForm,
         'totalVotes' => $totalVotes,
+        'isEmbedded' => $isEmbedded,
     ],
     'current_nav' => 'polls',
     'body_class' => 'page-polls',
@@ -274,4 +287,11 @@ renderPublicPage([
     'admin_edit_url' => $poll !== null
         ? BASE_URL . '/admin/polls_form.php?id=' . (int)$poll['id']
         : BASE_URL . '/admin/polls.php',
-]);
+];
+
+if ($isEmbedded) {
+    renderPublicEmbedPage($pageData);
+    exit;
+}
+
+renderPublicPage($pageData);

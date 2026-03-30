@@ -21,26 +21,36 @@ $siteName = getSetting('site_name', 'Kora CMS');
 
 if ($showSlug !== '' && $episodeSlug !== '') {
     $stmt = $pdo->prepare(
-        "SELECT p.*, s.id AS show_id, s.slug AS show_slug, s.title AS show_title, s.author AS show_author,
-                s.cover_image AS show_cover_image, s.website_url AS show_website_url, s.description AS show_description
+        "SELECT p.*,
+                s.id AS show_id, s.slug AS show_slug, s.title AS show_title, s.author AS show_author,
+                s.cover_image AS show_cover_image, s.website_url AS show_website_url, s.description AS show_description,
+                s.subtitle AS show_subtitle, s.language AS show_language, s.category AS show_category,
+                s.owner_name AS show_owner_name, s.owner_email AS show_owner_email,
+                s.explicit_mode AS show_explicit_mode, s.show_type AS show_show_type,
+                s.feed_complete AS show_feed_complete, s.feed_episode_limit AS show_feed_episode_limit,
+                s.status AS show_status, s.is_published AS show_is_published
          FROM cms_podcasts p
          INNER JOIN cms_podcast_shows s ON s.id = p.show_id
          WHERE s.slug = ?
            AND p.slug = ?
-           AND p.status = 'published'
-           AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+           AND " . podcastEpisodePublicVisibilitySql('p', 's') . "
          LIMIT 1"
     );
     $stmt->execute([$showSlug, $episodeSlug]);
 } else {
     $stmt = $pdo->prepare(
-        "SELECT p.*, s.id AS show_id, s.slug AS show_slug, s.title AS show_title, s.author AS show_author,
-                s.cover_image AS show_cover_image, s.website_url AS show_website_url, s.description AS show_description
+        "SELECT p.*,
+                s.id AS show_id, s.slug AS show_slug, s.title AS show_title, s.author AS show_author,
+                s.cover_image AS show_cover_image, s.website_url AS show_website_url, s.description AS show_description,
+                s.subtitle AS show_subtitle, s.language AS show_language, s.category AS show_category,
+                s.owner_name AS show_owner_name, s.owner_email AS show_owner_email,
+                s.explicit_mode AS show_explicit_mode, s.show_type AS show_show_type,
+                s.feed_complete AS show_feed_complete, s.feed_episode_limit AS show_feed_episode_limit,
+                s.status AS show_status, s.is_published AS show_is_published
          FROM cms_podcasts p
          INNER JOIN cms_podcast_shows s ON s.id = p.show_id
          WHERE p.id = ?
-           AND p.status = 'published'
-           AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+           AND " . podcastEpisodePublicVisibilitySql('p', 's') . "
          LIMIT 1"
     );
     $stmt->execute([$id]);
@@ -74,6 +84,17 @@ $show = hydratePodcastShowPresentation([
     'cover_image' => $episode['show_cover_image'] ?? '',
     'website_url' => $episode['show_website_url'] ?? '',
     'description' => $episode['show_description'] ?? '',
+    'subtitle' => $episode['show_subtitle'] ?? '',
+    'language' => $episode['show_language'] ?? 'cs',
+    'category' => $episode['show_category'] ?? '',
+    'owner_name' => $episode['show_owner_name'] ?? '',
+    'owner_email' => $episode['show_owner_email'] ?? '',
+    'explicit_mode' => $episode['show_explicit_mode'] ?? 'no',
+    'show_type' => $episode['show_show_type'] ?? 'episodic',
+    'feed_complete' => $episode['show_feed_complete'] ?? 0,
+    'feed_episode_limit' => $episode['show_feed_episode_limit'] ?? 100,
+    'status' => $episode['show_status'] ?? 'published',
+    'is_published' => $episode['show_is_published'] ?? 1,
 ]);
 
 $requestPath = (string)(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '');
@@ -100,7 +121,8 @@ renderPublicPage([
         'type' => 'article',
     ],
     'extra_head_html' => '  <link rel="alternate" type="application/rss+xml" title="'
-        . h((string)$show['title']) . ' – RSS feed" href="' . h($feedUrl) . '">' . PHP_EOL,
+        . h((string)$show['title']) . ' – RSS feed" href="' . h($feedUrl) . '">' . PHP_EOL
+        . podcastEpisodeStructuredData($show, $episode),
     'view' => 'modules/podcast-episode',
     'view_data' => [
         'show' => $show,

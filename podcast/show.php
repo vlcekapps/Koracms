@@ -15,6 +15,7 @@ if ($slug === '') {
 
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
+$perPage = 10;
 
 $showStmt = $pdo->prepare(
     "SELECT s.*,
@@ -22,8 +23,9 @@ $showStmt = $pdo->prepare(
             MAX(COALESCE(e.publish_at, e.created_at)) AS latest_episode_at
      FROM cms_podcast_shows s
      LEFT JOIN cms_podcasts e ON e.show_id = s.id
-         AND e.status = 'published' AND (e.publish_at IS NULL OR e.publish_at <= NOW())
+         AND " . podcastEpisodePublicVisibilitySql('e') . "
      WHERE s.slug = ?
+       AND " . podcastShowPublicVisibilitySql('s') . "
      GROUP BY s.id
      LIMIT 1"
 );
@@ -51,16 +53,24 @@ if (str_contains($requestPath, '/podcast/show.php')) {
     exit;
 }
 
+$pagination = paginate(
+    $pdo,
+    "SELECT COUNT(*) FROM cms_podcasts p WHERE p.show_id = ? AND " . podcastEpisodePublicVisibilitySql('p'),
+    [(int)$show['id']],
+    $perPage
+);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset, 'total' => $totalEpisodes] = $pagination;
+
 $episodesStmt = $pdo->prepare(
-    "SELECT p.*, s.slug AS show_slug, s.title AS show_title
+    "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
      FROM cms_podcasts p
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
      WHERE p.show_id = ?
-       AND p.status = 'published'
-       AND (p.publish_at IS NULL OR p.publish_at <= NOW())
-     ORDER BY COALESCE(p.publish_at, p.created_at) DESC, COALESCE(p.episode_num, 0) DESC, p.id DESC"
+       AND " . podcastEpisodePublicVisibilitySql('p') . "
+     ORDER BY COALESCE(p.publish_at, p.created_at) DESC, COALESCE(p.episode_num, 0) DESC, p.id DESC
+     LIMIT ? OFFSET ?"
 );
-$episodesStmt->execute([(int)$show['id']]);
+$episodesStmt->execute([(int)$show['id'], $perPage, $offset]);
 $episodes = array_map(
     static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
@@ -74,6 +84,7 @@ $feedUrl = siteUrl('/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'
 $metaDescription = $show['description_plain'] !== ''
     ? mb_strimwidth((string)$show['description_plain'], 0, 180, '…', 'UTF-8')
     : 'Přehled epizod podcastu ' . (string)$show['title'];
+$pagerHtml = renderPager($page, $pages, '?', 'Stránkování epizod podcastu');
 
 renderPublicPage([
     'title' => $show['title'] . ' – ' . $siteName,
@@ -84,12 +95,15 @@ renderPublicPage([
         'type' => 'article',
     ],
     'extra_head_html' => '  <link rel="alternate" type="application/rss+xml" title="'
-        . h((string)$show['title']) . ' – RSS feed" href="' . h($feedUrl) . '">' . PHP_EOL,
+        . h((string)$show['title']) . ' – RSS feed" href="' . h($feedUrl) . '">' . PHP_EOL
+        . podcastShowStructuredData($show),
     'view' => 'modules/podcast-show',
     'view_data' => [
         'show' => $show,
         'episodes' => $episodes,
         'feedUrl' => $feedUrl,
+        'pagerHtml' => $pagerHtml,
+        'resultCount' => $totalEpisodes,
     ],
     'current_nav' => 'podcast',
     'body_class' => 'page-podcast-show',

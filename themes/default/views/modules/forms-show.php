@@ -1,6 +1,7 @@
-<div class="auth-shell">
-  <section class="surface surface--narrow" aria-labelledby="form-title">
-    <h1 id="form-title" class="section-title section-title--hero"><?= h((string)$form['title']) ?></h1>
+<?php $isEmbedded = !empty($isEmbedded); ?>
+<div class="<?= $isEmbedded ? 'auth-shell auth-shell--embed' : 'auth-shell' ?>">
+  <section class="surface surface--narrow<?= $isEmbedded ? ' surface--embed' : '' ?>" aria-labelledby="form-title">
+    <h1 id="form-title" class="section-title <?= $isEmbedded ? 'section-title--compact' : 'section-title--hero' ?>"><?= h((string)$form['title']) ?></h1>
 
     <?php if (trim((string)($form['description'] ?? '')) !== ''): ?>
       <p class="section-subtitle"><?= h((string)$form['description']) ?></p>
@@ -54,7 +55,7 @@
       }
       ?>
 
-      <form method="post" enctype="multipart/form-data" novalidate class="form-stack" data-conditional-form<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
+      <form method="post" action="<?= h(formPublicPath($form, $isEmbedded ? ['embed' => '1'] : [])) ?>" enctype="multipart/form-data" novalidate class="form-stack" data-conditional-form<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <?php if ((int)($form['use_honeypot'] ?? 1) === 1): ?>
           <?= honeypotField() ?>

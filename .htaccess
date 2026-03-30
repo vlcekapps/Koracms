@@ -36,6 +36,8 @@ Options -Indexes
     RewriteRule ^uploads/gallery/ - [F,L,NC]
     # Obrázky míst se zobrazují jen přes places/image.php
     RewriteRule ^uploads/places/ - [F,L,NC]
+    # Podcast audio a artwork se vydávají jen přes podcast/*.php endpointy
+    RewriteRule ^uploads/podcasts/ - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

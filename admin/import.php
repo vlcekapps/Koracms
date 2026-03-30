@@ -542,8 +542,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_podcast_shows
                          (id, title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
-                          explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['podcast_shows'] as $row) {
                         $title = trim((string)($row['title'] ?? ''));
@@ -569,6 +569,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             !empty($row['feed_complete']) ? 1 : 0,
                             max(1, min(1000, (int)($row['feed_episode_limit'] ?? 100))),
                             normalizePodcastWebsiteUrl((string)($row['website_url'] ?? '')),
+                            (int)($row['is_published'] ?? 1),
+                            in_array((string)($row['status'] ?? 'published'), ['pending', 'published'], true) ? (string)$row['status'] : 'published',
                             $createdAt, $updatedAt,
                         ]);
                     }

@@ -154,12 +154,26 @@ $publicUserRow = $pdo->query(
 )->fetch();
 $podcastShowRow = null;
 $podcastShowSlug = '';
+$podcastShowLegacySlugPath = '';
+$podcastShowLegacySlugUrl = '';
 $podcastEpisodeRow = null;
 $podcastEpisodeId = false;
 $podcastEpisodeCanonicalPath = '';
 $podcastEpisodeLegacyPath = '';
 $podcastEpisodeCanonicalUrl = '';
 $podcastEpisodeLegacyUrl = '';
+$podcastEpisodeLegacySlugPath = '';
+$podcastEpisodeLegacySlugUrl = '';
+$podcastVisibleCoverUrl = '';
+$podcastVisibleEpisodeImageUrl = '';
+$podcastVisibleEpisodeAudioUrl = '';
+$podcastHiddenShowTitle = '';
+$podcastHiddenShowPath = '';
+$podcastHiddenShowUrl = '';
+$podcastHiddenFeedUrl = '';
+$podcastHiddenShowCoverUrl = '';
+$podcastHiddenEpisodeImageUrl = '';
+$podcastHiddenEpisodeAudioUrl = '';
 $newsletterPendingSubscriberId = false;
 $newsletterConfirmedSubscriberId = false;
 $newsletterHistoryId = false;
@@ -323,6 +337,7 @@ $cleanup = [
     'poll_ids' => [],
     'podcast_show_ids' => [],
     'podcast_episode_ids' => [],
+    'podcast_files' => [],
     'form_ids' => [],
     'form_submission_ids' => [],
     'redirect_paths' => [],
@@ -1326,19 +1341,58 @@ if (isModuleEnabled('polls')) {
 }
 
 if (isModuleEnabled('podcast')) {
+    $runtimeAuditPodcastBaseDir = __DIR__ . '/../uploads/podcasts/';
+    $runtimeAuditPodcastCoverDir = $runtimeAuditPodcastBaseDir . 'covers/';
+    $runtimeAuditPodcastImageDir = $runtimeAuditPodcastBaseDir . 'images/';
+    if (!is_dir($runtimeAuditPodcastBaseDir)) {
+        mkdir($runtimeAuditPodcastBaseDir, 0755, true);
+    }
+    if (!is_dir($runtimeAuditPodcastCoverDir)) {
+        mkdir($runtimeAuditPodcastCoverDir, 0755, true);
+    }
+    if (!is_dir($runtimeAuditPodcastImageDir)) {
+        mkdir($runtimeAuditPodcastImageDir, 0755, true);
+    }
+    $runtimeAuditPodcastPng = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aC8AAAAASUVORK5CYII=');
+    if ($runtimeAuditPodcastPng === false) {
+        $runtimeAuditPodcastPng = '';
+    }
+    $runtimeAuditPodcastAudio = "ID3RuntimeAuditPodcast";
+    $runtimeAuditPodcastCover = 'runtime-audit-podcast-cover-' . bin2hex(random_bytes(4)) . '.png';
+    $runtimeAuditPodcastEpisodeImage = 'runtime-audit-podcast-episode-' . bin2hex(random_bytes(4)) . '.png';
+    $runtimeAuditPodcastAudioFile = 'runtime-audit-podcast-audio-' . bin2hex(random_bytes(4)) . '.mp3';
+    $runtimeAuditHiddenPodcastCover = 'runtime-audit-podcast-hidden-cover-' . bin2hex(random_bytes(4)) . '.png';
+    $runtimeAuditHiddenPodcastEpisodeImage = 'runtime-audit-podcast-hidden-episode-' . bin2hex(random_bytes(4)) . '.png';
+    $runtimeAuditHiddenPodcastAudioFile = 'runtime-audit-podcast-hidden-audio-' . bin2hex(random_bytes(4)) . '.mp3';
+    if ($runtimeAuditPodcastPng !== '') {
+        file_put_contents($runtimeAuditPodcastCoverDir . $runtimeAuditPodcastCover, $runtimeAuditPodcastPng);
+        file_put_contents($runtimeAuditPodcastImageDir . $runtimeAuditPodcastEpisodeImage, $runtimeAuditPodcastPng);
+        file_put_contents($runtimeAuditPodcastCoverDir . $runtimeAuditHiddenPodcastCover, $runtimeAuditPodcastPng);
+        file_put_contents($runtimeAuditPodcastImageDir . $runtimeAuditHiddenPodcastEpisodeImage, $runtimeAuditPodcastPng);
+        $cleanup['podcast_files'][] = 'covers/' . $runtimeAuditPodcastCover;
+        $cleanup['podcast_files'][] = 'images/' . $runtimeAuditPodcastEpisodeImage;
+        $cleanup['podcast_files'][] = 'covers/' . $runtimeAuditHiddenPodcastCover;
+        $cleanup['podcast_files'][] = 'images/' . $runtimeAuditHiddenPodcastEpisodeImage;
+    }
+    file_put_contents($runtimeAuditPodcastBaseDir . $runtimeAuditPodcastAudioFile, $runtimeAuditPodcastAudio);
+    file_put_contents($runtimeAuditPodcastBaseDir . $runtimeAuditHiddenPodcastAudioFile, $runtimeAuditPodcastAudio);
+    $cleanup['podcast_files'][] = $runtimeAuditPodcastAudioFile;
+    $cleanup['podcast_files'][] = $runtimeAuditHiddenPodcastAudioFile;
     $runtimeAuditPodcastShowTitle = 'Runtime audit podcast';
     $runtimeAuditPodcastShowSlug = uniquePodcastShowSlug($pdo, 'runtime-audit-podcast-' . bin2hex(random_bytes(4)));
+    $runtimeAuditPodcastShowOldSlug = uniquePodcastShowSlug($pdo, 'runtime-audit-podcast-old-' . bin2hex(random_bytes(3)));
     $pdo->prepare(
         "INSERT INTO cms_podcast_shows (
             title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
-            explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, '', 'cs', ?, ?, ?, 'clean', 'episodic', 0, 25, ?, NOW(), NOW())"
+            explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, status, is_published, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, 'cs', ?, ?, ?, 'clean', 'episodic', 0, 25, ?, 'published', 1, NOW(), NOW())"
     )->execute([
         $runtimeAuditPodcastShowTitle,
         $runtimeAuditPodcastShowSlug,
         '<p>Testovací pořad pro runtime audit veřejných URL, RSS feedu a administrace podcastů.</p>',
         'Runtime Audit',
         'Krátký podtitul testovacího pořadu.',
+        $runtimeAuditPodcastCover,
         'Technologie',
         'Runtime Audit Owner',
         'runtime.audit.owner@example.test',
@@ -1349,17 +1403,19 @@ if (isModuleEnabled('podcast')) {
 
     $runtimeAuditPodcastEpisodeTitle = 'Runtime audit epizoda';
     $runtimeAuditPodcastEpisodeSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditPodcastShowId, 'runtime-audit-epizoda-' . bin2hex(random_bytes(4)));
+    $runtimeAuditPodcastEpisodeOldSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditPodcastShowId, 'runtime-audit-epizoda-old-' . bin2hex(random_bytes(3)));
     $pdo->prepare(
         "INSERT INTO cms_podcasts (
-            show_id, title, slug, description, audio_file, audio_url, subtitle, duration, episode_num, season_num,
+            show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
             episode_type, explicit_mode, block_from_feed, publish_at, status, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, '', ?, ?, '12:34', 1, 2, 'bonus', 'yes', 0, NOW(), 'published', NOW(), NOW())"
+         ) VALUES (?, ?, ?, ?, ?, ?, '', ?, '12:34', 1, 2, 'bonus', 'yes', 0, NOW(), 'published', NOW(), NOW())"
     )->execute([
         $runtimeAuditPodcastShowId,
         $runtimeAuditPodcastEpisodeTitle,
         $runtimeAuditPodcastEpisodeSlug,
         '<p>Detailní text testovací epizody pro runtime audit podcastů.</p>',
-        'https://example.test/runtime-audit-episode.mp3',
+        $runtimeAuditPodcastAudioFile,
+        $runtimeAuditPodcastEpisodeImage,
         'Krátký podtitul testovací epizody.',
     ]);
     $runtimeAuditPodcastEpisodeId = (int)$pdo->lastInsertId();
@@ -1371,7 +1427,7 @@ if (isModuleEnabled('podcast')) {
                 MAX(COALESCE(e.publish_at, e.created_at)) AS latest_episode_at
          FROM cms_podcast_shows s
          LEFT JOIN cms_podcasts e ON e.show_id = s.id
-             AND e.status = 'published' AND (e.publish_at IS NULL OR e.publish_at <= NOW())
+             AND " . podcastEpisodePublicVisibilitySql('e', 's') . "
          WHERE s.id = ?
          GROUP BY s.id"
     );
@@ -1380,13 +1436,21 @@ if (isModuleEnabled('podcast')) {
     if ($podcastShowRow) {
         $podcastShowRow = hydratePodcastShowPresentation($podcastShowRow);
         $podcastShowSlug = (string)($podcastShowRow['slug'] ?? '');
+        $podcastVisibleCoverUrl = (string)($podcastShowRow['cover_url'] ?? '');
+        if ($podcastShowSlug !== '') {
+            $podcastShowLegacySlugPath = BASE_URL . '/podcast/' . rawurlencode($runtimeAuditPodcastShowOldSlug);
+            $podcastShowLegacySlugUrl = $baseUrl . $podcastShowLegacySlugPath;
+            upsertPathRedirect($pdo, $podcastShowLegacySlugPath, (string)$podcastShowRow['public_path']);
+            $cleanup['redirect_paths'][] = $podcastShowLegacySlugPath;
+        }
     }
 
     $podcastEpisodeStmt = $pdo->prepare(
         "SELECT p.*, s.slug AS show_slug, s.title AS show_title
          FROM cms_podcasts p
          INNER JOIN cms_podcast_shows s ON s.id = p.show_id
-         WHERE p.id = ?"
+         WHERE p.id = ?
+           AND " . podcastEpisodePublicVisibilitySql('p', 's')
     );
     $podcastEpisodeStmt->execute([$runtimeAuditPodcastEpisodeId]);
     $podcastEpisodeRow = $podcastEpisodeStmt->fetch() ?: null;
@@ -1397,7 +1461,61 @@ if (isModuleEnabled('podcast')) {
         $podcastEpisodeLegacyPath = $podcastEpisodeId !== false ? BASE_URL . '/podcast/episode.php?id=' . urlencode((string)$podcastEpisodeId) : '';
         $podcastEpisodeCanonicalUrl = $podcastEpisodeCanonicalPath !== '' ? $baseUrl . $podcastEpisodeCanonicalPath : '';
         $podcastEpisodeLegacyUrl = $podcastEpisodeLegacyPath !== '' ? $baseUrl . $podcastEpisodeLegacyPath : '';
+        $podcastVisibleEpisodeImageUrl = (string)($podcastEpisodeRow['image_url'] ?? '');
+        $podcastVisibleEpisodeAudioUrl = (string)($podcastEpisodeRow['audio_src'] ?? '');
+        if ($podcastEpisodeCanonicalPath !== '') {
+            $podcastEpisodeLegacySlugPath = BASE_URL . '/podcast/' . rawurlencode($podcastShowSlug) . '/' . rawurlencode($runtimeAuditPodcastEpisodeOldSlug);
+            $podcastEpisodeLegacySlugUrl = $baseUrl . $podcastEpisodeLegacySlugPath;
+            upsertPathRedirect($pdo, $podcastEpisodeLegacySlugPath, $podcastEpisodeCanonicalPath);
+            $cleanup['redirect_paths'][] = $podcastEpisodeLegacySlugPath;
+        }
     }
+
+    $podcastHiddenShowTitle = 'Runtime audit skryty podcast';
+    $runtimeAuditHiddenPodcastShowSlug = uniquePodcastShowSlug($pdo, 'runtime-audit-hidden-podcast-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_shows (
+            title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
+            explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, status, is_published, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, 'cs', ?, ?, ?, 'clean', 'episodic', 0, 10, ?, 'published', 0, NOW(), NOW())"
+    )->execute([
+        $podcastHiddenShowTitle,
+        $runtimeAuditHiddenPodcastShowSlug,
+        '<p>Skryty porad jen pro overeni verejne viditelnosti podcastu.</p>',
+        'Runtime Audit',
+        'Skryty podtitul.',
+        $runtimeAuditHiddenPodcastCover,
+        'Test',
+        'Runtime Audit Owner',
+        'runtime.audit.owner@example.test',
+        'https://example.test/podcast-hidden',
+    ]);
+    $runtimeAuditHiddenPodcastShowId = (int)$pdo->lastInsertId();
+    $cleanup['podcast_show_ids'][] = $runtimeAuditHiddenPodcastShowId;
+    $podcastHiddenShowPath = BASE_URL . '/podcast/' . rawurlencode($runtimeAuditHiddenPodcastShowSlug);
+    $podcastHiddenShowUrl = $baseUrl . BASE_URL . '/podcast/' . rawurlencode($runtimeAuditHiddenPodcastShowSlug);
+    $podcastHiddenFeedUrl = $baseUrl . '/podcast/feed.php?slug=' . urlencode($runtimeAuditHiddenPodcastShowSlug);
+    $podcastHiddenShowCoverUrl = $baseUrl . BASE_URL . '/podcast/cover.php?id=' . urlencode((string)$runtimeAuditHiddenPodcastShowId);
+
+    $runtimeAuditHiddenPodcastEpisodeSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditHiddenPodcastShowId, 'runtime-audit-hidden-epizoda-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_podcasts (
+            show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
+            episode_type, explicit_mode, block_from_feed, publish_at, status, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, '', ?, '01:23', 1, 1, 'full', 'inherit', 0, NOW(), 'published', NOW(), NOW())"
+    )->execute([
+        $runtimeAuditHiddenPodcastShowId,
+        'Runtime audit skryta epizoda',
+        $runtimeAuditHiddenPodcastEpisodeSlug,
+        '<p>Skryta epizoda pro overeni asset endpointu.</p>',
+        $runtimeAuditHiddenPodcastAudioFile,
+        $runtimeAuditHiddenPodcastEpisodeImage,
+        'Skryta epizoda.',
+    ]);
+    $runtimeAuditHiddenPodcastEpisodeId = (int)$pdo->lastInsertId();
+    $cleanup['podcast_episode_ids'][] = $runtimeAuditHiddenPodcastEpisodeId;
+    $podcastHiddenEpisodeImageUrl = $baseUrl . BASE_URL . '/podcast/image.php?id=' . urlencode((string)$runtimeAuditHiddenPodcastEpisodeId);
+    $podcastHiddenEpisodeAudioUrl = $baseUrl . BASE_URL . '/podcast/audio.php?id=' . urlencode((string)$runtimeAuditHiddenPodcastEpisodeId);
 }
 
 if (isModuleEnabled('contact')) {
@@ -2781,8 +2899,8 @@ foreach ($pages as $page) {
         'admin_form_contact_preset' => ['Šablona:', 'Obecný kontaktní formulář', 'Po prvním uložení se automaticky přidají tato pole:', 'Souhlas', 'Kontakt na vás', 'Vaše zpráva'],
         'admin_form_content_report_preset' => ['Šablona:', 'Nahlášení problému s obsahem', 'Po prvním uložení se automaticky přidají tato pole:', 'Souhlas', 'Kde je problém', 'Co je potřeba opravit'],
         'admin_form_edit' => ['Upravte nastavení formuláře, jeho pole, sekce, rozložení a to, co se má stát po úspěšném odeslání.', 'Text tlačítka pro odeslání', 'E-mail pro notifikaci', 'Předmět notifikačního e-mailu', 'Režim po odeslání', 'Primární tlačítko po odeslání', 'Sekundární tlačítko po odeslání', 'Povolené typy souborů', 'Max. velikost souboru (MB)', 'Odpovědi formuláře', 'Potvrzení odesílateli', 'Poslat odesílateli potvrzovací e-mail', 'Začít na novém řádku'],
-        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
-        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_blog_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, formulář, anketu, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu, formuláře, ankety i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
+        'admin_blog_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Nechte prázdné, pokud se má článek zveřejnit hned.', 'Vložit odkaz nebo HTML z webu', 'Vyhledejte existující článek, stránku, formulář, anketu, médium nebo jiný veřejný obsah', 'Hledání prochází veřejně dostupný obsah webu, formuláře, ankety i knihovnu médií.', '[audio]https://example.test/audio.mp3[/audio]'],
         'admin_news_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_news_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Krátké shrnutí', 'Registrační odkaz', 'Plánované zrušení publikace', 'Zveřejnit na webu'],
@@ -2859,11 +2977,13 @@ foreach ($pages as $page) {
     if (in_array($page['label'], $contentReferencePickerLabels, true)) {
         foreach ([
             'Vložit odkaz nebo HTML z webu',
-            'Vyhledejte existující článek, stránku, médium nebo jiný veřejný obsah',
-            'Hledání prochází veřejně dostupný obsah webu i knihovnu médií.',
-            'fotogalerii, obrázek nebo přehrávač',
+            'Vyhledejte existující článek, stránku, formulář, anketu, médium nebo jiný veřejný obsah',
+            'Hledání prochází veřejně dostupný obsah webu, formuláře, ankety i knihovnu médií.',
+            'fotogalerii, obrázek, přehrávač nebo obsahový snippet',
             'value="media"',
             'Knihovna médií',
+            'value="forms"',
+            'Formuláře',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'content reference picker is missing fragment: ' . $expectedFragment;
@@ -2915,6 +3035,14 @@ foreach ($pages as $page) {
         foreach ([
             '[audio]https://example.test/audio.mp3[/audio]',
             '[video]https://example.test/video.mp4[/video]',
+            '[form]slug-formulare[/form]',
+            '[poll]slug-ankety[/poll]',
+            '[download]slug-polozky[/download]',
+            '[podcast]slug-poradu[/podcast]',
+            '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
+            '[place]slug-mista[/place]',
+            '[event]slug-udalosti[/event]',
+            '[board]slug-oznameni[/board]',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'HTML snippet helper is missing fragment: ' . $expectedFragment;
@@ -3695,6 +3823,9 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin podcast shows search field is missing';
         }
+        if (!str_contains($result['body'], 'name="status"')) {
+            $issues[] = 'admin podcast shows status filter is missing';
+        }
         if (!str_contains($result['body'], 'podcast_show_form.php')) {
             $issues[] = 'admin podcast shows page is missing create link';
         }
@@ -4292,6 +4423,8 @@ foreach ($pages as $page) {
             'name="feed_episode_limit"',
             'name="website_url"',
             'name="cover_image"',
+            'name="is_published"',
+            'revisions.php?type=podcast_show&amp;id=',
             'Zpět na přehled podcastů',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
@@ -4314,6 +4447,7 @@ foreach ($pages as $page) {
             'name="image_file"',
             'name="audio_url"',
             'name="publish_at"',
+            'revisions.php?type=podcast_episode&amp;id=',
             'Upravit epizodu podcastu',
             'Zpět na epizody podcastu',
         ] as $expectedField) {
@@ -4329,6 +4463,7 @@ foreach ($pages as $page) {
             '<itunes:subtitle>',
             '<itunes:owner>',
             '<itunes:email>runtime.audit.owner@example.test</itunes:email>',
+            '<managingEditor>runtime.audit.owner@example.test (Runtime Audit Owner)</managingEditor>',
             '<itunes:type>episodic</itunes:type>',
             '<itunes:explicit>clean</itunes:explicit>',
             '<itunes:season>2</itunes:season>',
@@ -4338,6 +4473,9 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'podcast feed is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'length="0"')) {
+            $issues[] = 'podcast feed still contains zero-length enclosure';
         }
     }
 
@@ -4804,6 +4942,9 @@ foreach ($pages as $page) {
     if ($page['label'] === 'podcast_index' && $podcastShowSlug !== '' && !str_contains($result['body'], '/podcast/' . $podcastShowSlug)) {
         $issues[] = 'podcast listing is missing show detail link';
     }
+    if ($page['label'] === 'podcast_index' && $podcastHiddenShowTitle !== '' && str_contains($result['body'], $podcastHiddenShowTitle)) {
+        $issues[] = 'podcast listing still exposes hidden show';
+    }
 
     if ($page['label'] === 'podcast_show') {
         if ($podcastShowRow && !str_contains($result['body'], (string)($podcastShowRow['title'] ?? ''))) {
@@ -4814,6 +4955,12 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'RSS feed')) {
             $issues[] = 'podcast show is missing RSS link';
+        }
+        if (!str_contains($result['body'], 'application/ld+json')) {
+            $issues[] = 'podcast show is missing structured data';
+        }
+        if (str_contains($result['body'], '/uploads/podcasts/')) {
+            $issues[] = 'podcast show still exposes direct uploads paths';
         }
     }
 
@@ -4829,6 +4976,12 @@ foreach ($pages as $page) {
         }
         if ($podcastShowRow && !str_contains($result['body'], (string)($podcastShowRow['public_path'] ?? ''))) {
             $issues[] = 'podcast episode is missing back link to show';
+        }
+        if (!str_contains($result['body'], 'application/ld+json')) {
+            $issues[] = 'podcast episode is missing structured data';
+        }
+        if (str_contains($result['body'], '/uploads/podcasts/')) {
+            $issues[] = 'podcast episode still exposes direct uploads paths';
         }
     }
 
@@ -5241,6 +5394,107 @@ if ($podcastEpisodeCanonicalPath === '' || $podcastEpisodeLegacyPath === '' || $
     }
 }
 
+echo "=== podcast_show_slug_redirect ===\n";
+if ($podcastShowLegacySlugPath === '' || $podcastShowSlug === '') {
+    echo "OK\n";
+} else {
+    $legacyPodcastShowSlugProbe = fetchUrl($podcastShowLegacySlugUrl, '', 0);
+    if (!str_contains($legacyPodcastShowSlugProbe['status'], '301') && !str_contains($legacyPodcastShowSlugProbe['status'], '302')) {
+        echo "- legacy podcast show slug URL does not redirect ({$legacyPodcastShowSlugProbe['status']})\n";
+        $failures++;
+    } elseif (!responseHasLocationHeader($legacyPodcastShowSlugProbe['headers'], BASE_URL . '/podcast/' . rawurlencode((string)$podcastShowSlug), $baseUrl)) {
+        echo "- legacy podcast show slug URL does not redirect to canonical path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== podcast_episode_slug_redirect ===\n";
+if ($podcastEpisodeLegacySlugPath === '' || $podcastEpisodeCanonicalPath === '') {
+    echo "OK\n";
+} else {
+    $legacyPodcastEpisodeSlugProbe = fetchUrl($podcastEpisodeLegacySlugUrl, '', 0);
+    if (!str_contains($legacyPodcastEpisodeSlugProbe['status'], '301') && !str_contains($legacyPodcastEpisodeSlugProbe['status'], '302')) {
+        echo "- legacy podcast episode slug URL does not redirect ({$legacyPodcastEpisodeSlugProbe['status']})\n";
+        $failures++;
+    } elseif (!responseHasLocationHeader($legacyPodcastEpisodeSlugProbe['headers'], $podcastEpisodeCanonicalPath, $baseUrl)) {
+        echo "- legacy podcast episode slug URL does not redirect to canonical path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== podcast_visibility_guards ===\n";
+$podcastVisibilityIssues = [];
+if ($podcastVisibleCoverUrl !== '') {
+    $podcastVisibleCoverProbe = fetchUrl(str_starts_with($podcastVisibleCoverUrl, 'http') ? $podcastVisibleCoverUrl : $baseUrl . $podcastVisibleCoverUrl, '', 0);
+    if (!str_contains($podcastVisibleCoverProbe['status'], '200')) {
+        $podcastVisibilityIssues[] = 'podcast cover endpoint does not serve public show cover';
+    }
+}
+if ($podcastVisibleEpisodeImageUrl !== '') {
+    $podcastVisibleImageProbe = fetchUrl(str_starts_with($podcastVisibleEpisodeImageUrl, 'http') ? $podcastVisibleEpisodeImageUrl : $baseUrl . $podcastVisibleEpisodeImageUrl, '', 0);
+    if (!str_contains($podcastVisibleImageProbe['status'], '200')) {
+        $podcastVisibilityIssues[] = 'podcast image endpoint does not serve public episode image';
+    }
+}
+if ($podcastVisibleEpisodeAudioUrl !== '') {
+    $podcastVisibleAudioProbe = fetchUrl(str_starts_with($podcastVisibleEpisodeAudioUrl, 'http') ? $podcastVisibleEpisodeAudioUrl : $baseUrl . $podcastVisibleEpisodeAudioUrl, '', 0);
+    if (!str_contains($podcastVisibleAudioProbe['status'], '200')) {
+        $podcastVisibilityIssues[] = 'podcast audio endpoint does not serve public episode audio';
+    }
+}
+if ($podcastHiddenShowUrl !== '') {
+    $podcastHiddenShowProbe = fetchUrl($podcastHiddenShowUrl, '', 0);
+    if (!preg_match('/\s404\s/', $podcastHiddenShowProbe['status'])) {
+        $podcastVisibilityIssues[] = 'hidden podcast show remains publicly reachable';
+    }
+}
+if ($podcastHiddenFeedUrl !== '') {
+    $podcastHiddenFeedProbe = fetchUrl($podcastHiddenFeedUrl, '', 0);
+    if (!preg_match('/\s404\s/', $podcastHiddenFeedProbe['status'])) {
+        $podcastVisibilityIssues[] = 'hidden podcast feed remains publicly reachable';
+    }
+}
+if ($podcastHiddenShowCoverUrl !== '') {
+    $podcastHiddenCoverProbe = fetchUrl($podcastHiddenShowCoverUrl, '', 0);
+    if (!preg_match('/\s404\s/', $podcastHiddenCoverProbe['status'])) {
+        $podcastVisibilityIssues[] = 'hidden podcast cover remains publicly reachable';
+    }
+}
+if ($podcastHiddenEpisodeImageUrl !== '') {
+    $podcastHiddenImageProbe = fetchUrl($podcastHiddenEpisodeImageUrl, '', 0);
+    if (!preg_match('/\s404\s/', $podcastHiddenImageProbe['status'])) {
+        $podcastVisibilityIssues[] = 'hidden podcast episode image remains publicly reachable';
+    }
+}
+if ($podcastHiddenEpisodeAudioUrl !== '') {
+    $podcastHiddenAudioProbe = fetchUrl($podcastHiddenEpisodeAudioUrl, '', 0);
+    if (!preg_match('/\s404\s/', $podcastHiddenAudioProbe['status'])) {
+        $podcastVisibilityIssues[] = 'hidden podcast episode audio remains publicly reachable';
+    }
+}
+$podcastDirectUploadProbe = fetchUrl($baseUrl . '/uploads/podcasts/' . rawurlencode((string)($runtimeAuditPodcastAudioFile ?? 'runtime-audit-podcast-audio.mp3')), '', 0);
+if (!preg_match('/\s40[34]\s/', $podcastDirectUploadProbe['status'])) {
+    $podcastVisibilityIssues[] = 'direct uploads/podcasts path is still publicly reachable';
+}
+$podcastSearchProbe = fetchUrl($baseUrl . '/search.php?q=' . urlencode($podcastHiddenShowTitle), '', 0);
+if (!str_contains($podcastSearchProbe['status'], '200')) {
+    $podcastVisibilityIssues[] = 'search page did not load for podcast visibility audit';
+} elseif ($podcastHiddenShowPath !== '' && str_contains($podcastSearchProbe['body'], $podcastHiddenShowPath)) {
+    $podcastVisibilityIssues[] = 'search still exposes hidden podcast show';
+}
+if ($podcastVisibilityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($podcastVisibilityIssues as $podcastVisibilityIssue) {
+        echo '- ' . $podcastVisibilityIssue . "\n";
+    }
+}
+
 echo "=== public_author_guard ===\n";
 if ($runtimeAuditAuthorUrl === '') {
     echo "OK\n";
@@ -5644,6 +5898,30 @@ HTML;
         if (!empty($galleryAlbumRow['slug'])) {
             $shortcodeContent .= "\n[gallery]" . (string)$galleryAlbumRow['slug'] . "[/gallery]\n";
         }
+        if ($runtimeAuditFormSlug !== '') {
+            $shortcodeContent .= "\n[form]" . $runtimeAuditFormSlug . "[/form]\n";
+        }
+        if (!empty($pollRow['slug'])) {
+            $shortcodeContent .= "\n[poll]" . (string)$pollRow['slug'] . "[/poll]\n";
+        }
+        if (!empty($downloadRow['slug'])) {
+            $shortcodeContent .= "\n[download]" . (string)$downloadRow['slug'] . "[/download]\n";
+        }
+        if (!empty($podcastShowRow['slug'])) {
+            $shortcodeContent .= "\n[podcast]" . (string)$podcastShowRow['slug'] . "[/podcast]\n";
+        }
+        if (!empty($podcastShowRow['slug']) && !empty($podcastEpisodeRow['slug'])) {
+            $shortcodeContent .= "\n[podcast_episode]" . (string)$podcastShowRow['slug'] . '/' . (string)$podcastEpisodeRow['slug'] . "[/podcast_episode]\n";
+        }
+        if (!empty($placeRow['slug'])) {
+            $shortcodeContent .= "\n[place]" . (string)$placeRow['slug'] . "[/place]\n";
+        }
+        if (!empty($eventRow['slug'])) {
+            $shortcodeContent .= "\n[event]" . (string)$eventRow['slug'] . "[/event]\n";
+        }
+        if (!empty($boardRow['slug'])) {
+            $shortcodeContent .= "\n[board]" . (string)$boardRow['slug'] . "[/board]\n";
+        }
 
         $pdo->prepare("UPDATE cms_articles SET content = ? WHERE id = ?")->execute([
             $shortcodeContent,
@@ -5669,6 +5947,54 @@ HTML;
             if (!empty($galleryAlbumRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-gallery-embed')) {
                 $contentShortcodeIssues[] = 'gallery shortcode was not rendered as embedded gallery';
             }
+            if ($runtimeAuditFormSlug !== '' && !str_contains($shortcodeProbe['body'], 'content-embed-frame--form')) {
+                $contentShortcodeIssues[] = 'form shortcode was not rendered as interactive embed';
+            }
+            if ($runtimeAuditFormPath !== '' && !str_contains($shortcodeProbe['body'], $runtimeAuditFormPath . '?embed=1')) {
+                $contentShortcodeIssues[] = 'form shortcode is missing embedded form iframe target';
+            }
+            if (!empty($pollRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-frame--poll')) {
+                $contentShortcodeIssues[] = 'poll shortcode was not rendered as interactive embed';
+            }
+            if (!empty($pollRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$pollRow['question'])) {
+                $contentShortcodeIssues[] = 'poll shortcode is missing poll question';
+            }
+            if (!empty($downloadRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--download')) {
+                $contentShortcodeIssues[] = 'download shortcode was not rendered as teaser card';
+            }
+            if (!empty($downloadRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$downloadRow['title'])) {
+                $contentShortcodeIssues[] = 'download shortcode is missing download title';
+            }
+            if (!empty($podcastShowRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--podcast')) {
+                $contentShortcodeIssues[] = 'podcast shortcode was not rendered as teaser card';
+            }
+            if (!empty($podcastShowRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$podcastShowRow['title'])) {
+                $contentShortcodeIssues[] = 'podcast shortcode is missing show title';
+            }
+            if (!empty($podcastShowRow['slug']) && !empty($podcastEpisodeRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--podcast-episode')) {
+                $contentShortcodeIssues[] = 'podcast episode shortcode was not rendered as teaser card';
+            }
+            if (!empty($podcastShowRow['slug']) && !empty($podcastEpisodeRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$podcastEpisodeRow['title'])) {
+                $contentShortcodeIssues[] = 'podcast episode shortcode is missing episode title';
+            }
+            if (!empty($placeRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--place')) {
+                $contentShortcodeIssues[] = 'place shortcode was not rendered as teaser card';
+            }
+            if (!empty($placeRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$placeRow['name'])) {
+                $contentShortcodeIssues[] = 'place shortcode is missing place title';
+            }
+            if (!empty($eventRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--event')) {
+                $contentShortcodeIssues[] = 'event shortcode was not rendered as teaser card';
+            }
+            if (!empty($eventRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$eventRow['title'])) {
+                $contentShortcodeIssues[] = 'event shortcode is missing event title';
+            }
+            if (!empty($boardRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--board')) {
+                $contentShortcodeIssues[] = 'board shortcode was not rendered as teaser card';
+            }
+            if (!empty($boardRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$boardRow['title'])) {
+                $contentShortcodeIssues[] = 'board shortcode is missing board title';
+            }
         }
     } finally {
         $pdo->prepare("UPDATE cms_articles SET content = ? WHERE id = ?")->execute([
@@ -5684,6 +6010,63 @@ HTML;
         foreach ($contentShortcodeIssues as $issue) {
             echo '- ' . $issue . "\n";
         }
+    }
+}
+
+echo "=== content_snippet_guardrails ===\n";
+$contentSnippetIssues = [];
+$contentLibrarySource = (string)file_get_contents(dirname(__DIR__) . '/lib/content.php');
+$contentPickerSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_picker.php');
+$contentSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
+
+foreach ([
+    '[form',
+    '[poll',
+    '[download',
+    '[podcast(?:',
+    '[podcast_episode',
+    '[place',
+    '[event',
+    '[board',
+] as $shortcodeFragment) {
+    if (!str_contains($contentLibrarySource, $shortcodeFragment)) {
+        $contentSnippetIssues[] = 'content parser is missing shortcode registration: ' . $shortcodeFragment;
+    }
+}
+
+foreach ([
+    "\$types['forms'] = 'Formuláře';",
+    '[form]slug-formulare[/form]',
+    '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
+] as $pickerFragment) {
+    if (!str_contains($contentPickerSource, $pickerFragment)) {
+        $contentSnippetIssues[] = 'content picker is missing snippet helper fragment: ' . $pickerFragment;
+    }
+}
+
+foreach ([
+    'Vložit formulář',
+    'Vložit anketu',
+    'Vložit blok ke stažení',
+    'Vložit podcast',
+    'Vložit epizodu podcastu',
+    'Vložit místo',
+    'Vložit událost',
+    'Vložit oznámení',
+    "'form' => 'Formulář'",
+    "'forms',",
+] as $searchFragment) {
+    if (!str_contains($contentSearchSource, $searchFragment)) {
+        $contentSnippetIssues[] = 'content reference search is missing snippet action fragment: ' . $searchFragment;
+    }
+}
+
+if ($contentSnippetIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($contentSnippetIssues as $contentSnippetIssue) {
+        echo '- ' . $contentSnippetIssue . "\n";
     }
 }
 
@@ -6237,6 +6620,9 @@ if (!empty($cleanup['podcast_episode_ids'])) {
 if (!empty($cleanup['podcast_show_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['podcast_show_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_podcast_shows WHERE id IN ({$placeholders})")->execute($cleanup['podcast_show_ids']);
+}
+foreach ($cleanup['podcast_files'] as $podcastFile) {
+    @unlink(__DIR__ . '/../uploads/podcasts/' . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, (string)$podcastFile));
 }
 if (!empty($cleanup['author_user_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['author_user_ids']), '?'));
@@ -7813,6 +8199,106 @@ if ($placesSourceIssues === []) {
     $failures++;
     foreach ($placesSourceIssues as $placesSourceIssue) {
         echo '- ' . $placesSourceIssue . "\n";
+    }
+}
+
+echo "=== podcast_source_guardrails ===\n";
+$podcastSourceIssues = [];
+$podcastShowSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_save.php');
+$podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_save.php');
+$podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
+$podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
+$podcastIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/index.php');
+$podcastShowControllerSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/show.php');
+$podcastEpisodeControllerSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/episode.php');
+$podcastIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/podcast-index.php');
+$podcastShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/podcast-show.php');
+$podcastFeedSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/feed.php');
+$podcastAudioSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/audio.php');
+$podcastCoverSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/cover.php');
+$podcastImageSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/image.php');
+$podcastSearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
+$podcastSitemapSource = (string)file_get_contents(dirname(__DIR__) . '/sitemap.php');
+$podcastWidgetSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$podcastHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
+if (!str_contains($podcastShowSaveSource, 'saveRevision(') || !str_contains($podcastShowSaveSource, "'podcast_show'")) {
+    $podcastSourceIssues[] = 'podcast show save is missing revision persistence';
+}
+if (!str_contains($podcastShowSaveSource, 'upsertPathRedirect')) {
+    $podcastSourceIssues[] = 'podcast show save is missing slug redirect persistence';
+}
+if (!str_contains($podcastEpisodeSaveSource, 'saveRevision(') || !str_contains($podcastEpisodeSaveSource, "'podcast_episode'")) {
+    $podcastSourceIssues[] = 'podcast episode save is missing revision persistence';
+}
+if (!str_contains($podcastEpisodeSaveSource, 'upsertPathRedirect')) {
+    $podcastSourceIssues[] = 'podcast episode save is missing slug redirect persistence';
+}
+if (!str_contains($podcastShowFormSource, 'name="is_published"')) {
+    $podcastSourceIssues[] = 'podcast show form is missing show visibility field';
+}
+if (!str_contains($podcastShowFormSource, 'revisions.php?type=podcast_show')) {
+    $podcastSourceIssues[] = 'podcast show form is missing revisions link';
+}
+if (!str_contains($podcastEpisodeFormSource, 'revisions.php?type=podcast_episode')) {
+    $podcastSourceIssues[] = 'podcast episode form is missing revisions link';
+}
+if (!str_contains($podcastIndexControllerSource, 'paginate(')) {
+    $podcastSourceIssues[] = 'podcast index is missing pagination support';
+}
+if (!str_contains($podcastIndexControllerSource, "podcastShowPublicVisibilitySql('s')")) {
+    $podcastSourceIssues[] = 'podcast index is missing show visibility guard';
+}
+if (!str_contains($podcastShowControllerSource, 'renderPager(')) {
+    $podcastSourceIssues[] = 'podcast show controller is missing pager support';
+}
+if (!str_contains($podcastIndexViewSource, 'pagerHtml')) {
+    $podcastSourceIssues[] = 'podcast index view is missing pager output';
+}
+if (!str_contains($podcastShowViewSource, 'pagerHtml')) {
+    $podcastSourceIssues[] = 'podcast show view is missing pager output';
+}
+if (!str_contains($podcastShowControllerSource, 'podcastShowStructuredData(')) {
+    $podcastSourceIssues[] = 'podcast show controller is missing structured data';
+}
+if (!str_contains($podcastEpisodeControllerSource, 'podcastEpisodeStructuredData(')) {
+    $podcastSourceIssues[] = 'podcast episode controller is missing structured data';
+}
+if (!str_contains($podcastFeedSource, 'podcastFeedManagingEditor(')) {
+    $podcastSourceIssues[] = 'podcast feed is missing managingEditor helper';
+}
+if (!str_contains($podcastFeedSource, 'podcastEpisodeEnclosureLength(')) {
+    $podcastSourceIssues[] = 'podcast feed is missing enclosure length helper';
+}
+if (!str_contains($podcastAudioSource, "currentUserHasCapability('content_manage_shared')")) {
+    $podcastSourceIssues[] = 'podcast audio endpoint is missing private visibility guard';
+}
+if (!str_contains($podcastCoverSource, "currentUserHasCapability('content_manage_shared')")) {
+    $podcastSourceIssues[] = 'podcast cover endpoint is missing private visibility guard';
+}
+if (!str_contains($podcastImageSource, "currentUserHasCapability('content_manage_shared')")) {
+    $podcastSourceIssues[] = 'podcast image endpoint is missing private visibility guard';
+}
+if (!str_contains($podcastSearchSource, "podcastEpisodePublicVisibilitySql('p', 's')")) {
+    $podcastSourceIssues[] = 'search no longer protects podcast episode visibility';
+}
+if (!str_contains($podcastSearchSource, 'podcastShowPublicVisibilitySql()')) {
+    $podcastSourceIssues[] = 'search no longer protects podcast show visibility';
+}
+if (!str_contains($podcastSitemapSource, "podcastEpisodePublicVisibilitySql('p', 's')")) {
+    $podcastSourceIssues[] = 'sitemap no longer protects podcast episode visibility';
+}
+if (!str_contains($podcastWidgetSource, "podcastEpisodePublicVisibilitySql('p', 's')")) {
+    $podcastSourceIssues[] = 'podcast widget no longer protects episode visibility';
+}
+if (!str_contains($podcastHtaccessSource, 'RewriteRule ^uploads/podcasts/ - [F,L,NC]')) {
+    $podcastSourceIssues[] = 'htaccess is missing podcasts uploads deny rule';
+}
+if ($podcastSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($podcastSourceIssues as $podcastSourceIssue) {
+        echo '- ' . $podcastSourceIssue . "\n";
     }
 }
 

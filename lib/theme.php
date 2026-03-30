@@ -1754,3 +1754,67 @@ function renderPublicPage(array $pageData): void
 
     include $layoutPath;
 }
+
+function renderPublicEmbedPage(array $pageData): void
+{
+    $themeName = resolveThemeName(isset($pageData['theme']) ? (string)$pageData['theme'] : null);
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $pageTitle = trim((string)($pageData['title'] ?? $siteName));
+    if ($pageTitle === '') {
+        $pageTitle = $siteName;
+    }
+
+    $viewName = trim((string)($pageData['view'] ?? ''));
+    if ($viewName === '') {
+        throw new InvalidArgumentException('Missing public embed theme view.');
+    }
+
+    $meta = is_array($pageData['meta'] ?? null) ? $pageData['meta'] : [];
+    if (!isset($meta['title'])) {
+        $meta['title'] = $pageTitle;
+    }
+
+    $bodyClasses = ['theme-public', 'theme-' . $themeName, 'theme-embed'];
+    $bodyClass = trim((string)($pageData['body_class'] ?? ''));
+    if ($bodyClass !== '') {
+        $bodyClasses[] = $bodyClass;
+    }
+    $extraBodyClasses = is_array($pageData['body_classes'] ?? null) ? $pageData['body_classes'] : [];
+    foreach ($extraBodyClasses as $extraBodyClass) {
+        $extraBodyClass = trim((string)$extraBodyClass);
+        if ($extraBodyClass !== '') {
+            $bodyClasses[] = $extraBodyClass;
+        }
+    }
+
+    $contentHtml = renderThemeView(
+        $viewName,
+        is_array($pageData['view_data'] ?? null) ? $pageData['view_data'] : [],
+        $themeName
+    );
+
+    $mainClass = trim('site-main site-main--embed ' . (string)($pageData['main_class'] ?? ''));
+    $bodyClassAttr = implode(' ', array_unique(array_filter($bodyClasses)));
+    $extraHeadHtml = (string)($pageData['extra_head_html'] ?? '');
+    $stylesheetUrl = themeAssetUrl('assets/public.css', $themeName);
+
+    echo "<!DOCTYPE html>\n";
+    echo '<html lang="cs">' . "\n";
+    echo "<head>\n";
+    echo '  <meta charset="utf-8">' . "\n";
+    echo '  <meta name="viewport" content="width=device-width, initial-scale=1">' . "\n";
+    echo '  <title>' . h((string)$meta['title']) . "</title>\n";
+    echo publicA11yStyleTag();
+    echo faviconTag();
+    echo seoMeta($meta);
+    echo '  <link rel="stylesheet" href="' . h($stylesheetUrl) . '">' . "\n";
+    echo $extraHeadHtml;
+    echo "</head>\n";
+    echo '<body class="' . h($bodyClassAttr) . '">' . "\n";
+    echo '  <a class="skip-link" href="#main">Přeskočit na obsah</a>' . "\n";
+    echo '  <main id="main" class="' . h($mainClass) . '">' . "\n";
+    echo '    <div class="container"><div class="page-stack">' . $contentHtml . "</div></div>\n";
+    echo "  </main>\n";
+    echo "</body>\n";
+    echo "</html>";
+}

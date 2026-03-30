@@ -18,7 +18,7 @@
           <?php if (!empty($show['author'])): ?>
             <span><?= h((string)$show['author']) ?></span>
           <?php endif; ?>
-          <span><?= count($episodes) ?> epizod</span>
+          <span><?= (int)($resultCount ?? count($episodes)) ?> epizod</span>
           <?php if (!empty($show['category'])): ?>
             <span class="pill"><?= h((string)$show['category']) ?></span>
           <?php endif; ?>
@@ -39,11 +39,15 @@
   </section>
 
   <section class="surface" aria-labelledby="podcast-episodes-title">
-    <div class="section-heading">
-      <div>
-        <h2 id="podcast-episodes-title" class="section-title">Epizody</h2>
+      <div class="section-heading">
+        <div>
+          <h2 id="podcast-episodes-title" class="section-title">Epizody</h2>
+        </div>
       </div>
-    </div>
+
+      <?php if (!empty($resultCount)): ?>
+        <p class="meta-row meta-row--tight"><?= (int)$resultCount ?> epizod</p>
+      <?php endif; ?>
 
     <?php if (empty($episodes)): ?>
       <p class="empty-state">Zatím tu nejsou žádné zveřejněné epizody.</p>
@@ -88,6 +92,12 @@
           </article>
         <?php endforeach; ?>
       </div>
+
+      <?php if (!empty($pagerHtml)): ?>
+        <div class="listing-shell__pager">
+          <?= $pagerHtml ?>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
   </section>
 </div>

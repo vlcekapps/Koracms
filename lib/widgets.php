@@ -585,7 +585,7 @@ function renderWidget_latest_podcast_episodes(array $widget, array $settings, st
     $showId = (int)($settings['show_id'] ?? 0);
     $pdo = db_connect();
 
-    $where = "WHERE p.status = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())";
+    $where = "WHERE " . podcastEpisodePublicVisibilitySql('p', 's');
     $params = [];
     if ($showId > 0) {
         $where .= " AND p.show_id = ?";

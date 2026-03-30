@@ -10,6 +10,9 @@
     <?php if (empty($shows)): ?>
       <p class="empty-state">Zatím nejsou zveřejněné žádné podcasty.</p>
     <?php else: ?>
+      <?php if (!empty($resultCount)): ?>
+        <p class="meta-row meta-row--tight"><?= (int)$resultCount ?> pořadů</p>
+      <?php endif; ?>
       <div class="card-grid">
         <?php foreach ($shows as $show): ?>
           <article class="card podcast-card">
@@ -52,6 +55,12 @@
           </article>
         <?php endforeach; ?>
       </div>
+
+      <?php if (!empty($pagerHtml)): ?>
+        <div class="listing-shell__pager">
+          <?= $pagerHtml ?>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
   </section>
 </div>

@@ -161,6 +161,7 @@ if (!isModuleEnabled('forms')) {
 
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
+$isEmbedded = (string)($_GET['embed'] ?? '') === '1';
 
 $slug = formSlug(trim($_GET['slug'] ?? ''));
 $id = inputInt('get', 'id');
@@ -192,7 +193,7 @@ if (!$form) {
 
 // Přesměrování na slug URL
 if ($slug === '' && !empty($form['slug'])) {
-    header('Location: ' . formPublicPath($form));
+    header('Location: ' . formPublicPath($form, $isEmbedded ? ['embed' => '1'] : []));
     exit;
 }
 
@@ -470,7 +471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $captchaExpr = captchaGenerate();
 
-renderPublicPage([
+$pageData = [
     'title' => (string)$form['title'] . ' – ' . $siteName,
     'meta' => [
         'title' => (string)$form['title'] . ' – ' . $siteName,
@@ -485,8 +486,16 @@ renderPublicPage([
         'successActions' => $successActions,
         'formData' => $formData,
         'captchaExpr' => $captchaExpr,
+        'isEmbedded' => $isEmbedded,
     ],
     'body_class' => 'page-form',
     'page_kind' => 'detail',
     'current_nav' => 'form:' . (int)$form['id'],
-]);
+];
+
+if ($isEmbedded) {
+    renderPublicEmbedPage($pageData);
+    exit;
+}
+
+renderPublicPage($pageData);
