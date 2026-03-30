@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.5] – 2026-03-30
 
 ### Změněno
 - **Statické stránky a navigace** – druhé samostatné pozicování statických stránek bylo odstraněno; `Navigace webu` je teď jediná autorita pro veřejné pořadí menu i pro pořadí stránek v admin přehledu a původní `admin/page_positions.php` už slouží jen jako kompatibilitní přesměrování na sjednocenou správu navigace
