@@ -1,6 +1,6 @@
 <?php
 /**
- * Správa navigace – jednotné řazení modulů, statických stránek a blogů.
+ * Správa navigace – jednotné řazení modulů, statických stránek, blogů a formulářů.
  */
 require_once __DIR__ . '/layout.php';
 requireCapability('settings_manage', 'Přístup odepřen.');
@@ -68,6 +68,31 @@ foreach ($pages as $pageRow) {
     ];
 }
 
+$forms = $pdo->query(
+    "SELECT id, title, slug, show_in_nav, is_active
+     FROM cms_forms
+     ORDER BY title, id"
+)->fetchAll();
+foreach ($forms as $formRow) {
+    $formId = (int)$formRow['id'];
+    $enabled = isModuleEnabled('forms')
+        && (int)$formRow['is_active'] === 1
+        && (int)$formRow['show_in_nav'] === 1;
+    $navItems[] = [
+        'key' => 'form:' . $formId,
+        'type' => 'form',
+        'id' => $formId,
+        'label' => (string)$formRow['title'],
+        'sublabel' => 'Formulář'
+            . ((int)$formRow['show_in_nav'] !== 1 ? ' · mimo navigaci' : '')
+            . ((int)$formRow['is_active'] !== 1 ? ' · nezveřejněný' : '')
+            . (!isModuleEnabled('forms') ? ' · modul vypnutý' : ''),
+        'enabled' => $enabled,
+        'manage_url' => BASE_URL . '/admin/form_form.php?id=' . $formId,
+        'manage_label' => 'Upravit formulář',
+    ];
+}
+
 $savedOrder = getSetting('nav_order_unified', '');
 if ($savedOrder !== '') {
     $orderedKeys = explode(',', $savedOrder);
@@ -129,11 +154,11 @@ adminHeader('Navigace webu');
   <p class="success" role="status">Pořadí statických stránek se nyní spravuje tady společně s moduly a blogy.</p>
 <?php endif; ?>
 
-<p style="font-size:.9rem">Tady určujete skutečné pořadí hlavní navigace webu napříč moduly, blogy a statickými stránkami. Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. Položky označené jako mimo navigaci nebo nezveřejněné tu zůstávají kvůli přehledu, ale návštěvníkům se teď nezobrazí.</p>
+<p style="font-size:.9rem">Tady určujete skutečné pořadí hlavní navigace webu napříč moduly, blogy, formuláři a statickými stránkami. Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. Položky označené jako mimo navigaci nebo nezveřejněné tu zůstávají kvůli přehledu, ale návštěvníkům se teď nezobrazí.</p>
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <p id="nav-order-help" class="field-help" style="margin-top:0">Potřebujete změnit stav položky? U stránek použijte „Upravit stránku“, u blogů „Správa blogů“ a u modulů „Správa modulů“.</p>
+  <p id="nav-order-help" class="field-help" style="margin-top:0">Potřebujete změnit stav položky? U stránek použijte „Upravit stránku“, u formulářů „Upravit formulář“, u blogů „Správa blogů“ a u modulů „Správa modulů“.</p>
   <p id="nav-order-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <ol style="list-style:none;padding:0;margin:0;max-width:62rem" id="nav-list" data-sortable="nav_unified">
     <?php $total = count($navItems); ?>

@@ -28,7 +28,7 @@ try {
 
     $whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
     $stmt = $pdo->prepare(
-        "SELECT f.id, f.title, f.slug, f.is_active, f.created_at,
+        "SELECT f.id, f.title, f.slug, f.is_active, f.show_in_nav, f.created_at,
                 (SELECT COUNT(*) FROM cms_form_fields WHERE form_id = f.id) AS field_count,
                 (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id) AS submission_count,
                 (SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = f.id AND status = 'new') AS new_submission_count,
@@ -111,7 +111,10 @@ adminHeader('Formuláře');
             0
           <?php endif; ?>
         </td>
-        <td><?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?></td>
+        <td>
+          <?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?>
+          <br><small style="color:#555"><?= (int)($form['show_in_nav'] ?? 0) === 1 ? 'v navigaci webu' : 'mimo navigaci' ?></small>
+        </td>
         <td class="actions">
           <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit</a>
           <?php if ((int)$form['submission_count'] > 0): ?>

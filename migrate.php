@@ -882,6 +882,7 @@ $addColumns = [
     'cms_forms.submitter_email_field' => "ALTER TABLE cms_forms ADD COLUMN submitter_email_field VARCHAR(100) NOT NULL DEFAULT ''",
     'cms_forms.submitter_confirmation_subject' => "ALTER TABLE cms_forms ADD COLUMN submitter_confirmation_subject VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_forms.submitter_confirmation_message' => "ALTER TABLE cms_forms ADD COLUMN submitter_confirmation_message TEXT",
+    'cms_forms.show_in_nav'          => "ALTER TABLE cms_forms ADD COLUMN show_in_nav TINYINT(1) NOT NULL DEFAULT 0",
     // cms_form_fields
     'cms_form_fields.default_value'  => "ALTER TABLE cms_form_fields ADD COLUMN default_value VARCHAR(500) NOT NULL DEFAULT ''",
     'cms_form_fields.help_text'      => "ALTER TABLE cms_form_fields ADD COLUMN help_text TEXT",

@@ -6113,6 +6113,7 @@ $adminPagesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.p
 $pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
 $pagePositionsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_positions.php');
 $publicNavSource = (string)file_get_contents(dirname(__DIR__) . '/lib/stats.php');
+$adminFormFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
 if (!str_contains($adminMenuSource, 'id="nav-order-status"')) {
     $menuAdminIssues[] = 'admin menu is missing live status region for keyboard reorder feedback';
 }
@@ -6133,6 +6134,21 @@ if (!str_contains($pagePositionsSource, '/admin/menu.php?page_positions=1')) {
 }
 if (!str_contains($publicNavSource, '$renderUnifiedEntry') || !str_contains($publicNavSource, 'foreach (array_keys($pagesMap) as $pageId)')) {
     $menuAdminIssues[] = 'public navigation does not append missing unified entries safely';
+}
+if (!str_contains($adminMenuSource, 'FROM cms_forms')) {
+    $menuAdminIssues[] = 'admin menu no longer includes forms in unified navigation source';
+}
+if (!str_contains($adminMenuSource, 'Upravit formulář')) {
+    $menuAdminIssues[] = 'admin menu is missing form edit action';
+}
+if (!str_contains($publicNavSource, 'foreach (array_keys($visibleForms) as $formId)')) {
+    $menuAdminIssues[] = 'public navigation does not append missing form entries safely';
+}
+if (!str_contains($publicNavSource, "current === 'form:'")) {
+    $menuAdminIssues[] = 'public navigation is missing current state support for forms';
+}
+if (!str_contains($adminFormFormSource, 'name="show_in_nav"')) {
+    $menuAdminIssues[] = 'form editor is missing show_in_nav checkbox';
 }
 if ($menuAdminIssues === []) {
     echo "OK\n";

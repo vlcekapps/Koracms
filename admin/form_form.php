@@ -196,6 +196,14 @@ adminHeader($pageTitle);
     </div>
 
     <div style="margin-bottom:.75rem">
+      <label for="show_in_nav">
+        <input type="checkbox" id="show_in_nav" name="show_in_nav" value="1"<?= ((int)($form['show_in_nav'] ?? ($formDefaults['show_in_nav'] ?? 0)) === 1) ? ' checked' : '' ?> aria-describedby="show-in-nav-help">
+        Zobrazit formulář v navigaci webu
+      </label>
+      <small id="show-in-nav-help" class="field-help">Použije se jen u aktivního formuláře. Skutečné pořadí v menu upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>.</small>
+    </div>
+
+    <div style="margin-bottom:.75rem">
       <label for="use_honeypot">
         <input type="checkbox" id="use_honeypot" name="use_honeypot" value="1"<?= ((int)($form['use_honeypot'] ?? ($formDefaults['use_honeypot'] ?? 1)) === 1) ? ' checked' : '' ?> aria-describedby="use-honeypot-help">
         Použít antispam honeypot

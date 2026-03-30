@@ -51,6 +51,7 @@ $submitterConfirmationEnabled = isset($_POST['submitter_confirmation_enabled']) 
 $submitterEmailField = trim($_POST['submitter_email_field'] ?? '');
 $submitterConfirmationSubject = trim($_POST['submitter_confirmation_subject'] ?? '');
 $submitterConfirmationMessage = trim($_POST['submitter_confirmation_message'] ?? '');
+$showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
 $isActive = isset($_POST['is_active']) ? 1 : 0;
 $presetKey = trim((string)($_POST['preset'] ?? ''));
 $presetDefinition = $id === null ? formPresetDefinition($presetKey) : null;
@@ -122,9 +123,9 @@ $slug = $uniqueSlug;
 if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_forms
-         SET title = ?, slug = ?, description = ?, success_message = ?, submit_label = ?, notification_email = ?, notification_subject = ?, redirect_url = ?, success_behavior = ?, success_primary_label = ?, success_primary_url = ?, success_secondary_label = ?, success_secondary_url = ?, webhook_enabled = ?, webhook_url = ?, webhook_secret = ?, webhook_events = ?, use_honeypot = ?, submitter_confirmation_enabled = ?, submitter_email_field = ?, submitter_confirmation_subject = ?, submitter_confirmation_message = ?, is_active = ?, updated_at = NOW()
+         SET title = ?, slug = ?, description = ?, success_message = ?, submit_label = ?, notification_email = ?, notification_subject = ?, redirect_url = ?, success_behavior = ?, success_primary_label = ?, success_primary_url = ?, success_secondary_label = ?, success_secondary_url = ?, webhook_enabled = ?, webhook_url = ?, webhook_secret = ?, webhook_events = ?, use_honeypot = ?, submitter_confirmation_enabled = ?, submitter_email_field = ?, submitter_confirmation_subject = ?, submitter_confirmation_message = ?, show_in_nav = ?, is_active = ?, updated_at = NOW()
          WHERE id = ?"
-    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $successBehavior, $successPrimaryLabel, $successPrimaryUrl, $successSecondaryLabel, $successSecondaryUrl, $webhookEnabled, $webhookUrl, $webhookSecret, $webhookEvents, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $isActive, $id]);
+    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $successBehavior, $successPrimaryLabel, $successPrimaryUrl, $successSecondaryLabel, $successSecondaryUrl, $webhookEnabled, $webhookUrl, $webhookSecret, $webhookEvents, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $showInNav, $isActive, $id]);
     logAction('form_edit', "id={$id} title={$title}");
 
     // Zpracování existujících polí
@@ -240,9 +241,9 @@ if ($id !== null) {
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $id);
 } else {
     $pdo->prepare(
-        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_email, notification_subject, redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label, success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events, use_honeypot, submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject, submitter_confirmation_message, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $successBehavior, $successPrimaryLabel, $successPrimaryUrl, $successSecondaryLabel, $successSecondaryUrl, $webhookEnabled, $webhookUrl, $webhookSecret, $webhookEvents, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $isActive]);
+        "INSERT INTO cms_forms (title, slug, description, success_message, submit_label, notification_email, notification_subject, redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label, success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events, use_honeypot, submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject, submitter_confirmation_message, show_in_nav, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([$title, $slug, $description, $successMessage, $submitLabel, $notificationEmail, $notificationSubject, $redirectUrl, $successBehavior, $successPrimaryLabel, $successPrimaryUrl, $successSecondaryLabel, $successSecondaryUrl, $webhookEnabled, $webhookUrl, $webhookSecret, $webhookEvents, $useHoneypot, $submitterConfirmationEnabled, $submitterEmailField, $submitterConfirmationSubject, $submitterConfirmationMessage, $showInNav, $isActive]);
     $newId = (int)$pdo->lastInsertId();
 
     if ($presetDefinition !== null && !empty($presetDefinition['fields'])) {

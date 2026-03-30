@@ -636,6 +636,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             submitter_email_field VARCHAR(100) NOT NULL DEFAULT '',
             submitter_confirmation_subject VARCHAR(255) NOT NULL DEFAULT '',
             submitter_confirmation_message TEXT,
+            show_in_nav TINYINT(1) NOT NULL DEFAULT 0,
             is_active   TINYINT(1)   NOT NULL DEFAULT 1,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

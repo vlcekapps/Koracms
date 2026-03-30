@@ -218,7 +218,7 @@ function siteNav(string $current = ''): string
     $unifiedOrder = getSetting('nav_order_unified', '');
 
     if ($unifiedOrder !== '') {
-        // Unified navigace – stránky, moduly a blogy dohromady
+        // Unified navigace – stránky, moduly, blogy a formuláře dohromady
         $moduleMap = navModuleDefaults();
         $visibleBlogEntries = [];
         if (isModuleEnabled('blog')) {
@@ -228,6 +228,20 @@ function siteNav(string $current = ''): string
                 }
                 $visibleBlogEntries[(int)$blogEntry['id']] = $blogEntry;
             }
+        }
+        $visibleForms = [];
+        if (isModuleEnabled('forms')) {
+            try {
+                $formRows = db_connect()->query(
+                    "SELECT id, title, slug
+                     FROM cms_forms
+                     WHERE is_active = 1 AND show_in_nav = 1
+                     ORDER BY title, id"
+                )->fetchAll();
+                foreach ($formRows as $formRow) {
+                    $visibleForms[(int)$formRow['id']] = $formRow;
+                }
+            } catch (\PDOException $e) {}
         }
         $pagesMap = [];
         try {
@@ -293,6 +307,17 @@ function siteNav(string $current = ''): string
                 $blogNavKey = 'blog:' . $blogEntry['slug'];
                 $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
                 $renderedEntries[$entry] = true;
+                return;
+            }
+
+            if (str_starts_with($entry, 'form:')) {
+                $formId = (int)substr($entry, 5);
+                if (!isset($visibleForms[$formId])) {
+                    return;
+                }
+                $form = $visibleForms[$formId];
+                $nav .= '<li><a href="' . h(formPublicPath($form)) . '"' . ($current === 'form:' . $formId ? ' aria-current="page"' : '') . '>' . h((string)$form['title']) . '</a></li>' . "\n";
+                $renderedEntries[$entry] = true;
             }
         };
 
@@ -312,6 +337,9 @@ function siteNav(string $current = ''): string
         }
         foreach (array_keys($pagesMap) as $pageId) {
             $renderUnifiedEntry('page:' . $pageId);
+        }
+        foreach (array_keys($visibleForms) as $formId) {
+            $renderUnifiedEntry('form:' . $formId);
         }
     } else {
         // Fallback: starý systém (stránky, pak moduly)
@@ -346,6 +374,20 @@ function siteNav(string $current = ''): string
                 [$href, $label] = $moduleMap[$key];
                 $nav .= $li($href, $label, $key);
             }
+        }
+
+        if (isModuleEnabled('forms')) {
+            try {
+                $forms = db_connect()->query(
+                    "SELECT id, title, slug
+                     FROM cms_forms
+                     WHERE is_active = 1 AND show_in_nav = 1
+                     ORDER BY title, id"
+                )->fetchAll();
+                foreach ($forms as $form) {
+                    $nav .= '<li><a href="' . h(formPublicPath($form)) . '"' . ($current === 'form:' . (int)$form['id'] ? ' aria-current="page"' : '') . '>' . h((string)$form['title']) . '</a></li>' . "\n";
+                }
+            } catch (\PDOException $e) {}
         }
     }
 

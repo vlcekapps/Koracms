@@ -488,4 +488,5 @@ renderPublicPage([
     ],
     'body_class' => 'page-form',
     'page_kind' => 'detail',
+    'current_nav' => 'form:' . (int)$form['id'],
 ]);
