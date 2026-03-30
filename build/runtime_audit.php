@@ -5934,6 +5934,15 @@ if (!str_contains($blogListSource, 'Vytvořit první blog')) {
 if (!str_contains($blogFormSource, "blog.php?msg=no_blog")) {
     $blogAdminIssues[] = 'article form no longer redirects back to blog list when no blog exists';
 }
+if (!str_contains($blogFormSource, 'const noCategoryLabel =')) {
+    $blogAdminIssues[] = 'article form is missing shared no-category label for multiblog category switching';
+}
+if (!str_contains($blogFormSource, 'categorySelect.options[0].textContent = noCategoryLabel;')) {
+    $blogAdminIssues[] = 'article form no longer normalizes initial no-category label from the shared PHP value';
+}
+if (!str_contains($blogFormSource, "categoryMarkup.push('<option value=\"\">' + noCategoryLabel + '</option>');")) {
+    $blogAdminIssues[] = 'article form no longer rebuilds empty category option from the shared PHP label';
+}
 if (!str_contains($blogCatsSource, 'if (!hasAnyBlogs())')) {
     $blogAdminIssues[] = 'blog categories page is missing no-blog redirect guard';
 }

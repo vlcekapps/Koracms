@@ -43,6 +43,7 @@ $categories = $catStmt->fetchAll();
 
 $allTags = [];
 $articleTagIds = [];
+$noCategoryLabel = '– bez kategorie –';
 try {
     $tagStmt2 = $pdo->prepare("SELECT id, name FROM cms_tags WHERE blog_id = ? ORDER BY name");
     $tagStmt2->execute([$currentBlogId]);
@@ -332,6 +333,7 @@ adminHeader($pageTitle);
     const categorySelect = document.getElementById('category_id');
     const tagsFieldset = document.getElementById('article-tags-fieldset');
     const tagsContainer = document.getElementById('article-tags-options');
+    const noCategoryLabel = <?= json_encode($noCategoryLabel, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMeta = <?= json_encode(array_values(array_map(static function (array $blogEntry): array {
         return [
@@ -357,6 +359,10 @@ adminHeader($pageTitle);
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 
+    if (categorySelect && categorySelect.options.length > 0 && categorySelect.options[0].value === '') {
+        categorySelect.options[0].textContent = noCategoryLabel;
+    }
+
     const rememberCurrentSelections = () => {
         if (!blogSelect || !categorySelect || !tagsContainer) {
             return;
@@ -375,7 +381,12 @@ adminHeader($pageTitle);
 
         const state = rememberedSelections[blogId] || { categoryId: '', tags: [] };
         const selectedTags = new Set((state.tags || []).map((value) => Number(value)));
+        /*
         const categoryMarkup = ['<option value="">â€“ bez kategorie â€“</option>'];
+
+        */
+        const categoryMarkup = [];
+        categoryMarkup.push('<option value="">' + noCategoryLabel + '</option>');
 
         (blogOptions[blogId].categories || []).forEach((category) => {
             const selected = String(category.id) === String(state.categoryId) ? ' selected' : '';
