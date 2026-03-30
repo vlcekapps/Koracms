@@ -22,3 +22,6 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Keep admin guide tracked for release assets and README links
+!docs/admin-guide.md

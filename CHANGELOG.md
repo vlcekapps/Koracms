@@ -6,8 +6,12 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **Release assety** – release ZIP nově vždy přibaluje také `docs/admin-guide.md` do složky `docs/admin-guide.md`, takže administrátorský návod je součástí každého distribučního balíčku a zůstává dostupný i mimo repozitář
+
 ### Změněno
 - **README.md** – kompletní revize: srozumitelnější jazyk pro administrátory, obsah (TOC), sjednocená sekce Konfigurace (SMTP, GA4, režim údržby, GitHub token, privátní úložiště), nové sekce Zálohování a údržba, Řešení problémů a ukázková Nginx konfigurace; opraveny chybějící PHP rozšíření `mbstring` a `zip` v požadavcích; odstraněny duplicitní sekce a changelogový tón; detailní popis modulů přesunut do `docs/admin-guide.md`
+- **Patička webu** – odkaz na Kora CMS v patičce nově směřuje na oficiální GitHub repozitář `https://github.com/vlcekapps/Koracms` místo původní domény projektu
 
 ## [3.0.0-rc.6] – 2026-03-30
 

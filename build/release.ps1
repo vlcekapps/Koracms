@@ -188,6 +188,11 @@ function New-ReleaseZip {
     param([string]$ProjectRoot, [string]$OutPath)
 
     $exclude = @('.git', '.gitignore', '.claude', 'uploads', 'build', 'dist', 'docs', 'config.php', 'aconfig.php', 'AGENTS.md', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
+    $adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"
+
+    if (!(Test-Path $adminGuideSource)) {
+        throw "Soubor docs/admin-guide.md nebyl nalezen. Release asset musí obsahovat administrátorský návod."
+    }
 
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("koracms_" + [System.Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $tempDir | Out-Null
@@ -198,6 +203,12 @@ function New-ReleaseZip {
         } | ForEach-Object {
             Copy-Item -Path $_.FullName -Destination $tempDir -Recurse -Force
         }
+
+        $docsTempDir = Join-Path $tempDir "docs"
+        if (!(Test-Path $docsTempDir)) {
+            New-Item -ItemType Directory -Path $docsTempDir | Out-Null
+        }
+        Copy-Item -Path $adminGuideSource -Destination (Join-Path $docsTempDir "admin-guide.md") -Force
 
         if (Test-Path $OutPath) { Remove-Item $OutPath -Force }
         Compress-Archive -Path (Join-Path $tempDir '*') -DestinationPath $OutPath

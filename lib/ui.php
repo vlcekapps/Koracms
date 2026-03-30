@@ -45,7 +45,7 @@ function siteFooter(): string
                    : "<a href=\"{$b}/public_login.php\">Přihlášení</a> · <a href=\"{$b}/register.php\">Registrace</a>")
                . "</p>\n"
              : '')
-         . "  <p><small><a href=\"https://koracms.pvlcek.cz\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$version}</a></small></p>\n"
+         . "  <p><small><a href=\"https://github.com/vlcekapps/Koracms\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$version}</a></small></p>\n"
          . (getSetting('visitor_counter_enabled', '0') === '1'
              ? (function () {
                    $vs = getVisitorStats();
