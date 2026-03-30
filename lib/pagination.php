@@ -19,6 +19,22 @@ function paginate(PDO $pdo, string $countQuery, array $countParams, int $perPage
 }
 
 /**
+ * Vypočítá stránkování pro už hotový počet výsledků bez SQL COUNT.
+ *
+ * @return array{perPage: int, total: int, totalPages: int, page: int, offset: int}
+ */
+function paginateArray(int $total, int $perPage = 10, ?int $requestedPage = null): array
+{
+    $total = max(0, $total);
+    $perPage = max(1, $perPage);
+    $totalPages = max(1, (int)ceil($total / $perPage));
+    $page = max(1, min($totalPages, $requestedPage ?? (int)($_GET['strana'] ?? 1)));
+    $offset = ($page - 1) * $perPage;
+
+    return compact('perPage', 'total', 'totalPages', 'page', 'offset');
+}
+
+/**
  * Vykreslí stránkovací navigaci (<nav> s <ul class="pager">).
  * Vrátí prázdný řetězec, pokud je jen 1 strana.
  */

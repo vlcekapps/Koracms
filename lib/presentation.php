@@ -621,6 +621,35 @@ function faqExcerpt(array $faq, int $limit = 220): string
     return mb_strimwidth($answerExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+function faqPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "{$prefix}deleted_at IS NULL"
+        . " AND COALESCE({$prefix}status,'published') = 'published'"
+        . " AND {$prefix}is_published = 1";
+}
+
+function faqRevisionSnapshot(array $faq, array $categoryNames = []): array
+{
+    $categoryId = isset($faq['category_id']) && (int)$faq['category_id'] > 0
+        ? (int)$faq['category_id']
+        : 0;
+    $categoryName = $categoryId > 0 ? trim((string)($categoryNames[$categoryId] ?? '')) : '';
+
+    return [
+        'question' => trim((string)($faq['question'] ?? '')),
+        'slug' => faqSlug((string)($faq['slug'] ?? '')),
+        'category' => $categoryName,
+        'excerpt' => trim((string)($faq['excerpt'] ?? '')),
+        'answer' => trim((string)($faq['answer'] ?? '')),
+        'meta_title' => trim((string)($faq['meta_title'] ?? '')),
+        'meta_description' => trim((string)($faq['meta_description'] ?? '')),
+        'is_published' => (string)((int)($faq['is_published'] ?? 1)),
+        'status' => (string)($faq['status'] ?? 'published'),
+    ];
+}
+
 function placeKindLabel(string $kind): string
 {
     $definitions = placeKindDefinitions();
@@ -2428,6 +2457,46 @@ function eventStructuredData(array $event): string
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
+function faqStructuredData(array $faqs, string $pageUrl = ''): string
+{
+    $mainEntities = [];
+
+    foreach ($faqs as $faq) {
+        $question = trim((string)($faq['question'] ?? ''));
+        $answer = normalizePlainText((string)($faq['answer'] ?? ''));
+
+        if ($question === '' || $answer === '') {
+            continue;
+        }
+
+        $mainEntities[] = [
+            '@type' => 'Question',
+            'name' => $question,
+            'acceptedAnswer' => [
+                '@type' => 'Answer',
+                'text' => $answer,
+            ],
+            'url' => faqPublicUrl($faq),
+        ];
+    }
+
+    if ($mainEntities === []) {
+        return '';
+    }
+
+    $data = [
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => $mainEntities,
+    ];
+
+    if ($pageUrl !== '') {
+        $data['url'] = $pageUrl;
+    }
+
+    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+}
+
 function eventIcsFilename(array $event): string
 {
     $slug = eventSlug((string)($event['slug'] ?? ''));
@@ -3074,10 +3143,14 @@ function hydrateFaqPresentation(array $faq): array
     $faq['question'] = trim((string)($faq['question'] ?? ''));
     $faq['slug'] = faqSlug((string)($faq['slug'] ?? ''));
     $faq['excerpt'] = faqExcerpt($faq);
+    $faq['meta_title'] = trim((string)($faq['meta_title'] ?? ''));
+    $faq['meta_description'] = trim((string)($faq['meta_description'] ?? ''));
     $faq['public_path'] = faqPublicPath($faq);
     $faq['public_url'] = faqPublicUrl($faq);
     $faq['status'] = (string)($faq['status'] ?? ((int)($faq['is_published'] ?? 1) === 1 ? 'published' : 'pending'));
-    $faq['is_publicly_visible'] = $faq['status'] === 'published' && (int)($faq['is_published'] ?? 1) === 1;
+    $faq['is_publicly_visible'] = $faq['status'] === 'published'
+        && (int)($faq['is_published'] ?? 1) === 1
+        && empty($faq['deleted_at']);
     return $faq;
 }
 

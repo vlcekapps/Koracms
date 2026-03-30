@@ -8,6 +8,8 @@ $id = inputInt('post', 'id');
 $question = trim($_POST['question'] ?? '');
 $submittedSlug = trim($_POST['slug'] ?? '');
 $excerpt = trim($_POST['excerpt'] ?? '');
+$metaTitle = trim((string)($_POST['meta_title'] ?? ''));
+$metaDescription = trim((string)($_POST['meta_description'] ?? ''));
 $answer = $_POST['answer'] ?? '';
 $categoryId = inputInt('post', 'category_id');
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
@@ -41,19 +43,41 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
 }
 $slug = $uniqueSlug;
 
+$faqCategoryNames = [];
+foreach ($pdo->query("SELECT id, name FROM cms_faq_categories ORDER BY sort_order, name")->fetchAll() as $faqCategoryRow) {
+    $faqCategoryNames[(int)$faqCategoryRow['id']] = (string)$faqCategoryRow['name'];
+}
+
 if ($existingFaq) {
-    $oldStmt = $pdo->prepare("SELECT question, slug, excerpt, answer FROM cms_faqs WHERE id = ?");
+    $oldStmt = $pdo->prepare("SELECT * FROM cms_faqs WHERE id = ?");
     $oldStmt->execute([$id]);
     $oldData = $oldStmt->fetch();
     if ($oldData) {
-        saveRevision($pdo, 'faq', $id, $oldData, [
-            'question' => $question, 'slug' => $slug, 'excerpt' => $excerpt, 'answer' => $answer,
-        ]);
+        saveRevision(
+            $pdo,
+            'faq',
+            $id,
+            faqRevisionSnapshot($oldData, $faqCategoryNames),
+            faqRevisionSnapshot([
+                'question' => $question,
+                'slug' => $slug,
+                'excerpt' => $excerpt,
+                'answer' => $answer,
+                'category_id' => $categoryId,
+                'meta_title' => $metaTitle,
+                'meta_description' => $metaDescription,
+                'is_published' => $isPublished,
+                'status' => $oldData['status'] ?? 'published',
+            ], $faqCategoryNames)
+        );
     }
+
+    $oldPath = $oldData ? faqPublicPath($oldData) : '';
 
     $pdo->prepare(
         "UPDATE cms_faqs
-         SET question = ?, slug = ?, excerpt = ?, answer = ?, category_id = ?, is_published = ?, updated_at = NOW()
+         SET question = ?, slug = ?, excerpt = ?, answer = ?, category_id = ?, meta_title = ?, meta_description = ?,
+             is_published = ?, updated_at = NOW()
          WHERE id = ?"
     )->execute([
         $question,
@@ -61,22 +85,27 @@ if ($existingFaq) {
         $excerpt,
         $answer,
         $categoryId,
+        $metaTitle,
+        $metaDescription,
         $isPublished,
         $id,
     ]);
+    upsertPathRedirect($pdo, $oldPath, faqPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('faq_edit', "id={$id} question={$question} slug={$slug}");
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
-        "INSERT INTO cms_faqs (question, slug, excerpt, answer, category_id, is_published, status)
-         VALUES (?,?,?,?,?,?,?)"
+        "INSERT INTO cms_faqs (question, slug, excerpt, answer, category_id, meta_title, meta_description, is_published, status)
+         VALUES (?,?,?,?,?,?,?,?,?)"
     )->execute([
         $question,
         $slug,
         $excerpt,
         $answer,
         $categoryId,
+        $metaTitle,
+        $metaDescription,
         $visible,
         $status,
     ]);

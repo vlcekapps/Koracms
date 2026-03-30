@@ -462,6 +462,7 @@ $tables = [
 
     'cms_faq_categories' => "CREATE TABLE IF NOT EXISTS cms_faq_categories (
         id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        parent_id  INT          NULL DEFAULT NULL,
         name       VARCHAR(255) NOT NULL,
         sort_order INT          NOT NULL DEFAULT 0,
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -474,12 +475,16 @@ $tables = [
         slug         VARCHAR(255) NOT NULL,
         excerpt      TEXT,
         answer       TEXT         NOT NULL,
+        meta_title   VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
         sort_order   INT          NOT NULL DEFAULT 0,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+        deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_cms_faqs_slug (slug)
+        UNIQUE KEY uq_cms_faqs_slug (slug),
+        FULLTEXT INDEX ft_faqs_search (question, excerpt, answer)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_board_categories' => "CREATE TABLE IF NOT EXISTS cms_board_categories (
@@ -823,6 +828,8 @@ $addColumns = [
     'cms_faqs.slug'                  => "ALTER TABLE cms_faqs ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_faqs.excerpt'               => "ALTER TABLE cms_faqs ADD COLUMN excerpt TEXT",
     'cms_faqs.status'                => "ALTER TABLE cms_faqs ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_faqs.meta_title'            => "ALTER TABLE cms_faqs ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
+    'cms_faqs.meta_description'      => "ALTER TABLE cms_faqs ADD COLUMN meta_description TEXT",
     // cms_podcast_shows
     'cms_podcast_shows.subtitle'          => "ALTER TABLE cms_podcast_shows ADD COLUMN subtitle VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_podcast_shows.owner_name'        => "ALTER TABLE cms_podcast_shows ADD COLUMN owner_name VARCHAR(255) NOT NULL DEFAULT ''",
@@ -1684,9 +1691,9 @@ try {
         $foodSlugNullabilityCheck->execute();
         if (($foodSlugNullabilityCheck->fetchColumn() ?? 'NO') === 'YES') {
             $pdo->exec("ALTER TABLE cms_food_cards MODIFY slug VARCHAR(255) NOT NULL");
-            $log[] = "âś“ Sloupec <code>cms_food_cards.slug</code> je nynĂ­ NOT NULL â€“ OK";
+            $log[] = "✓ Sloupec <code>cms_food_cards.slug</code> je nyní NOT NULL – OK";
         } else {
-            $log[] = "Â· Sloupec <code>cms_food_cards.slug</code> uĹľ je NOT NULL â€“ pĹ™eskoÄŤeno";
+            $log[] = "· Sloupec <code>cms_food_cards.slug</code> už je NOT NULL – přeskočeno";
         }
 
         $foodSlugIndexCheck = $pdo->prepare(
@@ -1697,12 +1704,12 @@ try {
         $foodSlugIndexCheck->execute();
         if ((int)$foodSlugIndexCheck->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE cms_food_cards ADD UNIQUE KEY uq_cms_food_cards_slug (slug)");
-            $log[] = "âś“ UnikĂˇtnĂ­ index <code>uq_cms_food_cards_slug</code> pĹ™idĂˇn â€“ OK";
+            $log[] = "✓ Unikátní index <code>uq_cms_food_cards_slug</code> přidán – OK";
         } else {
-            $log[] = "Â· UnikĂˇtnĂ­ index pro <code>cms_food_cards.slug</code> jiĹľ existuje â€“ pĹ™eskoÄŤeno";
+            $log[] = "· Unikátní index pro <code>cms_food_cards.slug</code> již existuje – přeskočeno";
         }
     } else {
-        $log[] = "Â· Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ sloupec <code>cms_food_cards.slug</code> neexistuje, pĹ™eskoÄŤeno";
+        $log[] = "· Slugy jídelních lístků – sloupec <code>cms_food_cards.slug</code> neexistuje, přeskočeno";
     }
 } catch (\PDOException $e) {
     $log[] = "âś— Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ CHYBA: " . h($e->getMessage());

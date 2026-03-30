@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **FAQ – veřejné hledání, přepínání zobrazení a strukturovaná data** – znalostní báze nově umí fulltextové hledání, filtr podle kategorie, stránkování, přepínání `Přehled karet / Rozbalené odpovědi`, související otázky na detailu a `FAQPage` strukturovaná data pro vyhledávače
 - **Multiblog – týmy blogů a jemnější oprávnění** – každý blog může mít vlastní tým autorů a správců blogu; autoři nově vidí jen přidělené blogy a správa kategorií a štítků se umí omezit jen na konkrétní blog
 - **Multiblog – per-blog metadata a veřejný index** – blogy nově podporují `meta title`, `meta description`, RSS podtitulek, rozšířený intro blok, výchozí komentáře pro nové články, počet položek v RSS feedu a doporučený článek přímo na indexu blogu
 - **Multiblog – hledání, archiv a current-blog widget kontext** – veřejný index blogu nově umí hledání v rámci konkrétního blogu, archiv po měsících a widget „Nejnovější články“ se umí na blogových stránkách přepnout na právě otevřený blog
@@ -15,6 +16,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Ke stažení – veřejné hledání, filtry a stránkování** – veřejný katalog nově umí hledání, filtrování podle kategorie, typu, platformy, zdroje a doporučených položek a také stránkování výpisu
 
 ### Změněno
+- **FAQ – admin workflow, SEO a migrace** – editor FAQ nově obsahuje `meta title` a `meta description`, přehled FAQ umí filtr podle kategorie, změna slugu ukládá redirect, revize zachycují i kategorii a SEO metadata a `install.php` i `migrate.php` nově drží stejné FAQ schéma včetně `parent_id`, `meta_title` a `meta_description`
 - **Blogové URL a feedy** – při změně slug blogu se staré adresy i per-blog RSS feed bezpečně přesměrují na nový canonical tvar
 - **Export / import** – balíčky nově zahrnují i blog membership, redirecty starých slugů, rozšířená metadata blogů a featured flag článků
 - **Multiblog – přehlednější správa týmů** – obrazovka `Tým blogu` nově ukazuje i další blogy daného uživatele, přehled uživatelů zobrazuje jejich blogová přiřazení a správa blogů přidává i počet členů týmu u každého blogu

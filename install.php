@@ -495,6 +495,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             slug         VARCHAR(255) NOT NULL,
             excerpt      TEXT,
             answer       TEXT         NOT NULL,
+            meta_title   VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
             sort_order   INT          NOT NULL DEFAULT 0,
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',

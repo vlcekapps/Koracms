@@ -308,6 +308,47 @@ Každá položka může mít:
 
 ---
 
+## Znalostní báze – FAQ workflow
+
+### Co se nastavuje u otázky
+
+V editoru FAQ položky se nově nastavuje:
+
+- otázka, slug a krátké shrnutí
+- odpověď v HTML editoru
+- kategorie FAQ
+- `meta title` a `meta description` pro detail otázky
+- publikační stav a zveřejnění na webu
+
+Při změně slugu se automaticky uloží redirect ze staré adresy na novou, takže veřejné odkazy nepřestanou fungovat.
+
+### Co je nové v admin workflow
+
+- Přehled FAQ nově umí hledání, workflow stav a filtr podle kategorie.
+- Revize ukládají nejen text otázky a odpovědi, ale i kategorii, SEO metadata a publikační stav.
+- FAQ export a import drží stejná pole jako aktuální editor, takže se metadata neztratí při migraci obsahu.
+
+### Veřejný výpis a detail
+
+Veřejná znalostní báze nově podporuje:
+
+- fulltextové hledání
+- filtr podle kategorie
+- stránkování
+- přepínání `Přehled karet / Rozbalené odpovědi`
+- zachování kontextu při návratu z detailu otázky
+- související otázky na detailu
+- `FAQPage` strukturovaná data pro vyhledávače
+
+Detail otázky umí použít vlastní `meta title` a `meta description`. Pokud nejsou vyplněné, použije se otázka a shrnutí FAQ.
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) jen stručně říká, že znalostní báze umí hledání, stránkování, SEO a strukturovaná data.
+- Tento dokument popisuje konkrétní práci správce s kategoriemi, SEO poli, revizemi a veřejným výpisem FAQ.
+
+---
+
 ## Kompletní seznam widgetů
 
 Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.

@@ -14,6 +14,14 @@ if ($id === null && $slug === '') {
     exit;
 }
 
+$listingQuery = [];
+foreach (['q', 'kat', 'zobrazeni', 'strana'] as $queryKey) {
+    $queryValue = trim((string)($_GET[$queryKey] ?? ''));
+    if ($queryValue !== '') {
+        $listingQuery[$queryKey] = $queryValue;
+    }
+}
+
 $pdo = db_connect();
 
 if ($slug !== '') {
@@ -21,7 +29,7 @@ if ($slug !== '') {
         "SELECT f.*, c.name AS category_name
          FROM cms_faqs f
          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
-         WHERE f.slug = ? AND COALESCE(f.status,'published') = 'published' AND f.is_published = 1
+         WHERE f.slug = ? AND " . faqPublicVisibilitySql('f') . "
          LIMIT 1"
     );
     $stmt->execute([$slug]);
@@ -30,7 +38,7 @@ if ($slug !== '') {
         "SELECT f.*, c.name AS category_name
          FROM cms_faqs f
          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
-         WHERE f.id = ? AND COALESCE(f.status,'published') = 'published' AND f.is_published = 1
+         WHERE f.id = ? AND " . faqPublicVisibilitySql('f') . "
          LIMIT 1"
     );
     $stmt->execute([$id]);
@@ -78,7 +86,7 @@ if ($faqCatId > 0) {
 }
 
 if ($slug === '' && !empty($faq['slug'])) {
-    header('Location: ' . faqPublicPath($faq));
+    header('Location: ' . faqPublicPath($faq, $listingQuery));
     exit;
 }
 
@@ -87,15 +95,50 @@ if (!isset($_SESSION['cms_user_id'])) {
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');
-$metaDescription = faqExcerpt($faq, 180);
+$metaTitle = trim((string)($faq['meta_title'] ?? ''));
+$metaDescription = trim((string)($faq['meta_description'] ?? ''));
+if ($metaDescription === '') {
+    $metaDescription = faqExcerpt($faq, 180);
+}
 if ($metaDescription === '') {
     $metaDescription = 'Odpověď na otázku ' . (string)$faq['question'];
 }
+$pageTitle = $metaTitle !== '' ? $metaTitle : (string)$faq['question'];
+
+$relatedFaqs = [];
+$relatedParams = [(int)$faq['id']];
+$relatedWhere = ['f.id <> ?', faqPublicVisibilitySql('f')];
+
+if (!empty($faq['category_id'])) {
+    $relatedWhere[] = 'f.category_id = ?';
+    $relatedParams[] = (int)$faq['category_id'];
+}
+
+$relatedStmt = $pdo->prepare(
+    "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.category_id, f.updated_at,
+            f.meta_title, f.meta_description, COALESCE(c.name, '') AS category_name
+     FROM cms_faqs f
+     LEFT JOIN cms_faq_categories c ON c.id = f.category_id
+     WHERE " . implode(' AND ', $relatedWhere) . "
+     ORDER BY COALESCE(f.updated_at, f.created_at) DESC, f.id DESC
+     LIMIT 4"
+);
+$relatedStmt->execute($relatedParams);
+$relatedFaqs = array_map(
+    static fn(array $relatedFaq): array => hydrateFaqPresentation($relatedFaq),
+    $relatedStmt->fetchAll()
+);
+
+$backUrl = BASE_URL . appendUrlQuery('/faq/index.php', $listingQuery);
+if ($listingQuery === [] && !empty($faq['category_id'])) {
+    $backUrl = BASE_URL . '/faq/index.php?kat=' . (int)$faq['category_id'];
+}
+$extraHeadHtml = faqStructuredData([$faq], faqPublicUrl($faq));
 
 renderPublicPage([
-    'title' => (string)$faq['question'] . ' – ' . $siteName,
+    'title' => $pageTitle . ' – ' . $siteName,
     'meta' => [
-        'title' => (string)$faq['question'] . ' – ' . $siteName,
+        'title' => $pageTitle . ' – ' . $siteName,
         'description' => $metaDescription,
         'url' => faqPublicUrl($faq),
         'type' => 'article',
@@ -104,9 +147,12 @@ renderPublicPage([
     'view_data' => [
         'faq' => $faq,
         'breadcrumbs' => $faqBreadcrumbs,
+        'relatedFaqs' => $relatedFaqs,
+        'backUrl' => $backUrl,
     ],
     'current_nav' => 'faq',
     'body_class' => 'page-faq-article',
     'page_kind' => 'detail',
     'admin_edit_url' => BASE_URL . '/admin/faq_form.php?id=' . (int)$faq['id'],
+    'extra_head_html' => $extraHeadHtml,
 ]);

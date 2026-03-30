@@ -155,7 +155,7 @@ if (isModuleEnabled('faq')) {
         $faqs = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_faqs
-             WHERE COALESCE(status, 'published') = 'published' AND is_published = 1
+             WHERE " . faqPublicVisibilitySql() . "
              ORDER BY created_at DESC, id DESC"
         )->fetchAll();
         foreach ($faqs as $faq) {

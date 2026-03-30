@@ -239,7 +239,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Ke stažení** | Katalog dokumentů a software s verzemi, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů, aktuální lístek a archiv |
 | **Ankety** | Hlasování s ochranou proti opakovanému hlasu |
-| **Znalostní báze** | FAQ s kategoriemi a přehlednou navigací |
+| **Znalostní báze** | FAQ s kategoriemi, hledáním, stránkováním, SEO a FAQPage strukturovanými daty |
 | **Formuláře** | Form Builder s přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge |
 | **Vývěska** | Úřední deska s typem položky, datem vyvěšení, připnutím, filtrováním a archivem |
 | **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování a storno přes token |
@@ -251,6 +251,8 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
 
 Modul **Ke stažení** nově pokrývá i praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje.
+
+Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle kategorie, stránkování, přepínání `karty / rozbalené odpovědi`, per-FAQ SEO metadata, redirecty při změně slugu a `FAQPage` strukturovaná data pro vyhledávače.
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 

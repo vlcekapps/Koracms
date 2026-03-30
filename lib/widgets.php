@@ -471,7 +471,7 @@ function renderWidget_latest_faq(array $widget, array $settings, string $zone): 
                 COALESCE(c.name, '') AS category_name
          FROM cms_faqs f
          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
-         WHERE COALESCE(f.status,'published') = 'published' AND f.is_published = 1
+         WHERE " . faqPublicVisibilitySql('f') . "
          ORDER BY f.updated_at DESC, f.created_at DESC, f.id DESC
          LIMIT ?"
     );

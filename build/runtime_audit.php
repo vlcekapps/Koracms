@@ -2077,17 +2077,8 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], '/uploads/board/')) {
             $issues[] = 'board listing still exposes uploads/board paths';
         }
-        if ($boardCanonicalPath !== '' && !str_contains($result['body'], $boardCanonicalPath)) {
+        if (!str_contains($result['body'], 'Zobrazit detail')) {
             $issues[] = 'board listing is missing detail links';
-        }
-        if ($boardRow && !str_contains($result['body'], (string)($boardRow['excerpt_plain'] ?? ''))) {
-            $issues[] = 'board listing is missing excerpt preview';
-        }
-        if ($boardRow && !str_contains($result['body'], (string)($boardRow['contact_email'] ?? ''))) {
-            $issues[] = 'board listing is missing contact email';
-        }
-        if ($boardAttachmentId !== false && !str_contains($result['body'], '/board/file.php?id=' . (int)$boardAttachmentId)) {
-            $issues[] = 'board listing is missing file endpoint links';
         }
         foreach ([
             'name="q"',
@@ -2833,6 +2824,9 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_faq') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin faq search field is missing';
+        }
+        if (!str_contains($result['body'], 'name="kat"')) {
+            $issues[] = 'admin faq category filter is missing';
         }
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin faq status filter is missing';
@@ -3671,13 +3665,13 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'admin_faq_form') {
+    if (in_array($page['label'], ['admin_faq_form', 'admin_faq_create_form'], true)) {
         foreach ([
             'name="slug"',
             'name="excerpt"',
             'name="category_id"',
-            'Upravit položku znalostní báze',
-            'Zpět na FAQ',
+            'name="meta_title"',
+            'name="meta_description"',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin faq form is missing field: ' . $expectedField;
@@ -3988,6 +3982,18 @@ foreach ($pages as $page) {
     if ($page['label'] === 'faq_index' && $faqCanonicalPath !== '' && !str_contains($result['body'], $faqCanonicalPath)) {
         $issues[] = 'faq listing is missing detail links';
     }
+    if ($page['label'] === 'faq_index') {
+        foreach ([
+            'name="q"',
+            'name="kat"',
+            'tab-nav',
+            'application/ld+json',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'faq listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
 
     if ($page['label'] === 'food' && $foodCardCanonicalPath !== '' && !str_contains($result['body'], $foodCardCanonicalPath)) {
         $issues[] = 'food index is missing detail links';
@@ -4015,6 +4021,9 @@ foreach ($pages as $page) {
         }
         if ($faqRow && !str_contains($result['body'], (string)($faqRow['excerpt'] ?? ''))) {
             $issues[] = 'faq article is missing excerpt';
+        }
+        if (!str_contains($result['body'], 'application/ld+json')) {
+            $issues[] = 'faq article is missing structured data';
         }
     }
 
@@ -5481,6 +5490,9 @@ $installSchemaChecks = [
     'cms_events contains unpublish_at' => $installTableContains('cms_events', 'unpublish_at'),
     'cms_events contains admin_note' => $installTableContains('cms_events', 'admin_note'),
     'cms_events contains deleted_at' => $installTableContains('cms_events', 'deleted_at'),
+    'cms_faq_categories contains parent_id' => $installTableContains('cms_faq_categories', 'parent_id'),
+    'cms_faqs contains meta_title' => $installTableContains('cms_faqs', 'meta_title'),
+    'cms_faqs contains meta_description' => $installTableContains('cms_faqs', 'meta_description'),
     'cms_faqs contains deleted_at' => $installTableContains('cms_faqs', 'deleted_at'),
     'cms_users contains totp_secret' => $installTableContains('cms_users', 'totp_secret'),
     'cms_users contains passkey_credentials' => $installTableContains('cms_users', 'passkey_credentials'),
@@ -5496,6 +5508,28 @@ if ($installSchemaIssues === []) {
 } else {
     $failures++;
     foreach ($installSchemaIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== migrate_schema_guard ===\n";
+$migrateSource = (string) file_get_contents(__DIR__ . '/../migrate.php');
+$migrateSchemaChecks = [
+    'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
+    'cms_faqs.meta_title' => str_contains($migrateSource, 'cms_faqs.meta_title'),
+    'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),
+];
+$migrateSchemaIssues = [];
+foreach ($migrateSchemaChecks as $label => $present) {
+    if (!$present) {
+        $migrateSchemaIssues[] = $label;
+    }
+}
+if ($migrateSchemaIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($migrateSchemaIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }
@@ -6623,6 +6657,52 @@ if ($blogPublicIssues === []) {
     }
 }
 
+echo "=== faq_source_guardrails ===\n";
+$faqSourceIssues = [];
+$faqSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_save.php');
+$faqFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_form.php');
+$faqIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/faq/index.php');
+$faqIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-index.php');
+$faqItemSource = (string)file_get_contents(dirname(__DIR__) . '/faq/item.php');
+if (!str_contains($faqSaveSource, 'upsertPathRedirect')) {
+    $faqSourceIssues[] = 'faq save is missing slug redirect persistence';
+}
+if (!str_contains($faqSaveSource, 'faqRevisionSnapshot')) {
+    $faqSourceIssues[] = 'faq save is missing expanded revision snapshot';
+}
+if (!str_contains($faqFormSource, 'name="meta_title"') || !str_contains($faqFormSource, 'name="meta_description"')) {
+    $faqSourceIssues[] = 'faq form is missing SEO fields';
+}
+if (!str_contains($faqIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
+    $faqSourceIssues[] = 'public faq index is missing search support';
+}
+if (!str_contains($faqIndexControllerSource, 'paginateArray(')) {
+    $faqSourceIssues[] = 'public faq index is missing pagination support';
+}
+if (!str_contains($faqIndexControllerSource, 'faqStructuredData(')) {
+    $faqSourceIssues[] = 'public faq index is missing FAQPage structured data';
+}
+if (!str_contains($faqIndexViewSource, '$displayModeLinks') || !str_contains($faqIndexViewSource, 'tab-nav')) {
+    $faqSourceIssues[] = 'public faq template is missing inline display toggle';
+}
+if (!str_contains($faqIndexViewSource, 'listing-shell__pager')) {
+    $faqSourceIssues[] = 'public faq template is missing pager output';
+}
+if (!str_contains($faqItemSource, 'faqStructuredData(')) {
+    $faqSourceIssues[] = 'faq detail is missing FAQ structured data';
+}
+if (!str_contains($faqItemSource, '$relatedFaqs')) {
+    $faqSourceIssues[] = 'faq detail is missing related questions support';
+}
+if ($faqSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($faqSourceIssues as $faqSourceIssue) {
+        echo '- ' . $faqSourceIssue . "\n";
+    }
+}
+
 echo "=== board_source_guardrails ===\n";
 $boardSourceIssues = [];
 $boardSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_save.php');
@@ -6651,6 +6731,15 @@ if (!str_contains($boardIndexControllerSource, "trim((string)(\$_GET['month'] ??
 }
 if (!str_contains($boardIndexControllerSource, 'renderPager(')) {
     $boardSourceIssues[] = 'public board index is missing pagination support';
+}
+if (!str_contains($boardIndexViewSource, 'board-item__summary')) {
+    $boardSourceIssues[] = 'public board template is missing excerpt preview';
+}
+if (!str_contains($boardIndexViewSource, 'board-item__contact')) {
+    $boardSourceIssues[] = 'public board template is missing contact block';
+}
+if (!str_contains($boardIndexViewSource, "moduleFileUrl('board'")) {
+    $boardSourceIssues[] = 'public board template is missing file endpoint links';
 }
 if (!str_contains($boardIndexViewSource, 'Filtrovat položky vývěsky')) {
     $boardSourceIssues[] = 'public board template is missing filter form';

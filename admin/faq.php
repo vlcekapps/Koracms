@@ -5,10 +5,17 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
+$categoryFilter = inputInt('get', 'kat');
 $allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
+
+$faqCategories = $pdo->query(
+    "SELECT id, name, parent_id, sort_order
+     FROM cms_faq_categories
+     ORDER BY sort_order, name"
+)->fetchAll();
 
 $whereParts = ['f.deleted_at IS NULL'];
 $params = [];
@@ -28,6 +35,11 @@ if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(f.status,'published') = 'published' AND f.is_published = 0";
 }
 
+if ($categoryFilter !== null && $categoryFilter > 0) {
+    $whereParts[] = 'f.category_id = ?';
+    $params[] = $categoryFilter;
+}
+
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
 
 $stmt = $pdo->prepare(
@@ -37,7 +49,7 @@ $stmt = $pdo->prepare(
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
      {$whereSql}
-     ORDER BY c.sort_order, c.name, f.created_at DESC, f.id DESC"
+     ORDER BY c.sort_order, c.name, COALESCE(f.updated_at, f.created_at) DESC, f.id DESC"
 );
 $stmt->execute($params);
 $faqs = array_map(
@@ -69,15 +81,26 @@ adminHeader('Znalostní báze');
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
     </select>
   </div>
+  <div>
+    <label for="kat">Kategorie</label>
+    <select id="kat" name="kat">
+      <option value="">Všechny kategorie</option>
+      <?php foreach ($faqCategories as $category): ?>
+        <option value="<?= (int)$category['id'] ?>"<?= $categoryFilter !== null && $categoryFilter === (int)$category['id'] ? ' selected' : '' ?>>
+          <?= h((string)$category['name']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $categoryFilter !== null): ?>
     <a href="faq.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($faqs)): ?>
   <p>
-    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+    <?php if ($q !== '' || $statusFilter !== 'all' || $categoryFilter !== null): ?>
       Pro zvolený filtr tu teď nejsou žádné otázky.
     <?php else: ?>
       Zatím tu nejsou žádné otázky. <a href="faq_form.php">Přidat první otázku</a>.

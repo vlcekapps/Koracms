@@ -23,6 +23,8 @@ $faq = $faq ?: [
     'excerpt' => '',
     'answer' => '',
     'category_id' => null,
+    'meta_title' => '',
+    'meta_description' => '',
     'is_published' => 1,
     'status' => 'published',
 ];
@@ -75,6 +77,15 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
     <label for="excerpt">Krátké shrnutí / perex</label>
     <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="faq-excerpt-help"><?= h((string)($faq['excerpt'] ?? '')) ?></textarea>
     <small id="faq-excerpt-help" class="field-help">Zobrazí se ve výpisu FAQ, ve vyhledávání a jako úvod detailu.</small>
+
+    <label for="meta_title">Meta titulek</label>
+    <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="faq-seo-help"
+           value="<?= h((string)($faq['meta_title'] ?? '')) ?>">
+
+    <label for="meta_description">Meta popis</label>
+    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="faq-seo-help"
+              style="min-height:0"><?= h((string)($faq['meta_description'] ?? '')) ?></textarea>
+    <small id="faq-seo-help" class="field-help">Volitelné. Pokud je nevyplníte, použije se otázka a shrnutí FAQ.</small>
 
     <label for="answer">Odpověď <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <?php if ($useWysiwyg): ?>

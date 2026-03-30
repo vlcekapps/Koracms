@@ -163,7 +163,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $pdo, $q, $like,
                 "SELECT id, question AS title, slug, COALESCE(NULLIF(excerpt, ''), answer) AS perex,
                         COALESCE(updated_at, created_at) AS created_at, 'faq' AS type",
-                "FROM cms_faqs WHERE COALESCE(status,'published') = 'published' AND is_published = 1",
+                "FROM cms_faqs WHERE " . faqPublicVisibilitySql(),
                 'question, excerpt, answer',
                 [],
                 'created_at DESC, id DESC',

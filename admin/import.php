@@ -605,10 +605,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // FAQ kategorie
                 if (!empty($data['faq_categories']) && is_array($data['faq_categories'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_faq_categories (id, name, sort_order) VALUES (?,?,?)"
+                        "INSERT IGNORE INTO cms_faq_categories (id, name, parent_id, sort_order) VALUES (?,?,?,?)"
                     );
                     foreach ($data['faq_categories'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name'], (int)($row['sort_order'] ?? 0)]);
+                        $ins->execute([
+                            (int)$row['id'],
+                            $row['name'],
+                            !empty($row['parent_id']) ? (int)$row['parent_id'] : null,
+                            (int)($row['sort_order'] ?? 0),
+                        ]);
                     }
                     $summary[] = 'FAQ kategorie importovány.';
                 }
@@ -617,8 +622,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['faqs']) && is_array($data['faqs'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_faqs
-                         (id, question, slug, excerpt, answer, category_id, is_published, sort_order, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                         (id, question, slug, excerpt, answer, category_id, meta_title, meta_description, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['faqs'] as $row) {
                         $importQuestion = trim((string)($row['question'] ?? ''));
@@ -638,8 +643,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['excerpt'] ?? '',
                             $row['answer'] ?? '',
                             $row['category_id'] ?: null,
+                            trim((string)($row['meta_title'] ?? '')),
+                            trim((string)($row['meta_description'] ?? '')),
                             (int)($row['is_published'] ?? 1),
-                            (int)($row['sort_order'] ?? 0),
                             $row['status'] ?? 'published',
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                             $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
