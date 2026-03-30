@@ -12,6 +12,7 @@ $boardPublicLabel = trim($_POST['board_public_label'] ?? getSetting('board_publi
 $publicRegistrationEnabled = isset($_POST['public_registration_enabled']) ? '1' : getSetting('public_registration_enabled', '1');
 $githubIssuesEnabled = isset($_POST['github_issues_enabled']) ? '1' : getSetting('github_issues_enabled', '0');
 $githubIssuesRepository = trim($_POST['github_issues_repository'] ?? getSetting('github_issues_repository', ''));
+$chatRetentionDays = max(0, min(3650, (int)($_POST['chat_retention_days'] ?? getSetting('chat_retention_days', '0'))));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -24,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $publicRegistrationEnabled = isset($_POST['public_registration_enabled']) ? '1' : '0';
     $githubIssuesEnabled = isset($_POST['github_issues_enabled']) ? '1' : '0';
     $githubIssuesRepository = trim((string)($_POST['github_issues_repository'] ?? $githubIssuesRepository));
+    $chatRetentionDays = max(0, min(3650, (int)($_POST['chat_retention_days'] ?? $chatRetentionDays)));
     $newsPerPage   = max(1, (int)($_POST['news_per_page']   ?? 10));
     $blogPerPage   = max(1, (int)($_POST['blog_per_page']   ?? 10));
     $eventsPerPage = max(1, (int)($_POST['events_per_page'] ?? 10));
@@ -103,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('notify_form_submission', isset($_POST['notify_form_submission']) ? '1' : '0');
         saveSetting('notify_pending_content', isset($_POST['notify_pending_content']) ? '1' : '0');
         saveSetting('notify_chat_message', isset($_POST['notify_chat_message']) ? '1' : '0');
+        saveSetting('chat_retention_days', (string)$chatRetentionDays);
 
         logAction('settings_save');
 
@@ -587,6 +590,14 @@ adminHeader('Nastavení webu');
     <textarea id="maintenance_text" name="maintenance_text"
               rows="2"><?= h(getSetting('maintenance_text',
               'Právě probíhá údržba webu. Brzy budeme zpět, děkujeme za trpělivost.')) ?></textarea>
+
+    <?php if (isModuleEnabled('chat')): ?>
+    <label for="chat_retention_days">Mazat vyřízené chat zprávy po kolika dnech</label>
+    <input type="number" id="chat_retention_days" name="chat_retention_days" min="0" max="3650"
+           aria-describedby="chat-retention-days-help"
+           value="<?= h((string)$chatRetentionDays) ?>">
+    <small id="chat-retention-days-help" class="field-help">Hodnota 0 znamená, že se vyřízené chat zprávy automaticky nemažou. Mazání provádí cron.php.</small>
+    <?php endif; ?>
   </fieldset>
 
   <button type="submit" style="margin-top:1rem">Uložit nastavení</button>

@@ -178,6 +178,165 @@ function setChatMessageStatus(PDO $pdo, int $messageId, string $status): bool
     return (int)$exists->fetchColumn() > 0;
 }
 
+function chatPublicVisibilityDefinitions(): array
+{
+    return [
+        'pending' => ['label' => 'Ke schválení'],
+        'approved' => ['label' => 'Zveřejněno'],
+        'hidden' => ['label' => 'Skryto'],
+    ];
+}
+
+function normalizeChatPublicVisibility(string $visibility): string
+{
+    $normalized = trim($visibility);
+    return array_key_exists($normalized, chatPublicVisibilityDefinitions()) ? $normalized : 'pending';
+}
+
+function chatPublicVisibilityLabel(string $visibility): string
+{
+    $normalized = normalizeChatPublicVisibility($visibility);
+    return chatPublicVisibilityDefinitions()[$normalized]['label'] ?? 'Ke schválení';
+}
+
+function chatPublicVisibilityCounts(PDO $pdo): array
+{
+    $counts = array_fill_keys(array_keys(chatPublicVisibilityDefinitions()), 0);
+
+    try {
+        $rows = $pdo->query(
+            "SELECT public_visibility, COUNT(*) AS cnt
+             FROM cms_chat
+             GROUP BY public_visibility"
+        )->fetchAll();
+        foreach ($rows as $row) {
+            $visibilityKey = normalizeChatPublicVisibility((string)($row['public_visibility'] ?? 'pending'));
+            $counts[$visibilityKey] = (int)($row['cnt'] ?? 0);
+        }
+    } catch (\PDOException $e) {
+        return $counts;
+    }
+
+    return $counts;
+}
+
+function setChatMessagePublicVisibility(PDO $pdo, int $messageId, string $visibility, ?int $actorUserId = null): bool
+{
+    $normalizedVisibility = normalizeChatPublicVisibility($visibility);
+    $approvalTimestamp = $normalizedVisibility === 'approved' ? date('Y-m-d H:i:s') : null;
+    $approvalActorId = $normalizedVisibility === 'approved' ? $actorUserId : null;
+
+    try {
+        $stmt = $pdo->prepare(
+            "UPDATE cms_chat
+             SET public_visibility = ?,
+                 approved_at = ?,
+                 approved_by_user_id = ?,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?"
+        );
+        $stmt->execute([$normalizedVisibility, $approvalTimestamp, $approvalActorId, $messageId]);
+        if ($stmt->rowCount() > 0) {
+            return true;
+        }
+    } catch (\PDOException $e) {
+        return false;
+    }
+
+    $exists = $pdo->prepare("SELECT COUNT(*) FROM cms_chat WHERE id = ?");
+    $exists->execute([$messageId]);
+    return (int)$exists->fetchColumn() > 0;
+}
+
+function chatMessageContainsUrl(string $message): bool
+{
+    return preg_match('~(?:https?://|www\.)\S+~iu', $message) === 1;
+}
+
+function chatPublicMessagesPerPage(): int
+{
+    return 20;
+}
+
+function chatAdminMessagesPerPage(): int
+{
+    return 25;
+}
+
+function normalizeChatSort(string $sort): string
+{
+    return in_array($sort, ['newest', 'oldest'], true) ? $sort : 'newest';
+}
+
+function chatSortLabel(string $sort): string
+{
+    return normalizeChatSort($sort) === 'oldest' ? 'Nejstarší první' : 'Nejnovější první';
+}
+
+function chatRetentionDays(): int
+{
+    return max(0, min(3650, (int)getSetting('chat_retention_days', '0')));
+}
+
+function chatHistoryCreate(PDO $pdo, int $chatId, ?int $actorUserId, string $eventType, string $message): void
+{
+    $pdo->prepare(
+        "INSERT INTO cms_chat_history (chat_id, actor_user_id, event_type, message)
+         VALUES (?, ?, ?, ?)"
+    )->execute([
+        $chatId,
+        $actorUserId,
+        trim($eventType) !== '' ? trim($eventType) : 'workflow',
+        trim($message),
+    ]);
+}
+
+function chatHistoryEntries(PDO $pdo, int $chatId): array
+{
+    $stmt = $pdo->prepare(
+        "SELECT h.*,
+                u.email AS actor_email,
+                u.first_name AS actor_first_name,
+                u.last_name AS actor_last_name,
+                u.nickname AS actor_nickname,
+                u.role AS actor_role,
+                u.is_superadmin AS actor_is_superadmin
+         FROM cms_chat_history h
+         LEFT JOIN cms_users u ON u.id = h.actor_user_id
+         WHERE h.chat_id = ?
+         ORDER BY h.created_at DESC, h.id DESC"
+    );
+    $stmt->execute([$chatId]);
+    return $stmt->fetchAll();
+}
+
+function chatHistoryActorLabel(array $entry): string
+{
+    $firstName = trim((string)($entry['actor_first_name'] ?? ''));
+    $lastName = trim((string)($entry['actor_last_name'] ?? ''));
+    $nickname = trim((string)($entry['actor_nickname'] ?? ''));
+    $email = trim((string)($entry['actor_email'] ?? ''));
+    $fullName = trim($firstName . ' ' . $lastName);
+
+    if ($fullName !== '') {
+        return $fullName;
+    }
+    if ($nickname !== '') {
+        return $nickname;
+    }
+    if ($email !== '') {
+        return $email;
+    }
+
+    return 'Systém';
+}
+
+function deleteChatMessage(PDO $pdo, int $messageId): void
+{
+    $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$messageId]);
+    $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$messageId]);
+}
+
 function pendingReviewSummary(PDO $pdo): array
 {
     $summary = [];

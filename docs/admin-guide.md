@@ -329,6 +329,76 @@ Veřejná galerie nově podporuje:
 
 ---
 
+## Chat
+
+Modul chatu teď funguje jako moderovaná veřejná nástěnka, ne jako okamžitě publikovaný shoutbox. Každá nová zpráva nejdřív přijde do administrace a veřejně se zobrazí až po schválení.
+
+### Co se zobrazuje veřejně
+
+Veřejný chat ukazuje jen:
+
+- jméno autora
+- datum odeslání
+- text zprávy
+
+E-mailová adresa zůstává jen pro administraci a veřejně se nikdy nezobrazuje. Pole `web` už veřejný formulář vůbec nenabízí.
+
+### Jak funguje moderace
+
+Nová zpráva se po odeslání uloží jako:
+
+- inbox stav `Nové`
+- veřejná viditelnost `Ke schválení`
+
+Teprve po ručním schválení se objeví na veřejném webu. Administrace umí zprávu i znovu skrýt, aniž by se ztratila z interní historie.
+
+### Veřejný formulář a ochrana proti spamu
+
+Formulář chatu používá:
+
+- CSRF ochranu
+- rate limiting
+- honeypot pole
+- CAPTCHA
+- zákaz vkládání URL do textu zprávy
+
+To znamená, že veřejný chat je použitelnější i na ostrém webu a neukazuje spam nebo odkazy hned po odeslání.
+
+### Inbox workflow v administraci
+
+Přehled chat zpráv nově umí:
+
+- fulltextové hledání
+- stránkování
+- filtr podle inbox stavu `Nové / Přečtené / Vyřízené / Všechny`
+- filtr podle veřejné viditelnosti `Ke schválení / Zveřejněné / Skryté / Vše`
+- hromadné akce `Schválit`, `Skrýt`, `Označit jako přečtené`, `Označit jako vyřízené`, `Smazat`
+
+Detail zprávy přidává:
+
+- interní poznámku
+- historii změn
+- rychlé workflow akce
+- odpověď odesílateli e-mailem, pokud je k dispozici platná adresa
+
+Samotné otevření detailu označí zprávu jako přečtenou, ale automaticky ji nezveřejní.
+
+### Automatický úklid přes cron
+
+V nastavení webu lze nově zadat počet dní, po kterých se mají automaticky mazat staré vyřízené chat zprávy. Hodnota `0` znamená, že se automatický úklid nepoužije.
+
+Cleanup provádí `cron.php` a maže jen:
+
+- zprávy se stavem `Vyřízené`
+- starší než nastavený limit
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) stručně říká, že chat je moderovaný, stránkovaný a má inbox workflow.
+- Tento dokument popisuje konkrétní redakční workflow, veřejnou viditelnost zpráv, moderaci, odpovědi a automatický cleanup.
+
+---
+
 ## Vývěska / Úřední deska
 
 Modul vývěsky je určený pro oznámení, dokumenty a další veřejné položky, které se mají zobrazit od určitého data a případně po čase spadnout do archivu.

@@ -15,6 +15,40 @@ function siteUrl(string $path = ''): string
     return $base . $path;
 }
 
+function sendChatReply(string $recipient, string $authorName, string $subject, string $message): bool
+{
+    $normalizedRecipient = trim($recipient);
+    $normalizedAuthorName = trim($authorName);
+    $normalizedSubject = trim($subject);
+    $normalizedMessage = trim($message);
+
+    if (!filter_var($normalizedRecipient, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    if ($normalizedSubject === '' || $normalizedMessage === '') {
+        return false;
+    }
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $greeting = $normalizedAuthorName !== ''
+        ? 'Dobrý den, ' . $normalizedAuthorName . ",\n\n"
+        : "Dobrý den,\n\n";
+    $body = $greeting
+        . $normalizedMessage . "\n\n"
+        . "S pozdravem\n"
+        . $siteName;
+
+    return sendMail(
+        $normalizedRecipient,
+        $normalizedSubject,
+        $body,
+        [
+            'reply_to' => mailSanitizeHeaderValue(getSetting('contact_email', '')),
+            'reply_to_name' => $siteName,
+        ]
+    );
+}
+
 function mailSanitizeHeaderValue(string $value): string
 {
     return trim((string)preg_replace('/[\r\n]+/', ' ', $value));

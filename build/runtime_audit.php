@@ -154,6 +154,9 @@ $newsletterConfirmedSubscriberId = false;
 $newsletterHistoryId = false;
 $contactMessageId = false;
 $chatMessageId = false;
+$chatApprovedMessageText = '';
+$chatHiddenMessageText = '';
+$chatPendingMessageText = '';
 $runtimeAuditFormId = 0;
 $runtimeAuditFormSubmissionId = 0;
 $runtimeAuditFormSubmissionReference = '';
@@ -1226,17 +1229,49 @@ if (isModuleEnabled('contact')) {
 }
 
 if (isModuleEnabled('chat')) {
+    $chatPendingMessageText = 'Testovací chat zpráva čekající na schválení pro runtime audit.';
+    $chatApprovedMessageText = 'Schválená chat zpráva pro veřejný runtime audit.';
+    $chatHiddenMessageText = 'Skrytá chat zpráva pro runtime audit.';
     $pdo->prepare(
-        "INSERT INTO cms_chat (name, email, web, message, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'new', NOW(), NOW())"
+        "INSERT INTO cms_chat (name, email, web, message, status, public_visibility, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'new', 'pending', NOW(), NOW())"
     )->execute([
         'Runtime Audit',
         'runtimeaudit-chat-' . bin2hex(random_bytes(4)) . '@example.test',
         'https://example.test/runtime-audit-chat',
-        'Testovací chat zpráva pro audit moderátorského inboxu.',
+        $chatPendingMessageText,
     ]);
     $chatMessageId = (int)$pdo->lastInsertId();
     $cleanup['chat_ids'][] = $chatMessageId;
+    chatHistoryCreate($pdo, $chatMessageId, null, 'submitted', 'Zpráva byla přijata a čeká na schválení.');
+
+    $pdo->prepare(
+        "INSERT INTO cms_chat (
+            name, email, web, message, status, public_visibility, approved_at, created_at, updated_at
+         )
+         VALUES (?, ?, ?, ?, 'read', 'approved', NOW(), NOW(), NOW())"
+    )->execute([
+        'Runtime Audit Approved',
+        'runtimeaudit-approved-' . bin2hex(random_bytes(4)) . '@example.test',
+        'https://example.test/runtime-audit-approved',
+        $chatApprovedMessageText,
+    ]);
+    $approvedChatId = (int)$pdo->lastInsertId();
+    $cleanup['chat_ids'][] = $approvedChatId;
+    chatHistoryCreate($pdo, $approvedChatId, null, 'visibility', 'Zpráva byla schválena pro veřejný chat.');
+
+    $pdo->prepare(
+        "INSERT INTO cms_chat (name, email, web, message, status, public_visibility, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'handled', 'hidden', NOW(), NOW())"
+    )->execute([
+        'Runtime Audit Hidden',
+        'runtimeaudit-hidden-' . bin2hex(random_bytes(4)) . '@example.test',
+        'https://example.test/runtime-audit-hidden',
+        $chatHiddenMessageText,
+    ]);
+    $hiddenChatId = (int)$pdo->lastInsertId();
+    $cleanup['chat_ids'][] = $hiddenChatId;
+    chatHistoryCreate($pdo, $hiddenChatId, null, 'visibility', 'Zpráva byla skryta z veřejného chatu.');
 }
 
 if (isModuleEnabled('forms')) {
@@ -2974,10 +3009,14 @@ foreach ($pages as $page) {
         foreach ([
             'name="q"',
             'name="status"',
+            'name="visibility"',
             'chat_message.php',
+            'name="action" value="approve"',
+            'name="action" value="hide"',
             'Označit jako přečtené',
             'Označit jako vyřízené',
             'data-selection-status="chat"',
+            'Hromadné akce s vybranými zprávami',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat inbox is missing fragment: ' . $expectedFragment;
@@ -2991,6 +3030,31 @@ foreach ($pages as $page) {
         }
         if (str_contains($result['body'], 'Vrátit jako nové')) {
             $issues[] = 'admin chat detail still contains outdated "return as new" wording';
+        }
+    }
+
+    if ($page['label'] === 'chat') {
+        foreach ([
+            $chatApprovedMessageText,
+            'name="q"',
+            'name="razeni"',
+            'name="email"',
+            'name="message"',
+        ] as $expectedFragment) {
+            if ($expectedFragment !== '' && !str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'public chat is missing fragment: ' . $expectedFragment;
+            }
+        }
+        foreach ([
+            $chatPendingMessageText,
+            $chatHiddenMessageText,
+            'mailto:',
+            'name="web"',
+            'runtime-audit-chat',
+        ] as $forbiddenFragment) {
+            if ($forbiddenFragment !== '' && str_contains($result['body'], $forbiddenFragment)) {
+                $issues[] = 'public chat still exposes forbidden fragment: ' . $forbiddenFragment;
+            }
         }
     }
 
@@ -3691,9 +3755,16 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_chat_message') {
         foreach ([
             'name="action" value="handled"',
+            'name="public_visibility"',
+            'name="internal_note"',
+            '/admin/chat_update.php',
+            '/admin/chat_reply.php',
             'Runtime Audit',
             'Zpět na přehled chat zpráv',
-            'Co můžete udělat',
+            'Rychlé kroky',
+            'Workflow zprávy',
+            'Odpověď odesílateli',
+            'Historie zprávy',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin chat detail is missing fragment: ' . $expectedFragment;
@@ -3702,6 +3773,7 @@ foreach ($pages as $page) {
         foreach ([
             'Zpět na chat zprávy',
             '>Akce<',
+            'Vrátit jako nové',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin chat detail still contains outdated phrase: ' . $forbiddenFragment;
@@ -5473,6 +5545,148 @@ if ($articleId === false) {
     }
 }
 
+echo "=== chat_runtime ===\n";
+if (!isModuleEnabled('chat')) {
+    echo "SKIP (modul chat není aktivní)\n";
+} else {
+    $chatIssues = [];
+    $publicChatUrl = $baseUrl . '/chat/index.php';
+
+    $pendingChatCookie = 'PHPSESSID=runtimeauditchatpending';
+    $pendingChatForm = fetchUrl($publicChatUrl, $pendingChatCookie, 0);
+    $pendingChatCsrf = extractHiddenInputValue($pendingChatForm['body'], 'csrf_token');
+    $pendingChatCaptcha = extractCaptchaAnswer($pendingChatForm['body']);
+    $pendingChatMessage = 'Runtime audit moderovaná chat zpráva ' . bin2hex(random_bytes(4));
+
+    if ($pendingChatCsrf === '' || $pendingChatCaptcha === null) {
+        $chatIssues[] = 'could not extract chat form token or captcha';
+    } else {
+        $pendingChatPost = postUrl(
+            $publicChatUrl,
+            [
+                'csrf_token' => $pendingChatCsrf,
+                'name' => 'Runtime Audit Chat',
+                'email' => '',
+                'message' => $pendingChatMessage,
+                'captcha' => (string)$pendingChatCaptcha,
+                'hp_website' => '',
+            ],
+            $pendingChatCookie,
+            0
+        );
+        if (!str_contains($pendingChatPost['status'], '302')) {
+            $chatIssues[] = 'chat submit did not redirect after submit';
+        } elseif (!responseHasLocationHeader($pendingChatPost['headers'], '/chat/index.php?ok=pending', $baseUrl)) {
+            $chatIssues[] = 'chat submit did not redirect to pending state';
+        }
+
+        $pendingChatStmt = $pdo->prepare(
+            "SELECT id, status, public_visibility
+             FROM cms_chat
+             WHERE message = ?
+             ORDER BY id DESC
+             LIMIT 1"
+        );
+        $pendingChatStmt->execute([$pendingChatMessage]);
+        $pendingChatRow = $pendingChatStmt->fetch();
+        if (!$pendingChatRow) {
+            $chatIssues[] = 'submitted chat message was not stored';
+        } else {
+            $pendingChatId = (int)$pendingChatRow['id'];
+            $cleanup['chat_ids'][] = $pendingChatId;
+            if (($pendingChatRow['status'] ?? '') !== 'new') {
+                $chatIssues[] = 'submitted chat message is not marked as new';
+            }
+            if (($pendingChatRow['public_visibility'] ?? '') !== 'pending') {
+                $chatIssues[] = 'submitted chat message is not waiting for approval';
+            }
+
+            $publicChatAfterSubmit = fetchUrl($publicChatUrl, '', 0);
+            if (str_contains($publicChatAfterSubmit['body'], $pendingChatMessage)) {
+                $chatIssues[] = 'pending chat message leaked into public chat';
+            }
+
+            $noEmailDetail = fetchUrl(
+                $baseUrl . '/admin/chat_message.php?id=' . urlencode((string)$pendingChatId),
+                'PHPSESSID=' . $auditSessionId,
+                0
+            );
+            if (!str_contains($noEmailDetail['status'], '200')) {
+                $chatIssues[] = 'admin detail for no-email chat message is not accessible';
+            } else {
+                if (!str_contains($noEmailDetail['body'], 'Tato zpráva neobsahuje e-mailovou adresu')) {
+                    $chatIssues[] = 'chat detail without e-mail is missing explanatory reply notice';
+                }
+                if (str_contains($noEmailDetail['body'], '/admin/chat_reply.php')) {
+                    $chatIssues[] = 'chat detail without e-mail still renders reply form';
+                }
+            }
+        }
+    }
+
+    $urlChatCookie = 'PHPSESSID=runtimeauditchaturl';
+    $urlChatForm = fetchUrl($publicChatUrl, $urlChatCookie, 0);
+    $urlChatCsrf = extractHiddenInputValue($urlChatForm['body'], 'csrf_token');
+    $urlChatCaptcha = extractCaptchaAnswer($urlChatForm['body']);
+    $urlSpamMessage = 'Tato zpráva obsahuje odkaz https://example.test/runtime-audit-chat-spam a má být odmítnuta.';
+    if ($urlChatCsrf === '' || $urlChatCaptcha === null) {
+        $chatIssues[] = 'could not extract chat form token or captcha for URL rejection test';
+    } else {
+        $urlChatPost = postUrl(
+            $publicChatUrl,
+            [
+                'csrf_token' => $urlChatCsrf,
+                'name' => 'Runtime Audit URL',
+                'email' => 'runtimeaudit-chat-' . bin2hex(random_bytes(4)) . '@example.test',
+                'message' => $urlSpamMessage,
+                'captcha' => (string)$urlChatCaptcha,
+                'hp_website' => '',
+            ],
+            $urlChatCookie,
+            0
+        );
+        if (!str_contains($urlChatPost['status'], '200')) {
+            $chatIssues[] = 'chat URL rejection did not stay on the form page';
+        }
+        if (!str_contains($urlChatPost['body'], 'Do textu zprávy nevkládejte webové adresy ani odkazy.')) {
+            $chatIssues[] = 'chat URL rejection is missing validation message';
+        }
+        $urlSpamCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_chat WHERE message = ?");
+        $urlSpamCountStmt->execute([$urlSpamMessage]);
+        if ((int)$urlSpamCountStmt->fetchColumn() !== 0) {
+            $chatIssues[] = 'chat message containing a URL was still stored';
+        }
+    }
+
+    $chatFilteredProbe = fetchUrl(
+        $publicChatUrl . '?q=' . urlencode('Schválená chat zpráva') . '&razeni=oldest',
+        '',
+        0
+    );
+    if (!str_contains($chatFilteredProbe['status'], '200')) {
+        $chatIssues[] = 'filtered public chat is not accessible';
+    } else {
+        if (!str_contains($chatFilteredProbe['body'], $chatApprovedMessageText)) {
+            $chatIssues[] = 'filtered public chat is missing the approved message';
+        }
+        if (str_contains($chatFilteredProbe['body'], $chatHiddenMessageText)) {
+            $chatIssues[] = 'filtered public chat still exposes hidden messages';
+        }
+        if (!str_contains($chatFilteredProbe['body'], 'value="oldest" selected')) {
+            $chatIssues[] = 'public chat sort switch does not preserve oldest ordering';
+        }
+    }
+
+    if ($chatIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($chatIssues as $issue) {
+            echo '- ' . $issue . "\n";
+        }
+    }
+}
+
 saveSetting('home_author_user_id', $runtimeAuditOriginalHomeAuthorUserId);
 saveSetting('blog_authors_index_enabled', $runtimeAuditOriginalBlogAuthorsIndexEnabled);
 saveSetting('public_registration_enabled', $runtimeAuditOriginalPublicRegistrationEnabled);
@@ -5519,6 +5733,7 @@ if (!empty($cleanup['contact_ids'])) {
 }
 if (!empty($cleanup['chat_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['chat_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($cleanup['chat_ids']);
     $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($cleanup['chat_ids']);
 }
 if (!empty($cleanup['board_ids'])) {
@@ -5606,6 +5821,8 @@ echo "=== cron_runtime ===\n";
 try {
     $cronIssues = [];
     $cronRateLimitId = 'runtime_audit_' . bin2hex(random_bytes(8));
+    $originalChatRetentionDays = getSetting('chat_retention_days', '0');
+    $cronChatId = 0;
     $cronBackupFile = cronBackupDirectory() . 'kora_backup_' . date('Y-m-d') . '.sql';
     $legacyBackupFile = __DIR__ . '/../uploads/backups/kora_backup_' . date('Y-m-d') . '.sql';
     $storageRoot = str_replace('\\', '/', rtrim(koraStorageDirectory(), '\\/'));
@@ -5621,14 +5838,42 @@ try {
          ON DUPLICATE KEY UPDATE attempts = VALUES(attempts), window_start = VALUES(window_start)"
     )->execute([$cronRateLimitId]);
 
+    saveSetting('chat_retention_days', '1');
+    clearSettingsCache();
+    $GLOBALS['_CMS_SETTINGS']['chat_retention_days'] = '1';
+    $pdo->prepare(
+        "INSERT INTO cms_chat (name, email, web, message, status, public_visibility, created_at, updated_at)
+         VALUES (?, '', '', ?, 'handled', 'hidden', DATE_SUB(NOW(), INTERVAL 10 DAY), DATE_SUB(NOW(), INTERVAL 10 DAY))"
+    )->execute([
+        'Runtime Audit Cron',
+        'Runtime audit stará chat zpráva pro cron cleanup.',
+    ]);
+    $cronChatId = (int)$pdo->lastInsertId();
+    $pdo->prepare(
+        "INSERT INTO cms_chat_history (chat_id, actor_user_id, event_type, message, created_at)
+         VALUES (?, NULL, 'workflow', ?, DATE_SUB(NOW(), INTERVAL 10 DAY))"
+    )->execute([
+        $cronChatId,
+        'Zpráva byla označena jako vyřízená.',
+    ]);
+
     $cronLog = runKoraCron($pdo);
     $rateLimitCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_rate_limit WHERE id = ?");
     $rateLimitCheckStmt->execute([$cronRateLimitId]);
     $remainingRateLimit = (int)$rateLimitCheckStmt->fetchColumn();
+    $cronChatCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_chat WHERE id = ?");
+    $cronChatCheckStmt->execute([$cronChatId]);
+    $remainingCronChat = (int)$cronChatCheckStmt->fetchColumn();
+    $cronChatHistoryCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ?");
+    $cronChatHistoryCheckStmt->execute([$cronChatId]);
+    $remainingCronChatHistory = (int)$cronChatHistoryCheckStmt->fetchColumn();
 
     if ($remainingRateLimit !== 0) {
         $cronIssues[] = 'cron did not clean expired rate-limit records';
         $pdo->prepare("DELETE FROM cms_rate_limit WHERE id = ?")->execute([$cronRateLimitId]);
+    }
+    if ($remainingCronChat !== 0 || $remainingCronChatHistory !== 0) {
+        $cronIssues[] = 'cron did not clean old handled chat messages according to chat_retention_days';
     }
     if (!is_file($cronBackupFile)) {
         $cronIssues[] = 'cron did not keep SQL backups in private storage';
@@ -5650,7 +5895,21 @@ try {
             echo '- ' . $issue . "\n";
         }
     }
+    saveSetting('chat_retention_days', $originalChatRetentionDays);
+    clearSettingsCache();
+    $GLOBALS['_CMS_SETTINGS']['chat_retention_days'] = $originalChatRetentionDays;
+    if ($cronChatId > 0) {
+        $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$cronChatId]);
+        $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$cronChatId]);
+    }
 } catch (\Throwable $e) {
+    saveSetting('chat_retention_days', $originalChatRetentionDays ?? '0');
+    clearSettingsCache();
+    $GLOBALS['_CMS_SETTINGS']['chat_retention_days'] = $originalChatRetentionDays ?? '0';
+    if (!empty($cronChatId)) {
+        $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$cronChatId]);
+        $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$cronChatId]);
+    }
     $failures++;
     echo '- cron runtime check failed: ' . $e->getMessage() . "\n";
 }

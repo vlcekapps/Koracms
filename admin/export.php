@@ -27,6 +27,12 @@ $tables = [
     'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
     'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",
+    'chat'          => "SELECT id, name, email, web, message, status, public_visibility, approved_at, approved_by_user_id,
+                               internal_note, replied_at, replied_by_user_id, replied_subject, replied_to_email,
+                               created_at, updated_at
+                        FROM cms_chat",
+    'chat_history'  => "SELECT id, chat_id, actor_user_id, event_type, message, created_at
+                        FROM cms_chat_history",
     'events'        => "SELECT id, title, slug, event_kind, excerpt, description, program_note, location,
                                organizer_name, organizer_email, registration_url, price_note, accessibility_note,
                                image_file, event_date, event_end, is_published, status, unpublish_at, admin_note,

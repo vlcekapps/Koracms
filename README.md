@@ -245,7 +245,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování a storno přes token |
 | **Statické stránky** | Vlastní stránky se slug URL a volitelným zobrazením v navigaci |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypotem a rate limitingem |
-| **Chat** | Veřejná diskuse s moderátorským inboxem |
+| **Chat** | Moderovaná veřejná nástěnka s inbox workflow, historií a odpověďmi e-mailem |
 | **Newsletter** | Odběr e-mailem s potvrzením, odhlášením a historií rozesílek |
 
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
@@ -257,6 +257,8 @@ Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle ka
 Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / archivní` lístky podle `Platí od / do`, podporuje veřejné hledání, scope filtry, stránkování archivu, redirecty při změně slugu, historii revizí a structured data pro detail lístku.
 
 Modul **Galerie** nově chrání neveřejná alba i fotografie i na úrovni detailu, vyhledávání a sitemapy, používá bezpečný media endpoint místo přímých `/uploads/gallery/` cest, podporuje redirecty po změně slugu, historii revizí, veřejné hledání, stránkování alb i detailu a structured data pro alba i fotografie.
+
+Modul **Chat** nově funguje jako moderovaná veřejná nástěnka: nové zprávy se nejdřív ukládají ke schválení, veřejně se nezobrazuje e-mail ani web autora, veřejný výpis podporuje hledání, řazení a stránkování a administrace nabízí inbox workflow se schvalováním, interní poznámkou, historií změn a odpovědí e-mailem.
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 

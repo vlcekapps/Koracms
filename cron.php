@@ -122,6 +122,30 @@ function runKoraCron(PDO $pdo): array
     }
 
     // 5. Automatická záloha databáze (1x denně)
+    $chatRetentionDays = chatRetentionDays();
+    if ($chatRetentionDays > 0) {
+        try {
+            $chatRetentionCutoff = date('Y-m-d H:i:s', time() - ($chatRetentionDays * 86400));
+            $expiredChatIdsStmt = $pdo->prepare(
+                "SELECT id
+                 FROM cms_chat
+                 WHERE status = 'handled'
+                   AND updated_at < ?"
+            );
+            $expiredChatIdsStmt->execute([$chatRetentionCutoff]);
+            $expiredChatIds = array_map('intval', $expiredChatIdsStmt->fetchAll(PDO::FETCH_COLUMN));
+
+            if ($expiredChatIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($expiredChatIds), '?'));
+                $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
+                $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($expiredChatIds);
+                cronAppendLog($log, 'Smazáno ' . count($expiredChatIds) . ' starých vyřízených chat zpráv');
+            }
+        } catch (\PDOException $e) {
+            cronAppendLog($log, 'Chyba čištění chat zpráv: ' . $e->getMessage());
+        }
+    }
+
     $backupDirectory = cronBackupDirectory();
     if (koraEnsureDirectory($backupDirectory)) {
         $todayBackup = $backupDirectory . 'kora_backup_' . date('Y-m-d') . '.sql';

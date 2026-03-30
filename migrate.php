@@ -151,8 +151,25 @@ $tables = [
         web        VARCHAR(255) NOT NULL DEFAULT '',
         message    TEXT         NOT NULL,
         status     ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+        public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
+        approved_at DATETIME NULL DEFAULT NULL,
+        approved_by_user_id INT NULL DEFAULT NULL,
+        internal_note TEXT,
+        replied_at DATETIME NULL DEFAULT NULL,
+        replied_by_user_id INT NULL DEFAULT NULL,
+        replied_subject VARCHAR(255) NOT NULL DEFAULT '',
+        replied_to_email VARCHAR(255) NOT NULL DEFAULT '',
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_chat_history' => "CREATE TABLE IF NOT EXISTS cms_chat_history (
+        id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        chat_id       INT          NOT NULL,
+        actor_user_id INT          NULL DEFAULT NULL,
+        event_type    VARCHAR(50)  NOT NULL DEFAULT 'workflow',
+        message       TEXT         NOT NULL,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_contact' => "CREATE TABLE IF NOT EXISTS cms_contact (
@@ -797,6 +814,7 @@ $columnExists = static function (string $tableName, string $columnName) use ($pd
 
 $contactStatusWasMissing = !$columnExists('cms_contact', 'status');
 $chatStatusWasMissing = !$columnExists('cms_chat', 'status');
+$chatPublicVisibilityWasMissing = !$columnExists('cms_chat', 'public_visibility');
 
 $addColumns = [
     // cms_articles
@@ -818,7 +836,23 @@ $addColumns = [
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_chat
     'cms_chat.status'                => "ALTER TABLE cms_chat ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
+    'cms_chat.public_visibility'     => "ALTER TABLE cms_chat ADD COLUMN public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending'",
+    'cms_chat.approved_at'           => "ALTER TABLE cms_chat ADD COLUMN approved_at DATETIME NULL DEFAULT NULL",
+    'cms_chat.approved_by_user_id'   => "ALTER TABLE cms_chat ADD COLUMN approved_by_user_id INT NULL DEFAULT NULL",
+    'cms_chat.internal_note'         => "ALTER TABLE cms_chat ADD COLUMN internal_note TEXT",
+    'cms_chat.replied_at'            => "ALTER TABLE cms_chat ADD COLUMN replied_at DATETIME NULL DEFAULT NULL",
+    'cms_chat.replied_by_user_id'    => "ALTER TABLE cms_chat ADD COLUMN replied_by_user_id INT NULL DEFAULT NULL",
+    'cms_chat.replied_subject'       => "ALTER TABLE cms_chat ADD COLUMN replied_subject VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_chat.replied_to_email'      => "ALTER TABLE cms_chat ADD COLUMN replied_to_email VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_chat.updated_at'            => "ALTER TABLE cms_chat ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    'cms_chat_history.id'            => "CREATE TABLE IF NOT EXISTS cms_chat_history (
+        id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        chat_id       INT          NOT NULL,
+        actor_user_id INT          NULL DEFAULT NULL,
+        event_type    VARCHAR(50)  NOT NULL DEFAULT 'workflow',
+        message       TEXT         NOT NULL,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     // cms_contact
     'cms_contact.status'             => "ALTER TABLE cms_contact ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
     'cms_contact.updated_at'         => "ALTER TABLE cms_contact ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
@@ -1921,6 +1955,7 @@ $newSettings = [
     'notify_form_submission'  => '1',
     'notify_pending_content'  => '1',
     'notify_chat_message'     => '0',
+    'chat_retention_days'     => '0',
     'comment_blocked_emails'  => '',
     'comment_spam_words'      => '',
     'home_author_user_id'     => '',
@@ -2074,6 +2109,31 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Migrace stavů chat zpráv – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if ($chatPublicVisibilityWasMissing) {
+        $approvedChat = $pdo->exec(
+            "UPDATE cms_chat
+             SET public_visibility = 'approved',
+                 approved_at = COALESCE(approved_at, created_at)
+             WHERE public_visibility <> 'approved' OR approved_at IS NULL"
+        );
+        $log[] = "✓ Veřejná viditelnost chat zpráv nastavena pro starší instalace – OK ({$approvedChat} záznamů)";
+    } else {
+        $syncedApprovedChat = $pdo->exec(
+            "UPDATE cms_chat
+             SET approved_at = COALESCE(approved_at, created_at)
+             WHERE public_visibility = 'approved' AND approved_at IS NULL"
+        );
+        if ($syncedApprovedChat > 0) {
+            $log[] = "✓ Doplněno datum schválení u {$syncedApprovedChat} chat zpráv";
+        } else {
+            $log[] = "· Migrace veřejné viditelnosti chat zpráv – stavový model již existuje, přeskočeno";
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Migrace veřejné viditelnosti chat zpráv – CHYBA: " . h($e->getMessage());
 }
 
 try {

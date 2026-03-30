@@ -147,8 +147,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             web        VARCHAR(255) NOT NULL DEFAULT '',
             message    TEXT         NOT NULL,
             status     ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+            public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
+            approved_at DATETIME NULL DEFAULT NULL,
+            approved_by_user_id INT NULL DEFAULT NULL,
+            internal_note TEXT,
+            replied_at DATETIME NULL DEFAULT NULL,
+            replied_by_user_id INT NULL DEFAULT NULL,
+            replied_subject VARCHAR(255) NOT NULL DEFAULT '',
+            replied_to_email VARCHAR(255) NOT NULL DEFAULT '',
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat_history (
+            id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            chat_id       INT          NOT NULL,
+            actor_user_id INT          NULL DEFAULT NULL,
+            event_type    VARCHAR(50)  NOT NULL DEFAULT 'workflow',
+            message       TEXT         NOT NULL,
+            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_contact (
@@ -823,6 +840,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notify_form_submission' => '1',
             'notify_pending_content' => '1',
             'notify_chat_message' => '0',
+            'chat_retention_days' => '0',
             'comment_blocked_emails' => '',
             'comment_spam_words' => '',
             'home_author_user_id' => '',

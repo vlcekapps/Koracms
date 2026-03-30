@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Chat – moderovaný veřejný stream a inbox workflow** – chat nově funguje jako moderovaná veřejná nástěnka; nové zprávy se ukládají jako `Ke schválení`, veřejně se zobrazují až po ručním schválení, veřejný výpis podporuje hledání, řazení a stránkování a detail zprávy v administraci nově nabízí interní poznámku, historii změn a odpověď odesílateli e-mailem
 - **FAQ – veřejné hledání, přepínání zobrazení a strukturovaná data** – znalostní báze nově umí fulltextové hledání, filtr podle kategorie, stránkování, přepínání `Přehled karet / Rozbalené odpovědi`, související otázky na detailu a `FAQPage` strukturovaná data pro vyhledávače
 - **Multiblog – týmy blogů a jemnější oprávnění** – každý blog může mít vlastní tým autorů a správců blogu; autoři nově vidí jen přidělené blogy a správa kategorií a štítků se umí omezit jen na konkrétní blog
 - **Multiblog – per-blog metadata a veřejný index** – blogy nově podporují `meta title`, `meta description`, RSS podtitulek, rozšířený intro blok, výchozí komentáře pro nové články, počet položek v RSS feedu a doporučený článek přímo na indexu blogu
@@ -18,6 +19,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Galerie – veřejné hledání, stránkování a detail fotografie** – galerie nově umí hledání v přehledu alb i uvnitř konkrétního alba, stránkování výpisů, související fotografie, zachování kontextu při návratu z detailu a akci `Kopírovat odkaz`
 
 ### Změněno
+- **Chat – soukromí, spam ochrana a automatický úklid** – veřejný chat už nezobrazuje e-mail ani web autora, formulář odmítá zprávy s URL, inbox umí veřejnou viditelnost `ke schválení / zveřejněné / skryté`, bulk akce a stránkování a `cron.php` nově umí volitelně mazat staré vyřízené chat zprávy podle nastavení `chat_retention_days`
 - **FAQ – admin workflow, SEO a migrace** – editor FAQ nově obsahuje `meta title` a `meta description`, přehled FAQ umí filtr podle kategorie, změna slugu ukládá redirect, revize zachycují i kategorii a SEO metadata a `install.php` i `migrate.php` nově drží stejné FAQ schéma včetně `parent_id`, `meta_title` a `meta_description`
 - **Blogové URL a feedy** – při změně slug blogu se staré adresy i per-blog RSS feed bezpečně přesměrují na nový canonical tvar
 - **Export / import** – balíčky nově zahrnují i blog membership, redirecty starých slugů, rozšířená metadata blogů a featured flag článků

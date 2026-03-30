@@ -300,6 +300,8 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         'chat_delete.php',
         'chat_action.php',
         'chat_message.php',
+        'chat_update.php',
+        'chat_reply.php',
         'contact.php',
         'contact_delete.php',
         'contact_action.php',

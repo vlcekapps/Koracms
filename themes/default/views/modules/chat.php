@@ -7,34 +7,73 @@
       </div>
     </div>
 
+    <?php if ($successState === 'pending'): ?>
+      <p class="status-message status-message--success" role="status">
+        Zpráva byla přijata a po schválení se objeví ve veřejném chatu.
+      </p>
+    <?php endif; ?>
+
+    <p class="section-summary">
+      Chat funguje jako moderovaná veřejná nástěnka. Zobrazujeme jen schválené zprávy a e-mail autora zůstává jen pro administraci.
+    </p>
+
+    <form method="get" style="margin-bottom:1rem">
+      <fieldset class="button-row">
+        <legend class="sr-only">Filtrovat zprávy chatu</legend>
+
+        <label for="chat-q" class="sr-only">Hledat v chatu</label>
+        <input type="search" id="chat-q" name="q" class="form-control" placeholder="Hledat ve zprávách…"
+               value="<?= h($searchQuery) ?>" style="width:min(100%, 20rem)">
+
+        <label for="chat-razeni" class="sr-only">Řazení zpráv</label>
+        <select id="chat-razeni" name="razeni" class="form-control form-control--compact">
+          <option value="newest"<?= $sortOrder === 'newest' ? ' selected' : '' ?>>Nejnovější první</option>
+          <option value="oldest"<?= $sortOrder === 'oldest' ? ' selected' : '' ?>>Nejstarší první</option>
+        </select>
+
+        <button type="submit" class="btn">Použít filtr</button>
+        <?php if ($searchQuery !== '' || $sortOrder !== 'newest'): ?>
+          <a href="<?= BASE_URL ?>/chat/index.php" class="btn">Zrušit filtr</a>
+        <?php endif; ?>
+      </fieldset>
+    </form>
+
     <?php if (empty($messages)): ?>
-      <p class="empty-state">Zatím tu nejsou žádné zprávy.</p>
+      <p class="empty-state">
+        <?= $searchQuery !== '' ? 'Pro zadané hledání jsme zatím nenašli žádnou schválenou zprávu.' : 'Zatím tu nejsou žádné schválené zprávy.' ?>
+      </p>
     <?php else: ?>
       <div class="chat-stream" aria-label="Zprávy z chatu">
         <?php foreach ($messages as $message): ?>
           <article class="chat-message">
             <header class="chat-message__header">
               <p class="meta-row">
-                <strong><?= h($message['name']) ?></strong>
-                <?php if ($message['email'] !== ''): ?>
-                  <a href="mailto:<?= h($message['email']) ?>"><?= h($message['email']) ?></a>
-                <?php endif; ?>
-                <?php if ($message['web'] !== ''): ?>
-                  <a href="<?= h($message['web']) ?>" rel="nofollow noopener noreferrer"><?= h($message['web']) ?></a>
-                <?php endif; ?>
-                <time datetime="<?= h(str_replace(' ', 'T', $message['created_at'])) ?>"><?= formatCzechDate($message['created_at']) ?></time>
+                <strong><?= h((string)$message['name']) ?></strong>
+                <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
+                  <?= formatCzechDate((string)$message['created_at']) ?>
+                </time>
               </p>
             </header>
-            <p class="chat-message__body"><?= nl2br(h($message['message'])) ?></p>
+            <p class="chat-message__body"><?= nl2br(h((string)$message['message'])) ?></p>
           </article>
         <?php endforeach; ?>
       </div>
+
+      <?= renderPager(
+          (int)$pagination['page'],
+          (int)$pagination['totalPages'],
+          $pagerBaseUrl,
+          'Stránkování veřejného chatu',
+          'Novější zprávy',
+          'Starší zprávy'
+      ) ?>
     <?php endif; ?>
   </section>
 
   <section class="surface surface--narrow" aria-labelledby="chat-form-title">
     <p class="section-kicker">Přidejte se</p>
     <h2 id="chat-form-title" class="section-title">Napsat zprávu</h2>
+    <p class="field-help">Do textu nevkládejte odkazy. Každá nová zpráva před zveřejněním projde schválením.</p>
 
     <?php if (!empty($errors)): ?>
       <div id="form-errors" class="status-message status-message--error" role="alert">
@@ -62,15 +101,7 @@
           <input type="email" id="email" name="email" class="form-control" maxlength="255"
                  aria-describedby="chat-email-help" autocomplete="email"
                  value="<?= h($formData['email']) ?>">
-          <small id="chat-email-help" class="help-text">Nepovinné pole.</small>
-        </div>
-
-        <div class="field">
-          <label for="web">Web</label>
-          <input type="url" id="web" name="web" class="form-control" maxlength="255"
-                 aria-describedby="chat-web-help"
-                 value="<?= h($formData['web']) ?>">
-          <small id="chat-web-help" class="help-text">Nepovinné pole.</small>
+          <small id="chat-email-help" class="help-text">Nepovinné pole. Slouží jen pro případnou odpověď správce a veřejně se nezobrazuje.</small>
         </div>
 
         <div class="field">

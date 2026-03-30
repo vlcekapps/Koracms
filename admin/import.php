@@ -212,6 +212,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Novinky importovány.';
                 }
 
+                if (!empty($data['chat']) && is_array($data['chat'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_chat
+                         (id, name, email, web, message, status, public_visibility, approved_at, approved_by_user_id,
+                          internal_note, replied_at, replied_by_user_id, replied_subject, replied_to_email,
+                          created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['chat'] as $row) {
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            trim((string)($row['name'] ?? '')),
+                            trim((string)($row['email'] ?? '')),
+                            trim((string)($row['web'] ?? '')),
+                            (string)($row['message'] ?? ''),
+                            normalizeMessageStatus((string)($row['status'] ?? 'new')),
+                            normalizeChatPublicVisibility((string)($row['public_visibility'] ?? 'pending')),
+                            !empty($row['approved_at']) ? $row['approved_at'] : null,
+                            !empty($row['approved_by_user_id']) ? (int)$row['approved_by_user_id'] : null,
+                            (string)($row['internal_note'] ?? ''),
+                            !empty($row['replied_at']) ? $row['replied_at'] : null,
+                            !empty($row['replied_by_user_id']) ? (int)$row['replied_by_user_id'] : null,
+                            (string)($row['replied_subject'] ?? ''),
+                            trim((string)($row['replied_to_email'] ?? '')),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
+                    }
+                    $summary[] = 'Chat zprávy importovány.';
+                }
+
+                if (!empty($data['chat_history']) && is_array($data['chat_history'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_chat_history (id, chat_id, actor_user_id, event_type, message, created_at)
+                         VALUES (?,?,?,?,?,?)"
+                    );
+                    foreach ($data['chat_history'] as $row) {
+                        $chatId = (int)($row['chat_id'] ?? 0);
+                        if ($chatId <= 0) {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $chatId,
+                            !empty($row['actor_user_id']) ? (int)$row['actor_user_id'] : null,
+                            trim((string)($row['event_type'] ?? 'workflow')),
+                            (string)($row['message'] ?? ''),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Historie chat zpráv importována.';
+                }
+
                 // Události
                 if (!empty($data['events']) && is_array($data['events'])) {
                     $ins = $pdo->prepare(
