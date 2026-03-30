@@ -119,7 +119,7 @@ if (isModuleEnabled('board')) {
         $documents = $pdo->query(
             "SELECT id, slug, COALESCE(created_at, CONCAT(posted_date, ' 00:00:00')) AS sitemap_lastmod
              FROM cms_board
-             WHERE status = 'published' AND is_published = 1
+             WHERE " . boardPublicVisibilitySql() . "
              ORDER BY posted_date DESC, id DESC"
         )->fetchAll();
         foreach ($documents as $document) {

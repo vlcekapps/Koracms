@@ -4,6 +4,7 @@ $documentCategory = trim((string)($document['category_name'] ?? ''));
 $documentPostedDate = (string)($document['posted_date'] ?? '');
 $documentRemovalDate = (string)($document['removal_date'] ?? '');
 $documentIsArchived = $documentRemovalDate !== '' && $documentRemovalDate < date('Y-m-d');
+$backUrl = BASE_URL . '/board/index.php' . ($documentIsArchived ? '?scope=archive' : '');
 $leadText = normalizePlainText((string)($document['excerpt'] ?? ''));
 $hasAttachment = (string)($document['original_name'] ?? '') !== '';
 $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
@@ -86,7 +87,7 @@ $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
     <?php endif; ?>
 
     <div class="article-actions">
-      <a class="button-secondary" href="<?= BASE_URL ?>/board/index.php"><span aria-hidden="true">&larr;</span> <?= h(boardModuleBackLabel()) ?></a>
+      <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> <?= h(boardModuleBackLabel()) ?></a>
       <?php if ((string)($document['filename'] ?? '') !== ''): ?>
         <a class="button-primary" href="<?= moduleFileUrl('board', (int)$document['id']) ?>" download="<?= h((string)$document['original_name']) ?>">Stáhnout přílohu</a>
       <?php endif; ?>

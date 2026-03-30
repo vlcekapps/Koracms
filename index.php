@@ -82,7 +82,7 @@ if (isModuleEnabled('board') && $homeBoardCount > 0) {
                 b.filename, b.original_name, b.file_size
          FROM cms_board b
          LEFT JOIN cms_board_categories c ON c.id = b.category_id
-         WHERE b.status = 'published' AND b.is_published = 1
+         WHERE " . boardPublicVisibilitySql('b') . "
            AND (b.removal_date IS NULL OR b.removal_date >= CURDATE())
          ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC, b.title
          LIMIT ?"

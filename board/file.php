@@ -7,13 +7,13 @@ if ($id === null) {
     sendFileDownloadNotFound();
 }
 
-$allowPrivateAccess = isLoggedIn() && !isPublicUser();
+$allowPrivateAccess = currentUserHasCapability('content_manage_shared') || currentUserHasCapability('content_approve_shared');
 if (!$allowPrivateAccess && !isModuleEnabled('board')) {
     sendFileDownloadNotFound();
 }
 
 $stmt = db_connect()->prepare(
-    "SELECT id, title, filename, original_name, is_published, COALESCE(status, 'published') AS status
+    "SELECT id, title, filename, original_name, posted_date, is_published, COALESCE(status, 'published') AS status
      FROM cms_board
      WHERE id = ?"
 );
@@ -24,7 +24,14 @@ if (!$document) {
     sendFileDownloadNotFound();
 }
 
-if (!$allowPrivateAccess && ($document['status'] !== 'published' || !(int)$document['is_published'])) {
+if (
+    !$allowPrivateAccess
+    && (
+        $document['status'] !== 'published'
+        || !(int)$document['is_published']
+        || (string)($document['posted_date'] ?? '') > date('Y-m-d')
+    )
+) {
     sendFileDownloadNotFound();
 }
 

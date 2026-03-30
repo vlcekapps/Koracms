@@ -21,7 +21,7 @@ if ($slug !== '') {
         "SELECT b.*, COALESCE(c.name, '') AS category_name
          FROM cms_board b
          LEFT JOIN cms_board_categories c ON c.id = b.category_id
-         WHERE b.slug = ? AND b.status = 'published' AND b.is_published = 1
+         WHERE b.slug = ? AND " . boardPublicVisibilitySql('b') . "
          LIMIT 1"
     );
     $stmt->execute([$slug]);
@@ -30,7 +30,7 @@ if ($slug !== '') {
         "SELECT b.*, COALESCE(c.name, '') AS category_name
          FROM cms_board b
          LEFT JOIN cms_board_categories c ON c.id = b.category_id
-         WHERE b.id = ? AND b.status = 'published' AND b.is_published = 1
+         WHERE b.id = ? AND " . boardPublicVisibilitySql('b') . "
          LIMIT 1"
     );
     $stmt->execute([$id]);

@@ -212,6 +212,52 @@ Kora CMS poskytuje globální RSS feed i samostatné feedy jednotlivých blogů.
 
 ---
 
+## Vývěska / Úřední deska
+
+Modul vývěsky je určený pro oznámení, dokumenty a další veřejné položky, které se mají zobrazit od určitého data a případně po čase spadnout do archivu.
+
+### Co se nastavuje u položky
+
+Každá položka může mít:
+
+- typ položky
+- kategorii
+- datum vyvěšení
+- datum sejmutí
+- krátký perex a plný text
+- volitelný obrázek
+- kontaktní osobu, telefon a e-mail
+- volitelnou přílohu
+- připnutí mezi důležité položky
+- zveřejnění na webu
+
+Formulář nově zobrazuje i kontextovou nápovědu podle typu položky a odkaz na historii revizí.
+
+### Jak funguje veřejné zobrazení
+
+- Položka se na veřejném webu zobrazí až od data vyvěšení.
+- Pokud má datum sejmutí a to už uplynulo, přesune se do archivu.
+- Veřejný výpis nově umí hledání, filtr podle kategorie, filtr podle období vyvěšení a přepínání `aktuální / archiv / vše`.
+- Veřejný detail archivní položky vrací návštěvníka zpět rovnou do archivního výpisu.
+
+### Přílohy a přístupová práva
+
+- Veřejně publikovaná položka může nabídnout přílohu ke stažení přes bezpečný serverový endpoint.
+- Neveřejné přílohy už nejsou dostupné každému přihlášenému účtu.
+- Přístup k neveřejné příloze má jen správce obsahu nebo schvalovatel.
+
+### Revize a změny slugů
+
+- Úpravy položek se zapisují do historie revizí stejně jako u dalších obsahových modulů.
+- Pokud se změní slug položky, stará veřejná adresa se uloží jako redirect na nový canonical tvar.
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) stručně říká, že vývěska podporuje datum vyvěšení, připnutí, filtrování a archiv.
+- Tento dokument popisuje konkrétní workflow modulu, veřejné chování a přístupová pravidla příloh.
+
+---
+
 ## Kompletní seznam widgetů
 
 Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.

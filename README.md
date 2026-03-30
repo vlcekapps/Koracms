@@ -241,7 +241,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Ankety** | Hlasování s ochranou proti opakovanému hlasu |
 | **Znalostní báze** | FAQ s kategoriemi a přehlednou navigací |
 | **Formuláře** | Form Builder s přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge |
-| **Vývěska** | Úřední deska s typem položky, připnutím a archivem |
+| **Vývěska** | Úřední deska s typem položky, datem vyvěšení, připnutím, filtrováním a archivem |
 | **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování a storno přes token |
 | **Statické stránky** | Vlastní stránky se slug URL a volitelným zobrazením v navigaci |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypotem a rate limitingem |

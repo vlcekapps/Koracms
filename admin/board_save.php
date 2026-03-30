@@ -16,6 +16,35 @@ if ($id !== null) {
     }
 }
 
+$boardCategoryName = static function (PDO $pdo, ?int $categoryId): string {
+    if ($categoryId === null || $categoryId <= 0) {
+        return '';
+    }
+
+    $stmt = $pdo->prepare("SELECT name FROM cms_board_categories WHERE id = ?");
+    $stmt->execute([$categoryId]);
+
+    return trim((string)($stmt->fetchColumn() ?? ''));
+};
+
+$boardRevisionSnapshot = static function (array $row) use ($pdo, $boardCategoryName): array {
+    return [
+        'title' => trim((string)($row['title'] ?? '')),
+        'slug' => trim((string)($row['slug'] ?? '')),
+        'board_type' => boardTypeLabel((string)($row['board_type'] ?? 'document')),
+        'category' => $boardCategoryName($pdo, isset($row['category_id']) ? (int)$row['category_id'] : null),
+        'excerpt' => trim((string)($row['excerpt'] ?? '')),
+        'description' => trim((string)($row['description'] ?? '')),
+        'posted_date' => trim((string)($row['posted_date'] ?? '')),
+        'removal_date' => trim((string)($row['removal_date'] ?? '')),
+        'contact_name' => trim((string)($row['contact_name'] ?? '')),
+        'contact_phone' => trim((string)($row['contact_phone'] ?? '')),
+        'contact_email' => trim((string)($row['contact_email'] ?? '')),
+        'is_pinned' => (int)($row['is_pinned'] ?? 0) === 1 ? 'Ano' : 'Ne',
+        'is_published' => (int)($row['is_published'] ?? 0) === 1 ? 'Ano' : 'Ne',
+    ];
+};
+
 $redirectToForm = static function (?int $documentId, string $errorCode): void {
     $params = ['err' => $errorCode];
     if ($documentId !== null) {
@@ -127,6 +156,8 @@ if (!empty($_FILES['file']['name'])) {
 }
 
 if ($id !== null) {
+    $oldSnapshot = $existingDocument ? $boardRevisionSnapshot($existingDocument) : [];
+    $oldPath = $existingDocument ? boardPublicPath($existingDocument) : '';
     $set = "title = ?, slug = ?, board_type = ?, excerpt = ?, description = ?, category_id = ?,
             posted_date = ?, removal_date = ?, image_file = ?, contact_name = ?, contact_phone = ?,
             contact_email = ?, is_pinned = ?, is_published = ?, author_id = COALESCE(author_id, ?)";
@@ -157,6 +188,23 @@ if ($id !== null) {
 
     $params[] = $id;
     $pdo->prepare("UPDATE cms_board SET {$set} WHERE id = ?")->execute($params);
+    $newSnapshot = $boardRevisionSnapshot([
+        'title' => $title,
+        'slug' => $slug,
+        'board_type' => $boardType,
+        'category_id' => $categoryId,
+        'excerpt' => $excerpt,
+        'description' => $description,
+        'posted_date' => $postedDate,
+        'removal_date' => $removalDate,
+        'contact_name' => $contactName,
+        'contact_phone' => $contactPhone,
+        'contact_email' => $contactEmail,
+        'is_pinned' => $isPinned,
+        'is_published' => $isPublished,
+    ]);
+    saveRevision($pdo, 'board', $id, $oldSnapshot, $newSnapshot);
+    upsertPathRedirect($pdo, $oldPath, boardPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('board_edit', "id={$id} title={$title} slug={$slug} type={$boardType} pinned={$isPinned}");
 } else {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';

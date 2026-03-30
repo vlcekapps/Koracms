@@ -41,6 +41,11 @@ $document = $document ?: [
 $categories = $pdo->query("SELECT id, name FROM cms_board_categories ORDER BY sort_order, name")->fetchAll();
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $publicLabel = boardModulePublicLabel();
+$currentBoardType = normalizeBoardType((string)($document['board_type'] ?? 'document'));
+$boardTypeHelpMap = [];
+foreach (boardTypeDefinitions() as $typeKey => $typeMeta) {
+    $boardTypeHelpMap[$typeKey] = (string)($typeMeta['help'] ?? '');
+}
 $err = trim($_GET['err'] ?? '');
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
@@ -57,6 +62,10 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+<?php endif; ?>
+
+<?php if ($id): ?>
+  <p><a href="revisions.php?type=board&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
 <?php endif; ?>
 
 <p style="margin-top:0;color:#555">
@@ -88,13 +97,14 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <small id="board-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="board_type">Typ oznámení</label>
-    <select id="board_type" name="board_type">
+    <select id="board_type" name="board_type" aria-describedby="board-type-help">
       <?php foreach (boardTypeDefinitions() as $typeKey => $typeMeta): ?>
-        <option value="<?= h($typeKey) ?>"<?= normalizeBoardType((string)$document['board_type']) === $typeKey ? ' selected' : '' ?>>
+        <option value="<?= h($typeKey) ?>"<?= $currentBoardType === $typeKey ? ' selected' : '' ?>>
           <?= h($typeMeta['label']) ?>
         </option>
       <?php endforeach; ?>
     </select>
+    <small id="board-type-help" class="field-help"><?= h($boardTypeHelpMap[$currentBoardType] ?? '') ?></small>
 
     <label for="category_id">Kategorie</label>
     <select id="category_id" name="category_id">
@@ -127,7 +137,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="posted_date">Datum vyvěšení <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="date" id="posted_date" name="posted_date" required aria-required="true"
+           aria-describedby="board-posted-date-help"
            value="<?= h((string)$document['posted_date']) ?>">
+    <small id="board-posted-date-help" class="field-help">Položka se na veřejném webu zobrazí od tohoto dne. Budoucí datum vytvoří naplánovanou položku.</small>
 
     <label for="removal_date">Datum sejmutí</label>
     <input type="date" id="removal_date" name="removal_date" aria-describedby="board-removal-date-help"
@@ -200,7 +212,11 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat položku sekce' ?></button>
     <a href="board.php" style="margin-left:1rem">Zrušit</a>
-    <?php if (($document['status'] ?? 'published') === 'published' && (int)($document['is_published'] ?? 1) === 1 && !empty($document['slug'])): ?>
+    <?php if (($document['status'] ?? 'published') === 'published'
+        && (int)($document['is_published'] ?? 1) === 1
+        && !empty($document['slug'])
+        && (string)($document['posted_date'] ?? '') !== ''
+        && (string)$document['posted_date'] <= date('Y-m-d')): ?>
       <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
   </div>
@@ -210,6 +226,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
+    const boardTypeInput = document.getElementById('board_type');
+    const boardTypeHelp = document.getElementById('board-type-help');
+    const boardTypeHelpMap = <?= json_encode($boardTypeHelpMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     let slugManual = <?= !empty($document['slug']) ? 'true' : 'false' ?>;
 
     const slugify = (value) => value
@@ -229,6 +248,16 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
         }
         slugInput.value = slugify(this.value);
     });
+
+    const syncBoardTypeHelp = function () {
+        if (!boardTypeInput || !boardTypeHelp) {
+            return;
+        }
+        boardTypeHelp.textContent = boardTypeHelpMap[boardTypeInput.value] || '';
+    };
+
+    boardTypeInput?.addEventListener('change', syncBoardTypeHelp);
+    syncBoardTypeHelp();
 })();
 </script>
 

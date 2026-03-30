@@ -240,7 +240,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $pdo, $q, $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
                         posted_date AS created_at, 'board' AS type",
-                "FROM cms_board WHERE status = 'published' AND is_published = 1",
+                "FROM cms_board WHERE " . boardPublicVisibilitySql(),
                 'title, excerpt, description',
                 [],
                 'posted_date DESC',

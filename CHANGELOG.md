@@ -10,12 +10,15 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Multiblog – týmy blogů a jemnější oprávnění** – každý blog může mít vlastní tým autorů a správců blogu; autoři nově vidí jen přidělené blogy a správa kategorií a štítků se umí omezit jen na konkrétní blog
 - **Multiblog – per-blog metadata a veřejný index** – blogy nově podporují `meta title`, `meta description`, RSS podtitulek, rozšířený intro blok, výchozí komentáře pro nové články, počet položek v RSS feedu a doporučený článek přímo na indexu blogu
 - **Multiblog – hledání, archiv a current-blog widget kontext** – veřejný index blogu nově umí hledání v rámci konkrétního blogu, archiv po měsících a widget „Nejnovější články“ se umí na blogových stránkách přepnout na právě otevřený blog
+- **Vývěska – hledání, filtry a stránkování** – veřejný výpis vývěsky nově umí hledání, filtr podle kategorie, filtr podle období vyvěšení, přepínání `aktuální / archiv / vše` a stránkování, takže je použitelnější i pro větší úřední desku nebo delší archiv
 
 ### Změněno
 - **Blogové URL a feedy** – při změně slug blogu se staré adresy i per-blog RSS feed bezpečně přesměrují na nový canonical tvar
 - **Export / import** – balíčky nově zahrnují i blog membership, redirecty starých slugů, rozšířená metadata blogů a featured flag článků
 - **Multiblog – přehlednější správa týmů** – obrazovka `Tým blogu` nově ukazuje i další blogy daného uživatele, přehled uživatelů zobrazuje jejich blogová přiřazení a správa blogů přidává i počet členů týmu u každého blogu
 - **Dokumentace** – README nově drží jen vysokou úroveň instalace, provozu a přehledu funkcí; detailní administrátorské workflow pro multiblog, formuláře a podcasty je přesunuté do `docs/admin-guide.md`
+- **Vývěska – veřejná viditelnost a bezpečnost příloh** – položky se nově na veřejném webu zobrazí až od `Data vyvěšení`, budoucí položky nejsou vidět ani na homepage, ve widgetech, vyhledávání a sitemapě a neveřejné přílohy už nestáhne libovolný přihlášený účet, ale jen správce obsahu nebo schvalovatel
+- **Vývěska – revize, redirecty a formulářové vedení** – úpravy položek se nově zapisují do historie revizí, změna slugu ukládá redirect na nový canonical tvar a editor položky dostal i typovou nápovědu a kontextovější veřejný odkaz
 
 ## [3.0.0-rc.7] – 2026-03-30
 

@@ -74,6 +74,15 @@ function revisionFieldLabel(string $entityType, string $fieldName): string
         'description' => 'Popis',
         'slug'        => 'Slug (URL)',
         'location'    => 'Místo konání',
+        'board_type'  => 'Typ položky',
+        'category'    => 'Kategorie',
+        'posted_date' => 'Datum vyvěšení',
+        'removal_date'=> 'Datum sejmutí',
+        'contact_name'=> 'Kontaktní osoba',
+        'contact_phone' => 'Telefon',
+        'contact_email' => 'E-mail',
+        'is_pinned'   => 'Připnuto mezi důležité',
+        'is_published'=> 'Zveřejnění na webu',
     ];
 
     return $labels[$fieldName] ?? $fieldName;

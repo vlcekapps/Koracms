@@ -89,6 +89,11 @@ $boardCanonicalUrl = '';
 $boardLegacyUrl = '';
 $boardCount = 0;
 $boardAttachmentId = false;
+$boardFutureTitle = '';
+$boardFuturePath = '';
+$boardFutureUrl = '';
+$boardPrivateAttachmentId = false;
+$boardPrivateAttachmentPath = '';
 $downloadRow = null;
 $downloadId = false;
 $downloadCanonicalPath = '';
@@ -266,6 +271,7 @@ $cleanup = [
     'author_user_ids' => [],
     'staff_user_ids' => [],
     'board_ids' => [],
+    'board_files' => [],
     'download_ids' => [],
     'download_files' => [],
     'faq_ids' => [],
@@ -478,12 +484,21 @@ if (isModuleEnabled('board')) {
     $runtimeAuditBoardExcerpt = 'Krátké shrnutí testovací položky pro audit vývěsky a oznámení.';
     $runtimeAuditBoardPhone = '+420 777 123 456';
     $runtimeAuditBoardEmail = 'vyveska@example.test';
+    $runtimeAuditBoardStorageDir = __DIR__ . '/../uploads/board';
+    if (!is_dir($runtimeAuditBoardStorageDir)) {
+        mkdir($runtimeAuditBoardStorageDir, 0755, true);
+    }
+
+    $runtimeAuditBoardStoredName = 'runtime_audit_board_' . bin2hex(random_bytes(6)) . '.txt';
+    file_put_contents($runtimeAuditBoardStorageDir . '/' . $runtimeAuditBoardStoredName, "Runtime audit board attachment.\n");
+    $cleanup['board_files'][] = $runtimeAuditBoardStoredName;
+
     $pdo->prepare(
         "INSERT INTO cms_board (
             title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
             image_file, contact_name, contact_phone, contact_email,
             filename, original_name, file_size, sort_order, is_pinned, is_published, status, author_id, created_at
-         ) VALUES (?, ?, 'notice', ?, ?, NULL, '2030-12-31', NULL, '', ?, ?, ?, '', '', 0, -100, 1, 1, 'published', ?, NOW())"
+         ) VALUES (?, ?, 'notice', ?, ?, NULL, DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, '', ?, ?, ?, ?, 'runtime-audit-board.txt', ?, -100, 1, 1, 'published', ?, NOW())"
     )->execute([
         $runtimeAuditBoardTitle,
         $runtimeAuditBoardSlug,
@@ -492,6 +507,8 @@ if (isModuleEnabled('board')) {
         'Runtime Audit',
         $runtimeAuditBoardPhone,
         $runtimeAuditBoardEmail,
+        $runtimeAuditBoardStoredName,
+        filesize($runtimeAuditBoardStorageDir . '/' . $runtimeAuditBoardStoredName) ?: 0,
         $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
     ]);
     $runtimeAuditBoardId = (int)$pdo->lastInsertId();
@@ -514,14 +531,60 @@ if (isModuleEnabled('board')) {
         $boardLegacyUrl = $boardLegacyPath !== '' ? $baseUrl . $boardLegacyPath : '';
     }
 
+    $boardFutureTitle = 'Runtime audit budoucí položka';
+    $boardFutureSlug = uniqueBoardSlug($pdo, 'runtime-audit-budouci-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_board (
+            title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+            image_file, contact_name, contact_phone, contact_email,
+            filename, original_name, file_size, sort_order, is_pinned, is_published, status, author_id, created_at
+         ) VALUES (?, ?, 'notice', ?, ?, NULL, DATE_ADD(CURDATE(), INTERVAL 14 DAY), NULL, '', '', '', '', '', '', 0, -90, 0, 1, 'published', ?, NOW())"
+    )->execute([
+        $boardFutureTitle,
+        $boardFutureSlug,
+        'Budoucí položka vývěsky pro audit plánovaného zveřejnění.',
+        '<p>Tato položka se nesmí veřejně zobrazit dříve, než nastane datum vyvěšení.</p>',
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $runtimeAuditFutureBoardId = (int)$pdo->lastInsertId();
+    $cleanup['board_ids'][] = $runtimeAuditFutureBoardId;
+    $boardFuturePath = boardPublicPath(['id' => $runtimeAuditFutureBoardId, 'slug' => $boardFutureSlug]);
+    $boardFutureUrl = $baseUrl . $boardFuturePath;
+
+    $runtimeAuditPrivateBoardStoredName = 'runtime_audit_board_private_' . bin2hex(random_bytes(6)) . '.txt';
+    file_put_contents($runtimeAuditBoardStorageDir . '/' . $runtimeAuditPrivateBoardStoredName, "Runtime audit private board attachment.\n");
+    $cleanup['board_files'][] = $runtimeAuditPrivateBoardStoredName;
+
+    $runtimeAuditPrivateBoardSlug = uniqueBoardSlug($pdo, 'runtime-audit-soukroma-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_board (
+            title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+            image_file, contact_name, contact_phone, contact_email,
+            filename, original_name, file_size, sort_order, is_pinned, is_published, status, author_id, created_at
+         ) VALUES (?, ?, 'document', ?, ?, NULL, CURDATE(), NULL, '', '', '', '', ?, 'runtime-audit-private.txt', ?, -80, 0, 0, 'published', ?, NOW())"
+    )->execute([
+        'Runtime audit neveřejná příloha',
+        $runtimeAuditPrivateBoardSlug,
+        'Neveřejná příloha pro audit přístupových práv vývěsky.',
+        '<p>Soubor této položky smí stáhnout jen správce obsahu nebo schvalovatel.</p>',
+        $runtimeAuditPrivateBoardStoredName,
+        filesize($runtimeAuditBoardStorageDir . '/' . $runtimeAuditPrivateBoardStoredName) ?: 0,
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $boardPrivateAttachmentId = (int)$pdo->lastInsertId();
+    $cleanup['board_ids'][] = $boardPrivateAttachmentId;
+    $boardPrivateAttachmentPath = '/board/file.php?id=' . $boardPrivateAttachmentId;
+
     $boardCount = (int)$pdo->query(
         "SELECT COUNT(*) FROM cms_board
-         WHERE status = 'published' AND is_published = 1
+         WHERE " . boardPublicVisibilitySql() . "
            AND (removal_date IS NULL OR removal_date >= CURDATE())"
     )->fetchColumn();
     $boardAttachmentId = $pdo->query(
         "SELECT id FROM cms_board
-         WHERE status = 'published' AND is_published = 1 AND filename <> ''
+         WHERE " . boardPublicVisibilitySql() . "
+           AND (removal_date IS NULL OR removal_date >= CURDATE())
+           AND filename <> ''
          ORDER BY posted_date DESC, id DESC
          LIMIT 1"
     )->fetchColumn();
@@ -1863,6 +1926,20 @@ foreach ($pages as $page) {
         if ($boardAttachmentId !== false && !str_contains($result['body'], '/board/file.php?id=' . (int)$boardAttachmentId)) {
             $issues[] = 'board listing is missing file endpoint links';
         }
+        foreach ([
+            'name="q"',
+            'name="kat"',
+            'name="month"',
+            'name="scope"',
+            'Filtrovat položky vývěsky',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'board listing is missing filter fragment: ' . $expectedFragment;
+            }
+        }
+        if ($boardFutureTitle !== '' && str_contains($result['body'], $boardFutureTitle)) {
+            $issues[] = 'board listing still exposes future-dated item';
+        }
     }
 
     if ($page['label'] === 'places_index') {
@@ -3203,6 +3280,8 @@ foreach ($pages as $page) {
             'name="contact_phone"',
             'name="contact_email"',
             'name="is_pinned"',
+            'id="board-type-help"',
+            'revisions.php?type=board&amp;id=',
             'Zpět na přehled sekce',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
@@ -4440,17 +4519,11 @@ if (!str_contains($boardFileGuard['status'], '404')) {
     echo "OK\n";
 }
 
-$sampleBoard = $pdo->query(
-    "SELECT id FROM cms_board
-     WHERE status = 'published' AND is_published = 1 AND filename <> ''
-     ORDER BY id DESC
-     LIMIT 1"
-)->fetchColumn();
 echo "=== board_file ===\n";
-if ($sampleBoard === false) {
+if ($boardAttachmentId === false) {
     echo "OK\n";
 } else {
-    $boardProbe = fetchUrl($baseUrl . '/board/file.php?id=' . (int)$sampleBoard, '', 0);
+    $boardProbe = fetchUrl($baseUrl . '/board/file.php?id=' . (int)$boardAttachmentId, '', 0);
     if (!str_contains($boardProbe['status'], '200')) {
         echo "- unexpected status: {$boardProbe['status']}\n";
         $failures++;
@@ -4459,6 +4532,59 @@ if ($sampleBoard === false) {
         $failures++;
     } else {
         echo "OK\n";
+    }
+}
+
+echo "=== board_future_visibility ===\n";
+if ($boardFutureUrl === '') {
+    echo "OK\n";
+} else {
+    $futureBoardProbe = fetchUrl($boardFutureUrl, '', 0);
+    if (!preg_match('/\s404\s/', $futureBoardProbe['status'])) {
+        echo "- future-dated board item is publicly visible ({$futureBoardProbe['status']})\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== board_private_attachment_access ===\n";
+if ($boardPrivateAttachmentId === false || $boardPrivateAttachmentPath === '') {
+    echo "OK\n";
+} else {
+    $privateAttachmentIssues = [];
+    $privateAnonProbe = fetchUrl($baseUrl . $boardPrivateAttachmentPath, '', 0);
+    if (!preg_match('/\s404\s/', $privateAnonProbe['status'])) {
+        $privateAttachmentIssues[] = 'anonymous visitor can access private board attachment';
+    }
+
+    $privateAuthorProbe = fetchUrl($baseUrl . $boardPrivateAttachmentPath, 'PHPSESSID=' . $roleAuditSessions['author'], 0);
+    if (!preg_match('/\s404\s/', $privateAuthorProbe['status'])) {
+        $privateAttachmentIssues[] = 'author can access private board attachment';
+    }
+
+    $privateModeratorProbe = fetchUrl($baseUrl . $boardPrivateAttachmentPath, 'PHPSESSID=' . $roleAuditSessions['moderator'], 0);
+    if (!preg_match('/\s404\s/', $privateModeratorProbe['status'])) {
+        $privateAttachmentIssues[] = 'moderator can access private board attachment';
+    }
+
+    $privateBookingManagerProbe = fetchUrl($baseUrl . $boardPrivateAttachmentPath, 'PHPSESSID=' . $roleAuditSessions['booking_manager'], 0);
+    if (!preg_match('/\s404\s/', $privateBookingManagerProbe['status'])) {
+        $privateAttachmentIssues[] = 'booking manager can access private board attachment';
+    }
+
+    $privateAdminProbe = fetchUrl($baseUrl . $boardPrivateAttachmentPath, 'PHPSESSID=' . $auditSessionId, 0);
+    if (!str_contains($privateAdminProbe['status'], '200')) {
+        $privateAttachmentIssues[] = 'admin cannot access private board attachment';
+    }
+
+    if ($privateAttachmentIssues === []) {
+        echo "OK\n";
+    } else {
+        $failures++;
+        foreach ($privateAttachmentIssues as $privateAttachmentIssue) {
+            echo '- ' . $privateAttachmentIssue . "\n";
+        }
     }
 }
 
@@ -4857,6 +4983,9 @@ if (!empty($cleanup['chat_ids'])) {
 if (!empty($cleanup['board_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['board_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_board WHERE id IN ({$placeholders})")->execute($cleanup['board_ids']);
+}
+foreach ($cleanup['board_files'] as $boardFile) {
+    @unlink(__DIR__ . '/../uploads/board/' . basename((string)$boardFile));
 }
 if (!empty($cleanup['download_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['download_ids']), '?'));
@@ -6153,6 +6282,60 @@ if ($blogPublicIssues === []) {
     }
 }
 
+echo "=== board_source_guardrails ===\n";
+$boardSourceIssues = [];
+$boardSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_save.php');
+$boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
+$boardIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/board/index.php');
+$boardIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-index.php');
+$boardFileSource = (string)file_get_contents(dirname(__DIR__) . '/board/file.php');
+$boardDocumentSource = (string)file_get_contents(dirname(__DIR__) . '/board/document.php');
+if (!str_contains($boardSaveSource, "saveRevision(\$pdo, 'board'")) {
+    $boardSourceIssues[] = 'board save is missing revision persistence';
+}
+if (!str_contains($boardSaveSource, 'upsertPathRedirect')) {
+    $boardSourceIssues[] = 'board save is missing slug redirect persistence';
+}
+if (!str_contains($boardFormSource, 'revisions.php?type=board')) {
+    $boardSourceIssues[] = 'board form is missing revisions link';
+}
+if (!str_contains($boardFormSource, 'board-type-help')) {
+    $boardSourceIssues[] = 'board form is missing board type help';
+}
+if (!str_contains($boardIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
+    $boardSourceIssues[] = 'public board index is missing search support';
+}
+if (!str_contains($boardIndexControllerSource, "trim((string)(\$_GET['month'] ?? ''))")) {
+    $boardSourceIssues[] = 'public board index is missing month filter support';
+}
+if (!str_contains($boardIndexControllerSource, 'renderPager(')) {
+    $boardSourceIssues[] = 'public board index is missing pagination support';
+}
+if (!str_contains($boardIndexViewSource, 'Filtrovat položky vývěsky')) {
+    $boardSourceIssues[] = 'public board template is missing filter form';
+}
+if (!str_contains($boardIndexViewSource, 'listing-shell__pager')) {
+    $boardSourceIssues[] = 'public board template is missing pager output';
+}
+if (!str_contains($boardFileSource, 'currentUserHasCapability(\'content_manage_shared\')')) {
+    $boardSourceIssues[] = 'board file endpoint is missing tightened private access rule';
+}
+if (!str_contains($boardFileSource, '(string)($document[\'posted_date\'] ?? \'\') > date(\'Y-m-d\')')) {
+    $boardSourceIssues[] = 'board file endpoint is missing future-date access guard';
+}
+if (!str_contains($boardDocumentSource, 'boardPublicVisibilitySql(\'b\')')) {
+    $boardSourceIssues[] = 'board detail is missing public visibility guard';
+}
+
+if ($boardSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($boardSourceIssues as $boardSourceIssue) {
+        echo '- ' . $boardSourceIssue . "\n";
+    }
+}
+
 echo "=== estranky_photo_guardrails ===\n";
 $estrankyPhotoIssues = [];
 $estrankyPhotoSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
@@ -6240,6 +6423,23 @@ if (str_contains($widgetSearchOne . $widgetSearchTwo, 'id="widget-search-q"')) {
     $widgetRenderIssues[] = 'search widget still renders legacy duplicate input id';
 }
 if (isModuleEnabled('board')) {
+    $widgetBoardSlug = uniqueBoardSlug($pdo, 'runtime-audit-widget-board-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_board (
+            title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
+            image_file, contact_name, contact_phone, contact_email,
+            filename, original_name, file_size, sort_order, is_pinned, is_published, status, author_id, created_at
+         ) VALUES (?, ?, 'notice', ?, ?, NULL, CURDATE(), NULL, '', '', '', '', '', '', 0, -70, 1, 1, 'published', ?, NOW())"
+    )->execute([
+        'Runtime audit widget vývěska',
+        $widgetBoardSlug,
+        'Položka vývěsky vytvořená jen pro audit featured widgetu.',
+        '<p>Audit featured widgetu vývěsky.</p>',
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+    ]);
+    $widgetBoardId = (int)$pdo->lastInsertId();
+    $cleanup['board_ids'][] = $widgetBoardId;
+
     $featuredBoardWidget = renderWidget_featured_article(['id' => 301, 'title' => 'Doporučený obsah'], ['source' => 'board'], 'homepage');
     if ($featuredBoardWidget === '') {
         $widgetRenderIssues[] = 'featured board widget does not render any output';

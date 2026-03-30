@@ -694,9 +694,10 @@ function renderWidget_board(array $widget, array $settings, string $zone): strin
     $count = max(1, (int)($settings['count'] ?? 5));
     $pdo = db_connect();
     $stmt = $pdo->prepare(
-        "SELECT id, title, slug, created_at FROM cms_board
-         WHERE is_published = 1 AND COALESCE(status,'published') = 'published'
-         ORDER BY is_pinned DESC, created_at DESC LIMIT ?"
+        "SELECT id, title, slug, created_at, posted_date FROM cms_board
+         WHERE " . boardPublicVisibilitySql() . "
+           AND (removal_date IS NULL OR removal_date >= CURDATE())
+         ORDER BY is_pinned DESC, posted_date DESC, created_at DESC LIMIT ?"
     );
     $stmt->execute([$count]);
     $items = $stmt->fetchAll();
@@ -867,7 +868,8 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
                     b.is_pinned, COALESCE(c.name, '') AS category_name
              FROM cms_board b
              LEFT JOIN cms_board_categories c ON c.id = b.category_id
-             WHERE b.is_published = 1 AND COALESCE(b.status, 'published') = 'published'
+             WHERE " . boardPublicVisibilitySql('b') . "
+               AND (b.removal_date IS NULL OR b.removal_date >= CURDATE())
              ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC
              LIMIT 1"
         );

@@ -5,7 +5,7 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu úř
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
-$allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
+$allowedStatusFilters = ['all', 'pending', 'published', 'scheduled', 'hidden'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
@@ -24,7 +24,9 @@ if ($q !== '') {
 if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(b.status,'published') = 'pending'";
 } elseif ($statusFilter === 'published') {
-    $whereParts[] = "COALESCE(b.status,'published') = 'published' AND b.is_published = 1";
+    $whereParts[] = "COALESCE(b.status,'published') = 'published' AND b.is_published = 1 AND b.posted_date <= CURDATE()";
+} elseif ($statusFilter === 'scheduled') {
+    $whereParts[] = "COALESCE(b.status,'published') = 'published' AND b.is_published = 1 AND b.posted_date > CURDATE()";
 } elseif ($statusFilter === 'hidden') {
     $whereParts[] = "COALESCE(b.status,'published') = 'published' AND b.is_published = 0";
 }
@@ -67,6 +69,7 @@ adminHeader('Úřední deska');
     <select id="status" name="status">
       <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
       <option value="published"<?= $statusFilter === 'published' ? ' selected' : '' ?>>Publikované</option>
+      <option value="scheduled"<?= $statusFilter === 'scheduled' ? ' selected' : '' ?>>Naplánované</option>
       <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
     </select>
@@ -135,6 +138,8 @@ adminHeader('Úřední deska');
             <strong class="status-badge status-badge--pending"><span aria-hidden="true">⟳</span> Čeká na schválení</strong>
           <?php elseif (!(int)$document['is_published']): ?>
             <strong>Skryto</strong>
+          <?php elseif ((string)$document['posted_date'] > date('Y-m-d')): ?>
+            <strong>Naplánováno</strong>
           <?php elseif (!empty($document['removal_date']) && (string)$document['removal_date'] < date('Y-m-d')): ?>
             <em>Archivováno</em>
           <?php else: ?>
@@ -143,7 +148,7 @@ adminHeader('Úřední deska');
         </td>
         <td class="actions">
           <a href="board_form.php?id=<?= (int)$document['id'] ?>" class="btn">Upravit</a>
-          <?php if ($document['status'] === 'published' && (int)$document['is_published'] === 1): ?>
+          <?php if ($document['status'] === 'published' && (int)$document['is_published'] === 1 && (string)$document['posted_date'] <= date('Y-m-d')): ?>
             <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($document['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>

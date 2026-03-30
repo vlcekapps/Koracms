@@ -7,26 +7,32 @@ function boardTypeDefinitions(): array
         'document' => [
             'label' => 'Dokument',
             'public_label' => 'Dokument',
+            'help' => 'Vhodné pro úřední dokument, oznámení ke stažení nebo text, který má mít hlavně přílohu a jasné datum vyvěšení.',
         ],
         'notice' => [
             'label' => 'Oznámení',
             'public_label' => 'Oznámení',
+            'help' => 'Krátká veřejná informace bez složité struktury. Hodí se pro běžná oznámení, změny provozu nebo stručné sdělení.',
         ],
         'lost_found' => [
             'label' => 'Ztráty a nálezy',
             'public_label' => 'Ztráty a nálezy',
+            'help' => 'Počítá s krátkým shrnutím, kontaktem a ideálně i obrázkem nalezené nebo ztracené věci.',
         ],
         'memorial' => [
             'label' => 'Parte / vzpomínka',
             'public_label' => 'Vzpomínka',
+            'help' => 'Vhodné pro parte nebo vzpomínkovou položku. Nejlépe funguje s obrázkem, datem vyvěšení a kontaktní osobou.',
         ],
         'invitation' => [
             'label' => 'Pozvánka',
             'public_label' => 'Pozvánka',
+            'help' => 'Použijte pro pozvánky na akce, schůze nebo veřejná setkání. Hodí se datum sejmutí, obrázek i delší popis.',
         ],
         'alert' => [
             'label' => 'Upozornění',
             'public_label' => 'Upozornění',
+            'help' => 'Pro důležité nebo urgentní sdělení. Zvažte připnutí mezi důležité položky a krátký, jasný perex.',
         ],
     ];
 }
@@ -60,6 +66,14 @@ function normalizeBoardType(string $type): string
 {
     $definitions = boardTypeDefinitions();
     return isset($definitions[$type]) ? $type : 'document';
+}
+
+function boardTypeHelp(string $type): string
+{
+    $definitions = boardTypeDefinitions();
+    $normalized = normalizeBoardType($type);
+
+    return (string)($definitions[$normalized]['help'] ?? '');
 }
 
 function normalizePlaceKind(string $kind): string

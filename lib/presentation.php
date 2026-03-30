@@ -1648,6 +1648,7 @@ function hydrateBoardPresentation(array $document): array
 {
     $document['board_type'] = normalizeBoardType((string)($document['board_type'] ?? 'document'));
     $document['board_type_label'] = boardTypeLabel((string)$document['board_type']);
+    $document['board_type_help'] = boardTypeHelp((string)$document['board_type']);
     $document['excerpt_plain'] = boardExcerpt($document);
     $document['image_url'] = boardImageUrl($document);
     $document['contact_name'] = trim((string)($document['contact_name'] ?? ''));
@@ -1964,6 +1965,44 @@ function boardPublicPath(array $document, array $query = []): string
 function boardPublicUrl(array $document, array $query = []): string
 {
     return siteUrl(appendUrlQuery(boardPublicRequestPath($document), $query));
+}
+
+function boardPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "{$prefix}status = 'published' AND {$prefix}is_published = 1 AND {$prefix}posted_date <= CURDATE()";
+}
+
+function boardScopeVisibilitySql(string $scope, string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return match ($scope) {
+        'archive' => "{$prefix}removal_date IS NOT NULL AND {$prefix}removal_date < CURDATE()",
+        'all' => '1 = 1',
+        default => "{$prefix}removal_date IS NULL OR {$prefix}removal_date >= CURDATE()",
+    };
+}
+
+function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $statusCode = 301): void
+{
+    $oldPath = trim($oldPath);
+    $newPath = trim($newPath);
+    if ($oldPath === '' || $newPath === '' || $oldPath === $newPath) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO cms_redirects (old_path, new_path, status_code)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE new_path = VALUES(new_path), status_code = VALUES(status_code)"
+        );
+        $stmt->execute([$oldPath, $newPath, in_array($statusCode, [301, 302], true) ? $statusCode : 301]);
+    } catch (\PDOException $e) {
+        error_log('presentation: nelze ulozit redirect cesty: ' . $e->getMessage());
+    }
 }
 
 function eventPublicRequestPath(array $event): string
