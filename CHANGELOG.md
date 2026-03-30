@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.6] – 2026-03-30
 
 ### Přidáno
 - **Formuláře v hlavní navigaci** – veřejné formuláře mohou nově dostat vlastní položku v `Navigaci webu`; editor formuláře má přepínač `Zobrazit formulář v navigaci webu`, sjednocená navigace je umí řadit mezi moduly, blogy a stránky a veřejný detail formuláře nově správně drží aktivní stav menu
