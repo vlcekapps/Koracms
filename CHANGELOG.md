@@ -10,6 +10,10 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Statické stránky a navigace** – druhé samostatné pozicování statických stránek bylo odstraněno; `Navigace webu` je teď jediná autorita pro veřejné pořadí menu i pro pořadí stránek v admin přehledu a původní `admin/page_positions.php` už slouží jen jako kompatibilitní přesměrování na sjednocenou správu navigace
 - **Runtime audit** – guardrails pro stránky a navigaci nově hlídají jednotný model přes `Navigaci webu` a ověřují i redirect staré adresy `admin/page_positions.php`
 
+### Opraveno
+- **SMTP a doručitelnost e-mailů** – centrální `sendMail()` nově přidává hlavičky `Date` a `Message-ID`, správně kóduje UTF-8 předmět i tělo, používá explicitní `Content-Transfer-Encoding`, neposílá `EHLO localhost` a kontaktní formulář nově používá čitelnější předmět `Kontakt: ...` a `Reply-To` na návštěvníka; tím se snižuje riziko, že budou zprávy označené jako spam
+- **Runtime audit** – nový `sendmail_header_guardrails` hlídá, že mail helper neztratí hlavičky, UTF-8 encoding ani vylepšený subject/reply-to u kontaktu
+
 ## [3.0.0-rc.4] – 2026-03-29
 
 ### Opraveno

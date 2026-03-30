@@ -5879,6 +5879,42 @@ if ($sendMailIssues === []) {
     }
 }
 
+echo "=== sendmail_header_guardrails ===\n";
+$sendMailHeaderIssues = [];
+$mailLibrarySource = (string)file_get_contents(dirname(__DIR__) . '/lib/mail.php');
+$contactModuleSource = (string)file_get_contents(dirname(__DIR__) . '/contact/index.php');
+
+if (!str_contains($mailLibrarySource, 'Message-ID:')) {
+    $sendMailHeaderIssues[] = 'sendMail is missing Message-ID header';
+}
+if (!str_contains($mailLibrarySource, 'Date: ')) {
+    $sendMailHeaderIssues[] = 'sendMail is missing Date header';
+}
+if (!str_contains($mailLibrarySource, 'Content-Transfer-Encoding:')) {
+    $sendMailHeaderIssues[] = 'sendMail is missing explicit Content-Transfer-Encoding header';
+}
+if (!str_contains($mailLibrarySource, 'quoted_printable_encode')) {
+    $sendMailHeaderIssues[] = 'sendMail body encoding no longer uses quoted-printable fallback logic';
+}
+if (!str_contains($mailLibrarySource, 'function mailEncodeHeaderValue')) {
+    $sendMailHeaderIssues[] = 'sendMail is missing UTF-8 header encoding helper';
+}
+if (!str_contains($contactModuleSource, "Kontakt: ' . \$subject")) {
+    $sendMailHeaderIssues[] = 'contact notifications no longer prefix subject with Kontakt';
+}
+if (!str_contains($contactModuleSource, "'reply_to' => \$from")) {
+    $sendMailHeaderIssues[] = 'contact notifications are missing visitor reply-to';
+}
+
+if ($sendMailHeaderIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($sendMailHeaderIssues as $sendMailHeaderIssue) {
+        echo '- ' . $sendMailHeaderIssue . "\n";
+    }
+}
+
 echo "=== blog_admin_guardrails ===\n";
 $blogAdminIssues = [];
 $blogLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');

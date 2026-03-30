@@ -129,6 +129,14 @@ define('SMTP_SECURE', 'tls'); // '', 'tls', 'ssl'
 
 Pokud SMTP konstanty nenastavíte, CMS se pokusí použít `localhost:25` bez autentizace. To může fungovat na lokálním serveru nebo některých hostingech, ale pro běžný produkční provoz je lepší explicitní SMTP konfigurace.
 
+Kora CMS nyní odesílá zprávy se standardními hlavičkami `Date` a `Message-ID` a správným UTF-8 kódováním těla i předmětu. Pro dobrou doručitelnost ale stále doporučujeme mít na doméně správně nastavené i:
+
+- `SPF`
+- `DKIM`
+- `DMARC`
+
+Pokud tyto DNS záznamy chybí, mohou některé servery i korektně odeslané zprávy označovat jako spam.
+
 ### 4. Spusťte instalaci
 
 Otevřete:

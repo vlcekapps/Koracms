@@ -54,7 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mailSent = true;
                 if ($destEmail !== '') {
                     $mailBody = "Zpráva z kontaktního formuláře.\n\nOd: {$from}\nPředmět: {$subject}\n\n{$message}";
-                    $mailSent = sendMail($destEmail, $subject, $mailBody);
+                    $mailSubject = 'Kontakt: ' . $subject . ' – ' . $siteName;
+                    $mailSent = sendMail($destEmail, $mailSubject, $mailBody, [
+                        'reply_to' => $from,
+                    ]);
                 }
 
                 $success = true;

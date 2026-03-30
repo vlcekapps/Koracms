@@ -15,6 +15,87 @@ function siteUrl(string $path = ''): string
     return $base . $path;
 }
 
+function mailSanitizeHeaderValue(string $value): string
+{
+    return trim((string)preg_replace('/[\r\n]+/', ' ', $value));
+}
+
+function mailNormalizeEol(string $value): string
+{
+    return str_replace(["\r\n", "\r"], "\n", $value);
+}
+
+function mailEncodeHeaderValue(string $value): string
+{
+    $sanitized = mailSanitizeHeaderValue($value);
+    if ($sanitized === '') {
+        return '';
+    }
+    if (preg_match('/^[\x20-\x7E]*$/', $sanitized)) {
+        return $sanitized;
+    }
+    return '=?UTF-8?B?' . base64_encode($sanitized) . '?=';
+}
+
+function mailFormatMailboxHeader(string $email, string $name = ''): string
+{
+    $safeEmail = mailSanitizeHeaderValue($email);
+    $safeName = mailEncodeHeaderValue($name);
+    if ($safeName === '') {
+        return $safeEmail;
+    }
+    return $safeName . ' <' . $safeEmail . '>';
+}
+
+function mailIdentityHost(string $fallbackEmail = ''): string
+{
+    $siteHost = (string)parse_url(siteUrl('/'), PHP_URL_HOST);
+    if ($siteHost !== '' && $siteHost !== 'localhost') {
+        return strtolower($siteHost);
+    }
+    if ($fallbackEmail !== '' && preg_match('/@([a-z0-9.-]+)/i', $fallbackEmail, $match)) {
+        return strtolower($match[1]);
+    }
+    $serverHost = mailSanitizeHeaderValue((string)($_SERVER['SERVER_NAME'] ?? ''));
+    if ($serverHost !== '') {
+        return strtolower($serverHost);
+    }
+    return 'localhost';
+}
+
+function mailBuildMessageId(string $fallbackEmail = ''): string
+{
+    return sprintf(
+        '<%s.%s@%s>',
+        date('YmdHis'),
+        bin2hex(random_bytes(8)),
+        mailIdentityHost($fallbackEmail)
+    );
+}
+
+function mailEncodeBody(string $body): array
+{
+    $normalizedBody = mailNormalizeEol($body);
+    if (function_exists('quoted_printable_encode')) {
+        $encodedBody = quoted_printable_encode($normalizedBody);
+        $transferEncoding = 'quoted-printable';
+    } else {
+        $encodedBody = rtrim(chunk_split(base64_encode($normalizedBody), 76, "\n"));
+        $transferEncoding = 'base64';
+    }
+
+    $normalizedEncodedBody = mailNormalizeEol($encodedBody);
+    $dotStuffedBody = preg_replace('/(?m)^\./', '..', $normalizedEncodedBody);
+    if (!is_string($dotStuffedBody)) {
+        $dotStuffedBody = $normalizedEncodedBody;
+    }
+
+    return [
+        str_replace("\n", "\r\n", $dotStuffedBody),
+        $transferEncoding,
+    ];
+}
+
 function sendNewsletterSubscriptionConfirmation(string $recipient, string $token): bool
 {
     $siteName = getSetting('site_name', 'Kora CMS');
@@ -36,12 +117,34 @@ function sendNewsletterSubscriptionConfirmation(string $recipient, string $token
  * SMTP_USER, SMTP_PASS, SMTP_SECURE). Pokud nejsou definovány,
  * použije se localhost:25 bez autentizace.
  */
-function sendMail(string $to, string $subject, string $body): bool
+function sendMail(string $to, string $subject, string $body, array $options = []): bool
 {
-    $from        = getSetting('contact_email', 'noreply@localhost');
-    $safeSubject = preg_replace('/[\r\n]/', '', $subject);
-    $safeFrom    = preg_replace('/[\r\n]/', '', $from);
-    $safeTo      = preg_replace('/[\r\n]/', '', $to);
+    $from = mailSanitizeHeaderValue(getSetting('contact_email', 'noreply@localhost'));
+    $siteName = trim((string)getSetting('site_name', 'Kora CMS'));
+    $safeSubject = mailSanitizeHeaderValue($subject);
+    $safeFrom = mailSanitizeHeaderValue($from);
+    $safeTo = mailSanitizeHeaderValue($to);
+    $safeReplyTo = mailSanitizeHeaderValue((string)($options['reply_to'] ?? $safeFrom));
+    $safeReplyToName = mailSanitizeHeaderValue((string)($options['reply_to_name'] ?? ''));
+
+    if (!filter_var($safeFrom, FILTER_VALIDATE_EMAIL) || !filter_var($safeTo, FILTER_VALIDATE_EMAIL)) {
+        error_log('sendMail FAILED: invalid sender or recipient address');
+        return false;
+    }
+    if ($safeReplyTo !== '' && !filter_var($safeReplyTo, FILTER_VALIDATE_EMAIL)) {
+        $safeReplyTo = $safeFrom;
+        $safeReplyToName = $siteName;
+    }
+
+    [$encodedBody, $transferEncoding] = mailEncodeBody($body);
+    $messageId = mailBuildMessageId($safeFrom);
+    $mailHost = mailIdentityHost($safeFrom);
+    $encodedSubject = mailEncodeHeaderValue($safeSubject);
+    $fromHeader = mailFormatMailboxHeader($safeFrom, $siteName);
+    $toHeader = mailFormatMailboxHeader($safeTo);
+    $replyToHeader = ($safeReplyTo !== '')
+        ? mailFormatMailboxHeader($safeReplyTo, $safeReplyTo === $safeFrom ? $siteName : $safeReplyToName)
+        : $fromHeader;
 
     $smtpHost   = defined('SMTP_HOST')   ? SMTP_HOST   : (ini_get('SMTP') ?: 'localhost');
     $smtpPort   = defined('SMTP_PORT')   ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
@@ -80,7 +183,7 @@ function sendMail(string $to, string $subject, string $body): bool
 
     if ($expect('220') === null) return false;
 
-    fwrite($smtp, "EHLO localhost\r\n");
+    fwrite($smtp, "EHLO {$mailHost}\r\n");
     if ($expect('250') === null) return false;
 
     // STARTTLS
@@ -93,7 +196,7 @@ function sendMail(string $to, string $subject, string $body): bool
             return false;
         }
         // Po STARTTLS je nutný nový EHLO
-        fwrite($smtp, "EHLO localhost\r\n");
+        fwrite($smtp, "EHLO {$mailHost}\r\n");
         if ($expect('250') === null) return false;
     }
 
@@ -114,14 +217,18 @@ function sendMail(string $to, string $subject, string $body): bool
     fwrite($smtp, "DATA\r\n");
     if ($expect('354') === null) return false;
 
-    $msg = "From: {$safeFrom}\r\n"
-         . "To: {$safeTo}\r\n"
-         . "Subject: {$safeSubject}\r\n"
-         . "Reply-To: {$safeFrom}\r\n"
+    $msg = "Date: " . date(DATE_RFC2822) . "\r\n"
+         . "Message-ID: {$messageId}\r\n"
+         . "From: {$fromHeader}\r\n"
+         . "To: {$toHeader}\r\n"
+         . "Subject: {$encodedSubject}\r\n"
+         . "Reply-To: {$replyToHeader}\r\n"
          . "Content-Type: text/plain; charset=UTF-8\r\n"
+         . "Content-Transfer-Encoding: {$transferEncoding}\r\n"
          . "MIME-Version: 1.0\r\n"
+         . "X-Mailer: Kora CMS SMTP\r\n"
          . "\r\n"
-         . str_replace("\n.", "\n..", $body) . "\r\n.\r\n";
+         . $encodedBody . "\r\n.\r\n";
 
     fwrite($smtp, $msg);
     $dataResp = $read();
