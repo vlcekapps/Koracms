@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.7] – 2026-03-30
 
 ### Přidáno
 - **Release assety** – release ZIP nově vždy přibaluje také `docs/admin-guide.md` do složky `docs/admin-guide.md`, takže administrátorský návod je součástí každého distribučního balíčku a zůstává dostupný i mimo repozitář
