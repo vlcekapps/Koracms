@@ -112,7 +112,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
     $newsStmt = $pdo->prepare(
         "SELECT id, title, slug, content, created_at
          FROM cms_news
-         WHERE status = 'published' AND deleted_at IS NULL
+         WHERE " . newsPublicVisibilitySql() . "
          ORDER BY created_at DESC, id DESC
          LIMIT ?"
     );

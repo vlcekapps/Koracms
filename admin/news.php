@@ -3,13 +3,14 @@ require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $pdo = db_connect();
-$q = trim($_GET['q'] ?? '');
-$statusFilter = trim($_GET['status'] ?? 'all');
+$q = trim((string)($_GET['q'] ?? ''));
+$statusFilter = trim((string)($_GET['status'] ?? 'all'));
 $allowedStatusFilters = ['all', 'pending', 'published'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
 
+$perPage = 25;
 $whereParts = ['n.deleted_at IS NULL'];
 $params = [];
 
@@ -25,28 +26,49 @@ if ($q !== '') {
 }
 
 if ($statusFilter === 'pending') {
-    $whereParts[] = "COALESCE(n.status,'published') = 'pending'";
+    $whereParts[] = "COALESCE(n.status, 'published') = 'pending'";
 } elseif ($statusFilter === 'published') {
-    $whereParts[] = "COALESCE(n.status,'published') = 'published'";
+    $whereParts[] = "COALESCE(n.status, 'published') = 'published'";
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
+$pagination = paginate(
+    $pdo,
+    "SELECT COUNT(*) FROM cms_news n {$whereSql}",
+    $params,
+    $perPage
+);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $pagination;
 
 $stmt = $pdo->prepare(
-    "SELECT n.id, n.title, n.slug, n.content, n.created_at, COALESCE(n.status,'published') AS status,
+    "SELECT n.id, n.title, n.slug, n.content, n.created_at, n.unpublish_at, COALESCE(n.status, 'published') AS status,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_news n
      LEFT JOIN cms_users u ON u.id = n.author_id
      {$whereSql}
-     ORDER BY n.created_at DESC"
+     ORDER BY n.created_at DESC, n.id DESC
+     LIMIT ? OFFSET ?"
 );
-$stmt->execute($params);
+$stmt->execute(array_merge($params, [$perPage, $offset]));
 $items = array_map(
     static fn(array $item): array => hydrateNewsPresentation($item),
     $stmt->fetchAll()
 );
 
 $canApproveNews = currentUserHasCapability('news_approve');
+$listQuery = array_filter([
+    'q' => $q !== '' ? $q : null,
+    'status' => $statusFilter !== 'all' ? $statusFilter : null,
+    'strana' => $page > 1 ? $page : null,
+], static fn($value): bool => $value !== null && $value !== '');
+$currentListUrl = BASE_URL . '/admin/news.php' . ($listQuery !== [] ? '?' . http_build_query($listQuery) : '');
+$pagerBaseUrl = '?' . http_build_query(array_filter([
+    'q' => $q !== '' ? $q : null,
+    'status' => $statusFilter !== 'all' ? $statusFilter : null,
+])) . ($q !== '' || $statusFilter !== 'all' ? '&' : '');
+if ($pagerBaseUrl === '?') {
+    $pagerBaseUrl = '?';
+}
 
 adminHeader('Novinky');
 ?>
@@ -55,8 +77,7 @@ adminHeader('Novinky');
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <div>
     <label for="q" class="visually-hidden">Hledat v novinkách</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v novinkách…"
-           value="<?= h($q) ?>" style="width:300px">
+    <input type="search" id="q" name="q" placeholder="Hledat v novinkách…" value="<?= h($q) ?>" style="width:300px">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -81,7 +102,7 @@ adminHeader('Novinky');
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <?= bulkActions('news', BASE_URL . '/admin/news.php', 'Hromadné akce s novinkami', 'novinka') ?>
+  <?= bulkActions('news', $currentListUrl, 'Hromadné akce s novinkami', 'novinka') ?>
   <table>
     <caption>Přehled novinek</caption>
     <thead>
@@ -104,6 +125,9 @@ adminHeader('Novinky');
           <?php if ($item['excerpt'] !== ''): ?>
             <br><small style="color:#555"><?= h((string)$item['excerpt']) ?></small>
           <?php endif; ?>
+          <?php if (!empty($item['unpublish_at'])): ?>
+            <br><small style="color:#555">Skryje se: <?= h(formatCzechDate((string)$item['unpublish_at'])) ?></small>
+          <?php endif; ?>
         </td>
         <td><?= $item['author_name'] ? h((string)$item['author_name']) : '<em>–</em>' ?></td>
         <td><?= h(formatCzechDate((string)$item['created_at'])) ?></td>
@@ -124,21 +148,21 @@ adminHeader('Novinky');
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="news">
               <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-              <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/news.php">
+              <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
           <form action="news_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat novinku?">Smazat</button>
+            <button type="submit" class="btn btn-danger" data-confirm="Smazat novinku?">Smazat</button>
           </form>
         </td>
       </tr>
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?= renderPager($page, $pages, $pagerBaseUrl, 'Stránkování novinek', 'Starší stránka', 'Novější stránka') ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

@@ -133,6 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status     ENUM('pending','published') NOT NULL DEFAULT 'published',
             unpublish_at DATETIME   NULL DEFAULT NULL,
             admin_note TEXT,
+            meta_title VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
             deleted_at DATETIME     NULL DEFAULT NULL,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -5,32 +5,51 @@ verifyCsrf();
 
 $pdo = db_connect();
 $id = inputInt('post', 'id');
-$title = trim($_POST['title'] ?? '');
-$submittedSlug = trim($_POST['slug'] ?? '');
-$content = trim($_POST['content'] ?? '');
-$adminNote = trim($_POST['admin_note'] ?? '');
+$title = trim((string)($_POST['title'] ?? ''));
+$submittedSlug = trim((string)($_POST['slug'] ?? ''));
+$content = trim((string)($_POST['content'] ?? ''));
+$adminNote = trim((string)($_POST['admin_note'] ?? ''));
+$metaTitle = mb_substr(trim((string)($_POST['meta_title'] ?? '')), 0, 160);
+$metaDescription = trim((string)($_POST['meta_description'] ?? ''));
 
-$unpublishAt = trim($_POST['unpublish_at'] ?? '');
+$redirectBase = BASE_URL . '/admin/news_form.php';
+$redirectToForm = static function (string $errorCode) use ($redirectBase, $id): never {
+    $query = $id !== null
+        ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
+        : '?err=' . rawurlencode($errorCode);
+    header('Location: ' . $redirectBase . $query);
+    exit;
+};
+
+$unpublishAtInput = trim((string)($_POST['unpublish_at'] ?? ''));
 $unpublishAtSql = null;
-if ($unpublishAt !== '') {
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
-    if ($dateTime) {
-        $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+if ($unpublishAtInput !== '') {
+    $dateTime = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $unpublishAtInput);
+    if (!$dateTime || $dateTime->format('Y-m-d\TH:i') !== $unpublishAtInput) {
+        $redirectToForm('unpublish_at');
     }
+    $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 if ($title === '' || $content === '') {
-    header('Location: news_form.php?err=required' . ($id ? '&id=' . $id : ''));
-    exit;
+    $redirectToForm('required');
 }
 
 $existingItem = null;
 if ($id !== null) {
     if (canManageOwnNewsOnly()) {
-        $existingStmt = $pdo->prepare("SELECT id, author_id FROM cms_news WHERE id = ? AND author_id = ?");
+        $existingStmt = $pdo->prepare(
+            "SELECT id, author_id
+             FROM cms_news
+             WHERE id = ? AND author_id = ? AND deleted_at IS NULL"
+        );
         $existingStmt->execute([$id, currentUserId()]);
     } else {
-        $existingStmt = $pdo->prepare("SELECT id, author_id FROM cms_news WHERE id = ?");
+        $existingStmt = $pdo->prepare(
+            "SELECT id, author_id
+             FROM cms_news
+             WHERE id = ? AND deleted_at IS NULL"
+        );
         $existingStmt->execute([$id]);
     }
     $existingItem = $existingStmt->fetch() ?: null;
@@ -42,49 +61,99 @@ if ($id !== null) {
 
 $slug = newsSlug($submittedSlug !== '' ? $submittedSlug : $title);
 if ($slug === '') {
-    header('Location: news_form.php?err=slug' . ($id ? '&id=' . $id : ''));
-    exit;
+    $redirectToForm('slug');
 }
 
 $uniqueSlug = uniqueNewsSlug($pdo, $slug, $id);
 if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
-    header('Location: news_form.php?err=slug' . ($id ? '&id=' . $id : ''));
-    exit;
+    $redirectToForm('slug');
 }
 $slug = $uniqueSlug;
 
 if ($existingItem) {
-    $oldStmt = $pdo->prepare("SELECT title, slug, content FROM cms_news WHERE id = ?");
+    $oldStmt = $pdo->prepare("SELECT * FROM cms_news WHERE id = ?");
     $oldStmt->execute([$id]);
-    $oldData = $oldStmt->fetch();
+    $oldData = $oldStmt->fetch() ?: null;
+
     if ($oldData) {
-        saveRevision($pdo, 'news', $id, $oldData, [
-            'title' => $title, 'slug' => $slug, 'content' => $content,
-        ]);
+        saveRevision(
+            $pdo,
+            'news',
+            $id,
+            newsRevisionSnapshot($oldData),
+            newsRevisionSnapshot([
+                'title' => $title,
+                'slug' => $slug,
+                'content' => $content,
+                'unpublish_at' => $unpublishAtSql,
+                'admin_note' => $adminNote,
+                'meta_title' => $metaTitle,
+                'meta_description' => $metaDescription,
+            ])
+        );
     }
+
+    $oldPath = $oldData ? newsPublicPath($oldData) : '';
 
     if (canManageOwnNewsOnly()) {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
-             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, author_id = COALESCE(author_id, ?), updated_at = NOW()
+             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, meta_title = ?, meta_description = ?,
+                 author_id = COALESCE(author_id, ?), updated_at = NOW()
              WHERE id = ? AND author_id = ?"
         );
-        $stmt->execute([$title, $slug, $content, $unpublishAtSql, $adminNote, currentUserId(), $id, currentUserId()]);
+        $stmt->execute([
+            $title,
+            $slug,
+            $content,
+            $unpublishAtSql,
+            $adminNote,
+            $metaTitle,
+            $metaDescription,
+            currentUserId(),
+            $id,
+            currentUserId(),
+        ]);
     } else {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
-             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, author_id = COALESCE(author_id, ?), updated_at = NOW()
+             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, meta_title = ?, meta_description = ?,
+                 author_id = COALESCE(author_id, ?), updated_at = NOW()
              WHERE id = ?"
         );
-        $stmt->execute([$title, $slug, $content, $unpublishAtSql, $adminNote, currentUserId(), $id]);
+        $stmt->execute([
+            $title,
+            $slug,
+            $content,
+            $unpublishAtSql,
+            $adminNote,
+            $metaTitle,
+            $metaDescription,
+            currentUserId(),
+            $id,
+        ]);
     }
+
+    upsertPathRedirect($pdo, $oldPath, newsPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('news_edit', "id={$id} title={$title} slug={$slug}");
 } else {
     $status = currentUserHasCapability('news_approve') ? 'published' : 'pending';
     $authorId = currentUserId();
     $pdo->prepare(
-        "INSERT INTO cms_news (title, slug, content, unpublish_at, admin_note, status, author_id) VALUES (?,?,?,?,?,?,?)"
-    )->execute([$title, $slug, $content, $unpublishAtSql, $adminNote, $status, $authorId]);
+        "INSERT INTO cms_news (
+            title, slug, content, unpublish_at, admin_note, meta_title, meta_description, status, author_id
+         ) VALUES (?,?,?,?,?,?,?,?,?)"
+    )->execute([
+        $title,
+        $slug,
+        $content,
+        $unpublishAtSql,
+        $adminNote,
+        $metaTitle,
+        $metaDescription,
+        $status,
+        $authorId,
+    ]);
     $id = (int)$pdo->lastInsertId();
     logAction('news_add', "id={$id} title={$title} slug={$slug} status={$status}");
     if ($status === 'pending') {

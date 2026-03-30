@@ -573,12 +573,12 @@ if ($requestedType === 'all' || $requestedType === 'page') {
 if (($requestedType === 'all' || $requestedType === 'news') && isModuleEnabled('news')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, content, created_at, 'news' AS type
-             FROM cms_news
-             WHERE status = 'published'
-               AND (title LIKE ? OR content LIKE ? OR slug LIKE ?)
-             ORDER BY created_at DESC
-             LIMIT 10"
+             "SELECT id, title, slug, content, created_at, 'news' AS type
+              FROM cms_news
+              WHERE " . newsPublicVisibilitySql() . "
+                AND (title LIKE ? OR content LIKE ? OR slug LIKE ?)
+              ORDER BY created_at DESC
+              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {

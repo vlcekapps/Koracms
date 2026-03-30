@@ -72,7 +72,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
              FROM cms_news n
              LEFT JOIN cms_users u ON u.id = n.author_id
-             WHERE n.status = 'pending'
+             WHERE n.status = 'pending' AND n.deleted_at IS NULL
              ORDER BY n.created_at DESC
              LIMIT 20"
         )->fetchAll();

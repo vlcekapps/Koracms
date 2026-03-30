@@ -72,7 +72,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
             foreach ($ftSearch(
                 $pdo, $q, $like,
                 "SELECT id, title, slug, content AS perex, created_at, 'news' AS type",
-                "FROM cms_news WHERE status = 'published'",
+                "FROM cms_news WHERE " . newsPublicVisibilitySql(),
                 'title, content',
                 [],
                 'created_at DESC',

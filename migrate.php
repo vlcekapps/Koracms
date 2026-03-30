@@ -139,9 +139,15 @@ $tables = [
         content    TEXT         NOT NULL,
         author_id  INT          NULL DEFAULT NULL,
         status     ENUM('pending','published') NOT NULL DEFAULT 'published',
+        unpublish_at DATETIME   NULL DEFAULT NULL,
+        admin_note TEXT,
+        meta_title VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
+        deleted_at DATETIME     NULL DEFAULT NULL,
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_cms_news_slug (slug)
+        UNIQUE KEY uq_cms_news_slug (slug),
+        FULLTEXT INDEX ft_news_search (title, content)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_chat' => "CREATE TABLE IF NOT EXISTS cms_chat (
@@ -833,6 +839,8 @@ $addColumns = [
     'cms_news.slug'                  => "ALTER TABLE cms_news ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_news.author_id'             => "ALTER TABLE cms_news ADD COLUMN author_id INT NULL DEFAULT NULL",
     'cms_news.status'                => "ALTER TABLE cms_news ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_news.meta_title'            => "ALTER TABLE cms_news ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
+    'cms_news.meta_description'      => "ALTER TABLE cms_news ADD COLUMN meta_description TEXT",
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_chat
     'cms_chat.status'                => "ALTER TABLE cms_chat ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",

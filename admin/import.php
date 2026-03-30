@@ -188,8 +188,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Novinky
                 if (!empty($data['news']) && is_array($data['news'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_news (id, title, slug, content, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?)"
+                        "INSERT IGNORE INTO cms_news (
+                            id, title, slug, content, author_id, status, created_at, updated_at,
+                            unpublish_at, admin_note, meta_title, meta_description, deleted_at
+                         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['news'] as $row) {
                         $importTitle = newsTitleCandidate((string)($row['title'] ?? ''), (string)($row['content'] ?? ''));
@@ -204,9 +206,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $importTitle,
                             $importSlug,
                             $row['content'] ?? '',
+                            !empty($row['author_id']) ? (int)$row['author_id'] : null,
                             $row['status'] ?? 'published',
                             $row['created_at'],
                             $row['updated_at'] ?? $row['created_at'],
+                            !empty($row['unpublish_at']) ? $row['unpublish_at'] : null,
+                            (string)($row['admin_note'] ?? ''),
+                            mb_substr(trim((string)($row['meta_title'] ?? '')), 0, 160),
+                            trim((string)($row['meta_description'] ?? '')),
+                            !empty($row['deleted_at']) ? $row['deleted_at'] : null,
                         ]);
                     }
                     $summary[] = 'Novinky importovány.';

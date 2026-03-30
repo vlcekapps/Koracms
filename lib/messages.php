@@ -366,7 +366,7 @@ function pendingReviewSummary(PDO $pdo): array
     }
 
     if (isModuleEnabled('news') && currentUserHasCapability('news_approve')) {
-        $addSummaryItem('news', 'Novinky', 'content', BASE_URL . '/admin/news.php', "SELECT COUNT(*) FROM cms_news WHERE status = 'pending'");
+$addSummaryItem('news', 'Novinky', 'content', BASE_URL . '/admin/news.php', "SELECT COUNT(*) FROM cms_news WHERE status = 'pending' AND deleted_at IS NULL");
     }
 
     if (currentUserHasCapability('content_approve_shared')) {

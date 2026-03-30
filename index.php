@@ -15,7 +15,7 @@ if (isModuleEnabled('news') && $homeNewsCount > 0) {
                 u.author_public_enabled, u.author_slug, u.role AS author_role
          FROM cms_news n
          LEFT JOIN cms_users u ON u.id = n.author_id
-         WHERE n.status = 'published'
+         WHERE " . newsPublicVisibilitySql('n') . "
          ORDER BY n.created_at DESC
          LIMIT ?"
     );

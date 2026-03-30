@@ -101,7 +101,7 @@ if (isModuleEnabled('news')) {
         $newsItems = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_news
-             WHERE status = 'published'
+             WHERE " . newsPublicVisibilitySql() . "
              ORDER BY created_at DESC"
         )->fetchAll();
         foreach ($newsItems as $newsItem) {

@@ -561,6 +561,30 @@ function newsExcerpt(string $content, int $limit = 220): string
     return mb_strimwidth($plain, 0, $limit, '…', 'UTF-8');
 }
 
+function newsPublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "{$prefix}deleted_at IS NULL"
+        . " AND COALESCE({$prefix}status, 'published') = 'published'"
+        . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())";
+}
+
+function newsRevisionSnapshot(array $news): array
+{
+    $title = str_replace('â€¦', '…', newsTitleCandidate((string)($news['title'] ?? ''), (string)($news['content'] ?? '')));
+
+    return [
+        'title' => $title,
+        'slug' => newsSlug((string)($news['slug'] ?? '')),
+        'content' => (string)($news['content'] ?? ''),
+        'unpublish_at' => trim((string)($news['unpublish_at'] ?? '')),
+        'admin_note' => trim((string)($news['admin_note'] ?? '')),
+        'meta_title' => trim((string)($news['meta_title'] ?? '')),
+        'meta_description' => trim((string)($news['meta_description'] ?? '')),
+    ];
+}
+
 function eventExcerpt(array $event, int $limit = 220): string
 {
     $excerpt = normalizePlainText((string)($event['excerpt'] ?? ''));
@@ -2405,6 +2429,49 @@ function newsPublicUrl(array $news, array $query = []): string
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));
 }
 
+function newsStructuredData(array $news): string
+{
+    $headline = trim((string)($news['title'] ?? ''));
+    $url = newsPublicUrl($news);
+    if ($headline === '' || $url === '') {
+        return '';
+    }
+
+    $description = trim((string)($news['meta_description'] ?? ''));
+    if ($description === '') {
+        $description = newsExcerpt((string)($news['content'] ?? ''), 220);
+    }
+    $description = str_replace('â€¦', '…', $description);
+
+    $authorData = null;
+    if (!empty($news['author_name'])) {
+        $authorData = array_filter([
+            '@type' => 'Person',
+            'name' => trim((string)$news['author_name']),
+            'url' => trim((string)($news['author_public_url'] ?? '')),
+        ], static fn($value): bool => $value !== '');
+    }
+
+    $data = array_filter([
+        '@context' => 'https://schema.org',
+        '@type' => 'NewsArticle',
+        'headline' => $headline,
+        'description' => $description,
+        'datePublished' => !empty($news['created_at']) ? date(DATE_ATOM, strtotime((string)$news['created_at'])) : '',
+        'dateModified' => !empty($news['updated_at']) ? date(DATE_ATOM, strtotime((string)$news['updated_at'])) : '',
+        'mainEntityOfPage' => $url,
+        'url' => $url,
+        'author' => $authorData,
+        'publisher' => array_filter([
+            '@type' => 'Organization',
+            'name' => getSetting('site_name', 'Kora CMS'),
+            'url' => siteUrl('/'),
+        ], static fn($value): bool => $value !== ''),
+    ], static fn($value): bool => $value !== '' && $value !== null);
+
+    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+}
+
 function downloadPublicRequestPath(array $download): string
 {
     $slug = downloadSlug((string)($download['slug'] ?? ''));
@@ -3353,6 +3420,9 @@ function hydrateNewsPresentation(array $news): array
     $news['title'] = newsTitleCandidate((string)($news['title'] ?? ''), (string)($news['content'] ?? ''));
     $news['slug'] = newsSlug((string)($news['slug'] ?? ''));
     $news['excerpt'] = newsExcerpt((string)($news['content'] ?? ''));
+    $news['excerpt'] = str_replace('â€¦', '…', $news['excerpt']);
+    $news['meta_title'] = trim((string)($news['meta_title'] ?? ''));
+    $news['meta_description'] = trim((string)($news['meta_description'] ?? ''));
     $news['public_path'] = newsPublicPath($news);
     $news['public_url'] = newsPublicUrl($news);
 

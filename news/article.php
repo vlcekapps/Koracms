@@ -8,7 +8,7 @@ if (!isModuleEnabled('news')) {
 }
 
 $id = inputInt('get', 'id');
-$slug = newsSlug(trim($_GET['slug'] ?? ''));
+$slug = newsSlug(trim((string)($_GET['slug'] ?? '')));
 if ($id === null && $slug === '') {
     header('Location: ' . BASE_URL . '/news/index.php');
     exit;
@@ -18,23 +18,23 @@ $pdo = db_connect();
 
 if ($slug !== '') {
     $stmt = $pdo->prepare(
-        "SELECT n.id, n.title, n.slug, n.content, n.created_at, n.updated_at,
+        "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
                 u.author_public_enabled, u.author_slug, u.role AS author_role
          FROM cms_news n
          LEFT JOIN cms_users u ON u.id = n.author_id
-         WHERE n.slug = ? AND n.status = 'published'
+         WHERE n.slug = ? AND " . newsPublicVisibilitySql('n') . "
          LIMIT 1"
     );
     $stmt->execute([$slug]);
 } else {
     $stmt = $pdo->prepare(
-        "SELECT n.id, n.title, n.slug, n.content, n.created_at, n.updated_at,
+        "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
                 COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
                 u.author_public_enabled, u.author_slug, u.role AS author_role
          FROM cms_news n
          LEFT JOIN cms_users u ON u.id = n.author_id
-         WHERE n.id = ? AND n.status = 'published'
+         WHERE n.id = ? AND " . newsPublicVisibilitySql('n') . "
          LIMIT 1"
     );
     $stmt->execute([$id]);
@@ -49,8 +49,8 @@ if (!$news) {
         'meta' => [
             'title' => 'Novinka nenalezena – ' . $siteName,
             'url' => $slug !== ''
-                ? BASE_URL . '/news/' . rawurlencode($slug)
-                : BASE_URL . '/news/article.php' . ($id !== null ? '?id=' . urlencode((string)$id) : ''),
+                ? siteUrl('/news/' . rawurlencode($slug))
+                : siteUrl('/news/article.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '')),
         ],
         'view' => 'not-found',
         'body_class' => 'page-news-not-found',
@@ -61,7 +61,7 @@ if (!$news) {
 $news = hydrateNewsPresentation($news);
 
 if ($slug === '' && !empty($news['slug'])) {
-    header('Location: ' . newsPublicPath($news));
+    header('Location: ' . newsPublicPath($news), true, 302);
     exit;
 }
 
@@ -70,12 +70,14 @@ if (!isset($_SESSION['cms_user_id'])) {
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');
+$metaTitleBase = $news['meta_title'] !== '' ? $news['meta_title'] : $news['title'];
+$metaDescription = $news['meta_description'] !== '' ? $news['meta_description'] : newsExcerpt((string)$news['content'], 180);
 
 renderPublicPage([
-    'title' => $news['title'] . ' – ' . $siteName,
+    'title' => $metaTitleBase . ' – ' . $siteName,
     'meta' => [
-        'title' => $news['title'] . ' – ' . $siteName,
-        'description' => newsExcerpt((string)$news['content'], 180),
+        'title' => $metaTitleBase . ' – ' . $siteName,
+        'description' => $metaDescription,
         'url' => newsPublicUrl($news),
         'type' => 'article',
     ],

@@ -344,7 +344,7 @@ function renderWidget_latest_news(array $widget, array $settings, string $zone):
     $pdo = db_connect();
     $stmt = $pdo->prepare(
         "SELECT id, title, slug, created_at FROM cms_news
-         WHERE status = 'published' AND deleted_at IS NULL
+         WHERE " . newsPublicVisibilitySql() . "
          ORDER BY created_at DESC LIMIT ?"
     );
     $stmt->execute([$count]);

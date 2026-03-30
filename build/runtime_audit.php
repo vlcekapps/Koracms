@@ -60,7 +60,7 @@ $articleCount = (int)$pdo->query(
 )->fetchColumn();
 $homeBlogCountSetting = max(0, (int)getSetting('home_blog_count', '5'));
 $newsRow = $pdo->query(
-    "SELECT id, title, slug FROM cms_news WHERE status = 'published' ORDER BY created_at DESC, id DESC LIMIT 1"
+    "SELECT id, title, slug FROM cms_news WHERE " . newsPublicVisibilitySql() . " ORDER BY created_at DESC, id DESC LIMIT 1"
 )->fetch() ?: null;
 $newsId = $newsRow['id'] ?? false;
 $newsCanonicalPath = $newsRow ? newsPublicPath($newsRow) : '';
@@ -68,8 +68,13 @@ $newsLegacyPath = $newsId !== false ? BASE_URL . '/news/article.php?id=' . urlen
 $newsCanonicalUrl = $newsCanonicalPath !== '' ? $baseUrl . $newsCanonicalPath : '';
 $newsLegacyUrl = $newsLegacyPath !== '' ? $baseUrl . $newsLegacyPath : '';
 $newsCount = (int)$pdo->query(
-    "SELECT COUNT(*) FROM cms_news WHERE status = 'published'"
+    "SELECT COUNT(*) FROM cms_news WHERE " . newsPublicVisibilitySql()
 )->fetchColumn();
+$newsLegacySlugPath = '';
+$newsLegacySlugUrl = '';
+$runtimeAuditNewsSearchTerm = '';
+$runtimeAuditNewsExpiredTitle = '';
+$runtimeAuditNewsDeletedTitle = '';
 $eventRow = $pdo->query(
     "SELECT id, title, slug FROM cms_events
      WHERE status = 'published' AND is_published = 1
@@ -292,6 +297,7 @@ $cleanup = [
     'confirm_emails' => [],
     'subscriber_emails' => [],
     'newsletter_ids' => [],
+    'news_ids' => [],
     'contact_ids' => [],
     'chat_ids' => [],
     'author_user_ids' => [],
@@ -321,6 +327,7 @@ $runtimeAuditOriginalThemeSettings = getSetting($runtimeAuditThemeSettingsKey, '
 $runtimeAuditOriginalHomeAuthorUserId = getSetting('home_author_user_id', '0');
 $runtimeAuditOriginalArticleAuthorId = null;
 $runtimeAuditOriginalNewsAuthorId = null;
+$runtimeAuditExistingNewsIdForAuthorRestore = false;
 $runtimeAuditAuthorId = 0;
 $runtimeAuditAuthorSlug = '';
 $runtimeAuditAuthorPath = '';
@@ -494,6 +501,7 @@ if ($articleId !== false && $runtimeAuditAuthorId > 0) {
 }
 
 if ($newsId !== false && $runtimeAuditAuthorId > 0) {
+    $runtimeAuditExistingNewsIdForAuthorRestore = (int)$newsId;
     $newsAuthorStmt = $pdo->prepare("SELECT author_id FROM cms_news WHERE id = ?");
     $newsAuthorStmt->execute([(int)$newsId]);
     $runtimeAuditOriginalNewsAuthorId = $newsAuthorStmt->fetchColumn();
@@ -501,6 +509,81 @@ if ($newsId !== false && $runtimeAuditAuthorId > 0) {
         $runtimeAuditAuthorId,
         (int)$newsId,
     ]);
+}
+
+if (isModuleEnabled('news')) {
+    $runtimeAuditNewsTitle = 'Runtime audit novinka';
+    $runtimeAuditNewsSlug = uniqueNewsSlug($pdo, 'runtime-audit-novinka-' . bin2hex(random_bytes(4)));
+    $runtimeAuditNewsOldSlug = uniqueNewsSlug($pdo, 'runtime-audit-novinka-stary-' . bin2hex(random_bytes(4)));
+    $runtimeAuditNewsSearchTerm = 'runtime audit';
+    $runtimeAuditNewsExpiredTitle = 'Runtime audit expirovaná novinka';
+    $runtimeAuditNewsDeletedTitle = 'Runtime audit skrytá novinka';
+
+    $pdo->prepare(
+        "INSERT INTO cms_news (
+            title, slug, content, author_id, status, unpublish_at, admin_note, meta_title, meta_description, created_at
+         ) VALUES (?, ?, ?, ?, 'published', NULL, ?, ?, ?, NOW())"
+    )->execute([
+        $runtimeAuditNewsTitle,
+        $runtimeAuditNewsSlug,
+        '<p>Testovací novinka pro audit veřejného výpisu, detailu, hledání a strukturovaných dat.</p>',
+        $runtimeAuditAuthorId > 0 ? $runtimeAuditAuthorId : null,
+        'Runtime audit interní poznámka k novince.',
+        'Runtime audit meta titulek novinky',
+        'Runtime audit meta popis novinky pro kontrolu editoru a detailu.',
+    ]);
+    $runtimeAuditNewsId = (int)$pdo->lastInsertId();
+    $cleanup['news_ids'][] = $runtimeAuditNewsId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_news (
+            title, slug, content, status, unpublish_at, created_at
+         ) VALUES (?, ?, ?, 'published', ?, NOW())"
+    )->execute([
+        $runtimeAuditNewsExpiredTitle,
+        uniqueNewsSlug($pdo, 'runtime-audit-expirovana-' . bin2hex(random_bytes(4))),
+        '<p>Tato novinka už nemá být veřejně vidět.</p>',
+        (new DateTimeImmutable('-1 day'))->format('Y-m-d H:i:s'),
+    ]);
+    $cleanup['news_ids'][] = (int)$pdo->lastInsertId();
+
+    $pdo->prepare(
+        "INSERT INTO cms_news (
+            title, slug, content, status, deleted_at, created_at
+         ) VALUES (?, ?, ?, 'published', NOW(), NOW())"
+    )->execute([
+        $runtimeAuditNewsDeletedTitle,
+        uniqueNewsSlug($pdo, 'runtime-audit-smazana-' . bin2hex(random_bytes(4))),
+        '<p>Tato novinka je soft-deleted a nesmí být veřejně dohledatelná.</p>',
+    ]);
+    $cleanup['news_ids'][] = (int)$pdo->lastInsertId();
+
+    $runtimeAuditNewsStmt = $pdo->prepare(
+        "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
+                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                u.author_public_enabled, u.author_slug, u.role AS author_role
+         FROM cms_news n
+         LEFT JOIN cms_users u ON u.id = n.author_id
+         WHERE n.id = ?"
+    );
+    $runtimeAuditNewsStmt->execute([$runtimeAuditNewsId]);
+    $newsRow = $runtimeAuditNewsStmt->fetch() ?: null;
+    if ($newsRow) {
+        $newsRow = hydrateNewsPresentation($newsRow);
+        $newsId = $newsRow['id'] ?? false;
+        $newsCanonicalPath = newsPublicPath($newsRow);
+        $newsLegacyPath = $newsId !== false ? BASE_URL . '/news/article.php?id=' . urlencode((string)$newsId) : '';
+        $newsCanonicalUrl = $newsCanonicalPath !== '' ? $baseUrl . $newsCanonicalPath : '';
+        $newsLegacyUrl = $newsLegacyPath !== '' ? $baseUrl . $newsLegacyPath : '';
+        $newsLegacySlugPath = BASE_URL . '/news/' . rawurlencode($runtimeAuditNewsOldSlug);
+        $newsLegacySlugUrl = $baseUrl . $newsLegacySlugPath;
+        upsertPathRedirect($pdo, $newsLegacySlugPath, $newsCanonicalPath);
+        $cleanup['redirect_paths'][] = $newsLegacySlugPath;
+    }
+
+    $newsCount = (int)$pdo->query(
+        "SELECT COUNT(*) FROM cms_news WHERE " . newsPublicVisibilitySql()
+    )->fetchColumn();
 }
 
 $runtimeAuditThemeSettings = themePersistedSettingsValues($runtimeAuditActiveTheme);
@@ -1632,6 +1715,9 @@ if (isModuleEnabled('gallery')) {
 }
 if (isModuleEnabled('news')) {
     $pages[] = ['label' => 'news_index', 'url' => $baseUrl . '/news/index.php'];
+    if ($runtimeAuditNewsSearchTerm !== '') {
+        $pages[] = ['label' => 'news_index_search', 'url' => $baseUrl . '/news/index.php?q=' . urlencode($runtimeAuditNewsSearchTerm)];
+    }
 }
 if (isModuleEnabled('places')) {
     $pages[] = ['label' => 'places_index', 'url' => $baseUrl . '/places/index.php'];
@@ -2742,8 +2828,8 @@ foreach ($pages as $page) {
         'admin_form_edit' => ['Základní údaje formuláře', 'Potvrzení odesílateli', 'Po odeslání formuláře', 'Pole a sekce formuláře'],
         'admin_blog_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
         'admin_blog_create_form' => ['Základní údaje článku', 'Text článku', 'Vyhledání obsahu', 'Komentáře', 'Vyhledávače a sdílení'],
-        'admin_news_form' => ['Obsah novinky'],
-        'admin_news_create_form' => ['Obsah novinky'],
+        'admin_news_form' => ['Novinka', 'Zveřejnění', 'Vyhledávače a sdílení'],
+        'admin_news_create_form' => ['Novinka', 'Zveřejnění', 'Vyhledávače a sdílení'],
         'admin_event_form' => ['Základní údaje události', 'Termín konání', 'Obsah události', 'Pořadatel, registrace a dostupnost', 'Obrázek a zveřejnění', 'Interní poznámka'],
         'admin_event_create_form' => ['Základní údaje události', 'Termín konání', 'Obsah události', 'Pořadatel, registrace a dostupnost', 'Obrázek a zveřejnění', 'Interní poznámka'],
         'admin_page_form' => ['Obsah a zobrazení stránky'],
@@ -2795,8 +2881,6 @@ foreach ($pages as $page) {
         'admin_form_edit' => ['<legend>Základní údaje</legend>', '<legend>Pole formuláře</legend>'],
         'admin_blog_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
         'admin_blog_create_form' => ['<legend>Článek</legend>', '<legend>Tagy</legend>', '<legend>Obsah</legend>', '<legend>Diskuse</legend>', '<legend>SEO / Open Graph</legend>'],
-        'admin_news_form' => ['<legend>Novinka</legend>'],
-        'admin_news_create_form' => ['<legend>Novinka</legend>'],
         'admin_event_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>', '<legend>Popis události</legend>'],
         'admin_event_create_form' => ['<legend>Událost</legend>', '<legend>Podrobnosti</legend>', '<legend>Popis události</legend>'],
         'admin_page_form' => ['<legend>Vlastnosti stránky</legend>'],
@@ -3852,6 +3936,23 @@ foreach ($pages as $page) {
         }
     }
 
+    if (in_array($page['label'], ['admin_news_form', 'admin_news_create_form'], true)) {
+        foreach ([
+            'name="slug"',
+            'name="unpublish_at"',
+            'name="admin_note"',
+            'name="meta_title"',
+            'name="meta_description"',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin news form is missing field: ' . $expectedField;
+            }
+        }
+        if (!str_contains($result['body'], 'id="content"') && !str_contains($result['body'], 'name="content"')) {
+            $issues[] = 'admin news form is missing content field';
+        }
+    }
+
     if ($page['label'] === 'admin_place_form') {
         foreach ([
             'name="slug"',
@@ -4140,12 +4241,42 @@ foreach ($pages as $page) {
         $issues[] = 'news listing is missing public author links';
     }
 
+    if (in_array($page['label'], ['news_index', 'news_index_search'], true)) {
+        foreach ([
+            'name="q"',
+            'Hledat v novinkách',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'news listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($runtimeAuditNewsExpiredTitle !== '' && str_contains($result['body'], $runtimeAuditNewsExpiredTitle)) {
+            $issues[] = 'news listing still exposes expired news';
+        }
+        if ($runtimeAuditNewsDeletedTitle !== '' && str_contains($result['body'], $runtimeAuditNewsDeletedTitle)) {
+            $issues[] = 'news listing still exposes deleted news';
+        }
+    }
+
+    if ($page['label'] === 'news_index_search') {
+        if ($newsCanonicalPath !== '' && !str_contains($result['body'], $newsCanonicalPath)) {
+            $issues[] = 'filtered news listing is missing detail links';
+        }
+        if (!str_contains($result['body'], 'value="' . h($runtimeAuditNewsSearchTerm) . '"')
+            && !str_contains($result['body'], 'value="' . $runtimeAuditNewsSearchTerm . '"')) {
+            $issues[] = 'filtered news listing does not preserve search query';
+        }
+    }
+
     if ($page['label'] === 'news_article') {
         if ($newsRow && !str_contains($result['body'], newsTitleCandidate((string)($newsRow['title'] ?? ''), ''))) {
             $issues[] = 'news article is missing title';
         }
         if ($newsId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
             $issues[] = 'news article is missing public author link';
+        }
+        if (!str_contains($result['body'], 'application/ld+json')) {
+            $issues[] = 'news article is missing structured data';
         }
     }
 
@@ -4554,6 +4685,22 @@ if ($newsCanonicalPath === '' || $newsLegacyPath === '' || $newsCanonicalPath ==
         $failures++;
     } elseif (!in_array($expectedLocation, $legacyNewsProbe['headers'], true)) {
         echo "- legacy news article URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== news_article_slug_redirect ===\n";
+if ($newsLegacySlugPath === '' || $newsCanonicalPath === '' || $newsLegacySlugPath === $newsCanonicalPath) {
+    echo "OK\n";
+} else {
+    $legacyNewsSlugProbe = fetchUrl($newsLegacySlugUrl, '', 0);
+    if (!str_contains($legacyNewsSlugProbe['status'], '301') && !str_contains($legacyNewsSlugProbe['status'], '302')) {
+        echo "- legacy news slug URL does not redirect ({$legacyNewsSlugProbe['status']})\n";
+        $failures++;
+    } elseif (!responseHasLocationHeader($legacyNewsSlugProbe['headers'], $newsCanonicalPath, $baseUrl)) {
+        echo "- legacy news slug URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";
@@ -5703,10 +5850,10 @@ if ($articleId !== false && $runtimeAuditOriginalArticleAuthorId !== null) {
         (int)$articleId,
     ]);
 }
-if ($newsId !== false && $runtimeAuditOriginalNewsAuthorId !== null) {
+if ($runtimeAuditExistingNewsIdForAuthorRestore !== false && $runtimeAuditOriginalNewsAuthorId !== null) {
     $pdo->prepare("UPDATE cms_news SET author_id = ? WHERE id = ?")->execute([
         (int)$runtimeAuditOriginalNewsAuthorId,
-        (int)$newsId,
+        (int)$runtimeAuditExistingNewsIdForAuthorRestore,
     ]);
 }
 
@@ -5726,6 +5873,10 @@ if (!empty($cleanup['subscriber_emails'])) {
 if (!empty($cleanup['newsletter_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['newsletter_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_newsletters WHERE id IN ({$placeholders})")->execute($cleanup['newsletter_ids']);
+}
+if (!empty($cleanup['news_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['news_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_news WHERE id IN ({$placeholders})")->execute($cleanup['news_ids']);
 }
 if (!empty($cleanup['contact_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['contact_ids']), '?'));
@@ -5961,6 +6112,8 @@ $installSchemaChecks = [
     'cms_events contains unpublish_at' => $installTableContains('cms_events', 'unpublish_at'),
     'cms_events contains admin_note' => $installTableContains('cms_events', 'admin_note'),
     'cms_events contains deleted_at' => $installTableContains('cms_events', 'deleted_at'),
+    'cms_news contains meta_title' => $installTableContains('cms_news', 'meta_title'),
+    'cms_news contains meta_description' => $installTableContains('cms_news', 'meta_description'),
     'cms_faq_categories contains parent_id' => $installTableContains('cms_faq_categories', 'parent_id'),
     'cms_faqs contains meta_title' => $installTableContains('cms_faqs', 'meta_title'),
     'cms_faqs contains meta_description' => $installTableContains('cms_faqs', 'meta_description'),
@@ -5986,6 +6139,8 @@ if ($installSchemaIssues === []) {
 echo "=== migrate_schema_guard ===\n";
 $migrateSource = (string) file_get_contents(__DIR__ . '/../migrate.php');
 $migrateSchemaChecks = [
+    'cms_news.meta_title' => str_contains($migrateSource, 'cms_news.meta_title'),
+    'cms_news.meta_description' => str_contains($migrateSource, 'cms_news.meta_description'),
     'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
     'cms_faqs.meta_title' => str_contains($migrateSource, 'cms_faqs.meta_title'),
     'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),

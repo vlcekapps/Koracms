@@ -231,7 +231,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | Modul | Co umí |
 |---|---|
 | **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, author archive, globální i per-blog RSS feed |
-| **Novinky** | Krátké zprávy s autorem a slug URL |
+| **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s datem, místem a detailem |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
 | **Podcasty** | Více pořadů, epizody, artwork, RSS feed s iTunes značkami |
@@ -253,6 +253,8 @@ README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a
 Modul **Ke stažení** nově pokrývá i praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje.
 
 Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle kategorie, stránkování, přepínání `karty / rozbalené odpovědi`, per-FAQ SEO metadata, redirecty při změně slugu a `FAQPage` strukturovaná data pro vyhledávače.
+
+Modul **Novinky** nově drží stejný publikační model jako ostatní obsahové moduly: respektuje `unpublish_at`, podporuje veřejné fulltextové hledání, admin stránkování, redirecty po změně slugu, širší revize a volitelná SEO pole `meta title` a `meta description`.
 
 Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / archivní` lístky podle `Platí od / do`, podporuje veřejné hledání, scope filtry, stránkování archivu, redirecty při změně slugu, historii revizí a structured data pro detail lístku.
 

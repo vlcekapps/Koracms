@@ -85,7 +85,9 @@ if ($canManageBlog && isModuleEnabled('blog')) {
 }
 
 if ($canManageNews && isModuleEnabled('news')) {
-    $newsScopeSql = $canManageAllNews ? 'SELECT COUNT(*) FROM cms_news' : 'SELECT COUNT(*) FROM cms_news WHERE author_id = ?';
+$newsScopeSql = $canManageAllNews
+    ? 'SELECT COUNT(*) FROM cms_news WHERE deleted_at IS NULL'
+    : 'SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND deleted_at IS NULL';
     $newsScopeParams = $canManageAllNews ? [] : [currentUserId()];
     $newsCount = $safeCount($pdo, $newsScopeSql, $newsScopeParams);
     if ($newsCount !== null) {
@@ -228,14 +230,14 @@ if ($canManageBlog && isModuleEnabled('blog')) {
 
 if ($canManageNews && isModuleEnabled('news')) {
     $newsTotal = $canManageAllNews
-        ? $safeCount($pdo, 'SELECT COUNT(*) FROM cms_news')
-        : $safeCount($pdo, 'SELECT COUNT(*) FROM cms_news WHERE author_id = ?', [currentUserId()]);
+    ? $safeCount($pdo, 'SELECT COUNT(*) FROM cms_news WHERE deleted_at IS NULL')
+    : $safeCount($pdo, 'SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND deleted_at IS NULL', [currentUserId()]);
     $newsPublished = $canManageAllNews
-        ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'published'")
-        : $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND status = 'published'", [currentUserId()]);
+    ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'published' AND deleted_at IS NULL")
+    : $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND status = 'published' AND deleted_at IS NULL", [currentUserId()]);
     $newsPending = $canManageAllNews
-        ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'pending'")
-        : $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND status = 'pending'", [currentUserId()]);
+    ? $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE status = 'pending' AND deleted_at IS NULL")
+    : $safeCount($pdo, "SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND status = 'pending' AND deleted_at IS NULL", [currentUserId()]);
 
     if ($newsTotal !== null && $newsPublished !== null && $newsPending !== null) {
         $contentSummaries[] = [

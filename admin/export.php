@@ -26,7 +26,9 @@ $tables = [
     'tags'        => "SELECT id, name, slug, blog_id, created_at FROM cms_tags",
     'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
-    'news'          => "SELECT id, title, slug, content, status, created_at, updated_at FROM cms_news",
+    'news'          => "SELECT id, title, slug, content, author_id, status, created_at, updated_at,
+                               unpublish_at, admin_note, meta_title, meta_description, deleted_at
+                        FROM cms_news",
     'chat'          => "SELECT id, name, email, web, message, status, public_visibility, approved_at, approved_by_user_id,
                                internal_note, replied_at, replied_by_user_id, replied_subject, replied_to_email,
                                created_at, updated_at

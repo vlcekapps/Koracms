@@ -14,6 +14,7 @@ $renderAuthorName = static function (array $item): string {
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="novinka-nadpis">
+    <?= newsStructuredData($news) ?>
     <p class="section-kicker">Aktualita</p>
     <header class="section-heading">
       <div>
@@ -32,10 +33,13 @@ $renderAuthorName = static function (array $item): string {
     </div>
 
     <div class="article-actions">
-      <a class="button-secondary" href="<?= BASE_URL ?>/news/index.php"><span aria-hidden="true">←</span> Zpět na novinky</a>
-      <button type="button" class="button-secondary js-copy-link"
-              data-url="<?= h(newsPublicUrl($news)) ?>"
-              aria-label="Kopírovat odkaz na novinku">Kopírovat odkaz</button>
+      <a class="button-secondary" href="<?= BASE_URL ?>/news/index.php"><span aria-hidden="true">&larr;</span> Zpět na novinky</a>
+      <button
+        type="button"
+        class="button-secondary js-copy-link"
+        data-url="<?= h(newsPublicUrl($news)) ?>"
+        aria-label="Kopírovat odkaz na novinku"
+      >Kopírovat odkaz</button>
     </div>
   </article>
 </div>

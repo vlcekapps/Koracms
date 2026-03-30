@@ -536,6 +536,64 @@ Detail otázky umí použít vlastní `meta title` a `meta description`. Pokud n
 
 ---
 
+## Novinky – rychlé zprávy, plánované skrytí a SEO
+
+### Co se nastavuje u novinky
+
+Editor novinky teď pokrývá:
+
+- titulek a slug
+- plný HTML obsah
+- publikační stav
+- `Plánované zrušení publikace`
+- interní poznámku pro administraci
+- `meta title` a `meta description` pro detail novinky
+
+Pokud `meta title` nebo `meta description` nevyplníte, veřejný detail použije bezpečný fallback z titulku a výtahu obsahu.
+
+### Co je nové v admin workflow
+
+- Přehled `Novinky` nově umí fulltext, stavový filtr a stránkování.
+- Filtrovaný seznam si drží stabilní návrat i po bulk akci nebo schválení položky.
+- Revize nově zachycují nejen text, ale i `unpublish_at`, interní poznámku a SEO pole.
+- Při změně slugu se stará adresa uloží jako redirect na nový canonical tvar.
+
+### Veřejný výpis a detail
+
+Veřejný modul novinek nově podporuje:
+
+- fulltextové hledání nad `title + content`
+- stránkování i při aktivním hledání
+- tvrdou public visibility logiku: zobrazí se jen publikované novinky bez `deleted_at` a bez expirovaného `unpublish_at`
+- `NewsArticle` structured data na detailu
+
+To znamená, že novinka s již uplynulým `Plánovaným zrušením publikace` se neukáže:
+
+- na veřejném indexu novinek
+- v detailu
+- ve veřejném vyhledávání
+- ani v sitemapě
+
+### Export / import a kompatibilita
+
+Export i import nově drží stejnou sadu polí jako aktuální editor novinky, včetně:
+
+- `author_id`
+- `unpublish_at`
+- `admin_note`
+- `meta_title`
+- `meta_description`
+- `deleted_at`
+
+Starší exporty zůstávají kompatibilní; chybějící novější pole se při importu doplní rozumnými výchozími hodnotami.
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) jen stručně říká, že modul Novinky umí veřejné hledání, plánované skrytí a SEO fallbacky.
+- Tento dokument popisuje konkrétní workflow editoru, plánované zrušení publikace, revize, redirecty a veřejné chování modulu.
+
+---
+
 ## Kompletní seznam widgetů
 
 Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
