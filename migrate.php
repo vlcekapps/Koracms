@@ -353,6 +353,8 @@ $tables = [
         contact_phone VARCHAR(100) NOT NULL DEFAULT '',
         contact_email VARCHAR(255) NOT NULL DEFAULT '',
         opening_hours TEXT,
+        meta_title   VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         sort_order   INT          NOT NULL DEFAULT 0,
@@ -905,6 +907,8 @@ $addColumns = [
     'cms_places.contact_phone'       => "ALTER TABLE cms_places ADD COLUMN contact_phone VARCHAR(100) NOT NULL DEFAULT ''",
     'cms_places.contact_email'       => "ALTER TABLE cms_places ADD COLUMN contact_email VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_places.opening_hours'       => "ALTER TABLE cms_places ADD COLUMN opening_hours TEXT",
+    'cms_places.meta_title'          => "ALTER TABLE cms_places ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
+    'cms_places.meta_description'    => "ALTER TABLE cms_places ADD COLUMN meta_description TEXT",
     'cms_places.status'              => "ALTER TABLE cms_places ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_places.updated_at'          => "ALTER TABLE cms_places ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_gallery

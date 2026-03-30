@@ -41,7 +41,7 @@ $tables = [
                                created_at, updated_at FROM cms_events",
     'places'        => "SELECT id, name, slug, place_kind, excerpt, description, url, image_file, category,
                                address, locality, latitude, longitude, contact_phone, contact_email,
-                               opening_hours, is_published, sort_order, status, created_at, updated_at
+                               opening_hours, meta_title, meta_description, is_published, sort_order, status, created_at, updated_at
                                FROM cms_places",
     'gallery_albums'=> "SELECT id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at
                                FROM cms_gallery_albums",

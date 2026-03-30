@@ -1,6 +1,7 @@
 <?php
 $placeCategory = trim((string)($place['category'] ?? ''));
 $placeLocality = trim((string)($place['locality'] ?? ''));
+$backUrl = (string)($backUrl ?? (BASE_URL . '/places/index.php'));
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="place-title">
@@ -23,7 +24,7 @@ $placeLocality = trim((string)($place['locality'] ?? ''));
       <p class="article-shell__lead"><?= h((string)$place['excerpt_plain']) ?></p>
     <?php endif; ?>
 
-    <?php if ($place['image_url'] !== ''): ?>
+    <?php if ((string)($place['image_url'] ?? '') !== ''): ?>
       <div class="board-detail__hero">
         <img class="board-detail__image" src="<?= h((string)$place['image_url']) ?>" alt="" loading="lazy">
       </div>
@@ -36,10 +37,10 @@ $placeLocality = trim((string)($place['locality'] ?? ''));
           <?php if (!empty($place['full_address'])): ?>
             <p><strong>Adresa:</strong> <?= h((string)$place['full_address']) ?></p>
           <?php endif; ?>
-          <?php if ($place['url'] !== ''): ?>
+          <?php if ((string)($place['url'] ?? '') !== ''): ?>
             <p><strong>Web:</strong> <a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$place['url']) ?></a></p>
           <?php endif; ?>
-          <?php if ($place['has_coordinates']): ?>
+          <?php if (!empty($place['has_coordinates'])): ?>
             <p><strong>GPS:</strong> <?= h((string)$place['latitude']) ?>, <?= h((string)$place['longitude']) ?></p>
             <p><a class="section-link" href="<?= h((string)$place['map_url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít v mapách <span aria-hidden="true">→</span></a></p>
           <?php endif; ?>
@@ -74,8 +75,8 @@ $placeLocality = trim((string)($place['locality'] ?? ''));
     <?php endif; ?>
 
     <div class="article-actions">
-      <a class="button-secondary" href="<?= BASE_URL ?>/places/index.php"><span aria-hidden="true">&larr;</span> Zpět na zajímavá místa</a>
-      <?php if ($place['url'] !== ''): ?>
+      <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na zajímavá místa</a>
+      <?php if ((string)($place['url'] ?? '') !== ''): ?>
         <a class="button-primary" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Navštívit web</a>
       <?php endif; ?>
       <button type="button" class="button-secondary js-copy-link"

@@ -8,10 +8,18 @@ if (!isModuleEnabled('places')) {
 }
 
 $id = inputInt('get', 'id');
-$slug = placeSlug(trim($_GET['slug'] ?? ''));
+$slug = placeSlug(trim((string)($_GET['slug'] ?? '')));
 if ($id === null && $slug === '') {
     header('Location: ' . BASE_URL . '/places/index.php');
     exit;
+}
+
+$listingQuery = [];
+foreach (['q', 'kind', 'category', 'locality', 'strana'] as $queryKey) {
+    $queryValue = trim((string)($_GET[$queryKey] ?? ''));
+    if ($queryValue !== '') {
+        $listingQuery[$queryKey] = $queryValue;
+    }
 }
 
 $pdo = db_connect();
@@ -20,7 +28,7 @@ if ($slug !== '') {
     $stmt = $pdo->prepare(
         "SELECT *
          FROM cms_places
-         WHERE slug = ? AND status = 'published' AND is_published = 1
+         WHERE slug = ? AND " . placePublicVisibilitySql() . "
          LIMIT 1"
     );
     $stmt->execute([$slug]);
@@ -28,7 +36,7 @@ if ($slug !== '') {
     $stmt = $pdo->prepare(
         "SELECT *
          FROM cms_places
-         WHERE id = ? AND status = 'published' AND is_published = 1
+         WHERE id = ? AND " . placePublicVisibilitySql() . "
          LIMIT 1"
     );
     $stmt->execute([$id]);
@@ -57,7 +65,7 @@ if (!$place) {
 $place = hydratePlacePresentation($place);
 
 if ($slug === '' && !empty($place['slug'])) {
-    header('Location: ' . placePublicPath($place));
+    header('Location: ' . placePublicPath($place, $listingQuery), true, 302);
     exit;
 }
 
@@ -66,15 +74,18 @@ if (!isset($_SESSION['cms_user_id'])) {
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');
-$metaDescription = placeExcerpt($place, 180);
+$metaTitleBase = $place['meta_title'] !== '' ? $place['meta_title'] : (string)$place['name'];
+$metaDescription = $place['meta_description'] !== '' ? $place['meta_description'] : placeExcerpt($place, 180);
 if ($metaDescription === '') {
     $metaDescription = 'Detail místa ' . (string)$place['name'];
 }
 
+$backUrl = BASE_URL . '/places/index.php' . ($listingQuery !== [] ? '?' . http_build_query($listingQuery) : '');
+
 renderPublicPage([
-    'title' => (string)$place['name'] . ' - ' . $siteName,
+    'title' => $metaTitleBase . ' - ' . $siteName,
     'meta' => [
-        'title' => (string)$place['name'] . ' - ' . $siteName,
+        'title' => $metaTitleBase . ' - ' . $siteName,
         'description' => $metaDescription,
         'url' => placePublicUrl($place),
         'type' => 'article',
@@ -82,9 +93,11 @@ renderPublicPage([
     'view' => 'modules/places-article',
     'view_data' => [
         'place' => $place,
+        'backUrl' => $backUrl,
     ],
     'current_nav' => 'places',
     'body_class' => 'page-places-article',
     'page_kind' => 'detail',
     'admin_edit_url' => BASE_URL . '/admin/place_form.php?id=' . (int)$place['id'],
+    'extra_head_html' => placeStructuredData($place),
 ]);

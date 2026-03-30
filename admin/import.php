@@ -328,8 +328,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT IGNORE INTO cms_places
                          (id, name, slug, place_kind, excerpt, description, url, image_file, category,
                           address, locality, latitude, longitude, contact_phone, contact_email,
-                          opening_hours, is_published, sort_order, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          opening_hours, meta_title, meta_description, is_published, sort_order, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['places'] as $row) {
                         $importName = trim((string)($row['name'] ?? ''));
@@ -358,6 +358,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['contact_phone'] ?? '',
                             $row['contact_email'] ?? '',
                             $row['opening_hours'] ?? '',
+                            trim((string)($row['meta_title'] ?? '')),
+                            trim((string)($row['meta_description'] ?? '')),
                             (int)($row['is_published'] ?? 1),
                             (int)($row['sort_order'] ?? 0),
                             $row['status'] ?? 'published',

@@ -676,8 +676,17 @@ function faqRevisionSnapshot(array $faq, array $categoryNames = []): array
 
 function placeKindLabel(string $kind): string
 {
-    $definitions = placeKindDefinitions();
-    return $definitions[normalizePlaceKind($kind)]['label'];
+    $definitions = [
+        'sight' => 'Památka a zajímavost',
+        'trip' => 'Tip na výlet',
+        'service' => 'Služba',
+        'food' => 'Občerstvení',
+        'accommodation' => 'Ubytování',
+        'experience' => 'Zážitek',
+        'info' => 'Informační místo',
+    ];
+
+    return $definitions[normalizePlaceKind($kind)] ?? $definitions['sight'];
 }
 
 function placeExcerpt(array $place, int $limit = 220): string
@@ -693,6 +702,103 @@ function placeExcerpt(array $place, int $limit = 220): string
     }
 
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
+}
+
+function placeKindOptions(): array
+{
+    return [
+        'sight' => ['label' => 'Památka a zajímavost'],
+        'trip' => ['label' => 'Tip na výlet'],
+        'service' => ['label' => 'Služba'],
+        'food' => ['label' => 'Občerstvení'],
+        'accommodation' => ['label' => 'Ubytování'],
+        'experience' => ['label' => 'Zážitek'],
+        'info' => ['label' => 'Informační místo'],
+    ];
+}
+
+function placePublicVisibilitySql(string $alias = ''): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    return "COALESCE({$prefix}status, 'published') = 'published'"
+        . " AND COALESCE({$prefix}is_published, 1) = 1";
+}
+
+function placeRevisionSnapshot(array $place): array
+{
+    return [
+        'name' => trim((string)($place['name'] ?? '')),
+        'slug' => placeSlug((string)($place['slug'] ?? '')),
+        'place_kind' => normalizePlaceKind((string)($place['place_kind'] ?? 'sight')),
+        'category' => trim((string)($place['category'] ?? '')),
+        'excerpt' => trim((string)($place['excerpt'] ?? '')),
+        'description' => (string)($place['description'] ?? ''),
+        'url' => normalizePlaceUrl((string)($place['url'] ?? '')),
+        'address' => trim((string)($place['address'] ?? '')),
+        'locality' => trim((string)($place['locality'] ?? '')),
+        'latitude' => trim((string)($place['latitude'] ?? '')),
+        'longitude' => trim((string)($place['longitude'] ?? '')),
+        'opening_hours' => trim((string)($place['opening_hours'] ?? '')),
+        'contact_phone' => trim((string)($place['contact_phone'] ?? '')),
+        'contact_email' => trim((string)($place['contact_email'] ?? '')),
+        'meta_title' => trim((string)($place['meta_title'] ?? '')),
+        'meta_description' => trim((string)($place['meta_description'] ?? '')),
+        'is_published' => !empty($place['is_published']) ? '1' : '0',
+        'status' => trim((string)($place['status'] ?? 'published')),
+    ];
+}
+
+function placeStructuredData(array $place): string
+{
+    $name = trim((string)($place['name'] ?? ''));
+    if ($name === '') {
+        return '';
+    }
+
+    $description = trim((string)($place['meta_description'] ?? ''));
+    if ($description === '') {
+        $description = placeExcerpt($place, 320);
+    }
+
+    $schemaType = match (normalizePlaceKind((string)($place['place_kind'] ?? 'sight'))) {
+        'food' => 'Restaurant',
+        'accommodation' => 'LodgingBusiness',
+        'service' => 'LocalBusiness',
+        'info' => 'TouristInformationCenter',
+        'sight', 'trip', 'experience' => 'TouristAttraction',
+        default => 'Place',
+    };
+
+    $imageUrl = trim((string)($place['image_url'] ?? ''));
+    if ($imageUrl !== '') {
+        $imageUrl = siteUrl(str_replace(BASE_URL, '', $imageUrl));
+    }
+
+    $data = array_filter([
+        '@context' => 'https://schema.org',
+        '@type' => $schemaType,
+        'name' => $name,
+        'description' => $description,
+        'url' => placePublicUrl($place),
+        'image' => $imageUrl !== '' ? [$imageUrl] : null,
+        'telephone' => trim((string)($place['contact_phone'] ?? '')),
+        'email' => trim((string)($place['contact_email'] ?? '')),
+        'sameAs' => trim((string)($place['url'] ?? '')),
+        'openingHours' => trim((string)($place['opening_hours'] ?? '')),
+        'address' => !empty($place['full_address']) ? array_filter([
+            '@type' => 'PostalAddress',
+            'streetAddress' => trim((string)($place['address'] ?? '')),
+            'addressLocality' => trim((string)($place['locality'] ?? '')),
+        ], static fn($value): bool => $value !== '') : null,
+        'geo' => !empty($place['has_coordinates']) ? [
+            '@type' => 'GeoCoordinates',
+            'latitude' => (string)($place['latitude'] ?? ''),
+            'longitude' => (string)($place['longitude'] ?? ''),
+        ] : null,
+    ], static fn($value): bool => $value !== '' && $value !== null);
+
+    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
 function downloadTypeLabel(string $type): string
@@ -1660,12 +1766,23 @@ function uploadBlogLogo(array $file, string $existingFilename = ''): array
 
 function placeImageUrl(array $place): string
 {
-    $filename = trim((string)($place['image_file'] ?? ''));
-    if ($filename === '') {
+    $requestPath = placeImageRequestPath($place);
+    if ($requestPath === '') {
         return '';
     }
 
-    return BASE_URL . '/uploads/places/' . rawurlencode($filename);
+    return BASE_URL . $requestPath;
+}
+
+function placeImageRequestPath(array $place): string
+{
+    $filename = trim((string)($place['image_file'] ?? ''));
+    $placeId = (int)($place['id'] ?? 0);
+    if ($filename === '' || $placeId <= 0) {
+        return '';
+    }
+
+    return '/places/image.php?id=' . $placeId;
 }
 
 function deletePlaceImageFile(string $filename): void
@@ -1886,7 +2003,10 @@ function hydratePlacePresentation(array $place): array
     $place['slug'] = placeSlug((string)($place['slug'] ?? ''));
     $place['place_kind'] = normalizePlaceKind((string)($place['place_kind'] ?? 'sight'));
     $place['place_kind_label'] = placeKindLabel((string)$place['place_kind']);
+    $place['category'] = trim((string)($place['category'] ?? ''));
     $place['excerpt_plain'] = placeExcerpt($place);
+    $place['meta_title'] = trim((string)($place['meta_title'] ?? ''));
+    $place['meta_description'] = trim((string)($place['meta_description'] ?? ''));
     $place['image_url'] = placeImageUrl($place);
     $place['url'] = normalizePlaceUrl((string)($place['url'] ?? ''));
     $place['address'] = trim((string)($place['address'] ?? ''));
@@ -1910,6 +2030,10 @@ function hydratePlacePresentation(array $place): array
     $place['map_url'] = $place['has_coordinates']
         ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($latitude . ',' . $longitude)
         : '';
+    $place['is_publicly_visible'] = ((string)($place['status'] ?? 'published') === 'published')
+        && (int)($place['is_published'] ?? 1) === 1;
+    $place['public_path'] = placePublicPath($place);
+    $place['public_url'] = placePublicUrl($place);
 
     return $place;
 }

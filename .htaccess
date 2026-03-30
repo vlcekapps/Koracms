@@ -34,6 +34,8 @@ Options -Indexes
     RewriteRule ^uploads/backups/ - [F,L,NC]
     # Fotografie galerie se zobrazují jen přes gallery/image.php
     RewriteRule ^uploads/gallery/ - [F,L,NC]
+    # Obrázky míst se zobrazují jen přes places/image.php
+    RewriteRule ^uploads/places/ - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

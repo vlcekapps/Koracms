@@ -522,7 +522,7 @@ function renderWidget_latest_places(array $widget, array $settings, string $zone
     $stmt = $pdo->prepare(
         "SELECT *
          FROM cms_places
-         WHERE status = 'published' AND is_published = 1
+         WHERE " . placePublicVisibilitySql() . "
          ORDER BY name ASC
          LIMIT ?"
     );

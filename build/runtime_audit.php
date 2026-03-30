@@ -126,6 +126,12 @@ $placeCanonicalPath = '';
 $placeLegacyPath = '';
 $placeCanonicalUrl = '';
 $placeLegacyUrl = '';
+$placeLegacySlugPath = '';
+$placeLegacySlugUrl = '';
+$placeHiddenId = false;
+$placeHiddenTitle = '';
+$placeHiddenImagePath = '';
+$placeVisibleImagePath = '';
 $pollRow = null;
 $pollId = false;
 $pollCanonicalPath = '';
@@ -313,6 +319,7 @@ $cleanup = [
     'gallery_photo_ids' => [],
     'gallery_files' => [],
     'place_ids' => [],
+    'place_files' => [],
     'poll_ids' => [],
     'podcast_show_ids' => [],
     'podcast_episode_ids' => [],
@@ -1128,7 +1135,7 @@ if (isModuleEnabled('faq')) {
     }
 }
 
-if (isModuleEnabled('places')) {
+if (false && isModuleEnabled('places')) {
     $runtimeAuditPlaceName = 'Runtime audit místo';
     $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
     $runtimeAuditPlaceExcerpt = 'Krátký přehled testovacího místa pro ověření detailu, praktických informací a veřejného výpisu.';
@@ -1171,6 +1178,101 @@ if (isModuleEnabled('places')) {
         $placeCanonicalUrl = $placeCanonicalPath !== '' ? $baseUrl . $placeCanonicalPath : '';
         $placeLegacyUrl = $placeLegacyPath !== '' ? $baseUrl . $placeLegacyPath : '';
     }
+}
+
+if (isModuleEnabled('places')) {
+    $runtimeAuditPlaceName = 'Runtime audit místo';
+    $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
+    $runtimeAuditPlaceLegacySlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-stary-' . bin2hex(random_bytes(3)));
+    $runtimeAuditPlaceExcerpt = 'Krátký přehled testovacího místa pro ověření detailu, praktických informací a veřejného adresáře.';
+    $runtimeAuditPlaceImage = 'runtime-audit-place-' . bin2hex(random_bytes(4)) . '.png';
+    $runtimeAuditHiddenPlaceImage = 'runtime-audit-place-hidden-' . bin2hex(random_bytes(4)) . '.png';
+    $runtimeAuditPng = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aC8AAAAASUVORK5CYII=');
+
+    if (is_string($runtimeAuditPng)) {
+        file_put_contents(__DIR__ . '/../uploads/places/' . $runtimeAuditPlaceImage, $runtimeAuditPng);
+        file_put_contents(__DIR__ . '/../uploads/places/' . $runtimeAuditHiddenPlaceImage, $runtimeAuditPng);
+        $cleanup['place_files'][] = $runtimeAuditPlaceImage;
+        $cleanup['place_files'][] = $runtimeAuditHiddenPlaceImage;
+    }
+
+    $pdo->prepare(
+        "INSERT INTO cms_places (
+            name, slug, place_kind, category, excerpt, description, image_file, address, locality,
+            latitude, longitude, url, contact_phone, contact_email, opening_hours, meta_title, meta_description,
+            is_published, status, sort_order, created_at, updated_at
+         ) VALUES (?, ?, 'info', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'published', -100, NOW(), NOW())"
+    )->execute([
+        $runtimeAuditPlaceName,
+        $runtimeAuditPlaceSlug,
+        'Testovací lokalita',
+        $runtimeAuditPlaceExcerpt,
+        '<p>Detailní text runtime audit místa pro ověření veřejného detailu, filtrace a SEO výstupu.</p>',
+        $runtimeAuditPlaceImage,
+        'Testovací 1',
+        'Praha',
+        50.0874510,
+        14.4206710,
+        'https://example.test/misto',
+        '+420 777 987 654',
+        'misto@example.test',
+        "Po–Pá: 9:00–17:00\nSo: 10:00–14:00",
+        'Runtime audit meta titulek místa',
+        'Runtime audit meta popis místa pro ověření veřejného detailu.',
+    ]);
+    $runtimeAuditPlaceId = (int)$pdo->lastInsertId();
+    $cleanup['place_ids'][] = $runtimeAuditPlaceId;
+
+    $placeStmt = $pdo->prepare(
+        "SELECT *
+         FROM cms_places
+         WHERE id = ?"
+    );
+    $placeStmt->execute([$runtimeAuditPlaceId]);
+    $placeRow = $placeStmt->fetch() ?: null;
+    if ($placeRow) {
+        $placeRow = hydratePlacePresentation($placeRow);
+        $placeId = $placeRow['id'] ?? false;
+        $placeCanonicalPath = placePublicPath($placeRow);
+        $placeLegacyPath = $placeId !== false ? BASE_URL . '/places/place.php?id=' . urlencode((string)$placeId) : '';
+        $placeCanonicalUrl = $placeCanonicalPath !== '' ? $baseUrl . $placeCanonicalPath : '';
+        $placeLegacyUrl = $placeLegacyPath !== '' ? $baseUrl . $placeLegacyPath : '';
+        $placeVisibleImagePath = placeImageRequestPath($placeRow);
+        if ($placeCanonicalPath !== '') {
+            $placeLegacySlugPath = BASE_URL . '/places/' . rawurlencode($runtimeAuditPlaceLegacySlug);
+            $placeLegacySlugUrl = $baseUrl . $placeLegacySlugPath;
+            upsertPathRedirect($pdo, $placeLegacySlugPath, $placeCanonicalPath);
+            $cleanup['redirect_paths'][] = $placeLegacySlugPath;
+        }
+    }
+
+    $placeHiddenTitle = 'Runtime audit skryté místo';
+    $runtimeAuditHiddenPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-skryte-misto-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_places (
+            name, slug, place_kind, category, excerpt, description, image_file, address, locality,
+            latitude, longitude, url, contact_phone, contact_email, opening_hours, meta_title, meta_description,
+            is_published, status, sort_order, created_at, updated_at
+         ) VALUES (?, ?, 'service', ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, 0, 'published', 999, NOW(), NOW())"
+    )->execute([
+        $placeHiddenTitle,
+        $runtimeAuditHiddenPlaceSlug,
+        'Skrytá lokalita',
+        'Tato položka nesmí být veřejně vidět.',
+        '<p>Skrytý detail místa pro ověření ochrany obrázku.</p>',
+        $runtimeAuditHiddenPlaceImage,
+        'Skrytá 1',
+        'Brno',
+        'https://example.test/skryte-misto',
+        '+420 777 000 111',
+        'hidden-place@example.test',
+        'Jen interně',
+        '',
+        '',
+    ]);
+    $placeHiddenId = (int)$pdo->lastInsertId();
+    $cleanup['place_ids'][] = $placeHiddenId;
+    $placeHiddenImagePath = BASE_URL . '/places/image.php?id=' . $placeHiddenId;
 }
 
 if (isModuleEnabled('polls')) {
@@ -1721,6 +1823,9 @@ if (isModuleEnabled('news')) {
 }
 if (isModuleEnabled('places')) {
     $pages[] = ['label' => 'places_index', 'url' => $baseUrl . '/places/index.php'];
+    if ($placeRow) {
+        $pages[] = ['label' => 'places_index_filtered', 'url' => $baseUrl . '/places/index.php?q=' . urlencode('audit') . '&kind=info&category=' . urlencode((string)($placeRow['category'] ?? '')) . '&locality=' . urlencode((string)($placeRow['locality'] ?? ''))];
+    }
 }
 if (isModuleEnabled('podcast')) {
     $pages[] = ['label' => 'podcast_index', 'url' => $baseUrl . '/podcast/index.php'];
@@ -2307,7 +2412,7 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'places_index') {
+    if (false && $page['label'] === 'places_index') {
         if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
             $issues[] = 'places listing is missing detail links';
         }
@@ -2316,6 +2421,51 @@ foreach ($pages as $page) {
         }
         if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
             $issues[] = 'places listing is missing address';
+        }
+    }
+
+    if ($page['label'] === 'places_index') {
+        foreach ([
+            'name="q"',
+            'name="kind"',
+            'name="category"',
+            'name="locality"',
+            'Filtrovat adresář míst',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'places listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
+            $issues[] = 'places listing is missing detail links';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['excerpt_plain'] ?? ''))) {
+            $issues[] = 'places listing is missing excerpt preview';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
+            $issues[] = 'places listing is missing address';
+        }
+        if (str_contains($result['body'], '/uploads/places/')) {
+            $issues[] = 'places listing still exposes uploads/places paths';
+        }
+        if ($placeHiddenTitle !== '' && str_contains($result['body'], $placeHiddenTitle)) {
+            $issues[] = 'places listing still exposes hidden place';
+        }
+    }
+
+    if ($page['label'] === 'places_index_filtered') {
+        foreach ([
+            'value="audit"',
+            'value="info"',
+            'value="Testovací lokalita"',
+            'value="Praha"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'filtered places listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
+            $issues[] = 'filtered places listing is missing detail links';
         }
     }
 
@@ -2645,8 +2795,8 @@ foreach ($pages as $page) {
         'admin_faq_create_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
         'admin_food_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu', 'Nechte prázdné, pokud má lístek platit bez data konce.'],
         'admin_food_create_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu', 'Nechte prázdné, pokud má lístek platit bez data konce.'],
-        'admin_place_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.'],
-        'admin_place_create_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.'],
+        'admin_place_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve veřejném adresáři míst.'],
+        'admin_place_create_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve veřejném adresáři míst.'],
         'admin_board_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
         'admin_board_create_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
         'admin_podcast_show_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Počet epizod v RSS feedu', 'E-mail vlastníka feedu'],
@@ -3506,7 +3656,7 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'admin_places') {
+    if (false && $page['label'] === 'admin_places') {
         if (!str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin places search field is missing';
         }
@@ -3690,6 +3840,21 @@ foreach ($pages as $page) {
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin page still contains outdated action wording: ' . $forbiddenFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'admin_places') {
+        foreach ([
+            'name="q"',
+            'name="status"',
+            'name="kind"',
+            'name="category"',
+            'name="locality"',
+            'Přehled zajímavých míst',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin places page is missing fragment: ' . $expectedFragment;
             }
         }
     }
@@ -3954,6 +4119,31 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'admin_place_form') {
+        foreach ([
+            'name="slug"',
+            'name="place_kind"',
+            'name="excerpt"',
+            'name="place_image"',
+            'name="address"',
+            'name="locality"',
+            'name="latitude"',
+            'name="longitude"',
+            'name="contact_phone"',
+            'name="contact_email"',
+            'name="opening_hours"',
+            'name="meta_title"',
+            'name="meta_description"',
+            'Historie revizí',
+            'Upravit zajímavé místo',
+            'Zpět na zajímavá místa',
+        ] as $expectedField) {
+            if (!str_contains($result['body'], $expectedField)) {
+                $issues[] = 'admin place form is missing field: ' . $expectedField;
+            }
+        }
+    }
+
+    if (false && $page['label'] === 'admin_place_form') {
         foreach ([
             'name="slug"',
             'name="place_kind"',
@@ -4544,6 +4734,38 @@ foreach ($pages as $page) {
         if ($placeRow && !str_contains($result['body'], (string)($placeRow['name'] ?? ''))) {
             $issues[] = 'places article is missing title';
         }
+        foreach ([
+            'Zpět na zajímavá místa',
+            'Praktické informace',
+            'Kontakt',
+            'Kopírovat odkaz',
+            'application/ld+json',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'places article is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
+            $issues[] = 'places article is missing address';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['contact_phone'] ?? ''))) {
+            $issues[] = 'places article is missing contact phone';
+        }
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['contact_email'] ?? ''))) {
+            $issues[] = 'places article is missing contact email';
+        }
+        if ($placeRow && !str_contains($result['body'], 'google.com/maps')) {
+            $issues[] = 'places article is missing map link';
+        }
+        if (str_contains($result['body'], '/uploads/places/')) {
+            $issues[] = 'places article still exposes uploads/places paths';
+        }
+    }
+
+    if (false && $page['label'] === 'places_article') {
+        if ($placeRow && !str_contains($result['body'], (string)($placeRow['name'] ?? ''))) {
+            $issues[] = 'places article is missing title';
+        }
         if (!str_contains($result['body'], 'Zpět na zajímavá místa')) {
             $issues[] = 'places article is missing back link';
         }
@@ -4911,6 +5133,60 @@ if ($placeCanonicalPath === '' || $placeLegacyPath === '' || $placeCanonicalPath
         $failures++;
     } else {
         echo "OK\n";
+    }
+}
+
+echo "=== places_article_slug_redirect ===\n";
+if ($placeLegacySlugPath === '' || $placeCanonicalPath === '' || $placeLegacySlugPath === $placeCanonicalPath) {
+    echo "OK\n";
+} else {
+    $legacyPlaceSlugProbe = fetchUrl($placeLegacySlugUrl, '', 0);
+    if (!str_contains($legacyPlaceSlugProbe['status'], '301') && !str_contains($legacyPlaceSlugProbe['status'], '302')) {
+        echo "- legacy place slug URL does not redirect ({$legacyPlaceSlugProbe['status']})\n";
+        $failures++;
+    } elseif (!responseHasLocationHeader($legacyPlaceSlugProbe['headers'], $placeCanonicalPath, $baseUrl)) {
+        echo "- legacy place slug URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== places_image_visibility_guards ===\n";
+$placesImageIssues = [];
+if ($placeVisibleImagePath !== '') {
+    $placeVisibleImageProbe = fetchUrl($baseUrl . $placeVisibleImagePath, '', 0);
+    if (!str_contains($placeVisibleImageProbe['status'], '200')) {
+        $placesImageIssues[] = 'places image endpoint does not serve public place images';
+    } else {
+        $hasImageContentType = false;
+        foreach ($placeVisibleImageProbe['headers'] as $placeVisibleImageHeader) {
+            if (stripos((string)$placeVisibleImageHeader, 'Content-Type: image/') === 0) {
+                $hasImageContentType = true;
+                break;
+            }
+        }
+        if (!$hasImageContentType) {
+            $placesImageIssues[] = 'places image endpoint is missing image content type';
+        }
+    }
+}
+if ($placeHiddenImagePath !== '') {
+    $placeHiddenImageProbe = fetchUrl($baseUrl . $placeHiddenImagePath, '', 0);
+    if (!preg_match('/\s404\s/', $placeHiddenImageProbe['status'])) {
+        $placesImageIssues[] = 'hidden place image remains publicly reachable';
+    }
+}
+$placeDirectUploadProbe = fetchUrl($baseUrl . '/uploads/places/' . rawurlencode((string)($cleanup['place_files'][0] ?? 'runtime-audit-place.png')), '', 0);
+if (!preg_match('/\s40[34]\s/', $placeDirectUploadProbe['status'])) {
+    $placesImageIssues[] = 'direct uploads/places path is still publicly reachable';
+}
+if ($placesImageIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($placesImageIssues as $placesImageIssue) {
+        echo '- ' . $placesImageIssue . "\n";
     }
 }
 
@@ -5932,6 +6208,9 @@ foreach ($cleanup['gallery_files'] as $galleryFile) {
 if (!empty($cleanup['place_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['place_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_places WHERE id IN ({$placeholders})")->execute($cleanup['place_ids']);
+}
+foreach ($cleanup['place_files'] as $placeFile) {
+    @unlink(__DIR__ . '/../uploads/places/' . basename((string)$placeFile));
 }
 if (!empty($cleanup['form_submission_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['form_submission_ids']), '?'));
@@ -7466,6 +7745,74 @@ if ($gallerySourceIssues === []) {
     $failures++;
     foreach ($gallerySourceIssues as $gallerySourceIssue) {
         echo '- ' . $gallerySourceIssue . "\n";
+    }
+}
+
+echo "=== places_source_guardrails ===\n";
+$placesSourceIssues = [];
+$placeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_save.php');
+$placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
+$placeIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/places/index.php');
+$placeDetailControllerSource = (string)file_get_contents(dirname(__DIR__) . '/places/place.php');
+$placeIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/places-index.php');
+$placeImageSource = (string)file_get_contents(dirname(__DIR__) . '/places/image.php');
+$placeSearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
+$placeWidgetSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$placeHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
+if (!str_contains($placeSaveSource, "saveRevision(\$pdo, 'place'")) {
+    $placesSourceIssues[] = 'place save is missing revision persistence';
+}
+if (!str_contains($placeSaveSource, 'upsertPathRedirect')) {
+    $placesSourceIssues[] = 'place save is missing slug redirect persistence';
+}
+if (!str_contains($placeSaveSource, 'internalRedirectTarget(')) {
+    $placesSourceIssues[] = 'place save is missing validated redirect handling';
+}
+if (!str_contains($placeFormSource, 'revisions.php?type=place')) {
+    $placesSourceIssues[] = 'place form is missing revisions link';
+}
+if (!str_contains($placeFormSource, 'name="meta_title"') || !str_contains($placeFormSource, 'name="meta_description"')) {
+    $placesSourceIssues[] = 'place form is missing SEO fields';
+}
+if (!str_contains($placeIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
+    $placesSourceIssues[] = 'places index is missing public search support';
+}
+if (!str_contains($placeIndexControllerSource, "placePublicVisibilitySql('p')")) {
+    $placesSourceIssues[] = 'places index is missing public visibility guard';
+}
+if (!str_contains($placeIndexControllerSource, 'renderPager(')) {
+    $placesSourceIssues[] = 'places index is missing pagination support';
+}
+if (!str_contains($placeDetailControllerSource, 'placeStructuredData(')) {
+    $placesSourceIssues[] = 'place detail is missing structured data';
+}
+if (!str_contains($placeDetailControllerSource, 'placePublicVisibilitySql()')) {
+    $placesSourceIssues[] = 'place detail is missing public visibility guard';
+}
+if (!str_contains($placeIndexViewSource, 'Filtrovat adresář míst')) {
+    $placesSourceIssues[] = 'places view is missing filter form';
+}
+if (!str_contains($placeIndexViewSource, 'listing-shell__pager')) {
+    $placesSourceIssues[] = 'places view is missing pager output';
+}
+if (!str_contains($placeImageSource, "currentUserHasCapability('content_manage_shared')")) {
+    $placesSourceIssues[] = 'places image endpoint is missing private visibility guard';
+}
+if (!str_contains($placeSearchSource, 'placePublicVisibilitySql()')) {
+    $placesSourceIssues[] = 'search no longer protects place visibility';
+}
+if (!str_contains($placeWidgetSource, 'placePublicVisibilitySql()')) {
+    $placesSourceIssues[] = 'places widget no longer protects public visibility';
+}
+if (!str_contains($placeHtaccessSource, 'RewriteRule ^uploads/places/ - [F,L,NC]')) {
+    $placesSourceIssues[] = 'htaccess is missing places uploads deny rule';
+}
+if ($placesSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($placesSourceIssues as $placesSourceIssue) {
+        echo '- ' . $placesSourceIssue . "\n";
     }
 }
 

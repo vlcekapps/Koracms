@@ -427,6 +427,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             contact_phone VARCHAR(100) NOT NULL DEFAULT '',
             contact_email VARCHAR(255) NOT NULL DEFAULT '',
             opening_hours TEXT,
+            meta_title  VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
             is_published TINYINT(1)  NOT NULL DEFAULT 1,
             status      ENUM('pending','published') NOT NULL DEFAULT 'published',
             sort_order  INT          NOT NULL DEFAULT 0,

@@ -5,6 +5,7 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu mís
 
 $pdo = db_connect();
 $id = inputInt('get', 'id');
+$backUrl = internalRedirectTarget((string)($_GET['redirect'] ?? ''), BASE_URL . '/admin/places.php');
 $place = null;
 
 if ($id !== null) {
@@ -12,7 +13,7 @@ if ($id !== null) {
     $stmt->execute([$id]);
     $place = $stmt->fetch() ?: null;
     if (!$place) {
-        header('Location: places.php');
+        header('Location: ' . $backUrl);
         exit;
     }
 }
@@ -33,15 +34,18 @@ $place = $place ?: [
     'contact_phone' => '',
     'contact_email' => '',
     'opening_hours' => '',
+    'meta_title' => '',
+    'meta_description' => '',
     'is_published' => 1,
     'status' => 'published',
 ];
+$place = hydratePlacePresentation($place);
 
 $categories = $pdo->query(
     "SELECT DISTINCT category FROM cms_places WHERE category <> '' ORDER BY category"
 )->fetchAll(\PDO::FETCH_COLUMN);
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-$err = trim($_GET['err'] ?? '');
+$err = trim((string)($_GET['err'] ?? ''));
 $formError = match ($err) {
     'required' => 'Vyplňte prosím povinné pole názvu místa.',
     'slug' => 'Slug místa je povinný a musí být unikátní.',
@@ -55,6 +59,10 @@ $formError = match ($err) {
 adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 ?>
 
+<?php if ($id !== null): ?>
+  <p><a href="revisions.php?type=place&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
@@ -63,10 +71,11 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
-<p><a href="places.php"><span aria-hidden="true">←</span> Zpět na zajímavá místa</a></p>
+<p><a href="<?= h($backUrl) ?>"><span aria-hidden="true">←</span> Zpět na zajímavá místa</a></p>
 
 <form method="post" action="place_save.php" enctype="multipart/form-data" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <input type="hidden" name="redirect" value="<?= h($backUrl) ?>">
   <?php if ($id): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
   <?php endif; ?>
@@ -86,8 +95,8 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="place_kind">Typ místa</label>
     <select id="place_kind" name="place_kind">
-      <?php foreach (placeKindDefinitions() as $kindKey => $kindMeta): ?>
-        <option value="<?= h($kindKey) ?>"<?= normalizePlaceKind((string)$place['place_kind']) === $kindKey ? ' selected' : '' ?>>
+      <?php foreach (placeKindOptions() as $kindKey => $kindMeta): ?>
+        <option value="<?= h((string)$kindKey) ?>"<?= normalizePlaceKind((string)$place['place_kind']) === (string)$kindKey ? ' selected' : '' ?>>
           <?= h((string)$kindMeta['label']) ?>
         </option>
       <?php endforeach; ?>
@@ -102,26 +111,26 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
         <option value="<?= h((string)$category) ?>">
       <?php endforeach; ?>
     </datalist>
-    <small id="place-category-help" class="field-help">Volitelné. Pomůže s filtrováním a orientací ve výpisu míst.</small>
+    <small id="place-category-help" class="field-help">Volitelné. Pomůže s filtrováním a orientací ve veřejném adresáři míst.</small>
 
     <label for="locality">Lokalita / obec</label>
     <input type="text" id="locality" name="locality" maxlength="255"
-           value="<?= h((string)($place['locality'] ?? '')) ?>">
+           value="<?= h((string)$place['locality']) ?>">
 
     <label for="address">Adresa</label>
     <input type="text" id="address" name="address" maxlength="255"
-           value="<?= h((string)($place['address'] ?? '')) ?>">
+           value="<?= h((string)$place['address']) ?>">
 
     <label for="excerpt">Krátké shrnutí / perex</label>
-    <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="place-excerpt-help"><?= h((string)($place['excerpt'] ?? '')) ?></textarea>
+    <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="place-excerpt-help"><?= h((string)$place['excerpt']) ?></textarea>
     <small id="place-excerpt-help" class="field-help">Zobrazí se ve výpisu míst, ve vyhledávání a jako úvod detailu.</small>
 
     <label for="description">Detailní popis</label>
     <?php if ($useWysiwyg): ?>
-      <div id="editor-description" style="min-height:220px"><?= (string)($place['description'] ?? '') ?></div>
-      <input type="hidden" id="description" name="description" value="<?= h((string)($place['description'] ?? '')) ?>">
+      <div id="editor-description" style="min-height:220px"><?= (string)$place['description'] ?></div>
+      <input type="hidden" id="description" name="description" value="<?= h((string)$place['description']) ?>">
     <?php else: ?>
-      <textarea id="description" name="description" rows="8" aria-describedby="place-description-help"><?= h((string)($place['description'] ?? '')) ?></textarea>
+      <textarea id="description" name="description" rows="8" aria-describedby="place-description-help"><?= h((string)$place['description']) ?></textarea>
       <small id="place-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
       <?php renderAdminContentReferencePicker('description'); ?>
     <?php endif; ?>
@@ -132,32 +141,44 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="url">Web / externí odkaz</label>
     <input type="url" id="url" name="url" maxlength="500"
-           value="<?= h((string)($place['url'] ?? '')) ?>">
+           value="<?= h((string)$place['url']) ?>">
 
     <div style="display:flex;gap:1rem;flex-wrap:wrap">
       <div style="flex:1 1 12rem">
         <label for="latitude">Zeměpisná šířka</label>
         <input type="text" id="latitude" name="latitude" inputmode="decimal" aria-describedby="place-coordinates-help"
-               value="<?= h((string)($place['latitude'] ?? '')) ?>">
+               value="<?= h((string)$place['latitude']) ?>">
       </div>
       <div style="flex:1 1 12rem">
         <label for="longitude">Zeměpisná délka</label>
         <input type="text" id="longitude" name="longitude" inputmode="decimal" aria-describedby="place-coordinates-help"
-               value="<?= h((string)($place['longitude'] ?? '')) ?>">
+               value="<?= h((string)$place['longitude']) ?>">
       </div>
     </div>
     <small id="place-coordinates-help" class="field-help">Pokud vyplníte obě souřadnice, na veřejné stránce se zobrazí odkaz do map.</small>
 
     <label for="opening_hours">Otevírací doba / praktické poznámky</label>
-    <textarea id="opening_hours" name="opening_hours" rows="4"><?= h((string)($place['opening_hours'] ?? '')) ?></textarea>
+    <textarea id="opening_hours" name="opening_hours" rows="4"><?= h((string)$place['opening_hours']) ?></textarea>
 
     <label for="contact_phone">Telefon</label>
     <input type="text" id="contact_phone" name="contact_phone" maxlength="100"
-           value="<?= h((string)($place['contact_phone'] ?? '')) ?>">
+           value="<?= h((string)$place['contact_phone']) ?>">
 
     <label for="contact_email">E-mail</label>
     <input type="email" id="contact_email" name="contact_email" maxlength="255"
-           value="<?= h((string)($place['contact_email'] ?? '')) ?>">
+           value="<?= h((string)$place['contact_email']) ?>">
+  </fieldset>
+
+  <fieldset>
+    <legend>SEO a sdílení</legend>
+
+    <label for="meta_title">Meta titulek</label>
+    <input type="text" id="meta_title" name="meta_title" maxlength="160"
+           value="<?= h((string)$place['meta_title']) ?>">
+
+    <label for="meta_description">Meta popis</label>
+    <textarea id="meta_description" name="meta_description" rows="3" aria-describedby="place-meta-help"><?= h((string)$place['meta_description']) ?></textarea>
+    <small id="place-meta-help" class="field-help">Volitelné. Pokud pole necháte prázdná, veřejná stránka použije název a perex místa.</small>
   </fieldset>
 
   <fieldset>
@@ -166,7 +187,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <label for="place_image">Hlavní obrázek</label>
     <?php if (!empty($place['image_file'])): ?>
       <div style="margin:.5rem 0">
-        <img src="<?= h(placeImageUrl($place)) ?>" alt="Náhled obrázku"
+        <img src="<?= h((string)$place['image_url']) ?>" alt="Náhled obrázku"
              style="display:block;max-width:320px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>
@@ -185,15 +206,15 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_published" value="1" aria-describedby="place-published-help"
-             <?= (int)($place['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+             <?= (int)$place['is_published'] === 1 ? 'checked' : '' ?>>
       Zveřejnit na webu
     </label>
-    <small id="place-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, místo zůstane uložené jen v administraci.</small>
+    <small id="place-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, místo zůstane uložené jen v administraci a skryje se i jeho obrázek.</small>
   </fieldset>
 
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
-    <a href="places.php" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>
     <?php if (($place['status'] ?? 'published') === 'published' && (int)($place['is_published'] ?? 1) === 1 && !empty($place['slug'])): ?>
       <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>

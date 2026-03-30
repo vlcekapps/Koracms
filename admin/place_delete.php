@@ -4,6 +4,8 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu mís
 verifyCsrf();
 
 $id = inputInt('post', 'id');
+$redirectTarget = internalRedirectTarget((string)($_POST['redirect'] ?? ''), BASE_URL . '/admin/places.php');
+
 if ($id !== null) {
     $pdo = db_connect();
     $stmt = $pdo->prepare("SELECT image_file FROM cms_places WHERE id = ?");
@@ -16,5 +18,5 @@ if ($id !== null) {
     logAction('place_delete', "id={$id}");
 }
 
-header('Location: ' . BASE_URL . '/admin/places.php');
+header('Location: ' . $redirectTarget);
 exit;

@@ -280,8 +280,8 @@ if ($q !== '' && mb_strlen($q) >= 2) {
             foreach ($ftSearch(
                 $pdo, $q, $like,
                 "SELECT id, name AS title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
-                        created_at, 'place' AS type",
-                "FROM cms_places WHERE status = 'published' AND is_published = 1",
+                         created_at, 'place' AS type",
+                "FROM cms_places WHERE " . placePublicVisibilitySql(),
                 'name, excerpt, description',
                 [],
                 'name ASC',

@@ -294,7 +294,7 @@ if (isModuleEnabled('places')) {
         $places = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_places
-             WHERE status = 'published' AND is_published = 1
+             WHERE " . placePublicVisibilitySql() . "
              ORDER BY name ASC"
         )->fetchAll();
         foreach ($places as $place) {
