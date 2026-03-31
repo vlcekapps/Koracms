@@ -94,7 +94,6 @@ function httpIntegrationSettingsPostFields(array $formState): array
         'custom_head_code' => (string)($formState['custom_head_code'] ?? ''),
         'custom_footer_code' => (string)($formState['custom_footer_code'] ?? ''),
         'og_image_default' => (string)($formState['og_image_default'] ?? ''),
-        'home_intro' => (string)($formState['home_intro'] ?? ''),
         'cookie_consent_text' => (string)($formState['cookie_consent_text'] ?? ''),
         'maintenance_text' => (string)($formState['maintenance_text'] ?? ''),
     ];

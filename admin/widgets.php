@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('settings_manage', 'Přístup odepřen. Pro správu widgetů nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -80,18 +81,32 @@ adminHeader('Widgety');
           $wSettings = widgetSettings($w);
           $wTypeDef = $types[$w['widget_type']] ?? null;
           $wTypeName = $wTypeDef ? $wTypeDef['name'] : $w['widget_type'];
+          $wTitle = trim((string)($w['title'] ?? ''));
+          $wDisplayTitle = $wTitle !== '' ? $wTitle : $wTypeName;
+          $wMetaParts = [];
+          if ($wTitle !== '' && $wTitle !== $wTypeName) {
+              $wMetaParts[] = $wTypeName;
+          }
+          if (!(int)$w['is_active']) {
+              $wMetaParts[] = 'neaktivní';
+          }
           $wAvailability = widgetInstanceAvailability($w);
           $wDisplayable = $wAvailability['displayable'];
           $wDisplayWarning = (int)$w['is_active'] === 1 && !$wDisplayable;
           $wDisplayReasons = $wAvailability['reasons'];
+          if ($wDisplayWarning) {
+              $wMetaParts[] = 'na webu se teď nezobrazí';
+          }
         ?>
           <li style="display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .5rem;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab<?= !(int)$w['is_active'] ? ';opacity:.5' : '' ?>"
               data-sort-id="<?= (int)$w['id'] ?>" tabindex="0"
-              aria-label="<?= h($w['title'] ?: $wTypeName) ?> (<?= h($wTypeName) ?>)">
+              aria-label="<?= h($wDisplayTitle) ?> (<?= h($wTypeName) ?>)">
 
             <div style="min-width:14rem;flex:1 1 16rem">
-              <strong><?= h($w['title'] ?: $wTypeName) ?></strong>
-              <br><small style="color:#555"><?= h($wTypeName) ?><?= !(int)$w['is_active'] ? ' · <em>neaktivní</em>' : '' ?><?= $wDisplayWarning ? ' · na webu se teď nezobrazí' : '' ?></small>
+              <strong><?= h($wDisplayTitle) ?></strong>
+              <?php if ($wMetaParts !== []): ?>
+                <br><small style="color:#555"><?= h(implode(' · ', $wMetaParts)) ?></small>
+              <?php endif; ?>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start">
@@ -100,7 +115,7 @@ adminHeader('Widgety');
               <?php endif; ?>
               <div style="display:flex;gap:.4rem;flex-wrap:wrap">
                 <button type="button" class="btn widget-edit-btn" style="font-size:.85rem"
-                        aria-label="Nastavení widgetu <?= h($w['title'] ?: $wTypeName) ?>"
+                        aria-label="Nastavení widgetu <?= h($wDisplayTitle) ?>"
                         aria-haspopup="dialog"
                         aria-controls="widget-dialog"
                         aria-expanded="false"
@@ -114,8 +129,8 @@ adminHeader('Widgety');
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
                   <button type="submit" class="btn btn-danger" style="font-size:.85rem"
-                          data-confirm="<?= h('Odebrat widget „' . (string)($w['title'] ?: $wTypeName) . '“?') ?>"
-                          aria-label="Odebrat widget <?= h($w['title'] ?: $wTypeName) ?>">✕</button>
+                          data-confirm="<?= h('Odebrat widget „' . $wDisplayTitle . '“?') ?>"
+                          aria-label="Odebrat widget <?= h($wDisplayTitle) ?>">✕</button>
                 </form>
               </div>
             </div>
@@ -221,14 +236,11 @@ adminHeader('Widgety');
       <small class="field-help">Na webu se zobrazí jen aktivní formulář.</small>
     </div>
 
-    <div id="wd-field-text" style="display:none;margin-top:.75rem">
-      <label for="wd-text">Text</label>
-      <textarea id="wd-text" name="widget_text" rows="4"></textarea>
-    </div>
-
     <div id="wd-field-content" style="display:none;margin-top:.75rem">
       <label for="wd-content">HTML obsah</label>
-      <textarea id="wd-content" name="widget_content" rows="6"></textarea>
+      <textarea id="wd-content" name="widget_content" rows="6" aria-describedby="wd-content-help"></textarea>
+      <small id="wd-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('wd-content'); ?>
     </div>
 
     <div id="wd-field-social" style="display:none;margin-top:.75rem">
@@ -286,7 +298,7 @@ adminHeader('Widgety');
     document.getElementById('wd-active').checked = btn.dataset.widgetActive === '1';
 
     // Skrýt všechna dynamická pole
-    ['count','blog','source','cta','album','show','form','text','content','social'].forEach(function(f){
+    ['count','blog','source','cta','album','show','form','content','social'].forEach(function(f){
       document.getElementById('wd-field-'+f).style.display = 'none';
     });
     socialFieldKeys.forEach(function(key){
@@ -326,8 +338,8 @@ adminHeader('Widgety');
       document.getElementById('wd-form').value = s.form_id || 0;
     }
     if (type === 'intro') {
-      document.getElementById('wd-field-text').style.display = '';
-      document.getElementById('wd-text').value = s.text || '';
+      document.getElementById('wd-field-content').style.display = '';
+      document.getElementById('wd-content').value = s.content || s.text || '';
     }
     if (type === 'custom_html') {
       document.getElementById('wd-field-content').style.display = '';

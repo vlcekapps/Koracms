@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Widgety – úvod domovské stránky má nově jediný zdroj pravdy v intro widgetu** – pole `Úvodní text` zmizelo z `Obecných nastavení`, homepage už nepoužívá legacy `home_intro` a stejný obsah se nově spravuje jen přes widget `Úvodní text`; widget zároveň podporuje HTML a stejné snippety jako ostatní obsahové bloky a při prázdném obsahu se na webu vůbec nevykreslí
+- **Migrace – starý úvod domovské stránky se při upgradu bezpečně převede do widgetu** – `migrate.php` nově při aktualizaci doplní původní `home_intro` do existujícího nebo nově vytvořeného intro widgetu na homepage, takže po nasazení změny nezmizí dosavadní úvodní text ani na starších instalacích
+
 ## [3.3.0] – 2026-04-01
 
 ### Změněno

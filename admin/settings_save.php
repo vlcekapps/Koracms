@@ -39,7 +39,6 @@ $formState['ga4_measurement_id'] = trim((string)($_POST['ga4_measurement_id'] ??
 $formState['custom_head_code'] = (string)($_POST['custom_head_code'] ?? '');
 $formState['custom_footer_code'] = (string)($_POST['custom_footer_code'] ?? '');
 $formState['og_image_default'] = trim((string)($_POST['og_image_default'] ?? ''));
-$formState['home_intro'] = trim((string)($_POST['home_intro'] ?? ''));
 $formState['cookie_consent_enabled'] = isset($_POST['cookie_consent_enabled']) ? '1' : '0';
 $formState['cookie_consent_text'] = trim((string)($_POST['cookie_consent_text'] ?? ''));
 $formState['maintenance_mode'] = isset($_POST['maintenance_mode']) ? '1' : '0';
@@ -238,7 +237,6 @@ $settingsToPersist = [
     'cookie_consent_enabled',
     'cookie_consent_text',
     'og_image_default',
-    'home_intro',
 ];
 
 $pdo = db_connect();

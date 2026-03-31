@@ -132,6 +132,21 @@ To snižuje riziko, že se do veřejně servírovaných assetů dostane aktivní
 
 ---
 
+## Domovská stránka – úvodní text jako widget
+
+Úvodní text domovské stránky se nově nespravuje v **Obecných nastaveních**, ale pouze přes widget **Úvodní text**.
+
+Platí tato pravidla:
+
+- homepage intro má jediný zdroj pravdy ve widgetech
+- widget `Úvodní text` umí HTML a stejné snippety jako ostatní obsahové bloky
+- pokud obsah widgetu zůstane prázdný, na webu se vůbec nevykreslí
+- po aktualizaci starší instalace `migrate.php` automaticky převede původní `home_intro` do intro widgetu na homepage
+
+Prakticky to znamená, že stejného výsledku jako dřívější pole v nastavení webu nově dosáhnete tím, že intro widget umístíte na homepage na požadovanou pozici.
+
+---
+
 ## Podcasty – feed metadata
 
 Každý podcastový pořad má vlastní nastavení feedu pro podcastové aplikace a katalogy.
@@ -707,7 +722,7 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 
 | Widget | Popis |
 |--------|-------|
-| Úvodní text | Hlavní textový blok |
+| Úvodní text | Hlavní textový blok pro domovskou stránku s podporou HTML a snippetů |
 | Nejnovější články | Články z vybraného blogu |
 | Novinky | Poslední novinky |
 | Doporučený obsah | Výběr z blogu, vývěsky, ankety nebo newsletteru |

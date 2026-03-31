@@ -121,7 +121,7 @@ renderPublicPage([
     'view_data' => [
         'widgetHtml' => $widgetHtml,
         'useWidgets' => $useWidgets,
-        'homeIntro' => getSetting('home_intro', ''),
+        'homeIntro' => '',
         'latestNews' => $latestNews,
         'latestArticles' => $latestArticles,
         'featuredBlogArticle' => $featuredBlogArticle,

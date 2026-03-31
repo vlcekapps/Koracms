@@ -44,7 +44,6 @@ function settingsDefaultFormState(): array
         'custom_head_code' => getSetting('custom_head_code', ''),
         'custom_footer_code' => getSetting('custom_footer_code', ''),
         'og_image_default' => getSetting('og_image_default', ''),
-        'home_intro' => getSetting('home_intro', ''),
         'cookie_consent_enabled' => getSetting('cookie_consent_enabled', '0'),
         'cookie_consent_text' => getSetting(
             'cookie_consent_text',

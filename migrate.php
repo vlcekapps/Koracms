@@ -2325,6 +2325,58 @@ try {
 }
 
 try {
+    $homeIntro = trim(getSetting('home_intro', ''));
+    if ($homeIntro !== '') {
+        $introWidgets = $pdo->query(
+            "SELECT id, zone, sort_order, settings
+             FROM cms_widgets
+             WHERE widget_type = 'intro'
+             ORDER BY sort_order, id"
+        )->fetchAll();
+
+        if ($introWidgets === []) {
+            $homepageIntroSortOrder = (int)$pdo->query(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'homepage'"
+            )->fetchColumn();
+            $insertIntroWidget = $pdo->prepare(
+                "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order)
+                 VALUES ('homepage', 'intro', 'Úvodní text', ?, ?)"
+            );
+            $insertIntroWidget->execute([
+                json_encode(['content' => $homeIntro], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $homepageIntroSortOrder,
+            ]);
+            $log[] = '· Legacy úvodní text domovské stránky byl převeden do nového intro widgetu na homepage';
+        } else {
+            $updateIntroWidget = $pdo->prepare("UPDATE cms_widgets SET settings = ? WHERE id = ?");
+            $updatedIntroWidgets = 0;
+            foreach ($introWidgets as $introWidget) {
+                $introSettings = json_decode((string)($introWidget['settings'] ?? '{}'), true);
+                if (!is_array($introSettings)) {
+                    $introSettings = [];
+                }
+                $introContent = trim((string)($introSettings['content'] ?? ($introSettings['text'] ?? '')));
+                if ($introContent !== '') {
+                    continue;
+                }
+                $introSettings['content'] = $homeIntro;
+                unset($introSettings['text']);
+                $updateIntroWidget->execute([
+                    json_encode($introSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    (int)$introWidget['id'],
+                ]);
+                $updatedIntroWidgets++;
+            }
+            if ($updatedIntroWidgets > 0) {
+                $log[] = '· Legacy úvodní text domovské stránky byl doplněn do prázdných intro widgetů';
+            }
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Převod legacy úvodního textu do widgetu – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
     if (getSetting('visitor_counter_enabled', '0') === '1') {
         $hasVisitorStatsWidget = (int)$pdo->query(
             "SELECT COUNT(*) FROM cms_widgets WHERE widget_type = 'visitor_stats'"
@@ -2386,17 +2438,32 @@ try {
 
             $insertSocialLinksWidget = $pdo->prepare(
                 "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order)
-                 VALUES ('footer', 'social_links', 'SociĂˇlnĂ­ sĂ­tÄ›', ?, ?)"
+                 VALUES ('footer', 'social_links', 'Sociální sítě', ?, ?)"
             );
             $insertSocialLinksWidget->execute([
                 json_encode($socialLinksSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 $footerSortOrder,
             ]);
-            $log[] = 'Â· Ve footer zĂłnÄ› byl doplnÄ›n widget â€žSociĂˇlnĂ­ sĂ­tÄ›â€ś z pĹŻvodnĂ­ch odkazĹŻ uloĹľenĂ˝ch v nastavenĂ­ webu';
+            $log[] = '· Ve footer zóně byl doplněn widget „Sociální sítě“ z původních odkazů uložených v nastavení webu';
         }
     }
 } catch (\PDOException $e) {
-    $log[] = 'Â· SociĂˇlnĂ­ sĂ­tÄ› â€“ pĹ™eskoÄŤeno: ' . h($e->getMessage());
+    $log[] = '· Sociální sítě – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
+    $repairSocialLinksWidgetTitle = $pdo->prepare(
+        "UPDATE cms_widgets
+         SET title = 'Sociální sítě'
+         WHERE widget_type = 'social_links'
+           AND title = 'SociĂˇlnĂ­ sĂ­tÄ›'"
+    );
+    $repairSocialLinksWidgetTitle->execute();
+    if ($repairSocialLinksWidgetTitle->rowCount() > 0) {
+        $log[] = '· U stávajících widgetů sociálních sítí byl opraven zkomolený výchozí název';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Oprava názvu widgetu sociálních sítí – přeskočeno: ' . h($e->getMessage());
 }
 
 try {

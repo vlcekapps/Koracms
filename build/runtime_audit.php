@@ -2686,7 +2686,6 @@ foreach ($pages as $page) {
         foreach ([
             'Nastavení webu',
             'Sekce nastavení webu',
-            '#settings-homepage',
             '#settings-basics',
             '#settings-notifications',
             '#settings-analytics',
@@ -2707,6 +2706,9 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'name="board_public_label"')) {
             $issues[] = 'board public label setting is missing';
+        }
+        if (str_contains($result['body'], 'name="home_intro"')) {
+            $issues[] = 'admin settings still renders the legacy home_intro field instead of widget-only homepage intro';
         }
         if (!str_contains($result['body'], 'name="public_registration_enabled"')) {
             $issues[] = 'public registration toggle is missing';
@@ -3019,7 +3021,6 @@ foreach ($pages as $page) {
         'admin_profile',
         'admin_user_form',
         'admin_user_create_form',
-        'admin_settings',
     ];
     if (in_array($page['label'], $contentReferencePickerLabels, true)) {
         foreach ([
@@ -3076,7 +3077,6 @@ foreach ($pages as $page) {
         'admin_profile',
         'admin_user_form',
         'admin_user_create_form',
-        'admin_settings',
     ];
     if (in_array($page['label'], $htmlSnippetHelpLabels, true)) {
         foreach ([
@@ -7193,7 +7193,6 @@ try {
         'maintenance_text' => getSetting('maintenance_text', ''),
         'cookie_consent_text' => getSetting('cookie_consent_text', ''),
         'og_image_default' => getSetting('og_image_default', ''),
-        'home_intro' => getSetting('home_intro', ''),
     ];
 
     if (getSetting('maintenance_mode', '0') === '1') {
@@ -9741,6 +9740,27 @@ foreach ($requiredWidgetTypes as $requiredWidgetType) {
 if (($widgetDefs['contact_info']['requires_module'] ?? null) !== null) {
     $widgetRegistryIssues[] = 'contact_info widget is still incorrectly bound to contact module';
 }
+if (($widgetDefs['intro']['requires_setting'] ?? null) !== null) {
+    $widgetRegistryIssues[] = 'intro widget is still incorrectly bound to legacy homepage settings';
+}
+if (str_contains($migrateSource, "VALUES ('footer', 'social_links', 'SociĂˇlnĂ­ sĂ­tÄ›'")) {
+    $widgetRegistryIssues[] = 'widget migration still inserts the mojibake social links default title';
+}
+if (!str_contains($migrateSource, "WHERE widget_type = 'social_links'") || !str_contains($migrateSource, "title = 'SociĂˇlnĂ­ sĂ­tÄ›'")) {
+    $widgetRegistryIssues[] = 'widget migration is missing the repair step for previously corrupted social links titles';
+}
+if (!str_contains($migrateSource, "SELECT id, zone, sort_order, settings") || !str_contains($migrateSource, "WHERE widget_type = 'intro'")) {
+    $widgetRegistryIssues[] = 'migration is missing the legacy home_intro to intro widget backfill';
+}
+if (!str_contains($blogWidgetAdminSource, '$wMetaParts = [];') || !str_contains($blogWidgetAdminSource, "if (\$wTitle !== '' && \$wTitle !== \$wTypeName)")) {
+    $widgetRegistryIssues[] = 'widgets admin still repeats the widget type label even when the title already matches it';
+}
+if (!str_contains($blogWidgetAdminSource, "if (type === 'intro') {") || !str_contains($blogWidgetAdminSource, "document.getElementById('wd-content').value = s.content || s.text || '';")) {
+    $widgetRegistryIssues[] = 'widgets admin does not edit intro widget through the shared HTML content field';
+}
+if (str_contains($blogWidgetAdminSource, 'id="wd-field-text"')) {
+    $widgetRegistryIssues[] = 'widgets admin still renders the legacy text-only field for intro widget editing';
+}
 if (isModuleEnabled('forms')) {
     $activeFormCount = 0;
     try {
@@ -9783,6 +9803,12 @@ if (!str_contains($widgetSearchOne, 'role="search"')) {
 }
 if (!str_contains($widgetSearchOne, '<fieldset class="widget-form-fieldset">') || !str_contains($widgetSearchOne, 'widget-search-legend-101')) {
     $widgetRenderIssues[] = 'search widget is missing fieldset/legend semantics';
+}
+if (!str_contains($blogWidgetLibSource, "\$settings['content'] ?? (\$settings['text'] ?? '')")) {
+    $widgetRenderIssues[] = 'intro widget is missing settings-based HTML content fallback';
+}
+if (str_contains($blogWidgetLibSource, "getSetting('home_intro', '')")) {
+    $widgetRenderIssues[] = 'intro widget still falls back to legacy home_intro setting';
 }
 if (isModuleEnabled('board')) {
     $widgetBoardSlug = uniqueBoardSlug($pdo, 'runtime-audit-widget-board-' . bin2hex(random_bytes(4)));

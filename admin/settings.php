@@ -24,7 +24,6 @@ if (!isset($siteProfiles[$formState['site_profile']])) {
 }
 
 $settingsSections = [
-    ['id' => 'settings-homepage', 'label' => 'Domovská stránka'],
     ['id' => 'settings-basics', 'label' => 'Obecná nastavení'],
     ['id' => 'settings-profile', 'label' => 'Profil webu'],
     ['id' => 'settings-home-sections', 'label' => 'Sekce na domovské stránce'],
@@ -65,15 +64,6 @@ adminHeader('Nastavení webu');
 
 <form method="post" action="settings_save.php" enctype="multipart/form-data" novalidate<?= $errors !== [] ? ' aria-describedby="settings-form-errors"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-
-  <fieldset id="settings-homepage">
-    <legend>Domovská stránka</legend>
-    <p>Pokud text vyplníte, zobrazí se na domovské stránce nad hlavním obsahem. Když pole necháte prázdné, úvodní blok se nezobrazí.</p>
-    <label for="home_intro" class="sr-only">Úvodní text</label>
-    <textarea id="home_intro" name="home_intro" rows="6" aria-describedby="home-intro-help"><?= h($formState['home_intro']) ?></textarea>
-    <small id="home-intro-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
-    <?php renderAdminContentReferencePicker('home_intro'); ?>
-  </fieldset>
 
   <fieldset id="settings-basics">
     <legend>Obecná nastavení</legend>

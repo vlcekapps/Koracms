@@ -12,7 +12,7 @@ function widgetTypeDefinitions(): array
             'name' => 'Úvodní text',
             'default_title' => 'Úvodní text',
             'requires_module' => null,
-            'requires_setting' => 'home_intro',
+            'requires_setting' => null,
         ],
         'latest_articles' => [
             'name' => 'Nejnovější články',
@@ -191,10 +191,6 @@ function widgetModuleDisplayName(string $moduleKey): string
 
 function widgetSettingAvailabilityReason(string $type, string $settingKey): string
 {
-    if ($type === 'intro' && $settingKey === 'home_intro') {
-        return 'chybí úvodní text webu';
-    }
-
     return 'chybí potřebné nastavení widgetu';
 }
 
@@ -233,9 +229,9 @@ function widgetInstanceAvailability(array $widget): array
 
     switch ($type) {
         case 'intro':
-            $introText = trim((string)($settings['text'] ?? getSetting('home_intro', '')));
-            if ($introText === '') {
-                $reasons[] = 'chybí text úvodního widgetu';
+            $introContent = trim((string)($settings['content'] ?? ($settings['text'] ?? '')));
+            if ($introContent === '') {
+                $reasons[] = 'chybí obsah úvodního widgetu';
             }
             break;
 
@@ -672,16 +668,16 @@ function renderWidget(array $widget, string $zone = 'homepage'): string
 
 function renderWidget_intro(array $widget, array $settings, string $zone): string
 {
-    $text = $settings['text'] ?? getSetting('home_intro', '');
-    if (trim($text) === '') {
+    $content = (string)($settings['content'] ?? ($settings['text'] ?? ''));
+    if (trim($content) === '') {
         return '';
     }
     if ($zone === 'homepage') {
         return '<section class="surface home-section" aria-label="' . h($widget['title'] ?: 'Úvod') . '">'
-             . '<div class="prose">' . renderContent($text) . '</div></section>';
+             . '<div class="prose">' . renderContent($content) . '</div></section>';
     }
     return '<section class="widget-card" aria-label="' . h($widget['title'] ?: 'Úvod') . '">'
-         . '<div class="prose">' . renderContent($text) . '</div></section>';
+         . '<div class="prose">' . renderContent($content) . '</div></section>';
 }
 
 function renderWidget_latest_articles(array $widget, array $settings, string $zone): string

@@ -31,9 +31,10 @@ if (!isset($zones[$zone])) {
 $settings = widgetSettings($widget);
 $type = $widget['widget_type'];
 
-switch ($type) {
+  switch ($type) {
     case 'intro':
-        $settings['text'] = $_POST['widget_text'] ?? ($settings['text'] ?? '');
+        $settings['content'] = $_POST['widget_content'] ?? ($settings['content'] ?? ($settings['text'] ?? ''));
+        unset($settings['text']);
         break;
     case 'latest_articles':
         $settings['count'] = max(1, min(50, (int)($_POST['widget_count'] ?? 5)));
