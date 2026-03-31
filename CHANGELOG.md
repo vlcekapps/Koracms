@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.9] – 2026-03-31
 
 ### Přidáno
 - **Blogy – doplnění zakladatele u starších blogů** – stránka `Tým blogu` nově umožňuje globálním správcům bezpečně doplnit chybějícího zakladatele (`created_by_user_id`) u starších blogů jako jednorázový auditní údaj, aniž by se tím automaticky měnilo členství v týmu blogu
