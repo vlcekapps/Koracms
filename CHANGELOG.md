@@ -25,6 +25,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **HTML editor – obsahové snippety pro moduly** – content parser a content picker nově podporují živé embedy formulářů a anket a teaser karty pro downloady, podcasty, epizody podcastů, místa, události a položky vývěsky
 
 ### Změněno
+- **Nastavení webu – PRG workflow, field-level chyby a lehký HTTP integration běh** – stránka `Obecná nastavení` nově používá samostatný POST handler `admin/settings_save.php`, ukládá změny atomicky až po plné validaci včetně branding uploadů, vrací se přes PRG zpět na `settings.php` a u validovaných polí zobrazuje lokální field-level chyby s `aria-invalid`; vedle `build/runtime_audit.php` je nově k dispozici i lehký request/response ověřovací skript `php build/http_integration.php` pro kritické POST flow
 - **Rezervace – veřejná validace kalendářního data** – veřejný booking flow nově neověřuje jen formát `RRRR-MM-DD`, ale i skutečně existující kalendářní datum; neplatný den se už potichu nepřenormalizuje na jiný termín rezervace
 - **Nastavení webu – bezpečnější upload loga a favicony** – branding uploady v administraci už nepřijímají nové SVG soubory, backend vynucuje velikostní limity pro faviconu i logo a při chybě uploadu vrací čitelnější validační hlášku místo tichého selhání
 - **UTF-8 a diakritika – migrační logy a audit copy** – opravené rozbité texty v `migrate.php`, `build/runtime_audit.php` a legacy komentovaném bloku v editoru článků, aby administrace i migrační výstupy držely korektní českou diakritiku

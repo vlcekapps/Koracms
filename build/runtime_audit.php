@@ -7,6 +7,7 @@ ob_start();
 
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cron.php';
+require_once __DIR__ . '/http_test_helpers.php';
 
 $baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
 $pdo     = db_connect();
@@ -2024,72 +2025,76 @@ if ($resourceSlug) {
 /**
  * @return array{status:string,headers:array<int,string>,body:string}
  */
-function fetchUrl(string $url, string $cookie = '', int $maxRedirects = 20): array
-{
-    $headers = [
-        'User-Agent: KoraRuntimeAudit/1.0',
-    ];
-    if ($cookie !== '') {
-        $headers[] = 'Cookie: ' . $cookie;
+if (!function_exists('fetchUrl')) {
+    function fetchUrl(string $url, string $cookie = '', int $maxRedirects = 20): array
+    {
+        $headers = [
+            'User-Agent: KoraRuntimeAudit/1.0',
+        ];
+        if ($cookie !== '') {
+            $headers[] = 'Cookie: ' . $cookie;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => implode("\r\n", $headers) . "\r\n",
+                'ignore_errors' => true,
+                'timeout' => 15,
+                'follow_location' => $maxRedirects > 0 ? 1 : 0,
+                'max_redirects' => $maxRedirects,
+            ],
+        ]);
+
+        $body = file_get_contents($url, false, $context);
+        $responseHeaders = $http_response_header ?? [];
+        $status = $responseHeaders[0] ?? 'HTTP status unknown';
+
+        return [
+            'status' => $status,
+            'headers' => $responseHeaders,
+            'body' => is_string($body) ? $body : '',
+        ];
     }
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => implode("\r\n", $headers) . "\r\n",
-            'ignore_errors' => true,
-            'timeout' => 15,
-            'follow_location' => $maxRedirects > 0 ? 1 : 0,
-            'max_redirects' => $maxRedirects,
-        ],
-    ]);
-
-    $body = file_get_contents($url, false, $context);
-    $responseHeaders = $http_response_header ?? [];
-    $status = $responseHeaders[0] ?? 'HTTP status unknown';
-
-    return [
-        'status' => $status,
-        'headers' => $responseHeaders,
-        'body' => is_string($body) ? $body : '',
-    ];
 }
 
 /**
  * @param array<string,string> $fields
  * @return array{status:string,headers:array<int,string>,body:string}
  */
-function postUrl(string $url, array $fields, string $cookie = '', int $maxRedirects = 20): array
-{
-    $headers = [
-        'User-Agent: KoraRuntimeAudit/1.0',
-        'Content-Type: application/x-www-form-urlencoded',
-    ];
-    if ($cookie !== '') {
-        $headers[] = 'Cookie: ' . $cookie;
+if (!function_exists('postUrl')) {
+    function postUrl(string $url, array $fields, string $cookie = '', int $maxRedirects = 20): array
+    {
+        $headers = [
+            'User-Agent: KoraRuntimeAudit/1.0',
+            'Content-Type: application/x-www-form-urlencoded',
+        ];
+        if ($cookie !== '') {
+            $headers[] = 'Cookie: ' . $cookie;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers) . "\r\n",
+                'content' => http_build_query($fields),
+                'ignore_errors' => true,
+                'timeout' => 15,
+                'follow_location' => $maxRedirects > 0 ? 1 : 0,
+                'max_redirects' => $maxRedirects,
+            ],
+        ]);
+
+        $body = file_get_contents($url, false, $context);
+        $responseHeaders = $http_response_header ?? [];
+        $status = $responseHeaders[0] ?? 'HTTP status unknown';
+
+        return [
+            'status' => $status,
+            'headers' => $responseHeaders,
+            'body' => is_string($body) ? $body : '',
+        ];
     }
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => implode("\r\n", $headers) . "\r\n",
-            'content' => http_build_query($fields),
-            'ignore_errors' => true,
-            'timeout' => 15,
-            'follow_location' => $maxRedirects > 0 ? 1 : 0,
-            'max_redirects' => $maxRedirects,
-        ],
-    ]);
-
-    $body = file_get_contents($url, false, $context);
-    $responseHeaders = $http_response_header ?? [];
-    $status = $responseHeaders[0] ?? 'HTTP status unknown';
-
-    return [
-        'status' => $status,
-        'headers' => $responseHeaders,
-        'body' => is_string($body) ? $body : '',
-    ];
 }
 
 /**
@@ -2097,57 +2102,59 @@ function postUrl(string $url, array $fields, string $cookie = '', int $maxRedire
  * @param array<string,array{path:string,filename:string,type?:string}> $files
  * @return array{status:string,headers:array<int,string>,body:string}
  */
-function postMultipartUrl(string $url, array $fields, array $files, string $cookie = '', int $maxRedirects = 20): array
-{
-    $boundary = '----KoraRuntimeAudit' . bin2hex(random_bytes(8));
-    $eol = "\r\n";
-    $body = '';
+if (!function_exists('postMultipartUrl')) {
+    function postMultipartUrl(string $url, array $fields, array $files, string $cookie = '', int $maxRedirects = 20): array
+    {
+        $boundary = '----KoraRuntimeAudit' . bin2hex(random_bytes(8));
+        $eol = "\r\n";
+        $body = '';
 
-    foreach ($fields as $fieldName => $fieldValue) {
-        $body .= '--' . $boundary . $eol;
-        $body .= 'Content-Disposition: form-data; name="' . $fieldName . '"' . $eol . $eol;
-        $body .= $fieldValue . $eol;
+        foreach ($fields as $fieldName => $fieldValue) {
+            $body .= '--' . $boundary . $eol;
+            $body .= 'Content-Disposition: form-data; name="' . $fieldName . '"' . $eol . $eol;
+            $body .= $fieldValue . $eol;
+        }
+
+        foreach ($files as $fieldName => $file) {
+            $contents = (string)file_get_contents($file['path']);
+            $body .= '--' . $boundary . $eol;
+            $body .= 'Content-Disposition: form-data; name="' . $fieldName . '"; filename="' . $file['filename'] . '"' . $eol;
+            $body .= 'Content-Type: ' . ($file['type'] ?? 'application/octet-stream') . $eol . $eol;
+            $body .= $contents . $eol;
+        }
+
+        $body .= '--' . $boundary . '--' . $eol;
+
+        $headers = [
+            'User-Agent: KoraRuntimeAudit/1.0',
+            'Content-Type: multipart/form-data; boundary=' . $boundary,
+        ];
+        if ($cookie !== '') {
+            $headers[] = 'Cookie: ' . $cookie;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers) . "\r\n",
+                'content' => $body,
+                'ignore_errors' => true,
+                'timeout' => 20,
+                'follow_location' => $maxRedirects > 0 ? 1 : 0,
+                'max_redirects' => $maxRedirects,
+            ],
+        ]);
+
+        $responseBody = file_get_contents($url, false, $context);
+        $responseHeaders = $http_response_header ?? [];
+        $status = $responseHeaders[0] ?? 'HTTP status unknown';
+
+        return [
+            'status' => $status,
+            'headers' => $responseHeaders,
+            'body' => is_string($responseBody) ? $responseBody : '',
+        ];
     }
-
-    foreach ($files as $fieldName => $file) {
-        $contents = (string)file_get_contents($file['path']);
-        $body .= '--' . $boundary . $eol;
-        $body .= 'Content-Disposition: form-data; name="' . $fieldName . '"; filename="' . $file['filename'] . '"' . $eol;
-        $body .= 'Content-Type: ' . ($file['type'] ?? 'application/octet-stream') . $eol . $eol;
-        $body .= $contents . $eol;
-    }
-
-    $body .= '--' . $boundary . '--' . $eol;
-
-    $headers = [
-        'User-Agent: KoraRuntimeAudit/1.0',
-        'Content-Type: multipart/form-data; boundary=' . $boundary,
-    ];
-    if ($cookie !== '') {
-        $headers[] = 'Cookie: ' . $cookie;
-    }
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => implode("\r\n", $headers) . "\r\n",
-            'content' => $body,
-            'ignore_errors' => true,
-            'timeout' => 20,
-            'follow_location' => $maxRedirects > 0 ? 1 : 0,
-            'max_redirects' => $maxRedirects,
-        ],
-    ]);
-
-    $responseBody = file_get_contents($url, false, $context);
-    $responseHeaders = $http_response_header ?? [];
-    $status = $responseHeaders[0] ?? 'HTTP status unknown';
-
-    return [
-        'status' => $status,
-        'headers' => $responseHeaders,
-        'body' => is_string($responseBody) ? $responseBody : '',
-    ];
 }
 
 /**
@@ -2314,17 +2321,37 @@ function analyzeHeaders(array $headers): array
     return $issues;
 }
 
-function responseHasLocationHeader(array $headers, string $expectedPath, string $baseUrl = ''): bool
-{
-    $expectedAbsolute = rtrim($baseUrl, '/') . $expectedPath;
-    if (isset($headers['Location'])) {
-        $headerValue = $headers['Location'];
-        $locations = is_array($headerValue) ? $headerValue : [$headerValue];
-        foreach ($locations as $location) {
-            $location = trim((string)$location);
+if (!function_exists('responseHasLocationHeader')) {
+    function responseHasLocationHeader(array $headers, string $expectedPath, string $baseUrl = ''): bool
+    {
+        $expectedAbsolute = rtrim($baseUrl, '/') . $expectedPath;
+        if (isset($headers['Location'])) {
+            $headerValue = $headers['Location'];
+            $locations = is_array($headerValue) ? $headerValue : [$headerValue];
+            foreach ($locations as $location) {
+                $location = trim((string)$location);
+                if ($location === $expectedPath || $location === $expectedAbsolute) {
+                    return true;
+                }
+                $parsedPath = (string)(parse_url($location, PHP_URL_PATH) ?? '');
+                $parsedQuery = (string)(parse_url($location, PHP_URL_QUERY) ?? '');
+                $normalizedLocation = $parsedPath . ($parsedQuery !== '' ? '?' . $parsedQuery : '');
+                if ($normalizedLocation === $expectedPath) {
+                    return true;
+                }
+            }
+        }
+
+        foreach ($headers as $header) {
+            if (stripos($header, 'Location:') !== 0) {
+                continue;
+            }
+
+            $location = trim(substr($header, 9));
             if ($location === $expectedPath || $location === $expectedAbsolute) {
                 return true;
             }
+
             $parsedPath = (string)(parse_url($location, PHP_URL_PATH) ?? '');
             $parsedQuery = (string)(parse_url($location, PHP_URL_QUERY) ?? '');
             $normalizedLocation = $parsedPath . ($parsedQuery !== '' ? '?' . $parsedQuery : '');
@@ -2332,27 +2359,9 @@ function responseHasLocationHeader(array $headers, string $expectedPath, string 
                 return true;
             }
         }
+
+        return false;
     }
-
-    foreach ($headers as $header) {
-        if (stripos($header, 'Location:') !== 0) {
-            continue;
-        }
-
-        $location = trim(substr($header, 9));
-        if ($location === $expectedPath || $location === $expectedAbsolute) {
-            return true;
-        }
-
-        $parsedPath = (string)(parse_url($location, PHP_URL_PATH) ?? '');
-        $parsedQuery = (string)(parse_url($location, PHP_URL_QUERY) ?? '');
-        $normalizedLocation = $parsedPath . ($parsedQuery !== '' ? '?' . $parsedQuery : '');
-        if ($normalizedLocation === $expectedPath) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 /**
@@ -2418,14 +2427,16 @@ function analyzeUxHeuristics(string $html, string $label): array
     return array_values(array_unique($issues));
 }
 
-function extractHiddenInputValue(string $html, string $name): string
-{
-    $pattern = '/<input[^>]+name="' . preg_quote($name, '/') . '"[^>]+value="([^"]*)"/i';
-    if (preg_match($pattern, $html, $matches) === 1) {
-        return html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    }
+if (!function_exists('extractHiddenInputValue')) {
+    function extractHiddenInputValue(string $html, string $name): string
+    {
+        $pattern = '/<input[^>]+name="' . preg_quote($name, '/') . '"[^>]+value="([^"]*)"/i';
+        if (preg_match($pattern, $html, $matches) === 1) {
+            return html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
 
-    return '';
+        return '';
+    }
 }
 
 function extractCaptchaAnswer(string $html): ?int
@@ -7080,16 +7091,26 @@ try {
     }
 
     $customProfileResult = postUrl(
-        $baseUrl . '/admin/settings.php',
+        $baseUrl . '/admin/settings_save.php',
         $settingsPayload,
         'PHPSESSID=' . $auditSessionId,
         0
     );
 
-    if (!str_contains($customProfileResult['status'], '200')) {
-        $customProfileIssues[] = 'custom profile settings save did not return 200';
+    if (!str_contains($customProfileResult['status'], '302')) {
+        $customProfileIssues[] = 'custom profile settings save did not return PRG redirect';
     }
-    if (!str_contains($customProfileResult['body'], 'Vlastní profil byl uložen bez zásahu do stávajících modulů a vzhledu.')) {
+    if (!responseHasLocationHeader($customProfileResult['headers'], '/admin/settings.php', $baseUrl)) {
+        $customProfileIssues[] = 'custom profile settings save did not redirect back to settings page';
+    }
+
+    $customProfileFollowup = fetchUrl(
+        $baseUrl . '/admin/settings.php',
+        'PHPSESSID=' . $auditSessionId,
+        0
+    );
+
+    if (!str_contains($customProfileFollowup['body'], 'Vlastní profil zůstal bez zásahu do stávajících modulů a vzhledu.')) {
         $customProfileIssues[] = 'custom profile save did not confirm non-destructive apply';
     }
 
@@ -8653,6 +8674,7 @@ $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_fo
 $profileAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
 $userFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
 $settingsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings.php');
+$settingsSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_save.php');
 
 foreach ([
     'function uploadDownloadImage',
@@ -8703,7 +8725,7 @@ foreach ([
     'Favicon může mít nejvýše 256 KB.',
     'Logo může mít nejvýše 2 MB.',
 ] as $settingsUploadFragment) {
-    if (!str_contains($settingsAdminSource, $settingsUploadFragment)) {
+    if (!str_contains($settingsSaveSource, $settingsUploadFragment) && !str_contains($settingsAdminSource, $settingsUploadFragment)) {
         $publicUploadSvgIssues[] = 'settings admin is missing upload size validation fragment: ' . $settingsUploadFragment;
     }
 }
@@ -8714,6 +8736,76 @@ if ($publicUploadSvgIssues === []) {
     $failures++;
     foreach ($publicUploadSvgIssues as $publicUploadSvgIssue) {
         echo '- ' . $publicUploadSvgIssue . "\n";
+    }
+}
+
+echo "=== settings_prg_guardrails ===\n";
+$settingsPrgIssues = [];
+$settingsSharedSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_shared.php');
+$httpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
+    ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
+    : '';
+$readmeSource = (string)file_get_contents(dirname(__DIR__) . '/README.md');
+foreach ([
+    "require_once __DIR__ . '/settings_shared.php';",
+    '$flash = settingsFlashPull();',
+    'action="settings_save.php"',
+    "adminFieldAttributes('site_name'",
+    "adminFieldAttributes('contact_email'",
+    "adminFieldAttributes('board_public_label'",
+    "adminFieldAttributes('github_issues_repository'",
+    "adminFieldAttributes('site_favicon'",
+    "adminFieldAttributes('site_logo'",
+] as $settingsViewFragment) {
+    if (!str_contains($settingsAdminSource, $settingsViewFragment)) {
+        $settingsPrgIssues[] = 'settings page is missing PRG/view fragment: ' . $settingsViewFragment;
+    }
+}
+foreach ([
+    'function settingsFlashPull(): array',
+    'function settingsFlashSet(array $flash): void',
+    'function settingsDefaultFormState(): array',
+] as $settingsSharedFragment) {
+    if (!str_contains($settingsSharedSource, $settingsSharedFragment)) {
+        $settingsPrgIssues[] = 'settings shared helper is missing fragment: ' . $settingsSharedFragment;
+    }
+}
+foreach ([
+    '$pdo->beginTransaction();',
+    'settingsFlashSet([',
+    "'field_errors' => array_values(array_unique(\$fieldErrors))",
+    "'success' => \$successMessage",
+    "header('Location: ' . BASE_URL . '/admin/settings.php');",
+    '$movedFiles = [];',
+    '$generatedWebpFiles = [];',
+] as $settingsSaveFragment) {
+    if (!str_contains($settingsSaveSource, $settingsSaveFragment)) {
+        $settingsPrgIssues[] = 'settings save handler is missing PRG/atomic fragment: ' . $settingsSaveFragment;
+    }
+}
+if ($httpIntegrationSource === '') {
+    $settingsPrgIssues[] = 'build/http_integration.php is missing';
+} else {
+    foreach ([
+        "require_once __DIR__ . '/http_test_helpers.php';",
+        '/admin/settings_save.php',
+        '/reservations/book.php',
+        '/admin/blog_transfer.php',
+    ] as $integrationFragment) {
+        if (!str_contains($httpIntegrationSource, $integrationFragment)) {
+            $settingsPrgIssues[] = 'http integration script is missing scenario fragment: ' . $integrationFragment;
+        }
+    }
+}
+if (!str_contains($readmeSource, 'php build/http_integration.php')) {
+    $settingsPrgIssues[] = 'README is missing http integration verification command';
+}
+if ($settingsPrgIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($settingsPrgIssues as $settingsPrgIssue) {
+        echo '- ' . $settingsPrgIssue . "\n";
     }
 }
 

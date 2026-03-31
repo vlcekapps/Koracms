@@ -110,6 +110,8 @@ Platí tato pravidla:
 - favicona musí respektovat backend limit `256 KB`
 - logo musí respektovat backend limit `2 MB`
 - při chybě uploadu nebo neplatném dočasném souboru se formulář vrátí s čitelnou chybovou hláškou
+- ukládání běží přes PRG workflow, takže refresh po uložení neopakuje POST
+- validovaná pole nově vracejí i lokální field-level chyby s `aria-invalid` a zachováním zadaných hodnot po redirectu
 
 To snižuje riziko, že se do veřejně servírovaných assetů dostane aktivní obsah nebo nepřiměřeně velký soubor.
 

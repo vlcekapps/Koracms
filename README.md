@@ -504,6 +504,7 @@ Před nasazením změn spusťte:
 
 ```bash
 php build/runtime_audit.php
+php build/http_integration.php
 ```
 
 Při větších zásazích doplňte i PHP lint:
