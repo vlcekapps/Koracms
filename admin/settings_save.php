@@ -38,10 +38,6 @@ $formState['content_editor'] = in_array((string)($_POST['content_editor'] ?? '')
 $formState['ga4_measurement_id'] = trim((string)($_POST['ga4_measurement_id'] ?? ''));
 $formState['custom_head_code'] = (string)($_POST['custom_head_code'] ?? '');
 $formState['custom_footer_code'] = (string)($_POST['custom_footer_code'] ?? '');
-$formState['social_facebook'] = trim((string)($_POST['social_facebook'] ?? ''));
-$formState['social_youtube'] = trim((string)($_POST['social_youtube'] ?? ''));
-$formState['social_instagram'] = trim((string)($_POST['social_instagram'] ?? ''));
-$formState['social_twitter'] = trim((string)($_POST['social_twitter'] ?? ''));
 $formState['og_image_default'] = trim((string)($_POST['og_image_default'] ?? ''));
 $formState['home_intro'] = trim((string)($_POST['home_intro'] ?? ''));
 $formState['cookie_consent_enabled'] = isset($_POST['cookie_consent_enabled']) ? '1' : '0';
@@ -234,10 +230,6 @@ $settingsToPersist = [
     'notify_pending_content',
     'notify_chat_message',
     'chat_retention_days',
-    'social_facebook',
-    'social_youtube',
-    'social_instagram',
-    'social_twitter',
     'ga4_measurement_id',
     'custom_head_code',
     'custom_footer_code',

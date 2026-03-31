@@ -2393,6 +2393,26 @@ body.theme-public textarea.form-control {
   font-size: 1.05rem;
 }
 
+.widget-form-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.widget-form-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.widget-form-stack .field {
+  margin: 0;
+}
+
+.widget-form-stack .button-row {
+  margin: 0;
+}
+
 .widget-list {
   list-style: none;
   margin: 0;

@@ -59,6 +59,9 @@ switch ($type) {
     case 'newsletter':
         $settings['cta_text'] = trim($_POST['widget_cta_text'] ?? '');
         break;
+    case 'search':
+        $settings['cta_text'] = trim($_POST['widget_cta_text'] ?? '');
+        break;
     case 'gallery_preview':
         $settings['album_id'] = (int)($_POST['widget_album_id'] ?? 0);
         break;
@@ -67,6 +70,11 @@ switch ($type) {
         break;
     case 'custom_html':
         $settings['content'] = $_POST['widget_content'] ?? '';
+        break;
+    case 'social_links':
+        foreach (array_keys(widgetSocialLinkDefinitions()) as $socialSettingKey) {
+            $settings[$socialSettingKey] = normalizeWidgetExternalUrl((string)($_POST['widget_' . $socialSettingKey] ?? ''));
+        }
         break;
 }
 

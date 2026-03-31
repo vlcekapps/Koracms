@@ -699,18 +699,37 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 | Vývěska | Poslední oznámení |
 | Nadcházející události | Nejbližší plánované akce |
 | Anketa | Aktivní hlasování |
-| Newsletter | Formulář pro přihlášení k odběru |
+| Newsletter | Inline formulář pro přihlášení k odběru novinek |
 | Ke stažení | Poslední položky ke stažení |
 | FAQ | Často kladené otázky |
 | Zajímavá místa | Výběr z turistického adresáře |
 | Nejnovější epizody podcastu | Poslední epizody |
 | Vybraný formulář | Konkrétní veřejný formulář (jen pokud existuje alespoň jeden aktivní) |
-| Nápověda galerie | Odkaz na galerii |
-| Vyhledávání | Vyhledávací pole |
+| Náhled galerie | Výběr posledních veřejných fotografií |
+| Vyhledávání | Vyhledávací pole a tlačítko `Hledat` |
 | Kontaktní údaje | Adresa, telefon, e-mail |
+| Sociální sítě | Odkazy na vyplněné profily Facebook / YouTube / Instagram / X |
+| Statistiky návštěvnosti | Přehled `Online / Dnes / Měsíc / Celkem` |
 | Vlastní HTML | Libovolný HTML kód |
 
 Widgety respektují stav modulů – vypnutý modul se v nabídce widgetů nezobrazuje.
+
+Zároveň ale platí, že i aktivní widget se může dočasně nevykreslit. Typické důvody:
+
+- vypnutý modul
+- vypnuté sledování návštěvnosti u widgetu Statistiky návštěvnosti
+- chybějící obsah, například žádné veřejné články, fotky nebo události
+- prázdná konfigurace, například žádné odkazy v widgetu Sociální sítě
+- neplatná vazba na formulář, album, pořad nebo blog
+
+Správa widgetů tyto stavy nově ukazuje přímo v přehledu textem `Na webu se teď nezobrazí: ...`, takže správce nemusí zkoušet metodou pokus–omyl, proč je blok aktivní, ale na webu se neukazuje.
+
+Praktická poznámka k footeru:
+
+- odkazy na sociální sítě už se nenastavují v `Obecných nastaveních`, ale přímo ve widgetu `Sociální sítě`
+- odkaz `Vyhledávání` je nahrazen widgetem s vlastním hledacím polem
+- odkaz `Odběr novinek` je nahrazen widgetem s inline formulářem pro přihlášení k newsletteru
+- veřejné statistiky návštěvnosti se už nezapínají samostatným checkboxem v `Správě modulů`; zobrazí se jen při aktivním modulu Statistiky, zapnutém sledování návštěvnosti a aktivním widgetu
 
 ---
 

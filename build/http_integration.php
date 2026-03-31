@@ -93,10 +93,6 @@ function httpIntegrationSettingsPostFields(array $formState): array
         'ga4_measurement_id' => (string)($formState['ga4_measurement_id'] ?? ''),
         'custom_head_code' => (string)($formState['custom_head_code'] ?? ''),
         'custom_footer_code' => (string)($formState['custom_footer_code'] ?? ''),
-        'social_facebook' => (string)($formState['social_facebook'] ?? ''),
-        'social_youtube' => (string)($formState['social_youtube'] ?? ''),
-        'social_instagram' => (string)($formState['social_instagram'] ?? ''),
-        'social_twitter' => (string)($formState['social_twitter'] ?? ''),
         'og_image_default' => (string)($formState['og_image_default'] ?? ''),
         'home_intro' => (string)($formState['home_intro'] ?? ''),
         'cookie_consent_text' => (string)($formState['cookie_consent_text'] ?? ''),
@@ -310,7 +306,6 @@ try {
         'module_reservations' => getSetting('module_reservations', '0'),
         'module_forms' => getSetting('module_forms', '0'),
         'visitor_tracking_enabled' => getSetting('visitor_tracking_enabled', '0'),
-        'visitor_counter_enabled' => getSetting('visitor_counter_enabled', '0'),
         'stats_retention_days' => getSetting('stats_retention_days', '90'),
     ];
 
@@ -518,9 +513,6 @@ try {
     if (getSetting('visitor_tracking_enabled', '0') === '1') {
         $settingsModulesFields['visitor_tracking_enabled'] = '1';
     }
-    if (getSetting('visitor_counter_enabled', '0') === '1') {
-        $settingsModulesFields['visitor_counter_enabled'] = '1';
-    }
 
     $settingsModulesSaveResponse = postUrl($settingsModulesUrl, $settingsModulesFields, $adminSession['cookie'], 0);
     if (httpIntegrationStatusCode($settingsModulesSaveResponse) !== 302) {
@@ -546,12 +538,15 @@ try {
     if (str_contains($settingsModulesSecondRead['body'], 'Nastavení modulů bylo uloženo.')) {
         $settingsModulesIssues[] = 'success flash zpráva správy modulů po druhém načtení nezmizela';
     }
+    if (str_contains($settingsModulesSuccessPage['body'], 'Povolit widget Statistiky návštěvnosti na veřejném webu')) {
+        $settingsModulesIssues[] = 'správa modulů stále vykresluje duplicitní přepínač visitor_stats widgetu';
+    }
 
     httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
 
     $visitorStatsWidgetIssues = [];
+    saveSetting('module_statistics', '1');
     saveSetting('visitor_tracking_enabled', '1');
-    saveSetting('visitor_counter_enabled', '1');
     clearSettingsCache();
 
     $visitorStatsWidgetTitle = 'HTTP visitor stats ' . bin2hex(random_bytes(4));
@@ -581,6 +576,25 @@ try {
         $visitorStatsWidgetIssues[] = 'visitor stats widget ve footer zóně nepoužil footer variantu stylů';
     }
 
+    saveSetting('visitor_tracking_enabled', '0');
+    clearSettingsCache();
+    $homeWithTrackingDisabled = fetchUrl($publicHomeUrl, '', 0);
+    if (str_contains($homeWithTrackingDisabled['body'], $visitorStatsWidgetTitle)) {
+        $visitorStatsWidgetIssues[] = 'visitor stats widget zůstal viditelný i při vypnutém sledování návštěvnosti';
+    }
+
+    saveSetting('visitor_tracking_enabled', '1');
+    saveSetting('module_statistics', '0');
+    clearSettingsCache();
+    $homeWithStatisticsModuleDisabled = fetchUrl($publicHomeUrl, '', 0);
+    if (str_contains($homeWithStatisticsModuleDisabled['body'], $visitorStatsWidgetTitle)) {
+        $visitorStatsWidgetIssues[] = 'visitor stats widget zůstal viditelný i při vypnutém modulu statistik';
+    }
+
+    saveSetting('module_statistics', '1');
+    saveSetting('visitor_tracking_enabled', '1');
+    clearSettingsCache();
+
     $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$visitorStatsWidgetId]);
     $createdWidgetIds = array_values(array_filter(
         $createdWidgetIds,
@@ -593,6 +607,239 @@ try {
     }
 
     httpIntegrationPrintResult('visitor_stats_widget_http', $visitorStatsWidgetIssues, $failures);
+
+    $socialLinksWidgetIssues = [];
+    $socialLinksWidgetTitle = 'HTTP social links ' . bin2hex(random_bytes(4));
+    $socialLinksWidgetSortOrder = (int)$pdo->query(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+    )->fetchColumn();
+    $socialLinksWidgetSettings = [
+        'social_facebook' => 'https://example.test/facebook-' . bin2hex(random_bytes(4)),
+        'social_youtube' => 'https://example.test/youtube-' . bin2hex(random_bytes(4)),
+        'social_instagram' => 'https://example.test/instagram-' . bin2hex(random_bytes(4)),
+        'social_twitter' => 'https://example.test/x-' . bin2hex(random_bytes(4)),
+    ];
+    $insertSocialLinksWidget = $pdo->prepare(
+        "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order, is_active)
+         VALUES ('footer', 'social_links', ?, ?, ?, 1)"
+    );
+    $insertSocialLinksWidget->execute([
+        $socialLinksWidgetTitle,
+        json_encode($socialLinksWidgetSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        $socialLinksWidgetSortOrder,
+    ]);
+    $socialLinksWidgetId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $socialLinksWidgetId;
+
+    $homeWithSocialLinksWidget = fetchUrl($publicHomeUrl, '', 0);
+    if (httpIntegrationStatusCode($homeWithSocialLinksWidget) !== 200) {
+        $socialLinksWidgetIssues[] = 'homepage se social links widgetem nevrátila 200';
+    }
+    if (!str_contains($homeWithSocialLinksWidget['body'], $socialLinksWidgetTitle)) {
+        $socialLinksWidgetIssues[] = 'social links widget se na homepage nevykreslil s vlastním titulkem';
+    }
+    foreach (['Facebook', 'YouTube', 'Instagram', 'X / Twitter'] as $socialLabel) {
+        if (!str_contains($homeWithSocialLinksWidget['body'], $socialLabel)) {
+            $socialLinksWidgetIssues[] = 'social links widget nevykreslil odkaz ' . $socialLabel;
+        }
+    }
+    foreach ($socialLinksWidgetSettings as $socialLinkUrl) {
+        if (!str_contains($homeWithSocialLinksWidget['body'], $socialLinkUrl)) {
+            $socialLinksWidgetIssues[] = 'social links widget nevykreslil URL ' . $socialLinkUrl;
+        }
+    }
+
+    $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$socialLinksWidgetId]);
+    $createdWidgetIds = array_values(array_filter(
+        $createdWidgetIds,
+        static fn(int $existingWidgetId): bool => $existingWidgetId !== $socialLinksWidgetId
+    ));
+
+    $homeWithoutSocialLinksWidget = fetchUrl($publicHomeUrl, '', 0);
+    if (str_contains($homeWithoutSocialLinksWidget['body'], $socialLinksWidgetTitle)) {
+        $socialLinksWidgetIssues[] = 'social links widget zůstal na homepage i po odebrání z footer zóny';
+    }
+
+    httpIntegrationPrintResult('social_links_widget_http', $socialLinksWidgetIssues, $failures);
+
+    $widgetsAdminAvailabilityIssues = [];
+    $widgetsAdminUrl = $baseUrl . BASE_URL . '/admin/widgets.php';
+    $widgetsAdminOriginalModuleStatistics = getSetting('module_statistics', '0');
+    $widgetsAdminOriginalTrackingEnabled = getSetting('visitor_tracking_enabled', '0');
+
+    $hiddenSocialWidgetTitle = 'HTTP unavailable social ' . bin2hex(random_bytes(4));
+    $hiddenSocialWidgetSortOrder = (int)$pdo->query(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+    )->fetchColumn();
+    $insertHiddenSocialWidget = $pdo->prepare(
+        "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order, is_active)
+         VALUES ('footer', 'social_links', ?, '{}', ?, 1)"
+    );
+    $insertHiddenSocialWidget->execute([$hiddenSocialWidgetTitle, $hiddenSocialWidgetSortOrder]);
+    $hiddenSocialWidgetId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $hiddenSocialWidgetId;
+
+    $widgetsAdminSocialResponse = fetchUrl($widgetsAdminUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($widgetsAdminSocialResponse) !== 200) {
+        $widgetsAdminAvailabilityIssues[] = 'správa widgetů nevrátila 200 pro kontrolu prázdného social links widgetu';
+    }
+    if (preg_match(
+        '/' . preg_quote($hiddenSocialWidgetTitle, '/') . '.*?Na webu se teď nezobrazí:.*?nejsou vyplněné žádné odkazy na sociální sítě/isu',
+        $widgetsAdminSocialResponse['body']
+    ) !== 1) {
+        $widgetsAdminAvailabilityIssues[] = 'správa widgetů neukázala důvod nezobrazení pro social links widget bez odkazů';
+    }
+
+    saveSetting('module_statistics', '1');
+    saveSetting('visitor_tracking_enabled', '0');
+    clearSettingsCache();
+
+    $hiddenVisitorStatsTitle = 'HTTP unavailable stats ' . bin2hex(random_bytes(4));
+    $hiddenVisitorStatsSortOrder = (int)$pdo->query(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+    )->fetchColumn();
+    $insertHiddenVisitorStatsWidget = $pdo->prepare(
+        "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order, is_active)
+         VALUES ('footer', 'visitor_stats', ?, '{}', ?, 1)"
+    );
+    $insertHiddenVisitorStatsWidget->execute([$hiddenVisitorStatsTitle, $hiddenVisitorStatsSortOrder]);
+    $hiddenVisitorStatsWidgetId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $hiddenVisitorStatsWidgetId;
+
+    $widgetsAdminVisitorStatsResponse = fetchUrl($widgetsAdminUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($widgetsAdminVisitorStatsResponse) !== 200) {
+        $widgetsAdminAvailabilityIssues[] = 'správa widgetů nevrátila 200 pro kontrolu visitor stats widgetu bez tracking';
+    }
+    if (preg_match(
+        '/' . preg_quote($hiddenVisitorStatsTitle, '/') . '.*?Na webu se teď nezobrazí:.*?sledování návštěvnosti je vypnuté/isu',
+        $widgetsAdminVisitorStatsResponse['body']
+    ) !== 1) {
+        $widgetsAdminAvailabilityIssues[] = 'správa widgetů neukázala důvod nezobrazení pro visitor stats widget při vypnutém tracking';
+    }
+
+    saveSetting('module_statistics', $widgetsAdminOriginalModuleStatistics);
+    saveSetting('visitor_tracking_enabled', $widgetsAdminOriginalTrackingEnabled);
+    clearSettingsCache();
+
+    $pdo->prepare("DELETE FROM cms_widgets WHERE id IN (?, ?)")->execute([$hiddenSocialWidgetId, $hiddenVisitorStatsWidgetId]);
+    $createdWidgetIds = array_values(array_filter(
+        $createdWidgetIds,
+        static fn(int $existingWidgetId): bool => $existingWidgetId !== $hiddenSocialWidgetId && $existingWidgetId !== $hiddenVisitorStatsWidgetId
+    ));
+
+    httpIntegrationPrintResult('widgets_admin_availability_http', $widgetsAdminAvailabilityIssues, $failures);
+
+    $footerDiscoveryWidgetIssues = [];
+    $publicWidgetSession = koraPrimeTestSession([], 'kora-http-footer-widgets');
+    $searchWidgetTitle = 'HTTP footer search ' . bin2hex(random_bytes(4));
+    $newsletterWidgetTitle = 'HTTP footer newsletter ' . bin2hex(random_bytes(4));
+    $searchWidgetSettings = [
+        'cta_text' => 'HTTP hledání napříč celým webem ' . bin2hex(random_bytes(3)),
+    ];
+    $newsletterWidgetSettings = [
+        'cta_text' => 'HTTP newsletter formulář ' . bin2hex(random_bytes(3)),
+    ];
+    $footerSortOrder = (int)$pdo->query(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+    )->fetchColumn();
+
+    $insertFooterDiscoveryWidget = $pdo->prepare(
+        "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order, is_active)
+         VALUES ('footer', ?, ?, ?, ?, 1)"
+    );
+    $insertFooterDiscoveryWidget->execute([
+        'search',
+        $searchWidgetTitle,
+        json_encode($searchWidgetSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        $footerSortOrder,
+    ]);
+    $searchWidgetId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $searchWidgetId;
+
+    $insertFooterDiscoveryWidget->execute([
+        'newsletter',
+        $newsletterWidgetTitle,
+        json_encode($newsletterWidgetSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        $footerSortOrder + 1,
+    ]);
+    $newsletterWidgetId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $newsletterWidgetId;
+
+    $homeWithFooterDiscoveryWidgets = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);
+    if (httpIntegrationStatusCode($homeWithFooterDiscoveryWidgets) !== 200) {
+        $footerDiscoveryWidgetIssues[] = 'homepage se search/newsletter widgety ve footeru nevrátila 200';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], $searchWidgetTitle)) {
+        $footerDiscoveryWidgetIssues[] = 'footer search widget se na homepage nevykreslil s vlastním titulkem';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], $searchWidgetSettings['cta_text'])) {
+        $footerDiscoveryWidgetIssues[] = 'footer search widget nevykreslil svůj úvodní text';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'action="' . BASE_URL . '/search.php"')) {
+        $footerDiscoveryWidgetIssues[] = 'footer search widget nevykreslil formulář směrovaný na search.php';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], '<fieldset class="widget-form-fieldset">')) {
+        $footerDiscoveryWidgetIssues[] = 'footer search/newsletter widgety nevykreslily fieldset pro formulářovou semantiku';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], '<legend id="widget-search-legend-')) {
+        $footerDiscoveryWidgetIssues[] = 'footer search widget postrádá legend pro čtečky obrazovky';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], $newsletterWidgetTitle)) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget se na homepage nevykreslil s vlastním titulkem';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], $newsletterWidgetSettings['cta_text'])) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget nevykreslil svůj úvodní text';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'action="' . BASE_URL . '/newsletter_widget_subscribe.php"')) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget nevykreslil subscribe formulář';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'name="hp_website"')) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget postrádá honeypot ochranu';
+    }
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], '<legend id="newsletter-widget-legend-')) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget postrádá legend pro čtečky obrazovky';
+    }
+
+    $widgetSubscribeResponse = postUrl(
+        $baseUrl . BASE_URL . '/newsletter_widget_subscribe.php',
+        [
+            'csrf_token' => $publicWidgetSession['csrf'],
+            'return_url' => BASE_URL . '/',
+            'email' => 'not-an-email',
+        ],
+        $publicWidgetSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($widgetSubscribeResponse) !== 302) {
+        $footerDiscoveryWidgetIssues[] = 'newsletter widget submit s neplatným e-mailem nevrátil 302 redirect';
+    }
+    if (!responseHasLocationHeader($widgetSubscribeResponse['headers'], BASE_URL . '/', $baseUrl)) {
+        $footerDiscoveryWidgetIssues[] = 'newsletter widget submit s neplatným e-mailem nemíří zpět na homepage';
+    }
+
+    $homeWithNewsletterWidgetError = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);
+    if (!str_contains($homeWithNewsletterWidgetError['body'], 'Zadejte platnou e-mailovou adresu.')) {
+        $footerDiscoveryWidgetIssues[] = 'newsletter widget po invalid submitu nezobrazil chybovou zprávu';
+    }
+    if (!str_contains($homeWithNewsletterWidgetError['body'], 'aria-invalid="true"')) {
+        $footerDiscoveryWidgetIssues[] = 'newsletter widget po invalid submitu neoznačil e-mailové pole aria-invalid';
+    }
+    if (!str_contains($homeWithNewsletterWidgetError['body'], 'value="not-an-email"')) {
+        $footerDiscoveryWidgetIssues[] = 'newsletter widget po invalid submitu nezachoval zadanou hodnotu';
+    }
+
+    $pdo->prepare("DELETE FROM cms_widgets WHERE id IN (?, ?)")->execute([$searchWidgetId, $newsletterWidgetId]);
+    $createdWidgetIds = array_values(array_filter(
+        $createdWidgetIds,
+        static fn(int $existingWidgetId): bool => $existingWidgetId !== $searchWidgetId && $existingWidgetId !== $newsletterWidgetId
+    ));
+
+    $homeWithoutFooterDiscoveryWidgets = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);
+    if (str_contains($homeWithoutFooterDiscoveryWidgets['body'], $searchWidgetTitle) || str_contains($homeWithoutFooterDiscoveryWidgets['body'], $newsletterWidgetTitle)) {
+        $footerDiscoveryWidgetIssues[] = 'footer search/newsletter widget zůstal po odebrání na homepage viditelný';
+    }
+
+    httpIntegrationPrintResult('footer_discovery_widgets_http', $footerDiscoveryWidgetIssues, $failures);
 
     $formPresetIssues = [];
     $issuePresetDefinition = formPresetDefinition('issue_report');

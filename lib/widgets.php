@@ -110,6 +110,12 @@ function widgetTypeDefinitions(): array
             'requires_module' => null,
             'requires_setting' => null,
         ],
+        'social_links' => [
+            'name' => 'Sociální sítě',
+            'default_title' => 'Sociální sítě',
+            'requires_module' => null,
+            'requires_setting' => null,
+        ],
         'visitor_stats' => [
             'name' => 'Statistiky návštěvnosti',
             'default_title' => 'Statistiky návštěvnosti',
@@ -121,11 +127,21 @@ function widgetTypeDefinitions(): array
 
 function isWidgetTypeAvailable(string $type, array $definition): bool
 {
+    return widgetTypeAvailability($type, $definition)['displayable'];
+}
+
+/**
+ * @return array{displayable:bool,reasons:array<int,string>}
+ */
+function widgetTypeAvailability(string $type, array $definition): array
+{
+    $reasons = [];
+
     if ($definition['requires_module'] !== null && !isModuleEnabled($definition['requires_module'])) {
-        return false;
+        $reasons[] = 'modul ' . widgetModuleDisplayName($definition['requires_module']) . ' je vypnutý';
     }
     if ($definition['requires_setting'] !== null && trim(getSetting($definition['requires_setting'], '')) === '') {
-        return false;
+        $reasons[] = widgetSettingAvailabilityReason($type, $definition['requires_setting']);
     }
     if ($type === 'selected_form') {
         try {
@@ -134,14 +150,409 @@ function isWidgetTypeAvailable(string $type, array $definition): bool
             $hasActiveForms = false;
         }
         if (!$hasActiveForms) {
-            return false;
+            $reasons[] = 'není k dispozici žádný aktivní formulář';
         }
     }
-    if ($type === 'visitor_stats' && getSetting('visitor_counter_enabled', '0') !== '1') {
-        return false;
+    if ($type === 'visitor_stats') {
+        if (!isModuleEnabled('statistics')) {
+            $reasons[] = 'modul Statistiky je vypnutý';
+        }
+        if (getSetting('visitor_tracking_enabled', '0') !== '1') {
+            $reasons[] = 'sledování návštěvnosti je vypnuté';
+        }
     }
 
-    return true;
+    return [
+        'displayable' => $reasons === [],
+        'reasons' => array_values(array_unique($reasons)),
+    ];
+}
+
+function widgetModuleDisplayName(string $moduleKey): string
+{
+    static $labels = [
+        'blog' => 'Blog',
+        'news' => 'Novinky',
+        'downloads' => 'Ke stažení',
+        'faq' => 'FAQ',
+        'places' => 'Místa',
+        'podcast' => 'Podcast',
+        'board' => boardModulePublicLabel(),
+        'events' => 'Události',
+        'polls' => 'Ankety',
+        'newsletter' => 'Newsletter',
+        'gallery' => 'Fotogalerie',
+        'forms' => 'Formuláře',
+        'statistics' => 'Statistiky',
+    ];
+
+    return $labels[$moduleKey] ?? $moduleKey;
+}
+
+function widgetSettingAvailabilityReason(string $type, string $settingKey): string
+{
+    if ($type === 'intro' && $settingKey === 'home_intro') {
+        return 'chybí úvodní text webu';
+    }
+
+    return 'chybí potřebné nastavení widgetu';
+}
+
+function widgetCountByQuery(string $sql, array $params = []): int
+{
+    try {
+        $stmt = db_connect()->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    } catch (\PDOException $e) {
+        return 0;
+    }
+}
+
+/**
+ * @return array{displayable:bool,reasons:array<int,string>}
+ */
+function widgetInstanceAvailability(array $widget): array
+{
+    $type = (string)($widget['widget_type'] ?? '');
+    $definitions = widgetTypeDefinitions();
+    if (!isset($definitions[$type])) {
+        return [
+            'displayable' => false,
+            'reasons' => ['typ widgetu už není v systému dostupný'],
+        ];
+    }
+
+    $definition = $definitions[$type];
+    $settings = widgetSettings($widget);
+    $reasons = [];
+
+    if ($definition['requires_module'] !== null && !isModuleEnabled($definition['requires_module'])) {
+        $reasons[] = 'modul ' . widgetModuleDisplayName($definition['requires_module']) . ' je vypnutý';
+    }
+
+    switch ($type) {
+        case 'intro':
+            $introText = trim((string)($settings['text'] ?? getSetting('home_intro', '')));
+            if ($introText === '') {
+                $reasons[] = 'chybí text úvodního widgetu';
+            }
+            break;
+
+        case 'latest_articles':
+            $blogId = (int)($settings['blog_id'] ?? 0);
+            if ($blogId > 0) {
+                if (widgetCountByQuery("SELECT COUNT(*) FROM cms_blogs WHERE id = ?", [$blogId]) === 0) {
+                    $reasons[] = 'vybraný blog už neexistuje';
+                    break;
+                }
+                if (widgetCountByQuery(
+                    "SELECT COUNT(*)
+                     FROM cms_articles
+                     WHERE blog_id = ?
+                       AND status = 'published'
+                       AND deleted_at IS NULL
+                       AND (publish_at IS NULL OR publish_at <= NOW())",
+                    [$blogId]
+                ) === 0) {
+                    $reasons[] = 'vybraný blog zatím nemá veřejné články';
+                }
+                break;
+            }
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_articles
+                 WHERE status = 'published'
+                   AND deleted_at IS NULL
+                   AND (publish_at IS NULL OR publish_at <= NOW())"
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné veřejné články';
+            }
+            break;
+
+        case 'latest_news':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*) FROM cms_news WHERE " . newsPublicVisibilitySql()
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné veřejné novinky';
+            }
+            break;
+
+        case 'latest_downloads':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_downloads
+                 WHERE status = 'published' AND is_published = 1"
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné veřejné položky ke stažení';
+            }
+            break;
+
+        case 'latest_faq':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*) FROM cms_faqs f WHERE " . faqPublicVisibilitySql('f')
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné veřejné otázky';
+            }
+            break;
+
+        case 'latest_places':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*) FROM cms_places WHERE " . placePublicVisibilitySql()
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádná veřejná místa';
+            }
+            break;
+
+        case 'latest_podcast_episodes':
+            $showId = (int)($settings['show_id'] ?? 0);
+            if ($showId > 0) {
+                if (widgetCountByQuery("SELECT COUNT(*) FROM cms_podcast_shows WHERE id = ?", [$showId]) === 0) {
+                    $reasons[] = 'vybraný pořad už neexistuje';
+                    break;
+                }
+                if (widgetCountByQuery(
+                    "SELECT COUNT(*)
+                     FROM cms_podcasts p
+                     INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+                     WHERE " . podcastEpisodePublicVisibilitySql('p', 's') . "
+                       AND p.show_id = ?",
+                    [$showId]
+                ) === 0) {
+                    $reasons[] = 'vybraný pořad nemá žádné veřejné epizody';
+                }
+                break;
+            }
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_podcasts p
+                 INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+                 WHERE " . podcastEpisodePublicVisibilitySql('p', 's')
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné veřejné epizody podcastu';
+            }
+            break;
+
+        case 'featured_article':
+            $source = (string)($settings['source'] ?? 'blog');
+            if ($source === 'blog') {
+                if (widgetCountByQuery(
+                    "SELECT COUNT(*)
+                     FROM cms_articles
+                     WHERE status = 'published'
+                       AND deleted_at IS NULL
+                       AND (publish_at IS NULL OR publish_at <= NOW())"
+                ) === 0) {
+                    $reasons[] = 'zdroj Blog zatím nemá žádný veřejný doporučený obsah';
+                }
+            } elseif ($source === 'board') {
+                if (!isModuleEnabled('board')) {
+                    $reasons[] = 'modul ' . widgetModuleDisplayName('board') . ' je vypnutý';
+                } elseif (widgetCountByQuery(
+                    "SELECT COUNT(*)
+                     FROM cms_board
+                     WHERE " . boardPublicVisibilitySql() . "
+                       AND (removal_date IS NULL OR removal_date >= CURDATE())"
+                ) === 0) {
+                    $reasons[] = 'zdroj Vývěska zatím nemá žádnou veřejnou položku';
+                }
+            } elseif ($source === 'poll') {
+                if (!isModuleEnabled('polls')) {
+                    $reasons[] = 'modul Ankety je vypnutý';
+                } elseif (widgetCountByQuery(
+                    "SELECT COUNT(*)
+                     FROM cms_polls
+                     WHERE " . pollPublicVisibilitySql('', 'active')
+                ) === 0) {
+                    $reasons[] = 'zdroj Anketa zatím nemá aktivní veřejnou anketu';
+                }
+            } elseif ($source === 'newsletter') {
+                if (!isModuleEnabled('newsletter')) {
+                    $reasons[] = 'modul Newsletter je vypnutý';
+                }
+            } else {
+                $reasons[] = 'vybraný zdroj doporučeného obsahu není podporovaný';
+            }
+            break;
+
+        case 'poll':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_polls
+                 WHERE " . pollPublicVisibilitySql('', 'active')
+            ) === 0) {
+                $reasons[] = 'zatím není žádná aktivní veřejná anketa';
+            }
+            break;
+
+        case 'board':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_board
+                 WHERE " . boardPublicVisibilitySql() . "
+                   AND (removal_date IS NULL OR removal_date >= CURDATE())"
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné veřejné položky vývěsky';
+            }
+            break;
+
+        case 'upcoming_events':
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_events
+                 WHERE " . eventPublicVisibilitySql() . "
+                   AND " . eventEffectiveEndSql() . " >= NOW()"
+            ) === 0) {
+                $reasons[] = 'zatím nejsou žádné nadcházející veřejné události';
+            }
+            break;
+
+        case 'custom_html':
+            if (trim((string)($settings['content'] ?? '')) === '') {
+                $reasons[] = 'chybí HTML obsah widgetu';
+            }
+            break;
+
+        case 'gallery_preview':
+            $albumId = (int)($settings['album_id'] ?? 0);
+            if ($albumId > 0) {
+                if (widgetCountByQuery("SELECT COUNT(*) FROM cms_gallery_albums WHERE id = ?", [$albumId]) === 0) {
+                    $reasons[] = 'vybrané album už neexistuje';
+                    break;
+                }
+                if (widgetCountByQuery(
+                    "SELECT COUNT(*)
+                     FROM cms_gallery_photos p
+                     INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+                     WHERE " . galleryPhotoPublicVisibilitySql('p', 'a') . "
+                       AND p.album_id = ?",
+                    [$albumId]
+                ) === 0) {
+                    $reasons[] = 'vybrané album zatím nemá žádné veřejné fotografie';
+                }
+                break;
+            }
+            if (widgetCountByQuery(
+                "SELECT COUNT(*)
+                 FROM cms_gallery_photos p
+                 INNER JOIN cms_gallery_albums a ON a.id = p.album_id
+                 WHERE " . galleryPhotoPublicVisibilitySql('p', 'a')
+            ) === 0) {
+                $reasons[] = 'fotogalerie zatím nemá žádné veřejné fotografie';
+            }
+            break;
+
+        case 'selected_form':
+            $formId = (int)($settings['form_id'] ?? 0);
+            if ($formId <= 0) {
+                $reasons[] = 'není vybraný formulář';
+                break;
+            }
+            if (widgetCountByQuery(
+                "SELECT COUNT(*) FROM cms_forms WHERE id = ? AND is_active = 1",
+                [$formId]
+            ) === 0) {
+                $reasons[] = 'vybraný formulář není aktivní nebo už neexistuje';
+            }
+            break;
+
+        case 'social_links':
+            $hasSocialLink = false;
+            foreach (array_keys(widgetSocialLinkDefinitions()) as $socialSettingKey) {
+                if (normalizeWidgetExternalUrl((string)($settings[$socialSettingKey] ?? '')) !== '') {
+                    $hasSocialLink = true;
+                    break;
+                }
+            }
+            if (!$hasSocialLink) {
+                $reasons[] = 'nejsou vyplněné žádné odkazy na sociální sítě';
+            }
+            break;
+
+        case 'contact_info':
+            if (
+                trim(getSetting('contact_email', '')) === ''
+                && trim(getSetting('site_name', '')) === ''
+                && !isModuleEnabled('contact')
+            ) {
+                $reasons[] = 'chybí kontaktní údaje webu i kontaktní formulář';
+            } elseif (trim(getSetting('contact_email', '')) === '' && trim(getSetting('site_name', '')) === '') {
+                $reasons[] = 'chybí kontaktní údaje webu';
+            }
+            break;
+
+        case 'visitor_stats':
+            if (!isModuleEnabled('statistics')) {
+                $reasons[] = 'modul Statistiky je vypnutý';
+            }
+            if (getSetting('visitor_tracking_enabled', '0') !== '1') {
+                $reasons[] = 'sledování návštěvnosti je vypnuté';
+            }
+            break;
+    }
+
+    return [
+        'displayable' => $reasons === [],
+        'reasons' => array_values(array_unique($reasons)),
+    ];
+}
+
+function widgetSocialLinkDefinitions(): array
+{
+    return [
+        'social_facebook' => 'Facebook',
+        'social_youtube' => 'YouTube',
+        'social_instagram' => 'Instagram',
+        'social_twitter' => 'X / Twitter',
+    ];
+}
+
+function normalizeWidgetExternalUrl(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $value)) {
+        $value = 'https://' . ltrim($value, '/');
+    }
+
+    $validated = filter_var($value, FILTER_VALIDATE_URL);
+    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
+        return '';
+    }
+
+    return $validated;
+}
+
+/**
+ * @return array{type:string,message:string,email:string}
+ */
+function newsletterWidgetFlash(): array
+{
+    static $flash = null;
+    if (is_array($flash)) {
+        return $flash;
+    }
+
+    $raw = $_SESSION['newsletter_widget_flash'] ?? null;
+    unset($_SESSION['newsletter_widget_flash']);
+
+    if (!is_array($raw)) {
+        $flash = ['type' => '', 'message' => '', 'email' => ''];
+        return $flash;
+    }
+
+    $type = trim((string)($raw['type'] ?? ''));
+    $message = trim((string)($raw['message'] ?? ''));
+    $email = trim((string)($raw['email'] ?? ''));
+    $flash = [
+        'type' => in_array($type, ['success', 'error'], true) ? $type : '',
+        'message' => $message,
+        'email' => $email,
+    ];
+    return $flash;
 }
 
 /**
@@ -152,7 +563,7 @@ function availableWidgetTypes(): array
     $all = widgetTypeDefinitions();
     $available = [];
     foreach ($all as $type => $def) {
-        if (!isWidgetTypeAvailable($type, $def)) {
+        if (!widgetTypeAvailability($type, $def)['displayable']) {
             continue;
         }
         $available[$type] = $def;
@@ -183,13 +594,8 @@ function getWidgetsForZone(string $zone): array
         );
         $stmt->execute([$zone]);
         $widgets = $stmt->fetchAll();
-        $types = widgetTypeDefinitions();
-        return array_filter($widgets, function (array $w) use ($types) {
-            $type = $w['widget_type'];
-            if (!isset($types[$type])) {
-                return false;
-            }
-            return isWidgetTypeAvailable($type, $types[$type]);
+        return array_filter($widgets, function (array $w) {
+            return widgetInstanceAvailability($w)['displayable'];
         });
     } catch (\PDOException $e) {
         return [];
@@ -693,18 +1099,51 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
 {
     $title = h($widget['title'] ?: 'Zůstaňte v kontaktu');
     $ctaText = h($settings['cta_text'] ?? 'Přihlaste se k odběru a dostávejte nové články přímo e-mailem.');
+    $flash = newsletterWidgetFlash();
+    $flashHtml = '';
+    if ($flash['type'] !== '' && $flash['message'] !== '') {
+        $flashClass = $flash['type'] === 'success' ? 'status-message status-message--success' : 'status-message status-message--error';
+        $flashRole = $flash['type'] === 'success' ? 'status' : 'alert';
+        $flashHtml = '<div class="' . h($flashClass) . '" role="' . h($flashRole) . '"><p>' . h($flash['message']) . '</p></div>';
+    }
+    $widgetId = (int)($widget['id'] ?? 0);
+    $emailFieldId = 'newsletter-widget-email-' . $widgetId;
+    $legendId = 'newsletter-widget-legend-' . $widgetId;
+    $descriptionId = 'newsletter-widget-description-' . $widgetId;
+    $flashId = 'newsletter-widget-feedback-' . $widgetId;
+    $isError = $flash['type'] === 'error' && $flash['message'] !== '';
+    $emailDescribedBy = $descriptionId . ($isError ? ' ' . $flashId : '');
+    $returnUrl = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/subscribe.php');
+    $formHtml = '<form action="' . BASE_URL . '/newsletter_widget_subscribe.php" method="post" class="widget-form-stack" novalidate>'
+        . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
+        . '<input type="hidden" name="return_url" value="' . h($returnUrl) . '">'
+        . honeypotField()
+        . '<fieldset class="widget-form-fieldset">'
+        . '<legend id="' . h($legendId) . '" class="sr-only">Přihlášení k odběru novinek</legend>'
+        . '<p id="' . h($descriptionId) . '">' . $ctaText . '</p>'
+        . '<div class="field">'
+        . '<label for="' . h($emailFieldId) . '">Váš e-mail</label>'
+        . '<input type="email" id="' . h($emailFieldId) . '" name="email" class="form-control" maxlength="255" autocomplete="email" required aria-required="true" aria-describedby="' . h($emailDescribedBy) . '"' . ($isError ? ' aria-invalid="true"' : '') . ' value="' . h($flash['email']) . '">'
+        . '</div>'
+        . '<div class="button-row button-row--start"><button type="submit" class="button-primary">Přihlásit k odběru</button></div>'
+        . '</fieldset>'
+        . '</form>';
+    if ($flashHtml !== '') {
+        $flashHtml = '<div id="' . h($flashId) . '">' . $flashHtml . '</div>';
+    }
 
     if ($zone === 'sidebar' || $zone === 'footer') {
         return '<section class="widget-card" aria-label="' . $title . '">'
              . '<h3 class="widget-card__title">' . $title . '</h3>'
-             . '<p>' . $ctaText . '</p>'
-             . '<p><a href="' . BASE_URL . '/subscribe.php">Přihlásit odběr</a></p></section>';
+             . $flashHtml
+             . $formHtml
+             . '</section>';
     }
 
     return '<section class="surface surface--accent home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
          . '<h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2>'
-         . '<p class="section-subtitle">' . $ctaText . '</p>'
-         . '<div class="button-row button-row--start"><a class="button-primary" href="' . BASE_URL . '/subscribe.php">Přihlásit odběr</a></div>'
+         . $flashHtml
+         . $formHtml
          . '</section>';
 }
 
@@ -817,30 +1256,39 @@ function renderWidget_custom_html(array $widget, array $settings, string $zone):
 function renderWidget_search(array $widget, array $settings, string $zone): string
 {
     $title = h($widget['title'] ?: 'Vyhledávání');
-    $inputId = 'widget-search-q-' . (int)($widget['id'] ?? 0);
+    $ctaText = h(trim((string)($settings['cta_text'] ?? '')) ?: 'Najděte články, novinky, stránky a další obsah napříč celým webem.');
+    $widgetId = (int)($widget['id'] ?? 0);
+    $inputId = 'widget-search-q-' . $widgetId;
+    $legendId = 'widget-search-legend-' . $widgetId;
+    $descriptionId = 'widget-search-description-' . $widgetId;
+    $formHtml = '<form action="' . BASE_URL . '/search.php" method="get" class="widget-form-stack" role="search">'
+         . '<fieldset class="widget-form-fieldset">'
+         . '<legend id="' . h($legendId) . '" class="sr-only">Vyhledávání na webu</legend>'
+         . '<p id="' . h($descriptionId) . '">' . $ctaText . '</p>'
+         . '<div class="field">'
+         . '<label for="' . h($inputId) . '">Hledaný výraz</label>'
+         . '<input type="search" id="' . h($inputId) . '" name="q" class="form-control" placeholder="Hledat na webu…" aria-describedby="' . h($descriptionId) . '">'
+         . '</div>'
+         . '<div class="button-row button-row--start"><button type="submit" class="button-primary">Hledat</button></div>'
+         . '</fieldset>'
+         . '</form>';
 
     if ($zone === 'homepage') {
         return '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
              . '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>'
-             . '<form action="' . BASE_URL . '/search.php" method="get">'
-             . '<label for="' . h($inputId) . '" class="visually-hidden">Hledat</label>'
-             . '<input type="search" id="' . h($inputId) . '" name="q" class="form-control" placeholder="Hledat na webu…">'
-             . '<button type="submit" class="button-primary" style="margin-top:.5rem">Hledat</button>'
-             . '</form></section>';
+             . $formHtml
+             . '</section>';
     }
 
     return '<section class="widget-card" aria-label="' . $title . '">'
          . '<h3 class="widget-card__title">' . $title . '</h3>'
-         . '<form action="' . BASE_URL . '/search.php" method="get">'
-         . '<label for="' . h($inputId) . '" class="visually-hidden">Hledat</label>'
-         . '<input type="search" id="' . h($inputId) . '" name="q" class="form-control" placeholder="Hledat na webu…">'
-         . '<button type="submit" class="button-primary" style="margin-top:.5rem">Hledat</button>'
-         . '</form></section>';
+         . $formHtml
+         . '</section>';
 }
 
 function renderWidget_visitor_stats(array $widget, array $settings, string $zone): string
 {
-    if (getSetting('visitor_counter_enabled', '0') !== '1') {
+    if (!isModuleEnabled('statistics') || getSetting('visitor_tracking_enabled', '0') !== '1') {
         return '';
     }
 
@@ -873,6 +1321,47 @@ function renderWidget_visitor_stats(array $widget, array $settings, string $zone
     }
 
     return $out . '</ul></section>';
+}
+
+function renderWidget_social_links(array $widget, array $settings, string $zone): string
+{
+    $links = [];
+    foreach (widgetSocialLinkDefinitions() as $settingKey => $label) {
+        $url = normalizeWidgetExternalUrl((string)($settings[$settingKey] ?? ''));
+        if ($url === '') {
+            continue;
+        }
+
+        $links[] = [
+            'label' => $label,
+            'url' => $url,
+        ];
+    }
+
+    if ($links === []) {
+        return '';
+    }
+
+    $title = h($widget['title'] ?: 'Sociální sítě');
+    $listHtml = '<ul class="widget-list">';
+    foreach ($links as $link) {
+        $listHtml .= '<li><a href="' . h($link['url']) . '" rel="noopener noreferrer" target="_blank">'
+            . h($link['label'])
+            . '</a></li>';
+    }
+    $listHtml .= '</ul>';
+
+    if ($zone === 'homepage') {
+        return '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
+            . '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>'
+            . $listHtml
+            . '</section>';
+    }
+
+    return '<section class="widget-card" aria-label="' . $title . '">'
+        . '<h3 class="widget-card__title">' . $title . '</h3>'
+        . $listHtml
+        . '</section>';
 }
 
 function renderWidget_contact_info(array $widget, array $settings, string $zone): string

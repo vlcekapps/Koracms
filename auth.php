@@ -592,9 +592,13 @@ function rateLimit(string $action, int $max = 10, int $window = 60): void
  */
 function honeypotField(): string
 {
+    static $honeypotCounter = 0;
+    $honeypotCounter++;
+    $honeypotId = 'hp_website_' . $honeypotCounter;
+
     return '<div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">'
-         . '<label for="hp_website">Website</label>'
-         . '<input type="text" id="hp_website" name="hp_website" tabindex="-1" autocomplete="off">'
+         . '<label for="' . h($honeypotId) . '">Website</label>'
+         . '<input type="text" id="' . h($honeypotId) . '" name="hp_website" tabindex="-1" autocomplete="off">'
          . '</div>';
 }
 

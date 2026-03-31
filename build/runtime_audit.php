@@ -43,7 +43,8 @@ saveSetting('github_issues_enabled', '1');
 saveSetting('github_issues_repository', 'vlcekapps/Koracms');
 clearSettingsCache();
 $runtimeAuditHomepageUsesWidgets = renderZone('homepage') !== '';
-$runtimeAuditPublicVisitorStatsWidgetEnabled = getSetting('visitor_counter_enabled', '0') === '1'
+$runtimeAuditPublicVisitorStatsWidgetEnabled = isModuleEnabled('statistics')
+    && getSetting('visitor_tracking_enabled', '0') === '1'
     && (int)$pdo->query(
         "SELECT COUNT(*) FROM cms_widgets
          WHERE widget_type = 'visitor_stats'
@@ -7189,10 +7190,6 @@ try {
         'blog_per_page' => getSetting('blog_per_page', '10'),
         'events_per_page' => getSetting('events_per_page', '10'),
         'content_editor' => getSetting('content_editor', 'html'),
-        'social_facebook' => getSetting('social_facebook', ''),
-        'social_youtube' => getSetting('social_youtube', ''),
-        'social_instagram' => getSetting('social_instagram', ''),
-        'social_twitter' => getSetting('social_twitter', ''),
         'maintenance_text' => getSetting('maintenance_text', ''),
         'cookie_consent_text' => getSetting('cookie_consent_text', ''),
         'og_image_default' => getSetting('og_image_default', ''),
@@ -9152,6 +9149,23 @@ foreach ([
         $settingsPrgIssues[] = 'settings save handler is missing PRG/atomic fragment: ' . $settingsSaveFragment;
     }
 }
+foreach ([
+    'settings-social',
+    'social_facebook',
+    'social_youtube',
+    'social_instagram',
+    'social_twitter',
+] as $legacySocialFragment) {
+    if (str_contains($settingsAdminSource, $legacySocialFragment)) {
+        $settingsPrgIssues[] = 'settings page still contains legacy social links field: ' . $legacySocialFragment;
+    }
+    if (str_contains($settingsSharedSource, $legacySocialFragment)) {
+        $settingsPrgIssues[] = 'settings shared state still contains legacy social links field: ' . $legacySocialFragment;
+    }
+    if (str_contains($settingsSaveSource, $legacySocialFragment)) {
+        $settingsPrgIssues[] = 'settings save handler still persists legacy social links field: ' . $legacySocialFragment;
+    }
+}
 if ($httpIntegrationSource === '') {
     $settingsPrgIssues[] = 'build/http_integration.php is missing';
 } else {
@@ -9163,6 +9177,7 @@ if ($httpIntegrationSource === '') {
         '/admin/blog_save.php',
         '/admin/blog_transfer.php',
         '/admin/media.php',
+        'social_links_widget_http',
         'httpIntegrationRestoreSettings($originalSettings);',
         'editace článku přes blog_save',
         'editace článku s ruční volbou',
@@ -9703,6 +9718,8 @@ $requiredWidgetTypes = [
     'latest_places',
     'latest_podcast_episodes',
     'selected_form',
+    'social_links',
+    'visitor_stats',
 ];
 foreach ($requiredWidgetTypes as $requiredWidgetType) {
     if (!isset($widgetDefs[$requiredWidgetType])) {
@@ -9748,6 +9765,12 @@ if (!str_contains($widgetSearchTwo, 'widget-search-q-202')) {
 }
 if (str_contains($widgetSearchOne . $widgetSearchTwo, 'id="widget-search-q"')) {
     $widgetRenderIssues[] = 'search widget still renders legacy duplicate input id';
+}
+if (!str_contains($widgetSearchOne, 'role="search"')) {
+    $widgetRenderIssues[] = 'search widget is missing the search landmark on its form';
+}
+if (!str_contains($widgetSearchOne, '<fieldset class="widget-form-fieldset">') || !str_contains($widgetSearchOne, 'widget-search-legend-101')) {
+    $widgetRenderIssues[] = 'search widget is missing fieldset/legend semantics';
 }
 if (isModuleEnabled('board')) {
     $widgetBoardSlug = uniqueBoardSlug($pdo, 'runtime-audit-widget-board-' . bin2hex(random_bytes(4)));
@@ -9813,6 +9836,7 @@ $widgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.ph
 $widgetsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
 $settingsModulesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_modules.php');
 $widgetsMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
+$newsletterWidgetSubscribeSource = (string)file_get_contents(dirname(__DIR__) . '/newsletter_widget_subscribe.php');
 $uiSource = (string)file_get_contents(dirname(__DIR__) . '/lib/ui.php');
 if (!str_contains($widgetsAdminSource, 'id="widget-add-zone"')) {
     $widgetRenderIssues[] = 'admin widgets page is missing target zone selector';
@@ -9829,11 +9853,26 @@ if (!str_contains($widgetsAdminSource, 'name="widget_show_id"')) {
 if (!str_contains($widgetsAdminSource, 'Aktuální blog (na blogových stránkách)')) {
     $widgetRenderIssues[] = 'admin widgets page is missing current-blog option for latest articles';
 }
+foreach ([
+    'widgetSocialLinkDefinitions()',
+    'name="widget_<?= h($socialSettingKey) ?>"',
+    "type === 'social_links'",
+] as $socialWidgetFieldFragment) {
+    if (!str_contains($widgetsAdminSource, $socialWidgetFieldFragment)) {
+        $widgetRenderIssues[] = 'admin widgets page is missing social widget fragment: ' . $socialWidgetFieldFragment;
+    }
+}
 if (!str_contains($widgetSaveSource, '$rawBlogId === -1 ? -1')) {
     $widgetRenderIssues[] = 'widget save is missing current-blog persistence for latest articles';
 }
 if (!str_contains($widgetLibSource, "\$rawBlogId === -1")) {
     $widgetRenderIssues[] = 'latest articles widget is missing current-blog render fallback';
+}
+if (!str_contains($widgetSaveSource, "case 'social_links':")) {
+    $widgetRenderIssues[] = 'widget save handler is missing social links settings persistence';
+}
+if (!str_contains($widgetSaveSource, "case 'search':")) {
+    $widgetRenderIssues[] = 'widget save handler is missing search widget settings persistence';
 }
 if (!str_contains($widgetLibSource, "'visitor_stats'")) {
     $widgetRenderIssues[] = 'widget registry is missing visitor stats widget type';
@@ -9841,17 +9880,106 @@ if (!str_contains($widgetLibSource, "'visitor_stats'")) {
 if (!str_contains($widgetLibSource, 'function renderWidget_visitor_stats')) {
     $widgetRenderIssues[] = 'visitor stats widget renderer is missing';
 }
-if (!str_contains($settingsModulesSource, 'Povolit widget Statistiky návštěvnosti na veřejném webu')) {
-    $widgetRenderIssues[] = 'settings modules page still describes visitor stats as hardcoded footer counter';
+if (!str_contains($widgetLibSource, "'social_links'")) {
+    $widgetRenderIssues[] = 'widget registry is missing social links widget type';
 }
-if (!str_contains($settingsModulesSource, 'Správě widgetů')) {
+if (!str_contains($widgetLibSource, 'function widgetSocialLinkDefinitions(): array')) {
+    $widgetRenderIssues[] = 'widget library is missing shared social link definitions';
+}
+if (!str_contains($widgetLibSource, 'function normalizeWidgetExternalUrl(string $value): string')) {
+    $widgetRenderIssues[] = 'widget library is missing external URL normalization for social links';
+}
+if (!str_contains($widgetLibSource, 'function renderWidget_social_links')) {
+    $widgetRenderIssues[] = 'social links widget renderer is missing';
+}
+if (!str_contains($widgetLibSource, 'newsletter_widget_subscribe.php')) {
+    $widgetRenderIssues[] = 'newsletter widget renderer is missing inline subscribe form action';
+}
+if (!str_contains($widgetLibSource, 'Najděte články, novinky, stránky a další obsah napříč celým webem.')) {
+    $widgetRenderIssues[] = 'search widget is missing the default cross-site discovery helper text';
+}
+if (!str_contains($widgetLibSource, '<fieldset class="widget-form-fieldset">') || !str_contains($widgetLibSource, 'widget-search-legend-')) {
+    $widgetRenderIssues[] = 'search widget renderer is missing fieldset/legend semantics';
+}
+if (!str_contains($widgetLibSource, 'name="return_url"') || !str_contains($widgetLibSource, 'name="email"')) {
+    $widgetRenderIssues[] = 'newsletter widget is missing required subscribe form fields';
+}
+if (!str_contains($widgetLibSource, 'honeypotField()')) {
+    $widgetRenderIssues[] = 'newsletter widget is missing honeypot protection';
+}
+if (!str_contains($widgetLibSource, 'newsletter-widget-legend-') || !str_contains($widgetLibSource, 'aria-invalid="true"')) {
+    $widgetRenderIssues[] = 'newsletter widget renderer is missing accessible fieldset or invalid-state handling';
+}
+if (!str_contains($widgetLibSource, 'function widgetInstanceAvailability(array $widget): array')) {
+    $widgetRenderIssues[] = 'widget library is missing shared per-widget availability evaluation';
+}
+if (!str_contains($widgetLibSource, "return widgetInstanceAvailability(\$w)['displayable'];")) {
+    $widgetRenderIssues[] = 'public widget zone rendering is not reusing the shared widget availability evaluation';
+}
+if (!str_contains($widgetsAdminSource, 'widgetInstanceAvailability($w)') || !str_contains($widgetsAdminSource, 'Na webu se teď nezobrazí:')) {
+    $widgetRenderIssues[] = 'admin widgets page is missing unavailable-widget notice above the settings action';
+}
+foreach ([
+    'nejsou vyplněné žádné odkazy na sociální sítě',
+    'sledování návštěvnosti je vypnuté',
+] as $widgetAvailabilityReasonFragment) {
+    if (!str_contains($widgetLibSource, $widgetAvailabilityReasonFragment)) {
+        $widgetRenderIssues[] = 'widget availability helper is missing reason fragment: ' . $widgetAvailabilityReasonFragment;
+    }
+}
+if (str_contains($settingsModulesSource, 'visitor_counter_enabled')) {
+    $widgetRenderIssues[] = 'settings modules page still contains duplicate visitor_counter_enabled toggle';
+}
+if (!str_contains($settingsModulesSource, 'Statistiky návštěvnosti ve Správě widgetů')) {
     $widgetRenderIssues[] = 'settings modules page is missing widget placement hint for visitor stats';
+}
+if (!str_contains($widgetLibSource, "getSetting('visitor_tracking_enabled', '0') !== '1'")) {
+    $widgetRenderIssues[] = 'visitor stats widget is not gated by visitor_tracking_enabled';
+}
+if (!str_contains($widgetLibSource, "!isModuleEnabled('statistics')")) {
+    $widgetRenderIssues[] = 'visitor stats widget is not gated by statistics module availability';
 }
 if (str_contains($uiSource, 'visitor-counter-block') || str_contains($uiSource, "getSetting('visitor_counter_enabled', '0')")) {
     $widgetRenderIssues[] = 'site footer still hardcodes public visitor stats output';
 }
+foreach ([
+    "getSetting('social_facebook'",
+    "getSetting('social_youtube'",
+    "getSetting('social_instagram'",
+    "getSetting('social_twitter'",
+] as $legacyFooterSocialFragment) {
+    if (str_contains($uiSource, $legacyFooterSocialFragment)) {
+        $widgetRenderIssues[] = 'site footer still hardcodes legacy social links setting: ' . $legacyFooterSocialFragment;
+    }
+}
+foreach ([
+    '/search.php">Vyhledávání</a>',
+    '/subscribe.php">Odběr novinek</a>',
+] as $legacyFooterDiscoveryFragment) {
+    if (str_contains($uiSource, $legacyFooterDiscoveryFragment)) {
+        $widgetRenderIssues[] = 'site footer still hardcodes legacy discovery link: ' . $legacyFooterDiscoveryFragment;
+    }
+}
 if (!str_contains($widgetsMigrateSource, "widget_type = 'visitor_stats'")) {
     $widgetRenderIssues[] = 'migrate.php is missing visitor stats widget backfill for upgraded sites';
+}
+if (!str_contains($widgetsMigrateSource, "widget_type = 'social_links'")) {
+    $widgetRenderIssues[] = 'migrate.php is missing social links widget backfill for upgraded sites';
+}
+if (!str_contains($widgetsMigrateSource, "widget_type = 'search' AND zone = 'footer'")) {
+    $widgetRenderIssues[] = 'migrate.php is missing footer search widget backfill for upgraded sites';
+}
+if (!str_contains($widgetsMigrateSource, "widget_type = 'newsletter' AND zone = 'footer'")) {
+    $widgetRenderIssues[] = 'migrate.php is missing footer newsletter widget backfill for upgraded sites';
+}
+if (!str_contains($newsletterWidgetSubscribeSource, "rateLimit('subscribe_widget', 3, 300)")) {
+    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing dedicated rate limiting';
+}
+if (!str_contains($newsletterWidgetSubscribeSource, 'internalRedirectTarget')) {
+    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing safe return_url validation';
+}
+if (!str_contains($newsletterWidgetSubscribeSource, "'email' => \$email")) {
+    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint does not preserve invalid e-mail value for PRG retry';
 }
 if ($widgetRenderIssues === []) {
     echo "OK\n";

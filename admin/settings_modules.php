@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         saveSetting('module_' . $m, isset($_POST['module_' . $m]) ? '1' : '0');
     }
     saveSetting('visitor_tracking_enabled', isset($_POST['visitor_tracking_enabled']) ? '1' : '0');
-    saveSetting('visitor_counter_enabled', isset($_POST['visitor_counter_enabled']) ? '1' : '0');
     $retDays = max(1, (int)($_POST['stats_retention_days'] ?? 90));
     saveSetting('stats_retention_days', (string)$retDays);
     clearSettingsCache();
@@ -73,12 +72,7 @@ adminHeader('Správa modulů');
              <?= getSetting('visitor_tracking_enabled', '0') === '1' ? 'checked' : '' ?>>
       <label for="visitor_tracking_enabled" style="display:inline;font-weight:normal">Sledovat návštěvnost webu</label>
     </div>
-    <div>
-      <input type="checkbox" id="visitor_counter_enabled" name="visitor_counter_enabled" value="1"
-             <?= getSetting('visitor_counter_enabled', '0') === '1' ? 'checked' : '' ?>>
-      <label for="visitor_counter_enabled" style="display:inline;font-weight:normal">Povolit widget Statistiky návštěvnosti na veřejném webu</label>
-    </div>
-    <p class="field-help" style="margin:.35rem 0 0">Samotné umístění statistik nastavíte ve <a href="widgets.php">Správě widgetů</a>, typicky ve footer zóně.</p>
+    <p class="field-help" style="margin:.35rem 0 0">Veřejné statistiky se zobrazí jen tehdy, když je aktivní sledování návštěvnosti a současně zapnete widget <a href="widgets.php">Statistiky návštěvnosti ve Správě widgetů</a>.</p>
     <div style="margin-top:.5rem">
       <label for="stats_retention_days">Uchovávat podrobná data (dní):</label>
       <input type="number" id="stats_retention_days" name="stats_retention_days" min="1" max="3650"

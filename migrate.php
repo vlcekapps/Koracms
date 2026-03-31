@@ -2350,6 +2350,110 @@ try {
 // ── 7. Multiblog – výchozí blog a přeindexování ──────────────────────────────
 
 try {
+    $hasSocialLinksWidget = (int)$pdo->query(
+        "SELECT COUNT(*) FROM cms_widgets WHERE widget_type = 'social_links'"
+    )->fetchColumn() > 0;
+
+    if (!$hasSocialLinksWidget) {
+        $socialLinksSettings = [];
+        foreach ([
+            'social_facebook',
+            'social_youtube',
+            'social_instagram',
+            'social_twitter',
+        ] as $socialSettingKey) {
+            $rawSocialUrl = trim(getSetting($socialSettingKey, ''));
+            if ($rawSocialUrl === '') {
+                continue;
+            }
+
+            if (!preg_match('#^https?://#i', $rawSocialUrl)) {
+                $rawSocialUrl = 'https://' . ltrim($rawSocialUrl, '/');
+            }
+
+            $validatedSocialUrl = filter_var($rawSocialUrl, FILTER_VALIDATE_URL);
+            if (!is_string($validatedSocialUrl) || !preg_match('#^https?://#i', $validatedSocialUrl)) {
+                continue;
+            }
+
+            $socialLinksSettings[$socialSettingKey] = $validatedSocialUrl;
+        }
+
+        if ($socialLinksSettings !== []) {
+            $footerSortOrder = (int)$pdo->query(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+            )->fetchColumn();
+
+            $insertSocialLinksWidget = $pdo->prepare(
+                "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order)
+                 VALUES ('footer', 'social_links', 'SociĂˇlnĂ­ sĂ­tÄ›', ?, ?)"
+            );
+            $insertSocialLinksWidget->execute([
+                json_encode($socialLinksSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $footerSortOrder,
+            ]);
+            $log[] = 'Â· Ve footer zĂłnÄ› byl doplnÄ›n widget â€žSociĂˇlnĂ­ sĂ­tÄ›â€ś z pĹŻvodnĂ­ch odkazĹŻ uloĹľenĂ˝ch v nastavenĂ­ webu';
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = 'Â· SociĂˇlnĂ­ sĂ­tÄ› â€“ pĹ™eskoÄŤeno: ' . h($e->getMessage());
+}
+
+try {
+    $hasFooterSearchWidget = (int)$pdo->query(
+        "SELECT COUNT(*) FROM cms_widgets WHERE widget_type = 'search' AND zone = 'footer'"
+    )->fetchColumn() > 0;
+
+    if (!$hasFooterSearchWidget) {
+        $footerSortOrder = (int)$pdo->query(
+            "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+        )->fetchColumn();
+
+        $insertSearchWidget = $pdo->prepare(
+            "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order)
+             VALUES ('footer', 'search', 'Vyhledávání', ?, ?)"
+        );
+        $insertSearchWidget->execute([
+            json_encode([
+                'cta_text' => 'Najděte články, novinky, stránky a další obsah napříč celým webem.',
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $footerSortOrder,
+        ]);
+        $log[] = '· Ve footer zóně byl doplněn widget „Vyhledávání“ místo dřívějšího natvrdo vloženého odkazu';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Vyhledávací widget ve footeru – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
+    if (isModuleEnabled('newsletter')) {
+        $hasFooterNewsletterWidget = (int)$pdo->query(
+            "SELECT COUNT(*) FROM cms_widgets WHERE widget_type = 'newsletter' AND zone = 'footer'"
+        )->fetchColumn() > 0;
+
+        if (!$hasFooterNewsletterWidget) {
+            $footerSortOrder = (int)$pdo->query(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+            )->fetchColumn();
+
+            $insertNewsletterWidget = $pdo->prepare(
+                "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order)
+                 VALUES ('footer', 'newsletter', 'Odběr novinek', ?, ?)"
+            );
+            $insertNewsletterWidget->execute([
+                json_encode([
+                    'cta_text' => 'Získejte novinky z webu přímo do e-mailu. Po odeslání formuláře odběr potvrdíte kliknutím na odkaz v potvrzovacím e-mailu.',
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $footerSortOrder,
+            ]);
+            $log[] = '· Ve footer zóně byl doplněn widget „Odběr novinek“ místo dřívějšího natvrdo vloženého odkazu';
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Newsletter widget ve footeru – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
     $blogCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_blogs")->fetchColumn();
     if ($blogCount === 0) {
         $pdo->exec("INSERT INTO cms_blogs (id, name, slug, sort_order) VALUES (1, 'Blog', 'blog', 0)");

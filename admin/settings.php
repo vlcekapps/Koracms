@@ -37,7 +37,6 @@ if (isModuleEnabled('blog')) {
 $settingsSections[] = ['id' => 'settings-notifications', 'label' => 'E-mailové notifikace'];
 $settingsSections[] = ['id' => 'settings-editor', 'label' => 'Obsah a editor'];
 $settingsSections[] = ['id' => 'settings-analytics', 'label' => 'Google Analytics a vlastní kód'];
-$settingsSections[] = ['id' => 'settings-social', 'label' => 'Sociální sítě'];
 $settingsSections[] = ['id' => 'settings-brand', 'label' => 'Logo a sdílení'];
 $settingsSections[] = ['id' => 'settings-privacy', 'label' => 'Soukromí a cookies'];
 $settingsSections[] = ['id' => 'settings-integrations', 'label' => 'Integrace'];
@@ -317,22 +316,6 @@ adminHeader('Nastavení webu');
                 aria-describedby="footer-code-help"><?= h($formState['custom_footer_code']) ?></textarea>
       <small id="footer-code-help" class="field-help">HTML/JS kód vložený před zavírací &lt;/body&gt;. Slouží pro analytické skripty, chat widgety apod.</small>
     </div>
-  </fieldset>
-
-  <fieldset id="settings-social">
-    <legend>Sociální sítě</legend>
-    <label for="social_facebook">Facebook (URL)</label>
-    <input type="url" id="social_facebook" name="social_facebook"
-           value="<?= h($formState['social_facebook']) ?>">
-    <label for="social_youtube">YouTube (URL)</label>
-    <input type="url" id="social_youtube" name="social_youtube"
-           value="<?= h($formState['social_youtube']) ?>">
-    <label for="social_instagram">Instagram (URL)</label>
-    <input type="url" id="social_instagram" name="social_instagram"
-           value="<?= h($formState['social_instagram']) ?>">
-    <label for="social_twitter">X / Twitter (URL)</label>
-    <input type="url" id="social_twitter" name="social_twitter"
-           value="<?= h($formState['social_twitter']) ?>">
   </fieldset>
 
   <fieldset id="settings-brand">

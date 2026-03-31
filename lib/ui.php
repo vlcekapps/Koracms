@@ -8,22 +8,7 @@ function siteFooter(): string
     $year     = date('Y');
     $siteName = h(getSetting('site_name', 'Kora CMS'));
     $b        = BASE_URL;
-    $links    = '';
     $publicRegistrationEnabled = publicRegistrationEnabled();
-
-    $socials = [
-        'social_facebook'  => ['Facebook',  'https://www.facebook.com/'],
-        'social_youtube'   => ['YouTube',   'https://www.youtube.com/'],
-        'social_instagram' => ['Instagram', 'https://www.instagram.com/'],
-        'social_twitter'   => ['X/Twitter', 'https://x.com/'],
-    ];
-    foreach ($socials as $key => [$label, $prefix]) {
-        $url = getSetting($key, '');
-        if ($url !== '') {
-            $links .= '<a href="' . h($url) . '" rel="noopener noreferrer" target="_blank">' . $label . '</a> ';
-        }
-    }
-    $links .= '<a href="' . $b . '/feed.php">RSS</a>';
 
     $version = KORA_VERSION;
 
@@ -32,10 +17,7 @@ function siteFooter(): string
     return "<footer>\n"
          . $footerWidgets
          . "  <p>&copy; {$year} {$siteName}</p>\n"
-         . "  <p>{$links}</p>\n"
-         . "  <p><a href=\"{$b}/search.php\">Vyhledávání</a>"
-         . (isModuleEnabled('newsletter') ? " · <a href=\"{$b}/subscribe.php\">Odběr novinek</a>" : '')
-         . "</p>\n"
+         . "  <p><a href=\"{$b}/feed.php\">RSS</a></p>\n"
          . (isModuleEnabled('reservations') && ($publicRegistrationEnabled || (isLoggedIn() && isPublicUser()))
              ? "  <p>"
                . (isLoggedIn()

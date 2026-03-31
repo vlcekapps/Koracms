@@ -43,10 +43,6 @@ function settingsDefaultFormState(): array
         'ga4_measurement_id' => getSetting('ga4_measurement_id', ''),
         'custom_head_code' => getSetting('custom_head_code', ''),
         'custom_footer_code' => getSetting('custom_footer_code', ''),
-        'social_facebook' => getSetting('social_facebook'),
-        'social_youtube' => getSetting('social_youtube'),
-        'social_instagram' => getSetting('social_instagram'),
-        'social_twitter' => getSetting('social_twitter'),
         'og_image_default' => getSetting('og_image_default', ''),
         'home_intro' => getSetting('home_intro', ''),
         'cookie_consent_enabled' => getSetting('cookie_consent_enabled', '0'),
@@ -75,4 +71,3 @@ function settingsFieldErrorMessages(): array
         'site_logo' => 'Nahrajte logo ve formátu JPEG, PNG, GIF nebo WebP o velikosti nejvýše 2 MB.',
     ];
 }
-

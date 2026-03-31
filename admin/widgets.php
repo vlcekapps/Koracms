@@ -41,7 +41,7 @@ try {
 adminHeader('Widgety');
 ?>
 
-<p style="font-size:.9rem">Přidávejte, přesouvejte a nastavujte widgety v jednotlivých zónách webu. Přetažením myší nebo klávesou Ctrl+šipka změníte pořadí.</p>
+<p style="font-size:.9rem">Přidávejte, přesouvejte a nastavujte widgety v jednotlivých zónách webu. Přetažením myší nebo klávesou Ctrl+šipka změníte pořadí. Aktivní widgety, které se teď na webu nedokážou zobrazit, tu uvidíte s vysvětlením přímo nad tlačítkem Nastavení.</p>
 
 <fieldset id="widget-add" style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
   <legend>Přidat widget do zóny</legend>
@@ -80,6 +80,10 @@ adminHeader('Widgety');
           $wSettings = widgetSettings($w);
           $wTypeDef = $types[$w['widget_type']] ?? null;
           $wTypeName = $wTypeDef ? $wTypeDef['name'] : $w['widget_type'];
+          $wAvailability = widgetInstanceAvailability($w);
+          $wDisplayable = $wAvailability['displayable'];
+          $wDisplayWarning = (int)$w['is_active'] === 1 && !$wDisplayable;
+          $wDisplayReasons = $wAvailability['reasons'];
         ?>
           <li style="display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .5rem;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab<?= !(int)$w['is_active'] ? ';opacity:.5' : '' ?>"
               data-sort-id="<?= (int)$w['id'] ?>" tabindex="0"
@@ -87,28 +91,33 @@ adminHeader('Widgety');
 
             <div style="min-width:14rem;flex:1 1 16rem">
               <strong><?= h($w['title'] ?: $wTypeName) ?></strong>
-              <br><small style="color:#555"><?= h($wTypeName) ?><?= !(int)$w['is_active'] ? ' · <em>neaktivní</em>' : '' ?></small>
+              <br><small style="color:#555"><?= h($wTypeName) ?><?= !(int)$w['is_active'] ? ' · <em>neaktivní</em>' : '' ?><?= $wDisplayWarning ? ' · na webu se teď nezobrazí' : '' ?></small>
             </div>
 
-            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-              <button type="button" class="btn widget-edit-btn" style="font-size:.85rem"
-                      aria-label="Nastavení widgetu <?= h($w['title'] ?: $wTypeName) ?>"
-                      aria-haspopup="dialog"
-                      aria-controls="widget-dialog"
-                      aria-expanded="false"
-                      data-widget-id="<?= (int)$w['id'] ?>"
-                      data-widget-title="<?= h($w['title']) ?>"
-                      data-widget-type="<?= h($w['widget_type']) ?>"
-                      data-widget-zone="<?= h($w['zone']) ?>"
-                      data-widget-active="<?= (int)$w['is_active'] ?>"
-                      data-widget-settings="<?= h(json_encode($wSettings, JSON_UNESCAPED_UNICODE)) ?>">Nastavení</button>
-              <form method="post" action="widget_delete.php" style="display:inline">
-                <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-                <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
-                <button type="submit" class="btn btn-danger" style="font-size:.85rem"
-                        data-confirm="<?= h('Odebrat widget „' . (string)($w['title'] ?: $wTypeName) . '“?') ?>"
-                        aria-label="Odebrat widget <?= h($w['title'] ?: $wTypeName) ?>">✕</button>
-              </form>
+            <div style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start">
+              <?php if ($wDisplayWarning && $wDisplayReasons !== []): ?>
+                <p class="field-help" style="margin:0;max-width:26rem">Na webu se teď nezobrazí: <?= h(implode('; ', $wDisplayReasons)) ?>.</p>
+              <?php endif; ?>
+              <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+                <button type="button" class="btn widget-edit-btn" style="font-size:.85rem"
+                        aria-label="Nastavení widgetu <?= h($w['title'] ?: $wTypeName) ?>"
+                        aria-haspopup="dialog"
+                        aria-controls="widget-dialog"
+                        aria-expanded="false"
+                        data-widget-id="<?= (int)$w['id'] ?>"
+                        data-widget-title="<?= h($w['title']) ?>"
+                        data-widget-type="<?= h($w['widget_type']) ?>"
+                        data-widget-zone="<?= h($w['zone']) ?>"
+                        data-widget-active="<?= (int)$w['is_active'] ?>"
+                        data-widget-settings="<?= h(json_encode($wSettings, JSON_UNESCAPED_UNICODE)) ?>">Nastavení</button>
+                <form method="post" action="widget_delete.php" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                  <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
+                  <button type="submit" class="btn btn-danger" style="font-size:.85rem"
+                          data-confirm="<?= h('Odebrat widget „' . (string)($w['title'] ?: $wTypeName) . '“?') ?>"
+                          aria-label="Odebrat widget <?= h($w['title'] ?: $wTypeName) ?>">✕</button>
+                </form>
+              </div>
             </div>
           </li>
         <?php endforeach; ?>
@@ -177,7 +186,7 @@ adminHeader('Widgety');
     </div>
 
     <div id="wd-field-cta" style="display:none;margin-top:.75rem">
-      <label for="wd-cta">CTA text</label>
+      <label for="wd-cta">Úvodní text</label>
       <input type="text" id="wd-cta" name="widget_cta_text" maxlength="500">
     </div>
 
@@ -222,6 +231,18 @@ adminHeader('Widgety');
       <textarea id="wd-content" name="widget_content" rows="6"></textarea>
     </div>
 
+    <div id="wd-field-social" style="display:none;margin-top:.75rem">
+      <fieldset style="margin:0;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+        <legend>Odkazy na sociální sítě</legend>
+        <p class="field-help" style="margin-top:0">Vyplňte jen odkazy, které chcete v tomto widgetu zobrazit. Když pole necháte prázdná, widget se na webu nevykreslí.</p>
+        <?php foreach (widgetSocialLinkDefinitions() as $socialSettingKey => $socialLabel): ?>
+          <?php $socialFieldId = 'wd-' . str_replace('_', '-', $socialSettingKey); ?>
+          <label for="<?= h($socialFieldId) ?>"><?= h($socialLabel) ?></label>
+          <input type="url" id="<?= h($socialFieldId) ?>" name="widget_<?= h($socialSettingKey) ?>" placeholder="https://">
+        <?php endforeach; ?>
+      </fieldset>
+    </div>
+
     <div class="button-row" style="margin-top:1rem">
       <button type="submit" class="btn">Uložit</button>
       <button type="button" id="widget-dialog-cancel" class="btn">Zrušit</button>
@@ -239,6 +260,7 @@ adminHeader('Widgety');
   var lastTrigger = null;
   var previousBodyOverflow = '';
   var countTypes = ['latest_articles','latest_news','board','upcoming_events','latest_downloads','latest_faq','latest_places','latest_podcast_episodes'];
+  var socialFieldKeys = ['social_facebook','social_youtube','social_instagram','social_twitter'];
   var multiBlog = <?= count($allBlogs) > 1 ? 'true' : 'false' ?>;
 
   function syncAddZoneInputs() {
@@ -264,8 +286,14 @@ adminHeader('Widgety');
     document.getElementById('wd-active').checked = btn.dataset.widgetActive === '1';
 
     // Skrýt všechna dynamická pole
-    ['count','blog','source','cta','album','show','form','text','content'].forEach(function(f){
+    ['count','blog','source','cta','album','show','form','text','content','social'].forEach(function(f){
       document.getElementById('wd-field-'+f).style.display = 'none';
+    });
+    socialFieldKeys.forEach(function(key){
+      var input = document.querySelector('[name="widget_' + key + '"]');
+      if (input) {
+        input.value = '';
+      }
     });
 
     // Zobrazit relevantní pole
@@ -281,7 +309,7 @@ adminHeader('Widgety');
       document.getElementById('wd-field-source').style.display = '';
       document.getElementById('wd-source').value = s.source || 'blog';
     }
-    if (type === 'newsletter') {
+    if (type === 'newsletter' || type === 'search') {
       document.getElementById('wd-field-cta').style.display = '';
       document.getElementById('wd-cta').value = s.cta_text || '';
     }
@@ -304,6 +332,15 @@ adminHeader('Widgety');
     if (type === 'custom_html') {
       document.getElementById('wd-field-content').style.display = '';
       document.getElementById('wd-content').value = s.content || '';
+    }
+    if (type === 'social_links') {
+      document.getElementById('wd-field-social').style.display = '';
+      socialFieldKeys.forEach(function(key){
+        var input = document.querySelector('[name="widget_' + key + '"]');
+        if (input) {
+          input.value = s[key] || '';
+        }
+      });
     }
 
     previousBodyOverflow = document.body.style.overflow;
