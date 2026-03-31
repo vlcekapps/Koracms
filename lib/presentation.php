@@ -4815,16 +4815,58 @@ function formSubmissionNormalizeLabels(string $value): string
     return implode(', ', formSubmissionLabelsFromString($value));
 }
 
+function formFieldNameVariants(string $fieldName): array
+{
+    $fieldName = trim($fieldName);
+    if ($fieldName === '') {
+        return [];
+    }
+
+    $variants = [$fieldName];
+    $hyphenVariant = str_replace('_', '-', $fieldName);
+    $underscoreVariant = str_replace('-', '_', $fieldName);
+    foreach ([$hyphenVariant, $underscoreVariant] as $variant) {
+        if ($variant !== '' && !in_array($variant, $variants, true)) {
+            $variants[] = $variant;
+        }
+    }
+
+    return $variants;
+}
+
+function formSubmissionValueByFieldName(array $submissionData, string $fieldName): mixed
+{
+    foreach (formFieldNameVariants($fieldName) as $candidateName) {
+        if (array_key_exists($candidateName, $submissionData)) {
+            return $submissionData[$candidateName];
+        }
+    }
+
+    return '';
+}
+
+function formFieldDefinitionByName(array $fieldsByName, string $fieldName): ?array
+{
+    foreach (formFieldNameVariants($fieldName) as $candidateName) {
+        if (isset($fieldsByName[$candidateName]) && is_array($fieldsByName[$candidateName])) {
+            return $fieldsByName[$candidateName];
+        }
+    }
+
+    return null;
+}
+
 function formSubmissionRecipient(array $form, array $fieldsByName, array $submissionData): array
 {
     $emailField = trim((string)($form['submitter_email_field'] ?? ''));
     if ($emailField !== '') {
-        $recipient = trim((string)($submissionData[$emailField] ?? ''));
+        $recipient = trim((string)formSubmissionValueByFieldName($submissionData, $emailField));
         if ($recipient !== '' && filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            $fieldDefinition = formFieldDefinitionByName($fieldsByName, $emailField);
             return [
                 'email' => $recipient,
                 'field_name' => $emailField,
-                'field_label' => trim((string)($fieldsByName[$emailField]['label'] ?? $emailField)),
+                'field_label' => trim((string)($fieldDefinition['label'] ?? $emailField)),
             ];
         }
     }
@@ -5639,7 +5681,10 @@ function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $sub
     ];
 
     foreach ($fieldsByName as $name => $field) {
-        $map['{{field:' . $name . '}}'] = formSubmissionDisplayValueForField($field, $submissionData[$name] ?? '');
+        $displayValue = formSubmissionDisplayValueForField($field, formSubmissionValueByFieldName($submissionData, $name));
+        foreach (formFieldNameVariants($name) as $candidateName) {
+            $map['{{field:' . $candidateName . '}}'] = $displayValue;
+        }
     }
 
     return array_merge($map, $extraPlaceholders);

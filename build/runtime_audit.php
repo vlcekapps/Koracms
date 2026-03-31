@@ -2924,7 +2924,7 @@ foreach ($pages as $page) {
 
     $adminFormCopyExpectations = [
         'admin_form_create' => ['Nejdřív vytvořte základ formuláře.', 'Necháte-li prázdné, adresa se vytvoří automaticky podle názvu formuláře.', 'Zobrazí se návštěvníkovi tehdy, když po odeslání zůstane na stránce formuláře.', 'Režim po odeslání', 'Primární tlačítko po odeslání', 'Sekundární tlačítko po odeslání', 'Zveřejnit formulář na webu', 'Neaktivní formulář zůstane uložený, ale návštěvníci ho na webu neuvidí.'],
-        'admin_form_issue_preset' => ['Šablona:', 'Nahlášení chyby', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas', 'Potvrzení odesílateli', 'Zařazení problému', 'Popis chyby', 'Přílohy a kontakt'],
+        'admin_form_issue_preset' => ['Šablona:', 'Nahlášení chyby', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas', 'Potvrzení odesílateli', 'Zařazení problému', 'Popis chyby', 'Přílohy a kontakt', 'value="email_pro_odpoved" selected'],
         'admin_form_feature_preset' => ['Šablona:', 'Návrh nové funkce', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas', 'O návrhu', 'Popis a dopad'],
         'admin_form_support_preset' => ['Šablona:', 'Žádost o podporu', 'Po prvním uložení se automaticky přidají tato pole:', 'Použít antispam honeypot', 'Souhlas', 'Základ žádosti', 'Popis a co už jste zkusili'],
         'admin_form_contact_preset' => ['Šablona:', 'Obecný kontaktní formulář', 'Po prvním uložení se automaticky přidají tato pole:', 'Souhlas', 'Kontakt na vás', 'Vaše zpráva'],
@@ -9247,6 +9247,8 @@ $faqFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_form.p
 $foodFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_form.php');
 $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
 $formBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
+$formSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_save.php');
+$presentationHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
 $boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
 $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
@@ -9298,6 +9300,24 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
             $adminFieldErrorIssues[] = $formLabel . ' is missing field-level error fragment: ' . $requiredFragment;
         }
     }
+}
+if (!str_contains($formBuilderSource, '$submitterEmailFieldValue') || !str_contains($formBuilderSource, 'count($emailFieldOptions) === 1')) {
+    $adminFieldErrorIssues[] = 'form builder is missing resilient fallback selection for submitter confirmation email field';
+}
+if (!str_contains($formSaveSource, 'adminAvailableSubmitterEmailFields') || !str_contains($formSaveSource, '$presetSubmitterEmailField') || !str_contains($formSaveSource, '$existingSubmitterEmailField')) {
+    $adminFieldErrorIssues[] = 'form save is missing fallback resolution for submitter confirmation email field';
+}
+if (!str_contains($formSaveSource, 'adminUniquePresetFieldName') || !str_contains($formSaveSource, '$presetFieldName = adminUniquePresetFieldName(')) {
+    $adminFieldErrorIssues[] = 'form save is missing exact preset field name preservation for template-backed forms';
+}
+if (
+    !str_contains($presentationHelpersSource, 'function formFieldNameVariants(')
+    || !str_contains($presentationHelpersSource, 'function formSubmissionValueByFieldName(')
+    || !str_contains($presentationHelpersSource, 'function formFieldDefinitionByName(')
+    || !str_contains($presentationHelpersSource, "formSubmissionValueByFieldName(\$submissionData, \$name)")
+    || !str_contains($presentationHelpersSource, "'{{field:' . \$candidateName . '}}'")
+) {
+    $adminFieldErrorIssues[] = 'form submission placeholder rendering is missing alias fallback for preset field names';
 }
 foreach ([
     '$_SESSION[\'form_error_fields\']',

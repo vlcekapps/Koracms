@@ -419,6 +419,154 @@ try {
 
     httpIntegrationPrintResult('settings_save_http', $settingsIssues, $failures);
 
+    $formPresetIssues = [];
+    $issuePresetDefinition = formPresetDefinition('issue_report');
+    $issuePresetUrl = $baseUrl . BASE_URL . '/admin/form_form.php?preset=issue_report';
+    $issuePresetResponse = fetchUrl($issuePresetUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($issuePresetResponse) !== 200) {
+        $formPresetIssues[] = 'preset formuláře pro nahlášení chyby nevrátil 200';
+    }
+    if (!str_contains($issuePresetResponse['body'], 'value="email_pro_odpoved" selected')) {
+        $formPresetIssues[] = 'preset formuláře pro nahlášení chyby nepředvyplnil pole pro potvrzovací e-mail';
+    }
+    $issuePresetCsrf = extractHiddenInputValue($issuePresetResponse['body'], 'csrf_token');
+    if ($issuePresetCsrf === '') {
+        $formPresetIssues[] = 'preset formuláře pro nahlášení chyby nevykreslil csrf_token';
+    }
+
+    $issuePresetTitle = 'HTTP preset issue ' . bin2hex(random_bytes(4));
+    $issuePresetSlug = uniqueFormSlug($pdo, 'http-preset-issue-' . bin2hex(random_bytes(4)));
+    $issuePresetFormValues = (array)($issuePresetDefinition['form'] ?? []);
+    $issuePresetCreateResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_save.php',
+        [
+            'csrf_token' => $issuePresetCsrf,
+            'preset' => 'issue_report',
+            'title' => $issuePresetTitle,
+            'slug' => $issuePresetSlug,
+            'description' => (string)($issuePresetFormValues['description'] ?? ''),
+            'success_message' => (string)($issuePresetFormValues['success_message'] ?? ''),
+            'submit_label' => (string)($issuePresetFormValues['submit_label'] ?? ''),
+            'notification_email' => '',
+            'notification_subject' => (string)($issuePresetFormValues['notification_subject'] ?? ''),
+            'redirect_url' => '',
+            'success_behavior' => (string)($issuePresetFormValues['success_behavior'] ?? 'message'),
+            'success_primary_label' => '',
+            'success_primary_url' => '',
+            'success_secondary_label' => '',
+            'success_secondary_url' => '',
+            'use_honeypot' => '1',
+            'submitter_confirmation_enabled' => '1',
+            'submitter_email_field' => 'email_pro_odpoved',
+            'submitter_confirmation_subject' => (string)($issuePresetFormValues['submitter_confirmation_subject'] ?? ''),
+            'submitter_confirmation_message' => (string)($issuePresetFormValues['submitter_confirmation_message'] ?? ''),
+            'is_active' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($issuePresetCreateResponse) !== 302) {
+        $formPresetIssues[] = 'uložení presetu formuláře pro nahlášení chyby nevrátilo 302 redirect';
+    }
+
+    $issuePresetCreateHeaders = implode("\n", $issuePresetCreateResponse['headers']);
+    $issuePresetFormId = 0;
+    if (preg_match('~Location:\s*(?:https?://[^/]+)?' . preg_quote(BASE_URL . '/admin/form_form.php?id=', '~') . '(\d+)~i', $issuePresetCreateHeaders, $matches) === 1) {
+        $issuePresetFormId = (int)$matches[1];
+    } else {
+        $formPresetIssues[] = 'uložení presetu formuláře pro nahlášení chyby nemíří zpět na editaci formuláře';
+    }
+
+    if ($issuePresetFormId > 0) {
+        $createdFormIds[] = $issuePresetFormId;
+
+        $issuePresetFormStmt = $pdo->prepare("SELECT submitter_confirmation_enabled, submitter_email_field FROM cms_forms WHERE id = ? LIMIT 1");
+        $issuePresetFormStmt->execute([$issuePresetFormId]);
+        $issuePresetFormRow = $issuePresetFormStmt->fetch() ?: [];
+        if ((int)($issuePresetFormRow['submitter_confirmation_enabled'] ?? 0) !== 1) {
+            $formPresetIssues[] = 'uložený preset formuláře pro nahlášení chyby nezapnul potvrzovací e-mail';
+        }
+        if ((string)($issuePresetFormRow['submitter_email_field'] ?? '') !== 'email_pro_odpoved') {
+            $formPresetIssues[] = 'uložený preset formuláře pro nahlášení chyby neuložil správné pole pro potvrzovací e-mail';
+        }
+
+        $issuePresetFieldStmt = $pdo->prepare("SELECT name FROM cms_form_fields WHERE form_id = ? ORDER BY sort_order, id");
+        $issuePresetFieldStmt->execute([$issuePresetFormId]);
+        $issuePresetFieldNames = array_values(array_map('strval', array_column($issuePresetFieldStmt->fetchAll() ?: [], 'name')));
+        if (!in_array('email_pro_odpoved', $issuePresetFieldNames, true) || !in_array('strucny_nazev_problemu', $issuePresetFieldNames, true)) {
+            $formPresetIssues[] = 'preset formuláře pro nahlášení chyby neuložil očekávané interní názvy polí';
+        }
+        if (in_array('email-pro-odpoved', $issuePresetFieldNames, true) || in_array('strucny-nazev-problemu', $issuePresetFieldNames, true)) {
+            $formPresetIssues[] = 'preset formuláře pro nahlášení chyby stále slugifikuje interní názvy polí';
+        }
+
+        $issuePresetEditUrl = $baseUrl . BASE_URL . '/admin/form_form.php?id=' . $issuePresetFormId;
+        $issuePresetEditResponse = fetchUrl($issuePresetEditUrl, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($issuePresetEditResponse) !== 200) {
+            $formPresetIssues[] = 'editace presetu formuláře pro nahlášení chyby nevrátila 200';
+        }
+        if (!str_contains($issuePresetEditResponse['body'], 'value="email_pro_odpoved" selected')) {
+            $formPresetIssues[] = 'editace presetu formuláře pro nahlášení chyby nezachovala vybrané pole pro potvrzovací e-mail';
+        }
+
+        $issuePresetEditCsrf = extractHiddenInputValue($issuePresetEditResponse['body'], 'csrf_token');
+        if ($issuePresetEditCsrf === '') {
+            $formPresetIssues[] = 'editace presetu formuláře pro nahlášení chyby nevykreslila csrf_token';
+        }
+
+        $issuePresetResaveResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/form_save.php',
+            [
+                'csrf_token' => $issuePresetEditCsrf,
+                'id' => (string)$issuePresetFormId,
+                'title' => $issuePresetTitle,
+                'slug' => $issuePresetSlug,
+                'description' => (string)($issuePresetFormValues['description'] ?? ''),
+                'success_message' => (string)($issuePresetFormValues['success_message'] ?? ''),
+                'submit_label' => (string)($issuePresetFormValues['submit_label'] ?? ''),
+                'notification_email' => '',
+                'notification_subject' => (string)($issuePresetFormValues['notification_subject'] ?? ''),
+                'redirect_url' => '',
+                'success_behavior' => (string)($issuePresetFormValues['success_behavior'] ?? 'message'),
+                'success_primary_label' => '',
+                'success_primary_url' => '',
+                'success_secondary_label' => '',
+                'success_secondary_url' => '',
+                'use_honeypot' => '1',
+                'submitter_confirmation_enabled' => '1',
+                'submitter_email_field' => '',
+                'submitter_confirmation_subject' => (string)($issuePresetFormValues['submitter_confirmation_subject'] ?? ''),
+                'submitter_confirmation_message' => (string)($issuePresetFormValues['submitter_confirmation_message'] ?? ''),
+                'is_active' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($issuePresetResaveResponse) !== 302) {
+            $formPresetIssues[] = 'uložení beze změn u presetu formuláře pro nahlášení chyby nevrátilo 302 redirect';
+        }
+
+        $issuePresetResaveHeaders = implode("\n", $issuePresetResaveResponse['headers']);
+        if (
+            preg_match(
+                '~Location:\s*(?:https?://[^/]+)?' . preg_quote(BASE_URL . '/admin/form_form.php?id=' . $issuePresetFormId, '~') . '(?:\s|$)~i',
+                $issuePresetResaveHeaders
+            ) !== 1
+        ) {
+            $formPresetIssues[] = 'uložení beze změn u presetu formuláře pro nahlášení chyby nemíří zpět na editaci formuláře';
+        }
+        if (str_contains($issuePresetResaveHeaders, 'err=submitter_email_field')) {
+            $formPresetIssues[] = 'uložení beze změn u presetu formuláře pro nahlášení chyby stále padá na submitter_email_field';
+        }
+
+        $issuePresetAfterResaveStmt = $pdo->prepare("SELECT submitter_email_field FROM cms_forms WHERE id = ? LIMIT 1");
+        $issuePresetAfterResaveStmt->execute([$issuePresetFormId]);
+        if ((string)($issuePresetAfterResaveStmt->fetchColumn() ?: '') !== 'email_pro_odpoved') {
+            $formPresetIssues[] = 'uložení beze změn u presetu formuláře pro nahlášení chyby nezachovalo uložené pole pro potvrzovací e-mail';
+        }
+    }
+    httpIntegrationPrintResult('form_issue_preset_http', $formPresetIssues, $failures);
+
     $galleryPickerIssues = [];
     $galleryAlbumSlug = 'http-picker-gallery-' . bin2hex(random_bytes(4));
     $galleryAlbumTitle = 'HTTP Picker Letecký den ' . date('His');

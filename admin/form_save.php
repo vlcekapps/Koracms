@@ -26,6 +26,73 @@ function adminUniqueFormFieldName(string $baseName, array &$usedNames, string $f
     return $candidate;
 }
 
+function adminUniquePresetFieldName(string $preferredName, string $fallbackLabel, array &$usedNames, string $fallbackPrefix = 'field'): string
+{
+    $preferredName = trim($preferredName);
+    if ($preferredName === '') {
+        return adminUniqueFormFieldName($fallbackLabel, $usedNames, $fallbackPrefix);
+    }
+
+    $candidate = $preferredName;
+    $suffix = 2;
+    while (in_array($candidate, $usedNames, true)) {
+        $candidate = $preferredName . '_' . $suffix;
+        $suffix++;
+    }
+
+    $usedNames[] = $candidate;
+    return $candidate;
+}
+
+function adminAvailableSubmitterEmailFields(PDO $pdo, ?array $existingForm, ?array $presetDefinition, array $submittedFields): array
+{
+    $options = [];
+
+    if ($existingForm !== null) {
+        $fieldStmt = $pdo->prepare("SELECT id, name, field_type FROM cms_form_fields WHERE form_id = ?");
+        $fieldStmt->execute([(int)$existingForm['id']]);
+        $existingFields = $fieldStmt->fetchAll() ?: [];
+        $submittedFieldsById = [];
+        foreach ($submittedFields as $submittedField) {
+            $fieldId = (int)($submittedField['id'] ?? 0);
+            if ($fieldId > 0) {
+                $submittedFieldsById[$fieldId] = $submittedField;
+            }
+        }
+
+        foreach ($existingFields as $existingField) {
+            $fieldId = (int)($existingField['id'] ?? 0);
+            $submittedField = is_array($submittedFieldsById[$fieldId] ?? null) ? $submittedFieldsById[$fieldId] : [];
+            if (!empty($submittedField['delete'])) {
+                continue;
+            }
+
+            $fieldType = normalizeFormFieldType((string)($submittedField['field_type'] ?? ($existingField['field_type'] ?? 'text')));
+            if ($fieldType !== 'email') {
+                continue;
+            }
+
+            $fieldName = trim((string)($existingField['name'] ?? ''));
+            if ($fieldName !== '') {
+                $options[] = $fieldName;
+            }
+        }
+    } elseif ($presetDefinition !== null) {
+        foreach ((array)($presetDefinition['fields'] ?? []) as $presetField) {
+            if (normalizeFormFieldType((string)($presetField['field_type'] ?? 'text')) !== 'email') {
+                continue;
+            }
+
+            $fieldName = trim((string)($presetField['name'] ?? ''));
+            if ($fieldName !== '') {
+                $options[] = $fieldName;
+            }
+        }
+    }
+
+    return array_values(array_unique($options));
+}
+
 $pdo = db_connect();
 $canManageFormIntegrations = currentUserHasCapability('settings_manage');
 $id = inputInt('post', 'id');
@@ -57,6 +124,7 @@ $presetKey = trim((string)($_POST['preset'] ?? ''));
 $presetDefinition = $id === null ? formPresetDefinition($presetKey) : null;
 $errorSuffix = $id !== null ? '&id=' . $id : ($presetKey !== '' ? '&preset=' . urlencode($presetKey) : '');
 $existingForm = null;
+$submittedFields = (array)($_POST['fields'] ?? []);
 
 if ($id !== null) {
     $existingStmt = $pdo->prepare("SELECT * FROM cms_forms WHERE id = ?");
@@ -73,10 +141,6 @@ if ($submitLabel === '') {
 }
 if ($notificationEmail !== '' && !filter_var($notificationEmail, FILTER_VALIDATE_EMAIL)) {
     header('Location: form_form.php?err=notification_email' . $errorSuffix);
-    exit;
-}
-if ($submitterConfirmationEnabled === 1 && $submitterEmailField === '') {
-    header('Location: form_form.php?err=submitter_email_field' . $errorSuffix);
     exit;
 }
 $redirectUrl = $redirectUrl !== '' ? internalRedirectTarget($redirectUrl, '') : '';
@@ -107,6 +171,26 @@ if ($title === '') {
     exit;
 }
 
+$availableSubmitterEmailFields = adminAvailableSubmitterEmailFields($pdo, $existingForm, $presetDefinition, $submittedFields);
+if ($submitterConfirmationEnabled === 1) {
+    $existingSubmitterEmailField = trim((string)($existingForm['submitter_email_field'] ?? ''));
+    $presetSubmitterEmailField = trim((string)($presetDefinition['form']['submitter_email_field'] ?? ''));
+
+    if ($submitterEmailField === '' && $existingSubmitterEmailField !== '' && in_array($existingSubmitterEmailField, $availableSubmitterEmailFields, true)) {
+        $submitterEmailField = $existingSubmitterEmailField;
+    }
+    if ($submitterEmailField === '' && $presetSubmitterEmailField !== '' && in_array($presetSubmitterEmailField, $availableSubmitterEmailFields, true)) {
+        $submitterEmailField = $presetSubmitterEmailField;
+    }
+    if ($submitterEmailField === '' && count($availableSubmitterEmailFields) === 1) {
+        $submitterEmailField = $availableSubmitterEmailFields[0];
+    }
+    if ($submitterEmailField === '' || !in_array($submitterEmailField, $availableSubmitterEmailFields, true)) {
+        header('Location: form_form.php?err=submitter_email_field' . $errorSuffix);
+        exit;
+    }
+}
+
 $slug = formSlug($submittedSlug !== '' ? $submittedSlug : $title);
 if ($slug === '') {
     header('Location: form_form.php?err=slug' . $errorSuffix);
@@ -134,7 +218,6 @@ if ($id !== null) {
     $existingNames = $existingNames->fetchAll(PDO::FETCH_KEY_PAIR);
     $usedFieldNames = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $existingNames)));
 
-    $submittedFields = (array)($_POST['fields'] ?? []);
     foreach ($submittedFields as $fieldData) {
         $fieldId = (int)($fieldData['id'] ?? 0);
         if ($fieldId <= 0) {
@@ -260,8 +343,9 @@ if ($id !== null) {
                 continue;
             }
 
-            $presetFieldName = adminUniqueFormFieldName(
-                trim((string)($presetField['name'] ?? '')) !== '' ? (string)$presetField['name'] : $presetFieldLabel,
+            $presetFieldName = adminUniquePresetFieldName(
+                (string)($presetField['name'] ?? ''),
+                $presetFieldLabel,
                 $usedFieldNames,
                 'field'
             );

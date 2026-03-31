@@ -55,6 +55,23 @@ $formDefaults = $presetDefinition['form'] ?? [];
 $presetFields = (array)($presetDefinition['fields'] ?? []);
 $fieldSourceForOptions = $fields !== [] ? $fields : $presetFields;
 $emailFieldOptions = formEmailFieldOptions($fieldSourceForOptions);
+$defaultSubmitterEmailField = trim((string)($formDefaults['submitter_email_field'] ?? ''));
+$submitterEmailFieldValue = trim((string)($form['submitter_email_field'] ?? $defaultSubmitterEmailField));
+if ($submitterEmailFieldValue === '' && $defaultSubmitterEmailField !== '' && array_key_exists($defaultSubmitterEmailField, $emailFieldOptions)) {
+    $submitterEmailFieldValue = $defaultSubmitterEmailField;
+}
+if ($submitterEmailFieldValue === '' && count($emailFieldOptions) === 1) {
+    $submitterEmailFieldValue = (string)array_key_first($emailFieldOptions);
+}
+if ($submitterEmailFieldValue !== '' && !array_key_exists($submitterEmailFieldValue, $emailFieldOptions)) {
+    if ($defaultSubmitterEmailField !== '' && array_key_exists($defaultSubmitterEmailField, $emailFieldOptions)) {
+        $submitterEmailFieldValue = $defaultSubmitterEmailField;
+    } elseif (count($emailFieldOptions) === 1) {
+        $submitterEmailFieldValue = (string)array_key_first($emailFieldOptions);
+    } else {
+        $submitterEmailFieldValue = '';
+    }
+}
 $submitterConfirmationSubjectValue = (string)($form['submitter_confirmation_subject'] ?? ($formDefaults['submitter_confirmation_subject'] ?? ''));
 $submitterConfirmationMessageValue = (string)($form['submitter_confirmation_message'] ?? ($formDefaults['submitter_confirmation_message'] ?? ''));
 $successBehaviorValue = normalizeFormSuccessBehavior(
@@ -250,7 +267,7 @@ adminHeader($pageTitle);
               style="width:100%;max-width:500px">
         <option value="">Nevybráno</option>
         <?php foreach ($emailFieldOptions as $fieldName => $fieldLabel): ?>
-          <option value="<?= h($fieldName) ?>"<?= (string)($form['submitter_email_field'] ?? ($formDefaults['submitter_email_field'] ?? '')) === $fieldName ? ' selected' : '' ?>><?= h($fieldLabel) ?> (<?= h($fieldName) ?>)</option>
+          <option value="<?= h($fieldName) ?>"<?= $submitterEmailFieldValue === $fieldName ? ' selected' : '' ?>><?= h($fieldLabel) ?> (<?= h($fieldName) ?>)</option>
         <?php endforeach; ?>
       </select>
       <small id="submitter-email-field-help" class="field-help">Vyberte e-mailové pole, na které má přijít potvrzení. Když tu ještě žádné není, nejdřív ho přidejte mezi pole formuláře.</small>
