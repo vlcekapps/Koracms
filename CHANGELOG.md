@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.10] – 2026-03-31
 
 ### Změněno
 - **Blogy – změna blogu v editoru článku nově respektuje taxonomie cílového blogu** – při přesunu jednoho článku přes běžnou editaci se nově automaticky přenesou odpovídající kategorie a štítky, pokud v cílovém blogu existují, editor dovolí ručně vybrat jiné existující taxonomie cílového blogu a správce taxonomií může přímo z editoru vytvořit chybějící kategorii nebo štítky; server-side validace zároveň brání podvrženému přiřazení nebo nepovolenému vytvoření taxonomií mimo cílový blog
