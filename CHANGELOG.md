@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.3.0] – 2026-04-01
 
 ### Změněno
 - **Import / Export – JSON import nově přísně hlídá UTF-8 a chrání českou diakritiku** – administrace při importu JSON nejdřív ověří platné UTF-8, toleruje jen běžný UTF-8 BOM a soubor s poškozeným kódováním odmítne dřív, než by se texty zapsaly do databáze; dokumentace současně nově výslovně upozorňuje, že ruční SQL restore musí používat `utf8mb4`, jinak se české znaky mohou změnit na `?`
