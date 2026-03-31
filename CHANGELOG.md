@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0-rc.8] – 2026-03-31
 
 ### Přidáno
 - **Blogy – přesun článků mezi blogy v administraci** – autoři s přístupem do více blogů mohou nově z přehledu článků hromadně přesouvat své vlastní články mezi blogy, do kterých smějí zapisovat; převod nabízí výběr cílového blogu, shrnutí vybraných článků, bezpečné vyrovnání kategorií a štítků a pro správce cílového blogu i vytvoření chybějících taxonomií nebo ruční mapování chybějících kategorií a štítků na existující taxonomie cílového blogu, přičemž celý přesun běží transakčně a ukládá revize změn
