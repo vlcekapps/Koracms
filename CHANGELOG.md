@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.2.2] – 2026-03-31
 
 ### Změněno
 - **HTML editor – shortcode `[code]...[/code]` má univerzálnější akci kopírování** – kopírovatelný blok už nezobrazuje horní popisek a tlačítko je nově až pod obsahem s neutrálním textem `Kopírovat do schránky`, takže se hodí i pro jiné texty než jen ukázky kódu
