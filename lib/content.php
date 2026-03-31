@@ -166,16 +166,14 @@ function renderContentCodeShortcode(string $body): ?string
     $contentCodeShortcodeIndex++;
 
     $blockId = 'content-code-block-' . $contentCodeShortcodeIndex;
-    $titleId = $blockId . '-title';
     $codeId = $blockId . '-code';
 
     return "\n\n"
-        . '<section class="content-code-block" aria-labelledby="' . h($titleId) . '">'
-        . '<div class="content-code-block__header">'
-        . '<p id="' . h($titleId) . '" class="content-code-block__eyebrow">Ukázka kódu</p>'
-        . '<button type="button" class="button-secondary content-code-block__copy js-copy-content" data-copy-target="' . h($codeId) . '" data-copy-label="Zkopírovat obsah">Zkopírovat obsah</button>'
-        . '</div>'
+        . '<section class="content-code-block" aria-label="Kopírovatelný obsah">'
         . '<pre class="content-code-block__pre"><code id="' . h($codeId) . '">' . h($code) . '</code></pre>'
+        . '<div class="content-code-block__actions">'
+        . '<button type="button" class="button-secondary content-code-block__copy js-copy-content" data-copy-target="' . h($codeId) . '" data-copy-label="Kopírovat do schránky">Kopírovat do schránky</button>'
+        . '</div>'
         . '</section>'
         . "\n\n";
 }

@@ -111,7 +111,7 @@ document.addEventListener('click', function (e) {
   if (!source) return;
   var payload = source.textContent || '';
   var live = document.getElementById('a11y-live');
-  var defaultLabel = btn.getAttribute('data-copy-label') || 'Zkopírovat obsah';
+  var defaultLabel = btn.getAttribute('data-copy-label') || 'Kopírovat do schránky';
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(payload).then(function () {
       btn.textContent = 'Zkopírováno!';

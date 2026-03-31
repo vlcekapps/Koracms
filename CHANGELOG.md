@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **HTML editor – shortcode `[code]...[/code]` má univerzálnější akci kopírování** – kopírovatelný blok už nezobrazuje horní popisek a tlačítko je nově až pod obsahem s neutrálním textem `Kopírovat do schránky`, takže se hodí i pro jiné texty než jen ukázky kódu
+- **Content/media picker – vkládané obrázky už automaticky nepřidávají popisek z názvu média** – HTML vložení obrázku z knihovny médií nově zachová `alt` atribut, ale nevytváří `figcaption`; pokud médium nemá vyplněný alternativní text, vloží se bezpečné `alt=""`, které lze v editoru ručně doplnit
+
 ## [3.2.1] – 2026-03-31
 
 ### Změněno
@@ -14,7 +20,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **HTML editor – PDF náhled jako nový obsahový snippet** – HTML obsah nově podporuje shortcode `[pdf]...[/pdf]`, který na veřejném webu vykreslí přístupný náhled PDF s titulkem a odkazem `Otevřít PDF samostatně`; content/media picker zároveň nově u veřejných PDF z knihovny médií nabízí akci `Vložit PDF náhled`
-- **HTML editor – kopírovatelné bloky kódu přes shortcode `[code]...[/code]`** – veřejný renderer nově umí z HTML obsahu vytvořit výrazný blok kódu s tlačítkem `Zkopírovat obsah`, potvrzením přes live region a bezpečným zkopírováním textu do schránky bez nutnosti ručního označování
+- **HTML editor – kopírovatelné bloky obsahu přes shortcode `[code]...[/code]`** – veřejný renderer umí z HTML obsahu vytvořit kopírovatelný blok s tlačítkem `Kopírovat do schránky`, potvrzením přes live region a bezpečným zkopírováním textu do schránky bez nutnosti ručního označování
 
 ### Změněno
 - **Správa modulů – první uložení už neschovává právě povolený modul zpět do vypnutého stavu** – obrazovka `admin/settings_modules.php` nově po uložení používá PRG redirect a flash zprávu místo renderu ve stejné POST odpovědi, takže se checkboxy po prvním uložení načtou z opravdu uloženého stavu a success hláška se zobrazí jen jednou

@@ -1658,21 +1658,12 @@ body.theme-public textarea.form-control {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
 
-.content-code-block__header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.content-code-block__eyebrow {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.84);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.content-code-block__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .content-code-block__copy {

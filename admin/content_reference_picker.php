@@ -433,16 +433,12 @@ function renderAdminContentReferencePicker(string $textareaId): void
             }
 
             const altText = typeof item.media_alt === 'string' && item.media_alt.trim() !== ''
-                ? item.media_alt
-                : item.title;
+                ? item.media_alt.trim()
+                : '';
             const lines = [
                 '<figure class="content-media content-media--image">',
                 '  <img src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(altText) + '" loading="lazy">',
             ];
-
-            if (item.title) {
-                lines.push('  <figcaption>' + escapeHtml(item.title) + '</figcaption>');
-            }
 
             lines.push('</figure>');
             return lines.join('\n');

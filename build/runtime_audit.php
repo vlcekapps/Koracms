@@ -6147,7 +6147,7 @@ HTML;
             if (!str_contains($shortcodeProbe['body'], 'class="button-secondary content-code-block__copy js-copy-content"')) {
                 $contentShortcodeIssues[] = 'code shortcode is missing copy button';
             }
-            if (!str_contains($shortcodeProbe['body'], 'Zkopírovat obsah')) {
+            if (!str_contains($shortcodeProbe['body'], 'Kopírovat do schránky')) {
                 $contentShortcodeIssues[] = 'code shortcode is missing copy button label';
             }
             if (!str_contains($shortcodeProbe['body'], 'echo &quot;Ahoj z code shortcodu&quot;;')) {
@@ -6323,6 +6323,12 @@ if (!str_contains($baseLayoutSource = (string)file_get_contents(dirname(__DIR__)
 }
 if (!str_contains($baseLayoutSource, 'Obsah byl zkopírován do schránky.')) {
     $contentSnippetIssues[] = 'default layout is missing copyable code live region feedback';
+}
+if (str_contains($contentPickerSource, '<figcaption>')) {
+    $contentSnippetIssues[] = 'content reference picker still injects figcaption into inserted image HTML';
+}
+if (str_contains($contentPickerSource, "const altText = typeof item.media_alt === 'string' && item.media_alt.trim() !== ''\n                ? item.media_alt.trim()\n                : item.title;")) {
+    $contentSnippetIssues[] = 'content reference picker still falls back to image title for alt text';
 }
 if (!str_contains($contentSearchSource, "SELECT id, name AS title, slug, description, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type")) {
     $contentSnippetIssues[] = 'content reference search gallery album query is not selecting real description field';
