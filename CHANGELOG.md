@@ -7,6 +7,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Média – public/private knihovna a bezpečnější workflow** – knihovna médií nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery a chráněné endpointy pro soukromá média a SVG, blokuje mazání používaných souborů a přidává náhradu souboru, rozšířená metadata, bulk akce a filtrování
+- **Ankety – veřejné hledání, SEO a revize** – modul ankety nově podporuje fulltextové hledání a stránkování na veřejném indexu, `meta title` a `meta description` v editoru, širší revize včetně termínů a možností, redirect starého slugu na nový canonical tvar a sjednocenou veřejnou viditelnost napříč widgetem, vyhledáváním, sitemapou i shortcode embedy
 - **Podcasty – chráněné asset endpointy a structured data** – cover pořadu, artwork epizody i lokální audio nově tečou přes kontrolované endpointy místo přímých `/uploads/podcasts/...` cest, skryté pořady už nezpřístupní ani své soubory a veřejný detail pořadu i epizody nově doplňuje structured data
 - **Novinky – veřejné hledání, SEO a redirecty** – modul Novinky nově podporuje fulltextové hledání na veřejném indexu, stránkování i při aktivním dotazu, `meta title` a `meta description` v editoru, `NewsArticle` structured data na detailu a redirect starého slugu na nový canonical tvar
 - **Chat – moderovaný veřejný stream a inbox workflow** – chat nově funguje jako moderovaná veřejná nástěnka; nové zprávy se ukládají jako `Ke schválení`, veřejně se zobrazují až po ručním schválení, veřejný výpis podporuje hledání, řazení a stránkování a detail zprávy v administraci nově nabízí interní poznámku, historii změn a odpověď odesílateli e-mailem

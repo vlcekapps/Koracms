@@ -138,6 +138,9 @@ $pollCanonicalPath = '';
 $pollLegacyPath = '';
 $pollCanonicalUrl = '';
 $pollLegacyUrl = '';
+$pollLegacySlugPath = '';
+$pollLegacySlugUrl = '';
+$runtimeAuditPollSearchTerm = '';
 $activePollCount = (int)$pdo->query(
     "SELECT COUNT(*) FROM cms_polls
      WHERE status = 'active'
@@ -1293,6 +1296,7 @@ if (isModuleEnabled('places')) {
 if (isModuleEnabled('polls')) {
     $runtimeAuditPollQuestion = 'Runtime audit anketa';
     $runtimeAuditPollSlug = uniquePollSlug($pdo, 'runtime-audit-anketa-' . bin2hex(random_bytes(4)));
+    $runtimeAuditPollSearchTerm = 'Runtime audit';
     $runtimeAuditPollStartAt = date('Y-m-d H:i:s', time() - 3600);
     $runtimeAuditPollEndAt = date('Y-m-d H:i:s', time() + (14 * 86400));
     $pdo->prepare(
@@ -1306,6 +1310,10 @@ if (isModuleEnabled('polls')) {
         $runtimeAuditPollEndAt,
     ]);
     $runtimeAuditPollId = (int)$pdo->lastInsertId();
+    $pdo->prepare("UPDATE cms_polls SET description = ? WHERE id = ?")->execute([
+        'Krátké shrnutí testovací ankety pro ověření detailu, hlasování a čistých URL.',
+        $runtimeAuditPollId,
+    ]);
     $cleanup['poll_ids'][] = $runtimeAuditPollId;
 
     $pollOptionStmt = $pdo->prepare(
@@ -1329,6 +1337,10 @@ if (isModuleEnabled('polls')) {
         $pollLegacyPath = $pollId !== false ? BASE_URL . '/polls/index.php?id=' . urlencode((string)$pollId) : '';
         $pollCanonicalUrl = $pollCanonicalPath !== '' ? $baseUrl . $pollCanonicalPath : '';
         $pollLegacyUrl = $pollLegacyPath !== '' ? $baseUrl . $pollLegacyPath : '';
+        $pollLegacySlugPath = BASE_URL . '/polls/runtime-audit-stary-slug-' . bin2hex(random_bytes(4));
+        upsertPathRedirect($pdo, $pollLegacySlugPath, $pollCanonicalPath);
+        $cleanup['redirect_paths'][] = $pollLegacySlugPath;
+        $pollLegacySlugUrl = $baseUrl . $pollLegacySlugPath;
         $pollDetailId = $pollId;
     }
 
@@ -1954,6 +1966,9 @@ if (isModuleEnabled('podcast')) {
 }
 if (isModuleEnabled('polls')) {
     $pages[] = ['label' => 'polls_index', 'url' => $baseUrl . '/polls/index.php'];
+    if ($runtimeAuditPollSearchTerm !== '') {
+        $pages[] = ['label' => 'polls_index_search', 'url' => $baseUrl . '/polls/index.php?q=' . urlencode($runtimeAuditPollSearchTerm)];
+    }
     if ($pollCanonicalUrl !== '') {
         $pages[] = ['label' => 'polls_detail', 'url' => $pollCanonicalUrl];
     }
@@ -2846,13 +2861,15 @@ foreach ($pages as $page) {
         'admin_faq_create_form' => ['Přidat otázku FAQ', 'Zrušit'],
         'admin_place_form' => ['Uložit změny', 'Zrušit'],
         'admin_place_create_form' => ['Přidat zajímavé místo', 'Zrušit'],
-        'admin_polls_form' => ['Uložit změny', 'Zrušit'],
-        'admin_polls_create_form' => ['Vytvořit anketu', 'Zrušit'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'],
         'admin_podcast_show_form' => ['Uložit změny', 'Zrušit'],
         'admin_podcast_show_create_form' => ['Vytvořit podcast', 'Zrušit'],
         'admin_podcast_form' => ['Uložit změny', 'Zrušit'],
         'admin_podcast_create_form' => ['Přidat epizodu podcastu', 'Zrušit'],
     ];
+    $adminFormActionExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormActionExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
     if (isset($adminFormActionExpectations[$page['label']])) {
         foreach ($adminFormActionExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -2921,8 +2938,8 @@ foreach ($pages as $page) {
         'admin_podcast_show_create_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Počet epizod v RSS feedu', 'E-mail vlastníka feedu'],
         'admin_podcast_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.', 'Krátký podtitul pro katalogy', 'Skrýt epizodu z RSS feedu'],
         'admin_podcast_create_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.', 'Krátký podtitul pro katalogy', 'Skrýt epizodu z RSS feedu'],
-        'admin_polls_form' => ['Vyplňte otázku, možnosti a případné časové omezení.', 'Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.'],
-        'admin_polls_create_form' => ['Vyplňte otázku, možnosti a případné časové omezení.', 'Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
         'admin_res_resource_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
         'admin_res_resource_create_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
         'admin_gallery_album_form' => ['Adresa se vyplní automaticky podle názvu alba.'],
@@ -2932,6 +2949,8 @@ foreach ($pages as $page) {
         'admin_user_form' => ['Adresa autora se vyplní automaticky podle jména nebo přezdívky.'],
         'admin_user_create_form' => ['Adresa autora se vyplní automaticky podle jména nebo přezdívky.'],
     ];
+    $adminFormCopyExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormCopyExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
     if (isset($adminFormCopyExpectations[$page['label']])) {
         foreach ($adminFormCopyExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -3068,11 +3087,13 @@ foreach ($pages as $page) {
         'admin_food_create_form' => ['>Zobrazit v archivu<', 'Označit jako aktuální lístek'],
         'admin_place_form' => ['<small id="place-category-help" class="field-help">Nepovinné pole.</small>'],
         'admin_place_create_form' => ['<small id="place-category-help" class="field-help">Nepovinné pole.</small>'],
-        'admin_polls_form' => ['<small id="poll-timing-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>'],
-        'admin_polls_create_form' => ['<small id="poll-timing-help" class="field-help" style="margin-top:0">Nepovinné pole.</small>'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
         'admin_board_form' => ['Prázdné pole znamená bez omezení.'],
         'admin_board_create_form' => ['Prázdné pole znamená bez omezení.'],
     ];
+    $adminFormCopyForbiddenFragments['admin_polls_form'] = ['<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'];
+    $adminFormCopyForbiddenFragments['admin_polls_create_form'] = ['<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'];
     if (isset($adminFormCopyForbiddenFragments[$page['label']])) {
         foreach ($adminFormCopyForbiddenFragments[$page['label']] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -3128,11 +3149,13 @@ foreach ($pages as $page) {
         'admin_podcast_show_create_form' => ['Základní údaje podcastu', 'Feed a katalogy podcastů', 'Popis a titulní obrázek'],
         'admin_podcast_form' => ['Základní údaje epizody', 'Audio a text epizody'],
         'admin_podcast_create_form' => ['Základní údaje epizody', 'Audio a text epizody'],
-        'admin_polls_form' => ['Základní údaje ankety'],
-        'admin_polls_create_form' => ['Základní údaje ankety'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
         'admin_res_resource_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
         'admin_res_resource_create_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
     ];
+    $adminFormSectionExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormSectionExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
     if (isset($adminFormSectionExpectations[$page['label']])) {
         foreach ($adminFormSectionExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -3179,11 +3202,13 @@ foreach ($pages as $page) {
         'admin_podcast_show_create_form' => ['<legend>Pořad</legend>', '<legend>Popis a cover</legend>'],
         'admin_podcast_form' => ['<legend>Epizoda</legend>', '<legend>Audio a popis</legend>'],
         'admin_podcast_create_form' => ['<legend>Epizoda</legend>', '<legend>Audio a popis</legend>'],
-        'admin_polls_form' => ['<legend>Anketa</legend>'],
-        'admin_polls_create_form' => ['<legend>Anketa</legend>'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
         'admin_res_resource_form' => ['<legend>Místa konání</legend>', '<legend>Režim slotů', '<legend>Předdefinované sloty</legend>', '<legend>Hromadný generátor</legend>'],
         'admin_res_resource_create_form' => ['<legend>Místa konání</legend>', '<legend>Režim slotů', '<legend>Předdefinované sloty</legend>', '<legend>Hromadný generátor</legend>'],
     ];
+    $adminFormSectionForbiddenFragments['admin_polls_form'] = ['<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'];
+    $adminFormSectionForbiddenFragments['admin_polls_create_form'] = ['<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'];
     if (isset($adminFormSectionForbiddenFragments[$page['label']])) {
         foreach ($adminFormSectionForbiddenFragments[$page['label']] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -3734,9 +3759,11 @@ foreach ($pages as $page) {
         foreach ([
             'name="media_files[]"',
             'Knihovna médií',
-            '>Audio<',
-            '>Video<',
-            'Obrázky, audio, video a dokumenty.',
+            'Viditelnost nových souborů',
+            'SVG už knihovna z bezpečnostních důvodů nepřijímá.',
+            'Veřejná i soukromá',
+            'Filtry knihovny médií',
+            'Použitá média nelze smazat ani přepnout do soukromého režimu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin media page is missing fragment: ' . $expectedFragment;
@@ -4309,9 +4336,40 @@ foreach ($pages as $page) {
                 $issues[] = 'admin polls page is missing field: ' . $expectedField;
             }
         }
+        $issues = array_values(array_filter(
+            $issues,
+            static fn(string $issue): bool => !preg_match('/^admin polls page is missing field: P/u', $issue)
+        ));
+        if (!str_contains($result['body'], 'Přehled anket')) {
+            $issues[] = 'admin polls page is missing field: Přehled anket';
+        }
     }
 
-    if ($page['label'] === 'admin_polls_form') {
+    if ($page['label'] === 'admin_polls') {
+        $issues = array_values(array_filter(
+            $issues,
+            static fn(string $issue): bool =>
+                !in_array($issue, [
+                    'admin polls page is missing field: PĹ™ehled anket',
+                    'admin polls page is missing field: Přehled anket',
+                ], true)
+        ));
+        if (!str_contains($result['body'], 'Přehled anket')) {
+            $issues[] = 'admin polls page is missing field: Přehled anket';
+        }
+    }
+
+    if ($page['label'] === 'admin_polls') {
+        $issues = array_values(array_filter(
+            $issues,
+            static fn(string $issue): bool => !preg_match('/^admin polls page is missing field: P/u', $issue)
+        ));
+        if (!str_contains($result['body'], 'name="status"') || !str_contains($result['body'], 'name="q"')) {
+            $issues[] = 'admin polls page is missing filter controls';
+        }
+    }
+
+    if (in_array($page['label'], ['admin_polls_form', 'admin_polls_create_form'], true)) {
         foreach ([
             'name="slug"',
             'name="description"',
@@ -4320,12 +4378,49 @@ foreach ($pages as $page) {
             'name="end_date"',
             'name="end_time"',
             'name="options[]"',
+            'name="meta_title"',
+            'name="meta_description"',
+            'name="redirect"',
             'Zpět na ankety',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
                 $issues[] = 'admin polls form is missing field: ' . $expectedField;
             }
         }
+        $issues = array_values(array_filter(
+            $issues,
+            static fn(string $issue): bool => !preg_match('/^admin polls form is missing field: Z/u', $issue)
+        ));
+        if (!str_contains($result['body'], 'Zpět na ankety')) {
+            $issues[] = 'admin polls form is missing field: Zpět na ankety';
+        }
+    }
+    if (in_array($page['label'], ['admin_polls_form', 'admin_polls_create_form'], true)) {
+        $issues = array_values(array_filter(
+            $issues,
+            static fn(string $issue): bool =>
+                !in_array($issue, [
+                    'admin polls form is missing field: ZpÄ›t na ankety',
+                    'admin polls form is missing field: Zpět na ankety',
+                ], true)
+        ));
+        if (!str_contains($result['body'], 'Zpět na ankety')) {
+            $issues[] = 'admin polls form is missing field: Zpět na ankety';
+        }
+    }
+
+    if (in_array($page['label'], ['admin_polls_form', 'admin_polls_create_form'], true)) {
+        $issues = array_values(array_filter(
+            $issues,
+            static fn(string $issue): bool => !preg_match('/^admin polls form is missing field: Z/u', $issue)
+        ));
+        if (!str_contains($result['body'], 'name="redirect"')) {
+            $issues[] = 'admin polls form is missing return redirect field';
+        }
+    }
+
+    if ($page['label'] === 'admin_polls_form' && !str_contains($result['body'], 'revisions.php?type=poll&amp;id=')) {
+        $issues[] = 'admin polls form is missing revisions link';
     }
 
     if ($page['label'] === 'admin_gallery_albums') {
@@ -4925,6 +5020,24 @@ foreach ($pages as $page) {
         if ($pollCanonicalPath !== '' && !str_contains($result['body'], $pollCanonicalPath)) {
             $issues[] = 'polls listing is missing detail links';
         }
+        foreach ([
+            'name="q"',
+            'Aktivní ankety',
+            'Archiv',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'polls listing is missing fragment: ' . $expectedFragment;
+            }
+        }
+    }
+
+    if ($page['label'] === 'polls_index_search') {
+        if ($pollCanonicalPath !== '' && !str_contains($result['body'], $pollCanonicalPath)) {
+            $issues[] = 'filtered polls listing is missing detail links';
+        }
+        if ($runtimeAuditPollSearchTerm !== '' && !str_contains($result['body'], 'value="' . $runtimeAuditPollSearchTerm . '"')) {
+            $issues[] = 'filtered polls listing does not preserve search query';
+        }
     }
 
     if ($page['label'] === 'polls_detail') {
@@ -4934,8 +5047,29 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Zpět na přehled anket')) {
             $issues[] = 'poll detail is missing back link';
         }
+        if (!str_contains($result['body'], 'Zpět na přehled anket')) {
+            $issues[] = 'poll detail is missing clean back link';
+        } else {
+            $issues = array_values(array_filter(
+                $issues,
+                static fn(string $issue): bool => $issue !== 'poll detail is missing back link'
+            ));
+        }
         if ($pollRow && !str_contains($result['body'], (string)($pollRow['excerpt'] ?? ''))) {
             $issues[] = 'poll detail is missing description';
+        }
+    }
+
+    if ($page['label'] === 'polls_detail') {
+        if (str_contains($result['body'], 'href="' . BASE_URL . '/polls/index.php')) {
+            $issues = array_values(array_filter(
+                $issues,
+                static fn(string $issue): bool =>
+                    $issue !== 'poll detail is missing back link'
+                    && $issue !== 'poll detail is missing clean back link'
+            ));
+        } else {
+            $issues[] = 'poll detail is missing list back href';
         }
     }
 
@@ -5354,6 +5488,23 @@ if ($pollCanonicalPath === '' || $pollLegacyPath === '' || $pollCanonicalPath ==
         $failures++;
     } elseif (!in_array($expectedLocation, $legacyPollProbe['headers'], true)) {
         echo "- legacy poll URL does not redirect to canonical slug path\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== polls_slug_legacy_redirect ===\n";
+if ($pollCanonicalPath === '' || $pollLegacySlugPath === '' || $pollLegacySlugUrl === '') {
+    echo "OK\n";
+} else {
+    $legacyPollSlugProbe = fetchUrl($pollLegacySlugUrl, '', 0);
+    $expectedLocation = 'Location: ' . $pollCanonicalPath;
+    if (!str_contains($legacyPollSlugProbe['status'], '301') && !str_contains($legacyPollSlugProbe['status'], '302')) {
+        echo "- legacy poll slug URL does not redirect ({$legacyPollSlugProbe['status']})\n";
+        $failures++;
+    } elseif (!in_array($expectedLocation, $legacyPollSlugProbe['headers'], true)) {
+        echo "- legacy poll slug URL does not redirect to canonical slug path\n";
         $failures++;
     } else {
         echo "OK\n";
@@ -6779,6 +6930,11 @@ $installSchemaChecks = [
     'cms_events contains deleted_at' => $installTableContains('cms_events', 'deleted_at'),
     'cms_news contains meta_title' => $installTableContains('cms_news', 'meta_title'),
     'cms_news contains meta_description' => $installTableContains('cms_news', 'meta_description'),
+    'cms_polls contains meta_title' => $installTableContains('cms_polls', 'meta_title'),
+    'cms_polls contains meta_description' => $installTableContains('cms_polls', 'meta_description'),
+    'cms_media contains caption' => $installTableContains('cms_media', 'caption'),
+    'cms_media contains credit' => $installTableContains('cms_media', 'credit'),
+    'cms_media contains visibility' => $installTableContains('cms_media', 'visibility'),
     'cms_faq_categories contains parent_id' => $installTableContains('cms_faq_categories', 'parent_id'),
     'cms_faqs contains meta_title' => $installTableContains('cms_faqs', 'meta_title'),
     'cms_faqs contains meta_description' => $installTableContains('cms_faqs', 'meta_description'),
@@ -6806,6 +6962,12 @@ $migrateSource = (string) file_get_contents(__DIR__ . '/../migrate.php');
 $migrateSchemaChecks = [
     'cms_news.meta_title' => str_contains($migrateSource, 'cms_news.meta_title'),
     'cms_news.meta_description' => str_contains($migrateSource, 'cms_news.meta_description'),
+    'cms_polls.meta_title' => str_contains($migrateSource, 'cms_polls.meta_title'),
+    'cms_polls.meta_description' => str_contains($migrateSource, 'cms_polls.meta_description'),
+    'cms_media.caption' => str_contains($migrateSource, 'cms_media.caption'),
+    'cms_media.credit' => str_contains($migrateSource, 'cms_media.credit'),
+    'cms_media.visibility' => str_contains($migrateSource, 'cms_media.visibility'),
+    'idx_media_visibility' => str_contains($migrateSource, 'idx_media_visibility'),
     'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
     'cms_faqs.meta_title' => str_contains($migrateSource, 'cms_faqs.meta_title'),
     'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),
@@ -8199,6 +8361,169 @@ if ($placesSourceIssues === []) {
     $failures++;
     foreach ($placesSourceIssues as $placesSourceIssue) {
         echo '- ' . $placesSourceIssue . "\n";
+    }
+}
+
+echo "=== polls_source_guardrails ===\n";
+$pollSourceIssues = [];
+$pollSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
+$pollFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
+$pollListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls.php');
+$pollDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_delete.php');
+$pollIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/polls/index.php');
+$pollIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
+$pollHomeSource = (string)file_get_contents(dirname(__DIR__) . '/index.php');
+$pollContentSource = (string)file_get_contents(dirname(__DIR__) . '/lib/content.php');
+$pollSearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
+$pollSitemapSource = (string)file_get_contents(dirname(__DIR__) . '/sitemap.php');
+$pollWidgetSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$pollExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
+$pollImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
+if (!str_contains($pollSaveSource, 'saveRevision(') || !str_contains($pollSaveSource, "'poll'")) {
+    $pollSourceIssues[] = 'poll save is missing revision persistence';
+}
+if (!str_contains($pollSaveSource, 'upsertPathRedirect')) {
+    $pollSourceIssues[] = 'poll save is missing slug redirect persistence';
+}
+if (!str_contains($pollSaveSource, 'internalRedirectTarget(')) {
+    $pollSourceIssues[] = 'poll save is missing validated redirect handling';
+}
+if (!str_contains($pollDeleteSource, 'internalRedirectTarget(')) {
+    $pollSourceIssues[] = 'poll delete is missing validated redirect handling';
+}
+if (!str_contains($pollFormSource, 'revisions.php?type=poll')) {
+    $pollSourceIssues[] = 'poll form is missing revisions link';
+}
+if (!str_contains($pollFormSource, 'name="meta_title"') || !str_contains($pollFormSource, 'name="meta_description"')) {
+    $pollSourceIssues[] = 'poll form is missing SEO fields';
+}
+if (!str_contains($pollListSource, 'paginate(')) {
+    $pollSourceIssues[] = 'poll admin list is missing pagination support';
+}
+if (!str_contains($pollListSource, 'name="status"') || !str_contains($pollListSource, 'name="q"')) {
+    $pollSourceIssues[] = 'poll admin list is missing filter controls';
+}
+if (!str_contains($pollIndexControllerSource, 'pollPublicVisibilitySql(')) {
+    $pollSourceIssues[] = 'poll index is missing shared visibility helper';
+}
+if (!str_contains($pollIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
+    $pollSourceIssues[] = 'poll index is missing public search support';
+}
+if (!str_contains($pollIndexControllerSource, 'paginate(')) {
+    $pollSourceIssues[] = 'poll index is missing pagination support';
+}
+if (!str_contains($pollIndexViewSource, 'name="q"')) {
+    $pollSourceIssues[] = 'poll public view is missing search field';
+}
+if (!str_contains($pollIndexViewSource, 'renderPager(')) {
+    $pollSourceIssues[] = 'poll public view is missing pager output';
+}
+if (!str_contains($pollSearchSource, 'pollPublicVisibilitySql()')) {
+    $pollSourceIssues[] = 'search no longer protects poll visibility';
+}
+if (!str_contains($pollSitemapSource, 'pollPublicVisibilitySql()')) {
+    $pollSourceIssues[] = 'sitemap no longer protects poll visibility';
+}
+if (!str_contains($pollWidgetSource, "pollPublicVisibilitySql('', 'active')")) {
+    $pollSourceIssues[] = 'poll widget is missing shared visibility helper';
+}
+if (!str_contains($pollHomeSource, "pollPublicVisibilitySql('p', 'active')")) {
+    $pollSourceIssues[] = 'homepage poll highlight is missing shared visibility helper';
+}
+if (!str_contains($pollContentSource, 'pollPublicVisibilitySql(')) {
+    $pollSourceIssues[] = 'poll shortcode embed is missing shared visibility helper';
+}
+foreach (['meta_title', 'meta_description'] as $pollFieldFragment) {
+    if (!str_contains($pollExportSource, $pollFieldFragment)) {
+        $pollSourceIssues[] = 'poll export is missing field fragment: ' . $pollFieldFragment;
+    }
+    if (!str_contains($pollImportSource, $pollFieldFragment)) {
+        $pollSourceIssues[] = 'poll import is missing field fragment: ' . $pollFieldFragment;
+    }
+}
+if ($pollSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($pollSourceIssues as $pollSourceIssue) {
+        echo '- ' . $pollSourceIssue . "\n";
+    }
+}
+echo "=== media_library_guardrails ===\n";
+$mediaLibraryIssues = [];
+$mediaAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/media.php');
+$mediaHelperSource = (string)file_get_contents(dirname(__DIR__) . '/lib/media_library.php');
+$mediaSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
+$mediaExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
+$mediaImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
+$mediaHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
+$mediaFileEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/file.php');
+$mediaThumbEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/thumb.php');
+if (!str_contains($mediaAdminSource, 'internalRedirectTarget(')) {
+    $mediaLibraryIssues[] = 'media admin is missing validated redirect handling';
+}
+if (!str_contains($mediaAdminSource, 'name="bulk_action"')) {
+    $mediaLibraryIssues[] = 'media admin is missing bulk action selector';
+}
+if (!str_contains($mediaAdminSource, 'make_public') || !str_contains($mediaAdminSource, 'make_private') || !str_contains($mediaAdminSource, 'delete_unused')) {
+    $mediaLibraryIssues[] = 'media admin is missing expected bulk actions';
+}
+if (!str_contains($mediaAdminSource, 'name="caption"') || !str_contains($mediaAdminSource, 'name="credit"') || !str_contains($mediaAdminSource, 'name="visibility"')) {
+    $mediaLibraryIssues[] = 'media admin is missing metadata fields for caption, credit or visibility';
+}
+if (!str_contains($mediaAdminSource, 'navigator.clipboard.writeText')) {
+    $mediaLibraryIssues[] = 'media admin is missing clipboard copy helper';
+}
+if (!str_contains($mediaAdminSource, 'window.prompt(')) {
+    $mediaLibraryIssues[] = 'media admin is missing clipboard fallback dialog';
+}
+if (str_contains($mediaAdminSource, 'image/svg+xml,image/svg')) {
+    $mediaLibraryIssues[] = 'media admin upload accept still allows SVG';
+}
+if (!str_contains($mediaHelperSource, 'SVG soubory už knihovna médií nepřijímá')) {
+    $mediaLibraryIssues[] = 'media helper is missing explicit SVG upload rejection';
+}
+if (!str_contains($mediaHelperSource, "return BASE_URL . '/media/file.php?id='")) {
+    $mediaLibraryIssues[] = 'media helper is missing canonical protected file URL helper';
+}
+if (!str_contains($mediaHelperSource, "return BASE_URL . '/media/thumb.php?id='")) {
+    $mediaLibraryIssues[] = 'media helper is missing canonical protected thumb URL helper';
+}
+if (!str_contains($mediaSearchSource, "visibility = 'public'")) {
+    $mediaLibraryIssues[] = 'content reference search no longer filters media to public visibility';
+}
+if (!str_contains($mediaSearchSource, 'mediaFileUrl($row)')) {
+    $mediaLibraryIssues[] = 'content reference search is missing canonical media file URL helper';
+}
+if (!str_contains($mediaSearchSource, 'mediaThumbUrl($row)')) {
+    $mediaLibraryIssues[] = 'content reference search is missing canonical media thumb URL helper';
+}
+if (!str_contains($mediaExportSource, "'media'")) {
+    $mediaLibraryIssues[] = 'export is missing media table payload';
+}
+foreach (['caption', 'credit', 'visibility'] as $mediaFieldFragment) {
+    if (!str_contains($mediaExportSource, $mediaFieldFragment)) {
+        $mediaLibraryIssues[] = 'export is missing media field fragment: ' . $mediaFieldFragment;
+    }
+    if (!str_contains($mediaImportSource, $mediaFieldFragment)) {
+        $mediaLibraryIssues[] = 'import is missing media field fragment: ' . $mediaFieldFragment;
+    }
+}
+if (!str_contains($mediaHtaccessSource, 'RewriteRule ^uploads/media/.+\.svg$ - [F,L,NC]')) {
+    $mediaLibraryIssues[] = 'htaccess is missing SVG deny rule for uploads/media';
+}
+if (!str_contains($mediaFileEndpointSource, 'mediaStaffCanAccessPrivate()')) {
+    $mediaLibraryIssues[] = 'media file endpoint is missing private access guard';
+}
+if (!str_contains($mediaThumbEndpointSource, 'mediaStaffCanAccessPrivate()')) {
+    $mediaLibraryIssues[] = 'media thumb endpoint is missing private access guard';
+}
+if ($mediaLibraryIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($mediaLibraryIssues as $mediaLibraryIssue) {
+        echo '- ' . $mediaLibraryIssue . "\n";
     }
 }
 

@@ -156,6 +156,7 @@ require_once __DIR__ . '/lib/comments.php';
 require_once __DIR__ . '/lib/messages.php';
 require_once __DIR__ . '/lib/presentation.php';
 require_once __DIR__ . '/lib/gallery.php';
+require_once __DIR__ . '/lib/media_library.php';
 require_once __DIR__ . '/lib/content.php';
 require_once __DIR__ . '/lib/filedownloads.php';
 require_once __DIR__ . '/lib/ui.php';

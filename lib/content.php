@@ -413,11 +413,7 @@ function renderContentPollShortcode(string $slug): string
             "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
              FROM cms_polls p
              WHERE p.slug = ?
-               AND (
-                    (p.status = 'active' AND (p.start_date IS NULL OR p.start_date <= NOW()) AND (p.end_date IS NULL OR p.end_date > NOW()))
-                    OR p.status = 'closed'
-                    OR (p.end_date IS NOT NULL AND p.end_date <= NOW())
-               )
+               AND " . pollPublicVisibilitySql('p') . "
              LIMIT 1"
         );
         $stmt->execute([$normalizedSlug]);

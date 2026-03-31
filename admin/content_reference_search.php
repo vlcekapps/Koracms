@@ -108,6 +108,9 @@ function contentReferenceExcerpt(array $row, int $limit = 180): string
 function mediaReferenceKind(array $row): string
 {
     $mimeType = strtolower(trim((string)($row['mime_type'] ?? '')));
+    if (mediaIsSvgMime($mimeType)) {
+        return 'media_file';
+    }
     if (str_starts_with($mimeType, 'image/')) {
         return 'media_image';
     }
@@ -123,24 +126,30 @@ function mediaReferenceKind(array $row): string
 
 function mediaReferencePublicPath(array $row): string
 {
-    $folder = trim((string)($row['folder'] ?? 'media'));
-    $filename = trim((string)($row['filename'] ?? ''));
-    if ($filename === '') {
+    if ((int)($row['id'] ?? 0) <= 0 || trim((string)($row['filename'] ?? '')) === '') {
         return BASE_URL . '/';
     }
 
-    return BASE_URL . '/uploads/' . rawurlencode($folder) . '/' . rawurlencode($filename);
+    return mediaFileUrl($row);
 }
 
 function mediaReferenceExcerpt(array $row, int $limit = 180): string
 {
     $parts = [];
     $altText = trim((string)($row['alt_text'] ?? ''));
+    $caption = trim((string)($row['caption'] ?? ''));
+    $credit = trim((string)($row['credit'] ?? ''));
     $mimeType = trim((string)($row['mime_type'] ?? ''));
     $fileSize = (int)($row['file_size'] ?? 0);
 
     if ($altText !== '') {
         $parts[] = 'Popis: ' . $altText;
+    }
+    if ($caption !== '') {
+        $parts[] = 'Titulek: ' . $caption;
+    }
+    if ($credit !== '') {
+        $parts[] = 'Kredit: ' . $credit;
     }
     if ($mimeType !== '') {
         $parts[] = strtoupper($mimeType);
@@ -292,7 +301,7 @@ function contentReferenceThumbnailUrl(array $row): string
         return boardImageUrl($row);
     }
     if (str_starts_with($type, 'media_') && mediaReferenceKind($row) === 'media_image') {
-        return mediaReferencePublicPath($row);
+        return mediaThumbUrl($row);
     }
 
     return '';
@@ -845,13 +854,14 @@ if (($requestedType === 'all' || $requestedType === 'forms') && isModuleEnabled(
 if ($requestedType === 'all' || $requestedType === 'media') {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, filename, original_name, alt_text, mime_type, file_size, folder, created_at
+            "SELECT id, filename, original_name, alt_text, caption, credit, visibility, mime_type, file_size, folder, created_at
              FROM cms_media
-             WHERE original_name LIKE ? OR alt_text LIKE ? OR mime_type LIKE ?
+             WHERE visibility = 'public'
+               AND (original_name LIKE ? OR alt_text LIKE ? OR caption LIKE ? OR credit LIKE ? OR mime_type LIKE ?)
              ORDER BY created_at DESC
              LIMIT 10"
         );
-        $stmt->execute([$like, $like, $like]);
+        $stmt->execute([$like, $like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
             $row['title'] = trim((string)($row['original_name'] ?? ''));
             $row['type'] = mediaReferenceKind($row);

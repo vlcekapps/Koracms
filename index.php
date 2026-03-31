@@ -99,9 +99,7 @@ if (isModuleEnabled('polls')) {
     $pollStmt = db_connect()->prepare(
         "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
          FROM cms_polls p
-         WHERE p.status = 'active'
-           AND (p.start_date IS NULL OR p.start_date <= NOW())
-           AND (p.end_date   IS NULL OR p.end_date > NOW())
+         WHERE " . pollPublicVisibilitySql('p', 'active') . "
          ORDER BY p.created_at DESC LIMIT 1"
     );
     $pollStmt->execute();

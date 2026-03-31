@@ -300,11 +300,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $pdo, $q, $like,
                 "SELECT id, question AS title, slug, COALESCE(NULLIF(description, ''), question) AS perex,
                         COALESCE(updated_at, created_at) AS created_at, 'poll' AS type",
-                "FROM cms_polls WHERE (
-                        (status = 'active' AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date > NOW()))
-                        OR status = 'closed'
-                        OR (end_date IS NOT NULL AND end_date <= NOW())
-                   )",
+                "FROM cms_polls WHERE " . pollPublicVisibilitySql(),
                 'question, description',
                 [],
                 'COALESCE(start_date, created_at) DESC, id DESC',

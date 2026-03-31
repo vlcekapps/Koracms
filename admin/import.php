@@ -432,6 +432,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Galerie – fotografie importovány.';
                 }
 
+                // Knihovna médií
+                if (!empty($data['media']) && is_array($data['media'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_media
+                         (id, filename, original_name, mime_type, file_size, folder, alt_text, caption, credit, visibility, uploaded_by, created_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['media'] as $row) {
+                        $filename = basename((string)($row['filename'] ?? ''));
+                        if ($filename === '') {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $filename,
+                            trim((string)($row['original_name'] ?? '')),
+                            trim((string)($row['mime_type'] ?? 'application/octet-stream')),
+                            max(0, (int)($row['file_size'] ?? 0)),
+                            trim((string)($row['folder'] ?? 'media')) !== '' ? trim((string)$row['folder']) : 'media',
+                            (string)($row['alt_text'] ?? ''),
+                            (string)($row['caption'] ?? ''),
+                            trim((string)($row['credit'] ?? '')),
+                            normalizeMediaVisibility((string)($row['visibility'] ?? 'public')),
+                            !empty($row['uploaded_by']) ? (int)$row['uploaded_by'] : null,
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Knihovna médií importována.';
+                }
+
                 // Kategorie ke stažení
                 if (!empty($data['dl_categories']) && is_array($data['dl_categories'])) {
                     $ins = $pdo->prepare(
@@ -620,8 +650,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['polls']) && is_array($data['polls'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_polls
-                         (id, question, slug, description, start_date, end_date, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?)"
+                         (id, question, slug, description, meta_title, meta_description, start_date, end_date, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['polls'] as $row) {
                         $question = trim((string)($row['question'] ?? ''));
@@ -641,9 +671,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $question,
                             $slug,
                             $row['description'] ?? '',
+                            trim((string)($row['meta_title'] ?? '')),
+                            trim((string)($row['meta_description'] ?? '')),
                             $row['start_date'] ?: null,
                             $row['end_date'] ?: null,
-                            $row['status'] ?? 'active',
+                            in_array(($row['status'] ?? ''), ['active', 'closed'], true) ? $row['status'] : 'active',
                             $createdAt,
                             $updatedAt,
                         ]);

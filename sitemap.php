@@ -313,11 +313,7 @@ if (isModuleEnabled('polls')) {
         $polls = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_polls
-             WHERE (
-                    (status = 'active' AND (start_date IS NULL OR start_date <= NOW()) AND (end_date IS NULL OR end_date > NOW()))
-                    OR status = 'closed'
-                    OR (end_date IS NOT NULL AND end_date <= NOW())
-                  )
+             WHERE " . pollPublicVisibilitySql() . "
              ORDER BY COALESCE(start_date, created_at) DESC, id DESC"
         )->fetchAll();
         foreach ($polls as $poll) {

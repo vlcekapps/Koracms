@@ -7,7 +7,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 4,
+    'version'     => 5,
 ];
 
 $tables = [
@@ -47,6 +47,9 @@ $tables = [
                                FROM cms_gallery_albums",
     'gallery_photos'=> "SELECT id, album_id, filename, title, slug, sort_order, created_at
                                FROM cms_gallery_photos",
+    'media'         => "SELECT id, filename, original_name, mime_type, file_size, folder, alt_text, caption, credit,
+                               visibility, uploaded_by, created_at
+                        FROM cms_media",
     'dl_categories' => "SELECT id, name, created_at FROM cms_dl_categories",
     'downloads'     => "SELECT id, title, slug, download_type, dl_category_id, excerpt, description,
                                image_file, version_label, platform_label, license_label, project_url,
@@ -62,7 +65,7 @@ $tables = [
     'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, image_file, audio_url, subtitle,
                                duration, episode_num, season_num, episode_type, explicit_mode, block_from_feed,
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
-    'polls'         => "SELECT id, question, slug, description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
+    'polls'         => "SELECT id, question, slug, description, meta_title, meta_description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
     'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",
     'faq_categories'=> "SELECT id, name, parent_id, sort_order, created_at FROM cms_faq_categories",
     'faqs'          => "SELECT id, question, slug, excerpt, answer, category_id, meta_title, meta_description,

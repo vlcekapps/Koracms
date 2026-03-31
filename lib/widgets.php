@@ -648,13 +648,11 @@ function renderWidget_poll(array $widget, array $settings, string $zone): string
         $stmt = $pdo->prepare(
             "SELECT id, question, slug
              FROM cms_polls
-             WHERE status = 'active'
-               AND (start_date IS NULL OR start_date <= ?)
-               AND (end_date IS NULL OR end_date > ?)
+             WHERE " . pollPublicVisibilitySql('', 'active') . "
              ORDER BY COALESCE(start_date, created_at) DESC, id DESC
              LIMIT 1"
         );
-        $stmt->execute([$now, $now]);
+        $stmt->execute();
         $poll = $stmt->fetch();
     } catch (\PDOException $e) {
         return '';

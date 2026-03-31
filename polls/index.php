@@ -14,31 +14,18 @@ function pollIpHash(int $pollId): string
 
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
-$now = date('Y-m-d H:i:s');
 $pollId = inputInt('get', 'id');
-$pollSlugValue = pollSlug(trim($_GET['slug'] ?? ''));
+$pollSlugValue = pollSlug(trim((string)($_GET['slug'] ?? '')));
 $archiv = isset($_GET['archiv']);
 $isEmbedded = (string)($_GET['embed'] ?? '') === '1';
+$q = trim((string)($_GET['q'] ?? ''));
 
-$fetchPoll = static function (bool $onlyActive) use ($pdo, $pollId, $pollSlugValue, $now): ?array {
+$fetchPoll = static function (string $scope = 'all') use ($pdo, $pollId, $pollSlugValue): ?array {
     if ($pollId === null && $pollSlugValue === '') {
         return null;
     }
 
-    if ($onlyActive) {
-        $whereSql = "p.status = 'active'
-            AND (p.start_date IS NULL OR p.start_date <= ?)
-            AND (p.end_date IS NULL OR p.end_date > ?)";
-        $params = [$now, $now];
-    } else {
-        $whereSql = "(
-                (p.status = 'active' AND (p.start_date IS NULL OR p.start_date <= ?) AND (p.end_date IS NULL OR p.end_date > ?))
-                OR p.status = 'closed'
-                OR (p.end_date IS NOT NULL AND p.end_date <= ?)
-            )";
-        $params = [$now, $now, $now];
-    }
-
+    $whereSql = pollPublicVisibilitySql('p', $scope);
     if ($pollSlugValue !== '') {
         $stmt = $pdo->prepare(
             "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
@@ -46,7 +33,7 @@ $fetchPoll = static function (bool $onlyActive) use ($pdo, $pollId, $pollSlugVal
              WHERE p.slug = ? AND {$whereSql}
              LIMIT 1"
         );
-        $stmt->execute(array_merge([$pollSlugValue], $params));
+        $stmt->execute([$pollSlugValue]);
         return $stmt->fetch() ?: null;
     }
 
@@ -56,7 +43,7 @@ $fetchPoll = static function (bool $onlyActive) use ($pdo, $pollId, $pollSlugVal
          WHERE p.id = ? AND {$whereSql}
          LIMIT 1"
     );
-    $stmt->execute(array_merge([$pollId], $params));
+    $stmt->execute([$pollId]);
     return $stmt->fetch() ?: null;
 };
 
@@ -76,7 +63,7 @@ $detailRequested = $pollId !== null || $pollSlugValue !== '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['vote'])) {
     verifyCsrf();
 
-    $votePoll = $fetchPoll(true);
+    $votePoll = $fetchPoll('active');
     if ($votePoll !== null) {
         $votePoll = hydratePollPresentation($votePoll);
     }
@@ -120,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['v
                 }
                 header('Location: ' . pollPublicPath($votePoll, $redirectQuery));
                 exit;
-            } catch (\PDOException $e) {
+            } catch (\PDOException) {
                 $voteError = 'already_voted';
                 $poll = $votePoll;
             }
@@ -130,21 +117,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['v
 
 $pageTitle = 'Ankety';
 $pageMetaTitle = 'Ankety – ' . $siteName;
-$pageUrl = BASE_URL . '/polls/index.php';
+$pageUrl = siteUrl(appendUrlQuery('/polls/index.php', array_filter([
+    'archiv' => $archiv ? '1' : null,
+    'q' => $q !== '' ? $q : null,
+])));
 
 if ($detailRequested) {
-    $poll = $poll ?? $fetchPoll(false);
+    $poll = $poll ?? $fetchPoll('all');
     if ($poll === null) {
         http_response_code(404);
-        $missingPath = $pollSlugValue !== ''
-            ? BASE_URL . '/polls/' . rawurlencode($pollSlugValue)
-            : BASE_URL . '/polls/index.php' . ($pollId !== null ? '?id=' . urlencode((string)$pollId) : '');
+        $missingUrl = $pollSlugValue !== ''
+            ? siteUrl('/polls/' . rawurlencode($pollSlugValue))
+            : siteUrl('/polls/index.php' . ($pollId !== null ? '?id=' . urlencode((string)$pollId) : ''));
 
         renderPublicPage([
             'title' => 'Anketa nenalezena – ' . $siteName,
             'meta' => [
                 'title' => 'Anketa nenalezena – ' . $siteName,
-                'url' => $missingPath,
+                'url' => $missingUrl,
             ],
             'view' => 'not-found',
             'body_class' => 'page-poll-not-found',
@@ -165,9 +155,13 @@ if ($detailRequested) {
         exit;
     }
 
-    $pageTitle = (string)$poll['question'] . ' – Ankety';
-    $pageMetaTitle = (string)$poll['question'] . ' – Ankety – ' . $siteName;
-    $pageUrl = pollPublicPath($poll);
+    $metaTitleBase = $poll['meta_title'] !== '' ? $poll['meta_title'] : (string)$poll['question'];
+    $metaDescription = $poll['meta_description'] !== ''
+        ? $poll['meta_description']
+        : ($poll['excerpt'] !== '' ? (string)$poll['excerpt'] : 'Detail ankety ' . (string)$poll['question']);
+    $pageTitle = $metaTitleBase;
+    $pageMetaTitle = $metaTitleBase . ' – ' . $siteName;
+    $pageUrl = pollPublicUrl($poll);
 
     $optionsStmt = $pdo->prepare(
         "SELECT o.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE option_id = o.id) AS vote_count
@@ -195,56 +189,69 @@ if ($detailRequested) {
     }
 } else {
     $perPage = 10;
+    $whereParts = [pollPublicVisibilitySql('p', $archiv ? 'archive' : 'active')];
+    $params = [];
+
+    if ($q !== '') {
+        $whereParts[] = '(p.question LIKE ? OR p.description LIKE ?)';
+        $params[] = '%' . $q . '%';
+        $params[] = '%' . $q . '%';
+    }
+
+    $whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 
     if ($archiv) {
-        $pageTitle = 'Archiv anket';
-        $pageMetaTitle = 'Archiv anket – ' . $siteName;
-        $pageUrl = BASE_URL . '/polls/index.php?archiv=1';
-        $countSql = "SELECT COUNT(*) FROM cms_polls
-                     WHERE status = 'closed' OR (end_date IS NOT NULL AND end_date <= :now1)";
-        $listSql = "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
-                    FROM cms_polls p
-                    WHERE p.status = 'closed' OR (p.end_date IS NOT NULL AND p.end_date <= :now1)
-                    ORDER BY COALESCE(p.end_date, p.created_at) DESC, p.id DESC
-                    LIMIT :lim OFFSET :off";
-        $countParams = [':now1' => $now];
-    } else {
-        $countSql = "SELECT COUNT(*) FROM cms_polls
-                     WHERE status = 'active'
-                       AND (start_date IS NULL OR start_date <= :now1)
-                       AND (end_date IS NULL OR end_date > :now2)";
-        $listSql = "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
-                    FROM cms_polls p
-                    WHERE p.status = 'active'
-                      AND (p.start_date IS NULL OR p.start_date <= :now1)
-                      AND (p.end_date IS NULL OR p.end_date > :now2)
-                    ORDER BY COALESCE(p.start_date, p.created_at) DESC, p.id DESC
-                    LIMIT :lim OFFSET :off";
-        $countParams = [':now1' => $now, ':now2' => $now];
+        $pageTitle = $q !== '' ? 'Archiv anket – hledání' : 'Archiv anket';
+        $pageMetaTitle = $pageTitle . ' – ' . $siteName;
+    } elseif ($q !== '') {
+        $pageTitle = 'Ankety – hledání';
+        $pageMetaTitle = 'Ankety – hledání – ' . $siteName;
     }
 
-    $pag = paginate($pdo, $countSql, $countParams, $perPage);
+    $pag = paginate(
+        $pdo,
+        "SELECT COUNT(*) FROM cms_polls p {$whereSql}",
+        $params,
+        $perPage
+    );
     ['totalPages' => $totalPages, 'page' => $page, 'offset' => $offset] = $pag;
 
-    $listStmt = $pdo->prepare($listSql);
-    foreach ($countParams as $key => $value) {
-        $listStmt->bindValue($key, $value);
-    }
-    $listStmt->bindValue(':lim', $perPage, PDO::PARAM_INT);
-    $listStmt->bindValue(':off', $offset, PDO::PARAM_INT);
-    $listStmt->execute();
+    $listStmt = $pdo->prepare(
+        "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
+         FROM cms_polls p
+         {$whereSql}
+         ORDER BY COALESCE(p.start_date, p.created_at) DESC, p.id DESC
+         LIMIT ? OFFSET ?"
+    );
+    $listStmt->execute(array_merge($params, [$perPage, $offset]));
     $polls = array_map(
         static fn(array $item): array => hydratePollPresentation($item),
         $listStmt->fetchAll()
     );
 
-    foreach ($polls as &$listPoll) {
-        $pollIp = pollIpHash((int)$listPoll['id']);
-        $votedStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ? AND ip_hash = ?");
-        $votedStmt->execute([(int)$listPoll['id'], $pollIp]);
-        $listPoll['has_voted'] = (int)$votedStmt->fetchColumn() > 0;
+    if ($polls !== []) {
+        $pollHashes = [];
+        foreach ($polls as $listedPoll) {
+            $pollHashes[(int)$listedPoll['id']] = pollIpHash((int)$listedPoll['id']);
+        }
+
+        $placeholders = implode(',', array_fill(0, count($pollHashes), '?'));
+        $voteLookup = [];
+        $voteLookupStmt = $pdo->prepare(
+            "SELECT poll_id
+             FROM cms_poll_votes
+             WHERE ip_hash IN ({$placeholders})"
+        );
+        $voteLookupStmt->execute(array_values($pollHashes));
+        foreach ($voteLookupStmt->fetchAll(PDO::FETCH_COLUMN) as $votedPollId) {
+            $voteLookup[(int)$votedPollId] = true;
+        }
+
+        foreach ($polls as &$listPoll) {
+            $listPoll['has_voted'] = isset($voteLookup[(int)$listPoll['id']]);
+        }
+        unset($listPoll);
     }
-    unset($listPoll);
 }
 
 $voteErrorMessages = [
@@ -255,13 +262,20 @@ $voteErrorMessages = [
     'already_voted' => 'Z této IP adresy už bylo hlasováno.',
 ];
 
+$listingMetaDescription = $archiv
+    ? 'Archiv uzavřených anket na webu ' . $siteName
+    : 'Přehled aktivních anket na webu ' . $siteName;
+if ($q !== '') {
+    $listingMetaDescription = 'Výsledky hledání v anketách pro dotaz „' . $q . '“ na webu ' . $siteName;
+}
+
 $pageData = [
     'title' => $pageMetaTitle,
     'meta' => [
         'title' => $pageMetaTitle,
         'description' => $poll !== null
-            ? ($poll['excerpt'] !== '' ? (string)$poll['excerpt'] : 'Detail ankety ' . (string)$poll['question'])
-            : ($archiv ? 'Archiv anket na webu ' . $siteName : 'Přehled aktivních anket na webu ' . $siteName),
+            ? $metaDescription
+            : $listingMetaDescription,
         'url' => $pageUrl,
         'type' => $poll !== null ? 'article' : 'website',
     ],
@@ -280,6 +294,7 @@ $pageData = [
         'showForm' => $showForm,
         'totalVotes' => $totalVotes,
         'isEmbedded' => $isEmbedded,
+        'q' => $q,
     ],
     'current_nav' => 'polls',
     'body_class' => 'page-polls',

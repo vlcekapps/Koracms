@@ -38,6 +38,8 @@ Options -Indexes
     RewriteRule ^uploads/places/ - [F,L,NC]
     # Podcast audio a artwork se vydávají jen přes podcast/*.php endpointy
     RewriteRule ^uploads/podcasts/ - [F,L,NC]
+    # SVG z knihovny médií se nikdy neservírují přímo z uploads/media
+    RewriteRule ^uploads/media/.+\.svg$ - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

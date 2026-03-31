@@ -827,6 +827,51 @@ function placeExcerpt(array $place, int $limit = 220): string
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+function pollPublicVisibilitySql(string $alias = '', string $scope = 'all'): string
+{
+    $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
+
+    $activeSql = "COALESCE({$prefix}status, 'active') = 'active'"
+        . " AND ({$prefix}start_date IS NULL OR {$prefix}start_date <= NOW())"
+        . " AND ({$prefix}end_date IS NULL OR {$prefix}end_date > NOW())";
+    $archiveSql = "(COALESCE({$prefix}status, 'active') = 'closed'"
+        . " OR ({$prefix}end_date IS NOT NULL AND {$prefix}end_date <= NOW()))";
+
+    return match ($scope) {
+        'active' => $activeSql,
+        'archive' => $archiveSql,
+        default => '(' . $activeSql . ' OR ' . $archiveSql . ')',
+    };
+}
+
+function pollRevisionSnapshot(array $poll, array $options = []): array
+{
+    $normalizedOptions = [];
+    foreach ($options as $option) {
+        if (is_array($option)) {
+            $optionText = trim((string)($option['option_text'] ?? $option['text'] ?? ''));
+        } else {
+            $optionText = trim((string)$option);
+        }
+
+        if ($optionText !== '') {
+            $normalizedOptions[] = $optionText;
+        }
+    }
+
+    return [
+        'question' => trim((string)($poll['question'] ?? '')),
+        'slug' => pollSlug((string)($poll['slug'] ?? '')),
+        'description' => (string)($poll['description'] ?? ''),
+        'status' => trim((string)($poll['status'] ?? 'active')),
+        'start_date' => trim((string)($poll['start_date'] ?? '')),
+        'end_date' => trim((string)($poll['end_date'] ?? '')),
+        'meta_title' => trim((string)($poll['meta_title'] ?? '')),
+        'meta_description' => trim((string)($poll['meta_description'] ?? '')),
+        'options' => implode("\n", $normalizedOptions),
+    ];
+}
+
 function placeKindOptions(): array
 {
     return [
@@ -3902,6 +3947,8 @@ function hydratePollPresentation(array $poll): array
     $poll['question'] = trim((string)($poll['question'] ?? ''));
     $poll['slug'] = pollSlug((string)($poll['slug'] ?? ''));
     $poll['excerpt'] = pollExcerpt($poll);
+    $poll['meta_title'] = trim((string)($poll['meta_title'] ?? ''));
+    $poll['meta_description'] = trim((string)($poll['meta_description'] ?? ''));
     $poll['public_path'] = pollPublicPath($poll);
     $poll['public_url'] = pollPublicUrl($poll);
 

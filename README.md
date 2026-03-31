@@ -238,7 +238,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s verzemi, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů s platností, archivem, hledáním a revizemi |
-| **Ankety** | Hlasování s ochranou proti opakovanému hlasu |
+| **Ankety** | Hlasování s plánováním, fulltextovým hledáním, slug URL, SEO fallbacky a revizemi |
 | **Znalostní báze** | FAQ s kategoriemi, hledáním, stránkováním, SEO a FAQPage strukturovanými daty |
 | **Formuláře** | Form Builder s přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge |
 | **Vývěska** | Úřední deska s typem položky, datem vyvěšení, připnutím, filtrováním a archivem |
@@ -261,6 +261,10 @@ Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / a
 Modul **Galerie** nově chrání neveřejná alba i fotografie i na úrovni detailu, vyhledávání a sitemapy, používá bezpečný media endpoint místo přímých `/uploads/gallery/` cest, podporuje redirecty po změně slugu, historii revizí, veřejné hledání, stránkování alb i detailu a structured data pro alba i fotografie.
 
 Modul **Chat** nově funguje jako moderovaná veřejná nástěnka: nové zprávy se nejdřív ukládají ke schválení, veřejně se nezobrazuje e-mail ani web autora, veřejný výpis podporuje hledání, řazení a stránkování a administrace nabízí inbox workflow se schvalováním, interní poznámkou, historií změn a odpovědí e-mailem.
+
+Knihovna **Média** nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery místo ručně skládaných `/uploads/media/...` URL, blokuje mazání používaných souborů a podporuje náhradu souboru, rozšířená metadata i hromadné akce v administraci.
+
+Modul **Ankety** nově používá stejný publikační helper jako widgety, sitemapa a vyhledávání, takže aktivní a archivní ankety drží konzistentní veřejnou viditelnost. Součástí modulu je veřejné fulltextové hledání, stránkování indexu, redirect při změně slugu, širší revize a volitelná SEO pole `meta title` a `meta description`.
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 

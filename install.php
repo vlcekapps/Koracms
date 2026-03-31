@@ -477,6 +477,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             question    VARCHAR(500) NOT NULL,
             slug        VARCHAR(255) NOT NULL,
             description TEXT,
+            meta_title  VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
             status      ENUM('active','closed') NOT NULL DEFAULT 'active',
             start_date  DATETIME     NULL DEFAULT NULL,
             end_date    DATETIME     NULL DEFAULT NULL,
@@ -795,10 +797,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             file_size   INT          NOT NULL DEFAULT 0,
             folder      VARCHAR(100) NOT NULL DEFAULT 'media',
             alt_text    VARCHAR(500) NOT NULL DEFAULT '',
+            caption     TEXT,
+            credit      VARCHAR(255) NOT NULL DEFAULT '',
+            visibility  ENUM('public','private') NOT NULL DEFAULT 'public',
             uploaded_by INT          NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_media_folder (folder),
-            INDEX idx_media_mime (mime_type)
+            INDEX idx_media_mime (mime_type),
+            INDEX idx_media_visibility (visibility)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_widgets (
@@ -910,6 +916,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'uploads/gallery/thumbs',
             'uploads/downloads',
             'uploads/downloads/images',
+            'uploads/media',
+            'uploads/media/thumbs',
             'uploads/places',
             'uploads/board',
             'uploads/board/images',

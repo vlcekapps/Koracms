@@ -660,3 +660,118 @@ Podporované obsahové snippety v HTML editoru:
 - `[place]slug-mista[/place]`
 - `[event]slug-udalosti[/event]`
 - `[board]slug-oznameni[/board]`
+
+---
+
+## Ankety – plánování, SEO a veřejný výpis
+
+Modul ankety je určený pro jednoduché hlasování s okamžitě veřejnými výsledky po odeslání hlasu. Tato vlna dotažení sjednotila veřejnou viditelnost modulu s ostatními částmi CMS, doplnila revize a přidala i základní SEO workflow.
+
+### Co se nastavuje u ankety
+
+Každá anketa může mít:
+
+- otázku a slug
+- volitelný popis
+- stav `Aktivní` nebo `Uzavřená`
+- časové okno `Začátek` a `Konec`
+- 2 až 10 odpovědí
+- volitelný `meta title`
+- volitelný `meta description`
+
+Pokud SEO pole nevyplníte, veřejný detail použije fallback z otázky a krátkého shrnutí.
+
+### Jak funguje veřejná viditelnost
+
+- Veřejný index nově používá stejný helper jako widget ankety, vyhledávání a sitemapu.
+- Aktivní anketa se zobrazuje jen v době, kdy je opravdu otevřená pro hlasování.
+- Archiv zahrnuje ukončené ankety a ankety uzavřené ručně.
+- Pokud změníte slug ankety, stará veřejná adresa se uloží jako redirect na nový canonical tvar.
+
+### Co je nové v administraci
+
+- Přehled anket nově umí fulltext `q`, filtr podle stavu a stránkování.
+- Po uložení, smazání nebo hromadné akci se návrat drží ve stejném filtru a na stejné stránce přehledu.
+- Editor nově obsahuje SEO pole `Meta titulek` a `Meta popis`.
+- Revize zachycují otázku, slug, popis, stav, termíny, možnosti i SEO metadata.
+
+### Veřejný výpis a detail
+
+Veřejná stránka anket nově podporuje:
+
+- přepínání `Aktivní ankety / Archiv`
+- fulltextové hledání v otázce a popisu
+- stránkování i při aktivním dotazu
+- zachování filtru a vyhledávacího dotazu při listování
+
+Detail ankety dál zachovává stejné hlasovací chování:
+
+- po hlasování se hned ukážou výsledky
+- neexportují se jednotlivé hlasy
+- ochrana proti opakovanému hlasování dál stojí na stávajícím IP hash modelu
+
+### Export a import
+
+Export/import anket přenáší:
+
+- samotnou anketu
+- její možnosti odpovědí
+- stav a časové okno
+- SEO pole
+
+Nepřenáší se:
+
+- jednotlivé hlasy
+- agregované výsledky hlasování
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) stručně říká, že ankety podporují plánování, veřejné hledání, slug URL, SEO fallbacky a revize.
+- Tento dokument popisuje konkrétní redakční workflow, chování veřejné viditelnosti, časování a pravidla exportu/importu.
+
+---
+
+## Knihovna médií – veřejné a soukromé soubory
+
+Knihovna médií už není jen jednoduchý seznam uploadů. Nově funguje jako bezpečnější centrální správa souborů pro editor, content picker i interní staff workflow.
+
+### Co se u média nově spravuje
+
+Každé médium může mít:
+
+- `alt text`
+- `caption`
+- `credit`
+- viditelnost `Veřejné / Soukromé`
+
+Veřejná média dál mohou používat veřejné stránky a content picker. Soukromá média jsou určená pro interní workflow a nepůjčují se do veřejného pickeru.
+
+### Bezpečnostní pravidla
+
+- Nové SVG uploady jsou zakázané.
+- Starší SVG soubory zůstávají v knihovně, ale nechovají se jako obrázkové preview assety.
+- Soukromé soubory a SVG se servírují přes kontrolované endpointy `media/file.php` a `media/thumb.php`.
+- Přímé `/uploads/media/...` odkazy zůstávají jen pro veřejná ne-SVG média.
+
+### Mazání a kontrola použití
+
+Před smazáním knihovna nově kontroluje, jestli se médium používá:
+
+- ve strukturovaných modulech
+- v HTML obsahu
+- ve vložených odkazech a známých embed patternách
+
+Pokud je médium použité, smazání je zablokované a administrace ukáže nalezená místa použití.
+
+### Co je nové v administraci
+
+- seznam médií má filtry podle typu, viditelnosti, uploadera a stavu použití
+- fulltext prochází jméno souboru, `alt text`, `caption` i `credit`
+- po uploadu, úpravě, náhradě souboru i mazání se používá PRG návrat, takže refresh neopakuje POST
+- médium lze nahradit novým souborem ve stejné MIME rodině bez rozbití existujících referencí
+- bulk akce umí přepnout na `Veřejné`, `Soukromé` a smazat nepoužitá média
+
+### Co patří do README a co sem
+
+- [README.md](../README.md) stručně říká, že knihovna médií podporuje `public/private`, canonical media helpery, blokaci mazání používaných souborů a náhradu souboru.
+- Tento dokument popisuje konkrétní redakční workflow, bezpečnostní pravidla a chování správy médií v administraci.

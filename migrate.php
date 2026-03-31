@@ -771,10 +771,14 @@ $tables = [
         file_size   INT          NOT NULL DEFAULT 0,
         folder      VARCHAR(100) NOT NULL DEFAULT 'media',
         alt_text    VARCHAR(500) NOT NULL DEFAULT '',
+        caption     TEXT,
+        credit      VARCHAR(255) NOT NULL DEFAULT '',
+        visibility  ENUM('public','private') NOT NULL DEFAULT 'public',
         uploaded_by INT          NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_media_folder (folder),
-        INDEX idx_media_mime (mime_type)
+        INDEX idx_media_mime (mime_type),
+        INDEX idx_media_visibility (visibility)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_widgets' => "CREATE TABLE IF NOT EXISTS cms_widgets (
@@ -846,6 +850,9 @@ $addColumns = [
     'cms_news.meta_title'            => "ALTER TABLE cms_news ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
     'cms_news.meta_description'      => "ALTER TABLE cms_news ADD COLUMN meta_description TEXT",
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    // cms_polls
+    'cms_polls.meta_title'           => "ALTER TABLE cms_polls ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
+    'cms_polls.meta_description'     => "ALTER TABLE cms_polls ADD COLUMN meta_description TEXT",
     // cms_chat
     'cms_chat.status'                => "ALTER TABLE cms_chat ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
     'cms_chat.public_visibility'     => "ALTER TABLE cms_chat ADD COLUMN public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending'",
@@ -962,6 +969,10 @@ $addColumns = [
     'cms_downloads.download_count'   => "ALTER TABLE cms_downloads ADD COLUMN download_count INT NOT NULL DEFAULT 0 AFTER file_size",
     'cms_downloads.is_featured'      => "ALTER TABLE cms_downloads ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER download_count",
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+    // cms_media
+    'cms_media.caption'              => "ALTER TABLE cms_media ADD COLUMN caption TEXT AFTER alt_text",
+    'cms_media.credit'               => "ALTER TABLE cms_media ADD COLUMN credit VARCHAR(255) NOT NULL DEFAULT '' AFTER caption",
+    'cms_media.visibility'           => "ALTER TABLE cms_media ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public' AFTER credit",
     // cms_polls
     'cms_polls.slug'                 => "ALTER TABLE cms_polls ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER question",
     // cms_users – rozšíření pro veřejné uživatele a role
@@ -2051,6 +2062,8 @@ $uploadDirs = [
     'uploads/gallery/thumbs',
     'uploads/downloads',
     'uploads/downloads/images',
+    'uploads/media',
+    'uploads/media/thumbs',
     'uploads/places',
     'uploads/board',
     'uploads/board/images',
@@ -2373,6 +2386,17 @@ $indexExists = static function (string $tableName, string $indexName) use ($pdo)
     $stmt->execute([$tableName, $indexName]);
     return (int)$stmt->fetchColumn() > 0;
 };
+
+try {
+    if (!$indexExists('cms_media', 'idx_media_visibility')) {
+        $pdo->exec("ALTER TABLE cms_media ADD INDEX idx_media_visibility (visibility)");
+        $log[] = "✓ Index <code>idx_media_visibility</code> pro knihovnu médií přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_media_visibility</code> pro knihovnu médií již existuje – přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Index <code>idx_media_visibility</code> pro knihovnu médií – CHYBA: " . h($e->getMessage());
+}
 
 $fulltextIndexes = [
     ['cms_articles',   'ft_articles_search',   '(title, perex, content)'],

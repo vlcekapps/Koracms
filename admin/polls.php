@@ -3,13 +3,14 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu anket nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
-$q = trim($_GET['q'] ?? '');
-$statusFilter = trim($_GET['status'] ?? 'all');
+$q = trim((string)($_GET['q'] ?? ''));
+$statusFilter = trim((string)($_GET['status'] ?? 'all'));
 $allowedStatusFilters = ['all', 'active', 'scheduled', 'closed'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
 
+$perPage = 25;
 $whereParts = [];
 $params = [];
 
@@ -20,37 +21,59 @@ if ($q !== '') {
     $params[] = '%' . $q . '%';
 }
 
+$now = date('Y-m-d H:i:s');
+if ($statusFilter === 'active') {
+    $whereParts[] = pollPublicVisibilitySql('p', 'active');
+} elseif ($statusFilter === 'scheduled') {
+    $whereParts[] = "COALESCE(p.status, 'active') = 'active' AND p.start_date IS NOT NULL AND p.start_date > ?";
+    $params[] = $now;
+} elseif ($statusFilter === 'closed') {
+    $whereParts[] = pollPublicVisibilitySql('p', 'archive');
+}
+
 $whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$pagination = paginate(
+    $pdo,
+    "SELECT COUNT(*) FROM cms_polls p {$whereSql}",
+    $params,
+    $perPage
+);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $pagination;
 
 $stmt = $pdo->prepare(
     "SELECT p.*,
             (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
      FROM cms_polls p
      {$whereSql}
-     ORDER BY COALESCE(p.start_date, p.created_at) DESC, p.id DESC"
+     ORDER BY COALESCE(p.start_date, p.created_at) DESC, p.id DESC
+     LIMIT ? OFFSET ?"
 );
-$stmt->execute($params);
+$stmt->execute(array_merge($params, [$perPage, $offset]));
 $polls = array_map(
     static fn(array $poll): array => hydratePollPresentation($poll),
     $stmt->fetchAll()
 );
 
-if ($statusFilter !== 'all') {
-    $polls = array_values(array_filter(
-        $polls,
-        static fn(array $poll): bool => (string)($poll['state'] ?? '') === $statusFilter
-    ));
-}
+$listQuery = array_filter([
+    'q' => $q !== '' ? $q : null,
+    'status' => $statusFilter !== 'all' ? $statusFilter : null,
+    'strana' => $page > 1 ? $page : null,
+], static fn($value): bool => $value !== null && $value !== '');
+$currentListUrl = BASE_URL . '/admin/polls.php' . ($listQuery !== [] ? '?' . http_build_query($listQuery) : '');
+$pagerQuery = array_filter([
+    'q' => $q !== '' ? $q : null,
+    'status' => $statusFilter !== 'all' ? $statusFilter : null,
+], static fn($value): bool => $value !== null && $value !== '');
+$pagerBaseUrl = '?' . ($pagerQuery !== [] ? http_build_query($pagerQuery) . '&' : '');
 
 adminHeader('Ankety');
 ?>
-<p><a href="polls_form.php" class="btn">+ Nová anketa</a></p>
+<p><a href="polls_form.php?redirect=<?= urlencode($currentListUrl) ?>" class="btn">+ Nová anketa</a></p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <div>
     <label for="q" class="visually-hidden">Hledat v anketách</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v anketách..."
-           value="<?= h($q) ?>" style="width:320px">
+    <input type="search" id="q" name="q" placeholder="Hledat v anketách..." value="<?= h($q) ?>" style="width:320px">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -72,11 +95,11 @@ adminHeader('Ankety');
     <?php if ($q !== '' || $statusFilter !== 'all'): ?>
       Pro zvolený filtr tu teď nejsou žádné ankety.
     <?php else: ?>
-      Zatím tu nejsou žádné ankety. <a href="polls_form.php">Přidat první anketu</a>.
+      Zatím tu nejsou žádné ankety. <a href="polls_form.php?redirect=<?= urlencode($currentListUrl) ?>">Přidat první anketu</a>.
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <?= bulkActions('polls', BASE_URL . '/admin/polls.php', 'Hromadné akce s anketami', 'anketa', false) ?>
+  <?= bulkActions('polls', $currentListUrl, 'Hromadné akce s anketami', 'anketa', false) ?>
   <table>
     <caption>Přehled anket</caption>
     <thead>
@@ -114,21 +137,22 @@ adminHeader('Ankety');
         <td><?= !empty($poll['start_date']) ? h(formatCzechDate((string)$poll['start_date'])) : '–' ?></td>
         <td><?= !empty($poll['end_date']) ? h(formatCzechDate((string)$poll['end_date'])) : '–' ?></td>
         <td class="actions">
-          <a href="polls_form.php?id=<?= (int)$poll['id'] ?>" class="btn">Upravit</a>
+          <a href="polls_form.php?id=<?= (int)$poll['id'] ?>&amp;redirect=<?= urlencode($currentListUrl) ?>" class="btn">Upravit</a>
           <?php if ($state !== 'scheduled'): ?>
             <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <form action="polls_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$poll['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat anketu včetně všech hlasů?">Smazat</button>
+            <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
+            <button type="submit" class="btn btn-danger" data-confirm="Smazat anketu včetně všech hlasů?">Smazat</button>
           </form>
         </td>
       </tr>
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?= renderPager($page, $pages, $pagerBaseUrl, 'Stránkování anket', 'Starší stránka', 'Novější stránka') ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 
