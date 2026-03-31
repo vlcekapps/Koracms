@@ -8374,6 +8374,9 @@ if (!str_contains($blogPresentationSource, 'function normalizeBlogTaxonomyName')
 if (!str_contains($blogPresentationSource, 'function saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog helpers are missing slug redirect persistence';
 }
+if (str_contains($blogPresentationSource, "(string)(\$currentBlog['slug'] ?? '') === \$oldSlug")) {
+    $blogAdminIssues[] = 'blog slug redirect helper still skips persisting the old slug before the update happens';
+}
 if (!str_contains($blogPresentationSource, 'function blogLogoAltText')) {
     $blogAdminIssues[] = 'blog helpers are missing configurable blog logo alt text helper';
 }

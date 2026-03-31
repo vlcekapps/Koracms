@@ -1780,6 +1780,130 @@ try {
 
     httpIntegrationPrintResult('blog_static_pages_http', $blogStaticPagesIssues, $failures);
 
+    $blogSlugRedirectIssues = [];
+    $blogSlugRedirectOriginalSlug = 'http-blog-slug-main-' . bin2hex(random_bytes(4));
+    $blogSlugRedirectOtherSlug = 'http-blog-slug-other-' . bin2hex(random_bytes(4));
+    foreach ([
+        ['name' => 'HTTP Redirect blog', 'slug' => $blogSlugRedirectOriginalSlug],
+        ['name' => 'HTTP Redirect other blog', 'slug' => $blogSlugRedirectOtherSlug],
+    ] as $blogSlugRow) {
+        $pdo->prepare(
+            "INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)"
+        )->execute([$blogSlugRow['name'], $blogSlugRow['slug'], $adminUserId]);
+        $createdBlogs[] = (int)$pdo->lastInsertId();
+    }
+    [$blogSlugRedirectMainId, $blogSlugRedirectOtherId] = array_slice($createdBlogs, -2);
+
+    $blogSlugRedirectPageSlug = 'http-blog-slug-page-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_pages (title, slug, content, blog_id, is_published, show_in_nav, blog_nav_order, status)
+         VALUES (?, ?, ?, ?, 1, 0, 1, 'published')"
+    )->execute([
+        'HTTP Redirect page',
+        $blogSlugRedirectPageSlug,
+        '<p>Obsah testovací blogové stránky.</p>',
+        $blogSlugRedirectMainId,
+    ]);
+    $createdPageIds[] = (int)$pdo->lastInsertId();
+
+    $blogSlugRedirectArticleSlug = 'http-blog-slug-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, status)
+         VALUES (?, ?, ?, ?, ?, 1, 'published')"
+    )->execute([
+        'HTTP Redirect article',
+        $blogSlugRedirectArticleSlug,
+        $blogSlugRedirectMainId,
+        'Perex testovacího článku.',
+        '<p>Obsah testovacího článku.</p>',
+    ]);
+    $createdArticles[] = (int)$pdo->lastInsertId();
+
+    $blogSlugRedirectTemporarySlug = $blogSlugRedirectOriginalSlug . '-redirect-' . bin2hex(random_bytes(3));
+    if (strlen($blogSlugRedirectTemporarySlug) > 100) {
+        $blogSlugRedirectTemporarySlug = substr($blogSlugRedirectTemporarySlug, 0, 100);
+    }
+    $blogSlugRedirectSnapshotStmt = $pdo->prepare("SELECT old_slug FROM cms_blog_slug_redirects WHERE blog_id = ? ORDER BY id");
+    $blogSlugRedirectSnapshotStmt->execute([$blogSlugRedirectMainId]);
+    $blogSlugRedirectSnapshot = $blogSlugRedirectSnapshotStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+    try {
+        saveBlogSlugRedirect($pdo, $blogSlugRedirectMainId, $blogSlugRedirectOriginalSlug);
+        $pdo->prepare("UPDATE cms_blogs SET slug = ? WHERE id = ?")->execute([$blogSlugRedirectTemporarySlug, $blogSlugRedirectMainId]);
+        clearBlogCache();
+
+        $blogSlugChecks = [
+            [
+                'label' => 'old_blog_index',
+                'url' => $baseUrl . BASE_URL . '/' . rawurlencode($blogSlugRedirectOriginalSlug) . '/',
+                'expected_code' => 301,
+                'expected_location' => BASE_URL . '/' . rawurlencode($blogSlugRedirectTemporarySlug) . '/',
+            ],
+            [
+                'label' => 'new_blog_index',
+                'url' => $baseUrl . BASE_URL . '/' . rawurlencode($blogSlugRedirectTemporarySlug) . '/',
+                'expected_code' => 200,
+            ],
+            [
+                'label' => 'old_blog_article',
+                'url' => $baseUrl . BASE_URL . '/' . rawurlencode($blogSlugRedirectOriginalSlug) . '/' . rawurlencode($blogSlugRedirectArticleSlug),
+                'expected_code' => 301,
+                'expected_location' => BASE_URL . '/' . rawurlencode($blogSlugRedirectTemporarySlug) . '/' . rawurlencode($blogSlugRedirectArticleSlug),
+            ],
+            [
+                'label' => 'new_blog_article',
+                'url' => $baseUrl . BASE_URL . '/' . rawurlencode($blogSlugRedirectTemporarySlug) . '/' . rawurlencode($blogSlugRedirectArticleSlug),
+                'expected_code' => 200,
+            ],
+            [
+                'label' => 'old_blog_page',
+                'url' => $baseUrl . BASE_URL . '/' . rawurlencode($blogSlugRedirectOriginalSlug) . '/stranka/' . rawurlencode($blogSlugRedirectPageSlug),
+                'expected_code' => 301,
+                'expected_location' => BASE_URL . '/' . rawurlencode($blogSlugRedirectTemporarySlug) . '/stranka/' . rawurlencode($blogSlugRedirectPageSlug),
+            ],
+            [
+                'label' => 'new_blog_page',
+                'url' => $baseUrl . BASE_URL . '/' . rawurlencode($blogSlugRedirectTemporarySlug) . '/stranka/' . rawurlencode($blogSlugRedirectPageSlug),
+                'expected_code' => 200,
+            ],
+            [
+                'label' => 'old_blog_feed',
+                'url' => $baseUrl . BASE_URL . '/feed.php?blog=' . rawurlencode($blogSlugRedirectOriginalSlug),
+                'expected_code' => 301,
+                'expected_location' => BASE_URL . '/feed.php?blog=' . rawurlencode($blogSlugRedirectTemporarySlug),
+            ],
+            [
+                'label' => 'new_blog_feed',
+                'url' => $baseUrl . BASE_URL . '/feed.php?blog=' . rawurlencode($blogSlugRedirectTemporarySlug),
+                'expected_code' => 200,
+            ],
+        ];
+
+        foreach ($blogSlugChecks as $blogSlugCheck) {
+            $blogSlugResponse = fetchUrl((string)$blogSlugCheck['url'], '', 0);
+            if (httpIntegrationStatusCode($blogSlugResponse) !== (int)$blogSlugCheck['expected_code']) {
+                $blogSlugRedirectIssues[] = $blogSlugCheck['label'] . ' returned unexpected status ' . ($blogSlugResponse['status'] ?? 'unknown');
+                continue;
+            }
+            if (isset($blogSlugCheck['expected_location'])
+                && !responseHasLocationHeader($blogSlugResponse['headers'], (string)$blogSlugCheck['expected_location'], $baseUrl)) {
+                $blogSlugRedirectIssues[] = $blogSlugCheck['label'] . ' is missing expected Location header';
+            }
+        }
+    } finally {
+        $pdo->prepare("UPDATE cms_blogs SET slug = ? WHERE id = ?")->execute([$blogSlugRedirectOriginalSlug, $blogSlugRedirectMainId]);
+        $pdo->prepare("DELETE FROM cms_blog_slug_redirects WHERE blog_id = ?")->execute([$blogSlugRedirectMainId]);
+        if ($blogSlugRedirectSnapshot !== []) {
+            $restoreBlogSlugRedirectStmt = $pdo->prepare("INSERT INTO cms_blog_slug_redirects (blog_id, old_slug) VALUES (?, ?)");
+            foreach ($blogSlugRedirectSnapshot as $snapshotOldSlug) {
+                $restoreBlogSlugRedirectStmt->execute([$blogSlugRedirectMainId, (string)$snapshotOldSlug]);
+            }
+        }
+        clearBlogCache();
+    }
+
+    httpIntegrationPrintResult('blog_slug_redirect_http', $blogSlugRedirectIssues, $failures);
+
     $mediaIssues = [];
     $mediaAdminUrl = $baseUrl . BASE_URL . '/admin/media.php';
     $mediaReturnPath = BASE_URL . '/admin/media.php';

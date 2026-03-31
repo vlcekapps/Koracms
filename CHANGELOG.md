@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Blogy – změna slugu nově opravdu zachovává funkční staré veřejné adresy** – při přejmenování slugu blogu se starý slug nově spolehlivě uloží do redirect tabulky ještě před aktualizací blogu, takže staré adresy blogu, jeho článků, blogových stránek i RSS feedu korektně vrací `301` na nový canonical tvar místo `404`
+
 ## [3.2.2] – 2026-03-31
 
 ### Změněno

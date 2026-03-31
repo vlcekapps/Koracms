@@ -638,11 +638,6 @@ function saveBlogSlugRedirect(PDO $pdo, int $blogId, string $oldSlug): void
     }
 
     try {
-        $currentBlog = getBlogById($blogId);
-        if ($currentBlog && (string)($currentBlog['slug'] ?? '') === $oldSlug) {
-            return;
-        }
-
         $stmt = $pdo->prepare(
             "INSERT IGNORE INTO cms_blog_slug_redirects (blog_id, old_slug)
              VALUES (?, ?)"
