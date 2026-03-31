@@ -363,6 +363,115 @@ function loadTransferableBlogArticles(PDO $pdo, array $ids): array
     ));
 }
 
+function normalizeBlogTaxonomyName(string $value): string
+{
+    $normalized = preg_replace('/\s+/u', ' ', trim($value));
+    if ($normalized === null) {
+        $normalized = trim($value);
+    }
+
+    return function_exists('mb_strtolower')
+        ? mb_strtolower($normalized, 'UTF-8')
+        : strtolower($normalized);
+}
+
+/**
+ * @param array<int, array<string, mixed>> $categories
+ * @return array<string, array{id:int,name:string}>
+ */
+function blogCategoryLookupByNormalizedName(array $categories): array
+{
+    $map = [];
+    foreach ($categories as $category) {
+        $name = trim((string)($category['name'] ?? ''));
+        $categoryId = (int)($category['id'] ?? 0);
+        if ($categoryId <= 0 || $name === '') {
+            continue;
+        }
+
+        $normalizedName = normalizeBlogTaxonomyName($name);
+        if (!isset($map[$normalizedName])) {
+            $map[$normalizedName] = [
+                'id' => $categoryId,
+                'name' => $name,
+            ];
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * @param array<int, array<string, mixed>> $tags
+ * @return array{by_slug: array<string, array{id:int,name:string,slug:string}>, by_name: array<string, array{id:int,name:string,slug:string}>}
+ */
+function blogTagLookupMaps(array $tags): array
+{
+    $bySlug = [];
+    $byName = [];
+
+    foreach ($tags as $tag) {
+        $tagId = (int)($tag['id'] ?? 0);
+        $tagName = trim((string)($tag['name'] ?? ''));
+        $tagSlug = trim((string)($tag['slug'] ?? ''));
+        if ($tagId <= 0 || ($tagName === '' && $tagSlug === '')) {
+            continue;
+        }
+
+        $tagData = [
+            'id' => $tagId,
+            'name' => $tagName,
+            'slug' => $tagSlug,
+        ];
+
+        if ($tagSlug !== '' && !isset($bySlug[$tagSlug])) {
+            $bySlug[$tagSlug] = $tagData;
+        }
+
+        if ($tagName !== '') {
+            $normalizedName = normalizeBlogTaxonomyName($tagName);
+            if (!isset($byName[$normalizedName])) {
+                $byName[$normalizedName] = $tagData;
+            }
+        }
+    }
+
+    return [
+        'by_slug' => $bySlug,
+        'by_name' => $byName,
+    ];
+}
+
+/**
+ * @return array<int, array{id:int,name:string,slug:string}>
+ */
+function loadArticleTagDetails(PDO $pdo, int $articleId): array
+{
+    if ($articleId <= 0) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT t.id, t.name, t.slug
+         FROM cms_article_tags at
+         INNER JOIN cms_tags t ON t.id = at.tag_id
+         WHERE at.article_id = ?
+         ORDER BY t.name ASC, t.id ASC"
+    );
+    $stmt->execute([$articleId]);
+
+    return array_map(
+        static function (array $row): array {
+            return [
+                'id' => (int)($row['id'] ?? 0),
+                'name' => (string)($row['name'] ?? ''),
+                'slug' => (string)($row['slug'] ?? ''),
+            ];
+        },
+        $stmt->fetchAll() ?: []
+    );
+}
+
 function getBlogMembers(int $blogId): array
 {
     if ($blogId <= 0) {

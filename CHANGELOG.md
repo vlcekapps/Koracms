@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Změněno
 - **Blogy – rozšířený úvod nově podporuje content/media picker** – pole `Rozšířený úvod blogu` při vytváření i úpravě blogu nově používá stejný picker odkazů, médií a snippetů jako ostatní HTML editory v administraci
+- **Blogy – změna blogu v editoru článku nově respektuje taxonomie cílového blogu** – při přesunu jednoho článku přes běžnou editaci se nově automaticky přenesou odpovídající kategorie a štítky, pokud v cílovém blogu existují, editor dovolí ručně vybrat jiné existující taxonomie cílového blogu a správce taxonomií může přímo z editoru vytvořit chybějící kategorii nebo štítky; server-side validace zároveň brání podvrženému přiřazení nebo nepovolenému vytvoření taxonomií mimo cílový blog
 
 ## [3.0.0-rc.8] – 2026-03-31
 

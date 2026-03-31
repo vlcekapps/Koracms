@@ -40,7 +40,8 @@ if ($allBlogs === []) {
 
 $accessibleBlogIds = array_map(static fn(array $blogEntry): int => (int)$blogEntry['id'], $allBlogs);
 $defaultAccessibleBlog = $allBlogs[0] ?? null;
-$requestedBlogId = (int)($article['blog_id'] ?? ($_GET['blog_id'] ?? ($defaultAccessibleBlog['id'] ?? 1)));
+$sourceArticleBlogId = (int)($article['blog_id'] ?? 0);
+$requestedBlogId = (int)(($_GET['blog_id'] ?? null) ?? ($article['blog_id'] ?? ($defaultAccessibleBlog['id'] ?? 1)));
 if (!in_array($requestedBlogId, $accessibleBlogIds, true)) {
     $requestedBlogId = (int)($defaultAccessibleBlog['id'] ?? $requestedBlogId);
 }
@@ -60,15 +61,25 @@ $categories = $catStmt->fetchAll();
 
 $allTags = [];
 $articleTagIds = [];
+$sourceCategoryName = '';
+$sourceTagDetails = [];
 $noCategoryLabel = '– bez kategorie –';
 try {
-    $tagStmt2 = $pdo->prepare("SELECT id, name FROM cms_tags WHERE blog_id = ? ORDER BY name");
+    $tagStmt2 = $pdo->prepare("SELECT id, name, slug FROM cms_tags WHERE blog_id = ? ORDER BY name");
     $tagStmt2->execute([$currentBlogId]);
     $allTags = $tagStmt2->fetchAll();
     if ($id !== null) {
-        $tagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ?");
-        $tagStmt->execute([$id]);
-        $articleTagIds = array_column($tagStmt->fetchAll(), 'tag_id');
+        if ((int)($article['category_id'] ?? 0) > 0) {
+            $sourceCategoryStmt = $pdo->prepare("SELECT name FROM cms_categories WHERE id = ? LIMIT 1");
+            $sourceCategoryStmt->execute([(int)$article['category_id']]);
+            $sourceCategoryName = trim((string)$sourceCategoryStmt->fetchColumn());
+        }
+
+        $sourceTagDetails = loadArticleTagDetails($pdo, $id);
+        $articleTagIds = array_values(array_map(
+            static fn(array $tag): int => (int)($tag['id'] ?? 0),
+            $sourceTagDetails
+        ));
     }
 } catch (\PDOException $e) {
     error_log('admin/blog_form tags: ' . $e->getMessage());
@@ -81,6 +92,7 @@ if (isMultiBlog()) {
             'categories' => [],
             'tags' => [],
             'comments_default' => (int)($blogEntry['comments_default'] ?? 1),
+            'can_manage_taxonomies' => canCurrentUserManageBlogTaxonomies((int)($blogEntry['id'] ?? 0)),
         ];
     }
 
@@ -101,7 +113,7 @@ if (isMultiBlog()) {
     }
 
     try {
-        $allTagsStmt = $pdo->query("SELECT id, blog_id, name FROM cms_tags ORDER BY blog_id, name");
+        $allTagsStmt = $pdo->query("SELECT id, blog_id, name, slug FROM cms_tags ORDER BY blog_id, name");
         foreach ($allTagsStmt->fetchAll() as $tagRow) {
             $blogId = (int)($tagRow['blog_id'] ?? 0);
             if (!isset($blogFormOptions[$blogId])) {
@@ -110,6 +122,7 @@ if (isMultiBlog()) {
             $blogFormOptions[$blogId]['tags'][] = [
                 'id' => (int)$tagRow['id'],
                 'name' => (string)$tagRow['name'],
+                'slug' => (string)($tagRow['slug'] ?? ''),
             ];
         }
     } catch (\PDOException $e) {
@@ -129,6 +142,8 @@ $fieldErrorMap = [
     'publish_at' => ['publish_at'],
     'unpublish_at' => ['unpublish_at'],
     'publish_range' => ['publish_at', 'unpublish_at'],
+    'missing_category_action' => ['missing_category_action'],
+    'missing_tags_action' => ['missing_tags_action'],
 ];
 $fieldErrorMessages = [
     'title' => 'Vyplňte prosím název článku.',
@@ -137,6 +152,8 @@ $fieldErrorMessages = [
     'publish_at' => 'Plánované publikování má neplatný formát data a času.',
     'unpublish_at' => 'Plánované zrušení publikace má neplatný formát data a času.',
     'publish_range' => 'Plánované zrušení publikace musí být později než plánované publikování.',
+    'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
+    'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
 ];
 $publishAtInput = '';
 if (!empty($article['publish_at'])) {
@@ -193,6 +210,10 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Plánované zrušení publikace má neplatný formát data a času.</p>
 <?php elseif ($err === 'publish_range'): ?>
   <p role="alert" class="error" id="form-error">Plánované zrušení publikace musí být později než plánované publikování.</p>
+<?php elseif ($err === 'missing_category_action'): ?>
+  <p role="alert" class="error" id="form-error">Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
+<?php elseif ($err === 'missing_tags_action'): ?>
+  <p role="alert" class="error" id="form-error">Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
 <?php endif; ?>
 
 <form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
@@ -213,6 +234,8 @@ adminHeader($pageTitle);
   <?php else: ?>
     <input type="hidden" name="blog_id" value="<?= $currentBlogId ?>">
   <?php endif; ?>
+  <input type="hidden" name="category_selection_mode" id="category-selection-mode" value="<?= $article ? 'auto' : 'manual' ?>">
+  <input type="hidden" name="tag_selection_mode" id="tag-selection-mode" value="<?= $article ? 'auto' : 'manual' ?>">
 
   <?php if ($article && !empty($article['author_id'])): ?>
     <?php
@@ -258,7 +281,7 @@ adminHeader($pageTitle);
     <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="category_id">Kategorie</label>
-    <select id="category_id" name="category_id"<?= isMultiBlog() ? ' aria-describedby="blog-category-help"' : '' ?>>
+    <select id="category_id" name="category_id"<?= isMultiBlog() ? ' aria-describedby="blog-category-help blog-taxonomy-transfer-help"' : '' ?>>
       <option value="">– bez kategorie –</option>
       <?php foreach ($categories as $category): ?>
         <option value="<?= (int)$category['id'] ?>" <?= ((int)($article['category_id'] ?? 0) === (int)$category['id']) ? 'selected' : '' ?>>
@@ -268,10 +291,11 @@ adminHeader($pageTitle);
     </select>
     <?php if (isMultiBlog()): ?>
       <small id="blog-category-help" class="field-help">Nabídka kategorií odpovídá právě vybranému blogu.</small>
+      <small id="blog-taxonomy-transfer-help" class="field-help">Při změně blogu editor předvyplní stejně pojmenovanou kategorii a odpovídající štítky, pokud v cílovém blogu existují. Tady nahoře vždy vybíráte už existující taxonomie cílového blogu.</small>
     <?php endif; ?>
   </fieldset>
 
-  <fieldset id="article-tags-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help"' : '' ?>>
+  <fieldset id="article-tags-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help blog-taxonomy-transfer-help"' : '' ?>>
     <legend>Štítky článku</legend>
     <div id="article-tags-options">
       <?php foreach ($allTags as $tag): ?>
@@ -286,6 +310,49 @@ adminHeader($pageTitle);
       <small id="blog-tags-help" class="field-help">Dostupné štítky se mění podle vybraného blogu.</small>
     <?php endif; ?>
   </fieldset>
+
+  <?php if (isMultiBlog() && $article): ?>
+    <fieldset id="blog-missing-taxonomies-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem" hidden>
+      <legend>Chybějící taxonomie po změně blogu</legend>
+      <p id="blog-missing-taxonomies-summary" class="field-help">Pokud v cílovém blogu chybí původní kategorie nebo štítky, můžete je zde ponechat bez přiřazení nebo je vytvořit.</p>
+
+      <div id="blog-missing-category-group" hidden>
+        <p id="blog-missing-category-description" class="field-help"></p>
+        <div>
+          <input type="radio" id="missing-category-action-drop" name="missing_category_action" value="drop"
+                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
+                 <?= $err === 'missing_category_action' ? '' : ' checked' ?>>
+          <label for="missing-category-action-drop" style="display:inline;font-weight:normal">Bez kategorie</label>
+        </div>
+        <div id="blog-missing-category-create-option" hidden>
+          <input type="radio" id="missing-category-action-create" name="missing_category_action" value="create"
+                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
+                 <?= $err === 'missing_category_action' ? ' checked' : '' ?>>
+          <label for="missing-category-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící kategorii v cílovém blogu</label>
+        </div>
+        <small id="blog-missing-category-help" class="field-help">Tato volba řeší jen původní kategorii článku, která v cílovém blogu zatím neexistuje.</small>
+        <?php adminRenderFieldError('missing_category_action', $err, $fieldErrorMap, $fieldErrorMessages['missing_category_action']); ?>
+      </div>
+
+      <div id="blog-missing-tags-group" hidden style="margin-top:1rem">
+        <p id="blog-missing-tags-description" class="field-help"></p>
+        <div>
+          <input type="radio" id="missing-tags-action-drop" name="missing_tags_action" value="drop"
+                 <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
+                 <?= $err === 'missing_tags_action' ? '' : ' checked' ?>>
+          <label for="missing-tags-action-drop" style="display:inline;font-weight:normal">Bez chybějících štítků</label>
+        </div>
+        <div id="blog-missing-tags-create-option" hidden>
+          <input type="radio" id="missing-tags-action-create" name="missing_tags_action" value="create"
+                 <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
+                 <?= $err === 'missing_tags_action' ? ' checked' : '' ?>>
+          <label for="missing-tags-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící štítky v cílovém blogu</label>
+        </div>
+        <small id="blog-missing-tags-help" class="field-help">Tato volba se týká jen původních štítků, které v cílovém blogu zatím neexistují.</small>
+        <?php adminRenderFieldError('missing_tags_action', $err, $fieldErrorMap, $fieldErrorMessages['missing_tags_action']); ?>
+      </div>
+    </fieldset>
+  <?php endif; ?>
 
   <fieldset>
     <legend>Text článku</legend>
@@ -411,9 +478,33 @@ adminHeader($pageTitle);
     const categorySelect = document.getElementById('category_id');
     const tagsFieldset = document.getElementById('article-tags-fieldset');
     const tagsContainer = document.getElementById('article-tags-options');
+    const missingTaxonomiesFieldset = document.getElementById('blog-missing-taxonomies-fieldset');
+    const missingTaxonomiesSummary = document.getElementById('blog-missing-taxonomies-summary');
+    const missingCategoryGroup = document.getElementById('blog-missing-category-group');
+    const missingCategoryDescription = document.getElementById('blog-missing-category-description');
+    const missingCategoryCreateOption = document.getElementById('blog-missing-category-create-option');
+    const missingTagsGroup = document.getElementById('blog-missing-tags-group');
+    const missingTagsDescription = document.getElementById('blog-missing-tags-description');
+    const missingTagsCreateOption = document.getElementById('blog-missing-tags-create-option');
+    const missingCategoryActionInputs = Array.from(document.querySelectorAll('input[name="missing_category_action"]'));
+    const missingTagsActionInputs = Array.from(document.querySelectorAll('input[name="missing_tags_action"]'));
+    const categorySelectionModeInput = document.getElementById('category-selection-mode');
+    const tagSelectionModeInput = document.getElementById('tag-selection-mode');
     const commentsCheckbox = document.getElementById('comments_enabled');
     const noCategoryLabel = <?= json_encode($noCategoryLabel, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const sourceArticleTaxonomy = <?= json_encode([
+        'categoryName' => $sourceCategoryName,
+        'tags' => array_map(
+            static function (array $tag): array {
+                return [
+                    'name' => (string)($tag['name'] ?? ''),
+                    'slug' => (string)($tag['slug'] ?? ''),
+                ];
+            },
+            $sourceTagDetails
+        ),
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMeta = <?= json_encode(array_values(array_map(static function (array $blogEntry): array {
         return [
             'id' => (int)$blogEntry['id'],
@@ -424,12 +515,17 @@ adminHeader($pageTitle);
     }, $allBlogs)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMetaById = Object.fromEntries(blogMeta.map((blogEntry) => [String(blogEntry.id), blogEntry]));
     const isNewArticle = <?= $article ? 'false' : 'true' ?>;
+    const sourceBlogId = <?= (int)$sourceArticleBlogId ?>;
     let slugManual = <?= $article && !empty($article['slug']) ? 'true' : 'false' ?>;
     let commentsTouched = <?= $article ? 'true' : 'false' ?>;
     const rememberedSelections = {
-        '<?= (int)$currentBlogId ?>': {
+        '<?= (int)($sourceArticleBlogId > 0 ? $sourceArticleBlogId : $currentBlogId) ?>': {
             categoryId: '<?= (int)($article['category_id'] ?? 0) ?>' !== '0' ? '<?= (int)($article['category_id'] ?? 0) ?>' : '',
             tags: <?= json_encode(array_map('intval', $articleTagIds)) ?>,
+            categoryMode: 'manual',
+            tagsMode: 'manual',
+            missingCategoryAction: 'drop',
+            missingTagsAction: 'drop',
         }
     };
 
@@ -439,6 +535,136 @@ adminHeader($pageTitle);
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
+
+    const normalizeTaxonomyName = (value) => String(value || '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLocaleLowerCase('cs-CZ');
+
+    const resolveAutoSelections = (blogId) => {
+        const fallback = {
+            categoryId: '',
+            tags: [],
+            categoryMode: 'auto',
+            tagsMode: 'auto',
+            missingCategoryAction: 'drop',
+            missingTagsAction: 'drop',
+        };
+        const targetBlogOptions = blogOptions[blogId] || { categories: [], tags: [] };
+
+        const normalizedSourceCategory = normalizeTaxonomyName(sourceArticleTaxonomy.categoryName || '');
+        if (normalizedSourceCategory !== '') {
+            const matchingCategory = (targetBlogOptions.categories || []).find((category) => (
+                normalizeTaxonomyName(category.name) === normalizedSourceCategory
+            ));
+            if (matchingCategory) {
+                fallback.categoryId = String(matchingCategory.id);
+            }
+        }
+
+        const resolvedTagIds = [];
+        (sourceArticleTaxonomy.tags || []).forEach((sourceTag) => {
+            const sourceSlug = String(sourceTag.slug || '').trim();
+            const normalizedSourceName = normalizeTaxonomyName(sourceTag.name || '');
+            const matchingTag = (targetBlogOptions.tags || []).find((tag) => (
+                (sourceSlug !== '' && String(tag.slug || '').trim() === sourceSlug)
+                || (normalizedSourceName !== '' && normalizeTaxonomyName(tag.name) === normalizedSourceName)
+            ));
+            if (matchingTag) {
+                const tagId = Number(matchingTag.id);
+                if (!resolvedTagIds.includes(tagId)) {
+                    resolvedTagIds.push(tagId);
+                }
+            }
+        });
+        fallback.tags = resolvedTagIds;
+
+        return fallback;
+    };
+
+    const setRadioValue = (inputs, value, fallbackValue = 'drop') => {
+        const normalizedValue = String(value || fallbackValue);
+        const resolvedValue = inputs.some((input) => input.value === normalizedValue) ? normalizedValue : fallbackValue;
+        inputs.forEach((input) => {
+            input.checked = input.value === resolvedValue;
+        });
+    };
+
+    const selectedRadioValue = (inputs, fallbackValue = 'drop') => {
+        const checkedInput = inputs.find((input) => input.checked);
+        return checkedInput ? checkedInput.value : fallbackValue;
+    };
+
+    const updateMissingTaxonomyChoices = (blogId, state) => {
+        if (!missingTaxonomiesFieldset || isNewArticle || sourceBlogId <= 0) {
+            return;
+        }
+
+        const targetBlogOptions = blogOptions[blogId] || { categories: [], tags: [], can_manage_taxonomies: false };
+        const canCreateTaxonomies = !!targetBlogOptions.can_manage_taxonomies;
+        const sourceBlogChanged = String(blogId) !== String(sourceBlogId);
+
+        const sourceCategoryName = String(sourceArticleTaxonomy.categoryName || '').trim();
+        const categoryIsMissing = sourceBlogChanged
+            && sourceCategoryName !== ''
+            && (state.categoryMode || 'auto') !== 'manual'
+            && String(state.categoryId || '') === '';
+
+        const missingTagNames = [];
+        if (sourceBlogChanged && (state.tagsMode || 'auto') !== 'manual') {
+            (sourceArticleTaxonomy.tags || []).forEach((sourceTag) => {
+                const sourceSlug = String(sourceTag.slug || '').trim();
+                const normalizedSourceName = normalizeTaxonomyName(sourceTag.name || '');
+                const matchingTag = (targetBlogOptions.tags || []).find((tag) => (
+                    (sourceSlug !== '' && String(tag.slug || '').trim() === sourceSlug)
+                    || (normalizedSourceName !== '' && normalizeTaxonomyName(tag.name) === normalizedSourceName)
+                ));
+                if (!matchingTag && String(sourceTag.name || '').trim() !== '') {
+                    missingTagNames.push(String(sourceTag.name).trim());
+                }
+            });
+        }
+
+        if (missingCategoryGroup) {
+            missingCategoryGroup.hidden = !categoryIsMissing;
+        }
+        if (missingCategoryDescription) {
+            missingCategoryDescription.textContent = categoryIsMissing
+                ? 'Původní kategorie článku „' + sourceCategoryName + '“ v cílovém blogu neexistuje.'
+                : '';
+        }
+        if (missingCategoryCreateOption) {
+            missingCategoryCreateOption.hidden = !categoryIsMissing || !canCreateTaxonomies;
+        }
+        if (missingCategoryActionInputs.length > 0) {
+            setRadioValue(missingCategoryActionInputs, categoryIsMissing ? state.missingCategoryAction : 'drop');
+        }
+
+        const uniqueMissingTagNames = Array.from(new Set(missingTagNames));
+        const tagsAreMissing = uniqueMissingTagNames.length > 0;
+        if (missingTagsGroup) {
+            missingTagsGroup.hidden = !tagsAreMissing;
+        }
+        if (missingTagsDescription) {
+            missingTagsDescription.textContent = tagsAreMissing
+                ? 'V cílovém blogu chybí původní štítky: ' + uniqueMissingTagNames.join(', ') + '.'
+                : '';
+        }
+        if (missingTagsCreateOption) {
+            missingTagsCreateOption.hidden = !tagsAreMissing || !canCreateTaxonomies;
+        }
+        if (missingTagsActionInputs.length > 0) {
+            setRadioValue(missingTagsActionInputs, tagsAreMissing ? state.missingTagsAction : 'drop');
+        }
+
+        if (missingTaxonomiesSummary) {
+            missingTaxonomiesSummary.textContent = canCreateTaxonomies
+                ? 'Pokud v cílovém blogu chybí původní kategorie nebo štítky, můžete je zde ponechat bez přiřazení nebo je vytvořit.'
+                : 'Pokud v cílovém blogu chybí původní kategorie nebo štítky, bez práv správce taxonomií je v editoru můžete jen vynechat.';
+        }
+
+        missingTaxonomiesFieldset.hidden = !(categoryIsMissing || tagsAreMissing);
+    };
 
     if (categorySelect && categorySelect.options.length > 0 && categorySelect.options[0].value === '') {
         categorySelect.options[0].textContent = noCategoryLabel;
@@ -452,6 +678,10 @@ adminHeader($pageTitle);
         rememberedSelections[blogSelect.value] = {
             categoryId: categorySelect.value,
             tags: Array.from(tagsContainer.querySelectorAll('input[name="tags[]"]:checked')).map((input) => Number(input.value)),
+            categoryMode: categorySelectionModeInput ? categorySelectionModeInput.value : 'manual',
+            tagsMode: tagSelectionModeInput ? tagSelectionModeInput.value : 'manual',
+            missingCategoryAction: selectedRadioValue(missingCategoryActionInputs),
+            missingTagsAction: selectedRadioValue(missingTagsActionInputs),
         };
     };
 
@@ -460,7 +690,7 @@ adminHeader($pageTitle);
             return;
         }
 
-        const state = rememberedSelections[blogId] || { categoryId: '', tags: [] };
+        const state = rememberedSelections[blogId] || resolveAutoSelections(blogId);
         const selectedTags = new Set((state.tags || []).map((value) => Number(value)));
         const categoryMarkup = [];
         categoryMarkup.push('<option value="">' + noCategoryLabel + '</option>');
@@ -470,6 +700,9 @@ adminHeader($pageTitle);
             categoryMarkup.push('<option value="' + String(category.id) + '"' + selected + '>' + String(category.name) + '</option>');
         });
         categorySelect.innerHTML = categoryMarkup.join('');
+        if (categorySelectionModeInput) {
+            categorySelectionModeInput.value = state.categoryMode || 'manual';
+        }
 
         const selectedBlog = blogMetaById[String(blogId)] || null;
         if (contextName && selectedBlog) {
@@ -495,9 +728,13 @@ adminHeader($pageTitle);
         }
 
         const tags = blogOptions[blogId].tags || [];
+        if (tagSelectionModeInput) {
+            tagSelectionModeInput.value = state.tagsMode || 'manual';
+        }
         if (tags.length === 0) {
             tagsContainer.innerHTML = '';
             tagsFieldset.hidden = true;
+            updateMissingTaxonomyChoices(blogId, state);
             return;
         }
 
@@ -509,6 +746,7 @@ adminHeader($pageTitle);
                 + ' ' + String(tag.name)
                 + '</label>';
         }).join('');
+        updateMissingTaxonomyChoices(blogId, state);
     };
 
     slugInput?.addEventListener('input', function () {
@@ -527,13 +765,32 @@ adminHeader($pageTitle);
             rememberCurrentSelections();
             renderBlogOptions(this.value);
         });
+        renderBlogOptions(blogSelect.value);
     }
 
     commentsCheckbox?.addEventListener('change', function () {
         commentsTouched = true;
     });
-    categorySelect?.addEventListener('change', rememberCurrentSelections);
-    tagsContainer?.addEventListener('change', rememberCurrentSelections);
+    categorySelect?.addEventListener('change', function () {
+        if (categorySelectionModeInput) {
+            categorySelectionModeInput.value = 'manual';
+        }
+        rememberCurrentSelections();
+        updateMissingTaxonomyChoices(blogSelect ? blogSelect.value : String(sourceBlogId), rememberedSelections[blogSelect ? blogSelect.value : String(sourceBlogId)] || {});
+    });
+    tagsContainer?.addEventListener('change', function () {
+        if (tagSelectionModeInput) {
+            tagSelectionModeInput.value = 'manual';
+        }
+        rememberCurrentSelections();
+        updateMissingTaxonomyChoices(blogSelect ? blogSelect.value : String(sourceBlogId), rememberedSelections[blogSelect ? blogSelect.value : String(sourceBlogId)] || {});
+    });
+    missingCategoryActionInputs.forEach((input) => {
+        input.addEventListener('change', rememberCurrentSelections);
+    });
+    missingTagsActionInputs.forEach((input) => {
+        input.addEventListener('change', rememberCurrentSelections);
+    });
 })();
 </script>
 

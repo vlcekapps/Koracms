@@ -11,6 +11,10 @@ $perex = trim($_POST['perex'] ?? '');
 $content = trim($_POST['content'] ?? '');
 $categoryId = inputInt('post', 'category_id');
 $tagIds = array_map('intval', (array)($_POST['tags'] ?? []));
+$categorySelectionMode = trim((string)($_POST['category_selection_mode'] ?? ($id !== null ? 'auto' : 'manual')));
+$tagSelectionMode = trim((string)($_POST['tag_selection_mode'] ?? ($id !== null ? 'auto' : 'manual')));
+$missingCategoryAction = trim((string)($_POST['missing_category_action'] ?? 'drop'));
+$missingTagsAction = trim((string)($_POST['missing_tags_action'] ?? 'drop'));
 $publishAt = trim($_POST['publish_at'] ?? '');
 $metaTitle = trim($_POST['meta_title'] ?? '');
 $metaDescription = trim($_POST['meta_description'] ?? '');
@@ -22,9 +26,12 @@ $defaultRedirect = BASE_URL . '/admin/blog.php' . ($blogId > 0 ? '?blog=' . $blo
 $redirect = internalRedirectTarget($_POST['redirect'] ?? '', $defaultRedirect);
 $redirectToForm = static function (?int $articleId, int $targetBlogId, string $errorCode) use ($blogId): never {
     $params = ['err' => $errorCode];
+    if ($targetBlogId > 0) {
+        $params['blog_id'] = $targetBlogId;
+    }
     if ($articleId !== null) {
         $params['id'] = $articleId;
-    } else {
+    } else if (!isset($params['blog_id'])) {
         $params['blog_id'] = $targetBlogId > 0 ? $targetBlogId : $blogId;
     }
 
@@ -57,10 +64,10 @@ if ($title === '' || $content === '') {
 $existingArticle = null;
 if ($id !== null) {
     if (canManageOwnBlogOnly()) {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id FROM cms_articles WHERE id = ? AND author_id = ?");
+        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id FROM cms_articles WHERE id = ? AND author_id = ?");
         $existingStmt->execute([$id, currentUserId()]);
     } else {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id FROM cms_articles WHERE id = ?");
+        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id FROM cms_articles WHERE id = ?");
         $existingStmt->execute([$id]);
     }
     $existingArticle = $existingStmt->fetch() ?: null;
@@ -68,6 +75,20 @@ if ($id !== null) {
         header('Location: ' . BASE_URL . '/admin/blog.php');
         exit;
     }
+}
+
+$articleIsMovingToAnotherBlog = $existingArticle !== null
+    && (int)($existingArticle['blog_id'] ?? 0) > 0
+    && (int)($existingArticle['blog_id'] ?? 0) !== $blogId;
+$canCreateTargetTaxonomies = $articleIsMovingToAnotherBlog && canCurrentUserManageBlogTaxonomies($blogId);
+$missingCategoryAction = in_array($missingCategoryAction, ['drop', 'create'], true) ? $missingCategoryAction : 'drop';
+$missingTagsAction = in_array($missingTagsAction, ['drop', 'create'], true) ? $missingTagsAction : 'drop';
+
+if ($articleIsMovingToAnotherBlog && $missingCategoryAction === 'create' && !$canCreateTargetTaxonomies) {
+    $redirectToForm($id, $blogId, 'missing_category_action');
+}
+if ($articleIsMovingToAnotherBlog && $missingTagsAction === 'create' && !$canCreateTargetTaxonomies) {
+    $redirectToForm($id, $blogId, 'missing_tags_action');
 }
 
 $slug = articleSlug($submittedSlug !== '' ? $submittedSlug : $title);
@@ -89,12 +110,150 @@ if ($categoryId !== null) {
     }
 }
 
+$sourceCategoryName = '';
+$sourceTagDetails = [];
+$targetCategoryRows = [];
+$targetCategoryLookup = [];
+$targetTagRows = [];
+$targetTagLookup = ['by_slug' => [], 'by_name' => []];
+if ($articleIsMovingToAnotherBlog) {
+    $sourceCategoryId = (int)($existingArticle['category_id'] ?? 0);
+    if ($sourceCategoryId > 0) {
+        $sourceCategoryStmt = $pdo->prepare("SELECT name FROM cms_categories WHERE id = ? LIMIT 1");
+        $sourceCategoryStmt->execute([$sourceCategoryId]);
+        $sourceCategoryName = trim((string)$sourceCategoryStmt->fetchColumn());
+    }
+
+    $sourceTagDetails = loadArticleTagDetails($pdo, $id ?? 0);
+
+    $targetCategoryStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name ASC, id ASC");
+    $targetCategoryStmt->execute([$blogId]);
+    $targetCategoryRows = $targetCategoryStmt->fetchAll() ?: [];
+    $targetCategoryLookup = blogCategoryLookupByNormalizedName($targetCategoryRows);
+
+    $targetTagStmt = $pdo->prepare("SELECT id, name, slug FROM cms_tags WHERE blog_id = ? ORDER BY name ASC, id ASC");
+    $targetTagStmt->execute([$blogId]);
+    $targetTagRows = $targetTagStmt->fetchAll() ?: [];
+    $targetTagLookup = blogTagLookupMaps($targetTagRows);
+}
+
+if ($articleIsMovingToAnotherBlog && $categoryId === null && $categorySelectionMode !== 'manual') {
+    if ($sourceCategoryName !== '') {
+        $normalizedSourceCategory = normalizeBlogTaxonomyName($sourceCategoryName);
+        if (isset($targetCategoryLookup[$normalizedSourceCategory]['id'])) {
+            $categoryId = (int)$targetCategoryLookup[$normalizedSourceCategory]['id'];
+        } elseif ($missingCategoryAction === 'create' && $canCreateTargetTaxonomies) {
+            $insertCategoryStmt = $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)");
+            $insertCategoryStmt->execute([$sourceCategoryName, $blogId]);
+            $categoryId = (int)$pdo->lastInsertId();
+            $targetCategoryLookup[$normalizedSourceCategory] = [
+                'id' => $categoryId,
+                'name' => $sourceCategoryName,
+            ];
+        }
+    }
+}
+
 $validTagIds = [];
+$allowedTagRows = [];
 if ($tagIds !== []) {
-    $tagCheckStmt = $pdo->prepare("SELECT id FROM cms_tags WHERE blog_id = ? ORDER BY id");
+    $tagCheckStmt = $pdo->prepare("SELECT id, name, slug FROM cms_tags WHERE blog_id = ? ORDER BY id");
     $tagCheckStmt->execute([$blogId]);
-    $allowedTagIds = array_map('intval', array_column($tagCheckStmt->fetchAll(), 'id'));
+    $allowedTagRows = $tagCheckStmt->fetchAll() ?: [];
+    $allowedTagIds = array_map('intval', array_column($allowedTagRows, 'id'));
     $validTagIds = array_values(array_intersect($allowedTagIds, $tagIds));
+}
+
+if ($articleIsMovingToAnotherBlog && $validTagIds === [] && $tagSelectionMode !== 'manual') {
+    $resolvedTagIds = [];
+    $missingSourceTags = [];
+
+    foreach ($sourceTagDetails as $sourceTag) {
+        $sourceTagSlug = trim((string)($sourceTag['slug'] ?? ''));
+        $sourceTagName = trim((string)($sourceTag['name'] ?? ''));
+        $matchedTargetTag = null;
+        if ($sourceTagSlug !== '' && isset($targetTagLookup['by_slug'][$sourceTagSlug])) {
+            $matchedTargetTag = $targetTagLookup['by_slug'][$sourceTagSlug];
+        } elseif ($sourceTagName !== '') {
+            $normalizedSourceTagName = normalizeBlogTaxonomyName($sourceTagName);
+            if (isset($targetTagLookup['by_name'][$normalizedSourceTagName])) {
+                $matchedTargetTag = $targetTagLookup['by_name'][$normalizedSourceTagName];
+            }
+        }
+
+        $matchedTargetTagId = (int)($matchedTargetTag['id'] ?? 0);
+        if ($matchedTargetTagId > 0 && !in_array($matchedTargetTagId, $resolvedTagIds, true)) {
+            $resolvedTagIds[] = $matchedTargetTagId;
+            continue;
+        }
+
+        if ($sourceTagName !== '') {
+            $missingSourceTags[] = [
+                'name' => $sourceTagName,
+                'slug' => $sourceTagSlug,
+            ];
+        }
+    }
+
+    if ($missingSourceTags !== [] && $missingTagsAction === 'create' && $canCreateTargetTaxonomies) {
+        $insertTagStmt = $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)");
+        foreach ($missingSourceTags as $missingSourceTag) {
+            $missingTagName = trim((string)($missingSourceTag['name'] ?? ''));
+            $missingTagSlug = trim((string)($missingSourceTag['slug'] ?? ''));
+            if ($missingTagName === '') {
+                continue;
+            }
+
+            if ($missingTagSlug !== '' && isset($targetTagLookup['by_slug'][$missingTagSlug]['id'])) {
+                $existingTargetTagId = (int)$targetTagLookup['by_slug'][$missingTagSlug]['id'];
+                if ($existingTargetTagId > 0 && !in_array($existingTargetTagId, $resolvedTagIds, true)) {
+                    $resolvedTagIds[] = $existingTargetTagId;
+                }
+                continue;
+            }
+
+            $normalizedMissingTagName = normalizeBlogTaxonomyName($missingTagName);
+            if ($normalizedMissingTagName !== '' && isset($targetTagLookup['by_name'][$normalizedMissingTagName]['id'])) {
+                $existingTargetTagId = (int)$targetTagLookup['by_name'][$normalizedMissingTagName]['id'];
+                if ($existingTargetTagId > 0 && !in_array($existingTargetTagId, $resolvedTagIds, true)) {
+                    $resolvedTagIds[] = $existingTargetTagId;
+                }
+                continue;
+            }
+
+            $candidateSlug = $missingTagSlug !== '' ? $missingTagSlug : slugify($missingTagName);
+            if ($candidateSlug === '') {
+                $candidateSlug = 'tag-' . substr(sha1($missingTagName), 0, 8);
+            }
+            $uniqueSlug = $candidateSlug;
+            $slugSuffix = 2;
+            while (isset($targetTagLookup['by_slug'][$uniqueSlug])) {
+                $uniqueSlug = $candidateSlug . '-' . $slugSuffix;
+                $slugSuffix++;
+            }
+
+            $insertTagStmt->execute([$missingTagName, $uniqueSlug, $blogId]);
+            $newTagId = (int)$pdo->lastInsertId();
+            if ($newTagId <= 0) {
+                continue;
+            }
+
+            $newTagData = [
+                'id' => $newTagId,
+                'name' => $missingTagName,
+                'slug' => $uniqueSlug,
+            ];
+            $targetTagLookup['by_slug'][$uniqueSlug] = $newTagData;
+            if ($normalizedMissingTagName !== '') {
+                $targetTagLookup['by_name'][$normalizedMissingTagName] = $newTagData;
+            }
+            if (!in_array($newTagId, $resolvedTagIds, true)) {
+                $resolvedTagIds[] = $newTagId;
+            }
+        }
+    }
+
+    $validTagIds = $resolvedTagIds;
 }
 
 $publishAtSql = null;

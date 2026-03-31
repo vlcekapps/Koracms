@@ -7958,6 +7958,24 @@ if (!str_contains($blogFormSource, 'categorySelect.options[0].textContent = noCa
 if (!str_contains($blogFormSource, "categoryMarkup.push('<option value=\"\">' + noCategoryLabel + '</option>');")) {
     $blogAdminIssues[] = 'article form no longer rebuilds empty category option from the shared PHP label';
 }
+if (!str_contains($blogFormSource, 'name="category_selection_mode"') || !str_contains($blogFormSource, 'name="tag_selection_mode"')) {
+    $blogAdminIssues[] = 'article form is missing taxonomy selection mode tracking for blog changes';
+}
+if (!str_contains($blogFormSource, 'resolveAutoSelections') || !str_contains($blogFormSource, 'normalizeTaxonomyName')) {
+    $blogAdminIssues[] = 'article form is missing automatic taxonomy carry-over when switching blogs';
+}
+if (!str_contains($blogFormSource, 'blog-taxonomy-transfer-help')) {
+    $blogAdminIssues[] = 'article form is missing help text for taxonomy carry-over when changing blogs';
+}
+if (!str_contains($blogFormSource, 'blog-missing-taxonomies-fieldset') || !str_contains($blogFormSource, 'name="missing_category_action"') || !str_contains($blogFormSource, 'name="missing_tags_action"')) {
+    $blogAdminIssues[] = 'article form is missing missing-taxonomy controls for single-article blog changes';
+}
+if (!str_contains($blogFormSource, 'Vytvořit chybějící kategorii v cílovém blogu') || !str_contains($blogFormSource, 'Vytvořit chybějící štítky v cílovém blogu')) {
+    $blogAdminIssues[] = 'article form is missing create options for missing target taxonomies';
+}
+if (!str_contains($blogFormSource, 'can_manage_taxonomies') || !str_contains($blogFormSource, 'updateMissingTaxonomyChoices')) {
+    $blogAdminIssues[] = 'article form is missing per-blog taxonomy create gating for missing taxonomies';
+}
 if (!str_contains($blogFormSource, 'comments_default')) {
     $blogAdminIssues[] = 'article form is missing per-blog default comments metadata';
 }
@@ -8063,6 +8081,18 @@ if (!str_contains($blogSaveSource, 'cms_categories WHERE id = ? AND blog_id = ?'
 if (!str_contains($blogSaveSource, 'cms_tags WHERE blog_id = ? ORDER BY id')) {
     $blogAdminIssues[] = 'article save no longer scopes tags to selected blog';
 }
+if (!str_contains($blogSaveSource, '$articleIsMovingToAnotherBlog') || !str_contains($blogSaveSource, 'category_selection_mode') || !str_contains($blogSaveSource, 'tag_selection_mode')) {
+    $blogAdminIssues[] = 'article save is missing blog-change taxonomy carry-over safeguards';
+}
+if (!str_contains($blogSaveSource, 'blogCategoryLookupByNormalizedName(') || !str_contains($blogSaveSource, 'blogTagLookupMaps(') || !str_contains($blogSaveSource, 'loadArticleTagDetails(')) {
+    $blogAdminIssues[] = 'article save is missing server-side taxonomy remapping helpers for blog changes';
+}
+if (!str_contains($blogSaveSource, 'missing_category_action') || !str_contains($blogSaveSource, 'missing_tags_action') || !str_contains($blogSaveSource, '$canCreateTargetTaxonomies')) {
+    $blogAdminIssues[] = 'article save is missing missing-taxonomy create controls for single-article blog changes';
+}
+if (!str_contains($blogSaveSource, 'INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)') || !str_contains($blogSaveSource, 'INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)')) {
+    $blogAdminIssues[] = 'article save is missing creation of missing target taxonomies during single-article move';
+}
 if (!str_contains($blogSaveSource, 'is_featured_in_blog')) {
     $blogAdminIssues[] = 'article save is missing featured-in-blog persistence';
 }
@@ -8137,6 +8167,9 @@ if (!str_contains($blogPresentationSource, 'function getTaxonomyManagedBlogsForU
 }
 if (!str_contains($blogPresentationSource, 'function loadTransferableBlogArticles')) {
     $blogAdminIssues[] = 'blog helpers are missing transferable article loader for cross-blog move';
+}
+if (!str_contains($blogPresentationSource, 'function normalizeBlogTaxonomyName') || !str_contains($blogPresentationSource, 'function blogCategoryLookupByNormalizedName') || !str_contains($blogPresentationSource, 'function blogTagLookupMaps') || !str_contains($blogPresentationSource, 'function loadArticleTagDetails')) {
+    $blogAdminIssues[] = 'blog helpers are missing shared taxonomy carry-over helpers for article moves';
 }
 if (!str_contains($blogPresentationSource, 'function saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog helpers are missing slug redirect persistence';
@@ -8835,9 +8868,14 @@ if ($httpIntegrationSource === '') {
         "require_once __DIR__ . '/http_test_helpers.php';",
         '/admin/settings_save.php',
         '/reservations/book.php',
+        '/admin/blog_save.php',
         '/admin/blog_transfer.php',
         '/admin/media.php',
-    ] as $integrationFragment) {
+        'editace článku přes blog_save',
+        'editace článku s ruční volbou',
+        'editace článku s vytvořením taxonomií',
+        'nepovolené vytvoření taxonomií v editoru článku',
+        ] as $integrationFragment) {
         if (!str_contains($httpIntegrationSource, $integrationFragment)) {
             $settingsPrgIssues[] = 'http integration script is missing scenario fragment: ' . $integrationFragment;
         }

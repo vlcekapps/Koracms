@@ -545,26 +545,45 @@ try {
     $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute(['HTTP Cizí kategorie', $foreignBlogId]);
     $foreignCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $foreignCategoryId;
+    $sharedCategoryName = 'HTTP Sdílená kategorie';
+    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$sharedCategoryName, $sourceBlogId]);
+    $sharedSourceCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $sharedSourceCategoryId;
+    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$sharedCategoryName, $targetBlogId]);
+    $sharedTargetCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $sharedTargetCategoryId;
+    $createSourceCategoryName = 'HTTP Kategorie k vytvoření';
+    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$createSourceCategoryName, $sourceBlogId]);
+    $createSourceCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $createSourceCategoryId;
 
     $sourceTagOneSlug = 'http-source-tag-one-' . bin2hex(random_bytes(2));
     $sourceTagTwoSlug = 'http-source-tag-two-' . bin2hex(random_bytes(2));
     $targetTagSlug = 'http-target-tag-' . bin2hex(random_bytes(2));
     $foreignTagSlug = 'http-foreign-tag-' . bin2hex(random_bytes(2));
+    $sharedTagSlug = 'http-shared-tag-' . bin2hex(random_bytes(2));
+    $createSourceTagSlug = 'http-create-tag-' . bin2hex(random_bytes(2));
     foreach ([
         ['name' => 'HTTP Zdrojový štítek A', 'slug' => $sourceTagOneSlug, 'blog_id' => $sourceBlogId],
         ['name' => 'HTTP Zdrojový štítek B', 'slug' => $sourceTagTwoSlug, 'blog_id' => $sourceBlogId],
         ['name' => 'HTTP Cílový štítek', 'slug' => $targetTagSlug, 'blog_id' => $targetBlogId],
         ['name' => 'HTTP Cizí štítek', 'slug' => $foreignTagSlug, 'blog_id' => $foreignBlogId],
+        ['name' => 'HTTP Sdílený štítek', 'slug' => $sharedTagSlug, 'blog_id' => $sourceBlogId],
+        ['name' => 'HTTP Sdílený štítek', 'slug' => $sharedTagSlug, 'blog_id' => $targetBlogId],
+        ['name' => 'HTTP Štítek k vytvoření', 'slug' => $createSourceTagSlug, 'blog_id' => $sourceBlogId],
     ] as $tagRow) {
         $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$tagRow['name'], $tagRow['slug'], $tagRow['blog_id']]);
         $createdTags[] = (int)$pdo->lastInsertId();
     }
-    [$sourceTagOneId, $sourceTagTwoId, $targetTagId, $foreignTagId] = $createdTags;
+    [$sourceTagOneId, $sourceTagTwoId, $targetTagId, $foreignTagId, $sharedSourceTagId, $sharedTargetTagId, $createSourceTagId] = array_slice($createdTags, -7);
 
     foreach ([
         ['title' => 'HTTP Přesunovaný článek', 'slug' => 'http-transfer-article-' . bin2hex(random_bytes(4)), 'author_id' => $authorId],
         ['title' => 'HTTP Cizí mapování', 'slug' => 'http-transfer-article-foreign-' . bin2hex(random_bytes(4)), 'author_id' => $authorId],
         ['title' => 'HTTP Bez taxonomy práv', 'slug' => 'http-transfer-article-author-' . bin2hex(random_bytes(4)), 'author_id' => $authorNoTaxId],
+        ['title' => 'HTTP Edit přes blog_save', 'slug' => 'http-edit-move-article-' . bin2hex(random_bytes(4)), 'author_id' => $authorId],
+        ['title' => 'HTTP Edit ruční volba', 'slug' => 'http-edit-manual-article-' . bin2hex(random_bytes(4)), 'author_id' => $authorId],
+        ['title' => 'HTTP Edit vytvoření taxonomií', 'slug' => 'http-edit-create-article-' . bin2hex(random_bytes(4)), 'author_id' => $authorId],
     ] as $articleRow) {
         $pdo->prepare(
             "INSERT INTO cms_articles
@@ -574,18 +593,23 @@ try {
             $articleRow['title'],
             $articleRow['slug'],
             $sourceBlogId,
-            $sourceCategoryId,
+            $articleRow['title'] === 'HTTP Edit přes blog_save'
+                ? $sharedSourceCategoryId
+                : ($articleRow['title'] === 'HTTP Edit vytvoření taxonomií' ? $createSourceCategoryId : $sourceCategoryId),
             $articleRow['author_id'],
         ]);
         $createdArticles[] = (int)$pdo->lastInsertId();
     }
-    [$articleId, $articleForeignAttemptId, $articleNoTaxId] = $createdArticles;
+    [$articleId, $articleForeignAttemptId, $articleNoTaxId, $articleEditMoveId, $articleManualMoveId, $articleCreateMoveId] = array_slice($createdArticles, -6);
 
     foreach ([
         [$articleId, $sourceTagOneId],
         [$articleId, $sourceTagTwoId],
         [$articleForeignAttemptId, $sourceTagOneId],
         [$articleNoTaxId, $sourceTagOneId],
+        [$articleEditMoveId, $sharedSourceTagId],
+        [$articleManualMoveId, $sourceTagOneId],
+        [$articleCreateMoveId, $createSourceTagId],
     ] as $articleTagRow) {
         $pdo->prepare("INSERT INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)")->execute($articleTagRow);
     }
@@ -602,6 +626,179 @@ try {
             'created_at' => time(),
         ],
     ], 'kora-http-transfer-author');
+
+    $articleEditMoveSlug = 'http-edit-move-article-save-' . bin2hex(random_bytes(4));
+    $articleEditMoveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $authorSession['csrf'],
+        'id' => (string)$articleEditMoveId,
+        'blog_id' => (string)$targetBlogId,
+        'title' => 'HTTP Edit přes blog_save',
+        'slug' => $articleEditMoveSlug,
+        'perex' => '',
+        'content' => '<p>HTTP integration test.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'auto',
+        'tag_selection_mode' => 'auto',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $targetBlogId,
+        'comments_enabled' => '1',
+    ], $authorSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleEditMoveResponse) !== 302) {
+        $blogTransferIssues[] = 'editace článku přes blog_save při změně blogu nevrátila redirect';
+    }
+    $editMovedArticleStmt = $pdo->prepare("SELECT blog_id, category_id FROM cms_articles WHERE id = ?");
+    $editMovedArticleStmt->execute([$articleEditMoveId]);
+    $editMovedArticle = $editMovedArticleStmt->fetch() ?: [];
+    if ((int)($editMovedArticle['blog_id'] ?? 0) !== $targetBlogId) {
+        $blogTransferIssues[] = 'editace článku přes blog_save nepřesunula článek do cílového blogu';
+    }
+    if ((int)($editMovedArticle['category_id'] ?? 0) !== $sharedTargetCategoryId) {
+        $blogTransferIssues[] = 'editace článku přes blog_save nenamapovala stejně pojmenovanou kategorii cílového blogu';
+    }
+    $editMovedTagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ? ORDER BY tag_id ASC");
+    $editMovedTagStmt->execute([$articleEditMoveId]);
+    $editMovedTagIds = array_values(array_map('intval', array_column($editMovedTagStmt->fetchAll() ?: [], 'tag_id')));
+    if ($editMovedTagIds !== [$sharedTargetTagId]) {
+        $blogTransferIssues[] = 'editace článku přes blog_save nepřenesla odpovídající štítek cílového blogu';
+    }
+
+    $manualMoveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $authorSession['csrf'],
+        'id' => (string)$articleManualMoveId,
+        'blog_id' => (string)$targetBlogId,
+        'title' => 'HTTP Edit ruční volba',
+        'slug' => 'http-edit-manual-article-save-' . bin2hex(random_bytes(4)),
+        'perex' => '',
+        'content' => '<p>HTTP integration test.</p>',
+        'category_id' => (string)$targetCategoryId,
+        'tags' => [(string)$targetTagId],
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'missing_category_action' => 'drop',
+        'missing_tags_action' => 'drop',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $targetBlogId,
+        'comments_enabled' => '1',
+    ], $authorSession['cookie'], 0);
+    if (httpIntegrationStatusCode($manualMoveResponse) !== 302) {
+        $blogTransferIssues[] = 'editace článku s ruční volbou taxonomií nevrátila redirect';
+    }
+    $manualMovedArticleStmt = $pdo->prepare("SELECT blog_id, category_id FROM cms_articles WHERE id = ?");
+    $manualMovedArticleStmt->execute([$articleManualMoveId]);
+    $manualMovedArticle = $manualMovedArticleStmt->fetch() ?: [];
+    if ((int)($manualMovedArticle['blog_id'] ?? 0) !== $targetBlogId) {
+        $blogTransferIssues[] = 'editace článku s ruční volbou nepřesunula článek do cílového blogu';
+    }
+    if ((int)($manualMovedArticle['category_id'] ?? 0) !== $targetCategoryId) {
+        $blogTransferIssues[] = 'editace článku s ruční volbou nepoužila ručně vybranou cílovou kategorii';
+    }
+    $manualMovedTagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ? ORDER BY tag_id ASC");
+    $manualMovedTagStmt->execute([$articleManualMoveId]);
+    $manualMovedTagIds = array_values(array_map('intval', array_column($manualMovedTagStmt->fetchAll() ?: [], 'tag_id')));
+    if ($manualMovedTagIds !== [$targetTagId]) {
+        $blogTransferIssues[] = 'editace článku s ruční volbou nepoužila ručně vybrané cílové štítky';
+    }
+
+    $createMoveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $authorSession['csrf'],
+        'id' => (string)$articleCreateMoveId,
+        'blog_id' => (string)$targetBlogId,
+        'title' => 'HTTP Edit vytvoření taxonomií',
+        'slug' => 'http-edit-create-article-save-' . bin2hex(random_bytes(4)),
+        'perex' => '',
+        'content' => '<p>HTTP integration test.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'auto',
+        'tag_selection_mode' => 'auto',
+        'missing_category_action' => 'create',
+        'missing_tags_action' => 'create',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $targetBlogId,
+        'comments_enabled' => '1',
+    ], $authorSession['cookie'], 0);
+    if (httpIntegrationStatusCode($createMoveResponse) !== 302) {
+        $blogTransferIssues[] = 'editace článku s vytvořením chybějících taxonomií nevrátila redirect';
+    }
+    $createdTargetCategoryStmt = $pdo->prepare("SELECT id FROM cms_categories WHERE blog_id = ? AND name = ? ORDER BY id DESC LIMIT 1");
+    $createdTargetCategoryStmt->execute([$targetBlogId, $createSourceCategoryName]);
+    $createdTargetCategoryId = (int)($createdTargetCategoryStmt->fetchColumn() ?: 0);
+    if ($createdTargetCategoryId <= 0) {
+        $blogTransferIssues[] = 'editace článku s vytvořením taxonomií nevytvořila chybějící kategorii';
+    } elseif (!in_array($createdTargetCategoryId, $createdCategories, true)) {
+        $createdCategories[] = $createdTargetCategoryId;
+    }
+    $createdTargetTagStmt = $pdo->prepare("SELECT id FROM cms_tags WHERE blog_id = ? AND slug = ? ORDER BY id DESC LIMIT 1");
+    $createdTargetTagStmt->execute([$targetBlogId, $createSourceTagSlug]);
+    $createdTargetTagId = (int)($createdTargetTagStmt->fetchColumn() ?: 0);
+    if ($createdTargetTagId <= 0) {
+        $blogTransferIssues[] = 'editace článku s vytvořením taxonomií nevytvořila chybějící štítek';
+    } elseif (!in_array($createdTargetTagId, $createdTags, true)) {
+        $createdTags[] = $createdTargetTagId;
+    }
+    $createdMoveArticleStmt = $pdo->prepare("SELECT blog_id, category_id FROM cms_articles WHERE id = ?");
+    $createdMoveArticleStmt->execute([$articleCreateMoveId]);
+    $createdMoveArticle = $createdMoveArticleStmt->fetch() ?: [];
+    if ((int)($createdMoveArticle['blog_id'] ?? 0) !== $targetBlogId) {
+        $blogTransferIssues[] = 'editace článku s vytvořením taxonomií nepřesunula článek do cílového blogu';
+    }
+    if ($createdTargetCategoryId > 0 && (int)($createdMoveArticle['category_id'] ?? 0) !== $createdTargetCategoryId) {
+        $blogTransferIssues[] = 'editace článku s vytvořením taxonomií nepřiřadila novou kategorii';
+    }
+    $createdMoveTagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ? ORDER BY tag_id ASC");
+    $createdMoveTagStmt->execute([$articleCreateMoveId]);
+    $createdMoveTagIds = array_values(array_map('intval', array_column($createdMoveTagStmt->fetchAll() ?: [], 'tag_id')));
+    if ($createdTargetTagId > 0 && $createdMoveTagIds !== [$createdTargetTagId]) {
+        $blogTransferIssues[] = 'editace článku s vytvořením taxonomií nepřiřadila nový štítek';
+    }
+
+    $authorNoTaxSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => false,
+        'cms_user_id' => $authorNoTaxId,
+        'cms_user_name' => 'HTTP Author Plain',
+        'cms_user_role' => 'author',
+        'blog_transfer_selection' => [
+            'ids' => [$articleNoTaxId],
+            'redirect' => BASE_URL . '/admin/blog.php',
+            'created_at' => time(),
+        ],
+    ], 'kora-http-transfer-author-plain');
+
+    $noTaxCreateResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $authorNoTaxSession['csrf'],
+        'id' => (string)$articleNoTaxId,
+        'blog_id' => (string)$targetBlogId,
+        'title' => 'HTTP Bez taxonomy práv',
+        'slug' => 'http-no-taxonomy-create-' . bin2hex(random_bytes(4)),
+        'perex' => '',
+        'content' => '<p>HTTP integration test.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'auto',
+        'tag_selection_mode' => 'auto',
+        'missing_category_action' => 'create',
+        'missing_tags_action' => 'create',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $targetBlogId,
+        'comments_enabled' => '1',
+    ], $authorNoTaxSession['cookie'], 0);
+    if (httpIntegrationStatusCode($noTaxCreateResponse) !== 302) {
+        $blogTransferIssues[] = 'nepovolené vytvoření taxonomií v editoru článku nevrátilo redirect';
+    }
+    $noTaxCreateLocationHeader = '';
+    foreach (($noTaxCreateResponse['headers'] ?? []) as $headerLine) {
+        if (stripos((string)$headerLine, 'Location:') === 0) {
+            $noTaxCreateLocationHeader = trim(substr((string)$headerLine, 9));
+            break;
+        }
+    }
+    if ($noTaxCreateLocationHeader === '' || !str_contains($noTaxCreateLocationHeader, BASE_URL . '/admin/blog_form.php') || !str_contains($noTaxCreateLocationHeader, 'err=missing_category_action')) {
+        $blogTransferIssues[] = 'nepovolené vytvoření taxonomií v editoru článku nemíří zpět na formulář s chybou';
+    }
+    $noTaxCreateArticleStmt = $pdo->prepare("SELECT blog_id, category_id FROM cms_articles WHERE id = ?");
+    $noTaxCreateArticleStmt->execute([$articleNoTaxId]);
+    $noTaxCreateArticle = $noTaxCreateArticleStmt->fetch() ?: [];
+    if ((int)($noTaxCreateArticle['blog_id'] ?? 0) !== $sourceBlogId) {
+        $blogTransferIssues[] = 'nepovolené vytvoření taxonomií v editoru článku přesto změnilo blog článku';
+    }
+    if ((int)($noTaxCreateArticle['category_id'] ?? 0) !== $sourceCategoryId) {
+        $blogTransferIssues[] = 'nepovolené vytvoření taxonomií v editoru článku přesto změnilo kategorii článku';
+    }
 
     $blogTransferUrl = $baseUrl . BASE_URL . '/admin/blog_transfer.php';
     $positiveTransferResponse = postUrl($blogTransferUrl, [
@@ -640,18 +837,6 @@ try {
         $blogTransferIssues[] = 'map_existing nevytvořil deduplikovanou vazbu na cílový štítek';
     }
 
-    $authorNoTaxSession = koraPrimeTestSession([
-        'cms_logged_in' => true,
-        'cms_superadmin' => false,
-        'cms_user_id' => $authorNoTaxId,
-        'cms_user_name' => 'HTTP Author Plain',
-        'cms_user_role' => 'author',
-        'blog_transfer_selection' => [
-            'ids' => [$articleNoTaxId],
-            'redirect' => BASE_URL . '/admin/blog.php',
-            'created_at' => time(),
-        ],
-    ], 'kora-http-transfer-author-plain');
     $noTaxPage = fetchUrl($blogTransferUrl . '?target_blog_id=' . $targetBlogId, $authorNoTaxSession['cookie'], 0);
     if (httpIntegrationStatusCode($noTaxPage) !== 200) {
         $blogTransferIssues[] = 'kontrola skrytí map_existing pro běžného autora nevrátila validační obrazovku';
