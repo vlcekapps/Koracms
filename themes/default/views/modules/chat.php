@@ -17,13 +17,13 @@
       Chat funguje jako moderovaná veřejná nástěnka. Zobrazujeme jen schválené zprávy a e-mail autora zůstává jen pro administraci.
     </p>
 
-    <form method="get" style="margin-bottom:1rem">
+    <form method="get" class="chat-filter-form">
       <fieldset class="button-row">
         <legend class="sr-only">Filtrovat zprávy chatu</legend>
 
         <label for="chat-q" class="sr-only">Hledat v chatu</label>
-        <input type="search" id="chat-q" name="q" class="form-control" placeholder="Hledat ve zprávách…"
-               value="<?= h($searchQuery) ?>" style="width:min(100%, 20rem)">
+        <input type="search" id="chat-q" name="q" class="form-control chat-filter-search" placeholder="Hledat ve zprávách…"
+               value="<?= h($searchQuery) ?>">
 
         <label for="chat-razeni" class="sr-only">Řazení zpráv</label>
         <select id="chat-razeni" name="razeni" class="form-control form-control--compact">

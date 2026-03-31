@@ -92,7 +92,7 @@ $hasItems = !empty($items);
           </div>
         </div>
 
-        <label style="font-weight:normal;margin-top:.25rem">
+        <label class="filter-option-toggle">
           <input type="checkbox" name="featured" value="1" <?= $featuredOnly ? 'checked' : '' ?>>
           Jen doporučené položky
         </label>

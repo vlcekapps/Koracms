@@ -76,8 +76,9 @@ adminHeader('Správa modulů');
     <div>
       <input type="checkbox" id="visitor_counter_enabled" name="visitor_counter_enabled" value="1"
              <?= getSetting('visitor_counter_enabled', '0') === '1' ? 'checked' : '' ?>>
-      <label for="visitor_counter_enabled" style="display:inline;font-weight:normal">Zobrazit počítadlo návštěv v patičce webu</label>
+      <label for="visitor_counter_enabled" style="display:inline;font-weight:normal">Povolit widget Statistiky návštěvnosti na veřejném webu</label>
     </div>
+    <p class="field-help" style="margin:.35rem 0 0">Samotné umístění statistik nastavíte ve <a href="widgets.php">Správě widgetů</a>, typicky ve footer zóně.</p>
     <div style="margin-top:.5rem">
       <label for="stats_retention_days">Uchovávat podrobná data (dní):</label>
       <input type="number" id="stats_retention_days" name="stats_retention_days" min="1" max="3650"

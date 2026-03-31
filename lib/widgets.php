@@ -110,7 +110,38 @@ function widgetTypeDefinitions(): array
             'requires_module' => null,
             'requires_setting' => null,
         ],
+        'visitor_stats' => [
+            'name' => 'Statistiky návštěvnosti',
+            'default_title' => 'Statistiky návštěvnosti',
+            'requires_module' => null,
+            'requires_setting' => null,
+        ],
     ];
+}
+
+function isWidgetTypeAvailable(string $type, array $definition): bool
+{
+    if ($definition['requires_module'] !== null && !isModuleEnabled($definition['requires_module'])) {
+        return false;
+    }
+    if ($definition['requires_setting'] !== null && trim(getSetting($definition['requires_setting'], '')) === '') {
+        return false;
+    }
+    if ($type === 'selected_form') {
+        try {
+            $hasActiveForms = (int)db_connect()->query("SELECT COUNT(*) FROM cms_forms WHERE is_active = 1")->fetchColumn() > 0;
+        } catch (\PDOException $e) {
+            $hasActiveForms = false;
+        }
+        if (!$hasActiveForms) {
+            return false;
+        }
+    }
+    if ($type === 'visitor_stats' && getSetting('visitor_counter_enabled', '0') !== '1') {
+        return false;
+    }
+
+    return true;
 }
 
 /**
@@ -121,21 +152,8 @@ function availableWidgetTypes(): array
     $all = widgetTypeDefinitions();
     $available = [];
     foreach ($all as $type => $def) {
-        if ($def['requires_module'] !== null && !isModuleEnabled($def['requires_module'])) {
+        if (!isWidgetTypeAvailable($type, $def)) {
             continue;
-        }
-        if ($def['requires_setting'] !== null && trim(getSetting($def['requires_setting'], '')) === '') {
-            continue;
-        }
-        if ($type === 'selected_form') {
-            try {
-                $hasActiveForms = (int)db_connect()->query("SELECT COUNT(*) FROM cms_forms WHERE is_active = 1")->fetchColumn() > 0;
-            } catch (\PDOException $e) {
-                $hasActiveForms = false;
-            }
-            if (!$hasActiveForms) {
-                continue;
-            }
         }
         $available[$type] = $def;
     }
@@ -171,14 +189,7 @@ function getWidgetsForZone(string $zone): array
             if (!isset($types[$type])) {
                 return false;
             }
-            $def = $types[$type];
-            if ($def['requires_module'] !== null && !isModuleEnabled($def['requires_module'])) {
-                return false;
-            }
-            if ($def['requires_setting'] !== null && trim(getSetting($def['requires_setting'], '')) === '') {
-                return false;
-            }
-            return true;
+            return isWidgetTypeAvailable($type, $types[$type]);
         });
     } catch (\PDOException $e) {
         return [];
@@ -825,6 +836,43 @@ function renderWidget_search(array $widget, array $settings, string $zone): stri
          . '<input type="search" id="' . h($inputId) . '" name="q" class="form-control" placeholder="Hledat na webu…">'
          . '<button type="submit" class="button-primary" style="margin-top:.5rem">Hledat</button>'
          . '</form></section>';
+}
+
+function renderWidget_visitor_stats(array $widget, array $settings, string $zone): string
+{
+    if (getSetting('visitor_counter_enabled', '0') !== '1') {
+        return '';
+    }
+
+    $stats = getVisitorStats();
+    $formatNumber = static fn(int $value): string => number_format($value, 0, ',', "\u{00a0}");
+    $items = [
+        'Online' => $formatNumber((int)($stats['online'] ?? 0)),
+        'Dnes' => $formatNumber((int)($stats['today'] ?? 0)),
+        'Měsíc' => $formatNumber((int)($stats['month'] ?? 0)),
+        'Celkem' => $formatNumber((int)($stats['total'] ?? 0)),
+    ];
+    $title = h($widget['title'] ?: 'Statistiky návštěvnosti');
+    $counterClass = 'visitor-counter ' . ($zone === 'footer' ? 'visitor-counter--footer' : 'visitor-counter--surface');
+
+    if ($zone === 'homepage') {
+        $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+        $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+        $out .= '<ul class="' . h($counterClass) . '">';
+    } else {
+        $out = '<section class="widget-card" aria-label="' . $title . '">';
+        $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+        $out .= '<ul class="' . h($counterClass) . '">';
+    }
+
+    foreach ($items as $label => $value) {
+        $out .= '<li class="visitor-counter__item">'
+             . '<span class="visitor-counter__label">' . h($label) . ':</span> '
+             . '<strong class="visitor-counter__value">' . $value . '</strong>'
+             . '</li>';
+    }
+
+    return $out . '</ul></section>';
 }
 
 function renderWidget_contact_info(array $widget, array $settings, string $zone): string

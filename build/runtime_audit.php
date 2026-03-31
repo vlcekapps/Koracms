@@ -43,6 +43,13 @@ saveSetting('github_issues_enabled', '1');
 saveSetting('github_issues_repository', 'vlcekapps/Koracms');
 clearSettingsCache();
 $runtimeAuditHomepageUsesWidgets = renderZone('homepage') !== '';
+$runtimeAuditPublicVisitorStatsWidgetEnabled = getSetting('visitor_counter_enabled', '0') === '1'
+    && (int)$pdo->query(
+        "SELECT COUNT(*) FROM cms_widgets
+         WHERE widget_type = 'visitor_stats'
+           AND is_active = 1
+           AND zone IN ('homepage', 'footer')"
+    )->fetchColumn() > 0;
 
 $articleRow = $pdo->query(
     "SELECT a.id, a.slug, a.blog_id, b.slug AS blog_slug
@@ -2482,12 +2489,12 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'home' && getSetting('visitor_counter_enabled', '0') === '1') {
+    if ($page['label'] === 'home' && $runtimeAuditPublicVisitorStatsWidgetEnabled) {
         if (!str_contains($result['body'], 'class="visitor-counter__item"')) {
             $issues[] = 'visitor counter does not expose individual statistic items';
         }
-        if (str_contains($result['body'], ' · Dnes:') || str_contains($result['body'], ' · Měsíc:') || str_contains($result['body'], ' · Celkem:')) {
-            $issues[] = 'visitor counter still uses visual dot separators in footer output';
+        if (!str_contains($result['body'], 'Statistiky návštěvnosti')) {
+            $issues[] = 'visitor stats widget is missing a visible heading';
         }
     }
 
@@ -9804,6 +9811,9 @@ if (isModuleEnabled('forms')) {
 $widgetSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_save.php');
 $widgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
 $widgetsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
+$settingsModulesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_modules.php');
+$widgetsMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
+$uiSource = (string)file_get_contents(dirname(__DIR__) . '/lib/ui.php');
 if (!str_contains($widgetsAdminSource, 'id="widget-add-zone"')) {
     $widgetRenderIssues[] = 'admin widgets page is missing target zone selector';
 }
@@ -9824,6 +9834,24 @@ if (!str_contains($widgetSaveSource, '$rawBlogId === -1 ? -1')) {
 }
 if (!str_contains($widgetLibSource, "\$rawBlogId === -1")) {
     $widgetRenderIssues[] = 'latest articles widget is missing current-blog render fallback';
+}
+if (!str_contains($widgetLibSource, "'visitor_stats'")) {
+    $widgetRenderIssues[] = 'widget registry is missing visitor stats widget type';
+}
+if (!str_contains($widgetLibSource, 'function renderWidget_visitor_stats')) {
+    $widgetRenderIssues[] = 'visitor stats widget renderer is missing';
+}
+if (!str_contains($settingsModulesSource, 'Povolit widget Statistiky návštěvnosti na veřejném webu')) {
+    $widgetRenderIssues[] = 'settings modules page still describes visitor stats as hardcoded footer counter';
+}
+if (!str_contains($settingsModulesSource, 'Správě widgetů')) {
+    $widgetRenderIssues[] = 'settings modules page is missing widget placement hint for visitor stats';
+}
+if (str_contains($uiSource, 'visitor-counter-block') || str_contains($uiSource, "getSetting('visitor_counter_enabled', '0')")) {
+    $widgetRenderIssues[] = 'site footer still hardcodes public visitor stats output';
+}
+if (!str_contains($widgetsMigrateSource, "widget_type = 'visitor_stats'")) {
+    $widgetRenderIssues[] = 'migrate.php is missing visitor stats widget backfill for upgraded sites';
 }
 if ($widgetRenderIssues === []) {
     echo "OK\n";
@@ -9980,6 +10008,89 @@ if ($menuAdminIssues === []) {
     $failures++;
     foreach ($menuAdminIssues as $menuAdminIssue) {
         echo '- ' . $menuAdminIssue . "\n";
+    }
+}
+
+echo "=== theme_layout_guardrails ===\n";
+$themeLayoutIssues = [];
+$themeBaseLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/layouts/base.php');
+$themePublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
+$themePageViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/page.php');
+$themeBlogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
+$themeChatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat.php');
+$themeDownloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
+$themeDownloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
+$themeEventsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-article.php');
+$themeFaqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-article.php');
+$themeFormsShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/forms-show.php');
+$themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
+if (!str_contains($themeBaseLayoutSource, 'aria-labelledby="page-sidebar-heading"')
+    || !str_contains($themeBaseLayoutSource, '<h2 id="page-sidebar-heading" class="sr-only">Postranní panel</h2>')) {
+    $themeLayoutIssues[] = 'default theme sidebar is missing heading-backed landmark semantics';
+}
+if (str_contains($themeBaseLayoutSource, "querySelector('[role=\"status\"]:not(#a11y-live),[role=\"alert\"]')")
+    || str_contains($themeBaseLayoutSource, "message.removeAttribute('role');")) {
+    $themeLayoutIssues[] = 'default theme layout still mutates server-rendered status roles on page load';
+}
+foreach ([
+    '.listing-filters',
+    '.page-back-link',
+    '.blog-intro-content',
+    '.blog-featured-article',
+    '.blog-search-input',
+    '.chat-filter-form',
+    '.chat-filter-search',
+    '.stack-sections--spaced',
+    '.stack-actions--spaced',
+    '.surface--subsection',
+    '.filter-option-toggle',
+    '.button-row--filters',
+] as $themeCssSelector) {
+    if (!str_contains($themePublicCssSource, $themeCssSelector)) {
+        $themeLayoutIssues[] = 'default theme CSS is missing cleanup selector ' . $themeCssSelector;
+    }
+}
+foreach ([
+    $themePageViewSource => ['style="margin-top:1.5rem"'],
+    $themeBlogIndexViewSource => [
+        'style="display:block;max-width:min(100%,22rem);max-height:8rem;width:auto;height:auto"',
+        'style="margin-top:1rem"',
+        'style="margin-bottom:1.5rem"',
+        'style="margin-bottom:1.25rem"',
+        'style="min-width:min(26rem,100%)"',
+    ],
+    $themeChatViewSource => [
+        'style="margin-bottom:1rem"',
+        'style="width:min(100%, 20rem)"',
+    ],
+    $themeDownloadsArticleViewSource => [
+        'style="margin-top:1.5rem"',
+        'style="margin-top:1rem"',
+    ],
+    $themeDownloadsIndexViewSource => ['style="font-weight:normal;margin-top:.25rem"'],
+    $themeEventsArticleViewSource => [
+        'style="margin-top:1.5rem"',
+        'style="margin-top:1rem"',
+    ],
+    $themeFaqArticleViewSource => ['style="margin-top:2rem"'],
+    $themeFormsShowViewSource => ['style="margin-top:1rem"'],
+    $themePollsIndexViewSource => [
+        'style="margin:1rem 0"',
+        'style="align-items:flex-end;flex-wrap:wrap"',
+    ],
+] as $themeViewSource => $legacyInlineStyles) {
+    foreach ($legacyInlineStyles as $legacyInlineStyle) {
+        if (str_contains((string)$themeViewSource, $legacyInlineStyle)) {
+            $themeLayoutIssues[] = 'default theme view still contains legacy inline layout styles: ' . $legacyInlineStyle;
+        }
+    }
+}
+if ($themeLayoutIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($themeLayoutIssues as $themeLayoutIssue) {
+        echo '- ' . $themeLayoutIssue . "\n";
     }
 }
 

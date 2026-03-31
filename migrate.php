@@ -2324,6 +2324,29 @@ try {
     $log[] = '· Widgety – přeskočeno: ' . h($e->getMessage());
 }
 
+try {
+    if (getSetting('visitor_counter_enabled', '0') === '1') {
+        $hasVisitorStatsWidget = (int)$pdo->query(
+            "SELECT COUNT(*) FROM cms_widgets WHERE widget_type = 'visitor_stats'"
+        )->fetchColumn() > 0;
+
+        if (!$hasVisitorStatsWidget) {
+            $footerSortOrder = (int)$pdo->query(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+            )->fetchColumn();
+
+            $insertVisitorStatsWidget = $pdo->prepare(
+                "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order)
+                 VALUES ('footer', 'visitor_stats', 'Statistiky návštěvnosti', '{}', ?)"
+            );
+            $insertVisitorStatsWidget->execute([$footerSortOrder]);
+            $log[] = '· Ve footer zóně byl doplněn widget „Statistiky návštěvnosti“ pro dříve zapnuté veřejné počítadlo';
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = '· Veřejné statistiky – přeskočeno: ' . h($e->getMessage());
+}
+
 // ── 7. Multiblog – výchozí blog a přeindexování ──────────────────────────────
 
 try {

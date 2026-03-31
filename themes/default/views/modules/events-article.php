@@ -54,7 +54,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
         <?php endif; ?>
 
         <?php if ($eventProgram !== ''): ?>
-          <section class="surface" style="margin-top:1.5rem" aria-labelledby="event-program-title">
+          <section class="surface surface--subsection" aria-labelledby="event-program-title">
             <h2 id="event-program-title" class="section-title section-title--compact">Program a doplňující informace</h2>
             <div class="prose">
               <?= renderContent($eventProgram) ?>
@@ -98,7 +98,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
             <?php endif; ?>
           </dl>
 
-          <div class="stack-actions" style="margin-top:1rem">
+          <div class="stack-actions stack-actions--spaced">
             <?php if (!empty($event['has_registration_url'])): ?>
               <a class="btn" href="<?= h((string)$event['registration_url']) ?>" target="_blank" rel="noopener noreferrer">Registrovat se</a>
             <?php endif; ?>

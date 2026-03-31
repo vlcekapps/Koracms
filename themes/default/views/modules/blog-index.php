@@ -55,14 +55,14 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
         <h1 id="blog-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
         <?php if ($blogLogo !== ''): ?>
           <div class="blog-brand-mark">
-            <img class="blog-brand-mark__image" src="<?= h($blogLogo) ?>" alt="<?= h($blogLogoAlt) ?>" loading="eager" decoding="async" style="display:block;max-width:min(100%,22rem);max-height:8rem;width:auto;height:auto">
+            <img class="blog-brand-mark__image" src="<?= h($blogLogo) ?>" alt="<?= h($blogLogoAlt) ?>" loading="eager" decoding="async">
           </div>
         <?php endif; ?>
         <?php if (!empty($blog['description'])): ?>
           <p class="section-subtitle"><?= h((string)$blog['description']) ?></p>
         <?php endif; ?>
         <?php if (!empty($blog['intro_content'])): ?>
-          <div class="prose" style="margin-top:1rem">
+          <div class="prose blog-intro-content">
             <?= renderContent((string)$blog['intro_content']) ?>
           </div>
         <?php endif; ?>
@@ -76,7 +76,7 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
     </div>
 
     <?php if ($blogPages !== []): ?>
-      <nav class="form-stack blog-page-links" aria-labelledby="blog-pages-heading" style="margin-bottom:1.5rem">
+      <nav class="form-stack blog-page-links" aria-labelledby="blog-pages-heading">
         <h2 id="blog-pages-heading" class="section-title section-title--compact">Stránky blogu</h2>
         <ul class="chip-list">
           <?php foreach ($blogPages as $blogPage): ?>
@@ -87,7 +87,7 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
     <?php endif; ?>
 
     <?php if (!empty($featuredArticle)): ?>
-      <article class="card card--feature" aria-labelledby="featured-article-title" style="margin-bottom:1.25rem">
+      <article class="card card--feature blog-featured-article" aria-labelledby="featured-article-title">
         <?php if (!empty($featuredArticle['image_file'])): ?>
           <a class="card__media" href="<?= h($articleLink($featuredArticle)) ?>">
             <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode((string)$featuredArticle['image_file']) ?>"
@@ -191,7 +191,7 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
         <?php if ($archiveFilter !== ''): ?><input type="hidden" name="archiv" value="<?= h($archiveFilter) ?>"><?php endif; ?>
         <label for="blog-search-q">Hledat v blogu</label>
         <div class="button-row button-row--wrap button-row--start">
-          <input type="search" id="blog-search-q" name="q" value="<?= h($searchQuery) ?>" placeholder="Hledat v článcích blogu…" style="min-width:min(26rem,100%)">
+          <input type="search" id="blog-search-q" name="q" class="blog-search-input" value="<?= h($searchQuery) ?>" placeholder="Hledat v článcích blogu…">
           <button type="submit" class="button-primary">Hledat</button>
           <?php if ($searchQuery !== ''): ?>
             <a class="button-secondary" href="<?= h($filterLink(['q' => null])) ?>">Vyčistit hledání</a>

@@ -58,14 +58,14 @@ $otherVersions = $otherVersions ?? [];
         <?php endif; ?>
 
         <?php if ($download['has_requirements']): ?>
-          <section class="surface" style="margin-top:1.5rem" aria-labelledby="download-requirements-title">
+          <section class="surface surface--subsection" aria-labelledby="download-requirements-title">
             <h2 id="download-requirements-title" class="section-title section-title--compact">Požadavky a kompatibilita</h2>
             <div class="prose"><p><?= nl2br(h((string)$download['requirements'])) ?></p></div>
           </section>
         <?php endif; ?>
 
         <?php if ($otherVersions !== []): ?>
-          <section class="surface" style="margin-top:1.5rem" aria-labelledby="download-versions-title">
+          <section class="surface surface--subsection" aria-labelledby="download-versions-title">
             <h2 id="download-versions-title" class="section-title section-title--compact">Další verze ke stažení</h2>
             <ul class="link-list">
               <?php foreach ($otherVersions as $version): ?>
@@ -115,7 +115,7 @@ $otherVersions = $otherVersions ?? [];
             <div><dt>Aktualizováno</dt><dd><?= formatCzechDate((string)($download['updated_at'] ?? $download['created_at'])) ?></dd></div>
           </dl>
 
-          <div class="stack-actions" style="margin-top:1rem">
+          <div class="stack-actions stack-actions--spaced">
             <?php if ($download['has_file']): ?>
               <a class="btn" href="<?= moduleFileUrl('downloads', (int)$download['id']) ?>"
                  download="<?= h((string)$download['original_name']) ?>">Stáhnout soubor</a>

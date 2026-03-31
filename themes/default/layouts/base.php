@@ -54,7 +54,10 @@ $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? 
       <div class="container">
         <div class="article-shell article-shell--sidebar">
           <div class="article-shell__content"><?= $contentHtml ?></div>
-          <aside class="article-shell__aside" aria-label="Postranní panel"><?= $sidebarHtml ?></aside>
+          <aside class="article-shell__aside" aria-labelledby="page-sidebar-heading">
+            <h2 id="page-sidebar-heading" class="sr-only">Postranní panel</h2>
+            <?= $sidebarHtml ?>
+          </aside>
         </div>
       </div>
     <?php else: ?>
@@ -66,18 +69,6 @@ $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? 
   <?= renderThemePartial('footer', [], $themeName) ?>
 </div>
 <script nonce="<?= cspNonce() ?>">
-document.addEventListener('DOMContentLoaded', function () {
-  var liveRegion = document.getElementById('a11y-live');
-  if (!liveRegion) return;
-  var message = document.querySelector('[role="status"]:not(#a11y-live),[role="alert"]');
-  if (!message) return;
-  var text = message.textContent.trim();
-  if (!text) return;
-  setTimeout(function () {
-    liveRegion.textContent = text;
-  }, 150);
-  message.removeAttribute('role');
-});
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('.js-copy-link');
   if (!btn) return;

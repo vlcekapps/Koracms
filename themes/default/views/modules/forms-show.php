@@ -11,7 +11,7 @@
       <div class="status-message status-message--success" role="status" aria-atomic="true">
         <p><strong><?= h(trim((string)($form['success_message'] ?? '')) !== '' ? (string)$form['success_message'] : 'Formulář byl úspěšně odeslán. Děkujeme!') ?></strong></p>
         <?php if (!empty($successActions)): ?>
-          <div class="button-row button-row--start" style="margin-top:1rem">
+          <div class="status-actions">
             <?php foreach ($successActions as $action): ?>
               <a href="<?= h((string)$action['url']) ?>" class="<?= ($action['variant'] ?? '') === 'primary' ? 'button-primary' : 'btn' ?>"><?= h((string)$action['label']) ?></a>
             <?php endforeach; ?>

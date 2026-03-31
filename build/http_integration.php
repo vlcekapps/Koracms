@@ -24,6 +24,7 @@ $createdGalleryAlbumIds = [];
 $createdMediaIds = [];
 $createdBoardIds = [];
 $createdResourceIds = [];
+$createdWidgetIds = [];
 $createdTempFiles = [];
 
 /**
@@ -547,6 +548,51 @@ try {
     }
 
     httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
+
+    $visitorStatsWidgetIssues = [];
+    saveSetting('visitor_tracking_enabled', '1');
+    saveSetting('visitor_counter_enabled', '1');
+    clearSettingsCache();
+
+    $visitorStatsWidgetTitle = 'HTTP visitor stats ' . bin2hex(random_bytes(4));
+    $visitorStatsWidgetSortOrder = (int)$pdo->query(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+    )->fetchColumn();
+    $insertVisitorStatsWidget = $pdo->prepare(
+        "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order, is_active)
+         VALUES ('footer', 'visitor_stats', ?, '{}', ?, 1)"
+    );
+    $insertVisitorStatsWidget->execute([$visitorStatsWidgetTitle, $visitorStatsWidgetSortOrder]);
+    $visitorStatsWidgetId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $visitorStatsWidgetId;
+
+    $publicHomeUrl = rtrim($baseUrl . BASE_URL, '/') . '/';
+    $homeWithVisitorStatsWidget = fetchUrl($publicHomeUrl, '', 0);
+    if (httpIntegrationStatusCode($homeWithVisitorStatsWidget) !== 200) {
+        $visitorStatsWidgetIssues[] = 'homepage s visitor stats widgetem nevrátila 200';
+    }
+    if (!str_contains($homeWithVisitorStatsWidget['body'], $visitorStatsWidgetTitle)) {
+        $visitorStatsWidgetIssues[] = 'visitor stats widget se na homepage nevykreslil s vlastním titulkem';
+    }
+    if (!str_contains($homeWithVisitorStatsWidget['body'], 'class="visitor-counter__item"')) {
+        $visitorStatsWidgetIssues[] = 'visitor stats widget nevykreslil jednotlivé statistické položky';
+    }
+    if (!str_contains($homeWithVisitorStatsWidget['body'], 'visitor-counter--footer')) {
+        $visitorStatsWidgetIssues[] = 'visitor stats widget ve footer zóně nepoužil footer variantu stylů';
+    }
+
+    $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$visitorStatsWidgetId]);
+    $createdWidgetIds = array_values(array_filter(
+        $createdWidgetIds,
+        static fn(int $existingWidgetId): bool => $existingWidgetId !== $visitorStatsWidgetId
+    ));
+
+    $homeWithoutVisitorStatsWidget = fetchUrl($publicHomeUrl, '', 0);
+    if (str_contains($homeWithoutVisitorStatsWidget['body'], $visitorStatsWidgetTitle)) {
+        $visitorStatsWidgetIssues[] = 'visitor stats widget zůstal na homepage i po odebrání z footer zóny';
+    }
+
+    httpIntegrationPrintResult('visitor_stats_widget_http', $visitorStatsWidgetIssues, $failures);
 
     $formPresetIssues = [];
     $issuePresetDefinition = formPresetDefinition('issue_report');
@@ -2632,6 +2678,10 @@ try {
 } finally {
     if (isset($originalSettings) && is_array($originalSettings)) {
         httpIntegrationRestoreSettings($originalSettings);
+    }
+
+    foreach ($createdWidgetIds as $widgetIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$widgetIdToDelete]);
     }
 
     foreach ($createdResourceIds as $resourceId) {

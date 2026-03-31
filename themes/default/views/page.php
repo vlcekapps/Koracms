@@ -10,7 +10,7 @@ $backLinkLabel = trim((string)($backLinkLabel ?? ''));
     <?= renderContent((string)$page['content']) ?>
   </div>
   <?php if ($backLinkHref !== '' && $backLinkLabel !== ''): ?>
-    <p class="button-row button-row--start" style="margin-top:1.5rem">
+    <p class="button-row button-row--start page-back-link">
       <a class="button-secondary" href="<?= h($backLinkHref) ?>"><?= h($backLinkLabel) ?></a>
     </p>
   <?php endif; ?>

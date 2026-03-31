@@ -44,7 +44,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/faq/index.php'));
     </div>
 
     <?php if ($relatedFaqs !== []): ?>
-      <section class="stack-sections" aria-labelledby="faq-related-title" style="margin-top:2rem">
+      <section class="stack-sections stack-sections--spaced" aria-labelledby="faq-related-title">
         <h2 id="faq-related-title" class="section-title section-title--compact">Další otázky</h2>
         <ul class="link-list">
           <?php foreach ($relatedFaqs as $relatedFaq): ?>

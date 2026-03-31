@@ -131,11 +131,11 @@ $q = trim((string)($q ?? ''));
         </ul>
       </nav>
 
-      <form method="get" class="listing-filters" aria-label="Hledání v anketách" style="margin:1rem 0">
+      <form method="get" class="listing-filters" aria-label="Hledání v anketách">
         <?php if ($archiv): ?>
           <input type="hidden" name="archiv" value="1">
         <?php endif; ?>
-        <div class="button-row button-row--start" style="align-items:flex-end;flex-wrap:wrap">
+        <div class="button-row button-row--start button-row--filters">
           <div>
             <label for="poll-search">Hledat v anketách</label>
             <input type="search" id="poll-search" name="q" value="<?= h($q) ?>" placeholder="Otázka nebo popis">
