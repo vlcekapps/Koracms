@@ -4,6 +4,14 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- **Blogy – doplnění zakladatele u starších blogů** – stránka `Tým blogu` nově umožňuje globálním správcům bezpečně doplnit chybějícího zakladatele (`created_by_user_id`) u starších blogů jako jednorázový auditní údaj, aniž by se tím automaticky měnilo členství v týmu blogu
+
+### Změněno
+- **Blogy – rozšířený úvod nově podporuje content/media picker** – pole `Rozšířený úvod blogu` při vytváření i úpravě blogu nově používá stejný picker odkazů, médií a snippetů jako ostatní HTML editory v administraci
+
 ## [3.0.0-rc.8] – 2026-03-31
 
 ### Přidáno

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu blogů nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -143,7 +144,8 @@ adminHeader('Správa blogů');
 
     <label for="intro_content">Rozšířený úvod blogu</label>
     <textarea id="intro_content" name="intro_content" rows="5" aria-describedby="blog-intro-help"></textarea>
-    <small id="blog-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu, vhodný třeba pro úvod, CTA nebo vysvětlení zaměření blogu.</small>
+    <small id="blog-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu, vhodný třeba pro úvod, CTA nebo vysvětlení zaměření blogu. <?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('intro_content'); ?>
 
     <label for="meta_title">Meta titulek</label>
     <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-meta-help">
@@ -293,7 +295,9 @@ adminHeader('Správa blogů');
     <textarea id="bd-desc" name="description" rows="2"></textarea>
 
     <label for="bd-intro-content">Rozšířený úvod blogu</label>
-    <textarea id="bd-intro-content" name="intro_content" rows="5"></textarea>
+    <textarea id="bd-intro-content" name="intro_content" rows="5" aria-describedby="bd-intro-help"></textarea>
+    <small id="bd-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu. <?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('bd-intro-content'); ?>
 
     <label for="bd-meta-title">Meta titulek</label>
     <input type="text" id="bd-meta-title" name="meta_title" maxlength="160">

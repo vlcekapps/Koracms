@@ -8081,6 +8081,9 @@ if (!str_contains($blogsAdminSource, 'name="comments_default"')) {
 if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
     $blogAdminIssues[] = 'blog editor is missing extended intro content';
 }
+if (!str_contains($blogsAdminSource, "renderAdminContentReferencePicker('intro_content')") || !str_contains($blogsAdminSource, "renderAdminContentReferencePicker('bd-intro-content')")) {
+    $blogAdminIssues[] = 'blog editor is missing content picker support for extended intro content';
+}
 if (!str_contains($blogsAdminSource, 'member_count')) {
     $blogAdminIssues[] = 'blog overview is missing assigned team counts';
 }
