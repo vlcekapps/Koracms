@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.1.1] – 2026-03-31
 
 ### Změněno
 - **Content/media picker – fotogalerie se ve vyhledávání znovu správně zobrazují** – hledání v administraci nově vrací publikovaná galerie podle názvu, popisu i slugu bez tichého výpadku způsobeného dotazem na neexistující sloupec `cms_gallery_albums.excerpt`; picker tak znovu nabízí i akci `Vložit fotogalerii` pro existující alba
