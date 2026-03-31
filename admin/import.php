@@ -59,8 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_blogs
                          (id, name, slug, description, intro_content, logo_file, meta_title, meta_description,
-                          rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_by_user_id, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['blogs'] as $row) {
                         $ins->execute([
@@ -75,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             max(1, min(100, (int)($row['feed_item_limit'] ?? 20))),
                             (int)($row['sort_order'] ?? 0),
                             (int)($row['show_in_nav'] ?? 1),
+                            !empty($row['created_by_user_id']) ? (int)$row['created_by_user_id'] : null,
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                             $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);

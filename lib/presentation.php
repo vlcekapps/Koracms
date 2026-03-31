@@ -20,8 +20,8 @@ function getAllBlogs(): array
 
 function clearBlogCache(): void
 {
-    global $_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE;
-    unset($_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE);
+    global $_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE, $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE;
+    unset($_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE, $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE);
 }
 
 function getBlogById(int $id): ?array
@@ -108,6 +108,45 @@ function blogMembershipsEnabled(): bool
     return $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE;
 }
 
+/**
+ * @return array<int, true>
+ */
+function getBlogsWithExplicitMembers(): array
+{
+    global $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE;
+
+    if (!isset($_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE)) {
+        $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE = [];
+        try {
+            $rows = db_connect()->query(
+                "SELECT DISTINCT blog_id
+                 FROM cms_blog_members
+                 WHERE blog_id IS NOT NULL"
+            )->fetchAll();
+            foreach ($rows as $row) {
+                $blogId = (int)($row['blog_id'] ?? 0);
+                if ($blogId > 0) {
+                    $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE[$blogId] = true;
+                }
+            }
+        } catch (\PDOException $e) {
+            $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE = [];
+        }
+    }
+
+    return $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE;
+}
+
+function blogHasExplicitMembers(int $blogId): bool
+{
+    if ($blogId <= 0) {
+        return false;
+    }
+
+    $blogMap = getBlogsWithExplicitMembers();
+    return isset($blogMap[$blogId]);
+}
+
 function getUserBlogMemberships(?int $userId = null): array
 {
     global $_CMS_BLOG_MEMBERSHIP_CACHE;
@@ -168,14 +207,22 @@ function getWritableBlogsForUser(?int $userId = null): array
         return getAllBlogs();
     }
 
+    $explicitMembershipBlogs = getBlogsWithExplicitMembers();
     $memberships = getUserBlogMembershipMap($userId);
-    if ($memberships === []) {
-        return [];
-    }
-
     return array_values(array_filter(
         getAllBlogs(),
-        static fn(array $blog): bool => isset($memberships[(int)($blog['id'] ?? 0)])
+        static function (array $blog) use ($explicitMembershipBlogs, $memberships): bool {
+            $blogId = (int)($blog['id'] ?? 0);
+            if ($blogId <= 0) {
+                return false;
+            }
+
+            if (!isset($explicitMembershipBlogs[$blogId])) {
+                return true;
+            }
+
+            return isset($memberships[$blogId]);
+        }
     ));
 }
 
@@ -194,6 +241,11 @@ function getTaxonomyManagedBlogsForUser(?int $userId = null): array
         return [];
     }
 
+    $explicitMembershipBlogs = getBlogsWithExplicitMembers();
+    if ($explicitMembershipBlogs === []) {
+        return [];
+    }
+
     $memberships = getUserBlogMembershipMap($userId);
     if ($memberships === []) {
         return [];
@@ -203,7 +255,7 @@ function getTaxonomyManagedBlogsForUser(?int $userId = null): array
         getAllBlogs(),
         static function (array $blog) use ($memberships): bool {
             $blogId = (int)($blog['id'] ?? 0);
-            return ($memberships[$blogId] ?? '') === 'manager';
+            return blogHasExplicitMembers($blogId) && ($memberships[$blogId] ?? '') === 'manager';
         }
     ));
 }
@@ -226,6 +278,10 @@ function canCurrentUserWriteToBlog(int $blogId): bool
         return true;
     }
 
+    if (!blogHasExplicitMembers($blogId)) {
+        return true;
+    }
+
     $memberships = getUserBlogMembershipMap();
     return isset($memberships[$blogId]);
 }
@@ -241,6 +297,10 @@ function canCurrentUserManageBlogTaxonomies(int $blogId): bool
     }
 
     if (!blogMembershipsEnabled()) {
+        return false;
+    }
+
+    if (!blogHasExplicitMembers($blogId)) {
         return false;
     }
 

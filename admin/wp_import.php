@@ -144,11 +144,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     if (!$targetBlog && $importSiteInfo && $data['title'] !== '') {
         $blogSlug = slugify($data['title']) ?: 'import';
         $blogSlug = substr($blogSlug, 0, 100);
+        $creatorUserId = (int)(currentUserId() ?? 0);
         try {
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order) VALUES (?, ?, ?, ?)")
-                ->execute([$data['title'], $blogSlug, $data['description'] ?? '', (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn()]);
-            $targetBlog = getBlogById((int)$pdo->lastInsertId());
+            $pdo->beginTransaction();
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order, created_by_user_id) VALUES (?, ?, ?, ?, ?)")
+                ->execute([
+                    $data['title'],
+                    $blogSlug,
+                    $data['description'] ?? '',
+                    (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn(),
+                    $creatorUserId > 0 ? $creatorUserId : null,
+                ]);
+            $createdBlogId = (int)$pdo->lastInsertId();
+            if ($creatorUserId > 0 && $createdBlogId > 0) {
+                $pdo->prepare(
+                    "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+                     VALUES (?, ?, 'manager')
+                     ON DUPLICATE KEY UPDATE member_role = VALUES(member_role)"
+                )->execute([$createdBlogId, $creatorUserId]);
+            }
+            $pdo->commit();
+            $targetBlog = getBlogById($createdBlogId);
         } catch (\PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $targetBlog = getDefaultBlog();
         }
     }

@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             feed_item_limit INT NOT NULL DEFAULT 20,
             sort_order  INT          NOT NULL DEFAULT 0,
             show_in_nav TINYINT(1)   NOT NULL DEFAULT 1,
+            created_by_user_id INT NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");

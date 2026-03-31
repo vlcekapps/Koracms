@@ -72,12 +72,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($error === '') {
         $sortOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn();
+        $creatorUserId = (int)(currentUserId() ?? 0);
         try {
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, intro_content, logo_file, meta_title, meta_description, rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                ->execute([$name, $slug, $desc, $introContent, $logoFile, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $sortOrder, $showInNav]);
+            $pdo->beginTransaction();
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, intro_content, logo_file, meta_title, meta_description, rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$name, $slug, $desc, $introContent, $logoFile, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $sortOrder, $showInNav, $creatorUserId > 0 ? $creatorUserId : null]);
+            $newBlogId = (int)$pdo->lastInsertId();
+            if ($creatorUserId > 0 && $newBlogId > 0) {
+                $pdo->prepare(
+                    "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+                     VALUES (?, ?, 'manager')
+                     ON DUPLICATE KEY UPDATE member_role = VALUES(member_role)"
+                )->execute([$newBlogId, $creatorUserId]);
+            }
+            $pdo->commit();
             clearBlogCache();
             $success = 'Blog vytvořen.';
-        } catch (\PDOException $e) {
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if (!empty($logoUpload['uploaded']) && $logoFile !== '') {
+                deleteBlogLogoFile($logoFile);
+            }
             $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
         }
     }
@@ -85,9 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $blogs = $pdo->query(
     "SELECT b.*,
+            u.email AS creator_email,
+            COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email, '') AS creator_label,
             (SELECT COUNT(*) FROM cms_articles WHERE blog_id = b.id) AS article_count,
             (SELECT COUNT(*) FROM cms_blog_members WHERE blog_id = b.id) AS member_count
-     FROM cms_blogs b ORDER BY b.sort_order, b.name"
+     FROM cms_blogs b
+     LEFT JOIN cms_users u ON u.id = b.created_by_user_id
+     ORDER BY b.sort_order, b.name"
 )->fetchAll();
 $defaultBlogId = (int)(getDefaultBlog()['id'] ?? 0);
 
@@ -166,6 +187,7 @@ adminHeader('Správa blogů');
         <th scope="col">Slug</th>
         <th scope="col">Články</th>
         <th scope="col">Tým</th>
+        <th scope="col">Zakladatel</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -192,6 +214,17 @@ adminHeader('Správa blogů');
             <br><small class="field-help">Přiřazených autorů a správců</small>
           <?php else: ?>
             <br><small class="field-help">Bez týmu</small>
+          <?php endif; ?>
+        </td>
+        <td>
+          <?php if (!empty($blog['created_by_user_id'])): ?>
+            <?php $blogCreatorLabel = trim((string)($blog['creator_label'] ?? '')) !== '' ? (string)$blog['creator_label'] : ('Uživatel #' . (int)$blog['created_by_user_id']); ?>
+            <?= h($blogCreatorLabel) ?>
+            <?php if (!empty($blog['creator_email']) && (string)$blog['creator_email'] !== $blogCreatorLabel): ?>
+              <br><small class="field-help"><?= h((string)$blog['creator_email']) ?></small>
+            <?php endif; ?>
+          <?php else: ?>
+            <span class="field-help">Neevidován</span>
           <?php endif; ?>
         </td>
         <td class="actions">

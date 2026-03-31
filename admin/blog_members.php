@@ -27,6 +27,20 @@ $blogId = (int)($currentBlog['id'] ?? 0);
 $success = '';
 $error = '';
 $roleOptions = blogMembershipRoleDefinitions();
+$blogCreator = null;
+
+if ($blogId > 0) {
+    $blogCreatorStmt = $pdo->prepare(
+        "SELECT b.created_by_user_id,
+                u.email,
+                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email, '') AS creator_label
+         FROM cms_blogs b
+         LEFT JOIN cms_users u ON u.id = b.created_by_user_id
+         WHERE b.id = ?"
+    );
+    $blogCreatorStmt->execute([$blogId]);
+    $blogCreator = $blogCreatorStmt->fetch() ?: null;
+}
 
 $eligibleUsersStmt = $pdo->query(
     "SELECT id, email, first_name, last_name, nickname, role, is_superadmin
@@ -168,6 +182,21 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
     z toho <?= $managerCount ?> správc<?= $managerCount === 1 ? 'e' : 'ů' ?> blogu a
     <?= $authorCount ?> autor<?= $authorCount === 1 ? '' : (($authorCount >= 2 && $authorCount <= 4) ? 'i' : 'ů') ?>.
   </p>
+  <p class="field-help">
+    Zakladatel blogu:
+    <?php if (!empty($blogCreator['created_by_user_id'])): ?>
+      <?php $creatorLabel = trim((string)($blogCreator['creator_label'] ?? '')) !== '' ? (string)$blogCreator['creator_label'] : ('Uživatel #' . (int)$blogCreator['created_by_user_id']); ?>
+      <strong><?= h($creatorLabel) ?></strong>
+      <?php if (!empty($blogCreator['email']) && (string)$blogCreator['email'] !== $creatorLabel): ?>
+        (<?= h((string)$blogCreator['email']) ?>)
+      <?php endif; ?>
+      <?php if (!isset($memberMap[(int)$blogCreator['created_by_user_id']])): ?>
+        <br><span>Zakladatel zatím není přiřazený v týmu blogu. U starších blogů to můžete doplnit ručně zde.</span>
+      <?php endif; ?>
+    <?php else: ?>
+      <span>Neevidován. U starších blogů je potřeba doplnit zakladatele ručně.</span>
+    <?php endif; ?>
+  </p>
 <?php endif; ?>
 
 <form method="post" novalidate>
@@ -177,7 +206,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
   <fieldset>
     <legend>Tým blogu</legend>
     <p class="field-help">
-      Jakmile u blogů začnete používat přiřazení, autoři uvidí a upraví jen své přidělené blogy.
+      U blogů, které mají přiřazený tým, uvidí a upraví autoři jen své přidělené blogy.
       Role <strong>Správce blogu</strong> navíc umožňuje spravovat kategorie a štítky tohoto blogu.
     </p>
 

@@ -82,12 +82,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     if (!$targetBlog && $esSiteTitle !== '') {
         $blogSlug = slugify($esSiteTitle) ?: 'import';
         $blogSlug = substr($blogSlug, 0, 100);
+        $creatorUserId = (int)(currentUserId() ?? 0);
         try {
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order) VALUES (?, ?, ?, ?)")
-                ->execute([$esSiteTitle, $blogSlug, $esSiteDesc, (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn()]);
-            $targetBlog = getBlogById((int)$pdo->lastInsertId());
+            $pdo->beginTransaction();
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order, created_by_user_id) VALUES (?, ?, ?, ?, ?)")
+                ->execute([
+                    $esSiteTitle,
+                    $blogSlug,
+                    $esSiteDesc,
+                    (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn(),
+                    $creatorUserId > 0 ? $creatorUserId : null,
+                ]);
+            $createdBlogId = (int)$pdo->lastInsertId();
+            if ($creatorUserId > 0 && $createdBlogId > 0) {
+                $pdo->prepare(
+                    "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+                     VALUES (?, ?, 'manager')
+                     ON DUPLICATE KEY UPDATE member_role = VALUES(member_role)"
+                )->execute([$createdBlogId, $creatorUserId]);
+            }
+            $pdo->commit();
+            $targetBlog = getBlogById($createdBlogId);
             $log[] = '<span aria-hidden="true">✓</span> Vytvořen blog: ' . $esSiteTitle;
         } catch (\PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $targetBlog = getDefaultBlog();
         }
     }

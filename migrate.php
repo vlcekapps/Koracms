@@ -75,6 +75,7 @@ $tables = [
         feed_item_limit INT NOT NULL DEFAULT 20,
         sort_order  INT          NOT NULL DEFAULT 0,
         show_in_nav TINYINT(1)   NOT NULL DEFAULT 1,
+        created_by_user_id INT NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -940,6 +941,7 @@ $addColumns = [
     'cms_blogs.comments_default'     => "ALTER TABLE cms_blogs ADD COLUMN comments_default TINYINT(1) NOT NULL DEFAULT 1 AFTER rss_subtitle",
     'cms_blogs.feed_item_limit'      => "ALTER TABLE cms_blogs ADD COLUMN feed_item_limit INT NOT NULL DEFAULT 20 AFTER comments_default",
     'cms_blogs.show_in_nav'          => "ALTER TABLE cms_blogs ADD COLUMN show_in_nav TINYINT(1) NOT NULL DEFAULT 1",
+    'cms_blogs.created_by_user_id'   => "ALTER TABLE cms_blogs ADD COLUMN created_by_user_id INT NULL DEFAULT NULL AFTER show_in_nav",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_board

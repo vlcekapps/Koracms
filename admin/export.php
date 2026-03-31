@@ -7,7 +7,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 5,
+    'version'     => 6,
 ];
 
 $tables = [
@@ -15,6 +15,7 @@ $tables = [
     'categories'  => "SELECT id, name, blog_id, created_at FROM cms_categories",
     'blogs'       => "SELECT id, name, slug, description, intro_content, logo_file, meta_title, meta_description,
                              rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav,
+                             created_by_user_id,
                              created_at, updated_at
                       FROM cms_blogs",
     'blog_members'=> "SELECT blog_id, user_id, member_role, created_at FROM cms_blog_members",

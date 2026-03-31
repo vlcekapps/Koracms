@@ -7888,6 +7888,8 @@ $blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.p
 $usersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
 $blogExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
 $blogImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
+$blogWpImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/wp_import.php');
+$blogEstrankyImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_import.php');
 $blogIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/index.php');
 $blogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
 $blogFeedSource = (string)file_get_contents(dirname(__DIR__) . '/feed.php');
@@ -7966,6 +7968,9 @@ if (!str_contains($blogMembersSource, 'blogMembershipRoleDefinitions()')) {
 if (!str_contains($blogMembersSource, 'canCurrentUserManageBlogTaxonomies($blogId)')) {
     $blogAdminIssues[] = 'blog team management page is missing capability enforcement';
 }
+if (!str_contains($blogMembersSource, 'Zakladatel blogu:') || !str_contains($blogMembersSource, 'created_by_user_id')) {
+    $blogAdminIssues[] = 'blog team management page is missing creator audit context';
+}
 if (!str_contains($blogMembersSource, 'Další blogy uživatele')) {
     $blogAdminIssues[] = 'blog team management page is missing cross-blog membership overview';
 }
@@ -8026,8 +8031,20 @@ if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
 if (!str_contains($blogsAdminSource, 'member_count')) {
     $blogAdminIssues[] = 'blog overview is missing assigned team counts';
 }
+if (!str_contains($blogsAdminSource, 'created_by_user_id') || !str_contains($blogsAdminSource, 'creator_label')) {
+    $blogAdminIssues[] = 'blog overview is missing creator audit visibility';
+}
 if (!str_contains($blogsAdminSource, 'saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog editor no longer stores legacy slug redirects';
+}
+if (!str_contains($blogsAdminSource, 'INSERT INTO cms_blog_members') || !str_contains($blogsAdminSource, "'manager'")) {
+    $blogAdminIssues[] = 'blog create flow no longer assigns the creator as blog manager';
+}
+if (!str_contains($blogsAdminSource, 'created_by_user_id) VALUES') || !str_contains($blogsAdminSource, '$creatorUserId > 0 ? $creatorUserId : null')) {
+    $blogAdminIssues[] = 'blog create flow is missing creator audit persistence';
+}
+if (!str_contains($blogsAdminSource, 'beginTransaction()')) {
+    $blogAdminIssues[] = 'blog create flow is missing transactional persistence';
 }
 if (!str_contains($usersAdminSource, 'Bez přiřazení k blogům')) {
     $blogAdminIssues[] = 'users overview is missing blog assignment visibility';
@@ -8043,6 +8060,18 @@ if (!str_contains($blogPresentationSource, 'function getBlogByLegacySlug')) {
 }
 if (!str_contains($blogPresentationSource, 'function getWritableBlogsForUser')) {
     $blogAdminIssues[] = 'blog helpers are missing writable-blog membership resolution';
+}
+if (!str_contains($blogPresentationSource, 'function getBlogsWithExplicitMembers')) {
+    $blogAdminIssues[] = 'blog helpers are missing explicit-membership blog map';
+}
+if (!str_contains($blogPresentationSource, 'function blogHasExplicitMembers')) {
+    $blogAdminIssues[] = 'blog helpers are missing explicit-membership detection';
+}
+if (!str_contains($blogPresentationSource, '!isset($explicitMembershipBlogs[$blogId])')) {
+    $blogAdminIssues[] = 'writable blog helper no longer keeps blogs without explicit teams writable';
+}
+if (!str_contains($blogPresentationSource, 'if (!blogHasExplicitMembers($blogId)) {')) {
+    $blogAdminIssues[] = 'blog permission helpers are missing per-blog explicit-team fallback';
 }
 if (!str_contains($blogPresentationSource, 'function getTaxonomyManagedBlogsForUser')) {
     $blogAdminIssues[] = 'blog helpers are missing taxonomy-managed blog resolution';
@@ -8092,8 +8121,14 @@ if (!str_contains($blogRouterSource, 'getBlogByLegacySlug($blogSlug)')) {
 if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExportSource, "'blog_slug_redirects'")) {
     $blogAdminIssues[] = 'export is missing blog membership and slug redirect datasets';
 }
+if (!str_contains($blogExportSource, 'created_by_user_id')) {
+    $blogAdminIssues[] = 'export is missing blog creator audit field';
+}
 if (!str_contains($blogImportSource, 'cms_blog_members') || !str_contains($blogImportSource, 'cms_blog_slug_redirects')) {
     $blogAdminIssues[] = 'import is missing blog membership or slug redirect restore';
+}
+if (!str_contains($blogImportSource, 'created_by_user_id')) {
+    $blogAdminIssues[] = 'import is missing blog creator audit restore';
 }
 if (!str_contains($blogWidgetAdminSource, 'value="-1">Aktuální blog (na blogových stránkách)')) {
     $blogAdminIssues[] = 'widget editor is missing current-blog context option for latest articles';
@@ -8110,14 +8145,39 @@ if (!str_contains($blogInstallSource, 'cms_blog_members') || !str_contains($blog
 if (!str_contains($blogInstallSource, 'intro_content TEXT')) {
     $blogAdminIssues[] = 'fresh install is missing extended blog intro field';
 }
+if (!str_contains($blogInstallSource, 'created_by_user_id INT NULL DEFAULT NULL')) {
+    $blogAdminIssues[] = 'fresh install is missing blog creator audit field';
+}
 if (!str_contains($blogInstallSource, 'is_featured_in_blog TINYINT(1) NOT NULL DEFAULT 0')) {
     $blogAdminIssues[] = 'fresh install is missing per-blog featured article field';
 }
 if (!str_contains($blogMigrateSource, 'cms_blogs.intro_content')) {
     $blogAdminIssues[] = 'migrations are missing extended blog intro field';
 }
+if (!str_contains($blogMigrateSource, 'cms_blogs.created_by_user_id')) {
+    $blogAdminIssues[] = 'migrations are missing blog creator audit field';
+}
 if (!str_contains($blogMigrateSource, 'cms_articles.is_featured_in_blog')) {
     $blogAdminIssues[] = 'migrations are missing per-blog featured article field';
+}
+if (!str_contains($blogWpImportSource, 'created_by_user_id') || !str_contains($blogWpImportSource, 'cms_blog_members')) {
+    $blogAdminIssues[] = 'wordpress import is missing creator audit persistence for new blogs';
+}
+if (!str_contains($blogEstrankyImportSource, 'created_by_user_id') || !str_contains($blogEstrankyImportSource, 'cms_blog_members')) {
+    $blogAdminIssues[] = 'estranky import is missing creator audit persistence for new blogs';
+}
+if (!function_exists('roleDefinitions')) {
+    $blogAdminIssues[] = 'auth helpers are missing roleDefinitions()';
+} else {
+    $blogRoleDefinitions = roleDefinitions();
+    foreach (['editor', 'admin', 'collaborator'] as $blogCreatorRole) {
+        if (!in_array('blog_taxonomies_manage', $blogRoleDefinitions[$blogCreatorRole]['capabilities'] ?? [], true)) {
+            $blogAdminIssues[] = 'role no longer allows creating blogs: ' . $blogCreatorRole;
+        }
+    }
+    if (in_array('blog_taxonomies_manage', $blogRoleDefinitions['author']['capabilities'] ?? [], true)) {
+        $blogAdminIssues[] = 'author role unexpectedly allows creating blogs';
+    }
 }
 
 if ($blogAdminIssues === []) {
