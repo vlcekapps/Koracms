@@ -72,6 +72,36 @@ if ($title === '' || $postedDate === '') {
     $redirectToForm($id, 'required');
 }
 
+$normalizeBoardDate = static function (string $value): ?string {
+    $dateTime = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    if ($dateTime === false) {
+        return null;
+    }
+
+    $errors = DateTimeImmutable::getLastErrors();
+    if ($errors !== false && (($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0)) {
+        return null;
+    }
+
+    return $dateTime->format('Y-m-d') === $value
+        ? $dateTime->format('Y-m-d')
+        : null;
+};
+
+$postedDateSql = $normalizeBoardDate($postedDate);
+if ($postedDateSql === null) {
+    $redirectToForm($id, 'posted_date');
+}
+$postedDate = $postedDateSql;
+
+if ($removalDate !== '') {
+    $removalDateSql = $normalizeBoardDate($removalDate);
+    if ($removalDateSql === null) {
+        $redirectToForm($id, 'removal_date');
+    }
+    $removalDate = $removalDateSql;
+}
+
 if ($removalDate !== '' && $removalDate < $postedDate) {
     $redirectToForm($id, 'dates');
 }

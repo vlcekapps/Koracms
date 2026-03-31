@@ -209,6 +209,7 @@ foreach ($fields as $fieldRow) {
 }
 
 $errors = [];
+$fieldErrors = [];
 $success = false;
 $formData = [];
 $storedUploads = [];
@@ -216,6 +217,13 @@ $successActions = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('form_submit_' . (int)$form['id'], 5, 300);
+    $addFieldError = static function (string $fieldName, string $message) use (&$errors, &$fieldErrors): void {
+        $errors[] = $message;
+        if (!isset($fieldErrors[$fieldName]) || !is_array($fieldErrors[$fieldName])) {
+            $fieldErrors[$fieldName] = [];
+        }
+        $fieldErrors[$fieldName][] = $message;
+    };
 
     if ((int)($form['use_honeypot'] ?? 1) === 1 && honeypotTriggered()) {
         $success = true;
@@ -223,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         verifyCsrf();
 
         if (!captchaVerify($_POST['captcha'] ?? '')) {
-            $errors[] = 'Chybná odpověď na ověřovací otázku.';
+            $addFieldError('captcha', 'Chybná odpověď na ověřovací otázku.');
         }
 
         $previewData = [];
@@ -297,13 +305,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $formData[$name] = $value;
 
                 if ($required && $value === []) {
-                    $errors[] = 'Pole „' . $label . '“ je povinné.';
+                    $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
                 }
 
                 $allowedOptions = formFieldOptionsList((string)($field['options'] ?? ''));
                 foreach ($value as $selectedOption) {
                     if (!in_array($selectedOption, $allowedOptions, true)) {
-                        $errors[] = 'Pole „' . $label . '“ obsahuje nepovolenou hodnotu.';
+                        $addFieldError($name, 'Pole „' . $label . '“ obsahuje nepovolenou hodnotu.');
                         break;
                     }
                 }
@@ -317,7 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $value = isset($_POST[$name]) ? '1' : '';
                 $formData[$name] = $value;
                 if ($required && $value !== '1') {
-                    $errors[] = 'Pole „' . $label . '“ je povinné.';
+                    $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
                 }
                 $submissionData[$name] = $value;
                 $notificationData[$label] = formSubmissionDisplayValueForField($field, $value);
@@ -326,7 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hasUpload = publicFormUploadInputHasFile($_FILES[$name] ?? null);
                 if (!$hasUpload) {
                     if ($required) {
-                        $errors[] = 'Pole „' . $label . '“ je povinné.';
+                        $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
                     }
                     $emptyFileValue = formFieldAllowsMultipleFiles($field) ? [] : '';
                     $submissionData[$name] = $emptyFileValue;
@@ -336,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $uploadResult = storePublicFormUploads($field, $_FILES[$name] ?? null);
                 if (isset($uploadResult['error'])) {
-                    $errors[] = 'Pole „' . $label . '“: ' . $uploadResult['error'];
+                    $addFieldError($name, 'Pole „' . $label . '“: ' . $uploadResult['error']);
                     $submissionData[$name] = formFieldAllowsMultipleFiles($field) ? [] : '';
                     $notificationData[$label] = '';
                     continue;
@@ -356,21 +364,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($required && $value === '') {
-                $errors[] = 'Pole „' . $label . '“ je povinné.';
+                $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
             }
 
             if ($fieldType === 'email' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'Pole „' . $label . '“ musí být platná e-mailová adresa.';
+                $addFieldError($name, 'Pole „' . $label . '“ musí být platná e-mailová adresa.');
             }
 
             if ($fieldType === 'url' && $value !== '' && !filter_var($value, FILTER_VALIDATE_URL)) {
-                $errors[] = 'Pole „' . $label . '“ musí být platná webová adresa.';
+                $addFieldError($name, 'Pole „' . $label . '“ musí být platná webová adresa.');
             }
 
             if (in_array($fieldType, ['select', 'radio'], true) && $value !== '') {
                 $allowedOptions = formFieldOptionsList((string)($field['options'] ?? ''));
                 if (!in_array($value, $allowedOptions, true)) {
-                    $errors[] = 'Pole „' . $label . '“ obsahuje nepovolenou hodnotu.';
+                    $addFieldError($name, 'Pole „' . $label . '“ obsahuje nepovolenou hodnotu.');
                 }
             }
 
@@ -482,6 +490,7 @@ $pageData = [
         'form' => $form,
         'fields' => $fields,
         'errors' => $errors,
+        'fieldErrors' => $fieldErrors,
         'success' => $success,
         'successActions' => $successActions,
         'formData' => $formData,

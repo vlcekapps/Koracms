@@ -113,7 +113,18 @@
               $value = h((string)$rawValue);
               $fieldId = 'field-' . $name;
               $placeholder = h((string)($field['placeholder'] ?? ''));
-              $describedBy = $helpText !== '' ? $fieldId . '-help' : '';
+              $fieldErrorMessages = array_values(array_filter((array)($fieldErrors[$field['name']] ?? []), static fn($message): bool => trim((string)$message) !== ''));
+              $hasFieldError = $fieldErrorMessages !== [];
+              $fieldHelpId = $helpText !== '' ? $fieldId . '-help' : '';
+              $fieldErrorId = $fieldId . '-error';
+              $describedByIds = [];
+              if ($fieldHelpId !== '') {
+                  $describedByIds[] = $fieldHelpId;
+              }
+              if ($hasFieldError) {
+                  $describedByIds[] = $fieldErrorId;
+              }
+              $describedBy = implode(' ', $describedByIds);
               $optionList = formFieldOptionsList((string)($field['options'] ?? ''));
               $showIfField = trim((string)($field['show_if_field'] ?? ''));
               $showIfValue = trim((string)($field['show_if_value'] ?? ''));
@@ -132,7 +143,7 @@
             <?php endif; ?>
 
             <?php if ($fieldType === 'checkbox_group'): ?>
-              <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?>>
                 <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
                 <?php foreach ($optionList as $index => $opt): ?>
                   <?php
@@ -141,64 +152,79 @@
                   ?>
                   <div>
                     <label for="<?= $checkboxId ?>">
-                      <input type="checkbox" id="<?= $checkboxId ?>" name="<?= $name ?>[]" value="<?= h($opt) ?>"<?= $isChecked ? ' checked' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $required && $index === 0 ? ' aria-required="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
+                      <input type="checkbox" id="<?= $checkboxId ?>" name="<?= $name ?>[]" value="<?= h($opt) ?>"<?= $isChecked ? ' checked' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?><?= $required && $index === 0 ? ' aria-required="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
                       <?= h($opt) ?>
                     </label>
                   </div>
                 <?php endforeach; ?>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </fieldset>
 
             <?php elseif (in_array($fieldType, ['checkbox', 'consent'], true)): ?>
               <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
-                <label>
-                  <input type="checkbox" name="<?= $name ?>" value="1"<?= ((string)$rawValue) === '1' ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
+                <label for="<?= $fieldId ?>">
+                  <input type="checkbox" id="<?= $fieldId ?>" name="<?= $name ?>" value="1"<?= ((string)$rawValue) === '1' ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
                   <?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?>
                 </label>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </div>
 
             <?php elseif ($fieldType === 'select'): ?>
               <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
-                <select id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
+                <select id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
                   <option value="">Vyberte možnost</option>
                   <?php foreach ($optionList as $opt): ?>
                     <option value="<?= h($opt) ?>"<?= ($formData[$field['name']] ?? '') === $opt ? ' selected' : '' ?>><?= h($opt) ?></option>
                   <?php endforeach; ?>
                 </select>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </div>
 
             <?php elseif ($fieldType === 'radio'): ?>
-              <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
+              <fieldset class="<?= h($fieldClass) ?> form-fieldset"<?= $conditionalAttributes ?><?= $conditionalHidden ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?>>
                 <legend><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></legend>
                 <?php foreach ($optionList as $index => $opt): ?>
                   <?php $radioId = $fieldId . '-' . $index; ?>
                   <div>
                     <label for="<?= $radioId ?>">
-                      <input type="radio" id="<?= $radioId ?>" name="<?= $name ?>" value="<?= h($opt) ?>"<?= ($rawValue ?? '') === $opt ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
+                      <input type="radio" id="<?= $radioId ?>" name="<?= $name ?>" value="<?= h($opt) ?>"<?= ($rawValue ?? '') === $opt ? ' checked' : '' ?><?= $required ? ' required aria-required="true"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
                       <?= h($opt) ?>
                     </label>
                   </div>
                 <?php endforeach; ?>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </fieldset>
 
             <?php elseif ($fieldType === 'textarea'): ?>
               <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
-                <textarea id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>><?= $value ?></textarea>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <textarea id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"<?= $required ? ' required aria-required="true"' : '' ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>><?= $value ?></textarea>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </div>
 
@@ -210,9 +236,13 @@
                        <?= trim((string)($field['accept_types'] ?? '')) !== '' ? ' accept="' . h((string)$field['accept_types']) . '"' : '' ?>
                        <?= formFieldAllowsMultipleFiles($field) ? ' multiple' : '' ?>
                        <?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?>
+                       <?= $hasFieldError ? ' aria-invalid="true"' : '' ?>
                        <?= !$isConditionallyVisible ? ' disabled' : '' ?>>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </div>
 
@@ -236,9 +266,12 @@
               <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
                 <input type="<?= $inputType ?>" id="<?= $fieldId ?>" name="<?= $name ?>" class="form-control"
-                       value="<?= $value ?>"<?= $required ? ' required aria-required="true"' : '' ?><?= $autocomplete ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
-                <?php if ($helpText !== ''): ?>
-                  <small id="<?= h($describedBy) ?>" class="field-help"><?= h($helpText) ?></small>
+                       value="<?= $value ?>"<?= $required ? ' required aria-required="true"' : '' ?><?= $autocomplete ?><?= $placeholder !== '' ? ' placeholder="' . $placeholder . '"' : '' ?><?= $describedBy !== '' ? ' aria-describedby="' . h($describedBy) . '"' : '' ?><?= $hasFieldError ? ' aria-invalid="true"' : '' ?><?= !$isConditionallyVisible ? ' disabled' : '' ?>>
+                <?php if ($fieldHelpId !== ''): ?>
+                  <small id="<?= h($fieldHelpId) ?>" class="field-help"><?= h($helpText) ?></small>
+                <?php endif; ?>
+                <?php if ($hasFieldError): ?>
+                  <small id="<?= h($fieldErrorId) ?>" class="field-error"><?= h($fieldErrorMessages[0]) ?></small>
                 <?php endif; ?>
               </div>
             <?php endif; ?>
@@ -251,11 +284,23 @@
           <?php endif; ?>
 
           <div class="form-fields-grid form-fields-grid--single">
+            <?php
+              $captchaErrors = array_values(array_filter((array)($fieldErrors['captcha'] ?? []), static fn($message): bool => trim((string)$message) !== ''));
+              $captchaHasError = $captchaErrors !== [];
+              $captchaDescribedByIds = ['captcha-help'];
+              if ($captchaHasError) {
+                  $captchaDescribedByIds[] = 'captcha-error';
+              }
+              $captchaDescribedBy = implode(' ', $captchaDescribedByIds);
+            ?>
             <div class="field form-field form-field--full">
               <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
               <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
-                     aria-required="true" inputmode="numeric" autocomplete="off" aria-describedby="captcha-help">
+                     aria-required="true" inputmode="numeric" autocomplete="off" aria-describedby="<?= h($captchaDescribedBy) ?>"<?= $captchaHasError ? ' aria-invalid="true"' : '' ?>>
               <small id="captcha-help" class="field-help">Krátké ověření proti spamu. Zadejte jen výsledek příkladu.</small>
+              <?php if ($captchaHasError): ?>
+                <small id="captcha-error" class="field-error"><?= h($captchaErrors[0]) ?></small>
+              <?php endif; ?>
             </div>
           </div>
 

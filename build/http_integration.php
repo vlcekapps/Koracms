@@ -17,6 +17,11 @@ $createdBlogs = [];
 $createdCategories = [];
 $createdTags = [];
 $createdArticles = [];
+$createdFormIds = [];
+$createdFormSubmissionIds = [];
+$createdPageIds = [];
+$createdMediaIds = [];
+$createdBoardIds = [];
 $createdResourceIds = [];
 $createdTempFiles = [];
 
@@ -132,6 +137,110 @@ function httpIntegrationCreateTempFile(string $prefix, string $contents, array &
     return $path;
 }
 
+function httpIntegrationCreatePngFixtureFile(string $prefix, array &$createdTempFiles, int $width = 24, int $height = 24): string
+{
+    if (!function_exists('imagecreatetruecolor') || !function_exists('imagepng')) {
+        throw new RuntimeException('GD není k dispozici pro vytvoření PNG fixture v HTTP integration testu.');
+    }
+
+    $path = tempnam(sys_get_temp_dir(), $prefix);
+    if ($path === false) {
+        throw new RuntimeException('Nepodařilo se vytvořit dočasný PNG fixture soubor pro HTTP integration test.');
+    }
+
+    $image = imagecreatetruecolor($width, $height);
+    if ($image === false) {
+        @unlink($path);
+        throw new RuntimeException('Nepodařilo se vytvořit GD image pro HTTP integration test.');
+    }
+
+    $background = imagecolorallocate($image, 20, 120, 220);
+    $accent = imagecolorallocate($image, 255, 255, 255);
+    imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $background);
+    imagerectangle($image, 1, 1, $width - 2, $height - 2, $accent);
+    imagefilledellipse($image, (int)floor($width / 2), (int)floor($height / 2), max(6, (int)floor($width / 2)), max(6, (int)floor($height / 2)), $accent);
+
+    $written = imagepng($image, $path);
+    imagedestroy($image);
+
+    if ($written !== true) {
+        @unlink($path);
+        throw new RuntimeException('Nepodařilo se zapsat PNG fixture pro HTTP integration test.');
+    }
+
+    $createdTempFiles[] = $path;
+    return $path;
+}
+
+function httpIntegrationFetchMediaById(PDO $pdo, int $mediaId): ?array
+{
+    if ($mediaId <= 0) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM cms_media WHERE id = ? LIMIT 1");
+    $stmt->execute([$mediaId]);
+    $row = $stmt->fetch();
+
+    return is_array($row) ? $row : null;
+}
+
+function httpIntegrationFetchMediaByOriginalName(PDO $pdo, string $originalName): ?array
+{
+    $stmt = $pdo->prepare("SELECT * FROM cms_media WHERE original_name = ? ORDER BY id DESC LIMIT 1");
+    $stmt->execute([$originalName]);
+    $row = $stmt->fetch();
+
+    return is_array($row) ? $row : null;
+}
+
+function httpIntegrationExtractCaptchaAnswer(string $html): string
+{
+    if (preg_match('/Ověření:\s*kolik je\s*(\d+)\s*[×x*]\s*(\d+)\?/u', $html, $matches) !== 1) {
+        return '';
+    }
+
+    return (string)(((int)$matches[1]) * ((int)$matches[2]));
+}
+
+/**
+ * @return array<int, string>
+ */
+function httpIntegrationListStoredFormUploads(): array
+{
+    $directory = formUploadDirectory();
+    if (!is_dir($directory)) {
+        return [];
+    }
+
+    $entries = [];
+    foreach (scandir($directory) ?: [] as $entry) {
+        if ($entry === '.' || $entry === '..') {
+            continue;
+        }
+        $path = $directory . $entry;
+        if (is_file($path)) {
+            $entries[] = $entry;
+        }
+    }
+
+    sort($entries);
+    return $entries;
+}
+
+function httpIntegrationFetchLatestFormSubmissionByFormId(PDO $pdo, int $formId): ?array
+{
+    if ($formId <= 0) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM cms_form_submissions WHERE form_id = ? ORDER BY id DESC LIMIT 1");
+    $stmt->execute([$formId]);
+    $row = $stmt->fetch();
+
+    return is_array($row) ? $row : null;
+}
+
 try {
     $originalSettings = [
         'site_name' => httpIntegrationSettingValue($pdo, 'site_name'),
@@ -139,10 +248,12 @@ try {
         'board_public_label' => httpIntegrationSettingValue($pdo, 'board_public_label'),
         'module_blog' => getSetting('module_blog', '0'),
         'module_reservations' => getSetting('module_reservations', '0'),
+        'module_forms' => getSetting('module_forms', '0'),
     ];
 
     saveSetting('module_blog', '1');
     saveSetting('module_reservations', '1');
+    saveSetting('module_forms', '1');
     clearSettingsCache();
 
     $settingsIssues = [];
@@ -334,6 +445,49 @@ try {
     }
 
     httpIntegrationPrintResult('reservations_http', $reservationIssues, $failures);
+
+    $boardIssues = [];
+    $invalidBoardTitle = 'HTTP Invalid Board ' . date('His');
+    $invalidBoardResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/board_save.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'title' => $invalidBoardTitle,
+            'slug' => '',
+            'board_type' => 'notice',
+            'excerpt' => '',
+            'description' => '',
+            'category_id' => '',
+            'posted_date' => '2026-02-31',
+            'removal_date' => '',
+            'contact_name' => '',
+            'contact_phone' => '',
+            'contact_email' => '',
+            'is_published' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidBoardResponse) !== 302) {
+        $boardIssues[] = 'neplatné datum vývěsky nevrátilo PRG redirect';
+    }
+    if (!responseHasLocationHeader($invalidBoardResponse['headers'], '/admin/board_form.php?err=posted_date', $baseUrl)) {
+        $boardIssues[] = 'neplatné datum vývěsky nemíří zpět na formulář s err=posted_date';
+    }
+    $boardExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_board WHERE title = ?");
+    $boardExistsStmt->execute([$invalidBoardTitle]);
+    if ((int)$boardExistsStmt->fetchColumn() !== 0) {
+        $boardIssues[] = 'neplatné datum vývěsky vytvořilo záznam v databázi';
+    }
+    $invalidBoardPage = fetchUrl($baseUrl . BASE_URL . '/admin/board_form.php?err=posted_date', $adminSession['cookie'], 0);
+    if (!str_contains($invalidBoardPage['body'], 'Zadejte platné datum vyvěšení.')) {
+        $boardIssues[] = 'neplatné datum vývěsky nezobrazilo validační zprávu';
+    }
+    if (!httpIntegrationFieldHasAriaInvalid($invalidBoardPage['body'], 'posted_date')) {
+        $boardIssues[] = 'neplatné datum vývěsky neoznačilo pole posted_date jako aria-invalid';
+    }
+
+    httpIntegrationPrintResult('board_save_http', $boardIssues, $failures);
 
     $blogTransferIssues = [];
     $passwordHash = password_hash('HttpIntegration123!', PASSWORD_BCRYPT);
@@ -551,6 +705,732 @@ try {
     }
 
     httpIntegrationPrintResult('blog_transfer_http', $blogTransferIssues, $failures);
+
+    $mediaIssues = [];
+    $mediaAdminUrl = $baseUrl . BASE_URL . '/admin/media.php';
+    $mediaReturnPath = BASE_URL . '/admin/media.php';
+
+    $validMediaOriginalName = 'http-media-upload-' . bin2hex(random_bytes(4)) . '.png';
+    $validMediaPath = httpIntegrationCreatePngFixtureFile('kora-media-png-', $createdTempFiles);
+    $validMediaUploadResponse = postMultipartUrl(
+        $mediaAdminUrl,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'upload',
+            'upload_visibility' => 'public',
+            'return_to' => $mediaReturnPath,
+        ],
+        [
+            'media_files[0]' => [
+                'path' => $validMediaPath,
+                'filename' => $validMediaOriginalName,
+                'type' => 'image/png',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($validMediaUploadResponse) !== 302) {
+        $mediaIssues[] = 'validní upload média nevrátil 302 redirect';
+    }
+    if (!responseHasLocationHeader($validMediaUploadResponse['headers'], $mediaReturnPath, $baseUrl)) {
+        $mediaIssues[] = 'validní upload média nemíří zpět na přehled médií';
+    }
+
+    $uploadedMedia = httpIntegrationFetchMediaByOriginalName($pdo, $validMediaOriginalName);
+    if ($uploadedMedia === null) {
+        $mediaIssues[] = 'validní upload média nevytvořil záznam v cms_media';
+    } else {
+        $createdMediaIds[] = (int)$uploadedMedia['id'];
+        if (normalizeMediaVisibility((string)($uploadedMedia['visibility'] ?? 'public')) !== 'public') {
+            $mediaIssues[] = 'validní upload média neuložil visibility=public';
+        }
+        if (!str_starts_with(mediaFileUrl($uploadedMedia), BASE_URL . '/uploads/media/')) {
+            $mediaIssues[] = 'validní upload média nepoužívá canonical public URL';
+        }
+    }
+
+    $validUploadPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+    if (!str_contains($validUploadPage['body'], 'Nahráno 1 souborů.')) {
+        $mediaIssues[] = 'validní upload média nezobrazil success flash zprávu';
+    }
+
+    $invalidSvgOriginalName = 'http-media-svg-' . bin2hex(random_bytes(4)) . '.svg';
+    $invalidSvgPath = httpIntegrationCreateTempFile(
+        'kora-media-svg-',
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
+        $createdTempFiles
+    );
+    $invalidSvgResponse = postMultipartUrl(
+        $mediaAdminUrl,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'upload',
+            'upload_visibility' => 'public',
+            'return_to' => $mediaReturnPath,
+        ],
+        [
+            'media_files[0]' => [
+                'path' => $invalidSvgPath,
+                'filename' => $invalidSvgOriginalName,
+                'type' => 'image/svg+xml',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidSvgResponse) !== 302) {
+        $mediaIssues[] = 'SVG upload média nevrátil 302 redirect';
+    }
+    $invalidSvgPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+    if (!str_contains($invalidSvgPage['body'], 'SVG soubory už knihovna médií nepřijímá')) {
+        $mediaIssues[] = 'SVG upload média nezobrazil validační chybu';
+    }
+    if (httpIntegrationFetchMediaByOriginalName($pdo, $invalidSvgOriginalName) !== null) {
+        $mediaIssues[] = 'SVG upload média přesto vytvořil záznam v cms_media';
+    }
+
+    $oversizedMediaOriginalName = 'http-media-oversized-' . bin2hex(random_bytes(4)) . '.bin';
+    $oversizedMediaPath = httpIntegrationCreateTempFile(
+        'kora-media-big-',
+        str_repeat('A', mediaMaxFileSizeBytes() + 2048),
+        $createdTempFiles
+    );
+    $oversizedMediaResponse = postMultipartUrl(
+        $mediaAdminUrl,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'upload',
+            'upload_visibility' => 'public',
+            'return_to' => $mediaReturnPath,
+        ],
+        [
+            'media_files[0]' => [
+                'path' => $oversizedMediaPath,
+                'filename' => $oversizedMediaOriginalName,
+                'type' => 'application/octet-stream',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($oversizedMediaResponse) !== 302) {
+        $mediaIssues[] = 'oversized upload média nevrátil 302 redirect';
+    }
+    $oversizedMediaPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+    if (!str_contains($oversizedMediaPage['body'], 'Soubor překračuje maximální velikost 10 MB.')) {
+        $mediaIssues[] = 'oversized upload média nezobrazil validační chybu';
+    }
+    if (httpIntegrationFetchMediaByOriginalName($pdo, $oversizedMediaOriginalName) !== null) {
+        $mediaIssues[] = 'oversized upload média přesto vytvořil záznam v cms_media';
+    }
+
+    if ($uploadedMedia !== null) {
+        $uploadedMediaId = (int)$uploadedMedia['id'];
+        $uploadedEditPath = BASE_URL . '/admin/media.php?edit=' . $uploadedMediaId;
+
+        $updateMetaResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'update_meta',
+                'media_id' => (string)$uploadedMediaId,
+                'alt_text' => 'HTTP alt text média',
+                'caption' => 'HTTP titulek média',
+                'credit' => 'HTTP kredit média',
+                'visibility' => 'public',
+                'return_to' => $uploadedEditPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($updateMetaResponse) !== 302) {
+            $mediaIssues[] = 'update_meta média nevrátil 302 redirect';
+        }
+        if (!responseHasLocationHeader($updateMetaResponse['headers'], $uploadedEditPath, $baseUrl)) {
+            $mediaIssues[] = 'update_meta média nemíří zpět na detail média';
+        }
+
+        $uploadedMediaAfterMeta = httpIntegrationFetchMediaById($pdo, $uploadedMediaId);
+        if ($uploadedMediaAfterMeta === null) {
+            $mediaIssues[] = 'update_meta média ztratil záznam v cms_media';
+        } else {
+            if ((string)($uploadedMediaAfterMeta['alt_text'] ?? '') !== 'HTTP alt text média') {
+                $mediaIssues[] = 'update_meta média neuložil alt_text';
+            }
+            if ((string)($uploadedMediaAfterMeta['caption'] ?? '') !== 'HTTP titulek média') {
+                $mediaIssues[] = 'update_meta média neuložil caption';
+            }
+            if ((string)($uploadedMediaAfterMeta['credit'] ?? '') !== 'HTTP kredit média') {
+                $mediaIssues[] = 'update_meta média neuložil credit';
+            }
+        }
+
+        $updateMetaPage = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
+        if (!str_contains($updateMetaPage['body'], 'Metadata média byla uložena.')) {
+            $mediaIssues[] = 'update_meta média nezobrazil success flash zprávu';
+        }
+        $updateMetaPageSecondRead = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
+        if (str_contains($updateMetaPageSecondRead['body'], 'Metadata média byla uložena.')) {
+            $mediaIssues[] = 'update_meta média nezmizel success flash po druhém načtení';
+        }
+
+        $replacementMediaOriginalName = 'http-media-replacement-' . bin2hex(random_bytes(4)) . '.png';
+        $replacementMediaPath = httpIntegrationCreatePngFixtureFile('kora-media-replace-', $createdTempFiles, 32, 32);
+        $replaceResponse = postMultipartUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'replace',
+                'media_id' => (string)$uploadedMediaId,
+                'return_to' => $uploadedEditPath,
+            ],
+            [
+                'replacement_file' => [
+                    'path' => $replacementMediaPath,
+                    'filename' => $replacementMediaOriginalName,
+                    'type' => 'image/png',
+                ],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($replaceResponse) !== 302) {
+            $mediaIssues[] = 'replace média stejné MIME rodiny nevrátil 302 redirect';
+        }
+        if (!responseHasLocationHeader($replaceResponse['headers'], $uploadedEditPath, $baseUrl)) {
+            $mediaIssues[] = 'replace média stejné MIME rodiny nemíří zpět na detail média';
+        }
+
+        $uploadedMediaAfterReplace = httpIntegrationFetchMediaById($pdo, $uploadedMediaId);
+        if ($uploadedMediaAfterReplace === null) {
+            $mediaIssues[] = 'replace média stejné MIME rodiny ztratil záznam v cms_media';
+        } else {
+            if ((string)($uploadedMediaAfterReplace['original_name'] ?? '') !== $replacementMediaOriginalName) {
+                $mediaIssues[] = 'replace média stejné MIME rodiny neaktualizoval original_name';
+            }
+            if ((string)($uploadedMediaAfterReplace['filename'] ?? '') !== (string)($uploadedMedia['filename'] ?? '')) {
+                $mediaIssues[] = 'replace média stejné MIME rodiny změnil canonical filename veřejného souboru';
+            }
+            if ((string)($uploadedMediaAfterReplace['mime_type'] ?? '') !== 'image/png') {
+                $mediaIssues[] = 'replace média stejné MIME rodiny změnil mime_type';
+            }
+            if (!is_file(mediaOriginalPath($uploadedMediaAfterReplace))) {
+                $mediaIssues[] = 'replace média stejné MIME rodiny nezachoval fyzický soubor';
+            }
+        }
+
+        $replacePage = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
+        if (!str_contains($replacePage['body'], 'Soubor byl nahrazen bez změny jeho ID.')) {
+            $mediaIssues[] = 'replace média stejné MIME rodiny nezobrazil success flash zprávu';
+        }
+
+        $invalidReplacePath = httpIntegrationCreateTempFile('kora-media-text-', 'plain text replacement', $createdTempFiles);
+        $beforeInvalidReplace = httpIntegrationFetchMediaById($pdo, $uploadedMediaId);
+        $invalidReplaceResponse = postMultipartUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'replace',
+                'media_id' => (string)$uploadedMediaId,
+                'return_to' => $uploadedEditPath,
+            ],
+            [
+                'replacement_file' => [
+                    'path' => $invalidReplacePath,
+                    'filename' => 'http-media-replacement-' . bin2hex(random_bytes(4)) . '.txt',
+                    'type' => 'text/plain',
+                ],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($invalidReplaceResponse) !== 302) {
+            $mediaIssues[] = 'replace média jiné MIME rodiny nevrátil 302 redirect';
+        }
+        $invalidReplacePage = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
+        if (!str_contains($invalidReplacePage['body'], 'Náhradní soubor musí zůstat ve stejné rodině typu jako původní médium.')) {
+            $mediaIssues[] = 'replace média jiné MIME rodiny nezobrazil validační chybu';
+        }
+        $afterInvalidReplace = httpIntegrationFetchMediaById($pdo, $uploadedMediaId);
+        if ($beforeInvalidReplace !== null && $afterInvalidReplace !== null) {
+            foreach (['filename', 'mime_type', 'file_size'] as $replaceInvariantField) {
+                if ((string)$afterInvalidReplace[$replaceInvariantField] !== (string)$beforeInvalidReplace[$replaceInvariantField]) {
+                    $mediaIssues[] = 'replace média jiné MIME rodiny změnil pole ' . $replaceInvariantField;
+                }
+            }
+        }
+    }
+
+    $uploadMediaFixture = static function (string $label) use (
+        $pdo,
+        $mediaAdminUrl,
+        $mediaReturnPath,
+        $adminSession,
+        &$createdTempFiles,
+        &$createdMediaIds,
+        &$mediaIssues,
+        $baseUrl
+    ): ?array {
+        $originalName = 'http-media-' . $label . '-' . bin2hex(random_bytes(4)) . '.png';
+        $fixturePath = httpIntegrationCreatePngFixtureFile('kora-media-fixture-', $createdTempFiles);
+        $response = postMultipartUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'upload',
+                'upload_visibility' => 'public',
+                'return_to' => $mediaReturnPath,
+            ],
+            [
+                'media_files[0]' => [
+                    'path' => $fixturePath,
+                    'filename' => $originalName,
+                    'type' => 'image/png',
+                ],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($response) !== 302) {
+            $mediaIssues[] = 'fixture upload média (' . $label . ') nevrátil 302 redirect';
+            return null;
+        }
+        if (!responseHasLocationHeader($response['headers'], $mediaReturnPath, $baseUrl)) {
+            $mediaIssues[] = 'fixture upload média (' . $label . ') nemíří zpět na přehled médií';
+            return null;
+        }
+
+        $media = httpIntegrationFetchMediaByOriginalName($pdo, $originalName);
+        if ($media === null) {
+            $mediaIssues[] = 'fixture upload média (' . $label . ') nevytvořil záznam v cms_media';
+            return null;
+        }
+
+        $createdMediaIds[] = (int)$media['id'];
+        fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+
+        return $media;
+    };
+
+    $usedMedia = $uploadMediaFixture('used');
+    $bulkUnusedMedia = $uploadMediaFixture('unused');
+
+    if ($usedMedia === null || $bulkUnusedMedia === null) {
+        $mediaIssues[] = 'nepodařilo se připravit HTTP fixture pro scénáře used/unused média';
+    } else {
+        $usedPageSlug = 'http-media-page-' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, status)
+             VALUES (?, ?, ?, 1, 0, 0, 'published')"
+        )->execute([
+            'HTTP media usage page',
+            $usedPageSlug,
+            '<p><img src="' . h(mediaFileUrl($usedMedia)) . '" alt=""></p>',
+        ]);
+        $createdPageIds[] = (int)$pdo->lastInsertId();
+
+        $usedMediaEditPath = BASE_URL . '/admin/media.php?edit=' . (int)$usedMedia['id'];
+        $usedToPrivateResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'update_meta',
+                'media_id' => (string)$usedMedia['id'],
+                'alt_text' => '',
+                'caption' => '',
+                'credit' => '',
+                'visibility' => 'private',
+                'return_to' => $usedMediaEditPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($usedToPrivateResponse) !== 302) {
+            $mediaIssues[] = 'used -> private nevrátil 302 redirect';
+        }
+        $usedToPrivatePage = fetchUrl($baseUrl . $usedMediaEditPath, $adminSession['cookie'], 0);
+        if (!str_contains($usedToPrivatePage['body'], 'Použité médium nelze přepnout do soukromého režimu, dokud je vložené v obsahu.')) {
+            $mediaIssues[] = 'used -> private nezobrazil validační chybu';
+        }
+        $usedMediaAfterPrivateAttempt = httpIntegrationFetchMediaById($pdo, (int)$usedMedia['id']);
+        if ($usedMediaAfterPrivateAttempt === null || normalizeMediaVisibility((string)($usedMediaAfterPrivateAttempt['visibility'] ?? 'public')) !== 'public') {
+            $mediaIssues[] = 'used -> private změnil visibility použitého média';
+        }
+
+        $usedDeleteResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'delete',
+                'media_id' => (string)$usedMedia['id'],
+                'return_to' => $mediaReturnPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($usedDeleteResponse) !== 302) {
+            $mediaIssues[] = 'delete použitého média nevrátil 302 redirect';
+        }
+        $usedDeletePage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+        if (!str_contains($usedDeletePage['body'], 'Použité médium nelze smazat, dokud je vložené v obsahu.')) {
+            $mediaIssues[] = 'delete použitého média nezobrazil validační chybu';
+        }
+        if (httpIntegrationFetchMediaById($pdo, (int)$usedMedia['id']) === null) {
+            $mediaIssues[] = 'delete použitého média přesto smazal záznam';
+        }
+
+        $bulkPrivateResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'bulk',
+                'bulk_action' => 'make_private',
+                'media_ids' => [(string)$usedMedia['id'], (string)$bulkUnusedMedia['id']],
+                'return_to' => $mediaReturnPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($bulkPrivateResponse) !== 302) {
+            $mediaIssues[] = 'bulk make_private nevrátil 302 redirect';
+        }
+        $bulkPrivatePage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+        if (!str_contains($bulkPrivatePage['body'], 'Soukromě označeno 1 médií.')) {
+            $mediaIssues[] = 'bulk make_private nezobrazil success flash zprávu';
+        }
+        if (!str_contains($bulkPrivatePage['body'], 'U 1 médií byla akce zablokována kvůli použití nebo chybě přesunu.')) {
+            $mediaIssues[] = 'bulk make_private nezobrazil blokaci použitého média';
+        }
+        $usedMediaAfterBulkPrivate = httpIntegrationFetchMediaById($pdo, (int)$usedMedia['id']);
+        $bulkUnusedMediaAfterPrivate = httpIntegrationFetchMediaById($pdo, (int)$bulkUnusedMedia['id']);
+        if ($usedMediaAfterBulkPrivate === null || normalizeMediaVisibility((string)($usedMediaAfterBulkPrivate['visibility'] ?? 'public')) !== 'public') {
+            $mediaIssues[] = 'bulk make_private změnil visibility použitého média';
+        }
+        if ($bulkUnusedMediaAfterPrivate === null || normalizeMediaVisibility((string)($bulkUnusedMediaAfterPrivate['visibility'] ?? 'public')) !== 'private') {
+            $mediaIssues[] = 'bulk make_private nepřepnul nepoužité médium do soukromého režimu';
+        } elseif (!str_starts_with(mediaFileUrl($bulkUnusedMediaAfterPrivate), BASE_URL . '/media/file.php?id=' . (int)$bulkUnusedMedia['id'])) {
+            $mediaIssues[] = 'bulk make_private nepřepnul canonical URL nepoužitého média na chráněný endpoint';
+        }
+
+        $bulkDeleteResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'bulk',
+                'bulk_action' => 'delete_unused',
+                'media_ids' => [(string)$usedMedia['id'], (string)$bulkUnusedMedia['id']],
+                'return_to' => $mediaReturnPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($bulkDeleteResponse) !== 302) {
+            $mediaIssues[] = 'bulk delete_unused nevrátil 302 redirect';
+        }
+        $bulkDeletePage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+        if (!str_contains($bulkDeletePage['body'], 'Smazáno 1 nepoužitých médií.')) {
+            $mediaIssues[] = 'bulk delete_unused nezobrazil success flash zprávu';
+        }
+        if (!str_contains($bulkDeletePage['body'], 'U 1 médií byla akce zablokována kvůli použití nebo chybě přesunu.')) {
+            $mediaIssues[] = 'bulk delete_unused nezobrazil blokaci použitého média';
+        }
+        if (httpIntegrationFetchMediaById($pdo, (int)$bulkUnusedMedia['id']) !== null) {
+            $mediaIssues[] = 'bulk delete_unused nesmazal nepoužité médium';
+        }
+        if (httpIntegrationFetchMediaById($pdo, (int)$usedMedia['id']) === null) {
+            $mediaIssues[] = 'bulk delete_unused smazal použité médium';
+        }
+    }
+
+    httpIntegrationPrintResult('media_admin_http', $mediaIssues, $failures);
+
+    $publicFormIssues = [];
+    $publicFormSlug = uniqueFormSlug($pdo, 'http-integration-form-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_forms (
+            title, slug, description, success_message, submit_label, notification_email, notification_subject,
+            redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label,
+            success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events,
+            use_honeypot, submitter_confirmation_enabled, submitter_email_field,
+            submitter_confirmation_subject, submitter_confirmation_message, show_in_nav, is_active, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, '', '', '', '', '', '', '', '', 0, '', '', '', 1, 0, '', '', '', 0, 1, NOW(), NOW())"
+    )->execute([
+        'HTTP integration formulář',
+        $publicFormSlug,
+        'Formulář pro integrační ověření veřejného odeslání s přílohou.',
+        'Formulář byl úspěšně odeslán přes HTTP integration.',
+        'Odeslat formulář',
+    ]);
+    $publicFormId = (int)$pdo->lastInsertId();
+    $createdFormIds[] = $publicFormId;
+
+    $publicFormFields = [
+        [
+            'field_type' => 'text',
+            'label' => 'Jméno',
+            'name' => 'full_name',
+            'placeholder' => 'Jan Tester',
+            'default_value' => '',
+            'help_text' => 'Uveďte své jméno.',
+            'options' => '',
+            'accept_types' => '',
+            'max_file_size_mb' => 1,
+            'allow_multiple' => 0,
+            'layout_width' => 'half',
+            'start_new_row' => 0,
+            'show_if_field' => '',
+            'show_if_operator' => '',
+            'show_if_value' => '',
+            'is_required' => 1,
+            'sort_order' => 10,
+        ],
+        [
+            'field_type' => 'email',
+            'label' => 'E-mail',
+            'name' => 'contact_email',
+            'placeholder' => 'tester@example.test',
+            'default_value' => '',
+            'help_text' => 'Na tuto adresu vám můžeme odpovědět.',
+            'options' => '',
+            'accept_types' => '',
+            'max_file_size_mb' => 1,
+            'allow_multiple' => 0,
+            'layout_width' => 'half',
+            'start_new_row' => 0,
+            'show_if_field' => '',
+            'show_if_operator' => '',
+            'show_if_value' => '',
+            'is_required' => 1,
+            'sort_order' => 20,
+        ],
+        [
+            'field_type' => 'file',
+            'label' => 'Příloha',
+            'name' => 'attachment',
+            'placeholder' => '',
+            'default_value' => '',
+            'help_text' => 'Nahrajte PNG přílohu do 1 MB.',
+            'options' => '',
+            'accept_types' => '.png,image/png',
+            'max_file_size_mb' => 1,
+            'allow_multiple' => 0,
+            'layout_width' => 'full',
+            'start_new_row' => 1,
+            'show_if_field' => '',
+            'show_if_operator' => '',
+            'show_if_value' => '',
+            'is_required' => 1,
+            'sort_order' => 30,
+        ],
+    ];
+    $publicFormFieldStmt = $pdo->prepare(
+        "INSERT INTO cms_form_fields (
+            form_id, field_type, label, name, placeholder, default_value, help_text, options,
+            accept_types, max_file_size_mb, allow_multiple, layout_width, start_new_row,
+            show_if_field, show_if_operator, show_if_value, is_required, sort_order
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    foreach ($publicFormFields as $publicFormField) {
+        $publicFormFieldStmt->execute([
+            $publicFormId,
+            $publicFormField['field_type'],
+            $publicFormField['label'],
+            $publicFormField['name'],
+            $publicFormField['placeholder'],
+            $publicFormField['default_value'],
+            $publicFormField['help_text'],
+            $publicFormField['options'],
+            $publicFormField['accept_types'],
+            $publicFormField['max_file_size_mb'],
+            $publicFormField['allow_multiple'],
+            $publicFormField['layout_width'],
+            $publicFormField['start_new_row'],
+            $publicFormField['show_if_field'],
+            $publicFormField['show_if_operator'],
+            $publicFormField['show_if_value'],
+            $publicFormField['is_required'],
+            $publicFormField['sort_order'],
+        ]);
+    }
+
+    $publicFormUrl = $baseUrl . formPublicPath(['id' => $publicFormId, 'slug' => $publicFormSlug]);
+    $publicFormSession = koraPrimeTestSession([], 'kora-http-public-form-' . bin2hex(random_bytes(4)));
+
+    $fetchPublicFormState = static function () use ($publicFormUrl, $publicFormSession, &$publicFormIssues): array {
+        $response = fetchUrl($publicFormUrl, $publicFormSession['cookie'], 0);
+        if (httpIntegrationStatusCode($response) !== 200) {
+            $publicFormIssues[] = 'veřejný formulář nevrátil 200 při načtení formuláře';
+        }
+
+        $csrfToken = extractHiddenInputValue($response['body'], 'csrf_token');
+        if ($csrfToken === '') {
+            $publicFormIssues[] = 'veřejný formulář nevykreslil csrf_token';
+        }
+
+        $captchaAnswer = httpIntegrationExtractCaptchaAnswer($response['body']);
+        if ($captchaAnswer === '') {
+            $publicFormIssues[] = 'veřejný formulář nevykreslil parsovatelnou CAPTCHA otázku';
+        }
+
+        return [
+            'response' => $response,
+            'csrf_token' => $csrfToken,
+            'captcha_answer' => $captchaAnswer,
+        ];
+    };
+
+    $basePublicFields = [
+        'full_name' => 'HTTP Tester',
+        'contact_email' => 'http.tester@example.test',
+    ];
+
+    $validPublicFilePath = httpIntegrationCreatePngFixtureFile('kora-form-valid-', $createdTempFiles, 36, 36);
+    $invalidPublicFilePath = httpIntegrationCreateTempFile('kora-form-text-', 'plain text attachment', $createdTempFiles);
+
+    $beforeInvalidCaptchaUploads = httpIntegrationListStoredFormUploads();
+    $invalidCaptchaState = $fetchPublicFormState();
+    $invalidCaptchaResponse = postMultipartUrl(
+        $publicFormUrl,
+        [
+            'csrf_token' => (string)$invalidCaptchaState['csrf_token'],
+            'captcha' => '0',
+            'full_name' => $basePublicFields['full_name'],
+            'contact_email' => $basePublicFields['contact_email'],
+        ],
+        [
+            'attachment' => [
+                'path' => $validPublicFilePath,
+                'filename' => 'http-form-valid-' . bin2hex(random_bytes(4)) . '.png',
+                'type' => 'image/png',
+            ],
+        ],
+        $publicFormSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidCaptchaResponse) !== 200) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nevrátil 200';
+    }
+    if (!str_contains($invalidCaptchaResponse['body'], 'Chybná odpověď na ověřovací otázku.')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nezobrazil validační chybu';
+    }
+    if (!httpIntegrationFieldHasAriaInvalid($invalidCaptchaResponse['body'], 'captcha')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou neoznačil pole captcha jako aria-invalid';
+    }
+    if (!str_contains($invalidCaptchaResponse['body'], 'id="captcha-error"')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nevykreslil lokální chybový text';
+    }
+    if (!str_contains($invalidCaptchaResponse['body'], 'value="' . h($basePublicFields['full_name']) . '"')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nezachoval jméno';
+    }
+    if (!str_contains($invalidCaptchaResponse['body'], 'value="' . h($basePublicFields['contact_email']) . '"')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nezachoval e-mail';
+    }
+    if (httpIntegrationFetchLatestFormSubmissionByFormId($pdo, $publicFormId) !== null) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou přesto vytvořil submission';
+    }
+    if (httpIntegrationListStoredFormUploads() !== $beforeInvalidCaptchaUploads) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou po sobě nechal uloženou přílohu';
+    }
+
+    $beforeInvalidTypeUploads = httpIntegrationListStoredFormUploads();
+    $invalidTypeState = $fetchPublicFormState();
+    $invalidTypeResponse = postMultipartUrl(
+        $publicFormUrl,
+        [
+            'csrf_token' => (string)$invalidTypeState['csrf_token'],
+            'captcha' => (string)$invalidTypeState['captcha_answer'],
+            'full_name' => $basePublicFields['full_name'],
+            'contact_email' => $basePublicFields['contact_email'],
+        ],
+        [
+            'attachment' => [
+                'path' => $invalidPublicFilePath,
+                'filename' => 'http-form-invalid-' . bin2hex(random_bytes(4)) . '.txt',
+                'type' => 'text/plain',
+            ],
+        ],
+        $publicFormSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidTypeResponse) !== 200) {
+        $publicFormIssues[] = 'submit veřejného formuláře s nepovoleným typem přílohy nevrátil 200';
+    }
+    if (!str_contains($invalidTypeResponse['body'], 'Pole „Příloha“: Vybraný typ souboru není v tomto poli povolený.')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s nepovoleným typem přílohy nezobrazil validační chybu';
+    }
+    if (!httpIntegrationFieldHasAriaInvalid($invalidTypeResponse['body'], 'field-attachment')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s nepovoleným typem přílohy neoznačil pole attachment jako aria-invalid';
+    }
+    if (!str_contains($invalidTypeResponse['body'], 'id="field-attachment-error"')) {
+        $publicFormIssues[] = 'submit veřejného formuláře s nepovoleným typem přílohy nevykreslil lokální chybový text';
+    }
+    if (httpIntegrationFetchLatestFormSubmissionByFormId($pdo, $publicFormId) !== null) {
+        $publicFormIssues[] = 'submit veřejného formuláře s nepovoleným typem přílohy přesto vytvořil submission';
+    }
+    if (httpIntegrationListStoredFormUploads() !== $beforeInvalidTypeUploads) {
+        $publicFormIssues[] = 'submit veřejného formuláře s nepovoleným typem přílohy po sobě nechal uloženou přílohu';
+    }
+
+    $validSubmitState = $fetchPublicFormState();
+    $validSubmitResponse = postMultipartUrl(
+        $publicFormUrl,
+        [
+            'csrf_token' => (string)$validSubmitState['csrf_token'],
+            'captcha' => (string)$validSubmitState['captcha_answer'],
+            'full_name' => $basePublicFields['full_name'],
+            'contact_email' => $basePublicFields['contact_email'],
+        ],
+        [
+            'attachment' => [
+                'path' => $validPublicFilePath,
+                'filename' => 'http-form-success-' . bin2hex(random_bytes(4)) . '.png',
+                'type' => 'image/png',
+            ],
+        ],
+        $publicFormSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($validSubmitResponse) !== 200) {
+        $publicFormIssues[] = 'validní submit veřejného formuláře nevrátil 200';
+    }
+    if (!str_contains($validSubmitResponse['body'], 'Formulář byl úspěšně odeslán přes HTTP integration.')) {
+        $publicFormIssues[] = 'validní submit veřejného formuláře nezobrazil success stav';
+    }
+    $validSubmission = httpIntegrationFetchLatestFormSubmissionByFormId($pdo, $publicFormId);
+    if ($validSubmission === null) {
+        $publicFormIssues[] = 'validní submit veřejného formuláře nevytvořil submission';
+    } else {
+        $createdFormSubmissionIds[] = (int)$validSubmission['id'];
+        $submissionData = json_decode((string)($validSubmission['data'] ?? ''), true);
+        if (!is_array($submissionData)) {
+            $publicFormIssues[] = 'validní submit veřejného formuláře neuložil čitelná JSON data';
+        } else {
+            if ((string)($submissionData['full_name'] ?? '') !== $basePublicFields['full_name']) {
+                $publicFormIssues[] = 'validní submit veřejného formuláře neuložil full_name';
+            }
+            if ((string)($submissionData['contact_email'] ?? '') !== $basePublicFields['contact_email']) {
+                $publicFormIssues[] = 'validní submit veřejného formuláře neuložil contact_email';
+            }
+
+            $attachmentData = $submissionData['attachment'] ?? null;
+            if (!is_array($attachmentData) || trim((string)($attachmentData['stored_name'] ?? '')) === '') {
+                $publicFormIssues[] = 'validní submit veřejného formuláře neuložil metadata přílohy';
+            } else {
+                $storedAttachmentPath = formUploadFilePath((string)$attachmentData['stored_name']);
+                if ($storedAttachmentPath === '' || !is_file($storedAttachmentPath)) {
+                    $publicFormIssues[] = 'validní submit veřejného formuláře neuložil soubor přílohy na disk';
+                }
+            }
+        }
+        if (trim((string)($validSubmission['reference_code'] ?? '')) === '') {
+            $publicFormIssues[] = 'validní submit veřejného formuláře nevygeneroval reference_code';
+        }
+    }
+
+    httpIntegrationPrintResult('public_form_submit_http', $publicFormIssues, $failures);
 } finally {
     if (isset($originalSettings) && is_array($originalSettings)) {
         foreach ($originalSettings as $settingKey => $settingValue) {
@@ -567,10 +1447,49 @@ try {
         $pdo->prepare("DELETE FROM cms_res_resources WHERE id = ?")->execute([$resourceId]);
     }
 
+    foreach ($createdFormSubmissionIds as $submissionIdToDelete) {
+        $submissionStmt = $pdo->prepare("SELECT data FROM cms_form_submissions WHERE id = ? LIMIT 1");
+        $submissionStmt->execute([$submissionIdToDelete]);
+        $submissionJson = $submissionStmt->fetchColumn();
+        $submissionData = json_decode(is_string($submissionJson) ? $submissionJson : '', true);
+        if (is_array($submissionData)) {
+            formDeleteUploadedFilesFromSubmissionData($submissionData);
+        }
+        $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id = ?")->execute([$submissionIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_form_submissions WHERE id = ?")->execute([$submissionIdToDelete]);
+    }
+    foreach ($createdFormIds as $formIdToDelete) {
+        $submissionRows = $pdo->prepare("SELECT id, data FROM cms_form_submissions WHERE form_id = ?");
+        $submissionRows->execute([$formIdToDelete]);
+        foreach ($submissionRows->fetchAll() ?: [] as $submissionRow) {
+            $submissionData = json_decode((string)($submissionRow['data'] ?? ''), true);
+            if (is_array($submissionData)) {
+                formDeleteUploadedFilesFromSubmissionData($submissionData);
+            }
+            $pdo->prepare("DELETE FROM cms_form_submission_history WHERE submission_id = ?")->execute([(int)$submissionRow['id']]);
+        }
+        $pdo->prepare("DELETE FROM cms_form_submissions WHERE form_id = ?")->execute([$formIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_form_fields WHERE form_id = ?")->execute([$formIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_forms WHERE id = ?")->execute([$formIdToDelete]);
+    }
+    foreach ($createdPageIds as $pageIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_pages WHERE id = ?")->execute([$pageIdToDelete]);
+    }
     foreach ($createdArticles as $articleIdToDelete) {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$articleIdToDelete]);
+    }
+    foreach ($createdMediaIds as $mediaIdToDelete) {
+        $mediaToDelete = httpIntegrationFetchMediaById($pdo, $mediaIdToDelete);
+        if ($mediaToDelete !== null) {
+            mediaDeletePhysicalFiles($mediaToDelete);
+            $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaIdToDelete]);
+        }
+    }
+    foreach ($createdBoardIds as $boardIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$boardIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_board WHERE id = ?")->execute([$boardIdToDelete]);
     }
     foreach ($createdTags as $tagIdToDelete) {
         $pdo->prepare("DELETE FROM cms_tags WHERE id = ?")->execute([$tagIdToDelete]);

@@ -8595,6 +8595,9 @@ $mediaImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import
 $mediaHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 $mediaFileEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/file.php');
 $mediaThumbEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/thumb.php');
+$mediaHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
+    ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
+    : '';
 if (!str_contains($mediaAdminSource, 'internalRedirectTarget(')) {
     $mediaLibraryIssues[] = 'media admin is missing validated redirect handling';
 }
@@ -8653,6 +8656,27 @@ if (!str_contains($mediaFileEndpointSource, 'mediaStaffCanAccessPrivate()')) {
 }
 if (!str_contains($mediaThumbEndpointSource, 'mediaStaffCanAccessPrivate()')) {
     $mediaLibraryIssues[] = 'media thumb endpoint is missing private access guard';
+}
+if ($mediaHttpIntegrationSource === '') {
+    $mediaLibraryIssues[] = 'build/http_integration.php is missing for media admin coverage';
+} else {
+    foreach ([
+        "httpIntegrationPrintResult('media_admin_http'",
+        '/admin/media.php',
+        "'action' => 'upload'",
+        "'action' => 'update_meta'",
+        "'action' => 'replace'",
+        "'action' => 'delete'",
+        "'action' => 'bulk'",
+        "'bulk_action' => 'make_private'",
+        "'bulk_action' => 'delete_unused'",
+        'Použité médium nelze přepnout do soukromého režimu',
+        'Použité médium nelze smazat',
+    ] as $mediaIntegrationFragment) {
+        if (!str_contains($mediaHttpIntegrationSource, $mediaIntegrationFragment)) {
+            $mediaLibraryIssues[] = 'media http integration is missing fragment: ' . $mediaIntegrationFragment;
+        }
+    }
 }
 if ($mediaLibraryIssues === []) {
     echo "OK\n";
@@ -8791,6 +8815,7 @@ if ($httpIntegrationSource === '') {
         '/admin/settings_save.php',
         '/reservations/book.php',
         '/admin/blog_transfer.php',
+        '/admin/media.php',
     ] as $integrationFragment) {
         if (!str_contains($httpIntegrationSource, $integrationFragment)) {
             $settingsPrgIssues[] = 'http integration script is missing scenario fragment: ' . $integrationFragment;
@@ -8809,6 +8834,66 @@ if ($settingsPrgIssues === []) {
     }
 }
 
+echo "=== public_forms_http_guardrails ===\n";
+$publicFormsHttpIssues = [];
+$formsControllerSource = (string)file_get_contents(dirname(__DIR__) . '/forms/index.php');
+$formsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/forms-show.php');
+$formsHelperSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
+if ($httpIntegrationSource === '') {
+    $publicFormsHttpIssues[] = 'build/http_integration.php is missing for public forms coverage';
+} else {
+    foreach ([
+        "httpIntegrationPrintResult('public_form_submit_http'",
+        'formPublicPath([',
+        'Chybná odpověď na ověřovací otázku.',
+        'Vybraný typ souboru není v tomto poli povolený.',
+        'httpIntegrationExtractCaptchaAnswer(',
+        'httpIntegrationListStoredFormUploads(',
+        "'attachment' => [",
+        'httpIntegrationFetchLatestFormSubmissionByFormId(',
+    ] as $publicFormsIntegrationFragment) {
+        if (!str_contains($httpIntegrationSource, $publicFormsIntegrationFragment)) {
+            $publicFormsHttpIssues[] = 'public forms http integration is missing fragment: ' . $publicFormsIntegrationFragment;
+        }
+    }
+}
+foreach ([
+    'verifyCsrf();',
+    'captchaVerify($_POST[\'captcha\'] ?? \'\')',
+    'storePublicFormUploads(',
+    'formDeleteUploadedFile(',
+    '$fieldErrors = [];',
+    '$addFieldError = static function',
+] as $formsControllerFragment) {
+    if (!str_contains($formsControllerSource, $formsControllerFragment)) {
+        $publicFormsHttpIssues[] = 'forms controller is missing fragment: ' . $formsControllerFragment;
+    }
+}
+if (!str_contains($formsHelperSource, 'function formDeleteUploadedFilesFromSubmissionData(')) {
+    $publicFormsHttpIssues[] = 'forms helper is missing uploaded-file cleanup helper';
+}
+foreach ([
+    'id="form-errors"',
+    'role="alert"',
+    'type="file"',
+    'name="captcha"',
+    'aria-invalid="true"',
+    'field-error',
+    'captcha-error',
+] as $formsViewFragment) {
+    if (!str_contains($formsViewSource, $formsViewFragment)) {
+        $publicFormsHttpIssues[] = 'forms view is missing fragment: ' . $formsViewFragment;
+    }
+}
+if ($publicFormsHttpIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($publicFormsHttpIssues as $publicFormsHttpIssue) {
+        echo '- ' . $publicFormsHttpIssue . "\n";
+    }
+}
+
 echo "=== editorial_validation_guardrails ===\n";
 $editorialValidationIssues = [];
 $pageSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_save.php');
@@ -8821,6 +8906,8 @@ $podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
 $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
+$boardSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_save.php');
+$boardFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
 $reservationSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_save.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingSource = (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php');
@@ -8879,6 +8966,19 @@ if (!str_contains($pollSaveValidationSource, "redirectToForm(\$id, 'dates'")) {
 }
 if (!str_contains($pollFormValidationSource, "'dates' =>")) {
     $editorialValidationIssues[] = 'poll form is missing invalid date/time feedback';
+}
+if (!str_contains($boardSaveValidationSource, "DateTimeImmutable::createFromFormat('!Y-m-d'")) {
+    $editorialValidationIssues[] = 'board save is missing strict board date parsing';
+}
+foreach (["'posted_date'", "'removal_date'", "'dates'"] as $boardErrorFragment) {
+    if (!str_contains($boardSaveValidationSource, $boardErrorFragment)) {
+        $editorialValidationIssues[] = 'board save is missing validation branch: ' . $boardErrorFragment;
+    }
+}
+foreach (["'posted_date' =>", "'removal_date' =>", "'posted_date_invalid' =>", "\$err === 'removal_date'"] as $boardFormFragment) {
+    if (!str_contains($boardFormValidationSource, $boardFormFragment)) {
+        $editorialValidationIssues[] = 'board form is missing validation message branch: ' . $boardFormFragment;
+    }
 }
 if (!str_contains($reservationSaveSource, '$pdo->beginTransaction()') || !str_contains($reservationSaveSource, '$pdo->rollBack()')) {
     $editorialValidationIssues[] = 'reservation resource save is missing transactional protection';

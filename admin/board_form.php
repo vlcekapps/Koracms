@@ -49,6 +49,8 @@ foreach (boardTypeDefinitions() as $typeKey => $typeMeta) {
 $err = trim($_GET['err'] ?? '');
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
+    'posted_date' => 'Zadejte platné datum vyvěšení.',
+    'removal_date' => 'Zadejte platné datum sejmutí.',
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'contact_email' => 'Kontaktní e-mail nemá platný formát.',
@@ -58,6 +60,8 @@ $formError = match ($err) {
 };
 $fieldErrorMap = [
     'required' => ['title', 'posted_date'],
+    'posted_date' => ['posted_date'],
+    'removal_date' => ['removal_date'],
     'dates' => ['posted_date', 'removal_date'],
     'slug' => ['slug'],
     'contact_email' => ['contact_email'],
@@ -67,6 +71,8 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'title' => 'Nadpis položky je povinný.',
     'posted_date' => 'Datum vyvěšení je povinné.',
+    'posted_date_invalid' => 'Zadejte platné datum vyvěšení.',
+    'removal_date' => 'Zadejte platné datum sejmutí.',
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'contact_email' => 'Kontaktní e-mail nemá platný formát.',
@@ -162,7 +168,11 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <small id="board-posted-date-help" class="field-help">Položka se na veřejném webu zobrazí od tohoto dne. Budoucí datum vytvoří naplánovanou položku.</small>
     <?php if (adminFieldHasError('posted_date', $err, $fieldErrorMap)): ?>
       <small id="board-posted-date-error" class="field-help field-error">
-        <?= h($err === 'dates' ? $fieldErrorMessages['dates'] : $fieldErrorMessages['posted_date']) ?>
+        <?= h(match ($err) {
+            'dates' => $fieldErrorMessages['dates'],
+            'posted_date' => $fieldErrorMessages['posted_date_invalid'],
+            default => $fieldErrorMessages['posted_date'],
+        }) ?>
       </small>
     <?php endif; ?>
 
@@ -172,7 +182,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
            value="<?= h((string)($document['removal_date'] ?? '')) ?>">
     <small id="board-removal-date-help" class="field-help">Nechte prázdné, pokud má položka zůstat bez data stažení.</small>
     <?php if (adminFieldHasError('removal_date', $err, $fieldErrorMap)): ?>
-      <small id="board-removal-date-error" class="field-help field-error"><?= h($fieldErrorMessages['dates']) ?></small>
+      <small id="board-removal-date-error" class="field-help field-error">
+        <?= h($err === 'removal_date' ? $fieldErrorMessages['removal_date'] : $fieldErrorMessages['dates']) ?>
+      </small>
     <?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">

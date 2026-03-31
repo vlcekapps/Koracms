@@ -665,6 +665,11 @@ body.theme-public textarea.form-control {
   color: var(--text-muted);
 }
 
+.field-error {
+  color: #8f1d1d;
+  font-weight: 700;
+}
+
 .form-control {
   width: 100%;
   min-height: 2.9rem;
@@ -673,6 +678,16 @@ body.theme-public textarea.form-control {
   border-radius: 0.85rem;
   background: rgba(255, 255, 255, 0.98);
   color: var(--text-main);
+}
+
+.form-control[aria-invalid="true"] {
+  border-color: #b42318;
+  box-shadow: 0 0 0 1px rgba(180, 35, 24, 0.16);
+}
+
+.form-fieldset[aria-invalid="true"] {
+  padding-left: 0.75rem;
+  border-left: 4px solid #b42318;
 }
 
 .form-control--compact {
