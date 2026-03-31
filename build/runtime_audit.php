@@ -7991,6 +7991,21 @@ if (!str_contains($blogMembersSource, 'canCurrentUserManageBlogTaxonomies($blogI
 if (!str_contains($blogMembersSource, 'Zakladatel blogu:') || !str_contains($blogMembersSource, 'created_by_user_id')) {
     $blogAdminIssues[] = 'blog team management page is missing creator audit context';
 }
+if (!str_contains($blogMembersSource, "name=\"action\" value=\"set_creator\"") || !str_contains($blogMembersSource, 'name="creator_user_id"')) {
+    $blogAdminIssues[] = 'blog team management page is missing founder backfill form';
+}
+if (!str_contains($blogMembersSource, "currentUserHasCapability('blog_taxonomies_manage') || currentUserHasCapability('settings_manage')")) {
+    $blogAdminIssues[] = 'blog team management page is missing founder backfill global-permission guard';
+}
+if (!str_contains($blogMembersSource, 'UPDATE cms_blogs') || !str_contains($blogMembersSource, 'created_by_user_id IS NULL')) {
+    $blogAdminIssues[] = 'blog team management page is missing founder backfill single-write update';
+}
+if (!str_contains($blogMembersSource, 'Zakladatel už je u tohoto blogu evidovaný.')) {
+    $blogAdminIssues[] = 'blog team management page is missing guard against reassigning existing founders';
+}
+if (!str_contains($blogMembersSource, 'automaticky nepřidá uživatele do týmu blogu')) {
+    $blogAdminIssues[] = 'blog team management page is missing copy that separates founder audit from team membership';
+}
 if (!str_contains($blogMembersSource, 'Další blogy uživatele')) {
     $blogAdminIssues[] = 'blog team management page is missing cross-blog membership overview';
 }
@@ -8071,6 +8086,9 @@ if (!str_contains($blogsAdminSource, 'member_count')) {
 }
 if (!str_contains($blogsAdminSource, 'created_by_user_id') || !str_contains($blogsAdminSource, 'creator_label')) {
     $blogAdminIssues[] = 'blog overview is missing creator audit visibility';
+}
+if (!str_contains($blogsAdminSource, 'Doplníte na stránce Tým blogu.')) {
+    $blogAdminIssues[] = 'blog overview is missing founder backfill hint for legacy blogs';
 }
 if (!str_contains($blogsAdminSource, 'saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog editor no longer stores legacy slug redirects';

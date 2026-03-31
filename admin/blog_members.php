@@ -28,6 +28,22 @@ $success = '';
 $error = '';
 $roleOptions = blogMembershipRoleDefinitions();
 $blogCreator = null;
+$canAssignBlogCreator = currentUserHasCapability('blog_taxonomies_manage') || currentUserHasCapability('settings_manage');
+$blogMemberFlash = $_SESSION['blog_members_flash'] ?? [];
+unset($_SESSION['blog_members_flash']);
+$creatorForm = [
+    'creator_user_id' => '',
+];
+$creatorFieldErrors = [];
+
+if (is_array($blogMemberFlash)) {
+    $success = is_string($blogMemberFlash['success'] ?? null) ? (string)$blogMemberFlash['success'] : '';
+    $error = is_string($blogMemberFlash['error'] ?? null) ? (string)$blogMemberFlash['error'] : '';
+    if (($blogMemberFlash['context'] ?? '') === 'creator' && isset($blogMemberFlash['form']) && is_array($blogMemberFlash['form'])) {
+        $creatorForm = array_merge($creatorForm, $blogMemberFlash['form']);
+        $creatorFieldErrors = array_values(array_unique(array_filter((array)($blogMemberFlash['field_errors'] ?? []), 'is_string')));
+    }
+}
 
 if ($blogId > 0) {
     $blogCreatorStmt = $pdo->prepare(
@@ -49,6 +65,13 @@ $eligibleUsersStmt = $pdo->query(
      ORDER BY COALESCE(NULLIF(nickname,''), NULLIF(TRIM(CONCAT(first_name,' ',last_name)),''), email)"
 );
 $eligibleUsers = $eligibleUsersStmt->fetchAll();
+$eligibleUsersById = [];
+foreach ($eligibleUsers as $eligibleUserRow) {
+    $eligibleUserId = (int)($eligibleUserRow['id'] ?? 0);
+    if ($eligibleUserId > 0) {
+        $eligibleUsersById[$eligibleUserId] = $eligibleUserRow;
+    }
+}
 $allMembershipRows = [];
 try {
     $allMembershipStmt = $pdo->query(
@@ -64,8 +87,66 @@ try {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
+    $postAction = trim((string)($_POST['action'] ?? 'save_team'));
+    $redirectTarget = internalRedirectTarget(
+        trim((string)($_POST['redirect'] ?? '')),
+        BASE_URL . '/admin/blog_members.php?blog_id=' . $blogId
+    );
 
-    if ($blogId <= 0 || !getBlogById($blogId)) {
+    if ($postAction === 'set_creator') {
+        $creatorForm['creator_user_id'] = (string)($_POST['creator_user_id'] ?? '');
+
+        if ($blogId <= 0) {
+            $flashError = 'Vybraný blog nebyl nalezen.';
+        } elseif (!$canAssignBlogCreator) {
+            $flashError = 'Zakladatele blogu může doplnit jen globální správce blogů nebo nastavení.';
+        } else {
+            $blogCreatorCheckStmt = $pdo->prepare("SELECT created_by_user_id FROM cms_blogs WHERE id = ?");
+            $blogCreatorCheckStmt->execute([$blogId]);
+            $blogCreatorCheck = $blogCreatorCheckStmt->fetch();
+            $selectedCreatorId = inputInt('post', 'creator_user_id') ?? 0;
+            $flashError = '';
+
+            if (!$blogCreatorCheck) {
+                $flashError = 'Vybraný blog nebyl nalezen.';
+            } elseif (!empty($blogCreatorCheck['created_by_user_id'])) {
+                $flashError = 'Zakladatel už je u tohoto blogu evidovaný.';
+            } elseif ($selectedCreatorId <= 0 || !isset($eligibleUsersById[$selectedCreatorId])) {
+                $flashError = 'Vyberte prosím platného interního uživatele.';
+                $creatorFieldErrors[] = 'creator_user_id';
+            }
+
+            if ($flashError === '') {
+                $updateCreatorStmt = $pdo->prepare(
+                    "UPDATE cms_blogs
+                     SET created_by_user_id = ?
+                     WHERE id = ? AND created_by_user_id IS NULL"
+                );
+                $updateCreatorStmt->execute([$selectedCreatorId, $blogId]);
+
+                if ($updateCreatorStmt->rowCount() !== 1) {
+                    $flashError = 'Zakladatele se nepodařilo doplnit, protože byl mezitím už nastaven.';
+                } else {
+                    clearBlogCache();
+                    logAction('blog_creator_backfill', 'blog_id=' . $blogId . ';creator_user_id=' . $selectedCreatorId);
+                    $_SESSION['blog_members_flash'] = [
+                        'success' => 'Zakladatel blogu byl doplněn.',
+                    ];
+                    header('Location: ' . $redirectTarget);
+                    exit;
+                }
+            }
+
+            $_SESSION['blog_members_flash'] = [
+                'context' => 'creator',
+                'error' => $flashError,
+                'field_errors' => $creatorFieldErrors,
+                'form' => $creatorForm,
+            ];
+            header('Location: ' . $redirectTarget);
+            exit;
+        }
+    } elseif ($blogId <= 0 || !getBlogById($blogId)) {
         $error = 'Vybraný blog nebyl nalezen.';
     } elseif (!canCurrentUserManageBlogTaxonomies($blogId)) {
         $error = 'Tým tohoto blogu nemůžete upravovat.';
@@ -191,17 +272,57 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
         (<?= h((string)$blogCreator['email']) ?>)
       <?php endif; ?>
       <?php if (!isset($memberMap[(int)$blogCreator['created_by_user_id']])): ?>
-        <br><span>Zakladatel zatím není přiřazený v týmu blogu. U starších blogů to můžete doplnit ručně zde.</span>
+        <br><span>Zakladatel zatím není přiřazený v týmu blogu. Pokud má mít přístup i jako člen týmu, přiřaďte ho níže samostatně.</span>
       <?php endif; ?>
     <?php else: ?>
-      <span>Neevidován. U starších blogů je potřeba doplnit zakladatele ručně.</span>
+      <?php if ($canAssignBlogCreator): ?>
+        <span>Neevidován. U starších blogů ho můžete doplnit níže jako jednorázový auditní údaj.</span>
+      <?php else: ?>
+        <span>Neevidován. Doplnit ho může jen globální správce blogů nebo nastavení.</span>
+      <?php endif; ?>
     <?php endif; ?>
   </p>
+
+  <?php if (empty($blogCreator['created_by_user_id']) && $canAssignBlogCreator): ?>
+    <form method="post" novalidate style="margin-top:1rem">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="action" value="set_creator">
+      <input type="hidden" name="blog_id" value="<?= $blogId ?>">
+      <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/blog_members.php?blog_id=' . $blogId) ?>">
+      <fieldset>
+        <legend>Doplnit zakladatele</legend>
+        <p class="field-help">
+          Tato volba slouží jen pro starší blogy bez evidovaného zakladatele. Jakmile údaj uložíte, v administraci už ho nepůjde změnit.
+        </p>
+        <label for="creator_user_id">Zakladatel blogu</label>
+        <select
+          id="creator_user_id"
+          name="creator_user_id"
+          <?= adminFieldAttributes('creator_user_id', $creatorFieldErrors, [], ['creator-user-help']) ?>
+        >
+          <option value="">Vyberte interního uživatele</option>
+          <?php foreach ($eligibleUsers as $eligibleUser): ?>
+            <?php $creatorUserId = (int)($eligibleUser['id'] ?? 0); ?>
+            <option value="<?= $creatorUserId ?>"<?= (string)$creatorUserId === (string)($creatorForm['creator_user_id'] ?? '') ? ' selected' : '' ?>>
+              <?= h($displayName($eligibleUser)) ?> (<?= h((string)($eligibleUser['email'] ?? '')) ?>)
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <small id="creator-user-help" class="field-help">Vybrat můžete jen interní účet. Doplnění zakladatele automaticky nepřidá uživatele do týmu blogu.</small>
+        <?php adminRenderFieldError('creator_user_id', $creatorFieldErrors, [], 'Vyberte prosím interního uživatele, kterého chcete evidovat jako zakladatele.'); ?>
+
+        <div class="button-row" style="margin-top:1rem">
+          <button type="submit" class="btn">Uložit zakladatele</button>
+        </div>
+      </fieldset>
+    </form>
+  <?php endif; ?>
 <?php endif; ?>
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="blog_id" value="<?= $blogId ?>">
+  <input type="hidden" name="action" value="save_team">
 
   <fieldset>
     <legend>Tým blogu</legend>

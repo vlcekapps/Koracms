@@ -225,6 +225,7 @@ adminHeader('Správa blogů');
             <?php endif; ?>
           <?php else: ?>
             <span class="field-help">Neevidován</span>
+            <br><small class="field-help">Doplníte na stránce Tým blogu.</small>
           <?php endif; ?>
         </td>
         <td class="actions">
