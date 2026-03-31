@@ -212,7 +212,9 @@ function siteNav(string $current = ''): string
         return '<li><a href="' . $b . $href . '"' . $cur($page) . '>' . $label . '</a></li>' . "\n";
     };
 
-    $nav  = '<nav aria-label="Hlavní navigace"><ul>' . "\n";
+    $navHeadingId = 'site-nav-heading';
+    $nav = '<nav aria-labelledby="' . $navHeadingId . '">';
+    $nav .= '<p id="' . $navHeadingId . '" class="sr-only">Hlavní navigace</p><ul>' . "\n";
     $nav .= $li('/index.php', 'Domů', 'home');
 
     $unifiedOrder = getSetting('nav_order_unified', '');
@@ -247,7 +249,11 @@ function siteNav(string $current = ''): string
         try {
             $pageRows = db_connect()->query(
                 "SELECT id, title, slug FROM cms_pages
-                 WHERE show_in_nav = 1 AND is_published = 1 AND COALESCE(status,'published') = 'published' AND deleted_at IS NULL"
+                 WHERE blog_id IS NULL
+                   AND show_in_nav = 1
+                   AND is_published = 1
+                   AND COALESCE(status,'published') = 'published'
+                   AND deleted_at IS NULL"
             )->fetchAll();
             foreach ($pageRows as $p) {
                 $pagesMap[(int)$p['id']] = $p;
@@ -346,7 +352,9 @@ function siteNav(string $current = ''): string
         try {
             $pages = db_connect()->query(
                 "SELECT title, slug FROM cms_pages
-                 WHERE show_in_nav = 1 AND is_published = 1
+                 WHERE blog_id IS NULL
+                   AND show_in_nav = 1
+                   AND is_published = 1
                  ORDER BY nav_order, title"
             )->fetchAll();
             foreach ($pages as $p) {

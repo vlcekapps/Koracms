@@ -4,6 +4,16 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- **Blogy – statické stránky přiřazené ke konkrétnímu blogu** – stránky lze nově přiřadit k jednomu blogu, řadit je samostatně v rámci daného blogu a zobrazovat je na veřejném blogu jako vlastní obsahovou vrstvu s adresami `/{blog-slug}/stranka/{page-slug}`; převod článku na stránku nově zachovává příslušný blog a blogové pořadí stránek
+
+### Změněno
+- **Blogy – hlavní adresa blogu nově zobrazuje navigaci blogových stránek nad články** – pokud má blog přiřazené statické stránky, veřejný index blogu nad featured článkem a výpisem zobrazí jejich samostatnou navigaci s vlastním nadpisem, ale bez automatického vykreslení obsahu některé stránky
+- **Blogy – detail blogové stránky funguje jako samostatná stránka se zpětným odkazem na blog** – otevření konkrétní blogové stránky zobrazí jen obsah dané stránky v běžném page layoutu a pod ním odkaz `Zpět na blog`, bez featured článku, seznamu článků a sekundárních blogových bloků
+- **Přístupnost – hlavní navigace webu má nově i nadpis pro čtečky obrazovky** – veřejná hlavní navigace je vedle landmarku dohledatelná také přes `aria-labelledby` napojené na skutečný skrytý nadpis `Hlavní navigace`
+
 ## [3.0.0] – 2026-03-31
 
 ### Přidáno

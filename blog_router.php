@@ -20,6 +20,7 @@ if (!isModuleEnabled('blog')) {
 
 $blogSlug = slugify(trim((string)($_GET['blog_slug'] ?? '')));
 $articleSlug = articleSlug(trim((string)($_GET['slug'] ?? '')));
+$pageSlug = pageSlug(trim((string)($_GET['page_slug'] ?? '')));
 
 if ($blogSlug === '') {
     http_response_code(404);
@@ -37,8 +38,28 @@ $blog = getBlogBySlug($blogSlug);
 if (!$blog) {
     $legacyBlog = getBlogByLegacySlug($blogSlug);
     if ($legacyBlog) {
+        $pdo = db_connect();
+        if ($pageSlug !== '') {
+            $pageStmt = $pdo->prepare(
+                "SELECT p.id, p.slug, p.blog_id, b.slug AS blog_slug
+                 FROM cms_pages p
+                 INNER JOIN cms_blogs b ON b.id = p.blog_id
+                 WHERE p.blog_id = ?
+                   AND p.slug = ?
+                   AND p.deleted_at IS NULL
+                   AND p.status = 'published'
+                   AND p.is_published = 1
+                 LIMIT 1"
+            );
+            $pageStmt->execute([(int)$legacyBlog['id'], $pageSlug]);
+            $legacyPage = $pageStmt->fetch() ?: null;
+            if ($legacyPage) {
+                header('Location: ' . pagePublicPath($legacyPage), true, 301);
+                exit;
+            }
+        }
+
         if ($articleSlug !== '') {
-            $pdo = db_connect();
             $articleStmt = $pdo->prepare(
                 "SELECT a.id, a.slug, a.blog_id, b.slug AS blog_slug
                  FROM cms_articles a
@@ -72,7 +93,10 @@ if (!$blog) {
 $GLOBALS['current_blog'] = $blog;
 $_GET['blog_id'] = (int)$blog['id'];
 
-if ($articleSlug !== '') {
+if ($pageSlug !== '') {
+    $_GET['page_slug'] = $pageSlug;
+    require __DIR__ . '/blog/page.php';
+} elseif ($articleSlug !== '') {
     $_GET['slug'] = $articleSlug;
     require __DIR__ . '/blog/article.php';
 } else {

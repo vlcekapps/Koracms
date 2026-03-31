@@ -1836,6 +1836,9 @@ if ($pageId !== false) {
     $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
  $pages[] = ['label' => 'admin_page_create_form', 'url' => $baseUrl . '/admin/page_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+if (!empty($articleRow['blog_id'])) {
+    $pages[] = ['label' => 'admin_blog_pages', 'url' => $baseUrl . '/admin/blog_pages.php?blog_id=' . urlencode((string)$articleRow['blog_id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
+}
 if ($runtimeAuditFormId > 0) {
     $pages[] = ['label' => 'admin_form_edit', 'url' => $baseUrl . '/admin/form_form.php?id=' . urlencode((string)$runtimeAuditFormId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
     $pages[] = ['label' => 'admin_form_submissions', 'url' => $baseUrl . '/admin/form_submissions.php?id=' . urlencode((string)$runtimeAuditFormId) . '&status=all', 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -2933,8 +2936,8 @@ foreach ($pages as $page) {
         'admin_news_create_form' => ['Adresa se vyplní automaticky, dokud ji neupravíte ručně.'],
         'admin_event_form' => ['Vyplňte potřebné údaje k této události.', 'Krátké shrnutí', 'Registrační odkaz', 'Plánované zrušení publikace', 'Zveřejnit na webu'],
         'admin_event_create_form' => ['Vyplňte potřebné údaje k této události.', 'Krátké shrnutí', 'Registrační odkaz', 'Plánované zrušení publikace', 'Zveřejnit na webu'],
-        'admin_page_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
-        'admin_page_create_form' => ['Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci'],
+        'admin_page_form' => ['Vyplňte základní údaje stránky. Můžete ji ponechat jako globální statickou stránku, nebo ji přiřadit ke konkrétnímu blogu.', 'Patří k blogu', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci', 'Pořadí stránek blogu'],
+        'admin_page_create_form' => ['Vyplňte základní údaje stránky. Můžete ji ponechat jako globální statickou stránku, nebo ji přiřadit ke konkrétnímu blogu.', 'Patří k blogu', 'Zveřejnit na webu', 'Zobrazit v hlavní navigaci', 'Pořadí stránek blogu'],
         'admin_download_form' => ['Zveřejnit na webu', 'Můžete nahrát dokument, archiv nebo instalační balíček.'],
         'admin_download_create_form' => ['Zveřejnit na webu', 'Můžete nahrát dokument, archiv nebo instalační balíček.'],
         'admin_faq_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
@@ -4025,6 +4028,22 @@ foreach ($pages as $page) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin places page is missing fragment: ' . $expectedFragment;
             }
+        }
+    }
+
+    if ($page['label'] === 'admin_blog_pages') {
+        foreach ([
+            'Pořadí stránek blogu',
+            'Tady určujete pořadí statických stránek blogu',
+            'Uložit pořadí',
+            'Nová stránka blogu',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin blog pages page is missing fragment: ' . $expectedFragment;
+            }
+        }
+        if (!str_contains($result['body'], 'id="blog-page-order-status"') || !str_contains($result['body'], 'data-sort-id=')) {
+            $issues[] = 'admin blog pages page is missing accessible reorder controls';
         }
     }
 
@@ -9556,6 +9575,87 @@ if ($widgetRenderIssues === []) {
     }
 }
 
+echo "=== blog_static_pages_guardrails ===\n";
+$blogStaticPageIssues = [];
+$blogStaticPageControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/page.php');
+$blogStaticPagesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_pages.php');
+$blogStaticHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
+$blogStaticReadmeSource = (string)file_get_contents(dirname(__DIR__) . '/README.md');
+$blogStaticStatsSource = (string)file_get_contents(dirname(__DIR__) . '/lib/stats.php');
+$blogStaticPageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
+$blogStaticPageSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_save.php');
+$blogStaticPagesListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.php');
+$blogStaticMenuSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');
+$blogStaticConvertSource = (string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php');
+$blogStaticInstallSource = (string)file_get_contents(dirname(__DIR__) . '/install.php');
+$blogStaticMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
+$blogStaticHttpIntegrationSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+if (!str_contains($blogStaticStatsSource, 'site-nav-heading') || !str_contains($blogStaticStatsSource, 'aria-labelledby')) {
+    $blogStaticPageIssues[] = 'site navigation is missing a screen-reader heading with aria-labelledby';
+}
+if (str_contains($blogStaticStatsSource, 'aria-label="Hlavní navigace"')) {
+    $blogStaticPageIssues[] = 'site navigation still contains the legacy aria-label-only implementation';
+}
+if (!str_contains($blogStaticInstallSource, 'blog_id') || !str_contains($blogStaticInstallSource, 'blog_nav_order') || !str_contains($blogStaticInstallSource, 'idx_pages_blog_nav')) {
+    $blogStaticPageIssues[] = 'fresh install is missing blog page schema fields on cms_pages';
+}
+if (!str_contains($blogStaticMigrateSource, 'cms_pages.blog_id') || !str_contains($blogStaticMigrateSource, 'cms_pages.blog_nav_order') || !str_contains($blogStaticMigrateSource, 'idx_pages_blog_nav')) {
+    $blogStaticPageIssues[] = 'migration is missing blog page schema upgrade on cms_pages';
+}
+if (!str_contains($blogPresentationSource, 'function pageBlogContext') || !str_contains($blogPresentationSource, '/stranka/') || !str_contains($blogPresentationSource, 'function normalizeBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function nextBlogPageNavigationOrder')) {
+    $blogStaticPageIssues[] = 'presentation helpers are missing blog page routing or ordering support';
+}
+if (!str_contains($blogRouterSource, '$pageSlug = pageSlug') || !str_contains($blogRouterSource, "require __DIR__ . '/blog/page.php'")) {
+    $blogStaticPageIssues[] = 'blog router is missing dedicated handling for blog static pages';
+}
+if (!str_contains($blogStaticHtaccessSource, '/stranka/') || !str_contains($blogStaticHtaccessSource, 'page_slug=$2')) {
+    $blogStaticPageIssues[] = '.htaccess is missing blog static page rewrite before article routes';
+}
+if (!str_contains($blogStaticReadmeSource, '/blog_router.php?blog_slug=$1&page_slug=$2&$args')) {
+    $blogStaticPageIssues[] = 'README nginx sample is missing the blog static page route';
+}
+if (!str_contains($blogIndexControllerSource, 'SELECT id, title, slug, blog_id, blog_nav_order') || !str_contains($blogIndexControllerSource, '$blogPages')) {
+    $blogStaticPageIssues[] = 'blog index controller is missing loading of ordered blog pages';
+}
+if (!str_contains($blogIndexViewSource, 'Stránky blogu') || !str_contains($blogIndexViewSource, 'aria-labelledby="blog-pages-heading"')) {
+    $blogStaticPageIssues[] = 'blog index view is missing the labeled blog page navigation block';
+}
+if (!str_contains($blogStaticPageControllerSource, "'view' => 'page'") || !str_contains($blogStaticPageControllerSource, 'Zpět na blog') || !str_contains($blogStaticPageControllerSource, "'page-blog-static'")) {
+    $blogStaticPageIssues[] = 'blog page controller is missing page rendering or the back-to-blog affordance';
+}
+if (!str_contains($blogStaticPageFormSource, 'name="blog_id"') || !str_contains($blogStaticPageFormSource, 'Patří k blogu') || !str_contains($blogStaticPageFormSource, 'Pořadí stránek blogu')) {
+    $blogStaticPageIssues[] = 'page editor is missing blog assignment controls';
+}
+if (!str_contains($blogStaticPageSaveSource, '$targetBlogId') || !str_contains($blogStaticPageSaveSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticPageSaveSource, 'normalizeBlogPageNavigationOrder')) {
+    $blogStaticPageIssues[] = 'page save is missing blog-specific persistence or ordering';
+}
+if (!str_contains($blogStaticPagesAdminSource, 'blog_nav_order') || !str_contains($blogStaticPagesAdminSource, 'Uložit pořadí') || !str_contains($blogStaticPagesAdminSource, 'blog-page-order-status')) {
+    $blogStaticPageIssues[] = 'blog page ordering admin screen is missing reorder persistence or accessibility helpers';
+}
+if (!str_contains($blogStaticPagesListSource, 'Blogová stránka') || !str_contains($blogStaticPagesListSource, '/admin/blog_pages.php?blog_id=')) {
+    $blogStaticPageIssues[] = 'pages overview is missing blog page classification or reorder link';
+}
+if (!str_contains($blogStaticMenuSource, 'WHERE blog_id IS NULL AND deleted_at IS NULL')) {
+    $blogStaticPageIssues[] = 'global navigation management still includes blog pages';
+}
+if (!str_contains($blogStaticConvertSource, 'blog_nav_order') || !str_contains($blogStaticConvertSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticConvertSource, '$targetBlogId = !empty($page[\'blog_id\']) ? (int)$page[\'blog_id\'] : $defaultBlogId')) {
+    $blogStaticPageIssues[] = 'content conversion is missing blog-preserving page/article behavior';
+}
+if (!str_contains($blogExportSource, 'blog_id, blog_nav_order') || !str_contains($blogImportSource, 'blog_id, blog_nav_order')) {
+    $blogStaticPageIssues[] = 'export/import is missing blog page fields';
+}
+if (!str_contains($blogStaticHttpIntegrationSource, "blog_static_pages_http")) {
+    $blogStaticPageIssues[] = 'http integration suite is missing blog static page scenarios';
+}
+if ($blogStaticPageIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($blogStaticPageIssues as $blogStaticPageIssue) {
+        echo '- ' . $blogStaticPageIssue . "\n";
+    }
+}
+
 echo "=== menu_admin_guardrails ===\n";
 $menuAdminIssues = [];
 $adminMenuSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');
@@ -9584,6 +9684,12 @@ if (!str_contains($pagePositionsSource, '/admin/menu.php?page_positions=1')) {
 }
 if (!str_contains($publicNavSource, '$renderUnifiedEntry') || !str_contains($publicNavSource, 'foreach (array_keys($pagesMap) as $pageId)')) {
     $menuAdminIssues[] = 'public navigation does not append missing unified entries safely';
+}
+if (!str_contains($publicNavSource, "\$navHeadingId = 'site-nav-heading';") || !str_contains($publicNavSource, "aria-labelledby=\"' . \$navHeadingId . '\"")) {
+    $menuAdminIssues[] = 'public navigation is missing the heading-backed main navigation landmark';
+}
+if (str_contains($publicNavSource, 'aria-label="Hlavní navigace"')) {
+    $menuAdminIssues[] = 'public navigation still contains legacy aria-label-only main navigation markup';
 }
 if (!str_contains($adminMenuSource, 'FROM cms_forms')) {
     $menuAdminIssues[] = 'admin menu no longer includes forms in unified navigation source';

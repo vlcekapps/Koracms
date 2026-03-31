@@ -46,6 +46,7 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor, $s
     return $query === [] ? $base : $base . '?' . http_build_query($query);
 };
 $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || $searchQuery !== '' || $archiveFilter !== '';
+$blogPages = is_array($blogPages ?? null) ? $blogPages : [];
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="blog-title">
@@ -73,6 +74,17 @@ $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || 
         <?php endif; ?>
       </div>
     </div>
+
+    <?php if ($blogPages !== []): ?>
+      <nav class="form-stack blog-page-links" aria-labelledby="blog-pages-heading" style="margin-bottom:1.5rem">
+        <h2 id="blog-pages-heading" class="section-title section-title--compact">Stránky blogu</h2>
+        <ul class="chip-list">
+          <?php foreach ($blogPages as $blogPage): ?>
+            <li><a class="chip-link" href="<?= h(pagePublicPath($blogPage)) ?>"><?= h((string)$blogPage['title']) ?></a></li>
+          <?php endforeach; ?>
+        </ul>
+      </nav>
+    <?php endif; ?>
 
     <?php if (!empty($featuredArticle)): ?>
       <article class="card card--feature" aria-labelledby="featured-article-title" style="margin-bottom:1.25rem">

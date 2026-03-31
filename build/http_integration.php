@@ -1017,6 +1017,266 @@ try {
 
     httpIntegrationPrintResult('blog_transfer_http', $blogTransferIssues, $failures);
 
+    $blogStaticPagesIssues = [];
+    $blogStaticMainSlug = 'http-blog-pages-main-' . bin2hex(random_bytes(4));
+    $blogStaticOtherSlug = 'http-blog-pages-other-' . bin2hex(random_bytes(4));
+    foreach ([
+        ['name' => 'HTTP Blogové stránky', 'slug' => $blogStaticMainSlug],
+        ['name' => 'HTTP Jiný blog', 'slug' => $blogStaticOtherSlug],
+    ] as $blogRow) {
+        $pdo->prepare(
+            "INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)"
+        )->execute([$blogRow['name'], $blogRow['slug'], $adminUserId]);
+        $createdBlogs[] = (int)$pdo->lastInsertId();
+    }
+    [$blogStaticMainId, $blogStaticOtherId] = array_slice($createdBlogs, -2);
+
+    $pageSaveUrl = $baseUrl . BASE_URL . '/admin/page_save.php';
+    $blogPagesAdminUrl = $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId;
+    $blogStaticIndexUrl = $baseUrl . BASE_URL . '/' . rawurlencode($blogStaticMainSlug) . '/';
+
+    $blogPageOneTitle = 'HTTP Blogová stránka A';
+    $blogPageOneSlug = 'http-blog-page-a-' . bin2hex(random_bytes(4));
+    $blogPageOneContent = '<p>Obsah první blogové stránky pro HTTP integration test.</p>';
+    $blogPageOneResponse = postUrl($pageSaveUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'redirect' => BASE_URL . '/admin/pages.php',
+        'title' => $blogPageOneTitle,
+        'slug' => $blogPageOneSlug,
+        'content' => $blogPageOneContent,
+        'blog_id' => (string)$blogStaticMainId,
+        'is_published' => '1',
+        'show_in_nav' => '1',
+        'admin_note' => 'HTTP integration test',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogPageOneResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'uložení první blogové stránky nevrátilo redirect';
+    }
+    if (!responseHasLocationHeader($blogPageOneResponse['headers'], BASE_URL . '/admin/pages.php', $baseUrl)) {
+        $blogStaticPagesIssues[] = 'uložení první blogové stránky nemíří zpět na přehled stránek';
+    }
+    $blogPageOneStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? ORDER BY id DESC LIMIT 1");
+    $blogPageOneStmt->execute([$blogPageOneSlug]);
+    $blogPageOne = $blogPageOneStmt->fetch() ?: null;
+    if (!$blogPageOne) {
+        $blogStaticPagesIssues[] = 'první blogová stránka se po uložení nevytvořila';
+    } else {
+        $createdPageIds[] = (int)$blogPageOne['id'];
+        if ((int)($blogPageOne['blog_id'] ?? 0) !== $blogStaticMainId) {
+            $blogStaticPagesIssues[] = 'první blogová stránka není přiřazená správnému blogu';
+        }
+        if ((int)($blogPageOne['show_in_nav'] ?? 1) !== 0) {
+            $blogStaticPagesIssues[] = 'první blogová stránka se neměla zobrazit v globální navigaci';
+        }
+        if ((int)($blogPageOne['blog_nav_order'] ?? 0) !== 1) {
+            $blogStaticPagesIssues[] = 'první blogová stránka nemá očekávané pořadí 1';
+        }
+    }
+
+    $blogPageTwoTitle = 'HTTP Blogová stránka B';
+    $blogPageTwoSlug = 'http-blog-page-b-' . bin2hex(random_bytes(4));
+    $blogPageTwoContent = '<p>Obsah druhé blogové stránky pro HTTP integration test.</p>';
+    $blogPageTwoResponse = postUrl($pageSaveUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'redirect' => BASE_URL . '/admin/pages.php',
+        'title' => $blogPageTwoTitle,
+        'slug' => $blogPageTwoSlug,
+        'content' => $blogPageTwoContent,
+        'blog_id' => (string)$blogStaticMainId,
+        'is_published' => '1',
+        'show_in_nav' => '1',
+        'admin_note' => 'HTTP integration test',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogPageTwoResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'uložení druhé blogové stránky nevrátilo redirect';
+    }
+    $blogPageTwoStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? ORDER BY id DESC LIMIT 1");
+    $blogPageTwoStmt->execute([$blogPageTwoSlug]);
+    $blogPageTwo = $blogPageTwoStmt->fetch() ?: null;
+    if (!$blogPageTwo) {
+        $blogStaticPagesIssues[] = 'druhá blogová stránka se po uložení nevytvořila';
+    } else {
+        $createdPageIds[] = (int)$blogPageTwo['id'];
+        if ((int)($blogPageTwo['blog_nav_order'] ?? 0) !== 2) {
+            $blogStaticPagesIssues[] = 'druhá blogová stránka nemá očekávané pořadí 2';
+        }
+    }
+
+    $blogPagesAdminResponse = fetchUrl($blogPagesAdminUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogPagesAdminResponse) !== 200) {
+        $blogStaticPagesIssues[] = 'správa pořadí blogových stránek se nenačetla';
+    }
+    if (!str_contains($blogPagesAdminResponse['body'], 'Pořadí stránek blogu')) {
+        $blogStaticPagesIssues[] = 'správa pořadí blogových stránek nemá očekávaný nadpis';
+    }
+    if ($blogPageOne && $blogPageTwo) {
+        $reorderResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'redirect' => BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+                'order' => [(string)$blogPageTwo['id'], (string)$blogPageOne['id']],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($reorderResponse) !== 302) {
+            $blogStaticPagesIssues[] = 'uložení pořadí blogových stránek nevrátilo redirect';
+        }
+        if (!responseHasLocationHeader($reorderResponse['headers'], BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId . '&saved=1', $baseUrl)) {
+            $blogStaticPagesIssues[] = 'uložení pořadí blogových stránek nemíří zpět na reorder screen';
+        }
+        $reorderedStmt = $pdo->prepare("SELECT id, blog_nav_order FROM cms_pages WHERE id IN (?, ?) ORDER BY blog_nav_order, id");
+        $reorderedStmt->execute([(int)$blogPageOne['id'], (int)$blogPageTwo['id']]);
+        $reorderedRows = $reorderedStmt->fetchAll() ?: [];
+        if (count($reorderedRows) !== 2
+            || (int)$reorderedRows[0]['id'] !== (int)$blogPageTwo['id']
+            || (int)$reorderedRows[0]['blog_nav_order'] !== 1
+            || (int)$reorderedRows[1]['id'] !== (int)$blogPageOne['id']
+            || (int)$reorderedRows[1]['blog_nav_order'] !== 2) {
+            $blogStaticPagesIssues[] = 'reorder blogových stránek neuložil očekávané pořadí';
+        }
+    }
+
+    $blogArticleTitle = 'HTTP Článek v blogu se stránkami';
+    $blogArticleSlug = 'http-blog-page-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, status)
+         VALUES (?, ?, ?, ?, ?, 1, 'published')"
+    )->execute([
+        $blogArticleTitle,
+        $blogArticleSlug,
+        $blogStaticMainId,
+        'Krátký perex pro blogový index.',
+        '<p>Obsah článku pro blogový index.</p>',
+    ]);
+    $blogArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $blogArticleId;
+
+    $blogIndexResponse = fetchUrl($blogStaticIndexUrl, '', 0);
+    if (httpIntegrationStatusCode($blogIndexResponse) !== 200) {
+        $blogStaticPagesIssues[] = 'veřejný blogový index s navigací stránek se nenačetl';
+    }
+    if (!str_contains($blogIndexResponse['body'], 'Stránky blogu')) {
+        $blogStaticPagesIssues[] = 'veřejný blogový index neobsahuje blok Stránky blogu';
+    }
+    if (!str_contains($blogIndexResponse['body'], $blogPageOneTitle) || !str_contains($blogIndexResponse['body'], $blogPageTwoTitle)) {
+        $blogStaticPagesIssues[] = 'veřejný blogový index neobsahuje odkazy na blogové stránky';
+    }
+    if (!str_contains($blogIndexResponse['body'], $blogArticleTitle)) {
+        $blogStaticPagesIssues[] = 'veřejný blogový index nezobrazuje články pod navigací blogových stránek';
+    }
+    if (str_contains($blogIndexResponse['body'], 'Obsah první blogové stránky pro HTTP integration test.')) {
+        $blogStaticPagesIssues[] = 'veřejný blogový index nemá zobrazovat obsah blogové stránky automaticky';
+    }
+    $pagesHeadingPos = strpos($blogIndexResponse['body'], 'Stránky blogu');
+    $articleTitlePos = strpos($blogIndexResponse['body'], $blogArticleTitle);
+    if ($pagesHeadingPos === false || $articleTitlePos === false || $pagesHeadingPos > $articleTitlePos) {
+        $blogStaticPagesIssues[] = 'blok Stránky blogu není na indexu vykreslený nad články';
+    }
+
+    $blogPageDetailUrl = $baseUrl . BASE_URL . '/' . rawurlencode($blogStaticMainSlug) . '/stranka/' . rawurlencode($blogPageOneSlug);
+    $blogPageDetailResponse = fetchUrl($blogPageDetailUrl, '', 0);
+    if (httpIntegrationStatusCode($blogPageDetailResponse) !== 200) {
+        $blogStaticPagesIssues[] = 'detail blogové stránky se nenačetl';
+    }
+    if (!str_contains($blogPageDetailResponse['body'], $blogPageOneTitle) || !str_contains($blogPageDetailResponse['body'], 'Obsah první blogové stránky pro HTTP integration test.')) {
+        $blogStaticPagesIssues[] = 'detail blogové stránky nezobrazuje očekávaný obsah';
+    }
+    if (!str_contains($blogPageDetailResponse['body'], 'Zpět na blog HTTP Blogové stránky')) {
+        $blogStaticPagesIssues[] = 'detail blogové stránky nemá odkaz zpět na blog';
+    }
+    foreach ([
+        'Stránky blogu',
+        'Hledání v blogu',
+        'Archiv blogu',
+        'Další blogy webu',
+        $blogArticleTitle,
+    ] as $forbiddenFragment) {
+        if (str_contains($blogPageDetailResponse['body'], $forbiddenFragment)) {
+            $blogStaticPagesIssues[] = 'detail blogové stránky stále obsahuje blogový indexový blok: ' . $forbiddenFragment;
+        }
+    }
+
+    $foreignBlogPageResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/' . rawurlencode($blogStaticOtherSlug) . '/stranka/' . rawurlencode($blogPageOneSlug),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($foreignBlogPageResponse) !== 404) {
+        $blogStaticPagesIssues[] = 'blogová stránka je dostupná i pod cizím blogem místo 404';
+    }
+
+    $convertArticleTitle = 'HTTP Převod článku na blogovou stránku';
+    $convertArticleSlug = 'http-blog-page-convert-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, status)
+         VALUES (?, ?, ?, ?, ?, 1, 'published')"
+    )->execute([
+        $convertArticleTitle,
+        $convertArticleSlug,
+        $blogStaticMainId,
+        'Perex pro převod článku.',
+        '<p>Obsah převáděného článku.</p>',
+    ]);
+    $convertSourceArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $convertSourceArticleId;
+
+    $articleToPageResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/convert_content.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'direction' => 'article_to_page',
+            'id' => (string)$convertSourceArticleId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($articleToPageResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'převod článku na blogovou stránku nevrátil redirect';
+    }
+    $convertedPageStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE title = ? ORDER BY id DESC LIMIT 1");
+    $convertedPageStmt->execute([$convertArticleTitle]);
+    $convertedPage = $convertedPageStmt->fetch() ?: null;
+    if (!$convertedPage) {
+        $blogStaticPagesIssues[] = 'převod článku na stránku nevytvořil blogovou stránku';
+    } else {
+        $createdPageIds[] = (int)$convertedPage['id'];
+        if ((int)($convertedPage['blog_id'] ?? 0) !== $blogStaticMainId) {
+            $blogStaticPagesIssues[] = 'převod článku na stránku nezachoval blog původního článku';
+        }
+        if ((int)($convertedPage['blog_nav_order'] ?? 0) !== 3) {
+            $blogStaticPagesIssues[] = 'převod článku na stránku nezařadil novou blogovou stránku na konec pořadí';
+        }
+
+        $pageToArticleResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/convert_content.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'direction' => 'page_to_article',
+                'id' => (string)$convertedPage['id'],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($pageToArticleResponse) !== 302) {
+            $blogStaticPagesIssues[] = 'převod blogové stránky zpět na článek nevrátil redirect';
+        }
+        $reconvertedArticleStmt = $pdo->prepare("SELECT * FROM cms_articles WHERE title = ? ORDER BY id DESC LIMIT 1");
+        $reconvertedArticleStmt->execute([$convertArticleTitle]);
+        $reconvertedArticle = $reconvertedArticleStmt->fetch() ?: null;
+        if (!$reconvertedArticle) {
+            $blogStaticPagesIssues[] = 'převod blogové stránky zpět na článek nevytvořil článek';
+        } else {
+            $createdArticles[] = (int)$reconvertedArticle['id'];
+            if ((int)($reconvertedArticle['blog_id'] ?? 0) !== $blogStaticMainId) {
+                $blogStaticPagesIssues[] = 'převod blogové stránky zpět na článek nezachoval původní blog';
+            }
+        }
+    }
+
+    httpIntegrationPrintResult('blog_static_pages_http', $blogStaticPagesIssues, $failures);
+
     $mediaIssues = [];
     $mediaAdminUrl = $baseUrl . BASE_URL . '/admin/media.php';
     $mediaReturnPath = BASE_URL . '/admin/media.php';

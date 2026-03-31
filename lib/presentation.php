@@ -2821,10 +2821,59 @@ function articlePublicUrl(array $article, array $query = []): string
     return siteUrl(appendUrlQuery(articlePublicRequestPath($article), $query));
 }
 
+function pageBlogContext(array $page): ?array
+{
+    $blogId = (int)($page['blog_id'] ?? 0);
+    if ($blogId > 0) {
+        $blog = null;
+        if (!empty($page['blog_slug'])) {
+            $blog = getBlogBySlug((string)$page['blog_slug']);
+        }
+        if (!$blog) {
+            $blog = getBlogById($blogId);
+        }
+        return $blog ?: null;
+    }
+
+    $pageId = (int)($page['id'] ?? 0);
+    if ($pageId <= 0) {
+        return null;
+    }
+
+    static $pageBlogContextCache = [];
+    if (array_key_exists($pageId, $pageBlogContextCache)) {
+        return $pageBlogContextCache[$pageId];
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT p.blog_id, b.*
+             FROM cms_pages p
+             LEFT JOIN cms_blogs b ON b.id = p.blog_id
+             WHERE p.id = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$pageId]);
+        $row = $stmt->fetch() ?: null;
+        if ($row && (int)($row['blog_id'] ?? 0) > 0 && !empty($row['slug'])) {
+            $pageBlogContextCache[$pageId] = $row;
+            return $row;
+        }
+    } catch (\PDOException $e) {
+    }
+
+    $pageBlogContextCache[$pageId] = null;
+    return null;
+}
+
 function pagePublicRequestPath(array $page): string
 {
     $slug = pageSlug((string)($page['slug'] ?? ''));
     if ($slug !== '') {
+        $blog = pageBlogContext($page);
+        if ($blog) {
+            return '/' . rawurlencode((string)$blog['slug']) . '/stranka/' . rawurlencode($slug);
+        }
         return '/page.php?slug=' . rawurlencode($slug);
     }
 
@@ -3672,6 +3721,7 @@ function normalizePageNavigationOrder(PDO $pdo): void
     $pages = $pdo->query(
         "SELECT id, nav_order, title
          FROM cms_pages
+         WHERE blog_id IS NULL AND deleted_at IS NULL
          ORDER BY nav_order, title, id"
     )->fetchAll();
 
@@ -3693,7 +3743,7 @@ function nextPageNavigationOrder(PDO $pdo): int
 {
     normalizePageNavigationOrder($pdo);
 
-    $maxOrder = (int)$pdo->query("SELECT COALESCE(MAX(nav_order), 0) FROM cms_pages")->fetchColumn();
+    $maxOrder = (int)$pdo->query("SELECT COALESCE(MAX(nav_order), 0) FROM cms_pages WHERE blog_id IS NULL AND deleted_at IS NULL")->fetchColumn();
     return $maxOrder + 1;
 }
 
@@ -3708,6 +3758,7 @@ function movePageNavigationOrder(PDO $pdo, int $pageId, string $direction): bool
     $pages = $pdo->query(
         "SELECT id
          FROM cms_pages
+         WHERE blog_id IS NULL AND deleted_at IS NULL
          ORDER BY nav_order, title, id"
     )->fetchAll();
 
@@ -3730,6 +3781,48 @@ function movePageNavigationOrder(PDO $pdo, int $pageId, string $direction): bool
     }
 
     return true;
+}
+
+function normalizeBlogPageNavigationOrder(PDO $pdo, int $blogId): void
+{
+    if ($blogId <= 0) {
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT id, blog_nav_order, title
+         FROM cms_pages
+         WHERE blog_id = ? AND deleted_at IS NULL
+         ORDER BY blog_nav_order, title, id"
+    );
+    $stmt->execute([$blogId]);
+    $pages = $stmt->fetchAll();
+
+    if ($pages === []) {
+        return;
+    }
+
+    $update = $pdo->prepare("UPDATE cms_pages SET blog_nav_order = ? WHERE id = ?");
+    $position = 1;
+    foreach ($pages as $page) {
+        if ((int)($page['blog_nav_order'] ?? 0) !== $position) {
+            $update->execute([$position, (int)$page['id']]);
+        }
+        $position++;
+    }
+}
+
+function nextBlogPageNavigationOrder(PDO $pdo, int $blogId): int
+{
+    if ($blogId <= 0) {
+        return 0;
+    }
+
+    normalizeBlogPageNavigationOrder($pdo, $blogId);
+
+    $stmt = $pdo->prepare("SELECT COALESCE(MAX(blog_nav_order), 0) FROM cms_pages WHERE blog_id = ? AND deleted_at IS NULL");
+    $stmt->execute([$blogId]);
+    return (int)$stmt->fetchColumn() + 1;
 }
 
 function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string

@@ -245,12 +245,15 @@ $tables = [
         title        VARCHAR(255) NOT NULL,
         slug         VARCHAR(255) NOT NULL UNIQUE,
         content      TEXT,
+        blog_id      INT          NULL DEFAULT NULL,
+        blog_nav_order INT        NOT NULL DEFAULT 0,
         show_in_nav  TINYINT(1)   NOT NULL DEFAULT 0,
         nav_order    INT          NOT NULL DEFAULT 0,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_pages_blog_nav (blog_id, blog_nav_order)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_events' => "CREATE TABLE IF NOT EXISTS cms_events (
@@ -1061,6 +1064,8 @@ $addColumns = [
     'cms_articles.deleted_at'        => "ALTER TABLE cms_articles ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_news.deleted_at'            => "ALTER TABLE cms_news ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_pages.blog_id'              => "ALTER TABLE cms_pages ADD COLUMN blog_id INT NULL DEFAULT NULL AFTER content",
+    'cms_pages.blog_nav_order'       => "ALTER TABLE cms_pages ADD COLUMN blog_nav_order INT NOT NULL DEFAULT 0 AFTER blog_id",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.event_kind'          => "ALTER TABLE cms_events ADD COLUMN event_kind VARCHAR(50) NOT NULL DEFAULT 'general'",
     'cms_events.excerpt'             => "ALTER TABLE cms_events ADD COLUMN excerpt TEXT",
@@ -2377,6 +2382,14 @@ try {
     if (!$idxCheck) {
         $pdo->exec("ALTER TABLE cms_tags ADD INDEX idx_tags_blog_id (blog_id)");
         $log[] = '· cms_tags: přidán index idx_tags_blog_id';
+    }
+} catch (\PDOException $e) {}
+
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_pages WHERE Key_name = 'idx_pages_blog_nav'")->fetch();
+    if (!$idxCheck) {
+        $pdo->exec("ALTER TABLE cms_pages ADD INDEX idx_pages_blog_nav (blog_id, blog_nav_order)");
+        $log[] = '· cms_pages: přidán index idx_pages_blog_nav';
     }
 } catch (\PDOException $e) {}
 

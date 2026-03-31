@@ -3,37 +3,39 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu statických stránek nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
-$q = trim($_GET['q'] ?? '');
+$q = trim((string)($_GET['q'] ?? ''));
 $statusFilter = in_array($_GET['status'] ?? '', ['all', 'pending', 'published', 'hidden'], true)
     ? (string)$_GET['status']
     : 'all';
 
-$where = ['deleted_at IS NULL'];
+$where = ['p.deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {
-    $where[] = '(title LIKE ? OR slug LIKE ? OR content LIKE ?)';
+    $where[] = '(p.title LIKE ? OR p.slug LIKE ? OR p.content LIKE ?)';
     $params[] = '%' . $q . '%';
     $params[] = '%' . $q . '%';
     $params[] = '%' . $q . '%';
 }
 
 if ($statusFilter === 'pending') {
-    $where[] = "COALESCE(status,'published') = 'pending'";
+    $where[] = "COALESCE(p.status,'published') = 'pending'";
 } elseif ($statusFilter === 'published') {
-    $where[] = "COALESCE(status,'published') = 'published' AND is_published = 1";
+    $where[] = "COALESCE(p.status,'published') = 'published' AND p.is_published = 1";
 } elseif ($statusFilter === 'hidden') {
-    $where[] = "COALESCE(status,'published') = 'published' AND is_published = 0";
+    $where[] = "COALESCE(p.status,'published') = 'published' AND p.is_published = 0";
 }
 
 $whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $stmt = $pdo->prepare(
-    "SELECT id, title, slug, is_published, show_in_nav, nav_order,
-            COALESCE(status,'published') AS status, created_at
-     FROM cms_pages
+    "SELECT p.id, p.title, p.slug, p.blog_id, p.blog_nav_order, p.is_published, p.show_in_nav, p.nav_order,
+            COALESCE(p.status,'published') AS status, p.created_at,
+            b.name AS blog_name, b.slug AS blog_slug
+     FROM cms_pages p
+     LEFT JOIN cms_blogs b ON b.id = p.blog_id
      {$whereSql}
-     ORDER BY title, id"
+     ORDER BY p.title, p.id"
 );
 $stmt->execute($params);
 $pages = $stmt->fetchAll();
@@ -57,6 +59,9 @@ foreach (array_keys(navModuleDefaults()) as $moduleKey) {
 
 $pageIds = [];
 foreach ($pages as $pageRow) {
+    if (!empty($pageRow['blog_id'])) {
+        continue;
+    }
     $pageId = (int)$pageRow['id'];
     $pageIds[$pageId] = true;
     $key = 'page:' . $pageId;
@@ -99,11 +104,32 @@ foreach ($normalizedNavigationKeys as $key) {
 }
 
 usort($pages, static function (array $left, array $right) use ($pageNavigationPositions): int {
-    $leftPosition = $pageNavigationPositions[(int)$left['id']] ?? PHP_INT_MAX;
-    $rightPosition = $pageNavigationPositions[(int)$right['id']] ?? PHP_INT_MAX;
+    $leftBlogId = !empty($left['blog_id']) ? (int)$left['blog_id'] : null;
+    $rightBlogId = !empty($right['blog_id']) ? (int)$right['blog_id'] : null;
 
-    if ($leftPosition !== $rightPosition) {
-        return $leftPosition <=> $rightPosition;
+    if ($leftBlogId === null && $rightBlogId !== null) {
+        return -1;
+    }
+    if ($leftBlogId !== null && $rightBlogId === null) {
+        return 1;
+    }
+
+    if ($leftBlogId === null && $rightBlogId === null) {
+        $leftPosition = $pageNavigationPositions[(int)$left['id']] ?? PHP_INT_MAX;
+        $rightPosition = $pageNavigationPositions[(int)$right['id']] ?? PHP_INT_MAX;
+        if ($leftPosition !== $rightPosition) {
+            return $leftPosition <=> $rightPosition;
+        }
+    } else {
+        $blogNameComparison = strcasecmp((string)($left['blog_name'] ?? ''), (string)($right['blog_name'] ?? ''));
+        if ($blogNameComparison !== 0) {
+            return $blogNameComparison;
+        }
+        $leftBlogOrder = (int)($left['blog_nav_order'] ?? 0);
+        $rightBlogOrder = (int)($right['blog_nav_order'] ?? 0);
+        if ($leftBlogOrder !== $rightBlogOrder) {
+            return $leftBlogOrder <=> $rightBlogOrder;
+        }
     }
 
     $titleComparison = strcasecmp((string)$left['title'], (string)$right['title']);
@@ -131,7 +157,7 @@ adminHeader('Statické stránky');
   <a href="<?= BASE_URL ?>/admin/menu.php" class="btn">Navigace webu</a>
 </p>
 
-<p class="field-help" style="margin-top:0">Skutečné pořadí statických stránek v hlavní navigaci i mezi ostatními položkami webu upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>. Pořadí v tomto přehledu se řídí stejným nastavením.</p>
+<p class="field-help" style="margin-top:0">Globální statické stránky se řadí v <a href="<?= BASE_URL ?>/admin/menu.php">Navigaci webu</a>. Blogové stránky mají vlastní pořadí jen uvnitř konkrétního blogu.</p>
 
 <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
   <div>
@@ -169,22 +195,36 @@ adminHeader('Statické stránky');
       <tr>
         <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
         <th scope="col">Název</th>
+        <th scope="col">Umístění</th>
         <th scope="col">Stav</th>
         <th scope="col">V navigaci</th>
-        <th scope="col">Pořadí v navigaci</th>
+        <th scope="col">Pořadí</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
     <tbody>
       <?php foreach ($pages as $page): ?>
-        <?php $publicPath = pagePublicPath($page); ?>
+        <?php
+        $pageId = (int)$page['id'];
+        $isBlogPageRow = !empty($page['blog_id']);
+        $publicPath = pagePublicPath($page);
+        ?>
         <tr>
-          <td><input type="checkbox" name="ids[]" value="<?= (int)$page['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$page['title']) ?>"></td>
+          <td><input type="checkbox" name="ids[]" value="<?= $pageId ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$page['title']) ?>"></td>
           <td>
             <strong><?= h((string)$page['title']) ?></strong>
             <br><small><?= h((string)$page['slug']) ?></small>
             <?php if (!empty($page['created_at'])): ?>
               <br><small style="color:#555">Vytvořeno <?= h((string)$page['created_at']) ?></small>
+            <?php endif; ?>
+          </td>
+          <td>
+            <?php if ($isBlogPageRow): ?>
+              <strong>Blogová stránka</strong>
+              <br><small><a href="<?= BASE_URL ?>/admin/blog_pages.php?blog_id=<?= (int)$page['blog_id'] ?>"><?= h((string)$page['blog_name']) ?></a></small>
+            <?php else: ?>
+              <strong>Globální stránka</strong>
+              <br><small>Spravuje se v hlavní navigaci webu</small>
             <?php endif; ?>
           </td>
           <td>
@@ -196,33 +236,42 @@ adminHeader('Statické stránky');
               <strong>Skryto</strong>
             <?php endif; ?>
           </td>
-          <td><?= (int)$page['show_in_nav'] === 1 ? 'Ano' : '–' ?></td>
-          <td><?= (int)$page['show_in_nav'] === 1 ? (int)($pageNavigationPositions[(int)$page['id']] ?? 0) : '–' ?></td>
+          <td><?= !$isBlogPageRow && (int)$page['show_in_nav'] === 1 ? 'Ano' : '–' ?></td>
+          <td>
+            <?php if ($isBlogPageRow): ?>
+              <?= (int)($page['blog_nav_order'] ?? 0) ?>
+            <?php else: ?>
+              <?= (int)$page['show_in_nav'] === 1 ? (int)($pageNavigationPositions[$pageId] ?? 0) : '–' ?>
+            <?php endif; ?>
+          </td>
           <td class="actions">
-            <a href="<?= BASE_URL ?>/admin/page_form.php?id=<?= (int)$page['id'] ?>&amp;redirect=<?= rawurlencode($currentRedirect) ?>" class="btn">Upravit</a>
+            <a href="<?= BASE_URL ?>/admin/page_form.php?id=<?= $pageId ?>&amp;redirect=<?= rawurlencode($currentRedirect) ?>" class="btn">Upravit</a>
+            <?php if ($isBlogPageRow): ?>
+              <a href="<?= BASE_URL ?>/admin/blog_pages.php?blog_id=<?= (int)$page['blog_id'] ?>" class="btn">Pořadí blogu</a>
+            <?php endif; ?>
             <?php if ($page['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="module" value="pages">
-                <input type="hidden" name="id" value="<?= (int)$page['id'] ?>">
+                <input type="hidden" name="id" value="<?= $pageId ?>">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
                 <button type="submit" class="btn btn-success">Schválit</button>
               </form>
             <?php endif; ?>
-            <?php if ((int)$page['is_published'] === 1): ?>
+            <?php if ((int)$page['is_published'] === 1 && (string)$page['status'] === 'published'): ?>
               <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php" style="display:inline"
                   onsubmit="return confirm('Převést stránku na článek blogu?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="direction" value="page_to_article">
-              <input type="hidden" name="id" value="<?= (int)$page['id'] ?>">
+              <input type="hidden" name="id" value="<?= $pageId ?>">
               <button type="submit" class="btn">→ Článek</button>
             </form>
             <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
                   onsubmit="return confirm('Smazat tuto stránku?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="id" value="<?= (int)$page['id'] ?>">
+              <input type="hidden" name="id" value="<?= $pageId ?>">
               <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
               <button type="submit" class="btn btn-danger">Smazat</button>
             </form>

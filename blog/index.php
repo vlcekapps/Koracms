@@ -19,6 +19,27 @@ if (!$blog) {
 }
 $blogId = (int)$blog['id'];
 $blogName = (string)$blog['name'];
+$blogPages = [];
+
+try {
+    $blogPageStmt = $pdo->prepare(
+        "SELECT id, title, slug, blog_id, blog_nav_order
+         FROM cms_pages
+         WHERE blog_id = ?
+           AND deleted_at IS NULL
+           AND status = 'published'
+           AND is_published = 1
+         ORDER BY blog_nav_order, title, id"
+    );
+    $blogPageStmt->execute([$blogId]);
+    $blogPages = $blogPageStmt->fetchAll();
+    foreach ($blogPages as &$blogPage) {
+        $blogPage['blog_slug'] = $blog['slug'];
+    }
+    unset($blogPage);
+} catch (\PDOException $e) {
+    error_log('blog/index pages: ' . $e->getMessage());
+}
 
 $katId = inputInt('get', 'kat');
 $tagSlug = trim((string)($_GET['tag'] ?? ''));
@@ -290,6 +311,7 @@ renderPublicPage([
         'searchQuery' => $searchQuery,
         'archiveFilter' => $archiveFilter,
         'blogArchives' => $blogArchives,
+        'blogPages' => $blogPages,
     ],
     'current_nav' => 'blog:' . $blog['slug'],
     'body_class' => 'page-blog-index',

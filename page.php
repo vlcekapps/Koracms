@@ -10,7 +10,11 @@ if ($slug === '') {
 
 $pdo  = db_connect();
 $stmt = $pdo->prepare(
-    "SELECT * FROM cms_pages WHERE slug = ? AND status = 'published' AND is_published = 1"
+    "SELECT * FROM cms_pages
+     WHERE slug = ?
+       AND blog_id IS NULL
+       AND status = 'published'
+       AND is_published = 1"
 );
 $stmt->execute([$slug]);
 $page = $stmt->fetch();

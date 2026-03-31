@@ -163,8 +163,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['pages']) && is_array($data['pages'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_pages
-                         (id, title, slug, content, show_in_nav, nav_order, is_published, status)
-                         VALUES (?,?,?,?,?,?,?,?)"
+                         (id, title, slug, content, blog_id, blog_nav_order, show_in_nav, nav_order, is_published, status)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['pages'] as $row) {
                         $importTitle = trim((string)($row['title'] ?? ''));
@@ -177,9 +177,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             $importSlug = uniquePageSlug($pdo, $importSlug, (int)$row['id']);
                         }
+                        $importBlogId = !empty($row['blog_id']) ? (int)$row['blog_id'] : null;
+                        if ($importBlogId !== null && !getBlogById($importBlogId)) {
+                            $importBlogId = null;
+                        }
                         $ins->execute([
                             (int)$row['id'], $importTitle, $importSlug,
-                            $row['content'] ?? '', (int)$row['show_in_nav'],
+                            $row['content'] ?? '', $importBlogId,
+                            $importBlogId !== null ? (int)($row['blog_nav_order'] ?? 0) : 0,
+                            $importBlogId === null ? (int)$row['show_in_nav'] : 0,
                             (int)$row['nav_order'], (int)$row['is_published'],
                             $row['status'] ?? 'published',
                         ]);

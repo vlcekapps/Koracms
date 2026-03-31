@@ -260,6 +260,7 @@ adminHeader('Správa blogů');
                   data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>"
                   data-blog-logo-alt="<?= h((string)($blog['logo_alt_text'] ?? '')) ?>"
                   data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit</button>
+          <a href="blog_pages.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Stránky blogu</a>
           <a href="blog_members.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Tým blogu</a>
           <form action="blog_blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

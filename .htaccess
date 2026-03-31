@@ -68,6 +68,10 @@ Options -Indexes
     # Multi-blog catch-all (MUSÍ být poslední – dynamické blog slugy)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([a-z0-9\-]+)/stranka/([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1&page_slug=$2 [L,QSA,NC]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^([a-z0-9\-]+)/([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1&slug=$2 [L,QSA,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f

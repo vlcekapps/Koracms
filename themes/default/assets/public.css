@@ -837,6 +837,18 @@ body.theme-public textarea.form-control {
   border-top: 1px solid rgba(201, 213, 226, 0.9);
 }
 
+.blog-page-links {
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(201, 213, 226, 0.9);
+  border-radius: var(--radius-md);
+  background: rgba(247, 250, 252, 0.82);
+}
+
+.blog-page-links .section-title {
+  margin-bottom: 0.35rem;
+}
+
 .blog-secondary-tools__block {
   padding: 1rem 1.1rem;
   border: 1px solid rgba(201, 213, 226, 0.9);

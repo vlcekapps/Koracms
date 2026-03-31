@@ -44,7 +44,7 @@ foreach (array_keys($moduleMap) as $mKey) {
 $pages = $pdo->query(
     "SELECT id, title, slug, show_in_nav, is_published, COALESCE(status,'published') AS status
      FROM cms_pages
-     WHERE deleted_at IS NULL
+     WHERE blog_id IS NULL AND deleted_at IS NULL
      ORDER BY nav_order, title, id"
 )->fetchAll();
 foreach ($pages as $pageRow) {

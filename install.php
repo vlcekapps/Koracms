@@ -213,6 +213,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             title        VARCHAR(255) NOT NULL,
             slug         VARCHAR(255) NOT NULL UNIQUE,
             content      TEXT,
+            blog_id      INT          NULL DEFAULT NULL,
+            blog_nav_order INT        NOT NULL DEFAULT 0,
             show_in_nav  TINYINT(1)   NOT NULL DEFAULT 0,
             nav_order    INT          NOT NULL DEFAULT 0,
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
@@ -222,6 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             deleted_at   DATETIME     NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_pages_blog_nav (blog_id, blog_nav_order),
             FULLTEXT INDEX ft_pages_search (title, content)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 

@@ -25,7 +25,7 @@ $tables = [
                              status, created_at FROM cms_articles",
     'article_tags'=> "SELECT article_id, tag_id FROM cms_article_tags",
     'tags'        => "SELECT id, name, slug, blog_id, created_at FROM cms_tags",
-    'pages'       => "SELECT id, title, slug, content, show_in_nav, nav_order,
+    'pages'       => "SELECT id, title, slug, content, blog_id, blog_nav_order, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
     'news'          => "SELECT id, title, slug, content, author_id, status, created_at, updated_at,
                                unpublish_at, admin_note, meta_title, meta_description, deleted_at

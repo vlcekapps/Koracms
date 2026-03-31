@@ -480,6 +480,9 @@ server {
     location = /sitemap.xml { rewrite ^ /sitemap.php last; }
 
     # Multi-blog catch-all (musí být poslední)
+    location ~ ^/([a-z0-9\-]+)/stranka/([a-z0-9\-]+)/?$ {
+        try_files $uri $uri/ /blog_router.php?blog_slug=$1&page_slug=$2&$args;
+    }
     location ~ ^/([a-z0-9\-]+)/([a-z0-9\-]+)/?$ {
         try_files $uri $uri/ /blog_router.php?blog_slug=$1&slug=$2&$args;
     }
