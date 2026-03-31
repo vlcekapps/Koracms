@@ -132,8 +132,8 @@ adminHeader('Správa blogů');
 
 <form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <fieldset>
-    <legend>Nový blog</legend>
+  <fieldset style="margin:0 0 1rem">
+    <legend>Základní údaje blogu</legend>
     <label for="name">Název blogu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
 
@@ -144,9 +144,12 @@ adminHeader('Správa blogů');
     <small id="blog-slug-help" class="field-help">Slug se použije jako adresa blogu, např. <code>/recepty/</code>. Vyplní se automaticky z názvu.</small>
 
     <label for="description">Popis</label>
-    <textarea id="description" name="description" rows="2"></textarea>
-    <small class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
+    <textarea id="description" name="description" rows="2" aria-describedby="blog-description-help"></textarea>
+    <small id="blog-description-help" class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
+  </fieldset>
 
+  <fieldset style="margin:0 0 1rem">
+    <legend>Obsah a metadata blogu</legend>
     <label for="intro_content">Rozšířený úvod blogu</label>
     <textarea id="intro_content" name="intro_content" rows="5" aria-describedby="blog-intro-help"></textarea>
     <small id="blog-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu, vhodný třeba pro úvod, CTA nebo vysvětlení zaměření blogu. <?= adminHtmlSnippetSupportMarkup() ?></small>
@@ -165,7 +168,10 @@ adminHeader('Správa blogů');
     <label for="feed_item_limit">Počet článků v RSS feedu</label>
     <input type="number" id="feed_item_limit" name="feed_item_limit" min="1" max="100" value="20" style="width:auto" aria-describedby="blog-feed-help">
     <small id="blog-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
+  </fieldset>
 
+  <fieldset style="margin:0">
+    <legend>Logo a zobrazení blogu</legend>
     <label for="logo_file">Logo blogu</label>
     <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="blog-logo-help">
     <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF a WebP; pevný rozměr není nutný.</small>
@@ -181,9 +187,10 @@ adminHeader('Správa blogů');
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
     </div>
-
-    <button type="submit" class="btn" style="margin-top:.5rem">Vytvořit blog</button>
   </fieldset>
+  <div class="button-row" style="margin-top:.75rem">
+    <button type="submit" class="btn">Vytvořit blog</button>
+  </div>
 </form>
 
 <h2>Přehled blogů</h2>
@@ -298,57 +305,73 @@ adminHeader('Správa blogů');
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="update_id" id="bd-id">
 
-    <label for="bd-name">Název blogu <span aria-hidden="true">*</span></label>
-    <input type="text" id="bd-name" name="name" required aria-required="true" maxlength="255">
+    <fieldset style="margin:0 0 1rem">
+      <legend>Základní údaje blogu</legend>
 
-    <label for="bd-slug">Slug (URL) <span aria-hidden="true">*</span></label>
-    <input type="text" id="bd-slug" name="slug" required aria-required="true" maxlength="100"
-           pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky">
+      <label for="bd-name">Název blogu <span aria-hidden="true">*</span></label>
+      <input type="text" id="bd-name" name="name" required aria-required="true" maxlength="255">
 
-    <label for="bd-desc">Popis</label>
-    <textarea id="bd-desc" name="description" rows="2"></textarea>
+      <label for="bd-slug">Slug (URL) <span aria-hidden="true">*</span></label>
+      <input type="text" id="bd-slug" name="slug" required aria-required="true" maxlength="100"
+             pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky" aria-describedby="bd-slug-help">
+      <small id="bd-slug-help" class="field-help">Slug se použije jako veřejná adresa blogu. Použijte malá písmena, číslice a pomlčky.</small>
 
-    <label for="bd-intro-content">Rozšířený úvod blogu</label>
-    <textarea id="bd-intro-content" name="intro_content" rows="5" aria-describedby="bd-intro-help"></textarea>
-    <small id="bd-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu. <?= adminHtmlSnippetSupportMarkup() ?></small>
-    <?php renderAdminContentReferencePicker('bd-intro-content'); ?>
+      <label for="bd-desc">Popis</label>
+      <textarea id="bd-desc" name="description" rows="2" aria-describedby="bd-description-help"></textarea>
+      <small id="bd-description-help" class="field-help">Krátký úvod blogu zobrazený na jeho veřejném indexu.</small>
+    </fieldset>
 
-    <label for="bd-meta-title">Meta titulek</label>
-    <input type="text" id="bd-meta-title" name="meta_title" maxlength="160">
+    <fieldset style="margin:0 0 1rem">
+      <legend>Obsah a metadata blogu</legend>
 
-    <label for="bd-meta-description">Meta popis</label>
-    <textarea id="bd-meta-description" name="meta_description" rows="2"></textarea>
+      <label for="bd-intro-content">Rozšířený úvod blogu</label>
+      <textarea id="bd-intro-content" name="intro_content" rows="5" aria-describedby="bd-intro-help"></textarea>
+      <small id="bd-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu. <?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('bd-intro-content'); ?>
 
-    <label for="bd-rss-subtitle">Podtitulek RSS feedu</label>
-    <input type="text" id="bd-rss-subtitle" name="rss_subtitle" maxlength="255">
+      <label for="bd-meta-title">Meta titulek</label>
+      <input type="text" id="bd-meta-title" name="meta_title" maxlength="160" aria-describedby="bd-meta-help">
 
-    <label for="bd-feed-item-limit">Počet článků v RSS feedu</label>
-    <input type="number" id="bd-feed-item-limit" name="feed_item_limit" min="1" max="100" style="width:auto">
+      <label for="bd-meta-description">Meta popis</label>
+      <textarea id="bd-meta-description" name="meta_description" rows="2" aria-describedby="bd-meta-help"></textarea>
+      <small id="bd-meta-help" class="field-help">Volitelné. Když pole necháte prázdná, blog použije svůj název a popis.</small>
 
-    <div id="bd-logo-current" hidden style="margin-top:.75rem">
-      <span class="field-help">Aktuální logo</span><br>
-      <img id="bd-logo-preview" src="" alt="" style="display:block;margin-top:.4rem;max-width:min(100%,20rem);max-height:7rem;height:auto;width:auto">
-    </div>
+      <label for="bd-rss-subtitle">Podtitulek RSS feedu</label>
+      <input type="text" id="bd-rss-subtitle" name="rss_subtitle" maxlength="255" aria-describedby="bd-feed-help">
 
-    <label for="bd-logo-file" style="margin-top:.75rem">Logo blogu</label>
-    <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="bd-logo-help">
-    <small id="bd-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu.</small>
+      <label for="bd-feed-item-limit">Počet článků v RSS feedu</label>
+      <input type="number" id="bd-feed-item-limit" name="feed_item_limit" min="1" max="100" style="width:auto" aria-describedby="bd-feed-help">
+      <small id="bd-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
+    </fieldset>
 
-    <label for="bd-logo-alt-text" style="margin-top:.75rem">Alternativní text loga</label>
-    <input type="text" id="bd-logo-alt-text" name="logo_alt_text" maxlength="255" aria-describedby="bd-logo-alt-help">
-    <small id="bd-logo-alt-help" class="field-help">Volitelné. Když pole necháte prázdné, logo zůstane dekorativní a čtečky ho přeskočí.</small>
+    <fieldset style="margin:0">
+      <legend>Logo a zobrazení blogu</legend>
 
-    <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>
-      <label><input type="checkbox" name="logo_file_delete" value="1" id="bd-logo-delete"> Odebrat aktuální logo</label>
-    </div>
+      <div id="bd-logo-current" hidden style="margin-top:0">
+        <span class="field-help">Aktuální logo</span><br>
+        <img id="bd-logo-preview" src="" alt="" style="display:block;margin-top:.4rem;max-width:min(100%,20rem);max-height:7rem;height:auto;width:auto">
+      </div>
 
-    <div style="margin-top:.5rem">
-      <label><input type="checkbox" name="comments_default" value="1" id="bd-comments-default"> Ve výchozím stavu povolit komentáře u nových článků</label>
-    </div>
+      <label for="bd-logo-file" style="margin-top:.75rem">Logo blogu</label>
+      <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="bd-logo-help">
+      <small id="bd-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu.</small>
 
-    <div style="margin-top:.5rem">
-      <label><input type="checkbox" name="show_in_nav" value="1" id="bd-nav"> Zobrazit v navigaci webu</label>
-    </div>
+      <label for="bd-logo-alt-text" style="margin-top:.75rem">Alternativní text loga</label>
+      <input type="text" id="bd-logo-alt-text" name="logo_alt_text" maxlength="255" aria-describedby="bd-logo-alt-help">
+      <small id="bd-logo-alt-help" class="field-help">Volitelné. Když pole necháte prázdné, logo zůstane dekorativní a čtečky ho přeskočí.</small>
+
+      <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>
+        <label><input type="checkbox" name="logo_file_delete" value="1" id="bd-logo-delete"> Odebrat aktuální logo</label>
+      </div>
+
+      <div style="margin-top:.5rem">
+        <label><input type="checkbox" name="comments_default" value="1" id="bd-comments-default"> Ve výchozím stavu povolit komentáře u nových článků</label>
+      </div>
+
+      <div style="margin-top:.5rem">
+        <label><input type="checkbox" name="show_in_nav" value="1" id="bd-nav"> Zobrazit v navigaci webu</label>
+      </div>
+    </fieldset>
 
     <div class="button-row" style="margin-top:1rem">
       <button type="submit" class="btn">Uložit změny</button>
@@ -371,9 +394,18 @@ adminHeader('Správa blogů');
     var logoDelete = document.getElementById('bd-logo-delete');
     var logoFileInput = document.getElementById('bd-logo-file');
     var logoAltInput = document.getElementById('bd-logo-alt-text');
+    var dialogTitle = document.getElementById('blog-dialog-title');
+
+    function getDialogFocusableElements() {
+        return Array.from(dialog.querySelectorAll('a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+            .filter(function (el) {
+                return !el.hidden && el.offsetParent !== null;
+            });
+    }
 
     function openDialog(btn) {
         lastTrigger = btn;
+        dialogTitle.textContent = 'Upravit blog: ' + (btn.dataset.blogName || 'Blog');
         document.getElementById('bd-id').value = btn.dataset.blogId;
         document.getElementById('bd-name').value = btn.dataset.blogName;
         document.getElementById('bd-slug').value = btn.dataset.blogSlug;
@@ -432,7 +464,7 @@ adminHeader('Správa blogů');
     dialog.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') { e.preventDefault(); closeDialog(); }
         if (e.key === 'Tab') {
-            var focusable = Array.from(dialog.querySelectorAll('input:not([type=hidden]),textarea,button,select'));
+            var focusable = getDialogFocusableElements();
             if (focusable.length === 0) return;
             if (e.shiftKey && document.activeElement === focusable[0]) { e.preventDefault(); focusable[focusable.length-1].focus(); }
             else if (!e.shiftKey && document.activeElement === focusable[focusable.length-1]) { e.preventDefault(); focusable[0].focus(); }

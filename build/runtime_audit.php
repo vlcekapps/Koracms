@@ -8305,6 +8305,29 @@ if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
 if (!str_contains($blogsAdminSource, "renderAdminContentReferencePicker('intro_content')") || !str_contains($blogsAdminSource, "renderAdminContentReferencePicker('bd-intro-content')")) {
     $blogAdminIssues[] = 'blog editor is missing content picker support for extended intro content';
 }
+foreach ([
+    '<legend>Základní údaje blogu</legend>',
+    '<legend>Obsah a metadata blogu</legend>',
+    '<legend>Logo a zobrazení blogu</legend>',
+    'aria-describedby="blog-description-help"',
+    'aria-describedby="bd-slug-help"',
+    'aria-describedby="bd-description-help"',
+    'aria-describedby="bd-meta-help"',
+    'aria-describedby="bd-feed-help"',
+] as $blogDialogAccessibilityFragment) {
+    if (!str_contains($blogsAdminSource, $blogDialogAccessibilityFragment)) {
+        $blogAdminIssues[] = 'blog admin forms are missing accessibility fragment: ' . $blogDialogAccessibilityFragment;
+    }
+}
+foreach ([
+    "dialogTitle.textContent = 'Upravit blog: ' + (btn.dataset.blogName || 'Blog');",
+    'function getDialogFocusableElements()',
+    'el.offsetParent !== null',
+] as $blogDialogJsFragment) {
+    if (!str_contains($blogsAdminSource, $blogDialogJsFragment)) {
+        $blogAdminIssues[] = 'blog edit dialog is missing accessibility JS fragment: ' . $blogDialogJsFragment;
+    }
+}
 if (!str_contains($blogListSource, 'value="article_to_page"') || !str_contains($blogListSource, 'aria-hidden="true"')) {
     $blogAdminIssues[] = 'blog list still exposes the article-to-page arrow to screen readers';
 }
@@ -9890,6 +9913,30 @@ if (!str_contains($widgetsAdminSource, 'name="widget_show_id"')) {
 }
 if (!str_contains($widgetsAdminSource, 'Aktuální blog (na blogových stránkách)')) {
     $widgetRenderIssues[] = 'admin widgets page is missing current-blog option for latest articles';
+}
+foreach ([
+    '<legend>Základní nastavení widgetu</legend>',
+    'id="wd-dynamic-fieldset"',
+    '<legend id="wd-dynamic-legend">Doplňující nastavení widgetu</legend>',
+    'aria-describedby="wd-blog-help"',
+    'aria-describedby="wd-form-help"',
+    'aria-describedby="wd-content-help"',
+] as $widgetAdminDialogFragment) {
+    if (!str_contains($widgetsAdminSource, $widgetAdminDialogFragment)) {
+        $widgetRenderIssues[] = 'admin widgets dialog is missing accessibility fragment: ' . $widgetAdminDialogFragment;
+    }
+}
+foreach ([
+    'function toggleDialogField(fieldName, visible)',
+    "field.hidden = !visible;",
+    "field.setAttribute('aria-hidden', visible ? 'false' : 'true');",
+    "el.disabled = disabled;",
+    'function getDialogFocusableElements()',
+    'el.offsetParent !== null',
+] as $widgetAdminDialogJsFragment) {
+    if (!str_contains($widgetsAdminSource, $widgetAdminDialogJsFragment)) {
+        $widgetRenderIssues[] = 'admin widgets dialog is missing accessibility JS fragment: ' . $widgetAdminDialogJsFragment;
+    }
 }
 foreach ([
     'widgetSocialLinkDefinitions()',

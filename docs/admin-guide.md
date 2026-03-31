@@ -226,6 +226,8 @@ Pokud blog změní slug, Kora CMS si uloží starý slug jako redirect a staré 
 
 Pokud je u loga vyplněný alternativní text, veřejný index blogu ho použije jako `alt` obrázku. Když pole zůstane prázdné, logo se bere jako dekorativní a čtečky obrazovky ho přeskočí. Po odebrání loga se alternativní text automaticky vyprázdní, aby v administraci nezůstal viset bez obrázku.
 
+Create i edit formulář blogu jsou nově rozdělené do srozumitelných sekcí `Základní údaje blogu`, `Obsah a metadata blogu` a `Logo a zobrazení blogu`. Pomocné texty jsou napojené přes skutečné `aria-describedby`, takže formulář lépe funguje i pro čtečky obrazovky.
+
 ### Týmy blogů
 
 Každý blog může mít vlastní tým v obrazovce **Tým blogu**.
@@ -743,6 +745,8 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 | Vlastní HTML | Libovolný HTML kód |
 
 Widgety respektují stav modulů – vypnutý modul se v nabídce widgetů nezobrazuje.
+
+Dialog `Nastavení` u widgetu nově používá skutečné `fieldset` a `legend` pro základní i typově specifická nastavení. Skrytá pole se při změně typu widgetu zároveň deaktivují, takže se nedostanou ani do tab orderu, ani do odeslaného formuláře.
 
 Zároveň ale platí, že i aktivní widget se může dočasně nevykreslit. Typické důvody:
 

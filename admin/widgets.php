@@ -157,103 +157,113 @@ adminHeader('Widgety');
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="widget_id" id="wd-id">
 
-    <label for="wd-title">Název widgetu</label>
-    <input type="text" id="wd-title" name="title" maxlength="255">
+    <fieldset id="wd-basic-fieldset" style="margin:0 0 1rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+      <legend>Základní nastavení widgetu</legend>
 
-    <label for="wd-zone">Zóna</label>
-    <select id="wd-zone" name="zone">
-      <?php foreach ($zones as $zk => $zl): ?>
-        <option value="<?= h($zk) ?>"><?= h($zl) ?></option>
-      <?php endforeach; ?>
-    </select>
+      <label for="wd-title">Název widgetu</label>
+      <input type="text" id="wd-title" name="title" maxlength="255">
 
-    <label style="font-weight:normal;margin-top:.5rem">
-      <input type="checkbox" name="is_active" value="1" id="wd-active"> Aktivní
-    </label>
-
-    <!-- Dynamická pole dle typu -->
-    <div id="wd-field-count" style="display:none;margin-top:.75rem">
-      <label for="wd-count">Počet položek</label>
-      <input type="number" id="wd-count" name="widget_count" min="1" max="50" value="5" style="width:6rem">
-    </div>
-
-    <div id="wd-field-blog" style="display:none;margin-top:.5rem">
-      <label for="wd-blog">Blog</label>
-      <select id="wd-blog" name="widget_blog_id">
-        <option value="0">Všechny blogy</option>
-        <?php if (count($allBlogs) > 1): ?>
-          <option value="-1">Aktuální blog (na blogových stránkách)</option>
-        <?php endif; ?>
-        <?php foreach ($allBlogs as $b): ?>
-          <option value="<?= (int)$b['id'] ?>"><?= h($b['name']) ?></option>
+      <label for="wd-zone">Zóna</label>
+      <select id="wd-zone" name="zone">
+        <?php foreach ($zones as $zk => $zl): ?>
+          <option value="<?= h($zk) ?>"><?= h($zl) ?></option>
         <?php endforeach; ?>
       </select>
-      <small class="field-help">Vyberte konkrétní blog, nebo nechte widget reagovat na právě otevřený blog.</small>
-    </div>
 
-    <div id="wd-field-source" style="display:none;margin-top:.75rem">
-      <label for="wd-source">Zdroj</label>
-      <select id="wd-source" name="widget_source">
-        <?php foreach ($featuredSourceOptions as $sourceKey => $sourceLabel): ?>
-          <option value="<?= h($sourceKey) ?>"><?= h($sourceLabel) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
+      <label style="font-weight:normal;margin-top:.5rem">
+        <input type="checkbox" name="is_active" value="1" id="wd-active"> Aktivní
+      </label>
+    </fieldset>
 
-    <div id="wd-field-cta" style="display:none;margin-top:.75rem">
-      <label for="wd-cta">Úvodní text</label>
-      <input type="text" id="wd-cta" name="widget_cta_text" maxlength="500">
-    </div>
+    <fieldset id="wd-dynamic-fieldset" style="display:none;margin:0;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem" hidden aria-hidden="true" aria-describedby="wd-dynamic-help">
+      <legend id="wd-dynamic-legend">Doplňující nastavení widgetu</legend>
+      <p id="wd-dynamic-help" class="field-help" style="margin-top:0">Zobrazují se jen pole, která jsou relevantní pro vybraný typ widgetu.</p>
 
-    <div id="wd-field-album" style="display:none;margin-top:.75rem">
-      <label for="wd-album">Album</label>
-      <select id="wd-album" name="widget_album_id">
-        <option value="0">Všechny fotky</option>
-        <?php foreach ($allAlbums as $alb): ?>
-          <option value="<?= (int)$alb['id'] ?>"><?= h($alb['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
+      <!-- Dynamická pole dle typu -->
+      <div id="wd-field-count" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-count">Počet položek</label>
+        <input type="number" id="wd-count" name="widget_count" min="1" max="50" value="5" style="width:6rem" disabled>
+      </div>
 
-    <div id="wd-field-show" style="display:none;margin-top:.75rem">
-      <label for="wd-show">Pořad</label>
-      <select id="wd-show" name="widget_show_id">
-        <option value="0">Všechny pořady</option>
-        <?php foreach ($allShows as $show): ?>
-          <option value="<?= (int)$show['id'] ?>"><?= h($show['title']) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
+      <div id="wd-field-blog" style="display:none;margin-top:.5rem" hidden aria-hidden="true">
+        <label for="wd-blog">Blog</label>
+        <select id="wd-blog" name="widget_blog_id" aria-describedby="wd-blog-help" disabled>
+          <option value="0">Všechny blogy</option>
+          <?php if (count($allBlogs) > 1): ?>
+            <option value="-1">Aktuální blog (na blogových stránkách)</option>
+          <?php endif; ?>
+          <?php foreach ($allBlogs as $b): ?>
+            <option value="<?= (int)$b['id'] ?>"><?= h($b['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <small id="wd-blog-help" class="field-help">Vyberte konkrétní blog, nebo nechte widget reagovat na právě otevřený blog.</small>
+      </div>
 
-    <div id="wd-field-form" style="display:none;margin-top:.75rem">
-      <label for="wd-form">Formulář</label>
-      <select id="wd-form" name="widget_form_id">
-        <option value="0">Vyberte formulář</option>
-        <?php foreach ($allForms as $form): ?>
-          <option value="<?= (int)$form['id'] ?>"><?= h($form['title']) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <small class="field-help">Na webu se zobrazí jen aktivní formulář.</small>
-    </div>
+      <div id="wd-field-source" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-source">Zdroj</label>
+        <select id="wd-source" name="widget_source" disabled>
+          <?php foreach ($featuredSourceOptions as $sourceKey => $sourceLabel): ?>
+            <option value="<?= h($sourceKey) ?>"><?= h($sourceLabel) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
 
-    <div id="wd-field-content" style="display:none;margin-top:.75rem">
-      <label for="wd-content">HTML obsah</label>
-      <textarea id="wd-content" name="widget_content" rows="6" aria-describedby="wd-content-help"></textarea>
-      <small id="wd-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
-      <?php renderAdminContentReferencePicker('wd-content'); ?>
-    </div>
+      <div id="wd-field-cta" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-cta">Úvodní text widgetu</label>
+        <input type="text" id="wd-cta" name="widget_cta_text" maxlength="500" aria-describedby="wd-cta-help" disabled>
+        <small id="wd-cta-help" class="field-help">Krátký doprovodný text zobrazený nad vyhledáváním nebo newsletter formulářem.</small>
+      </div>
 
-    <div id="wd-field-social" style="display:none;margin-top:.75rem">
-      <fieldset style="margin:0;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
-        <legend>Odkazy na sociální sítě</legend>
-        <p class="field-help" style="margin-top:0">Vyplňte jen odkazy, které chcete v tomto widgetu zobrazit. Když pole necháte prázdná, widget se na webu nevykreslí.</p>
-        <?php foreach (widgetSocialLinkDefinitions() as $socialSettingKey => $socialLabel): ?>
-          <?php $socialFieldId = 'wd-' . str_replace('_', '-', $socialSettingKey); ?>
-          <label for="<?= h($socialFieldId) ?>"><?= h($socialLabel) ?></label>
-          <input type="url" id="<?= h($socialFieldId) ?>" name="widget_<?= h($socialSettingKey) ?>" placeholder="https://">
-        <?php endforeach; ?>
-      </fieldset>
-    </div>
+      <div id="wd-field-album" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-album">Album</label>
+        <select id="wd-album" name="widget_album_id" disabled>
+          <option value="0">Všechny fotky</option>
+          <?php foreach ($allAlbums as $alb): ?>
+            <option value="<?= (int)$alb['id'] ?>"><?= h($alb['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div id="wd-field-show" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-show">Pořad</label>
+        <select id="wd-show" name="widget_show_id" disabled>
+          <option value="0">Všechny pořady</option>
+          <?php foreach ($allShows as $show): ?>
+            <option value="<?= (int)$show['id'] ?>"><?= h($show['title']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div id="wd-field-form" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-form">Formulář</label>
+        <select id="wd-form" name="widget_form_id" aria-describedby="wd-form-help" disabled>
+          <option value="0">Vyberte formulář</option>
+          <?php foreach ($allForms as $form): ?>
+            <option value="<?= (int)$form['id'] ?>"><?= h($form['title']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <small id="wd-form-help" class="field-help">Na webu se zobrazí jen aktivní formulář.</small>
+      </div>
+
+      <div id="wd-field-content" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <label for="wd-content">HTML obsah</label>
+        <textarea id="wd-content" name="widget_content" rows="6" aria-describedby="wd-content-help" disabled></textarea>
+        <small id="wd-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+        <?php renderAdminContentReferencePicker('wd-content'); ?>
+      </div>
+
+      <div id="wd-field-social" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+        <fieldset style="margin:0;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+          <legend>Odkazy na sociální sítě</legend>
+          <p id="wd-social-help" class="field-help" style="margin-top:0">Vyplňte jen odkazy, které chcete v tomto widgetu zobrazit. Když pole necháte prázdná, widget se na webu nevykreslí.</p>
+          <?php foreach (widgetSocialLinkDefinitions() as $socialSettingKey => $socialLabel): ?>
+            <?php $socialFieldId = 'wd-' . str_replace('_', '-', $socialSettingKey); ?>
+            <label for="<?= h($socialFieldId) ?>"><?= h($socialLabel) ?></label>
+            <input type="url" id="<?= h($socialFieldId) ?>" name="widget_<?= h($socialSettingKey) ?>" placeholder="https://" aria-describedby="wd-social-help" disabled>
+          <?php endforeach; ?>
+        </fieldset>
+      </div>
+    </fieldset>
 
     <div class="button-row" style="margin-top:1rem">
       <button type="submit" class="btn">Uložit</button>
@@ -274,6 +284,37 @@ adminHeader('Widgety');
   var countTypes = ['latest_articles','latest_news','board','upcoming_events','latest_downloads','latest_faq','latest_places','latest_podcast_episodes'];
   var socialFieldKeys = ['social_facebook','social_youtube','social_instagram','social_twitter'];
   var multiBlog = <?= count($allBlogs) > 1 ? 'true' : 'false' ?>;
+  var dialogTitle = document.getElementById('widget-dialog-title');
+  var dynamicFieldset = document.getElementById('wd-dynamic-fieldset');
+
+  function setFieldDisabledState(container, disabled) {
+    container.querySelectorAll('input, select, textarea, button').forEach(function(el){
+      if (el.type === 'hidden') return;
+      el.disabled = disabled;
+    });
+  }
+
+  function toggleDialogField(fieldName, visible) {
+    var field = document.getElementById('wd-field-' + fieldName);
+    if (!field) return;
+    field.style.display = visible ? '' : 'none';
+    field.hidden = !visible;
+    field.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    setFieldDisabledState(field, !visible);
+  }
+
+  function setDynamicFieldsetVisibility(visible) {
+    dynamicFieldset.style.display = visible ? '' : 'none';
+    dynamicFieldset.hidden = !visible;
+    dynamicFieldset.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  }
+
+  function getDialogFocusableElements() {
+    return Array.from(dialog.querySelectorAll('a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      .filter(function(el){
+        return !el.hidden && el.offsetParent !== null;
+      });
+  }
 
   function syncAddZoneInputs() {
     if (!addZoneSelect) return;
@@ -291,15 +332,21 @@ adminHeader('Widgety');
     lastTrigger = btn;
     var s = JSON.parse(btn.dataset.widgetSettings || '{}');
     var type = btn.dataset.widgetType;
+    var dialogHeadingName = btn.dataset.widgetTitle
+      || (btn.closest('[data-sort-id]') && btn.closest('[data-sort-id]').querySelector('strong')
+        ? btn.closest('[data-sort-id]').querySelector('strong').textContent.trim()
+        : '')
+      || 'Widget';
 
     document.getElementById('wd-id').value = btn.dataset.widgetId;
     document.getElementById('wd-title').value = btn.dataset.widgetTitle;
     document.getElementById('wd-zone').value = btn.dataset.widgetZone;
     document.getElementById('wd-active').checked = btn.dataset.widgetActive === '1';
+    dialogTitle.textContent = 'Nastavení widgetu: ' + dialogHeadingName;
 
     // Skrýt všechna dynamická pole
     ['count','blog','source','cta','album','show','form','content','social'].forEach(function(f){
-      document.getElementById('wd-field-'+f).style.display = 'none';
+      toggleDialogField(f, false);
     });
     socialFieldKeys.forEach(function(key){
       var input = document.querySelector('[name="widget_' + key + '"]');
@@ -310,43 +357,43 @@ adminHeader('Widgety');
 
     // Zobrazit relevantní pole
     if (countTypes.indexOf(type) !== -1) {
-      document.getElementById('wd-field-count').style.display = '';
+      toggleDialogField('count', true);
       document.getElementById('wd-count').value = s.count || 5;
     }
     if (type === 'latest_articles' && multiBlog) {
-      document.getElementById('wd-field-blog').style.display = '';
+      toggleDialogField('blog', true);
       document.getElementById('wd-blog').value = s.blog_id || 0;
     }
     if (type === 'featured_article') {
-      document.getElementById('wd-field-source').style.display = '';
+      toggleDialogField('source', true);
       document.getElementById('wd-source').value = s.source || 'blog';
     }
     if (type === 'newsletter' || type === 'search') {
-      document.getElementById('wd-field-cta').style.display = '';
+      toggleDialogField('cta', true);
       document.getElementById('wd-cta').value = s.cta_text || '';
     }
     if (type === 'gallery_preview') {
-      document.getElementById('wd-field-album').style.display = '';
+      toggleDialogField('album', true);
       document.getElementById('wd-album').value = s.album_id || 0;
     }
     if (type === 'latest_podcast_episodes') {
-      document.getElementById('wd-field-show').style.display = '';
+      toggleDialogField('show', true);
       document.getElementById('wd-show').value = s.show_id || 0;
     }
     if (type === 'selected_form') {
-      document.getElementById('wd-field-form').style.display = '';
+      toggleDialogField('form', true);
       document.getElementById('wd-form').value = s.form_id || 0;
     }
     if (type === 'intro') {
-      document.getElementById('wd-field-content').style.display = '';
+      toggleDialogField('content', true);
       document.getElementById('wd-content').value = s.content || s.text || '';
     }
     if (type === 'custom_html') {
-      document.getElementById('wd-field-content').style.display = '';
+      toggleDialogField('content', true);
       document.getElementById('wd-content').value = s.content || '';
     }
     if (type === 'social_links') {
-      document.getElementById('wd-field-social').style.display = '';
+      toggleDialogField('social', true);
       socialFieldKeys.forEach(function(key){
         var input = document.querySelector('[name="widget_' + key + '"]');
         if (input) {
@@ -354,6 +401,19 @@ adminHeader('Widgety');
         }
       });
     }
+    setDynamicFieldsetVisibility(
+      countTypes.indexOf(type) !== -1
+      || (type === 'latest_articles' && multiBlog)
+      || type === 'featured_article'
+      || type === 'newsletter'
+      || type === 'search'
+      || type === 'gallery_preview'
+      || type === 'latest_podcast_episodes'
+      || type === 'selected_form'
+      || type === 'intro'
+      || type === 'custom_html'
+      || type === 'social_links'
+    );
 
     previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -388,12 +448,14 @@ adminHeader('Widgety');
   dialog.addEventListener('keydown', function(e){
     if (e.key === 'Escape') { e.preventDefault(); closeDialog(); }
     if (e.key === 'Tab') {
-      var focusable = Array.from(dialog.querySelectorAll('input:not([type=hidden]),select,textarea,button'));
+      var focusable = getDialogFocusableElements();
       if (focusable.length === 0) return;
       if (e.shiftKey && document.activeElement === focusable[0]) { e.preventDefault(); focusable[focusable.length-1].focus(); }
       else if (!e.shiftKey && document.activeElement === focusable[focusable.length-1]) { e.preventDefault(); focusable[0].focus(); }
     }
   });
+
+  setDynamicFieldsetVisibility(false);
 
   // Drag & drop
   var endpoint = <?= json_encode(BASE_URL . '/admin/reorder_ajax.php') ?>;
