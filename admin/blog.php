@@ -7,6 +7,8 @@ $q = trim($_GET['q'] ?? '');
 $cat = trim($_GET['cat'] ?? '');
 $blogFilter = trim($_GET['blog'] ?? '');
 $message = trim($_GET['msg'] ?? '');
+$transferFlash = $_SESSION['blog_transfer_flash'] ?? null;
+unset($_SESSION['blog_transfer_flash']);
 $hasBlogs = hasAnyBlogs();
 $allBlogs = $hasBlogs ? getAllBlogs() : [];
 $availableBlogs = $hasBlogs
@@ -144,6 +146,12 @@ adminHeader($blogCaptionTitle);
   <p role="status"><strong>Nejdřív vytvořte blog.</strong> Kategorie, štítky i články se spravují až uvnitř existujícího blogu.</p>
 <?php endif; ?>
 
+<?php if (is_array($transferFlash) && ($transferFlash['message'] ?? '') !== ''): ?>
+  <p class="<?= ($transferFlash['type'] ?? '') === 'error' ? 'error' : 'success' ?>" role="<?= ($transferFlash['type'] ?? '') === 'error' ? 'alert' : 'status' ?>">
+    <?= h((string)$transferFlash['message']) ?>
+  </p>
+<?php endif; ?>
+
 <?php if ($message === 'no_blog_access'): ?>
   <p role="status"><strong>Zatím nemáte přiřazený žádný blog.</strong> Jakmile vás správce přidá do týmu některého blogu, půjde v něm vytvářet a upravovat články.</p>
 <?php endif; ?>
@@ -216,6 +224,9 @@ adminHeader($blogCaptionTitle);
     <legend>Hromadné akce s vybranými články</legend>
     <p data-selection-status="blog" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný článek.</p>
     <div class="button-row">
+      <?php if ($multiBlog): ?>
+        <button type="submit" name="action" value="move" class="btn bulk-action-btn" disabled>Přesunout do jiného blogu</button>
+      <?php endif; ?>
       <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
               disabled data-confirm="Smazat vybrané články?">Smazat vybrané</button>
     </div>
@@ -285,7 +296,9 @@ adminHeader($blogCaptionTitle);
     <?php endforeach; ?>
     </tbody>
   </table>
-  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru článků můžete použít hromadnou akci nahoře.</div>
+  <div style="margin-top:.75rem;color:#555" aria-hidden="true">
+    Po výběru článků můžete nahoře použít hromadnou akci<?= $multiBlog ? ' včetně přesunu do jiného blogu' : '' ?>.
+  </div>
 </form>
 <?php endif; ?>
 

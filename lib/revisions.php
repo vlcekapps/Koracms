@@ -95,6 +95,8 @@ function revisionFieldLabel(string $entityType, string $fieldName): string
         'admin_note'  => 'Interní poznámka',
         'board_type'  => 'Typ položky',
         'category'    => 'Kategorie',
+        'blog'        => 'Blog',
+        'tags'        => 'Štítky',
         'author'      => 'Autor / vydavatel',
         'subtitle'    => 'Podtitul',
         'language'    => 'Jazyk',

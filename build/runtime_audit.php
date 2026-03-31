@@ -7880,6 +7880,8 @@ $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form
 $blogCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php');
 $blogTagsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php');
 $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_blog_delete.php');
+$blogBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bulk.php');
+$blogTransferSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
 $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
 $blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
@@ -7915,6 +7917,12 @@ if (!str_contains($blogListSource, "\$message === 'no_blog_access'")) {
 }
 if (!str_contains($blogListSource, 'Tým blogu')) {
     $blogAdminIssues[] = 'blog list is missing blog team quick link';
+}
+if (!str_contains($blogListSource, 'Přesunout do jiného blogu') || !str_contains($blogListSource, 'value="move"')) {
+    $blogAdminIssues[] = 'blog list is missing bulk move action';
+}
+if (!str_contains($blogListSource, '<?php if ($multiBlog): ?>')) {
+    $blogAdminIssues[] = 'blog list is missing multiblog-only guard around bulk move action';
 }
 if (!str_contains($blogFormSource, "blog.php?msg=no_blog")) {
     $blogAdminIssues[] = 'article form no longer redirects back to blog list when no blog exists';
@@ -7960,6 +7968,33 @@ if (!str_contains($blogMembersSource, 'canCurrentUserManageBlogTaxonomies($blogI
 }
 if (!str_contains($blogMembersSource, 'Další blogy uživatele')) {
     $blogAdminIssues[] = 'blog team management page is missing cross-blog membership overview';
+}
+if (!str_contains($blogBulkSource, "\$action === 'move'")) {
+    $blogAdminIssues[] = 'blog bulk handler is missing move action branch';
+}
+if (!str_contains($blogBulkSource, 'loadTransferableBlogArticles($pdo, $ids)')) {
+    $blogAdminIssues[] = 'blog bulk handler no longer validates transferable articles before move';
+}
+if (!str_contains($blogBulkSource, "\$_SESSION['blog_transfer_selection']")) {
+    $blogAdminIssues[] = 'blog bulk handler is missing transfer session handoff';
+}
+if (!str_contains($blogBulkSource, "BASE_URL . '/admin/blog_transfer.php'")) {
+    $blogAdminIssues[] = 'blog bulk handler is missing redirect to transfer confirmation step';
+}
+if (!str_contains($blogTransferSource, 'loadTransferableBlogArticles($pdo, $selectionIds)')) {
+    $blogAdminIssues[] = 'blog transfer page is missing transferable-article permission enforcement';
+}
+if (!str_contains($blogTransferSource, 'category_strategy') || !str_contains($blogTransferSource, 'tag_strategy')) {
+    $blogAdminIssues[] = 'blog transfer page is missing category or tag reconciliation controls';
+}
+if (!str_contains($blogTransferSource, 'canCurrentUserManageBlogTaxonomies((int)$targetBlog[\'id\'])')) {
+    $blogAdminIssues[] = 'blog transfer page is missing target taxonomy permission guard';
+}
+if (!str_contains($blogTransferSource, 'saveRevision($pdo, \'article\'')) {
+    $blogAdminIssues[] = 'blog transfer page is missing revision logging for moved articles';
+}
+if (!str_contains($blogTransferSource, 'internalRedirectTarget')) {
+    $blogAdminIssues[] = 'blog transfer page is missing validated redirect handling';
 }
 if (!str_contains($blogSaveSource, 'canCurrentUserWriteToBlog($blogId)')) {
     $blogAdminIssues[] = 'article save is missing writable-blog enforcement';
@@ -8011,6 +8046,9 @@ if (!str_contains($blogPresentationSource, 'function getWritableBlogsForUser')) 
 }
 if (!str_contains($blogPresentationSource, 'function getTaxonomyManagedBlogsForUser')) {
     $blogAdminIssues[] = 'blog helpers are missing taxonomy-managed blog resolution';
+}
+if (!str_contains($blogPresentationSource, 'function loadTransferableBlogArticles')) {
+    $blogAdminIssues[] = 'blog helpers are missing transferable article loader for cross-blog move';
 }
 if (!str_contains($blogPresentationSource, 'function saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog helpers are missing slug redirect persistence';
@@ -8524,6 +8562,65 @@ if ($mediaLibraryIssues === []) {
     $failures++;
     foreach ($mediaLibraryIssues as $mediaLibraryIssue) {
         echo '- ' . $mediaLibraryIssue . "\n";
+    }
+}
+
+echo "=== public_upload_svg_guardrails ===\n";
+$publicUploadSvgIssues = [];
+$sharedPresentationSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
+$blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
+$boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
+$downloadFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/download_form.php');
+$eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
+$placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
+$profileAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
+$userFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
+
+foreach ([
+    'function uploadDownloadImage',
+    'function uploadBlogLogo',
+    'function uploadPlaceImage',
+    'function uploadEventImage',
+    'function uploadBoardImage',
+    'function storeUploadedAuthorAvatar',
+] as $uploadHelperName) {
+    $helperPosition = strpos($sharedPresentationSource, $uploadHelperName);
+    if ($helperPosition === false) {
+        $publicUploadSvgIssues[] = 'presentation helper is missing expected upload helper: ' . $uploadHelperName;
+        continue;
+    }
+
+    $helperSlice = substr($sharedPresentationSource, $helperPosition, 1400);
+    if (str_contains($helperSlice, 'image/svg+xml')) {
+        $publicUploadSvgIssues[] = 'upload helper still allows SVG: ' . $uploadHelperName;
+    }
+}
+
+foreach ([
+    ['source' => $blogsAdminSource, 'fragment' => 'image/svg+xml', 'issue' => 'blog admin still allows SVG logos'],
+    ['source' => $blogsAdminSource, 'fragment' => 'WebP a SVG', 'issue' => 'blog admin still advertises SVG logos'],
+    ['source' => $boardFormSource, 'fragment' => '.svg', 'issue' => 'board form still allows SVG images'],
+    ['source' => $boardFormSource, 'fragment' => 'nebo SVG', 'issue' => 'board form still advertises SVG images'],
+    ['source' => $downloadFormSource, 'fragment' => '.svg', 'issue' => 'download form still allows SVG preview images'],
+    ['source' => $eventFormSource, 'fragment' => '.svg', 'issue' => 'event form still allows SVG images'],
+    ['source' => $placeFormSource, 'fragment' => '.svg', 'issue' => 'place form still allows SVG images'],
+    ['source' => $placeFormSource, 'fragment' => 'nebo SVG', 'issue' => 'place form still advertises SVG images'],
+    ['source' => $profileAdminSource, 'fragment' => '.svg', 'issue' => 'profile form still allows SVG avatars'],
+    ['source' => $profileAdminSource, 'fragment' => 'nebo SVG', 'issue' => 'profile form still advertises SVG avatars'],
+    ['source' => $userFormSource, 'fragment' => '.svg', 'issue' => 'user form still allows SVG avatars'],
+    ['source' => $userFormSource, 'fragment' => 'nebo SVG', 'issue' => 'user form still advertises SVG avatars'],
+] as $svgGuard) {
+    if (str_contains((string)$svgGuard['source'], (string)$svgGuard['fragment'])) {
+        $publicUploadSvgIssues[] = (string)$svgGuard['issue'];
+    }
+}
+
+if ($publicUploadSvgIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($publicUploadSvgIssues as $publicUploadSvgIssue) {
+        echo '- ' . $publicUploadSvgIssue . "\n";
     }
 }
 

@@ -52,7 +52,7 @@ $formError = match ($err) {
     'url' => 'Webový odkaz musí mít platný formát.',
     'email' => 'Kontaktní e-mail nemá platný formát.',
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
-    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF, WebP nebo SVG.',
+    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     default => '',
 };
 
@@ -191,7 +191,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
              style="display:block;max-width:320px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>
-    <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+    <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            aria-describedby="place-image-help<?= !empty($place['image_file']) ? ' place-image-current' : '' ?>">
     <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát k lokalitě.</small>
     <?php if (!empty($place['image_file'])): ?>

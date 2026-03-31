@@ -139,8 +139,8 @@ adminHeader('Správa blogů');
     <small id="blog-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
 
     <label for="logo_file">Logo blogu</label>
-    <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" aria-describedby="blog-logo-help">
-    <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF, WebP a SVG; pevný rozměr není nutný.</small>
+    <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="blog-logo-help">
+    <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF a WebP; pevný rozměr není nutný.</small>
 
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="comments_default" value="1" checked> Ve výchozím stavu povolit komentáře u nových článků</label>
@@ -279,7 +279,7 @@ adminHeader('Správa blogů');
     </div>
 
     <label for="bd-logo-file" style="margin-top:.75rem">Logo blogu</label>
-    <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" aria-describedby="bd-logo-help">
+    <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="bd-logo-help">
     <small id="bd-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu.</small>
 
     <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>

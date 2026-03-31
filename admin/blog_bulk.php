@@ -7,6 +7,13 @@ $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []
 $action = $_POST['action'] ?? '';
 $redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/blog.php');
 
+$setFlash = static function (string $type, string $message): void {
+    $_SESSION['blog_transfer_flash'] = [
+        'type' => $type,
+        'message' => $message,
+    ];
+};
+
 if ($action === 'delete' && $ids !== []) {
     $pdo = db_connect();
     $dir = __DIR__ . '/../uploads/articles/';
@@ -56,6 +63,32 @@ if ($action === 'delete' && $ids !== []) {
     if ($deleteIds !== []) {
         logAction('article_bulk_delete', 'ids=' . implode(',', $deleteIds));
     }
+} elseif ($action === 'move' && $ids !== []) {
+    $pdo = db_connect();
+    $writableBlogs = getWritableBlogsForUser();
+    if (count($writableBlogs) < 2) {
+        unset($_SESSION['blog_transfer_selection']);
+        $setFlash('error', 'Přesun článků se zobrazí až ve chvíli, kdy máte přístup alespoň do dvou blogů.');
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    $articles = loadTransferableBlogArticles($pdo, $ids);
+    if (count($articles) !== count($ids)) {
+        unset($_SESSION['blog_transfer_selection']);
+        $setFlash('error', 'Vybraný seznam článků se změnil nebo obsahuje položky, které nemůžete přesouvat.');
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    $_SESSION['blog_transfer_selection'] = [
+        'ids' => array_values(array_map('intval', $ids)),
+        'redirect' => $redirect,
+        'created_at' => time(),
+    ];
+
+    header('Location: ' . BASE_URL . '/admin/blog_transfer.php');
+    exit;
 }
 
 header('Location: ' . $redirect);

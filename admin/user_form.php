@@ -158,9 +158,9 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
       <small id="author-website-help" class="field-help">Nepovinné pole pro osobní web nebo profil autora.</small>
 
       <label for="author_avatar">Avatar autora</label>
-      <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+      <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
              aria-describedby="author-avatar-help<?= !empty($account['author_avatar']) ? ' author-avatar-current' : '' ?>">
-      <small id="author-avatar-help" class="field-help">Povolené formáty: JPEG, PNG, GIF, WebP nebo SVG.</small>
+      <small id="author-avatar-help" class="field-help">Povolené formáty: JPEG, PNG, GIF nebo WebP.</small>
       <?php if (!empty($account['author_avatar'])): ?>
         <div id="author-avatar-current" class="field-help">
           Aktuální avatar:

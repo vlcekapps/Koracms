@@ -263,6 +263,46 @@ function canCurrentUserManageAnyBlogTaxonomies(): bool
     return false;
 }
 
+/**
+ * Načte články blogu, se kterými může aktuální uživatel pracovat v rámci přesunu.
+ *
+ * @param int[] $ids
+ * @return array<int, array<string, mixed>>
+ */
+function loadTransferableBlogArticles(PDO $pdo, array $ids): array
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn(int $id): bool => $id > 0)));
+    if ($ids === []) {
+        return [];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $pdo->prepare(
+        "SELECT a.id, a.title, a.blog_id, a.category_id, a.author_id, a.is_featured_in_blog,
+                b.name AS blog_name,
+                c.name AS category_name
+         FROM cms_articles a
+         LEFT JOIN cms_blogs b ON b.id = a.blog_id
+         LEFT JOIN cms_categories c ON c.id = a.category_id
+         WHERE a.deleted_at IS NULL
+           AND a.id IN ({$placeholders})"
+    );
+    $stmt->execute($ids);
+    $articles = $stmt->fetchAll() ?: [];
+
+    if (!canManageOwnBlogOnly()) {
+        return $articles;
+    }
+
+    return array_values(array_filter(
+        $articles,
+        static function (array $article): bool {
+            return (int)($article['author_id'] ?? 0) === (int)(currentUserId() ?? 0)
+                && canCurrentUserWriteToBlog((int)($article['blog_id'] ?? 0));
+        }
+    ));
+}
+
 function getBlogMembers(int $blogId): array
 {
     if ($blogId <= 0) {
@@ -1651,7 +1691,6 @@ function uploadDownloadImage(array $file, string $existingFilename = ''): array
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -1659,7 +1698,7 @@ function uploadDownloadImage(array $file, string $existingFilename = ''): array
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
         ];
     }
 
@@ -2034,7 +2073,6 @@ function uploadBlogLogo(array $file, string $existingFilename = ''): array
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -2042,7 +2080,7 @@ function uploadBlogLogo(array $file, string $existingFilename = ''): array
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Logo blogu musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Logo blogu musí být ve formátu JPEG, PNG, GIF nebo WebP.',
         ];
     }
 
@@ -2148,7 +2186,6 @@ function uploadPlaceImage(array $file, string $existingFilename = ''): array
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -2156,7 +2193,7 @@ function uploadPlaceImage(array $file, string $existingFilename = ''): array
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
         ];
     }
 
@@ -2249,7 +2286,6 @@ function uploadEventImage(array $file, string $existingFilename = ''): array
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -2257,7 +2293,7 @@ function uploadEventImage(array $file, string $existingFilename = ''): array
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Obrázek akce musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Obrázek akce musí být ve formátu JPEG, PNG, GIF nebo WebP.',
         ];
     }
 
@@ -2411,7 +2447,6 @@ function uploadBoardImage(array $file, string $existingFilename = ''): array
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -2419,7 +2454,7 @@ function uploadBoardImage(array $file, string $existingFilename = ''): array
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
         ];
     }
 
@@ -4183,7 +4218,6 @@ function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): 
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
-        'image/svg+xml' => 'svg',
     ];
 
     $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
@@ -4191,7 +4225,7 @@ function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): 
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Avatar musí být ve formátu JPEG, PNG, GIF, WebP nebo SVG.',
+            'error' => 'Avatar musí být ve formátu JPEG, PNG, GIF nebo WebP.',
         ];
     }
 

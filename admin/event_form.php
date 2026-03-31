@@ -196,7 +196,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <legend>Obrázek a zveřejnění</legend>
 
     <label for="event_image">Obrázek události</label>
-    <input type="file" id="event_image" name="event_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+    <input type="file" id="event_image" name="event_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            aria-describedby="event-image-help<?= (string)$event['image_file'] !== '' ? ' event-image-current' : '' ?>">
     <small id="event-image-help" class="field-help">Volitelné. Hodí se pro přehled akcí, detail události i sdílení na webu.</small>
     <?php if ((string)$event['image_url'] !== ''): ?>

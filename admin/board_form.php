@@ -52,7 +52,7 @@ $formError = match ($err) {
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'contact_email' => 'Kontaktní e-mail nemá platný formát.',
-    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF, WebP nebo SVG.',
+    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
     default => '',
 };
@@ -163,7 +163,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
              style="display:block;max-width:280px;width:100%;border-radius:12px;border:1px solid #d0d7de">
       </div>
     <?php endif; ?>
-    <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+    <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            aria-describedby="board-image-help<?= !empty($document['image_file']) ? ' board-image-current' : '' ?>">
     <small id="board-image-help" class="field-help">Hodí se pro parte, ztracené zvíře, plakát nebo ilustrační fotku oznámení.</small>
     <?php if (!empty($document['image_file'])): ?>

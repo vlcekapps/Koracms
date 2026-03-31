@@ -207,7 +207,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <legend>Náhled a zveřejnění</legend>
 
     <label for="download_image">Náhledový obrázek</label>
-    <input type="file" id="download_image" name="download_image" accept=".jpg,.jpeg,.png,.gif,.webp,.svg">
+    <input type="file" id="download_image" name="download_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp">
     <?php if ((string)$download['image_url'] !== ''): ?>
       <div style="margin:.75rem 0">
         <img src="<?= h((string)$download['image_url']) ?>" alt="Náhled obrázku" style="max-width:16rem;height:auto;border:1px solid #d6d6d6;border-radius:.75rem">

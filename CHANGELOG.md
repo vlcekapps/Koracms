@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Blogy – přesun článků mezi blogy v administraci** – autoři s přístupem do více blogů mohou nově z přehledu článků hromadně přesouvat své vlastní články mezi blogy, do kterých smějí zapisovat; převod nabízí výběr cílového blogu, shrnutí vybraných článků, bezpečné vyrovnání kategorií a štítků a pro správce cílového blogu i vytvoření chybějících taxonomií, přičemž celý přesun běží transakčně a ukládá revize změn
 - **Média – public/private knihovna a bezpečnější workflow** – knihovna médií nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery a chráněné endpointy pro soukromá média a SVG, blokuje mazání používaných souborů a přidává náhradu souboru, rozšířená metadata, bulk akce a filtrování
 - **Ankety – veřejné hledání, SEO a revize** – modul ankety nově podporuje fulltextové hledání a stránkování na veřejném indexu, `meta title` a `meta description` v editoru, širší revize včetně termínů a možností, redirect starého slugu na nový canonical tvar a sjednocenou veřejnou viditelnost napříč widgetem, vyhledáváním, sitemapou i shortcode embedy
 - **Podcasty – chráněné asset endpointy a structured data** – cover pořadu, artwork epizody i lokální audio nově tečou přes kontrolované endpointy místo přímých `/uploads/podcasts/...` cest, skryté pořady už nezpřístupní ani své soubory a veřejný detail pořadu i epizody nově doplňuje structured data
@@ -108,6 +109,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Multiblog – volitelné logo blogu** – každý blog nově může mít vlastní volitelné logo, které se zobrazuje nad popisem na jeho veřejném indexu; administrace umí logo nahrát, zobrazit, odebrat a při smazání blogu i uklidit, a kompatibilita je dopsaná i do install/migrate a export/import workflow
 
 ### Opraveno
+- **Veřejné uploady obrázků mimo knihovnu médií** – starší upload helpery a admin formuláře už nepřijímají SVG pro blog loga, obrázky vývěsky, preview obrázky downloadů, obrázky událostí a míst ani autorské avatary; tím se snižuje riziko XSS a aktivního obsahu z veřejných `uploads/` adresářů a nový runtime guardrail hlídá, aby se SVG do těchto cest nevrátilo
 - **Audit a WCAG regressions po velké integrační vlně** – opraven pád detailu novinky, sjednocen wording návratu z detailu autora, doplněna objevitelnost řazení statických stránek a zpřesněn wording galerie v administraci
 - **Navigace webu a statické stránky** – `Navigace webu` je teď skutečná autorita pro veřejné pořadí menu, ukládání sjednoceného pořadí doplňuje chybějící položky bezpečně na konec, stránka hlásí změny přes live region a copy u statických stránek nově jasně odlišuje hlavní navigaci od základního pořadí stránek
 - **Hromadné akce a tabulky v administraci** – odstraněno duplicitní `id="check-all"` v jídelním lístku a bulk helper nyní bezpečně podporuje více tabulek se samostatným výběrem položek
