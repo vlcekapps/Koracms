@@ -742,11 +742,11 @@ if (($requestedType === 'all' || $requestedType === 'faq') && isModuleEnabled('f
 if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnabled('gallery')) {
     try {
         $albumStmt = $pdo->prepare(
-            "SELECT id, name AS title, slug, excerpt, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type
+            "SELECT id, name AS title, slug, description, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type
              FROM cms_gallery_albums
              WHERE status = 'published'
                AND is_published = 1
-               AND (name LIKE ? OR excerpt LIKE ? OR slug LIKE ?)
+               AND (name LIKE ? OR description LIKE ? OR slug LIKE ?)
              ORDER BY COALESCE(updated_at, created_at) DESC
              LIMIT 6"
         );

@@ -6198,6 +6198,9 @@ $contentSnippetIssues = [];
 $contentLibrarySource = (string)file_get_contents(dirname(__DIR__) . '/lib/content.php');
 $contentPickerSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_picker.php');
 $contentSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
+$contentHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
+    ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
+    : '';
 
 foreach ([
     '[form',
@@ -6239,6 +6242,19 @@ foreach ([
     if (!str_contains($contentSearchSource, $searchFragment)) {
         $contentSnippetIssues[] = 'content reference search is missing snippet action fragment: ' . $searchFragment;
     }
+}
+
+if (!str_contains($contentSearchSource, 'Vložit fotogalerii')) {
+    $contentSnippetIssues[] = 'content reference search is missing gallery album insert action fragment';
+}
+if (!str_contains($contentSearchSource, "SELECT id, name AS title, slug, description, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type")) {
+    $contentSnippetIssues[] = 'content reference search gallery album query is not selecting real description field';
+}
+if (str_contains($contentSearchSource, "SELECT id, name AS title, slug, excerpt, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type")) {
+    $contentSnippetIssues[] = 'content reference search gallery album query still references non-existent excerpt column';
+}
+if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('content_reference_gallery_http'")) {
+    $contentSnippetIssues[] = 'build/http_integration.php is missing gallery content picker coverage';
 }
 
 if ($contentSnippetIssues === []) {

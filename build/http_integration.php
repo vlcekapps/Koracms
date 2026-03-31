@@ -20,6 +20,7 @@ $createdArticles = [];
 $createdFormIds = [];
 $createdFormSubmissionIds = [];
 $createdPageIds = [];
+$createdGalleryAlbumIds = [];
 $createdMediaIds = [];
 $createdBoardIds = [];
 $createdResourceIds = [];
@@ -247,11 +248,13 @@ try {
         'site_description' => httpIntegrationSettingValue($pdo, 'site_description'),
         'board_public_label' => httpIntegrationSettingValue($pdo, 'board_public_label'),
         'module_blog' => getSetting('module_blog', '0'),
+        'module_gallery' => getSetting('module_gallery', '0'),
         'module_reservations' => getSetting('module_reservations', '0'),
         'module_forms' => getSetting('module_forms', '0'),
     ];
 
     saveSetting('module_blog', '1');
+    saveSetting('module_gallery', '1');
     saveSetting('module_reservations', '1');
     saveSetting('module_forms', '1');
     clearSettingsCache();
@@ -415,6 +418,71 @@ try {
     }
 
     httpIntegrationPrintResult('settings_save_http', $settingsIssues, $failures);
+
+    $galleryPickerIssues = [];
+    $galleryAlbumSlug = 'http-picker-gallery-' . bin2hex(random_bytes(4));
+    $galleryAlbumTitle = 'HTTP Picker Letecký den ' . date('His');
+    $galleryAlbumDescription = 'Dočasné album pro ověření content pickeru galerie.';
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_albums (name, slug, description, status, is_published)
+         VALUES (?, ?, ?, 'published', 1)"
+    )->execute([
+        $galleryAlbumTitle,
+        $galleryAlbumSlug,
+        $galleryAlbumDescription,
+    ]);
+    $galleryAlbumId = (int)$pdo->lastInsertId();
+    $createdGalleryAlbumIds[] = $galleryAlbumId;
+
+    $galleryPickerResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/content_reference_search.php?q=' . urlencode('letecky') . '&type=gallery',
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($galleryPickerResponse) !== 200) {
+        $galleryPickerIssues[] = 'gallery content picker search nevrátil 200';
+    } else {
+        $galleryPickerPayload = json_decode((string)($galleryPickerResponse['body'] ?? ''), true);
+        if (!is_array($galleryPickerPayload) || ($galleryPickerPayload['ok'] ?? false) !== true) {
+            $galleryPickerIssues[] = 'gallery content picker search nevrátil čitelné JSON s ok=true';
+        } else {
+            $galleryAlbumFound = false;
+            foreach (($galleryPickerPayload['results'] ?? []) as $pickerResult) {
+                if (!is_array($pickerResult)) {
+                    continue;
+                }
+                if ((string)($pickerResult['type'] ?? '') !== 'gallery_album') {
+                    continue;
+                }
+                if ((string)($pickerResult['title'] ?? '') !== $galleryAlbumTitle) {
+                    continue;
+                }
+                $galleryAlbumFound = true;
+                if ((string)($pickerResult['path'] ?? '') !== galleryAlbumPublicPath(['id' => $galleryAlbumId, 'slug' => $galleryAlbumSlug])) {
+                    $galleryPickerIssues[] = 'gallery content picker vrátil album s neočekávanou veřejnou cestou';
+                }
+                $actions = $pickerResult['insert_actions'] ?? [];
+                $hasGalleryAction = false;
+                if (is_array($actions)) {
+                    foreach ($actions as $action) {
+                        if (is_array($action) && (string)($action['label'] ?? '') === 'Vložit fotogalerii') {
+                            $hasGalleryAction = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$hasGalleryAction) {
+                    $galleryPickerIssues[] = 'gallery content picker u alba nenabízí akci Vložit fotogalerii';
+                }
+                break;
+            }
+            if (!$galleryAlbumFound) {
+                $galleryPickerIssues[] = 'gallery content picker nenašel publikované album podle dotazu';
+            }
+        }
+    }
+
+    httpIntegrationPrintResult('content_reference_gallery_http', $galleryPickerIssues, $failures);
 
     $reservationIssues = [];
     $resourceSlug = 'http-resource-' . bin2hex(random_bytes(4));
@@ -2045,6 +2113,9 @@ try {
     }
     foreach ($createdPageIds as $pageIdToDelete) {
         $pdo->prepare("DELETE FROM cms_pages WHERE id = ?")->execute([$pageIdToDelete]);
+    }
+    foreach ($createdGalleryAlbumIds as $galleryAlbumIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$galleryAlbumIdToDelete]);
     }
     foreach ($createdArticles as $articleIdToDelete) {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$articleIdToDelete]);
