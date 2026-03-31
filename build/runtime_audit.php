@@ -845,7 +845,7 @@ $pdo->prepare(
     $runtimeAuditDownloadExcerpt,
     '<p>Detailní text runtime audit položky ke stažení pro ověření veřejného detailu a CTA tlačítek.</p>',
     'https://example.test/runtime-project',
-    'Windows 11 nebo novÄ›jĹˇĂ­, 4 GB RAM.',
+    'Windows 11 nebo novější, 4 GB RAM.',
     str_repeat('a', 64),
     $runtimeAuditDownloadSeriesKey,
     'https://example.test/runtime-download',
@@ -3611,10 +3611,10 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_form_submission_detail') {
         foreach ([
             'GitHub issue',
-            'PĹ™ipravit issue',
-            'OtevĹ™Ă­t nĂˇvrh na GitHubu',
-            'PĹ™ipojit existujĂ­cĂ­ issue',
-            'RepozitĂˇĹ™',
+            'Připravit issue',
+            'Otevřít návrh na GitHubu',
+            'Připojit existující issue',
+            'Repozitář',
             'Referenční kód',
             'Workflow hlášení',
             'Priorita',
@@ -3991,10 +3991,10 @@ foreach ($pages as $page) {
 
     if (str_starts_with($page['label'], 'admin_')) {
         foreach ([
-            'VeĹ™ejnĂˇ strĂˇnka',
-            'VeĹ™ejnĂˇ strĂˇnka zdroje',
+            'Veřejná stránka',
+            'Veřejná stránka zdroje',
             '>VĹˇechny podcasty<',
-            '>SprĂˇva zdrojĹŻ<',
+            '>Správa zdrojů<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
                 $issues[] = 'admin page still contains outdated action wording: ' . $forbiddenFragment;
@@ -4350,7 +4350,6 @@ foreach ($pages as $page) {
             $issues,
             static fn(string $issue): bool =>
                 !in_array($issue, [
-                    'admin polls page is missing field: PĹ™ehled anket',
                     'admin polls page is missing field: Přehled anket',
                 ], true)
         ));
@@ -7992,11 +7991,29 @@ if (!str_contains($blogTransferSource, 'loadTransferableBlogArticles($pdo, $sele
 if (!str_contains($blogTransferSource, 'category_strategy') || !str_contains($blogTransferSource, 'tag_strategy')) {
     $blogAdminIssues[] = 'blog transfer page is missing category or tag reconciliation controls';
 }
+if (!str_contains($blogTransferSource, 'map_existing')) {
+    $blogAdminIssues[] = 'blog transfer page is missing manual taxonomy mapping strategy';
+}
+if (!str_contains($blogTransferSource, 'name="category_map[') || !str_contains($blogTransferSource, 'name="tag_map[')) {
+    $blogAdminIssues[] = 'blog transfer page is missing per-taxonomy mapping inputs';
+}
+if (!str_contains($blogTransferSource, 'blogTransferMappingFieldName')) {
+    $blogAdminIssues[] = 'blog transfer page is missing stable field identifiers for taxonomy mapping';
+}
 if (!str_contains($blogTransferSource, 'canCurrentUserManageBlogTaxonomies((int)$targetBlog[\'id\'])')) {
     $blogAdminIssues[] = 'blog transfer page is missing target taxonomy permission guard';
 }
+if (!str_contains($blogTransferSource, 'targetCategoryMapById') || !str_contains($blogTransferSource, 'targetTagMapById')) {
+    $blogAdminIssues[] = 'blog transfer page is missing target-blog taxonomy ownership validation';
+}
+if (!str_contains($blogTransferSource, 'adminFieldAttributes(') || !str_contains($blogTransferSource, 'adminRenderFieldError(')) {
+    $blogAdminIssues[] = 'blog transfer page is missing field-level accessibility errors for transfer mapping';
+}
 if (!str_contains($blogTransferSource, 'saveRevision($pdo, \'article\'')) {
     $blogAdminIssues[] = 'blog transfer page is missing revision logging for moved articles';
+}
+if (!str_contains($blogTransferSource, 'array_key_exists($tagKey, $manualTagAssignments)')) {
+    $blogAdminIssues[] = 'blog transfer page is missing manual tag remapping application';
 }
 if (!str_contains($blogTransferSource, 'internalRedirectTarget')) {
     $blogAdminIssues[] = 'blog transfer page is missing validated redirect handling';
@@ -8635,6 +8652,7 @@ $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_fo
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $profileAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
 $userFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
+$settingsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings.php');
 
 foreach ([
     'function uploadDownloadImage',
@@ -8669,9 +8687,24 @@ foreach ([
     ['source' => $profileAdminSource, 'fragment' => 'nebo SVG', 'issue' => 'profile form still advertises SVG avatars'],
     ['source' => $userFormSource, 'fragment' => '.svg', 'issue' => 'user form still allows SVG avatars'],
     ['source' => $userFormSource, 'fragment' => 'nebo SVG', 'issue' => 'user form still advertises SVG avatars'],
+    ['source' => $settingsAdminSource, 'fragment' => 'image/svg+xml', 'issue' => 'settings admin still allows SVG site assets'],
+    ['source' => $settingsAdminSource, 'fragment' => '.svg', 'issue' => 'settings admin still advertises SVG site assets'],
+    ['source' => $settingsAdminSource, 'fragment' => 'Povolené formáty: ICO, PNG nebo SVG', 'issue' => 'settings admin still advertises SVG favicons'],
+    ['source' => $settingsAdminSource, 'fragment' => 'Povolené formáty: JPEG, PNG, WebP nebo SVG', 'issue' => 'settings admin still advertises SVG logos'],
 ] as $svgGuard) {
     if (str_contains((string)$svgGuard['source'], (string)$svgGuard['fragment'])) {
         $publicUploadSvgIssues[] = (string)$svgGuard['issue'];
+    }
+}
+
+foreach ([
+    '$siteFaviconMaxBytes = 256 * 1024',
+    '$siteLogoMaxBytes = 2 * 1024 * 1024',
+    'Favicon může mít nejvýše 256 KB.',
+    'Logo může mít nejvýše 2 MB.',
+] as $settingsUploadFragment) {
+    if (!str_contains($settingsAdminSource, $settingsUploadFragment)) {
+        $publicUploadSvgIssues[] = 'settings admin is missing upload size validation fragment: ' . $settingsUploadFragment;
     }
 }
 
@@ -8698,6 +8731,7 @@ $pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
 $reservationSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_save.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
+$reservationBookingSource = (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php');
 if (!str_contains($pageSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'")) {
     $editorialValidationIssues[] = 'page save is missing datetime parsing for unpublish_at';
 }
@@ -8763,6 +8797,12 @@ if (!str_contains($reservationSaveSource, "DateTime::createFromFormat('H:i'")) {
 if (!str_contains($reservationSaveSource, "DateTime::createFromFormat('Y-m-d'")) {
     $editorialValidationIssues[] = 'reservation resource save is missing strict blocked-date parsing';
 }
+if (!str_contains($reservationBookingSource, "DateTime::createFromFormat('!Y-m-d', \$dateStr)")) {
+    $editorialValidationIssues[] = 'reservation booking is missing strict booking date parsing';
+}
+if (!str_contains($reservationBookingSource, 'DateTime::getLastErrors()')) {
+    $editorialValidationIssues[] = 'reservation booking is missing invalid calendar date rejection';
+}
 foreach ([
     "redirectToForm(\$id, 'name')",
     "redirectToForm(\$id, 'slug')",
@@ -8787,6 +8827,39 @@ if ($editorialValidationIssues === []) {
     $failures++;
     foreach ($editorialValidationIssues as $editorialValidationIssue) {
         echo '- ' . $editorialValidationIssue . "\n";
+    }
+}
+
+echo "=== utf8_copy_guardrails ===\n";
+$utf8CopyIssues = [];
+$runtimeAuditSource = (string)file_get_contents(__FILE__);
+$migrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
+$blogFormSourceForUtf8 = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
+foreach ([
+    'Windows 11 nebo novější, 4 GB RAM.',
+    'Otevřít návrh na GitHubu',
+    'Připojit existující issue',
+    'Repozitář',
+    'Veřejná stránka',
+    'Veřejná stránka zdroje',
+    '>Správa zdrojů<',
+] as $expectedUtf8Fragment) {
+    if (!str_contains($runtimeAuditSource, $expectedUtf8Fragment)) {
+        $utf8CopyIssues[] = 'runtime audit is missing expected UTF-8 fragment: ' . $expectedUtf8Fragment;
+    }
+}
+if (str_contains($migrateSource, 'âś— Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ CHYBA:')) {
+    $utf8CopyIssues[] = 'migrate.php still contains mojibake in food slug migration log';
+}
+if (str_contains($blogFormSourceForUtf8, 'â€“ bez kategorie â€“')) {
+    $utf8CopyIssues[] = 'blog form still contains mojibake in legacy category option copy';
+}
+if ($utf8CopyIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($utf8CopyIssues as $utf8CopyIssue) {
+        echo '- ' . $utf8CopyIssue . "\n";
     }
 }
 

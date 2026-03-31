@@ -90,10 +90,28 @@ Týká se to hlavně těchto oblastí:
 - ankety: datum a čas začátku a konce
 - jídelní a nápojové lístky: `Platí od` a `Platí do`
 - zdroje rezervací: otevírací doba, předdefinované sloty a blokovaná data
+- veřejný rezervační formulář: datum rezervace musí být nejen ve správném formátu, ale i skutečně existovat v kalendáři
 
 U rezervací se navíc celý save workflow zapisuje transakčně. Když selže některý krok při ukládání otevíracích hodin, slotů nebo blokovaných dat, změna se vrátí zpět jako celek a v databázi nezůstane jen část nového nastavení.
 
+Veřejný booking flow nově používá stejnou přísnější logiku i pro samotný den rezervace. Datum typu `2026-02-31` se už nepřevede na jiný existující den, ale formulář návštěvníka vrátí zpět s validační chybou.
+
 To je důležité hlavně po ručních úpravách nebo importech, kdy se nejčastěji objeví překlep v datu, obrácený rozsah nebo neplatný čas.
+
+---
+
+## Nastavení webu – logo a favicona
+
+V sekci **Obecná nastavení** lze dál nahrávat logo a faviconu webu, ale branding uploady mají nově přísnější ochranu.
+
+Platí tato pravidla:
+
+- nové SVG soubory se pro logo ani faviconu nepřijímají
+- favicona musí respektovat backend limit `256 KB`
+- logo musí respektovat backend limit `2 MB`
+- při chybě uploadu nebo neplatném dočasném souboru se formulář vrátí s čitelnou chybovou hláškou
+
+To snižuje riziko, že se do veřejně servírovaných assetů dostane aktivní obsah nebo nepřiměřeně velký soubor.
 
 ---
 
@@ -204,6 +222,41 @@ Editor článku respektuje vybraný blog:
 - jeden článek v blogu lze označit jako `Doporučený článek blogu`
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
+
+### Přesun článků mezi blogy
+
+Z přehledu článků lze nově hromadně přesouvat články mezi blogy. Funkce je dostupná jen tehdy, když má uživatel přístup alespoň do dvou blogů, do kterých smí zapisovat.
+
+Přesun respektuje tato pravidla:
+
+- autor může přesouvat jen své vlastní články
+- cílový blog musí patřit mezi blogy, do kterých má aktuální uživatel write přístup
+- celý přesun běží v jedné databázové transakci
+- po dokončení se uloží revize změny blogu, kategorie i štítků
+
+### Jak fungují kategorie a štítky při přesunu
+
+Nejprve se CMS pokusí použít existující shodu:
+
+- kategorie podle stejného názvu v cílovém blogu
+- štítky podle stejného slugu, případně názvu
+
+Jen pokud shoda neexistuje, nabídne převod další možnosti.
+
+Pro správce taxonomií cílového blogu jsou dostupné tři strategie:
+
+- `Bez kategorizace` / `Bez štítků`
+- `Vytvořit chybějící kategorie` / `Vytvořit chybějící štítky`
+- `Mapovat na existující`
+
+Varianta `Mapovat na existující` zobrazí pro každou chybějící zdrojovou kategorii a každý chybějící zdrojový štítek samostatný výběr. V něm lze rozhodnout:
+
+- použít konkrétní existující kategorii nebo štítek cílového blogu
+- nebo položku explicitně zahodit jako `Bez kategorie` / `Bez štítku`
+
+Běžný autor bez práva spravovat taxonomie cílového blogu dostane jen bezpečné varianty `Bez kategorizace` a `Bez štítků`.
+
+Server zároveň ověřuje, že ručně zvolená cílová kategorie nebo štítek opravdu patří do vybraného cílového blogu. Podvržené ID z jiného blogu proto přesun neprojde.
 
 ### Veřejný blog index
 

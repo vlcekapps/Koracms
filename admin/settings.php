@@ -135,43 +135,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $siteDir = __DIR__ . '/../uploads/site/';
         if (!is_dir($siteDir)) mkdir($siteDir, 0755, true);
 
+        $siteFaviconMaxBytes = 256 * 1024;
         if (!empty($_FILES['site_favicon']['name'])) {
-            $tmp   = $_FILES['site_favicon']['tmp_name'];
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $mime  = $finfo->file($tmp);
-            $allowedFav = ['image/x-icon' => 'ico', 'image/vnd.microsoft.icon' => 'ico',
-                           'image/png' => 'png', 'image/svg+xml' => 'svg'];
-            if (isset($allowedFav[$mime])) {
-                $fname = 'favicon.' . $allowedFav[$mime];
-                if (move_uploaded_file($tmp, $siteDir . $fname)) {
-                    saveSetting('site_favicon', $fname);
-                    if ($mime === 'image/png') {
-                        generateWebp($siteDir . $fname);
-                    }
-                }
+            $faviconFile = $_FILES['site_favicon'];
+            $uploadError = (int)($faviconFile['error'] ?? UPLOAD_ERR_NO_FILE);
+            $tmp = (string)($faviconFile['tmp_name'] ?? '');
+            if ($uploadError !== UPLOAD_ERR_OK) {
+                $errors[] = 'Favicon se nepodařilo nahrát.';
+            } elseif ($tmp === '' || !is_uploaded_file($tmp)) {
+                $errors[] = 'Favicon se nepodařilo zpracovat.';
+            } elseif ((int)($faviconFile['size'] ?? 0) > $siteFaviconMaxBytes) {
+                $errors[] = 'Favicon může mít nejvýše 256 KB.';
             } else {
-                $errors[] = 'Favicon: nepodporovaný formát (povoleno: ICO, PNG, SVG).';
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mime  = (string)$finfo->file($tmp);
+                $allowedFav = [
+                    'image/x-icon' => 'ico',
+                    'image/vnd.microsoft.icon' => 'ico',
+                    'image/png' => 'png',
+                ];
+                if (isset($allowedFav[$mime])) {
+                    $fname = 'favicon.' . $allowedFav[$mime];
+                    if (move_uploaded_file($tmp, $siteDir . $fname)) {
+                        saveSetting('site_favicon', $fname);
+                        if ($mime === 'image/png') {
+                            generateWebp($siteDir . $fname);
+                        }
+                    } else {
+                        $errors[] = 'Favicon se nepodařilo uložit.';
+                    }
+                } else {
+                    $errors[] = 'Favicon: nepodporovaný formát (povoleno: ICO, PNG).';
+                }
             }
         }
 
         // Logo – nahrání souboru
+        $siteLogoMaxBytes = 2 * 1024 * 1024;
         if (!empty($_FILES['site_logo']['name'])) {
-            $tmp   = $_FILES['site_logo']['tmp_name'];
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $mime  = $finfo->file($tmp);
-            $allowedImg = ['image/jpeg' => 'jpg', 'image/png' => 'png',
-                           'image/gif' => 'gif', 'image/webp' => 'webp', 'image/svg+xml' => 'svg'];
-            if (isset($allowedImg[$mime])) {
-                $ext   = $allowedImg[$mime];
-                $fname = 'logo.' . $ext;
-                if (move_uploaded_file($tmp, $siteDir . $fname)) {
-                    saveSetting('site_logo', $fname);
-                    if ($mime !== 'image/svg+xml') {
-                        generateWebp($siteDir . $fname);
-                    }
-                }
+            $logoFile = $_FILES['site_logo'];
+            $uploadError = (int)($logoFile['error'] ?? UPLOAD_ERR_NO_FILE);
+            $tmp = (string)($logoFile['tmp_name'] ?? '');
+            if ($uploadError !== UPLOAD_ERR_OK) {
+                $errors[] = 'Logo se nepodařilo nahrát.';
+            } elseif ($tmp === '' || !is_uploaded_file($tmp)) {
+                $errors[] = 'Logo se nepodařilo zpracovat.';
+            } elseif ((int)($logoFile['size'] ?? 0) > $siteLogoMaxBytes) {
+                $errors[] = 'Logo může mít nejvýše 2 MB.';
             } else {
-                $errors[] = 'Logo: nepodporovaný formát (povoleno: JPEG, PNG, GIF, WebP, SVG).';
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mime  = (string)$finfo->file($tmp);
+                $allowedImg = [
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/gif' => 'gif',
+                    'image/webp' => 'webp',
+                ];
+                if (isset($allowedImg[$mime])) {
+                    $ext   = $allowedImg[$mime];
+                    $fname = 'logo.' . $ext;
+                    if (move_uploaded_file($tmp, $siteDir . $fname)) {
+                        saveSetting('site_logo', $fname);
+                        generateWebp($siteDir . $fname);
+                    } else {
+                        $errors[] = 'Logo se nepodařilo uložit.';
+                    }
+                } else {
+                    $errors[] = 'Logo: nepodporovaný formát (povoleno: JPEG, PNG, GIF, WebP).';
+                }
             }
         }
 
@@ -502,9 +533,9 @@ adminHeader('Nastavení webu');
   <fieldset id="settings-brand">
     <legend>Logo, favicon a sdílení webu</legend>
     <label for="site_favicon">Favicon</label>
-    <input type="file" id="site_favicon" name="site_favicon" accept=".ico,.png,.svg,image/x-icon,image/png,image/svg+xml"
+    <input type="file" id="site_favicon" name="site_favicon" accept=".ico,.png,image/x-icon,image/png"
            aria-describedby="site-favicon-help<?= getSetting('site_favicon', '') !== '' ? ' site-favicon-current' : '' ?>">
-    <small id="site-favicon-help" class="field-help">Povolené formáty: ICO, PNG nebo SVG. Maximální velikost je 256 KB.</small>
+    <small id="site-favicon-help" class="field-help">Povolené formáty: ICO nebo PNG. Maximální velikost je 256 KB.</small>
     <?php $fav = getSetting('site_favicon', ''); ?>
     <?php if ($fav !== ''): ?>
       <div id="site-favicon-current" class="field-help">
@@ -515,9 +546,9 @@ adminHeader('Nastavení webu');
     <?php endif; ?>
 
     <label for="site_logo">Logo webu</label>
-    <input type="file" id="site_logo" name="site_logo" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*"
+    <input type="file" id="site_logo" name="site_logo" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            aria-describedby="site-logo-help<?= getSetting('site_logo', '') !== '' ? ' site-logo-current' : '' ?>">
-    <small id="site-logo-help" class="field-help">Povolené formáty: JPEG, PNG, WebP nebo SVG. Maximální velikost je 2 MB.</small>
+    <small id="site-logo-help" class="field-help">Povolené formáty: JPEG, PNG, GIF nebo WebP. Maximální velikost je 2 MB.</small>
     <?php $logo = getSetting('site_logo', ''); ?>
     <?php if ($logo !== ''): ?>
       <div id="site-logo-current" class="field-help">

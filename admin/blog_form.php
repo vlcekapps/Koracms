@@ -462,10 +462,6 @@ adminHeader($pageTitle);
 
         const state = rememberedSelections[blogId] || { categoryId: '', tags: [] };
         const selectedTags = new Set((state.tags || []).map((value) => Number(value)));
-        /*
-        const categoryMarkup = ['<option value="">â€“ bez kategorie â€“</option>'];
-
-        */
         const categoryMarkup = [];
         categoryMarkup.push('<option value="">' + noCategoryLabel + '</option>');
 

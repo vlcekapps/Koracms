@@ -1775,7 +1775,7 @@ try {
         $log[] = "· Slugy jídelních lístků – sloupec <code>cms_food_cards.slug</code> neexistuje, přeskočeno";
     }
 } catch (\PDOException $e) {
-    $log[] = "âś— Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ CHYBA: " . h($e->getMessage());
+    $log[] = "✗ Slugy jídelních lístků – CHYBA: " . h($e->getMessage());
 }
 
 try {

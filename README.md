@@ -266,6 +266,8 @@ Knihovna **Média** nově rozlišuje veřejné a soukromé soubory, odmítá nov
 
 Modul **Ankety** nově používá stejný publikační helper jako widgety, sitemapa a vyhledávání, takže aktivní a archivní ankety drží konzistentní veřejnou viditelnost. Součástí modulu je veřejné fulltextové hledání, stránkování indexu, redirect při změně slugu, širší revize a volitelná SEO pole `meta title` a `meta description`.
 
+V multiblog administraci nově umí přesun článků mezi blogy vedle automatického vyrovnání taxonomií i ruční mapování chybějících kategorií a štítků na existující taxonomie cílového blogu. Tato volba je dostupná jen uživatelům, kteří smějí spravovat taxonomie cílového blogu.
+
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 
 ---
@@ -372,6 +374,8 @@ Kora CMS používá:
 - ochranu `.env` a `.git/`
 - audit log a kontrolu integrity souborů
 
+V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
+
 ---
 
 ## Přístupnost
@@ -412,6 +416,8 @@ V administraci: **Obecná nastavení → Provoz webu**. Zapne stránku údržby 
 ## Řešení problémů
 
 Pokud administrace po uložení obsahu vrátí formulář zpět s chybou u data nebo času, jde nově o záměrné ochranné chování. CMS přísněji validuje plánované publikování, zrušení publikace, platnost lístků, termíny anket a rezervační časy, aby se neukládaly neplatné nebo nejednoznačné hodnoty.
+
+Totéž platí i pro veřejné rezervace: rezervační formulář nově odmítne neexistující kalendářní datum místo toho, aby ho server tiše převedl na jiný den.
 
 | Příznak | Co zkontrolovat |
 |---------|----------------|
