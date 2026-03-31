@@ -75,18 +75,13 @@ $forms = $pdo->query(
 )->fetchAll();
 foreach ($forms as $formRow) {
     $formId = (int)$formRow['id'];
-    $enabled = isModuleEnabled('forms')
-        && (int)$formRow['is_active'] === 1
-        && (int)$formRow['show_in_nav'] === 1;
+    $enabled = formVisibleInPublicNavigation($formRow);
     $navItems[] = [
         'key' => 'form:' . $formId,
         'type' => 'form',
         'id' => $formId,
         'label' => (string)$formRow['title'],
-        'sublabel' => 'Formulář'
-            . ((int)$formRow['show_in_nav'] !== 1 ? ' · mimo navigaci' : '')
-            . ((int)$formRow['is_active'] !== 1 ? ' · nezveřejněný' : '')
-            . (!isModuleEnabled('forms') ? ' · modul vypnutý' : ''),
+        'sublabel' => implode(' · ', formPublicNavigationStatusParts($formRow)),
         'enabled' => $enabled,
         'manage_url' => BASE_URL . '/admin/form_form.php?id=' . $formId,
         'manage_label' => 'Upravit formulář',

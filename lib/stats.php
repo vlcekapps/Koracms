@@ -201,6 +201,81 @@ function navModuleOrder(): array
     return $order;
 }
 
+/**
+ * @param array<string,mixed> $form
+ * @return string[]
+ */
+function formPublicNavigationStatusParts(array $form): array
+{
+    $parts = ['Formulář'];
+
+    if ((int)($form['show_in_nav'] ?? 0) !== 1) {
+        $parts[] = 'mimo navigaci';
+    }
+    if ((int)($form['is_active'] ?? 0) !== 1) {
+        $parts[] = 'nezveřejněný';
+    }
+    if (!isModuleEnabled('forms')) {
+        $parts[] = 'modul vypnutý';
+    }
+    if (trim((string)($form['title'] ?? '')) === '') {
+        $parts[] = 'bez názvu';
+    }
+
+    return $parts;
+}
+
+/**
+ * @param array<string,mixed> $form
+ */
+function formVisibleInPublicNavigation(array $form): bool
+{
+    if (!isModuleEnabled('forms')) {
+        return false;
+    }
+
+    if ((int)($form['show_in_nav'] ?? 0) !== 1) {
+        return false;
+    }
+
+    if ((int)($form['is_active'] ?? 0) !== 1) {
+        return false;
+    }
+
+    return trim((string)($form['title'] ?? '')) !== '';
+}
+
+/**
+ * @return array<int, array<string,mixed>>
+ */
+function loadPublicNavigationForms(): array
+{
+    if (!isModuleEnabled('forms')) {
+        return [];
+    }
+
+    try {
+        $rows = db_connect()->query(
+            "SELECT id, title, slug, is_active, show_in_nav
+             FROM cms_forms
+             ORDER BY title, id"
+        )->fetchAll();
+    } catch (\PDOException $e) {
+        return [];
+    }
+
+    $visibleForms = [];
+    foreach ($rows as $row) {
+        if (!is_array($row) || !formVisibleInPublicNavigation($row)) {
+            continue;
+        }
+
+        $visibleForms[(int)($row['id'] ?? 0)] = $row;
+    }
+
+    return $visibleForms;
+}
+
 /** Navigace webu – zobrazí jen povolené moduly v nastavitelném pořadí */
 function siteNav(string $current = ''): string
 {
@@ -231,20 +306,7 @@ function siteNav(string $current = ''): string
                 $visibleBlogEntries[(int)$blogEntry['id']] = $blogEntry;
             }
         }
-        $visibleForms = [];
-        if (isModuleEnabled('forms')) {
-            try {
-                $formRows = db_connect()->query(
-                    "SELECT id, title, slug
-                     FROM cms_forms
-                     WHERE is_active = 1 AND show_in_nav = 1
-                     ORDER BY title, id"
-                )->fetchAll();
-                foreach ($formRows as $formRow) {
-                    $visibleForms[(int)$formRow['id']] = $formRow;
-                }
-            } catch (\PDOException $e) {}
-        }
+        $visibleForms = loadPublicNavigationForms();
         $pagesMap = [];
         try {
             $pageRows = db_connect()->query(
@@ -384,18 +446,8 @@ function siteNav(string $current = ''): string
             }
         }
 
-        if (isModuleEnabled('forms')) {
-            try {
-                $forms = db_connect()->query(
-                    "SELECT id, title, slug
-                     FROM cms_forms
-                     WHERE is_active = 1 AND show_in_nav = 1
-                     ORDER BY title, id"
-                )->fetchAll();
-                foreach ($forms as $form) {
-                    $nav .= '<li><a href="' . h(formPublicPath($form)) . '"' . ($current === 'form:' . (int)$form['id'] ? ' aria-current="page"' : '') . '>' . h((string)$form['title']) . '</a></li>' . "\n";
-                }
-            } catch (\PDOException $e) {}
+        foreach (loadPublicNavigationForms() as $form) {
+            $nav .= '<li><a href="' . h(formPublicPath($form)) . '"' . ($current === 'form:' . (int)$form['id'] ? ' aria-current="page"' : '') . '>' . h((string)$form['title']) . '</a></li>' . "\n";
         }
     }
 

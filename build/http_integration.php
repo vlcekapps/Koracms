@@ -1007,13 +1007,40 @@ try {
             $formPresetIssues[] = 'preset formuláře pro nahlášení chyby stále slugifikuje interní názvy polí';
         }
 
+        $issuePresetPublicUrl = $baseUrl . formPublicPath(['id' => $issuePresetFormId, 'slug' => $issuePresetSlug]);
+        $issuePresetPublicResponse = fetchUrl($issuePresetPublicUrl, '', 0);
+        if (httpIntegrationStatusCode($issuePresetPublicResponse) !== 200) {
+            $formPresetIssues[] = 'veřejný preset formuláře pro nahlášení chyby nevrátil 200 hned po vytvoření';
+        } else {
+            foreach ([
+                'name="strucny_nazev_problemu"',
+                'name="kde_se_problem_projevil[]"',
+                'name="zavaznost"',
+                'type="submit"',
+            ] as $expectedPublicFragment) {
+                if (!str_contains($issuePresetPublicResponse['body'], $expectedPublicFragment)) {
+                    $formPresetIssues[] = 'veřejný preset formuláře pro nahlášení chyby po vytvoření neobsahuje: ' . $expectedPublicFragment;
+                }
+            }
+            if (str_contains($issuePresetPublicResponse['body'], 'Array to string conversion')) {
+                $formPresetIssues[] = 'veřejný preset formuláře pro nahlášení chyby po vytvoření hlásí PHP warning Array to string conversion';
+            }
+        }
+
         $issuePresetEditUrl = $baseUrl . BASE_URL . '/admin/form_form.php?id=' . $issuePresetFormId;
         $issuePresetEditResponse = fetchUrl($issuePresetEditUrl, $adminSession['cookie'], 0);
         if (httpIntegrationStatusCode($issuePresetEditResponse) !== 200) {
             $formPresetIssues[] = 'editace presetu formuláře pro nahlášení chyby nevrátila 200';
         }
+        if (!str_contains($issuePresetEditResponse['body'], 'Formulář byl uložen.')) {
+            $formPresetIssues[] = 'po vytvoření presetu formuláře pro nahlášení chyby chybí success zpráva po redirectu';
+        }
         if (!str_contains($issuePresetEditResponse['body'], 'value="email_pro_odpoved" selected')) {
             $formPresetIssues[] = 'editace presetu formuláře pro nahlášení chyby nezachovala vybrané pole pro potvrzovací e-mail';
+        }
+        $issuePresetEditSecondRead = fetchUrl($issuePresetEditUrl, $adminSession['cookie'], 0);
+        if (str_contains($issuePresetEditSecondRead['body'], 'Formulář byl uložen.')) {
+            $formPresetIssues[] = 'success zpráva po vytvoření presetu formuláře pro nahlášení chyby po dalším načtení nezmizela';
         }
 
         $issuePresetEditCsrf = extractHiddenInputValue($issuePresetEditResponse['body'], 'csrf_token');
@@ -1066,6 +1093,15 @@ try {
             $formPresetIssues[] = 'uložení beze změn u presetu formuláře pro nahlášení chyby stále padá na submitter_email_field';
         }
 
+        $issuePresetResavePage = fetchUrl($issuePresetEditUrl, $adminSession['cookie'], 0);
+        if (!str_contains($issuePresetResavePage['body'], 'Formulář byl uložen.')) {
+            $formPresetIssues[] = 'po uložení beze změn u presetu formuláře pro nahlášení chyby chybí success zpráva';
+        }
+        $issuePresetResaveSecondRead = fetchUrl($issuePresetEditUrl, $adminSession['cookie'], 0);
+        if (str_contains($issuePresetResaveSecondRead['body'], 'Formulář byl uložen.')) {
+            $formPresetIssues[] = 'success zpráva po uložení beze změn u presetu formuláře pro nahlášení chyby po dalším načtení nezmizela';
+        }
+
         $issuePresetAfterResaveStmt = $pdo->prepare("SELECT submitter_email_field FROM cms_forms WHERE id = ? LIMIT 1");
         $issuePresetAfterResaveStmt->execute([$issuePresetFormId]);
         if ((string)($issuePresetAfterResaveStmt->fetchColumn() ?: '') !== 'email_pro_odpoved') {
@@ -1073,6 +1109,56 @@ try {
         }
     }
     httpIntegrationPrintResult('form_issue_preset_http', $formPresetIssues, $failures);
+
+    $formsNavIssues = [];
+    $navFormTitle = 'HTTP NAV FORM ' . bin2hex(random_bytes(3));
+    $navFormSlug = uniqueFormSlug($pdo, 'http-nav-form-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_forms (
+            title, slug, description, success_message, submit_label, notification_email, notification_subject,
+            redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label,
+            success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events, use_honeypot,
+            submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject,
+            submitter_confirmation_message, show_in_nav, is_active
+        )
+         VALUES (?, ?, '', '', 'Odeslat formulář', '', '', '', 'message', '', '', '', '', 0, '', '', '', 1, 0, '', '', '', 1, 1)"
+    )->execute([
+        $navFormTitle,
+        $navFormSlug,
+    ]);
+    $navFormId = (int)$pdo->lastInsertId();
+    $createdFormIds[] = $navFormId;
+
+    $adminMenuResponse = fetchUrl($baseUrl . BASE_URL . '/admin/menu.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($adminMenuResponse) !== 200) {
+        $formsNavIssues[] = 'admin menu pro kontrolu formuláře v navigaci nevrátil 200';
+    } elseif (!str_contains($adminMenuResponse['body'], $navFormTitle)) {
+        $formsNavIssues[] = 'admin menu neobsahuje nově zveřejněný formulář pro hlavní navigaci';
+    } elseif (
+        preg_match(
+            '~<li[^>]*data-sort-id="' . preg_quote('form:' . $navFormId, '~') . '".*?</li>~s',
+            $adminMenuResponse['body'],
+            $navFormMenuRow
+        ) !== 1
+    ) {
+        $formsNavIssues[] = 'admin menu nenašlo konkrétní řádek nově zveřejněného formuláře';
+    } elseif (str_contains((string)($navFormMenuRow[0] ?? ''), 'na webu se teď nezobrazí')) {
+        $formsNavIssues[] = 'admin menu chybně tvrdí, že se aktivní formulář v navigaci na webu nezobrazí';
+    }
+
+    $navFormPath = formPublicPath(['id' => $navFormId, 'slug' => $navFormSlug]);
+    $homeWithNavForm = fetchUrl($publicHomeUrl, '', 0);
+    if (httpIntegrationStatusCode($homeWithNavForm) !== 200) {
+        $formsNavIssues[] = 'homepage pro kontrolu formuláře v navigaci nevrátila 200';
+    }
+    if (!str_contains($homeWithNavForm['body'], 'href="' . h($navFormPath) . '"')) {
+        $formsNavIssues[] = 'homepage neobsahuje odkaz na aktivní formulář označený pro hlavní navigaci';
+    }
+    if (!str_contains($homeWithNavForm['body'], $navFormTitle)) {
+        $formsNavIssues[] = 'homepage neobsahuje název aktivního formuláře označeného pro hlavní navigaci';
+    }
+
+    httpIntegrationPrintResult('forms_nav_http', $formsNavIssues, $failures);
 
     $galleryPickerIssues = [];
     $galleryAlbumSlug = 'http-picker-gallery-' . bin2hex(random_bytes(4));

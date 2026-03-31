@@ -76,6 +76,8 @@ Formulář může po odeslání, změně workflow, odpovědi odesílateli nebo p
 - Obecný kontaktní formulář
 - Nahlášení problému s obsahem
 
+Po vytvoření formuláře se editor vrací zpět na detail formuláře se stavovou hláškou `Formulář byl uložen.`. U šablony **Nahlášení chyby** se navíc všechna předpřipravená pole založí už při prvním uložení, takže je formulář po zveřejnění okamžitě použitelný i na veřejném webu bez nutnosti mezikroku typu „uložit znovu“.
+
 ---
 
 ## Validace dat a časů v administraci

@@ -9563,8 +9563,20 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
 if (!str_contains($formBuilderSource, '$submitterEmailFieldValue') || !str_contains($formBuilderSource, 'count($emailFieldOptions) === 1')) {
     $adminFieldErrorIssues[] = 'form builder is missing resilient fallback selection for submitter confirmation email field';
 }
+if (!str_contains($formBuilderSource, '$flash = is_array($_SESSION[\'form_flash\'] ?? null) ? $_SESSION[\'form_flash\'] : [];')
+    || !str_contains($formBuilderSource, 'unset($_SESSION[\'form_flash\']);')
+    || !str_contains($formBuilderSource, '$successMessage = trim((string)($flash[\'success\'] ?? \'\'));')
+    || !str_contains($formBuilderSource, '<?php if ($successMessage !== \'\'): ?>')
+    || !str_contains($formBuilderSource, '<p class="success" role="status"><?= h($successMessage) ?></p>')) {
+    $adminFieldErrorIssues[] = 'form builder is missing success flash handling after save';
+}
 if (!str_contains($formSaveSource, 'adminAvailableSubmitterEmailFields') || !str_contains($formSaveSource, '$presetSubmitterEmailField') || !str_contains($formSaveSource, '$existingSubmitterEmailField')) {
     $adminFieldErrorIssues[] = 'form save is missing fallback resolution for submitter confirmation email field';
+}
+if (!str_contains($formSaveSource, 'function formFlashSet(array $flash): void')
+    || substr_count($formSaveSource, 'formFlashSet([') < 2
+    || substr_count($formSaveSource, "header('Location: ' . BASE_URL . '/admin/form_form.php?id=' .") < 2) {
+    $adminFieldErrorIssues[] = 'form save is missing PRG success flash for create and edit flow';
 }
 if (!str_contains($formSaveSource, 'adminUniquePresetFieldName') || !str_contains($formSaveSource, '$presetFieldName = adminUniquePresetFieldName(')) {
     $adminFieldErrorIssues[] = 'form save is missing exact preset field name preservation for template-backed forms';
@@ -10209,11 +10221,26 @@ if (!str_contains($adminMenuSource, 'Upravit formulář')) {
 if (!str_contains($publicNavSource, 'foreach (array_keys($visibleForms) as $formId)')) {
     $menuAdminIssues[] = 'public navigation does not append missing form entries safely';
 }
+if (!str_contains($publicNavSource, 'loadPublicNavigationForms()')) {
+    $menuAdminIssues[] = 'public navigation is not using the shared public form navigation helper';
+}
 if (!str_contains($publicNavSource, "current === 'form:'")) {
     $menuAdminIssues[] = 'public navigation is missing current state support for forms';
 }
+if (!str_contains($publicNavSource, 'function formVisibleInPublicNavigation(')
+    || !str_contains($publicNavSource, 'function formPublicNavigationStatusParts(')
+    || !str_contains($publicNavSource, 'function loadPublicNavigationForms(')) {
+    $menuAdminIssues[] = 'public navigation helper set for forms is incomplete';
+}
 if (!str_contains($adminFormFormSource, 'name="show_in_nav"')) {
     $menuAdminIssues[] = 'form editor is missing show_in_nav checkbox';
+}
+if (!str_contains($adminMenuSource, 'formVisibleInPublicNavigation($formRow)')
+    || !str_contains($adminMenuSource, "implode(' · ', formPublicNavigationStatusParts(\$formRow))")) {
+    $menuAdminIssues[] = 'admin menu is not using shared public form availability logic';
+}
+if ($httpIntegrationSource !== '' && !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('forms_nav_http'")) {
+    $menuAdminIssues[] = 'http integration is missing forms navigation scenario';
 }
 if ($menuAdminIssues === []) {
     echo "OK\n";
@@ -10244,6 +10271,10 @@ if (!str_contains($themeBaseLayoutSource, 'aria-labelledby="page-sidebar-heading
 if (str_contains($themeBaseLayoutSource, "querySelector('[role=\"status\"]:not(#a11y-live),[role=\"alert\"]')")
     || str_contains($themeBaseLayoutSource, "message.removeAttribute('role');")) {
     $themeLayoutIssues[] = 'default theme layout still mutates server-rendered status roles on page load';
+}
+if (str_contains($themeFormsShowViewSource, '$value = h((string)$rawValue);')
+    || !str_contains($themeFormsShowViewSource, '$value = is_array($rawValue) ? \'\' : h((string)$rawValue);')) {
+    $themeLayoutIssues[] = 'default theme forms renderer still casts checkbox group values to string';
 }
 foreach ([
     '.listing-filters',

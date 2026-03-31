@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Formuláře – po uložení se v editoru nově spolehlivě ukáže jednorázová success hláška** – správa formulářů používá po create/edit uložení PRG flash zprávu `Formulář byl uložen.`, takže správce po redirectu dostane jasné potvrzení o uložení a při dalším obnovení stránky se hláška znovu neopakuje
+- **Formuláře – preset `Nahlášení chyby` je na webu plně použitelný hned po prvním uložení** – veřejný renderer formulářů nově korektně pracuje i s poli typu více voleb a preset formulář se po vytvoření okamžitě vykreslí se všemi poli, ne jen s CAPTCHA; současně správa menu a veřejná navigace sdílejí stejnou logiku pro zveřejněné formuláře, takže admin už netvrdí, že se formulář zobrazí, když ve veřejné navigaci neprojde
 ## [3.3.1] – 2026-04-01
 
 ### Změněno

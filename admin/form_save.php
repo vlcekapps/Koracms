@@ -3,6 +3,11 @@ require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 verifyCsrf();
 
+function formFlashSet(array $flash): void
+{
+    $_SESSION['form_flash'] = $flash;
+}
+
 function adminAllowedFormFieldTypes(): array
 {
     return array_keys(formFieldTypeDefinitions());
@@ -321,6 +326,9 @@ if ($id !== null) {
         )->execute([$id, $newType, $newLabel, $newName, $newOptions, $newPlaceholder, $newDefaultValue, $newHelpText, $newAcceptTypes, $newMaxFileSize, $newAllowMultiple, $newLayoutWidth, $newStartNewRow, $newShowIfField, $newShowIfOperator, $newShowIfValue, $newRequired, $newSort]);
     }
 
+    formFlashSet([
+        'success' => 'Formulář byl uložen.',
+    ]);
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $id);
 } else {
     $pdo->prepare(
@@ -376,6 +384,9 @@ if ($id !== null) {
     }
 
     logAction('form_add', "id={$newId} title={$title}");
+    formFlashSet([
+        'success' => 'Formulář byl uložen.',
+    ]);
     header('Location: ' . BASE_URL . '/admin/form_form.php?id=' . $newId);
 }
 exit;

@@ -350,6 +350,8 @@ Kora CMS používá jedno rozhraní pro správu pořadí navigace. V administrac
 
 Položky lze libovolně kombinovat – stránka může být mezi moduly, formulář vedle blogu.
 
+Správa navigace u veřejných formulářů nově používá stejnou dostupnostní logiku jako samotný veřejný web. Pokud je formulář aktivní, zveřejněný a označený pro navigaci, admin už ho neoznačuje jako skrytý a hlavní navigace ho vykreslí stejným pravidlem jako ve veřejné části.
+
 ---
 
 ## Widgety

@@ -3,6 +3,8 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 $pdo = db_connect();
+$flash = is_array($_SESSION['form_flash'] ?? null) ? $_SESSION['form_flash'] : [];
+unset($_SESSION['form_flash']);
 $id = inputInt('get', 'id');
 
 $form = null;
@@ -33,6 +35,7 @@ if ($id !== null) {
 }
 
 $err = trim($_GET['err'] ?? '');
+$successMessage = trim((string)($flash['success'] ?? ''));
 $fieldErrorMap = [
     'required' => ['title'],
     'slug' => ['slug'],
@@ -118,6 +121,9 @@ $fieldEditorLegend = static function (array $field, int $index): string {
 adminHeader($pageTitle);
 ?>
 
+<?php if ($successMessage !== ''): ?>
+  <p class="success" role="status"><?= h($successMessage) ?></p>
+<?php endif; ?>
 <?php if ($err === 'required'): ?>
   <p role="alert" class="error" id="form-error">Název formuláře je povinný.</p>
 <?php elseif ($err === 'slug'): ?>

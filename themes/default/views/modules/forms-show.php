@@ -110,7 +110,7 @@
                   ? ($defaultValue !== '' ? formFieldOptionsList(str_replace(',', '|', $defaultValue)) : [])
                   : $defaultValue
               );
-              $value = h((string)$rawValue);
+              $value = is_array($rawValue) ? '' : h((string)$rawValue);
               $fieldId = 'field-' . $name;
               $placeholder = h((string)($field['placeholder'] ?? ''));
               $fieldErrorMessages = array_values(array_filter((array)($fieldErrors[$field['name']] ?? []), static fn($message): bool => trim((string)$message) !== ''));
