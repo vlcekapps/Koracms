@@ -214,6 +214,7 @@ Správa týmů je teď viditelná i z více míst:
 - **Tým blogu** ukazuje u každého uživatele i jeho další blogová přiřazení, takže je hned jasné, kdo píše do více blogů
 - **Uživatelé a role** nově obsahují sloupec `Blogy`, kde je vidět přiřazení každého interního účtu
 - **Správa blogů** zobrazuje i počet členů týmu u každého blogu
+- **Správa blogů** zároveň nově nabízí rychlé odkazy `Články blogu`, `Kategorie blogu`, `Štítky blogu` a `Stránky blogu`, takže lze z jednoho přehledu přejít rovnou na správu konkrétního blogu
 
 To je užitečné hlavně ve chvíli, kdy jeden autor spravuje více blogů nebo když chcete rychle zkontrolovat, zda má nový redaktor přístup opravdu jen tam, kam patří.
 
@@ -227,6 +228,8 @@ Editor článku respektuje vybraný blog:
 - jeden článek v blogu lze označit jako `Doporučený článek blogu`
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
+
+V přehledech `Statické stránky` a `Články` se pro převod obsahu dál zobrazuje šipka jako vizuální vodítko, ale pro čtečky obrazovky je nově skrytá. Asistivní technologie tak hlásí jen samotnou akci `Článek` nebo `Stránka`, ne dekorativní symbol před ní.
 
 ### Přesun článků mezi blogy
 

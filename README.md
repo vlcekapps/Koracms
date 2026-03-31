@@ -270,6 +270,8 @@ V multiblog administraci nově umí přesun článků mezi blogy vedle automatic
 
 Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce vyplní, použije se na veřejném indexu blogu pro čtečky obrazovky; pokud zůstane prázdný, logo se dál bere jako dekorativní a asistivní technologie ho přeskočí.
 
+Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
+
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 
 ---

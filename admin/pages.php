@@ -266,7 +266,7 @@ adminHeader('Statické stránky');
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="direction" value="page_to_article">
               <input type="hidden" name="id" value="<?= $pageId ?>">
-              <button type="submit" class="btn">→ Článek</button>
+              <button type="submit" class="btn"><span aria-hidden="true">→</span> Článek</button>
             </form>
             <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
                   onsubmit="return confirm('Smazat tuto stránku?')">

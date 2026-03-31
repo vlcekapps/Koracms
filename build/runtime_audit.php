@@ -4944,7 +4944,10 @@ foreach ($pages as $page) {
         if ($boardRow && !str_contains($result['body'], (string)($boardRow['title'] ?? ''))) {
             $issues[] = 'board article is missing title';
         }
-        if (!str_contains($result['body'], boardModuleBackLabel())) {
+        if (
+            !str_contains($result['body'], boardModuleBackLabel())
+            && !str_contains($result['body'], BASE_URL . '/board/index.php')
+        ) {
             $issues[] = 'board article is missing back link';
         }
         if ($boardRow && !str_contains($result['body'], (string)($boardRow['excerpt'] ?? ''))) {
@@ -8164,6 +8167,23 @@ if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
 if (!str_contains($blogsAdminSource, "renderAdminContentReferencePicker('intro_content')") || !str_contains($blogsAdminSource, "renderAdminContentReferencePicker('bd-intro-content')")) {
     $blogAdminIssues[] = 'blog editor is missing content picker support for extended intro content';
 }
+if (!str_contains($blogListSource, 'value="article_to_page"') || !str_contains($blogListSource, 'aria-hidden="true"')) {
+    $blogAdminIssues[] = 'blog list still exposes the article-to-page arrow to screen readers';
+}
+if (!str_contains($blogsAdminSource, 'blog.php?blog=') || !str_contains($blogsAdminSource, 'Články blogu')) {
+    $blogAdminIssues[] = 'blog overview is missing per-blog article action link';
+}
+if (!str_contains($blogsAdminSource, 'blog_cats.php?blog_id=') || !str_contains($blogsAdminSource, 'Kategorie blogu')) {
+    $blogAdminIssues[] = 'blog overview is missing per-blog category action link';
+}
+if (!str_contains($blogsAdminSource, 'blog_tags.php?blog_id=') || !str_contains($blogsAdminSource, 'Štítky blogu')) {
+    $blogAdminIssues[] = 'blog overview is missing per-blog tag action link';
+}
+if (
+    preg_match('/Články blogu.*Kategorie blogu.*Štítky blogu.*blog_pages\.php\?blog_id=/s', $blogsAdminSource) !== 1
+) {
+    $blogAdminIssues[] = 'blog overview actions are missing article/category/tag links before blog pages';
+}
 if (!str_contains($blogsAdminSource, 'member_count')) {
     $blogAdminIssues[] = 'blog overview is missing assigned team counts';
 }
@@ -9691,6 +9711,9 @@ if (!str_contains($adminMenuSource, '/admin/blogs.php') || !str_contains($adminM
 }
 if (!str_contains($adminPagesSource, '/admin/menu.php') || str_contains($adminPagesSource, 'page_positions.php')) {
     $menuAdminIssues[] = 'pages overview still points static page ordering to the wrong screen';
+}
+if (!str_contains($adminPagesSource, 'value="page_to_article"') || !str_contains($adminPagesSource, 'aria-hidden="true"')) {
+    $menuAdminIssues[] = 'pages overview still exposes the page-to-article arrow to screen readers';
 }
 if (!str_contains($pageFormSource, '/admin/menu.php') || str_contains($pageFormSource, 'page_positions.php')) {
     $menuAdminIssues[] = 'page form help still points navigation ordering to the wrong screen';

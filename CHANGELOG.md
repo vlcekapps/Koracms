@@ -8,6 +8,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Změněno
 - **Content/media picker – fotogalerie se ve vyhledávání znovu správně zobrazují** – hledání v administraci nově vrací publikovaná galerie podle názvu, popisu i slugu bez tichého výpadku způsobeného dotazem na neexistující sloupec `cms_gallery_albums.excerpt`; picker tak znovu nabízí i akci `Vložit fotogalerii` pro existující alba
+- **Blogy – přehled blogů nabízí rychlé odkazy na správu článků, kategorií a štítků** – sloupec `Akce` v administraci blogů nově vede přímo na články konkrétního blogu, jeho kategorie a štítky, takže se správce dostane ke kompletní blogové správě bez dalšího hledání v menu
+- **Přístupnost administrace – převody Stránka → Článek a Článek → Stránka už nečtou dekorativní šipky** – tlačítka pro převod obsahu v přehledu statických stránek a blogových článků ponechávají šipku jen jako vizuální vodítko a nově ji skrývají před čtečkami obrazovky, takže asistivní technologie hlásí jen samotnou akci
 
 ## [3.1.0] – 2026-03-31
 

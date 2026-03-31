@@ -283,7 +283,7 @@ adminHeader($blogCaptionTitle);
             <input type="hidden" name="direction" value="article_to_page">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
             <button type="submit" class="btn"
-                    data-confirm="Převést článek na statickou stránku?">→ Stránka</button>
+                  data-confirm="Převést článek na statickou stránku?"><span aria-hidden="true">→</span> Stránka</button>
           </form>
           <form action="blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
