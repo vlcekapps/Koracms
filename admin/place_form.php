@@ -55,6 +55,22 @@ $formError = match ($err) {
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['name'],
+    'slug' => ['slug'],
+    'url' => ['url'],
+    'email' => ['contact_email'],
+    'coordinates' => ['latitude', 'longitude'],
+    'image' => ['place_image'],
+];
+$fieldErrorMessages = [
+    'name' => 'Název místa je povinný.',
+    'slug' => 'Slug místa je povinný a musí být unikátní.',
+    'url' => 'Webový odkaz musí mít platný formát.',
+    'contact_email' => 'Kontaktní e-mail nemá platný formát.',
+    'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
+    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+];
 
 adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 ?>
@@ -85,13 +101,16 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="name">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('name', $err, $fieldErrorMap) ?>
            value="<?= h((string)$place['name']) ?>">
+    <?php adminRenderFieldError('name', $err, $fieldErrorMap, $fieldErrorMessages['name']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="place-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['place-slug-help']) ?>
            value="<?= h((string)$place['slug']) ?>">
     <small id="place-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="place_kind">Typ místa</label>
     <select id="place_kind" name="place_kind">
@@ -141,21 +160,28 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="url">Web / externí odkaz</label>
     <input type="url" id="url" name="url" maxlength="500"
+           <?= adminFieldAttributes('url', $err, $fieldErrorMap) ?>
            value="<?= h((string)$place['url']) ?>">
+    <?php adminRenderFieldError('url', $err, $fieldErrorMap, $fieldErrorMessages['url']); ?>
 
     <div style="display:flex;gap:1rem;flex-wrap:wrap">
       <div style="flex:1 1 12rem">
         <label for="latitude">Zeměpisná šířka</label>
-        <input type="text" id="latitude" name="latitude" inputmode="decimal" aria-describedby="place-coordinates-help"
+        <input type="text" id="latitude" name="latitude" inputmode="decimal"
+               <?= adminFieldAttributes('latitude', $err, $fieldErrorMap, ['place-coordinates-help'], 'place-coordinates-error') ?>
                value="<?= h((string)$place['latitude']) ?>">
       </div>
       <div style="flex:1 1 12rem">
         <label for="longitude">Zeměpisná délka</label>
-        <input type="text" id="longitude" name="longitude" inputmode="decimal" aria-describedby="place-coordinates-help"
+        <input type="text" id="longitude" name="longitude" inputmode="decimal"
+               <?= adminFieldAttributes('longitude', $err, $fieldErrorMap, ['place-coordinates-help'], 'place-coordinates-error') ?>
                value="<?= h((string)$place['longitude']) ?>">
       </div>
     </div>
     <small id="place-coordinates-help" class="field-help">Pokud vyplníte obě souřadnice, na veřejné stránce se zobrazí odkaz do map.</small>
+    <?php if (adminFieldHasError('latitude', $err, $fieldErrorMap)): ?>
+      <small id="place-coordinates-error" class="field-help field-error"><?= h($fieldErrorMessages['coordinates']) ?></small>
+    <?php endif; ?>
 
     <label for="opening_hours">Otevírací doba / praktické poznámky</label>
     <textarea id="opening_hours" name="opening_hours" rows="4"><?= h((string)$place['opening_hours']) ?></textarea>
@@ -166,7 +192,9 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="contact_email">E-mail</label>
     <input type="email" id="contact_email" name="contact_email" maxlength="255"
+           <?= adminFieldAttributes('contact_email', $err, $fieldErrorMap) ?>
            value="<?= h((string)$place['contact_email']) ?>">
+    <?php adminRenderFieldError('contact_email', $err, $fieldErrorMap, $fieldErrorMessages['contact_email']); ?>
   </fieldset>
 
   <fieldset>
@@ -192,8 +220,10 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
       </div>
     <?php endif; ?>
     <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
-           aria-describedby="place-image-help<?= !empty($place['image_file']) ? ' place-image-current' : '' ?>">
+           <?= adminFieldAttributes('place_image', $err, $fieldErrorMap, array_filter(['place-image-help', !empty($place['image_file']) ? 'place-image-current' : ''])) ?>
+           >
     <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát k lokalitě.</small>
+    <?php adminRenderFieldError('place_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if (!empty($place['image_file'])): ?>
       <small id="place-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>

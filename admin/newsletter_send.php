@@ -10,9 +10,14 @@ $_SESSION['newsletter_form_state'] = [
     'subject' => $subject,
     'body' => $body,
 ];
+$_SESSION['newsletter_form_error_fields'] = [];
 
 if ($subject === '' || $body === '') {
     $_SESSION['newsletter_form_error'] = 'Vyplňte prosím předmět i text newsletteru.';
+    $_SESSION['newsletter_form_error_fields'] = array_values(array_filter([
+        $subject === '' ? 'subject' : null,
+        $body === '' ? 'body' : null,
+    ]));
     header('Location: ' . BASE_URL . '/admin/newsletter_form.php');
     exit;
 }
@@ -48,6 +53,7 @@ $pdo->prepare(
 $newsletterId = (int)$pdo->lastInsertId();
 logAction('newsletter_send', "subject={$subject} recipients={$sent}");
 unset($_SESSION['newsletter_form_state'], $_SESSION['newsletter_form_error']);
+unset($_SESSION['newsletter_form_error_fields']);
 
 header('Location: ' . BASE_URL . '/admin/newsletter_history.php?id=' . $newsletterId . '&ok=sent');
 exit;

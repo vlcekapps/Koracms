@@ -57,6 +57,22 @@ $dayNames = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 
 adminHeader($id ? 'Upravit zdroj rezervací' : 'Nový zdroj rezervací');
 
 $err = trim($_GET['err'] ?? '');
+$fieldErrorMap = [
+    'name' => ['name'],
+    'slug' => ['slug'],
+    'capacity' => ['capacity'],
+    'hours' => ['hours'],
+    'slots' => ['slots'],
+    'blocked_date' => ['blocked_dates'],
+];
+$fieldErrorMessages = [
+    'name' => 'Název zdroje je povinný.',
+    'slug' => 'Slug je povinný a musí být unikátní.',
+    'capacity' => 'Kapacita musí být alespoň 1.',
+    'hours' => 'Časy dostupnosti musí být ve správném formátu a konec musí být později než začátek.',
+    'slots' => 'Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.',
+    'blocked_date' => 'Blokované datum musí být ve správném formátu.',
+];
 ?>
 
 <?php if ($err === 'name'): ?>
@@ -94,13 +110,16 @@ $err = trim($_GET['err'] ?? '');
 
     <label for="name">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('name', $err, $fieldErrorMap) ?>
            value="<?= h($resource['name'] ?? '') ?>">
+    <?php adminRenderFieldError('name', $err, $fieldErrorMap, $fieldErrorMessages['name']); ?>
 
     <label for="slug">Slug (URL identifikátor) <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
-           aria-describedby="resource-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['resource-slug-help']) ?>
            value="<?= h($resource['slug'] ?? '') ?>">
     <small id="resource-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4" aria-describedby="resource-description-help"><?= h($resource['description'] ?? '') ?></textarea>
@@ -118,9 +137,10 @@ $err = trim($_GET['err'] ?? '');
 
     <label for="capacity">Max. osob na jednu rezervaci <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="number" id="capacity" name="capacity" min="1" required aria-required="true" style="width:8rem"
-           aria-describedby="resource-capacity-help"
+           <?= adminFieldAttributes('capacity', $err, $fieldErrorMap, ['resource-capacity-help']) ?>
            value="<?= (int)($resource['capacity'] ?? 1) ?>">
     <small id="resource-capacity-help" class="field-help">Kolik lidí může přijít v rámci jedné rezervace, například rodina nebo skupina.</small>
+    <?php adminRenderFieldError('capacity', $err, $fieldErrorMap, $fieldErrorMessages['capacity']); ?>
 
     <fieldset style="border:1px solid #ddd;padding:.5rem .75rem;margin-top:1rem">
       <legend>Lokality rezervací</legend>
@@ -213,8 +233,11 @@ $err = trim($_GET['err'] ?? '');
   </fieldset>
 
   <!-- C) Opening hours -->
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem"<?= adminFieldHasError('hours', $err, $fieldErrorMap) ? ' aria-describedby="hours-error"' : '' ?>>
     <legend>Otevírací doba</legend>
+    <?php if (adminFieldHasError('hours', $err, $fieldErrorMap)): ?>
+      <small id="hours-error" class="field-help field-error"><?= h($fieldErrorMessages['hours']) ?></small>
+    <?php endif; ?>
     <table>
       <caption class="sr-only">Otevírací doba podle dnů</caption>
       <thead>
@@ -256,8 +279,11 @@ $err = trim($_GET['err'] ?? '');
   </fieldset>
 
   <!-- D) Predefined slots -->
-  <fieldset id="slots-section" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem;<?= ($resource['slot_mode'] ?? 'slots') !== 'slots' ? 'display:none' : '' ?>">
+  <fieldset id="slots-section" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem;<?= ($resource['slot_mode'] ?? 'slots') !== 'slots' ? 'display:none' : '' ?>"<?= adminFieldHasError('slots', $err, $fieldErrorMap) ? ' aria-describedby="slots-error"' : '' ?>>
     <legend>Časy k rezervaci</legend>
+    <?php if (adminFieldHasError('slots', $err, $fieldErrorMap)): ?>
+      <small id="slots-error" class="field-help field-error"><?= h($fieldErrorMessages['slots']) ?></small>
+    <?php endif; ?>
 
     <fieldset style="border:1px dashed #aaa;padding:.5rem 1rem;margin-bottom:1rem">
       <legend>Hromadné přidání slotů</legend>
@@ -310,8 +336,11 @@ $err = trim($_GET['err'] ?? '');
   </fieldset>
 
   <!-- E) Blocked dates -->
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem"<?= adminFieldHasError('blocked_dates', $err, $fieldErrorMap) ? ' aria-describedby="blocked-dates-error"' : '' ?>>
     <legend>Blokované dny</legend>
+    <?php if (adminFieldHasError('blocked_dates', $err, $fieldErrorMap)): ?>
+      <small id="blocked-dates-error" class="field-help field-error"><?= h($fieldErrorMessages['blocked_date']) ?></small>
+    <?php endif; ?>
     <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:.5rem">
       <div>
         <label for="block_date">Datum</label>

@@ -37,6 +37,15 @@ $formError = match ($err) {
     'slug' => 'Slug FAQ je povinný a musí být unikátní.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['question', 'answer'],
+    'slug' => ['slug'],
+];
+$fieldErrorMessages = [
+    'question' => 'Otázka FAQ je povinná.',
+    'answer' => 'Odpověď FAQ je povinná.',
+    'slug' => 'Slug FAQ je povinný a musí být unikátní.',
+];
 
 adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostní báze');
 ?>
@@ -66,13 +75,16 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
 
     <label for="question">Otázka <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="question" name="question" required aria-required="true" maxlength="500"
+           <?= adminFieldAttributes('question', $err, $fieldErrorMap) ?>
            value="<?= h((string)$faq['question']) ?>">
+    <?php adminRenderFieldError('question', $err, $fieldErrorMap, $fieldErrorMessages['question']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="faq-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['faq-slug-help']) ?>
            value="<?= h((string)$faq['slug']) ?>">
     <small id="faq-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="excerpt">Krátké shrnutí / perex</label>
     <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="faq-excerpt-help"><?= h((string)($faq['excerpt'] ?? '')) ?></textarea>
@@ -91,9 +103,12 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
     <?php if ($useWysiwyg): ?>
       <div id="editor-answer" style="min-height:220px"><?= (string)($faq['answer'] ?? '') ?></div>
       <input type="hidden" id="answer" name="answer" value="<?= h((string)($faq['answer'] ?? '')) ?>">
+      <?php adminRenderFieldError('answer', $err, $fieldErrorMap, $fieldErrorMessages['answer']); ?>
     <?php else: ?>
-      <textarea id="answer" name="answer" rows="8" required aria-required="true" aria-describedby="faq-answer-help"><?= h((string)($faq['answer'] ?? '')) ?></textarea>
+      <textarea id="answer" name="answer" rows="8" required aria-required="true"
+                <?= adminFieldAttributes('answer', $err, $fieldErrorMap, ['faq-answer-help']) ?>><?= h((string)($faq['answer'] ?? '')) ?></textarea>
       <small id="faq-answer-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php adminRenderFieldError('answer', $err, $fieldErrorMap, $fieldErrorMessages['answer']); ?>
       <?php renderAdminContentReferencePicker('answer'); ?>
     <?php endif; ?>
 

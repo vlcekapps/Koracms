@@ -23,8 +23,9 @@ if ($accountId !== null) {
 }
 
 $formErrors = $_SESSION['form_errors'] ?? [];
+$formErrorFields = $_SESSION['form_error_fields'] ?? [];
 $formData = $_SESSION['form_data'] ?? [];
-unset($_SESSION['form_errors'], $_SESSION['form_data']);
+unset($_SESSION['form_errors'], $_SESSION['form_error_fields'], $_SESSION['form_data']);
 
 $defaults = [
     'email' => '',
@@ -54,6 +55,16 @@ $account['role'] = $accountRole;
 $account = hydrateAuthorPresentation($account);
 $authorFieldsetAvailable = $accountRole !== 'public';
 $roleOptions = staffRoleOptions($accountRole);
+$fieldErrorMessages = [
+    'email' => 'Zadejte platnou a jedinečnou e-mailovou adresu.',
+    'new_pass' => $accountId !== null
+        ? 'Nové heslo musí mít alespoň 8 znaků.'
+        : 'Zadejte heslo dlouhé alespoň 8 znaků.',
+    'new_pass2' => 'Kontrolní heslo se musí shodovat s heslem.',
+    'author_slug' => 'Zadejte jedinečný slug veřejného autora.',
+    'author_website' => 'Zadejte platnou adresu začínající na http:// nebo https://.',
+    'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP.',
+];
 
 adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživatelský účet');
 ?>
@@ -81,7 +92,8 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
 
     <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
     <input type="email" id="email" name="email" required aria-required="true"
-           autocomplete="email" value="<?= h((string)$account['email']) ?>">
+           autocomplete="email" value="<?= h((string)$account['email']) ?>"<?= adminFieldAttributes('email', $formErrorFields) ?>>
+    <?php adminRenderFieldError('email', $formErrorFields, [], $fieldErrorMessages['email']); ?>
 
     <label for="first_name">Jméno</label>
     <input type="text" id="first_name" name="first_name" maxlength="100"
@@ -117,11 +129,13 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
     <?php endif; ?>
     <label for="new_pass">Heslo (min. 8 znaků)</label>
     <input type="password" id="new_pass" name="new_pass" minlength="8"
-           autocomplete="new-password"<?= $accountId !== null ? ' aria-describedby="password-help"' : '' ?> <?= $accountId !== null ? '' : 'required aria-required="true"' ?>>
+           autocomplete="new-password"<?= adminFieldAttributes('new_pass', $formErrorFields, [], $accountId !== null ? ['password-help'] : []) ?> <?= $accountId !== null ? '' : 'required aria-required="true"' ?>>
+    <?php adminRenderFieldError('new_pass', $formErrorFields, [], $fieldErrorMessages['new_pass']); ?>
 
     <label for="new_pass2">Heslo znovu</label>
     <input type="password" id="new_pass2" name="new_pass2" minlength="8"
-           autocomplete="new-password"<?= $accountId !== null ? ' aria-describedby="password-help"' : '' ?>>
+           autocomplete="new-password"<?= adminFieldAttributes('new_pass2', $formErrorFields, [], $accountId !== null ? ['password-help'] : []) ?>>
+    <?php adminRenderFieldError('new_pass2', $formErrorFields, [], $fieldErrorMessages['new_pass2']); ?>
   </fieldset>
 
   <fieldset id="author-fieldset" style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
@@ -142,9 +156,9 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
 
       <label for="author_slug">Slug veřejného autora <span aria-hidden="true">*</span></label>
       <input type="text" id="author_slug" name="author_slug" maxlength="255" pattern="[a-z0-9\-]+"
-             aria-describedby="author-slug-help"
-             value="<?= h((string)($account['author_slug'] ?? '')) ?>">
+             value="<?= h((string)($account['author_slug'] ?? '')) ?>"<?= adminFieldAttributes('author_slug', $formErrorFields, [], ['author-slug-help']) ?>>
       <small id="author-slug-help" class="field-help">Adresa autora se vyplní automaticky podle jména nebo přezdívky. Použijte malá písmena, číslice a pomlčky.</small>
+      <?php adminRenderFieldError('author_slug', $formErrorFields, [], $fieldErrorMessages['author_slug']); ?>
 
       <label for="author_bio">Krátké bio / medailonek</label>
       <textarea id="author_bio" name="author_bio" rows="6" aria-describedby="author-bio-help"><?= h((string)($account['author_bio'] ?? '')) ?></textarea>
@@ -153,14 +167,15 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
 
       <label for="author_website">Web autora</label>
       <input type="url" id="author_website" name="author_website" maxlength="255"
-             aria-describedby="author-website-help"
-             value="<?= h((string)($account['author_website'] ?? '')) ?>">
+             value="<?= h((string)($account['author_website'] ?? '')) ?>"<?= adminFieldAttributes('author_website', $formErrorFields, [], ['author-website-help']) ?>>
       <small id="author-website-help" class="field-help">Nepovinné pole pro osobní web nebo profil autora.</small>
+      <?php adminRenderFieldError('author_website', $formErrorFields, [], $fieldErrorMessages['author_website']); ?>
 
       <label for="author_avatar">Avatar autora</label>
       <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
-             aria-describedby="author-avatar-help<?= !empty($account['author_avatar']) ? ' author-avatar-current' : '' ?>">
+             <?= adminFieldAttributes('author_avatar', $formErrorFields, [], !empty($account['author_avatar']) ? ['author-avatar-help', 'author-avatar-current'] : ['author-avatar-help']) ?>>
       <small id="author-avatar-help" class="field-help">Povolené formáty: JPEG, PNG, GIF nebo WebP.</small>
+      <?php adminRenderFieldError('author_avatar', $formErrorFields, [], $fieldErrorMessages['author_avatar']); ?>
       <?php if (!empty($account['author_avatar'])): ?>
         <div id="author-avatar-current" class="field-help">
           Aktuální avatar:

@@ -29,6 +29,17 @@ $formError = match ($err) {
     'unpublish_at' => 'Plánované zrušení publikace musí být ve správném formátu.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['title', 'content'],
+    'slug' => ['slug'],
+    'unpublish_at' => ['unpublish_at'],
+];
+$fieldErrorMessages = [
+    'title' => 'Titulek novinky je povinný.',
+    'content' => 'Text novinky je povinný.',
+    'slug' => 'Slug novinky je povinný a musí být unikátní.',
+    'unpublish_at' => 'Plánované zrušení publikace musí být ve správném formátu.',
+];
 
 $authorName = '';
 if ($item && !empty($item['author_id'])) {
@@ -88,8 +99,10 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       required
       aria-required="true"
       maxlength="255"
+      <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
       value="<?= h((string)($item['title'] ?? '')) ?>"
     >
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug (URL novinky) <span aria-hidden="true">*</span></label>
     <input
@@ -100,10 +113,11 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       aria-required="true"
       maxlength="255"
       pattern="[a-z0-9\-]+"
-      aria-describedby="news-slug-help"
+      <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['news-slug-help']) ?>
       value="<?= h((string)($item['slug'] ?? '')) ?>"
     >
     <small id="news-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Používejte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="content">Text novinky <span aria-hidden="true">*</span></label>
     <textarea
@@ -112,9 +126,10 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       rows="8"
       required
       aria-required="true"
-      aria-describedby="news-content-help"
+      <?= adminFieldAttributes('content', $err, $fieldErrorMap, ['news-content-help']) ?>
     ><?= h((string)($item['content'] ?? '')) ?></textarea>
     <small id="news-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php adminRenderFieldError('content', $err, $fieldErrorMap, $fieldErrorMessages['content']); ?>
     <?php renderAdminContentReferencePicker('content'); ?>
   </fieldset>
 
@@ -133,11 +148,12 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       type="datetime-local"
       id="unpublish_at"
       name="unpublish_at"
-      aria-describedby="unpublish-at-help"
+      <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>
       style="width:auto"
       value="<?= h(!empty($item['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$item['unpublish_at'])) : '') ?>"
     >
     <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
+    <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
 
     <label for="admin_note">Interní poznámka</label>
     <textarea

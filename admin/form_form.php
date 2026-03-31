@@ -33,6 +33,20 @@ if ($id !== null) {
 }
 
 $err = trim($_GET['err'] ?? '');
+$fieldErrorMap = [
+    'required' => ['title'],
+    'slug' => ['slug'],
+    'notification_email' => ['notification_email'],
+    'submitter_email_field' => ['submitter_email_field'],
+    'webhook_url' => ['webhook_url'],
+];
+$fieldErrorMessages = [
+    'title' => 'Název formuláře je povinný.',
+    'slug' => 'Slug formuláře je už obsazený.',
+    'notification_email' => 'Zadejte platnou e-mailovou adresu pro notifikaci, nebo pole nechte prázdné.',
+    'submitter_email_field' => 'Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.',
+    'webhook_url' => 'Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.',
+];
 $pageTitle = $form
     ? 'Upravit formulář – ' . mb_strimwidth((string)$form['title'], 0, 60, '…', 'UTF-8')
     : ($presetDefinition !== null ? 'Nový formulář – ' . (string)$presetDefinition['label'] : 'Nový formulář');
@@ -147,15 +161,19 @@ adminHeader($pageTitle);
     <div style="margin-bottom:.75rem">
       <label for="title">Název formuláře <span aria-hidden="true">*</span></label>
       <input type="text" id="title" name="title" required aria-required="true"
-             maxlength="255" value="<?= h((string)($form['title'] ?? ($formDefaults['title'] ?? ''))) ?>" style="width:100%;max-width:500px">
+             maxlength="255"<?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
+             value="<?= h((string)($form['title'] ?? ($formDefaults['title'] ?? ''))) ?>" style="width:100%;max-width:500px">
+      <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
     </div>
 
     <div style="margin-bottom:.75rem">
       <label for="slug">Slug (URL)</label>
       <input type="text" id="slug" name="slug" maxlength="255"
+             <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['slug-help']) ?>
              value="<?= h((string)($form['slug'] ?? ($formDefaults['slug'] ?? ''))) ?>" style="width:100%;max-width:500px"
-             aria-describedby="slug-help">
+             >
       <small id="slug-help" class="field-help">Necháte-li prázdné, adresa se vytvoří automaticky podle názvu formuláře.</small>
+      <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
     </div>
 
     <div style="margin-bottom:.75rem">
@@ -174,9 +192,11 @@ adminHeader($pageTitle);
     <div style="margin-bottom:.75rem">
       <label for="notification_email">E-mail pro notifikaci</label>
       <input type="email" id="notification_email" name="notification_email" maxlength="255"
+             <?= adminFieldAttributes('notification_email', $err, $fieldErrorMap, ['notification-email-help']) ?>
              value="<?= h((string)($form['notification_email'] ?? ($formDefaults['notification_email'] ?? ''))) ?>" style="width:100%;max-width:500px"
-             aria-describedby="notification-email-help" autocomplete="email">
+             autocomplete="email">
       <small id="notification-email-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se hlavní administrátorský nebo kontaktní e-mail webu.</small>
+      <?php adminRenderFieldError('notification_email', $err, $fieldErrorMap, $fieldErrorMessages['notification_email']); ?>
     </div>
 
     <div style="margin-bottom:.75rem">
@@ -225,13 +245,16 @@ adminHeader($pageTitle);
 
     <div style="margin-bottom:.75rem">
       <label for="submitter_email_field">Pole s e-mailovou adresou odesílatele</label>
-      <select id="submitter_email_field" name="submitter_email_field" aria-describedby="submitter-email-field-help" style="width:100%;max-width:500px">
+      <select id="submitter_email_field" name="submitter_email_field"
+              <?= adminFieldAttributes('submitter_email_field', $err, $fieldErrorMap, ['submitter-email-field-help']) ?>
+              style="width:100%;max-width:500px">
         <option value="">Nevybráno</option>
         <?php foreach ($emailFieldOptions as $fieldName => $fieldLabel): ?>
           <option value="<?= h($fieldName) ?>"<?= (string)($form['submitter_email_field'] ?? ($formDefaults['submitter_email_field'] ?? '')) === $fieldName ? ' selected' : '' ?>><?= h($fieldLabel) ?> (<?= h($fieldName) ?>)</option>
         <?php endforeach; ?>
       </select>
       <small id="submitter-email-field-help" class="field-help">Vyberte e-mailové pole, na které má přijít potvrzení. Když tu ještě žádné není, nejdřív ho přidejte mezi pole formuláře.</small>
+      <?php adminRenderFieldError('submitter_email_field', $err, $fieldErrorMap, $fieldErrorMessages['submitter_email_field']); ?>
     </div>
 
     <div style="margin-bottom:.75rem">
@@ -351,9 +374,11 @@ adminHeader($pageTitle);
     <div style="margin-bottom:.75rem">
       <label for="webhook_url">Adresa webhooku</label>
       <input type="url" id="webhook_url" name="webhook_url" maxlength="500"
+             <?= adminFieldAttributes('webhook_url', $err, $fieldErrorMap, ['webhook-url-help']) ?>
              value="<?= h($webhookUrlValue) ?>" style="width:100%;max-width:52rem"
-             aria-describedby="webhook-url-help" placeholder="https://example.test/hooks/forms">
+             placeholder="https://example.test/hooks/forms">
       <small id="webhook-url-help" class="field-help">Použijte HTTPS adresu služby, která má přijímat JSON POST. Lokální a privátní adresy formulář z bezpečnostních důvodů nepovolí.</small>
+      <?php adminRenderFieldError('webhook_url', $err, $fieldErrorMap, $fieldErrorMessages['webhook_url']); ?>
     </div>
 
     <div style="margin-bottom:.75rem">

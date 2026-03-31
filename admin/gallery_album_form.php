@@ -11,6 +11,16 @@ $errorMap = [
     'parent' => 'Zvolené nadřazené album není platné.',
 ];
 $formError = $errorMap[$errorKey] ?? '';
+$fieldErrorMap = [
+    'required' => ['name'],
+    'slug' => ['slug'],
+    'parent' => ['parent_id'],
+];
+$fieldErrorMessages = [
+    'name' => 'Vyplňte prosím název alba.',
+    'slug' => 'Zadaný slug už používá jiné album. Zvolte prosím jiný.',
+    'parent_id' => 'Zvolené nadřazené album není platné.',
+];
 
 $album = [
     'id' => null,
@@ -81,18 +91,21 @@ adminHeader($pageTitle);
 
     <label for="name">Název alba <span aria-hidden="true">*</span></label>
     <input type="text" id="name" name="name" required aria-required="true"
-           maxlength="255" value="<?= h((string)$album['name']) ?>"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
+           maxlength="255"<?= adminFieldAttributes('name', $errorKey, $fieldErrorMap) ?>
+           value="<?= h((string)$album['name']) ?>">
+    <?php adminRenderFieldError('name', $errorKey, $fieldErrorMap, $fieldErrorMessages['name']); ?>
 
     <label for="slug">Slug adresy</label>
-    <input type="text" id="slug" name="slug" maxlength="255" aria-describedby="gallery-album-slug-help<?= $formError !== '' ? ' form-errors' : '' ?>"
+    <input type="text" id="slug" name="slug" maxlength="255"<?= adminFieldAttributes('slug', $errorKey, $fieldErrorMap, ['gallery-album-slug-help']) ?>
            value="<?= h((string)$album['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false">
     <small id="gallery-album-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu alba. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $errorKey, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4"><?= h((string)($album['description'] ?? '')) ?></textarea>
 
     <label for="parent_id">Nadřazené album</label>
-    <select id="parent_id" name="parent_id">
+    <select id="parent_id" name="parent_id"<?= adminFieldAttributes('parent_id', $errorKey, $fieldErrorMap) ?>>
       <option value="">— Nejvyšší úroveň —</option>
       <?php foreach ($allAlbums as $candidateAlbum): ?>
         <?php if (in_array((int)$candidateAlbum['id'], $forbidden, true)) continue; ?>
@@ -101,6 +114,7 @@ adminHeader($pageTitle);
         </option>
       <?php endforeach; ?>
     </select>
+    <?php adminRenderFieldError('parent_id', $errorKey, $fieldErrorMap, $fieldErrorMessages['parent_id']); ?>
 
     <?php if (!empty($photos)): ?>
       <label for="cover_photo_id">Náhledová fotka alba</label>

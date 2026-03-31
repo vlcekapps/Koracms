@@ -58,6 +58,25 @@ $formError = match ($err) {
     'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['title', 'event_date'],
+    'slug' => ['slug'],
+    'dates' => ['event_date', 'event_time', 'event_end_date', 'event_end_time'],
+    'registration_url' => ['registration_url'],
+    'organizer_email' => ['organizer_email'],
+    'image' => ['event_image'],
+    'unpublish_at' => ['unpublish_at'],
+];
+$fieldErrorMessages = [
+    'title' => 'Událost musí mít název.',
+    'event_date' => 'Událost musí mít datum začátku.',
+    'slug' => 'Slug události je povinný a musí být unikátní.',
+    'dates' => 'Konec akce nesmí být dříve než její začátek.',
+    'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
+    'organizer_email' => 'E-mail pořadatele musí být platná e-mailová adresa.',
+    'image' => 'Obrázek události se nepodařilo uložit.',
+    'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
+];
 
 adminHeader($id ? 'Upravit událost' : 'Nová událost');
 ?>
@@ -87,13 +106,16 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
     <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            value="<?= h((string)$event['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug (URL události) <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="event-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['event-slug-help']) ?>
            value="<?= h((string)$event['slug']) ?>">
     <small id="event-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="event_kind">Typ akce</label>
     <select id="event_kind" name="event_kind" aria-describedby="event-kind-help">
@@ -121,25 +143,31 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
       <div>
         <label for="event_date">Začátek <span aria-hidden="true">*</span></label>
         <input type="date" id="event_date" name="event_date" required aria-required="true" style="width:auto;display:block;margin-top:.2rem"
+               <?= adminFieldAttributes('event_date', $err, $fieldErrorMap, [], 'event-dates-error') ?>
                value="<?= !empty($event['event_date']) ? h(date('Y-m-d', strtotime((string)$event['event_date']))) : '' ?>">
+        <?php if (adminFieldHasError('event_date', $err, $fieldErrorMap)): ?>
+          <small id="event-dates-error" class="field-help field-error">
+            <?= h($err === 'required' ? $fieldErrorMessages['event_date'] : $fieldErrorMessages['dates']) ?>
+          </small>
+        <?php endif; ?>
       </div>
       <div>
         <label for="event_time">Čas začátku</label>
         <input type="time" id="event_time" name="event_time" style="width:auto;display:block;margin-top:.2rem"
-               aria-describedby="event-time-help"
+               <?= adminFieldAttributes('event_time', $err, $fieldErrorMap, ['event-time-help'], 'event-dates-error') ?>
                value="<?= !empty($event['event_date']) ? h(date('H:i', strtotime((string)$event['event_date']))) : '' ?>">
         <small id="event-time-help" class="field-help">Nechte prázdné jen tehdy, pokud nevadí výchozí čas 00:00.</small>
       </div>
       <div>
         <label for="event_end_date">Konec</label>
         <input type="date" id="event_end_date" name="event_end_date" style="width:auto;display:block;margin-top:.2rem"
-               aria-describedby="event-end-help"
+               <?= adminFieldAttributes('event_end_date', $err, $fieldErrorMap, ['event-end-help'], 'event-dates-error') ?>
                value="<?= !empty($event['event_end']) ? h(date('Y-m-d', strtotime((string)$event['event_end']))) : '' ?>">
       </div>
       <div>
         <label for="event_end_time">Čas konce</label>
         <input type="time" id="event_end_time" name="event_end_time" style="width:auto;display:block;margin-top:.2rem"
-               aria-describedby="event-end-help"
+               <?= adminFieldAttributes('event_end_time', $err, $fieldErrorMap, ['event-end-help'], 'event-dates-error') ?>
                value="<?= !empty($event['event_end']) ? h(date('H:i', strtotime((string)$event['event_end']))) : '' ?>">
       </div>
     </div>
@@ -173,14 +201,17 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
     <label for="organizer_email">E-mail pořadatele</label>
     <input type="email" id="organizer_email" name="organizer_email" maxlength="255"
+           <?= adminFieldAttributes('organizer_email', $err, $fieldErrorMap) ?>
            value="<?= h((string)$event['organizer_email']) ?>">
+    <?php adminRenderFieldError('organizer_email', $err, $fieldErrorMap, $fieldErrorMessages['organizer_email']); ?>
 
     <label for="registration_url">Registrační odkaz</label>
     <input type="url" id="registration_url" name="registration_url" maxlength="500"
-           aria-describedby="event-registration-help"
+           <?= adminFieldAttributes('registration_url', $err, $fieldErrorMap, ['event-registration-help']) ?>
            placeholder="https://example.com/registrace"
            value="<?= h((string)$event['registration_url']) ?>">
     <small id="event-registration-help" class="field-help">Volitelné. Hodí se pro přihlášení, vstupenky nebo externí detail akce.</small>
+    <?php adminRenderFieldError('registration_url', $err, $fieldErrorMap, $fieldErrorMessages['registration_url']); ?>
 
     <label for="price_note">Cena / vstupné</label>
     <input type="text" id="price_note" name="price_note" maxlength="255"
@@ -197,8 +228,10 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
     <label for="event_image">Obrázek události</label>
     <input type="file" id="event_image" name="event_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
-           aria-describedby="event-image-help<?= (string)$event['image_file'] !== '' ? ' event-image-current' : '' ?>">
+           <?= adminFieldAttributes('event_image', $err, $fieldErrorMap, array_filter(['event-image-help', (string)$event['image_file'] !== '' ? 'event-image-current' : ''])) ?>
+           >
     <small id="event-image-help" class="field-help">Volitelné. Hodí se pro přehled akcí, detail události i sdílení na webu.</small>
+    <?php adminRenderFieldError('event_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if ((string)$event['image_url'] !== ''): ?>
       <div style="margin:.75rem 0">
         <img src="<?= h((string)$event['image_url']) ?>" alt="Náhled obrázku události" style="max-width:16rem;height:auto;border-radius:12px">
@@ -218,9 +251,11 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <small id="event-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, událost zůstane uložená jen v administraci.</small>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
-    <input type="datetime-local" id="unpublish_at" name="unpublish_at" aria-describedby="event-unpublish-help"
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at"
+           <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['event-unpublish-help']) ?>
            style="width:auto" value="<?= h(!empty($event['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['unpublish_at'])) : '') ?>">
     <small id="event-unpublish-help" class="field-help">Volitelné. V zadaný čas se událost skryje z veřejného webu, ale zůstane v administraci.</small>
+    <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">

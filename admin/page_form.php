@@ -31,6 +31,16 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $pageTitle = $id ? 'Upravit statickou stránku' : 'Nová statická stránka';
 $err = trim($_GET['err'] ?? '');
 $publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['slug'] ?? '')) !== '') ? pagePublicPath($page) : '';
+$fieldErrorMap = [
+    'required' => ['title'],
+    'slug' => ['slug'],
+    'unpublish_at' => ['unpublish_at'],
+];
+$fieldErrorMessages = [
+    'title' => 'Název stránky je povinný.',
+    'slug' => 'Slug stránky je už obsazený. Zvolte prosím jiný.',
+    'unpublish_at' => 'Plánované zrušení publikace má neplatný formát data a času.',
+];
 
 adminHeader($pageTitle);
 ?>
@@ -74,13 +84,18 @@ adminHeader($pageTitle);
     <legend>Obsah a zobrazení stránky</legend>
 
     <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="title" name="title" required aria-required="true" value="<?= h((string)$page['title']) ?>">
+    <input type="text" id="title" name="title" required aria-required="true"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
+           value="<?= h((string)$page['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug (URL) <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="slug" name="slug" required aria-required="true" aria-describedby="page-slug-help"
+    <input type="text" id="slug" name="slug" required aria-required="true"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['page-slug-help']) ?>
            pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky"
            value="<?= h((string)$page['slug']) ?>">
     <small id="page-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="content">Obsah</label>
     <textarea id="content" name="content"<?= !$useWysiwyg ? ' aria-describedby="page-content-help"' : '' ?>><?= h((string)$page['content']) ?></textarea>
@@ -102,9 +117,11 @@ adminHeader($pageTitle);
     <small id="page-nav-help" class="field-help">Použije se jen u zveřejněné stránky. Skutečné pořadí v hlavní navigaci upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>.</small>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
-    <input type="datetime-local" id="unpublish_at" name="unpublish_at" aria-describedby="unpublish-at-help"
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at"
+           <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>
            style="width:auto" value="<?= h(!empty($page['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['unpublish_at'])) : '') ?>">
     <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
+    <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">

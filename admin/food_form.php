@@ -41,6 +41,20 @@ $formError = match ($err) {
     'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['title'],
+    'slug' => ['slug'],
+    'valid_from' => ['valid_from'],
+    'valid_to' => ['valid_to'],
+    'valid_range' => ['valid_from', 'valid_to'],
+];
+$fieldErrorMessages = [
+    'title' => 'Název lístku je povinný.',
+    'slug' => 'Slug lístku je povinný a musí být unikátní.',
+    'valid_from' => 'Datum „Platí od“ má neplatný formát.',
+    'valid_to' => 'Datum „Platí do“ má neplatný formát.',
+    'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
+];
 
 $card = hydrateFoodCardPresentation($card);
 $foodTypeLabel = $card['type'] === 'beverage' ? 'nápojový lístek' : 'jídelní lístek';
@@ -79,14 +93,17 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 
     <label for="title">Název <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            placeholder="např. Týdenní menu 17.–23. března 2026"
            value="<?= h((string)$card['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="food-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['food-slug-help']) ?>
            value="<?= h((string)$card['slug']) ?>">
     <small id="food-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="description">Krátká poznámka</label>
     <textarea id="description" name="description" rows="2" aria-describedby="food-description-help"
@@ -104,13 +121,25 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
       <div>
         <label for="valid_from">Platí od</label>
         <input type="date" id="valid_from" name="valid_from" style="width:auto"
+               <?= adminFieldAttributes('valid_from', $err, $fieldErrorMap, [], 'food-valid-from-error') ?>
                value="<?= h((string)($card['valid_from'] ?? '')) ?>">
+        <?php if (adminFieldHasError('valid_from', $err, $fieldErrorMap)): ?>
+          <small id="food-valid-from-error" class="field-help field-error">
+            <?= h($err === 'valid_range' ? $fieldErrorMessages['valid_range'] : $fieldErrorMessages['valid_from']) ?>
+          </small>
+        <?php endif; ?>
       </div>
       <div>
         <label for="valid_to">Platí do</label>
-        <input type="date" id="valid_to" name="valid_to" style="width:auto" aria-describedby="food-valid-to-help"
+        <input type="date" id="valid_to" name="valid_to" style="width:auto"
+               <?= adminFieldAttributes('valid_to', $err, $fieldErrorMap, ['food-valid-to-help'], 'food-valid-to-error') ?>
                value="<?= h((string)($card['valid_to'] ?? '')) ?>">
         <small id="food-valid-to-help" class="field-help">Nechte prázdné, pokud má lístek platit bez data konce. Platnost se používá i pro rozlišení aktuálních, připravovaných a archivních lístků na webu.</small>
+        <?php if (adminFieldHasError('valid_to', $err, $fieldErrorMap)): ?>
+          <small id="food-valid-to-error" class="field-help field-error">
+            <?= h($err === 'valid_range' ? $fieldErrorMessages['valid_range'] : $fieldErrorMessages['valid_to']) ?>
+          </small>
+        <?php endif; ?>
       </div>
     </div>
   </fieldset>

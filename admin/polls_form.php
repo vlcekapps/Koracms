@@ -57,6 +57,26 @@ $formError = match ($err) {
     'save' => 'Anketu se nepodařilo uložit. Zkuste to prosím znovu.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['question', 'options'],
+    'max_options' => ['options'],
+    'has_votes' => ['options'],
+    'slug' => ['slug'],
+    'dates' => ['start_date', 'start_time', 'end_date', 'end_time'],
+    'range' => ['start_date', 'start_time', 'end_date', 'end_time'],
+];
+$fieldErrorMessages = [
+    'question' => 'Otázka ankety je povinná.',
+    'slug' => 'Slug ankety je povinný a musí být unikátní.',
+    'dates' => 'Začátek a konec ankety musí mít platný formát data a času.',
+    'range' => 'Konec ankety musí být později než začátek.',
+];
+$optionsErrorMessage = match ($err) {
+    'required' => 'Doplňte alespoň 2 možnosti odpovědi.',
+    'max_options' => 'Maximální počet možností odpovědi je 10.',
+    'has_votes' => 'Možnosti s hlasy nelze odebrat.',
+    default => '',
+};
 
 adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
 ?>
@@ -93,8 +113,10 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
       required
       aria-required="true"
       maxlength="500"
+      <?= adminFieldAttributes('question', $err, $fieldErrorMap) ?>
       value="<?= h((string)$poll['question']) ?>"
     >
+    <?php adminRenderFieldError('question', $err, $fieldErrorMap, $fieldErrorMessages['question']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input
@@ -105,10 +127,11 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
       aria-required="true"
       maxlength="255"
       pattern="[a-z0-9\-]+"
-      aria-describedby="poll-slug-help"
+      <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['poll-slug-help']) ?>
       value="<?= h((string)$poll['slug']) ?>"
     >
     <small id="poll-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Používejte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4" aria-describedby="poll-description-help"><?= h((string)($poll['description'] ?? '')) ?></textarea>
@@ -132,7 +155,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           id="start_date"
           name="start_date"
           style="width:auto;display:block;margin-top:.2rem"
-          aria-describedby="poll-timing-help"
+          <?= adminFieldAttributes('start_date', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['start_date']) ? h(date('Y-m-d', strtotime((string)$poll['start_date']))) : '' ?>"
         >
       </div>
@@ -143,7 +166,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           id="start_time"
           name="start_time"
           style="width:auto;display:block;margin-top:.2rem"
-          aria-describedby="poll-timing-help"
+          <?= adminFieldAttributes('start_time', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['start_date']) ? h(date('H:i', strtotime((string)$poll['start_date']))) : '' ?>"
         >
       </div>
@@ -154,7 +177,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           id="end_date"
           name="end_date"
           style="width:auto;display:block;margin-top:.2rem"
-          aria-describedby="poll-timing-help"
+          <?= adminFieldAttributes('end_date', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['end_date']) ? h(date('Y-m-d', strtotime((string)$poll['end_date']))) : '' ?>"
         >
       </div>
@@ -165,15 +188,23 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           id="end_time"
           name="end_time"
           style="width:auto;display:block;margin-top:.2rem"
-          aria-describedby="poll-timing-help"
+          <?= adminFieldAttributes('end_time', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['end_date']) ? h(date('H:i', strtotime((string)$poll['end_date']))) : '' ?>"
         >
       </div>
     </div>
+    <?php if (adminFieldHasError('start_date', $err, $fieldErrorMap)): ?>
+      <small id="poll-timing-error" class="field-help field-error">
+        <?= h($fieldErrorMessages[$err] ?? '') ?>
+      </small>
+    <?php endif; ?>
   </fieldset>
 
-  <fieldset id="options-fieldset" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset id="options-fieldset" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem"<?= adminFieldHasError('options', $err, $fieldErrorMap) ? ' aria-describedby="poll-options-error"' : '' ?>>
     <legend>Možnosti odpovědi <span aria-hidden="true">*</span><span class="sr-only">(povinné, min. 2, max. 10)</span></legend>
+    <?php if ($optionsErrorMessage !== ''): ?>
+      <small id="poll-options-error" class="field-help field-error"><?= h($optionsErrorMessage) ?></small>
+    <?php endif; ?>
     <div id="options-list">
       <?php if (!empty($options)): ?>
         <?php foreach ($options as $index => $option): ?>

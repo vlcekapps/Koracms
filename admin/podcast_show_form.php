@@ -54,6 +54,23 @@ $formError = match ($err) {
     'cover' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['title'],
+    'slug' => ['slug'],
+    'slug_taken' => ['slug'],
+    'url' => ['website_url'],
+    'owner_email' => ['owner_email'],
+    'feed_limit' => ['feed_episode_limit'],
+    'cover' => ['cover_image'],
+];
+$fieldErrorMessages = [
+    'title' => 'Název pořadu je povinný.',
+    'slug' => 'Slug pořadu musí zůstat jedinečný.',
+    'website_url' => 'Web pořadu musí mít platný formát.',
+    'owner_email' => 'E-mail vlastníka feedu musí mít platný formát.',
+    'feed_episode_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
+    'cover_image' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
+];
 $coverHelpIds = (string)$show['cover_url'] !== ''
     ? 'podcast-show-cover-current podcast-show-cover-help'
     : 'podcast-show-cover-help';
@@ -83,13 +100,16 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 
     <label for="title">Název pořadu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            value="<?= h((string)$show['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100" pattern="[a-z0-9\-]+"
-           aria-describedby="podcast-show-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['podcast-show-slug-help']) ?>
            value="<?= h((string)$show['slug']) ?>">
     <small id="podcast-show-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="author">Autor / vydavatel</label>
     <input type="text" id="author" name="author" maxlength="255"
@@ -117,8 +137,10 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 
     <label for="website_url">Web pořadu</label>
     <input type="url" id="website_url" name="website_url" maxlength="500"
+           <?= adminFieldAttributes('website_url', $err, $fieldErrorMap) ?>
            placeholder="https://example.com/podcast"
            value="<?= h((string)$show['website_url']) ?>">
+    <?php adminRenderFieldError('website_url', $err, $fieldErrorMap, $fieldErrorMessages['website_url']); ?>
   </fieldset>
 
   <fieldset>
@@ -128,9 +150,10 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <div style="flex:1 1 12rem">
         <label for="feed_episode_limit">Počet epizod v RSS feedu</label>
         <input type="number" id="feed_episode_limit" name="feed_episode_limit" min="1" max="1000"
-               aria-describedby="podcast-show-feed-limit-help"
+               <?= adminFieldAttributes('feed_episode_limit', $err, $fieldErrorMap, ['podcast-show-feed-limit-help']) ?>
                value="<?= (int)$show['feed_episode_limit'] ?>">
         <small id="podcast-show-feed-limit-help" class="field-help">Běžné podcast hostingy omezují feed na poslední epizody. Zadejte počet od 1 do 1000.</small>
+        <?php adminRenderFieldError('feed_episode_limit', $err, $fieldErrorMap, $fieldErrorMessages['feed_episode_limit']); ?>
       </div>
 
       <div style="flex:1 1 12rem">
@@ -161,9 +184,11 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 
       <div style="flex:1 1 18rem">
         <label for="owner_email">E-mail vlastníka feedu</label>
-        <input type="email" id="owner_email" name="owner_email" maxlength="255" aria-describedby="podcast-show-owner-email-help"
+        <input type="email" id="owner_email" name="owner_email" maxlength="255"
+               <?= adminFieldAttributes('owner_email', $err, $fieldErrorMap, ['podcast-show-owner-email-help']) ?>
                value="<?= h((string)$show['owner_email']) ?>">
         <small id="podcast-show-owner-email-help" class="field-help">Používá se v RSS feedu jako kontakt pro podcast katalogy.</small>
+        <?php adminRenderFieldError('owner_email', $err, $fieldErrorMap, $fieldErrorMessages['owner_email']); ?>
       </div>
     </div>
 
@@ -205,8 +230,9 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
       <small id="podcast-show-cover-current" class="field-help">Aktuální titulní obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <input type="file" id="cover_image" name="cover_image" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-           aria-describedby="<?= h($coverHelpIds) ?>">
+           <?= adminFieldAttributes('cover_image', $err, $fieldErrorMap, array_filter(explode(' ', $coverHelpIds))) ?>>
     <small id="podcast-show-cover-help" class="field-help">Volitelné, ale doporučené. Pro podcastové aplikace a Apple Podcasts nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.</small>
+    <?php adminRenderFieldError('cover_image', $err, $fieldErrorMap, $fieldErrorMessages['cover_image']); ?>
     <?php if ((string)$show['cover_image'] !== ''): ?>
       <label for="cover_image_delete" style="font-weight:normal;margin-top:.5rem">
         <input type="checkbox" id="cover_image_delete" name="cover_image_delete" value="1">

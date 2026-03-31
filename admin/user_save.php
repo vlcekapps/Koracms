@@ -31,18 +31,24 @@ if ($accountId !== null) {
 $accountRole = $submittedRole;
 $authorFieldsAllowed = $accountRole !== 'public';
 $errors = [];
+$errorFields = [];
 
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $errors[] = 'Zadejte platnou e-mailovou adresu.';
+    $errorFields[] = 'email';
 }
 if ($accountId === null && ($newPass === '' || strlen($newPass) < 8)) {
     $errors[] = 'Heslo je povinné a musí mít alespoň 8 znaků.';
+    $errorFields[] = 'new_pass';
 }
 if ($newPass !== '' && strlen($newPass) < 8) {
     $errors[] = 'Heslo musí mít alespoň 8 znaků.';
+    $errorFields[] = 'new_pass';
 }
 if ($newPass !== $newPass2) {
     $errors[] = 'Hesla se neshodují.';
+    $errorFields[] = 'new_pass';
+    $errorFields[] = 'new_pass2';
 }
 
 if (empty($errors)) {
@@ -55,6 +61,7 @@ if (empty($errors)) {
     }
     if ($duplicateStmt->fetch()) {
         $errors[] = 'Tento e-mail již používá jiný účet.';
+        $errorFields[] = 'email';
     }
 }
 
@@ -75,6 +82,7 @@ if ($authorFieldsAllowed) {
         $authorWebsite = normalizeAuthorWebsite($authorWebsiteInput);
         if ($authorWebsite === '') {
             $errors[] = 'Web autora musí být platná adresa začínající na http:// nebo https://.';
+            $errorFields[] = 'author_website';
         }
     } else {
         $authorWebsite = '';
@@ -91,12 +99,14 @@ if ($authorFieldsAllowed) {
     $authorSlug = authorSlug($authorSlugSource);
     if ($authorSlug === '') {
         $errors[] = 'Slug veřejného autora je povinný.';
+        $errorFields[] = 'author_slug';
     }
 
     if (empty($errors)) {
         $uniqueAuthorSlug = uniqueAuthorSlug($pdo, $authorSlug, $accountId);
         if ($submittedAuthorSlug !== '' && $uniqueAuthorSlug !== $authorSlug) {
             $errors[] = 'Zvolený slug veřejného autora už používá jiný účet.';
+            $errorFields[] = 'author_slug';
         } else {
             $authorSlug = $uniqueAuthorSlug;
         }
@@ -109,6 +119,7 @@ if ($authorFieldsAllowed) {
         );
         if ($avatarUpload['error'] !== '') {
             $errors[] = $avatarUpload['error'];
+            $errorFields[] = 'author_avatar';
         } else {
             $authorAvatarFilename = (string)$avatarUpload['filename'];
         }
@@ -124,6 +135,7 @@ if ($authorFieldsAllowed) {
 
 if (!empty($errors)) {
     $_SESSION['form_errors'] = $errors;
+    $_SESSION['form_error_fields'] = array_values(array_unique($errorFields));
     $_SESSION['form_data'] = $_POST;
     header('Location: user_form.php' . ($accountId ? '?id=' . $accountId : ''));
     exit;

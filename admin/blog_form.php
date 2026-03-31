@@ -123,6 +123,21 @@ $defaultCommentsEnabled = $article
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');
+$fieldErrorMap = [
+    'required' => ['title', 'content'],
+    'slug' => ['slug'],
+    'publish_at' => ['publish_at'],
+    'unpublish_at' => ['unpublish_at'],
+    'publish_range' => ['publish_at', 'unpublish_at'],
+];
+$fieldErrorMessages = [
+    'title' => 'Vyplňte prosím název článku.',
+    'content' => 'Vyplňte prosím obsah článku.',
+    'slug' => 'Slug článku je povinný a musí být unikátní.',
+    'publish_at' => 'Plánované publikování má neplatný formát data a času.',
+    'unpublish_at' => 'Plánované zrušení publikace má neplatný formát data a času.',
+    'publish_range' => 'Plánované zrušení publikace musí být později než plánované publikování.',
+];
 $publishAtInput = '';
 if (!empty($article['publish_at'])) {
     $publishAtInput = date('Y-m-d\TH:i', strtotime((string)$article['publish_at']));
@@ -231,13 +246,16 @@ adminHeader($pageTitle);
 
     <label for="title">Titulek <span aria-hidden="true">*</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            value="<?= h($article['title'] ?? '') ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug (URL článku) <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="blog-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['blog-slug-help']) ?>
            value="<?= h($article['slug'] ?? '') ?>">
     <small id="blog-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="category_id">Kategorie</label>
     <select id="category_id" name="category_id"<?= isMultiBlog() ? ' aria-describedby="blog-category-help"' : '' ?>>
@@ -276,8 +294,12 @@ adminHeader($pageTitle);
     <textarea id="perex" name="perex" rows="3"><?= h($article['perex'] ?? '') ?></textarea>
 
     <label for="content">Text článku <span aria-hidden="true">*</span></label>
-    <textarea id="content" name="content" rows="15" required aria-required="true"<?= !$useWysiwyg ? ' aria-describedby="blog-content-help"' : '' ?>><?= h($article['content'] ?? '') ?></textarea>
+    <textarea id="content" name="content" rows="15" required aria-required="true"
+              <?= !$useWysiwyg
+                  ? adminFieldAttributes('content', $err, $fieldErrorMap, ['blog-content-help'])
+                  : adminFieldAttributes('content', $err, $fieldErrorMap) ?>><?= h($article['content'] ?? '') ?></textarea>
     <?php if (!$useWysiwyg): ?><small id="blog-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small><?php endif; ?>
+    <?php adminRenderFieldError('content', $err, $fieldErrorMap, $fieldErrorMessages['content']); ?>
     <?php if (!$useWysiwyg): ?>
       <?php renderAdminContentReferencePicker('content'); ?>
     <?php endif; ?>
@@ -298,14 +320,26 @@ adminHeader($pageTitle);
     <?php endif; ?>
 
     <label for="publish_at">Plánované publikování</label>
-    <input type="datetime-local" id="publish_at" name="publish_at" aria-describedby="blog-publish-at-help"
+    <input type="datetime-local" id="publish_at" name="publish_at"
+           <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['blog-publish-at-help'], 'blog-publish-at-error') ?>
            style="width:auto" value="<?= h($publishAtInput) ?>">
     <small id="blog-publish-at-help" class="field-help">Nechte prázdné, pokud se má článek zveřejnit hned.</small>
+    <?php if (adminFieldHasError('publish_at', $err, $fieldErrorMap)): ?>
+      <small id="blog-publish-at-error" class="field-help field-error">
+        <?= h($err === 'publish_range' ? $fieldErrorMessages['publish_range'] : $fieldErrorMessages['publish_at']) ?>
+      </small>
+    <?php endif; ?>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
-    <input type="datetime-local" id="unpublish_at" name="unpublish_at" aria-describedby="blog-unpublish-at-help"
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at"
+           <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['blog-unpublish-at-help'], 'blog-unpublish-at-error') ?>
            style="width:auto" value="<?= h(!empty($article['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$article['unpublish_at'])) : '') ?>">
     <small id="blog-unpublish-at-help" class="field-help">Volitelné. Článek se v zadaný čas automaticky skryje z veřejného webu.</small>
+    <?php if (adminFieldHasError('unpublish_at', $err, $fieldErrorMap)): ?>
+      <small id="blog-unpublish-at-error" class="field-help field-error">
+        <?= h($err === 'publish_range' ? $fieldErrorMessages['publish_range'] : $fieldErrorMessages['unpublish_at']) ?>
+      </small>
+    <?php endif; ?>
   </fieldset>
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">

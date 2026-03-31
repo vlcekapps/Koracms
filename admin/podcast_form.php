@@ -81,6 +81,23 @@ $formError = match ($err) {
     'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['title'],
+    'slug' => ['slug'],
+    'slug_taken' => ['slug'],
+    'url' => ['audio_url'],
+    'audio' => ['audio_file'],
+    'image' => ['image_file'],
+    'publish_at' => ['publish_at'],
+];
+$fieldErrorMessages = [
+    'title' => 'Název epizody je povinný.',
+    'slug' => 'Slug epizody musí zůstat jedinečný v rámci pořadu.',
+    'audio_url' => 'Externí audio odkaz musí mít platný formát.',
+    'audio_file' => 'Audio soubor se nepodařilo uložit.',
+    'image_file' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v požadovaném rozměru.',
+    'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
+];
 $imageHelpIds = (string)$episode['image_url'] !== ''
     ? 'podcast-episode-image-current podcast-episode-image-help'
     : 'podcast-episode-image-help';
@@ -111,13 +128,16 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 
     <label for="title">Název epizody <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            value="<?= h((string)$episode['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="podcast-episode-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['podcast-episode-slug-help']) ?>
            value="<?= h((string)$episode['slug']) ?>">
     <small id="podcast-episode-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu epizody. V rámci pořadu musí zůstat jedinečná.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="subtitle">Krátký podtitul pro katalogy</label>
     <input type="text" id="subtitle" name="subtitle" maxlength="255" aria-describedby="podcast-episode-subtitle-help"
@@ -143,11 +163,13 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       </div>
       <div style="flex:1 1 16rem">
         <label for="publish_at">Plánované zveřejnění</label>
-        <input type="datetime-local" id="publish_at" name="publish_at" style="width:100%" aria-describedby="podcast-episode-publish-help"
+        <input type="datetime-local" id="publish_at" name="publish_at" style="width:100%"
+               <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['podcast-episode-publish-help']) ?>
                value="<?= h($publishInput) ?>">
       </div>
     </div>
     <small id="podcast-episode-publish-help" class="field-help">Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.</small>
+    <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
 
     <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1 1 12rem">
@@ -181,8 +203,10 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 
     <label for="audio_file">Audio soubor</label>
     <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*"
-           aria-describedby="podcast-episode-audio-help<?= (string)$episode['audio_file'] !== '' ? ' podcast-episode-audio-current' : '' ?>">
+           <?= adminFieldAttributes('audio_file', $err, $fieldErrorMap, array_filter(['podcast-episode-audio-help', (string)$episode['audio_file'] !== '' ? 'podcast-episode-audio-current' : ''])) ?>
+           >
     <small id="podcast-episode-audio-help" class="field-help">Můžete nahrát běžný zvukový soubor, například MP3, OGG, WAV, M4A nebo AAC.</small>
+    <?php adminRenderFieldError('audio_file', $err, $fieldErrorMap, $fieldErrorMessages['audio_file']); ?>
     <?php if ((string)$episode['audio_file'] !== ''): ?>
       <small id="podcast-episode-audio-current" class="field-help">Aktuální soubor je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
@@ -194,10 +218,12 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php endif; ?>
 
     <label for="audio_url">Externí audio odkaz</label>
-    <input type="url" id="audio_url" name="audio_url" maxlength="500" aria-describedby="podcast-episode-audio-url-help"
+    <input type="url" id="audio_url" name="audio_url" maxlength="500"
+           <?= adminFieldAttributes('audio_url', $err, $fieldErrorMap, ['podcast-episode-audio-url-help']) ?>
            placeholder="https://example.com/episode.mp3"
            value="<?= h((string)$episode['audio_url']) ?>">
     <small id="podcast-episode-audio-url-help" class="field-help">Hodí se pro externí hosting nebo přímý odkaz na audio soubor.</small>
+    <?php adminRenderFieldError('audio_url', $err, $fieldErrorMap, $fieldErrorMessages['audio_url']); ?>
 
     <label for="image_file">Obrázek epizody</label>
     <?php if ((string)$episode['image_url'] !== ''): ?>
@@ -207,8 +233,9 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       <small id="podcast-episode-image-current" class="field-help">Aktuální obrázek epizody je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <input type="file" id="image_file" name="image_file" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-           aria-describedby="<?= h($imageHelpIds) ?>">
+           <?= adminFieldAttributes('image_file', $err, $fieldErrorMap, array_filter(explode(' ', $imageHelpIds))) ?>>
     <small id="podcast-episode-image-help" class="field-help">Volitelné. Pokud chcete pro epizodu vlastní artwork, nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.</small>
+    <?php adminRenderFieldError('image_file', $err, $fieldErrorMap, $fieldErrorMessages['image_file']); ?>
     <?php if ((string)$episode['image_file'] !== ''): ?>
       <label for="image_file_delete" style="font-weight:normal;margin-top:.5rem">
         <input type="checkbox" id="image_file_delete" name="image_file_delete" value="1">

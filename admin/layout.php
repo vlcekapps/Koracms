@@ -1,6 +1,70 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
+function adminFieldHasError(string $fieldName, $errorState, array $fieldErrorMap = []): bool
+{
+    if (is_array($errorState)) {
+        return in_array($fieldName, $errorState, true);
+    }
+
+    $errorCode = (string)$errorState;
+    if ($errorCode === '' || !isset($fieldErrorMap[$errorCode])) {
+        return false;
+    }
+
+    return in_array($fieldName, (array)$fieldErrorMap[$errorCode], true);
+}
+
+function adminFieldErrorId(string $fieldName, ?string $customId = null): string
+{
+    return $customId !== null && $customId !== '' ? $customId : $fieldName . '-error';
+}
+
+function adminFieldAttributes(
+    string $fieldName,
+    $errorState,
+    array $fieldErrorMap = [],
+    array $describedByIds = [],
+    ?string $customErrorId = null
+): string {
+    $hasError = adminFieldHasError($fieldName, $errorState, $fieldErrorMap);
+    $ids = [];
+
+    foreach ($describedByIds as $describedById) {
+        $describedById = trim((string)$describedById);
+        if ($describedById !== '') {
+            $ids[] = $describedById;
+        }
+    }
+
+    if ($hasError) {
+        $ids[] = adminFieldErrorId($fieldName, $customErrorId);
+    }
+
+    $ids = array_values(array_unique($ids));
+    $attributes = $hasError ? ' aria-invalid="true"' : '';
+    if ($ids !== []) {
+        $attributes .= ' aria-describedby="' . h(implode(' ', $ids)) . '"';
+    }
+
+    return $attributes;
+}
+
+function adminRenderFieldError(
+    string $fieldName,
+    $errorState,
+    array $fieldErrorMap,
+    string $message,
+    ?string $customErrorId = null
+): void {
+    if ($message === '' || !adminFieldHasError($fieldName, $errorState, $fieldErrorMap)) {
+        return;
+    }
+
+    echo '<small id="' . h(adminFieldErrorId($fieldName, $customErrorId))
+        . '" class="field-help field-error">' . h($message) . '</small>';
+}
+
 function adminHeader(string $pageTitle): void
 {
     $siteName = h(getSetting('site_name', 'Kora CMS'));
@@ -301,7 +365,9 @@ function adminHeader(string $pageTitle): void
        . '    .table-row--pending { background:#fffaf0; }' . "\n"
        . '    .table-meta { display:block; margin-top:.2rem; color:#475467; font-size:.85rem; line-height:1.4; }' . "\n"
        . '    .field-help { display:block; margin:.35rem 0 0; color:#555; font-size:.92rem; line-height:1.45; font-weight:normal; }' . "\n"
+       . '    .field-error { color:#b42318; font-weight:700; }' . "\n"
        . '    .field-help code { font-size:.95em; }' . "\n"
+       . '    input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] { border:2px solid #b42318; }' . "\n"
        . '    .sr-only, .visually-hidden { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }' . "\n"
        . '    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }' . "\n"
        . '    nav a:focus-visible { outline-color: #7ecfff; }' . "\n"

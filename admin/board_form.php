@@ -56,6 +56,23 @@ $formError = match ($err) {
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
     default => '',
 };
+$fieldErrorMap = [
+    'required' => ['title', 'posted_date'],
+    'dates' => ['posted_date', 'removal_date'],
+    'slug' => ['slug'],
+    'contact_email' => ['contact_email'],
+    'image' => ['board_image'],
+    'file' => ['file'],
+];
+$fieldErrorMessages = [
+    'title' => 'Nadpis položky je povinný.',
+    'posted_date' => 'Datum vyvěšení je povinné.',
+    'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
+    'slug' => 'Slug položky je povinný a musí být unikátní.',
+    'contact_email' => 'Kontaktní e-mail nemá platný formát.',
+    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+    'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
+];
 
 adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sekce ' . $publicLabel);
 ?>
@@ -88,13 +105,16 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="title">Nadpis <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            value="<?= h((string)$document['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug veřejné stránky <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="board-slug-help"
+           <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['board-slug-help']) ?>
            value="<?= h((string)$document['slug']) ?>">
     <small id="board-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="board_type">Typ oznámení</label>
     <select id="board_type" name="board_type" aria-describedby="board-type-help">
@@ -137,14 +157,23 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="posted_date">Datum vyvěšení <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="date" id="posted_date" name="posted_date" required aria-required="true"
-           aria-describedby="board-posted-date-help"
+           <?= adminFieldAttributes('posted_date', $err, $fieldErrorMap, ['board-posted-date-help'], 'board-posted-date-error') ?>
            value="<?= h((string)$document['posted_date']) ?>">
     <small id="board-posted-date-help" class="field-help">Položka se na veřejném webu zobrazí od tohoto dne. Budoucí datum vytvoří naplánovanou položku.</small>
+    <?php if (adminFieldHasError('posted_date', $err, $fieldErrorMap)): ?>
+      <small id="board-posted-date-error" class="field-help field-error">
+        <?= h($err === 'dates' ? $fieldErrorMessages['dates'] : $fieldErrorMessages['posted_date']) ?>
+      </small>
+    <?php endif; ?>
 
     <label for="removal_date">Datum sejmutí</label>
-    <input type="date" id="removal_date" name="removal_date" aria-describedby="board-removal-date-help"
+    <input type="date" id="removal_date" name="removal_date"
+           <?= adminFieldAttributes('removal_date', $err, $fieldErrorMap, ['board-removal-date-help'], 'board-removal-date-error') ?>
            value="<?= h((string)($document['removal_date'] ?? '')) ?>">
     <small id="board-removal-date-help" class="field-help">Nechte prázdné, pokud má položka zůstat bez data stažení.</small>
+    <?php if (adminFieldHasError('removal_date', $err, $fieldErrorMap)): ?>
+      <small id="board-removal-date-error" class="field-help field-error"><?= h($fieldErrorMessages['dates']) ?></small>
+    <?php endif; ?>
 
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_pinned" value="1" aria-describedby="board-pinned-help"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
@@ -164,8 +193,10 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
       </div>
     <?php endif; ?>
     <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
-           aria-describedby="board-image-help<?= !empty($document['image_file']) ? ' board-image-current' : '' ?>">
+           <?= adminFieldAttributes('board_image', $err, $fieldErrorMap, array_filter(['board-image-help', !empty($document['image_file']) ? 'board-image-current' : ''])) ?>
+           >
     <small id="board-image-help" class="field-help">Hodí se pro parte, ztracené zvíře, plakát nebo ilustrační fotku oznámení.</small>
+    <?php adminRenderFieldError('board_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if (!empty($document['image_file'])): ?>
       <small id="board-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
@@ -186,7 +217,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="contact_email">E-mail</label>
     <input type="email" id="contact_email" name="contact_email" maxlength="255"
+           <?= adminFieldAttributes('contact_email', $err, $fieldErrorMap) ?>
            value="<?= h((string)($document['contact_email'] ?? '')) ?>">
+    <?php adminRenderFieldError('contact_email', $err, $fieldErrorMap, $fieldErrorMessages['contact_email']); ?>
   </fieldset>
 
   <fieldset>
@@ -195,8 +228,10 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <label for="file">Soubor přílohy</label>
     <input type="file" id="file" name="file"
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.txt"
-           aria-describedby="board-file-help<?= !empty($document['original_name']) ? ' board-file-current' : '' ?>">
+           <?= adminFieldAttributes('file', $err, $fieldErrorMap, array_filter(['board-file-help', !empty($document['original_name']) ? 'board-file-current' : ''])) ?>
+           >
     <small id="board-file-help" class="field-help">Můžete nahrát běžný dokument nebo archiv, například PDF, DOCX, XLSX, PPTX, ODT nebo ZIP.</small>
+    <?php adminRenderFieldError('file', $err, $fieldErrorMap, $fieldErrorMessages['file']); ?>
     <?php if (!empty($document['original_name'])): ?>
       <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor, pokud ji chcete nahradit.</small>
     <?php endif; ?>

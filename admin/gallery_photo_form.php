@@ -10,6 +10,12 @@ $errorMap = [
     'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
 ];
 $formError = $errorMap[$errorKey] ?? '';
+$fieldErrorMap = [
+    'slug' => ['slug'],
+];
+$fieldErrorMessages = [
+    'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
+];
 
 $photo = null;
 if ($id !== null) {
@@ -78,8 +84,10 @@ adminHeader($pageTitle);
 
       <label for="slug">Slug adresy</label>
       <input type="text" id="slug" name="slug" maxlength="255"
-             value="<?= h((string)$photo['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false" aria-describedby="gallery-photo-slug-help<?= $formError !== '' ? ' form-errors' : '' ?>">
+             <?= adminFieldAttributes('slug', $errorKey, $fieldErrorMap, ['gallery-photo-slug-help']) ?>
+             value="<?= h((string)$photo['slug']) ?>" inputmode="url" autocapitalize="off" spellcheck="false">
       <small id="gallery-photo-slug-help" class="field-help">Adresa se vyplní automaticky podle titulku fotografie. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
+      <?php adminRenderFieldError('slug', $errorKey, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
       <label for="sort_order">Pořadí</label>
       <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">

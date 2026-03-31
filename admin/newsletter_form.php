@@ -13,7 +13,13 @@ $formState = $_SESSION['newsletter_form_state'] ?? [
     'body' => '',
 ];
 $formError = $_SESSION['newsletter_form_error'] ?? '';
-unset($_SESSION['newsletter_form_state'], $_SESSION['newsletter_form_error']);
+$formErrorFields = $_SESSION['newsletter_form_error_fields'] ?? [];
+unset($_SESSION['newsletter_form_state'], $_SESSION['newsletter_form_error'], $_SESSION['newsletter_form_error_fields']);
+
+$fieldErrorMessages = [
+    'subject' => 'Vyplňte předmět newsletteru.',
+    'body' => 'Vyplňte text newsletteru.',
+];
 
 adminHeader('Nová rozesílka');
 ?>
@@ -46,10 +52,12 @@ adminHeader('Nová rozesílka');
 
       <label for="subject">Předmět <span aria-hidden="true">*</span></label>
       <input type="text" id="subject" name="subject" required aria-required="true" maxlength="255"
-             value="<?= h((string)$formState['subject']) ?>">
+             value="<?= h((string)$formState['subject']) ?>"<?= adminFieldAttributes('subject', $formErrorFields) ?>>
+      <?php adminRenderFieldError('subject', $formErrorFields, [], $fieldErrorMessages['subject']); ?>
 
       <label for="body">Text e-mailu <span aria-hidden="true">*</span></label>
-      <textarea id="body" name="body" rows="15" required aria-required="true"><?= h((string)$formState['body']) ?></textarea>
+      <textarea id="body" name="body" rows="15" required aria-required="true"<?= adminFieldAttributes('body', $formErrorFields) ?>><?= h((string)$formState['body']) ?></textarea>
+      <?php adminRenderFieldError('body', $formErrorFields, [], $fieldErrorMessages['body']); ?>
 
       <p style="margin-top:.5rem;font-size:.95rem;color:#444">
         Do každého e-mailu se automaticky přidá odkaz pro odhlášení z odběru.

@@ -8730,6 +8730,102 @@ if ($editorialValidationIssues === []) {
     }
 }
 
+echo "=== admin_field_error_guardrails ===\n";
+$adminFieldErrorIssues = [];
+$adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
+$pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
+$blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
+$newsFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news_form.php');
+$faqFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_form.php');
+$foodFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_form.php');
+$pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
+$formBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
+$boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
+$eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
+$placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
+$podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
+$podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
+$reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
+$galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
+$galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
+$userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
+$userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_save.php');
+$profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
+$newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
+$newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
+foreach ([
+    'function adminFieldHasError(',
+    'function adminFieldAttributes(',
+    'function adminRenderFieldError(',
+    '.field-error {',
+    'input[aria-invalid="true"]',
+] as $adminLayoutFragment) {
+    if (!str_contains($adminLayoutSource, $adminLayoutFragment)) {
+        $adminFieldErrorIssues[] = 'admin layout is missing field-level error helper fragment: ' . $adminLayoutFragment;
+    }
+}
+$adminFieldErrorForms = [
+    'page form' => [$pageFormSource, "adminFieldAttributes('title'", "adminRenderFieldError('title'", "adminFieldAttributes('unpublish_at'"],
+    'blog form' => [$blogFormSource, "adminFieldAttributes('title'", "adminFieldAttributes('content'", "adminFieldAttributes('publish_at'"],
+    'news form' => [$newsFormSource, "adminFieldAttributes('title'", "adminFieldAttributes('content'", "adminFieldAttributes('unpublish_at'"],
+    'faq form' => [$faqFormSource, "adminFieldAttributes('question'", "adminFieldAttributes('slug'", "adminRenderFieldError('answer'"],
+    'food form' => [$foodFormSource, "adminFieldAttributes('title'", "adminFieldAttributes('valid_from'", "adminFieldAttributes('valid_to'"],
+    'poll form' => [$pollFormValidationSource, "adminFieldAttributes('question'", "adminFieldAttributes('start_date'", "poll-options-error"],
+    'form builder' => [$formBuilderSource, "adminFieldAttributes('title'", "adminFieldAttributes('notification_email'", "adminFieldAttributes('webhook_url'"],
+    'board form' => [$boardFormSource, "adminFieldAttributes('posted_date'", "adminFieldAttributes('board_image'", "adminFieldAttributes('file'"],
+    'event form' => [$eventFormSource, "adminFieldAttributes('event_date'", "adminFieldAttributes('registration_url'", "adminFieldAttributes('unpublish_at'"],
+    'place form' => [$placeFormSource, "adminFieldAttributes('latitude'", "adminFieldAttributes('contact_email'", "adminFieldAttributes('place_image'"],
+    'podcast episode form' => [$podcastEpisodeFormSource, "adminFieldAttributes('audio_url'", "adminFieldAttributes('image_file'", "adminFieldAttributes('publish_at'"],
+    'podcast show form' => [$podcastShowFormSource, "adminFieldAttributes('website_url'", "adminFieldAttributes('feed_episode_limit'", "adminFieldAttributes('cover_image'"],
+    'reservation resource form' => [$reservationFormSource, "adminFieldAttributes('capacity'", 'hours-error', 'blocked-dates-error'],
+    'gallery album form' => [$galleryAlbumFormSource, "adminFieldAttributes('name'", "adminFieldAttributes('slug'", "adminFieldAttributes('parent_id'"],
+    'gallery photo form' => [$galleryPhotoFormSource, "adminFieldAttributes('slug'", "adminRenderFieldError('slug'"],
+    'user form' => [$userFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('author_slug'", "adminFieldAttributes('author_avatar'"],
+    'profile form' => [$profileFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('totp_verify'", "adminFieldAttributes('author_slug'"],
+    'newsletter form' => [$newsletterFormValidationSource, "adminFieldAttributes('subject'", "adminFieldAttributes('body'", "adminRenderFieldError('body'"],
+];
+foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
+    $formSource = (string)array_shift($formFragments);
+    foreach ($formFragments as $requiredFragment) {
+        if (!str_contains($formSource, $requiredFragment)) {
+            $adminFieldErrorIssues[] = $formLabel . ' is missing field-level error fragment: ' . $requiredFragment;
+        }
+    }
+}
+foreach ([
+    '$_SESSION[\'form_error_fields\']',
+    '$errorFields[] = \'email\'',
+    '$errorFields[] = \'author_slug\'',
+] as $userSaveFragment) {
+    if (!str_contains($userSaveValidationSource, $userSaveFragment)) {
+        $adminFieldErrorIssues[] = 'user save is missing field-level error persistence fragment: ' . $userSaveFragment;
+    }
+}
+foreach ([
+    '$_SESSION[\'newsletter_form_error_fields\']',
+    "adminRenderFieldError('subject'",
+] as $newsletterFragment) {
+    if (!str_contains($newsletterFormValidationSource . $newsletterSendValidationSource, $newsletterFragment)) {
+        $adminFieldErrorIssues[] = 'newsletter compose flow is missing field-level error fragment: ' . $newsletterFragment;
+    }
+}
+$profileTotpCheckPos = strpos($profileFormValidationSource, 'if ($enableTwoFactorRequested)');
+$profileUpdateGuardPos = $profileTotpCheckPos === false
+    ? false
+    : strpos($profileFormValidationSource, 'if (empty($errors)) {', $profileTotpCheckPos);
+$profileUpdateExecutePos = strpos($profileFormValidationSource, '$pdo->prepare("UPDATE cms_users SET {$setClauses} WHERE id=?")->execute($params);');
+if ($profileTotpCheckPos === false || $profileUpdateGuardPos === false || $profileUpdateExecutePos === false || $profileUpdateGuardPos > $profileUpdateExecutePos) {
+    $adminFieldErrorIssues[] = 'profile update is no longer guarded after 2FA validation';
+}
+if ($adminFieldErrorIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminFieldErrorIssues as $adminFieldErrorIssue) {
+        echo '- ' . $adminFieldErrorIssue . "\n";
+    }
+}
+
 echo "=== podcast_source_guardrails ===\n";
 $podcastSourceIssues = [];
 $podcastShowSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_save.php');

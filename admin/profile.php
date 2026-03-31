@@ -7,6 +7,9 @@ $pdo = db_connect();
 $accountId = currentUserId();
 $success = false;
 $errors = [];
+$fieldErrors = [];
+$enableTwoFactorRequested = false;
+$totpSetupSecret = '';
 
 $stmt = $pdo->prepare("SELECT * FROM cms_users WHERE id = ?");
 $stmt->execute([$accountId]);
@@ -44,15 +47,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $authorBio = trim($_POST['author_bio'] ?? '');
     $authorWebsiteInput = trim($_POST['author_website'] ?? '');
     $deleteAuthorAvatar = isset($_POST['author_avatar_delete']);
+    $enableTwoFactorRequested = isset($_POST['enable_2fa']) && $_POST['enable_2fa'] === '1';
+    $totpSetupSecret = trim($_POST['totp_secret'] ?? '');
 
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'Zadejte platnou e-mailovou adresu.';
+        $fieldErrors[] = 'email';
     }
     if ($newPass !== '' && strlen($newPass) < 8) {
         $errors[] = 'Nové heslo musí mít alespoň 8 znaků.';
+        $fieldErrors[] = 'new_pass';
     }
     if ($newPass !== $newPass2) {
         $errors[] = 'Hesla se neshodují.';
+        $fieldErrors[] = 'new_pass';
+        $fieldErrors[] = 'new_pass2';
     }
 
     if (empty($errors) && $accountId) {
@@ -60,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duplicateStmt->execute([$email, $accountId]);
         if ($duplicateStmt->fetch()) {
             $errors[] = 'Tento e-mail již používá jiný účet.';
+            $fieldErrors[] = 'email';
         }
     }
 
@@ -68,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $authorWebsite = normalizeAuthorWebsite($authorWebsiteInput);
         if ($authorWebsite === '') {
             $errors[] = 'Web autora musí být platná adresa začínající na http:// nebo https://.';
+            $fieldErrors[] = 'author_website';
         }
     }
 
@@ -82,36 +93,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $authorSlug = authorSlug($authorSlugSource);
     if ($authorSlug === '') {
         $errors[] = 'Slug veřejného autora je povinný.';
+        $fieldErrors[] = 'author_slug';
     }
 
     if (empty($errors) && $accountId) {
         $uniqueAuthorSlug = uniqueAuthorSlug($pdo, $authorSlug, $accountId);
         if ($submittedAuthorSlug !== '' && $uniqueAuthorSlug !== $authorSlug) {
             $errors[] = 'Zvolený slug veřejného autora už používá jiný účet.';
+            $fieldErrors[] = 'author_slug';
         } else {
             $authorSlug = $uniqueAuthorSlug;
         }
     }
 
     $authorAvatarFilename = (string)($currentRow['author_avatar'] ?? '');
-    if (empty($errors) && $accountId) {
-        $avatarUpload = storeUploadedAuthorAvatar(
-            $_FILES['author_avatar'] ?? [],
-            $authorAvatarFilename
-        );
-        if ($avatarUpload['error'] !== '') {
-            $errors[] = $avatarUpload['error'];
-        } else {
-            $authorAvatarFilename = (string)$avatarUpload['filename'];
-        }
-    }
 
     if (empty($errors) && $accountId) {
-        if ($deleteAuthorAvatar && $authorAvatarFilename !== '' && empty($_FILES['author_avatar']['name'])) {
-            deleteAuthorAvatarFile($authorAvatarFilename);
-            $authorAvatarFilename = '';
-        }
-
         $setClauses = "first_name=?, last_name=?, nickname=?, email=?, author_public_enabled=?, author_slug=?, author_bio=?, author_avatar=?, author_website=?";
         $params = [
             $firstName,
@@ -129,49 +126,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $params[] = password_hash($newPass, PASSWORD_BCRYPT);
         }
 
+        $updatedTotpSecret = (string)($currentRow['totp_secret'] ?? '');
+
         // 2FA TOTP
-        if (isset($_POST['enable_2fa']) && $_POST['enable_2fa'] === '1') {
-            $totpSecret = trim($_POST['totp_secret'] ?? '');
+        if ($enableTwoFactorRequested) {
+            $totpSecret = $totpSetupSecret;
             $totpVerifyCode = trim($_POST['totp_verify'] ?? '');
             if ($totpSecret !== '' && $totpVerifyCode !== '' && totpVerify($totpSecret, $totpVerifyCode)) {
                 $setClauses .= ", totp_secret=?";
                 $params[] = $totpSecret;
+                $updatedTotpSecret = $totpSecret;
             } else {
                 $errors[] = 'Ověřovací kód nesouhlasí. 2FA nebylo aktivováno.';
+                $fieldErrors[] = 'totp_verify';
             }
         }
         if (isset($_POST['disable_2fa']) && $_POST['disable_2fa'] === '1') {
             $setClauses .= ", totp_secret=NULL";
+            $updatedTotpSecret = '';
         }
 
-        $params[] = $accountId;
-        $pdo->prepare("UPDATE cms_users SET {$setClauses} WHERE id=?")->execute($params);
-
-        $displayName = $nickname !== '' ? $nickname : trim($firstName . ' ' . $lastName);
-        if ($displayName === '') {
-            $displayName = $email;
+        if (empty($errors)) {
+            $avatarUpload = storeUploadedAuthorAvatar(
+                $_FILES['author_avatar'] ?? [],
+                $authorAvatarFilename
+            );
+            if ($avatarUpload['error'] !== '') {
+                $errors[] = $avatarUpload['error'];
+                $fieldErrors[] = 'author_avatar';
+            } else {
+                $authorAvatarFilename = (string)$avatarUpload['filename'];
+                $params[7] = $authorAvatarFilename;
+            }
         }
-        $_SESSION['cms_user_name'] = $displayName;
-        $_SESSION['cms_user_email'] = $email;
 
-        logAction('profile_update');
-        $success = true;
-        $currentRow = array_merge($currentRow, [
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'nickname' => $nickname,
-            'email' => $email,
-            'author_public_enabled' => $authorPublicEnabled,
-            'author_slug' => $authorSlug,
-            'author_bio' => $authorBio,
-            'author_avatar' => $authorAvatarFilename,
-            'author_website' => $authorWebsite,
-        ]);
-        $currentRow = hydrateAuthorPresentation($currentRow);
+        if (empty($errors)) {
+            if ($deleteAuthorAvatar && $authorAvatarFilename !== '' && empty($_FILES['author_avatar']['name'])) {
+                deleteAuthorAvatarFile($authorAvatarFilename);
+                $authorAvatarFilename = '';
+                $params[7] = $authorAvatarFilename;
+            }
+
+            $params[] = $accountId;
+            $pdo->prepare("UPDATE cms_users SET {$setClauses} WHERE id=?")->execute($params);
+
+            $displayName = $nickname !== '' ? $nickname : trim($firstName . ' ' . $lastName);
+            if ($displayName === '') {
+                $displayName = $email;
+            }
+            $_SESSION['cms_user_name'] = $displayName;
+            $_SESSION['cms_user_email'] = $email;
+
+            logAction('profile_update');
+            $success = true;
+            $currentRow['totp_secret'] = $updatedTotpSecret;
+        }
     }
+
+    $currentRow = array_merge($currentRow, [
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'nickname' => $nickname,
+        'email' => $email,
+        'author_public_enabled' => $authorPublicEnabled,
+        'author_slug' => $authorSlug ?? '',
+        'author_bio' => $authorBio,
+        'author_avatar' => $authorAvatarFilename,
+        'author_website' => $authorWebsite,
+    ]);
+    $currentRow = hydrateAuthorPresentation($currentRow);
 }
 
 $authorProfileUrl = (string)($currentRow['author_public_path'] ?? '');
+$fieldErrors = array_values(array_unique($fieldErrors));
+$fieldErrorMessages = [
+    'email' => 'Zadejte platnou a jedinečnou e-mailovou adresu.',
+    'new_pass' => 'Nové heslo musí mít alespoň 8 znaků.',
+    'new_pass2' => 'Kontrolní heslo se musí shodovat s novým heslem.',
+    'author_slug' => 'Zadejte jedinečný slug veřejného autora.',
+    'author_website' => 'Zadejte platnou adresu začínající na http:// nebo https://.',
+    'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP.',
+    'totp_verify' => 'Zadejte platný šestimístný ověřovací kód.',
+];
 
 adminHeader('Můj profil');
 ?>
@@ -213,17 +249,20 @@ adminHeader('Můj profil');
 
     <label for="email">E-mail (pro přihlášení) <span aria-hidden="true">*</span></label>
     <input type="email" id="email" name="email" required aria-required="true"
-           autocomplete="email" value="<?= h($currentRow['email']) ?>">
+           autocomplete="email" value="<?= h($currentRow['email']) ?>"<?= adminFieldAttributes('email', $fieldErrors) ?>>
+    <?php adminRenderFieldError('email', $fieldErrors, [], $fieldErrorMessages['email']); ?>
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>Změna hesla</legend>
     <small id="profile-password-help" class="field-help" style="margin-top:0">Vyplňte jen pokud chcete změnit.</small>
     <label for="new_pass">Nové heslo (min. 8 znaků)</label>
-    <input type="password" id="new_pass" name="new_pass" minlength="8" autocomplete="new-password" aria-describedby="profile-password-help">
+    <input type="password" id="new_pass" name="new_pass" minlength="8" autocomplete="new-password"<?= adminFieldAttributes('new_pass', $fieldErrors, [], ['profile-password-help']) ?>>
+    <?php adminRenderFieldError('new_pass', $fieldErrors, [], $fieldErrorMessages['new_pass']); ?>
 
     <label for="new_pass2">Nové heslo znovu</label>
-    <input type="password" id="new_pass2" name="new_pass2" minlength="8" autocomplete="new-password" aria-describedby="profile-password-help">
+    <input type="password" id="new_pass2" name="new_pass2" minlength="8" autocomplete="new-password"<?= adminFieldAttributes('new_pass2', $fieldErrors, [], ['profile-password-help']) ?>>
+    <?php adminRenderFieldError('new_pass2', $fieldErrors, [], $fieldErrorMessages['new_pass2']); ?>
   </fieldset>
 
   <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
@@ -238,23 +277,25 @@ adminHeader('Můj profil');
     <?php else: ?>
       <p class="field-help">Zvyšte zabezpečení svého účtu. Použijte FreeOTP, Authy, Google Authenticator nebo jinou TOTP aplikaci.</p>
       <label style="font-weight:normal">
-        <input type="checkbox" name="enable_2fa" value="1" id="enable_2fa_check"> Aktivovat dvoufázové ověření
+        <input type="checkbox" name="enable_2fa" value="1" id="enable_2fa_check"<?= $enableTwoFactorRequested ? ' checked' : '' ?>> Aktivovat dvoufázové ověření
       </label>
-      <div id="totp-setup" style="display:none;margin-top:1rem;padding:1rem;background:#f8f9fb;border-radius:8px">
+      <div id="totp-setup" style="<?= $enableTwoFactorRequested ? '' : 'display:none;' ?>margin-top:1rem;padding:1rem;background:#f8f9fb;border-radius:8px">
         <?php
-          $newSecret = totpGenerateSecret();
-          $totpUri = totpUri($newSecret, $currentRow['email'], getSetting('site_name', 'Kora CMS'));
+          $totpSetupSecret = $totpSetupSecret !== '' ? $totpSetupSecret : totpGenerateSecret();
+          $totpUri = totpUri($totpSetupSecret, $currentRow['email'], getSetting('site_name', 'Kora CMS'));
           $qrUrl = totpQrUrl($totpUri);
         ?>
-        <input type="hidden" name="totp_secret" value="<?= h($newSecret) ?>">
+        <input type="hidden" name="totp_secret" value="<?= h($totpSetupSecret) ?>">
         <p><strong>1.</strong> Naskenujte QR kód v autentizační aplikaci:</p>
         <img src="<?= h($qrUrl) ?>" alt="QR kód pro TOTP nastavení" style="display:block;margin:.5rem 0">
-        <p><strong>2.</strong> Nebo ručně zadejte klíč: <code style="word-break:break-all"><?= h($newSecret) ?></code></p>
+        <p><strong>2.</strong> Nebo ručně zadejte klíč: <code style="word-break:break-all"><?= h($totpSetupSecret) ?></code></p>
         <p><strong>3.</strong> Zadejte ověřovací kód z aplikace pro potvrzení:</p>
         <label for="totp_verify">Ověřovací kód <span aria-hidden="true">*</span></label>
         <input type="text" id="totp_verify" name="totp_verify" inputmode="numeric" pattern="[0-9]{6}"
                maxlength="6" placeholder="000000" autocomplete="one-time-code"
+               value="<?= h((string)($_POST['totp_verify'] ?? '')) ?>"<?= adminFieldAttributes('totp_verify', $fieldErrors) ?>
                style="width:10rem;font-size:1.2rem;text-align:center;letter-spacing:.2rem">
+        <?php adminRenderFieldError('totp_verify', $fieldErrors, [], $fieldErrorMessages['totp_verify']); ?>
       </div>
       <script nonce="<?= cspNonce() ?>">
       document.getElementById('enable_2fa_check')?.addEventListener('change', function(){
@@ -277,9 +318,9 @@ adminHeader('Můj profil');
 
     <label for="author_slug">Slug veřejného autora <span aria-hidden="true">*</span></label>
     <input type="text" id="author_slug" name="author_slug" maxlength="255" pattern="[a-z0-9\-]+"
-           aria-describedby="profile-author-slug-help"
-           value="<?= h((string)($currentRow['author_slug'] ?? '')) ?>">
+           value="<?= h((string)($currentRow['author_slug'] ?? '')) ?>"<?= adminFieldAttributes('author_slug', $fieldErrors, [], ['profile-author-slug-help']) ?>>
     <small id="profile-author-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('author_slug', $fieldErrors, [], $fieldErrorMessages['author_slug']); ?>
 
     <label for="author_bio">Krátké bio / medailonek</label>
     <textarea id="author_bio" name="author_bio" rows="6" aria-describedby="profile-author-bio-help"><?= h((string)($currentRow['author_bio'] ?? '')) ?></textarea>
@@ -288,14 +329,15 @@ adminHeader('Můj profil');
 
     <label for="author_website">Web autora</label>
     <input type="url" id="author_website" name="author_website" maxlength="255"
-           aria-describedby="profile-author-website-help"
-           value="<?= h((string)($currentRow['author_website'] ?? '')) ?>">
+           value="<?= h((string)($currentRow['author_website'] ?? '')) ?>"<?= adminFieldAttributes('author_website', $fieldErrors, [], ['profile-author-website-help']) ?>>
     <small id="profile-author-website-help" class="field-help">Nepovinné pole pro osobní web nebo profil autora.</small>
+    <?php adminRenderFieldError('author_website', $fieldErrors, [], $fieldErrorMessages['author_website']); ?>
 
     <label for="author_avatar">Avatar autora</label>
     <input type="file" id="author_avatar" name="author_avatar" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
-           aria-describedby="profile-author-avatar-help<?= !empty($currentRow['author_avatar']) ? ' profile-author-avatar-current' : '' ?>">
+           <?= adminFieldAttributes('author_avatar', $fieldErrors, [], !empty($currentRow['author_avatar']) ? ['profile-author-avatar-help', 'profile-author-avatar-current'] : ['profile-author-avatar-help']) ?>>
     <small id="profile-author-avatar-help" class="field-help">Povolené formáty: JPEG, PNG, GIF nebo WebP.</small>
+    <?php adminRenderFieldError('author_avatar', $fieldErrors, [], $fieldErrorMessages['author_avatar']); ?>
     <?php if (!empty($currentRow['author_avatar'])): ?>
       <div id="profile-author-avatar-current" class="field-help">
         Aktuální avatar:
