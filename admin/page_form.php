@@ -8,7 +8,7 @@ $id = inputInt('get', 'id');
 $redirect = internalRedirectTarget(trim($_GET['redirect'] ?? ''), BASE_URL . '/admin/pages.php');
 
 if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_pages WHERE id = ?");
+    $stmt = $pdo->prepare('SELECT * FROM cms_pages WHERE id = ?');
     $stmt->execute([$id]);
     $page = $stmt->fetch();
     if (!$page) {
@@ -53,12 +53,14 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Název stránky je povinný.</p>
 <?php elseif ($err === 'slug'): ?>
   <p role="alert" class="error" id="form-error">Slug stránky je už obsazený. Zvolte prosím jiný.</p>
+<?php elseif ($err === 'unpublish_at'): ?>
+  <p role="alert" class="error" id="form-error">Plánované zrušení publikace má neplatný formát data a času.</p>
 <?php endif; ?>
 
-  <p class="button-row button-row--start">
-    <a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a>
-    <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>
-  </p>
+<p class="button-row button-row--start">
+  <a href="<?= h($redirect) ?>"><span aria-hidden="true">←</span> Zpět na statické stránky</a>
+  <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>
+</p>
 <p style="margin-top:0;font-size:.9rem">Vyplňte základní údaje stránky a zvolte, jestli se má zobrazit na webu a v hlavní navigaci.</p>
 
 <form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>

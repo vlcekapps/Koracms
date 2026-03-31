@@ -8527,6 +8527,112 @@ if ($mediaLibraryIssues === []) {
     }
 }
 
+echo "=== editorial_validation_guardrails ===\n";
+$editorialValidationIssues = [];
+$pageSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_save.php');
+$pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
+$foodSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_save.php');
+$foodFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_form.php');
+$blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
+$blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
+$podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_save.php');
+$podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
+$pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
+$pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
+$reservationSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_save.php');
+$reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
+if (!str_contains($pageSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'")) {
+    $editorialValidationIssues[] = 'page save is missing datetime parsing for unpublish_at';
+}
+if (!str_contains($pageSaveSource, "'err' => 'unpublish_at'")) {
+    $editorialValidationIssues[] = 'page save is missing invalid unpublish_at rejection';
+}
+if (!str_contains($pageSaveSource, "'unpublish_at' => \$unpublishAtSql") || !str_contains($pageSaveSource, "'admin_note' => \$adminNote")) {
+    $editorialValidationIssues[] = 'page save revision snapshot is missing unpublish_at or admin_note';
+}
+if (!str_contains($pageFormSource, "\$err === 'unpublish_at'")) {
+    $editorialValidationIssues[] = 'page form is missing invalid unpublish_at error feedback';
+}
+if (!str_contains($foodSaveSource, "DateTime::createFromFormat('Y-m-d'")) {
+    $editorialValidationIssues[] = 'food save is missing strict date parsing for validity fields';
+}
+foreach (["'err' => 'valid_from'", "'err' => 'valid_to'", "'err' => 'valid_range'"] as $foodErrorFragment) {
+    if (!str_contains($foodSaveSource, $foodErrorFragment)) {
+        $editorialValidationIssues[] = 'food save is missing validation redirect: ' . $foodErrorFragment;
+    }
+}
+foreach (["'valid_from' =>", "'valid_to' =>", "'valid_range' =>"] as $foodFormFragment) {
+    if (!str_contains($foodFormSource, $foodFormFragment)) {
+        $editorialValidationIssues[] = 'food form is missing validation message branch: ' . $foodFormFragment;
+    }
+}
+if (!str_contains($blogSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'")) {
+    $editorialValidationIssues[] = 'blog save is missing strict publish/unpublish datetime parsing';
+}
+foreach (["'publish_at'", "'unpublish_at'", "'publish_range'"] as $blogErrorFragment) {
+    if (!str_contains($blogSaveSource, $blogErrorFragment)) {
+        $editorialValidationIssues[] = 'blog save is missing validation branch: ' . $blogErrorFragment;
+    }
+}
+if (!str_contains($blogSaveSource, "'publish_at' => \$publishAtSql") || !str_contains($blogSaveSource, "'unpublish_at' => \$unpublishAtSql")) {
+    $editorialValidationIssues[] = 'blog save revision snapshot is missing publish_at or unpublish_at';
+}
+foreach (["\$err === 'publish_at'", "\$err === 'unpublish_at'", "\$err === 'publish_range'"] as $blogFormFragment) {
+    if (!str_contains($blogFormSource, $blogFormFragment)) {
+        $editorialValidationIssues[] = 'blog form is missing validation message branch: ' . $blogFormFragment;
+    }
+}
+if (!str_contains($podcastEpisodeSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'") || !str_contains($podcastEpisodeSaveSource, "redirectWithError('publish_at')")) {
+    $editorialValidationIssues[] = 'podcast episode save is missing strict publish_at validation';
+}
+if (!str_contains($podcastEpisodeFormSource, "'publish_at' =>")) {
+    $editorialValidationIssues[] = 'podcast episode form is missing publish_at validation message';
+}
+if (!str_contains($pollSaveValidationSource, "DateTime::createFromFormat('Y-m-d'") || !str_contains($pollSaveValidationSource, "DateTime::createFromFormat('H:i'")) {
+    $editorialValidationIssues[] = 'poll save is missing strict start/end date and time parsing';
+}
+if (!str_contains($pollSaveValidationSource, "redirectToForm(\$id, 'dates'")) {
+    $editorialValidationIssues[] = 'poll save is missing invalid date/time rejection';
+}
+if (!str_contains($pollFormValidationSource, "'dates' =>")) {
+    $editorialValidationIssues[] = 'poll form is missing invalid date/time feedback';
+}
+if (!str_contains($reservationSaveSource, '$pdo->beginTransaction()') || !str_contains($reservationSaveSource, '$pdo->rollBack()')) {
+    $editorialValidationIssues[] = 'reservation resource save is missing transactional protection';
+}
+if (!str_contains($reservationSaveSource, "DateTime::createFromFormat('H:i'")) {
+    $editorialValidationIssues[] = 'reservation resource save is missing strict time parsing';
+}
+if (!str_contains($reservationSaveSource, "DateTime::createFromFormat('Y-m-d'")) {
+    $editorialValidationIssues[] = 'reservation resource save is missing strict blocked-date parsing';
+}
+foreach ([
+    "redirectToForm(\$id, 'name')",
+    "redirectToForm(\$id, 'slug')",
+    "redirectToForm(\$id, 'capacity')",
+    "redirectToForm(\$id, 'hours')",
+    "redirectToForm(\$id, 'slots')",
+    "redirectToForm(\$id, 'blocked_date')",
+    "redirectToForm(\$id, 'save')",
+] as $reservationRedirectFragment) {
+    if (!str_contains($reservationSaveSource, $reservationRedirectFragment)) {
+        $editorialValidationIssues[] = 'reservation resource save is missing validation redirect: ' . $reservationRedirectFragment;
+    }
+}
+foreach (["\$err === 'hours'", "\$err === 'slots'", "\$err === 'blocked_date'", "\$err === 'save'"] as $reservationFormFragment) {
+    if (!str_contains($reservationFormSource, $reservationFormFragment)) {
+        $editorialValidationIssues[] = 'reservation resource form is missing error feedback branch: ' . $reservationFormFragment;
+    }
+}
+if ($editorialValidationIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($editorialValidationIssues as $editorialValidationIssue) {
+        echo '- ' . $editorialValidationIssue . "\n";
+    }
+}
+
 echo "=== podcast_source_guardrails ===\n";
 $podcastSourceIssues = [];
 $podcastShowSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_save.php');

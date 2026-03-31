@@ -65,6 +65,14 @@ $err = trim($_GET['err'] ?? '');
   <p role="alert" class="error" id="form-error">Slug je povinný a musí být unikátní.</p>
 <?php elseif ($err === 'capacity'): ?>
   <p role="alert" class="error" id="form-error">Kapacita musí být alespoň 1.</p>
+<?php elseif ($err === 'hours'): ?>
+  <p role="alert" class="error" id="form-error">Časy dostupnosti musí být ve správném formátu a konec musí být později než začátek.</p>
+<?php elseif ($err === 'slots'): ?>
+  <p role="alert" class="error" id="form-error">Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.</p>
+<?php elseif ($err === 'blocked_date'): ?>
+  <p role="alert" class="error" id="form-error">Blokované datum musí být ve správném formátu.</p>
+<?php elseif ($err === 'save'): ?>
+  <p role="alert" class="error" id="form-error">Zdroj se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to prosím znovu.</p>
 <?php endif; ?>
 
 <p style="margin-top:0;font-size:.9rem">

@@ -36,6 +36,9 @@ $err = trim($_GET['err'] ?? '');
 $formError = match ($err) {
     'required' => 'Vyplňte prosím název lístku.',
     'slug' => 'Slug lístku je povinný a musí být unikátní.',
+    'valid_from' => 'Datum „Platí od“ má neplatný formát.',
+    'valid_to' => 'Datum „Platí do“ má neplatný formát.',
+    'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
     default => '',
 };
 

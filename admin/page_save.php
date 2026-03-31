@@ -14,16 +14,21 @@ $adminNote = trim($_POST['admin_note'] ?? '');
 
 $unpublishAt = trim($_POST['unpublish_at'] ?? '');
 $unpublishAtSql = null;
+$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/pages.php');
+$fallback = BASE_URL . '/admin/page_form.php' . ($id ? '?id=' . $id : '');
 if ($unpublishAt !== '') {
     $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
-    if ($dateTime) {
-        $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+    $errors = DateTime::getLastErrors();
+    $hasDateTimeErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+    if ($dateTime === false || $hasDateTimeErrors || $dateTime->format('Y-m-d\TH:i') !== $unpublishAt) {
+        header('Location: ' . appendUrlQuery($fallback, ['err' => 'unpublish_at', 'redirect' => $redirect]));
+        exit;
     }
+    $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
-$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/pages.php');
 
 if ($title === '' || $slug === '') {
-    $fallback = BASE_URL . '/admin/page_form.php' . ($id ? '?id=' . $id : '');
     header('Location: ' . appendUrlQuery($fallback, ['err' => 'required', 'redirect' => $redirect]));
     exit;
 }
@@ -31,18 +36,23 @@ if ($title === '' || $slug === '') {
 $pdo = db_connect();
 $uniqueSlug = uniquePageSlug($pdo, $slug, $id);
 if ($uniqueSlug !== $slug) {
-    $fallback = BASE_URL . '/admin/page_form.php' . ($id ? '?id=' . $id : '');
     header('Location: ' . appendUrlQuery($fallback, ['err' => 'slug', 'redirect' => $redirect]));
     exit;
 }
 
 if ($id !== null) {
-    $oldStmt = $pdo->prepare("SELECT title, slug, content FROM cms_pages WHERE id = ?");
+    $oldStmt = $pdo->prepare("SELECT title, slug, content, is_published, show_in_nav, unpublish_at, admin_note FROM cms_pages WHERE id = ?");
     $oldStmt->execute([$id]);
     $oldData = $oldStmt->fetch();
     if ($oldData) {
         saveRevision($pdo, 'page', $id, $oldData, [
-            'title' => $title, 'slug' => $slug, 'content' => $content,
+            'title' => $title,
+            'slug' => $slug,
+            'content' => $content,
+            'is_published' => $isPublished,
+            'show_in_nav' => $showInNav,
+            'unpublish_at' => $unpublishAtSql,
+            'admin_note' => $adminNote,
         ]);
     }
 

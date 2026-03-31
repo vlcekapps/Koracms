@@ -78,6 +78,7 @@ $formError = match ($err) {
     'url' => 'Externí audio odkaz musí mít platný formát.',
     'audio' => 'Audio soubor se nepodařilo uložit.',
     'image' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
+    'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
     default => '',
 };
 $imageHelpIds = (string)$episode['image_url'] !== ''

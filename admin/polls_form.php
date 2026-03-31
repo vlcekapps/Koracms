@@ -52,6 +52,7 @@ $formError = match ($err) {
     'max_options' => 'Maximální počet možností je 10.',
     'has_votes' => 'Nelze odebrat možnosti, které už mají hlasy.',
     'slug' => 'Slug ankety je povinný a musí být unikátní.',
+    'dates' => 'Začátek a konec ankety musí mít platný formát data a času.',
     'range' => 'Konec ankety musí být později než začátek.',
     'save' => 'Anketu se nepodařilo uložit. Zkuste to prosím znovu.',
     default => '',

@@ -78,6 +78,25 @@ Formulář může po odeslání, změně workflow, odpovědi odesílateli nebo p
 
 ---
 
+## Validace dat a časů v administraci
+
+U obsahových modulů Kora CMS platí, že datumy a časy zadané ve formulářích musí mít přesný formát. Pokud je hodnota neplatná, CMS ji nově neuloží „tiše jako prázdnou“, ale vrátí správce zpět do formuláře s chybovou hláškou.
+
+Týká se to hlavně těchto oblastí:
+
+- stránky: `Plánované zrušení publikace`
+- blogové články: `Plánované publikování` a `Plánované zrušení publikace`
+- podcast epizody: `Plánované zveřejnění`
+- ankety: datum a čas začátku a konce
+- jídelní a nápojové lístky: `Platí od` a `Platí do`
+- zdroje rezervací: otevírací doba, předdefinované sloty a blokovaná data
+
+U rezervací se navíc celý save workflow zapisuje transakčně. Když selže některý krok při ukládání otevíracích hodin, slotů nebo blokovaných dat, změna se vrátí zpět jako celek a v databázi nezůstane jen část nového nastavení.
+
+To je důležité hlavně po ručních úpravách nebo importech, kdy se nejčastěji objeví překlep v datu, obrácený rozsah nebo neplatný čas.
+
+---
+
 ## Podcasty – feed metadata
 
 Každý podcastový pořad má vlastní nastavení feedu pro podcastové aplikace a katalogy.

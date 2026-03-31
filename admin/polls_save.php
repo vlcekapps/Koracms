@@ -29,21 +29,58 @@ $status = in_array((string)($_POST['status'] ?? ''), ['active', 'closed'], true)
     : 'active';
 $metaTitle = mb_substr(trim((string)($_POST['meta_title'] ?? '')), 0, 160);
 $metaDescription = trim((string)($_POST['meta_description'] ?? ''));
+$isValidDate = static function (string $value): bool {
+    $dateTime = DateTime::createFromFormat('Y-m-d', $value);
+    $errors = DateTime::getLastErrors();
+    $hasErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+
+    return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d') === $value;
+};
+$isValidTime = static function (string $value): bool {
+    $dateTime = DateTime::createFromFormat('H:i', $value);
+    $errors = DateTime::getLastErrors();
+    $hasErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+
+    return $dateTime !== false && !$hasErrors && $dateTime->format('H:i') === $value;
+};
+$composeDateTime = static function (string $date, string $time): ?string {
+    $dateTime = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
+    $errors = DateTime::getLastErrors();
+    $hasErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+
+    if ($dateTime === false || $hasErrors || $dateTime->format('Y-m-d H:i') !== ($date . ' ' . $time)) {
+        return null;
+    }
+
+    return $dateTime->format('Y-m-d H:i:s');
+};
 
 $startDate = null;
 if (!empty($_POST['start_date'])) {
-    $startDate = trim((string)$_POST['start_date']) . ' ' . trim((string)($_POST['start_time'] ?? '00:00')) . ':00';
+    $startDateInput = trim((string)$_POST['start_date']);
+    $startTimeInput = trim((string)($_POST['start_time'] ?? '00:00')) ?: '00:00';
+    if (!$isValidDate($startDateInput) || !$isValidTime($startTimeInput)) {
+        $redirectToForm($id, 'dates', $redirectTarget);
+    }
+    $startDate = $composeDateTime($startDateInput, $startTimeInput);
+    if ($startDate === null) {
+        $redirectToForm($id, 'dates', $redirectTarget);
+    }
 }
 $endDate = null;
 if (!empty($_POST['end_date'])) {
-    $endDate = trim((string)$_POST['end_date']) . ' ' . trim((string)($_POST['end_time'] ?? '00:00')) . ':00';
-}
-
-if ($startDate !== null && strtotime($startDate) === false) {
-    $startDate = null;
-}
-if ($endDate !== null && strtotime($endDate) === false) {
-    $endDate = null;
+    $endDateInput = trim((string)$_POST['end_date']);
+    $endTimeInput = trim((string)($_POST['end_time'] ?? '00:00')) ?: '00:00';
+    if (!$isValidDate($endDateInput) || !$isValidTime($endTimeInput)) {
+        $redirectToForm($id, 'dates', $redirectTarget);
+    }
+    $endDate = $composeDateTime($endDateInput, $endTimeInput);
+    if ($endDate === null) {
+        $redirectToForm($id, 'dates', $redirectTarget);
+    }
 }
 if ($startDate !== null && $endDate !== null && $endDate <= $startDate) {
     $redirectToForm($id, 'range', $redirectTarget);

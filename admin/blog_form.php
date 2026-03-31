@@ -170,9 +170,17 @@ adminHeader($pageTitle);
 
 <?php if ($err === 'slug'): ?>
   <p role="alert" class="error" id="form-error">Slug článku je povinný a musí být unikátní.</p>
+<?php elseif ($err === 'required'): ?>
+  <p role="alert" class="error" id="form-error">Vyplňte prosím název článku i jeho obsah.</p>
+<?php elseif ($err === 'publish_at'): ?>
+  <p role="alert" class="error" id="form-error">Plánované publikování má neplatný formát data a času.</p>
+<?php elseif ($err === 'unpublish_at'): ?>
+  <p role="alert" class="error" id="form-error">Plánované zrušení publikace má neplatný formát data a času.</p>
+<?php elseif ($err === 'publish_range'): ?>
+  <p role="alert" class="error" id="form-error">Plánované zrušení publikace musí být později než plánované publikování.</p>
 <?php endif; ?>
 
-<form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err === 'slug' ? ' aria-describedby="form-error"' : '' ?>>
+<form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="redirect" id="blog-redirect" value="<?= h($articleListUrl) ?>">
   <?php if ($article): ?>

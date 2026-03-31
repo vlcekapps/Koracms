@@ -45,6 +45,14 @@ $redirectWithError = static function (string $errorCode) use ($redirectBase, $id
     header('Location: ' . $redirectBase . $query);
     exit;
 };
+$isValidDateTimeLocal = static function (string $value): bool {
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $value);
+    $errors = DateTime::getLastErrors();
+    $hasErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+
+    return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d\TH:i') === $value;
+};
 
 if ($title === '') {
     $redirectWithError('required');
@@ -122,10 +130,12 @@ if (!empty($_FILES['audio_file']['name'])) {
 
 $publishAt = null;
 if (!empty($_POST['publish_at'])) {
-    $dateTime = \DateTime::createFromFormat('Y-m-d\TH:i', (string)$_POST['publish_at']);
-    if ($dateTime instanceof \DateTime) {
-        $publishAt = $dateTime->format('Y-m-d H:i:s');
+    $publishAtInput = trim((string)$_POST['publish_at']);
+    if (!$isValidDateTimeLocal($publishAtInput)) {
+        $redirectWithError('publish_at');
     }
+    $dateTime = \DateTime::createFromFormat('Y-m-d\TH:i', $publishAtInput);
+    $publishAt = $dateTime->format('Y-m-d H:i:s');
 }
 
 if ($id !== null) {

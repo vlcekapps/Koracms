@@ -20,6 +20,25 @@ $adminNote = trim($_POST['admin_note'] ?? '');
 $blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 0);
 $defaultRedirect = BASE_URL . '/admin/blog.php' . ($blogId > 0 ? '?blog=' . $blogId : '');
 $redirect = internalRedirectTarget($_POST['redirect'] ?? '', $defaultRedirect);
+$redirectToForm = static function (?int $articleId, int $targetBlogId, string $errorCode) use ($blogId): never {
+    $params = ['err' => $errorCode];
+    if ($articleId !== null) {
+        $params['id'] = $articleId;
+    } else {
+        $params['blog_id'] = $targetBlogId > 0 ? $targetBlogId : $blogId;
+    }
+
+    header('Location: ' . BASE_URL . '/admin/blog_form.php?' . http_build_query($params));
+    exit;
+};
+$isValidDateTimeLocal = static function (string $value): bool {
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $value);
+    $errors = DateTime::getLastErrors();
+    $hasErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+
+    return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d\TH:i') === $value;
+};
 
 if ($blogId <= 0 || !getBlogById($blogId)) {
     header('Location: ' . BASE_URL . '/admin/blogs.php');
@@ -32,10 +51,7 @@ if (!canCurrentUserWriteToBlog($blogId)) {
 }
 
 if ($title === '' || $content === '') {
-    $fallbackFormUrl = BASE_URL . '/admin/blog_form.php'
-        . ($id ? '?id=' . $id : '?blog_id=' . $blogId);
-    header('Location: ' . $fallbackFormUrl);
-    exit;
+    $redirectToForm($id, $blogId, 'required');
 }
 
 $existingArticle = null;
@@ -56,18 +72,12 @@ if ($id !== null) {
 
 $slug = articleSlug($submittedSlug !== '' ? $submittedSlug : $title);
 if ($slug === '') {
-    $slugFormUrl = BASE_URL . '/admin/blog_form.php?err=slug'
-        . ($id ? '&id=' . $id : '&blog_id=' . $blogId);
-    header('Location: ' . $slugFormUrl);
-    exit;
+    $redirectToForm($id, $blogId, 'slug');
 }
 
 $uniqueSlug = uniqueArticleSlug($pdo, $slug, $id, $blogId);
 if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
-    $slugFormUrl = BASE_URL . '/admin/blog_form.php?err=slug'
-        . ($id ? '&id=' . $id : '&blog_id=' . $blogId);
-    header('Location: ' . $slugFormUrl);
-    exit;
+    $redirectToForm($id, $blogId, 'slug');
 }
 $slug = $uniqueSlug;
 
@@ -89,19 +99,24 @@ if ($tagIds !== []) {
 
 $publishAtSql = null;
 if ($publishAt !== '') {
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $publishAt);
-    if ($dateTime) {
-        $publishAtSql = $dateTime->format('Y-m-d H:i:s');
+    if (!$isValidDateTimeLocal($publishAt)) {
+        $redirectToForm($id, $blogId, 'publish_at');
     }
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $publishAt);
+    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 $unpublishAt = trim($_POST['unpublish_at'] ?? '');
 $unpublishAtSql = null;
 if ($unpublishAt !== '') {
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
-    if ($dateTime) {
-        $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+    if (!$isValidDateTimeLocal($unpublishAt)) {
+        $redirectToForm($id, $blogId, 'unpublish_at');
     }
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
+    $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
+}
+if ($publishAtSql !== null && $unpublishAtSql !== null && $unpublishAtSql <= $publishAtSql) {
+    $redirectToForm($id, $blogId, 'publish_range');
 }
 
 $imageFile = null;
@@ -159,12 +174,20 @@ if ($existingArticle) {
     }
 
     // Revize – snapshot starých hodnot
-    $oldStmt = $pdo->prepare("SELECT title, slug, perex, content FROM cms_articles WHERE id = ?");
+    $oldStmt = $pdo->prepare("SELECT title, slug, perex, content, publish_at, unpublish_at, meta_title, meta_description, admin_note FROM cms_articles WHERE id = ?");
     $oldStmt->execute([$id]);
     $oldData = $oldStmt->fetch();
     if ($oldData) {
         saveRevision($pdo, 'article', $id, $oldData, [
-            'title' => $title, 'slug' => $slug, 'perex' => $perex, 'content' => $content,
+            'title' => $title,
+            'slug' => $slug,
+            'perex' => $perex,
+            'content' => $content,
+            'publish_at' => $publishAtSql,
+            'unpublish_at' => $unpublishAtSql,
+            'meta_title' => $metaTitle,
+            'meta_description' => $metaDescription,
+            'admin_note' => $adminNote,
         ]);
     }
 

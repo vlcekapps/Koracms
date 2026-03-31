@@ -12,16 +12,31 @@ $description = trim($_POST['description'] ?? '');
 $content = trim($_POST['content'] ?? '');
 $validFrom = trim($_POST['valid_from'] ?? '') ?: null;
 $validTo = trim($_POST['valid_to'] ?? '') ?: null;
+$fallback = BASE_URL . '/admin/food_form.php' . ($id ? '?id=' . $id : '');
+$isValidDate = static function (string $value): bool {
+    $dateTime = DateTime::createFromFormat('Y-m-d', $value);
+    $errors = DateTime::getLastErrors();
+    $hasErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
 
-if ($validFrom !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $validFrom)) {
-    $validFrom = null;
+    return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d') === $value;
+};
+
+if ($validFrom !== null && !$isValidDate($validFrom)) {
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'valid_from']));
+    exit;
 }
-if ($validTo !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $validTo)) {
-    $validTo = null;
+if ($validTo !== null && !$isValidDate($validTo)) {
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'valid_to']));
+    exit;
+}
+if ($validFrom !== null && $validTo !== null && $validTo < $validFrom) {
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'valid_range']));
+    exit;
 }
 
 if ($title === '') {
-    header('Location: ' . BASE_URL . '/admin/food_form.php' . ($id ? '?id=' . $id . '&err=required' : '?err=required'));
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'required']));
     exit;
 }
 
@@ -38,13 +53,13 @@ if ($id !== null) {
 
 $slug = foodCardSlug($submittedSlug !== '' ? $submittedSlug : $title);
 if ($slug === '') {
-    header('Location: ' . BASE_URL . '/admin/food_form.php' . ($id ? '?id=' . $id . '&err=slug' : '?err=slug'));
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'slug']));
     exit;
 }
 
 $uniqueSlug = uniqueFoodCardSlug($pdo, $slug, $id);
 if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
-    header('Location: ' . BASE_URL . '/admin/food_form.php' . ($id ? '?id=' . $id . '&err=slug' : '?err=slug'));
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'slug']));
     exit;
 }
 $slug = $uniqueSlug;

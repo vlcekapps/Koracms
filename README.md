@@ -411,6 +411,8 @@ V administraci: **Obecná nastavení → Provoz webu**. Zapne stránku údržby 
 
 ## Řešení problémů
 
+Pokud administrace po uložení obsahu vrátí formulář zpět s chybou u data nebo času, jde nově o záměrné ochranné chování. CMS přísněji validuje plánované publikování, zrušení publikace, platnost lístků, termíny anket a rezervační časy, aby se neukládaly neplatné nebo nejednoznačné hodnoty.
+
 | Příznak | Co zkontrolovat |
 |---------|----------------|
 | E-maily nedorazí | Ověřte SMTP konstanty v `config.php`. Zkontrolujte DNS záznamy SPF, DKIM a DMARC na doméně. |
