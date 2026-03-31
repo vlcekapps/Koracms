@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.2.0] – 2026-03-31
 
 ### Přidáno
 - **HTML editor – PDF náhled jako nový obsahový snippet** – HTML obsah nově podporuje shortcode `[pdf]...[/pdf]`, který na veřejném webu vykreslí přístupný náhled PDF s titulkem a odkazem `Otevřít PDF samostatně`; content/media picker zároveň nově u veřejných PDF z knihovny médií nabízí akci `Vložit PDF náhled`
