@@ -103,6 +103,35 @@ document.addEventListener('click', function (e) {
     setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
   }
 });
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.js-copy-content');
+  if (!btn) return;
+  var targetId = btn.getAttribute('data-copy-target') || '';
+  var source = targetId ? document.getElementById(targetId) : null;
+  if (!source) return;
+  var payload = source.textContent || '';
+  var live = document.getElementById('a11y-live');
+  var defaultLabel = btn.getAttribute('data-copy-label') || 'Zkopírovat obsah';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(payload).then(function () {
+      btn.textContent = 'Zkopírováno!';
+      if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
+      setTimeout(function () { btn.textContent = defaultLabel; }, 2000);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = payload;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Zkopírováno!';
+    if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
+    setTimeout(function () { btn.textContent = defaultLabel; }, 2000);
+  }
+});
 </script>
 <?php $customFooter = getSetting('custom_footer_code', ''); if ($customFooter !== ''): ?>
 <?= $customFooter ?>

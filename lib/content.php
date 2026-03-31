@@ -94,6 +94,76 @@ function contentEmbedMediaMimeType(string $url, string $type, string $preferredM
     };
 }
 
+function contentEmbedPdfMimeType(string $url, string $preferredMimeType = ''): string
+{
+    $preferredMimeType = strtolower(trim($preferredMimeType));
+    if ($preferredMimeType === 'application/pdf') {
+        return $preferredMimeType;
+    }
+
+    $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+    return $extension === 'pdf' ? 'application/pdf' : '';
+}
+
+function contentEmbedPdfTitle(string $url, string $preferredTitle = ''): string
+{
+    $preferredTitle = trim($preferredTitle);
+    if ($preferredTitle !== '') {
+        return $preferredTitle;
+    }
+
+    $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
+    $filename = rawurldecode((string)basename($path));
+    if ($filename === '') {
+        return 'PDF dokument';
+    }
+
+    $filenameWithoutExtension = preg_replace('/\.pdf$/i', '', $filename);
+    $normalized = trim((string)preg_replace('/[\s_-]+/u', ' ', (string)$filenameWithoutExtension));
+
+    return $normalized !== '' ? $normalized : 'PDF dokument';
+}
+
+function contentCodeShortcodeBody(string $body): string
+{
+    $body = str_replace(["\r\n", "\r"], "\n", $body);
+    if (str_starts_with($body, "\n")) {
+        $body = substr($body, 1);
+    }
+    if (str_ends_with($body, "\n")) {
+        $body = substr($body, 0, -1);
+    }
+
+    return $body;
+}
+
+function renderContentCodeShortcode(string $body): ?string
+{
+    $code = contentCodeShortcodeBody($body);
+    if ($code === '') {
+        return null;
+    }
+
+    static $contentCodeShortcodeIndex = 0;
+    $contentCodeShortcodeIndex++;
+
+    $blockId = 'content-code-block-' . $contentCodeShortcodeIndex;
+    $titleId = $blockId . '-title';
+    $codeId = $blockId . '-code';
+
+    return "\n\n"
+        . '<section class="content-code-block" aria-labelledby="' . h($titleId) . '">'
+        . '<div class="content-code-block__header">'
+        . '<p id="' . h($titleId) . '" class="content-code-block__eyebrow">Ukázka kódu</p>'
+        . '<button type="button" class="button-secondary content-code-block__copy js-copy-content" data-copy-target="' . h($codeId) . '" data-copy-label="Zkopírovat obsah">Zkopírovat obsah</button>'
+        . '</div>'
+        . '<pre class="content-code-block__pre"><code id="' . h($codeId) . '">' . h($code) . '</code></pre>'
+        . '</section>'
+        . "\n\n";
+}
+
 function renderContentAudioShortcode(string $url, string $preferredMimeType = ''): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
@@ -133,6 +203,36 @@ function renderContentVideoShortcode(string $url, string $preferredMimeType = ''
         . 'Váš prohlížeč nepodporuje přehrávání videa. <a href="' . $escapedUrl . '">Otevřít video soubor</a>.'
         . '</video>'
         . '</div>'
+        . "\n\n";
+}
+
+function renderContentPdfShortcode(string $url, string $title = '', string $preferredMimeType = ''): ?string
+{
+    $normalizedUrl = normalizeContentEmbedUrl($url);
+    $mimeType = contentEmbedPdfMimeType($normalizedUrl, $preferredMimeType);
+
+    if ($normalizedUrl === '' || $mimeType !== 'application/pdf') {
+        return null;
+    }
+
+    $resolvedTitle = contentEmbedPdfTitle($normalizedUrl, $title);
+    $escapedUrl = h($normalizedUrl);
+    $escapedTitle = h($resolvedTitle);
+
+    return "\n\n"
+        . '<section class="content-embed-card content-embed-card--pdf" aria-label="PDF dokument: ' . $escapedTitle . '">'
+        . '<div class="content-embed-card__content">'
+        . '<p class="content-embed-card__eyebrow">PDF dokument</p>'
+        . '<p class="content-embed-card__title"><a href="' . $escapedUrl . '">' . $escapedTitle . '</a></p>'
+        . '<p class="content-embed-card__excerpt">Náhled PDF se může lišit podle prohlížeče a asistivní technologie. Pokud se nezobrazí správně, otevřete dokument samostatně.</p>'
+        . '<div class="content-embed-frame content-embed-frame--pdf">'
+        . '<iframe src="' . $escapedUrl . '" title="PDF dokument: ' . $escapedTitle . '" loading="lazy"></iframe>'
+        . '</div>'
+        . '<div class="content-embed-card__actions">'
+        . '<a class="button-secondary" href="' . $escapedUrl . '">Otevřít PDF samostatně</a>'
+        . '</div>'
+        . '</div>'
+        . '</section>'
         . "\n\n";
 }
 
@@ -768,6 +868,27 @@ function renderContentShortcodes(string $text): string
             }
 
             return renderContentGalleryShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[pdf(?:\s+([^\]]*))?\](.*?)\[\/pdf\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $source = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['src', 'url']);
+            $title = trim((string)($attributes['title'] ?? $attributes['label'] ?? ''));
+            $mimeType = strtolower(trim((string)($attributes['mime'] ?? $attributes['type'] ?? '')));
+
+            return renderContentPdfShortcode($source, $title, $mimeType) ?? $matches[0];
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[code(?:\s+([^\]]*))?\](.*?)\[\/code\]/is',
+        static function (array $matches): string {
+            return renderContentCodeShortcode((string)($matches[2] ?? '')) ?? $matches[0];
         },
         $text
     ) ?? $text;

@@ -191,6 +191,39 @@ function httpIntegrationCreatePngFixtureFile(string $prefix, array &$createdTemp
     return $path;
 }
 
+function httpIntegrationCreatePdfFixtureFile(string $prefix, array &$createdTempFiles): string
+{
+    $path = tempnam(sys_get_temp_dir(), $prefix);
+    if ($path === false) {
+        throw new RuntimeException('Nepodařilo se vytvořit dočasný PDF fixture soubor pro HTTP integration test.');
+    }
+
+    $pdfFixture = <<<PDF
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>
+endobj
+trailer
+<< /Root 1 0 R >>
+%%EOF
+PDF;
+
+    $written = file_put_contents($path, $pdfFixture);
+    if ($written === false) {
+        @unlink($path);
+        throw new RuntimeException('Nepodařilo se zapsat PDF fixture pro HTTP integration test.');
+    }
+
+    $createdTempFiles[] = $path;
+    return $path;
+}
+
 function httpIntegrationFetchMediaById(PDO $pdo, int $mediaId): ?array
 {
     if ($mediaId <= 0) {
@@ -727,6 +760,89 @@ try {
     }
 
     httpIntegrationPrintResult('content_reference_gallery_http', $galleryPickerIssues, $failures);
+
+    $pdfPickerIssues = [];
+    $pdfMediaOriginalName = 'http-picker-pdf-' . bin2hex(random_bytes(4)) . '.pdf';
+    $pdfFixturePath = httpIntegrationCreatePdfFixtureFile('kora-picker-pdf-', $createdTempFiles);
+    $pdfUploadResponse = postMultipartUrl(
+        $baseUrl . BASE_URL . '/admin/media.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'upload',
+            'upload_visibility' => 'public',
+            'return_to' => BASE_URL . '/admin/media.php',
+        ],
+        [
+            'media_files[0]' => [
+                'path' => $pdfFixturePath,
+                'filename' => $pdfMediaOriginalName,
+                'type' => 'application/pdf',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($pdfUploadResponse) !== 302) {
+        $pdfPickerIssues[] = 'pdf content picker fixture upload nevrátil 302 redirect';
+    }
+
+    $pdfMedia = httpIntegrationFetchMediaByOriginalName($pdo, $pdfMediaOriginalName);
+    if ($pdfMedia === null) {
+        $pdfPickerIssues[] = 'pdf content picker fixture nevytvořil záznam v cms_media';
+    } else {
+        $createdMediaIds[] = (int)$pdfMedia['id'];
+        fetchUrl($baseUrl . BASE_URL . '/admin/media.php', $adminSession['cookie'], 0);
+        $pdfSearchQuery = rawurlencode(pathinfo($pdfMediaOriginalName, PATHINFO_FILENAME));
+        $pdfPickerResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/content_reference_search.php?q=' . $pdfSearchQuery . '&type=media',
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($pdfPickerResponse) !== 200) {
+            $pdfPickerIssues[] = 'pdf content picker search nevrátil 200';
+        } else {
+            $pdfPickerPayload = json_decode((string)($pdfPickerResponse['body'] ?? ''), true);
+            if (!is_array($pdfPickerPayload) || ($pdfPickerPayload['ok'] ?? false) !== true) {
+                $pdfPickerIssues[] = 'pdf content picker search nevrátil čitelné JSON s ok=true';
+            } else {
+                $pdfMediaFound = false;
+                foreach (($pdfPickerPayload['results'] ?? []) as $pickerResult) {
+                    if (!is_array($pickerResult)) {
+                        continue;
+                    }
+                    if ((string)($pickerResult['type'] ?? '') !== 'media_file') {
+                        continue;
+                    }
+                    if ((string)($pickerResult['title'] ?? '') !== $pdfMediaOriginalName) {
+                        continue;
+                    }
+                    $pdfMediaFound = true;
+                    if ((string)($pickerResult['path'] ?? '') !== mediaFileUrl($pdfMedia)) {
+                        $pdfPickerIssues[] = 'pdf content picker vrátil médium s neočekávanou veřejnou cestou';
+                    }
+                    $actions = $pickerResult['insert_actions'] ?? [];
+                    $hasPdfAction = false;
+                    if (is_array($actions)) {
+                        foreach ($actions as $action) {
+                            if (is_array($action) && (string)($action['label'] ?? '') === 'Vložit PDF náhled') {
+                                $hasPdfAction = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!$hasPdfAction) {
+                        $pdfPickerIssues[] = 'pdf content picker u média nenabízí akci Vložit PDF náhled';
+                    }
+                    break;
+                }
+                if (!$pdfMediaFound) {
+                    $pdfPickerIssues[] = 'pdf content picker nenašel nahrané PDF médium podle dotazu';
+                }
+            }
+        }
+    }
+
+    httpIntegrationPrintResult('content_reference_pdf_http', $pdfPickerIssues, $failures);
 
     $reservationIssues = [];
     $resourceSlug = 'http-resource-' . bin2hex(random_bytes(4));

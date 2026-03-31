@@ -6,6 +6,10 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **HTML editor – PDF náhled jako nový obsahový snippet** – HTML obsah nově podporuje shortcode `[pdf]...[/pdf]`, který na veřejném webu vykreslí přístupný náhled PDF s titulkem a odkazem `Otevřít PDF samostatně`; content/media picker zároveň nově u veřejných PDF z knihovny médií nabízí akci `Vložit PDF náhled`
+- **HTML editor – kopírovatelné bloky kódu přes shortcode `[code]...[/code]`** – veřejný renderer nově umí z HTML obsahu vytvořit výrazný blok kódu s tlačítkem `Zkopírovat obsah`, potvrzením přes live region a bezpečným zkopírováním textu do schránky bez nutnosti ručního označování
+
 ### Změněno
 - **Správa modulů – první uložení už neschovává právě povolený modul zpět do vypnutého stavu** – obrazovka `admin/settings_modules.php` nově po uložení používá PRG redirect a flash zprávu místo renderu ve stejné POST odpovědi, takže se checkboxy po prvním uložení načtou z opravdu uloženého stavu a success hláška se zobrazí jen jednou
 - **Formuláře – preset Nahlášení chyby už při editaci nepřichází o pole pro potvrzovací e-mail** – create flow presetů nově zachovává přesné interní názvy polí z definice šablony místo jejich zbytečného slugování, takže se formulář po vytvoření dá znovu uložit i bez změn a potvrzovací e-mail zůstane navázaný na správné e-mailové pole; současně je doplněná zpětná kompatibilita pro dříve vytvořené preset formuláře, aby dál fungovaly i jejich placeholdery v potvrzovacích zprávách

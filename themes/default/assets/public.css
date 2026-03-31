@@ -1534,6 +1534,10 @@ body.theme-public textarea.form-control {
   min-height: 44rem;
 }
 
+.content-embed-frame--pdf iframe {
+  min-height: 48rem;
+}
+
 .article-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1641,6 +1645,56 @@ body.theme-public textarea.form-control {
 .embedded-media .audio-player,
 .embedded-media .video-player {
   margin-bottom: 0;
+}
+
+.content-code-block {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1.5rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.content-code-block__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.content-code-block__eyebrow {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.content-code-block__copy {
+  flex: 0 0 auto;
+}
+
+.content-code-block__pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(2, 6, 23, 0.92);
+  color: #f8fafc;
+}
+
+.content-code-block__pre code {
+  display: block;
+  font-family: "Cascadia Code", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre;
 }
 
 .content-media {

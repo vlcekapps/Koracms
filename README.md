@@ -315,7 +315,7 @@ Kora CMS podporuje dva editory:
 - **HTML textarea** – výchozí, přístupnější varianta
 - **WYSIWYG (Quill)** – volitelný vizuální režim
 
-Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložení interních odkazů, galerií, médií, formulářů, anket a hotových HTML bloků.
+Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložení interních odkazů, galerií, médií, formulářů, anket, PDF náhledu z knihovny médií a hotových HTML bloků.
 
 ### Podporované snippety
 
@@ -323,6 +323,8 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 |---|---|
 | `[audio]https://example.test/audio.mp3[/audio]` | HTML5 audio přehrávač |
 | `[video]https://example.test/video.mp4[/video]` | HTML5 video přehrávač |
+| `[pdf]https://example.test/dokument.pdf[/pdf]` | Náhled PDF s odkazem na samostatné otevření |
+| `[code]echo "Ahoj";[/code]` | Blok kódu s tlačítkem `Zkopírovat obsah` |
 | `[gallery]slug-alba[/gallery]` | Vložená galerie podle slugu |
 | `[form]slug-formulare[/form]` | Živý embed veřejného formuláře |
 | `[poll]slug-ankety[/poll]` | Živý embed veřejné ankety |
@@ -333,7 +335,7 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 | `[event]slug-udalosti[/event]` | Teaser karta události |
 | `[board]slug-oznameni[/board]` | Teaser karta položky vývěsky |
 
-Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, ostatní nové snippety jako sjednocené obsahové karty.
+Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF jako inline náhled s bezpečným odkazem a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu.
 
 ---
 

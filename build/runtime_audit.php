@@ -6066,7 +6066,8 @@ echo "=== content_shortcodes ===\n";
 if ($articleId === false) {
     echo "OK\n";
 } else {
-    $contentShortcodeIssues = [];
+$contentShortcodeIssues = [];
+$runtimeAuditPdfUrl = '/uploads/runtime-audit.pdf';
     $originalArticleContent = '';
     try {
         $originalContentStmt = $pdo->prepare("SELECT content FROM cms_articles WHERE id = ?");
@@ -6077,6 +6078,9 @@ if ($articleId === false) {
 <p>Runtime audit shortcode test.</p>
 [audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]
 [video src="/downloads/file.php?id=321" mime="video/mp4"][/video]
+[pdf src="{$runtimeAuditPdfUrl}" title="Runtime audit PDF" mime="application/pdf"][/pdf]
+[code]echo "Ahoj z code shortcodu";
+$soubor = "/uploads/runtime-audit.pdf";[/code]
 HTML;
 
         if (!empty($galleryAlbumRow['slug'])) {
@@ -6127,6 +6131,27 @@ HTML;
             }
             if (!str_contains($shortcodeProbe['body'], 'src="/downloads/file.php?id=321" type="video/mp4"')) {
                 $contentShortcodeIssues[] = 'video shortcode with safe download endpoint and mime attribute was not rendered';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'content-embed-card--pdf')) {
+                $contentShortcodeIssues[] = 'pdf shortcode was not rendered as embedded pdf card';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'title="PDF dokument: Runtime audit PDF"')) {
+                $contentShortcodeIssues[] = 'pdf shortcode is missing accessible iframe title';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'Otevřít PDF samostatně')) {
+                $contentShortcodeIssues[] = 'pdf shortcode is missing fallback open action';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'content-code-block')) {
+                $contentShortcodeIssues[] = 'code shortcode was not rendered as copyable code block';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'class="button-secondary content-code-block__copy js-copy-content"')) {
+                $contentShortcodeIssues[] = 'code shortcode is missing copy button';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'Zkopírovat obsah')) {
+                $contentShortcodeIssues[] = 'code shortcode is missing copy button label';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'echo &quot;Ahoj z code shortcodu&quot;;')) {
+                $contentShortcodeIssues[] = 'code shortcode did not preserve escaped code content';
             }
             if (!empty($galleryAlbumRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-gallery-embed')) {
                 $contentShortcodeIssues[] = 'gallery shortcode was not rendered as embedded gallery';
@@ -6210,6 +6235,8 @@ foreach ([
     '[form',
     '[poll',
     '[download',
+    '[pdf',
+    '[code',
     '[podcast(?:',
     '[podcast_episode',
     '[place',
@@ -6247,6 +6274,7 @@ foreach ([
     'Vložit formulář',
     'Vložit anketu',
     'Vložit blok ke stažení',
+    'Vložit PDF náhled',
     'Vložit podcast',
     'Vložit epizodu podcastu',
     'Vložit místo',
@@ -6263,6 +6291,30 @@ foreach ([
 if (!str_contains($contentSearchSource, 'Vložit fotogalerii')) {
     $contentSnippetIssues[] = 'content reference search is missing gallery album insert action fragment';
 }
+if (!str_contains($contentSearchSource, 'function contentReferencePdfShortcode(string $url, string $title = \'\', string $mimeType = \'\'): string')) {
+    $contentSnippetIssues[] = 'content reference search is missing pdf shortcode helper';
+}
+if (!str_contains($contentLibrarySource, 'function renderContentPdfShortcode(string $url, string $title = \'\', string $preferredMimeType = \'\'): ?string')) {
+    $contentSnippetIssues[] = 'content renderer is missing pdf shortcode helper';
+}
+if (!str_contains($contentLibrarySource, 'function renderContentCodeShortcode(string $body): ?string')) {
+    $contentSnippetIssues[] = 'content renderer is missing code shortcode helper';
+}
+if (!str_contains($contentLibrarySource, 'content-embed-card content-embed-card--pdf')) {
+    $contentSnippetIssues[] = 'content renderer is missing pdf embed card markup';
+}
+if (!str_contains($contentLibrarySource, 'content-code-block__copy js-copy-content')) {
+    $contentSnippetIssues[] = 'content renderer is missing copyable code block markup';
+}
+if (!str_contains($contentLibrarySource, '/\\[code(?:\\s+([^\\]]*))?\\](.*?)\\[\\/code\\]/is')) {
+    $contentSnippetIssues[] = 'content renderer is missing code shortcode parser';
+}
+if (!str_contains($baseLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/layouts/base.php'), '.js-copy-content')) {
+    $contentSnippetIssues[] = 'default layout is missing code copy button handler';
+}
+if (!str_contains($baseLayoutSource, 'Obsah byl zkopírován do schránky.')) {
+    $contentSnippetIssues[] = 'default layout is missing copyable code live region feedback';
+}
 if (!str_contains($contentSearchSource, "SELECT id, name AS title, slug, description, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type")) {
     $contentSnippetIssues[] = 'content reference search gallery album query is not selecting real description field';
 }
@@ -6271,6 +6323,9 @@ if (str_contains($contentSearchSource, "SELECT id, name AS title, slug, excerpt,
 }
 if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('content_reference_gallery_http'")) {
     $contentSnippetIssues[] = 'build/http_integration.php is missing gallery content picker coverage';
+}
+if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('content_reference_pdf_http'")) {
+    $contentSnippetIssues[] = 'build/http_integration.php is missing pdf content picker coverage';
 }
 
 if ($contentSnippetIssues === []) {

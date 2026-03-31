@@ -246,6 +246,19 @@ function contentReferenceGalleryShortcode(string $slug): string
     return '[gallery]' . $slug . '[/gallery]';
 }
 
+function contentReferencePdfShortcode(string $url, string $title = '', string $mimeType = ''): string
+{
+    $attributes = [contentReferenceShortcodeAttribute('src', $url)];
+    if (trim($title) !== '') {
+        $attributes[] = contentReferenceShortcodeAttribute('title', $title);
+    }
+    if (trim($mimeType) !== '') {
+        $attributes[] = contentReferenceShortcodeAttribute('mime', $mimeType);
+    }
+
+    return '[pdf ' . implode(' ', $attributes) . '][/pdf]';
+}
+
 function contentReferenceSimpleEntityShortcode(string $tag, string $slug): string
 {
     return '[' . $tag . ']' . $slug . '[/' . $tag . ']';
@@ -462,6 +475,21 @@ function contentReferenceMediaLibraryAction(array $row): ?array
             'Do textu byl vložen video přehrávač.',
             true,
             contentReferenceVideoShortcode($url, $normalizedMimeType)
+        );
+    }
+
+    if ($type === 'media_file') {
+        $pdfMimeType = contentEmbedPdfMimeType($url, $mimeType);
+        if ($pdfMimeType !== 'application/pdf') {
+            return null;
+        }
+
+        return contentReferenceBuildAction(
+            'pdf_shortcode',
+            'Vložit PDF náhled',
+            'Do textu byl vložen PDF náhled.',
+            true,
+            contentReferencePdfShortcode($url, contentReferenceTitle($row), $pdfMimeType)
         );
     }
 

@@ -726,11 +726,14 @@ Content picker je přístupný dialog v HTML editoru, který umožňuje:
 - Vložit obsahovou kartu pro download, podcast, epizodu, místo, událost nebo oznámení
 - Vložit přímý odkaz ke stažení
 - Vložit audio/video přehrávač přes snippety nebo přímé akce
+- Vložit PDF náhled z veřejného PDF v knihovně médií
 
 Podporované obsahové snippety v HTML editoru:
 
 - `[audio]...[/audio]`
 - `[video]...[/video]`
+- `[pdf]...[/pdf]`
+- `[code]...[/code]`
 - `[gallery]slug-alba[/gallery]`
 - `[form]slug-formulare[/form]`
 - `[poll]slug-ankety[/poll]`
@@ -740,6 +743,12 @@ Podporované obsahové snippety v HTML editoru:
 - `[place]slug-mista[/place]`
 - `[event]slug-udalosti[/event]`
 - `[board]slug-oznameni[/board]`
+
+Praktické poznámky:
+
+- U veřejného PDF z knihovny médií nabízí picker akci `Vložit PDF náhled`, která vloží shortcode `[pdf]...[/pdf]`.
+- PDF snippet vykreslí inline náhled dokumentu a pod ním ponechá i odkaz `Otevřít PDF samostatně`.
+- Shortcode `[code]...[/code]` je určený pro kopírovatelné ukázky příkazů, konfigurace nebo kódu; na veřejném webu zobrazí blok s tlačítkem `Zkopírovat obsah`.
 
 ---
 
