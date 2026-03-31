@@ -2,26 +2,34 @@
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
-$success = false;
+$moduleKeys = ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms', 'statistics'];
+$flash = is_array($_SESSION['settings_modules_flash'] ?? null) ? $_SESSION['settings_modules_flash'] : [];
+unset($_SESSION['settings_modules_flash']);
+$successMessage = trim((string)($flash['success'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    foreach (['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms', 'statistics'] as $m) {
+    foreach ($moduleKeys as $m) {
         saveSetting('module_' . $m, isset($_POST['module_' . $m]) ? '1' : '0');
     }
     saveSetting('visitor_tracking_enabled', isset($_POST['visitor_tracking_enabled']) ? '1' : '0');
     saveSetting('visitor_counter_enabled', isset($_POST['visitor_counter_enabled']) ? '1' : '0');
     $retDays = max(1, (int)($_POST['stats_retention_days'] ?? 90));
     saveSetting('stats_retention_days', (string)$retDays);
+    clearSettingsCache();
     logAction('settings_modules_save');
-    $success = true;
+    $_SESSION['settings_modules_flash'] = [
+        'success' => 'Nastavení modulů bylo uloženo.',
+    ];
+    header('Location: ' . BASE_URL . '/admin/settings_modules.php');
+    exit;
 }
 
 adminHeader('Správa modulů');
 ?>
 
-<?php if ($success): ?>
-  <p class="success" role="status">Nastavení modulů bylo uloženo.</p>
+<?php if ($successMessage !== ''): ?>
+  <p class="success" role="status"><?= h($successMessage) ?></p>
 <?php endif; ?>
 
 <p>Tady zapnete nebo vypnete jednotlivé moduly webu. Aktivní moduly se podle svého nastavení zobrazují návštěvníkům na veřejném webu.</p>

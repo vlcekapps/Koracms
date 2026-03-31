@@ -126,6 +126,12 @@ function httpIntegrationFieldHasAriaInvalid(string $html, string $fieldId): bool
     return preg_match('/id="' . preg_quote($fieldId, '/') . '"[^>]*aria-invalid="true"/i', $html) === 1;
 }
 
+function httpIntegrationCheckboxIsChecked(string $html, string $fieldId): bool
+{
+    $pattern = '/<input(?=[^>]*id="' . preg_quote($fieldId, '/') . '")(?=[^>]*\bchecked\b)[^>]*>/i';
+    return preg_match($pattern, $html) === 1;
+}
+
 function httpIntegrationCreateTempFile(string $prefix, string $contents, array &$createdTempFiles): string
 {
     $path = tempnam(sys_get_temp_dir(), $prefix);
@@ -251,6 +257,9 @@ try {
         'module_gallery' => getSetting('module_gallery', '0'),
         'module_reservations' => getSetting('module_reservations', '0'),
         'module_forms' => getSetting('module_forms', '0'),
+        'visitor_tracking_enabled' => getSetting('visitor_tracking_enabled', '0'),
+        'visitor_counter_enabled' => getSetting('visitor_counter_enabled', '0'),
+        'stats_retention_days' => getSetting('stats_retention_days', '90'),
     ];
 
     saveSetting('module_blog', '1');
@@ -418,6 +427,74 @@ try {
     }
 
     httpIntegrationPrintResult('settings_save_http', $settingsIssues, $failures);
+
+    $settingsModulesIssues = [];
+    $settingsModulesUrl = $baseUrl . BASE_URL . '/admin/settings_modules.php';
+    $settingsModuleKeys = ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms', 'statistics'];
+
+    saveSetting('module_forms', '0');
+    clearSettingsCache();
+
+    $settingsModulesPage = fetchUrl($settingsModulesUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($settingsModulesPage) !== 200) {
+        $settingsModulesIssues[] = 'správa modulů nevrátila 200 před uložením';
+    }
+    $settingsModulesCsrf = extractHiddenInputValue($settingsModulesPage['body'], 'csrf_token');
+    if ($settingsModulesCsrf === '') {
+        $settingsModulesIssues[] = 'správa modulů nevykreslila csrf_token';
+    }
+    if (httpIntegrationCheckboxIsChecked($settingsModulesPage['body'], 'module_forms')) {
+        $settingsModulesIssues[] = 'test správy modulů nezačínal s vypnutým modulem formulářů';
+    }
+
+    $settingsModulesFields = [
+        'csrf_token' => $settingsModulesCsrf,
+        'stats_retention_days' => httpIntegrationSettingValue($pdo, 'stats_retention_days') !== ''
+            ? httpIntegrationSettingValue($pdo, 'stats_retention_days')
+            : '90',
+    ];
+    foreach ($settingsModuleKeys as $moduleKey) {
+        $settingValue = getSetting('module_' . $moduleKey, '0');
+        if ($moduleKey === 'forms') {
+            $settingValue = '1';
+        }
+        if ($settingValue === '1') {
+            $settingsModulesFields['module_' . $moduleKey] = '1';
+        }
+    }
+    if (getSetting('visitor_tracking_enabled', '0') === '1') {
+        $settingsModulesFields['visitor_tracking_enabled'] = '1';
+    }
+    if (getSetting('visitor_counter_enabled', '0') === '1') {
+        $settingsModulesFields['visitor_counter_enabled'] = '1';
+    }
+
+    $settingsModulesSaveResponse = postUrl($settingsModulesUrl, $settingsModulesFields, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($settingsModulesSaveResponse) !== 302) {
+        $settingsModulesIssues[] = 'uložení správy modulů nevrátilo 302 redirect';
+    }
+    if (!responseHasLocationHeader($settingsModulesSaveResponse['headers'], BASE_URL . '/admin/settings_modules.php', $baseUrl)) {
+        $settingsModulesIssues[] = 'uložení správy modulů nemíří zpět na settings_modules.php';
+    }
+    clearSettingsCache();
+    if (getSetting('module_forms', '0') !== '1') {
+        $settingsModulesIssues[] = 'první uložení správy modulů neuložilo povolení modulu formulářů';
+    }
+
+    $settingsModulesSuccessPage = fetchUrl($settingsModulesUrl, $adminSession['cookie'], 0);
+    if (!str_contains($settingsModulesSuccessPage['body'], 'Nastavení modulů bylo uloženo.')) {
+        $settingsModulesIssues[] = 'správa modulů po uložení nezobrazila success flash zprávu';
+    }
+    if (!httpIntegrationCheckboxIsChecked($settingsModulesSuccessPage['body'], 'module_forms')) {
+        $settingsModulesIssues[] = 'správa modulů po prvním uložení stále nevykreslila povolený modul formulářů jako checked';
+    }
+
+    $settingsModulesSecondRead = fetchUrl($settingsModulesUrl, $adminSession['cookie'], 0);
+    if (str_contains($settingsModulesSecondRead['body'], 'Nastavení modulů bylo uloženo.')) {
+        $settingsModulesIssues[] = 'success flash zpráva správy modulů po druhém načtení nezmizela';
+    }
+
+    httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
 
     $formPresetIssues = [];
     $issuePresetDefinition = formPresetDefinition('issue_report');

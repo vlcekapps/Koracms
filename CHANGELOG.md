@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Změněno
+- **Správa modulů – první uložení už neschovává právě povolený modul zpět do vypnutého stavu** – obrazovka `admin/settings_modules.php` nově po uložení používá PRG redirect a flash zprávu místo renderu ve stejné POST odpovědi, takže se checkboxy po prvním uložení načtou z opravdu uloženého stavu a success hláška se zobrazí jen jednou
 - **Formuláře – preset Nahlášení chyby už při editaci nepřichází o pole pro potvrzovací e-mail** – create flow presetů nově zachovává přesné interní názvy polí z definice šablony místo jejich zbytečného slugování, takže se formulář po vytvoření dá znovu uložit i bez změn a potvrzovací e-mail zůstane navázaný na správné e-mailové pole; současně je doplněná zpětná kompatibilita pro dříve vytvořené preset formuláře, aby dál fungovaly i jejich placeholdery v potvrzovacích zprávách
 
 ## [3.1.1] – 2026-03-31

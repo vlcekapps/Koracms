@@ -9016,6 +9016,43 @@ if ($settingsPrgIssues === []) {
     }
 }
 
+echo "=== settings_modules_prg_guardrails ===\n";
+$settingsModulesPrgIssues = [];
+$settingsModulesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_modules.php');
+foreach ([
+    '$_SESSION[\'settings_modules_flash\']',
+    'clearSettingsCache();',
+    "header('Location: ' . BASE_URL . '/admin/settings_modules.php');",
+    '$successMessage = trim((string)($flash[\'success\'] ?? \'\'))',
+] as $settingsModulesFragment) {
+    if (!str_contains($settingsModulesSource, $settingsModulesFragment)) {
+        $settingsModulesPrgIssues[] = 'settings modules screen is missing PRG fragment: ' . $settingsModulesFragment;
+    }
+}
+if ($httpIntegrationSource === '') {
+    $settingsModulesPrgIssues[] = 'build/http_integration.php is missing for module settings coverage';
+} else {
+    foreach ([
+        "httpIntegrationPrintResult('settings_modules_http'",
+        'Nastavení modulů bylo uloženo.',
+        "saveSetting('module_forms', '0');",
+        "httpIntegrationCheckboxIsChecked(\$settingsModulesSuccessPage['body'], 'module_forms')",
+        'success flash zpráva správy modulů po druhém načtení nezmizela',
+    ] as $settingsModulesIntegrationFragment) {
+        if (!str_contains($httpIntegrationSource, $settingsModulesIntegrationFragment)) {
+            $settingsModulesPrgIssues[] = 'settings modules integration is missing fragment: ' . $settingsModulesIntegrationFragment;
+        }
+    }
+}
+if ($settingsModulesPrgIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($settingsModulesPrgIssues as $settingsModulesPrgIssue) {
+        echo '- ' . $settingsModulesPrgIssue . "\n";
+    }
+}
+
 echo "=== public_forms_http_guardrails ===\n";
 $publicFormsHttpIssues = [];
 $formsControllerSource = (string)file_get_contents(dirname(__DIR__) . '/forms/index.php');
