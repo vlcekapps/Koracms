@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.0.0] – 2026-03-31
 
 ### Přidáno
 - **Blogy – volitelný alternativní text loga blogu** – každý blog nově může mít vedle nahraného loga i samostatný alternativní text pro čtečky obrazovky a fallback při nenačtení obrázku; pokud pole zůstane prázdné, logo se na veřejném indexu blogu dál chová jako dekorativní obrázek a po odebrání loga se alt text automaticky vyprázdní
