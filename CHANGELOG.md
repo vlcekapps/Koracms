@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Změněno
+- **Import / Export – JSON import nově přísně hlídá UTF-8 a chrání českou diakritiku** – administrace při importu JSON nejdřív ověří platné UTF-8, toleruje jen běžný UTF-8 BOM a soubor s poškozeným kódováním odmítne dřív, než by se texty zapsaly do databáze; dokumentace současně nově výslovně upozorňuje, že ruční SQL restore musí používat `utf8mb4`, jinak se české znaky mohou změnit na `?`
 - **Widgety – footer už nespoléhá na natvrdo zapsané odkazy a sociální sítě** – odkazy na sociální sítě, vyhledávání napříč webem i odběr novinek se nově spravují jako skutečné widgety; footer už tyto prvky negeneruje natvrdo a administrace `Obecná nastavení` se tím zjednodušila o samostatná pole pro sociální sítě
 - **Widgety – veřejné statistiky už nemají duplicitní přepínač ve správě modulů** – zobrazení widgetu `Statistiky návštěvnosti` se nově řídí jen třemi podmínkami: zapnutým modulem Statistiky, aktivním sledováním návštěvnosti a tím, že je samotný widget aktivní v některé zóně; duplicitní checkbox ve `Správě modulů` zmizel
 - **Widgety – přehled widgetů nově ukazuje i důvod, proč se aktivní widget na webu nezobrazí** – správa widgetů používá stejnou dostupnostní logiku jako veřejný render a u aktivních widgetů nově přímo nad tlačítkem `Nastavení` vypíše, zda je blok skrytý kvůli vypnutému modulu, vypnutému sledování, chybějícímu obsahu nebo neplatné vazbě na formulář, blog či album

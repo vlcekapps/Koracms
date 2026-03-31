@@ -544,6 +544,92 @@ try {
 
     httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
 
+    $jsonImportIssues = [];
+    $importUrl = $baseUrl . BASE_URL . '/admin/import.php';
+    $importPage = fetchUrl($importUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($importPage) !== 200) {
+        $jsonImportIssues[] = 'import dat nevykreslil formulář';
+    }
+    $importCsrf = extractHiddenInputValue($importPage['body'], 'csrf_token');
+    if ($importCsrf === '') {
+        $jsonImportIssues[] = 'import dat nevykreslil csrf_token';
+    }
+
+    $originalImportSettings = [
+        'site_name' => httpIntegrationSettingValue($pdo, 'site_name'),
+    ];
+
+    $utf8ImportSiteName = 'HTTP Import UTF-8 ' . bin2hex(random_bytes(4)) . ' Žluťoučký kůň';
+    $validImportPayload = [
+        'site' => 'cms',
+        'settings' => [
+            [
+                'key' => 'site_name',
+                'value' => $utf8ImportSiteName,
+            ],
+        ],
+    ];
+    $validImportPath = httpIntegrationCreateTempFile(
+        'imp',
+        "\xEF\xBB\xBF" . (string)json_encode($validImportPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        $createdTempFiles
+    );
+    $validImportResponse = postMultipartUrl(
+        $importUrl,
+        ['csrf_token' => $importCsrf],
+        [
+            'import_file' => [
+                'path' => $validImportPath,
+                'filename' => 'cms-import-valid.json',
+                'type' => 'application/json',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($validImportResponse) !== 200) {
+        $jsonImportIssues[] = 'validní UTF-8 JSON import nevrátil 200';
+    }
+    if (!str_contains($validImportResponse['body'], 'Import proběhl úspěšně.')) {
+        $jsonImportIssues[] = 'validní UTF-8 JSON import nezobrazil success zprávu';
+    }
+    clearSettingsCache();
+    if (httpIntegrationSettingValue($pdo, 'site_name') !== $utf8ImportSiteName) {
+        $jsonImportIssues[] = 'validní UTF-8 JSON import neuložil českou diakritiku do nastavení';
+    }
+    httpIntegrationRestoreSettings($originalImportSettings);
+
+    $invalidUtf8ImportPath = httpIntegrationCreateTempFile(
+        'imp',
+        "{\"site\":\"cms\",\"settings\":[{\"key\":\"site_name\",\"value\":\"" . "\xC3\x28" . "\"}]}",
+        $createdTempFiles
+    );
+    $invalidUtf8Response = postMultipartUrl(
+        $importUrl,
+        ['csrf_token' => $importCsrf],
+        [
+            'import_file' => [
+                'path' => $invalidUtf8ImportPath,
+                'filename' => 'cms-import-invalid-utf8.json',
+                'type' => 'application/json',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidUtf8Response) !== 200) {
+        $jsonImportIssues[] = 'neplatný UTF-8 JSON import nevrátil 200 s chybou formuláře';
+    }
+    if (!str_contains($invalidUtf8Response['body'], 'Importní JSON není v platném UTF-8.')) {
+        $jsonImportIssues[] = 'neplatný UTF-8 JSON import nezobrazil přesnou validační chybu';
+    }
+    clearSettingsCache();
+    if (httpIntegrationSettingValue($pdo, 'site_name') !== $originalImportSettings['site_name']) {
+        $jsonImportIssues[] = 'neplatný UTF-8 JSON import způsobil částečný zápis do nastavení';
+    }
+
+    httpIntegrationPrintResult('json_import_utf8_http', $jsonImportIssues, $failures);
+
     $visitorStatsWidgetIssues = [];
     saveSetting('module_statistics', '1');
     saveSetting('visitor_tracking_enabled', '1');

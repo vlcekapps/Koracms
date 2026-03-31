@@ -411,6 +411,14 @@ Cron každý den vytvoří SQL zálohu databáze do privátního úložiště (`
 
 V administraci: **Import / Export → Záloha databáze**. Stáhne aktuální SQL export.
 
+### JSON export a import
+
+V administraci: **Import / Export** lze obsah exportovat i znovu importovat jako JSON.
+
+- JSON export z Kora CMS používá UTF-8 a zachovává českou diakritiku bez escapování do `\u` sekvencí
+- JSON import nově odmítne soubor s neplatným UTF-8, aby se texty neuložily poškozeně
+- pokud obnovujete ruční SQL dump mimo administraci, používejte při importu klientské spojení `utf8mb4`; špatný charset může změnit české znaky na `?`
+
 ### Kontrola integrity
 
 V administraci: **Integrita souborů**. Porovná SHA-256 otisky PHP souborů s uloženým snímkem.

@@ -6,17 +6,48 @@ $errors  = [];
 $success = false;
 $summary = [];
 
+/**
+ * @return array<string, mixed>|null
+ */
+function importDecodeJsonUpload(string $path, array &$errors): ?array
+{
+    $json = @file_get_contents($path);
+    if ($json === false) {
+        $errors[] = 'Importní soubor se nepodařilo načíst.';
+        return null;
+    }
+
+    if (str_starts_with($json, "\xEF\xBB\xBF")) {
+        $json = substr($json, 3);
+    }
+
+    if (!mb_check_encoding($json, 'UTF-8')) {
+        $errors[] = 'Importní JSON není v platném UTF-8. Export z Kora CMS importujte beze změn a při ručním SQL restore používejte utf8mb4.';
+        return null;
+    }
+
+    try {
+        $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+    } catch (\JsonException $e) {
+        $errors[] = 'Neplatný nebo poškozený exportní soubor.';
+        return null;
+    }
+
+    return is_array($data) ? $data : null;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     if (empty($_FILES['import_file']['name'])) {
         $errors[] = 'Vyberte soubor pro import.';
     } else {
-        $tmp  = $_FILES['import_file']['tmp_name'];
-        $json = @file_get_contents($tmp);
-        $data = $json !== false ? @json_decode($json, true) : null;
+        $tmp = $_FILES['import_file']['tmp_name'];
+        $data = importDecodeJsonUpload($tmp, $errors);
 
-        if (!is_array($data) || ($data['site'] ?? '') !== 'cms') {
+        if ($data === null) {
+            // Přesná validační chyba už byla zapsaná do $errors v importDecodeJsonUpload().
+        } elseif (($data['site'] ?? '') !== 'cms') {
             $errors[] = 'Neplatný nebo poškozený exportní soubor.';
         } else {
             $pdo = db_connect();
@@ -899,6 +930,7 @@ adminHeader('Import / Export dat');
 <h2>Import dat</h2>
 <p>Importuje obsah z dříve staženého JSON souboru.
    Existující záznamy (stejné ID) jsou přeskočeny – data nebudou přepsána.</p>
+<p>JSON export i import používá UTF-8. Pokud import narazí na soubor s neplatným kódováním, odmítne ho, aby se česká diakritika neuložila poškozeně. Při ručním SQL restore používejte klientské spojení <code>utf8mb4</code>.</p>
 
 <?php if ($success): ?>
   <p class="success" role="status"><strong>Import proběhl úspěšně.</strong>

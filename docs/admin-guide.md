@@ -100,6 +100,21 @@ To je důležité hlavně po ručních úpravách nebo importech, kdy se nejčas
 
 ---
 
+## Import / Export dat a UTF-8
+
+Obrazovka **Import / Export** pracuje s JSON soubory v UTF-8.
+
+Platí tato pravidla:
+
+- export z Kora CMS zapisuje JSON s českou diakritikou v UTF-8
+- import nově odmítne JSON soubor s neplatným UTF-8, aby se poškozené texty neuložily do databáze
+- UTF-8 BOM na začátku souboru nevadí; import si ho automaticky odstraní
+- ruční SQL restore mimo administraci musí používat klientské spojení `utf8mb4`, jinak se české znaky mohou změnit na `?`
+
+Prakticky to znamená, že běžný export a následný import přes administraci je bezpečný i pro české texty. Největší riziko poškození diakritiky vzniká až při ručním importu SQL dumpu přes nástroj nebo klienta, který nepoužívá `utf8mb4`.
+
+---
+
 ## Nastavení webu – logo a favicona
 
 V sekci **Obecná nastavení** lze dál nahrávat logo a faviconu webu, ale branding uploady mají nově přísnější ochranu.
