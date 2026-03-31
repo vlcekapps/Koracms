@@ -746,9 +746,11 @@ Podporované obsahové snippety v HTML editoru:
 
 Praktické poznámky:
 
-- U veřejného PDF z knihovny médií nabízí picker akci `Vložit PDF náhled`, která vloží shortcode `[pdf]...[/pdf]`.
-- PDF snippet vykreslí inline náhled dokumentu a pod ním ponechá i odkaz `Otevřít PDF samostatně`.
+- U veřejného PDF z knihovny médií nabízí picker akci `Vložit PDF náhled`, která vloží robustní shortcode navázaný na konkrétní médium.
+- PDF snippet vykreslí inline náhled dokumentu přes interní same-origin preview endpoint a pod ním ponechá i odkaz `Otevřít PDF samostatně`.
+- Starší PDF snippety, které už mají v obsahu jen cestu `/uploads/media/...`, fungují zpětně bez ruční úpravy.
 - Shortcode `[code]...[/code]` je určený pro kopírovatelné ukázky příkazů, konfigurace nebo kódu; na veřejném webu zobrazí blok s tlačítkem `Zkopírovat obsah`.
+- Externí iframe a externí audio/video embedy ve veřejném HTML obsahu jsou podporované přes CSP, pokud je cílový zdroj sám dovolí.
 
 ---
 

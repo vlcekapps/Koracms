@@ -126,6 +126,22 @@ function contentEmbedPdfTitle(string $url, string $preferredTitle = ''): string
     return $normalized !== '' ? $normalized : 'PDF dokument';
 }
 
+function contentResolvePdfMedia(int $mediaId, string $url): ?array
+{
+    if ($mediaId > 0) {
+        $media = mediaGetById($mediaId);
+        if ($media !== null && mediaCanPreviewPdf($media)) {
+            return $media;
+        }
+    }
+
+    if ($url === '') {
+        return null;
+    }
+
+    return mediaGetPublicPdfByUrl($url);
+}
+
 function contentCodeShortcodeBody(string $body): string
 {
     $body = str_replace(["\r\n", "\r"], "\n", $body);
@@ -206,30 +222,35 @@ function renderContentVideoShortcode(string $url, string $preferredMimeType = ''
         . "\n\n";
 }
 
-function renderContentPdfShortcode(string $url, string $title = '', string $preferredMimeType = ''): ?string
+function renderContentPdfShortcode(string $url, string $title = '', string $preferredMimeType = '', int $mediaId = 0): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
-    $mimeType = contentEmbedPdfMimeType($normalizedUrl, $preferredMimeType);
+    $media = contentResolvePdfMedia($mediaId, $normalizedUrl);
+    $mimeType = $media !== null ? 'application/pdf' : contentEmbedPdfMimeType($normalizedUrl, $preferredMimeType);
 
-    if ($normalizedUrl === '' || $mimeType !== 'application/pdf') {
+    if (($normalizedUrl === '' && $media === null) || $mimeType !== 'application/pdf') {
         return null;
     }
 
-    $resolvedTitle = contentEmbedPdfTitle($normalizedUrl, $title);
-    $escapedUrl = h($normalizedUrl);
+    $previewUrl = $media !== null ? mediaPreviewUrl($media) : $normalizedUrl;
+    $openUrl = $media !== null ? mediaFileUrl($media) : $normalizedUrl;
+    $titleFallback = $media !== null ? mediaOriginalName($media) : '';
+    $resolvedTitle = contentEmbedPdfTitle($openUrl, $title !== '' ? $title : $titleFallback);
+    $escapedPreviewUrl = h($previewUrl);
+    $escapedOpenUrl = h($openUrl);
     $escapedTitle = h($resolvedTitle);
 
     return "\n\n"
         . '<section class="content-embed-card content-embed-card--pdf" aria-label="PDF dokument: ' . $escapedTitle . '">'
         . '<div class="content-embed-card__content">'
         . '<p class="content-embed-card__eyebrow">PDF dokument</p>'
-        . '<p class="content-embed-card__title"><a href="' . $escapedUrl . '">' . $escapedTitle . '</a></p>'
+        . '<p class="content-embed-card__title"><a href="' . $escapedOpenUrl . '">' . $escapedTitle . '</a></p>'
         . '<p class="content-embed-card__excerpt">Náhled PDF se může lišit podle prohlížeče a asistivní technologie. Pokud se nezobrazí správně, otevřete dokument samostatně.</p>'
         . '<div class="content-embed-frame content-embed-frame--pdf">'
-        . '<iframe src="' . $escapedUrl . '" title="PDF dokument: ' . $escapedTitle . '" loading="lazy"></iframe>'
+        . '<iframe src="' . $escapedPreviewUrl . '" title="PDF dokument: ' . $escapedTitle . '" loading="lazy"></iframe>'
         . '</div>'
         . '<div class="content-embed-card__actions">'
-        . '<a class="button-secondary" href="' . $escapedUrl . '">Otevřít PDF samostatně</a>'
+        . '<a class="button-secondary" href="' . $escapedOpenUrl . '">Otevřít PDF samostatně</a>'
         . '</div>'
         . '</div>'
         . '</section>'
@@ -879,8 +900,9 @@ function renderContentShortcodes(string $text): string
             $source = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['src', 'url']);
             $title = trim((string)($attributes['title'] ?? $attributes['label'] ?? ''));
             $mimeType = strtolower(trim((string)($attributes['mime'] ?? $attributes['type'] ?? '')));
+            $mediaId = filter_var((string)($attributes['media_id'] ?? $attributes['media'] ?? ''), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
-            return renderContentPdfShortcode($source, $title, $mimeType) ?? $matches[0];
+            return renderContentPdfShortcode($source, $title, $mimeType, $mediaId !== false ? (int)$mediaId : 0) ?? $matches[0];
         },
         $text
     ) ?? $text;

@@ -246,9 +246,12 @@ function contentReferenceGalleryShortcode(string $slug): string
     return '[gallery]' . $slug . '[/gallery]';
 }
 
-function contentReferencePdfShortcode(string $url, string $title = '', string $mimeType = ''): string
+function contentReferencePdfShortcode(string $url, string $title = '', string $mimeType = '', int $mediaId = 0): string
 {
     $attributes = [contentReferenceShortcodeAttribute('src', $url)];
+    if ($mediaId > 0) {
+        $attributes[] = contentReferenceShortcodeAttribute('media_id', (string)$mediaId);
+    }
     if (trim($title) !== '') {
         $attributes[] = contentReferenceShortcodeAttribute('title', $title);
     }
@@ -489,7 +492,7 @@ function contentReferenceMediaLibraryAction(array $row): ?array
             'Vložit PDF náhled',
             'Do textu byl vložen PDF náhled.',
             true,
-            contentReferencePdfShortcode($url, contentReferenceTitle($row), $pdfMimeType)
+            contentReferencePdfShortcode($url, contentReferenceTitle($row), $pdfMimeType, (int)($row['id'] ?? 0))
         );
     }
 

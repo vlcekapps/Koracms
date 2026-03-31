@@ -41,7 +41,7 @@ function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): vo
     exit;
 }
 
-function sendStoredFileDownload(string $path, string $downloadName): void
+function sendStoredFileResponse(string $path, string $downloadName, string $disposition = 'attachment', string $mimeTypeOverride = ''): void
 {
     if (!is_file($path) || !is_readable($path)) {
         sendFileDownloadNotFound();
@@ -61,6 +61,11 @@ function sendStoredFileDownload(string $path, string $downloadName): void
         error_log('sendStoredFileDownload: ' . $e->getMessage());
     }
 
+    $normalizedOverride = trim($mimeTypeOverride);
+    if ($normalizedOverride !== '') {
+        $mimeType = $normalizedOverride;
+    }
+
     while (ob_get_level() > 0) {
         ob_end_clean();
     }
@@ -68,7 +73,7 @@ function sendStoredFileDownload(string $path, string $downloadName): void
     header('Content-Description: File Transfer');
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string)filesize($path));
-    header('Content-Disposition: attachment; filename="' . addcslashes($asciiFallback, "\\\"") . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
+    header('Content-Disposition: ' . $disposition . '; filename="' . addcslashes($asciiFallback, "\\\"") . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
 
@@ -77,4 +82,14 @@ function sendStoredFileDownload(string $path, string $downloadName): void
         error_log('sendStoredFileDownload: nepodařilo se odeslat soubor ' . $path);
     }
     exit;
+}
+
+function sendStoredFileDownload(string $path, string $downloadName): void
+{
+    sendStoredFileResponse($path, $downloadName, 'attachment');
+}
+
+function sendStoredFileInline(string $path, string $downloadName, string $mimeTypeOverride = ''): void
+{
+    sendStoredFileResponse($path, $downloadName, 'inline', $mimeTypeOverride);
 }

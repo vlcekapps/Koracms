@@ -81,6 +81,11 @@ function mediaIsSvgMime(string $mimeType): bool
     return strtolower(trim($mimeType)) === 'image/svg+xml';
 }
 
+function mediaIsPdfMime(string $mimeType): bool
+{
+    return strtolower(trim($mimeType)) === 'application/pdf';
+}
+
 function mediaIsImageMime(string $mimeType): bool
 {
     return str_starts_with(strtolower(trim($mimeType)), 'image/');
@@ -121,6 +126,11 @@ function mediaUsesProtectedFileEndpoint(array $media): bool
 function mediaCanPreviewImage(array $media): bool
 {
     return mediaIsPreviewableImageMime((string)($media['mime_type'] ?? ''));
+}
+
+function mediaCanPreviewPdf(array $media): bool
+{
+    return mediaIsPublic($media) && mediaIsPdfMime((string)($media['mime_type'] ?? ''));
 }
 
 function mediaStoredFilename(array $media): string
@@ -527,6 +537,16 @@ function mediaFileUrl(array $media): string
     return BASE_URL . '/uploads/media/' . rawurlencode(mediaStoredFilename($media));
 }
 
+function mediaPreviewUrl(array $media): string
+{
+    $id = (int)($media['id'] ?? 0);
+    if ($id <= 0 || !mediaCanPreviewPdf($media)) {
+        return mediaFileUrl($media);
+    }
+
+    return BASE_URL . '/media/preview.php?id=' . $id;
+}
+
 function mediaThumbUrl(array $media): string
 {
     if (!mediaCanPreviewImage($media)) {
@@ -899,8 +919,78 @@ function mediaGetById(int $id): ?array
     }
 }
 
+function mediaGetPublicByStoredFilename(string $filename): ?array
+{
+    $filename = basename(trim($filename));
+    if ($filename === '') {
+        return null;
+    }
+
+    try {
+        $stmt = db_connect()->prepare(
+            "SELECT *
+             FROM cms_media
+             WHERE filename = ?
+               AND visibility = 'public'
+             LIMIT 1"
+        );
+        $stmt->execute([$filename]);
+        $media = $stmt->fetch() ?: null;
+        return $media ?: null;
+    } catch (\PDOException) {
+        return null;
+    }
+}
+
+function mediaGetPublicPdfByUrl(string $url): ?array
+{
+    $url = trim($url);
+    if ($url === '') {
+        return null;
+    }
+
+    $host = strtolower(trim((string)(parse_url($url, PHP_URL_HOST) ?? '')));
+    if ($host !== '') {
+        $currentHost = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
+        if ($currentHost === '' || $host !== $currentHost) {
+            return null;
+        }
+    }
+
+    $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
+    $query = (string)(parse_url($url, PHP_URL_QUERY) ?? '');
+    if ($path === '') {
+        return null;
+    }
+
+    $basePath = trim((string)BASE_URL);
+    if ($basePath !== '' && $path === $basePath) {
+        $path = '/';
+    } elseif ($basePath !== '' && str_starts_with($path, $basePath . '/')) {
+        $path = substr($path, strlen($basePath));
+    }
+
+    if ($path === '/media/file.php' || $path === '/media/preview.php') {
+        parse_str($query, $params);
+        $mediaId = (int)($params['id'] ?? 0);
+        if ($mediaId <= 0) {
+            return null;
+        }
+
+        $media = mediaGetById($mediaId);
+        return ($media !== null && mediaCanPreviewPdf($media)) ? $media : null;
+    }
+
+    if (preg_match('~^/uploads/media/([^/]+\.pdf)$~i', $path, $matches) !== 1) {
+        return null;
+    }
+
+    $filename = rawurldecode((string)$matches[1]);
+    $media = mediaGetPublicByStoredFilename($filename);
+    return ($media !== null && mediaCanPreviewPdf($media)) ? $media : null;
+}
+
 function mediaDownloadName(array $media): string
 {
     return safeDownloadName(mediaOriginalName($media), mediaStoredFilename($media));
 }
-

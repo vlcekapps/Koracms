@@ -6291,11 +6291,14 @@ foreach ([
 if (!str_contains($contentSearchSource, 'Vložit fotogalerii')) {
     $contentSnippetIssues[] = 'content reference search is missing gallery album insert action fragment';
 }
-if (!str_contains($contentSearchSource, 'function contentReferencePdfShortcode(string $url, string $title = \'\', string $mimeType = \'\'): string')) {
+if (!str_contains($contentSearchSource, 'function contentReferencePdfShortcode(string $url, string $title = \'\', string $mimeType = \'\', int $mediaId = 0): string')) {
     $contentSnippetIssues[] = 'content reference search is missing pdf shortcode helper';
 }
-if (!str_contains($contentLibrarySource, 'function renderContentPdfShortcode(string $url, string $title = \'\', string $preferredMimeType = \'\'): ?string')) {
+if (!str_contains($contentLibrarySource, 'function renderContentPdfShortcode(string $url, string $title = \'\', string $preferredMimeType = \'\', int $mediaId = 0): ?string')) {
     $contentSnippetIssues[] = 'content renderer is missing pdf shortcode helper';
+}
+if (!str_contains($contentLibrarySource, 'function contentResolvePdfMedia(int $mediaId, string $url): ?array')) {
+    $contentSnippetIssues[] = 'content renderer is missing pdf media resolver helper';
 }
 if (!str_contains($contentLibrarySource, 'function renderContentCodeShortcode(string $body): ?string')) {
     $contentSnippetIssues[] = 'content renderer is missing code shortcode helper';
@@ -6308,6 +6311,12 @@ if (!str_contains($contentLibrarySource, 'content-code-block__copy js-copy-conte
 }
 if (!str_contains($contentLibrarySource, '/\\[code(?:\\s+([^\\]]*))?\\](.*?)\\[\\/code\\]/is')) {
     $contentSnippetIssues[] = 'content renderer is missing code shortcode parser';
+}
+if (!str_contains($contentLibrarySource, "\$attributes['media_id'] ?? \$attributes['media'] ?? ''")) {
+    $contentSnippetIssues[] = 'content renderer is missing media_id-aware pdf shortcode parsing';
+}
+if (!str_contains($contentLibrarySource, 'mediaPreviewUrl($media)')) {
+    $contentSnippetIssues[] = 'content renderer is missing media preview URL integration for PDF';
 }
 if (!str_contains($baseLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/layouts/base.php'), '.js-copy-content')) {
     $contentSnippetIssues[] = 'default layout is missing code copy button handler';
@@ -6326,6 +6335,9 @@ if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('co
 }
 if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('content_reference_pdf_http'")) {
     $contentSnippetIssues[] = 'build/http_integration.php is missing pdf content picker coverage';
+}
+if (!str_contains($contentHttpIntegrationSource, '/media/preview.php?id=')) {
+    $contentSnippetIssues[] = 'build/http_integration.php is missing media preview endpoint coverage for PDF';
 }
 
 if ($contentSnippetIssues === []) {
@@ -7998,6 +8010,50 @@ if ($sendMailHeaderIssues === []) {
     }
 }
 
+echo "=== content_security_policy_guardrails ===\n";
+$contentSecurityPolicyIssues = [];
+$authSource = (string)file_get_contents(dirname(__DIR__) . '/auth.php');
+if (!str_contains($authSource, "media-src 'self' https: data: blob:;")) {
+    $contentSecurityPolicyIssues[] = 'auth CSP is missing media-src allowance for external media embeds';
+}
+if (!str_contains($authSource, "frame-src 'self' https:;")) {
+    $contentSecurityPolicyIssues[] = 'auth CSP is missing frame-src allowance for external iframe embeds';
+}
+if (!str_contains($authSource, "frame-ancestors 'none'")) {
+    $contentSecurityPolicyIssues[] = 'auth CSP no longer protects pages against third-party framing';
+}
+$contentSecurityPolicyProbe = fetchUrl($baseUrl . '/', '', 0);
+$contentSecurityPolicyHeaderFound = false;
+foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
+    $normalizedHeader = strtolower((string)$securityHeader);
+    if (!str_starts_with($normalizedHeader, 'content-security-policy:')) {
+        continue;
+    }
+    $contentSecurityPolicyHeaderFound = true;
+    if (!str_contains($normalizedHeader, "media-src 'self' https: data: blob:")) {
+        $contentSecurityPolicyIssues[] = 'public response header is missing media-src allowance for external media embeds';
+    }
+    if (!str_contains($normalizedHeader, "frame-src 'self' https:")) {
+        $contentSecurityPolicyIssues[] = 'public response header is missing frame-src allowance for external iframe embeds';
+    }
+    if (!str_contains($normalizedHeader, "frame-ancestors 'none'")) {
+        $contentSecurityPolicyIssues[] = 'public response header no longer protects against third-party framing';
+    }
+    break;
+}
+if (!$contentSecurityPolicyHeaderFound) {
+    $contentSecurityPolicyIssues[] = 'public response is missing Content-Security-Policy header';
+}
+
+if ($contentSecurityPolicyIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($contentSecurityPolicyIssues as $contentSecurityPolicyIssue) {
+        echo '- ' . $contentSecurityPolicyIssue . "\n";
+    }
+}
+
 echo "=== blog_admin_guardrails ===\n";
 $blogAdminIssues = [];
 $blogLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
@@ -8836,6 +8892,7 @@ $mediaExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export
 $mediaImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
 $mediaHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 $mediaFileEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/file.php');
+$mediaPreviewEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/preview.php');
 $mediaThumbEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/thumb.php');
 $mediaHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
@@ -8867,6 +8924,12 @@ if (!str_contains($mediaHelperSource, 'SVG soubory už knihovna médií nepřij�
 if (!str_contains($mediaHelperSource, "return BASE_URL . '/media/file.php?id='")) {
     $mediaLibraryIssues[] = 'media helper is missing canonical protected file URL helper';
 }
+if (!str_contains($mediaHelperSource, 'function mediaPreviewUrl(array $media): string')) {
+    $mediaLibraryIssues[] = 'media helper is missing canonical pdf preview URL helper';
+}
+if (!str_contains($mediaHelperSource, 'function mediaGetPublicPdfByUrl(string $url): ?array')) {
+    $mediaLibraryIssues[] = 'media helper is missing public pdf resolution helper for legacy snippets';
+}
 if (!str_contains($mediaHelperSource, "return BASE_URL . '/media/thumb.php?id='")) {
     $mediaLibraryIssues[] = 'media helper is missing canonical protected thumb URL helper';
 }
@@ -8896,8 +8959,24 @@ if (!str_contains($mediaHtaccessSource, 'RewriteRule ^uploads/media/.+\.svg$ - [
 if (!str_contains($mediaFileEndpointSource, 'mediaStaffCanAccessPrivate()')) {
     $mediaLibraryIssues[] = 'media file endpoint is missing private access guard';
 }
+foreach ([
+    'mediaCanPreviewPdf($media)',
+    'sendStoredFileInline(',
+    'X-Frame-Options: SAMEORIGIN',
+    "frame-ancestors 'self'",
+] as $mediaPreviewFragment) {
+    if (!str_contains($mediaPreviewEndpointSource, $mediaPreviewFragment)) {
+        $mediaLibraryIssues[] = 'media preview endpoint is missing fragment: ' . $mediaPreviewFragment;
+    }
+}
 if (!str_contains($mediaThumbEndpointSource, 'mediaStaffCanAccessPrivate()')) {
     $mediaLibraryIssues[] = 'media thumb endpoint is missing private access guard';
+}
+if (!str_contains($mediaHtaccessSource, 'SetEnvIfNoCase Request_URI "(^|/)media/preview\.php$" KORA_MEDIA_PREVIEW=1')) {
+    $mediaLibraryIssues[] = 'htaccess is missing media preview SAMEORIGIN exception';
+}
+if (!str_contains($mediaHtaccessSource, 'Header always set X-Frame-Options "SAMEORIGIN" env=KORA_MEDIA_PREVIEW')) {
+    $mediaLibraryIssues[] = 'htaccess is missing preview SAMEORIGIN X-Frame-Options header';
 }
 if ($mediaHttpIntegrationSource === '') {
     $mediaLibraryIssues[] = 'build/http_integration.php is missing for media admin coverage';
@@ -8914,6 +8993,9 @@ if ($mediaHttpIntegrationSource === '') {
         "'bulk_action' => 'delete_unused'",
         'Použité médium nelze přepnout do soukromého režimu',
         'Použité médium nelze smazat',
+        '/media/preview.php?id=',
+        'content-disposition: inline;',
+        'x-frame-options: sameorigin',
     ] as $mediaIntegrationFragment) {
         if (!str_contains($mediaHttpIntegrationSource, $mediaIntegrationFragment)) {
             $mediaLibraryIssues[] = 'media http integration is missing fragment: ' . $mediaIntegrationFragment;

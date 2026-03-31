@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **HTML editor – PDF náhled nově používá bezpečný same-origin preview endpoint** – snippet `[pdf]...[/pdf]` u veřejných PDF z knihovny médií nově nevkládá do `iframe` přímou veřejnou URL, ale interní endpoint `media/preview.php`, který dovolí vložení jen z vlastního webu; tím se opravuje zobrazení PDF na stránkách s tvrdou anti-embed ochranou a současně fungují i dříve vložené PDF snippety se starší cestou `/uploads/media/...`
+- **Veřejný obsah – CSP znovu povoluje legitimní externí iframe a audio/video embedy** – veřejné odpovědi nově přes Content Security Policy výslovně povolují externí `iframe` a externí audio/video média v obsahu, aniž by se oslabila ochrana `frame-ancestors`; embedy jako Castos tak znovu fungují, pokud je cílová služba sama dovolí
+
 ## [3.2.0] – 2026-03-31
 
 ### Přidáno

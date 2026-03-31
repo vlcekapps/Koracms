@@ -822,16 +822,86 @@ try {
                     }
                     $actions = $pickerResult['insert_actions'] ?? [];
                     $hasPdfAction = false;
+                    $pdfSnippet = '';
                     if (is_array($actions)) {
                         foreach ($actions as $action) {
                             if (is_array($action) && (string)($action['label'] ?? '') === 'Vložit PDF náhled') {
                                 $hasPdfAction = true;
+                                $pdfSnippet = (string)($action['snippet'] ?? '');
                                 break;
                             }
                         }
                     }
                     if (!$hasPdfAction) {
                         $pdfPickerIssues[] = 'pdf content picker u média nenabízí akci Vložit PDF náhled';
+                    } else {
+                        if (!str_contains($pdfSnippet, 'media_id="' . (int)$pdfMedia['id'] . '"')) {
+                            $pdfPickerIssues[] = 'pdf content picker nevkládá media_id pro same-origin preview endpoint';
+                        }
+
+                        $renderedPdfSnippet = renderContent($pdfSnippet);
+                        if (!str_contains($renderedPdfSnippet, '/media/preview.php?id=' . (int)$pdfMedia['id'])) {
+                            $pdfPickerIssues[] = 'pdf snippet z pickeru nevykresluje iframe přes media preview endpoint';
+                        }
+
+                        $legacyPdfSnippet = '[pdf src="' . htmlspecialchars(mediaFileUrl($pdfMedia), ENT_QUOTES, 'UTF-8') . '" title="' . htmlspecialchars((string)mediaOriginalName($pdfMedia), ENT_QUOTES, 'UTF-8') . '" mime="application/pdf"][/pdf]';
+                        $legacyRenderedPdfSnippet = renderContent($legacyPdfSnippet);
+                        if (!str_contains($legacyRenderedPdfSnippet, '/media/preview.php?id=' . (int)$pdfMedia['id'])) {
+                            $pdfPickerIssues[] = 'legacy pdf shortcode se src z uploads/media se zpětně nepřeklápí na media preview endpoint';
+                        }
+
+                        $pdfPreviewResponse = fetchUrl(
+                            $baseUrl . BASE_URL . '/media/preview.php?id=' . (int)$pdfMedia['id'],
+                            '',
+                            0
+                        );
+                        if (httpIntegrationStatusCode($pdfPreviewResponse) !== 200) {
+                            $pdfPickerIssues[] = 'media preview endpoint pro public PDF nevrátil 200';
+                        } else {
+                            $hasPdfContentType = false;
+                            $hasInlineDisposition = false;
+                            $hasSameOriginFrameHeader = false;
+                            $hasSelfFrameAncestors = false;
+                            $hasDenyFrameHeader = false;
+
+                            foreach ($pdfPreviewResponse['headers'] as $previewHeader) {
+                                $normalizedHeader = strtolower((string)$previewHeader);
+                                if (str_starts_with($normalizedHeader, 'content-type: application/pdf')) {
+                                    $hasPdfContentType = true;
+                                }
+                                if (str_starts_with($normalizedHeader, 'content-disposition: inline;')) {
+                                    $hasInlineDisposition = true;
+                                }
+                                if ($normalizedHeader === 'x-frame-options: sameorigin') {
+                                    $hasSameOriginFrameHeader = true;
+                                }
+                                if (str_starts_with($normalizedHeader, 'content-security-policy:') && str_contains($normalizedHeader, "frame-ancestors 'self'")) {
+                                    $hasSelfFrameAncestors = true;
+                                }
+                                if ($normalizedHeader === 'x-frame-options: deny') {
+                                    $hasDenyFrameHeader = true;
+                                }
+                            }
+
+                            if (!$hasPdfContentType) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF nevrátil application/pdf';
+                            }
+                            if (!$hasInlineDisposition) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF neposílá Content-Disposition inline';
+                            }
+                            if (!$hasSameOriginFrameHeader) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF neposílá X-Frame-Options SAMEORIGIN';
+                            }
+                            if (!$hasSelfFrameAncestors) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF neposílá CSP frame-ancestors self';
+                            }
+                            if ($hasDenyFrameHeader) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF stále vrací X-Frame-Options DENY';
+                            }
+                            if (!str_starts_with((string)($pdfPreviewResponse['body'] ?? ''), '%PDF-')) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF nevrátil PDF payload';
+                            }
+                        }
                     }
                     break;
                 }

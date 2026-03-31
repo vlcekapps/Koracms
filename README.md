@@ -335,7 +335,7 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 | `[event]slug-udalosti[/event]` | Teaser karta události |
 | `[board]slug-oznameni[/board]` | Teaser karta položky vývěsky |
 
-Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF jako inline náhled s bezpečným odkazem a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu.
+Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF z knihovny médií se nově vykresluje přes interní same-origin preview endpoint a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu. Externí iframe a externí audio/video embedy jsou na veřejném webu podporované přes CSP, pokud je cílový zdroj sám dovolí.
 
 ---
 
