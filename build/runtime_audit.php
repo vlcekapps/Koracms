@@ -8120,6 +8120,9 @@ if (!str_contains($blogsAdminSource, 'name="rss_subtitle"') || !str_contains($bl
 if (!str_contains($blogsAdminSource, 'name="comments_default"')) {
     $blogAdminIssues[] = 'blog editor is missing per-blog default comments toggle';
 }
+if (!str_contains($blogsAdminSource, 'name="logo_alt_text"')) {
+    $blogAdminIssues[] = 'blog editor is missing blog logo alt text field';
+}
 if (!str_contains($blogsAdminSource, 'name="intro_content"')) {
     $blogAdminIssues[] = 'blog editor is missing extended intro content';
 }
@@ -8186,6 +8189,9 @@ if (!str_contains($blogPresentationSource, 'function normalizeBlogTaxonomyName')
 if (!str_contains($blogPresentationSource, 'function saveBlogSlugRedirect')) {
     $blogAdminIssues[] = 'blog helpers are missing slug redirect persistence';
 }
+if (!str_contains($blogPresentationSource, 'function blogLogoAltText')) {
+    $blogAdminIssues[] = 'blog helpers are missing configurable blog logo alt text helper';
+}
 if (!str_contains($blogIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
     $blogAdminIssues[] = 'public blog index is missing in-blog search';
 }
@@ -8224,6 +8230,9 @@ foreach ([
 if (!str_contains($blogIndexViewSource, 'Doporučený článek')) {
     $blogAdminIssues[] = 'blog index view is missing featured article hero';
 }
+if (!str_contains($blogIndexViewSource, '$blogLogoAlt = blogLogoAltText($blog);') || !str_contains($blogIndexViewSource, 'alt="<?= h($blogLogoAlt) ?>"')) {
+    $blogAdminIssues[] = 'blog index view is missing configurable blog logo alt text support';
+}
 if (!str_contains($blogIndexViewSource, "renderContent((string)\$blog['intro_content'])")) {
     $blogAdminIssues[] = 'blog index view is missing extended intro content rendering';
 }
@@ -8260,11 +8269,17 @@ if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExp
 if (!str_contains($blogExportSource, 'created_by_user_id')) {
     $blogAdminIssues[] = 'export is missing blog creator audit field';
 }
+if (!str_contains($blogExportSource, 'logo_alt_text')) {
+    $blogAdminIssues[] = 'export is missing blog logo alt text field';
+}
 if (!str_contains($blogImportSource, 'cms_blog_members') || !str_contains($blogImportSource, 'cms_blog_slug_redirects')) {
     $blogAdminIssues[] = 'import is missing blog membership or slug redirect restore';
 }
 if (!str_contains($blogImportSource, 'created_by_user_id')) {
     $blogAdminIssues[] = 'import is missing blog creator audit restore';
+}
+if (!str_contains($blogImportSource, 'logo_alt_text')) {
+    $blogAdminIssues[] = 'import is missing blog logo alt text restore';
 }
 if (!str_contains($blogWidgetAdminSource, 'value="-1">Aktuální blog (na blogových stránkách)')) {
     $blogAdminIssues[] = 'widget editor is missing current-blog context option for latest articles';
@@ -8281,6 +8296,9 @@ if (!str_contains($blogInstallSource, 'cms_blog_members') || !str_contains($blog
 if (!str_contains($blogInstallSource, 'intro_content TEXT')) {
     $blogAdminIssues[] = 'fresh install is missing extended blog intro field';
 }
+if (!str_contains($blogInstallSource, 'logo_alt_text VARCHAR(255) NOT NULL DEFAULT')) {
+    $blogAdminIssues[] = 'fresh install is missing blog logo alt text field';
+}
 if (!str_contains($blogInstallSource, 'created_by_user_id INT NULL DEFAULT NULL')) {
     $blogAdminIssues[] = 'fresh install is missing blog creator audit field';
 }
@@ -8289,6 +8307,9 @@ if (!str_contains($blogInstallSource, 'is_featured_in_blog TINYINT(1) NOT NULL D
 }
 if (!str_contains($blogMigrateSource, 'cms_blogs.intro_content')) {
     $blogAdminIssues[] = 'migrations are missing extended blog intro field';
+}
+if (!str_contains($blogMigrateSource, 'cms_blogs.logo_alt_text')) {
+    $blogAdminIssues[] = 'migrations are missing blog logo alt text field';
 }
 if (!str_contains($blogMigrateSource, 'cms_blogs.created_by_user_id')) {
     $blogAdminIssues[] = 'migrations are missing blog creator audit field';

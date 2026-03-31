@@ -13,7 +13,7 @@ $data = [
 $tables = [
     'settings'    => "SELECT `key`, value FROM cms_settings WHERE `key` NOT IN ('admin_password')",
     'categories'  => "SELECT id, name, blog_id, created_at FROM cms_categories",
-    'blogs'       => "SELECT id, name, slug, description, intro_content, logo_file, meta_title, meta_description,
+    'blogs'       => "SELECT id, name, slug, description, intro_content, logo_file, logo_alt_text, meta_title, meta_description,
                              rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav,
                              created_by_user_id,
                              created_at, updated_at

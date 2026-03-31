@@ -68,6 +68,7 @@ $tables = [
         description TEXT,
         intro_content TEXT,
         logo_file   VARCHAR(255) NOT NULL DEFAULT '',
+        logo_alt_text VARCHAR(255) NOT NULL DEFAULT '',
         meta_title  VARCHAR(160) NOT NULL DEFAULT '',
         meta_description TEXT,
         rss_subtitle VARCHAR(255) NOT NULL DEFAULT '',
@@ -935,7 +936,8 @@ $addColumns = [
     // cms_blogs
     'cms_blogs.logo_file'            => "ALTER TABLE cms_blogs ADD COLUMN logo_file VARCHAR(255) NOT NULL DEFAULT '' AFTER description",
     'cms_blogs.intro_content'        => "ALTER TABLE cms_blogs ADD COLUMN intro_content TEXT AFTER description",
-    'cms_blogs.meta_title'           => "ALTER TABLE cms_blogs ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER logo_file",
+    'cms_blogs.logo_alt_text'        => "ALTER TABLE cms_blogs ADD COLUMN logo_alt_text VARCHAR(255) NOT NULL DEFAULT '' AFTER logo_file",
+    'cms_blogs.meta_title'           => "ALTER TABLE cms_blogs ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER logo_alt_text",
     'cms_blogs.meta_description'     => "ALTER TABLE cms_blogs ADD COLUMN meta_description TEXT AFTER meta_title",
     'cms_blogs.rss_subtitle'         => "ALTER TABLE cms_blogs ADD COLUMN rss_subtitle VARCHAR(255) NOT NULL DEFAULT '' AFTER meta_description",
     'cms_blogs.comments_default'     => "ALTER TABLE cms_blogs ADD COLUMN comments_default TINYINT(1) NOT NULL DEFAULT 1 AFTER rss_subtitle",

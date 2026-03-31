@@ -268,6 +268,8 @@ Modul **Ankety** nově používá stejný publikační helper jako widgety, site
 
 V multiblog administraci nově umí přesun článků mezi blogy vedle automatického vyrovnání taxonomií i ruční mapování chybějících kategorií a štítků na existující taxonomie cílového blogu. Tato volba je dostupná jen uživatelům, kteří smějí spravovat taxonomie cílového blogu. Stejné principy nově používá i běžná editace jednoho článku: po změně blogu editor automaticky předvyplní odpovídající taxonomie cílového blogu, dovolí ručně vybrat jiné existující a správcům taxonomií umí přímo z editoru vytvořit chybějící kategorii nebo štítky.
 
+Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce vyplní, použije se na veřejném indexu blogu pro čtečky obrazovky; pokud zůstane prázdný, logo se dál bere jako dekorativní a asistivní technologie ho přeskočí.
+
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 
 ---

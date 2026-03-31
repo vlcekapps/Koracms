@@ -184,6 +184,7 @@ U každého blogu lze nastavit:
 
 - název, slug a krátký popis
 - volitelné logo blogu
+- volitelný alternativní text loga pro čtečky obrazovky
 - rozšířený úvod blogu nad výpisem článků
 - `meta title` a `meta description`
 - RSS podtitulek
@@ -192,6 +193,8 @@ U každého blogu lze nastavit:
 - zobrazení blogu v hlavní navigaci
 
 Pokud blog změní slug, Kora CMS si uloží starý slug jako redirect a staré URL i RSS feed se přesměrují na nový tvar.
+
+Pokud je u loga vyplněný alternativní text, veřejný index blogu ho použije jako `alt` obrázku. Když pole zůstane prázdné, logo se bere jako dekorativní a čtečky obrazovky ho přeskočí. Po odebrání loga se alternativní text automaticky vyprázdní, aby v administraci nezůstal viset bez obrázku.
 
 ### Týmy blogů
 

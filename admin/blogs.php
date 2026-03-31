@@ -45,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $logoFile = trim((string)($existingBlog['logo_file'] ?? ''));
+    $logoAltText = trim((string)($_POST['logo_alt_text'] ?? ($existingBlog['logo_alt_text'] ?? '')));
+    $logoAltText = mb_substr($logoAltText, 0, 255);
     if ($error === '') {
         $logoUpload = uploadBlogLogo($_FILES['logo_file'] ?? [], $logoFile);
         if ($logoUpload['error'] !== '') {
@@ -55,6 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 deleteBlogLogoFile($logoFile);
                 $logoFile = '';
             }
+            if ($logoFile === '') {
+                $logoAltText = '';
+            }
         }
     }
 
@@ -64,8 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($oldSlug !== '' && $oldSlug !== $slug) {
                 saveBlogSlugRedirect($pdo, $updateId, $oldSlug);
             }
-            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, intro_content = ?, logo_file = ?, meta_title = ?, meta_description = ?, rss_subtitle = ?, comments_default = ?, feed_item_limit = ?, show_in_nav = ? WHERE id = ?")
-                ->execute([$name, $slug, $desc, $introContent, $logoFile, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $showInNav, $updateId]);
+            $pdo->prepare("UPDATE cms_blogs SET name = ?, slug = ?, description = ?, intro_content = ?, logo_file = ?, logo_alt_text = ?, meta_title = ?, meta_description = ?, rss_subtitle = ?, comments_default = ?, feed_item_limit = ?, show_in_nav = ? WHERE id = ?")
+                ->execute([$name, $slug, $desc, $introContent, $logoFile, $logoAltText, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $showInNav, $updateId]);
             clearBlogCache();
             $success = 'Blog upraven.';
         } catch (\PDOException $e) {
@@ -76,8 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $creatorUserId = (int)(currentUserId() ?? 0);
         try {
             $pdo->beginTransaction();
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, intro_content, logo_file, meta_title, meta_description, rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                ->execute([$name, $slug, $desc, $introContent, $logoFile, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $sortOrder, $showInNav, $creatorUserId > 0 ? $creatorUserId : null]);
+            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, intro_content, logo_file, logo_alt_text, meta_title, meta_description, rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$name, $slug, $desc, $introContent, $logoFile, $logoAltText, $metaTitle, $metaDescription, $rssSubtitle, $commentsDefault, $feedItemLimit, $sortOrder, $showInNav, $creatorUserId > 0 ? $creatorUserId : null]);
             $newBlogId = (int)$pdo->lastInsertId();
             if ($creatorUserId > 0 && $newBlogId > 0) {
                 $pdo->prepare(
@@ -165,6 +170,10 @@ adminHeader('Správa blogů');
     <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="blog-logo-help">
     <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF a WebP; pevný rozměr není nutný.</small>
 
+    <label for="logo_alt_text">Alternativní text loga</label>
+    <input type="text" id="logo_alt_text" name="logo_alt_text" maxlength="255" aria-describedby="blog-logo-alt-help">
+    <small id="blog-logo-alt-help" class="field-help">Volitelné. Pokud pole necháte prázdné, logo zůstane dekorativní a čtečky obrazovek ho přeskočí. Vyplňte ho jen tehdy, když logo nese smysluplnou informaci.</small>
+
     <div style="margin-top:.5rem">
       <label><input type="checkbox" name="comments_default" value="1" checked> Ve výchozím stavu povolit komentáře u nových článků</label>
     </div>
@@ -249,6 +258,7 @@ adminHeader('Správa blogů');
                   data-blog-comments-default="<?= (int)($blog['comments_default'] ?? 1) ?>"
                   data-blog-feed-item-limit="<?= (int)($blog['feed_item_limit'] ?? 20) ?>"
                   data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>"
+                  data-blog-logo-alt="<?= h((string)($blog['logo_alt_text'] ?? '')) ?>"
                   data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit</button>
           <a href="blog_members.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Tým blogu</a>
           <form action="blog_blog_delete.php" method="post" style="display:inline">
@@ -320,6 +330,10 @@ adminHeader('Správa blogů');
     <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="bd-logo-help">
     <small id="bd-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu.</small>
 
+    <label for="bd-logo-alt-text" style="margin-top:.75rem">Alternativní text loga</label>
+    <input type="text" id="bd-logo-alt-text" name="logo_alt_text" maxlength="255" aria-describedby="bd-logo-alt-help">
+    <small id="bd-logo-alt-help" class="field-help">Volitelné. Když pole necháte prázdné, logo zůstane dekorativní a čtečky ho přeskočí.</small>
+
     <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>
       <label><input type="checkbox" name="logo_file_delete" value="1" id="bd-logo-delete"> Odebrat aktuální logo</label>
     </div>
@@ -352,6 +366,7 @@ adminHeader('Správa blogů');
     var logoDeleteWrap = document.getElementById('bd-logo-delete-wrap');
     var logoDelete = document.getElementById('bd-logo-delete');
     var logoFileInput = document.getElementById('bd-logo-file');
+    var logoAltInput = document.getElementById('bd-logo-alt-text');
 
     function openDialog(btn) {
         lastTrigger = btn;
@@ -368,12 +383,15 @@ adminHeader('Správa blogů');
         document.getElementById('bd-nav').checked = btn.dataset.blogNav === '1';
         logoDelete.checked = false;
         logoFileInput.value = '';
+        logoAltInput.value = btn.dataset.blogLogoAlt || '';
         if (btn.dataset.blogLogoUrl) {
             logoPreview.src = btn.dataset.blogLogoUrl;
+            logoPreview.alt = btn.dataset.blogLogoAlt || '';
             logoPreviewWrap.hidden = false;
             logoDeleteWrap.hidden = false;
         } else {
             logoPreview.src = '';
+            logoPreview.alt = '';
             logoPreviewWrap.hidden = true;
             logoDeleteWrap.hidden = true;
         }

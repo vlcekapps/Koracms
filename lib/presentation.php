@@ -2270,6 +2270,15 @@ function blogLogoUrl(array $blog): string
     return BASE_URL . '/uploads/blogs/' . rawurlencode($filename);
 }
 
+function blogLogoAltText(array $blog): string
+{
+    if (blogLogoUrl($blog) === '') {
+        return '';
+    }
+
+    return trim((string)($blog['logo_alt_text'] ?? ''));
+}
+
 function deleteBlogLogoFile(string $filename): void
 {
     $filename = basename($filename);

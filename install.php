@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             description TEXT,
             intro_content TEXT,
             logo_file   VARCHAR(255) NOT NULL DEFAULT '',
+            logo_alt_text VARCHAR(255) NOT NULL DEFAULT '',
             meta_title  VARCHAR(160) NOT NULL DEFAULT '',
             meta_description TEXT,
             rss_subtitle VARCHAR(255) NOT NULL DEFAULT '',

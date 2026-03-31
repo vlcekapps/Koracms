@@ -58,9 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['blogs']) && is_array($data['blogs'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_blogs
-                         (id, name, slug, description, intro_content, logo_file, meta_title, meta_description,
+                         (id, name, slug, description, intro_content, logo_file, logo_alt_text, meta_title, meta_description,
                           rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav, created_by_user_id, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['blogs'] as $row) {
                         $ins->execute([
@@ -68,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['description'] ?? '',
                             $row['intro_content'] ?? '',
                             $row['logo_file'] ?? '',
+                            $row['logo_alt_text'] ?? '',
                             $row['meta_title'] ?? '',
                             $row['meta_description'] ?? '',
                             $row['rss_subtitle'] ?? '',
