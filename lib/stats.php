@@ -214,7 +214,7 @@ function siteNav(string $current = ''): string
 
     $navHeadingId = 'site-nav-heading';
     $nav = '<nav aria-labelledby="' . $navHeadingId . '">';
-    $nav .= '<p id="' . $navHeadingId . '" class="sr-only">Hlavní navigace</p><ul>' . "\n";
+    $nav .= '<h2 id="' . $navHeadingId . '" class="sr-only">Hlavní navigace</h2><ul>' . "\n";
     $nav .= $li('/index.php', 'Domů', 'home');
 
     $unifiedOrder = getSetting('nav_order_unified', '');

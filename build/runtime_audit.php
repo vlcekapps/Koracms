@@ -9852,6 +9852,9 @@ $blogStaticHttpIntegrationSource = (string)file_get_contents(dirname(__DIR__) . 
 if (!str_contains($blogStaticStatsSource, 'site-nav-heading') || !str_contains($blogStaticStatsSource, 'aria-labelledby')) {
     $blogStaticPageIssues[] = 'site navigation is missing a screen-reader heading with aria-labelledby';
 }
+if (!str_contains($blogStaticStatsSource, '<h2 id="\' . $navHeadingId . \'" class="sr-only">Hlavní navigace</h2>')) {
+    $blogStaticPageIssues[] = 'site navigation heading is not rendered as a real heading element for screen readers';
+}
 if (str_contains($blogStaticStatsSource, 'aria-label="Hlavní navigace"')) {
     $blogStaticPageIssues[] = 'site navigation still contains the legacy aria-label-only implementation';
 }
@@ -9949,6 +9952,9 @@ if (!str_contains($publicNavSource, '$renderUnifiedEntry') || !str_contains($pub
 }
 if (!str_contains($publicNavSource, "\$navHeadingId = 'site-nav-heading';") || !str_contains($publicNavSource, "aria-labelledby=\"' . \$navHeadingId . '\"")) {
     $menuAdminIssues[] = 'public navigation is missing the heading-backed main navigation landmark';
+}
+if (!str_contains($publicNavSource, '<h2 id="\' . $navHeadingId . \'" class="sr-only">Hlavní navigace</h2>')) {
+    $menuAdminIssues[] = 'public navigation still renders the main navigation label as plain text instead of a heading';
 }
 if (str_contains($publicNavSource, 'aria-label="Hlavní navigace"')) {
     $menuAdminIssues[] = 'public navigation still contains legacy aria-label-only main navigation markup';
