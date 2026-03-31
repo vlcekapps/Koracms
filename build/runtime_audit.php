@@ -28,6 +28,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_polls' => getSetting('module_polls', '0'),
     'module_reservations' => getSetting('module_reservations', '0'),
     'module_forms' => getSetting('module_forms', '0'),
+    'module_statistics' => getSetting('module_statistics', '0'),
 ];
 foreach (array_keys($runtimeAuditOriginalModuleSettings) as $moduleSettingKey) {
     saveSetting($moduleSettingKey, '1');
@@ -5170,7 +5171,7 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Všichni autoři')) {
             $issues[] = 'public author page is missing back link to all authors';
         }
-        if (!str_contains($result['body'], '>Blog<')) {
+        if (!str_contains($result['body'], 'Zpět na blog')) {
             $issues[] = 'public author page is missing back link to blog';
         }
     }
@@ -6224,9 +6225,21 @@ foreach ([
     "\$types['forms'] = 'Formuláře';",
     '[form]slug-formulare[/form]',
     '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
+    'let isSearching = false;',
+    "searchButton.setAttribute('aria-disabled', pending ? 'true' : 'false');",
+    'if (!dialog.hidden && !dialog.contains(document.activeElement)) {',
+    'searchButton.focus();',
 ] as $pickerFragment) {
     if (!str_contains($contentPickerSource, $pickerFragment)) {
         $contentSnippetIssues[] = 'content picker is missing snippet helper fragment: ' . $pickerFragment;
+    }
+}
+foreach ([
+    'searchButton.disabled = true;',
+    'searchButton.disabled = false;',
+] as $pickerForbiddenFragment) {
+    if (str_contains($contentPickerSource, $pickerForbiddenFragment)) {
+        $contentSnippetIssues[] = 'content picker still disables focused search button during search: ' . $pickerForbiddenFragment;
     }
 }
 
@@ -8986,11 +8999,13 @@ if ($httpIntegrationSource === '') {
 } else {
     foreach ([
         "require_once __DIR__ . '/http_test_helpers.php';",
+        'function httpIntegrationRestoreSettings(array $settings): void',
         '/admin/settings_save.php',
         '/reservations/book.php',
         '/admin/blog_save.php',
         '/admin/blog_transfer.php',
         '/admin/media.php',
+        'httpIntegrationRestoreSettings($originalSettings);',
         'editace článku přes blog_save',
         'editace článku s ruční volbou',
         'editace článku s vytvořením taxonomií',

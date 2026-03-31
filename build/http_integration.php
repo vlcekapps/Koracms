@@ -61,6 +61,18 @@ function httpIntegrationSettingValue(PDO $pdo, string $key): string
 }
 
 /**
+ * @param array<string, string> $settings
+ */
+function httpIntegrationRestoreSettings(array $settings): void
+{
+    foreach ($settings as $settingKey => $settingValue) {
+        saveSetting($settingKey, (string)$settingValue);
+    }
+
+    clearSettingsCache();
+}
+
+/**
  * @return array<string, string>
  */
 function httpIntegrationSettingsPostFields(array $formState): array
@@ -252,7 +264,13 @@ try {
     $originalSettings = [
         'site_name' => httpIntegrationSettingValue($pdo, 'site_name'),
         'site_description' => httpIntegrationSettingValue($pdo, 'site_description'),
+        'contact_email' => httpIntegrationSettingValue($pdo, 'contact_email'),
+        'comment_notify_email' => httpIntegrationSettingValue($pdo, 'comment_notify_email'),
         'board_public_label' => httpIntegrationSettingValue($pdo, 'board_public_label'),
+        'site_profile' => httpIntegrationSettingValue($pdo, 'site_profile'),
+        'active_theme' => httpIntegrationSettingValue($pdo, 'active_theme'),
+        'public_registration_enabled' => httpIntegrationSettingValue($pdo, 'public_registration_enabled'),
+        'module_statistics' => httpIntegrationSettingValue($pdo, 'module_statistics'),
         'module_blog' => getSetting('module_blog', '0'),
         'module_gallery' => getSetting('module_gallery', '0'),
         'module_reservations' => getSetting('module_reservations', '0'),
@@ -427,6 +445,7 @@ try {
     }
 
     httpIntegrationPrintResult('settings_save_http', $settingsIssues, $failures);
+    httpIntegrationRestoreSettings($originalSettings);
 
     $settingsModulesIssues = [];
     $settingsModulesUrl = $baseUrl . BASE_URL . '/admin/settings_modules.php';
@@ -1446,11 +1465,14 @@ try {
     $blogArticleId = (int)$pdo->lastInsertId();
     $createdArticles[] = $blogArticleId;
 
+    saveSetting('module_blog', '1');
+    clearSettingsCache();
+
     $blogIndexResponse = fetchUrl($blogStaticIndexUrl, '', 0);
     if (httpIntegrationStatusCode($blogIndexResponse) !== 200) {
         $blogStaticPagesIssues[] = 'veřejný blogový index s navigací stránek se nenačetl';
     }
-    if (!str_contains($blogIndexResponse['body'], 'Stránky blogu')) {
+    if (!str_contains($blogIndexResponse['body'], 'blog-page-links')) {
         $blogStaticPagesIssues[] = 'veřejný blogový index neobsahuje blok Stránky blogu';
     }
     if (!str_contains($blogIndexResponse['body'], $blogPageOneTitle) || !str_contains($blogIndexResponse['body'], $blogPageTwoTitle)) {
@@ -1462,7 +1484,7 @@ try {
     if (str_contains($blogIndexResponse['body'], 'Obsah první blogové stránky pro HTTP integration test.')) {
         $blogStaticPagesIssues[] = 'veřejný blogový index nemá zobrazovat obsah blogové stránky automaticky';
     }
-    $pagesHeadingPos = strpos($blogIndexResponse['body'], 'Stránky blogu');
+    $pagesHeadingPos = strpos($blogIndexResponse['body'], 'blog-page-links');
     $articleTitlePos = strpos($blogIndexResponse['body'], $blogArticleTitle);
     if ($pagesHeadingPos === false || $articleTitlePos === false || $pagesHeadingPos > $articleTitlePos) {
         $blogStaticPagesIssues[] = 'blok Stránky blogu není na indexu vykreslený nad články';
@@ -1473,10 +1495,12 @@ try {
     if (httpIntegrationStatusCode($blogPageDetailResponse) !== 200) {
         $blogStaticPagesIssues[] = 'detail blogové stránky se nenačetl';
     }
-    if (!str_contains($blogPageDetailResponse['body'], $blogPageOneTitle) || !str_contains($blogPageDetailResponse['body'], 'Obsah první blogové stránky pro HTTP integration test.')) {
+    if (!str_contains($blogPageDetailResponse['body'], 'page-blog-static')
+        || !str_contains($blogPageDetailResponse['body'], $blogPageOneTitle)
+        || !str_contains($blogPageDetailResponse['body'], 'Obsah první blogové stránky pro HTTP integration test.')) {
         $blogStaticPagesIssues[] = 'detail blogové stránky nezobrazuje očekávaný obsah';
     }
-    if (!str_contains($blogPageDetailResponse['body'], 'Zpět na blog HTTP Blogové stránky')) {
+    if (!str_contains($blogPageDetailResponse['body'], 'href="' . h(blogIndexPath(['slug' => $blogStaticMainSlug])) . '"')) {
         $blogStaticPagesIssues[] = 'detail blogové stránky nemá odkaz zpět na blog';
     }
     foreach ([
@@ -2297,10 +2321,7 @@ try {
     httpIntegrationPrintResult('public_form_submit_http', $publicFormIssues, $failures);
 } finally {
     if (isset($originalSettings) && is_array($originalSettings)) {
-        foreach ($originalSettings as $settingKey => $settingValue) {
-            saveSetting($settingKey, (string)$settingValue);
-        }
-        clearSettingsCache();
+        httpIntegrationRestoreSettings($originalSettings);
     }
 
     foreach ($createdResourceIds as $resourceId) {

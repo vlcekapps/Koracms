@@ -340,6 +340,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
         let lastTrigger = null;
         let savedSelection = { start: 0, end: 0, text: '' };
         let previousBodyOverflow = '';
+        let isSearching = false;
 
         if (!textarea || !openButton || !dialog || !overlay || !queryInput || !typeSelect || !searchButton || !statusNode || !resultsNode) {
             return;
@@ -472,6 +473,11 @@ function renderAdminContentReferencePicker(string $textareaId): void
             resultsNode.removeAttribute('aria-busy');
         };
 
+        const setSearchPending = (pending) => {
+            isSearching = pending;
+            searchButton.setAttribute('aria-disabled', pending ? 'true' : 'false');
+        };
+
         const closeDialog = (restoreFocus = true) => {
             dialog.hidden = true;
             dialog.style.display = 'none';
@@ -601,6 +607,10 @@ function renderAdminContentReferencePicker(string $textareaId): void
         };
 
         const runSearch = async () => {
+            if (isSearching) {
+                return;
+            }
+
             const query = queryInput.value.trim();
 
             if (query.length < 2) {
@@ -612,7 +622,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
             resultsNode.innerHTML = '';
             resultsNode.setAttribute('aria-busy', 'true');
             setStatus('Hledám obsah…');
-            searchButton.disabled = true;
+            setSearchPending(true);
 
             try {
                 const url = endpoint + '?q=' + encodeURIComponent(query) + '&type=' + encodeURIComponent(typeSelect.value);
@@ -641,7 +651,10 @@ function renderAdminContentReferencePicker(string $textareaId): void
                 setStatus(error instanceof Error ? error.message : 'Vyhledávání se nepodařilo dokončit.');
             } finally {
                 resultsNode.removeAttribute('aria-busy');
-                searchButton.disabled = false;
+                setSearchPending(false);
+                if (!dialog.hidden && !dialog.contains(document.activeElement)) {
+                    searchButton.focus();
+                }
             }
         };
 

@@ -1,6 +1,8 @@
 <?php
 $articleLink = static fn(array $article): string => articlePublicPath($article);
 $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi';
+$backBlogPath = trim((string)($backBlogPath ?? ''));
+$backBlogLabel = trim((string)($backBlogLabel ?? ''));
 ?>
 <div class="page-stack">
   <section class="surface author-panel" aria-labelledby="author-title">
@@ -30,10 +32,8 @@ $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi'
 
       <div class="button-row button-row--start">
         <a class="button-secondary" href="<?= authorIndexPath() ?>">Všichni autoři</a>
-        <?php if ($blogEnabled): ?>
-          <?php $defaultBlog = getDefaultBlog(); if ($defaultBlog): ?>
-            <a class="button-secondary" href="<?= h(blogIndexPath($defaultBlog)) ?>">Blog</a>
-          <?php endif; ?>
+        <?php if ($blogEnabled && $backBlogPath !== '' && $backBlogLabel !== ''): ?>
+          <a class="button-secondary" href="<?= h($backBlogPath) ?>"><?= h($backBlogLabel) ?></a>
         <?php endif; ?>
         <?php if ($author['author_website_url'] !== ''): ?>
           <a class="button-secondary" href="<?= h($author['author_website_url']) ?>" rel="noopener noreferrer" target="_blank">Web autora</a>

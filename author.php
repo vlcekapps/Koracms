@@ -27,6 +27,7 @@ if (!$author) {
 }
 
 $articles = [];
+$backBlog = null;
 if (isModuleEnabled('blog')) {
     $stmt = $pdo->prepare(
         "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.publish_at, a.view_count,
@@ -41,6 +42,17 @@ if (isModuleEnabled('blog')) {
     );
     $stmt->execute([(int)$author['id']]);
     $articles = $stmt->fetchAll();
+
+    if ($articles !== []) {
+        $backBlogId = (int)($articles[0]['blog_id'] ?? 0);
+        if ($backBlogId > 0) {
+            $backBlog = getBlogById($backBlogId);
+        }
+    }
+
+    if (!$backBlog) {
+        $backBlog = getDefaultBlog();
+    }
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');
@@ -63,6 +75,8 @@ renderPublicPage([
         'author' => $author,
         'articles' => $articles,
         'blogEnabled' => isModuleEnabled('blog'),
+        'backBlogPath' => $backBlog ? blogIndexPath($backBlog) : '',
+        'backBlogLabel' => $backBlog ? 'Zpět na blog' : '',
     ],
     'body_class' => 'page-author',
     'page_kind' => 'detail',
