@@ -627,6 +627,76 @@ try {
         ],
     ], 'kora-http-transfer-author');
 
+    $editAutoFormResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $articleEditMoveId . '&blog_id=' . $targetBlogId,
+        $authorSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($editAutoFormResponse) !== 200) {
+        $blogTransferIssues[] = 'editor článku při změně blogu nevrátil načtení formuláře';
+    }
+    if (!str_contains($editAutoFormResponse['body'], 'Uložený blog článku:')) {
+        $blogTransferIssues[] = 'editor článku nezobrazuje uložený blog jako samostatnou informaci';
+    }
+    if (!str_contains($editAutoFormResponse['body'], 'Po uložení bude článek přesunut do blogu')) {
+        $blogTransferIssues[] = 'editor článku nezobrazuje cílový blog jako stav po uložení';
+    }
+    if (str_contains($editAutoFormResponse['body'], 'Článek právě patří do blogu')) {
+        $blogTransferIssues[] = 'editor článku stále zavádějícím způsobem tvrdí, že článek už patří do vybraného cílového blogu';
+    }
+    if (!str_contains($editAutoFormResponse['body'], 'value="' . $sharedTargetCategoryId . '" selected')) {
+        $blogTransferIssues[] = 'editor článku při změně blogu nepředvyplnil stejně pojmenovanou cílovou kategorii';
+    }
+    if (!preg_match('/name="tags\[\]"\s+value="' . preg_quote((string)$sharedTargetTagId, '/') . '"[^>]*checked/', $editAutoFormResponse['body'])) {
+        $blogTransferIssues[] = 'editor článku při změně blogu nepředvyplnil odpovídající cílový štítek';
+    }
+    if (!str_contains($editAutoFormResponse['body'], 'id="blog-missing-category-group" style="margin-top:.75rem" hidden') || !str_contains($editAutoFormResponse['body'], 'id="blog-missing-tags-group" style="margin-top:.75rem" hidden')) {
+        $blogTransferIssues[] = 'editor článku neschovává sekci chybějících taxonomií, když se cílové taxonomie podařilo automaticky namapovat';
+    }
+
+    $editCreateFormResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $articleCreateMoveId . '&blog_id=' . $targetBlogId,
+        $authorSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($editCreateFormResponse) !== 200) {
+        $blogTransferIssues[] = 'editor článku s chybějícími taxonomiemi nevrátil načtení formuláře';
+    }
+    if (!str_contains($editCreateFormResponse['body'], 'Původní kategorie článku „' . $createSourceCategoryName . '“ v cílovém blogu neexistuje.')) {
+        $blogTransferIssues[] = 'editor článku neukazuje chybějící původní kategorii při změně blogu';
+    }
+    if (!str_contains($editCreateFormResponse['body'], 'Vytvořit chybějící kategorii v cílovém blogu')) {
+        $blogTransferIssues[] = 'editor článku nenabízí vytvoření chybějící cílové kategorie pro oprávněného uživatele';
+    }
+    if (!str_contains($editCreateFormResponse['body'], 'Vytvořit chybějící štítky v cílovém blogu')) {
+        $blogTransferIssues[] = 'editor článku nenabízí vytvoření chybějících cílových štítků pro oprávněného uživatele';
+    }
+
+    $authorNoTaxSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => false,
+        'cms_user_id' => $authorNoTaxId,
+        'cms_user_name' => 'HTTP Author Plain',
+        'cms_user_role' => 'author',
+        'blog_transfer_selection' => [
+            'ids' => [$articleNoTaxId],
+            'redirect' => BASE_URL . '/admin/blog.php',
+            'created_at' => time(),
+        ],
+    ], 'kora-http-transfer-author-plain');
+
+    $noTaxEditFormResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $articleNoTaxId . '&blog_id=' . $targetBlogId,
+        $authorNoTaxSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($noTaxEditFormResponse) !== 200) {
+        $blogTransferIssues[] = 'editor článku bez taxonomy práv nevrátil načtení formuláře';
+    }
+    if (str_contains($noTaxEditFormResponse['body'], 'Vytvořit chybějící kategorii v cílovém blogu') || str_contains($noTaxEditFormResponse['body'], 'Vytvořit chybějící štítky v cílovém blogu')) {
+        $blogTransferIssues[] = 'editor článku bez taxonomy práv stále nabízí vytvoření chybějících taxonomií';
+    }
+
     $articleEditMoveSlug = 'http-edit-move-article-save-' . bin2hex(random_bytes(4));
     $articleEditMoveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
         'csrf_token' => $authorSession['csrf'],
@@ -748,19 +818,6 @@ try {
         $blogTransferIssues[] = 'editace článku s vytvořením taxonomií nepřiřadila nový štítek';
     }
 
-    $authorNoTaxSession = koraPrimeTestSession([
-        'cms_logged_in' => true,
-        'cms_superadmin' => false,
-        'cms_user_id' => $authorNoTaxId,
-        'cms_user_name' => 'HTTP Author Plain',
-        'cms_user_role' => 'author',
-        'blog_transfer_selection' => [
-            'ids' => [$articleNoTaxId],
-            'redirect' => BASE_URL . '/admin/blog.php',
-            'created_at' => time(),
-        ],
-    ], 'kora-http-transfer-author-plain');
-
     $noTaxCreateResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
         'csrf_token' => $authorNoTaxSession['csrf'],
         'id' => (string)$articleNoTaxId,
@@ -798,6 +855,75 @@ try {
     }
     if ((int)($noTaxCreateArticle['category_id'] ?? 0) !== $sourceCategoryId) {
         $blogTransferIssues[] = 'nepovolené vytvoření taxonomií v editoru článku přesto změnilo kategorii článku';
+    }
+
+    $invalidCategoryResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $authorSession['csrf'],
+        'id' => (string)$articleForeignAttemptId,
+        'blog_id' => (string)$targetBlogId,
+        'title' => 'HTTP Cizí mapování',
+        'slug' => 'http-invalid-category-' . bin2hex(random_bytes(4)),
+        'perex' => '',
+        'content' => '<p>HTTP integration test.</p>',
+        'category_id' => (string)$foreignCategoryId,
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $targetBlogId,
+        'comments_enabled' => '1',
+    ], $authorSession['cookie'], 0);
+    if (httpIntegrationStatusCode($invalidCategoryResponse) !== 302) {
+        $blogTransferIssues[] = 'podvržená cizí kategorie v editoru článku nevrátila redirect';
+    }
+    $invalidCategoryLocationHeader = '';
+    foreach (($invalidCategoryResponse['headers'] ?? []) as $headerLine) {
+        if (stripos((string)$headerLine, 'Location:') === 0) {
+            $invalidCategoryLocationHeader = trim(substr((string)$headerLine, 9));
+            break;
+        }
+    }
+    if ($invalidCategoryLocationHeader === '' || !str_contains($invalidCategoryLocationHeader, BASE_URL . '/admin/blog_form.php') || !str_contains($invalidCategoryLocationHeader, 'err=category_target')) {
+        $blogTransferIssues[] = 'podvržená cizí kategorie v editoru článku nemíří zpět na formulář s validační chybou';
+    }
+    $invalidCategoryArticleStmt = $pdo->prepare("SELECT blog_id, category_id FROM cms_articles WHERE id = ?");
+    $invalidCategoryArticleStmt->execute([$articleForeignAttemptId]);
+    $invalidCategoryArticle = $invalidCategoryArticleStmt->fetch() ?: [];
+    if ((int)($invalidCategoryArticle['blog_id'] ?? 0) !== $sourceBlogId || (int)($invalidCategoryArticle['category_id'] ?? 0) !== $sourceCategoryId) {
+        $blogTransferIssues[] = 'podvržená cizí kategorie v editoru článku přesto změnila článek';
+    }
+
+    $invalidTagsResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $authorSession['csrf'],
+        'id' => (string)$articleForeignAttemptId,
+        'blog_id' => (string)$targetBlogId,
+        'title' => 'HTTP Cizí mapování',
+        'slug' => 'http-invalid-tags-' . bin2hex(random_bytes(4)),
+        'perex' => '',
+        'content' => '<p>HTTP integration test.</p>',
+        'category_id' => (string)$targetCategoryId,
+        'tags' => [(string)$foreignTagId],
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $targetBlogId,
+        'comments_enabled' => '1',
+    ], $authorSession['cookie'], 0);
+    if (httpIntegrationStatusCode($invalidTagsResponse) !== 302) {
+        $blogTransferIssues[] = 'podvržené cizí štítky v editoru článku nevrátily redirect';
+    }
+    $invalidTagsLocationHeader = '';
+    foreach (($invalidTagsResponse['headers'] ?? []) as $headerLine) {
+        if (stripos((string)$headerLine, 'Location:') === 0) {
+            $invalidTagsLocationHeader = trim(substr((string)$headerLine, 9));
+            break;
+        }
+    }
+    if ($invalidTagsLocationHeader === '' || !str_contains($invalidTagsLocationHeader, BASE_URL . '/admin/blog_form.php') || !str_contains($invalidTagsLocationHeader, 'err=tags_target')) {
+        $blogTransferIssues[] = 'podvržené cizí štítky v editoru článku nemíří zpět na formulář s validační chybou';
+    }
+    $invalidTagsArticleStmt = $pdo->prepare("SELECT blog_id, category_id FROM cms_articles WHERE id = ?");
+    $invalidTagsArticleStmt->execute([$articleForeignAttemptId]);
+    $invalidTagsArticle = $invalidTagsArticleStmt->fetch() ?: [];
+    if ((int)($invalidTagsArticle['blog_id'] ?? 0) !== $sourceBlogId || (int)($invalidTagsArticle['category_id'] ?? 0) !== $sourceCategoryId) {
+        $blogTransferIssues[] = 'podvržené cizí štítky v editoru článku přesto změnily článek';
     }
 
     $blogTransferUrl = $baseUrl . BASE_URL . '/admin/blog_transfer.php';

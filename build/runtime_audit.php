@@ -7967,7 +7967,7 @@ if (!str_contains($blogFormSource, 'resolveAutoSelections') || !str_contains($bl
 if (!str_contains($blogFormSource, 'blog-taxonomy-transfer-help')) {
     $blogAdminIssues[] = 'article form is missing help text for taxonomy carry-over when changing blogs';
 }
-if (!str_contains($blogFormSource, 'blog-missing-taxonomies-fieldset') || !str_contains($blogFormSource, 'name="missing_category_action"') || !str_contains($blogFormSource, 'name="missing_tags_action"')) {
+if (!str_contains($blogFormSource, 'blog-missing-category-group') || !str_contains($blogFormSource, 'blog-missing-tags-group') || !str_contains($blogFormSource, 'name="missing_category_action"') || !str_contains($blogFormSource, 'name="missing_tags_action"')) {
     $blogAdminIssues[] = 'article form is missing missing-taxonomy controls for single-article blog changes';
 }
 if (!str_contains($blogFormSource, 'Vytvořit chybějící kategorii v cílovém blogu') || !str_contains($blogFormSource, 'Vytvořit chybějící štítky v cílovém blogu')) {
@@ -7975,6 +7975,12 @@ if (!str_contains($blogFormSource, 'Vytvořit chybějící kategorii v cílovém
 }
 if (!str_contains($blogFormSource, 'can_manage_taxonomies') || !str_contains($blogFormSource, 'updateMissingTaxonomyChoices')) {
     $blogAdminIssues[] = 'article form is missing per-blog taxonomy create gating for missing taxonomies';
+}
+if (!str_contains($blogFormSource, 'Uložený blog článku:') || !str_contains($blogFormSource, 'Po uložení bude článek přesunut do blogu')) {
+    $blogAdminIssues[] = 'article form no longer distinguishes saved blog from target blog after a blog change';
+}
+if (str_contains($blogFormSource, 'Článek právě patří do blogu')) {
+    $blogAdminIssues[] = 'article form still uses misleading copy that says the article already belongs to the selected target blog';
 }
 if (!str_contains($blogFormSource, 'comments_default')) {
     $blogAdminIssues[] = 'article form is missing per-blog default comments metadata';
@@ -8084,7 +8090,7 @@ if (!str_contains($blogSaveSource, 'cms_tags WHERE blog_id = ? ORDER BY id')) {
 if (!str_contains($blogSaveSource, '$articleIsMovingToAnotherBlog') || !str_contains($blogSaveSource, 'category_selection_mode') || !str_contains($blogSaveSource, 'tag_selection_mode')) {
     $blogAdminIssues[] = 'article save is missing blog-change taxonomy carry-over safeguards';
 }
-if (!str_contains($blogSaveSource, 'blogCategoryLookupByNormalizedName(') || !str_contains($blogSaveSource, 'blogTagLookupMaps(') || !str_contains($blogSaveSource, 'loadArticleTagDetails(')) {
+if (!str_contains($blogSaveSource, 'resolveArticleMoveTaxonomyState(') || !str_contains($blogSaveSource, 'loadArticleTagDetails(')) {
     $blogAdminIssues[] = 'article save is missing server-side taxonomy remapping helpers for blog changes';
 }
 if (!str_contains($blogSaveSource, 'missing_category_action') || !str_contains($blogSaveSource, 'missing_tags_action') || !str_contains($blogSaveSource, '$canCreateTargetTaxonomies')) {
@@ -8092,6 +8098,12 @@ if (!str_contains($blogSaveSource, 'missing_category_action') || !str_contains($
 }
 if (!str_contains($blogSaveSource, 'INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)') || !str_contains($blogSaveSource, 'INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)')) {
     $blogAdminIssues[] = 'article save is missing creation of missing target taxonomies during single-article move';
+}
+if (!str_contains($blogSaveSource, "err=category_target") && !str_contains($blogSaveSource, "'category_target'")) {
+    $blogAdminIssues[] = 'article save is missing a validation error for foreign categories outside the selected blog';
+}
+if (!str_contains($blogSaveSource, "err=tags_target") && !str_contains($blogSaveSource, "'tags_target'")) {
+    $blogAdminIssues[] = 'article save is missing a validation error for foreign tags outside the selected blog';
 }
 if (!str_contains($blogSaveSource, 'is_featured_in_blog')) {
     $blogAdminIssues[] = 'article save is missing featured-in-blog persistence';
@@ -8192,11 +8204,43 @@ if (!str_contains($blogIndexViewSource, 'blog-search-q')) {
 if (!str_contains($blogIndexViewSource, 'Archiv blogu')) {
     $blogAdminIssues[] = 'blog index view is missing archive navigation';
 }
+foreach ([
+    'blog-blogs-heading' => 'Další blogy webu',
+    'blog-search-heading' => 'Hledání v blogu',
+    'blog-categories-heading' => 'Kategorie blogu',
+    'blog-tags-heading' => 'Štítky blogu',
+    'blog-archives-heading' => 'Archiv blogu',
+] as $blogHeadingId => $blogHeadingLabel) {
+    if (!str_contains($blogIndexViewSource, 'id="' . $blogHeadingId . '"')) {
+        $blogAdminIssues[] = 'blog index view is missing visible heading id for ' . $blogHeadingLabel;
+    }
+    if (!str_contains($blogIndexViewSource, $blogHeadingLabel)) {
+        $blogAdminIssues[] = 'blog index view is missing visible heading text for ' . $blogHeadingLabel;
+    }
+    if (!str_contains($blogIndexViewSource, 'aria-labelledby="' . $blogHeadingId . '"')) {
+        $blogAdminIssues[] = 'blog index view is missing aria-labelledby for ' . $blogHeadingLabel;
+    }
+}
 if (!str_contains($blogIndexViewSource, 'Doporučený článek')) {
     $blogAdminIssues[] = 'blog index view is missing featured article hero';
 }
 if (!str_contains($blogIndexViewSource, "renderContent((string)\$blog['intro_content'])")) {
     $blogAdminIssues[] = 'blog index view is missing extended intro content rendering';
+}
+if (!str_contains($blogIndexViewSource, 'blog-secondary-tools')) {
+    $blogAdminIssues[] = 'blog index view is missing secondary blog navigation wrapper';
+}
+$blogSearchHeadingPos = strpos($blogIndexViewSource, 'blog-search-heading');
+$blogPagerPos = strpos($blogIndexViewSource, 'renderPager(');
+$blogEmptyStatePos = strpos($blogIndexViewSource, 'empty-state');
+if (
+    $blogSearchHeadingPos === false
+    || $blogPagerPos === false
+    || $blogEmptyStatePos === false
+    || $blogSearchHeadingPos < $blogPagerPos
+    || $blogSearchHeadingPos < $blogEmptyStatePos
+) {
+    $blogAdminIssues[] = 'blog index secondary navigation is not rendered after article content';
 }
 if (!str_contains($blogFeedSource, 'getBlogByLegacySlug($feedBlogSlug)')) {
     $blogAdminIssues[] = 'RSS feed is missing legacy blog slug redirects';
@@ -8875,6 +8919,9 @@ if ($httpIntegrationSource === '') {
         'editace článku s ruční volbou',
         'editace článku s vytvořením taxonomií',
         'nepovolené vytvoření taxonomií v editoru článku',
+        'uložený blog jako samostatnou informaci',
+        'podvržená cizí kategorie v editoru článku',
+        'podvržené cizí štítky v editoru článku',
         ] as $integrationFragment) {
         if (!str_contains($httpIntegrationSource, $integrationFragment)) {
             $settingsPrgIssues[] = 'http integration script is missing scenario fragment: ' . $integrationFragment;

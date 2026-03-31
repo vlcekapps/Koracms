@@ -73,104 +73,6 @@ $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || 
       </div>
     </div>
 
-    <?php if (!empty($publicBlogs) && count($publicBlogs) > 1): ?>
-      <nav aria-label="Další blogy webu" class="form-stack">
-        <ul class="chip-list">
-          <?php foreach ($publicBlogs as $publicBlog): ?>
-            <?php $isCurrentBlog = (int)($publicBlog['id'] ?? 0) === (int)($blog['id'] ?? 0); ?>
-            <li>
-              <?php if ($isCurrentBlog): ?>
-                <span class="pill"><?= h((string)$publicBlog['name']) ?></span>
-              <?php else: ?>
-                <a class="chip-link" href="<?= h(blogIndexPath($publicBlog)) ?>"><?= h((string)$publicBlog['name']) ?></a>
-              <?php endif; ?>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      </nav>
-    <?php endif; ?>
-
-    <form action="<?= h(blogIndexPath($blog)) ?>" method="get" class="form-stack" role="search" aria-label="Hledání v blogu">
-      <?php if ($katId !== null): ?><input type="hidden" name="kat" value="<?= (int)$katId ?>"><?php endif; ?>
-      <?php if ($tagSlug !== ''): ?><input type="hidden" name="tag" value="<?= h($tagSlug) ?>"><?php endif; ?>
-      <?php if (!empty($activeAuthor['author_slug'])): ?><input type="hidden" name="autor" value="<?= h((string)$activeAuthor['author_slug']) ?>"><?php endif; ?>
-      <?php if ($archiveFilter !== ''): ?><input type="hidden" name="archiv" value="<?= h($archiveFilter) ?>"><?php endif; ?>
-      <label for="blog-search-q">Hledat v blogu</label>
-      <div class="button-row button-row--wrap button-row--start">
-        <input type="search" id="blog-search-q" name="q" value="<?= h($searchQuery) ?>" placeholder="Hledat v článcích blogu…" style="min-width:min(26rem,100%)">
-        <button type="submit" class="button-primary">Hledat</button>
-        <?php if ($searchQuery !== ''): ?>
-          <a class="button-secondary" href="<?= h($filterLink(['q' => null])) ?>">Vyčistit hledání</a>
-        <?php endif; ?>
-      </div>
-    </form>
-
-    <?php if (!empty($categories)): ?>
-      <nav aria-label="Kategorie blogu" class="form-stack">
-        <ul class="chip-list">
-          <li><a class="chip-link" href="<?= h($filterLink(['kat' => null, 'tag' => null])) ?>"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
-          <?php foreach ($categories as $category): ?>
-            <li>
-              <a class="chip-link" href="<?= h($filterLink(['kat' => (int)$category['id'], 'tag' => null])) ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
-                <?= h($category['name']) ?>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      </nav>
-    <?php endif; ?>
-
-    <?php if (!empty($allTags)): ?>
-      <nav aria-label="Štítky blogu" class="form-stack">
-        <ul class="chip-list">
-          <?php foreach ($allTags as $tag): ?>
-            <li>
-              <a class="chip-link" href="<?= h($filterLink(['tag' => (string)$tag['slug']])) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
-                #<?= h($tag['name']) ?>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      </nav>
-    <?php endif; ?>
-
-    <?php if (!empty($blogArchives)): ?>
-      <nav aria-label="Archiv blogu" class="form-stack">
-        <ul class="chip-list">
-          <li><a class="chip-link" href="<?= h($filterLink(['archiv' => null])) ?>"<?= $archiveFilter === '' ? ' aria-current="page"' : '' ?>>Všechny měsíce</a></li>
-          <?php foreach ($blogArchives as $archive): ?>
-            <li>
-              <a class="chip-link" href="<?= h($filterLink(['archiv' => (string)$archive['key']])) ?>"<?= $archiveFilter === $archive['key'] ? ' aria-current="page"' : '' ?>>
-                <?= h((string)$archive['label']) ?> <span aria-hidden="true">(<?= (int)$archive['count'] ?>)</span>
-              </a>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      </nav>
-    <?php endif; ?>
-
-    <?php if (!empty($activeAuthor)): ?>
-      <nav aria-label="Aktivní autor blogu" class="form-stack">
-        <ul class="chip-list">
-          <li><a class="chip-link" href="<?= authorIndexPath() ?>">Všichni autoři</a></li>
-          <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>">Všechny články</a></li>
-          <li>
-            <?php if (!empty($activeAuthor['author_public_path'])): ?>
-              <a class="chip-link" href="<?= h((string)$activeAuthor['author_public_path']) ?>">Autor: <?= h($activeAuthor['author_display_name']) ?></a>
-            <?php else: ?>
-              <span class="pill">Autor: <?= h($activeAuthor['author_display_name']) ?></span>
-            <?php endif; ?>
-          </li>
-        </ul>
-      </nav>
-    <?php endif; ?>
-
-    <?php if ($showAnyFilter): ?>
-      <p class="button-row button-row--start">
-        <a class="button-secondary" href="<?= h(blogIndexPath($blog)) ?>">Zobrazit celý blog</a>
-      </p>
-    <?php endif; ?>
-
     <?php if (!empty($featuredArticle)): ?>
       <article class="card card--feature" aria-labelledby="featured-article-title" style="margin-bottom:1.25rem">
         <?php if (!empty($featuredArticle['image_file'])): ?>
@@ -248,5 +150,111 @@ $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || 
 
       <?= renderPager($page, $pages, $paginBase, 'Stránkování blogu', 'Novější', 'Starší') ?>
     <?php endif; ?>
+
+    <div class="blog-secondary-tools">
+      <?php if (!empty($publicBlogs) && count($publicBlogs) > 1): ?>
+        <nav class="form-stack blog-secondary-tools__block" aria-labelledby="blog-blogs-heading">
+          <h2 id="blog-blogs-heading" class="section-title section-title--compact blog-secondary-tools__title">Další blogy webu</h2>
+          <ul class="chip-list">
+            <?php foreach ($publicBlogs as $publicBlog): ?>
+              <?php $isCurrentBlog = (int)($publicBlog['id'] ?? 0) === (int)($blog['id'] ?? 0); ?>
+              <li>
+                <?php if ($isCurrentBlog): ?>
+                  <span class="pill"><?= h((string)$publicBlog['name']) ?></span>
+                <?php else: ?>
+                  <a class="chip-link" href="<?= h(blogIndexPath($publicBlog)) ?>"><?= h((string)$publicBlog['name']) ?></a>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </nav>
+      <?php endif; ?>
+
+      <form action="<?= h(blogIndexPath($blog)) ?>" method="get" class="form-stack blog-secondary-tools__block" role="search" aria-labelledby="blog-search-heading">
+        <h2 id="blog-search-heading" class="section-title section-title--compact blog-secondary-tools__title">Hledání v blogu</h2>
+        <?php if ($katId !== null): ?><input type="hidden" name="kat" value="<?= (int)$katId ?>"><?php endif; ?>
+        <?php if ($tagSlug !== ''): ?><input type="hidden" name="tag" value="<?= h($tagSlug) ?>"><?php endif; ?>
+        <?php if (!empty($activeAuthor['author_slug'])): ?><input type="hidden" name="autor" value="<?= h((string)$activeAuthor['author_slug']) ?>"><?php endif; ?>
+        <?php if ($archiveFilter !== ''): ?><input type="hidden" name="archiv" value="<?= h($archiveFilter) ?>"><?php endif; ?>
+        <label for="blog-search-q">Hledat v blogu</label>
+        <div class="button-row button-row--wrap button-row--start">
+          <input type="search" id="blog-search-q" name="q" value="<?= h($searchQuery) ?>" placeholder="Hledat v článcích blogu…" style="min-width:min(26rem,100%)">
+          <button type="submit" class="button-primary">Hledat</button>
+          <?php if ($searchQuery !== ''): ?>
+            <a class="button-secondary" href="<?= h($filterLink(['q' => null])) ?>">Vyčistit hledání</a>
+          <?php endif; ?>
+        </div>
+      </form>
+
+      <?php if (!empty($categories)): ?>
+        <nav class="form-stack blog-secondary-tools__block" aria-labelledby="blog-categories-heading">
+          <h2 id="blog-categories-heading" class="section-title section-title--compact blog-secondary-tools__title">Kategorie blogu</h2>
+          <ul class="chip-list">
+            <li><a class="chip-link" href="<?= h($filterLink(['kat' => null, 'tag' => null])) ?>"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
+            <?php foreach ($categories as $category): ?>
+              <li>
+                <a class="chip-link" href="<?= h($filterLink(['kat' => (int)$category['id'], 'tag' => null])) ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
+                  <?= h($category['name']) ?>
+                </a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </nav>
+      <?php endif; ?>
+
+      <?php if (!empty($allTags)): ?>
+        <nav class="form-stack blog-secondary-tools__block" aria-labelledby="blog-tags-heading">
+          <h2 id="blog-tags-heading" class="section-title section-title--compact blog-secondary-tools__title">Štítky blogu</h2>
+          <ul class="chip-list">
+            <?php foreach ($allTags as $tag): ?>
+              <li>
+                <a class="chip-link" href="<?= h($filterLink(['tag' => (string)$tag['slug']])) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
+                  #<?= h($tag['name']) ?>
+                </a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </nav>
+      <?php endif; ?>
+
+      <?php if (!empty($blogArchives)): ?>
+        <nav class="form-stack blog-secondary-tools__block" aria-labelledby="blog-archives-heading">
+          <h2 id="blog-archives-heading" class="section-title section-title--compact blog-secondary-tools__title">Archiv blogu</h2>
+          <ul class="chip-list">
+            <li><a class="chip-link" href="<?= h($filterLink(['archiv' => null])) ?>"<?= $archiveFilter === '' ? ' aria-current="page"' : '' ?>>Všechny měsíce</a></li>
+            <?php foreach ($blogArchives as $archive): ?>
+              <li>
+                <a class="chip-link" href="<?= h($filterLink(['archiv' => (string)$archive['key']])) ?>"<?= $archiveFilter === $archive['key'] ? ' aria-current="page"' : '' ?>>
+                  <?= h((string)$archive['label']) ?> <span aria-hidden="true">(<?= (int)$archive['count'] ?>)</span>
+                </a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </nav>
+      <?php endif; ?>
+
+      <?php if (!empty($activeAuthor)): ?>
+        <nav class="form-stack blog-secondary-tools__block" aria-labelledby="blog-active-author-heading">
+          <h2 id="blog-active-author-heading" class="section-title section-title--compact blog-secondary-tools__title">Aktivní autor blogu</h2>
+          <ul class="chip-list">
+            <li><a class="chip-link" href="<?= authorIndexPath() ?>">Všichni autoři</a></li>
+            <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>">Všechny články</a></li>
+            <li>
+              <?php if (!empty($activeAuthor['author_public_path'])): ?>
+                <a class="chip-link" href="<?= h((string)$activeAuthor['author_public_path']) ?>">Autor: <?= h($activeAuthor['author_display_name']) ?></a>
+              <?php else: ?>
+                <span class="pill">Autor: <?= h($activeAuthor['author_display_name']) ?></span>
+              <?php endif; ?>
+            </li>
+          </ul>
+        </nav>
+      <?php endif; ?>
+
+      <?php if ($showAnyFilter): ?>
+        <p class="button-row button-row--start blog-secondary-tools__actions">
+          <a class="button-secondary" href="<?= h(blogIndexPath($blog)) ?>">Zobrazit celý blog</a>
+        </p>
+      <?php endif; ?>
+    </div>
   </section>
 </div>

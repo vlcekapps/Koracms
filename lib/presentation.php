@@ -443,6 +443,85 @@ function blogTagLookupMaps(array $tags): array
 }
 
 /**
+ * @param array<int, array{id?:mixed,name?:mixed,slug?:mixed}> $sourceTags
+ * @param array<int, array<string, mixed>> $targetCategories
+ * @param array<int, array<string, mixed>> $targetTags
+ * @return array{
+ *   matched_category_id:?int,
+ *   matched_tag_ids: array<int>,
+ *   missing_category_name:string,
+ *   missing_tags: array<int, array{name:string,slug:string}>
+ * }
+ */
+function resolveArticleMoveTaxonomyState(
+    string $sourceCategoryName,
+    array $sourceTags,
+    array $targetCategories,
+    array $targetTags
+): array {
+    $matchedCategoryId = null;
+    $missingCategoryName = '';
+    $matchedTagIds = [];
+    $missingTags = [];
+
+    $normalizedSourceCategory = normalizeBlogTaxonomyName($sourceCategoryName);
+    if ($normalizedSourceCategory !== '') {
+        $targetCategoryLookup = blogCategoryLookupByNormalizedName($targetCategories);
+        if (isset($targetCategoryLookup[$normalizedSourceCategory]['id'])) {
+            $matchedCategoryId = (int)$targetCategoryLookup[$normalizedSourceCategory]['id'];
+        } else {
+            $missingCategoryName = trim($sourceCategoryName);
+        }
+    }
+
+    $targetTagLookup = blogTagLookupMaps($targetTags);
+    foreach ($sourceTags as $sourceTag) {
+        $sourceTagName = trim((string)($sourceTag['name'] ?? ''));
+        $sourceTagSlug = trim((string)($sourceTag['slug'] ?? ''));
+        if ($sourceTagName === '' && $sourceTagSlug === '') {
+            continue;
+        }
+
+        $matchedTargetTag = null;
+        if ($sourceTagSlug !== '' && isset($targetTagLookup['by_slug'][$sourceTagSlug])) {
+            $matchedTargetTag = $targetTagLookup['by_slug'][$sourceTagSlug];
+        } elseif ($sourceTagName !== '') {
+            $normalizedSourceTagName = normalizeBlogTaxonomyName($sourceTagName);
+            if (isset($targetTagLookup['by_name'][$normalizedSourceTagName])) {
+                $matchedTargetTag = $targetTagLookup['by_name'][$normalizedSourceTagName];
+            }
+        }
+
+        $matchedTargetTagId = (int)($matchedTargetTag['id'] ?? 0);
+        if ($matchedTargetTagId > 0) {
+            if (!in_array($matchedTargetTagId, $matchedTagIds, true)) {
+                $matchedTagIds[] = $matchedTargetTagId;
+            }
+            continue;
+        }
+
+        if ($sourceTagName !== '') {
+            $missingKey = $sourceTagSlug !== ''
+                ? 'slug:' . $sourceTagSlug
+                : 'name:' . normalizeBlogTaxonomyName($sourceTagName);
+            if (!isset($missingTags[$missingKey])) {
+                $missingTags[$missingKey] = [
+                    'name' => $sourceTagName,
+                    'slug' => $sourceTagSlug,
+                ];
+            }
+        }
+    }
+
+    return [
+        'matched_category_id' => $matchedCategoryId,
+        'matched_tag_ids' => $matchedTagIds,
+        'missing_category_name' => $missingCategoryName,
+        'missing_tags' => array_values($missingTags),
+    ];
+}
+
+/**
  * @return array<int, array{id:int,name:string,slug:string}>
  */
 function loadArticleTagDetails(PDO $pdo, int $articleId): array

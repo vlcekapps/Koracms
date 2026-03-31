@@ -18,14 +18,7 @@ function blogTransferArticleIds(array $articles): array
 
 function blogTransferNormalizeName(string $value): string
 {
-    $normalized = preg_replace('/\s+/u', ' ', trim($value));
-    if ($normalized === null) {
-        $normalized = trim($value);
-    }
-
-    return function_exists('mb_strtolower')
-        ? mb_strtolower($normalized, 'UTF-8')
-        : strtolower($normalized);
+    return normalizeBlogTaxonomyName($value);
 }
 
 function blogTransferMappingFieldName(string $prefix, string $key): string
@@ -161,22 +154,7 @@ function blogTransferLoadTags(PDO $pdo, int $blogId): array
  */
 function blogTransferCategoryMapByName(array $categories): array
 {
-    $map = [];
-    foreach ($categories as $category) {
-        $name = trim((string)($category['name'] ?? ''));
-        if ($name === '') {
-            continue;
-        }
-        $normalized = blogTransferNormalizeName($name);
-        if (!isset($map[$normalized])) {
-            $map[$normalized] = [
-                'id' => (int)($category['id'] ?? 0),
-                'name' => $name,
-            ];
-        }
-    }
-
-    return $map;
+    return blogCategoryLookupByNormalizedName($categories);
 }
 
 /**
@@ -185,30 +163,7 @@ function blogTransferCategoryMapByName(array $categories): array
  */
 function blogTransferTagLookupMaps(array $tags): array
 {
-    $bySlug = [];
-    $byName = [];
-    foreach ($tags as $tag) {
-        $name = trim((string)($tag['name'] ?? ''));
-        $slug = trim((string)($tag['slug'] ?? ''));
-        $tagData = [
-            'id' => (int)($tag['id'] ?? 0),
-            'name' => $name,
-            'slug' => $slug,
-        ];
-
-        if ($slug !== '' && !isset($bySlug[$slug])) {
-            $bySlug[$slug] = $tagData;
-        }
-
-        if ($name !== '') {
-            $normalized = blogTransferNormalizeName($name);
-            if (!isset($byName[$normalized])) {
-                $byName[$normalized] = $tagData;
-            }
-        }
-    }
-
-    return ['by_slug' => $bySlug, 'by_name' => $byName];
+    return blogTagLookupMaps($tags);
 }
 
 /**

@@ -130,6 +130,50 @@ if (isMultiBlog()) {
     }
 }
 
+$articleIsMovingToSelectedBlog = $id !== null
+    && $sourceArticleBlogId > 0
+    && $currentBlogId > 0
+    && $sourceArticleBlogId !== $currentBlogId;
+$storedBlog = $sourceArticleBlogId > 0 ? (getBlogById($sourceArticleBlogId) ?? null) : null;
+$selectedBlog = $currentBlog;
+$initialMoveTaxonomyState = [
+    'matched_category_id' => null,
+    'matched_tag_ids' => [],
+    'missing_category_name' => '',
+    'missing_tags' => [],
+];
+$initialCanCreateTargetTaxonomies = false;
+$canCreateTaxonomiesAnywhere = canCurrentUserManageAnyBlogTaxonomies();
+if ($articleIsMovingToSelectedBlog) {
+    $selectedBlogOptions = $blogFormOptions[$currentBlogId] ?? [
+        'categories' => [],
+        'tags' => [],
+        'can_manage_taxonomies' => false,
+    ];
+    $initialMoveTaxonomyState = resolveArticleMoveTaxonomyState(
+        $sourceCategoryName,
+        $sourceTagDetails,
+        (array)($selectedBlogOptions['categories'] ?? []),
+        (array)($selectedBlogOptions['tags'] ?? [])
+    );
+    $initialCanCreateTargetTaxonomies = (bool)($selectedBlogOptions['can_manage_taxonomies'] ?? false);
+}
+
+$initialCategorySelectId = $articleIsMovingToSelectedBlog
+    ? (int)($initialMoveTaxonomyState['matched_category_id'] ?? 0)
+    : (int)($article['category_id'] ?? 0);
+if ($initialCategorySelectId <= 0) {
+    $initialCategorySelectId = 0;
+}
+$initialTagIds = $articleIsMovingToSelectedBlog
+    ? array_values(array_map('intval', (array)($initialMoveTaxonomyState['matched_tag_ids'] ?? [])))
+    : $articleTagIds;
+$initialMissingCategoryName = trim((string)($initialMoveTaxonomyState['missing_category_name'] ?? ''));
+$initialMissingTagNames = array_values(array_filter(array_map(
+    static fn(array $tag): string => trim((string)($tag['name'] ?? '')),
+    (array)($initialMoveTaxonomyState['missing_tags'] ?? [])
+)));
+
 $defaultCommentsEnabled = $article
     ? (int)($article['comments_enabled'] ?? 1)
     : (int)($currentBlog['comments_default'] ?? 1);
@@ -142,6 +186,8 @@ $fieldErrorMap = [
     'publish_at' => ['publish_at'],
     'unpublish_at' => ['unpublish_at'],
     'publish_range' => ['publish_at', 'unpublish_at'],
+    'category_target' => ['category_id'],
+    'tags_target' => ['tags'],
     'missing_category_action' => ['missing_category_action'],
     'missing_tags_action' => ['missing_tags_action'],
 ];
@@ -152,6 +198,8 @@ $fieldErrorMessages = [
     'publish_at' => 'Plánované publikování má neplatný formát data a času.',
     'unpublish_at' => 'Plánované zrušení publikace má neplatný formát data a času.',
     'publish_range' => 'Plánované zrušení publikace musí být později než plánované publikování.',
+    'category_target' => 'Vybraná kategorie nepatří do cílového blogu.',
+    'tags_target' => 'Vybrané štítky nepatří do cílového blogu.',
     'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
 ];
@@ -181,8 +229,15 @@ adminHeader($pageTitle);
 
 <?php if (isMultiBlog() && $currentBlog): ?>
   <p class="field-help" id="blog-form-context">
-    Článek právě patří do blogu <strong id="blog-context-name"><?= h((string)$currentBlog['name']) ?></strong>.
-    Pokud blog změníte, upraví se i dostupné kategorie, štítky a odkazy nahoře.
+    <span id="blog-saved-context">
+      Uložený blog článku:
+      <strong id="blog-saved-context-name"><?= h((string)($storedBlog['name'] ?? $currentBlog['name'])) ?></strong>.
+    </span>
+    <span id="blog-target-context"<?= $articleIsMovingToSelectedBlog ? '' : ' hidden' ?>>
+      Po uložení bude článek přesunut do blogu
+      <strong id="blog-target-context-name"><?= h((string)($selectedBlog['name'] ?? $currentBlog['name'])) ?></strong>.
+    </span>
+    <span id="blog-form-context-note">Dostupné kategorie, štítky a odkazy nahoře se přepínají podle právě vybraného cílového blogu.</span>
   </p>
 <?php endif; ?>
 
@@ -210,6 +265,10 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Plánované zrušení publikace má neplatný formát data a času.</p>
 <?php elseif ($err === 'publish_range'): ?>
   <p role="alert" class="error" id="form-error">Plánované zrušení publikace musí být později než plánované publikování.</p>
+<?php elseif ($err === 'category_target'): ?>
+  <p role="alert" class="error" id="form-error">Vybraná kategorie nepatří do cílového blogu.</p>
+<?php elseif ($err === 'tags_target'): ?>
+  <p role="alert" class="error" id="form-error">Vybrané štítky nepatří do cílového blogu.</p>
 <?php elseif ($err === 'missing_category_action'): ?>
   <p role="alert" class="error" id="form-error">Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
 <?php elseif ($err === 'missing_tags_action'): ?>
@@ -234,8 +293,8 @@ adminHeader($pageTitle);
   <?php else: ?>
     <input type="hidden" name="blog_id" value="<?= $currentBlogId ?>">
   <?php endif; ?>
-  <input type="hidden" name="category_selection_mode" id="category-selection-mode" value="<?= $article ? 'auto' : 'manual' ?>">
-  <input type="hidden" name="tag_selection_mode" id="tag-selection-mode" value="<?= $article ? 'auto' : 'manual' ?>">
+  <input type="hidden" name="category_selection_mode" id="category-selection-mode" value="<?= $articleIsMovingToSelectedBlog ? 'auto' : 'manual' ?>">
+  <input type="hidden" name="tag_selection_mode" id="tag-selection-mode" value="<?= $articleIsMovingToSelectedBlog ? 'auto' : 'manual' ?>">
 
   <?php if ($article && !empty($article['author_id'])): ?>
     <?php
@@ -281,10 +340,11 @@ adminHeader($pageTitle);
     <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="category_id">Kategorie</label>
-    <select id="category_id" name="category_id"<?= isMultiBlog() ? ' aria-describedby="blog-category-help blog-taxonomy-transfer-help"' : '' ?>>
+    <select id="category_id" name="category_id"
+            <?= adminFieldAttributes('category_id', $err, $fieldErrorMap, isMultiBlog() ? ['blog-category-help', 'blog-taxonomy-transfer-help'] : [], 'blog-category-error') ?>>
       <option value="">– bez kategorie –</option>
       <?php foreach ($categories as $category): ?>
-        <option value="<?= (int)$category['id'] ?>" <?= ((int)($article['category_id'] ?? 0) === (int)$category['id']) ? 'selected' : '' ?>>
+        <option value="<?= (int)$category['id'] ?>" <?= ($initialCategorySelectId === (int)$category['id']) ? 'selected' : '' ?>>
           <?= h($category['name']) ?>
         </option>
       <?php endforeach; ?>
@@ -293,15 +353,41 @@ adminHeader($pageTitle);
       <small id="blog-category-help" class="field-help">Nabídka kategorií odpovídá právě vybranému blogu.</small>
       <small id="blog-taxonomy-transfer-help" class="field-help">Při změně blogu editor předvyplní stejně pojmenovanou kategorii a odpovídající štítky, pokud v cílovém blogu existují. Tady nahoře vždy vybíráte už existující taxonomie cílového blogu.</small>
     <?php endif; ?>
+    <?php adminRenderFieldError('category_id', $err, $fieldErrorMap, $fieldErrorMessages['category_target']); ?>
+    <?php if (isMultiBlog() && $article): ?>
+      <div id="blog-missing-category-group" style="margin-top:.75rem"<?= ($articleIsMovingToSelectedBlog && $initialMissingCategoryName !== '') ? '' : ' hidden' ?>>
+        <p id="blog-missing-category-description" class="field-help">
+          <?php if ($articleIsMovingToSelectedBlog && $initialMissingCategoryName !== ''): ?>
+            Původní kategorie článku „<?= h($initialMissingCategoryName) ?>“ v cílovém blogu neexistuje.
+          <?php endif; ?>
+        </p>
+        <div>
+          <input type="radio" id="missing-category-action-drop" name="missing_category_action" value="drop"
+                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
+                 <?= $err === 'missing_category_action' && $initialCanCreateTargetTaxonomies ? '' : ' checked' ?>>
+          <label for="missing-category-action-drop" style="display:inline;font-weight:normal">Bez kategorie</label>
+        </div>
+        <?php if ($canCreateTaxonomiesAnywhere): ?>
+          <div id="blog-missing-category-create-option"<?= $initialCanCreateTargetTaxonomies ? '' : ' hidden' ?>>
+            <input type="radio" id="missing-category-action-create" name="missing_category_action" value="create"
+                   <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
+                   <?= $err === 'missing_category_action' && $initialCanCreateTargetTaxonomies ? ' checked' : '' ?>>
+            <label for="missing-category-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící kategorii v cílovém blogu</label>
+          </div>
+        <?php endif; ?>
+        <small id="blog-missing-category-help" class="field-help">Tato volba řeší jen původní kategorii článku, která v cílovém blogu zatím neexistuje.</small>
+        <?php adminRenderFieldError('missing_category_action', $err, $fieldErrorMap, $fieldErrorMessages['missing_category_action']); ?>
+      </div>
+    <?php endif; ?>
   </fieldset>
 
-  <fieldset id="article-tags-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help blog-taxonomy-transfer-help"' : '' ?>>
+  <fieldset id="article-tags-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help blog-taxonomy-transfer-help' . ($err === 'tags_target' ? ' blog-tags-error' : '') . '"' : ($err === 'tags_target' ? ' aria-describedby="blog-tags-error"' : '') ?>>
     <legend>Štítky článku</legend>
     <div id="article-tags-options">
       <?php foreach ($allTags as $tag): ?>
         <label style="display:inline-block;margin-right:1rem;font-weight:normal">
           <input type="checkbox" name="tags[]" value="<?= (int)$tag['id'] ?>"
-                 <?= in_array((int)$tag['id'], $articleTagIds, true) ? 'checked' : '' ?>>
+                 <?= in_array((int)$tag['id'], $initialTagIds, true) ? 'checked' : '' ?>>
           <?= h($tag['name']) ?>
         </label>
       <?php endforeach; ?>
@@ -309,50 +395,35 @@ adminHeader($pageTitle);
     <?php if (isMultiBlog()): ?>
       <small id="blog-tags-help" class="field-help">Dostupné štítky se mění podle vybraného blogu.</small>
     <?php endif; ?>
-  </fieldset>
-
-  <?php if (isMultiBlog() && $article): ?>
-    <fieldset id="blog-missing-taxonomies-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem" hidden>
-      <legend>Chybějící taxonomie po změně blogu</legend>
-      <p id="blog-missing-taxonomies-summary" class="field-help">Pokud v cílovém blogu chybí původní kategorie nebo štítky, můžete je zde ponechat bez přiřazení nebo je vytvořit.</p>
-
-      <div id="blog-missing-category-group" hidden>
-        <p id="blog-missing-category-description" class="field-help"></p>
-        <div>
-          <input type="radio" id="missing-category-action-drop" name="missing_category_action" value="drop"
-                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
-                 <?= $err === 'missing_category_action' ? '' : ' checked' ?>>
-          <label for="missing-category-action-drop" style="display:inline;font-weight:normal">Bez kategorie</label>
-        </div>
-        <div id="blog-missing-category-create-option" hidden>
-          <input type="radio" id="missing-category-action-create" name="missing_category_action" value="create"
-                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
-                 <?= $err === 'missing_category_action' ? ' checked' : '' ?>>
-          <label for="missing-category-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící kategorii v cílovém blogu</label>
-        </div>
-        <small id="blog-missing-category-help" class="field-help">Tato volba řeší jen původní kategorii článku, která v cílovém blogu zatím neexistuje.</small>
-        <?php adminRenderFieldError('missing_category_action', $err, $fieldErrorMap, $fieldErrorMessages['missing_category_action']); ?>
-      </div>
-
-      <div id="blog-missing-tags-group" hidden style="margin-top:1rem">
-        <p id="blog-missing-tags-description" class="field-help"></p>
+    <?php if ($err === 'tags_target'): ?>
+      <small id="blog-tags-error" class="field-help field-error"><?= h($fieldErrorMessages['tags_target']) ?></small>
+    <?php endif; ?>
+    <?php if (isMultiBlog() && $article): ?>
+      <div id="blog-missing-tags-group" style="margin-top:.75rem"<?= ($articleIsMovingToSelectedBlog && $initialMissingTagNames !== []) ? '' : ' hidden' ?>>
+        <p id="blog-missing-tags-description" class="field-help">
+          <?php if ($articleIsMovingToSelectedBlog && $initialMissingTagNames !== []): ?>
+            V cílovém blogu chybí původní štítky: <?= h(implode(', ', $initialMissingTagNames)) ?>.
+          <?php endif; ?>
+        </p>
         <div>
           <input type="radio" id="missing-tags-action-drop" name="missing_tags_action" value="drop"
                  <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
-                 <?= $err === 'missing_tags_action' ? '' : ' checked' ?>>
+                 <?= $err === 'missing_tags_action' && $initialCanCreateTargetTaxonomies ? '' : ' checked' ?>>
           <label for="missing-tags-action-drop" style="display:inline;font-weight:normal">Bez chybějících štítků</label>
         </div>
-        <div id="blog-missing-tags-create-option" hidden>
-          <input type="radio" id="missing-tags-action-create" name="missing_tags_action" value="create"
-                 <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
-                 <?= $err === 'missing_tags_action' ? ' checked' : '' ?>>
-          <label for="missing-tags-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící štítky v cílovém blogu</label>
-        </div>
+        <?php if ($canCreateTaxonomiesAnywhere): ?>
+          <div id="blog-missing-tags-create-option"<?= $initialCanCreateTargetTaxonomies ? '' : ' hidden' ?>>
+            <input type="radio" id="missing-tags-action-create" name="missing_tags_action" value="create"
+                   <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
+                   <?= $err === 'missing_tags_action' && $initialCanCreateTargetTaxonomies ? ' checked' : '' ?>>
+            <label for="missing-tags-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící štítky v cílovém blogu</label>
+          </div>
+        <?php endif; ?>
         <small id="blog-missing-tags-help" class="field-help">Tato volba se týká jen původních štítků, které v cílovém blogu zatím neexistují.</small>
         <?php adminRenderFieldError('missing_tags_action', $err, $fieldErrorMap, $fieldErrorMessages['missing_tags_action']); ?>
       </div>
-    </fieldset>
-  <?php endif; ?>
+    <?php endif; ?>
+  </fieldset>
 
   <fieldset>
     <legend>Text článku</legend>
@@ -470,7 +541,8 @@ adminHeader($pageTitle);
     const slugInput = document.getElementById('slug');
     const blogSelect = document.getElementById('blog_id');
     const redirectInput = document.getElementById('blog-redirect');
-    const contextName = document.getElementById('blog-context-name');
+    const targetContext = document.getElementById('blog-target-context');
+    const targetContextName = document.getElementById('blog-target-context-name');
     const categoryLink = document.getElementById('blog-link-categories');
     const tagLink = document.getElementById('blog-link-tags');
     const publicLink = document.getElementById('blog-link-public');
@@ -478,8 +550,6 @@ adminHeader($pageTitle);
     const categorySelect = document.getElementById('category_id');
     const tagsFieldset = document.getElementById('article-tags-fieldset');
     const tagsContainer = document.getElementById('article-tags-options');
-    const missingTaxonomiesFieldset = document.getElementById('blog-missing-taxonomies-fieldset');
-    const missingTaxonomiesSummary = document.getElementById('blog-missing-taxonomies-summary');
     const missingCategoryGroup = document.getElementById('blog-missing-category-group');
     const missingCategoryDescription = document.getElementById('blog-missing-category-description');
     const missingCategoryCreateOption = document.getElementById('blog-missing-category-create-option');
@@ -596,7 +666,7 @@ adminHeader($pageTitle);
     };
 
     const updateMissingTaxonomyChoices = (blogId, state) => {
-        if (!missingTaxonomiesFieldset || isNewArticle || sourceBlogId <= 0) {
+        if ((!missingCategoryGroup && !missingTagsGroup) || isNewArticle || sourceBlogId <= 0) {
             return;
         }
 
@@ -657,13 +727,9 @@ adminHeader($pageTitle);
             setRadioValue(missingTagsActionInputs, tagsAreMissing ? state.missingTagsAction : 'drop');
         }
 
-        if (missingTaxonomiesSummary) {
-            missingTaxonomiesSummary.textContent = canCreateTaxonomies
-                ? 'Pokud v cílovém blogu chybí původní kategorie nebo štítky, můžete je zde ponechat bez přiřazení nebo je vytvořit.'
-                : 'Pokud v cílovém blogu chybí původní kategorie nebo štítky, bez práv správce taxonomií je v editoru můžete jen vynechat.';
+        if (targetContext) {
+            targetContext.hidden = !sourceBlogChanged;
         }
-
-        missingTaxonomiesFieldset.hidden = !(categoryIsMissing || tagsAreMissing);
     };
 
     if (categorySelect && categorySelect.options.length > 0 && categorySelect.options[0].value === '') {
@@ -705,8 +771,11 @@ adminHeader($pageTitle);
         }
 
         const selectedBlog = blogMetaById[String(blogId)] || null;
-        if (contextName && selectedBlog) {
-            contextName.textContent = selectedBlog.name;
+        if (targetContextName && selectedBlog) {
+            targetContextName.textContent = selectedBlog.name;
+        }
+        if (targetContext) {
+            targetContext.hidden = String(blogId) === String(sourceBlogId);
         }
         if (redirectInput) {
             redirectInput.value = '<?= h(BASE_URL . '/admin/blog.php') ?>' + '?blog=' + encodeURIComponent(String(blogId));

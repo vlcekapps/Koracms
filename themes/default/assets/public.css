@@ -829,6 +829,30 @@ body.theme-public textarea.form-control {
   gap: 1.25rem;
 }
 
+.blog-secondary-tools {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(201, 213, 226, 0.9);
+}
+
+.blog-secondary-tools__block {
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(201, 213, 226, 0.9);
+  border-radius: var(--radius-md);
+  background: rgba(247, 250, 252, 0.82);
+}
+
+.blog-secondary-tools__title {
+  margin-bottom: 0.15rem;
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+}
+
+.blog-secondary-tools__actions {
+  margin: 0;
+}
+
 .breadcrumb-list {
   display: flex;
   flex-wrap: wrap;
