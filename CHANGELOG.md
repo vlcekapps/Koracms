@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Blogy – změna blogu v editoru článku nově spolehlivěji pracuje s kategoriemi a štítky cílového blogu** – editor při přesunu jednoho článku do jiného blogu nově jasně rozlišuje uložený a cílový blog, už při prvním renderu serverově vyhodnocuje chybějící taxonomie a oprávněným správcům nabídne vytvoření chybějící kategorie nebo štítků přímo z editace článku; server-side validace zároveň odmítá podvržené kategorie a štítky mimo cílový blog
+- **Veřejný index blogu – pomocná navigace je nově pod obsahem a s viditelnými nadpisy** – bloky `Další blogy webu`, `Hledání v blogu`, `Kategorie blogu`, `Štítky blogu`, `Archiv blogu` a aktivní autor se na hlavní stránce blogu nově zobrazují až pod featured článkem, výpisem a stránkováním a každá oblast má skutečný viditelný nadpis napojený přes `aria-labelledby`, takže ji čtečky obrazovek najdou jak podle landmarků, tak podle nadpisů
+
 ## [3.0.0-rc.10] – 2026-03-31
 
 ### Změněno
