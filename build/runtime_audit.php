@@ -2455,6 +2455,11 @@ function extractCaptchaAnswer(string $html): ?int
 $failures = 0;
 
 foreach ($pages as $page) {
+    if ($page['label'] === 'register') {
+        saveSetting('public_registration_enabled', '1');
+        clearSettingsCache();
+    }
+
     $result = fetchUrl($page['url'], $page['cookie'] ?? '');
     $issues = [];
 

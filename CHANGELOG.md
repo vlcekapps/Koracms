@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Změněno
 - **Blogy – změna slugu nově opravdu zachovává funkční staré veřejné adresy** – při přejmenování slugu blogu se starý slug nově spolehlivě uloží do redirect tabulky ještě před aktualizací blogu, takže staré adresy blogu, jeho článků, blogových stránek i RSS feedu korektně vrací `301` na nový canonical tvar místo `404`
+- **Audity – runtime kontrola registrace už nepadá na lokálně vypnuté veřejné registraci** – probe veřejné stránky `register.php` si před vlastním ověřením explicitně zapne `public_registration_enabled`, takže audit nově stabilně testuje skutečnou dostupnost registrační stránky místo toho, aby občas skončil falešnou chybou `403 Forbidden` podle lokálního výchozího nastavení
 
 ## [3.2.2] – 2026-03-31
 
