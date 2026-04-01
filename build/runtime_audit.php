@@ -10221,6 +10221,9 @@ if (!str_contains($adminMenuSource, 'Upravit formulář')) {
 if (!str_contains($publicNavSource, 'foreach (array_keys($visibleForms) as $formId)')) {
     $menuAdminIssues[] = 'public navigation does not append missing form entries safely';
 }
+if (!str_contains($publicNavSource, '$visibleBlogEntries, $visibleForms, $li, $cur, $current')) {
+    $menuAdminIssues[] = 'public navigation unified renderer is missing visible forms in closure scope';
+}
 if (!str_contains($publicNavSource, 'loadPublicNavigationForms()')) {
     $menuAdminIssues[] = 'public navigation is not using the shared public form navigation helper';
 }

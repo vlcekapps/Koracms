@@ -323,7 +323,7 @@ function siteNav(string $current = ''): string
         } catch (\PDOException $e) {}
 
         $renderedEntries = [];
-        $renderUnifiedEntry = static function (string $entry) use (&$nav, &$renderedEntries, $moduleMap, $pagesMap, $visibleBlogEntries, $li, $cur, $current): void {
+        $renderUnifiedEntry = static function (string $entry) use (&$nav, &$renderedEntries, $moduleMap, $pagesMap, $visibleBlogEntries, $visibleForms, $li, $cur, $current): void {
             if ($entry === '' || isset($renderedEntries[$entry])) {
                 return;
             }

@@ -298,6 +298,7 @@ try {
         'board_public_label' => httpIntegrationSettingValue($pdo, 'board_public_label'),
         'site_profile' => httpIntegrationSettingValue($pdo, 'site_profile'),
         'active_theme' => httpIntegrationSettingValue($pdo, 'active_theme'),
+        'nav_order_unified' => httpIntegrationSettingValue($pdo, 'nav_order_unified'),
         'public_registration_enabled' => httpIntegrationSettingValue($pdo, 'public_registration_enabled'),
         'module_statistics' => httpIntegrationSettingValue($pdo, 'module_statistics'),
         'module_blog' => getSetting('module_blog', '0'),
@@ -1147,6 +1148,8 @@ try {
     }
 
     $navFormPath = formPublicPath(['id' => $navFormId, 'slug' => $navFormSlug]);
+    saveSetting('nav_order_unified', 'page:999999');
+    clearSettingsCache();
     $homeWithNavForm = fetchUrl($publicHomeUrl, '', 0);
     if (httpIntegrationStatusCode($homeWithNavForm) !== 200) {
         $formsNavIssues[] = 'homepage pro kontrolu formuláře v navigaci nevrátila 200';
