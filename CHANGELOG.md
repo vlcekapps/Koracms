@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.3.3] – 2026-04-01
 
 ### Změněno
 - **Formuláře – hlavní navigace nově správně přidává aktivní formuláře i při zapnutém `nav_order_unified`** – veřejná navigace při sjednoceném pořadí modulů, stránek, blogů a formulářů znovu korektně pracuje i s položkami `form:*`, takže formuláře označené pro zobrazení v navigaci nezmizí jen proto, že web používá novější správu pořadí v `admin/menu.php`; integrační test současně nově ověřuje i produkční variantu s neprázdným `nav_order_unified`
