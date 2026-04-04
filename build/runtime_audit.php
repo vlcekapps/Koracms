@@ -7032,11 +7032,80 @@ echo "=== migrate_guard ===\n";
 if (!str_contains($migrateProbe['status'], '302')) {
     echo "- unexpected status: {$migrateProbe['status']}\n";
     $failures++;
-} elseif (!in_array('Location: /admin/login.php', $migrateProbe['headers'], true)) {
-    echo "- migrate.php does not redirect anonymous user to /admin/login.php\n";
-    $failures++;
 } else {
+    $migrateLocation = responseLocationHeaderValue($migrateProbe['headers']);
+    $migrateLocationPath = (string)(parse_url($migrateLocation, PHP_URL_PATH) ?? '');
+    $migrateLocationQuery = (string)(parse_url($migrateLocation, PHP_URL_QUERY) ?? '');
+    parse_str($migrateLocationQuery, $migrateLocationParams);
+    if ($migrateLocationPath !== BASE_URL . '/admin/login.php') {
+        echo "- migrate.php does not redirect anonymous user to /admin/login.php\n";
+        $failures++;
+    } elseif (($migrateLocationParams['redirect'] ?? '') !== BASE_URL . '/migrate.php') {
+        echo "- migrate.php does not preserve safe redirect back to itself after login\n";
+        $failures++;
+    } else {
+        echo "OK\n";
+    }
+}
+
+echo "=== admin_login_redirect_guardrails ===\n";
+$adminLoginRedirectIssues = [];
+$adminAuthSource = (string)file_get_contents(dirname(__DIR__) . '/auth.php');
+$adminLoginSource = (string)file_get_contents(dirname(__DIR__) . '/admin/login.php');
+$adminLogin2faSource = (string)file_get_contents(dirname(__DIR__) . '/admin/login_2fa.php');
+$adminHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
+    ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
+    : '';
+foreach ([
+    '$requestUri = (string)($_SERVER[\'REQUEST_URI\'] ?? \'\');',
+    'adminLoginRedirectTarget($currentTarget, \'\')',
+    'redirect=',
+] as $authRedirectFragment) {
+    if (!str_contains($adminAuthSource, $authRedirectFragment)) {
+        $adminLoginRedirectIssues[] = 'auth flow is missing admin redirect fragment: ' . $authRedirectFragment;
+    }
+}
+foreach ([
+    "adminLoginRedirectTarget(trim(\$_GET['redirect'] ?? \$_POST['redirect'] ?? ''), BASE_URL . '/admin/index.php')",
+    '$cancel2fa = ($_GET[\'cancel_2fa\'] ?? \'\') === \'1\';',
+    "\$_SESSION['2fa_pending_redirect'] = \$redirect;",
+    "\$_SESSION['2fa_pending_redirect']",
+    'name="redirect"',
+    "header('Location: ' . \$redirect);",
+] as $adminLoginFragment) {
+    if (!str_contains($adminLoginSource, $adminLoginFragment)) {
+        $adminLoginRedirectIssues[] = 'admin login is missing redirect fragment: ' . $adminLoginFragment;
+    }
+}
+foreach ([
+    "adminLoginRedirectTarget((string)(\$_SESSION['2fa_pending_redirect'] ?? ''), BASE_URL . '/admin/index.php')",
+    'cancel_2fa=1&redirect=',
+    "\$_SESSION['2fa_pending_redirect']",
+    "header('Location: ' . \$redirect);",
+] as $adminLogin2faFragment) {
+    if (!str_contains($adminLogin2faSource, $adminLogin2faFragment)) {
+        $adminLoginRedirectIssues[] = 'admin 2FA is missing redirect fragment: ' . $adminLogin2faFragment;
+    }
+}
+ if ($adminHttpIntegrationSource === '') {
+    $adminLoginRedirectIssues[] = 'build/http_integration.php is missing for admin login redirect coverage';
+} else {
+    foreach ([
+        "httpIntegrationPrintResult('admin_login_redirect_http'",
+        "httpIntegrationPrintResult('migrate_login_redirect_http'",
+    ] as $httpLoginRedirectFragment) {
+        if (!str_contains($adminHttpIntegrationSource, $httpLoginRedirectFragment)) {
+            $adminLoginRedirectIssues[] = 'http integration is missing admin redirect scenario: ' . $httpLoginRedirectFragment;
+        }
+    }
+}
+if ($adminLoginRedirectIssues === []) {
     echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminLoginRedirectIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
 }
 
 $migrateConfirm = fetchUrl($baseUrl . '/migrate.php', 'PHPSESSID=' . $auditSessionId, 0);

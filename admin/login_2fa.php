@@ -9,6 +9,8 @@ if (empty($_SESSION['2fa_pending_user_id'])) {
 
 $error = '';
 $userId = (int)$_SESSION['2fa_pending_user_id'];
+$redirect = adminLoginRedirectTarget((string)($_SESSION['2fa_pending_redirect'] ?? ''), BASE_URL . '/admin/index.php');
+$backToLoginUrl = BASE_URL . '/admin/login.php?cancel_2fa=1&redirect=' . urlencode($redirect);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('login_2fa', 5, 300);
@@ -30,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_pending_email'],
               $_SESSION['2fa_pending_superadmin'], $_SESSION['2fa_pending_name'],
-              $_SESSION['2fa_pending_role']);
-        header('Location: ' . BASE_URL . '/admin/index.php');
+              $_SESSION['2fa_pending_role'], $_SESSION['2fa_pending_redirect']);
+        header('Location: ' . $redirect);
         exit;
     }
 
@@ -103,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </fieldset>
   </form>
 
-  <p style="margin-top:2rem"><a href="login.php">Zpět na přihlášení</a></p>
+  <p style="margin-top:2rem"><a href="<?= h($backToLoginUrl) ?>">Zpět na přihlášení</a></p>
 </main>
 </body>
 </html>

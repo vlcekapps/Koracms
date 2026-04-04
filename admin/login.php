@@ -1,8 +1,26 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
+$redirect = adminLoginRedirectTarget(trim($_GET['redirect'] ?? $_POST['redirect'] ?? ''), BASE_URL . '/admin/index.php');
+$cancel2fa = ($_GET['cancel_2fa'] ?? '') === '1';
+
+if ($cancel2fa) {
+    unset(
+        $_SESSION['2fa_pending_user_id'],
+        $_SESSION['2fa_pending_email'],
+        $_SESSION['2fa_pending_superadmin'],
+        $_SESSION['2fa_pending_role'],
+        $_SESSION['2fa_pending_name'],
+        $_SESSION['2fa_pending_redirect']
+    );
+}
+
 if (isLoggedIn()) {
-    header('Location: ' . BASE_URL . '/admin/index.php');
+    if (isPublicUser()) {
+        header('Location: ' . BASE_URL . '/public_profile.php');
+    } else {
+        header('Location: ' . $redirect);
+    }
     exit;
 }
 
@@ -21,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo  = db_connect();
         $stmt = $pdo->prepare(
-            "SELECT id, password, first_name, last_name, nickname, is_superadmin, role
+            "SELECT id, password, first_name, last_name, nickname, is_superadmin, role, totp_secret
              FROM cms_users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([$inputEmail]);
@@ -38,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['2fa_pending_email'] = $inputEmail;
                 $_SESSION['2fa_pending_superadmin'] = (bool)$userRow['is_superadmin'];
                 $_SESSION['2fa_pending_role'] = $role;
+                $_SESSION['2fa_pending_redirect'] = $redirect;
                 $name = $userRow['nickname'] !== '' ? $userRow['nickname']
                       : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
                 $_SESSION['2fa_pending_name'] = $name !== '' ? $name : $inputEmail;
@@ -62,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($authenticated) {
-        header('Location: ' . BASE_URL . '/admin/index.php');
+        header('Location: ' . $redirect);
         exit;
     }
 
@@ -122,6 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <form method="post" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
     <fieldset>
       <legend>Přihlašovací údaje</legend>
 

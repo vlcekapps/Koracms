@@ -174,6 +174,54 @@ if (!function_exists('postMultipartUrl')) {
 }
 
 if (!function_exists('responseHasLocationHeader')) {
+    function responseLocationHeaderValue(array $headers): string
+    {
+        foreach ($headers as $header) {
+            if (stripos($header, 'Location:') === 0) {
+                return trim(substr($header, 9));
+            }
+        }
+
+        return '';
+    }
+
+    function responseMergeCookies(array $headers, string $existingCookie = ''): string
+    {
+        $cookieJar = [];
+        foreach (explode(';', $existingCookie) as $cookieChunk) {
+            $cookieChunk = trim($cookieChunk);
+            if ($cookieChunk === '' || !str_contains($cookieChunk, '=')) {
+                continue;
+            }
+
+            [$cookieName, $cookieValue] = explode('=', $cookieChunk, 2);
+            $cookieJar[trim($cookieName)] = trim($cookieValue);
+        }
+
+        foreach ($headers as $header) {
+            if (stripos($header, 'Set-Cookie:') !== 0) {
+                continue;
+            }
+
+            $setCookiePayload = trim(substr($header, 11));
+            $setCookieParts = explode(';', $setCookiePayload);
+            $cookiePair = trim($setCookieParts[0] ?? '');
+            if ($cookiePair === '' || !str_contains($cookiePair, '=')) {
+                continue;
+            }
+
+            [$cookieName, $cookieValue] = explode('=', $cookiePair, 2);
+            $cookieJar[trim($cookieName)] = trim($cookieValue);
+        }
+
+        $serializedCookies = [];
+        foreach ($cookieJar as $cookieName => $cookieValue) {
+            $serializedCookies[] = $cookieName . '=' . $cookieValue;
+        }
+
+        return implode('; ', $serializedCookies);
+    }
+
     function responseHasLocationHeader(array $headers, string $expectedPath, string $baseUrl = ''): bool
     {
         $expectedAbsolute = rtrim($baseUrl, '/') . $expectedPath;

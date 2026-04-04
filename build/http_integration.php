@@ -544,6 +544,213 @@ try {
 
     httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
 
+    $adminLoginRedirectIssues = [];
+    $createAdminUserStmt = $pdo->prepare(
+        "INSERT INTO cms_users (
+            email, password, first_name, last_name, nickname, is_superadmin, role, is_confirmed, totp_secret
+         ) VALUES (?, ?, ?, ?, '', ?, ?, 1, ?)"
+    );
+    $plainAdminEmail = 'http-admin-' . bin2hex(random_bytes(4)) . '@example.test';
+    $plainAdminPassword = 'KoraAdmin!123';
+    $createAdminUserStmt->execute([
+        $plainAdminEmail,
+        password_hash($plainAdminPassword, PASSWORD_DEFAULT),
+        'HTTP',
+        'Admin',
+        1,
+        'admin',
+        '',
+    ]);
+    $plainAdminId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $plainAdminId;
+
+    $totpAdminEmail = 'http-admin-2fa-' . bin2hex(random_bytes(4)) . '@example.test';
+    $totpAdminPassword = 'KoraAdmin2FA!123';
+    $totpSecret = totpGenerateSecret();
+    $createAdminUserStmt->execute([
+        $totpAdminEmail,
+        password_hash($totpAdminPassword, PASSWORD_DEFAULT),
+        'HTTP',
+        'Admin 2FA',
+        1,
+        'admin',
+        $totpSecret,
+    ]);
+    $totpAdminId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $totpAdminId;
+
+    $widgetsPath = BASE_URL . '/admin/widgets.php';
+    $widgetsUrl = $baseUrl . $widgetsPath;
+    $widgetsSession = koraPrimeTestSession([], 'kora-http-admin-login-redirect-widgets');
+    $widgetsProtectedResponse = fetchUrl($widgetsUrl, $widgetsSession['cookie'], 0);
+    if (httpIntegrationStatusCode($widgetsProtectedResponse) !== 302) {
+        $adminLoginRedirectIssues[] = 'chráněná admin stránka widgets.php bez loginu nevrátila 302 redirect';
+    }
+    $widgetsLoginLocation = responseLocationHeaderValue($widgetsProtectedResponse['headers']);
+    $widgetsLoginPath = (string)(parse_url($widgetsLoginLocation, PHP_URL_PATH) ?? '');
+    $widgetsLoginQuery = (string)(parse_url($widgetsLoginLocation, PHP_URL_QUERY) ?? '');
+    parse_str($widgetsLoginQuery, $widgetsLoginParams);
+    if ($widgetsLoginPath !== BASE_URL . '/admin/login.php') {
+        $adminLoginRedirectIssues[] = 'widgets.php bez loginu nemíří na admin/login.php';
+    }
+    if (($widgetsLoginParams['redirect'] ?? '') !== $widgetsPath) {
+        $adminLoginRedirectIssues[] = 'widgets.php bez loginu nepředal redirect na původní admin stránku';
+    }
+
+    $widgetsLoginPage = fetchUrl($baseUrl . $widgetsLoginLocation, $widgetsSession['cookie'], 0);
+    $widgetsLoginCsrf = extractHiddenInputValue($widgetsLoginPage['body'], 'csrf_token');
+    $widgetsLoginRedirect = extractHiddenInputValue($widgetsLoginPage['body'], 'redirect');
+    if ($widgetsLoginCsrf === '') {
+        $adminLoginRedirectIssues[] = 'admin login stránka pro widgets redirect nevykreslila csrf_token';
+    }
+    if ($widgetsLoginRedirect !== $widgetsPath) {
+        $adminLoginRedirectIssues[] = 'admin login stránka pro widgets redirect nezachovala hidden redirect';
+    }
+
+    $widgetsLoginResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/login.php',
+        [
+            'csrf_token' => $widgetsLoginCsrf,
+            'redirect' => $widgetsLoginRedirect,
+            'email' => $totpAdminEmail,
+            'heslo' => $totpAdminPassword,
+        ],
+        $widgetsSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($widgetsLoginResponse) !== 302) {
+        $adminLoginRedirectIssues[] = 'admin login s 2FA pro widgets redirect nevrátil 302';
+    }
+    if (!responseHasLocationHeader($widgetsLoginResponse['headers'], BASE_URL . '/admin/login_2fa.php', $baseUrl)) {
+        $adminLoginRedirectIssues[] = 'admin login s 2FA pro widgets redirect nemíří na login_2fa.php';
+    }
+    $widgetsSession['cookie'] = responseMergeCookies($widgetsLoginResponse['headers'], $widgetsSession['cookie']);
+
+    $widgets2faPage = fetchUrl($baseUrl . BASE_URL . '/admin/login_2fa.php', $widgetsSession['cookie'], 0);
+    $widgets2faCsrf = extractHiddenInputValue($widgets2faPage['body'], 'csrf_token');
+    if ($widgets2faCsrf === '') {
+        $adminLoginRedirectIssues[] = '2FA stránka pro widgets redirect nevykreslila csrf_token';
+    }
+    if (!str_contains($widgets2faPage['body'], 'cancel_2fa=1&amp;redirect=' . rawurlencode($widgetsPath))) {
+        $adminLoginRedirectIssues[] = '2FA stránka pro widgets redirect nenabízí bezpečný návrat zpět na login se zachováním redirectu';
+    }
+
+    $widgets2faResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/login_2fa.php',
+        [
+            'csrf_token' => $widgets2faCsrf,
+            'totp_code' => totpCalculate($totpSecret),
+        ],
+        $widgetsSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($widgets2faResponse) !== 302) {
+        $adminLoginRedirectIssues[] = '2FA dokončení pro widgets redirect nevrátilo 302';
+    }
+    if (!responseHasLocationHeader($widgets2faResponse['headers'], $widgetsPath, $baseUrl)) {
+        $adminLoginRedirectIssues[] = '2FA dokončení pro widgets redirect nevrátilo uživatele na původní admin stránku';
+    }
+    $widgetsSession['cookie'] = responseMergeCookies($widgets2faResponse['headers'], $widgetsSession['cookie']);
+    $widgetsAfterLogin = fetchUrl($widgetsUrl, $widgetsSession['cookie'], 0);
+    if (httpIntegrationStatusCode($widgetsAfterLogin) !== 200) {
+        $adminLoginRedirectIssues[] = 'po loginu a 2FA není widgets.php dostupná se stejnou session';
+    }
+
+    $externalSession = koraPrimeTestSession([], 'kora-http-admin-login-redirect-external');
+    $externalLoginPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/login.php?redirect=' . rawurlencode('https://evil.example/phish'),
+        $externalSession['cookie'],
+        0
+    );
+    $externalLoginCsrf = extractHiddenInputValue($externalLoginPage['body'], 'csrf_token');
+    $externalLoginRedirect = extractHiddenInputValue($externalLoginPage['body'], 'redirect');
+    if ($externalLoginRedirect !== BASE_URL . '/admin/index.php') {
+        $adminLoginRedirectIssues[] = 'admin login nepřepsal externí redirect na bezpečný fallback';
+    }
+    $externalLoginResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/login.php',
+        [
+            'csrf_token' => $externalLoginCsrf,
+            'redirect' => $externalLoginRedirect,
+            'email' => $plainAdminEmail,
+            'heslo' => $plainAdminPassword,
+        ],
+        $externalSession['cookie'],
+        0
+    );
+    $externalSession['cookie'] = responseMergeCookies($externalLoginResponse['headers'], $externalSession['cookie']);
+    if (!responseHasLocationHeader($externalLoginResponse['headers'], BASE_URL . '/admin/index.php', $baseUrl)) {
+        $adminLoginRedirectIssues[] = 'admin login po externím redirectu nespadl zpět na /admin/index.php';
+    }
+
+    $publicRedirectSession = koraPrimeTestSession([], 'kora-http-admin-login-redirect-public');
+    $publicRedirectLoginPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/login.php?redirect=' . rawurlencode(BASE_URL . '/'),
+        $publicRedirectSession['cookie'],
+        0
+    );
+    $publicRedirectHidden = extractHiddenInputValue($publicRedirectLoginPage['body'], 'redirect');
+    if ($publicRedirectHidden !== BASE_URL . '/admin/index.php') {
+        $adminLoginRedirectIssues[] = 'admin login nepřepsal veřejný interní redirect na bezpečný fallback';
+    }
+
+    httpIntegrationPrintResult('admin_login_redirect_http', $adminLoginRedirectIssues, $failures);
+
+    $migrateLoginRedirectIssues = [];
+    $migratePath = BASE_URL . '/migrate.php';
+    $migrateUrl = $baseUrl . $migratePath;
+    $migrateSession = koraPrimeTestSession([], 'kora-http-admin-login-redirect-migrate');
+    $migrateProtectedResponse = fetchUrl($migrateUrl, $migrateSession['cookie'], 0);
+    if (httpIntegrationStatusCode($migrateProtectedResponse) !== 302) {
+        $migrateLoginRedirectIssues[] = 'migrate.php bez loginu nevrátilo 302 redirect';
+    }
+    $migrateLoginLocation = responseLocationHeaderValue($migrateProtectedResponse['headers']);
+    $migrateLoginPath = (string)(parse_url($migrateLoginLocation, PHP_URL_PATH) ?? '');
+    $migrateLoginQuery = (string)(parse_url($migrateLoginLocation, PHP_URL_QUERY) ?? '');
+    parse_str($migrateLoginQuery, $migrateLoginParams);
+    if ($migrateLoginPath !== BASE_URL . '/admin/login.php') {
+        $migrateLoginRedirectIssues[] = 'migrate.php bez loginu nemíří na admin/login.php';
+    }
+    if (($migrateLoginParams['redirect'] ?? '') !== $migratePath) {
+        $migrateLoginRedirectIssues[] = 'migrate.php bez loginu nepředalo redirect na potvrzení migrace';
+    }
+
+    $migrateLoginPage = fetchUrl($baseUrl . $migrateLoginLocation, $migrateSession['cookie'], 0);
+    $migrateLoginCsrf = extractHiddenInputValue($migrateLoginPage['body'], 'csrf_token');
+    $migrateLoginRedirect = extractHiddenInputValue($migrateLoginPage['body'], 'redirect');
+    if ($migrateLoginRedirect !== $migratePath) {
+        $migrateLoginRedirectIssues[] = 'admin login stránka pro migrate redirect nezachovala hidden redirect';
+    }
+
+    $migrateLoginResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/login.php',
+        [
+            'csrf_token' => $migrateLoginCsrf,
+            'redirect' => $migrateLoginRedirect,
+            'email' => $plainAdminEmail,
+            'heslo' => $plainAdminPassword,
+        ],
+        $migrateSession['cookie'],
+        0
+    );
+    $migrateSession['cookie'] = responseMergeCookies($migrateLoginResponse['headers'], $migrateSession['cookie']);
+    if (!responseHasLocationHeader($migrateLoginResponse['headers'], $migratePath, $baseUrl)) {
+        $migrateLoginRedirectIssues[] = 'admin login po migrate redirectu nevrátil uživatele zpět na migrate.php';
+    }
+
+    $migrateConfirmPage = fetchUrl($migrateUrl, $migrateSession['cookie'], 0);
+    if (httpIntegrationStatusCode($migrateConfirmPage) !== 200) {
+        $migrateLoginRedirectIssues[] = 'po loginu není potvrzovací obrazovka migrate.php dostupná';
+    }
+    if (!str_contains($migrateConfirmPage['body'], 'Spustit migraci')) {
+        $migrateLoginRedirectIssues[] = 'po loginu migrate.php nezobrazilo potvrzovací tlačítko';
+    }
+    if (str_contains($migrateConfirmPage['body'], 'Hotovo.')) {
+        $migrateLoginRedirectIssues[] = 'migrate.php se po loginu spustilo bez potvrzovací obrazovky';
+    }
+
+    httpIntegrationPrintResult('migrate_login_redirect_http', $migrateLoginRedirectIssues, $failures);
+
     $jsonImportIssues = [];
     $importUrl = $baseUrl . BASE_URL . '/admin/import.php';
     $importPage = fetchUrl($importUrl, $adminSession['cookie'], 0);

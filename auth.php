@@ -413,10 +413,50 @@ function internalRedirectTarget(string $target, string $default = ''): string
     return $path . $query . $fragment;
 }
 
+function adminLoginRedirectTarget(string $target, string $default = ''): string
+{
+    $safeTarget = internalRedirectTarget($target, '');
+    if ($safeTarget === '') {
+        return $default;
+    }
+
+    $safePath = (string)(parse_url($safeTarget, PHP_URL_PATH) ?? '');
+    if ($safePath === BASE_URL . '/admin/login.php' || $safePath === BASE_URL . '/admin/login_2fa.php') {
+        return $default;
+    }
+
+    if (
+        str_starts_with($safePath, BASE_URL . '/admin/')
+        || $safePath === BASE_URL . '/migrate.php'
+    ) {
+        return $safeTarget;
+    }
+
+    return $default;
+}
+
 function requireLogin(string $loginUrl = '/admin/login.php'): void
 {
     if (!isLoggedIn()) {
-        header('Location: ' . $loginUrl);
+        $target = $loginUrl;
+        if (str_contains($loginUrl, '/admin/')) {
+            $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+            $parsedPath = (string)(parse_url($requestUri, PHP_URL_PATH) ?? '');
+            $parsedQuery = (string)(parse_url($requestUri, PHP_URL_QUERY) ?? '');
+            $currentTarget = $parsedPath !== ''
+                ? $parsedPath . ($parsedQuery !== '' ? '?' . $parsedQuery : '')
+                : '';
+            $safeRedirect = adminLoginRedirectTarget($currentTarget, '');
+            if (
+                $safeRedirect !== ''
+                && $safeRedirect !== BASE_URL . '/admin/login.php'
+                && $safeRedirect !== BASE_URL . '/admin/login_2fa.php'
+            ) {
+                $separator = str_contains($loginUrl, '?') ? '&' : '?';
+                $target .= $separator . 'redirect=' . urlencode($safeRedirect);
+            }
+        }
+        header('Location: ' . $target);
         exit;
     }
 
