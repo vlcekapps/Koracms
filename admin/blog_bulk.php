@@ -89,6 +89,24 @@ if ($action === 'delete' && $ids !== []) {
 
     header('Location: ' . BASE_URL . '/admin/blog_transfer.php');
     exit;
+} elseif (in_array($action, ['set_draft', 'set_pending', 'set_published'], true) && $ids !== []) {
+    $pdo = db_connect();
+    $statusMap = ['set_draft' => 'draft', 'set_pending' => 'pending', 'set_published' => 'published'];
+    $newStatus = $statusMap[$action];
+
+    if ($newStatus === 'published' && !currentUserHasCapability('blog_approve')) {
+        $newStatus = 'pending';
+    }
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    if (canManageOwnBlogOnly()) {
+        $pdo->prepare("UPDATE cms_articles SET status = ? WHERE id IN ({$placeholders}) AND author_id = ?")
+            ->execute(array_merge([$newStatus], $ids, [currentUserId()]));
+    } else {
+        $pdo->prepare("UPDATE cms_articles SET status = ? WHERE id IN ({$placeholders})")
+            ->execute(array_merge([$newStatus], $ids));
+    }
+    logAction('article_bulk_status', "status={$newStatus} ids=" . implode(',', $ids));
 }
 
 header('Location: ' . $redirect);

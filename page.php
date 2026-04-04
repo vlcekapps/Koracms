@@ -14,7 +14,8 @@ $stmt = $pdo->prepare(
      WHERE slug = ?
        AND blog_id IS NULL
        AND status = 'published'
-       AND is_published = 1"
+       AND is_published = 1
+       AND (publish_at IS NULL OR publish_at <= NOW())"
 );
 $stmt->execute([$slug]);
 $page = $stmt->fetch();

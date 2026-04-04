@@ -159,7 +159,7 @@ $tables = [
         meta_title       VARCHAR(160) NOT NULL DEFAULT '',
         meta_description TEXT,
         preview_token    VARCHAR(32)  NOT NULL DEFAULT '',
-        status           ENUM('pending','published') NOT NULL DEFAULT 'published',
+        status           ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
         publish_at       DATETIME     NULL DEFAULT NULL,
         unpublish_at     DATETIME     NULL DEFAULT NULL,
         admin_note       TEXT,
@@ -176,7 +176,8 @@ $tables = [
         slug       VARCHAR(255) NOT NULL,
         content    TEXT         NOT NULL,
         author_id  INT          NULL DEFAULT NULL,
-        status     ENUM('pending','published') NOT NULL DEFAULT 'published',
+        status     ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
+        publish_at DATETIME     NULL DEFAULT NULL,
         unpublish_at DATETIME   NULL DEFAULT NULL,
         admin_note TEXT,
         meta_title VARCHAR(160) NOT NULL DEFAULT '',
@@ -286,7 +287,8 @@ $tables = [
         show_in_nav  TINYINT(1)   NOT NULL DEFAULT 0,
         nav_order    INT          NOT NULL DEFAULT 0,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
-        status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+        status       ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
+        publish_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_pages_blog_nav (blog_id, blog_nav_order)
@@ -890,6 +892,7 @@ $addColumns = [
     'cms_news.status'                => "ALTER TABLE cms_news ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     'cms_news.meta_title'            => "ALTER TABLE cms_news ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
     'cms_news.meta_description'      => "ALTER TABLE cms_news ADD COLUMN meta_description TEXT",
+    'cms_news.publish_at'            => "ALTER TABLE cms_news ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_polls
     'cms_polls.meta_title'           => "ALTER TABLE cms_polls ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
@@ -985,6 +988,7 @@ $addColumns = [
     'cms_blogs.created_by_user_id'   => "ALTER TABLE cms_blogs ADD COLUMN created_by_user_id INT NULL DEFAULT NULL AFTER show_in_nav",
     // cms_pages
     'cms_pages.status'               => "ALTER TABLE cms_pages ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
+    'cms_pages.publish_at'           => "ALTER TABLE cms_pages ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     // cms_board
     'cms_board.slug'                 => "ALTER TABLE cms_board ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_board.board_type'           => "ALTER TABLE cms_board ADD COLUMN board_type VARCHAR(50) NOT NULL DEFAULT 'document'",
@@ -1252,6 +1256,33 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Rozšíření ENUM stavu rezervací – CHYBA: " . h($e->getMessage());
+}
+
+// ── 4c. Rozšíření ENUM statusu o 'draft' (články, novinky, stránky) ─────────
+
+$draftEnumTables = ['cms_articles', 'cms_news', 'cms_pages'];
+foreach ($draftEnumTables as $draftTable) {
+    try {
+        $colCheck = $pdo->prepare(
+            "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'status'"
+        );
+        $colCheck->execute([$draftTable]);
+        $colType = (string)$colCheck->fetchColumn();
+
+        if ($colType !== '' && strpos($colType, "'draft'") === false) {
+            $pdo->exec(
+                "ALTER TABLE {$draftTable} MODIFY COLUMN status
+                 ENUM('draft','pending','published')
+                 NOT NULL DEFAULT 'published'"
+            );
+            $log[] = "✓ ENUM <code>{$draftTable}.status</code> rozšířen o 'draft' – OK";
+        } else {
+            $log[] = "· ENUM <code>{$draftTable}.status</code> již obsahuje 'draft' – přeskočeno";
+        }
+    } catch (\PDOException $e) {
+        $log[] = "✗ Rozšíření ENUM <code>{$draftTable}.status</code> – CHYBA: " . h($e->getMessage());
+    }
 }
 
 // ── 5. Výchozí podcast show (zachová zpětnou kompatibilitu) ───────────────────

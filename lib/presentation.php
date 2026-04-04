@@ -858,6 +858,7 @@ function newsPublicVisibilitySql(string $alias = ''): string
 
     return "{$prefix}deleted_at IS NULL"
         . " AND COALESCE({$prefix}status, 'published') = 'published'"
+        . " AND ({$prefix}publish_at IS NULL OR {$prefix}publish_at <= NOW())"
         . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())";
 }
 

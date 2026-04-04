@@ -23,6 +23,10 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **WCAG 2.2 – 11 obrázků s obsahem nově má popisný alt text** – náhledy článků, stažení, událostí, míst a nástěnky ve widgetech i ve views měly prázdný `alt=""`; nově se jako alt text používá název/titulek příslušného záznamu (obrázky uvnitř `aria-hidden` duplicitních odkazů na homepage a v indexu nástěnky zůstávají správně dekorativní)
 
 ### Přidáno
+- **Stav „koncept" (draft) pro články, novinky a stránky** – nový stav `draft` v databázovém ENUM umožňuje autorům uložit rozpracovaný obsah bez vstupu do schvalovací fronty; koncepty jsou neviditelné na veřejném webu a v review queue; ve formuláři článku, novinky i stránky je nový selector „Stav" s možnostmi Koncept / Publikováno / Čeká na schválení; uživatelé bez schvalovacího oprávnění nemohou přímo publikovat
+- **Plánované publikování přes cron** – nová cron úloha automaticky publikuje články, novinky a stránky s nastaveným `publish_at` datem, když tento čas nastane; symetrické k existujícímu plánovanému rušení publikace
+- **Plánované publikování pro novinky a stránky** – pole `publish_at` přidáno do `cms_news` a `cms_pages`; formuláře novinek a stránek mají nový datetime-local input „Plánované publikování"; veřejné dotazy filtrují i podle `publish_at`
+- **Hromadná změna stavu článků** – bulk akce v seznamu článků nově podporují „Nastavit jako koncept", „Ke schválení" a „Publikovat" (poslední jen pro uživatele s oprávněním schvalovat)
 - **Unit testy – 89 testů pro 16 kritických funkcí** – nový `build/unit_tests.php` s vlastním bootstrapem (`build/unit_test_bootstrap.php`) testuje `h()`, `inputInt()`, `internalRedirectTarget()`, `slugify()`, `formatCzechDate()`, `readingTime()`, `paginateArray()`, `formatFileSize()`, `mailSanitizeHeaderValue()`, `base32Decode()`, `totpCalculate()`, `totpUri()`, `parseContentShortcodeAttributes()`, `normalizeContentEmbedUrl()`, `userHas2FA()`/`userHasPasskey()` a CSRF rotaci; spuštění: `php build/unit_tests.php`
 
 ## [3.3.3] – 2026-04-01

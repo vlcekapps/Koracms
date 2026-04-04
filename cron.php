@@ -71,6 +71,41 @@ function runKoraCron(PDO $pdo): array
         cronAppendLog($log, "Zrušena publikace {$totalUnpublished} položek");
     }
 
+    // 1b. Plánované publikování (publish_at)
+    $publishTables = ['cms_articles', 'cms_news'];
+    $totalPublished = 0;
+    foreach ($publishTables as $tableName) {
+        try {
+            $statement = $pdo->prepare(
+                "UPDATE {$tableName}
+                 SET status = 'published', publish_at = NULL
+                 WHERE publish_at IS NOT NULL
+                   AND publish_at <= NOW()
+                   AND status IN ('draft', 'pending')"
+            );
+            $statement->execute();
+            $totalPublished += $statement->rowCount();
+        } catch (\PDOException $e) {
+            cronAppendLog($log, 'Chyba plánovaného publikování: ' . $e->getMessage());
+        }
+    }
+    try {
+        $statement = $pdo->prepare(
+            "UPDATE cms_pages
+             SET is_published = 1, publish_at = NULL
+             WHERE publish_at IS NOT NULL
+               AND publish_at <= NOW()
+               AND is_published = 0"
+        );
+        $statement->execute();
+        $totalPublished += $statement->rowCount();
+    } catch (\PDOException $e) {
+        cronAppendLog($log, 'Chyba plánovaného publikování stránek: ' . $e->getMessage());
+    }
+    if ($totalPublished > 0) {
+        cronAppendLog($log, "Publikováno {$totalPublished} naplánovaných položek");
+    }
+
     // 2. Čištění starých rate-limit záznamů
     try {
         $statement = $pdo->prepare(

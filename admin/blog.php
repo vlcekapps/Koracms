@@ -227,6 +227,11 @@ adminHeader($blogCaptionTitle);
       <?php if ($multiBlog): ?>
         <button type="submit" name="action" value="move" class="btn bulk-action-btn" disabled>Přesunout do jiného blogu</button>
       <?php endif; ?>
+      <button type="submit" name="action" value="set_draft" class="btn bulk-action-btn" disabled>Nastavit jako koncept</button>
+      <button type="submit" name="action" value="set_pending" class="btn bulk-action-btn" disabled>Nastavit čeká na schválení</button>
+      <?php if (currentUserHasCapability('blog_approve')): ?>
+        <button type="submit" name="action" value="set_published" class="btn bulk-action-btn" disabled>Nastavit jako publikováno</button>
+      <?php endif; ?>
       <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
               disabled data-confirm="Smazat vybrané články?">Smazat vybrané</button>
     </div>
@@ -255,7 +260,9 @@ adminHeader($blogCaptionTitle);
         <td><?= h($article['category'] ?? '–') ?></td>
         <td><?= h((string)$article['created_at']) ?></td>
         <td>
-          <?php if ($article['status'] === 'pending'): ?>
+          <?php if ($article['status'] === 'draft'): ?>
+            <span class="status-badge status-badge--draft">✎ Koncept</span>
+          <?php elseif ($article['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">⟳ Čeká na schválení</strong>
           <?php elseif ($article['publish_at'] && strtotime((string)$article['publish_at']) > time()): ?>
             <small>Naplánováno: <?= h((string)$article['publish_at']) ?></small>

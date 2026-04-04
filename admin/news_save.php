@@ -21,6 +21,16 @@ $redirectToForm = static function (string $errorCode) use ($redirectBase, $id): 
     exit;
 };
 
+$publishAtInput = trim((string)($_POST['publish_at'] ?? ''));
+$publishAtSql = null;
+if ($publishAtInput !== '') {
+    $dateTime = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $publishAtInput);
+    if (!$dateTime || $dateTime->format('Y-m-d\TH:i') !== $publishAtInput) {
+        $redirectToForm('publish_at');
+    }
+    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
+}
+
 $unpublishAtInput = trim((string)($_POST['unpublish_at'] ?? ''));
 $unpublishAtSql = null;
 if ($unpublishAtInput !== '') {
@@ -95,10 +105,19 @@ if ($existingItem) {
 
     $oldPath = $oldData ? newsPublicPath($oldData) : '';
 
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $oldData['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('news_approve')) {
+        $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+    $status = $requestedStatus;
+
     if (canManageOwnNewsOnly()) {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
-             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, meta_title = ?, meta_description = ?,
+             SET title = ?, slug = ?, content = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?, meta_title = ?, meta_description = ?,
                  author_id = COALESCE(author_id, ?), updated_at = NOW()
              WHERE id = ? AND author_id = ?"
         );
@@ -106,7 +125,9 @@ if ($existingItem) {
             $title,
             $slug,
             $content,
+            $publishAtSql,
             $unpublishAtSql,
+            $status,
             $adminNote,
             $metaTitle,
             $metaDescription,
@@ -117,7 +138,7 @@ if ($existingItem) {
     } else {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
-             SET title = ?, slug = ?, content = ?, unpublish_at = ?, admin_note = ?, meta_title = ?, meta_description = ?,
+             SET title = ?, slug = ?, content = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?, meta_title = ?, meta_description = ?,
                  author_id = COALESCE(author_id, ?), updated_at = NOW()
              WHERE id = ?"
         );
@@ -125,7 +146,9 @@ if ($existingItem) {
             $title,
             $slug,
             $content,
+            $publishAtSql,
             $unpublishAtSql,
+            $status,
             $adminNote,
             $metaTitle,
             $metaDescription,
@@ -137,16 +160,24 @@ if ($existingItem) {
     upsertPathRedirect($pdo, $oldPath, newsPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('news_edit', "id={$id} title={$title} slug={$slug}");
 } else {
-    $status = currentUserHasCapability('news_approve') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('news_approve')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $authorId = currentUserId();
     $pdo->prepare(
         "INSERT INTO cms_news (
-            title, slug, content, unpublish_at, admin_note, meta_title, meta_description, status, author_id
-         ) VALUES (?,?,?,?,?,?,?,?,?)"
+            title, slug, content, publish_at, unpublish_at, admin_note, meta_title, meta_description, status, author_id
+         ) VALUES (?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
         $content,
+        $publishAtSql,
         $unpublishAtSql,
         $adminNote,
         $metaTitle,

@@ -170,6 +170,21 @@ adminHeader($pageTitle);
       <?php endif; ?>
     </small>
 
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status" aria-describedby="page-status-help">
+      <option value="draft"<?= ($page['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('content_approve_shared')): ?>
+        <option value="published"<?= ($page['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($page['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+    <small id="page-status-help" class="field-help">Koncept je viditelný jen v administraci.</small>
+
+    <label for="publish_at">Plánované publikování</label>
+    <input type="datetime-local" id="publish_at" name="publish_at"
+           style="width:auto" value="<?= h(!empty($page['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['publish_at'])) : '') ?>">
+    <small class="field-help">Nechte prázdné, pokud se má stránka zveřejnit hned.</small>
+
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>

@@ -64,10 +64,10 @@ if ($title === '' || $content === '') {
 $existingArticle = null;
 if ($id !== null) {
     if (canManageOwnBlogOnly()) {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id FROM cms_articles WHERE id = ? AND author_id = ?");
+        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ? AND author_id = ?");
         $existingStmt->execute([$id, currentUserId()]);
     } else {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id FROM cms_articles WHERE id = ?");
+        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ?");
         $existingStmt->execute([$id]);
     }
     $existingArticle = $existingStmt->fetch() ?: null;
@@ -350,8 +350,17 @@ try {
             ]);
         }
 
-        $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, is_featured_in_blog=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
-        $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $isFeaturedInBlog, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId];
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = $existingArticle['status'];
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('blog_approve')) {
+            $requestedStatus = ($existingArticle['status'] === 'published') ? 'published' : 'pending';
+        }
+        $status = $requestedStatus;
+
+        $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, is_featured_in_blog=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, status=?, updated_at=NOW()";
+        $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $isFeaturedInBlog, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId, $status];
         if ($imageFile !== null) {
             $setClauses .= ", image_file=?";
             $params[] = $imageFile;
@@ -365,11 +374,22 @@ try {
                  WHERE blog_id = ? AND id <> ?"
             )->execute([$blogId, $id]);
         }
-        logAction('article_edit', "id={$id} title={$title} slug={$slug}");
+        logAction('article_edit', "id={$id} title={$title} slug={$slug} status={$status}");
+        if ($status === 'pending' && ($existingArticle['status'] ?? '') !== 'pending') {
+            notifyPendingContent('Článek', $title, '/admin/blog.php');
+        }
     } else {
         $previewToken = bin2hex(random_bytes(16));
         $authorId = currentUserId();
-        $status = currentUserHasCapability('blog_approve') ? 'published' : 'pending';
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = 'draft';
+        }
+        // Non-approvers cannot directly publish
+        if ($requestedStatus === 'published' && !currentUserHasCapability('blog_approve')) {
+            $requestedStatus = 'pending';
+        }
+        $status = $requestedStatus;
         $pdo->prepare(
             "INSERT INTO cms_articles
              (title, slug, perex, content, category_id, comments_enabled, is_featured_in_blog, image_file, publish_at, unpublish_at,

@@ -13,6 +13,8 @@ $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
 $adminNote = trim((string)($_POST['admin_note'] ?? ''));
 $selectedBlogId = inputInt('post', 'blog_id');
 
+$publishAt = trim((string)($_POST['publish_at'] ?? ''));
+$publishAtSql = null;
 $unpublishAt = trim((string)($_POST['unpublish_at'] ?? ''));
 $unpublishAtSql = null;
 $redirect = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), BASE_URL . '/admin/pages.php');
@@ -23,6 +25,18 @@ if ($id !== null) {
     $fallbackParams['blog_id'] = $selectedBlogId;
 }
 $fallback = BASE_URL . '/admin/page_form.php?' . http_build_query($fallbackParams);
+
+if ($publishAt !== '') {
+    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $publishAt);
+    $errors = DateTime::getLastErrors();
+    $hasDateTimeErrors = is_array($errors)
+        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+    if ($dateTime === false || $hasDateTimeErrors || $dateTime->format('Y-m-d\TH:i') !== $publishAt) {
+        header('Location: ' . appendUrlQuery($fallback, ['err' => 'publish_at']));
+        exit;
+    }
+    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
+}
 
 if ($unpublishAt !== '') {
     $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
@@ -110,9 +124,17 @@ try {
             'admin_note' => $adminNote,
         ]);
 
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = $oldData['status'] ?? 'published';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
+        }
+
         $pdo->prepare(
             "UPDATE cms_pages
-             SET title = ?, slug = ?, content = ?, blog_id = ?, blog_nav_order = ?, is_published = ?, show_in_nav = ?, nav_order = ?, unpublish_at = ?, admin_note = ?
+             SET title = ?, slug = ?, content = ?, blog_id = ?, blog_nav_order = ?, is_published = ?, show_in_nav = ?, nav_order = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?
              WHERE id = ?"
         )->execute([
             $title,
@@ -123,7 +145,9 @@ try {
             $isPublished,
             $persistedShowInNav,
             $newIsGlobal ? $persistedNavOrder : (int)($oldData['nav_order'] ?? 0),
+            $publishAtSql,
             $unpublishAtSql,
+            $requestedStatus,
             $adminNote,
             $id,
         ]);
@@ -136,15 +160,22 @@ try {
 
         logAction('page_edit', 'id=' . $id . ', title=' . mb_substr($title, 0, 80));
     } else {
-        $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = 'draft';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = 'pending';
+        }
+        $status = $requestedStatus;
         $isPublished = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
         $persistedShowInNav = $targetBlogId === null ? $showInNav : 0;
         $navOrder = $targetBlogId === null ? nextPageNavigationOrder($pdo) : 0;
         $blogNavOrder = $targetBlogId !== null ? nextBlogPageNavigationOrder($pdo, $targetBlogId) : 0;
 
         $pdo->prepare(
-            "INSERT INTO cms_pages (title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, unpublish_at, admin_note, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO cms_pages (title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, publish_at, unpublish_at, admin_note, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )->execute([
             $title,
             $slug,
@@ -154,6 +185,7 @@ try {
             $isPublished,
             $persistedShowInNav,
             $navOrder,
+            $publishAtSql,
             $unpublishAtSql,
             $adminNote,
             $status,

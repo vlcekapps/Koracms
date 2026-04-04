@@ -143,6 +143,26 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       </small>
     </p>
 
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status" aria-describedby="news-status-help">
+      <option value="draft"<?= ($item['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('news_approve')): ?>
+        <option value="published"<?= ($item['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($item['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+    <small id="news-status-help" class="field-help">Koncept je viditelný jen v administraci.</small>
+
+    <label for="publish_at">Plánované publikování</label>
+    <input
+      type="datetime-local"
+      id="publish_at"
+      name="publish_at"
+      style="width:auto"
+      value="<?= h(!empty($item['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$item['publish_at'])) : '') ?>"
+    >
+    <small class="field-help">Nechte prázdné, pokud se má novinka zveřejnit hned.</small>
+
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input
       type="datetime-local"

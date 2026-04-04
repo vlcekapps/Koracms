@@ -524,6 +524,18 @@ adminHeader($pageTitle);
     <small id="admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
   </fieldset>
 
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Stav článku</legend>
+    <select id="article_status" name="article_status" aria-describedby="article-status-help">
+      <option value="draft"<?= ($article['status'] ?? ($article ? '' : 'draft')) === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('blog_approve')): ?>
+        <option value="published"<?= ($article['status'] ?? '') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($article['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+    <small id="article-status-help" class="field-help">Koncept je viditelný jen v administraci. Čeká na schválení upozorní správce.</small>
+  </fieldset>
+
   <div style="margin-top:1.5rem">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
     <a href="<?= h($articleListUrl) ?>" style="margin-left:1rem">Zrušit</a>
