@@ -77,7 +77,7 @@ $pdo->beginTransaction();
 try {
     if ($id !== null) {
         $oldStmt = $pdo->prepare(
-            "SELECT id, title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, unpublish_at, admin_note
+            "SELECT id, title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, unpublish_at, admin_note, preview_token
              FROM cms_pages
              WHERE id = ?"
         );
@@ -87,6 +87,11 @@ try {
             $pdo->rollBack();
             header('Location: ' . $redirect);
             exit;
+        }
+
+        if (($oldData['preview_token'] ?? '') === '') {
+            $previewToken = bin2hex(random_bytes(16));
+            $pdo->prepare("UPDATE cms_pages SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
         }
 
         $oldBlogId = !empty($oldData['blog_id']) ? (int)$oldData['blog_id'] : null;
@@ -172,10 +177,11 @@ try {
         $persistedShowInNav = $targetBlogId === null ? $showInNav : 0;
         $navOrder = $targetBlogId === null ? nextPageNavigationOrder($pdo) : 0;
         $blogNavOrder = $targetBlogId !== null ? nextBlogPageNavigationOrder($pdo, $targetBlogId) : 0;
+        $previewToken = bin2hex(random_bytes(16));
 
         $pdo->prepare(
-            "INSERT INTO cms_pages (title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, publish_at, unpublish_at, admin_note, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO cms_pages (title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, publish_at, unpublish_at, admin_note, preview_token, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )->execute([
             $title,
             $slug,
@@ -188,6 +194,7 @@ try {
             $publishAtSql,
             $unpublishAtSql,
             $adminNote,
+            $previewToken,
             $status,
         ]);
         $newId = (int)$pdo->lastInsertId();

@@ -16,28 +16,55 @@ if ($id === null && $slug === '') {
 
 $pdo = db_connect();
 
-if ($slug !== '') {
-    $stmt = $pdo->prepare(
-        "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
-                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
-                u.author_public_enabled, u.author_slug, u.role AS author_role
-         FROM cms_news n
-         LEFT JOIN cms_users u ON u.id = n.author_id
-         WHERE n.slug = ? AND " . newsPublicVisibilitySql('n') . "
-         LIMIT 1"
-    );
-    $stmt->execute([$slug]);
+$previewToken = trim($_GET['preview'] ?? '');
+if ($previewToken !== '') {
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_news n
+             LEFT JOIN cms_users u ON u.id = n.author_id
+             WHERE n.slug = ? AND n.preview_token = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$slug, $previewToken]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_news n
+             LEFT JOIN cms_users u ON u.id = n.author_id
+             WHERE n.id = ? AND n.preview_token = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$id, $previewToken]);
+    }
 } else {
-    $stmt = $pdo->prepare(
-        "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
-                COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
-                u.author_public_enabled, u.author_slug, u.role AS author_role
-         FROM cms_news n
-         LEFT JOIN cms_users u ON u.id = n.author_id
-         WHERE n.id = ? AND " . newsPublicVisibilitySql('n') . "
-         LIMIT 1"
-    );
-    $stmt->execute([$id]);
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_news n
+             LEFT JOIN cms_users u ON u.id = n.author_id
+             WHERE n.slug = ? AND " . newsPublicVisibilitySql('n') . "
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_news n
+             LEFT JOIN cms_users u ON u.id = n.author_id
+             WHERE n.id = ? AND " . newsPublicVisibilitySql('n') . "
+             LIMIT 1"
+        );
+        $stmt->execute([$id]);
+    }
 }
 
 $news = $stmt->fetch() ?: null;

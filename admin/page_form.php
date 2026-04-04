@@ -208,6 +208,11 @@ adminHeader($pageTitle);
       <?php if ($publicPath !== ''): ?>
         <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu <span aria-hidden="true">↗</span></a>
       <?php endif; ?>
+      <?php if ($id !== null && !empty($page['preview_token'])): ?>
+        <a href="<?= h(pagePreviewPath($page)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+      <?php elseif ($id !== null): ?>
+        <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+      <?php endif; ?>
     </div>
   </fieldset>
 </form>

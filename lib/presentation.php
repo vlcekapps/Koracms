@@ -3205,6 +3205,18 @@ function newsPublicPath(array $news, array $query = []): string
     return BASE_URL . appendUrlQuery(newsPublicRequestPath($news), $query);
 }
 
+function newsPreviewPath(array $news): string
+{
+    $previewToken = trim((string)($news['preview_token'] ?? ''));
+    return newsPublicPath($news, $previewToken !== '' ? ['preview' => $previewToken] : []);
+}
+
+function pagePreviewPath(array $page): string
+{
+    $previewToken = trim((string)($page['preview_token'] ?? ''));
+    return pagePublicPath($page, $previewToken !== '' ? ['preview' => $previewToken] : []);
+}
+
 function newsPublicUrl(array $news, array $query = []): string
 {
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));

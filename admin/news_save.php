@@ -85,6 +85,11 @@ if ($existingItem) {
     $oldStmt->execute([$id]);
     $oldData = $oldStmt->fetch() ?: null;
 
+    if ($oldData && ($oldData['preview_token'] ?? '') === '') {
+        $previewToken = bin2hex(random_bytes(16));
+        $pdo->prepare("UPDATE cms_news SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
+    }
+
     if ($oldData) {
         saveRevision(
             $pdo,
@@ -169,10 +174,11 @@ if ($existingItem) {
     }
     $status = $requestedStatus;
     $authorId = currentUserId();
+    $previewToken = bin2hex(random_bytes(16));
     $pdo->prepare(
         "INSERT INTO cms_news (
-            title, slug, content, publish_at, unpublish_at, admin_note, meta_title, meta_description, status, author_id
-         ) VALUES (?,?,?,?,?,?,?,?,?,?)"
+            title, slug, content, publish_at, unpublish_at, admin_note, meta_title, meta_description, preview_token, status, author_id
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -182,6 +188,7 @@ if ($existingItem) {
         $adminNote,
         $metaTitle,
         $metaDescription,
+        $previewToken,
         $status,
         $authorId,
     ]);

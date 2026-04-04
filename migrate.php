@@ -894,6 +894,7 @@ $addColumns = [
     'cms_news.meta_description'      => "ALTER TABLE cms_news ADD COLUMN meta_description TEXT",
     'cms_news.publish_at'            => "ALTER TABLE cms_news ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     'cms_news.updated_at'            => "ALTER TABLE cms_news ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    'cms_news.preview_token'         => "ALTER TABLE cms_news ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     // cms_polls
     'cms_polls.meta_title'           => "ALTER TABLE cms_polls ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
     'cms_polls.meta_description'     => "ALTER TABLE cms_polls ADD COLUMN meta_description TEXT",
@@ -1129,6 +1130,7 @@ $addColumns = [
     'cms_articles.unpublish_at'      => "ALTER TABLE cms_articles ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_news.unpublish_at'          => "ALTER TABLE cms_news ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_pages.unpublish_at'         => "ALTER TABLE cms_pages ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    'cms_pages.preview_token'        => "ALTER TABLE cms_pages ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_events.unpublish_at'        => "ALTER TABLE cms_events ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
 ];
 

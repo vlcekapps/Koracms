@@ -9,15 +9,26 @@ if ($slug === '') {
 }
 
 $pdo  = db_connect();
-$stmt = $pdo->prepare(
-    "SELECT * FROM cms_pages
-     WHERE slug = ?
-       AND blog_id IS NULL
-       AND status = 'published'
-       AND is_published = 1
-       AND (publish_at IS NULL OR publish_at <= NOW())"
-);
-$stmt->execute([$slug]);
+$previewToken = trim($_GET['preview'] ?? '');
+if ($previewToken !== '') {
+    $stmt = $pdo->prepare(
+        "SELECT * FROM cms_pages
+         WHERE slug = ?
+           AND blog_id IS NULL
+           AND preview_token = ?"
+    );
+    $stmt->execute([$slug, $previewToken]);
+} else {
+    $stmt = $pdo->prepare(
+        "SELECT * FROM cms_pages
+         WHERE slug = ?
+           AND blog_id IS NULL
+           AND status = 'published'
+           AND is_published = 1
+           AND (publish_at IS NULL OR publish_at <= NOW())"
+    );
+    $stmt->execute([$slug]);
+}
 $page = $stmt->fetch();
 
 if (!$page) {

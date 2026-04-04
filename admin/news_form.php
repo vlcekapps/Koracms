@@ -217,6 +217,11 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <?php if ($item && ($item['status'] ?? 'published') === 'published'): ?>
       <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
+    <?php if ($item && !empty($item['preview_token'])): ?>
+      <a href="<?= h(newsPreviewPath($item)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+    <?php elseif ($item): ?>
+      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+    <?php endif; ?>
   </div>
 </form>
 
