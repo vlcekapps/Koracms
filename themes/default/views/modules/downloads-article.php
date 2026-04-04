@@ -41,7 +41,7 @@ $otherVersions = $otherVersions ?? [];
     <section class="surface board-detail__hero" aria-labelledby="download-preview-title">
       <div class="article-shell">
         <h2 id="download-preview-title" class="sr-only">Náhled</h2>
-        <img class="board-detail__image" src="<?= h((string)$download['image_url']) ?>" alt="">
+        <img class="board-detail__image" src="<?= h((string)$download['image_url']) ?>" alt="<?= h((string)$download['title']) ?>">
       </div>
     </section>
   <?php endif; ?>

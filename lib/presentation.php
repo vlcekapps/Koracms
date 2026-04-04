@@ -661,6 +661,7 @@ function reservedBlogSlugs(): array
 
 function formatCzechDate(string $datetime): string
 {
+    if (trim($datetime) === '') return '';
     static $months = [
         '', 'ledna', 'února', 'března', 'dubna', 'května', 'června',
         'července', 'srpna', 'září', 'října', 'listopadu', 'prosince',
@@ -707,6 +708,13 @@ function slugify(string $text): string
         'ó'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ý'=>'y','ž'=>'z',
         'Á'=>'a','Č'=>'c','Ď'=>'d','É'=>'e','Ě'=>'e','Í'=>'i','Ň'=>'n',
         'Ó'=>'o','Ř'=>'r','Š'=>'s','Ť'=>'t','Ú'=>'u','Ů'=>'u','Ý'=>'y','Ž'=>'z',
+        // slovenština
+        'ľ'=>'l','Ľ'=>'l','ŕ'=>'r','Ŕ'=>'r','ĺ'=>'l','Ĺ'=>'l','ô'=>'o','Ô'=>'o',
+        // polština
+        'ą'=>'a','Ą'=>'a','ć'=>'c','Ć'=>'c','ę'=>'e','Ę'=>'e','ł'=>'l','Ł'=>'l',
+        'ń'=>'n','Ń'=>'n','ś'=>'s','Ś'=>'s','ź'=>'z','Ź'=>'z','ż'=>'z','Ż'=>'z',
+        // němčina
+        'ä'=>'ae','Ä'=>'ae','ö'=>'oe','Ö'=>'oe','ü'=>'ue','Ü'=>'ue','ß'=>'ss',
     ];
     $text = strtr($text, $map);
     $text = mb_strtolower($text, 'UTF-8');

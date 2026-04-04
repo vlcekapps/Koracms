@@ -323,90 +323,91 @@ if (!empty($_FILES['image']['name'])) {
     $imageFile = '';
 }
 
-if ($existingArticle) {
-    $previewToken = (string)($existingArticle['preview_token'] ?? '');
-    if ($previewToken === '') {
+$pdo->beginTransaction();
+try {
+    if ($existingArticle) {
+        $previewToken = (string)($existingArticle['preview_token'] ?? '');
+        if ($previewToken === '') {
+            $previewToken = bin2hex(random_bytes(16));
+            $pdo->prepare("UPDATE cms_articles SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
+        }
+
+        // Revize – snapshot starých hodnot
+        $oldStmt = $pdo->prepare("SELECT title, slug, perex, content, publish_at, unpublish_at, meta_title, meta_description, admin_note FROM cms_articles WHERE id = ?");
+        $oldStmt->execute([$id]);
+        $oldData = $oldStmt->fetch();
+        if ($oldData) {
+            saveRevision($pdo, 'article', $id, $oldData, [
+                'title' => $title,
+                'slug' => $slug,
+                'perex' => $perex,
+                'content' => $content,
+                'publish_at' => $publishAtSql,
+                'unpublish_at' => $unpublishAtSql,
+                'meta_title' => $metaTitle,
+                'meta_description' => $metaDescription,
+                'admin_note' => $adminNote,
+            ]);
+        }
+
+        $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, is_featured_in_blog=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
+        $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $isFeaturedInBlog, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId];
+        if ($imageFile !== null) {
+            $setClauses .= ", image_file=?";
+            $params[] = $imageFile;
+        }
+        $params[] = $id;
+        $pdo->prepare("UPDATE cms_articles SET {$setClauses} WHERE id = ?")->execute($params);
+        if ($isFeaturedInBlog === 1) {
+            $pdo->prepare(
+                "UPDATE cms_articles
+                 SET is_featured_in_blog = 0
+                 WHERE blog_id = ? AND id <> ?"
+            )->execute([$blogId, $id]);
+        }
+        logAction('article_edit', "id={$id} title={$title} slug={$slug}");
+    } else {
         $previewToken = bin2hex(random_bytes(16));
-        $pdo->prepare("UPDATE cms_articles SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
-    }
-
-    // Revize – snapshot starých hodnot
-    $oldStmt = $pdo->prepare("SELECT title, slug, perex, content, publish_at, unpublish_at, meta_title, meta_description, admin_note FROM cms_articles WHERE id = ?");
-    $oldStmt->execute([$id]);
-    $oldData = $oldStmt->fetch();
-    if ($oldData) {
-        saveRevision($pdo, 'article', $id, $oldData, [
-            'title' => $title,
-            'slug' => $slug,
-            'perex' => $perex,
-            'content' => $content,
-            'publish_at' => $publishAtSql,
-            'unpublish_at' => $unpublishAtSql,
-            'meta_title' => $metaTitle,
-            'meta_description' => $metaDescription,
-            'admin_note' => $adminNote,
+        $authorId = currentUserId();
+        $status = currentUserHasCapability('blog_approve') ? 'published' : 'pending';
+        $pdo->prepare(
+            "INSERT INTO cms_articles
+             (title, slug, perex, content, category_id, comments_enabled, is_featured_in_blog, image_file, publish_at, unpublish_at,
+              meta_title, meta_description, preview_token, author_id, status, blog_id)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        )->execute([
+            $title,
+            $slug,
+            $perex,
+            $content,
+            $categoryId,
+            $commentsEnabled,
+            $isFeaturedInBlog,
+            $imageFile ?? '',
+            $publishAtSql,
+            $unpublishAtSql,
+            $metaTitle,
+            $metaDescription,
+            $previewToken,
+            $authorId,
+            $status,
+            $blogId,
         ]);
+        $id = (int)$pdo->lastInsertId();
+        logAction('article_add', "id={$id} title={$title} slug={$slug} status={$status}");
+        if ($status === 'pending') {
+            notifyPendingContent('Článek', $title, '/admin/blog.php');
+        }
     }
 
-    $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, is_featured_in_blog=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, updated_at=NOW()";
-    $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $isFeaturedInBlog, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId];
-    if ($imageFile !== null) {
-        $setClauses .= ", image_file=?";
-        $params[] = $imageFile;
-    }
-    $params[] = $id;
-    $pdo->prepare("UPDATE cms_articles SET {$setClauses} WHERE id = ?")->execute($params);
-    if ($isFeaturedInBlog === 1) {
+    if ($isFeaturedInBlog === 1 && !$existingArticle) {
         $pdo->prepare(
             "UPDATE cms_articles
              SET is_featured_in_blog = 0
              WHERE blog_id = ? AND id <> ?"
         )->execute([$blogId, $id]);
     }
-    logAction('article_edit', "id={$id} title={$title} slug={$slug}");
-} else {
-    $previewToken = bin2hex(random_bytes(16));
-    $authorId = currentUserId();
-    $status = currentUserHasCapability('blog_approve') ? 'published' : 'pending';
-    $pdo->prepare(
-        "INSERT INTO cms_articles
-         (title, slug, perex, content, category_id, comments_enabled, is_featured_in_blog, image_file, publish_at, unpublish_at,
-          meta_title, meta_description, preview_token, author_id, status, blog_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    )->execute([
-        $title,
-        $slug,
-        $perex,
-        $content,
-        $categoryId,
-        $commentsEnabled,
-        $isFeaturedInBlog,
-        $imageFile ?? '',
-        $publishAtSql,
-        $unpublishAtSql,
-        $metaTitle,
-        $metaDescription,
-        $previewToken,
-        $authorId,
-        $status,
-        $blogId,
-    ]);
-    $id = (int)$pdo->lastInsertId();
-    logAction('article_add', "id={$id} title={$title} slug={$slug} status={$status}");
-    if ($status === 'pending') {
-        notifyPendingContent('Článek', $title, '/admin/blog.php');
-    }
-}
 
-if ($isFeaturedInBlog === 1 && !$existingArticle) {
-    $pdo->prepare(
-        "UPDATE cms_articles
-         SET is_featured_in_blog = 0
-         WHERE blog_id = ? AND id <> ?"
-    )->execute([$blogId, $id]);
-}
-
-try {
     $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$id]);
     if ($validTagIds !== []) {
         $insertTag = $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)");
@@ -414,8 +415,13 @@ try {
             $insertTag->execute([$id, $tagId]);
         }
     }
-} catch (\PDOException $e) {
-    error_log('admin/blog_save tags: ' . $e->getMessage());
+
+    $pdo->commit();
+} catch (\Throwable $e) {
+    $pdo->rollBack();
+    error_log('admin/blog_save: ' . $e->getMessage());
+    header('Location: ' . $redirect);
+    exit;
 }
 
 header('Location: ' . $redirect);

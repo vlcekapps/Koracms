@@ -529,6 +529,15 @@ function csrfToken(): string
 }
 
 /**
+ * Interní: rotuje CSRF token a uchová předchozí pro podporu multi-tab.
+ */
+function csrfRotate(): void
+{
+    $_SESSION['csrf_token_prev'] = $_SESSION['csrf_token'] ?? '';
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+/**
  * Vygeneruje příklad z násobilky (2–9 × 2–9) a uloží správnou odpověď do session.
  * Vrátí text příkladu, např. "3 × 7".
  */
@@ -563,24 +572,30 @@ function rateLimit(string $action, int $max = 10, int $window = 60): void
     $key = hash('sha256', $ip . '|' . $action);
     try {
         $pdo = db_connect();
+
+        // Vyčistit expirované záznamy
         $pdo->prepare("DELETE FROM cms_rate_limit
                     WHERE window_start < DATE_SUB(NOW(), INTERVAL ? SECOND)")
             ->execute([$window]);
+
+        // Atomický upsert – eliminuje TOCTOU race condition
+        $pdo->prepare(
+            "INSERT INTO cms_rate_limit (id, attempts, window_start) VALUES (?, 1, NOW())
+             ON DUPLICATE KEY UPDATE
+                attempts = IF(window_start < DATE_SUB(NOW(), INTERVAL ? SECOND), 1, attempts + 1),
+                window_start = IF(window_start < DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), window_start)"
+        )->execute([$key, $window, $window]);
+
+        // Zkontrolovat aktuální stav po upsertu
         $stmt = $pdo->prepare("SELECT attempts FROM cms_rate_limit WHERE id = ?");
         $stmt->execute([$key]);
         $row = $stmt->fetch();
-        if ($row) {
-            if ((int)$row['attempts'] >= $max) {
-                http_response_code(429);
-                echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>429</title></head>'
-                   . '<body><p>Příliš mnoho pokusů. Zkuste to prosím za chvíli.</p></body></html>';
-                exit;
-            }
-            $pdo->prepare("UPDATE cms_rate_limit SET attempts = attempts + 1 WHERE id = ?")
-                ->execute([$key]);
-        } else {
-            $pdo->prepare("INSERT INTO cms_rate_limit (id, attempts, window_start) VALUES (?,1,NOW())")
-                ->execute([$key]);
+
+        if ($row && (int)$row['attempts'] > $max) {
+            http_response_code(429);
+            echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>429</title></head>'
+               . '<body><p>Příliš mnoho pokusů. Zkuste to prosím za chvíli.</p></body></html>';
+            exit;
         }
     } catch (\PDOException $e) {
         error_log('rateLimit: ' . $e->getMessage());
@@ -613,10 +628,21 @@ function honeypotTriggered(): bool
 function verifyCsrf(): void
 {
     $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals(csrfToken(), $token)) {
-        http_response_code(403);
-        echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>403</title></head>'
-           . '<body><p>Neplatný bezpečnostní token. Vraťte se zpět a akci opakujte.</p></body></html>';
-        exit;
+
+    // Aktuální token
+    $current  = $_SESSION['csrf_token'] ?? '';
+    // Předchozí token (multi-tab: uživatel má otevřených více formulářů)
+    $previous = $_SESSION['csrf_token_prev'] ?? '';
+
+    if (($current !== '' && hash_equals($current, $token))
+        || ($previous !== '' && hash_equals($previous, $token))
+    ) {
+        csrfRotate();
+        return;
     }
+
+    http_response_code(403);
+    echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>403</title></head>'
+       . '<body><p>Neplatný bezpečnostní token. Vraťte se zpět a akci opakujte.</p></body></html>';
+    exit;
 }

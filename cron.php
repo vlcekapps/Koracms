@@ -137,8 +137,15 @@ function runKoraCron(PDO $pdo): array
 
             if ($expiredChatIds !== []) {
                 $placeholders = implode(',', array_fill(0, count($expiredChatIds), '?'));
-                $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
-                $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($expiredChatIds);
+                $pdo->beginTransaction();
+                try {
+                    $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
+                    $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($expiredChatIds);
+                    $pdo->commit();
+                } catch (\PDOException $txe) {
+                    $pdo->rollBack();
+                    throw $txe;
+                }
                 cronAppendLog($log, 'Smazáno ' . count($expiredChatIds) . ' starých vyřízených chat zpráv');
             }
         } catch (\PDOException $e) {
@@ -152,43 +159,44 @@ function runKoraCron(PDO $pdo): array
         if (!is_file($todayBackup)) {
             try {
                 $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-                $sqlDump = "-- Kora CMS auto-backup " . date('Y-m-d H:i:s') . "\n";
-                $sqlDump .= "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
-
-                foreach ($tables as $tableName) {
-                    if (!str_starts_with((string)$tableName, 'cms_')) {
-                        continue;
-                    }
-
-                    $createTable = $pdo->query("SHOW CREATE TABLE `{$tableName}`")->fetch();
-                    $sqlDump .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
-                    $sqlDump .= $createTable['Create Table'] . ";\n\n";
-
-                    $rows = $pdo->query("SELECT * FROM `{$tableName}`");
-                    $firstRow = true;
-                    $columnNames = null;
-                    foreach ($rows as $row) {
-                        if ($firstRow) {
-                            $columnNames = array_keys($row);
-                            $firstRow = false;
-                        }
-                        $values = [];
-                        foreach ($columnNames as $columnName) {
-                            $values[] = $row[$columnName] === null ? 'NULL' : $pdo->quote((string)$row[$columnName]);
-                        }
-                        $sqlDump .= "INSERT INTO `{$tableName}` (`" . implode('`, `', $columnNames) . "`) VALUES (" . implode(', ', $values) . ");\n";
-                    }
-
-                    if (!$firstRow) {
-                        $sqlDump .= "\n";
-                    }
-                }
-
-                $sqlDump .= "SET FOREIGN_KEY_CHECKS = 1;\n";
-                $written = @file_put_contents($todayBackup, $sqlDump);
-                if ($written === false) {
-                    cronAppendLog($log, 'Chyba zálohy: nepodařilo se uložit SQL dump do privátního úložiště');
+                $fh = @fopen($todayBackup, 'w');
+                if ($fh === false) {
+                    cronAppendLog($log, 'Chyba zálohy: nepodařilo se otevřít soubor pro zápis');
                 } else {
+                    fwrite($fh, "-- Kora CMS auto-backup " . date('Y-m-d H:i:s') . "\n");
+                    fwrite($fh, "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n");
+
+                    foreach ($tables as $tableName) {
+                        if (!str_starts_with((string)$tableName, 'cms_')) {
+                            continue;
+                        }
+
+                        $createTable = $pdo->query("SHOW CREATE TABLE `{$tableName}`")->fetch();
+                        fwrite($fh, "DROP TABLE IF EXISTS `{$tableName}`;\n");
+                        fwrite($fh, $createTable['Create Table'] . ";\n\n");
+
+                        $rows = $pdo->query("SELECT * FROM `{$tableName}`");
+                        $firstRow = true;
+                        $columnNames = null;
+                        foreach ($rows as $row) {
+                            if ($firstRow) {
+                                $columnNames = array_keys($row);
+                                $firstRow = false;
+                            }
+                            $values = [];
+                            foreach ($columnNames as $columnName) {
+                                $values[] = $row[$columnName] === null ? 'NULL' : $pdo->quote((string)$row[$columnName]);
+                            }
+                            fwrite($fh, "INSERT INTO `{$tableName}` (`" . implode('`, `', $columnNames) . "`) VALUES (" . implode(', ', $values) . ");\n");
+                        }
+
+                        if (!$firstRow) {
+                            fwrite($fh, "\n");
+                        }
+                    }
+
+                    fwrite($fh, "SET FOREIGN_KEY_CHECKS = 1;\n");
+                    fclose($fh);
                     cronAppendLog($log, 'Záloha databáze vytvořena: ' . basename($todayBackup));
                 }
             } catch (\Throwable $e) {

@@ -94,6 +94,7 @@ function gallery_make_thumb(string $src, string $dst, int $maxDim = 300): bool
     $info = @getimagesize($src);
     if (!$info) return false;
     [$w, $h, $type] = $info;
+    if ($w <= 0 || $h <= 0) return false;
 
     $image = match ($type) {
         IMAGETYPE_JPEG => @imagecreatefromjpeg($src),

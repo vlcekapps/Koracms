@@ -8,9 +8,14 @@ function siteUrl(string $path = ''): string
 {
     $base = BASE_URL;
     if ($base === '' || !str_starts_with($base, 'http')) {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $base   = $scheme . '://' . $host . $base;
+        $configuredUrl = function_exists('getSetting') ? getSetting('site_url', '') : '';
+        if ($configuredUrl !== '') {
+            $base = rtrim($configuredUrl, '/') . $base;
+        } else {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $base   = $scheme . '://' . $host . $base;
+        }
     }
     return $base . $path;
 }

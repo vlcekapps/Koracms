@@ -36,7 +36,7 @@ $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
 
     <?php if ((string)($document['image_url'] ?? '') !== ''): ?>
       <div class="board-detail__hero">
-        <img class="board-detail__image" src="<?= h((string)$document['image_url']) ?>" alt="" loading="lazy">
+        <img class="board-detail__image" src="<?= h((string)$document['image_url']) ?>" alt="<?= h((string)$document['title']) ?>" loading="lazy">
       </div>
     <?php endif; ?>
 

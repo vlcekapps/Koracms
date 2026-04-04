@@ -125,7 +125,7 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
           <article class="card card--rich">
             <?php if ((string)($event['image_url'] ?? '') !== ''): ?>
               <a class="card__media" href="<?= h(eventPublicPath($event, $listingQuery)) ?>">
-                <img src="<?= h((string)$event['image_url']) ?>" alt="">
+                <img src="<?= h((string)$event['image_url']) ?>" alt="<?= h((string)($event['title'] ?? '')) ?>">
               </a>
             <?php endif; ?>
 

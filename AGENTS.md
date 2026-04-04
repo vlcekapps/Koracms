@@ -8,4 +8,4 @@ Tento projekt cílí na stabilní provoz, bezpečnost a přístupnost. Při kaž
 - U formulářů používejte `label`, `fieldset` a `legend`; `aria-describedby` a `aria-labelledby` smí odkazovat jen na reálně existující elementy.
 - U textu a stavových indikací držte kontrast alespoň na úrovni WCAG 2.2 AA; nepřenášejte význam pouze barvou.
 - Na veřejných i admin stránkách zachovejte skip link a viditelný focus stav.
-- Před odevzdáním změn spusťte PHP lint a runtime audit: `php build/runtime_audit.php`.
+- Před odevzdáním změn spusťte PHP lint, unit testy a runtime audit: `php build/unit_tests.php && php build/runtime_audit.php`.

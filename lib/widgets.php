@@ -639,7 +639,11 @@ function renderZone(string $zone, string $wrapperClass = ''): string
 
     $out = '';
     foreach ($widgets as $widget) {
-        $out .= renderWidget($widget, $zone);
+        try {
+            $out .= renderWidget($widget, $zone);
+        } catch (\Throwable $e) {
+            error_log('Widget render error (id=' . (int)($widget['id'] ?? 0) . '): ' . $e->getMessage());
+        }
     }
 
     if ($wrapperClass !== '' && $out !== '') {
@@ -737,7 +741,7 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
         $out .= '<article class="card">';
         if (!empty($a['image_file'])) {
             $out .= '<a class="card__media" href="' . h(articlePublicPath($a)) . '">'
-                   . '<img src="' . BASE_URL . '/uploads/articles/thumbs/' . rawurlencode($a['image_file']) . '" alt="" loading="lazy">'
+                   . '<img src="' . BASE_URL . '/uploads/articles/thumbs/' . rawurlencode($a['image_file']) . '" alt="' . h($a['title']) . '" loading="lazy">'
                    . '</a>';
         }
         $out .= '<div class="card__body"><h3 class="card__title"><a href="' . h(articlePublicPath($a)) . '">' . h($a['title']) . '</a></h3>';
@@ -846,7 +850,7 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
         $out .= '<article class="card">';
         if (!empty($download['image_url'])) {
             $out .= '<a class="card__media" href="' . h(downloadPublicPath($download)) . '">'
-                  . '<img src="' . h((string)$download['image_url']) . '" alt="" loading="lazy">'
+                  . '<img src="' . h((string)$download['image_url']) . '" alt="' . h((string)$download['title']) . '" loading="lazy">'
                   . '</a>';
         }
         $out .= '<div class="card__body">';
@@ -972,7 +976,7 @@ function renderWidget_latest_places(array $widget, array $settings, string $zone
         $out .= '<article class="card">';
         if (!empty($place['image_url'])) {
             $out .= '<a class="card__media" href="' . h(placePublicPath($place)) . '">'
-                  . '<img src="' . h((string)$place['image_url']) . '" alt="" loading="lazy">'
+                  . '<img src="' . h((string)$place['image_url']) . '" alt="' . h((string)$place['name']) . '" loading="lazy">'
                   . '</a>';
         }
         $out .= '<div class="card__body">';

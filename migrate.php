@@ -51,6 +51,42 @@ if (!$isCli) {
 $pdo = db_connect();
 $log = [];
 
+// ── Verzování migrace ──────────────────────────────────────────────────────
+// Ukládá do cms_settings klíč 'migration_version'. Pokud je aktuální verze
+// shodná s cílovou, migrace se přeskočí. Díky tomu je opakované spuštění
+// bezpečné a zbytečné re-runy se neprovedou.
+$migrationTargetVersion = KORA_VERSION;
+$migrationCurrentVersion = '';
+try {
+    $vStmt = $pdo->query("SELECT value FROM cms_settings WHERE `key` = 'migration_version'");
+    $vRow  = $vStmt ? $vStmt->fetch() : false;
+    $migrationCurrentVersion = $vRow ? (string)$vRow['value'] : '';
+} catch (\PDOException $e) {
+    // Tabulka cms_settings ještě neexistuje – první spuštění
+}
+
+if ($migrationCurrentVersion === $migrationTargetVersion) {
+    $msg = "Databáze je již na verzi {$migrationTargetVersion} – migrace není potřeba.";
+    if ($isCli) {
+        echo $msg . PHP_EOL;
+        exit;
+    }
+    ?>
+<!DOCTYPE html>
+<html lang="cs">
+<head><meta charset="utf-8"><title>Migrace</title>
+<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem}</style>
+</head><body>
+<h1>Migrace databáze</h1>
+<p><?= h($msg) ?></p>
+<p><a href="<?= BASE_URL ?>/admin/index.php">Přejít do administrace →</a></p>
+</body></html>
+    <?php
+    exit;
+}
+
+$log[] = '· Aktuální verze migrace: ' . h($migrationCurrentVersion ?: '(žádná)') . ' → cíl: ' . h($migrationTargetVersion);
+
 // ── 1. Tabulky (CREATE TABLE IF NOT EXISTS = bezpečné, existující přeskočí) ──
 
 $tables = [
@@ -2722,6 +2758,17 @@ try {
     }
 } catch (\Throwable $e) {
     $log[] = '✗ Přesun SQL záloh – CHYBA: ' . h($e->getMessage());
+}
+
+// ── Uložení verze migrace ───────────────────────────────────────────────────
+try {
+    $pdo->prepare(
+        "INSERT INTO cms_settings (`key`, value) VALUES ('migration_version', ?)
+         ON DUPLICATE KEY UPDATE value = VALUES(value)"
+    )->execute([$migrationTargetVersion]);
+    $log[] = '✓ Verze migrace nastavena na ' . h($migrationTargetVersion);
+} catch (\Throwable $e) {
+    $log[] = '✗ Uložení verze migrace – CHYBA: ' . h($e->getMessage());
 }
 
 if ($isCli) {

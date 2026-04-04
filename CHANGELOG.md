@@ -4,6 +4,27 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Záloha databáze – cron.php nově zapisuje SQL dump inkrementálně místo do paměti** – záloha již nestaví celý dump jako jeden PHP string, ale zapisuje řádek po řádku přes `fopen`/`fwrite`; u velkých databází tak nedojde k vyčerpání `memory_limit` a pádu cron úlohy
+- **Ukládání článků – celá operace je nově obalena databázovou transakcí** – uložení článku, reset featured příznaku, smazání a vložení tagů nyní probíhá atomicky; při chybě uprostřed se provede rollback a článek nezůstane bez tagů
+- **CSRF ochrana – token se nově rotuje po každém úspěšném ověření** – `verifyCsrf()` po validaci vygeneruje nový token a předchozí uloží jako záložní, takže ukradený token nelze opakovaně zneužít a dva současně otevřené formuláře (multi-tab) stále fungují
+- **Rate limiting – atomický upsert místo SELECT + UPDATE** – `rateLimit()` nově používá `INSERT ... ON DUPLICATE KEY UPDATE`, čímž eliminuje TOCTOU race condition, kdy dva souběžné požadavky mohly oba projít limitem
+- **Záloha e-mailových odkazů – `siteUrl()` preferuje nastavení `site_url` z databáze** – funkce pro generování absolutních URL v e-mailech nově upřednostňuje administrátorem nastavenou adresu webu před HTTP hlavičkou `Host`, která je ovladatelná klientem a mohla být zneužita k vložení podvrženého odkazu do notifikačních e-mailů
+- **Migrace – opakované spuštění `migrate.php` se přeskočí, pokud je databáze aktuální** – migrate.php nově ukládá do `cms_settings` klíč `migration_version` a při opakovaném spuštění se shodná verze přeskočí bez zbytečných ALTER TABLE pokusů
+- **Widget rendering – výjimka v jednom widgetu neshodí celou stránku** – `renderZone()` nově obaluje každý widget v `try/catch` a chybu zaloguje místo propagace fatální výjimky na homepage
+- **`formatCzechDate('')` – prázdný řetězec vrací prázdný řetězec** – dříve `new DateTime('')` tiše vrátil aktuální datum, nyní funkce při prázdném vstupu korektně vrátí `''`
+- **`slugify()` – rozšíření transliterace o slovenské, polské a německé znaky** – mapa nově pokrývá `ľ, ŕ, ĺ, ô, ą, ć, ę, ł, ń, ś, ź, ż, ä, ö, ü, ß` a jejich velké varianty, takže slovenská, polská a německá jména generují smysluplné slugy místo prázdných řetězců
+- **Gallery – ochrana proti dělení nulou u poškozených obrázků** – `gallery_make_thumb()` nově kontroluje, zda `getimagesize()` vrátilo nenulové rozměry, a při nulové šířce nebo výšce vrátí `false` místo fatal error
+- **VERSION soubor – bezpečný fallback** – `db.php` nově ošetřuje chybějící `VERSION` soubor a místo PHP 8.1+ deprecation warning vrátí `'0.0.0'`
+
+### Opraveno
+- **WCAG 2.2 – 11 obrázků s obsahem nově má popisný alt text** – náhledy článků, stažení, událostí, míst a nástěnky ve widgetech i ve views měly prázdný `alt=""`; nově se jako alt text používá název/titulek příslušného záznamu (obrázky uvnitř `aria-hidden` duplicitních odkazů na homepage a v indexu nástěnky zůstávají správně dekorativní)
+
+### Přidáno
+- **Unit testy – 89 testů pro 16 kritických funkcí** – nový `build/unit_tests.php` s vlastním bootstrapem (`build/unit_test_bootstrap.php`) testuje `h()`, `inputInt()`, `internalRedirectTarget()`, `slugify()`, `formatCzechDate()`, `readingTime()`, `paginateArray()`, `formatFileSize()`, `mailSanitizeHeaderValue()`, `base32Decode()`, `totpCalculate()`, `totpUri()`, `parseContentShortcodeAttributes()`, `normalizeContentEmbedUrl()`, `userHas2FA()`/`userHasPasskey()` a CSRF rotaci; spuštění: `php build/unit_tests.php`
+
 ## [3.3.3] – 2026-04-01
 
 ### Změněno

@@ -110,7 +110,7 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
           <article class="card card--rich place-card">
             <?php if ((string)($place['image_url'] ?? '') !== ''): ?>
               <a class="card__media" href="<?= h(placePublicPath($place, $listingQuery)) ?>">
-                <img src="<?= h((string)$place['image_url']) ?>" alt="" loading="lazy">
+                <img src="<?= h((string)$place['image_url']) ?>" alt="<?= h((string)($place['name'] ?? '')) ?>" loading="lazy">
               </a>
             <?php endif; ?>
 

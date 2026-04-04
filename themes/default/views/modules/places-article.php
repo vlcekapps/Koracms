@@ -26,7 +26,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/places/index.php'));
 
     <?php if ((string)($place['image_url'] ?? '') !== ''): ?>
       <div class="board-detail__hero">
-        <img class="board-detail__image" src="<?= h((string)$place['image_url']) ?>" alt="" loading="lazy">
+        <img class="board-detail__image" src="<?= h((string)$place['image_url']) ?>" alt="<?= h((string)($place['name'] ?? '')) ?>" loading="lazy">
       </div>
     <?php endif; ?>
 

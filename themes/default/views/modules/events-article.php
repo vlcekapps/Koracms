@@ -36,7 +36,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
     <section class="surface board-detail__hero" aria-labelledby="event-preview-title">
       <div class="article-shell">
         <h2 id="event-preview-title" class="sr-only">Obrázek události</h2>
-        <img class="article-cover" src="<?= h((string)$event['image_url']) ?>" alt="">
+        <img class="article-cover" src="<?= h((string)$event['image_url']) ?>" alt="<?= h((string)($event['title'] ?? '')) ?>">
       </div>
     </section>
   <?php endif; ?>

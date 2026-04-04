@@ -138,7 +138,7 @@ $hasItems = !empty($items);
                 <article class="card card--rich">
                   <?php if ($download['image_url'] !== ''): ?>
                     <a class="card__media" href="<?= h(downloadPublicPath($download)) ?>">
-                      <img src="<?= h((string)$download['image_url']) ?>" alt="">
+                      <img src="<?= h((string)$download['image_url']) ?>" alt="<?= h((string)$download['title']) ?>">
                     </a>
                   <?php endif; ?>
 

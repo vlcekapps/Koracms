@@ -3,7 +3,7 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib/theme.php';
 
-define('KORA_VERSION', trim(file_get_contents(__DIR__ . '/VERSION')));
+define('KORA_VERSION', trim((string)(file_get_contents(__DIR__ . '/VERSION') ?: '0.0.0')));
 
 // Globální exception handler – zachytí neošetřené výjimky a zobrazí
 // uživatelsky přívětivou chybovou stránku místo bílé obrazovky.

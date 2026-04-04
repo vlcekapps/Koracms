@@ -580,7 +580,7 @@ $renderFeaturedSection = static function () use (
               <article class="card card--highlighted">
                 <?php if (!empty($featuredBoardItem['image_url'])): ?>
                   <a class="card__media" href="<?= h($featuredBoardPath) ?>">
-                    <img src="<?= h((string)$featuredBoardItem['image_url']) ?>" alt="" loading="lazy">
+                    <img src="<?= h((string)$featuredBoardItem['image_url']) ?>" alt="<?= h((string)$featuredBoardItem['title']) ?>" loading="lazy">
                   </a>
                 <?php endif; ?>
                 <div class="card__body">
