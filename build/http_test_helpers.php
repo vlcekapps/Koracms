@@ -40,10 +40,46 @@ if (!function_exists('fetchUrl')) {
 if (!function_exists('postUrl')) {
     /**
      * @param array<string,string> $fields
+     * @return array<string,string>
+     */
+    function refreshPostFieldsCsrfToken(array $fields, string $cookie): array
+    {
+        if (!array_key_exists('csrf_token', $fields) || $cookie === '') {
+            return $fields;
+        }
+
+        if (preg_match('/(?:^|;\s*)PHPSESSID=([^;]+)/', $cookie, $matches) !== 1) {
+            return $fields;
+        }
+
+        $sessionId = $matches[1];
+        $originalSessionId = session_status() === PHP_SESSION_ACTIVE ? session_id() : '';
+        $hadActiveSession = session_status() === PHP_SESSION_ACTIVE;
+
+        if ($hadActiveSession) {
+            session_write_close();
+        }
+
+        session_id($sessionId);
+        session_start();
+        $fields['csrf_token'] = (string)($_SESSION['csrf_token'] ?? $fields['csrf_token']);
+        session_write_close();
+
+        if ($hadActiveSession && $originalSessionId !== '' && $originalSessionId !== $sessionId) {
+            session_id($originalSessionId);
+            session_start();
+        }
+
+        return $fields;
+    }
+
+    /**
+     * @param array<string,string> $fields
      * @return array{status:string,headers:array<int,string>,body:string}
      */
     function postUrl(string $url, array $fields, string $cookie = '', int $maxRedirects = 20): array
     {
+        $fields = refreshPostFieldsCsrfToken($fields, $cookie);
         $headers = [
             'User-Agent: KoraHttpIntegration/1.0',
             'Content-Type: application/x-www-form-urlencoded',
@@ -84,6 +120,7 @@ if (!function_exists('postMultipartUrl')) {
      */
     function postMultipartUrl(string $url, array $fields, array $files, string $cookie = '', int $maxRedirects = 20): array
     {
+        $fields = refreshPostFieldsCsrfToken($fields, $cookie);
         $boundary = '----KoraHttpIntegration' . bin2hex(random_bytes(8));
         $eol = "\r\n";
         $body = '';
@@ -201,4 +238,3 @@ if (!function_exists('koraPrimeTestSession')) {
         ];
     }
 }
-

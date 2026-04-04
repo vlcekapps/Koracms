@@ -64,28 +64,11 @@ try {
 } catch (\PDOException $e) {
     // Tabulka cms_settings ještě neexistuje – první spuštění
 }
-
-if ($migrationCurrentVersion === $migrationTargetVersion) {
-    $msg = "Databáze je již na verzi {$migrationTargetVersion} – migrace není potřeba.";
-    if ($isCli) {
-        echo $msg . PHP_EOL;
-        exit;
-    }
-    ?>
-<!DOCTYPE html>
-<html lang="cs">
-<head><meta charset="utf-8"><title>Migrace</title>
-<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem}</style>
-</head><body>
-<h1>Migrace databáze</h1>
-<p><?= h($msg) ?></p>
-<p><a href="<?= BASE_URL ?>/admin/index.php">Přejít do administrace →</a></p>
-</body></html>
-    <?php
-    exit;
-}
-
+$rerunForConsistency = $migrationCurrentVersion === $migrationTargetVersion;
 $log[] = '· Aktuální verze migrace: ' . h($migrationCurrentVersion ?: '(žádná)') . ' → cíl: ' . h($migrationTargetVersion);
+if ($rerunForConsistency) {
+    $log[] = '· Databáze už hlásí cílovou verzi – proběhne kontrola konzistence schématu a chybějících sloupců.';
+}
 
 // ── 1. Tabulky (CREATE TABLE IF NOT EXISTS = bezpečné, existující přeskočí) ──
 
@@ -312,8 +295,12 @@ $tables = [
         event_date   DATETIME     NOT NULL,
         event_end    DATETIME     NULL DEFAULT NULL,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
-        status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+        status       ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
+        unpublish_at DATETIME     NULL DEFAULT NULL,
+        publish_at   DATETIME     NULL DEFAULT NULL,
+        admin_note   TEXT,
         preview_token VARCHAR(32) NOT NULL DEFAULT '',
+        deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_events_slug (slug)
@@ -404,8 +391,9 @@ $tables = [
         meta_title   VARCHAR(160) NOT NULL DEFAULT '',
         meta_description TEXT,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
-        status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+        status       ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
         sort_order   INT          NOT NULL DEFAULT 0,
+        deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_places_slug (slug)
@@ -1147,6 +1135,7 @@ $addColumns = [
     'cms_gallery_albums.deleted_at'  => "ALTER TABLE cms_gallery_albums ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_gallery_photos.deleted_at'  => "ALTER TABLE cms_gallery_photos ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_polls.deleted_at'           => "ALTER TABLE cms_polls ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_places.deleted_at'          => "ALTER TABLE cms_places ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     // 2FA
     'cms_users.totp_secret'          => "ALTER TABLE cms_users ADD COLUMN totp_secret VARCHAR(64) NULL DEFAULT NULL",
     'cms_users.passkey_credentials'  => "ALTER TABLE cms_users ADD COLUMN passkey_credentials TEXT",
@@ -2557,13 +2546,16 @@ try {
 }
 
 try {
+    // Záměrně držíme původní zkomolený řetězec, který se dostal do starších instalací.
+    // Tato oprava má při migraci narovnat už uložené mojibake názvy widgetu sociálních sítí.
+    $legacyBrokenSocialLinksTitle = 'SociĂˇlnĂ­ sĂ­tÄ›';
     $repairSocialLinksWidgetTitle = $pdo->prepare(
         "UPDATE cms_widgets
          SET title = 'Sociální sítě'
          WHERE widget_type = 'social_links'
-           AND title = 'SociĂˇlnĂ­ sĂ­tÄ›'"
+           AND title = ?"
     );
-    $repairSocialLinksWidgetTitle->execute();
+    $repairSocialLinksWidgetTitle->execute([$legacyBrokenSocialLinksTitle]);
     if ($repairSocialLinksWidgetTitle->rowCount() > 0) {
         $log[] = '· U stávajících widgetů sociálních sítí byl opraven zkomolený výchozí název';
     }

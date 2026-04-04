@@ -15,6 +15,7 @@ $siteProfiles = siteProfileDefinitions();
 $formState = settingsDefaultFormState();
 $errors = [];
 $fieldErrors = [];
+$fieldErrorMessages = [];
 $successMessage = 'Nastavení bylo uloženo.';
 
 $formState['site_name'] = trim((string)($_POST['site_name'] ?? ''));
@@ -68,6 +69,7 @@ $normalizedRepository = normalizeGitHubRepository($formState['github_issues_repo
 if ($formState['github_issues_repository'] !== '' && $normalizedRepository === '') {
     $errors[] = 'Výchozí repozitář pro GitHub issue bridge musí být ve formátu owner/repo.';
     $fieldErrors[] = 'github_issues_repository';
+    $fieldErrorMessages['github_issues_repository'] = 'Výchozí repozitář pro GitHub issue bridge musí být ve formátu owner/repo.';
 } else {
     $formState['github_issues_repository'] = $normalizedRepository;
 }
@@ -79,16 +81,19 @@ if ($formState['board_public_label'] === '') {
 if ($formState['site_name'] === '') {
     $errors[] = 'Název webu je povinný.';
     $fieldErrors[] = 'site_name';
+    $fieldErrorMessages['site_name'] = 'Název webu je povinný.';
 }
 
 if (mb_strlen($formState['board_public_label'], 'UTF-8') > 60) {
     $errors[] = 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.';
     $fieldErrors[] = 'board_public_label';
+    $fieldErrorMessages['board_public_label'] = 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.';
 }
 
 if ($formState['contact_email'] !== '' && !filter_var($formState['contact_email'], FILTER_VALIDATE_EMAIL)) {
     $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
     $fieldErrors[] = 'contact_email';
+    $fieldErrorMessages['contact_email'] = 'Neplatná e-mailová adresa pro kontakt.';
 }
 
 if (
@@ -98,6 +103,7 @@ if (
 ) {
     $errors[] = 'Neplatná e-mailová adresa pro upozornění na komentáře.';
     $fieldErrors[] = 'comment_notify_email';
+    $fieldErrorMessages['comment_notify_email'] = 'Neplatná e-mailová adresa pro upozornění na komentáře.';
 }
 
 $faviconUpload = null;
@@ -114,7 +120,7 @@ $validateUpload = static function (
     string $emptyTempMessage,
     string $sizeMessage,
     string $typeMessage
-) use (&$errors, &$fieldErrors): ?array {
+) use (&$errors, &$fieldErrors, &$fieldErrorMessages): ?array {
     if (empty($fileData['name'])) {
         return null;
     }
@@ -122,20 +128,24 @@ $validateUpload = static function (
     $uploadError = (int)($fileData['error'] ?? UPLOAD_ERR_NO_FILE);
     $tmpPath = (string)($fileData['tmp_name'] ?? '');
     if ($uploadError !== UPLOAD_ERR_OK) {
-        $errors[] = $fieldName === 'site_favicon' ? 'Favicon se nepodařilo nahrát.' : 'Logo se nepodařilo nahrát.';
+        $message = $fieldName === 'site_favicon' ? 'Favicon se nepodařilo nahrát.' : 'Logo se nepodařilo nahrát.';
+        $errors[] = $message;
         $fieldErrors[] = $fieldName;
+        $fieldErrorMessages[$fieldName] = $message;
         return null;
     }
 
     if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
         $errors[] = $emptyTempMessage;
         $fieldErrors[] = $fieldName;
+        $fieldErrorMessages[$fieldName] = $emptyTempMessage;
         return null;
     }
 
     if ((int)($fileData['size'] ?? 0) > $maxBytes) {
         $errors[] = $sizeMessage;
         $fieldErrors[] = $fieldName;
+        $fieldErrorMessages[$fieldName] = $sizeMessage;
         return null;
     }
 
@@ -144,6 +154,7 @@ $validateUpload = static function (
     if (!isset($allowedMimeTypes[$mimeType])) {
         $errors[] = $typeMessage;
         $fieldErrors[] = $fieldName;
+        $fieldErrorMessages[$fieldName] = $typeMessage;
         return null;
     }
 
@@ -187,9 +198,11 @@ if (($faviconUpload !== null || $logoUpload !== null) && !is_dir($siteDir) && !@
     $errors[] = 'Adresář pro soubory webu se nepodařilo připravit.';
     if ($faviconUpload !== null) {
         $fieldErrors[] = 'site_favicon';
+        $fieldErrorMessages['site_favicon'] = 'Adresář pro soubory webu se nepodařilo připravit.';
     }
     if ($logoUpload !== null) {
         $fieldErrors[] = 'site_logo';
+        $fieldErrorMessages['site_logo'] = 'Adresář pro soubory webu se nepodařilo připravit.';
     }
 }
 
@@ -197,6 +210,7 @@ if ($errors !== []) {
     settingsFlashSet([
         'errors' => $errors,
         'field_errors' => array_values(array_unique($fieldErrors)),
+        'field_error_messages' => $fieldErrorMessages,
         'form' => $formState,
     ]);
     header('Location: ' . BASE_URL . '/admin/settings.php');

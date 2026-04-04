@@ -25,6 +25,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Výkonnostní indexy pro veřejné dotazy** – migrace přidává composite indexy na `(deleted_at, status, publish_at)` pro 12 hlavních tabulek; zrychluje veřejné SQL filtry zejména u větších databází
 - **Autosave – podpora Quill WYSIWYG editoru** – autosave před ukládáním synchronizuje obsah z Quill editoru do textarea a při obnově konceptu jej zpětně promítne; funguje ve všech formulářích s rich-text editorem
 - **Sjednocená validace datetime-local** – nová sdílená funkce `validateDateTimeLocal()` v `lib/ui.php` nahrazuje 3 různé validační vzory v 6 save handlerech; konzistentní chování napříč všemi moduly
+- **Quality hardening testů a release kontroly** – integrační a runtime helpery nově před každým POSTem automaticky obnovují aktuální CSRF token z aktivní session, takže quality audity testují skutečný stav po PRG redirektech a nepadají na zastaralých tokenech
+- **Migrace a instalace – konzistence schématu se dorovnává i při opakovaném spuštění stejné verze** – `migrate.php` už nepřeskočí kontrolu chybějících sloupců jen proto, že sedí `migration_version`, a instalační schéma je sladěné s upgradem i pro `cms_events` a `cms_places`
 
 ### Opraveno
 - **Soft-deleted obsah neviditelný ve všech veřejných i admin cestách** – přidán filtr `deleted_at IS NULL` do veřejných dotazů na stránky (`page.php`), články (`blog/article.php`), autory (`author.php`) a do všech admin save handlerů (10 souborů); smazané položky již nejdou editovat ani zobrazit přes preview token; opravena funkce `placePublicVisibilitySql()`, která chyběla
@@ -35,6 +37,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Autosave: podpora checkbox a radio polí** – lokální koncept nyní ukládá i stav zaškrtávacích a přepínacích polí ve formulářích
 - **Podcasty v cron publish_at** – naplánované epizody podcastů se nyní automaticky publikují přes cron, stejně jako články a novinky
 - **WCAG 2.2 – 11 obrázků s obsahem nově má popisný alt text** – náhledy článků, stažení, událostí, míst a nástěnky ve widgetech i ve views měly prázdný `alt=""`; nově se jako alt text používá název/titulek příslušného záznamu (obrázky uvnitř `aria-hidden` duplicitních odkazů na homepage a v indexu nástěnky zůstávají správně dekorativní)
+- **Blogové statické stránky – nová stránka se po publikaci správně objeví i bez ručně zvoleného `article_status`** – ukládání stránek nově odvodí výchozí status z checkboxu publikace, takže nově vytvořený obsah neskončí omylem jako draft a je na webu viditelný hned po uložení
+- **Nastavení webu – po redirectu se vrací konkrétní validační chyba pole místo obecné hlášky** – PRG flow přenáší detailní field-level chyby i pro uploady loga a favicony, takže správce dostane po návratu do formuláře přesnou informaci, co opravit
+- **Widget Statistiky návštěvnosti – landmark používá skutečný heading a odolnější guardrail** – veřejný widget je lépe dohledatelný pro čtečky obrazovky a audit už nekontroluje jeho nadpis křehce jen podle jedné pevné formulace
 
 ### Přidáno
 - **Duplikace obsahu – články, novinky, stránky, události, nástěnka** – tlačítko „Duplikovat" v přehledech všech hlavních typů obsahu vytvoří kopii jako koncept s novým autorem; u článků klonuje i štítky, u nástěnky nastaví dnešní datum vyvěšení

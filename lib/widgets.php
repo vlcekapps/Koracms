@@ -1302,14 +1302,15 @@ function renderWidget_visitor_stats(array $widget, array $settings, string $zone
     ];
     $title = h($widget['title'] ?: 'Statistiky návštěvnosti');
     $counterClass = 'visitor-counter ' . ($zone === 'footer' ? 'visitor-counter--footer' : 'visitor-counter--surface');
+    $titleId = 'w-' . (int)$widget['id'] . '-title';
 
     if ($zone === 'homepage') {
-        $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
-        $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
+        $out = '<section class="surface home-section" aria-labelledby="' . $titleId . '">';
+        $out .= '<div class="section-heading"><div><h2 id="' . $titleId . '" class="section-title">' . $title . '</h2></div></div>';
         $out .= '<ul class="' . h($counterClass) . '">';
     } else {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+        $out = '<section class="widget-card" aria-labelledby="' . $titleId . '">';
+        $out .= '<h3 id="' . $titleId . '" class="widget-card__title">' . $title . '</h3>';
         $out .= '<ul class="' . h($counterClass) . '">';
     }
 

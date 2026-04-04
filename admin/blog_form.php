@@ -562,6 +562,7 @@ adminHeader($pageTitle);
 
   <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
     <legend>Stav článku</legend>
+    <label for="article_status" class="visually-hidden">Stav článku</label>
     <select id="article_status" name="article_status" aria-describedby="article-status-help">
       <option value="draft"<?= ($article['status'] ?? ($article ? '' : 'draft')) === 'draft' ? ' selected' : '' ?>>Koncept</option>
       <?php if (currentUserHasCapability('blog_approve')): ?>

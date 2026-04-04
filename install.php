@@ -450,6 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published TINYINT(1)  NOT NULL DEFAULT 1,
             status      ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
             sort_order  INT          NOT NULL DEFAULT 0,
+            deleted_at  DATETIME     NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_places_slug (slug),

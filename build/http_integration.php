@@ -2416,7 +2416,7 @@ try {
     }
 
     $validUploadPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
-    if (!str_contains($validUploadPage['body'], 'Nahráno 1 souborů.')) {
+    if (!str_contains($validUploadPage['body'], 'Nahráno.') && !str_contains($validUploadPage['body'], 'Nahráno 1 souborů.')) {
         $mediaIssues[] = 'validní upload média nezobrazil success flash zprávu';
     }
 

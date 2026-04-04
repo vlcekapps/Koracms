@@ -163,7 +163,7 @@ try {
     } else {
         $requestedStatus = trim($_POST['article_status'] ?? '');
         if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-            $requestedStatus = 'draft';
+            $requestedStatus = $isPublished === 1 ? 'published' : 'draft';
         }
         if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
             $requestedStatus = 'pending';

@@ -2034,140 +2034,8 @@ if ($resourceSlug) {
     }
 }
 
-/**
- * @return array{status:string,headers:array<int,string>,body:string}
- */
-if (!function_exists('fetchUrl')) {
-    function fetchUrl(string $url, string $cookie = '', int $maxRedirects = 20): array
-    {
-        $headers = [
-            'User-Agent: KoraRuntimeAudit/1.0',
-        ];
-        if ($cookie !== '') {
-            $headers[] = 'Cookie: ' . $cookie;
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'ignore_errors' => true,
-                'timeout' => 15,
-                'follow_location' => $maxRedirects > 0 ? 1 : 0,
-                'max_redirects' => $maxRedirects,
-            ],
-        ]);
-
-        $body = file_get_contents($url, false, $context);
-        $responseHeaders = $http_response_header ?? [];
-        $status = $responseHeaders[0] ?? 'HTTP status unknown';
-
-        return [
-            'status' => $status,
-            'headers' => $responseHeaders,
-            'body' => is_string($body) ? $body : '',
-        ];
-    }
-}
-
-/**
- * @param array<string,string> $fields
- * @return array{status:string,headers:array<int,string>,body:string}
- */
-if (!function_exists('postUrl')) {
-    function postUrl(string $url, array $fields, string $cookie = '', int $maxRedirects = 20): array
-    {
-        $headers = [
-            'User-Agent: KoraRuntimeAudit/1.0',
-            'Content-Type: application/x-www-form-urlencoded',
-        ];
-        if ($cookie !== '') {
-            $headers[] = 'Cookie: ' . $cookie;
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'content' => http_build_query($fields),
-                'ignore_errors' => true,
-                'timeout' => 15,
-                'follow_location' => $maxRedirects > 0 ? 1 : 0,
-                'max_redirects' => $maxRedirects,
-            ],
-        ]);
-
-        $body = file_get_contents($url, false, $context);
-        $responseHeaders = $http_response_header ?? [];
-        $status = $responseHeaders[0] ?? 'HTTP status unknown';
-
-        return [
-            'status' => $status,
-            'headers' => $responseHeaders,
-            'body' => is_string($body) ? $body : '',
-        ];
-    }
-}
-
-/**
- * @param array<string,string> $fields
- * @param array<string,array{path:string,filename:string,type?:string}> $files
- * @return array{status:string,headers:array<int,string>,body:string}
- */
-if (!function_exists('postMultipartUrl')) {
-    function postMultipartUrl(string $url, array $fields, array $files, string $cookie = '', int $maxRedirects = 20): array
-    {
-        $boundary = '----KoraRuntimeAudit' . bin2hex(random_bytes(8));
-        $eol = "\r\n";
-        $body = '';
-
-        foreach ($fields as $fieldName => $fieldValue) {
-            $body .= '--' . $boundary . $eol;
-            $body .= 'Content-Disposition: form-data; name="' . $fieldName . '"' . $eol . $eol;
-            $body .= $fieldValue . $eol;
-        }
-
-        foreach ($files as $fieldName => $file) {
-            $contents = (string)file_get_contents($file['path']);
-            $body .= '--' . $boundary . $eol;
-            $body .= 'Content-Disposition: form-data; name="' . $fieldName . '"; filename="' . $file['filename'] . '"' . $eol;
-            $body .= 'Content-Type: ' . ($file['type'] ?? 'application/octet-stream') . $eol . $eol;
-            $body .= $contents . $eol;
-        }
-
-        $body .= '--' . $boundary . '--' . $eol;
-
-        $headers = [
-            'User-Agent: KoraRuntimeAudit/1.0',
-            'Content-Type: multipart/form-data; boundary=' . $boundary,
-        ];
-        if ($cookie !== '') {
-            $headers[] = 'Cookie: ' . $cookie;
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'content' => $body,
-                'ignore_errors' => true,
-                'timeout' => 20,
-                'follow_location' => $maxRedirects > 0 ? 1 : 0,
-                'max_redirects' => $maxRedirects,
-            ],
-        ]);
-
-        $responseBody = file_get_contents($url, false, $context);
-        $responseHeaders = $http_response_header ?? [];
-        $status = $responseHeaders[0] ?? 'HTTP status unknown';
-
-        return [
-            'status' => $status,
-            'headers' => $responseHeaders,
-            'body' => is_string($responseBody) ? $responseBody : '',
-        ];
-    }
-}
+// HTTP helpery sdílíme s build/http_integration.php přes build/http_test_helpers.php,
+// aby audit a integrační scénáře používaly stejnou logiku cookies, redirectů a CSRF.
 
 /**
  * @return list<string>
@@ -2491,10 +2359,10 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'home' && $runtimeAuditPublicVisitorStatsWidgetEnabled) {
-        if (!str_contains($result['body'], 'class="visitor-counter__item"')) {
+        if (preg_match('/class="[^"]*visitor-counter__item/u', $result['body']) !== 1) {
             $issues[] = 'visitor counter does not expose individual statistic items';
         }
-        if (!str_contains($result['body'], 'Statistiky návštěvnosti')) {
+        if (preg_match('/<section[^>]*(?:aria-label|aria-labelledby)="[^"]*"[^>]*>.*?<h[23][^>]*>.*?<\/h[23]>.*?<ul class="visitor-counter/isu', $result['body']) !== 1) {
             $issues[] = 'visitor stats widget is missing a visible heading';
         }
     }
@@ -3105,10 +2973,6 @@ foreach ($pages as $page) {
         'admin_blog_create_form' => ['<small id="blog-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>', 'Prázdné pole znamená publikování ihned.'],
         'admin_news_form' => ['<small id="news-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>'],
         'admin_news_create_form' => ['<small id="news-slug-help" class="field-help">Používejte malá písmena, číslice a pomlčky.</small>'],
-        'admin_event_form' => ['>Publikováno<'],
-        'admin_event_create_form' => ['>Publikováno<'],
-        'admin_page_form' => ['>Publikováno<', '>Zobrazit v navigaci<'],
-        'admin_page_create_form' => ['>Publikováno<', '>Zobrazit v navigaci<'],
         'admin_download_form' => ['Použije se ve veřejné adrese'],
         'admin_download_create_form' => ['Použije se ve veřejné adrese'],
         'admin_food_form' => ['>Zobrazit v archivu<', 'Označit jako aktuální lístek'],
@@ -7073,8 +6937,10 @@ $installSchemaChecks = [
     'cms_events contains accessibility_note' => $installTableContains('cms_events', 'accessibility_note'),
     'cms_events contains image_file' => $installTableContains('cms_events', 'image_file'),
     'cms_events contains unpublish_at' => $installTableContains('cms_events', 'unpublish_at'),
+    'cms_events contains publish_at' => $installTableContains('cms_events', 'publish_at'),
     'cms_events contains admin_note' => $installTableContains('cms_events', 'admin_note'),
     'cms_events contains deleted_at' => $installTableContains('cms_events', 'deleted_at'),
+    'cms_places contains deleted_at' => $installTableContains('cms_places', 'deleted_at'),
     'cms_news contains meta_title' => $installTableContains('cms_news', 'meta_title'),
     'cms_news contains meta_description' => $installTableContains('cms_news', 'meta_description'),
     'cms_polls contains meta_title' => $installTableContains('cms_polls', 'meta_title'),
@@ -7118,6 +6984,9 @@ $migrateSchemaChecks = [
     'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
     'cms_faqs.meta_title' => str_contains($migrateSource, 'cms_faqs.meta_title'),
     'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),
+    'cms_events.publish_at' => str_contains($migrateSource, 'cms_events.publish_at'),
+    'cms_places.deleted_at' => str_contains($migrateSource, 'cms_places.deleted_at'),
+    'migrate reruns schema consistency checks even on matching version' => str_contains($migrateSource, 'kontrola konzistence schématu a chybějících sloupců'),
 ];
 $migrateSchemaIssues = [];
 foreach ($migrateSchemaChecks as $label => $present) {
@@ -9340,7 +9209,7 @@ $boardFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admi
 $reservationSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_save.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingSource = (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php');
-if (!str_contains($pageSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'")) {
+if (!str_contains($pageSaveSource, 'validateDateTimeLocal($unpublishAt)')) {
     $editorialValidationIssues[] = 'page save is missing datetime parsing for unpublish_at';
 }
 if (!str_contains($pageSaveSource, "'err' => 'unpublish_at'")) {
@@ -9365,7 +9234,7 @@ foreach (["'valid_from' =>", "'valid_to' =>", "'valid_range' =>"] as $foodFormFr
         $editorialValidationIssues[] = 'food form is missing validation message branch: ' . $foodFormFragment;
     }
 }
-if (!str_contains($blogSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'")) {
+if (!str_contains($blogSaveSource, 'validateDateTimeLocal($publishAt)') || !str_contains($blogSaveSource, 'validateDateTimeLocal($unpublishAt)')) {
     $editorialValidationIssues[] = 'blog save is missing strict publish/unpublish datetime parsing';
 }
 foreach (["'publish_at'", "'unpublish_at'", "'publish_range'"] as $blogErrorFragment) {
@@ -9381,7 +9250,7 @@ foreach (["\$err === 'publish_at'", "\$err === 'unpublish_at'", "\$err === 'publ
         $editorialValidationIssues[] = 'blog form is missing validation message branch: ' . $blogFormFragment;
     }
 }
-if (!str_contains($podcastEpisodeSaveSource, "DateTime::createFromFormat('Y-m-d\\TH:i'") || !str_contains($podcastEpisodeSaveSource, "redirectWithError('publish_at')")) {
+if (!str_contains($podcastEpisodeSaveSource, 'validateDateTimeLocal($publishAtInput)') || !str_contains($podcastEpisodeSaveSource, "redirectWithError('publish_at')")) {
     $editorialValidationIssues[] = 'podcast episode save is missing strict publish_at validation';
 }
 if (!str_contains($podcastEpisodeFormSource, "'publish_at' =>")) {
@@ -9778,10 +9647,10 @@ if (($widgetDefs['contact_info']['requires_module'] ?? null) !== null) {
 if (($widgetDefs['intro']['requires_setting'] ?? null) !== null) {
     $widgetRegistryIssues[] = 'intro widget is still incorrectly bound to legacy homepage settings';
 }
-if (str_contains($migrateSource, "VALUES ('footer', 'social_links', 'SociĂˇlnĂ­ sĂ­tÄ›'")) {
-    $widgetRegistryIssues[] = 'widget migration still inserts the mojibake social links default title';
+if (!str_contains($migrateSource, "VALUES ('footer', 'social_links', 'Sociální sítě'")) {
+    $widgetRegistryIssues[] = 'widget migration does not insert the correct social links default title';
 }
-if (!str_contains($migrateSource, "WHERE widget_type = 'social_links'") || !str_contains($migrateSource, "title = 'SociĂˇlnĂ­ sĂ­tÄ›'")) {
+if (!str_contains($migrateSource, "WHERE widget_type = 'social_links'") || !str_contains($migrateSource, '$legacyBrokenSocialLinksTitle = \'SociĂˇlnĂ­ sĂ­tÄ›\'')) {
     $widgetRegistryIssues[] = 'widget migration is missing the repair step for previously corrupted social links titles';
 }
 if (!str_contains($migrateSource, "SELECT id, zone, sort_order, settings") || !str_contains($migrateSource, "WHERE widget_type = 'intro'")) {

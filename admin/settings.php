@@ -18,6 +18,11 @@ $errors = array_values(array_filter((array)($flash['errors'] ?? []), 'is_string'
 $fieldErrors = array_values(array_unique(array_filter((array)($flash['field_errors'] ?? []), 'is_string')));
 $successMessage = is_string($flash['success'] ?? null) ? (string)$flash['success'] : '';
 $fieldErrorMessages = settingsFieldErrorMessages();
+$flashedFieldErrorMessages = array_filter((array)($flash['field_error_messages'] ?? []), 'is_string');
+$fieldMessageFor = static function (string $fieldName) use ($fieldErrorMessages, $flashedFieldErrorMessages): string {
+    $message = $flashedFieldErrorMessages[$fieldName] ?? $fieldErrorMessages[$fieldName] ?? '';
+    return is_string($message) ? $message : '';
+};
 
 if (!isset($siteProfiles[$formState['site_profile']])) {
     $formState['site_profile'] = currentSiteProfileKey();
@@ -70,7 +75,7 @@ adminHeader('Nastavení webu');
     <label for="site_name">Název webu <span aria-hidden="true">*</span></label>
     <input type="text" id="site_name" name="site_name" required aria-required="true"
            value="<?= h($formState['site_name']) ?>"<?= adminFieldAttributes('site_name', $fieldErrors) ?>>
-    <?php adminRenderFieldError('site_name', $fieldErrors, [], $fieldErrorMessages['site_name']); ?>
+    <?php adminRenderFieldError('site_name', $fieldErrors, [], $fieldMessageFor('site_name')); ?>
 
     <label for="site_description">Popis webu</label>
     <input type="text" id="site_description" name="site_description"
@@ -79,7 +84,7 @@ adminHeader('Nastavení webu');
     <label for="contact_email">E-mail pro kontaktní formulář</label>
     <input type="email" id="contact_email" name="contact_email"
            value="<?= h($formState['contact_email']) ?>"<?= adminFieldAttributes('contact_email', $fieldErrors) ?>>
-    <?php adminRenderFieldError('contact_email', $fieldErrors, [], $fieldErrorMessages['contact_email']); ?>
+    <?php adminRenderFieldError('contact_email', $fieldErrors, [], $fieldMessageFor('contact_email')); ?>
 
     <div style="margin-top:1rem">
       <input type="checkbox" id="public_registration_enabled" name="public_registration_enabled" value="1"
@@ -96,7 +101,7 @@ adminHeader('Nastavení webu');
            aria-describedby="board-public-label-help"
            value="<?= h($formState['board_public_label']) ?>"<?= adminFieldAttributes('board_public_label', $fieldErrors, [], ['board-public-label-help']) ?>>
     <small id="board-public-label-help" class="field-help">Používá se ve veřejné navigaci, na výpisu sekce a na detailu položky. Hodí se například <em>Úřední deska</em>, <em>Vývěska</em> nebo <em>Oznámení</em>. Pokud chcete odkazovat na instituci, bývá srozumitelnější název jako <em>Oznámení obecního úřadu</em> než samotné <em>Obecní úřad</em>.</small>
-    <?php adminRenderFieldError('board_public_label', $fieldErrors, [], $fieldErrorMessages['board_public_label']); ?>
+    <?php adminRenderFieldError('board_public_label', $fieldErrors, [], $fieldMessageFor('board_public_label')); ?>
   </fieldset>
 
   <fieldset id="settings-profile">
@@ -209,7 +214,7 @@ adminHeader('Nastavení webu');
            aria-describedby="comment-notify-email-help"
            value="<?= h($formState['comment_notify_email']) ?>"<?= adminFieldAttributes('comment_notify_email', $fieldErrors, [], ['comment-notify-email-help']) ?>>
     <small id="comment-notify-email-help" class="field-help">Nepovinné pole. Když ho necháte prázdné, použije se kontaktní e-mail webu.</small>
-    <?php adminRenderFieldError('comment_notify_email', $fieldErrors, [], $fieldErrorMessages['comment_notify_email']); ?>
+    <?php adminRenderFieldError('comment_notify_email', $fieldErrors, [], $fieldMessageFor('comment_notify_email')); ?>
 
     <div style="margin-top:1rem">
       <input type="checkbox" id="comment_notify_author_approve" name="comment_notify_author_approve" value="1" aria-describedby="comment-notify-author-help"
@@ -314,7 +319,7 @@ adminHeader('Nastavení webu');
     <input type="file" id="site_favicon" name="site_favicon" accept=".ico,.png,image/x-icon,image/png"
            <?= adminFieldAttributes('site_favicon', $fieldErrors, [], array_filter(['site-favicon-help', getSetting('site_favicon', '') !== '' ? 'site-favicon-current' : null])) ?>>
     <small id="site-favicon-help" class="field-help">Povolené formáty: ICO nebo PNG. Maximální velikost je 256 KB.</small>
-    <?php adminRenderFieldError('site_favicon', $fieldErrors, [], $fieldErrorMessages['site_favicon']); ?>
+    <?php adminRenderFieldError('site_favicon', $fieldErrors, [], $fieldMessageFor('site_favicon')); ?>
     <?php $fav = getSetting('site_favicon', ''); ?>
     <?php if ($fav !== ''): ?>
       <div id="site-favicon-current" class="field-help">
@@ -328,7 +333,7 @@ adminHeader('Nastavení webu');
     <input type="file" id="site_logo" name="site_logo" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            <?= adminFieldAttributes('site_logo', $fieldErrors, [], array_filter(['site-logo-help', getSetting('site_logo', '') !== '' ? 'site-logo-current' : null])) ?>>
     <small id="site-logo-help" class="field-help">Povolené formáty: JPEG, PNG, GIF nebo WebP. Maximální velikost je 2 MB.</small>
-    <?php adminRenderFieldError('site_logo', $fieldErrors, [], $fieldErrorMessages['site_logo']); ?>
+    <?php adminRenderFieldError('site_logo', $fieldErrors, [], $fieldMessageFor('site_logo')); ?>
     <?php $logo = getSetting('site_logo', ''); ?>
     <?php if ($logo !== ''): ?>
       <div id="site-logo-current" class="field-help">
