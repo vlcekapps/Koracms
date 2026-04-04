@@ -91,7 +91,7 @@ function runKoraCron(PDO $pdo): array
         }
     }
     // Stránky a nástěnka (is_published místo status)
-    $publishIsPublishedTables = ['cms_pages', 'cms_board'];
+    $publishIsPublishedTables = ['cms_pages', 'cms_board', 'cms_events'];
     foreach ($publishIsPublishedTables as $tableName) {
         try {
             $statement = $pdo->prepare(

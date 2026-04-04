@@ -185,13 +185,25 @@ if ($id !== null) {
     $oldSnapshot = $existingDownload ? downloadRevisionSnapshot($existingDownload) : [];
     $oldPath = $existingDownload ? downloadPublicPath($existingDownload) : '';
 
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $existingDownload['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($existingDownload['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+
+    // Při první publikaci aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($existingDownload['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
     $stmt = $pdo->prepare(
         "UPDATE cms_downloads
          SET title = ?, slug = ?, download_type = ?, dl_category_id = ?, excerpt = ?, description = ?,
              image_file = ?, version_label = ?, platform_label = ?, license_label = ?, project_url = ?,
              release_date = ?, requirements = ?, checksum_sha256 = ?, series_key = ?, external_url = ?,
              filename = ?, original_name = ?, file_size = ?, is_featured = ?, is_published = ?,
-             author_id = COALESCE(author_id, ?), updated_at = NOW()
+             status = ?, author_id = COALESCE(author_id, ?), updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     );
     $stmt->execute([
@@ -216,6 +228,7 @@ if ($id !== null) {
         $fileSize,
         $isFeatured,
         $isPublished,
+        $requestedStatus,
         currentUserId(),
         $id,
     ]);
@@ -242,7 +255,14 @@ if ($id !== null) {
     upsertPathRedirect($pdo, $oldPath, downloadPublicPath(['id' => $id, 'slug' => $uniqueSlug]));
     logAction('download_edit', "id={$id} title={$title} slug={$uniqueSlug} featured={$isFeatured}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $authorId = currentUserId();
     $stmt = $pdo->prepare(
         "INSERT INTO cms_downloads

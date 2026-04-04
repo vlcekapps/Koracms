@@ -324,5 +324,10 @@ if ($id !== null) {
     }
 }
 
+// Uvolnění zámku obsahu po úspěšném uložení
+if ($id !== null) {
+    releaseContentLock('board', $id);
+}
+
 header('Location: ' . BASE_URL . '/admin/board.php');
 exit;

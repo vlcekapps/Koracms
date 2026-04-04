@@ -6,6 +6,10 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **Duplikace obsahu – tlačítko „Duplikovat" v přehledu novinek, stránek, událostí a úřední desky** – vytvoří kopii položky se stavem „Koncept", novým slugem a preview tokenem; nové soubory `news_clone.php`, `page_clone.php`, `event_clone.php`, `board_clone.php`
+- **Stav „Koncept" pro události, soubory ke stažení, FAQ, místa a podcasty** – ENUM status rozšířen o hodnotu `draft`, formuláře obsahují výběr stavu (Koncept / Publikováno / Čeká na schválení), save handlery respektují oprávnění a při první publikaci aktualizují `created_at`
+
 ### Změněno
 - **Záloha databáze – cron.php nově zapisuje SQL dump inkrementálně místo do paměti** – záloha již nestaví celý dump jako jeden PHP string, ale zapisuje řádek po řádku přes `fopen`/`fwrite`; u velkých databází tak nedojde k vyčerpání `memory_limit` a pádu cron úlohy
 - **Ukládání článků – celá operace je nově obalena databázovou transakcí** – uložení článku, reset featured příznaku, smazání a vložení tagů nyní probíhá atomicky; při chybě uprostřed se provede rollback a článek nezůstane bez tagů
@@ -23,7 +27,10 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **WCAG 2.2 – 11 obrázků s obsahem nově má popisný alt text** – náhledy článků, stažení, událostí, míst a nástěnky ve widgetech i ve views měly prázdný `alt=""`; nově se jako alt text používá název/titulek příslušného záznamu (obrázky uvnitř `aria-hidden` duplicitních odkazů na homepage a v indexu nástěnky zůstávají správně dekorativní)
 
 ### Přidáno
-- **Duplikace článků** – nové tlačítko „Duplikovat" v přehledu článků vytvoří kopii článku jako koncept s novým autorem, klonuje i štítky; nový endpoint `admin/blog_clone.php`
+- **Duplikace obsahu – články, novinky, stránky, události, nástěnka** – tlačítko „Duplikovat" v přehledech všech hlavních typů obsahu vytvoří kopii jako koncept s novým autorem; u článků klonuje i štítky, u nástěnky nastaví dnešní datum vyvěšení
+- **Draft status pro všechny obsahové moduly** – stav „Koncept" nově podporují i události, soubory ke stažení, FAQ, místa, podcasty (pořady i epizody); status selector ve formulářích s capability-based kontrolou; při první publikaci se aktualizuje datum vytvoření
+- **Plánované publikování událostí** – pole `publish_at` přidáno do `cms_events`; formulář událostí má datetime-local input; veřejný filtr a cron automaticky publikují naplánované události s korektním datem
+- **Content locking pro nástěnku a události** – varování při souběžné editaci s heartbeat obnovou zámku; doplňuje existující locking pro články, novinky a stránky
 - **Koš – soft delete pro další moduly** – úřední deska, soubory ke stažení, jídelní lístky, podcasty (pořady i epizody), galerie (alba i fotografie) a ankety nyní používají soft delete místo trvalého mazání; smazané položky se zobrazují v koši s možností obnovení nebo trvalého smazání
 - **Související články** – pod článkem blogu se automaticky zobrazují až 3 související články ze stejného blogu na základě společné kategorie a sdílených štítků; nová funkce `relatedArticles()` v `lib/presentation.php`
 - **Náhledový odkaz (preview token) pro novinky, stránky, události a nástěnku** – nový sloupec `preview_token` v tabulkách `cms_news`, `cms_pages`, `cms_events` a `cms_board`; při uložení se automaticky vygeneruje 32znakový token; v administračním formuláři se zobrazí odkaz „Náhled", který umožní zobrazit nepublikovaný obsah bez přihlášení; veřejné zobrazení přes `?preview=<token>` obchází kontrolu stavu a plánovaného publikování

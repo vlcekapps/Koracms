@@ -17,6 +17,12 @@ if ($id !== null) {
     }
 }
 
+// Content locking – pokus o získání zámku při editaci existující položky
+$contentLockWarning = null;
+if ($document && $id !== null) {
+    $contentLockWarning = acquireContentLock('board', $id);
+}
+
 $document = $document ?: [
     'title' => '',
     'slug' => '',
@@ -82,6 +88,15 @@ $fieldErrorMessages = [
 
 adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sekce ' . $publicLabel);
 ?>
+
+<?php if ($contentLockWarning !== null): ?>
+  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+    <strong>Upozornění:</strong>
+    Tuto položku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
+    (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
+    Vaše změny mohou přepsat jejich práci.
+  </div>
+<?php endif; ?>
 
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
@@ -332,6 +347,27 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     syncBoardTypeHelp();
 })();
 </script>
+
+<?php if ($document && $id !== null): ?>
+<script nonce="<?= cspNonce() ?>">
+(function () {
+    var lockInterval = setInterval(function () {
+        var fd = new FormData();
+        fd.append('csrf_token', <?= json_encode(csrfToken(), JSON_UNESCAPED_SLASHES) ?>);
+        fd.append('entity_type', 'board');
+        fd.append('entity_id', '<?= (int)$id ?>');
+        fetch(<?= json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES) ?>, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        }).catch(function () {});
+    }, 60000);
+    window.addEventListener('beforeunload', function () {
+        clearInterval(lockInterval);
+    });
+})();
+</script>
+<?php endif; ?>
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">

@@ -232,6 +232,18 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <small id="download-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, položka se na veřejném webu nezobrazí.</small>
   </fieldset>
 
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Stav publikace</legend>
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status">
+      <option value="draft"<?= ($download['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('content_approve_shared')): ?>
+        <option value="published"<?= ($download['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($download['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+  </fieldset>
+
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat položku ke stažení' ?></button>
     <a href="downloads.php" style="margin-left:1rem">Zrušit</a>

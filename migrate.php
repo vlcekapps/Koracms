@@ -1162,6 +1162,7 @@ $addColumns = [
     'cms_pages.preview_token'        => "ALTER TABLE cms_pages ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_events.unpublish_at'        => "ALTER TABLE cms_events ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_events.preview_token'       => "ALTER TABLE cms_events ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
+    'cms_events.publish_at'          => "ALTER TABLE cms_events ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     'cms_board.preview_token'        => "ALTER TABLE cms_board ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_board.publish_at'           => "ALTER TABLE cms_board ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     'cms_board.unpublish_at'         => "ALTER TABLE cms_board ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
@@ -1297,7 +1298,7 @@ try {
 
 // ── 4c. Rozšíření ENUM statusu o 'draft' (články, novinky, stránky) ─────────
 
-$draftEnumTables = ['cms_articles', 'cms_news', 'cms_pages', 'cms_board'];
+$draftEnumTables = ['cms_articles', 'cms_news', 'cms_pages', 'cms_board', 'cms_events', 'cms_downloads', 'cms_faqs', 'cms_places', 'cms_podcast_shows', 'cms_podcasts'];
 foreach ($draftEnumTables as $draftTable) {
     try {
         $colCheck = $pdo->prepare(

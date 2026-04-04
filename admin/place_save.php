@@ -110,12 +110,24 @@ if ($id !== null && $existingPlace) {
     $oldSnapshot = placeRevisionSnapshot($existingPlace);
     $oldPath = placePublicPath($existingPlace);
 
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $existingPlace['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($existingPlace['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+
+    // Při první publikaci aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($existingPlace['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
     $pdo->prepare(
         "UPDATE cms_places
          SET name = ?, slug = ?, place_kind = ?, category = ?, locality = ?, address = ?, excerpt = ?,
              description = ?, url = ?, image_file = ?, latitude = ?, longitude = ?, opening_hours = ?,
              contact_phone = ?, contact_email = ?, meta_title = ?, meta_description = ?, is_published = ?,
-             updated_at = NOW()
+             status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     )->execute([
         $name,
@@ -136,6 +148,7 @@ if ($id !== null && $existingPlace) {
         $metaTitle,
         $metaDescription,
         $isPublished,
+        $requestedStatus,
         $id,
     ]);
 
@@ -157,12 +170,19 @@ if ($id !== null && $existingPlace) {
         'meta_title' => $metaTitle,
         'meta_description' => $metaDescription,
         'is_published' => $isPublished,
-        'status' => (string)($existingPlace['status'] ?? 'published'),
+        'status' => $requestedStatus,
     ]));
     upsertPathRedirect($pdo, $oldPath, placePublicPath(['id' => $id, 'slug' => $slug]));
     logAction('place_edit', "id={$id} name={$name} slug={$slug}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
         "INSERT INTO cms_places (

@@ -52,6 +52,15 @@ if ($existingFaq) {
     $oldStmt = $pdo->prepare("SELECT * FROM cms_faqs WHERE id = ?");
     $oldStmt->execute([$id]);
     $oldData = $oldStmt->fetch();
+
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $oldData['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+
     if ($oldData) {
         saveRevision(
             $pdo,
@@ -67,17 +76,21 @@ if ($existingFaq) {
                 'meta_title' => $metaTitle,
                 'meta_description' => $metaDescription,
                 'is_published' => $isPublished,
-                'status' => $oldData['status'] ?? 'published',
+                'status' => $requestedStatus,
             ], $faqCategoryNames)
         );
     }
 
     $oldPath = $oldData ? faqPublicPath($oldData) : '';
 
+    // Při první publikaci aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
     $pdo->prepare(
         "UPDATE cms_faqs
          SET question = ?, slug = ?, excerpt = ?, answer = ?, category_id = ?, meta_title = ?, meta_description = ?,
-             is_published = ?, updated_at = NOW()
+             is_published = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     )->execute([
         $question,
@@ -88,12 +101,20 @@ if ($existingFaq) {
         $metaTitle,
         $metaDescription,
         $isPublished,
+        $requestedStatus,
         $id,
     ]);
     upsertPathRedirect($pdo, $oldPath, faqPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('faq_edit', "id={$id} question={$question} slug={$slug}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
         "INSERT INTO cms_faqs (question, slug, excerpt, answer, category_id, meta_title, meta_description, is_published, status)

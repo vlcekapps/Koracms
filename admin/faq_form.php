@@ -129,6 +129,17 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
     </label>
     <small id="faq-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, otázka zůstane uložená jen v administraci.</small>
 
+    <div style="margin-top:1rem">
+      <label for="article_status">Stav</label>
+      <select id="article_status" name="article_status">
+        <option value="draft"<?= ($faq['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+        <?php if (currentUserHasCapability('content_approve_shared')): ?>
+          <option value="published"<?= ($faq['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+        <?php endif; ?>
+        <option value="pending"<?= ($faq['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+      </select>
+    </div>
+
     <div style="margin-top:1.5rem">
       <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku FAQ' ?></button>
       <a href="faq.php" style="margin-left:1rem">Zrušit</a>

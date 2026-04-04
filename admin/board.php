@@ -160,6 +160,11 @@ adminHeader('Úřední deska');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
+          <form action="board_clone.php" method="post" style="display:inline">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
+            <button type="submit" class="btn" data-confirm="Vytvořit kopii položky?">Duplikovat</button>
+          </form>
           <form action="board_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">

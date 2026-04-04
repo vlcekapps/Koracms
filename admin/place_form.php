@@ -242,6 +242,18 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <small id="place-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, místo zůstane uložené jen v administraci a skryje se i jeho obrázek.</small>
   </fieldset>
 
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Stav publikace</legend>
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status">
+      <option value="draft"<?= ($place['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('content_approve_shared')): ?>
+        <option value="published"<?= ($place['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($place['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+  </fieldset>
+
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
     <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>

@@ -93,6 +93,14 @@ if ($deleteCover && empty($_FILES['cover_image']['name']) && $coverFilename !== 
 }
 
 if ($id !== null) {
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $oldData['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+
     if ($oldData) {
         saveRevision(
             $pdo,
@@ -114,18 +122,22 @@ if ($id !== null) {
                 'feed_complete' => $feedComplete,
                 'feed_episode_limit' => $feedEpisodeLimit,
                 'website_url' => $websiteUrl,
-                'status' => (string)($oldData['status'] ?? 'published'),
+                'status' => $requestedStatus,
                 'is_published' => $isPublished,
             ])
         );
     }
+
+    // Při první publikaci aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
 
     $oldPath = $oldData ? podcastShowPublicPath($oldData) : '';
     $pdo->prepare(
         "UPDATE cms_podcast_shows
          SET title = ?, slug = ?, description = ?, author = ?, subtitle = ?, cover_image = ?, language = ?,
              category = ?, owner_name = ?, owner_email = ?, explicit_mode = ?, show_type = ?, feed_complete = ?,
-             feed_episode_limit = ?, website_url = ?, is_published = ?, status = ?, updated_at = NOW()
+             feed_episode_limit = ?, website_url = ?, is_published = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     )->execute([
         $title,
@@ -144,13 +156,20 @@ if ($id !== null) {
         $feedEpisodeLimit,
         $websiteUrl,
         $isPublished,
-        (string)($oldData['status'] ?? 'published'),
+        $requestedStatus,
         $id,
     ]);
     upsertPathRedirect($pdo, $oldPath, podcastShowPublicPath(['id' => $id, 'slug' => $uniqueSlug]));
     logAction('podcast_show_edit', "id={$id} slug={$uniqueSlug}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $pdo->prepare(
         "INSERT INTO cms_podcast_shows
          (title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,

@@ -152,6 +152,11 @@ adminHeader('Novinky');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
+          <form action="news_clone.php" method="post" style="display:inline">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
+            <button type="submit" class="btn" data-confirm="Vytvořit kopii novinky?">Duplikovat</button>
+          </form>
           <form action="news_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">

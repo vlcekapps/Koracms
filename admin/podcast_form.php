@@ -255,6 +255,18 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php endif; ?>
   </fieldset>
 
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Stav publikace</legend>
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status">
+      <option value="draft"<?= ($episode['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('content_approve_shared')): ?>
+        <option value="published"<?= ($episode['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($episode['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+  </fieldset>
+
   <div style="margin-top:1.5rem">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat epizodu podcastu' ?></button>
     <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>

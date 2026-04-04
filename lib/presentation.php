@@ -3519,7 +3519,8 @@ function eventPublicVisibilitySql(string $alias = ''): string
     return "{$prefix}status = 'published'"
         . " AND {$prefix}is_published = 1"
         . " AND {$prefix}deleted_at IS NULL"
-        . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())";
+        . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())"
+        . " AND ({$prefix}publish_at IS NULL OR {$prefix}publish_at <= NOW())";
 }
 
 function eventEffectiveEndSql(string $alias = ''): string

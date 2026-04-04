@@ -268,6 +268,11 @@ adminHeader('Statické stránky');
               <input type="hidden" name="id" value="<?= $pageId ?>">
               <button type="submit" class="btn"><span aria-hidden="true">→</span> Článek</button>
             </form>
+            <form action="<?= BASE_URL ?>/admin/page_clone.php" method="post" style="display:inline">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="id" value="<?= $pageId ?>">
+              <button type="submit" class="btn" data-confirm="Vytvořit kopii stránky?">Duplikovat</button>
+            </form>
             <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
                   onsubmit="return confirm('Smazat tuto stránku?')">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

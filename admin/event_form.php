@@ -17,6 +17,12 @@ if ($id !== null) {
     }
 }
 
+// Content locking – pokus o získání zámku při editaci existující události
+$contentLockWarning = null;
+if ($event && $id !== null) {
+    $contentLockWarning = acquireContentLock('event', $id);
+}
+
 $event = array_merge([
     'title' => '',
     'slug' => '',
@@ -34,6 +40,7 @@ $event = array_merge([
     'event_date' => '',
     'event_end' => '',
     'is_published' => 1,
+    'publish_at' => '',
     'unpublish_at' => '',
     'admin_note' => '',
     'status' => 'published',
@@ -56,6 +63,7 @@ $formError = match ($err) {
     'organizer_email' => 'E-mail pořadatele musí být platná e-mailová adresa.',
     'image' => 'Obrázek události se nepodařilo uložit.',
     'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
+    'publish_at' => 'Plánované publikování nemá platný formát data a času.',
     default => '',
 };
 $fieldErrorMap = [
@@ -66,6 +74,7 @@ $fieldErrorMap = [
     'organizer_email' => ['organizer_email'],
     'image' => ['event_image'],
     'unpublish_at' => ['unpublish_at'],
+    'publish_at' => ['publish_at'],
 ];
 $fieldErrorMessages = [
     'title' => 'Událost musí mít název.',
@@ -76,6 +85,7 @@ $fieldErrorMessages = [
     'organizer_email' => 'E-mail pořadatele musí být platná e-mailová adresa.',
     'image' => 'Obrázek události se nepodařilo uložit.',
     'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
+    'publish_at' => 'Plánované publikování nemá platný formát data a času.',
 ];
 
 adminHeader($id ? 'Upravit událost' : 'Nová událost');
@@ -85,6 +95,15 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
 <?php if ($id !== null): ?>
   <p><a href="revisions.php?type=event&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
+<?php if ($contentLockWarning !== null): ?>
+  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+    <strong>Upozornění:</strong>
+    Tuto událost právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
+    (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
+    Vaše změny mohou přepsat jejich práci.
+  </div>
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
@@ -250,6 +269,13 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     </label>
     <small id="event-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, událost zůstane uložená jen v administraci.</small>
 
+    <label for="publish_at">Plánované publikování</label>
+    <input type="datetime-local" id="publish_at" name="publish_at" style="width:auto"
+           <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['event-publish-help']) ?>
+           value="<?= h(!empty($event['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['publish_at'])) : '') ?>">
+    <small id="event-publish-help" class="field-help">Nechte prázdné pro okamžité zveřejnění.</small>
+    <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
+
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['event-unpublish-help']) ?>
@@ -264,6 +290,18 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <textarea id="admin_note" name="admin_note" rows="2" aria-describedby="event-admin-note-help"
               style="min-height:0"><?= h((string)$event['admin_note']) ?></textarea>
     <small id="event-admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
+  </fieldset>
+
+  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+    <legend>Stav publikace</legend>
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status">
+      <option value="draft"<?= ($event['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('content_approve_shared')): ?>
+        <option value="published"<?= ($event['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($event['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
   </fieldset>
 
   <div style="margin-top:1.5rem">
@@ -318,6 +356,27 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     syncEventKindHelp();
 })();
 </script>
+
+<?php if ($event && $id !== null): ?>
+<script nonce="<?= cspNonce() ?>">
+(function () {
+    var lockInterval = setInterval(function () {
+        var fd = new FormData();
+        fd.append('csrf_token', <?= json_encode(csrfToken(), JSON_UNESCAPED_SLASHES) ?>);
+        fd.append('entity_type', 'event');
+        fd.append('entity_id', '<?= (int)$id ?>');
+        fetch(<?= json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES) ?>, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        }).catch(function () {});
+    }, 60000);
+    window.addEventListener('beforeunload', function () {
+        clearInterval(lockInterval);
+    });
+})();
+</script>
+<?php endif; ?>
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">

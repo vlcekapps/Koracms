@@ -181,6 +181,11 @@ adminHeader('Události');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
+          <form action="event_clone.php" method="post" style="display:inline">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">
+            <button type="submit" class="btn" data-confirm="Vytvořit kopii události?">Duplikovat</button>
+          </form>
           <form action="event_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">

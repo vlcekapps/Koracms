@@ -139,6 +139,14 @@ if (!empty($_POST['publish_at'])) {
 }
 
 if ($id !== null) {
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $oldData['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+
     if ($oldData) {
         saveRevision(
             $pdo,
@@ -158,10 +166,14 @@ if ($id !== null) {
                 'explicit_mode' => $explicitMode,
                 'block_from_feed' => $blockFromFeed,
                 'publish_at' => $publishAt,
-                'status' => (string)($oldData['status'] ?? 'published'),
+                'status' => $requestedStatus,
             ])
         );
     }
+
+    // Při první publikaci aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
 
     $oldPath = $oldData ? podcastEpisodePublicPath([
         'show_slug' => (string)($show['slug'] ?? ''),
@@ -171,7 +183,7 @@ if ($id !== null) {
         "UPDATE cms_podcasts
          SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, image_file = ?, audio_url = ?,
              subtitle = ?, duration = ?, episode_num = ?, season_num = ?, episode_type = ?, explicit_mode = ?,
-             block_from_feed = ?, publish_at = ?, updated_at = NOW()
+             block_from_feed = ?, publish_at = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     )->execute([
         $showId,
@@ -189,6 +201,7 @@ if ($id !== null) {
         $explicitMode,
         $blockFromFeed,
         $publishAt,
+        $requestedStatus,
         $id,
     ]);
     upsertPathRedirect($pdo, $oldPath, podcastEpisodePublicPath([
@@ -197,7 +210,14 @@ if ($id !== null) {
     ]));
     logAction('podcast_edit', "id={$id} show_id={$showId} slug={$uniqueSlug}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $pdo->prepare(
         "INSERT INTO cms_podcasts
          (show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,

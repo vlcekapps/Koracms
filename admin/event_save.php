@@ -30,6 +30,16 @@ $redirectToForm = static function (string $errorCode) use ($redirectBase, $id): 
     exit;
 };
 
+$publishAtInput = trim((string)($_POST['publish_at'] ?? ''));
+$publishAtSql = null;
+if ($publishAtInput !== '') {
+    $dateTime = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $publishAtInput);
+    if (!$dateTime || $dateTime->format('Y-m-d\TH:i') !== $publishAtInput) {
+        $redirectToForm('publish_at');
+    }
+    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
+}
+
 $unpublishAtInput = trim((string)($_POST['unpublish_at'] ?? ''));
 $unpublishAtSql = null;
 if ($unpublishAtInput !== '') {
@@ -126,12 +136,25 @@ if ($id !== null && $existingEvent) {
     $oldSnapshot = eventRevisionSnapshot($existingEvent);
     $oldPath = eventPublicPath($existingEvent);
 
+    // Zpracování stavu (article_status z formuláře)
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $existingEvent['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($existingEvent['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+
+    // Při první publikaci (status draft/pending → published) aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($existingEvent['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
     $stmt = $pdo->prepare(
         "UPDATE cms_events
          SET title = ?, slug = ?, event_kind = ?, excerpt = ?, description = ?, program_note = ?,
              location = ?, organizer_name = ?, organizer_email = ?, registration_url = ?, price_note = ?,
              accessibility_note = ?, image_file = ?, event_date = ?, event_end = ?, is_published = ?,
-             unpublish_at = ?, admin_note = ?, updated_at = NOW()
+             publish_at = ?, unpublish_at = ?, admin_note = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     );
     $stmt->execute([
@@ -151,8 +174,10 @@ if ($id !== null && $existingEvent) {
         $eventDate,
         $eventEnd,
         $isPublished,
+        $publishAtSql,
         $unpublishAtSql,
         $adminNote,
+        $requestedStatus,
         $id,
     ]);
 
@@ -171,6 +196,7 @@ if ($id !== null && $existingEvent) {
         'registration_url' => $registrationUrl,
         'price_note' => $priceNote,
         'accessibility_note' => $accessibilityNote,
+        'publish_at' => $publishAtSql,
         'unpublish_at' => $unpublishAtSql,
         'admin_note' => $adminNote,
         'is_published' => $isPublished,
@@ -178,7 +204,14 @@ if ($id !== null && $existingEvent) {
     upsertPathRedirect($pdo, $oldPath, eventPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('event_edit', "id={$id} title={$title} slug={$slug} kind={$eventKind}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
 
     $previewToken = bin2hex(random_bytes(16));
@@ -186,8 +219,8 @@ if ($id !== null && $existingEvent) {
         "INSERT INTO cms_events (
             title, slug, event_kind, excerpt, description, program_note, location,
             organizer_name, organizer_email, registration_url, price_note, accessibility_note,
-            image_file, event_date, event_end, is_published, unpublish_at, admin_note, status, preview_token
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            image_file, event_date, event_end, is_published, publish_at, unpublish_at, admin_note, status, preview_token
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
         $title,
@@ -206,6 +239,7 @@ if ($id !== null && $existingEvent) {
         $eventDate,
         $eventEnd,
         $visible,
+        $publishAtSql,
         $unpublishAtSql,
         $adminNote,
         $status,
@@ -216,6 +250,11 @@ if ($id !== null && $existingEvent) {
     if ($status === 'pending') {
         notifyPendingContent('Událost', $title, '/admin/events.php');
     }
+}
+
+// Uvolnění zámku obsahu po úspěšném uložení
+if ($id !== null) {
+    releaseContentLock('event', $id);
 }
 
 header('Location: ' . BASE_URL . '/admin/events.php');
