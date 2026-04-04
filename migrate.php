@@ -313,6 +313,7 @@ $tables = [
         event_end    DATETIME     NULL DEFAULT NULL,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+        preview_token VARCHAR(32) NOT NULL DEFAULT '',
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_events_slug (slug)
@@ -593,6 +594,7 @@ $tables = [
         is_published   TINYINT(1)   NOT NULL DEFAULT 1,
         status         ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id      INT          NULL DEFAULT NULL,
+        preview_token  VARCHAR(32)  NOT NULL DEFAULT '',
         deleted_at     DATETIME     NULL DEFAULT NULL,
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_board_slug (slug)
@@ -1159,6 +1161,8 @@ $addColumns = [
     'cms_pages.unpublish_at'         => "ALTER TABLE cms_pages ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_pages.preview_token'        => "ALTER TABLE cms_pages ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_events.unpublish_at'        => "ALTER TABLE cms_events ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    'cms_events.preview_token'       => "ALTER TABLE cms_events ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
+    'cms_board.preview_token'        => "ALTER TABLE cms_board ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     // Hierarchické kategorie blogu
     'cms_categories.parent_id'       => "ALTER TABLE cms_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
 ];

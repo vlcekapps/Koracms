@@ -16,24 +16,47 @@ if ($id === null && $slug === '') {
 
 $pdo = db_connect();
 
-if ($slug !== '') {
-    $stmt = $pdo->prepare(
-        "SELECT b.*, COALESCE(c.name, '') AS category_name
-         FROM cms_board b
-         LEFT JOIN cms_board_categories c ON c.id = b.category_id
-         WHERE b.slug = ? AND " . boardPublicVisibilitySql('b') . "
-         LIMIT 1"
-    );
-    $stmt->execute([$slug]);
+$previewToken = trim($_GET['preview'] ?? '');
+if ($previewToken !== '') {
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT b.*, COALESCE(c.name, '') AS category_name
+             FROM cms_board b
+             LEFT JOIN cms_board_categories c ON c.id = b.category_id
+             WHERE b.slug = ? AND b.preview_token = ? AND b.deleted_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute([$slug, $previewToken]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT b.*, COALESCE(c.name, '') AS category_name
+             FROM cms_board b
+             LEFT JOIN cms_board_categories c ON c.id = b.category_id
+             WHERE b.id = ? AND b.preview_token = ? AND b.deleted_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute([$id, $previewToken]);
+    }
 } else {
-    $stmt = $pdo->prepare(
-        "SELECT b.*, COALESCE(c.name, '') AS category_name
-         FROM cms_board b
-         LEFT JOIN cms_board_categories c ON c.id = b.category_id
-         WHERE b.id = ? AND " . boardPublicVisibilitySql('b') . "
-         LIMIT 1"
-    );
-    $stmt->execute([$id]);
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT b.*, COALESCE(c.name, '') AS category_name
+             FROM cms_board b
+             LEFT JOIN cms_board_categories c ON c.id = b.category_id
+             WHERE b.slug = ? AND " . boardPublicVisibilitySql('b') . "
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT b.*, COALESCE(c.name, '') AS category_name
+             FROM cms_board b
+             LEFT JOIN cms_board_categories c ON c.id = b.category_id
+             WHERE b.id = ? AND " . boardPublicVisibilitySql('b') . "
+             LIMIT 1"
+        );
+        $stmt->execute([$id]);
+    }
 }
 
 $document = $stmt->fetch() ?: null;

@@ -3223,6 +3223,18 @@ function pagePreviewPath(array $page): string
     return pagePublicPath($page, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+function eventPreviewPath(array $event): string
+{
+    $previewToken = trim((string)($event['preview_token'] ?? ''));
+    return eventPublicPath($event, $previewToken !== '' ? ['preview' => $previewToken] : []);
+}
+
+function boardPreviewPath(array $item): string
+{
+    $previewToken = trim((string)($item['preview_token'] ?? ''));
+    return boardPublicPath($item, $previewToken !== '' ? ['preview' => $previewToken] : []);
+}
+
 function newsPublicUrl(array $news, array $query = []): string
 {
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));

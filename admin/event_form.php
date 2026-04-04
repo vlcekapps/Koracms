@@ -272,6 +272,11 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <?php if ($id !== null && (string)$event['status'] === 'published' && (int)($event['is_published'] ?? 0) === 1): ?>
       <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
+    <?php if ($id !== null && !empty($event['preview_token'])): ?>
+      <a href="<?= h(eventPreviewPath($event)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+    <?php elseif ($id !== null): ?>
+      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+    <?php endif; ?>
   </div>
 </form>
 

@@ -24,22 +24,43 @@ foreach (['q', 'misto', 'typ', 'period', 'scope', 'strana'] as $queryKey) {
 
 $pdo = db_connect();
 
-if ($slug !== '') {
-    $stmt = $pdo->prepare(
-        "SELECT *
-         FROM cms_events
-         WHERE slug = ? AND " . eventPublicVisibilitySql() . "
-         LIMIT 1"
-    );
-    $stmt->execute([$slug]);
+$previewToken = trim($_GET['preview'] ?? '');
+if ($previewToken !== '') {
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT *
+             FROM cms_events
+             WHERE slug = ? AND preview_token = ? AND deleted_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute([$slug, $previewToken]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT *
+             FROM cms_events
+             WHERE id = ? AND preview_token = ? AND deleted_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute([$id, $previewToken]);
+    }
 } else {
-    $stmt = $pdo->prepare(
-        "SELECT *
-         FROM cms_events
-         WHERE id = ? AND " . eventPublicVisibilitySql() . "
-         LIMIT 1"
-    );
-    $stmt->execute([$id]);
+    if ($slug !== '') {
+        $stmt = $pdo->prepare(
+            "SELECT *
+             FROM cms_events
+             WHERE slug = ? AND " . eventPublicVisibilitySql() . "
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT *
+             FROM cms_events
+             WHERE id = ? AND " . eventPublicVisibilitySql() . "
+             LIMIT 1"
+        );
+        $stmt->execute([$id]);
+    }
 }
 
 $event = $stmt->fetch() ?: null;

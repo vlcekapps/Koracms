@@ -186,6 +186,11 @@ if (!empty($_FILES['file']['name'])) {
 }
 
 if ($id !== null) {
+    if ($existingDocument && ($existingDocument['preview_token'] ?? '') === '') {
+        $previewToken = bin2hex(random_bytes(16));
+        $pdo->prepare("UPDATE cms_board SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
+    }
+
     $oldSnapshot = $existingDocument ? $boardRevisionSnapshot($existingDocument) : [];
     $oldPath = $existingDocument ? boardPublicPath($existingDocument) : '';
     $set = "title = ?, slug = ?, board_type = ?, excerpt = ?, description = ?, category_id = ?,
@@ -240,12 +245,13 @@ if ($id !== null) {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
 
+    $previewToken = bin2hex(random_bytes(16));
     $pdo->prepare(
         "INSERT INTO cms_board
          (title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
           image_file, contact_name, contact_phone, contact_email, filename, original_name, file_size,
-          is_pinned, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+          is_pinned, is_published, status, author_id, preview_token)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -266,6 +272,7 @@ if ($id !== null) {
         $visible,
         $status,
         currentUserId(),
+        $previewToken,
     ]);
 
     $id = (int)$pdo->lastInsertId();

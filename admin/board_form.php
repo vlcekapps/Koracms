@@ -266,6 +266,11 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
         && (string)$document['posted_date'] <= date('Y-m-d')): ?>
       <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
     <?php endif; ?>
+    <?php if ($id && !empty($document['preview_token'])): ?>
+      <a href="<?= h(boardPreviewPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+    <?php elseif ($id): ?>
+      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+    <?php endif; ?>
   </div>
 </form>
 

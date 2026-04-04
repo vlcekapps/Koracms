@@ -118,6 +118,11 @@ if ($deleteImage && $imageFilename !== '') {
 }
 
 if ($id !== null && $existingEvent) {
+    if (($existingEvent['preview_token'] ?? '') === '') {
+        $previewToken = bin2hex(random_bytes(16));
+        $pdo->prepare("UPDATE cms_events SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
+    }
+
     $oldSnapshot = eventRevisionSnapshot($existingEvent);
     $oldPath = eventPublicPath($existingEvent);
 
@@ -176,12 +181,13 @@ if ($id !== null && $existingEvent) {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
 
+    $previewToken = bin2hex(random_bytes(16));
     $stmt = $pdo->prepare(
         "INSERT INTO cms_events (
             title, slug, event_kind, excerpt, description, program_note, location,
             organizer_name, organizer_email, registration_url, price_note, accessibility_note,
-            image_file, event_date, event_end, is_published, unpublish_at, admin_note, status
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            image_file, event_date, event_end, is_published, unpublish_at, admin_note, status, preview_token
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
         $title,
@@ -203,6 +209,7 @@ if ($id !== null && $existingEvent) {
         $unpublishAtSql,
         $adminNote,
         $status,
+        $previewToken,
     ]);
     $id = (int)$pdo->lastInsertId();
     logAction('event_add', "id={$id} title={$title} slug={$slug} kind={$eventKind} status={$status}");
