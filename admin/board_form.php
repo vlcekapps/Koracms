@@ -187,6 +187,26 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
       </small>
     <?php endif; ?>
 
+    <label for="publish_at">Plánované publikování (přesný čas)</label>
+    <input type="datetime-local" id="publish_at" name="publish_at"
+           style="width:auto" value="<?= h(!empty($document['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['publish_at'])) : '') ?>">
+    <small class="field-help">Volitelné. Pokud je vyplněné, položka se na veřejném webu zobrazí až v zadaný čas (přesnější než datum vyvěšení).</small>
+
+    <label for="unpublish_at">Plánované sejmutí (přesný čas)</label>
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at"
+           style="width:auto" value="<?= h(!empty($document['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['unpublish_at'])) : '') ?>">
+    <small class="field-help">Volitelné. Přesnější alternativa k datu sejmutí výše.</small>
+
+    <label for="article_status">Stav</label>
+    <select id="article_status" name="article_status" aria-describedby="board-status-help">
+      <option value="draft"<?= ($document['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
+      <?php if (currentUserHasCapability('content_approve_shared')): ?>
+        <option value="published"<?= ($document['status'] ?? 'published') === 'published' ? ' selected' : '' ?>>Publikováno</option>
+      <?php endif; ?>
+      <option value="pending"<?= ($document['status'] ?? '') === 'pending' ? ' selected' : '' ?>>Čeká na schválení</option>
+    </select>
+    <small id="board-status-help" class="field-help">Koncept je viditelný jen v administraci.</small>
+
     <label style="font-weight:normal;margin-top:1rem">
       <input type="checkbox" name="is_pinned" value="1" aria-describedby="board-pinned-help"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
       Připnout mezi důležité položky

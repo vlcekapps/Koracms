@@ -1163,6 +1163,8 @@ $addColumns = [
     'cms_events.unpublish_at'        => "ALTER TABLE cms_events ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_events.preview_token'       => "ALTER TABLE cms_events ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_board.preview_token'        => "ALTER TABLE cms_board ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
+    'cms_board.publish_at'           => "ALTER TABLE cms_board ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
+    'cms_board.unpublish_at'         => "ALTER TABLE cms_board ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     // Hierarchické kategorie blogu
     'cms_categories.parent_id'       => "ALTER TABLE cms_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
 ];
@@ -1295,7 +1297,7 @@ try {
 
 // ── 4c. Rozšíření ENUM statusu o 'draft' (články, novinky, stránky) ─────────
 
-$draftEnumTables = ['cms_articles', 'cms_news', 'cms_pages'];
+$draftEnumTables = ['cms_articles', 'cms_news', 'cms_pages', 'cms_board'];
 foreach ($draftEnumTables as $draftTable) {
     try {
         $colCheck = $pdo->prepare(

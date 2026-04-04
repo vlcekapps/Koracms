@@ -38,6 +38,7 @@ function runKoraCron(PDO $pdo): array
     $unpublishTables = [
         'cms_articles' => ['has_published' => false],
         'cms_news' => ['has_published' => false],
+        'cms_board' => ['has_published' => true],
         'cms_pages' => ['has_published' => true],
         'cms_events' => ['has_published' => true],
     ];
@@ -89,18 +90,22 @@ function runKoraCron(PDO $pdo): array
             cronAppendLog($log, 'Chyba plánovaného publikování: ' . $e->getMessage());
         }
     }
-    try {
-        $statement = $pdo->prepare(
-            "UPDATE cms_pages
-             SET is_published = 1, created_at = publish_at, publish_at = NULL
-             WHERE publish_at IS NOT NULL
-               AND publish_at <= NOW()
-               AND is_published = 0"
-        );
-        $statement->execute();
-        $totalPublished += $statement->rowCount();
-    } catch (\PDOException $e) {
-        cronAppendLog($log, 'Chyba plánovaného publikování stránek: ' . $e->getMessage());
+    // Stránky a nástěnka (is_published místo status)
+    $publishIsPublishedTables = ['cms_pages', 'cms_board'];
+    foreach ($publishIsPublishedTables as $tableName) {
+        try {
+            $statement = $pdo->prepare(
+                "UPDATE {$tableName}
+                 SET is_published = 1, created_at = publish_at, publish_at = NULL
+                 WHERE publish_at IS NOT NULL
+                   AND publish_at <= NOW()
+                   AND is_published = 0"
+            );
+            $statement->execute();
+            $totalPublished += $statement->rowCount();
+        } catch (\PDOException $e) {
+            cronAppendLog($log, "Chyba plánovaného publikování ({$tableName}): " . $e->getMessage());
+        }
     }
     if ($totalPublished > 0) {
         cronAppendLog($log, "Publikováno {$totalPublished} naplánovaných položek");

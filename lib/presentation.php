@@ -3327,7 +3327,9 @@ function boardPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
-    return "{$prefix}deleted_at IS NULL AND {$prefix}status = 'published' AND {$prefix}is_published = 1 AND {$prefix}posted_date <= CURDATE()";
+    return "{$prefix}deleted_at IS NULL AND {$prefix}status = 'published' AND {$prefix}is_published = 1 AND {$prefix}posted_date <= CURDATE()"
+        . " AND ({$prefix}publish_at IS NULL OR {$prefix}publish_at <= NOW())"
+        . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())";
 }
 
 function boardScopeVisibilitySql(string $scope, string $alias = ''): string

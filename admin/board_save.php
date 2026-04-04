@@ -68,6 +68,23 @@ $contactEmail = trim($_POST['contact_email'] ?? '');
 $isPinned = isset($_POST['is_pinned']) ? 1 : 0;
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
+$publishAtInput = trim((string)($_POST['publish_at'] ?? ''));
+$publishAtSql = null;
+if ($publishAtInput !== '') {
+    $dt = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $publishAtInput);
+    if ($dt && $dt->format('Y-m-d\TH:i') === $publishAtInput) {
+        $publishAtSql = $dt->format('Y-m-d H:i:s');
+    }
+}
+$unpublishAtInput = trim((string)($_POST['unpublish_at'] ?? ''));
+$unpublishAtSql = null;
+if ($unpublishAtInput !== '') {
+    $dt = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $unpublishAtInput);
+    if ($dt && $dt->format('Y-m-d\TH:i') === $unpublishAtInput) {
+        $unpublishAtSql = $dt->format('Y-m-d H:i:s');
+    }
+}
+
 if ($title === '' || $postedDate === '') {
     $redirectToForm($id, 'required');
 }
@@ -193,9 +210,22 @@ if ($id !== null) {
 
     $oldSnapshot = $existingDocument ? $boardRevisionSnapshot($existingDocument) : [];
     $oldPath = $existingDocument ? boardPublicPath($existingDocument) : '';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = $existingDocument['status'] ?? 'published';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = (($existingDocument['status'] ?? '') === 'published') ? 'published' : 'pending';
+    }
+    // Při první publikaci aktualizovat created_at
+    $publishingNow = $requestedStatus === 'published' && ($existingDocument['status'] ?? '') !== 'published';
+
     $set = "title = ?, slug = ?, board_type = ?, excerpt = ?, description = ?, category_id = ?,
             posted_date = ?, removal_date = ?, image_file = ?, contact_name = ?, contact_phone = ?,
-            contact_email = ?, is_pinned = ?, is_published = ?, author_id = COALESCE(author_id, ?)";
+            contact_email = ?, is_pinned = ?, is_published = ?, publish_at = ?, unpublish_at = ?, status = ?, author_id = COALESCE(author_id, ?)";
+    if ($publishingNow) {
+        $set .= ", created_at = NOW()";
+    }
     $params = [
         $title,
         $slug,
@@ -211,6 +241,9 @@ if ($id !== null) {
         $contactEmail,
         $isPinned,
         $isPublished,
+        $publishAtSql,
+        $unpublishAtSql,
+        $requestedStatus,
         currentUserId(),
     ];
 
@@ -242,7 +275,14 @@ if ($id !== null) {
     upsertPathRedirect($pdo, $oldPath, boardPublicPath(['id' => $id, 'slug' => $slug]));
     logAction('board_edit', "id={$id} title={$title} slug={$slug} type={$boardType} pinned={$isPinned}");
 } else {
-    $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
+    $requestedStatus = trim($_POST['article_status'] ?? '');
+    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+        $requestedStatus = 'draft';
+    }
+    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+        $requestedStatus = 'pending';
+    }
+    $status = $requestedStatus;
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
 
     $previewToken = bin2hex(random_bytes(16));
@@ -250,8 +290,8 @@ if ($id !== null) {
         "INSERT INTO cms_board
          (title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
           image_file, contact_name, contact_phone, contact_email, filename, original_name, file_size,
-          is_pinned, is_published, status, author_id, preview_token)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+          is_pinned, is_published, publish_at, unpublish_at, status, author_id, preview_token)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $slug,
@@ -270,6 +310,8 @@ if ($id !== null) {
         $newFileSize ?? 0,
         $isPinned,
         $visible,
+        $publishAtSql,
+        $unpublishAtSql,
         $status,
         currentUserId(),
         $previewToken,
