@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.3.4] – 2026-04-04
 
 ### Přidáno
 - **Duplikace obsahu – tlačítko „Duplikovat" v přehledu novinek, stránek, událostí a úřední desky** – vytvoří kopii položky se stavem „Koncept", novým slugem a preview tokenem; nové soubory `news_clone.php`, `page_clone.php`, `event_clone.php`, `board_clone.php`
