@@ -444,5 +444,10 @@ try {
     exit;
 }
 
+// Uvolnění zámku obsahu po úspěšném uložení
+if ($id !== null) {
+    releaseContentLock('article', $id);
+}
+
 header('Location: ' . $redirect);
 exit;

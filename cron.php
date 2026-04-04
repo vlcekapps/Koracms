@@ -156,7 +156,21 @@ function runKoraCron(PDO $pdo): array
         cronAppendLog($log, 'Chyba čištění logu: ' . $e->getMessage());
     }
 
-    // 5. Automatická záloha databáze (1x denně)
+    // 5. Čištění expirovaných zámků obsahu
+    try {
+        $statement = $pdo->prepare(
+            "DELETE FROM cms_content_locks WHERE expires_at < NOW()"
+        );
+        $statement->execute();
+        $deletedCount = $statement->rowCount();
+        if ($deletedCount > 0) {
+            cronAppendLog($log, "Smazáno {$deletedCount} expirovaných zámků obsahu");
+        }
+    } catch (\PDOException $e) {
+        cronAppendLog($log, 'Chyba čištění zámků obsahu: ' . $e->getMessage());
+    }
+
+    // 6. Automatická záloha databáze (1x denně)
     $chatRetentionDays = chatRetentionDays();
     if ($chatRetentionDays > 0) {
         try {

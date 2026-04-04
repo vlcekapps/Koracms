@@ -22,6 +22,12 @@ if ($id !== null) {
     }
 }
 
+// Content locking – pokus o získání zámku při editaci existující novinky
+$contentLockWarning = null;
+if ($item && $id !== null) {
+    $contentLockWarning = acquireContentLock('news', $id);
+}
+
 $err = trim((string)($_GET['err'] ?? ''));
 $formError = match ($err) {
     'required' => 'Titulek a text novinky jsou povinné.',
@@ -67,6 +73,15 @@ if ($item && !empty($item['author_id'])) {
 
 adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 ?>
+
+<?php if ($contentLockWarning !== null): ?>
+  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+    <strong>Upozornění:</strong>
+    Tuto novinku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
+    (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
+    Vaše změny mohou přepsat jejich práci.
+  </div>
+<?php endif; ?>
 
 <?php if ($item): ?>
   <p><a href="revisions.php?type=news&amp;id=<?= (int)$item['id'] ?>">Historie revizí</a></p>
@@ -250,5 +265,26 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     });
 })();
 </script>
+
+<?php if ($item && $id !== null): ?>
+<script nonce="<?= cspNonce() ?>">
+(function () {
+    var lockInterval = setInterval(function () {
+        var fd = new FormData();
+        fd.append('csrf_token', <?= json_encode(csrfToken(), JSON_UNESCAPED_SLASHES) ?>);
+        fd.append('entity_type', 'news');
+        fd.append('entity_id', '<?= (int)$id ?>');
+        fetch(<?= json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES) ?>, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        }).catch(function () {});
+    }, 60000);
+    window.addEventListener('beforeunload', function () {
+        clearInterval(lockInterval);
+    });
+})();
+</script>
+<?php endif; ?>
 
 <?php adminFooter(); ?>

@@ -50,7 +50,7 @@ if (!preg_match('/^\d{4}-\d{2}$/', $archiveFilter)) {
     $archiveFilter = '';
 }
 
-$catStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name");
+$catStmt = $pdo->prepare("SELECT id, name, parent_id FROM cms_categories WHERE blog_id = ? ORDER BY name");
 $catStmt->execute([$blogId]);
 $categories = $catStmt->fetchAll();
 
@@ -110,8 +110,12 @@ $where = "WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_a
 $params = [$blogId];
 
 if ($katId !== null) {
-    $where .= " AND a.category_id = ?";
-    $params[] = $katId;
+    $catIds = categoryWithChildrenIds($pdo, $katId);
+    $catPlaceholders = implode(',', array_fill(0, count($catIds), '?'));
+    $where .= " AND a.category_id IN ({$catPlaceholders})";
+    foreach ($catIds as $cid) {
+        $params[] = $cid;
+    }
 }
 
 if ($tagSlug !== '') {

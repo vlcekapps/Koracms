@@ -212,5 +212,10 @@ try {
     throw $e;
 }
 
+// Uvolnění zámku obsahu po úspěšném uložení
+if ($id !== null) {
+    releaseContentLock('page', $id);
+}
+
 header('Location: ' . $redirect);
 exit;

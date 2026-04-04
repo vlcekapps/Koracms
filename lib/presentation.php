@@ -6172,4 +6172,24 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
     return $results;
 }
 
+// ─────────────────── Hierarchické kategorie blogu ────────────────────────
+
+/**
+ * Vrátí pole ID: zadaná kategorie + všechny její přímé potomky.
+ */
+function categoryWithChildrenIds(PDO $pdo, int $categoryId): array
+{
+    $ids = [$categoryId];
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM cms_categories WHERE parent_id = ?");
+        $stmt->execute([$categoryId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $childId) {
+            $ids[] = (int)$childId;
+        }
+    } catch (\PDOException $e) {
+        // V případě chyby vrátíme alespoň rodičovskou kategorii
+    }
+    return array_unique($ids);
+}
+
 // ─────────────────────────────── Galerie ──────────────────────────────────

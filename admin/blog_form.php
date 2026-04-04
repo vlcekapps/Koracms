@@ -32,6 +32,12 @@ if ($id !== null) {
     }
 }
 
+// Content locking – pokus o získání zámku při editaci existujícího článku
+$contentLockWarning = null;
+if ($article && $id !== null) {
+    $contentLockWarning = acquireContentLock('article', $id);
+}
+
 $allBlogs = canManageOwnBlogOnly() ? getWritableBlogsForUser() : getAllBlogs();
 if ($allBlogs === []) {
     header('Location: ' . BASE_URL . '/admin/blog.php?msg=no_blog_access');
@@ -55,9 +61,33 @@ $blogTagsUrl = BASE_URL . '/admin/blog_tags.php?blog_id=' . $currentBlogId;
 $blogPublicUrl = $currentBlog ? blogIndexPath($currentBlog) : '';
 $blogFeedUrl = $currentBlog ? blogFeedPath($currentBlog) : '';
 
-$catStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name");
+$catStmt = $pdo->prepare("SELECT id, name, parent_id FROM cms_categories WHERE blog_id = ? ORDER BY name");
 $catStmt->execute([$currentBlogId]);
 $categories = $catStmt->fetchAll();
+
+// Sestavíme strom kategorií pro hierarchické zobrazení v selectu
+$blogFormCatTree = [];
+$blogFormCatById = [];
+foreach ($categories as $cat) {
+    $blogFormCatById[(int)$cat['id']] = $cat;
+}
+foreach ($categories as $cat) {
+    $pid = $cat['parent_id'] !== null ? (int)$cat['parent_id'] : 0;
+    $blogFormCatTree[$pid][] = $cat;
+}
+
+function renderBlogFormCategoryOptions(array $tree, int $parentId = 0, int $depth = 0, int $selectedId = 0): string
+{
+    $out = '';
+    foreach ($tree[$parentId] ?? [] as $cat) {
+        $cid = (int)$cat['id'];
+        $prefix = $depth > 0 ? str_repeat('  ', $depth) . '-- ' : '';
+        $selected = $cid === $selectedId ? ' selected' : '';
+        $out .= '<option value="' . $cid . '"' . $selected . '>' . h($prefix . $cat['name']) . '</option>';
+        $out .= renderBlogFormCategoryOptions($tree, $cid, $depth + 1, $selectedId);
+    }
+    return $out;
+}
 
 $allTags = [];
 $articleTagIds = [];
@@ -97,7 +127,7 @@ if (isMultiBlog()) {
     }
 
     try {
-        $allCategoriesStmt = $pdo->query("SELECT id, blog_id, name FROM cms_categories ORDER BY blog_id, name");
+        $allCategoriesStmt = $pdo->query("SELECT id, blog_id, name, parent_id FROM cms_categories ORDER BY blog_id, name");
         foreach ($allCategoriesStmt->fetchAll() as $categoryRow) {
             $blogId = (int)($categoryRow['blog_id'] ?? 0);
             if (!isset($blogFormOptions[$blogId])) {
@@ -106,6 +136,7 @@ if (isMultiBlog()) {
             $blogFormOptions[$blogId]['categories'][] = [
                 'id' => (int)$categoryRow['id'],
                 'name' => (string)$categoryRow['name'],
+                'parent_id' => $categoryRow['parent_id'] !== null ? (int)$categoryRow['parent_id'] : null,
             ];
         }
     } catch (\PDOException $e) {
@@ -214,6 +245,15 @@ if (isMultiBlog() && $currentBlog) {
 }
 adminHeader($pageTitle);
 ?>
+
+<?php if ($contentLockWarning !== null): ?>
+  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+    <strong>Upozornění:</strong>
+    Tento článek právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
+    (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
+    Vaše změny mohou přepsat jejich práci.
+  </div>
+<?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="<?= h($articleListUrl) ?>"><span aria-hidden="true">←</span> Zpět na články</a>
@@ -343,11 +383,7 @@ adminHeader($pageTitle);
     <select id="category_id" name="category_id"
             <?= adminFieldAttributes('category_id', $err, $fieldErrorMap, isMultiBlog() ? ['blog-category-help', 'blog-taxonomy-transfer-help'] : [], 'blog-category-error') ?>>
       <option value="">– bez kategorie –</option>
-      <?php foreach ($categories as $category): ?>
-        <option value="<?= (int)$category['id'] ?>" <?= ($initialCategorySelectId === (int)$category['id']) ? 'selected' : '' ?>>
-          <?= h($category['name']) ?>
-        </option>
-      <?php endforeach; ?>
+      <?= renderBlogFormCategoryOptions($blogFormCatTree, 0, 0, $initialCategorySelectId) ?>
     </select>
     <?php if (isMultiBlog()): ?>
       <small id="blog-category-help" class="field-help">Nabídka kategorií odpovídá právě vybranému blogu.</small>
@@ -773,10 +809,25 @@ adminHeader($pageTitle);
         const categoryMarkup = [];
         categoryMarkup.push('<option value="">' + noCategoryLabel + '</option>');
 
-        (blogOptions[blogId].categories || []).forEach((category) => {
-            const selected = String(category.id) === String(state.categoryId) ? ' selected' : '';
-            categoryMarkup.push('<option value="' + String(category.id) + '"' + selected + '>' + String(category.name) + '</option>');
-        });
+        const buildCatTree = (cats) => {
+            const tree = {};
+            (cats || []).forEach((c) => {
+                const pid = c.parent_id != null ? String(c.parent_id) : '0';
+                if (!tree[pid]) tree[pid] = [];
+                tree[pid].push(c);
+            });
+            return tree;
+        };
+        const renderCatOptions = (tree, parentId, depth) => {
+            (tree[String(parentId)] || []).forEach((category) => {
+                const prefix = depth > 0 ? '\u00A0\u00A0'.repeat(depth) + '-- ' : '';
+                const selected = String(category.id) === String(state.categoryId) ? ' selected' : '';
+                categoryMarkup.push('<option value="' + String(category.id) + '"' + selected + '>' + prefix + String(category.name) + '</option>');
+                renderCatOptions(tree, category.id, depth + 1);
+            });
+        };
+        const catTree = buildCatTree(blogOptions[blogId].categories);
+        renderCatOptions(catTree, 0, 0);
         categorySelect.innerHTML = categoryMarkup.join('');
         if (categorySelectionModeInput) {
             categorySelectionModeInput.value = state.categoryMode || 'manual';
@@ -902,6 +953,27 @@ adminHeader($pageTitle);
 
     textarea.closest('form')?.addEventListener('submit', function () {
         textarea.value = quill.root.innerHTML;
+    });
+})();
+</script>
+<?php endif; ?>
+
+<?php if ($article && $id !== null): ?>
+<script nonce="<?= cspNonce() ?>">
+(function () {
+    var lockInterval = setInterval(function () {
+        var fd = new FormData();
+        fd.append('csrf_token', <?= json_encode(csrfToken(), JSON_UNESCAPED_SLASHES) ?>);
+        fd.append('entity_type', 'article');
+        fd.append('entity_id', '<?= (int)$id ?>');
+        fetch(<?= json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES) ?>, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        }).catch(function () {});
+    }, 60000);
+    window.addEventListener('beforeunload', function () {
+        clearInterval(lockInterval);
     });
 })();
 </script>

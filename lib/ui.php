@@ -426,3 +426,107 @@ function relativeTime(string $datetime): string
     }
     return "před {$years} lety";
 }
+
+// ──────────────────────── Content locking ────────────────────────────────
+
+/**
+ * Pokusí se získat zámek obsahu. Pokud zámek drží jiný uživatel
+ * a ještě nevypršel, vrátí informace o něm. Jinak zámek získá/obnoví a vrátí null.
+ *
+ * @return array|null  null = zámek získán; pole ['locked_by' => string, 'locked_at' => string] = zamčeno jiným uživatelem
+ */
+function acquireContentLock(string $entityType, int $entityId): ?array
+{
+    $userId = currentUserId();
+    if ($userId === null) {
+        return null;
+    }
+
+    $pdo = db_connect();
+    $expiresAt = date('Y-m-d H:i:s', time() + 900); // 15 minut
+
+    // Zkontrolujeme existující zámek
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT cl.user_id, cl.locked_at, cl.expires_at,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS user_name
+             FROM cms_content_locks cl
+             LEFT JOIN cms_users u ON u.id = cl.user_id
+             WHERE cl.entity_type = ? AND cl.entity_id = ?"
+        );
+        $stmt->execute([$entityType, $entityId]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            $lockUserId = (int)$existing['user_id'];
+            $lockExpired = strtotime((string)$existing['expires_at']) <= time();
+
+            if ($lockUserId !== $userId && !$lockExpired) {
+                // Zamčeno jiným uživatelem a ještě nevypršelo
+                return [
+                    'locked_by' => (string)($existing['user_name'] ?? '–'),
+                    'locked_at' => (string)$existing['locked_at'],
+                ];
+            }
+
+            // Zámek pro stejného uživatele nebo expirovaný – aktualizujeme
+            $pdo->prepare(
+                "UPDATE cms_content_locks SET user_id = ?, locked_at = NOW(), expires_at = ? WHERE entity_type = ? AND entity_id = ?"
+            )->execute([$userId, $expiresAt, $entityType, $entityId]);
+
+            return null;
+        }
+
+        // Žádný zámek – vytvoříme nový
+        $pdo->prepare(
+            "INSERT INTO cms_content_locks (entity_type, entity_id, user_id, locked_at, expires_at) VALUES (?, ?, ?, NOW(), ?)"
+        )->execute([$entityType, $entityId, $userId, $expiresAt]);
+
+        return null;
+    } catch (\PDOException $e) {
+        error_log('acquireContentLock: ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Uvolní zámek obsahu pro aktuálního uživatele.
+ */
+function releaseContentLock(string $entityType, int $entityId): void
+{
+    $userId = currentUserId();
+    if ($userId === null) {
+        return;
+    }
+
+    try {
+        db_connect()->prepare(
+            "DELETE FROM cms_content_locks WHERE entity_type = ? AND entity_id = ? AND user_id = ?"
+        )->execute([$entityType, $entityId, $userId]);
+    } catch (\PDOException $e) {
+        error_log('releaseContentLock: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Obnoví expiraci zámku pro aktuálního uživatele. Vrací true, pokud byl zámek obnoven.
+ */
+function refreshContentLock(string $entityType, int $entityId): bool
+{
+    $userId = currentUserId();
+    if ($userId === null) {
+        return false;
+    }
+
+    $expiresAt = date('Y-m-d H:i:s', time() + 900);
+    try {
+        $stmt = db_connect()->prepare(
+            "UPDATE cms_content_locks SET expires_at = ? WHERE entity_type = ? AND entity_id = ? AND user_id = ?"
+        );
+        $stmt->execute([$expiresAt, $entityType, $entityId, $userId]);
+        return $stmt->rowCount() > 0;
+    } catch (\PDOException $e) {
+        error_log('refreshContentLock: ' . $e->getMessage());
+        return false;
+    }
+}

@@ -854,6 +854,16 @@ $tables = [
         UNIQUE KEY uq_redirects_old_path (old_path(191))
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_content_locks' => "CREATE TABLE IF NOT EXISTS cms_content_locks (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        entity_type VARCHAR(50)  NOT NULL,
+        entity_id   INT          NOT NULL,
+        user_id     INT          NOT NULL,
+        locked_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at  DATETIME     NOT NULL,
+        UNIQUE KEY uq_lock (entity_type, entity_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -1149,6 +1159,8 @@ $addColumns = [
     'cms_pages.unpublish_at'         => "ALTER TABLE cms_pages ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
     'cms_pages.preview_token'        => "ALTER TABLE cms_pages ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_events.unpublish_at'        => "ALTER TABLE cms_events ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    // Hierarchické kategorie blogu
+    'cms_categories.parent_id'       => "ALTER TABLE cms_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {

@@ -17,6 +17,16 @@ if ($id !== null) {
         exit;
     }
 } else {
+    $page = null;
+}
+
+// Content locking – pokus o získání zámku při editaci existující stránky
+$contentLockWarning = null;
+if ($page && $id !== null) {
+    $contentLockWarning = acquireContentLock('page', $id);
+}
+
+if ($page === null) {
     $page = [
         'id' => null,
         'title' => '',
@@ -68,6 +78,15 @@ $fieldErrorMessages = [
 
 adminHeader($pageTitle);
 ?>
+
+<?php if ($contentLockWarning !== null): ?>
+  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+    <strong>Upozornění:</strong>
+    Tuto stránku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
+    (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
+    Vaše změny mohou přepsat jejich práci.
+  </div>
+<?php endif; ?>
 
 <?php if ($id): ?>
   <p>
@@ -321,5 +340,26 @@ adminHeader($pageTitle);
     }
 })();
 </script>
+
+<?php if ($id !== null): ?>
+<script nonce="<?= cspNonce() ?>">
+(function () {
+    var lockInterval = setInterval(function () {
+        var fd = new FormData();
+        fd.append('csrf_token', <?= json_encode(csrfToken(), JSON_UNESCAPED_SLASHES) ?>);
+        fd.append('entity_type', 'page');
+        fd.append('entity_id', '<?= (int)$id ?>');
+        fetch(<?= json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES) ?>, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        }).catch(function () {});
+    }, 60000);
+    window.addEventListener('beforeunload', function () {
+        clearInterval(lockInterval);
+    });
+})();
+</script>
+<?php endif; ?>
 
 <?php adminFooter(); ?>

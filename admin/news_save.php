@@ -199,5 +199,10 @@ if ($existingItem) {
     }
 }
 
+// Uvolnění zámku obsahu po úspěšném uložení
+if ($id !== null) {
+    releaseContentLock('news', $id);
+}
+
 header('Location: ' . BASE_URL . '/admin/news.php');
 exit;

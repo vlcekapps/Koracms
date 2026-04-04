@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             name       VARCHAR(255) NOT NULL,
             blog_id    INT          NOT NULL DEFAULT 1,
+            parent_id  INT          NULL DEFAULT NULL,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_categories_blog_id (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -804,6 +805,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             hit_count   INT          NOT NULL DEFAULT 0,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_redirects_old_path (old_path(191))
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_content_locks (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            entity_type VARCHAR(50)  NOT NULL,
+            entity_id   INT          NOT NULL,
+            user_id     INT          NOT NULL,
+            locked_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at  DATETIME     NOT NULL,
+            UNIQUE KEY uq_lock (entity_type, entity_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_media (
