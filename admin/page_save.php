@@ -137,9 +137,13 @@ try {
             $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
         }
 
+        // Při první publikaci aktualizovat created_at na čas publikace
+        $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
+
         $pdo->prepare(
             "UPDATE cms_pages
-             SET title = ?, slug = ?, content = ?, blog_id = ?, blog_nav_order = ?, is_published = ?, show_in_nav = ?, nav_order = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?
+             SET title = ?, slug = ?, content = ?, blog_id = ?, blog_nav_order = ?, is_published = ?, show_in_nav = ?, nav_order = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?"
+             . ($publishingNow ? ", created_at = NOW()" : "") . "
              WHERE id = ?"
         )->execute([
             $title,

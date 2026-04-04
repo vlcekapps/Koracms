@@ -119,11 +119,15 @@ if ($existingItem) {
     }
     $status = $requestedStatus;
 
+    // Při první publikaci aktualizovat created_at na čas publikace
+    $publishingNow = $status === 'published' && ($oldData['status'] ?? '') !== 'published';
+    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
     if (canManageOwnNewsOnly()) {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
              SET title = ?, slug = ?, content = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?, meta_title = ?, meta_description = ?,
-                 author_id = COALESCE(author_id, ?), updated_at = NOW()
+                 author_id = COALESCE(author_id, ?), updated_at = NOW(){$createdAtClause}
              WHERE id = ? AND author_id = ?"
         );
         $stmt->execute([
@@ -144,7 +148,7 @@ if ($existingItem) {
         $stmt = $pdo->prepare(
             "UPDATE cms_news
              SET title = ?, slug = ?, content = ?, publish_at = ?, unpublish_at = ?, status = ?, admin_note = ?, meta_title = ?, meta_description = ?,
-                 author_id = COALESCE(author_id, ?), updated_at = NOW()
+                 author_id = COALESCE(author_id, ?), updated_at = NOW(){$createdAtClause}
              WHERE id = ?"
         );
         $stmt->execute([

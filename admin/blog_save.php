@@ -359,7 +359,12 @@ try {
         }
         $status = $requestedStatus;
 
+        // Při první publikaci (draft/pending → published) aktualizovat created_at na čas publikace
+        $publishingNow = $status === 'published' && $existingArticle['status'] !== 'published';
         $setClauses = "title=?, slug=?, perex=?, content=?, category_id=?, comments_enabled=?, is_featured_in_blog=?, publish_at=?, unpublish_at=?, meta_title=?, meta_description=?, admin_note=?, author_id=COALESCE(author_id, ?), blog_id=?, status=?, updated_at=NOW()";
+        if ($publishingNow) {
+            $setClauses .= ", created_at=NOW()";
+        }
         $params = [$title, $slug, $perex, $content, $categoryId, $commentsEnabled, $isFeaturedInBlog, $publishAtSql, $unpublishAtSql, $metaTitle, $metaDescription, $adminNote, currentUserId(), $blogId, $status];
         if ($imageFile !== null) {
             $setClauses .= ", image_file=?";
