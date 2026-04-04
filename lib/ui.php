@@ -539,3 +539,20 @@ function refreshContentLock(string $entityType, int $entityId): bool
         return false;
     }
 }
+
+/**
+ * Validuje datetime-local vstup (formát Y-m-d\TH:i).
+ * Vrátí SQL datetime string (Y-m-d H:i:s) nebo null při chybě.
+ */
+function validateDateTimeLocal(string $input): ?string
+{
+    $input = trim($input);
+    if ($input === '') {
+        return null;
+    }
+    $dt = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $input);
+    if ($dt === false || $dt->format('Y-m-d\TH:i') !== $input) {
+        return null;
+    }
+    return $dt->format('Y-m-d H:i:s');
+}

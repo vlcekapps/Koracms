@@ -27,27 +27,19 @@ if ($id !== null) {
 $fallback = BASE_URL . '/admin/page_form.php?' . http_build_query($fallbackParams);
 
 if ($publishAt !== '') {
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $publishAt);
-    $errors = DateTime::getLastErrors();
-    $hasDateTimeErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
-    if ($dateTime === false || $hasDateTimeErrors || $dateTime->format('Y-m-d\TH:i') !== $publishAt) {
+    $publishAtSql = validateDateTimeLocal($publishAt);
+    if ($publishAtSql === null) {
         header('Location: ' . appendUrlQuery($fallback, ['err' => 'publish_at']));
         exit;
     }
-    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 if ($unpublishAt !== '') {
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
-    $errors = DateTime::getLastErrors();
-    $hasDateTimeErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
-    if ($dateTime === false || $hasDateTimeErrors || $dateTime->format('Y-m-d\TH:i') !== $unpublishAt) {
+    $unpublishAtSql = validateDateTimeLocal($unpublishAt);
+    if ($unpublishAtSql === null) {
         header('Location: ' . appendUrlQuery($fallback, ['err' => 'unpublish_at']));
         exit;
     }
-    $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 if ($title === '' || $slug === '') {

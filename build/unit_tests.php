@@ -288,6 +288,17 @@ assert_equals('právě teď', relativeTime(date('Y-m-d H:i:s', time() + 60)), 'f
 assert_contains('minut', relativeTime(date('Y-m-d H:i:s', time() - 300)), '5 min ago contains minutami');
 assert_contains('hodin', relativeTime(date('Y-m-d H:i:s', time() - 7200)), '2 hours ago contains hodin');
 
+// ─── 16. validateDateTimeLocal() ────────────────────────────────────────────
+
+test_section('validateDateTimeLocal()');
+
+assert_equals('2024-06-15 14:30:00', validateDateTimeLocal('2024-06-15T14:30'), 'valid datetime-local');
+assert_equals(null, validateDateTimeLocal(''), 'empty string returns null');
+assert_equals(null, validateDateTimeLocal('not-a-date'), 'invalid format returns null');
+assert_equals(null, validateDateTimeLocal('2024-13-01T10:00'), 'invalid month returns null');
+assert_equals(null, validateDateTimeLocal('2024-06-15 14:30'), 'space instead of T returns null');
+assert_equals('2024-01-01 00:00:00', validateDateTimeLocal('2024-01-01T00:00'), 'midnight');
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SOUHRN
 // ═══════════════════════════════════════════════════════════════════════════

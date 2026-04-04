@@ -69,21 +69,10 @@ $isPinned = isset($_POST['is_pinned']) ? 1 : 0;
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 $publishAtInput = trim((string)($_POST['publish_at'] ?? ''));
-$publishAtSql = null;
-if ($publishAtInput !== '') {
-    $dt = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $publishAtInput);
-    if ($dt && $dt->format('Y-m-d\TH:i') === $publishAtInput) {
-        $publishAtSql = $dt->format('Y-m-d H:i:s');
-    }
-}
+$publishAtSql = validateDateTimeLocal($publishAtInput);
+
 $unpublishAtInput = trim((string)($_POST['unpublish_at'] ?? ''));
-$unpublishAtSql = null;
-if ($unpublishAtInput !== '') {
-    $dt = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $unpublishAtInput);
-    if ($dt && $dt->format('Y-m-d\TH:i') === $unpublishAtInput) {
-        $unpublishAtSql = $dt->format('Y-m-d H:i:s');
-    }
-}
+$unpublishAtSql = validateDateTimeLocal($unpublishAtInput);
 
 if ($title === '' || $postedDate === '') {
     $redirectToForm($id, 'required');

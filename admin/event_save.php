@@ -33,21 +33,19 @@ $redirectToForm = static function (string $errorCode) use ($redirectBase, $id): 
 $publishAtInput = trim((string)($_POST['publish_at'] ?? ''));
 $publishAtSql = null;
 if ($publishAtInput !== '') {
-    $dateTime = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $publishAtInput);
-    if (!$dateTime || $dateTime->format('Y-m-d\TH:i') !== $publishAtInput) {
+    $publishAtSql = validateDateTimeLocal($publishAtInput);
+    if ($publishAtSql === null) {
         $redirectToForm('publish_at');
     }
-    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 $unpublishAtInput = trim((string)($_POST['unpublish_at'] ?? ''));
 $unpublishAtSql = null;
 if ($unpublishAtInput !== '') {
-    $dateTime = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $unpublishAtInput);
-    if (!$dateTime || $dateTime->format('Y-m-d\TH:i') !== $unpublishAtInput) {
+    $unpublishAtSql = validateDateTimeLocal($unpublishAtInput);
+    if ($unpublishAtSql === null) {
         $redirectToForm('unpublish_at');
     }
-    $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 $eventDateInput = trim((string)($_POST['event_date'] ?? ''));

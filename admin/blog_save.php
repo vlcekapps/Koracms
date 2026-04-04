@@ -38,14 +38,6 @@ $redirectToForm = static function (?int $articleId, int $targetBlogId, string $e
     header('Location: ' . BASE_URL . '/admin/blog_form.php?' . http_build_query($params));
     exit;
 };
-$isValidDateTimeLocal = static function (string $value): bool {
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $value);
-    $errors = DateTime::getLastErrors();
-    $hasErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
-
-    return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d\TH:i') === $value;
-};
 
 if ($blogId <= 0 || !getBlogById($blogId)) {
     header('Location: ' . BASE_URL . '/admin/blogs.php');
@@ -256,21 +248,19 @@ if ($articleIsMovingToAnotherBlog && $validTagIds === [] && $tagSelectionMode !=
 
 $publishAtSql = null;
 if ($publishAt !== '') {
-    if (!$isValidDateTimeLocal($publishAt)) {
+    $publishAtSql = validateDateTimeLocal($publishAt);
+    if ($publishAtSql === null) {
         $redirectToForm($id, $blogId, 'publish_at');
     }
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $publishAt);
-    $publishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 
 $unpublishAt = trim($_POST['unpublish_at'] ?? '');
 $unpublishAtSql = null;
 if ($unpublishAt !== '') {
-    if (!$isValidDateTimeLocal($unpublishAt)) {
+    $unpublishAtSql = validateDateTimeLocal($unpublishAt);
+    if ($unpublishAtSql === null) {
         $redirectToForm($id, $blogId, 'unpublish_at');
     }
-    $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $unpublishAt);
-    $unpublishAtSql = $dateTime->format('Y-m-d H:i:s');
 }
 if ($publishAtSql !== null && $unpublishAtSql !== null && $unpublishAtSql <= $publishAtSql) {
     $redirectToForm($id, $blogId, 'publish_range');

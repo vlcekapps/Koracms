@@ -2829,6 +2829,36 @@ try {
     $log[] = '✗ Přesun SQL záloh – CHYBA: ' . h($e->getMessage());
 }
 
+// ── Výkonnostní indexy pro veřejné dotazy ────────────────────────────────────
+$visibilityIndexes = [
+    'cms_articles'       => 'idx_articles_public (deleted_at, status, publish_at)',
+    'cms_news'           => 'idx_news_public (deleted_at, status, publish_at)',
+    'cms_pages'          => 'idx_pages_public (deleted_at, status, is_published, publish_at)',
+    'cms_events'         => 'idx_events_public (deleted_at, status, is_published, publish_at)',
+    'cms_board'          => 'idx_board_public (deleted_at, status, is_published, publish_at)',
+    'cms_downloads'      => 'idx_downloads_public (deleted_at, status, is_published)',
+    'cms_faqs'           => 'idx_faqs_public (deleted_at, status, is_published)',
+    'cms_places'         => 'idx_places_public (deleted_at, status, is_published)',
+    'cms_podcasts'       => 'idx_podcasts_public (deleted_at, status, publish_at)',
+    'cms_podcast_shows'  => 'idx_podcast_shows_public (deleted_at, status, is_published)',
+    'cms_gallery_albums' => 'idx_gallery_albums_public (deleted_at, status, is_published)',
+    'cms_polls'          => 'idx_polls_public (deleted_at, status)',
+];
+
+foreach ($visibilityIndexes as $tableName => $indexDef) {
+    $indexName = explode(' ', $indexDef)[0];
+    try {
+        $pdo->exec("ALTER TABLE {$tableName} ADD INDEX {$indexDef}");
+        $log[] = "✓ Index <code>{$indexName}</code> na <code>{$tableName}</code> – OK";
+    } catch (\PDOException $e) {
+        if (str_contains($e->getMessage(), 'Duplicate key name')) {
+            $log[] = "· Index <code>{$indexName}</code> na <code>{$tableName}</code> – již existuje";
+        } else {
+            $log[] = "✗ Index <code>{$indexName}</code> – CHYBA: " . h($e->getMessage());
+        }
+    }
+}
+
 // ── Uložení verze migrace ───────────────────────────────────────────────────
 try {
     $pdo->prepare(

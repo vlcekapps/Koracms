@@ -22,6 +22,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **`slugify()` – rozšíření transliterace o slovenské, polské a německé znaky** – mapa nově pokrývá `ľ, ŕ, ĺ, ô, ą, ć, ę, ł, ń, ś, ź, ż, ä, ö, ü, ß` a jejich velké varianty, takže slovenská, polská a německá jména generují smysluplné slugy místo prázdných řetězců
 - **Gallery – ochrana proti dělení nulou u poškozených obrázků** – `gallery_make_thumb()` nově kontroluje, zda `getimagesize()` vrátilo nenulové rozměry, a při nulové šířce nebo výšce vrátí `false` místo fatal error
 - **VERSION soubor – bezpečný fallback** – `db.php` nově ošetřuje chybějící `VERSION` soubor a místo PHP 8.1+ deprecation warning vrátí `'0.0.0'`
+- **Výkonnostní indexy pro veřejné dotazy** – migrace přidává composite indexy na `(deleted_at, status, publish_at)` pro 12 hlavních tabulek; zrychluje veřejné SQL filtry zejména u větších databází
+- **Autosave – podpora Quill WYSIWYG editoru** – autosave před ukládáním synchronizuje obsah z Quill editoru do textarea a při obnově konceptu jej zpětně promítne; funguje ve všech formulářích s rich-text editorem
+- **Sjednocená validace datetime-local** – nová sdílená funkce `validateDateTimeLocal()` v `lib/ui.php` nahrazuje 3 různé validační vzory v 6 save handlerech; konzistentní chování napříč všemi moduly
 
 ### Opraveno
 - **Soft-deleted obsah neviditelný ve všech veřejných i admin cestách** – přidán filtr `deleted_at IS NULL` do veřejných dotazů na stránky (`page.php`), články (`blog/article.php`), autory (`author.php`) a do všech admin save handlerů (10 souborů); smazané položky již nejdou editovat ani zobrazit přes preview token; opravena funkce `placePublicVisibilitySql()`, která chyběla
