@@ -26,7 +26,7 @@ if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
 
-$whereParts = ['p.show_id = ?'];
+$whereParts = ['p.deleted_at IS NULL', 'p.show_id = ?'];
 $params = [$showId];
 
 if ($q !== '') {

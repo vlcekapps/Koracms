@@ -881,14 +881,16 @@ function podcastShowPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
-    return "COALESCE({$prefix}status, 'published') = 'published'"
+    return "{$prefix}deleted_at IS NULL"
+        . " AND COALESCE({$prefix}status, 'published') = 'published'"
         . " AND COALESCE({$prefix}is_published, 1) = 1";
 }
 
 function podcastEpisodePublicVisibilitySql(string $episodeAlias = '', string $showAlias = ''): string
 {
     $episodePrefix = $episodeAlias !== '' ? rtrim($episodeAlias, '.') . '.' : '';
-    $visibility = "COALESCE({$episodePrefix}status, 'published') = 'published'"
+    $visibility = "{$episodePrefix}deleted_at IS NULL"
+        . " AND COALESCE({$episodePrefix}status, 'published') = 'published'"
         . " AND ({$episodePrefix}publish_at IS NULL OR {$episodePrefix}publish_at <= NOW())";
 
     if ($showAlias !== '') {
@@ -1123,6 +1125,7 @@ function pollPublicVisibilitySql(string $alias = '', string $scope = 'all'): str
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
+    $deletedSql = "{$prefix}deleted_at IS NULL";
     $activeSql = "COALESCE({$prefix}status, 'active') = 'active'"
         . " AND ({$prefix}start_date IS NULL OR {$prefix}start_date <= NOW())"
         . " AND ({$prefix}end_date IS NULL OR {$prefix}end_date > NOW())";
@@ -1130,9 +1133,9 @@ function pollPublicVisibilitySql(string $alias = '', string $scope = 'all'): str
         . " OR ({$prefix}end_date IS NOT NULL AND {$prefix}end_date <= NOW()))";
 
     return match ($scope) {
-        'active' => $activeSql,
-        'archive' => $archiveSql,
-        default => '(' . $activeSql . ' OR ' . $archiveSql . ')',
+        'active' => $deletedSql . ' AND ' . $activeSql,
+        'archive' => $deletedSql . ' AND ' . $archiveSql,
+        default => $deletedSql . ' AND (' . $activeSql . ' OR ' . $archiveSql . ')',
     };
 }
 
@@ -2106,7 +2109,8 @@ function foodCardPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
-    return "{$prefix}status = 'published'"
+    return "{$prefix}deleted_at IS NULL"
+        . " AND {$prefix}status = 'published'"
         . " AND {$prefix}is_published = 1";
 }
 
@@ -3055,7 +3059,8 @@ function galleryAlbumPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
-    return "COALESCE({$prefix}status, 'published') = 'published'"
+    return "{$prefix}deleted_at IS NULL"
+        . " AND COALESCE({$prefix}status, 'published') = 'published'"
         . " AND COALESCE({$prefix}is_published, 1) = 1";
 }
 
@@ -3082,7 +3087,8 @@ function galleryPhotoPublicUrl(array $photo, array $query = []): string
 function galleryPhotoPublicVisibilitySql(string $photoAlias = '', string $albumAlias = ''): string
 {
     $photoPrefix = $photoAlias !== '' ? rtrim($photoAlias, '.') . '.' : '';
-    $conditions = "COALESCE({$photoPrefix}status, 'published') = 'published'"
+    $conditions = "{$photoPrefix}deleted_at IS NULL"
+        . " AND COALESCE({$photoPrefix}status, 'published') = 'published'"
         . " AND COALESCE({$photoPrefix}is_published, 1) = 1";
 
     if ($albumAlias !== '') {
@@ -3309,7 +3315,7 @@ function boardPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
-    return "{$prefix}status = 'published' AND {$prefix}is_published = 1 AND {$prefix}posted_date <= CURDATE()";
+    return "{$prefix}deleted_at IS NULL AND {$prefix}status = 'published' AND {$prefix}is_published = 1 AND {$prefix}posted_date <= CURDATE()";
 }
 
 function boardScopeVisibilitySql(string $scope, string $alias = ''): string
@@ -6053,6 +6059,117 @@ function formResolveSuccessActions(array $form): array
 function formPublicUrl(array $form, array $query = []): string
 {
     return siteUrl(appendUrlQuery(formPublicRequestPath($form), $query));
+}
+
+// ──────────────────────── Související články ─────────────────────────────
+
+/**
+ * Vrátí související články z téhož blogu – prioritně se stejnou kategorií
+ * nebo sdílenými štítky. Výsledky se řadí podle počtu společných štítků a data.
+ */
+function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
+{
+    $articleId = (int)($article['id'] ?? 0);
+    $blogId = (int)($article['blog_id'] ?? 1);
+    $categoryId = $article['category_id'] ?? null;
+
+    if ($articleId <= 0) {
+        return [];
+    }
+
+    // Načtení ID štítků aktuálního článku
+    $tagIds = [];
+    try {
+        $tagStmt = $pdo->prepare("SELECT tag_id FROM cms_article_tags WHERE article_id = ?");
+        $tagStmt->execute([$articleId]);
+        $tagIds = $tagStmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (\PDOException $e) {
+        // Tabulka nemusí existovat
+    }
+
+    // Skládáme query s bodováním
+    $scoreParts = [];
+    $params = [];
+
+    // Bonus za stejnou kategorii
+    if ($categoryId !== null) {
+        $scoreParts[] = "(CASE WHEN a.category_id = ? THEN 2 ELSE 0 END)";
+        $params[] = (int)$categoryId;
+    }
+
+    // Bonus za sdílené štítky
+    if ($tagIds !== []) {
+        $placeholders = implode(',', array_fill(0, count($tagIds), '?'));
+        $scoreParts[] = "(SELECT COUNT(*) FROM cms_article_tags at2 WHERE at2.article_id = a.id AND at2.tag_id IN ({$placeholders}))";
+        foreach ($tagIds as $tagId) {
+            $params[] = (int)$tagId;
+        }
+    }
+
+    $scoreExpr = $scoreParts !== [] ? implode(' + ', $scoreParts) : '0';
+
+    $params[] = $blogId;
+    $params[] = $articleId;
+    $params[] = $limit;
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT a.id, a.title, a.slug, a.perex, a.image_file, a.blog_id,
+                    a.created_at, a.category_id,
+                    b.slug AS blog_slug,
+                    ({$scoreExpr}) AS relevance_score
+             FROM cms_articles a
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.blog_id = ?
+               AND a.id != ?
+               AND a.deleted_at IS NULL
+               AND a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             HAVING relevance_score > 0
+             ORDER BY relevance_score DESC, a.created_at DESC
+             LIMIT ?"
+        );
+        $stmt->execute($params);
+        $results = $stmt->fetchAll();
+    } catch (\PDOException $e) {
+        $results = [];
+    }
+
+    // Pokud nemáme dostatek výsledků s relevancí, doplníme nejnovější z blogu
+    if (count($results) < $limit) {
+        $existingIds = array_map(static fn(array $row): int => (int)$row['id'], $results);
+        $existingIds[] = $articleId;
+        $excludePlaceholders = implode(',', array_fill(0, count($existingIds), '?'));
+        $fillParams = $existingIds;
+        $fillParams[] = $blogId;
+        $fillParams[] = $limit - count($results);
+
+        try {
+            $fillStmt = $pdo->prepare(
+                "SELECT a.id, a.title, a.slug, a.perex, a.image_file, a.blog_id,
+                        a.created_at, a.category_id,
+                        b.slug AS blog_slug,
+                        0 AS relevance_score
+                 FROM cms_articles a
+                 LEFT JOIN cms_blogs b ON b.id = a.blog_id
+                 WHERE a.id NOT IN ({$excludePlaceholders})
+                   AND a.blog_id = ?
+                   AND a.deleted_at IS NULL
+                   AND a.status = 'published'
+                   AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+                 ORDER BY a.created_at DESC
+                 LIMIT ?"
+            );
+            $fillStmt->execute($fillParams);
+            foreach ($fillStmt->fetchAll() as $fill) {
+                $results[] = $fill;
+            }
+        } catch (\PDOException $e) {
+            // Ignorovat – vracíme co máme
+        }
+    }
+
+    return $results;
 }
 
 // ─────────────────────────────── Galerie ──────────────────────────────────

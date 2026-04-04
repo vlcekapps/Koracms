@@ -45,7 +45,7 @@ if ($platformFilter !== '' && !in_array($platformFilter, $platformOptions, true)
     $platformFilter = '';
 }
 
-$whereParts = [];
+$whereParts = ['d.deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {

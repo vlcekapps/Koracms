@@ -21,7 +21,7 @@ if ($slug !== '') {
         "SELECT d.*, COALESCE(c.name, '') AS category_name
          FROM cms_downloads d
          LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
-         WHERE d.slug = ? AND d.status = 'published' AND d.is_published = 1
+         WHERE d.slug = ? AND d.deleted_at IS NULL AND d.status = 'published' AND d.is_published = 1
          LIMIT 1"
     );
     $stmt->execute([$slug]);
@@ -30,7 +30,7 @@ if ($slug !== '') {
         "SELECT d.*, COALESCE(c.name, '') AS category_name
          FROM cms_downloads d
          LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
-         WHERE d.id = ? AND d.status = 'published' AND d.is_published = 1
+         WHERE d.id = ? AND d.deleted_at IS NULL AND d.status = 'published' AND d.is_published = 1
          LIMIT 1"
     );
     $stmt->execute([$id]);

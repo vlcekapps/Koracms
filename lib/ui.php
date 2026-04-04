@@ -348,3 +348,81 @@ function sortableJs(): string
         . '})();'
         . '</script>';
 }
+
+/**
+ * Vrátí relativní čas v češtině (např. "před 5 minutami", "včera").
+ */
+function relativeTime(string $datetime): string
+{
+    $now  = new \DateTimeImmutable('now');
+    $then = new \DateTimeImmutable($datetime);
+    $diff = $now->getTimestamp() - $then->getTimestamp();
+
+    if ($diff < 0) {
+        return 'právě teď';
+    }
+
+    if ($diff < 60) {
+        return 'právě teď';
+    }
+
+    $minutes = (int)floor($diff / 60);
+    if ($minutes < 60) {
+        if ($minutes === 1) {
+            return 'před 1 minutou';
+        }
+        if ($minutes >= 2 && $minutes <= 4) {
+            return "před {$minutes} minutami";
+        }
+        return "před {$minutes} minutami";
+    }
+
+    $hours = (int)floor($diff / 3600);
+    if ($hours < 24) {
+        if ($hours === 1) {
+            return 'před 1 hodinou';
+        }
+        if ($hours >= 2 && $hours <= 4) {
+            return "před {$hours} hodinami";
+        }
+        return "před {$hours} hodinami";
+    }
+
+    $days = (int)floor($diff / 86400);
+    if ($days === 1) {
+        return 'včera';
+    }
+    if ($days >= 2 && $days <= 4) {
+        return "před {$days} dny";
+    }
+    if ($days < 7) {
+        return "před {$days} dny";
+    }
+    if ($days < 30) {
+        $weeks = (int)floor($days / 7);
+        if ($weeks === 1) {
+            return 'před 1 týdnem';
+        }
+        return "před {$weeks} týdny";
+    }
+
+    $months = (int)floor($days / 30);
+    if ($months < 12) {
+        if ($months === 1) {
+            return 'před 1 měsícem';
+        }
+        if ($months >= 2 && $months <= 4) {
+            return "před {$months} měsíci";
+        }
+        return "před {$months} měsíci";
+    }
+
+    $years = (int)floor($days / 365);
+    if ($years === 1) {
+        return 'před 1 rokem';
+    }
+    if ($years >= 2 && $years <= 4) {
+        return "před {$years} roky";
+    }
+    return "před {$years} lety";
+}

@@ -20,7 +20,7 @@ if (!in_array($scopeFilter, $allowedScopeFilters, true)) {
     $scopeFilter = 'all';
 }
 
-$whereParts = [];
+$whereParts = ['c.deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {

@@ -5,17 +5,9 @@ verifyCsrf();
 
 $id = inputInt('post', 'id');
 if ($id !== null) {
-    $pdo  = db_connect();
-    $stmt = $pdo->prepare("SELECT filename, image_file FROM cms_downloads WHERE id = ?");
-    $stmt->execute([$id]);
-    $download = $stmt->fetch();
-    if ($download) {
-        deleteDownloadStoredFile((string)($download['filename'] ?? ''));
-        deleteDownloadImageFile((string)($download['image_file'] ?? ''));
-    }
-    $pdo->prepare("DELETE FROM cms_downloads WHERE id = ?")->execute([$id]);
-    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$id]);
-    logAction('download_delete', "id={$id}");
+    $pdo = db_connect();
+    $pdo->prepare("UPDATE cms_downloads SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
+    logAction('download_delete', "id={$id} soft=true");
 }
 
 header('Location: ' . BASE_URL . '/admin/downloads.php');

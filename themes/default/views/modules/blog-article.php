@@ -105,6 +105,34 @@ $showAuthorPanel = !empty($article['author_public_path'])
     </div>
   </article>
 
+  <?php if (!empty($related)): ?>
+  <section class="surface" aria-labelledby="souvisejici-clanky-nadpis">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">Další čtení</p>
+        <h2 id="souvisejici-clanky-nadpis" class="section-title">Související články</h2>
+      </div>
+    </div>
+    <div class="card-grid">
+      <?php foreach ($related as $relatedArticle): ?>
+        <article class="card">
+          <?php if (!empty($relatedArticle['image_file'])): ?>
+            <img src="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode($relatedArticle['image_file']) ?>"
+                 alt="<?= h($relatedArticle['title']) ?>" class="card__image" loading="lazy">
+          <?php endif; ?>
+          <h3 class="card__title">
+            <a href="<?= h(articlePublicPath($relatedArticle)) ?>"><?= h($relatedArticle['title']) ?></a>
+          </h3>
+          <?php if (!empty($relatedArticle['perex'])): ?>
+            <p class="card__excerpt"><?= h(mb_strimwidth(normalizePlainText((string)$relatedArticle['perex']), 0, 150, '…', 'UTF-8')) ?></p>
+          <?php endif; ?>
+          <p class="meta-row"><time datetime="<?= h(str_replace(' ', 'T', $relatedArticle['created_at'])) ?>"><?= formatCzechDate($relatedArticle['created_at']) ?></time></p>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <section class="surface" aria-labelledby="komentare-nadpis">
     <div class="section-heading">
       <div>

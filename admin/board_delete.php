@@ -6,19 +6,8 @@ verifyCsrf();
 $id = inputInt('post', 'id');
 if ($id !== null) {
     $pdo = db_connect();
-    $stmt = $pdo->prepare("SELECT filename, image_file FROM cms_board WHERE id = ?");
-    $stmt->execute([$id]);
-    $document = $stmt->fetch() ?: null;
-    $filename = (string)($document['filename'] ?? '');
-    if ($filename !== '') {
-        $deletePath = __DIR__ . '/../uploads/board/' . basename($filename);
-        if (file_exists($deletePath)) {
-            unlink($deletePath);
-        }
-    }
-    deleteBoardImageFile((string)($document['image_file'] ?? ''));
-    $pdo->prepare("DELETE FROM cms_board WHERE id = ?")->execute([$id]);
-    logAction('board_delete', "id={$id}");
+    $pdo->prepare("UPDATE cms_board SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
+    logAction('board_delete', "id={$id} soft=true");
 }
 
 header('Location: ' . BASE_URL . '/admin/board.php');

@@ -9,7 +9,7 @@ $allowedStatusFilters = ['all', 'published', 'hidden', 'pending'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
-$whereParts = [];
+$whereParts = ['s.deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {

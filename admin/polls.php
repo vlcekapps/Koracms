@@ -11,7 +11,7 @@ if (!in_array($statusFilter, $allowedStatusFilters, true)) {
 }
 
 $perPage = 25;
-$whereParts = [];
+$whereParts = ['p.deleted_at IS NULL'];
 $params = [];
 
 if ($q !== '') {

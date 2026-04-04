@@ -759,6 +759,59 @@ if (isSuperAdmin()) {
 </section>
 <?php endif; ?>
 
+<?php
+// Poslední aktivita – jen pro uživatele s přístupem k audit logu
+if ($showOperationalOverview && $canManageSettings):
+    $recentActivity = [];
+    try {
+        $actStmt = $pdo->prepare(
+            "SELECT l.action, l.detail, l.created_at,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email, 'Systém') AS user_name
+             FROM cms_log l
+             LEFT JOIN cms_users u ON u.id = l.user_id
+             ORDER BY l.created_at DESC
+             LIMIT 15"
+        );
+        $actStmt->execute();
+        $recentActivity = $actStmt->fetchAll();
+    } catch (\PDOException $e) {
+        $recentActivity = [];
+    }
+?>
+<?php if ($recentActivity !== []): ?>
+<section aria-labelledby="activity-feed-heading" style="margin-top:1.5rem">
+  <h2 id="activity-feed-heading">Poslední aktivita</h2>
+  <table>
+    <caption class="sr-only">Posledních 15 akcí v systému</caption>
+    <thead>
+      <tr>
+        <th scope="col">Čas</th>
+        <th scope="col">Uživatel</th>
+        <th scope="col">Akce</th>
+        <th scope="col">Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($recentActivity as $actEntry): ?>
+        <tr>
+          <td>
+            <time datetime="<?= h(str_replace(' ', 'T', (string)$actEntry['created_at'])) ?>"
+                  title="<?= h((string)$actEntry['created_at']) ?>">
+              <?= h(relativeTime((string)$actEntry['created_at'])) ?>
+            </time>
+          </td>
+          <td><?= h((string)$actEntry['user_name']) ?></td>
+          <td><code><?= h((string)$actEntry['action']) ?></code></td>
+          <td style="max-width:400px;word-break:break-word;font-size:.88rem"><?= h(mb_substr((string)$actEntry['detail'], 0, 80)) ?><?= mb_strlen((string)$actEntry['detail']) > 80 ? '…' : '' ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <p><a href="audit_log.php">Zobrazit celý log <span aria-hidden="true">→</span></a></p>
+</section>
+<?php endif; ?>
+<?php endif; ?>
+
 <?php if ($showOperationalOverview && $enabledModules !== []): ?>
 <section aria-labelledby="modules-heading-new" style="margin-top:1.5rem">
   <h2 id="modules-heading-new">Zapnuté moduly na webu</h2>

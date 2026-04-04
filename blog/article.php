@@ -218,6 +218,8 @@ try {
 
 $captchaExpr = captchaGenerate();
 
+$related = ($previewToken === '') ? relatedArticles($pdo, $article, 3) : [];
+
 renderPublicPage([
     'title' => (!empty($article['meta_title']) ? $article['meta_title'] : $article['title']) . ' – ' . $siteName,
     'meta' => [
@@ -239,6 +241,7 @@ renderPublicPage([
         'commentResult' => $commentResult,
         'commentsState' => $commentsState,
         'captchaExpr' => $captchaExpr,
+        'related' => $related,
         'formData' => [
             'author_name' => trim($_POST['author_name'] ?? ''),
             'author_email' => trim($_POST['author_email'] ?? ''),

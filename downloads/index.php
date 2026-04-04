@@ -66,7 +66,8 @@ if ($categoryId !== null && !in_array($categoryId, $validCategoryIds, true)) {
 $platformOptions = $pdo->query(
     "SELECT DISTINCT platform_label
      FROM cms_downloads
-     WHERE status = 'published'
+     WHERE deleted_at IS NULL
+       AND status = 'published'
        AND is_published = 1
        AND TRIM(COALESCE(platform_label, '')) <> ''
      ORDER BY platform_label"
@@ -76,7 +77,7 @@ if ($platformFilter !== '' && !in_array($platformFilter, $platformOptions, true)
     $platformFilter = '';
 }
 
-$whereParts = ["d.status = 'published'", 'd.is_published = 1'];
+$whereParts = ['d.deleted_at IS NULL', "d.status = 'published'", 'd.is_published = 1'];
 $params = [];
 
 if ($q !== '') {

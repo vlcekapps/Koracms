@@ -26,7 +26,7 @@ $sortFilter = in_array($_GET['sort'] ?? '', ['position', 'newest', 'title'], tru
     ? (string)$_GET['sort']
     : 'position';
 
-$whereSql = 'WHERE album_id = ?';
+$whereSql = 'WHERE deleted_at IS NULL AND album_id = ?';
 $params = [$albumId];
 if ($q !== '') {
     $whereSql .= ' AND (title LIKE ? OR slug LIKE ? OR filename LIKE ?)';

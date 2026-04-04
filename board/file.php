@@ -13,7 +13,7 @@ if (!$allowPrivateAccess && !isModuleEnabled('board')) {
 }
 
 $stmt = db_connect()->prepare(
-    "SELECT id, title, filename, original_name, posted_date, is_published, COALESCE(status, 'published') AS status
+    "SELECT id, title, filename, original_name, posted_date, deleted_at, is_published, COALESCE(status, 'published') AS status
      FROM cms_board
      WHERE id = ?"
 );
@@ -27,7 +27,8 @@ if (!$document) {
 if (
     !$allowPrivateAccess
     && (
-        $document['status'] !== 'published'
+        $document['deleted_at'] !== null
+        || $document['status'] !== 'published'
         || !(int)$document['is_published']
         || (string)($document['posted_date'] ?? '') > date('Y-m-d')
     )

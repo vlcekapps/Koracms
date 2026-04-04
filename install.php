@@ -194,6 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cover_photo_id INT          DEFAULT NULL,
             status         ENUM('pending','published') NOT NULL DEFAULT 'published',
             is_published   TINYINT(1)   NOT NULL DEFAULT 1,
+            deleted_at     DATETIME     NULL DEFAULT NULL,
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_gallery_albums_slug (slug)
@@ -328,6 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             website_url VARCHAR(500) NOT NULL DEFAULT '',
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+            deleted_at   DATETIME     NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -352,6 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+            deleted_at   DATETIME     NULL DEFAULT NULL,
             UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -415,6 +418,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published    TINYINT(1)   NOT NULL DEFAULT 1,
             status          ENUM('pending','published') NOT NULL DEFAULT 'published',
             author_id       INT          NULL DEFAULT NULL,
+            deleted_at      DATETIME     NULL DEFAULT NULL,
             created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_downloads_slug (slug),
@@ -458,6 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             sort_order   INT          NOT NULL DEFAULT 0,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
+            deleted_at   DATETIME     NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_gallery_photos_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -475,6 +480,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
             author_id    INT          NULL DEFAULT NULL,
+            deleted_at   DATETIME     NULL DEFAULT NULL,
             created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_food_cards_slug (slug),
@@ -491,6 +497,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status      ENUM('active','closed') NOT NULL DEFAULT 'active',
             start_date  DATETIME     NULL DEFAULT NULL,
             end_date    DATETIME     NULL DEFAULT NULL,
+            deleted_at  DATETIME     NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_polls_slug (slug),
@@ -570,6 +577,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             is_published   TINYINT(1)   NOT NULL DEFAULT 1,
             status         ENUM('pending','published') NOT NULL DEFAULT 'published',
             author_id      INT          NULL DEFAULT NULL,
+            deleted_at     DATETIME     NULL DEFAULT NULL,
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_board_slug (slug),
             FULLTEXT INDEX ft_board_search (title, excerpt, description)

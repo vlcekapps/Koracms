@@ -292,6 +292,12 @@ adminHeader($blogCaptionTitle);
             <button type="submit" class="btn"
                   data-confirm="Převést článek na statickou stránku?"><span aria-hidden="true">→</span> Stránka</button>
           </form>
+          <form action="blog_clone.php" method="post" style="display:inline">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+            <button type="submit" class="btn"
+                    data-confirm="Vytvořit kopii článku?">Duplikovat</button>
+          </form>
           <form action="blog_delete.php" method="post" style="display:inline">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">

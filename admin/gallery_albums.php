@@ -11,7 +11,7 @@ $hierarchyFilter = in_array($_GET['scope'] ?? '', ['all', 'root', 'nested'], tru
     ? (string)$_GET['scope']
     : 'all';
 
-$whereParts = [];
+$whereParts = ['a.deleted_at IS NULL'];
 $params = [];
 if ($q !== '') {
     $whereParts[] = '(a.name LIKE ? OR a.slug LIKE ? OR a.description LIKE ? OR COALESCE(p.name, \'\') LIKE ?)';

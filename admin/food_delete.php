@@ -5,8 +5,8 @@ verifyCsrf();
 
 $id = inputInt('post', 'id');
 if ($id !== null) {
-    db_connect()->prepare("DELETE FROM cms_food_cards WHERE id = ?")->execute([$id]);
-    logAction('food_delete', "id={$id}");
+    db_connect()->prepare("UPDATE cms_food_cards SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
+    logAction('food_delete', "id={$id} soft=true");
 }
 
 header('Location: ' . BASE_URL . '/admin/food.php');

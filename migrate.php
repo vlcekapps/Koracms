@@ -354,6 +354,7 @@ $tables = [
         website_url VARCHAR(500) NOT NULL DEFAULT '',
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
+        deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -376,6 +377,7 @@ $tables = [
         block_from_feed TINYINT(1) NOT NULL DEFAULT 0,
         publish_at  DATETIME     NULL DEFAULT NULL,
         status      ENUM('pending','published') NOT NULL DEFAULT 'published',
+        deleted_at  DATETIME     NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)
@@ -441,6 +443,7 @@ $tables = [
         is_published   TINYINT(1)   NOT NULL DEFAULT 1,
         status         ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id      INT          NULL DEFAULT NULL,
+        deleted_at     DATETIME     NULL DEFAULT NULL,
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_downloads_slug (slug)
@@ -453,6 +456,7 @@ $tables = [
         slug           VARCHAR(255) NOT NULL,
         description    TEXT,
         cover_photo_id INT          DEFAULT NULL,
+        deleted_at     DATETIME     NULL DEFAULT NULL,
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_gallery_albums_slug (slug)
@@ -465,6 +469,7 @@ $tables = [
         title      VARCHAR(255) NOT NULL DEFAULT '',
         slug       VARCHAR(255) NOT NULL,
         sort_order INT          NOT NULL DEFAULT 0,
+        deleted_at DATETIME     NULL DEFAULT NULL,
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_gallery_photos_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -482,6 +487,7 @@ $tables = [
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id    INT          NULL DEFAULT NULL,
+        deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_food_cards_slug (slug)
@@ -508,6 +514,7 @@ $tables = [
         status      ENUM('active','closed') NOT NULL DEFAULT 'active',
         start_date  DATETIME     NULL DEFAULT NULL,
         end_date    DATETIME     NULL DEFAULT NULL,
+        deleted_at  DATETIME     NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_polls_slug (slug)
@@ -586,6 +593,7 @@ $tables = [
         is_published   TINYINT(1)   NOT NULL DEFAULT 1,
         status         ENUM('pending','published') NOT NULL DEFAULT 'published',
         author_id      INT          NULL DEFAULT NULL,
+        deleted_at     DATETIME     NULL DEFAULT NULL,
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_board_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -1118,6 +1126,15 @@ $addColumns = [
     'cms_events.accessibility_note'  => "ALTER TABLE cms_events ADD COLUMN accessibility_note TEXT",
     'cms_events.image_file'          => "ALTER TABLE cms_events ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_faqs.deleted_at'            => "ALTER TABLE cms_faqs ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    // Koš – další moduly
+    'cms_board.deleted_at'           => "ALTER TABLE cms_board ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_downloads.deleted_at'       => "ALTER TABLE cms_downloads ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_food_cards.deleted_at'      => "ALTER TABLE cms_food_cards ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_podcasts.deleted_at'        => "ALTER TABLE cms_podcasts ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_podcast_shows.deleted_at'   => "ALTER TABLE cms_podcast_shows ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_gallery_albums.deleted_at'  => "ALTER TABLE cms_gallery_albums ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_gallery_photos.deleted_at'  => "ALTER TABLE cms_gallery_photos ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
+    'cms_polls.deleted_at'           => "ALTER TABLE cms_polls ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     // 2FA
     'cms_users.totp_secret'          => "ALTER TABLE cms_users ADD COLUMN totp_secret VARCHAR(64) NULL DEFAULT NULL",
     'cms_users.passkey_credentials'  => "ALTER TABLE cms_users ADD COLUMN passkey_credentials TEXT",

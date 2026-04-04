@@ -13,7 +13,7 @@ if (!$allowPrivateAccess && !isModuleEnabled('downloads')) {
 }
 
 $stmt = db_connect()->prepare(
-    "SELECT id, title, filename, original_name, is_published, COALESCE(status, 'published') AS status
+    "SELECT id, title, filename, original_name, is_published, deleted_at, COALESCE(status, 'published') AS status
      FROM cms_downloads
      WHERE id = ?"
 );
@@ -27,7 +27,8 @@ if (!$file) {
 if (
     !$allowPrivateAccess
     && (
-        $file['status'] !== 'published'
+        $file['deleted_at'] !== null
+        || $file['status'] !== 'published'
         || !(int)$file['is_published']
     )
 ) {

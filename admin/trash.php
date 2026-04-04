@@ -16,11 +16,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $itemId = inputInt('post', 'id');
 
     $moduleConfig = [
-        'articles' => ['table' => 'cms_articles', 'label' => 'Článek'],
-        'news'     => ['table' => 'cms_news',     'label' => 'Novinka'],
-        'pages'    => ['table' => 'cms_pages',     'label' => 'Stránka'],
-        'events'   => ['table' => 'cms_events',    'label' => 'Událost'],
-        'faq'      => ['table' => 'cms_faqs',      'label' => 'Znalostní báze'],
+        'articles'       => ['table' => 'cms_articles',       'label' => 'Článek'],
+        'news'           => ['table' => 'cms_news',           'label' => 'Novinka'],
+        'pages'          => ['table' => 'cms_pages',          'label' => 'Stránka'],
+        'events'         => ['table' => 'cms_events',         'label' => 'Událost'],
+        'faq'            => ['table' => 'cms_faqs',           'label' => 'Znalostní báze'],
+        'board'          => ['table' => 'cms_board',          'label' => 'Úřední deska'],
+        'downloads'      => ['table' => 'cms_downloads',      'label' => 'Soubor ke stažení'],
+        'food_cards'     => ['table' => 'cms_food_cards',     'label' => 'Jídelní lístek'],
+        'podcasts'       => ['table' => 'cms_podcasts',       'label' => 'Podcast – epizoda'],
+        'podcast_shows'  => ['table' => 'cms_podcast_shows',  'label' => 'Podcast – pořad'],
+        'gallery_albums' => ['table' => 'cms_gallery_albums', 'label' => 'Galerie – album'],
+        'gallery_photos' => ['table' => 'cms_gallery_photos', 'label' => 'Galerie – fotografie'],
+        'polls'          => ['table' => 'cms_polls',          'label' => 'Anketa'],
     ];
 
     if ($itemId !== null && isset($moduleConfig[$module])) {
@@ -34,6 +42,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'polls') {
+                $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$itemId]);
+                $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id = ?")->execute([$itemId]);
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'poll' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'downloads') {
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'podcasts') {
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'podcast_shows') {
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'gallery_albums') {
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'gallery_photos') {
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
             }
             $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
             $success = $cfg['label'] . ' trvale smazán(a).';
@@ -46,11 +68,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $trashItems = [];
 
 $modules = [
-    'articles' => ['table' => 'cms_articles', 'label' => 'Článek',        'title_col' => 'title', 'edit_url' => 'blog_form.php?id='],
-    'news'     => ['table' => 'cms_news',     'label' => 'Novinka',        'title_col' => 'title', 'edit_url' => 'news_form.php?id='],
-    'pages'    => ['table' => 'cms_pages',     'label' => 'Stránka',       'title_col' => 'title', 'edit_url' => 'page_form.php?id='],
-    'events'   => ['table' => 'cms_events',    'label' => 'Událost',       'title_col' => 'title', 'edit_url' => 'event_form.php?id='],
-    'faq'      => ['table' => 'cms_faqs',      'label' => 'Znalostní báze','title_col' => 'question', 'edit_url' => 'faq_form.php?id='],
+    'articles'       => ['table' => 'cms_articles',       'label' => 'Článek',              'title_col' => 'title',    'edit_url' => 'blog_form.php?id='],
+    'news'           => ['table' => 'cms_news',           'label' => 'Novinka',              'title_col' => 'title',    'edit_url' => 'news_form.php?id='],
+    'pages'          => ['table' => 'cms_pages',          'label' => 'Stránka',              'title_col' => 'title',    'edit_url' => 'page_form.php?id='],
+    'events'         => ['table' => 'cms_events',         'label' => 'Událost',              'title_col' => 'title',    'edit_url' => 'event_form.php?id='],
+    'faq'            => ['table' => 'cms_faqs',           'label' => 'Znalostní báze',       'title_col' => 'question', 'edit_url' => 'faq_form.php?id='],
+    'board'          => ['table' => 'cms_board',          'label' => 'Úřední deska',         'title_col' => 'title',    'edit_url' => 'board_form.php?id='],
+    'downloads'      => ['table' => 'cms_downloads',      'label' => 'Soubor ke stažení',    'title_col' => 'title',    'edit_url' => 'download_form.php?id='],
+    'food_cards'     => ['table' => 'cms_food_cards',     'label' => 'Jídelní lístek',       'title_col' => 'title',    'edit_url' => 'food_form.php?id='],
+    'podcasts'       => ['table' => 'cms_podcasts',       'label' => 'Podcast – epizoda',    'title_col' => 'title',    'edit_url' => 'podcast_form.php?id='],
+    'podcast_shows'  => ['table' => 'cms_podcast_shows',  'label' => 'Podcast – pořad',      'title_col' => 'title',    'edit_url' => 'podcast_show_form.php?id='],
+    'gallery_albums' => ['table' => 'cms_gallery_albums', 'label' => 'Galerie – album',      'title_col' => 'name',     'edit_url' => 'gallery_album_form.php?id='],
+    'gallery_photos' => ['table' => 'cms_gallery_photos', 'label' => 'Galerie – fotografie', 'title_col' => 'title',    'edit_url' => 'gallery_photo_form.php?id='],
+    'polls'          => ['table' => 'cms_polls',          'label' => 'Anketa',               'title_col' => 'question', 'edit_url' => 'polls_form.php?id='],
 ];
 
 foreach ($modules as $moduleKey => $cfg) {
