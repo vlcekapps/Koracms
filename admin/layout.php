@@ -373,6 +373,7 @@ function adminHeader(string $pageTitle): void
        . '    nav a:focus-visible { outline-color: #7ecfff; }' . "\n"
        . '    .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }' . "\n"
        . '    .skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:#005fcc;color:#fff;font-size:1rem;text-decoration:none;z-index:9999; }' . "\n"
+       . '    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important; } }' . "\n"
        . '  </style>' . "\n"
        . '</head>' . "\n"
        . '<body>' . "\n"

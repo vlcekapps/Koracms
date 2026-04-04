@@ -236,7 +236,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($uploadedCount > 0) {
-            mediaFlashSet('success', 'Nahráno ' . $uploadedCount . ' souborů.');
+            $altHint = $uploadedCount === 1
+                ? 'Nahráno. Nezapomeňte vyplnit alt text u obrázků.'
+                : 'Nahráno ' . $uploadedCount . ' souborů. Nezapomeňte vyplnit alt text u obrázků.';
+            mediaFlashSet('success', $altHint);
             logAction('media_upload', 'count=' . $uploadedCount . ';visibility=' . $uploadVisibility);
         }
         if ($errors !== []) {
@@ -655,7 +658,12 @@ adminHeader('Knihovna médií');
             <legend>Metadata a viditelnost</legend>
 
             <label for="alt_text">Alt text</label>
-            <input type="text" id="alt_text" name="alt_text" value="<?= h((string)($editItem['alt_text'] ?? '')) ?>">
+            <input type="text" id="alt_text" name="alt_text" aria-describedby="alt-text-help" value="<?= h((string)($editItem['alt_text'] ?? '')) ?>">
+            <?php if (trim((string)($editItem['alt_text'] ?? '')) === '' && mediaIsImageMime((string)($editItem['mime_type'] ?? ''))): ?>
+              <small id="alt-text-help" class="field-help" style="color:#b42318"><strong>Upozornění:</strong> Obrázek nemá vyplněný alt text. Pro přístupnost (WCAG 2.2) jej prosím doplňte.</small>
+            <?php else: ?>
+              <small id="alt-text-help" class="field-help">Popis obrázku pro čtečky obrazovky a vyhledávače.</small>
+            <?php endif; ?>
 
             <label for="caption">Titulek</label>
             <textarea id="caption" name="caption" rows="3" style="min-height:7rem"><?= h((string)($editItem['caption'] ?? '')) ?></textarea>
