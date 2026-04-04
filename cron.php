@@ -78,7 +78,7 @@ function runKoraCron(PDO $pdo): array
         try {
             $statement = $pdo->prepare(
                 "UPDATE {$tableName}
-                 SET status = 'published', created_at = NOW(), publish_at = NULL
+                 SET status = 'published', created_at = publish_at, publish_at = NULL
                  WHERE publish_at IS NOT NULL
                    AND publish_at <= NOW()
                    AND status IN ('draft', 'pending')"
@@ -92,7 +92,7 @@ function runKoraCron(PDO $pdo): array
     try {
         $statement = $pdo->prepare(
             "UPDATE cms_pages
-             SET is_published = 1, publish_at = NULL
+             SET is_published = 1, created_at = publish_at, publish_at = NULL
              WHERE publish_at IS NOT NULL
                AND publish_at <= NOW()
                AND is_published = 0"
