@@ -30,6 +30,41 @@ function cronAppendLog(array &$log, string $message): void
     }
 }
 
+/**
+ * @return list<string>
+ */
+function cronMissingColumns(PDO $pdo, string $tableName, array $requiredColumns): array
+{
+    static $columnCache = [];
+
+    if (!isset($columnCache[$tableName])) {
+        try {
+            $statement = $pdo->prepare(
+                "SELECT COLUMN_NAME
+                 FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = ?"
+            );
+            $statement->execute([$tableName]);
+            $columnCache[$tableName] = array_fill_keys(
+                array_map('strval', $statement->fetchAll(PDO::FETCH_COLUMN)),
+                true
+            );
+        } catch (\PDOException $e) {
+            $columnCache[$tableName] = [];
+        }
+    }
+
+    $missing = [];
+    foreach ($requiredColumns as $columnName) {
+        if (!isset($columnCache[$tableName][$columnName])) {
+            $missing[] = (string)$columnName;
+        }
+    }
+
+    return $missing;
+}
+
 function runKoraCron(PDO $pdo): array
 {
     $log = [];
@@ -44,6 +79,17 @@ function runKoraCron(PDO $pdo): array
     ];
     $totalUnpublished = 0;
     foreach ($unpublishTables as $tableName => $config) {
+        $requiredColumns = $config['has_published']
+            ? ['unpublish_at', 'is_published']
+            : ['unpublish_at', 'status'];
+        $missingColumns = cronMissingColumns($pdo, $tableName, $requiredColumns);
+        if ($missingColumns !== []) {
+            cronAppendLog(
+                $log,
+                "Přeskočeno zrušení publikace pro {$tableName}: chybí sloupce " . implode(', ', $missingColumns)
+            );
+            continue;
+        }
         try {
             if ($config['has_published']) {
                 $statement = $pdo->prepare(
@@ -76,6 +122,14 @@ function runKoraCron(PDO $pdo): array
     $publishTables = ['cms_articles', 'cms_news', 'cms_podcasts'];
     $totalPublished = 0;
     foreach ($publishTables as $tableName) {
+        $missingColumns = cronMissingColumns($pdo, $tableName, ['publish_at', 'status', 'created_at']);
+        if ($missingColumns !== []) {
+            cronAppendLog(
+                $log,
+                "Přeskočeno plánované publikování pro {$tableName}: chybí sloupce " . implode(', ', $missingColumns)
+            );
+            continue;
+        }
         try {
             $statement = $pdo->prepare(
                 "UPDATE {$tableName}
@@ -93,6 +147,14 @@ function runKoraCron(PDO $pdo): array
     // Stránky a nástěnka (is_published místo status)
     $publishIsPublishedTables = ['cms_pages', 'cms_board', 'cms_events'];
     foreach ($publishIsPublishedTables as $tableName) {
+        $missingColumns = cronMissingColumns($pdo, $tableName, ['publish_at', 'is_published', 'created_at']);
+        if ($missingColumns !== []) {
+            cronAppendLog(
+                $log,
+                "Přeskočeno plánované publikování pro {$tableName}: chybí sloupce " . implode(', ', $missingColumns)
+            );
+            continue;
+        }
         try {
             $statement = $pdo->prepare(
                 "UPDATE {$tableName}

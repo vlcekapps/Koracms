@@ -11,6 +11,7 @@ require_once __DIR__ . '/http_test_helpers.php';
 
 $baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
 $pdo     = db_connect();
+$cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -6890,6 +6891,29 @@ try {
     }
     $failures++;
     echo '- cron runtime check failed: ' . $e->getMessage() . "\n";
+}
+
+echo "=== cron_guardrails ===\n";
+$cronGuardIssues = [];
+$cronGuardChecks = [
+    'cronMissingColumns helper' => str_contains($cronSource, 'function cronMissingColumns(PDO $pdo, string $tableName, array $requiredColumns): array'),
+    'unpublish skip message' => str_contains($cronSource, 'Přeskočeno zrušení publikace pro {$tableName}: chybí sloupce'),
+    'publish skip message' => str_contains($cronSource, 'Přeskočeno plánované publikování pro {$tableName}: chybí sloupce'),
+    'publish required columns guard' => str_contains($cronSource, "cronMissingColumns(\$pdo, \$tableName, ['publish_at', 'status', 'created_at'])"),
+    'unpublish required columns guard' => str_contains($cronSource, "\$requiredColumns = \$config['has_published']"),
+];
+foreach ($cronGuardChecks as $label => $ok) {
+    if (!$ok) {
+        $cronGuardIssues[] = $label;
+    }
+}
+if ($cronGuardIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($cronGuardIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
 }
 
 $installProbe = fetchUrl($baseUrl . '/install.php', '', 0);
