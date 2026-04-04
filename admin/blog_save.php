@@ -64,10 +64,10 @@ if ($title === '' || $content === '') {
 $existingArticle = null;
 if ($id !== null) {
     if (canManageOwnBlogOnly()) {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ? AND author_id = ?");
+        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL");
         $existingStmt->execute([$id, currentUserId()]);
     } else {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ?");
+        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ? AND deleted_at IS NULL");
         $existingStmt->execute([$id]);
     }
     $existingArticle = $existingStmt->fetch() ?: null;

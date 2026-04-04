@@ -53,7 +53,7 @@ if ($previewToken !== '') {
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
-             WHERE a.slug = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
+             WHERE a.slug = ? AND a.deleted_at IS NULL AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
         );
         $stmt->execute([$slug]);
     } else {
@@ -65,7 +65,7 @@ if ($previewToken !== '') {
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
-             WHERE a.id = ? AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
+             WHERE a.id = ? AND a.deleted_at IS NULL AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
         );
         $stmt->execute([$id]);
     }

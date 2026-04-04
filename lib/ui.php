@@ -352,10 +352,17 @@ function sortableJs(): string
 /**
  * Vrátí relativní čas v češtině (např. "před 5 minutami", "včera").
  */
-function relativeTime(string $datetime): string
+function relativeTime(?string $datetime): string
 {
+    if ($datetime === null || trim($datetime) === '') {
+        return '–';
+    }
+    try {
+        $then = new \DateTimeImmutable($datetime);
+    } catch (\Exception $e) {
+        return '–';
+    }
     $now  = new \DateTimeImmutable('now');
-    $then = new \DateTimeImmutable($datetime);
     $diff = $now->getTimestamp() - $then->getTimestamp();
 
     if ($diff < 0) {
@@ -477,9 +484,11 @@ function acquireContentLock(string $entityType, int $entityId): ?array
             return null;
         }
 
-        // Žádný zámek – vytvoříme nový
+        // Žádný zámek – vytvoříme nový (atomicky přes ON DUPLICATE KEY UPDATE pro případ race condition)
         $pdo->prepare(
-            "INSERT INTO cms_content_locks (entity_type, entity_id, user_id, locked_at, expires_at) VALUES (?, ?, ?, NOW(), ?)"
+            "INSERT INTO cms_content_locks (entity_type, entity_id, user_id, locked_at, expires_at)
+             VALUES (?, ?, ?, NOW(), ?)
+             ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), locked_at = NOW(), expires_at = VALUES(expires_at)"
         )->execute([$entityType, $entityId, $userId, $expiresAt]);
 
         return null;

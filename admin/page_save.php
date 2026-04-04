@@ -79,7 +79,7 @@ try {
         $oldStmt = $pdo->prepare(
             "SELECT id, title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, unpublish_at, admin_note, preview_token
              FROM cms_pages
-             WHERE id = ?"
+             WHERE id = ? AND deleted_at IS NULL"
         );
         $oldStmt->execute([$id]);
         $oldData = $oldStmt->fetch();

@@ -124,5 +124,6 @@ require_once dirname(__DIR__) . '/lib/content.php';
 require_once dirname(__DIR__) . '/lib/pagination.php';
 require_once dirname(__DIR__) . '/lib/totp.php';
 require_once dirname(__DIR__) . '/lib/mail.php';
+require_once dirname(__DIR__) . '/lib/ui.php';
 
 ob_end_clean();

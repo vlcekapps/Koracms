@@ -76,7 +76,7 @@ $existing = [
 ];
 $existingDownload = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_downloads WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_downloads WHERE id = ? AND deleted_at IS NULL");
     $existingStmt->execute([$id]);
     $existingDownload = $existingStmt->fetch();
     if (!$existingDownload) {

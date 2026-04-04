@@ -21,7 +21,7 @@ if ($question === '' || trim($answer) === '') {
 
 $existingFaq = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT id, status FROM cms_faqs WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT id, status FROM cms_faqs WHERE id = ? AND deleted_at IS NULL");
     $existingStmt->execute([$id]);
     $existingFaq = $existingStmt->fetch() ?: null;
     if (!$existingFaq) {
@@ -49,7 +49,7 @@ foreach ($pdo->query("SELECT id, name FROM cms_faq_categories ORDER BY sort_orde
 }
 
 if ($existingFaq) {
-    $oldStmt = $pdo->prepare("SELECT * FROM cms_faqs WHERE id = ?");
+    $oldStmt = $pdo->prepare("SELECT * FROM cms_faqs WHERE id = ? AND deleted_at IS NULL");
     $oldStmt->execute([$id]);
     $oldData = $oldStmt->fetch();
 

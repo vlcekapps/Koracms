@@ -276,6 +276,18 @@ verifyCsrf(); // stary token = previous, musi projit
 $token3 = csrfToken();
 assert_true($token2 !== $token3, 'CSRF token rotated after prev-token verify');
 
+// ─── 15. relativeTime() ─────────────────────────────────────────��───────────
+
+test_section('relativeTime()');
+
+assert_equals('–', relativeTime(null), 'null returns dash');
+assert_equals('–', relativeTime(''), 'empty string returns dash');
+assert_equals('–', relativeTime('not-a-date'), 'invalid date returns dash');
+assert_equals('právě teď', relativeTime(date('Y-m-d H:i:s')), 'now returns prave ted');
+assert_equals('právě teď', relativeTime(date('Y-m-d H:i:s', time() + 60)), 'future returns prave ted');
+assert_contains('minut', relativeTime(date('Y-m-d H:i:s', time() - 300)), '5 min ago contains minutami');
+assert_contains('hodin', relativeTime(date('Y-m-d H:i:s', time() - 7200)), '2 hours ago contains hodin');
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SOUHRN
 // ═══════════════════════════════════════════════════════════════════════════

@@ -7,7 +7,7 @@ $pdo = db_connect();
 $id = inputInt('post', 'id');
 $existingDocument = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ? AND deleted_at IS NULL");
     $existingStmt->execute([$id]);
     $existingDocument = $existingStmt->fetch() ?: null;
     if (!$existingDocument) {

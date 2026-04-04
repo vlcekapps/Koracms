@@ -36,6 +36,7 @@ if (isModuleEnabled('blog')) {
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_blogs b ON b.id = a.blog_id
          WHERE a.author_id = ?
+           AND a.deleted_at IS NULL
            AND a.status = 'published'
            AND (a.publish_at IS NULL OR a.publish_at <= NOW())
          ORDER BY COALESCE(a.publish_at, a.created_at) DESC, a.id DESC"

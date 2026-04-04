@@ -1184,7 +1184,7 @@ function placePublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
 
-    return "COALESCE({$prefix}status, 'published') = 'published'"
+    return "{$prefix}deleted_at IS NULL AND COALESCE({$prefix}status, 'published') = 'published'"
         . " AND COALESCE({$prefix}is_published, 1) = 1";
 }
 

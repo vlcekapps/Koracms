@@ -15,6 +15,7 @@ if ($previewToken !== '') {
         "SELECT * FROM cms_pages
          WHERE slug = ?
            AND blog_id IS NULL
+           AND deleted_at IS NULL
            AND preview_token = ?"
     );
     $stmt->execute([$slug, $previewToken]);
@@ -23,6 +24,7 @@ if ($previewToken !== '') {
         "SELECT * FROM cms_pages
          WHERE slug = ?
            AND blog_id IS NULL
+           AND deleted_at IS NULL
            AND status = 'published'
            AND is_published = 1
            AND (publish_at IS NULL OR publish_at <= NOW())"

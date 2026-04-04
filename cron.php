@@ -73,7 +73,7 @@ function runKoraCron(PDO $pdo): array
     }
 
     // 1b. Plánované publikování (publish_at)
-    $publishTables = ['cms_articles', 'cms_news'];
+    $publishTables = ['cms_articles', 'cms_news', 'cms_podcasts'];
     $totalPublished = 0;
     foreach ($publishTables as $tableName) {
         try {

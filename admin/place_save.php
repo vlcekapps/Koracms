@@ -44,7 +44,7 @@ if ($name === '') {
 
 $existingPlace = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_places WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_places WHERE id = ? AND deleted_at IS NULL");
     $existingStmt->execute([$id]);
     $existingPlace = $existingStmt->fetch() ?: null;
     if (!$existingPlace) {

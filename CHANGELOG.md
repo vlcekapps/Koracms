@@ -24,6 +24,13 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **VERSION soubor – bezpečný fallback** – `db.php` nově ošetřuje chybějící `VERSION` soubor a místo PHP 8.1+ deprecation warning vrátí `'0.0.0'`
 
 ### Opraveno
+- **Soft-deleted obsah neviditelný ve všech veřejných i admin cestách** – přidán filtr `deleted_at IS NULL` do veřejných dotazů na stránky (`page.php`), články (`blog/article.php`), autory (`author.php`) a do všech admin save handlerů (10 souborů); smazané položky již nejdou editovat ani zobrazit přes preview token; opravena funkce `placePublicVisibilitySql()`, která chyběla
+- **Content lock race condition** – `acquireContentLock()` nyní používá `INSERT ... ON DUPLICATE KEY UPDATE` místo dvou separátních dotazů, čímž eliminuje souběžné vytvoření duplicitních zámků
+- **Dark mode: autosave, SEO náhled a počítadlo slov** – inline skripty v admin panelu nyní používají CSS custom properties místo hardcoded barev, takže správně fungují i v tmavém režimu
+- **relativeTime() crash na null/invalid** – funkce nyní přijímá nullable string a při nevalidním datu vrátí `–` místo fatální výjimky
+- **Kategorie: ochrana proti cirkulární referenci** – při editaci kategorie se kontroluje, zda navrhovaný nadřazený prvek není potomek editované kategorie (zabránění smyčce A→B→A)
+- **Autosave: podpora checkbox a radio polí** – lokální koncept nyní ukládá i stav zaškrtávacích a přepínacích polí ve formulářích
+- **Podcasty v cron publish_at** – naplánované epizody podcastů se nyní automaticky publikují přes cron, stejně jako články a novinky
 - **WCAG 2.2 – 11 obrázků s obsahem nově má popisný alt text** – náhledy článků, stažení, událostí, míst a nástěnky ve widgetech i ve views měly prázdný `alt=""`; nově se jako alt text používá název/titulek příslušného záznamu (obrázky uvnitř `aria-hidden` duplicitních odkazů na homepage a v indexu nástěnky zůstávají správně dekorativní)
 
 ### Přidáno

@@ -107,7 +107,7 @@ $slug = $uniqueSlug;
 
 $existingEvent = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ? AND deleted_at IS NULL");
     $existingStmt->execute([$id]);
     $existingEvent = $existingStmt->fetch() ?: null;
     if (!$existingEvent) {

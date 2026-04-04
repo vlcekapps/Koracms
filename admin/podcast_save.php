@@ -74,7 +74,7 @@ $existing = [
 ];
 $oldData = null;
 if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_podcasts WHERE id = ?");
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_podcasts WHERE id = ? AND deleted_at IS NULL");
     $existingStmt->execute([$id]);
     $existingRow = $existingStmt->fetch();
     if (!$existingRow) {

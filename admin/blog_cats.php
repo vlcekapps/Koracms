@@ -39,6 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($parentId === $updateId) {
             $parentId = null;
         }
+        // Ochrana proti cyklické referenci – ověříme, že navržený rodič není přímým potomkem
+        if ($parentId !== null) {
+            $childStmt = $pdo->prepare("SELECT id FROM cms_categories WHERE parent_id = ? AND blog_id = ?");
+            $childStmt->execute([$updateId, $blogId]);
+            $childIds = array_column($childStmt->fetchAll(), 'id');
+            if (in_array($parentId, array_map('intval', $childIds), true)) {
+                $parentId = null;
+            }
+        }
         $pdo->prepare("UPDATE cms_categories SET name = ?, parent_id = ? WHERE id = ? AND blog_id = ?")->execute([$name, $parentId, $updateId, $blogId]);
         $success = true;
         $editId = null;
