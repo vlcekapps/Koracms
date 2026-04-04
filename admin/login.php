@@ -77,14 +77,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Přihlášení – Administrace</title>
   <style nonce="<?= cspNonce() ?>">
-    body { font-family: system-ui, sans-serif; max-width: 380px; margin: 4rem auto; padding: 0 1rem; }
+    :root {
+      --login-bg: #ffffff;
+      --login-text: #1a1a2e;
+      --login-error: #c00;
+      --login-focus: #005fcc;
+      --login-input-bg: #fff;
+      --login-input-border: #aaa;
+      --login-btn-bg: #f8fafc;
+      --login-btn-text: #102a43;
+      --login-btn-border: #c6d0db;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --login-bg: #1a1a2e;
+        --login-text: #e0e0e0;
+        --login-error: #f08080;
+        --login-focus: #4da6ff;
+        --login-input-bg: #252540;
+        --login-input-border: #4a4a65;
+        --login-btn-bg: #252540;
+        --login-btn-text: #e0e0e0;
+        --login-btn-border: #4a4a65;
+      }
+    }
+    body { font-family: system-ui, sans-serif; max-width: 380px; margin: 4rem auto; padding: 0 1rem; background: var(--login-bg); color: var(--login-text); }
     label { display: block; margin-top: 1rem; font-weight: bold; }
-    input { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; }
-    button { margin-top: 1.5rem; padding: .5rem 1.5rem; }
-    .error { color: #c00; }
-    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }
+    input { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; background: var(--login-input-bg); color: var(--login-text); border: 1px solid var(--login-input-border); }
+    button { margin-top: 1.5rem; padding: .5rem 1.5rem; background: var(--login-btn-bg); color: var(--login-btn-text); border: 1px solid var(--login-btn-border); cursor: pointer; }
+    .error { color: var(--login-error); }
+    :focus-visible { outline: 3px solid var(--login-focus); outline-offset: 2px; }
     .skip-link { position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden; z-index:999; }
-    .skip-link:focus { position:fixed; top:0; left:0; width:auto; height:auto; padding:.75rem 1.5rem; background:#005fcc; color:#fff; text-decoration:none; z-index:9999; }
+    .skip-link:focus { position:fixed; top:0; left:0; width:auto; height:auto; padding:.75rem 1.5rem; background:var(--login-focus); color:#fff; text-decoration:none; z-index:9999; }
   </style>
 </head>
 <body>
