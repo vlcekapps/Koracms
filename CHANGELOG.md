@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Opraveno
+- **Admin login – návrat na původně otevřenou admin stránku po přihlášení** – chráněné admin stránky a `migrate.php` teď po přihlášení i po 2FA vrátí správce zpět na původní bezpečný interní cíl místo dashboardu; externí a veřejné interní redirecty se ignorují a spadnou na `/admin/index.php`
+
 ## [3.3.5] – 2026-04-04
 
 ### Opraveno
