@@ -1,0 +1,9 @@
+parameters:
+    level: 0
+    paths:
+        - build/lint_php.php
+        - lib/backup.php
+    excludePaths:
+        - vendor
+        - dist
+        - uploads

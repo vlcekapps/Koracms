@@ -82,7 +82,7 @@ function cookieBanner(): string
 /**
  * Vrátí HTML meta tagů pro SEO a Open Graph.
  *
- * @param array{title?:string,description?:string,image?:string,url?:string,type?:string} $meta
+ * @param array{title?:string,description?:string,image?:string,url?:string,canonical?:string,type?:string} $meta
  */
 function seoMeta(array $meta = []): string
 {
@@ -92,6 +92,9 @@ function seoMeta(array $meta = []): string
     $desc  = isset($meta['description']) ? h($meta['description']) : h(getSetting('site_description', ''));
     $image = $meta['image'] ?? '';
     $url   = isset($meta['url'])         ? h($meta['url'])         : '';
+    $canonical = isset($meta['canonical'])
+        ? seoCanonicalUrl((string)$meta['canonical'])
+        : seoCanonicalUrl((string)($meta['url'] ?? ''));
     $type  = isset($meta['type'])        ? h($meta['type'])        : 'website';
 
     if ($image === '') {
@@ -102,6 +105,7 @@ function seoMeta(array $meta = []): string
     }
 
     $out  = "  <meta name=\"description\" content=\"{$desc}\">\n";
+    if ($canonical !== '') $out .= '  <link rel="canonical" href="' . h($canonical) . "\">\n";
     $out .= "  <meta property=\"og:type\" content=\"{$type}\">\n";
     $out .= "  <meta property=\"og:title\" content=\"{$title}\">\n";
     $out .= "  <meta property=\"og:site_name\" content=\"{$siteName}\">\n";
@@ -109,6 +113,46 @@ function seoMeta(array $meta = []): string
     if ($image !== '') $out .= "  <meta property=\"og:image\" content=\"{$image}\">\n";
     if ($url   !== '') $out .= "  <meta property=\"og:url\" content=\"{$url}\">\n";
     return $out;
+}
+
+function seoCanonicalUrl(string $target): string
+{
+    $target = trim(str_replace(["\r", "\n"], '', $target));
+    if ($target === '') {
+        return '';
+    }
+
+    $parts = parse_url($target);
+    if ($parts === false) {
+        return '';
+    }
+
+    if (isset($parts['scheme']) || isset($parts['host'])) {
+        $scheme = strtolower((string)($parts['scheme'] ?? ''));
+        $host = (string)($parts['host'] ?? '');
+        if (!in_array($scheme, ['http', 'https'], true) || $host === '' || isset($parts['user']) || isset($parts['pass'])) {
+            return '';
+        }
+
+        $port = isset($parts['port']) ? ':' . (int)$parts['port'] : '';
+        $path = (string)($parts['path'] ?? '/');
+        $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+        return $scheme . '://' . $host . $port . $path . $query;
+    }
+
+    $safeTarget = internalRedirectTarget($target, '');
+    if ($safeTarget === '') {
+        return '';
+    }
+
+    if (BASE_URL !== '' && ($safeTarget === BASE_URL || str_starts_with($safeTarget, BASE_URL . '/'))) {
+        $safeTarget = substr($safeTarget, strlen(BASE_URL));
+        if ($safeTarget === '') {
+            $safeTarget = '/';
+        }
+    }
+
+    return siteUrl($safeTarget);
 }
 
 /**

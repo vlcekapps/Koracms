@@ -20,6 +20,7 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 - [Bezpečnost](#bezpečnost)
 - [Přístupnost](#přístupnost)
 - [Zálohování a údržba](#zálohování-a-údržba)
+- [Vývoj a CI](#vývoj-a-ci)
 - [Řešení problémů](#řešení-problémů)
 - [Nginx](#nginx)
 - [Ověření po změnách](#ověření-po-změnách)
@@ -274,6 +275,8 @@ Přehled blogů v administraci nově nabízí přímé odkazy na články, kateg
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
 
+Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`.
+
 ---
 
 ## Šablony a vzhled
@@ -417,6 +420,8 @@ Cron každý den vytvoří SQL zálohu databáze do privátního úložiště (`
 
 V administraci: **Import / Export → Záloha databáze**. Stáhne aktuální SQL export.
 
+Automatické i ruční SQL zálohy validují názvy tabulek a sloupců přes allowlist identifikátorů. Exportují se jen očekávané tabulky CMS s názvem `cms_*`.
+
 ### JSON export a import
 
 V administraci: **Import / Export** lze obsah exportovat i znovu importovat jako JSON.
@@ -432,6 +437,36 @@ V administraci: **Integrita souborů**. Porovná SHA-256 otisky PHP souborů s u
 ### Režim údržby
 
 V administraci: **Obecná nastavení → Provoz webu**. Zapne stránku údržby s HTTP 503 pro návštěvníky. Přihlášení administrátoři vidí web normálně.
+
+### Health check
+
+Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
+
+- databázové připojení
+- zapisovatelnost privátního úložiště
+- orientační stav poslední SQL zálohy
+
+Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vrací HTTP 200, při selhání kritické kontroly HTTP 503.
+
+---
+
+## Vývoj a CI
+
+Produkční běh Kora CMS zůstává bez Composer závislostí. Composer je použitý pouze pro vývojové nástroje v `require-dev`.
+
+Základní lokální kontrola:
+
+```bash
+composer install
+composer ci:basic
+```
+
+`composer ci:basic` spustí:
+
+- PHP lint přes `build/lint_php.php`
+- unit testy přes `build/unit_tests.php`
+
+GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`.
 
 ---
 
@@ -470,9 +505,12 @@ server {
 
     # Zakázané soubory
     location ~ ^/(config|db|auth)\.php$ { deny all; }
+    location ~ ^/(composer\.(json|lock)|phpstan\.neon\.dist|\.php-cs-fixer\.dist\.php)$ { deny all; }
     location ~ \.(inc|log|sql|bak|sh|cfg)$ { deny all; }
     location ~ /\.env { deny all; }
     location ~ /\.git { deny all; }
+    location ^~ /.github/ { deny all; }
+    location ^~ /vendor/ { deny all; }
 
     # Chráněné adresáře
     location ^~ /uploads/forms/ { deny all; }
@@ -497,6 +535,7 @@ server {
     location ~ ^/podcast/([a-z0-9\-]+)/?$ { rewrite ^/podcast/(.+?)/?$ /podcast/show.php?slug=$1 last; }
 
     # XML sitemap
+    location = /robots.txt { rewrite ^ /robots.php last; }
     location = /sitemap.xml { rewrite ^ /sitemap.php last; }
 
     # Multi-blog catch-all (musí být poslední)
@@ -528,6 +567,7 @@ Toto je výchozí šablona. Upravte cesty, `server_name` a `fastcgi_pass` podle 
 Před nasazením změn spusťte:
 
 ```bash
+composer ci:basic
 php build/runtime_audit.php
 php build/http_integration.php
 ```
@@ -535,7 +575,7 @@ php build/http_integration.php
 Při větších zásazích doplňte i PHP lint:
 
 ```bash
-php -l cesta/k/souboru.php
+php build/lint_php.php
 ```
 
 ---

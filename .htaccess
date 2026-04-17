@@ -5,8 +5,13 @@ Options -Indexes
     Require all denied
 </FilesMatch>
 
+# Ochrana vývojových a CI konfiguračních souborů
+<FilesMatch "^(composer\.(json|lock)|phpstan\.neon\.dist|\.php-cs-fixer\.dist\.php)$">
+    Require all denied
+</FilesMatch>
+
 # Blokovat ploché datové soubory
-<FilesMatch "\.(inc|txt|log|sql|bak|sh|cfg|env)$">
+<FilesMatch "^(?!robots\.txt$).*\.(inc|txt|log|sql|bak|sh|cfg|env)$">
     Require all denied
 </FilesMatch>
 
@@ -16,6 +21,8 @@ Options -Indexes
 </FilesMatch>
 <IfModule mod_rewrite.c>
     RewriteRule ^\.git - [F,L]
+    RewriteRule ^\.github - [F,L]
+    RewriteRule ^vendor/ - [F,L]
 </IfModule>
 
 # Bezpečnostní hlavičky
@@ -42,6 +49,10 @@ Options -Indexes
     RewriteRule ^uploads/podcasts/ - [F,L,NC]
     # SVG z knihovny médií se nikdy neservírují přímo z uploads/media
     RewriteRule ^uploads/media/.+\.svg$ - [F,L,NC]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^robots\.txt$ robots.php [L,QSA,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

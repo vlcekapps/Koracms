@@ -109,7 +109,26 @@ assert_equals('', internalRedirectTarget("/admin\x00evil"), 'null byte rejected'
 assert_equals('/page.php?id=5#section', internalRedirectTarget('/page.php?id=5#section'), 'query and fragment preserved');
 assert_equals('', internalRedirectTarget('admin/index.php'), 'relative path (no leading /) rejected');
 
-// ─── 4. slugify() ───────────────────────────────────────────────────────────
+// ─── 4. SQL backup identifier helpers ───────────────────────────────────────
+
+test_section('SQL backup identifiers');
+
+assert_true(koraSqlIdentifierAllowed('cms_articles'), 'CMS table identifier allowed');
+assert_true(koraSqlIdentifierAllowed('cms_2026_backup'), 'alphanumeric underscore identifier allowed');
+assert_false(koraSqlIdentifierAllowed('cms-users'), 'hyphenated identifier rejected');
+assert_false(koraSqlIdentifierAllowed('cms_users;DROP'), 'SQL fragment identifier rejected');
+assert_equals('`cms_articles`', koraSqlQuoteIdentifier('cms_articles'), 'identifier quoted with backticks');
+assert_equals('`id`, `title`', koraSqlQuoteIdentifierList(['id', 'title']), 'identifier list quoted');
+
+$invalidIdentifierRejected = false;
+try {
+    koraSqlQuoteIdentifier('cms_users`evil');
+} catch (InvalidArgumentException $e) {
+    $invalidIdentifierRejected = true;
+}
+assert_true($invalidIdentifierRejected, 'invalid quoted identifier throws');
+
+// ─── 5. slugify() ───────────────────────────────────────────────────────────
 
 test_section('slugify()');
 
@@ -127,7 +146,7 @@ assert_equals('laska', slugify('Láska'), 'Slovak l with caron');
 assert_equals('strasse', slugify('Straße'), 'German eszett');
 assert_equals('aerger', slugify('Ärger'), 'German umlaut ae');
 
-// ─── 5. formatCzechDate() ───────────────────────────────────────────────────
+// ─── 6. formatCzechDate() ───────────────────────────────────────────────────
 
 test_section('formatCzechDate()');
 
@@ -136,7 +155,7 @@ assert_equals('25. prosince 2024, 00:00', formatCzechDate('2024-12-25 00:00:00')
 assert_equals('', formatCzechDate(''), 'empty string returns empty (bugfix)');
 assert_equals('not-a-date', formatCzechDate('not-a-date'), 'invalid date returns escaped input');
 
-// ─── 6. readingTime() ───────────────────────────────────────────────────────
+// ─── 7. readingTime() ───────────────────────────────────────────────────────
 
 test_section('readingTime()');
 
@@ -145,7 +164,7 @@ assert_equals(1, readingTime('hello'), 'single word = 1 min');
 assert_equals(1, readingTime(str_repeat('word ', 200)), '200 words = 1 min');
 assert_equals(2, readingTime(str_repeat('word ', 400)), '400 words = 2 min');
 
-// ─── 7. paginateArray() ────────────────────────────────────────────────────
+// ─── 8. paginateArray() ────────────────────────────────────────────────────
 
 test_section('paginateArray()');
 
@@ -172,7 +191,7 @@ assert_equals(1, $p['perPage'], 'perPage 0 treated as 1');
 $p = paginateArray(-5, 10, 1);
 assert_equals(0, $p['total'], 'negative total treated as 0');
 
-// ─── 8. formatFileSize() ───────────────────────────────────────────────────
+// ─── 9. formatFileSize() ───────────────────────────────────────────────────
 
 test_section('formatFileSize()');
 
@@ -182,7 +201,7 @@ assert_equals('2 kB', formatFileSize(2048), '2 kilobytes');
 assert_equals('1 MB', formatFileSize(1048576), '1 megabyte');
 assert_equals('0 B', formatFileSize(0), 'zero bytes');
 
-// ─── 9. mailSanitizeHeaderValue() ──────────────────────────────────────────
+// ─── 10. mailSanitizeHeaderValue() ─────────────────────────────────────────
 
 test_section('mailSanitizeHeaderValue()');
 
@@ -190,7 +209,32 @@ assert_equals('test Bcc: evil@hacker.com', mailSanitizeHeaderValue("test\r\nBcc:
 assert_equals('Hello World', mailSanitizeHeaderValue('Hello World'), 'clean value passes through');
 assert_equals('', mailSanitizeHeaderValue(''), 'empty string');
 
-// ─── 10. base32Decode() + totpCalculate() + totpUri() ──────────────────────
+// ─── 11. SEO canonical URL ─────────────────────────────────────────────────
+
+test_section('seoCanonicalUrl()');
+
+$oldHttps = $_SERVER['HTTPS'] ?? null;
+$oldHttpHost = $_SERVER['HTTP_HOST'] ?? null;
+$_SERVER['HTTPS'] = 'on';
+$_SERVER['HTTP_HOST'] = 'example.test';
+
+assert_equals('https://example.test/clanek', seoCanonicalUrl('/clanek'), 'relative path converted to absolute canonical URL');
+assert_equals('https://example.com/clanek?strana=2', seoCanonicalUrl('https://example.com/clanek?strana=2#cast'), 'absolute canonical URL keeps query and drops fragment');
+assert_equals('', seoCanonicalUrl('javascript:alert(1)'), 'unsafe canonical URL rejected');
+assert_contains('<link rel="canonical" href="https://example.com/clanek">', seoMeta(['url' => 'https://example.com/clanek']), 'seoMeta renders canonical link');
+
+if ($oldHttps === null) {
+    unset($_SERVER['HTTPS']);
+} else {
+    $_SERVER['HTTPS'] = $oldHttps;
+}
+if ($oldHttpHost === null) {
+    unset($_SERVER['HTTP_HOST']);
+} else {
+    $_SERVER['HTTP_HOST'] = $oldHttpHost;
+}
+
+// ─── 12. base32Decode() + totpCalculate() + totpUri() ──────────────────────
 
 test_section('base32Decode()');
 

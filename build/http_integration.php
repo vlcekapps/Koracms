@@ -74,6 +74,29 @@ function httpIntegrationRestoreSettings(array $settings): void
 }
 
 /**
+ * Opakované spuštění HTTP integrace nesmí selhat jen proto, že předchozí běh
+ * vyčerpal lokální login rate-limit.
+ *
+ * @param array<int, string> $actions
+ */
+function httpIntegrationClearLocalRateLimits(PDO $pdo, array $actions): void
+{
+    $ids = [];
+    foreach (['127.0.0.1', '::1', 'unknown'] as $ipAddress) {
+        foreach ($actions as $action) {
+            $ids[] = hash('sha256', $ipAddress . '|' . $action);
+        }
+    }
+
+    if ($ids === []) {
+        return;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $pdo->prepare("DELETE FROM cms_rate_limit WHERE id IN ({$placeholders})")->execute($ids);
+}
+
+/**
  * @return array<string, string>
  */
 function httpIntegrationSettingsPostFields(array $formState): array
@@ -543,6 +566,8 @@ try {
     }
 
     httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
+
+    httpIntegrationClearLocalRateLimits($pdo, ['login', 'login_2fa']);
 
     $adminLoginRedirectIssues = [];
     $createAdminUserStmt = $pdo->prepare(

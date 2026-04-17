@@ -6,8 +6,14 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **Foundation tooling – dev-only Composer, základní GitHub Actions a cross-platform PHP lint** – produkční runtime zůstává bez závislostí, ale lokální vývoj a CI nově umí `composer ci:basic`, PHP lint všech zdrojových souborů a unit testy
+- **SEO/provoz – dynamický `robots.txt`, canonical link a `health.php`** – web nově vystavuje robots pravidla se sitemapou, `seoMeta()` umí generovat `<link rel="canonical">` a `/health.php` vrací minimální JSON stav databáze, úložiště a čerstvosti zálohy
+
 ### Opraveno
 - **Admin login – návrat na původně otevřenou admin stránku po přihlášení** – chráněné admin stránky a `migrate.php` teď po přihlášení i po 2FA vrátí správce zpět na původní bezpečný interní cíl místo dashboardu; externí a veřejné interní redirecty se ignorují a spadnou na `/admin/index.php`
+- **SQL zálohy – názvy tabulek a sloupců pro export procházejí allowlist validací** – automatická i ruční SQL záloha používá sdílené helpery pro bezpečné citování identifikátorů a ignoruje neočekávané názvy mimo `cms_*`
+- **Quality guardrails – runtime a HTTP audity už nejsou závislé na konkrétním ukázkovém obsahu webu** – prázdné seznamy se ověřují přes korektní empty state, snippet nápověda respektuje zapnuté moduly a opakované HTTP login testy si vyčistí lokální rate-limit
 
 ## [3.3.5] – 2026-04-04
 

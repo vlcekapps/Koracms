@@ -12,6 +12,14 @@ require_once __DIR__ . '/http_test_helpers.php';
 $baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
 $pdo     = db_connect();
 $cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
+$adminBackupSource = (string) file_get_contents(__DIR__ . '/../admin/backup.php');
+$backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php');
+$uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
+$htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
+$robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
+$healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
+$composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
+$ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -2948,18 +2956,33 @@ foreach ($pages as $page) {
         'admin_user_create_form',
     ];
     if (in_array($page['label'], $htmlSnippetHelpLabels, true)) {
-        foreach ([
+        $expectedSnippetFragments = [
             '[audio]https://example.test/audio.mp3[/audio]',
             '[video]https://example.test/video.mp4[/video]',
-            '[form]slug-formulare[/form]',
-            '[poll]slug-ankety[/poll]',
-            '[download]slug-polozky[/download]',
-            '[podcast]slug-poradu[/podcast]',
-            '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
-            '[place]slug-mista[/place]',
-            '[event]slug-udalosti[/event]',
-            '[board]slug-oznameni[/board]',
-        ] as $expectedFragment) {
+        ];
+        if (isModuleEnabled('forms')) {
+            $expectedSnippetFragments[] = '[form]slug-formulare[/form]';
+        }
+        if (isModuleEnabled('polls')) {
+            $expectedSnippetFragments[] = '[poll]slug-ankety[/poll]';
+        }
+        if (isModuleEnabled('downloads')) {
+            $expectedSnippetFragments[] = '[download]slug-polozky[/download]';
+        }
+        if (isModuleEnabled('podcast')) {
+            $expectedSnippetFragments[] = '[podcast]slug-poradu[/podcast]';
+            $expectedSnippetFragments[] = '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]';
+        }
+        if (isModuleEnabled('places')) {
+            $expectedSnippetFragments[] = '[place]slug-mista[/place]';
+        }
+        if (isModuleEnabled('events')) {
+            $expectedSnippetFragments[] = '[event]slug-udalosti[/event]';
+        }
+        if (isModuleEnabled('board')) {
+            $expectedSnippetFragments[] = '[board]slug-oznameni[/board]';
+        }
+        foreach ($expectedSnippetFragments as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'HTML snippet helper is missing fragment: ' . $expectedFragment;
             }
@@ -3238,11 +3261,17 @@ foreach ($pages as $page) {
         }
         foreach ([
             'Kategorie FAQ',
-            'Přehled otázek FAQ',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin faq page is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (
+            !str_contains($result['body'], 'Přehled otázek FAQ')
+            && !str_contains($result['body'], 'Zatím tu nejsou žádné otázky.')
+            && !str_contains($result['body'], 'Pro zvolený filtr tu teď nejsou žádné otázky.')
+        ) {
+            $issues[] = 'admin faq page is missing both list caption and empty state';
         }
         if (str_contains($result['body'], 'Správa kategorií')) {
             $issues[] = 'admin faq page still contains outdated category action wording';
@@ -3391,7 +3420,11 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin board status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled položek sekce')) {
+        if (
+            !str_contains($result['body'], 'Přehled položek sekce')
+            && !str_contains($result['body'], 'Zatím tu nejsou žádné položky této sekce.')
+            && !str_contains($result['body'], 'Pro zvolený filtr tu teď nejsou žádné položky.')
+        ) {
             $issues[] = 'admin board table caption was not updated';
         }
         if (!str_contains($result['body'], 'Návštěvníci tuto sekci na webu vidí jako')) {
@@ -3439,11 +3472,13 @@ foreach ($pages as $page) {
             'Kontaktní formulář',
             'Nahlášení problému s obsahem',
             'Na jednom místě připravíte veřejné formuláře',
-            'Otevřené',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin forms page is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'Přehled formulářů') && !str_contains($result['body'], 'Otevřené')) {
+            $issues[] = 'admin forms list is missing open submissions column';
         }
         if (
             !str_contains($result['body'], 'Přehled formulářů')
@@ -3671,7 +3706,11 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'name="status"')) {
             $issues[] = 'admin pages status filter is missing';
         }
-        if (!str_contains($result['body'], 'Přehled statických stránek')) {
+        if (
+            !str_contains($result['body'], 'Přehled statických stránek')
+            && !str_contains($result['body'], 'Zatím tu nejsou žádné statické stránky.')
+            && !str_contains($result['body'], 'Pro zvolený filtr tu teď nejsou žádné statické stránky.')
+        ) {
             $issues[] = 'admin pages table caption was not updated';
         }
     }
@@ -3723,11 +3762,17 @@ foreach ($pages as $page) {
             'res_resource_form.php',
             'Kategorie zdrojů rezervací',
             'Lokality rezervací',
-            'Přehled zdrojů rezervací',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin reservation resources is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (
+            !str_contains($result['body'], 'Přehled zdrojů rezervací')
+            && !str_contains($result['body'], 'Zatím tu nejsou žádné zdroje rezervací.')
+            && !str_contains($result['body'], 'Pro zvolený filtr tu teď nejsou žádné zdroje rezervací.')
+        ) {
+            $issues[] = 'admin reservation resources is missing both list caption and empty state';
         }
     }
 
@@ -4485,7 +4530,7 @@ foreach ($pages as $page) {
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog listing is missing public author links';
     }
-    if ($page['label'] === 'blog_index' && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], authorIndexPath())) {
+    if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], authorIndexPath())) {
         $issues[] = 'blog listing is missing authors index link';
     }
     if ($page['label'] === 'blog_index' && !str_contains($result['body'], '/feed.php?blog=')) {
@@ -6901,6 +6946,9 @@ $cronGuardChecks = [
     'publish skip message' => str_contains($cronSource, 'Přeskočeno plánované publikování pro {$tableName}: chybí sloupce'),
     'publish required columns guard' => str_contains($cronSource, "cronMissingColumns(\$pdo, \$tableName, ['publish_at', 'status', 'created_at'])"),
     'unpublish required columns guard' => str_contains($cronSource, "\$requiredColumns = \$config['has_published']"),
+    'cron backup table allowlist' => str_contains($cronSource, 'koraBackupTableNames($pdo)') && str_contains($cronSource, 'koraSqlQuoteIdentifier($tableName)'),
+    'manual backup table allowlist' => str_contains($adminBackupSource, 'koraBackupTableNames($pdo)') && str_contains($adminBackupSource, 'koraSqlQuoteIdentifier($table)'),
+    'backup helper validates identifiers' => str_contains($backupHelperSource, 'function koraSqlIdentifierAllowed') && str_contains($backupHelperSource, '/\A[A-Za-z0-9_]+\z/'),
 ];
 foreach ($cronGuardChecks as $label => $ok) {
     if (!$ok) {
@@ -6912,6 +6960,61 @@ if ($cronGuardIssues === []) {
 } else {
     $failures++;
     foreach ($cronGuardIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== foundation_guardrails ===\n";
+$foundationIssues = [];
+$foundationChecks = [
+    'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
+        && str_contains($composerSource, 'phpstan/phpstan')
+        && str_contains($composerSource, 'friendsofphp/php-cs-fixer')
+        && str_contains($composerSource, '"ci:basic"'),
+    'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
+        && str_contains($ciWorkflowSource, 'shivammathur/setup-php'),
+    'dev tooling is protected from direct web access' => str_contains($htaccessSource, 'composer\.(json|lock)')
+        && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
+        && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),
+    'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
+        && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
+        && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')'),
+    'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
+        && str_contains($uiSource, '<link rel="canonical" href="')
+        && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
+    'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
+        && str_contains($healthSource, "db_connect()->query('SELECT 1')")
+        && str_contains($healthSource, "'database' => ['status' => 'fail']")
+        && str_contains($healthSource, "'storage' => ['status' => 'fail']"),
+];
+foreach ($foundationChecks as $label => $ok) {
+    if (!$ok) {
+        $foundationIssues[] = $label;
+    }
+}
+
+$robotsProbe = fetchUrl($baseUrl . '/robots.txt', '', 0);
+if (!str_contains($robotsProbe['status'], '200')) {
+    $foundationIssues[] = 'robots.txt did not return 200';
+} elseif (!str_contains($robotsProbe['body'], 'Disallow: ' . BASE_URL . '/admin/') || !str_contains($robotsProbe['body'], 'Sitemap: ')) {
+    $foundationIssues[] = 'robots.txt is missing admin disallow or sitemap';
+}
+
+$healthProbe = fetchUrl($baseUrl . '/health.php', '', 0);
+if (!str_contains($healthProbe['status'], '200')) {
+    $foundationIssues[] = 'health.php did not return 200 on healthy local installation';
+} else {
+    $healthPayload = json_decode($healthProbe['body'], true);
+    if (!is_array($healthPayload) || ($healthPayload['status'] ?? '') !== 'ok' || (($healthPayload['checks']['database']['status'] ?? '') !== 'ok')) {
+        $foundationIssues[] = 'health.php did not report healthy database status';
+    }
+}
+
+if ($foundationIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($foundationIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

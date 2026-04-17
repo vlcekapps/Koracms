@@ -122,6 +122,7 @@ require_once dirname(__DIR__) . '/lib/definitions.php';
 require_once dirname(__DIR__) . '/lib/presentation.php';
 require_once dirname(__DIR__) . '/lib/content.php';
 require_once dirname(__DIR__) . '/lib/pagination.php';
+require_once dirname(__DIR__) . '/lib/backup.php';
 require_once dirname(__DIR__) . '/lib/totp.php';
 require_once dirname(__DIR__) . '/lib/mail.php';
 require_once dirname(__DIR__) . '/lib/ui.php';

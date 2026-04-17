@@ -1,0 +1,29 @@
+{
+  "name": "vlcekapps/koracms",
+  "description": "Kora CMS development tooling. Production runtime remains dependency-free.",
+  "type": "project",
+  "license": "proprietary",
+  "require": {},
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.75",
+    "phpstan/phpstan": "^2.1"
+  },
+  "config": {
+    "platform": {
+      "php": "8.0.0"
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "analyse": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G",
+    "lint": "php build/lint_php.php",
+    "test:unit": "php build/unit_tests.php",
+    "test:runtime": "php build/runtime_audit.php",
+    "test:http": "php build/http_integration.php",
+    "ci:basic": [
+      "@lint",
+      "@analyse",
+      "@test:unit"
+    ]
+  }
+}

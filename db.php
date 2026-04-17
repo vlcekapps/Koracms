@@ -159,6 +159,7 @@ require_once __DIR__ . '/lib/gallery.php';
 require_once __DIR__ . '/lib/media_library.php';
 require_once __DIR__ . '/lib/content.php';
 require_once __DIR__ . '/lib/filedownloads.php';
+require_once __DIR__ . '/lib/backup.php';
 require_once __DIR__ . '/lib/ui.php';
 require_once __DIR__ . '/lib/github.php';
 require_once __DIR__ . '/lib/webhooks.php';

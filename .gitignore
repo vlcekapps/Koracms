@@ -11,6 +11,9 @@ uploads/
 # Vygenerované release zipy
 dist/
 
+# Composer dev závislosti
+vendor/
+
 # Systémové soubory
 .DS_Store
 Thumbs.db

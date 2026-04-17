@@ -44,27 +44,26 @@ echo "-- Database: " . $dbName . "\n\n";
 echo "SET NAMES utf8mb4;\n";
 echo "SET FOREIGN_KEY_CHECKS = 0;\n\n";
 
-$tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+$tables = koraBackupTableNames($pdo);
 
 foreach ($tables as $table) {
-    if (!str_starts_with($table, 'cms_')) {
-        continue;
-    }
+    $quotedTable = koraSqlQuoteIdentifier($table);
 
     // CREATE TABLE
-    $create = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch();
-    echo "DROP TABLE IF EXISTS `{$table}`;\n";
+    $create = $pdo->query("SHOW CREATE TABLE {$quotedTable}")->fetch();
+    echo "DROP TABLE IF EXISTS {$quotedTable};\n";
     echo $create['Create Table'] . ";\n\n";
 
     // Data
-    $rows = $pdo->query("SELECT * FROM `{$table}`");
+    $rows = $pdo->query("SELECT * FROM {$quotedTable}");
     $first = true;
     $columns = null;
+    $quotedColumns = '';
 
     foreach ($rows as $row) {
         if ($first) {
             $columns = array_keys($row);
-            $colList = implode('`, `', $columns);
+            $quotedColumns = koraSqlQuoteIdentifierList($columns);
             $first = false;
         }
 
@@ -76,7 +75,7 @@ foreach ($tables as $table) {
                 $values[] = $pdo->quote($row[$col]);
             }
         }
-        echo "INSERT INTO `{$table}` (`{$colList}`) VALUES (" . implode(', ', $values) . ");\n";
+        echo "INSERT INTO {$quotedTable} ({$quotedColumns}) VALUES (" . implode(', ', $values) . ");\n";
     }
 
     if (!$first) {

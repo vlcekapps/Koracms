@@ -274,7 +274,7 @@ function runKoraCron(PDO $pdo): array
         $todayBackup = $backupDirectory . 'kora_backup_' . date('Y-m-d') . '.sql';
         if (!is_file($todayBackup)) {
             try {
-                $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+                $tables = koraBackupTableNames($pdo);
                 $fh = @fopen($todayBackup, 'w');
                 if ($fh === false) {
                     cronAppendLog($log, 'Chyba zálohy: nepodařilo se otevřít soubor pro zápis');
@@ -283,15 +283,12 @@ function runKoraCron(PDO $pdo): array
                     fwrite($fh, "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n");
 
                     foreach ($tables as $tableName) {
-                        if (!str_starts_with((string)$tableName, 'cms_')) {
-                            continue;
-                        }
-
-                        $createTable = $pdo->query("SHOW CREATE TABLE `{$tableName}`")->fetch();
-                        fwrite($fh, "DROP TABLE IF EXISTS `{$tableName}`;\n");
+                        $quotedTableName = koraSqlQuoteIdentifier($tableName);
+                        $createTable = $pdo->query("SHOW CREATE TABLE {$quotedTableName}")->fetch();
+                        fwrite($fh, "DROP TABLE IF EXISTS {$quotedTableName};\n");
                         fwrite($fh, $createTable['Create Table'] . ";\n\n");
 
-                        $rows = $pdo->query("SELECT * FROM `{$tableName}`");
+                        $rows = $pdo->query("SELECT * FROM {$quotedTableName}");
                         $firstRow = true;
                         $columnNames = null;
                         foreach ($rows as $row) {
@@ -303,7 +300,7 @@ function runKoraCron(PDO $pdo): array
                             foreach ($columnNames as $columnName) {
                                 $values[] = $row[$columnName] === null ? 'NULL' : $pdo->quote((string)$row[$columnName]);
                             }
-                            fwrite($fh, "INSERT INTO `{$tableName}` (`" . implode('`, `', $columnNames) . "`) VALUES (" . implode(', ', $values) . ");\n");
+                            fwrite($fh, "INSERT INTO {$quotedTableName} (" . koraSqlQuoteIdentifierList($columnNames) . ") VALUES (" . implode(', ', $values) . ");\n");
                         }
 
                         if (!$firstRow) {
