@@ -177,7 +177,7 @@ function widgetModuleDisplayName(string $moduleKey): string
         'faq' => 'FAQ',
         'places' => 'Místa',
         'podcast' => 'Podcast',
-        'board' => boardModulePublicLabel(),
+        'board' => '',
         'events' => 'Události',
         'polls' => 'Ankety',
         'newsletter' => 'Newsletter',
@@ -185,6 +185,10 @@ function widgetModuleDisplayName(string $moduleKey): string
         'forms' => 'Formuláře',
         'statistics' => 'Statistiky',
     ];
+
+    if ($moduleKey === 'board') {
+        return boardModulePublicLabel();
+    }
 
     return $labels[$moduleKey] ?? $moduleKey;
 }
