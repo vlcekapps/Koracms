@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.3.6] – 2026-04-17
 
 ### Přidáno
 - **Foundation tooling – dev-only Composer, základní GitHub Actions a cross-platform PHP lint** – produkční runtime zůstává bez závislostí, ale lokální vývoj a CI nově umí `composer ci:basic`, PHP lint všech zdrojových souborů a unit testy
