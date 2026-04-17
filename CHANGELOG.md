@@ -7,7 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
-- **Widgety – kompatibilita s PHP 8.0 v CI i produkci** – popisek modulu Úřední deska se už nepočítá přímo ve `static` inicializátoru, který PHP 8.0 neumí vyhodnotit; GitHub Actions tak nepadá při PHP lint kontrole
+- **CI – kompatibilita čistého GitHub Actions checkoutu** – popisek modulu Úřední deska se už nepočítá přímo ve `static` inicializátoru, který PHP 8.0 neumí vyhodnotit, a PHPStan ignoruje volitelné složky `dist`, `uploads` a `vendor` i když v checkoutu ještě neexistují
 
 ## [3.3.6] – 2026-04-17
 

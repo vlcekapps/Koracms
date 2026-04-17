@@ -4,6 +4,6 @@ parameters:
         - build/lint_php.php
         - lib/backup.php
     excludePaths:
-        - vendor
-        - dist
-        - uploads
+        - vendor (?)
+        - dist (?)
+        - uploads (?)
