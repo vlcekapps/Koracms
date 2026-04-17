@@ -37,42 +37,32 @@ function publicFormFieldAcceptsUpload(array $field, string $originalName, string
 
 function storePublicFormUpload(array $field, array $file): array
 {
-    $errorCode = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($errorCode !== UPLOAD_ERR_OK) {
-        return ['error' => 'Soubor se nepodařilo nahrát. Zkuste to prosím znovu.'];
-    }
-
-    $tmpName = (string)($file['tmp_name'] ?? '');
-    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
-        return ['error' => 'Nahraný soubor se nepodařilo ověřit.'];
-    }
-
-    $originalName = trim((string)($file['name'] ?? 'soubor'));
-    $fileSize = (int)($file['size'] ?? 0);
     $maxFileSizeBytes = max(1, (int)($field['max_file_size_mb'] ?? 10)) * 1024 * 1024;
-    if ($fileSize < 1) {
-        return ['error' => 'Vybraný soubor je prázdný.'];
-    }
-    if ($fileSize > $maxFileSizeBytes) {
-        return ['error' => 'Vybraný soubor je větší, než tento formulář dovoluje.'];
+    $upload = koraInspectUploadedFile($file, [
+        'upload_error' => 'Soubor se nepodařilo nahrát. Zkuste to prosím znovu.',
+        'invalid_upload_error' => 'Nahraný soubor se nepodařilo ověřit.',
+        'too_large_error' => 'Vybraný soubor je větší, než tento formulář dovoluje.',
+        'max_bytes' => $maxFileSizeBytes,
+    ]);
+    if (empty($upload['ok'])) {
+        return ['error' => (string)($upload['error'] ?? 'Soubor se nepodařilo nahrát.')];
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mimeType = (string)$finfo->file($tmpName);
+    $originalName = (string)$upload['original_name'];
+    $mimeType = (string)$upload['mime_type'];
     if (!publicFormFieldAcceptsUpload($field, $originalName, $mimeType)) {
         return ['error' => 'Vybraný typ souboru není v tomto poli povolený.'];
     }
 
     $uploadDir = formUploadDirectory();
-    if (!koraEnsureDirectory($uploadDir)) {
-        return ['error' => 'Soubor se nepodařilo připravit pro uložení na serveru.'];
-    }
-
-    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    $extension = (string)$upload['extension'];
     $storedName = uniqid('form_', true) . ($extension !== '' ? '.' . $extension : '');
-    $destination = $uploadDir . $storedName;
-    if (!move_uploaded_file($tmpName, $destination)) {
-        return ['error' => 'Soubor se nepodařilo uložit na server.'];
+    $storedUpload = koraStoreInspectedUpload($upload, $uploadDir, $storedName, [
+        'mkdir_error' => 'Soubor se nepodařilo připravit pro uložení na serveru.',
+        'move_error' => 'Soubor se nepodařilo uložit na server.',
+    ]);
+    if (empty($storedUpload['ok'])) {
+        return ['error' => (string)($storedUpload['error'] ?? 'Soubor se nepodařilo uložit na server.')];
     }
 
     return [
@@ -80,7 +70,7 @@ function storePublicFormUpload(array $field, array $file): array
             'original_name' => $originalName,
             'stored_name' => $storedName,
             'mime_type' => $mimeType,
-            'file_size' => $fileSize,
+            'file_size' => (int)$upload['file_size'],
         ],
     ];
 }

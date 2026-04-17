@@ -128,7 +128,57 @@ try {
 }
 assert_true($invalidIdentifierRejected, 'invalid quoted identifier throws');
 
-// ─── 5. slugify() ───────────────────────────────────────────────────────────
+// ─── 5. Upload helpers ─────────────────────────────────────────────────────
+
+test_section('Upload helpers');
+
+assert_false(koraUploadHasFile([]), 'empty upload field has no file');
+assert_false(koraUploadHasFile(['name' => '', 'error' => UPLOAD_ERR_NO_FILE]), 'UPLOAD_ERR_NO_FILE has no file');
+assert_true(koraUploadHasFile(['name' => 'soubor.txt', 'error' => UPLOAD_ERR_OK]), 'UPLOAD_ERR_OK with name has file');
+assert_equals('jpg', koraUploadSanitizeExtension('fotka.JPG'), 'safe extension normalized');
+assert_equals('', koraUploadSanitizeExtension('soubor.bad-ext'), 'unsafe extension rejected');
+assert_true(koraUploadMimeIsSvg('image/svg+xml'), 'SVG MIME detected');
+
+$uploadTmp = tempnam(sys_get_temp_dir(), 'kora-upload-test-');
+file_put_contents($uploadTmp, 'hello');
+$uploadInspection = koraInspectUploadedFile(
+    [
+        'name' => 'Dokument.TXT',
+        'tmp_name' => $uploadTmp,
+        'size' => filesize($uploadTmp),
+        'error' => UPLOAD_ERR_OK,
+    ],
+    [
+        'require_uploaded_file' => false,
+        'allowed_mime_map' => ['text/plain' => 'txt'],
+        'max_bytes' => 1024,
+    ]
+);
+assert_true((bool)($uploadInspection['ok'] ?? false), 'valid local test upload accepted when upload check disabled');
+assert_equals('Dokument.TXT', $uploadInspection['original_name'] ?? '', 'original upload name preserved');
+assert_equals('txt', $uploadInspection['extension'] ?? '', 'extension comes from MIME allowlist');
+
+$tooLargeUpload = koraInspectUploadedFile(
+    [
+        'name' => 'Dokument.TXT',
+        'tmp_name' => $uploadTmp,
+        'size' => filesize($uploadTmp),
+        'error' => UPLOAD_ERR_OK,
+    ],
+    [
+        'require_uploaded_file' => false,
+        'max_bytes' => 2,
+        'too_large_error' => 'too-large',
+    ]
+);
+assert_false((bool)($tooLargeUpload['ok'] ?? false), 'too large upload rejected');
+assert_equals('too-large', $tooLargeUpload['error'] ?? '', 'too large upload returns configured error');
+
+$invalidTargetUpload = koraStoreInspectedUpload($uploadInspection, sys_get_temp_dir(), '../evil.txt');
+assert_false((bool)($invalidTargetUpload['ok'] ?? false), 'unsafe target filename rejected before move');
+@unlink($uploadTmp);
+
+// ─── 6. slugify() ───────────────────────────────────────────────────────────
 
 test_section('slugify()');
 

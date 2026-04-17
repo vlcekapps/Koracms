@@ -1613,12 +1613,12 @@ function deletePodcastAudioFile(string $filename): void
 }
 
 /**
+ * @param array<string,mixed> $options
  * @return array{filename:string,uploaded:bool,error:string}
  */
-function uploadPodcastCoverImage(array $file, string $existingFilename = ''): array
+function storePresentationUploadedFile(array $file, string $existingFilename, array $options): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+    if (!koraUploadHasFile($file)) {
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
@@ -1626,77 +1626,58 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
         ];
     }
 
-    if ($uploadError !== UPLOAD_ERR_OK) {
+    $upload = koraInspectUploadedFile($file, [
+        'upload_error' => (string)($options['upload_error'] ?? 'Soubor se nepodařilo nahrát.'),
+        'invalid_upload_error' => (string)($options['invalid_upload_error'] ?? 'Soubor se nepodařilo zpracovat.'),
+        'allowed_mime_map' => (array)($options['allowed_mime_map'] ?? []),
+        'unsupported_type_error' => (string)($options['unsupported_type_error'] ?? 'Tento typ souboru není povolený.'),
+    ]);
+    if (empty($upload['ok'])) {
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Obrázek coveru se nepodařilo nahrát.',
+            'error' => (string)($upload['error'] ?? 'Soubor se nepodařilo nahrát.'),
         ];
     }
 
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+    $imageValidator = $options['image_validator'] ?? null;
+    if (is_callable($imageValidator)) {
+        $imageError = (string)$imageValidator((string)$upload['tmp_path']);
+        if ($imageError !== '') {
+            return [
+                'filename' => $existingFilename,
+                'uploaded' => false,
+                'error' => $imageError,
+            ];
+        }
+    }
+
+    $extension = (string)($upload['extension'] ?? '');
+    $filename = uniqid((string)($options['prefix'] ?? 'upload_'), true) . ($extension !== '' ? '.' . $extension : '');
+    $storedUpload = koraStoreInspectedUpload(
+        $upload,
+        (string)($options['directory'] ?? ''),
+        $filename,
+        [
+            'mkdir_error' => (string)($options['mkdir_error'] ?? 'Adresář pro soubory se nepodařilo vytvořit.'),
+            'move_error' => (string)($options['move_error'] ?? 'Soubor se nepodařilo uložit.'),
+        ]
+    );
+    if (empty($storedUpload['ok'])) {
         return [
             'filename' => $existingFilename,
             'uploaded' => false,
-            'error' => 'Obrázek coveru se nepodařilo zpracovat.',
+            'error' => (string)($storedUpload['error'] ?? 'Soubor se nepodařilo uložit.'),
         ];
     }
 
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Cover musí být ve formátu JPG nebo PNG.',
-        ];
+    if (!empty($options['generate_webp'])) {
+        generateWebp((string)$storedUpload['path']);
     }
 
-    $imageInfo = @getimagesize($tmpPath);
-    if (!is_array($imageInfo) || empty($imageInfo[0]) || empty($imageInfo[1])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Cover obrázek se nepodařilo zkontrolovat.',
-        ];
-    }
-
-    $width = (int)$imageInfo[0];
-    $height = (int)$imageInfo[1];
-    if ($width !== $height || $width < 1024 || $width > 3000) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/podcasts/covers/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro cover obrázky se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('podcast_cover_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Cover obrázek se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deletePodcastCoverFile($existingFilename);
+    $deleteCallback = $options['delete_callback'] ?? null;
+    if ($existingFilename !== '' && $existingFilename !== $filename && is_callable($deleteCallback)) {
+        $deleteCallback($existingFilename);
     }
 
     return [
@@ -1704,6 +1685,52 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
         'uploaded' => true,
         'error' => '',
     ];
+}
+
+function squarePodcastImageUploadError(string $tmpPath, string $label): string
+{
+    $imageInfo = @getimagesize($tmpPath);
+    if (!is_array($imageInfo) || empty($imageInfo[0]) || empty($imageInfo[1])) {
+        return $label . ' se nepodařilo zkontrolovat.';
+    }
+
+    $width = (int)$imageInfo[0];
+    $height = (int)$imageInfo[1];
+    if ($width !== $height || $width < 1024 || $width > 3000) {
+        return $label . ' musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.';
+    }
+
+    return '';
+}
+
+function presentationImageMimeMap(): array
+{
+    return [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+    ];
+}
+
+/**
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadPodcastCoverImage(array $file, string $existingFilename = ''): array
+{
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Obrázek coveru se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Obrázek coveru se nepodařilo zpracovat.',
+        'allowed_mime_map' => ['image/jpeg' => 'jpg', 'image/png' => 'png'],
+        'unsupported_type_error' => 'Cover musí být ve formátu JPG nebo PNG.',
+        'image_validator' => static fn(string $tmpPath): string => squarePodcastImageUploadError($tmpPath, 'Cover'),
+        'directory' => dirname(__DIR__) . '/uploads/podcasts/covers/',
+        'mkdir_error' => 'Adresář pro cover obrázky se nepodařilo vytvořit.',
+        'move_error' => 'Cover obrázek se nepodařilo uložit.',
+        'prefix' => 'podcast_cover_',
+        'generate_webp' => true,
+        'delete_callback' => 'deletePodcastCoverFile',
+    ]);
 }
 
 /**
@@ -1711,93 +1738,19 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
  */
 function uploadPodcastEpisodeImage(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek epizody se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek epizody se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek epizody musí být ve formátu JPG nebo PNG.',
-        ];
-    }
-
-    $imageInfo = @getimagesize($tmpPath);
-    if (!is_array($imageInfo) || empty($imageInfo[0]) || empty($imageInfo[1])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek epizody se nepodařilo zkontrolovat.',
-        ];
-    }
-
-    $width = (int)$imageInfo[0];
-    $height = (int)$imageInfo[1];
-    if ($width !== $height || $width < 1024 || $width > 3000) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/podcasts/images/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro obrázky epizod se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('podcast_episode_image_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek epizody se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deletePodcastEpisodeImageFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Obrázek epizody se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Obrázek epizody se nepodařilo zpracovat.',
+        'allowed_mime_map' => ['image/jpeg' => 'jpg', 'image/png' => 'png'],
+        'unsupported_type_error' => 'Obrázek epizody musí být ve formátu JPG nebo PNG.',
+        'image_validator' => static fn(string $tmpPath): string => squarePodcastImageUploadError($tmpPath, 'Obrázek epizody'),
+        'directory' => dirname(__DIR__) . '/uploads/podcasts/images/',
+        'mkdir_error' => 'Adresář pro obrázky epizod se nepodařilo vytvořit.',
+        'move_error' => 'Obrázek epizody se nepodařilo uložit.',
+        'prefix' => 'podcast_episode_image_',
+        'generate_webp' => true,
+        'delete_callback' => 'deletePodcastEpisodeImageFile',
+    ]);
 }
 
 /**
@@ -1805,79 +1758,26 @@ function uploadPodcastEpisodeImage(array $file, string $existingFilename = ''): 
  */
 function uploadPodcastAudioFile(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Audio soubor se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Audio soubor se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'audio/mpeg' => 'mp3',
-        'audio/mp3' => 'mp3',
-        'audio/ogg' => 'ogg',
-        'audio/wav' => 'wav',
-        'audio/x-wav' => 'wav',
-        'audio/mp4' => 'm4a',
-        'audio/x-m4a' => 'm4a',
-        'audio/aac' => 'aac',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Audio musí být ve formátu MP3, OGG, WAV, M4A nebo AAC.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/podcasts/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro podcastová audia se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('podcast_episode_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Audio soubor se nepodařilo uložit.',
-        ];
-    }
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deletePodcastAudioFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Audio soubor se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Audio soubor se nepodařilo zpracovat.',
+        'allowed_mime_map' => [
+            'audio/mpeg' => 'mp3',
+            'audio/mp3' => 'mp3',
+            'audio/ogg' => 'ogg',
+            'audio/wav' => 'wav',
+            'audio/x-wav' => 'wav',
+            'audio/mp4' => 'm4a',
+            'audio/x-m4a' => 'm4a',
+            'audio/aac' => 'aac',
+        ],
+        'unsupported_type_error' => 'Audio musí být ve formátu MP3, OGG, WAV, M4A nebo AAC.',
+        'directory' => dirname(__DIR__) . '/uploads/podcasts/',
+        'mkdir_error' => 'Adresář pro podcastová audia se nepodařilo vytvořit.',
+        'move_error' => 'Audio soubor se nepodařilo uložit.',
+        'prefix' => 'podcast_episode_',
+        'delete_callback' => 'deletePodcastAudioFile',
+    ]);
 }
 
 function deleteDownloadImageFile(string $filename): void
@@ -1915,76 +1815,18 @@ function deleteDownloadStoredFile(string $filename): void
  */
 function uploadDownloadImage(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/downloads/images/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro obrázky ke stažení se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('download_image_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deleteDownloadImageFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Obrázek se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Obrázek se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'directory' => dirname(__DIR__) . '/uploads/downloads/images/',
+        'mkdir_error' => 'Adresář pro obrázky ke stažení se nepodařilo vytvořit.',
+        'move_error' => 'Obrázek se nepodařilo uložit.',
+        'prefix' => 'download_image_',
+        'generate_webp' => true,
+        'delete_callback' => 'deleteDownloadImageFile',
+    ]);
 }
 
 function normalizeDownloadExternalUrl(string $value): string
@@ -2307,76 +2149,18 @@ function deleteBlogLogoFile(string $filename): void
  */
 function uploadBlogLogo(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Logo blogu se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Logo blogu se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Logo blogu musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/blogs/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro loga blogů se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('blog_logo_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Logo blogu se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deleteBlogLogoFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Logo blogu se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Logo blogu se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Logo blogu musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'directory' => dirname(__DIR__) . '/uploads/blogs/',
+        'mkdir_error' => 'Adresář pro loga blogů se nepodařilo vytvořit.',
+        'move_error' => 'Logo blogu se nepodařilo uložit.',
+        'prefix' => 'blog_logo_',
+        'generate_webp' => true,
+        'delete_callback' => 'deleteBlogLogoFile',
+    ]);
 }
 
 function placeImageUrl(array $place): string
@@ -2420,76 +2204,18 @@ function deletePlaceImageFile(string $filename): void
  */
 function uploadPlaceImage(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/places/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro obrázky míst se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('place_image_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deletePlaceImageFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Obrázek se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Obrázek se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'directory' => dirname(__DIR__) . '/uploads/places/',
+        'mkdir_error' => 'Adresář pro obrázky míst se nepodařilo vytvořit.',
+        'move_error' => 'Obrázek se nepodařilo uložit.',
+        'prefix' => 'place_image_',
+        'generate_webp' => true,
+        'delete_callback' => 'deletePlaceImageFile',
+    ]);
 }
 
 function eventImageUrl(array $event): string
@@ -2520,76 +2246,18 @@ function deleteEventImageFile(string $filename): void
  */
 function uploadEventImage(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek akce se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek akce se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek akce musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/events/images/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro obrázky akcí se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('event_image_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek akce se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deleteEventImageFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Obrázek akce se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Obrázek akce se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Obrázek akce musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'directory' => dirname(__DIR__) . '/uploads/events/images/',
+        'mkdir_error' => 'Adresář pro obrázky akcí se nepodařilo vytvořit.',
+        'move_error' => 'Obrázek akce se nepodařilo uložit.',
+        'prefix' => 'event_image_',
+        'generate_webp' => true,
+        'delete_callback' => 'deleteEventImageFile',
+    ]);
 }
 
 function normalizePlaceUrl(string $value): string
@@ -2681,76 +2349,18 @@ function deleteBoardImageFile(string $filename): void
  */
 function uploadBoardImage(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/board/images/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro obrázky vývěsky se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('board_image_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Obrázek se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deleteBoardImageFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Obrázek se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Obrázek se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'directory' => dirname(__DIR__) . '/uploads/board/images/',
+        'mkdir_error' => 'Adresář pro obrázky vývěsky se nepodařilo vytvořit.',
+        'move_error' => 'Obrázek se nepodařilo uložit.',
+        'prefix' => 'board_image_',
+        'generate_webp' => true,
+        'delete_callback' => 'deleteBoardImageFile',
+    ]);
 }
 
 function hydrateBoardPresentation(array $document): array
@@ -4574,76 +4184,18 @@ function deleteAuthorAvatarFile(string $filename): void
 
 function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($uploadError === UPLOAD_ERR_NO_FILE || trim((string)($file['name'] ?? '')) === '') {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => '',
-        ];
-    }
-
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Avatar se nepodařilo nahrát.',
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Avatar se nepodařilo zpracovat.',
-        ];
-    }
-
-    $allowedTypes = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    $mimeType = (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (!isset($allowedTypes[$mimeType])) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Avatar musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        ];
-    }
-
-    $directory = dirname(__DIR__) . '/uploads/authors/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Adresář pro avatary se nepodařilo vytvořit.',
-        ];
-    }
-
-    $filename = uniqid('author_', true) . '.' . $allowedTypes[$mimeType];
-    if (!move_uploaded_file($tmpPath, $directory . $filename)) {
-        return [
-            'filename' => $existingFilename,
-            'uploaded' => false,
-            'error' => 'Avatar se nepodařilo uložit.',
-        ];
-    }
-    generateWebp($directory . $filename);
-
-    if ($existingFilename !== '' && $existingFilename !== $filename) {
-        deleteAuthorAvatarFile($existingFilename);
-    }
-
-    return [
-        'filename' => $filename,
-        'uploaded' => true,
-        'error' => '',
-    ];
+    return storePresentationUploadedFile($file, $existingFilename, [
+        'upload_error' => 'Avatar se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Avatar se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Avatar musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'directory' => dirname(__DIR__) . '/uploads/authors/',
+        'mkdir_error' => 'Adresář pro avatary se nepodařilo vytvořit.',
+        'move_error' => 'Avatar se nepodařilo uložit.',
+        'prefix' => 'author_',
+        'generate_webp' => true,
+        'delete_callback' => 'deleteAuthorAvatarFile',
+    ]);
 }
 
 // ─────────────────────────────── Formuláře ────────────────────────────────

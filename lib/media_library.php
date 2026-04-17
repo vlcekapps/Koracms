@@ -321,52 +321,27 @@ function mediaUploadErrorMessage(int $errorCode): string
 
 function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?array $existingMedia = null): array
 {
-    $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if (($file['name'] ?? '') === '' || $uploadError === UPLOAD_ERR_NO_FILE) {
+    $upload = koraInspectUploadedFile($file, [
+        'no_file_error' => 'Nebyl vybrán žádný soubor.',
+        'upload_error' => mediaUploadErrorMessage((int)($file['error'] ?? UPLOAD_ERR_NO_FILE)),
+        'invalid_upload_error' => 'Soubor se nepodařilo zpracovat.',
+        'too_large_error' => 'Soubor překračuje maximální velikost 10 MB.',
+        'max_bytes' => mediaMaxFileSizeBytes(),
+        'reject_svg' => true,
+        'svg_error' => 'SVG soubory už knihovna médií nepřijímá. Nahrajte prosím PNG, JPG, WebP nebo jiný podporovaný formát.',
+        'allowed_mime_map' => mediaAllowedMimeMap(),
+        'unsupported_type_error' => 'Tento typ souboru není v knihovně médií podporovaný.',
+    ]);
+    if (empty($upload['ok'])) {
         return [
             'ok' => false,
-            'error' => 'Nebyl vybrán žádný soubor.',
+            'error' => (string)($upload['error'] ?? 'Soubor se nepodařilo nahrát.'),
         ];
     }
 
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        return [
-            'ok' => false,
-            'error' => mediaUploadErrorMessage($uploadError),
-        ];
-    }
-
-    $tmpPath = (string)($file['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        return [
-            'ok' => false,
-            'error' => 'Soubor se nepodařilo zpracovat.',
-        ];
-    }
-
-    $fileSize = (int)($file['size'] ?? 0);
-    if ($fileSize <= 0 || $fileSize > mediaMaxFileSizeBytes()) {
-        return [
-            'ok' => false,
-            'error' => 'Soubor překračuje maximální velikost 10 MB.',
-        ];
-    }
-
-    $mimeType = (string)(new finfo(FILEINFO_MIME_TYPE))->file($tmpPath);
-    if (mediaIsSvgMime($mimeType)) {
-        return [
-            'ok' => false,
-            'error' => 'SVG soubory už knihovna médií nepřijímá. Nahrajte prosím PNG, JPG, WebP nebo jiný podporovaný formát.',
-        ];
-    }
-
-    if (!array_key_exists($mimeType, mediaAllowedMimeMap())) {
-        return [
-            'ok' => false,
-            'error' => 'Tento typ souboru není v knihovně médií podporovaný.',
-        ];
-    }
-
+    $mimeType = (string)$upload['mime_type'];
+    $originalName = (string)$upload['original_name'];
+    $fileSize = (int)$upload['file_size'];
     $visibility = normalizeMediaVisibility($visibility);
     if (!mediaEnsureDirectories($visibility)) {
         return [
@@ -389,7 +364,7 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         }
 
         $oldExtension = strtolower(pathinfo($existingFilename, PATHINFO_EXTENSION));
-        $newExtension = mediaSanitizeExtension((string)($file['name'] ?? ''), $mimeType);
+        $newExtension = mediaSanitizeExtension($originalName, $mimeType);
         if ($existingFilename !== '' && $existingVisibility === 'public' && !mediaIsSvgMime($existingMimeType) && $oldExtension !== '' && $oldExtension !== $newExtension) {
             return [
                 'ok' => false,
@@ -398,14 +373,14 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         }
     }
 
-    $filename = mediaCanonicalStoredFilename((string)($file['name'] ?? ''), $mimeType);
+    $filename = mediaCanonicalStoredFilename($originalName, $mimeType);
     if ($existingFilename !== '') {
         $existingMimeType = (string)($existingMedia['mime_type'] ?? '');
         $existingDirectPublic = $existingVisibility === 'public' && !mediaIsSvgMime($existingMimeType);
         if ($existingDirectPublic) {
             $filename = $existingFilename;
         } else {
-            $newExtension = mediaSanitizeExtension((string)($file['name'] ?? ''), $mimeType);
+            $newExtension = mediaSanitizeExtension($originalName, $mimeType);
             $oldExtension = strtolower(pathinfo($existingFilename, PATHINFO_EXTENSION));
             if ($oldExtension !== '' && $oldExtension === $newExtension) {
                 $filename = $existingFilename;
@@ -431,10 +406,13 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         @unlink($targetPath);
     }
 
-    if (!move_uploaded_file($tmpPath, $targetPath)) {
+    $storedUpload = koraStoreInspectedUpload($upload, dirname($targetPath), basename($targetPath), [
+        'move_error' => 'Soubor se nepodařilo uložit.',
+    ]);
+    if (empty($storedUpload['ok'])) {
         return [
             'ok' => false,
-            'error' => 'Soubor se nepodařilo uložit.',
+            'error' => (string)($storedUpload['error'] ?? 'Soubor se nepodařilo uložit.'),
         ];
     }
 
@@ -464,7 +442,7 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
     return [
         'ok' => true,
         'filename' => $filename,
-        'original_name' => trim((string)($file['name'] ?? '')),
+        'original_name' => $originalName,
         'mime_type' => $mimeType,
         'file_size' => $fileSize,
     ];

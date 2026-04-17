@@ -4,6 +4,14 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Upload hardening – veřejné formuláře, knihovna médií a modulové obrázky/audio používají sdílené upload helpery** – kontrola PHP upload stavu, velikosti, MIME typu, bezpečné přípony a finálního uložení je nově sjednocená; snižuje to riziko rozdílných validací mezi moduly a usnadňuje další bezpečnostní rozšiřování.
+
+### Opraveno
+- **Release balíček – Composer `vendor/` se už nepřibalí do ZIP artefaktu** – produkční balíček zůstává bez vývojových závislostí a runtime audit hlídá, že se adresář `vendor` do release exclude listu neztratí.
+
 ## [3.3.7] – 2026-04-17
 
 ### Opraveno

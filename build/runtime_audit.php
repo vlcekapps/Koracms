@@ -20,6 +20,7 @@ $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
+$releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -6976,6 +6977,8 @@ $foundationChecks = [
     'dev tooling is protected from direct web access' => str_contains($htaccessSource, 'composer\.(json|lock)')
         && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),
+    'release zip excludes dev vendor directory' => str_contains($releaseScriptSource, "'vendor'")
+        && str_contains($releaseScriptSource, 'New-ReleaseZip'),
     'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')'),
@@ -8992,6 +8995,9 @@ echo "=== media_library_guardrails ===\n";
 $mediaLibraryIssues = [];
 $mediaAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/media.php');
 $mediaHelperSource = (string)file_get_contents(dirname(__DIR__) . '/lib/media_library.php');
+$uploadHelperSource = (string)file_get_contents(dirname(__DIR__) . '/lib/uploads.php');
+$publicFormsSource = (string)file_get_contents(dirname(__DIR__) . '/forms/index.php');
+$presentationUploadSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
 $mediaSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
 $mediaExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
 $mediaImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
@@ -9004,6 +9010,34 @@ $mediaHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integratio
     : '';
 if (!str_contains($mediaAdminSource, 'internalRedirectTarget(')) {
     $mediaLibraryIssues[] = 'media admin is missing validated redirect handling';
+}
+foreach ([
+    'function koraInspectUploadedFile(array $file, array $options = []): array',
+    'function koraStoreInspectedUpload(array $upload, string $directory, string $filename, array $options = []): array',
+    'is_uploaded_file($tmpPath)',
+    'move_uploaded_file(',
+] as $uploadHelperFragment) {
+    if (!str_contains($uploadHelperSource, $uploadHelperFragment)) {
+        $mediaLibraryIssues[] = 'shared upload helper is missing fragment: ' . $uploadHelperFragment;
+    }
+}
+if (!str_contains($mediaHelperSource, 'koraInspectUploadedFile(') || !str_contains($mediaHelperSource, 'koraStoreInspectedUpload(')) {
+    $mediaLibraryIssues[] = 'media library upload path is not using shared upload helpers';
+}
+if (!str_contains($publicFormsSource, 'koraInspectUploadedFile(') || !str_contains($publicFormsSource, 'koraStoreInspectedUpload(')) {
+    $mediaLibraryIssues[] = 'public form upload path is not using shared upload helpers';
+}
+if (!str_contains($presentationUploadSource, 'function storePresentationUploadedFile(') || !str_contains($presentationUploadSource, 'koraInspectUploadedFile(')) {
+    $mediaLibraryIssues[] = 'presentation upload path is not using shared upload helpers';
+}
+foreach ([
+    'lib/media_library.php' => $mediaHelperSource,
+    'forms/index.php' => $publicFormsSource,
+    'lib/presentation.php' => $presentationUploadSource,
+] as $uploadSourceLabel => $uploadSource) {
+    if (str_contains($uploadSource, 'new finfo(FILEINFO_MIME_TYPE)') || str_contains($uploadSource, 'new \\finfo(FILEINFO_MIME_TYPE)')) {
+        $mediaLibraryIssues[] = $uploadSourceLabel . ' still performs direct MIME detection outside shared upload helper';
+    }
 }
 if (!str_contains($mediaAdminSource, 'name="bulk_action"')) {
     $mediaLibraryIssues[] = 'media admin is missing bulk action selector';

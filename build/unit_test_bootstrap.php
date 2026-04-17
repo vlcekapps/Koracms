@@ -119,6 +119,7 @@ if (!function_exists('koraEnsureDirectory')) {
 
 // Nacteni lib souborů – kazdy ma require_once ale nemaji vedlejsi efekty pri loadu
 require_once dirname(__DIR__) . '/lib/definitions.php';
+require_once dirname(__DIR__) . '/lib/uploads.php';
 require_once dirname(__DIR__) . '/lib/presentation.php';
 require_once dirname(__DIR__) . '/lib/content.php';
 require_once dirname(__DIR__) . '/lib/pagination.php';
