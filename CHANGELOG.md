@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.3.7] – 2026-04-17
 
 ### Opraveno
 - **CI – kompatibilita čistého GitHub Actions checkoutu** – popisek modulu Úřední deska se už nepočítá přímo ve `static` inicializátoru, který PHP 8.0 neumí vyhodnotit, a PHPStan ignoruje volitelné složky `dist`, `uploads` a `vendor` i když v checkoutu ještě neexistují
