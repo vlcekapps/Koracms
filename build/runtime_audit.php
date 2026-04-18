@@ -20,6 +20,7 @@ $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
 $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) file_get_contents(__DIR__ . '/../phpstan.neon.dist') : '';
+$phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 
@@ -6977,11 +6978,16 @@ $foundationChecks = [
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
-    'phpstan covers first stable helper batch' => str_contains($composerSource, '"analyse"')
+    'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
+        && str_contains($phpstanConfigSource, 'bootstrapFiles')
+        && str_contains($phpstanConfigSource, 'build/phpstan_bootstrap.php')
         && str_contains($phpstanConfigSource, 'lib/filedownloads.php')
+        && str_contains($phpstanConfigSource, 'lib/pagination.php')
         && str_contains($phpstanConfigSource, 'lib/totp.php')
-        && str_contains($phpstanConfigSource, 'lib/uploads.php'),
+        && str_contains($phpstanConfigSource, 'lib/uploads.php')
+        && str_contains($phpstanBootstrapSource, 'function h(?string $s): string')
+        && !str_contains($phpstanBootstrapSource, 'require_once'),
     'dev tooling is protected from direct web access' => str_contains($htaccessSource, 'composer\.(json|lock)')
         && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),

@@ -467,7 +467,7 @@ composer ci:basic
 `composer ci:basic` spustí:
 
 - PHP lint přes `build/lint_php.php`
-- PHPStan nad první sadou stabilních helperů podle `phpstan.neon.dist`
+- PHPStan nad první sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php`, který definuje jen bezpečné stuby bez DB/session side efektů
 - unit testy přes `build/unit_tests.php`
 
 GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Workflow používá aktuální `actions/checkout@v6`, aby CI neběželo na deprecated Node 20 checkout akci.

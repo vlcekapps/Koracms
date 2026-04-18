@@ -1,9 +1,13 @@
 parameters:
     level: 0
+    bootstrapFiles:
+        - build/phpstan_bootstrap.php
     paths:
         - build/lint_php.php
+        - build/phpstan_bootstrap.php
         - lib/backup.php
         - lib/filedownloads.php
+        - lib/pagination.php
         - lib/totp.php
         - lib/uploads.php
     excludePaths:
