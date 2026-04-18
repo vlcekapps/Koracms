@@ -25,6 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
+            rateLimitSubject('password_reset_email', $email, 3, 900);
+
             $stmt = $pdo->prepare(
                 "SELECT id, email FROM cms_users WHERE email = ? AND role = 'public' AND is_confirmed = 1"
             );
@@ -55,6 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = true;
         }
     } else {
+        rateLimitSubject('password_reset_token', $token, 5, 300);
+
         $newPass  = $_POST['new_pass'] ?? '';
         $newPass2 = $_POST['new_pass2'] ?? '';
 

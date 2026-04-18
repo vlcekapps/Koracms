@@ -15,6 +15,7 @@ $backToLoginUrl = BASE_URL . '/admin/login.php?cancel_2fa=1&redirect=' . urlenco
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('login_2fa', 5, 300);
     verifyCsrf();
+    rateLimitSubject('login_2fa_user', (string)$userId, 5, 300);
 
     $code = trim($_POST['totp_code'] ?? '');
     $pdo = db_connect();

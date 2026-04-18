@@ -109,7 +109,18 @@ assert_equals('', internalRedirectTarget("/admin\x00evil"), 'null byte rejected'
 assert_equals('/page.php?id=5#section', internalRedirectTarget('/page.php?id=5#section'), 'query and fragment preserved');
 assert_equals('', internalRedirectTarget('admin/index.php'), 'relative path (no leading /) rejected');
 
-// ─── 4. SQL backup identifier helpers ───────────────────────────────────────
+// ─── 4. Rate-limit keys ─────────────────────────────────────────────────────
+
+test_section('rateLimitKey()');
+
+assert_equals(hash('sha256', '127.0.0.1|login'), rateLimitKey('login', '127.0.0.1'), 'IP rate-limit key format preserved');
+assert_equals(64, strlen(rateLimitKey('login_email', 'subject:admin@example.test')), 'rate-limit key is fixed-length hash');
+assert_false(
+    rateLimitKey('login', '127.0.0.1') === rateLimitKey('login_email', 'subject:admin@example.test'),
+    'IP and subject rate-limit keys do not collide'
+);
+
+// ─── 5. SQL backup identifier helpers ───────────────────────────────────────
 
 test_section('SQL backup identifiers');
 
@@ -128,7 +139,7 @@ try {
 }
 assert_true($invalidIdentifierRejected, 'invalid quoted identifier throws');
 
-// ─── 5. Upload helpers ─────────────────────────────────────────────────────
+// ─── 6. Upload helpers ─────────────────────────────────────────────────────
 
 test_section('Upload helpers');
 
@@ -178,7 +189,7 @@ $invalidTargetUpload = koraStoreInspectedUpload($uploadInspection, sys_get_temp_
 assert_false((bool)($invalidTargetUpload['ok'] ?? false), 'unsafe target filename rejected before move');
 @unlink($uploadTmp);
 
-// ─── 6. slugify() ───────────────────────────────────────────────────────────
+// ─── 7. slugify() ───────────────────────────────────────────────────────────
 
 test_section('slugify()');
 

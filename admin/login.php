@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $inputEmail = trim($_POST['email'] ?? '');
     $inputPass  = $_POST['heslo'] ?? '';
+    rateLimitSubject('login_email', $inputEmail, 5, 900);
 
     $authenticated = false;
 

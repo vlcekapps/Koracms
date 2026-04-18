@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    rateLimitSubject('public_login_email', $email, 5, 900);
 
     if ($email === '' || $password === '') {
         $errors[] = 'Vyplňte e-mail a heslo.';

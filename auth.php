@@ -606,10 +606,13 @@ function captchaVerify(string $input): bool
  * $max     – maximální počet pokusů v časovém okně
  * $window  – délka okna v sekundách
  */
-function rateLimit(string $action, int $max = 10, int $window = 60): void
+function rateLimitKey(string $action, string $identifier): string
 {
-    $ip  = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $key = hash('sha256', $ip . '|' . $action);
+    return hash('sha256', $identifier . '|' . $action);
+}
+
+function rateLimitApply(string $key, int $max, int $window): void
+{
     try {
         $pdo = db_connect();
 
@@ -640,6 +643,23 @@ function rateLimit(string $action, int $max = 10, int $window = 60): void
     } catch (\PDOException $e) {
         error_log('rateLimit: ' . $e->getMessage());
     }
+}
+
+function rateLimit(string $action, int $max = 10, int $window = 60): void
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    rateLimitApply(rateLimitKey($action, $ip), $max, $window);
+}
+
+function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60): void
+{
+    $normalizedSubject = strtolower(trim($subject));
+    if ($normalizedSubject === '') {
+        return;
+    }
+
+    // Subject limit chrání konkrétní účet/token napříč IP adresami, aniž by ukládal e-mail v databázi.
+    rateLimitApply(rateLimitKey($action, 'subject:' . $normalizedSubject), $max, $window);
 }
 
 /**

@@ -557,12 +557,13 @@ if ($newsId !== false && $runtimeAuditAuthorId > 0) {
 }
 
 if (isModuleEnabled('news')) {
-    $runtimeAuditNewsTitle = 'Runtime audit novinka';
+    $runtimeAuditNewsSuffix = bin2hex(random_bytes(4));
+    $runtimeAuditNewsTitle = 'Runtime audit novinka ' . $runtimeAuditNewsSuffix;
     $runtimeAuditNewsSlug = uniqueNewsSlug($pdo, 'runtime-audit-novinka-' . bin2hex(random_bytes(4)));
     $runtimeAuditNewsOldSlug = uniqueNewsSlug($pdo, 'runtime-audit-novinka-stary-' . bin2hex(random_bytes(4)));
     $runtimeAuditNewsSearchTerm = 'runtime audit';
-    $runtimeAuditNewsExpiredTitle = 'Runtime audit expirovaná novinka';
-    $runtimeAuditNewsDeletedTitle = 'Runtime audit skrytá novinka';
+    $runtimeAuditNewsExpiredTitle = 'Runtime audit expirovaná novinka ' . $runtimeAuditNewsSuffix;
+    $runtimeAuditNewsDeletedTitle = 'Runtime audit skrytá novinka ' . $runtimeAuditNewsSuffix;
 
     $pdo->prepare(
         "INSERT INTO cms_news (
@@ -7159,6 +7160,8 @@ $adminLoginRedirectIssues = [];
 $adminAuthSource = (string)file_get_contents(dirname(__DIR__) . '/auth.php');
 $adminLoginSource = (string)file_get_contents(dirname(__DIR__) . '/admin/login.php');
 $adminLogin2faSource = (string)file_get_contents(dirname(__DIR__) . '/admin/login_2fa.php');
+$publicLoginSource = (string)file_get_contents(dirname(__DIR__) . '/public_login.php');
+$resetPasswordSource = (string)file_get_contents(dirname(__DIR__) . '/reset_password.php');
 $adminHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
     : '';
@@ -7210,6 +7213,39 @@ if ($adminLoginRedirectIssues === []) {
 } else {
     $failures++;
     foreach ($adminLoginRedirectIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== auth_rate_limit_guardrails ===\n";
+$authRateLimitIssues = [];
+foreach ([
+    'function rateLimitKey(string $action, string $identifier): string',
+    'function rateLimitApply(string $key, int $max, int $window): void',
+    'function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60): void',
+    "rateLimitKey(\$action, \$ip)",
+    "rateLimitKey(\$action, 'subject:' . \$normalizedSubject)",
+] as $authRateLimitFragment) {
+    if (!str_contains($adminAuthSource, $authRateLimitFragment)) {
+        $authRateLimitIssues[] = 'auth.php is missing rate-limit fragment: ' . $authRateLimitFragment;
+    }
+}
+foreach ([
+    'admin/login.php' => [$adminLoginSource, "rateLimit('login', 5, 300)", "rateLimitSubject('login_email', \$inputEmail, 5, 900)"],
+    'admin/login_2fa.php' => [$adminLogin2faSource, "rateLimit('login_2fa', 5, 300)", "rateLimitSubject('login_2fa_user', (string)\$userId, 5, 300)"],
+    'public_login.php' => [$publicLoginSource, "rateLimit('public_login', 5, 300)", "rateLimitSubject('public_login_email', \$email, 5, 900)"],
+    'reset_password.php email' => [$resetPasswordSource, "rateLimit('password_reset', 3, 300)", "rateLimitSubject('password_reset_email', \$email, 3, 900)"],
+    'reset_password.php token' => [$resetPasswordSource, "rateLimitSubject('password_reset_token', \$token, 5, 300)", "verifyCsrf()"],
+] as $rateLimitSourceLabel => [$rateLimitSource, $ipFragment, $subjectFragment]) {
+    if (!str_contains($rateLimitSource, $ipFragment) || !str_contains($rateLimitSource, $subjectFragment)) {
+        $authRateLimitIssues[] = $rateLimitSourceLabel . ' is missing combined IP and subject rate limiting';
+    }
+}
+if ($authRateLimitIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($authRateLimitIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }
