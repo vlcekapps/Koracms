@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Změněno
 - **Rate limiting – přihlášení a obnovení hesla nově kombinují IP limit i hashovaný limit konkrétního účtu/tokenu** – pokusy rozložené přes více IP adres už se nesledují jen podle adresy klienta; e-maily se do databáze neukládají, používá se pouze SHA-256 klíč.
+- **CI a vývojové kontroly – GitHub Actions používá `actions/checkout@v6` a PHPStan nově pokrývá další stabilní helpery** – základní CI už nemá varování kvůli Node 20 checkout akci a statická analýza zahrnuje také `lib/filedownloads.php` a `lib/totp.php`.
 
 ## [3.3.8] – 2026-04-17
 

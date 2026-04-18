@@ -391,6 +391,8 @@ Kora CMS používá:
 - ochranu `.env` a `.git/`
 - audit log a kontrolu integrity souborů
 
+Přihlášení do administrace, veřejné přihlášení i obnovení hesla používají kombinovaný rate limiting. Systém hlídá počet pokusů podle IP adresy a zároveň podle hashovaného účtu nebo tokenu. Do databáze se neukládá e-mail ani token v čitelné podobě, pouze odvozený SHA-256 klíč.
+
 V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
 
 ---
@@ -453,6 +455,7 @@ Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vr
 ## Vývoj a CI
 
 Produkční běh Kora CMS zůstává bez Composer závislostí. Composer je použitý pouze pro vývojové nástroje v `require-dev`.
+Release ZIP se vytváří bez adresáře `vendor/`; pokud ho v lokálním checkoutu máte po `composer install`, slouží jen pro lokální vývoj a CI.
 
 Základní lokální kontrola:
 
@@ -464,9 +467,10 @@ composer ci:basic
 `composer ci:basic` spustí:
 
 - PHP lint přes `build/lint_php.php`
+- PHPStan nad první sadou stabilních helperů podle `phpstan.neon.dist`
 - unit testy přes `build/unit_tests.php`
 
-GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`.
+GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Workflow používá aktuální `actions/checkout@v6`, aby CI neběželo na deprecated Node 20 checkout akci.
 
 ---
 

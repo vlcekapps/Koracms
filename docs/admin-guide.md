@@ -720,6 +720,26 @@ Starší exporty zůstávají kompatibilní; chybějící novější pole se př
 
 ---
 
+## Provozní bezpečnost a vývojové nástroje
+
+Kora CMS drží produkční běh bez Composer závislostí. Adresář `vendor/` vzniká po `composer install` jen pro lokální vývojové nástroje a CI, například PHPStan a PHP-CS-Fixer. Release balíček `dist/koracms-*.zip` jej záměrně neobsahuje.
+
+Přihlašování a obnova hesla používají kombinovaný rate limiting:
+
+- limit podle IP adresy
+- limit podle hashovaného účtu nebo reset tokenu
+- bez ukládání e-mailu nebo tokenu v čitelné podobě do tabulky `cms_rate_limit`
+
+To chrání nejen proti opakovaným pokusům z jedné adresy, ale i proti útokům rozloženým přes více IP adres na stejný účet.
+
+Vývojové kontroly:
+
+- `composer ci:basic` spustí PHP lint, PHPStan a unit testy
+- `php build/runtime_audit.php` ověřuje runtime guardrails včetně release ZIP pravidel, rate limitingu a přístupnosti
+- `php build/http_integration.php` ověřuje důležité HTTP scénáře
+
+---
+
 ## Kompletní seznam widgetů
 
 Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.

@@ -3,6 +3,8 @@ parameters:
     paths:
         - build/lint_php.php
         - lib/backup.php
+        - lib/filedownloads.php
+        - lib/totp.php
         - lib/uploads.php
     excludePaths:
         - vendor (?)
