@@ -11,6 +11,9 @@ declare(strict_types=1);
 if (!defined('BASE_URL')) {
     define('BASE_URL', '');
 }
+if (!defined('KORA_VERSION')) {
+    define('KORA_VERSION', '0.0.0');
+}
 
 if (!function_exists('h')) {
     function h(?string $s): string

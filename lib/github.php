@@ -334,8 +334,9 @@ function githubIssueCreate(string $repository, string $title, string $body, arra
         ],
     ]);
 
+    $http_response_header = [];
     $response = @file_get_contents('https://api.github.com/repos/' . rawurlencode(explode('/', $normalizedRepository)[0]) . '/' . rawurlencode(explode('/', $normalizedRepository)[1]) . '/issues', false, $context);
-    $headers = $http_response_header ?? [];
+    $headers = $http_response_header;
     $status = githubApiResponseStatus($headers);
     $data = is_string($response) && $response !== '' ? json_decode($response, true) : [];
 
