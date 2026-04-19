@@ -252,7 +252,7 @@ function githubIssueParseUrl(string $url): ?array
         return null;
     }
 
-    if (!preg_match('#^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/issues/([0-9]+)(?:[/?#].*)?$#i', $normalizedUrl, $matches)) {
+    if (!preg_match('~^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/issues/([0-9]+)(?:[/?#].*)?$~i', $normalizedUrl, $matches)) {
         return null;
     }
 

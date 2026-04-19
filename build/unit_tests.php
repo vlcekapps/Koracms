@@ -344,6 +344,19 @@ assert_equals('/uploads/file.mp3', normalizeContentEmbedUrl('/uploads/file.mp3')
 assert_equals('', normalizeContentEmbedUrl("https://example.com\nevil"), 'URL with newline rejected');
 assert_equals('', normalizeContentEmbedUrl('javascript:alert(1)'), 'javascript: rejected');
 
+// ─── 13. githubIssueParseUrl() ───────────────────────────────────────────────
+
+test_section('githubIssueParseUrl()');
+
+$parsedIssue = githubIssueParseUrl('https://github.com/vlcekapps/Koracms/issues/123');
+assert_equals('vlcekapps/Koracms', $parsedIssue['repository'] ?? '', 'repository parsed from issue URL');
+assert_equals(123, $parsedIssue['number'] ?? 0, 'issue number parsed from issue URL');
+assert_equals('https://github.com/vlcekapps/Koracms/issues/123', $parsedIssue['url'] ?? '', 'canonical issue URL returned');
+
+$parsedIssueWithFragment = githubIssueParseUrl('https://github.com/vlcekapps/Koracms/issues/123#issuecomment-1');
+assert_equals('https://github.com/vlcekapps/Koracms/issues/123', $parsedIssueWithFragment['url'] ?? '', 'issue URL with fragment parsed');
+assert_equals(null, githubIssueParseUrl('https://example.com/vlcekapps/Koracms/issues/123'), 'non-GitHub issue URL rejected');
+
 // ─── 13. userHas2FA() / userHasPasskey() ───────────────────────────────────
 
 test_section('userHas2FA() / userHasPasskey()');
