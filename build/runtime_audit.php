@@ -6980,7 +6980,7 @@ $foundationChecks = [
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
-        && str_contains($phpstanConfigSource, 'level: 4')
+        && str_contains($phpstanConfigSource, 'level: 5')
         && str_contains($phpstanConfigSource, 'bootstrapFiles')
         && str_contains($phpstanConfigSource, 'scanFiles')
         && str_contains($phpstanConfigSource, 'build/phpstan_bootstrap.php')
