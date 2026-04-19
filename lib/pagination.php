@@ -4,6 +4,7 @@
 /**
  * Vypočítá stránkovací parametry z GET požadavku.
  *
+ * @param array<int|string, mixed> $countParams
  * @return array{perPage: int, total: int, totalPages: int, page: int, offset: int}
  */
 function paginate(PDO $pdo, string $countQuery, array $countParams, int $perPage = 10): array

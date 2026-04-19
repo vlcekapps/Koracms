@@ -104,6 +104,8 @@ function totpQrUrl(string $uri): string
 
 /**
  * Zkontroluje, zda uživatel má aktivní 2FA.
+ *
+ * @param array<string, mixed> $user
  */
 function userHas2FA(array $user): bool
 {
@@ -112,6 +114,8 @@ function userHas2FA(array $user): bool
 
 /**
  * Zkontroluje, zda uživatel má registrované passkey.
+ *
+ * @param array<string, mixed> $user
  */
 function userHasPasskey(array $user): bool
 {

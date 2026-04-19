@@ -468,6 +468,7 @@ composer ci:basic
 
 - PHP lint přes `build/lint_php.php`
 - PHPStan na levelu 5 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů
+- úzký PHPStan level 6 smoke check nad nejstabilnějšími helpery přes `composer analyse:strict`
 - unit testy přes `build/unit_tests.php`
 
 GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Workflow používá aktuální `actions/checkout@v6`, aby CI neběželo na deprecated Node 20 checkout akci.

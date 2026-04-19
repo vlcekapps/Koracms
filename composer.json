@@ -16,6 +16,7 @@
   },
   "scripts": {
     "analyse": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G",
+    "analyse:strict": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --level=6 build/lint_php.php build/phpstan_bootstrap.php lib/backup.php lib/filedownloads.php lib/pagination.php lib/totp.php lib/uploads.php",
     "lint": "php build/lint_php.php",
     "test:unit": "php build/unit_tests.php",
     "test:runtime": "php build/runtime_audit.php",
@@ -23,6 +24,7 @@
     "ci:basic": [
       "@lint",
       "@analyse",
+      "@analyse:strict",
       "@test:unit"
     ]
   }
