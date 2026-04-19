@@ -8,7 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Změněno
 - **Rate limiting – přihlášení a obnovení hesla nově kombinují IP limit i hashovaný limit konkrétního účtu/tokenu** – pokusy rozložené přes více IP adres už se nesledují jen podle adresy klienta; e-maily se do databáze neukládají, používá se pouze SHA-256 klíč.
-- **CI a vývojové kontroly – GitHub Actions používá `actions/checkout@v6` a PHPStan nově pokrývá širší sadu stabilních helperů na levelu 2** – základní CI už nemá varování kvůli Node 20 checkout akci a statická analýza má bezpečný bootstrap i symbol scan bez DB/session side efektů; zahrnuje mimo jiné `lib/content.php`, `lib/github.php`, `lib/media_library.php`, `lib/theme.php`, `lib/ui.php` a `lib/widgets.php`.
+- **CI a vývojové kontroly – GitHub Actions používá `actions/checkout@v6` a PHPStan nově pokrývá širší sadu stabilních helperů na levelu 3** – základní CI už nemá varování kvůli Node 20 checkout akci a statická analýza má bezpečný bootstrap i symbol scan bez DB/session side efektů; zahrnuje mimo jiné `lib/content.php`, `lib/github.php`, `lib/media_library.php`, `lib/theme.php`, `lib/ui.php` a `lib/widgets.php`.
 
 ### Opraveno
 - **GitHub issue parser – URL s fragmentem nebo query už nerozbije neplatný regulární výraz** – parser odkazů na GitHub issues používá bezpečný delimiter a jednotkový test hlídá běžnou issue URL i URL s fragmentem.
