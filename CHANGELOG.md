@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.3.9] – 2026-04-19
 
 ### Změněno
 - **Rate limiting – přihlášení a obnovení hesla nově kombinují IP limit i hashovaný limit konkrétního účtu/tokenu** – pokusy rozložené přes více IP adres už se nesledují jen podle adresy klienta; e-maily se do databáze neukládají, používá se pouze SHA-256 klíč.
