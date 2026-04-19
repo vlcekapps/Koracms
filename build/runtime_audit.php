@@ -6980,7 +6980,7 @@ $foundationChecks = [
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
-        && str_contains($phpstanConfigSource, 'level: 3')
+        && str_contains($phpstanConfigSource, 'level: 4')
         && str_contains($phpstanConfigSource, 'bootstrapFiles')
         && str_contains($phpstanConfigSource, 'scanFiles')
         && str_contains($phpstanConfigSource, 'build/phpstan_bootstrap.php')
@@ -6995,6 +6995,7 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'lib/totp.php')
         && str_contains($phpstanConfigSource, 'lib/ui.php')
         && str_contains($phpstanConfigSource, 'lib/uploads.php')
+        && str_contains($phpstanBootstrapSource, "getenv('KORA_PHPSTAN_BASE_URL')")
         && str_contains($phpstanBootstrapSource, "define('KORA_VERSION', '0.0.0')")
         && str_contains($phpstanBootstrapSource, 'function h(?string $s): string')
         && !str_contains($phpstanBootstrapSource, 'require_once'),

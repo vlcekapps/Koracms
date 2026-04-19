@@ -9,7 +9,8 @@ declare(strict_types=1);
  */
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '');
+    $phpstanBaseUrl = getenv('KORA_PHPSTAN_BASE_URL');
+    define('BASE_URL', is_string($phpstanBaseUrl) ? $phpstanBaseUrl : '');
 }
 if (!defined('KORA_VERSION')) {
     define('KORA_VERSION', '0.0.0');

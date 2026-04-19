@@ -1558,7 +1558,7 @@ function podcastEpisodeStructuredData(array $show, array $episode): string
 
     $duration = trim((string)($episode['duration'] ?? ''));
     if ($duration !== '' && preg_match('/^(?:(\d+):)?(\d{1,2}):(\d{2})$/', $duration, $matches)) {
-        $hours = isset($matches[1]) && $matches[1] !== '' ? (int)$matches[1] : 0;
+        $hours = $matches[1] !== '' ? (int)$matches[1] : 0;
         $minutes = (int)$matches[2];
         $seconds = (int)$matches[3];
         $data['duration'] = sprintf('PT%dH%dM%dS', $hours, $minutes, $seconds);
@@ -2105,7 +2105,7 @@ function hydrateFoodCardPresentation(array $card): array
     $card['public_path'] = foodCardPublicPath($card);
     $card['is_publicly_visible'] = ((string)($card['status'] ?? 'published') === 'published')
         && (int)($card['is_published'] ?? 1) === 1;
-    $card['is_temporally_active'] = (string)($card['state_key'] ?? 'current') === 'current';
+    $card['is_temporally_active'] = (string)$card['state_key'] === 'current';
 
     return $card;
 }
@@ -3919,7 +3919,7 @@ function hydratePodcastShowPresentation(array $show): array
     $show['public_url'] = podcastShowPublicUrl($show);
     $show['description_plain'] = normalizePlainText((string)($show['description'] ?? ''));
     $show['feed_subtitle'] = podcastFeedSubtitle((string)($show['subtitle'] !== '' ? $show['subtitle'] : $show['description_plain']));
-    $show['feed_summary'] = podcastFeedSummary((string)($show['description_plain'] ?? ''));
+    $show['feed_summary'] = podcastFeedSummary((string)$show['description_plain']);
     $show['is_public'] = podcastShowIsPublic($show);
     return $show;
 }
@@ -4415,7 +4415,7 @@ function formFieldNameVariants(string $fieldName): array
     $hyphenVariant = str_replace('_', '-', $fieldName);
     $underscoreVariant = str_replace('-', '_', $fieldName);
     foreach ([$hyphenVariant, $underscoreVariant] as $variant) {
-        if ($variant !== '' && !in_array($variant, $variants, true)) {
+        if (!in_array($variant, $variants, true)) {
             $variants[] = $variant;
         }
     }

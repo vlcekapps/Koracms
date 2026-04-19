@@ -836,7 +836,7 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[audio(?:\s+([^\]]*))?\](.*?)\[\/audio\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
             $source = '';
             foreach (['src', 'url', 'mp3', 'ogg', 'wav', 'm4a', 'aac', 'flac'] as $key) {
                 if (!empty($attributes[$key])) {
@@ -845,7 +845,7 @@ function renderContentShortcodes(string $text): string
                 }
             }
             if ($source === '') {
-                $source = trim((string)($matches[2] ?? ''));
+                $source = trim((string)$matches[2]);
             }
 
             $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'audio');
@@ -858,7 +858,7 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[video(?:\s+([^\]]*))?\](.*?)\[\/video\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
             $source = '';
             foreach (['src', 'url', 'mp4', 'webm', 'ogv', 'm4v', 'mov'] as $key) {
                 if (!empty($attributes[$key])) {
@@ -867,7 +867,7 @@ function renderContentShortcodes(string $text): string
                 }
             }
             if ($source === '') {
-                $source = trim((string)($matches[2] ?? ''));
+                $source = trim((string)$matches[2]);
             }
 
             $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'video');
@@ -880,8 +880,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[gallery(?:\s+([^\]]*))?\](.*?)\[\/gallery\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug', 'album']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug', 'album']);
             if (galleryAlbumSlug($slug) === '') {
                 return $matches[0];
             }
@@ -894,8 +894,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[pdf(?:\s+([^\]]*))?\](.*?)\[\/pdf\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $source = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['src', 'url']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $source = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['src', 'url']);
             $title = trim((string)($attributes['title'] ?? $attributes['label'] ?? ''));
             $mimeType = strtolower(trim((string)($attributes['mime'] ?? $attributes['type'] ?? '')));
             $mediaId = filter_var((string)($attributes['media_id'] ?? $attributes['media'] ?? ''), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -908,7 +908,7 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[code(?:\s+([^\]]*))?\](.*?)\[\/code\]/is',
         static function (array $matches): string {
-            return renderContentCodeShortcode((string)($matches[2] ?? '')) ?? $matches[0];
+            return renderContentCodeShortcode((string)$matches[2]) ?? $matches[0];
         },
         $text
     ) ?? $text;
@@ -916,8 +916,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[form(?:\s+([^\]]*))?\](.*?)\[\/form\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug', 'form']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug', 'form']);
             if (formSlug($slug) === '') {
                 return $matches[0];
             }
@@ -930,8 +930,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[poll(?:\s+([^\]]*))?\](.*?)\[\/poll\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug']);
             if (pollSlug($slug) === '') {
                 return $matches[0];
             }
@@ -944,8 +944,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[download(?:\s+([^\]]*))?\](.*?)\[\/download\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug']);
             if (downloadSlug($slug) === '') {
                 return $matches[0];
             }
@@ -958,8 +958,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[podcast(?:\s+([^\]]*))?\](.*?)\[\/podcast\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug', 'show']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug', 'show']);
             if (podcastShowSlug($slug) === '') {
                 return $matches[0];
             }
@@ -972,8 +972,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[podcast_episode(?:\s+([^\]]*))?\](.*?)\[\/podcast_episode\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $parts = contentShortcodePodcastEpisodeParts($attributes, (string)($matches[2] ?? ''));
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $parts = contentShortcodePodcastEpisodeParts($attributes, (string)$matches[2]);
             if ($parts === null) {
                 return $matches[0];
             }
@@ -986,8 +986,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[place(?:\s+([^\]]*))?\](.*?)\[\/place\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug']);
             if (placeSlug($slug) === '') {
                 return $matches[0];
             }
@@ -1000,8 +1000,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[event(?:\s+([^\]]*))?\](.*?)\[\/event\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug']);
             if (eventSlug($slug) === '') {
                 return $matches[0];
             }
@@ -1014,8 +1014,8 @@ function renderContentShortcodes(string $text): string
     $text = preg_replace_callback(
         '/\[board(?:\s+([^\]]*))?\](.*?)\[\/board\]/is',
         static function (array $matches): string {
-            $attributes = parseContentShortcodeAttributes(trim((string)($matches[1] ?? '')));
-            $slug = contentShortcodeResolvedValue($attributes, (string)($matches[2] ?? ''), ['slug']);
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug']);
             if (boardSlug($slug) === '') {
                 return $matches[0];
             }

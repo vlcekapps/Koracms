@@ -430,7 +430,7 @@ function siteNav(string $current = ''): string
         foreach (navModuleOrder() as $key) {
             if (!isModuleEnabled($key) || !isset($moduleMap[$key])) continue;
             if ($key === 'blog') {
-                $visibleBlogs = array_filter(getAllBlogs(), fn($b) => (int)($b['show_in_nav'] ?? 1));
+                $visibleBlogs = array_filter(getAllBlogs(), static fn(array $blog): bool => (int)($blog['show_in_nav'] ?? 1) !== 0);
                 if (count($visibleBlogs) === 0) continue;
             }
             if ($key === 'blog' && isMultiBlog()) {

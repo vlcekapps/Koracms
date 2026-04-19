@@ -376,7 +376,7 @@ function guessSiteProfileKey(): string
         return 'civic';
     }
 
-    if (isModuleEnabled('newsletter') && isModuleEnabled('contact') && !isModuleEnabled('board') && !isModuleEnabled('news')) {
+    if (isModuleEnabled('newsletter') && isModuleEnabled('contact')) {
         return 'service';
     }
 

@@ -266,7 +266,7 @@ function dispatchFormWebhook(
         formWebhookPayload($form, $event, $submission, $fieldsByName, $submissionData, $context),
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
     );
-    if (!is_string($payload) || $payload === '') {
+    if (!is_string($payload)) {
         error_log('form webhook failed: payload encoding error');
         return false;
     }

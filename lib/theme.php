@@ -1355,10 +1355,12 @@ function themeBuildPortablePackage(?string $themeKey = null): array
         ];
     }
 
-    if (!themeCreateZipArchive($tempZipPath, array_combine(
-        array_map(static fn($relativePath) => $resolvedTheme . '/' . $relativePath, array_keys($files)),
-        array_values($files)
-    ) ?: [])) {
+    $zipFiles = [];
+    foreach ($files as $relativePath => $contents) {
+        $zipFiles[$resolvedTheme . '/' . $relativePath] = $contents;
+    }
+
+    if (!themeCreateZipArchive($tempZipPath, $zipFiles)) {
         return [
             'ok' => false,
             'errors' => ['Nepodařilo se otevřít ZIP balíček pro export šablony.'],
@@ -1458,7 +1460,7 @@ function themeImportPortablePackageUpload(?array $upload): array
         }
 
         $rootThemeKey = array_shift($segments);
-        if (!is_string($rootThemeKey) || !isValidThemeKey($rootThemeKey)) {
+        if (!isValidThemeKey($rootThemeKey)) {
             $errors[] = 'ZIP balíček používá neplatný kořenový adresář šablony.';
             break;
         }

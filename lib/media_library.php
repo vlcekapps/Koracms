@@ -749,7 +749,7 @@ function mediaUsageNeedles(array $media): array
         $needles[] = '/uploads/media/thumbs/' . $encodedFilename;
     }
 
-    return array_values(array_unique(array_filter($needles)));
+    return array_values(array_unique($needles));
 }
 
 function mediaFindUsages(array $media, int $limit = 25): array
@@ -797,13 +797,7 @@ function mediaFindUsages(array $media, int $limit = 25): array
                 $columnParts[] = "{$columnName} LIKE ?";
                 $params[] = '%' . $needle . '%';
             }
-            if ($columnParts !== []) {
-                $whereParts[] = '(' . implode(' OR ', $columnParts) . ')';
-            }
-        }
-
-        if ($whereParts === []) {
-            continue;
+            $whereParts[] = '(' . implode(' OR ', $columnParts) . ')';
         }
 
         $sql = sprintf(
