@@ -125,8 +125,8 @@ if ($repository === '' || $title === '' || $body === '') {
 }
 
 $result = githubIssueCreate($repository, $title, $body, $labels);
-if (!($result['ok'] ?? false)) {
-    $errorMessage = trim((string)($result['error'] ?? ''));
+if (!$result['ok']) {
+    $errorMessage = trim((string)$result['error']);
     if ($errorMessage === '') {
         $errorMessage = 'GitHub issue se nepodařilo vytvořit.';
     }

@@ -330,14 +330,7 @@ function githubApiResponseStatus(array $headers): int
 
 /**
  * @param list<string> $labels
- * @return array{
- *     ok:bool,
- *     status:int,
- *     error?:string,
- *     repository?:string,
- *     number?:int,
- *     url?:string
- * }
+ * @return array{ok:false,status:int,error:string}|array{ok:true,status:int,repository:string,number:int,url:string}
  */
 function githubIssueCreate(string $repository, string $title, string $body, array $labels = []): array
 {

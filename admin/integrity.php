@@ -11,6 +11,8 @@ $snapshotFile = $baseDir . '/.integrity_snapshot.json';
 
 /**
  * Projde adresáře a vrátí pole [relativní_cesta => sha256_hash] pro PHP soubory.
+ *
+ * @return array<string, string>
  */
 function scanPhpFiles(string $baseDir): array
 {
@@ -31,7 +33,7 @@ function scanPhpFiles(string $baseDir): array
         $relativePath = str_replace('\\', '/', substr($file->getPathname(), strlen($baseDir) + 1));
 
         // Přeskočit adresáře, které se mění legitimně
-        $firstDir = explode('/', $relativePath)[0] ?? '';
+        $firstDir = explode('/', $relativePath)[0];
         if (in_array($firstDir, $skipDirs, true)) continue;
 
         // Přeskočit temp/cache soubory

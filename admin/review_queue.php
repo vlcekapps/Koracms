@@ -361,7 +361,7 @@ adminHeader('Ke schválení');
 <?php $hasVisibleRows = false; ?>
 
 <?php if (in_array($scope, ['all', 'content'], true)): ?>
-  <?php $hasVisibleRows = $hasVisibleRows || $contentRows !== []; ?>
+  <?php $hasVisibleRows = $contentRows !== []; ?>
   <section aria-labelledby="queue-content-heading" style="margin-top:1.5rem">
     <h2 id="queue-content-heading">Obsah čekající na schválení</h2>
     <?php if ($contentRows === []): ?>
