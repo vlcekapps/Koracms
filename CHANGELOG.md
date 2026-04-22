@@ -14,6 +14,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Vývojové ověření – přibyl `composer ci:full` pro lokální pre-release kontrolu** – po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže jde jedním příkazem ověřit celý dnes používaný quality balík.
 - **Přísnější PHPStan smoke check – level 6 nově hlídá i `auth.php` a `db.php`** – základní role/ACL helpery a cache nastavení z `cms_settings` mají přesnější návratové kontrakty a nově patří do stejného strict smoke checku jako stabilizované knihovny v `lib/`.
 - **Přísnější PHPStan smoke check – level 6 nově pokrývá i `cron.php`, `health.php` a `search.php`** – cron log helpery, health endpoint a veřejný result router mají přesnější kontrakty bez redundantních fallbacků a nově jsou součástí stejného strict smoke checku jako zbytek stabilizovaného jádra.
+- **Přísnější PHPStan smoke check – level 6 nově zahrnuje i `install.php`, `migrate.php` a `sitemap.php`** – instalační flow, migrační potvrzení a sitemap endpoint už procházejí stejným strict smoke checkem jako ostatní stabilizované root skripty, takže se regresní drift v těchto citlivých vstupech chytí dřív a bez zavádění baseline nebo ignore pravidel.
+- **Přísnější PHPStan smoke check – level 6 nově hlídá i `robots.php`, `subscribe_confirm.php` a `unsubscribe.php`** – SEO robots endpoint a potvrzovací/odhlašovací newsletter flow nově běží pod stejným strict quality geatem jako ostatní stabilizované root skripty, takže se typové regresní chyby v těchto veřejných vstupech chytí dřív a pořád bez baseline nebo `@phpstan-ignore`.
 
 ## [3.3.9] – 2026-04-19
 
