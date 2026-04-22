@@ -26,7 +26,7 @@ if ($statusFilter === 'pending') {
     $where[] = "COALESCE(p.status,'published') = 'published' AND p.is_published = 0";
 }
 
-$whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $where);
 
 $stmt = $pdo->prepare(
     "SELECT p.id, p.title, p.slug, p.blog_id, p.blog_nav_order, p.is_published, p.show_in_nav, p.nav_order,

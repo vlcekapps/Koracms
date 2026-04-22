@@ -22,7 +22,7 @@ if ($id !== null) {
 
 // Content locking – pokus o získání zámku při editaci existující stránky
 $contentLockWarning = null;
-if ($page && $id !== null) {
+if ($page) {
     $contentLockWarning = acquireContentLock('page', $id);
 }
 

@@ -155,7 +155,7 @@ try {
 
         if ($oldWasGlobal && !$newIsGlobal) {
             normalizePageNavigationOrder($pdo);
-        } elseif (!$oldWasGlobal && $oldBlogId !== null && $oldBlogId !== $targetBlogId) {
+        } elseif (!$oldWasGlobal && $oldBlogId !== $targetBlogId) {
             normalizeBlogPageNavigationOrder($pdo, $oldBlogId);
         }
 
