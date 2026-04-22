@@ -41,7 +41,7 @@ if ($latestBackupTimestamp > 0) {
 
 $overallStatus = 'ok';
 foreach (['database', 'storage'] as $requiredCheck) {
-    if (($checks[$requiredCheck]['status'] ?? 'fail') !== 'ok') {
+    if ($checks[$requiredCheck]['status'] !== 'ok') {
         $overallStatus = 'fail';
     }
 }

@@ -7011,6 +7011,8 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'lib/uploads.php')
         && str_contains($composerSource, '"analyse:strict"')
         && str_contains($composerSource, '--level=6')
+        && str_contains($composerSource, 'build/phpstan_bootstrap.php auth.php cron.php db.php health.php search.php')
+        && str_contains($composerSource, 'lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
         && str_contains($composerSource, 'lib/filedownloads.php lib/gallery.php lib/github.php lib/mail.php lib/media_library.php')
         && str_contains($composerSource, 'lib/messages.php lib/pagination.php lib/presentation.php lib/revisions.php lib/stats.php lib/theme.php')

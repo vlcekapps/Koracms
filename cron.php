@@ -22,6 +22,9 @@ function cronBackupDirectory(): string
     return rtrim(koraStoragePath('backups'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 }
 
+/**
+ * @param list<string> $log
+ */
 function cronAppendLog(array &$log, string $message): void
 {
     $message = trim($message);
@@ -31,6 +34,7 @@ function cronAppendLog(array &$log, string $message): void
 }
 
 /**
+ * @param list<string> $requiredColumns
  * @return list<string>
  */
 function cronMissingColumns(PDO $pdo, string $tableName, array $requiredColumns): array
@@ -65,6 +69,9 @@ function cronMissingColumns(PDO $pdo, string $tableName, array $requiredColumns)
     return $missing;
 }
 
+/**
+ * @return list<string>
+ */
 function runKoraCron(PDO $pdo): array
 {
     $log = [];

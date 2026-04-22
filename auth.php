@@ -72,6 +72,9 @@ function isSuperAdmin(): bool
     return !empty($_SESSION['cms_superadmin']);
 }
 
+/**
+ * @return array<string, array{label:string, staff:bool, capabilities:list<string>, legacy?:bool}>
+ */
 function roleDefinitions(): array
 {
     return [
@@ -187,6 +190,9 @@ function userRoleLabel(string $role): string
     return $definitions[$normalized]['label'] ?? 'Neznámá role';
 }
 
+/**
+ * @return array<string, string>
+ */
 function staffRoleOptions(?string $currentRole = null): array
 {
     $currentRole = normalizeUserRole($currentRole);

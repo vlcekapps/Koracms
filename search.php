@@ -336,6 +336,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     }
 }
 
+/**
+ * @param array<string, mixed> $result
+ */
 function resultUrl(array $result): string
 {
     $baseUrl = BASE_URL;

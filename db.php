@@ -55,6 +55,9 @@ function inputInt(string $source, string $key): ?int
 
 // ──────────────────────────────── Nastavení (cms_settings) ────────────────────
 
+/**
+ * @return array<string, string>
+ */
 function getSettings(): array
 {
     global $_CMS_SETTINGS;

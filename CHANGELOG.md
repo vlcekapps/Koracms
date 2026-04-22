@@ -12,6 +12,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Prezentace a routing helpery – `lib/presentation.php` nově prochází PHPStan levelem 6 a je součástí `composer analyse:strict` i `composer format:check`** – multiblog helpery, veřejné URL buildery, structured data, autorové profily, form builder preview workflow a helpery pro související články mají přesnější array kontrakty a nově je hlídá stejný strict smoke check jako ostatní stabilizované knihovny.
 - **PSR-12 smoke check – stejná formatovací sada nově zahrnuje i `lib/stats.php` a `lib/ui.php`** – návštěvnické statistiky, navigační helpery, cookie banner, SEO meta helpery a admin UI utility se tak kontrolují i stylem, nejen statickou analýzou.
 - **Vývojové ověření – přibyl `composer ci:full` pro lokální pre-release kontrolu** – po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže jde jedním příkazem ověřit celý dnes používaný quality balík.
+- **Přísnější PHPStan smoke check – level 6 nově hlídá i `auth.php` a `db.php`** – základní role/ACL helpery a cache nastavení z `cms_settings` mají přesnější návratové kontrakty a nově patří do stejného strict smoke checku jako stabilizované knihovny v `lib/`.
+- **Přísnější PHPStan smoke check – level 6 nově pokrývá i `cron.php`, `health.php` a `search.php`** – cron log helpery, health endpoint a veřejný result router mají přesnější kontrakty bez redundantních fallbacků a nově jsou součástí stejného strict smoke checku jako zbytek stabilizovaného jádra.
 
 ## [3.3.9] – 2026-04-19
 
