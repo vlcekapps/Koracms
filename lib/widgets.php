@@ -1,9 +1,12 @@
 <?php
+
 // Widget systém – definice typů, rendering do zón
 
 /**
  * Vrátí definice všech widget typů.
  * Každý typ: name, default_title, settings_fields, requires_module, requires_setting
+ *
+ * @return array<string, array{name:string, default_title:string, requires_module:?string, requires_setting:?string}>
  */
 function widgetTypeDefinitions(): array
 {
@@ -125,12 +128,16 @@ function widgetTypeDefinitions(): array
     ];
 }
 
+/**
+ * @param array{name:string, default_title:string, requires_module:?string, requires_setting:?string} $definition
+ */
 function isWidgetTypeAvailable(string $type, array $definition): bool
 {
     return widgetTypeAvailability($type, $definition)['displayable'];
 }
 
 /**
+ * @param array{name:string, default_title:string, requires_module:?string, requires_setting:?string} $definition
  * @return array{displayable:bool,reasons:array<int,string>}
  */
 function widgetTypeAvailability(string $type, array $definition): array
@@ -198,6 +205,9 @@ function widgetSettingAvailabilityReason(string $type, string $settingKey): stri
     return 'chybí potřebné nastavení widgetu';
 }
 
+/**
+ * @param array<int, mixed> $params
+ */
 function widgetCountByQuery(string $sql, array $params = []): int
 {
     try {
@@ -210,6 +220,7 @@ function widgetCountByQuery(string $sql, array $params = []): int
 }
 
 /**
+ * @param array<string,mixed> $widget
  * @return array{displayable:bool,reasons:array<int,string>}
  */
 function widgetInstanceAvailability(array $widget): array
@@ -497,6 +508,9 @@ function widgetInstanceAvailability(array $widget): array
     ];
 }
 
+/**
+ * @return array<string,string>
+ */
 function widgetSocialLinkDefinitions(): array
 {
     return [
@@ -557,6 +571,8 @@ function newsletterWidgetFlash(): array
 
 /**
  * Vrátí widget typy dostupné k přidání (respektuje stav modulů a nastavení).
+ *
+ * @return array<string, array{name:string, default_title:string, requires_module:?string, requires_setting:?string}>
  */
 function availableWidgetTypes(): array
 {
@@ -573,6 +589,8 @@ function availableWidgetTypes(): array
 
 /**
  * Vrátí definice zón.
+ *
+ * @return array<string,string>
  */
 function widgetZoneDefinitions(): array
 {
@@ -585,6 +603,8 @@ function widgetZoneDefinitions(): array
 
 /**
  * Vrátí aktivní widgety pro zónu.
+ *
+ * @return list<array<string,mixed>>
  */
 function getWidgetsForZone(string $zone): array
 {
@@ -604,6 +624,8 @@ function getWidgetsForZone(string $zone): array
 
 /**
  * Vrátí všechny widgety seskupené dle zóny (pro admin).
+ *
+ * @return array<string, list<array<string,mixed>>>
  */
 function getAllWidgetsByZone(): array
 {
@@ -618,12 +640,16 @@ function getAllWidgetsByZone(): array
         foreach ($rows as $row) {
             $zones[$row['zone']][] = $row;
         }
-    } catch (\PDOException $e) {}
+    } catch (\PDOException $e) {
+    }
     return $zones;
 }
 
 /**
  * Dekóduje widget settings JSON.
+ *
+ * @param array<string,mixed> $widget
+ * @return array<string,mixed>
  */
 function widgetSettings(array $widget): array
 {
@@ -658,6 +684,8 @@ function renderZone(string $zone, string $wrapperClass = ''): string
 
 /**
  * Renderuje jeden widget.
+ *
+ * @param array<string,mixed> $widget
  */
 function renderWidget(array $widget, string $zone = 'homepage'): string
 {
@@ -674,6 +702,10 @@ function renderWidget(array $widget, string $zone = 'homepage'): string
 
 // ──────────────── Widget render funkce ───────────────────────────────────────
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_intro(array $widget, array $settings, string $zone): string
 {
     $content = (string)($settings['content'] ?? ($settings['text'] ?? ''));
@@ -688,6 +720,10 @@ function renderWidget_intro(array $widget, array $settings, string $zone): strin
          . '<div class="prose">' . renderContent($content) . '</div></section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_latest_articles(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -759,6 +795,10 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_latest_news(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -798,6 +838,10 @@ function renderWidget_latest_news(array $widget, array $settings, string $zone):
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_latest_downloads(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -813,7 +857,7 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
     );
     $stmt->execute([$count]);
     $items = array_map(
-        static fn(array $download): array => hydrateDownloadPresentation($download),
+        static fn (array $download): array => hydrateDownloadPresentation($download),
         $stmt->fetchAll()
     );
 
@@ -883,6 +927,10 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_latest_faq(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -898,7 +946,7 @@ function renderWidget_latest_faq(array $widget, array $settings, string $zone): 
     );
     $stmt->execute([$count]);
     $items = array_map(
-        static fn(array $faq): array => hydrateFaqPresentation($faq),
+        static fn (array $faq): array => hydrateFaqPresentation($faq),
         $stmt->fetchAll()
     );
 
@@ -936,6 +984,10 @@ function renderWidget_latest_faq(array $widget, array $settings, string $zone): 
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_latest_places(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -949,7 +1001,7 @@ function renderWidget_latest_places(array $widget, array $settings, string $zone
     );
     $stmt->execute([$count]);
     $places = array_map(
-        static fn(array $place): array => hydratePlacePresentation($place),
+        static fn (array $place): array => hydratePlacePresentation($place),
         $stmt->fetchAll()
     );
 
@@ -1000,6 +1052,10 @@ function renderWidget_latest_places(array $widget, array $settings, string $zone
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_latest_podcast_episodes(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -1024,7 +1080,7 @@ function renderWidget_latest_podcast_episodes(array $widget, array $settings, st
     );
     $stmt->execute($params);
     $episodes = array_map(
-        static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
+        static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
         $stmt->fetchAll()
     );
 
@@ -1061,6 +1117,10 @@ function renderWidget_latest_podcast_episodes(array $widget, array $settings, st
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_poll(array $widget, array $settings, string $zone): string
 {
     $pdo = db_connect();
@@ -1099,6 +1159,10 @@ function renderWidget_poll(array $widget, array $settings, string $zone): string
          . '</section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_newsletter(array $widget, array $settings, string $zone): string
 {
     $title = h($widget['title'] ?: 'Zůstaňte v kontaktu');
@@ -1151,6 +1215,10 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
          . '</section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_board(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -1190,6 +1258,10 @@ function renderWidget_board(array $widget, array $settings, string $zone): strin
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_upcoming_events(array $widget, array $settings, string $zone): string
 {
     $count = max(1, (int)($settings['count'] ?? 5));
@@ -1206,7 +1278,7 @@ function renderWidget_upcoming_events(array $widget, array $settings, string $zo
     );
     $stmt->execute([$count]);
     $items = array_map(
-        static fn(array $event): array => hydrateEventPresentation($event),
+        static fn (array $event): array => hydrateEventPresentation($event),
         $stmt->fetchAll()
     );
 
@@ -1238,6 +1310,10 @@ function renderWidget_upcoming_events(array $widget, array $settings, string $zo
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_custom_html(array $widget, array $settings, string $zone): string
 {
     $content = $settings['content'] ?? '';
@@ -1257,6 +1333,10 @@ function renderWidget_custom_html(array $widget, array $settings, string $zone):
          . '<div class="prose">' . renderContent($content) . '</div></section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_search(array $widget, array $settings, string $zone): string
 {
     $title = h($widget['title'] ?: 'Vyhledávání');
@@ -1290,6 +1370,10 @@ function renderWidget_search(array $widget, array $settings, string $zone): stri
          . '</section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_visitor_stats(array $widget, array $settings, string $zone): string
 {
     if (!isModuleEnabled('statistics') || getSetting('visitor_tracking_enabled', '0') !== '1') {
@@ -1297,12 +1381,12 @@ function renderWidget_visitor_stats(array $widget, array $settings, string $zone
     }
 
     $stats = getVisitorStats();
-    $formatNumber = static fn(int $value): string => number_format($value, 0, ',', "\u{00a0}");
+    $formatNumber = static fn (int $value): string => number_format($value, 0, ',', "\u{00a0}");
     $items = [
-        'Online' => $formatNumber((int)($stats['online'] ?? 0)),
-        'Dnes' => $formatNumber((int)($stats['today'] ?? 0)),
-        'Měsíc' => $formatNumber((int)($stats['month'] ?? 0)),
-        'Celkem' => $formatNumber((int)($stats['total'] ?? 0)),
+        'Online' => $formatNumber($stats['online']),
+        'Dnes' => $formatNumber($stats['today']),
+        'Měsíc' => $formatNumber($stats['month']),
+        'Celkem' => $formatNumber($stats['total']),
     ];
     $title = h($widget['title'] ?: 'Statistiky návštěvnosti');
     $counterClass = 'visitor-counter ' . ($zone === 'footer' ? 'visitor-counter--footer' : 'visitor-counter--surface');
@@ -1328,6 +1412,10 @@ function renderWidget_visitor_stats(array $widget, array $settings, string $zone
     return $out . '</ul></section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_social_links(array $widget, array $settings, string $zone): string
 {
     $links = [];
@@ -1369,6 +1457,10 @@ function renderWidget_social_links(array $widget, array $settings, string $zone)
         . '</section>';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_contact_info(array $widget, array $settings, string $zone): string
 {
     $email = getSetting('contact_email', '');
@@ -1396,6 +1488,10 @@ function renderWidget_contact_info(array $widget, array $settings, string $zone)
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_featured_article(array $widget, array $settings, string $zone): string
 {
     $source = $settings['source'] ?? 'blog';
@@ -1490,6 +1586,10 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
     return '';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_gallery_preview(array $widget, array $settings, string $zone): string
 {
     $albumId = (int)($settings['album_id'] ?? 0);
@@ -1512,7 +1612,7 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     );
     $stmt->execute($params);
     $photos = array_map(
-        static fn(array $photo): array => hydrateGalleryPhotoPresentation($photo),
+        static fn (array $photo): array => hydrateGalleryPhotoPresentation($photo),
         $stmt->fetchAll()
     );
 
@@ -1547,6 +1647,10 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     return $out;
 }
 
+/**
+ * @param array<string,mixed> $widget
+ * @param array<string,mixed> $settings
+ */
 function renderWidget_selected_form(array $widget, array $settings, string $zone): string
 {
     $formId = (int)($settings['form_id'] ?? 0);

@@ -1,6 +1,10 @@
 <?php
+
 // Správa zpráv, inboxu a přehled ke schválení – extrahováno z db.php
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function messageStatusDefinitions(): array
 {
     return [
@@ -27,6 +31,9 @@ function messageStatusReadValue(string $status): int
     return normalizeMessageStatus($status) === 'new' ? 0 : 1;
 }
 
+/**
+ * @return array<string, int>
+ */
 function inboxStatusCounts(PDO $pdo, string $tableName, bool $hasLegacyReadColumn = false): array
 {
     $counts = array_fill_keys(array_keys(messageStatusDefinitions()), 0);
@@ -100,6 +107,9 @@ function newsletterSubscriberStatusLabel(bool $confirmed): string
     return $confirmed ? 'Potvrzeno' : 'Čeká na potvrzení';
 }
 
+/**
+ * @return array{confirmed:int, pending:int}
+ */
 function newsletterSubscriberCounts(PDO $pdo): array
 {
     $counts = [
@@ -178,6 +188,9 @@ function setChatMessageStatus(PDO $pdo, int $messageId, string $status): bool
     return (int)$exists->fetchColumn() > 0;
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function chatPublicVisibilityDefinitions(): array
 {
     return [
@@ -199,6 +212,9 @@ function chatPublicVisibilityLabel(string $visibility): string
     return chatPublicVisibilityDefinitions()[$normalized]['label'] ?? 'Ke schválení';
 }
 
+/**
+ * @return array<string, int>
+ */
 function chatPublicVisibilityCounts(PDO $pdo): array
 {
     $counts = array_fill_keys(array_keys(chatPublicVisibilityDefinitions()), 0);
@@ -291,6 +307,9 @@ function chatHistoryCreate(PDO $pdo, int $chatId, ?int $actorUserId, string $eve
     ]);
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function chatHistoryEntries(PDO $pdo, int $chatId): array
 {
     $stmt = $pdo->prepare(
@@ -310,6 +329,9 @@ function chatHistoryEntries(PDO $pdo, int $chatId): array
     return $stmt->fetchAll();
 }
 
+/**
+ * @param array<string, mixed> $entry
+ */
 function chatHistoryActorLabel(array $entry): string
 {
     $firstName = trim((string)($entry['actor_first_name'] ?? ''));
@@ -337,6 +359,9 @@ function deleteChatMessage(PDO $pdo, int $messageId): void
     $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$messageId]);
 }
 
+/**
+ * @return list<array{key:string, label:string, category:string, count:int, url:string}>
+ */
 function pendingReviewSummary(PDO $pdo): array
 {
     $summary = [];
@@ -366,7 +391,7 @@ function pendingReviewSummary(PDO $pdo): array
     }
 
     if (isModuleEnabled('news') && currentUserHasCapability('news_approve')) {
-$addSummaryItem('news', 'Novinky', 'content', BASE_URL . '/admin/news.php', "SELECT COUNT(*) FROM cms_news WHERE status = 'pending' AND deleted_at IS NULL");
+        $addSummaryItem('news', 'Novinky', 'content', BASE_URL . '/admin/news.php', "SELECT COUNT(*) FROM cms_news WHERE status = 'pending' AND deleted_at IS NULL");
     }
 
     if (currentUserHasCapability('content_approve_shared')) {

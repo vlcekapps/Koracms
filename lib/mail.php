@@ -1,4 +1,5 @@
 <?php
+
 // E-mailové odesílání – SMTP s podporou AUTH/TLS – extrahováno z db.php
 
 /**
@@ -112,6 +113,9 @@ function mailBuildMessageId(string $fallbackEmail = ''): string
     );
 }
 
+/**
+ * @return array{0:string, 1:string}
+ */
 function mailEncodeBody(string $body): array
 {
     $normalizedBody = mailNormalizeEol($body);
@@ -155,6 +159,8 @@ function sendNewsletterSubscriptionConfirmation(string $recipient, string $token
  * Konfigurace přes konstanty v config.php (SMTP_HOST, SMTP_PORT,
  * SMTP_USER, SMTP_PASS, SMTP_SECURE). Pokud nejsou definovány,
  * použije se localhost:25 bez autentizace.
+ *
+ * @param array{reply_to?:string, reply_to_name?:string} $options
  */
 function sendMail(string $to, string $subject, string $body, array $options = []): bool
 {
@@ -185,10 +191,10 @@ function sendMail(string $to, string $subject, string $body, array $options = []
         ? mailFormatMailboxHeader($safeReplyTo, $safeReplyTo === $safeFrom ? $siteName : $safeReplyToName)
         : $fromHeader;
 
-    $smtpHost   = defined('SMTP_HOST')   ? SMTP_HOST   : (ini_get('SMTP') ?: 'localhost');
-    $smtpPort   = defined('SMTP_PORT')   ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
-    $smtpUser   = defined('SMTP_USER')   ? SMTP_USER   : '';
-    $smtpPass   = defined('SMTP_PASS')   ? SMTP_PASS   : '';
+    $smtpHost   = defined('SMTP_HOST') ? SMTP_HOST : (ini_get('SMTP') ?: 'localhost');
+    $smtpPort   = defined('SMTP_PORT') ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
+    $smtpUser   = defined('SMTP_USER') ? SMTP_USER : '';
+    $smtpPass   = defined('SMTP_PASS') ? SMTP_PASS : '';
     $smtpSecure = defined('SMTP_SECURE') ? SMTP_SECURE : '';
 
     // SSL – připojení přes ssl:// wrapper
@@ -204,7 +210,9 @@ function sendMail(string $to, string $subject, string $body, array $options = []
         $response = '';
         while (($line = fgets($smtp, 512)) !== false) {
             $response .= $line;
-            if (isset($line[3]) && $line[3] === ' ') break;
+            if (isset($line[3]) && $line[3] === ' ') {
+                break;
+            }
         }
         return $response;
     };
@@ -220,15 +228,21 @@ function sendMail(string $to, string $subject, string $body, array $options = []
         return $resp;
     };
 
-    if ($expect('220') === null) return false;
+    if ($expect('220') === null) {
+        return false;
+    }
 
     fwrite($smtp, "EHLO {$mailHost}\r\n");
-    if ($expect('250') === null) return false;
+    if ($expect('250') === null) {
+        return false;
+    }
 
     // STARTTLS
     if ($smtpSecure === 'tls') {
         fwrite($smtp, "STARTTLS\r\n");
-        if ($expect('220') === null) return false;
+        if ($expect('220') === null) {
+            return false;
+        }
         if (!stream_socket_enable_crypto($smtp, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
             error_log("sendMail FAILED: STARTTLS handshake selhalo");
             fclose($smtp);
@@ -236,25 +250,39 @@ function sendMail(string $to, string $subject, string $body, array $options = []
         }
         // Po STARTTLS je nutný nový EHLO
         fwrite($smtp, "EHLO {$mailHost}\r\n");
-        if ($expect('250') === null) return false;
+        if ($expect('250') === null) {
+            return false;
+        }
     }
 
     // Autentizace (AUTH LOGIN)
     if ($smtpUser !== '' && $smtpPass !== '') {
         fwrite($smtp, "AUTH LOGIN\r\n");
-        if ($expect('334') === null) return false;
+        if ($expect('334') === null) {
+            return false;
+        }
         fwrite($smtp, base64_encode($smtpUser) . "\r\n");
-        if ($expect('334') === null) return false;
+        if ($expect('334') === null) {
+            return false;
+        }
         fwrite($smtp, base64_encode($smtpPass) . "\r\n");
-        if ($expect('235') === null) return false;
+        if ($expect('235') === null) {
+            return false;
+        }
     }
 
     fwrite($smtp, "MAIL FROM:<{$safeFrom}>\r\n");
-    if ($expect('250') === null) return false;
+    if ($expect('250') === null) {
+        return false;
+    }
     fwrite($smtp, "RCPT TO:<{$safeTo}>\r\n");
-    if ($expect('250') === null) return false;
+    if ($expect('250') === null) {
+        return false;
+    }
     fwrite($smtp, "DATA\r\n");
-    if ($expect('354') === null) return false;
+    if ($expect('354') === null) {
+        return false;
+    }
 
     $msg = "Date: " . date(DATE_RFC2822) . "\r\n"
          . "Message-ID: {$messageId}\r\n"
@@ -297,6 +325,8 @@ function notificationRecipient(): string
 
 /**
  * Notifikace: nový formulář odeslán.
+ *
+ * @param array<string, string> $data
  */
 function notifyFormSubmission(
     string $formTitle,
@@ -305,8 +335,7 @@ function notifyFormSubmission(
     string $subjectOverride = '',
     string $referenceCode = '',
     string $detailUrl = ''
-): void
-{
+): void {
     if (getSetting('notify_form_submission', '1') !== '1') {
         return;
     }
@@ -345,6 +374,12 @@ function notifyFormSubmission(
     }
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ * @param array<string, string> $extraPlaceholders
+ */
 function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $submissionData, array $extraPlaceholders = []): bool
 {
     if ((int)($form['submitter_confirmation_enabled'] ?? 0) !== 1) {

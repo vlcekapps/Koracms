@@ -1,4 +1,5 @@
 <?php
+
 // GitHub issue bridge helpery pro formuláře
 
 function githubIssueBridgeEnabled(): bool
@@ -65,6 +66,10 @@ function githubIssueAbsoluteUrl(string $path): string
     return rtrim($base, '/') . '/' . ltrim($normalizedPath, '/');
 }
 
+/**
+ * @param array<string, mixed> $submission
+ * @return list<string>
+ */
 function githubIssueLabelsFromSubmission(array $submission): array
 {
     $labels = [];
@@ -84,11 +89,18 @@ function githubIssueLabelsFromSubmission(array $submission): array
     return array_values(array_unique($labels));
 }
 
+/**
+ * @param array<int|string, string> $labels
+ */
 function githubIssueLabelsCsv(array $labels): string
 {
-    return implode(', ', array_values(array_filter(array_map('trim', $labels), static fn(string $item): bool => $item !== '')));
+    return implode(', ', array_values(array_filter(array_map('trim', $labels), static fn (string $item): bool => $item !== '')));
 }
 
+/**
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ */
 function githubIssueTitleCandidate(array $fieldsByName, array $submissionData): string
 {
     $preferredNames = [
@@ -127,6 +139,12 @@ function githubIssueTitleCandidate(array $fieldsByName, array $submissionData): 
     return '';
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, mixed> $submission
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ */
 function githubIssueDefaultTitle(array $form, array $submission, array $fieldsByName, array $submissionData): string
 {
     $reference = formSubmissionReference($form, $submission);
@@ -139,6 +157,9 @@ function githubIssueDefaultTitle(array $form, array $submission, array $fieldsBy
     return trim(mb_strimwidth($title, 0, 180, '…', 'UTF-8'));
 }
 
+/**
+ * @return list<string>
+ */
 function githubIssueMarkdownFileList(int $submissionId, string $fieldName, mixed $value): array
 {
     $items = formSubmissionFileItems($value);
@@ -168,6 +189,12 @@ function githubIssueMarkdownFileList(int $submissionId, string $fieldName, mixed
     return $links;
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, mixed> $submission
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ */
 function githubIssueDefaultBody(array $form, array $submission, array $fieldsByName, array $submissionData): string
 {
     $reference = formSubmissionReference($form, $submission);
@@ -231,6 +258,9 @@ function githubIssueDefaultBody(array $form, array $submission, array $fieldsByN
     return trim(implode("\n", $lines));
 }
 
+/**
+ * @param list<string> $labels
+ */
 function githubIssueComposeUrl(string $repository, string $title, string $body, array $labels = []): string
 {
     $normalizedRepository = normalizeGitHubRepository($repository);
@@ -245,6 +275,9 @@ function githubIssueComposeUrl(string $repository, string $title, string $body, 
     ]);
 }
 
+/**
+ * @return array{repository:string, number:int, url:string}|null
+ */
 function githubIssueParseUrl(string $url): ?array
 {
     $normalizedUrl = trim($url);
@@ -263,6 +296,9 @@ function githubIssueParseUrl(string $url): ?array
     ];
 }
 
+/**
+ * @param array<string, mixed> $submission
+ */
 function formSubmissionHasGitHubIssue(array $submission): bool
 {
     return trim((string)($submission['github_issue_url'] ?? '')) !== ''
@@ -270,6 +306,9 @@ function formSubmissionHasGitHubIssue(array $submission): bool
         && normalizeGitHubRepository((string)($submission['github_issue_repository'] ?? '')) !== '';
 }
 
+/**
+ * @param array<string, mixed> $submission
+ */
 function formSubmissionGitHubIssueLabel(array $submission): string
 {
     if (!formSubmissionHasGitHubIssue($submission)) {
@@ -279,6 +318,9 @@ function formSubmissionGitHubIssueLabel(array $submission): string
     return normalizeGitHubRepository((string)$submission['github_issue_repository']) . '#' . (int)$submission['github_issue_number'];
 }
 
+/**
+ * @param list<string> $headers
+ */
 function githubApiResponseStatus(array $headers): int
 {
     foreach ($headers as $header) {
@@ -290,6 +332,17 @@ function githubApiResponseStatus(array $headers): int
     return 0;
 }
 
+/**
+ * @param list<string> $labels
+ * @return array{
+ *     ok:bool,
+ *     status:int,
+ *     error?:string,
+ *     repository?:string,
+ *     number?:int,
+ *     url?:string
+ * }
+ */
 function githubIssueCreate(string $repository, string $title, string $body, array $labels = []): array
 {
     $normalizedRepository = normalizeGitHubRepository($repository);
@@ -315,7 +368,7 @@ function githubIssueCreate(string $repository, string $title, string $body, arra
     $payload = json_encode([
         'title' => $normalizedTitle,
         'body' => $normalizedBody,
-        'labels' => array_values(array_filter(array_map('trim', $labels), static fn(string $label): bool => $label !== '')),
+        'labels' => array_values(array_filter(array_map('trim', $labels), static fn (string $label): bool => $label !== '')),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     $context = stream_context_create([

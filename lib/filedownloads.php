@@ -1,4 +1,5 @@
 <?php
+
 // Stahování souborů – extrahováno z db.php
 
 function moduleFileUrl(string $module, int $id): string

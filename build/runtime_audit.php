@@ -401,7 +401,8 @@ if (!$publicUserRow) {
     ];
 }
 
-$auditSessionId = 'runtimeauditadmin';
+$runtimeAuditSessionSuffix = bin2hex(random_bytes(6));
+$auditSessionId = 'runtimeaudit-admin-' . $runtimeAuditSessionSuffix;
 session_write_close();
 session_id($auditSessionId);
 session_start();
@@ -413,7 +414,7 @@ $_SESSION['cms_user_role'] = 'admin';
 $adminCsrfToken = csrfToken();
 session_write_close();
 
-$publicAuditSessionId = 'runtimeauditpublic';
+$publicAuditSessionId = 'runtimeaudit-public-' . $runtimeAuditSessionSuffix;
 session_id($publicAuditSessionId);
 session_start();
 $_SESSION['cms_logged_in'] = true;
@@ -451,7 +452,7 @@ foreach ([
 
 $roleAuditSessions = [];
 foreach ($roleAuditUsers as $roleKey => $roleAuditUser) {
-    $roleAuditSessionId = 'runtimeaudit-' . str_replace('_', '-', $roleKey);
+    $roleAuditSessionId = 'runtimeaudit-' . str_replace('_', '-', $roleKey) . '-' . $runtimeAuditSessionSuffix;
     session_id($roleAuditSessionId);
     session_start();
     $_SESSION['cms_logged_in'] = true;
@@ -6974,10 +6975,21 @@ $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
         && str_contains($composerSource, 'friendsofphp/php-cs-fixer')
-        && str_contains($composerSource, '"ci:basic"'),
+        && str_contains($composerSource, '"ci:basic"')
+        && str_contains($composerSource, '"format:check"')
+        && str_contains($composerSource, '"format:fix"'),
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
+    'php cs fixer smoke check exists' => str_contains($composerSource, 'php-cs-fixer fix')
+        && str_contains($composerSource, '--dry-run')
+        && str_contains($composerSource, '--path-mode=intersection')
+        && str_contains($composerSource, 'build/lint_php.php build/phpstan_bootstrap.php')
+        && str_contains($composerSource, 'lib/backup.php lib/comments.php lib/content.php')
+        && str_contains($composerSource, 'lib/definitions.php lib/filedownloads.php lib/github.php')
+        && str_contains($composerSource, 'lib/mail.php lib/messages.php lib/pagination.php')
+        && str_contains($composerSource, 'lib/theme.php lib/totp.php lib/uploads.php lib/widgets.php')
+        && str_contains($composerSource, '@format:check'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')
@@ -6997,7 +7009,10 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'lib/uploads.php')
         && str_contains($composerSource, '"analyse:strict"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'lib/pagination.php lib/totp.php')
+        && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
+        && str_contains($composerSource, 'lib/filedownloads.php lib/github.php lib/mail.php')
+        && str_contains($composerSource, 'lib/messages.php lib/pagination.php lib/stats.php lib/theme.php')
+        && str_contains($composerSource, 'lib/totp.php lib/ui.php lib/uploads.php lib/widgets.php')
         && str_contains($phpstanBootstrapSource, "getenv('KORA_PHPSTAN_BASE_URL')")
         && str_contains($phpstanBootstrapSource, "define('KORA_VERSION', '0.0.0')")
         && str_contains($phpstanBootstrapSource, 'function h(?string $s): string')

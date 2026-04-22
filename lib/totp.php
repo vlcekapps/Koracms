@@ -1,4 +1,5 @@
 <?php
+
 /**
  * TOTP (Time-based One-Time Password) – RFC 6238 implementace.
  * Kompatibilní s FreeOTP, Authy, Google Authenticator a dalšími.

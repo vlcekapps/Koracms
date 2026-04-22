@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Změněno
+- **Code style guardrail – `composer ci:basic` nově hlídá i úzký PSR-12 smoke check přes PHP-CS-Fixer** – vývojové skripty přidávají `composer format:check` a `composer format:fix` pro postupně rozšiřovanou stabilní helper subset (`build/lint_php.php`, `build/phpstan_bootstrap.php`, `lib/backup.php`, `lib/comments.php`, `lib/content.php`, `lib/definitions.php`, `lib/filedownloads.php`, `lib/github.php`, `lib/mail.php`, `lib/messages.php`, `lib/pagination.php`, `lib/theme.php`, `lib/totp.php`, `lib/uploads.php`, `lib/widgets.php`), takže lze styl zavádět postupně bez velkého kosmetického refaktoru celého CMS.
+- **Přísnější PHPStan smoke check – level 6 nově pokrývá i `comments`, `content`, `definitions`, `github`, `mail`, `messages`, `stats`, `theme`, `ui` a `widgets` helpery** – po doplnění přesnějších array kontraktů pro shortcodes, komentáře, profilové preset konfigurace, GitHub issue bridge, e-mailové placeholder mapy, inbox summary struktury, návštěvnické statistiky, theme manifest/settings workflow, content locking a widget registry/render kontrakty běží `composer analyse:strict` nad širší, ale stále bezpečně udržitelnou sadou procedurálních knihoven.
+
 ## [3.3.9] – 2026-04-19
 
 ### Změněno

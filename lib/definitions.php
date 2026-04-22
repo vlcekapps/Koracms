@@ -1,6 +1,10 @@
 <?php
+
 // Definice typů, profilů webu a popisků modulů – extrahováno z db.php
 
+/**
+ * @return array<string, array{label:string, public_label:string, help:string}>
+ */
 function boardTypeDefinitions(): array
 {
     return [
@@ -37,6 +41,9 @@ function boardTypeDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function placeKindDefinitions(): array
 {
     return [
@@ -50,6 +57,9 @@ function placeKindDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function downloadTypeDefinitions(): array
 {
     return [
@@ -62,6 +72,9 @@ function downloadTypeDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string, array{label:string, help:string}>
+ */
 function eventKindDefinitions(): array
 {
     return [
@@ -140,6 +153,18 @@ function eventKindHelp(string $kind): string
     return (string)($definitions[$normalized]['help'] ?? '');
 }
 
+/**
+ * @return array<string, array{
+ *     label:string,
+ *     description:string,
+ *     theme?:string,
+ *     supports_preset?:bool,
+ *     modules?:array<string, bool>,
+ *     nav_order?:list<string>,
+ *     settings?:array<string, string>,
+ *     theme_settings?:array<string, string>
+ * }>
+ */
 function siteProfileDefinitions(): array
 {
     return [
@@ -462,6 +487,18 @@ function boardModuleBackLabel(): string
     };
 }
 
+/**
+ * @return array{
+ *     label:string,
+ *     description:string,
+ *     theme?:string,
+ *     supports_preset?:bool,
+ *     modules?:array<string, bool>,
+ *     nav_order?:list<string>,
+ *     settings?:array<string, string>,
+ *     theme_settings?:array<string, string>
+ * }
+ */
 function siteProfileConfig(string $profileKey): array
 {
     $definitions = siteProfileDefinitions();
@@ -495,6 +532,9 @@ function siteProfileShouldDetachForTheme(string $profileKey, string $themeKey): 
     return siteProfileRecommendedTheme($normalizedProfileKey) !== resolveThemeName($themeKey);
 }
 
+/**
+ * @return list<string>
+ */
 function siteProfileModuleKeys(): array
 {
     return ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms'];
@@ -521,9 +561,7 @@ function applySiteProfilePreset(string $profileKey): void
     }
 
     foreach ((array)($profileConfig['settings'] ?? []) as $settingKey => $settingValue) {
-        if (is_string($settingKey)) {
-            saveSetting($settingKey, (string)$settingValue);
-        }
+        saveSetting($settingKey, (string)$settingValue);
     }
 
     $navOrder = array_values(array_filter((array)($profileConfig['nav_order'] ?? []), 'is_string'));
@@ -533,7 +571,7 @@ function applySiteProfilePreset(string $profileKey): void
 
     $themeSettings = themeDefaultSettings($themeKey);
     foreach ((array)($profileConfig['theme_settings'] ?? []) as $settingKey => $settingValue) {
-        if (is_string($settingKey) && array_key_exists($settingKey, $themeSettings)) {
+        if (array_key_exists($settingKey, $themeSettings)) {
             $themeSettings[$settingKey] = (string)$settingValue;
         }
     }

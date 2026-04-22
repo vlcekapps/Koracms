@@ -1,4 +1,5 @@
 <?php
+
 // Sdílené helpery pro SQL zálohy.
 
 function koraSqlIdentifierAllowed(string $identifier): bool

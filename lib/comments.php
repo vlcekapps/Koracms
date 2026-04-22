@@ -1,9 +1,13 @@
 <?php
+
 // Komentářový systém – extrahováno z db.php
 
 // ────────────────────────────── Pomocné funkce ────────────────────────────────
 
 /** Formátuje datum česky: 18. března 2026, 14:30 */
+/**
+ * @return array<string, array{label:string, public:bool}>
+ */
 function commentStatusDefinitions(): array
 {
     return [
@@ -88,7 +92,7 @@ function commentNotificationEmail(): string
 function commentListSetting(string $key): array
 {
     $value = str_replace("\r", '', getSetting($key, ''));
-    $items = array_filter(array_map('trim', explode("\n", $value)), static fn(string $item): bool => $item !== '');
+    $items = array_filter(array_map('trim', explode("\n", $value)), static fn (string $item): bool => $item !== '');
     return array_values(array_unique($items));
 }
 
@@ -146,6 +150,9 @@ function matchedCommentSpamPhrase(string $authorName, string $content): string
     return '';
 }
 
+/**
+ * @param array<string, mixed> $article
+ */
 function articleCommentsClosedByAge(array $article): bool
 {
     $days = commentCloseDays();
@@ -169,6 +176,10 @@ function articleCommentsClosedByAge(array $article): bool
     return $referenceTs < strtotime('-' . $days . ' days');
 }
 
+/**
+ * @param array<string, mixed> $article
+ * @return array{enabled:bool, reason:string, message:string}
+ */
 function articleCommentsState(array $article): array
 {
     if (!commentsEnabledGlobally()) {
@@ -250,6 +261,9 @@ function determineCommentStatus(PDO $pdo, string $authorName, string $authorEmai
     return ['status' => 'pending', 'public_result' => 'pending'];
 }
 
+/**
+ * @param array<string, mixed> $article
+ */
 function notifyAdminAboutPendingComment(array $article, string $authorName, string $authorEmail, string $content): void
 {
     if (!commentNotifyAdminEnabled()) {
@@ -278,6 +292,20 @@ function notifyAdminAboutPendingComment(array $article, string $authorName, stri
     }
 }
 
+/**
+ * @return array{
+ *     id:int|string,
+ *     article_id:int|string,
+ *     author_name:string|null,
+ *     author_email:string|null,
+ *     content:string|null,
+ *     status:string,
+ *     is_approved:int|string,
+ *     created_at:string|null,
+ *     article_title:string|null,
+ *     article_slug:string|null
+ * }|null
+ */
 function loadCommentModerationContext(PDO $pdo, int $commentId): ?array
 {
     try {
@@ -306,6 +334,9 @@ function loadCommentModerationContext(PDO $pdo, int $commentId): ?array
     return $comment ?: null;
 }
 
+/**
+ * @param array<string, mixed> $comment
+ */
 function notifyAuthorAboutApprovedComment(array $comment): void
 {
     if (!commentNotifyAuthorOnApproveEnabled()) {
@@ -353,7 +384,7 @@ function setCommentModerationStatus(PDO $pdo, int $commentId, string $status): b
     }
 
     $normalizedStatus = normalizeCommentStatus($status);
-    $previousStatus = normalizeCommentStatus((string)($comment['status'] ?? 'pending'));
+    $previousStatus = normalizeCommentStatus((string)$comment['status']);
 
     try {
         $pdo->prepare(

@@ -58,6 +58,8 @@ function getOnlineCount(): int
 
 /**
  * Vrátí statistiky návštěvnosti: online, today, month, total.
+ *
+ * @return array{online:int, today:int, month:int, total:int}
  */
 function getVisitorStats(): array
 {
@@ -164,7 +166,11 @@ function autoCompleteBookings(): void
     }
 }
 
-/** Výchozí pořadí modulů v navigaci */
+/**
+ * Výchozí pořadí modulů v navigaci.
+ *
+ * @return array<string, array{0:string, 1:string}>
+ */
 function navModuleDefaults(): array
 {
     return [
@@ -185,7 +191,11 @@ function navModuleDefaults(): array
     ];
 }
 
-/** Vrátí aktuální pořadí klíčů modulů dle nastavení (nebo výchozí) */
+/**
+ * Vrátí aktuální pořadí klíčů modulů dle nastavení (nebo výchozí).
+ *
+ * @return list<string>
+ */
 function navModuleOrder(): array
 {
     $defaults = array_keys(navModuleDefaults());

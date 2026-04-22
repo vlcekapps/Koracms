@@ -484,7 +484,7 @@ function relativeTime(?string $datetime): string
  * Pokusí se získat zámek obsahu. Pokud zámek drží jiný uživatel
  * a ještě nevypršel, vrátí informace o něm. Jinak zámek získá/obnoví a vrátí null.
  *
- * @return array|null  null = zámek získán; pole ['locked_by' => string, 'locked_at' => string] = zamčeno jiným uživatelem
+ * @return array{locked_by:string, locked_at:string}|null  null = zámek získán; pole = zamčeno jiným uživatelem
  */
 function acquireContentLock(string $entityType, int $entityId): ?array
 {

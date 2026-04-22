@@ -8,7 +8,7 @@ on:
 
 jobs:
   basic:
-    name: PHP lint and unit tests
+    name: PHP quality checks
     runs-on: ubuntu-latest
 
     steps:

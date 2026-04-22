@@ -42,6 +42,9 @@ function resolveThemeName(?string $themeKey = null): string
     return themeExists($candidate) ? $candidate : $fallback;
 }
 
+/**
+ * @return list<string>
+ */
 function availableThemes(): array
 {
     $themes = [];
@@ -70,6 +73,9 @@ function availableThemes(): array
     return $themes;
 }
 
+/**
+ * @return array<string,mixed>
+ */
 function themeManifest(?string $themeKey = null): array
 {
     static $cache = [];
@@ -132,6 +138,9 @@ function themeIsSafeSettingKey(string $value): bool
     return preg_match('/^[a-z][a-z0-9_]*$/i', $value) === 1;
 }
 
+/**
+ * @return list<string>
+ */
 function themeNormalizeRequiredModules(mixed $value): array
 {
     $modules = [];
@@ -167,6 +176,9 @@ function themeNormalizeHexColor(string $value): ?string
     return null;
 }
 
+/**
+ * @return array{r:int,g:int,b:int}|null
+ */
 function themeHexToRgb(string $value): ?array
 {
     $color = themeNormalizeHexColor($value);
@@ -221,12 +233,16 @@ function themeCssValueIsSafe(string $value): bool
     return preg_match('/^[A-Za-z0-9\s,"\'.%(),-]+$/', $value) === 1;
 }
 
+/**
+ * @param array<string,mixed> $settings
+ * @return array<string,array<string,mixed>>
+ */
 function themeNormalizeSettingDefinitions(array $settings): array
 {
     $normalized = [];
 
     foreach ($settings as $settingKey => $definition) {
-        if (!is_string($settingKey) || !themeIsSafeSettingKey($settingKey) || !is_array($definition)) {
+        if (!themeIsSafeSettingKey($settingKey) || !is_array($definition)) {
             continue;
         }
 
@@ -334,6 +350,10 @@ function themeNormalizeSettingDefinitions(array $settings): array
     return $normalized;
 }
 
+/**
+ * @param array<string,mixed> $preview
+ * @return array{summary:string,colors:list<string>}
+ */
 function themeNormalizePreviewData(array $preview): array
 {
     $colors = [];
@@ -354,6 +374,9 @@ function themeNormalizePreviewData(array $preview): array
     ];
 }
 
+/**
+ * @return array<string,string>
+ */
 function themeModuleLabelMap(): array
 {
     static $labels = null;
@@ -367,12 +390,15 @@ function themeModuleLabelMap(): array
     ];
 
     foreach (navModuleDefaults() as $moduleKey => $moduleConfig) {
-        $labels[$moduleKey] = (string)($moduleConfig[1] ?? $moduleKey);
+        $labels[$moduleKey] = $moduleConfig[1];
     }
 
     return $labels;
 }
 
+/**
+ * @param list<string> $requiredModules
+ */
 function themeRequiredModulesDescription(array $requiredModules): string
 {
     if ($requiredModules === []) {
@@ -388,10 +414,13 @@ function themeRequiredModulesDescription(array $requiredModules): string
     return implode(', ', array_values(array_unique($labels)));
 }
 
+/**
+ * @param list<string> $requiredModules
+ */
 function themeModulesAvailable(array $requiredModules): bool
 {
     foreach ($requiredModules as $moduleKey) {
-        if (!is_string($moduleKey) || $moduleKey === '' || !isModuleEnabled($moduleKey)) {
+        if ($moduleKey === '' || !isModuleEnabled($moduleKey)) {
             return false;
         }
     }
@@ -399,16 +428,26 @@ function themeModulesAvailable(array $requiredModules): bool
     return true;
 }
 
+/**
+ * @param array<string,mixed> $definition
+ */
 function themeSettingIsAvailable(array $definition): bool
 {
     return themeModulesAvailable((array)($definition['requires_modules'] ?? []));
 }
 
+/**
+ * @param array<string,mixed> $option
+ */
 function themeSelectOptionIsAvailable(array $option): bool
 {
     return themeModulesAvailable((array)($option['requires_modules'] ?? []));
 }
 
+/**
+ * @param array<string,mixed> $definition
+ * @return array<string,array<string,mixed>>
+ */
 function themeAvailableSelectOptions(array $definition): array
 {
     if (($definition['type'] ?? '') !== 'select') {
@@ -425,6 +464,9 @@ function themeAvailableSelectOptions(array $definition): array
     return $availableOptions;
 }
 
+/**
+ * @param array<string,mixed> $definition
+ */
 function themeAvailableSelectValue(array $definition, string $currentValue): string
 {
     $availableOptions = themeAvailableSelectOptions($definition);
@@ -441,10 +483,15 @@ function themeAvailableSelectValue(array $definition, string $currentValue): str
     return is_string($firstKey) ? $firstKey : $defaultValue;
 }
 
+/**
+ * @param array<string,array<string,mixed>> $definitions
+ * @param array<string,mixed> $overrides
+ * @return array<string,array<string,mixed>>
+ */
 function themeApplySettingDefaultOverrides(array $definitions, array $overrides): array
 {
     foreach ($overrides as $settingKey => $overrideValue) {
-        if (!is_string($settingKey) || !isset($definitions[$settingKey])) {
+        if (!isset($definitions[$settingKey])) {
             continue;
         }
 
@@ -457,6 +504,9 @@ function themeApplySettingDefaultOverrides(array $definitions, array $overrides)
     return $definitions;
 }
 
+/**
+ * @return array<string,array<string,mixed>>
+ */
 function themeSettingDefinitions(?string $themeKey = null): array
 {
     $manifest = themeManifest($themeKey);
@@ -468,6 +518,9 @@ function themeSettingStorageKey(?string $themeKey = null): string
     return 'theme_settings_' . resolveThemeName($themeKey);
 }
 
+/**
+ * @return array<string,mixed>
+ */
 function themePersistedSettings(?string $themeKey = null): array
 {
     $raw = trim(getSetting(themeSettingStorageKey($themeKey), ''));
@@ -484,6 +537,9 @@ function themePreviewAllowed(): bool
     return isLoggedIn() && !isPublicUser();
 }
 
+/**
+ * @return array<string,mixed>
+ */
 function themePreviewData(): array
 {
     if (!themePreviewAllowed()) {
@@ -517,6 +573,9 @@ function themePreviewIsActive(): bool
     return themePreviewData() !== [];
 }
 
+/**
+ * @param array<string,mixed> $settings
+ */
 function setThemePreview(string $themeKey, array $settings = []): void
 {
     if (!themePreviewAllowed() || !themeExists($themeKey)) {
@@ -535,6 +594,9 @@ function clearThemePreview(): void
     unset($_SESSION['cms_theme_preview']);
 }
 
+/**
+ * @return array<string,string>
+ */
 function themeDefaultSettings(?string $themeKey = null): array
 {
     $defaults = [];
@@ -544,6 +606,9 @@ function themeDefaultSettings(?string $themeKey = null): array
     return $defaults;
 }
 
+/**
+ * @return array<string,mixed>
+ */
 function themeStoredSettings(?string $themeKey = null): array
 {
     $resolvedTheme = resolveThemeName($themeKey);
@@ -555,6 +620,10 @@ function themeStoredSettings(?string $themeKey = null): array
     return themePersistedSettings($resolvedTheme);
 }
 
+/**
+ * @param array<string,mixed> $definition
+ * @return array{valid:bool,value:string,error:string}
+ */
 function themeValidateSettingValue(array $definition, mixed $rawValue, bool $enforceAvailability = false): array
 {
     if ($definition['type'] === 'color') {
@@ -609,6 +678,9 @@ function themeValidateSettingValue(array $definition, mixed $rawValue, bool $enf
     ];
 }
 
+/**
+ * @return array<string,string>
+ */
 function themeSettingsValues(?string $themeKey = null): array
 {
     $definitions = themeSettingDefinitions($themeKey);
@@ -627,6 +699,9 @@ function themeSettingsValues(?string $themeKey = null): array
     return $values;
 }
 
+/**
+ * @return array<string,string>
+ */
 function themePersistedSettingsValues(?string $themeKey = null): array
 {
     $definitions = themeSettingDefinitions($themeKey);
@@ -651,6 +726,10 @@ function themeSettingValue(string $settingKey, ?string $themeKey = null): string
     return (string)($values[$settingKey] ?? '');
 }
 
+/**
+ * @param array<string,mixed> $submittedValues
+ * @return array{values:array<string,string>,errors:array<string,string>}
+ */
 function themeSettingsValidation(array $submittedValues, ?string $themeKey = null): array
 {
     $definitions = themeSettingDefinitions($themeKey);
@@ -691,6 +770,9 @@ function themeSettingsValidation(array $submittedValues, ?string $themeKey = nul
     ];
 }
 
+/**
+ * @param array<string,mixed> $values
+ */
 function saveThemeSettings(array $values, ?string $themeKey = null): void
 {
     saveSetting(
@@ -704,6 +786,9 @@ function resetThemeSettings(?string $themeKey = null): void
     saveSetting(themeSettingStorageKey($themeKey), '');
 }
 
+/**
+ * @return array<string,string>
+ */
 function themeCssVariables(?string $themeKey = null): array
 {
     $definitions = themeSettingDefinitions($themeKey);
@@ -772,6 +857,9 @@ function themeDirectoryPath(string $themeKey): string
     return themeBasePath() . DIRECTORY_SEPARATOR . $themeKey;
 }
 
+/**
+ * @return array<string,mixed>
+ */
 function themeRawManifest(?string $themeKey = null): array
 {
     $resolvedTheme = resolveThemeName($themeKey);
@@ -799,6 +887,9 @@ function themePortablePackageMode(): string
     return 'portable-static';
 }
 
+/**
+ * @return list<string>
+ */
 function themePortablePackageAllowedExtensions(): array
 {
     return [
@@ -838,6 +929,9 @@ function themePortableStringLength(string $value): int
     return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
 }
 
+/**
+ * @return array<string,mixed>
+ */
 function themePortablePackageManifest(?string $themeKey = null): array
 {
     $resolvedTheme = resolveThemeName($themeKey);
@@ -873,12 +967,16 @@ function themePortablePackageManifest(?string $themeKey = null): array
     ];
 }
 
+/**
+ * @param array<string,mixed> $manifest
+ * @return array{valid:bool,errors:list<string>,manifest:array<string,mixed>}
+ */
 function themeValidatePortablePackageManifest(array $manifest, string $themeKey): array
 {
     $errors = [];
     $allowedKeys = ['key', 'package', 'name', 'version', 'author', 'description', 'preview', 'settings_defaults'];
     foreach (array_keys($manifest) as $manifestKey) {
-        if (is_string($manifestKey) && !in_array($manifestKey, $allowedKeys, true)) {
+        if (!in_array($manifestKey, $allowedKeys, true)) {
             $errors[] = 'Manifest obsahuje nepodporovanou položku `' . $manifestKey . '`.';
         }
     }
@@ -1004,6 +1102,9 @@ function themePortableSvgIsSafe(string $svg): bool
     return preg_match('/<script|javascript:|onload\s*=|onerror\s*=|<foreignObject/i', $svg) !== 1;
 }
 
+/**
+ * @return array{valid:bool,error:string}
+ */
 function themePortablePackageFileValidation(string $relativePath, string $contents): array
 {
     $normalizedPath = trim(str_replace('\\', '/', $relativePath), '/');
@@ -1078,6 +1179,9 @@ function themeDeleteDirectory(string $path): void
     }
 }
 
+/**
+ * @return array{time:int,date:int}
+ */
 function themeZipDosDateTime(?int $timestamp = null): array
 {
     $parts = getdate($timestamp ?? time());
@@ -1099,6 +1203,9 @@ function themeZipUnsignedIntString(int $value): string
     return sprintf('%u', $value);
 }
 
+/**
+ * @param array<string,string> $files
+ */
 function themeCreateZipArchive(string $path, array $files): bool
 {
     $archive = '';
@@ -1163,6 +1270,9 @@ function themeCreateZipArchive(string $path, array $files): bool
     return file_put_contents($path, $archive . $centralDirectory . $endOfCentralDirectory) !== false;
 }
 
+/**
+ * @return array{ok:bool,errors:list<string>,files:array<string,string>}
+ */
 function themeReadZipArchive(string $path): array
 {
     $binary = @file_get_contents($path);
@@ -1277,6 +1387,9 @@ function themeReadZipArchive(string $path): array
     ];
 }
 
+/**
+ * @return array{ok:bool,errors:list<string>,path?:string,filename?:string,manifest?:array<string,mixed>}
+ */
 function themeBuildPortablePackage(?string $themeKey = null): array
 {
     $resolvedTheme = resolveThemeName($themeKey);
@@ -1392,6 +1505,10 @@ function themeUploadErrorMessage(int $uploadError): string
     };
 }
 
+/**
+ * @param array<string,mixed>|null $upload
+ * @return array<string,mixed>
+ */
 function themeImportPortablePackageUpload(?array $upload): array
 {
     if (!is_array($upload)) {
@@ -1444,7 +1561,7 @@ function themeImportPortablePackageUpload(?array $upload): array
             continue;
         }
 
-        $segments = array_values(array_filter(explode('/', $entryName), static fn($segment) => $segment !== ''));
+        $segments = array_values(array_filter(explode('/', $entryName), static fn ($segment) => $segment !== ''));
         if ($segments === []) {
             continue;
         }
@@ -1672,6 +1789,9 @@ function themePreviewAssetUrl(?string $themeKey = null): string
     return themeAssetUrl('assets/' . basename($previewPath), $themeKey);
 }
 
+/**
+ * @param array<string,mixed> $data
+ */
 function renderThemeTemplate(string $bucket, string $templateName, array $data = [], ?string $themeKey = null): string
 {
     $resolvedTheme = resolveThemeName($themeKey);
@@ -1684,16 +1804,25 @@ function renderThemeTemplate(string $bucket, string $templateName, array $data =
     return (string)ob_get_clean();
 }
 
+/**
+ * @param array<string,mixed> $data
+ */
 function renderThemeView(string $viewName, array $data = [], ?string $themeKey = null): string
 {
     return renderThemeTemplate('views', $viewName, $data, $themeKey);
 }
 
+/**
+ * @param array<string,mixed> $data
+ */
 function renderThemePartial(string $partialName, array $data = [], ?string $themeKey = null): string
 {
     return renderThemeTemplate('partials', $partialName, $data, $themeKey);
 }
 
+/**
+ * @param array<string,mixed> $pageData
+ */
 function renderPublicPage(array $pageData): void
 {
     $themeName = resolveThemeName(isset($pageData['theme']) ? (string)$pageData['theme'] : null);
@@ -1757,6 +1886,9 @@ function renderPublicPage(array $pageData): void
     include $layoutPath;
 }
 
+/**
+ * @param array<string,mixed> $pageData
+ */
 function renderPublicEmbedPage(array $pageData): void
 {
     $themeName = resolveThemeName(isset($pageData['theme']) ? (string)$pageData['theme'] : null);

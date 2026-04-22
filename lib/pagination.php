@@ -1,4 +1,5 @@
 <?php
+
 // Sdílený stránkovací helper – extrahuje opakující se logiku z výpisových modulů
 
 /**

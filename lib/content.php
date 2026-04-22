@@ -1,9 +1,12 @@
 <?php
+
 // Zpracování obsahu – shortcodes, renderContent – extrahováno z db.php
 
 /**
  * Zpracuje obsah přes Parsedown (Markdown + HTML).
  * Markdown syntaxe se převede na HTML, existující HTML projde beze změny.
+ *
+ * @return array<string, string>
  */
 function parseContentShortcodeAttributes(string $rawAttributes): array
 {
@@ -126,6 +129,9 @@ function contentEmbedPdfTitle(string $url, string $preferredTitle = ''): string
     return $normalized !== '' ? $normalized : 'PDF dokument';
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function contentResolvePdfMedia(int $mediaId, string $url): ?array
 {
     if ($mediaId > 0) {
@@ -326,6 +332,10 @@ function renderContentGalleryShortcode(string $slug): ?string
     return $html;
 }
 
+/**
+ * @param array<string, string> $attributes
+ * @param list<string> $attributeKeys
+ */
 function contentShortcodeResolvedValue(array $attributes, string $body, array $attributeKeys = ['slug']): string
 {
     foreach ($attributeKeys as $attributeKey) {
@@ -338,6 +348,10 @@ function contentShortcodeResolvedValue(array $attributes, string $body, array $a
     return trim($body);
 }
 
+/**
+ * @param array<string, string> $attributes
+ * @return array{show_slug:string, episode_slug:string}|null
+ */
 function contentShortcodePodcastEpisodeParts(array $attributes, string $body): ?array
 {
     $resolved = contentShortcodeResolvedValue($attributes, $body, ['slug', 'path']);
@@ -363,12 +377,15 @@ function contentShortcodePodcastEpisodeParts(array $attributes, string $body): ?
     ];
 }
 
+/**
+ * @param array<int|string, mixed> $items
+ */
 function contentEmbedMetaHtml(array $items): string
 {
     $items = array_values(array_filter(array_map(
-        static fn($item): string => trim((string)$item),
+        static fn ($item): string => trim((string)$item),
         $items
-    ), static fn(string $item): bool => $item !== ''));
+    ), static fn (string $item): bool => $item !== ''));
 
     if ($items === []) {
         return '';
@@ -383,6 +400,20 @@ function contentEmbedMetaHtml(array $items): string
     return $html;
 }
 
+/**
+ * @param array{
+ *     title?:string,
+ *     url?:string,
+ *     eyebrow?:string,
+ *     excerpt?:string,
+ *     cta_label?:string,
+ *     modifier?:string,
+ *     media_url?:string,
+ *     media_alt?:string,
+ *     extra_html?:string,
+ *     meta_items?:array<int|string, mixed>
+ * } $config
+ */
 function renderContentEmbedCard(array $config): string
 {
     $title = trim((string)($config['title'] ?? ''));
@@ -440,6 +471,18 @@ function renderContentEmbedCard(array $config): string
     return $html;
 }
 
+/**
+ * @param array{
+ *     title?:string,
+ *     url?:string,
+ *     embed_url?:string,
+ *     eyebrow?:string,
+ *     excerpt?:string,
+ *     open_label?:string,
+ *     modifier?:string,
+ *     frame_modifier?:string
+ * } $config
+ */
 function renderContentInteractiveEmbed(array $config): string
 {
     $title = trim((string)($config['title'] ?? ''));

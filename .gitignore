@@ -13,6 +13,7 @@ dist/
 
 # Composer dev závislosti
 vendor/
+.php-cs-fixer.cache
 
 # Systémové soubory
 .DS_Store
