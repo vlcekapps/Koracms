@@ -2,11 +2,17 @@
 require_once __DIR__ . '/layout.php';
 requireSuperAdmin();
 
-$successMessage = '';
-$errors = [];
-$previewRedirectDefault = BASE_URL . '/index.php';
-
-$reloadThemeCatalog = static function () use (&$availableThemeKeys, &$themeManifests, &$configuredTheme, &$effectiveTheme, &$usingFallback): void {
+/**
+ * @return array{
+ *   availableThemeKeys: list<string>,
+ *   themeManifests: array<string, array<string, mixed>>,
+ *   configuredTheme: string,
+ *   effectiveTheme: string,
+ *   usingFallback: bool
+ * }
+ */
+function themeAdminCatalogState(): array
+{
     $availableThemeKeys = availableThemes();
 
     $themeManifests = [];
@@ -20,15 +26,27 @@ $reloadThemeCatalog = static function () use (&$availableThemeKeys, &$themeManif
     }
 
     $effectiveTheme = resolveThemeName($configuredTheme);
-    $usingFallback = $configuredTheme !== $effectiveTheme;
-};
 
-$availableThemeKeys = [];
-$themeManifests = [];
-$configuredTheme = defaultThemeName();
-$effectiveTheme = defaultThemeName();
-$usingFallback = false;
-$reloadThemeCatalog();
+    return [
+        'availableThemeKeys' => $availableThemeKeys,
+        'themeManifests' => $themeManifests,
+        'configuredTheme' => $configuredTheme,
+        'effectiveTheme' => $effectiveTheme,
+        'usingFallback' => $configuredTheme !== $effectiveTheme,
+    ];
+}
+
+$successMessage = '';
+$errors = [];
+$previewRedirectDefault = BASE_URL . '/index.php';
+
+[
+    'availableThemeKeys' => $availableThemeKeys,
+    'themeManifests' => $themeManifests,
+    'configuredTheme' => $configuredTheme,
+    'effectiveTheme' => $effectiveTheme,
+    'usingFallback' => $usingFallback,
+] = themeAdminCatalogState();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -55,7 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     saveSetting('site_profile', 'custom');
                     $profileDetached = true;
                 }
-                $reloadThemeCatalog();
+                [
+                    'availableThemeKeys' => $availableThemeKeys,
+                    'themeManifests' => $themeManifests,
+                    'configuredTheme' => $configuredTheme,
+                    'effectiveTheme' => $effectiveTheme,
+                    'usingFallback' => $usingFallback,
+                ] = themeAdminCatalogState();
                 logAction('theme_activate', 'theme=' . $selectedTheme);
                 $successMessage = 'Aktivní šablona byla uložena.';
                 if ($profileDetached) {
@@ -112,7 +136,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$importResult['ok']) {
             $errors = array_merge($errors, $importResult['errors']);
         } else {
-            $reloadThemeCatalog();
+            [
+                'availableThemeKeys' => $availableThemeKeys,
+                'themeManifests' => $themeManifests,
+                'configuredTheme' => $configuredTheme,
+                'effectiveTheme' => $effectiveTheme,
+                'usingFallback' => $usingFallback,
+            ] = themeAdminCatalogState();
             $importThemeKey = (string)($importResult['theme_key'] ?? '');
             logAction('theme_import', 'theme=' . $importThemeKey);
             $successMessage = 'ZIP balíček byl bezpečně importován jako šablona `' . $importThemeKey . '`.';
@@ -145,7 +175,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$reloadThemeCatalog();
+[
+    'availableThemeKeys' => $availableThemeKeys,
+    'themeManifests' => $themeManifests,
+    'configuredTheme' => $configuredTheme,
+    'effectiveTheme' => $effectiveTheme,
+    'usingFallback' => $usingFallback,
+] = themeAdminCatalogState();
 $previewData = themePreviewData();
 $previewThemeKey = (string)($previewData['theme'] ?? '');
 $previewIsActive = $previewThemeKey !== '';
