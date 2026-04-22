@@ -5,6 +5,9 @@ requireCapability('content_manage_shared', 'Přístup odepřen.');
 $pdo = db_connect();
 $perPage = 24;
 
+/**
+ * @return array<string, string>
+ */
 function mediaAdminTypeOptions(): array
 {
     return [
@@ -18,6 +21,9 @@ function mediaAdminTypeOptions(): array
     ];
 }
 
+/**
+ * @return array<string, string>
+ */
 function mediaAdminUsageOptions(): array
 {
     return [
@@ -27,6 +33,17 @@ function mediaAdminUsageOptions(): array
     ];
 }
 
+/**
+ * @return array{
+ *   q: string,
+ *   type: string,
+ *   visibility: string,
+ *   uploader: int,
+ *   usage: string,
+ *   page: int,
+ *   edit: int
+ * }
+ */
 function mediaAdminStateFromRequest(): array
 {
     $page = filter_var($_GET['page'] ?? '1', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -59,28 +76,39 @@ function mediaAdminStateFromRequest(): array
     ];
 }
 
+/**
+ * @param array{
+ *   q: string,
+ *   type: string,
+ *   visibility: string,
+ *   uploader: int,
+ *   usage: string,
+ *   page: int,
+ *   edit: int
+ * } $state
+ */
 function mediaAdminPath(array $state): string
 {
     $query = [];
-    if (trim((string)($state['q'] ?? '')) !== '') {
+    if (trim($state['q']) !== '') {
         $query['q'] = trim((string)$state['q']);
     }
-    if (trim((string)($state['type'] ?? '')) !== '') {
+    if (trim($state['type']) !== '') {
         $query['type'] = trim((string)$state['type']);
     }
-    if (trim((string)($state['visibility'] ?? '')) !== '') {
+    if (trim($state['visibility']) !== '') {
         $query['visibility'] = trim((string)$state['visibility']);
     }
-    if ((int)($state['uploader'] ?? 0) > 0) {
+    if ($state['uploader'] > 0) {
         $query['uploader'] = (int)$state['uploader'];
     }
-    if (trim((string)($state['usage'] ?? '')) !== '') {
+    if (trim($state['usage']) !== '') {
         $query['usage'] = trim((string)$state['usage']);
     }
-    if ((int)($state['page'] ?? 1) > 1) {
+    if ($state['page'] > 1) {
         $query['page'] = (int)$state['page'];
     }
-    if ((int)($state['edit'] ?? 0) > 0) {
+    if ($state['edit'] > 0) {
         $query['edit'] = (int)$state['edit'];
     }
 
@@ -99,6 +127,9 @@ function mediaAdminRedirectWithFlash(string $target): void
     exit;
 }
 
+/**
+ * @return list<array{id:int|string,label:string}>
+ */
 function mediaAdminUploaderOptions(PDO $pdo): array
 {
     $stmt = $pdo->query(
@@ -113,6 +144,9 @@ function mediaAdminUploaderOptions(PDO $pdo): array
     return $stmt ? $stmt->fetchAll() : [];
 }
 
+/**
+ * @return array{0:string,1:list<string>}
+ */
 function mediaAdminTypeSql(string $type): array
 {
     return match ($type) {
@@ -126,6 +160,18 @@ function mediaAdminTypeSql(string $type): array
     };
 }
 
+/**
+ * @param array{
+ *   q: string,
+ *   type: string,
+ *   visibility: string,
+ *   uploader: int,
+ *   usage: string,
+ *   page: int,
+ *   edit: int
+ * } $state
+ * @return list<array<string, mixed>>
+ */
 function mediaAdminFetchItems(PDO $pdo, array $state): array
 {
     $where = [];
@@ -210,13 +256,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'size' => $files['size'][$i] ?? 0,
             ];
 
-            if (($singleFile['name'] ?? '') === '' && (int)($singleFile['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            if ($singleFile['name'] === '' && (int)$singleFile['error'] === UPLOAD_ERR_NO_FILE) {
                 continue;
             }
 
             $stored = mediaStoreUploadedFile($singleFile, $uploadVisibility);
             if (!$stored['ok']) {
-                $errors[] = ($singleFile['name'] ?? 'Soubor') . ': ' . $stored['error'];
+                $errors[] = ($singleFile['name'] !== '' ? $singleFile['name'] : 'Soubor') . ': ' . $stored['error'];
                 continue;
             }
 
@@ -730,7 +776,7 @@ adminHeader('Knihovna médií');
               <?php foreach ($editUsages as $usage): ?>
                 <li>
                   <strong><?= h((string)$usage['label']) ?>:</strong>
-                  <?php if (trim((string)($usage['admin_url'] ?? '')) !== ''): ?>
+                  <?php if (trim((string)$usage['admin_url']) !== ''): ?>
                     <a href="<?= h((string)$usage['admin_url']) ?>"><?= h((string)$usage['title']) ?></a>
                   <?php else: ?>
                     <?= h((string)$usage['title']) ?>
