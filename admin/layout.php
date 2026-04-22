@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
+/**
+ * @param string|list<string> $errorState
+ * @param array<string, list<string>> $fieldErrorMap
+ */
 function adminFieldHasError(string $fieldName, $errorState, array $fieldErrorMap = []): bool
 {
     if (is_array($errorState)) {
@@ -20,6 +24,11 @@ function adminFieldErrorId(string $fieldName, ?string $customId = null): string
     return $customId !== null && $customId !== '' ? $customId : $fieldName . '-error';
 }
 
+/**
+ * @param string|list<string> $errorState
+ * @param array<string, list<string>> $fieldErrorMap
+ * @param list<string> $describedByIds
+ */
 function adminFieldAttributes(
     string $fieldName,
     $errorState,
@@ -50,6 +59,10 @@ function adminFieldAttributes(
     return $attributes;
 }
 
+/**
+ * @param string|list<string> $errorState
+ * @param array<string, list<string>> $fieldErrorMap
+ */
 function adminRenderFieldError(
     string $fieldName,
     $errorState,

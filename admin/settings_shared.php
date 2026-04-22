@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * @return array{
+ *   errors?: list<string>,
+ *   field_errors?: list<string>,
+ *   field_error_messages?: array<string, string>,
+ *   form?: array<string, string>,
+ *   success?: string
+ * }
+ */
 function settingsFlashPull(): array
 {
     $flash = $_SESSION['settings_flash'] ?? [];
@@ -7,11 +16,23 @@ function settingsFlashPull(): array
     return is_array($flash) ? $flash : [];
 }
 
+/**
+ * @param array{
+ *   errors?: list<string>,
+ *   field_errors?: list<string>,
+ *   field_error_messages?: array<string, string>,
+ *   form?: array<string, string>,
+ *   success?: string
+ * } $flash
+ */
 function settingsFlashSet(array $flash): void
 {
     $_SESSION['settings_flash'] = $flash;
 }
 
+/**
+ * @return array<string, string>
+ */
 function settingsDefaultFormState(): array
 {
     return [
@@ -58,6 +79,9 @@ function settingsDefaultFormState(): array
     ];
 }
 
+/**
+ * @return array<string, string>
+ */
 function settingsFieldErrorMessages(): array
 {
     return [

@@ -3,6 +3,9 @@ parameters:
     bootstrapFiles:
         - build/phpstan_bootstrap.php
     scanFiles:
+        - admin/content_reference_picker.php
+        - admin/layout.php
+        - admin/settings_shared.php
         - auth.php
         - db.php
         - lib/Parsedown.php
@@ -22,6 +25,9 @@ parameters:
         - lib/webhooks.php
         - lib/widgets.php
     paths:
+        - admin/content_reference_picker.php
+        - admin/layout.php
+        - admin/settings_shared.php
         - build/lint_php.php
         - build/phpstan_bootstrap.php
         - lib/backup.php

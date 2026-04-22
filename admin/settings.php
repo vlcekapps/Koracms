@@ -7,21 +7,20 @@ requireCapability('settings_manage', 'Přístup odepřen. Pro správu nastavení
 $siteProfiles = siteProfileDefinitions();
 $flash = settingsFlashPull();
 $formState = settingsDefaultFormState();
-if (isset($flash['form']) && is_array($flash['form'])) {
+if (isset($flash['form'])) {
     foreach ($flash['form'] as $fieldName => $fieldValue) {
-        if (is_string($fieldName) && array_key_exists($fieldName, $formState) && is_string($fieldValue)) {
+        if (array_key_exists($fieldName, $formState)) {
             $formState[$fieldName] = $fieldValue;
         }
     }
 }
 $errors = array_values(array_filter((array)($flash['errors'] ?? []), 'is_string'));
 $fieldErrors = array_values(array_unique(array_filter((array)($flash['field_errors'] ?? []), 'is_string')));
-$successMessage = is_string($flash['success'] ?? null) ? (string)$flash['success'] : '';
+$successMessage = (string)($flash['success'] ?? '');
 $fieldErrorMessages = settingsFieldErrorMessages();
-$flashedFieldErrorMessages = array_filter((array)($flash['field_error_messages'] ?? []), 'is_string');
+$flashedFieldErrorMessages = $flash['field_error_messages'] ?? [];
 $fieldMessageFor = static function (string $fieldName) use ($fieldErrorMessages, $flashedFieldErrorMessages): string {
-    $message = $flashedFieldErrorMessages[$fieldName] ?? $fieldErrorMessages[$fieldName] ?? '';
-    return is_string($message) ? $message : '';
+    return $flashedFieldErrorMessages[$fieldName] ?? $fieldErrorMessages[$fieldName] ?? '';
 };
 
 if (!isset($siteProfiles[$formState['site_profile']])) {

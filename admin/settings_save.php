@@ -307,7 +307,7 @@ try {
     }
 
     foreach ($generatedWebpFiles as $generatedWebpPath) {
-        if (is_string($generatedWebpPath) && $generatedWebpPath !== '') {
+        if ($generatedWebpPath !== '') {
             @unlink($generatedWebpPath);
         }
     }

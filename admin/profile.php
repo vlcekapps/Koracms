@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'nickname' => $nickname,
         'email' => $email,
         'author_public_enabled' => $authorPublicEnabled,
-        'author_slug' => $authorSlug ?? '',
+        'author_slug' => $authorSlug,
         'author_bio' => $authorBio,
         'author_avatar' => $authorAvatarFilename,
         'author_website' => $authorWebsite,

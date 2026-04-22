@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * @return array<string, string>
+ */
 function adminContentReferencePickerTypes(): array
 {
     $types = [
@@ -77,14 +80,8 @@ function adminHtmlSnippetSupportMarkup(): string
         $snippets[] = '<code>[board]slug-oznameni[/board]</code>';
     }
 
-    $last = array_pop($snippets);
-    if ($last === null) {
-        return 'Můžete použít HTML nebo Markdown.';
-    }
-
-    $body = $snippets !== []
-        ? implode(', ', $snippets) . ' a ' . $last
-        : $last;
+    $last = (string) array_pop($snippets);
+    $body = implode(', ', $snippets) . ' a ' . $last;
 
     return 'Můžete použít HTML, Markdown nebo snippety jako ' . $body . '.';
 }
