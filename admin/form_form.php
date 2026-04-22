@@ -156,7 +156,7 @@ adminHeader($pageTitle);
   <?php if ($presetDefinition !== null): ?>
     <div class="notice notice-info" style="margin-bottom:1rem">
       <p><strong>Šablona:</strong> <?= h((string)$presetDefinition['label']) ?></p>
-      <p><?= h((string)($presetDefinition['description'] ?? '')) ?></p>
+      <p><?= h((string)$presetDefinition['description']) ?></p>
       <?php if (!empty($presetDefinition['fields'])): ?>
         <p class="field-help" style="margin-bottom:.5rem">Po prvním uložení se automaticky přidají tato pole:</p>
         <ul class="field-help" style="margin:0;padding-left:1.25rem">

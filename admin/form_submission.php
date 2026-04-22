@@ -2,6 +2,9 @@
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 
+/**
+ * @param array<string, mixed> $field
+ */
 function renderAdminFormSubmissionValue(array $field, mixed $value): string
 {
     $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
@@ -35,6 +38,9 @@ function renderAdminFormSubmissionValue(array $field, mixed $value): string
     return nl2br(h($displayValue));
 }
 
+/**
+ * @param array<string, mixed> $field
+ */
 function renderAdminFormSubmissionFiles(array $field, mixed $value, int $submissionId): string
 {
     $fieldName = trim((string)($field['name'] ?? ''));
@@ -44,10 +50,6 @@ function renderAdminFormSubmissionFiles(array $field, mixed $value, int $submiss
 
     $links = [];
     foreach (formSubmissionFileItems($value) as $index => $item) {
-        if (!is_array($item)) {
-            continue;
-        }
-
         $storedName = formSubmissionStoredFileName($item);
         $originalName = trim((string)($item['original_name'] ?? ''));
         if ($storedName === '' || $originalName === '') {
@@ -555,7 +557,7 @@ adminHeader('Detail odpovědi formuláře');
     <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
     <fieldset>
       <legend>Poslat odpověď e-mailem</legend>
-      <p class="field-help">Odpověď odejde na <strong><?= h((string)$replyRecipient['email']) ?></strong><?php if (trim((string)($replyRecipient['field_label'] ?? '')) !== ''): ?> z pole „<?= h((string)$replyRecipient['field_label']) ?>“<?php endif; ?>.</p>
+      <p class="field-help">Odpověď odejde na <strong><?= h((string)$replyRecipient['email']) ?></strong><?php if (trim((string)$replyRecipient['field_label']) !== ''): ?> z pole „<?= h((string)$replyRecipient['field_label']) ?>“<?php endif; ?>.</p>
       <div style="margin-bottom:.75rem">
         <label for="reply-subject">Předmět odpovědi</label>
         <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" style="width:100%;max-width:52rem">

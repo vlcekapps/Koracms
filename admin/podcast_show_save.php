@@ -24,7 +24,7 @@ $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $backUrl = internalRedirectTarget((string)($_POST['redirect'] ?? ''), BASE_URL . '/admin/podcast_shows.php');
 
 $redirectBase = BASE_URL . '/admin/podcast_show_form.php';
-$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $backUrl): never {
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $backUrl): void {
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);
@@ -101,38 +101,36 @@ if ($id !== null) {
         $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
     }
 
-    if ($oldData) {
-        saveRevision(
-            $pdo,
-            'podcast_show',
-            $id,
-            podcastShowRevisionSnapshot($oldData),
-            podcastShowRevisionSnapshot([
-                'title' => $title,
-                'slug' => $uniqueSlug,
-                'description' => $description,
-                'author' => $author,
-                'subtitle' => $subtitle,
-                'language' => $language !== '' ? $language : 'cs',
-                'category' => $category,
-                'owner_name' => $ownerName,
-                'owner_email' => $ownerEmail,
-                'explicit_mode' => $explicitMode,
-                'show_type' => $showType,
-                'feed_complete' => $feedComplete,
-                'feed_episode_limit' => $feedEpisodeLimit,
-                'website_url' => $websiteUrl,
-                'status' => $requestedStatus,
-                'is_published' => $isPublished,
-            ])
-        );
-    }
+    saveRevision(
+        $pdo,
+        'podcast_show',
+        $id,
+        podcastShowRevisionSnapshot($oldData),
+        podcastShowRevisionSnapshot([
+            'title' => $title,
+            'slug' => $uniqueSlug,
+            'description' => $description,
+            'author' => $author,
+            'subtitle' => $subtitle,
+            'language' => $language !== '' ? $language : 'cs',
+            'category' => $category,
+            'owner_name' => $ownerName,
+            'owner_email' => $ownerEmail,
+            'explicit_mode' => $explicitMode,
+            'show_type' => $showType,
+            'feed_complete' => $feedComplete,
+            'feed_episode_limit' => $feedEpisodeLimit,
+            'website_url' => $websiteUrl,
+            'status' => $requestedStatus,
+            'is_published' => $isPublished,
+        ])
+    );
 
     // Při první publikaci aktualizovat created_at
     $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
     $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
 
-    $oldPath = $oldData ? podcastShowPublicPath($oldData) : '';
+    $oldPath = podcastShowPublicPath($oldData);
     $pdo->prepare(
         "UPDATE cms_podcast_shows
          SET title = ?, slug = ?, description = ?, author = ?, subtitle = ?, cover_image = ?, language = ?,

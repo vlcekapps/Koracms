@@ -3,16 +3,25 @@ require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 verifyCsrf();
 
+/**
+ * @param array<string, mixed> $flash
+ */
 function formFlashSet(array $flash): void
 {
     $_SESSION['form_flash'] = $flash;
 }
 
+/**
+ * @return list<string>
+ */
 function adminAllowedFormFieldTypes(): array
 {
     return array_keys(formFieldTypeDefinitions());
 }
 
+/**
+ * @param list<string> $usedNames
+ */
 function adminUniqueFormFieldName(string $baseName, array &$usedNames, string $fallbackPrefix = 'field'): string
 {
     $baseName = slugify($baseName);
@@ -31,6 +40,9 @@ function adminUniqueFormFieldName(string $baseName, array &$usedNames, string $f
     return $candidate;
 }
 
+/**
+ * @param list<string> $usedNames
+ */
 function adminUniquePresetFieldName(string $preferredName, string $fallbackLabel, array &$usedNames, string $fallbackPrefix = 'field'): string
 {
     $preferredName = trim($preferredName);
@@ -49,6 +61,12 @@ function adminUniquePresetFieldName(string $preferredName, string $fallbackLabel
     return $candidate;
 }
 
+/**
+ * @param array<string, mixed>|null $existingForm
+ * @param array{fields?: list<array<string, mixed>>, form?: array<string, mixed>}|null $presetDefinition
+ * @param list<array<string, mixed>> $submittedFields
+ * @return list<string>
+ */
 function adminAvailableSubmitterEmailFields(PDO $pdo, ?array $existingForm, ?array $presetDefinition, array $submittedFields): array
 {
     $options = [];

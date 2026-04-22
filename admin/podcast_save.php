@@ -36,7 +36,7 @@ if ($showId === null || $showId < 1) {
 }
 
 $redirectBase = BASE_URL . '/admin/podcast_form.php';
-$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $showId, $backUrl): never {
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $showId, $backUrl): void {
     $query = '?show_id=' . $showId . '&err=' . rawurlencode($errorCode);
     if ($id !== null) {
         $query .= '&id=' . $id;
@@ -138,38 +138,36 @@ if ($id !== null) {
         $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
     }
 
-    if ($oldData) {
-        saveRevision(
-            $pdo,
-            'podcast_episode',
-            $id,
-            podcastEpisodeRevisionSnapshot($oldData),
-            podcastEpisodeRevisionSnapshot([
-                'title' => $title,
-                'slug' => $uniqueSlug,
-                'description' => $description,
-                'audio_url' => $audioUrl,
-                'subtitle' => $subtitle,
-                'duration' => $duration,
-                'episode_num' => $episodeNum,
-                'season_num' => $seasonNum,
-                'episode_type' => $episodeType,
-                'explicit_mode' => $explicitMode,
-                'block_from_feed' => $blockFromFeed,
-                'publish_at' => $publishAt,
-                'status' => $requestedStatus,
-            ])
-        );
-    }
+    saveRevision(
+        $pdo,
+        'podcast_episode',
+        $id,
+        podcastEpisodeRevisionSnapshot($oldData),
+        podcastEpisodeRevisionSnapshot([
+            'title' => $title,
+            'slug' => $uniqueSlug,
+            'description' => $description,
+            'audio_url' => $audioUrl,
+            'subtitle' => $subtitle,
+            'duration' => $duration,
+            'episode_num' => $episodeNum,
+            'season_num' => $seasonNum,
+            'episode_type' => $episodeType,
+            'explicit_mode' => $explicitMode,
+            'block_from_feed' => $blockFromFeed,
+            'publish_at' => $publishAt,
+            'status' => $requestedStatus,
+        ])
+    );
 
     // Při první publikaci aktualizovat created_at
     $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
     $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
 
-    $oldPath = $oldData ? podcastEpisodePublicPath([
+    $oldPath = podcastEpisodePublicPath([
         'show_slug' => (string)($show['slug'] ?? ''),
         'slug' => (string)($oldData['slug'] ?? ''),
-    ]) : '';
+    ]);
     $pdo->prepare(
         "UPDATE cms_podcasts
          SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, image_file = ?, audio_url = ?,
