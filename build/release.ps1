@@ -187,7 +187,7 @@ function Assert-CleanWorkingTree {
 function New-ReleaseZip {
     param([string]$ProjectRoot, [string]$OutPath)
 
-    $exclude = @('.git', '.gitignore', '.claude', 'uploads', 'build', 'dist', 'docs', 'vendor', 'config.php', 'aconfig.php', 'AGENTS.md', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
+    $exclude = @('.git', '.gitignore', '.claude', 'uploads', 'build', 'dist', 'docs', 'vendor', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
     $adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"
 
     if (!(Test-Path $adminGuideSource)) {

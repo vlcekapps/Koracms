@@ -24,7 +24,7 @@ $adminNote = trim($_POST['admin_note'] ?? '');
 $blogId = inputInt('post', 'blog_id') ?? (int)(getDefaultBlog()['id'] ?? 0);
 $defaultRedirect = BASE_URL . '/admin/blog.php' . ($blogId > 0 ? '?blog=' . $blogId : '');
 $redirect = internalRedirectTarget($_POST['redirect'] ?? '', $defaultRedirect);
-$redirectToForm = static function (?int $articleId, int $targetBlogId, string $errorCode) use ($blogId): never {
+$redirectToForm = static function (?int $articleId, int $targetBlogId, string $errorCode) use ($blogId): void {
     $params = ['err' => $errorCode];
     if ($targetBlogId > 0) {
         $params['blog_id'] = $targetBlogId;
@@ -116,7 +116,7 @@ if ($articleIsMovingToAnotherBlog) {
         $sourceCategoryName = trim((string)$sourceCategoryStmt->fetchColumn());
     }
 
-    $sourceTagDetails = loadArticleTagDetails($pdo, $id ?? 0);
+    $sourceTagDetails = loadArticleTagDetails($pdo, $id);
 
     $targetCategoryStmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name ASC, id ASC");
     $targetCategoryStmt->execute([$blogId]);
@@ -137,10 +137,10 @@ if ($articleIsMovingToAnotherBlog) {
 }
 
 if ($articleIsMovingToAnotherBlog && $categoryId === null && $categorySelectionMode !== 'manual') {
-    $matchedCategoryId = (int)($articleMoveTaxonomyState['matched_category_id'] ?? 0);
+    $matchedCategoryId = (int)$articleMoveTaxonomyState['matched_category_id'];
     if ($matchedCategoryId > 0) {
         $categoryId = $matchedCategoryId;
-    } elseif (($articleMoveTaxonomyState['missing_category_name'] ?? '') !== '' && $missingCategoryAction === 'create' && $canCreateTargetTaxonomies) {
+    } elseif ($articleMoveTaxonomyState['missing_category_name'] !== '' && $missingCategoryAction === 'create' && $canCreateTargetTaxonomies) {
         $missingCategoryName = trim((string)$articleMoveTaxonomyState['missing_category_name']);
         if ($missingCategoryName !== '') {
             $insertCategoryStmt = $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)");
@@ -177,19 +177,19 @@ if ($categoryId !== null) {
 }
 
 if ($articleIsMovingToAnotherBlog && $validTagIds === [] && $tagSelectionMode !== 'manual') {
-    $resolvedTagIds = array_values(array_map('intval', (array)($articleMoveTaxonomyState['matched_tag_ids'] ?? [])));
+    $resolvedTagIds = array_values(array_map('intval', $articleMoveTaxonomyState['matched_tag_ids']));
     $missingSourceTags = array_values(array_filter(
-        (array)($articleMoveTaxonomyState['missing_tags'] ?? []),
+        $articleMoveTaxonomyState['missing_tags'],
         static function (array $tag): bool {
-            return trim((string)($tag['name'] ?? '')) !== '';
+            return trim((string)$tag['name']) !== '';
         }
     ));
 
     if ($missingSourceTags !== [] && $missingTagsAction === 'create' && $canCreateTargetTaxonomies) {
         $insertTagStmt = $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)");
         foreach ($missingSourceTags as $missingSourceTag) {
-            $missingTagName = trim((string)($missingSourceTag['name'] ?? ''));
-            $missingTagSlug = trim((string)($missingSourceTag['slug'] ?? ''));
+            $missingTagName = trim((string)$missingSourceTag['name']);
+            $missingTagSlug = trim((string)$missingSourceTag['slug']);
             if ($missingTagName === '') {
                 continue;
             }
@@ -440,7 +440,7 @@ try {
 }
 
 // Uvolnění zámku obsahu po úspěšném uložení
-if ($id !== null) {
+if ($existingArticle !== null) {
     releaseContentLock('article', $id);
 }
 

@@ -354,7 +354,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
             $isAssigned = $assignedRole !== '';
             $otherMemberships = array_values(array_filter(
                 $allMembershipsByUser[$userId] ?? [],
-                static fn(array $membership): bool => (int)($membership['blog_id'] ?? 0) !== $blogId
+                static fn(array $membership): bool => (int)$membership['blog_id'] !== $blogId
             ));
             ?>
             <tr>

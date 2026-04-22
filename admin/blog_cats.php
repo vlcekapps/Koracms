@@ -72,6 +72,10 @@ foreach ($categories as $cat) {
     $blogCatTree[$pid][] = $cat;
 }
 
+/**
+ * @param array<int, list<array{id:int|string,name:string,parent_id:int|string|null}>> $tree
+ * @param array<int, array{id:int|string,name:string,parent_id:int|string|null}> $byId
+ */
 function renderBlogCategoryOptions(array $tree, array $byId, int $parentId = 0, int $depth = 0, ?int $excludeId = null): string
 {
     $out = '';
@@ -88,6 +92,10 @@ function renderBlogCategoryOptions(array $tree, array $byId, int $parentId = 0, 
 }
 
 // Seřadíme kategorie dle stromu pro zobrazení v tabulce
+/**
+ * @param array<int, list<array{id:int|string,name:string,parent_id:int|string|null}>> $tree
+ * @return list<array{id:int|string,name:string,parent_id:int|string|null,_depth:int}>
+ */
 function flattenBlogCategoryTree(array $tree, int $parentId = 0, int $depth = 0): array
 {
     $result = [];
@@ -160,7 +168,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
     <thead><tr><th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($flatCategories as $category): ?>
-      <?php $indent = str_repeat('— ', (int)($category['_depth'] ?? 0)); ?>
+      <?php $indent = str_repeat('— ', (int)$category['_depth']); ?>
       <tr>
         <td><input type="checkbox" name="ids[]" value="<?= (int)$category['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$category['name']) ?>"></td>
         <td>

@@ -56,7 +56,7 @@ if (canManageOwnBlogOnly()) {
     }
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 
 $categories = [];
 if ($hasBlogs) {

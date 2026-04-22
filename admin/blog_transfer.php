@@ -120,7 +120,7 @@ function blogTransferTagSummary(array $tags): string
     }
 
     $names = array_values(array_filter(array_map(
-        static fn(array $tag): string => trim((string)($tag['name'] ?? '')),
+        static fn(array $tag): string => trim((string)$tag['name']),
         $tags
     )));
 
@@ -128,7 +128,6 @@ function blogTransferTagSummary(array $tags): string
 }
 
 /**
- * @param array<int, array<string, mixed>> $articles
  * @return array<int, array<string, mixed>>
  */
 function blogTransferLoadCategories(PDO $pdo, int $blogId): array
@@ -168,7 +167,7 @@ function blogTransferTagLookupMaps(array $tags): array
 
 /**
  * @param array<int, array<string, mixed>> $articles
- * @param array<int, array<int, array{name:string,slug:string}>> $articleTags
+ * @param array<string, array{id:int,name:string}> $targetCategoryMap
  * @return array{resolved: array<string, array{id:int,name:string}>, missing: array<string, string>}
  */
 function blogTransferResolveCategories(array $articles, array $targetCategoryMap): array
@@ -196,6 +195,7 @@ function blogTransferResolveCategories(array $articles, array $targetCategoryMap
 
 /**
  * @param array<int, array<int, array{name:string,slug:string}>> $articleTags
+ * @param array{by_slug: array<string, array{id:int,name:string,slug:string}>, by_name: array<string, array{id:int,name:string,slug:string}>} $targetTagMaps
  * @return array{resolved: array<string, array{id:int,name:string,slug:string}>, missing: array<string, array{name:string,slug:string}>}
  */
 function blogTransferResolveTags(array $articleTags, array $targetTagMaps): array
@@ -205,8 +205,8 @@ function blogTransferResolveTags(array $articleTags, array $targetTagMaps): arra
 
     foreach ($articleTags as $tags) {
         foreach ($tags as $tag) {
-            $name = trim((string)($tag['name'] ?? ''));
-            $slug = trim((string)($tag['slug'] ?? ''));
+            $name = trim((string)$tag['name']);
+            $slug = trim((string)$tag['slug']);
             if ($name === '' && $slug === '') {
                 continue;
             }
@@ -475,7 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                             continue;
                         }
 
-                        $mappedCategoryId = (int)($mappedCategory['id'] ?? 0);
+                        $mappedCategoryId = (int)$mappedCategory['id'];
                         if ($mappedCategoryId <= 0 || !isset($targetCategoryMapById[$mappedCategoryId])) {
                             throw new RuntimeException('Ruční mapování kategorií obsahuje neplatnou cílovou kategorii.');
                         }
@@ -490,8 +490,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 if ($tagStrategy === 'create') {
                     $insertTag = $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)");
                     foreach ($tagResolution['missing'] as $missingTag) {
-                        $missingName = trim((string)($missingTag['name'] ?? ''));
-                        $missingSlug = trim((string)($missingTag['slug'] ?? ''));
+                        $missingName = trim((string)$missingTag['name']);
+                        $missingSlug = trim((string)$missingTag['slug']);
                         if ($missingName === '') {
                             continue;
                         }
@@ -514,7 +514,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                             continue;
                         }
 
-                        $mappedTagId = (int)($mappedTag['id'] ?? 0);
+                        $mappedTagId = (int)$mappedTag['id'];
                         if ($mappedTagId <= 0 || !isset($targetTagMapById[$mappedTagId])) {
                             throw new RuntimeException('Ruční mapování štítků obsahuje neplatný cílový štítek.');
                         }
@@ -558,16 +558,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                     } elseif ($normalizedCategoryName !== '' && $categoryStrategy === 'map_existing' && array_key_exists($normalizedCategoryName, $manualCategoryAssignments)) {
                         $mappedCategory = $manualCategoryAssignments[$normalizedCategoryName];
                         if (is_array($mappedCategory)) {
-                            $newCategoryId = (int)($mappedCategory['id'] ?? 0);
-                            $newCategoryLabel = (string)($mappedCategory['name'] ?? 'Bez kategorie');
+                            $newCategoryId = (int)$mappedCategory['id'];
+                            $newCategoryLabel = (string)$mappedCategory['name'];
                         }
                     }
 
                     $newTagIds = [];
                     $newTagNames = [];
                     foreach ($oldTags as $tag) {
-                        $tagName = trim((string)($tag['name'] ?? ''));
-                        $tagSlug = trim((string)($tag['slug'] ?? ''));
+                        $tagName = trim((string)$tag['name']);
+                        $tagSlug = trim((string)$tag['slug']);
                         $tagKey = $tagSlug !== '' ? 'slug:' . $tagSlug : 'name:' . blogTransferNormalizeName($tagName);
                         $matchedTag = null;
 
@@ -588,13 +588,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                             continue;
                         }
 
-                        $matchedTagId = (int)($matchedTag['id'] ?? 0);
+                        $matchedTagId = (int)$matchedTag['id'];
                         if ($matchedTagId <= 0 || in_array($matchedTagId, $newTagIds, true)) {
                             continue;
                         }
 
                         $newTagIds[] = $matchedTagId;
-                        $newTagNames[] = (string)($matchedTag['name'] ?? '');
+                        $newTagNames[] = (string)$matchedTag['name'];
                     }
 
                     $newFeaturedInBlog = 0;
@@ -655,10 +655,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
 }
 
 $selectedArticleCount = count($articles);
-$articleCountLabel = $selectedArticleCount === 1 ? 'článek' : (($selectedArticleCount >= 2 && $selectedArticleCount <= 4) ? 'články' : 'článků');
+$articleCountLabel = $selectedArticleCount === 1 ? 'článek' : ($selectedArticleCount <= 4 ? 'články' : 'článků');
 $missingCategoryNames = array_values($categoryResolution['missing']);
 $missingTagNames = array_values(array_map(
-    static fn(array $tag): string => (string)($tag['name'] ?? ''),
+    static fn(array $tag): string => (string)$tag['name'],
     $tagResolution['missing']
 ));
 
@@ -858,8 +858,8 @@ adminHeader('Přesun článků mezi blogy');
             </p>
             <?php foreach ($tagResolution['missing'] as $tagKey => $missingTag): ?>
               <?php
-              $tagName = trim((string)($missingTag['name'] ?? ''));
-              $tagLabel = $tagName !== '' ? $tagName : trim((string)($missingTag['slug'] ?? ''));
+              $tagName = trim((string)$missingTag['name']);
+              $tagLabel = $tagName !== '' ? $tagName : trim((string)$missingTag['slug']);
               $tagFieldName = blogTransferMappingFieldName('tag', $tagKey);
               $tagHelpId = $tagFieldName . '-help';
               $selectedTagValue = (string)($tagMapSelections[$tagKey] ?? '');

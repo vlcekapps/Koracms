@@ -82,7 +82,7 @@ if ($action === 'delete' && $ids !== []) {
     }
 
     $_SESSION['blog_transfer_selection'] = [
-        'ids' => array_values(array_map('intval', $ids)),
+        'ids' => array_map('intval', $ids),
         'redirect' => $redirect,
         'created_at' => time(),
     ];

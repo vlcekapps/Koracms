@@ -7014,7 +7014,7 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'lib/uploads.php')
         && str_contains($composerSource, '"analyse:strict"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/audit_log.php admin/backup.php admin/content_reference_picker.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submissions.php admin/forms.php admin/index.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/podcast.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_form.php admin/podcast_show_save.php admin/profile.php admin/redirects.php admin/settings.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/themes.php admin/widgets.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php auth.php confirm_email.php cron.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/content_reference_picker.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submissions.php admin/forms.php admin/index.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/podcast.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_form.php admin/podcast_show_save.php admin/profile.php admin/redirects.php admin/settings.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/themes.php admin/widgets.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php auth.php confirm_email.php cron.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
         && str_contains($composerSource, 'lib/filedownloads.php lib/gallery.php lib/github.php lib/mail.php lib/media_library.php')
@@ -7027,7 +7027,11 @@ $foundationChecks = [
     'dev tooling is protected from direct web access' => str_contains($htaccessSource, 'composer\.(json|lock)')
         && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),
-    'release zip excludes dev vendor directory' => str_contains($releaseScriptSource, "'vendor'")
+    'release zip excludes dev tooling and metadata' => str_contains($releaseScriptSource, "'vendor'")
+        && str_contains($releaseScriptSource, "'composer.json'")
+        && str_contains($releaseScriptSource, "'composer.lock'")
+        && str_contains($releaseScriptSource, "'phpstan.neon.dist'")
+        && str_contains($releaseScriptSource, "'.php-cs-fixer.dist.php'")
         && str_contains($releaseScriptSource, 'New-ReleaseZip'),
     'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')

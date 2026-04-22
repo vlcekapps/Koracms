@@ -34,7 +34,7 @@ if ($id !== null) {
 
 // Content locking – pokus o získání zámku při editaci existujícího článku
 $contentLockWarning = null;
-if ($article && $id !== null) {
+if ($article) {
     $contentLockWarning = acquireContentLock('article', $id);
 }
 
@@ -45,15 +45,15 @@ if ($allBlogs === []) {
 }
 
 $accessibleBlogIds = array_map(static fn(array $blogEntry): int => (int)$blogEntry['id'], $allBlogs);
-$defaultAccessibleBlog = $allBlogs[0] ?? null;
+$defaultAccessibleBlog = $allBlogs[0];
 $sourceArticleBlogId = (int)($article['blog_id'] ?? 0);
-$requestedBlogId = (int)(($_GET['blog_id'] ?? null) ?? ($article['blog_id'] ?? ($defaultAccessibleBlog['id'] ?? 1)));
+$requestedBlogId = (int)($_GET['blog_id'] ?? $article['blog_id'] ?? $defaultAccessibleBlog['id']);
 if (!in_array($requestedBlogId, $accessibleBlogIds, true)) {
-    $requestedBlogId = (int)($defaultAccessibleBlog['id'] ?? $requestedBlogId);
+    $requestedBlogId = (int)$defaultAccessibleBlog['id'];
 }
 
 $currentBlogId = $requestedBlogId;
-$currentBlog = getBlogById($currentBlogId) ?? $defaultAccessibleBlog ?? getDefaultBlog();
+$currentBlog = getBlogById($currentBlogId) ?? $defaultAccessibleBlog;
 $currentBlogId = (int)($currentBlog['id'] ?? $currentBlogId);
 $articleListUrl = BASE_URL . '/admin/blog.php' . (isMultiBlog() ? '?blog=' . $currentBlogId : '');
 $blogCategoriesUrl = BASE_URL . '/admin/blog_cats.php?blog_id=' . $currentBlogId;
@@ -76,6 +76,9 @@ foreach ($categories as $cat) {
     $blogFormCatTree[$pid][] = $cat;
 }
 
+/**
+ * @param array<int, list<array{id:int|string,name:string,parent_id:int|string|null}>> $tree
+ */
 function renderBlogFormCategoryOptions(array $tree, int $parentId = 0, int $depth = 0, int $selectedId = 0): string
 {
     $out = '';
@@ -107,7 +110,7 @@ try {
 
         $sourceTagDetails = loadArticleTagDetails($pdo, $id);
         $articleTagIds = array_values(array_map(
-            static fn(array $tag): int => (int)($tag['id'] ?? 0),
+            static fn(array $tag): int => (int)$tag['id'],
             $sourceTagDetails
         ));
     }
@@ -184,25 +187,25 @@ if ($articleIsMovingToSelectedBlog) {
     $initialMoveTaxonomyState = resolveArticleMoveTaxonomyState(
         $sourceCategoryName,
         $sourceTagDetails,
-        (array)($selectedBlogOptions['categories'] ?? []),
-        (array)($selectedBlogOptions['tags'] ?? [])
+        $selectedBlogOptions['categories'],
+        $selectedBlogOptions['tags']
     );
-    $initialCanCreateTargetTaxonomies = (bool)($selectedBlogOptions['can_manage_taxonomies'] ?? false);
+    $initialCanCreateTargetTaxonomies = (bool)$selectedBlogOptions['can_manage_taxonomies'];
 }
 
 $initialCategorySelectId = $articleIsMovingToSelectedBlog
-    ? (int)($initialMoveTaxonomyState['matched_category_id'] ?? 0)
+    ? (int)$initialMoveTaxonomyState['matched_category_id']
     : (int)($article['category_id'] ?? 0);
 if ($initialCategorySelectId <= 0) {
     $initialCategorySelectId = 0;
 }
 $initialTagIds = $articleIsMovingToSelectedBlog
-    ? array_values(array_map('intval', (array)($initialMoveTaxonomyState['matched_tag_ids'] ?? [])))
+    ? array_values(array_map('intval', $initialMoveTaxonomyState['matched_tag_ids']))
     : $articleTagIds;
-$initialMissingCategoryName = trim((string)($initialMoveTaxonomyState['missing_category_name'] ?? ''));
+$initialMissingCategoryName = trim((string)$initialMoveTaxonomyState['missing_category_name']);
 $initialMissingTagNames = array_values(array_filter(array_map(
-    static fn(array $tag): string => trim((string)($tag['name'] ?? '')),
-    (array)($initialMoveTaxonomyState['missing_tags'] ?? [])
+    static fn(array $tag): string => trim((string)$tag['name']),
+    $initialMoveTaxonomyState['missing_tags']
 )));
 
 $defaultCommentsEnabled = $article
@@ -617,21 +620,21 @@ adminHeader($pageTitle);
         'tags' => array_map(
             static function (array $tag): array {
                 return [
-                    'name' => (string)($tag['name'] ?? ''),
-                    'slug' => (string)($tag['slug'] ?? ''),
+                    'name' => (string)$tag['name'],
+                    'slug' => (string)$tag['slug'],
                 ];
             },
             $sourceTagDetails
         ),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    const blogMeta = <?= json_encode(array_values(array_map(static function (array $blogEntry): array {
+    const blogMeta = <?= json_encode(array_map(static function (array $blogEntry): array {
         return [
             'id' => (int)$blogEntry['id'],
             'name' => (string)$blogEntry['name'],
             'publicUrl' => blogIndexPath($blogEntry),
             'feedUrl' => blogFeedPath($blogEntry),
         ];
-    }, $allBlogs)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    }, $allBlogs), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMetaById = Object.fromEntries(blogMeta.map((blogEntry) => [String(blogEntry.id), blogEntry]));
     const isNewArticle = <?= $article ? 'false' : 'true' ?>;
     const sourceBlogId = <?= (int)$sourceArticleBlogId ?>;
