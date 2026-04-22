@@ -1,6 +1,10 @@
 <?php
+
 // Sdílené helpery pro knihovnu médií.
 
+/**
+ * @return array<string,string>
+ */
 function mediaVisibilityOptions(): array
 {
     return [
@@ -15,6 +19,9 @@ function normalizeMediaVisibility(string $value): string
     return array_key_exists($value, mediaVisibilityOptions()) ? $value : 'public';
 }
 
+/**
+ * @return array<string,string>
+ */
 function mediaAllowedMimeMap(): array
 {
     return [
@@ -113,31 +120,49 @@ function mediaSanitizeExtension(string $originalName, string $mimeType): string
     return mediaExtensionForMime($mimeType);
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaIsPublic(array $media): bool
 {
     return normalizeMediaVisibility((string)($media['visibility'] ?? 'public')) === 'public';
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaUsesProtectedFileEndpoint(array $media): bool
 {
     return !mediaIsPublic($media) || mediaIsSvgMime((string)($media['mime_type'] ?? ''));
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaCanPreviewImage(array $media): bool
 {
     return mediaIsPreviewableImageMime((string)($media['mime_type'] ?? ''));
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaCanPreviewPdf(array $media): bool
 {
     return mediaIsPublic($media) && mediaIsPdfMime((string)($media['mime_type'] ?? ''));
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaStoredFilename(array $media): string
 {
     return basename(trim((string)($media['filename'] ?? '')));
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaOriginalName(array $media): string
 {
     $originalName = trim((string)($media['original_name'] ?? ''));
@@ -190,6 +215,9 @@ function mediaEnsureDirectories(string $visibility): bool
     return true;
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaOriginalPath(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): string
 {
     $visibility = normalizeMediaVisibility($visibilityOverride ?? (string)($media['visibility'] ?? 'public'));
@@ -202,6 +230,9 @@ function mediaOriginalPath(array $media, ?string $visibilityOverride = null, ?st
     return $directory . DIRECTORY_SEPARATOR . $filename;
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaThumbPath(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): string
 {
     if (!mediaCanPreviewImage($media)) {
@@ -250,6 +281,9 @@ function mediaMoveFile(string $sourcePath, string $targetPath): bool
     return false;
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaDeleteDerivedFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): void
 {
     $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
@@ -264,6 +298,9 @@ function mediaDeleteDerivedFiles(array $media, ?string $visibilityOverride = nul
     }
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): void
 {
     mediaDeleteDerivedFiles($media, $visibilityOverride, $filenameOverride);
@@ -274,6 +311,9 @@ function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = nu
     }
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaRebuildDerivedFiles(array $media): bool
 {
     mediaDeleteDerivedFiles($media);
@@ -319,6 +359,11 @@ function mediaUploadErrorMessage(int $errorCode): string
     };
 }
 
+/**
+ * @param array<string,mixed> $file
+ * @param array<string,mixed>|null $existingMedia
+ * @return array{ok:bool,error?:string,filename?:string,original_name?:string,mime_type?:string,file_size?:int}
+ */
 function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?array $existingMedia = null): array
 {
     $upload = koraInspectUploadedFile($file, [
@@ -448,6 +493,10 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
     ];
 }
 
+/**
+ * @param array<string,mixed> $media
+ * @return array{ok:bool,error?:string}
+ */
 function mediaSwitchVisibility(array $media, string $newVisibility): array
 {
     $currentVisibility = normalizeMediaVisibility((string)($media['visibility'] ?? 'public'));
@@ -501,6 +550,9 @@ function mediaSwitchVisibility(array $media, string $newVisibility): array
     return ['ok' => true];
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaFileUrl(array $media): string
 {
     $id = (int)($media['id'] ?? 0);
@@ -515,6 +567,9 @@ function mediaFileUrl(array $media): string
     return BASE_URL . '/uploads/media/' . rawurlencode(mediaStoredFilename($media));
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaPreviewUrl(array $media): string
 {
     $id = (int)($media['id'] ?? 0);
@@ -525,6 +580,9 @@ function mediaPreviewUrl(array $media): string
     return BASE_URL . '/media/preview.php?id=' . $id;
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaThumbUrl(array $media): string
 {
     if (!mediaCanPreviewImage($media)) {
@@ -543,6 +601,9 @@ function mediaThumbUrl(array $media): string
     return BASE_URL . '/uploads/media/thumbs/' . rawurlencode(mediaStoredFilename($media));
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaDisplayKind(array $media): string
 {
     return match (mediaMimeFamily((string)($media['mime_type'] ?? ''))) {
@@ -553,6 +614,16 @@ function mediaDisplayKind(array $media): string
     };
 }
 
+/**
+ * @return list<array{
+ *   table:string,
+ *   id_column:string,
+ *   title_sql:string,
+ *   columns:list<string>,
+ *   label:string,
+ *   admin_path:callable(array<string,mixed>):string
+ * }>
+ */
 function mediaUsageSearchDefinitions(): array
 {
     return [
@@ -562,7 +633,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Stránka #', id))",
             'columns' => ['content'],
             'label' => 'Stránka',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/page_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/page_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_articles',
@@ -570,7 +641,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Článek #', id))",
             'columns' => ['perex', 'content'],
             'label' => 'Článek blogu',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/blog_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/blog_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_news',
@@ -578,7 +649,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Novinka #', id))",
             'columns' => ['content', 'meta_description'],
             'label' => 'Novinka',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/news_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/news_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_events',
@@ -586,7 +657,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Událost #', id))",
             'columns' => ['excerpt', 'description', 'program_note', 'accessibility_note'],
             'label' => 'Událost',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/event_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/event_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_faqs',
@@ -594,7 +665,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(question,''), CONCAT('FAQ #', id))",
             'columns' => ['excerpt', 'answer', 'meta_description'],
             'label' => 'FAQ',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/faq_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/faq_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_downloads',
@@ -602,7 +673,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Download #', id))",
             'columns' => ['excerpt', 'description', 'requirements'],
             'label' => 'Ke stažení',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/download_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/download_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_places',
@@ -610,7 +681,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(name,''), CONCAT('Místo #', id))",
             'columns' => ['excerpt', 'description', 'meta_description'],
             'label' => 'Zajímavé místo',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/place_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/place_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_board',
@@ -618,7 +689,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Oznámení #', id))",
             'columns' => ['excerpt', 'description'],
             'label' => 'Vývěska',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/board_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/board_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_food_cards',
@@ -626,7 +697,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Lístek #', id))",
             'columns' => ['description', 'content'],
             'label' => 'Jídelní lístek',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/food_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/food_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_forms',
@@ -634,7 +705,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Formulář #', id))",
             'columns' => ['description', 'success_message', 'submitter_confirmation_message'],
             'label' => 'Formulář',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/form_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/form_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_podcast_shows',
@@ -642,7 +713,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Podcast #', id))",
             'columns' => ['description', 'subtitle'],
             'label' => 'Podcast',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/podcast_show_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/podcast_show_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_podcasts',
@@ -650,7 +721,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Epizoda podcastu #', id))",
             'columns' => ['description', 'subtitle'],
             'label' => 'Epizoda podcastu',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/podcast_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/podcast_form.php?id=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_widgets',
@@ -658,7 +729,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(title,''), CONCAT(widget_type, ' #', id))",
             'columns' => ['settings'],
             'label' => 'Widget',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/widgets.php',
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/widgets.php',
         ],
         [
             'table' => 'cms_settings',
@@ -666,7 +737,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "`key`",
             'columns' => ['value'],
             'label' => 'Nastavení',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/settings.php',
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/settings.php',
         ],
         [
             'table' => 'cms_blogs',
@@ -674,7 +745,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(name,''), CONCAT('Blog #', id))",
             'columns' => ['description', 'intro_content', 'meta_description'],
             'label' => 'Blog',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/blogs.php?edit=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/blogs.php?edit=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_gallery_albums',
@@ -682,7 +753,7 @@ function mediaUsageSearchDefinitions(): array
             'title_sql' => "COALESCE(NULLIF(name,''), CONCAT('Album #', id))",
             'columns' => ['description'],
             'label' => 'Fotogalerie',
-            'admin_path' => static fn(array $row): string => BASE_URL . '/admin/gallery_album_form.php?id=' . (int)$row['id'],
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/gallery_album_form.php?id=' . (int)$row['id'],
         ],
     ];
 }
@@ -732,6 +803,10 @@ function mediaColumnExists(string $tableName, string $columnName): bool
     return $cache[$cacheKey];
 }
 
+/**
+ * @param array<string,mixed> $media
+ * @return list<string>
+ */
 function mediaUsageNeedles(array $media): array
 {
     $needles = [];
@@ -752,6 +827,10 @@ function mediaUsageNeedles(array $media): array
     return array_values(array_unique($needles));
 }
 
+/**
+ * @param array<string,mixed> $media
+ * @return list<array{label:string,title:string,admin_url:string}>
+ */
 function mediaFindUsages(array $media, int $limit = 25): array
 {
     static $cache = [];
@@ -782,8 +861,8 @@ function mediaFindUsages(array $media, int $limit = 25): array
         }
 
         $columns = array_values(array_filter(
-            (array)($definition['columns'] ?? []),
-            static fn(string $column): bool => mediaColumnExists($tableName, $column)
+            $definition['columns'],
+            static fn (string $column): bool => mediaColumnExists($tableName, $column)
         ));
         if ($columns === []) {
             continue;
@@ -821,9 +900,7 @@ function mediaFindUsages(array $media, int $limit = 25): array
                     'title' => trim((string)($row['title'] ?? '')) !== ''
                         ? trim((string)$row['title'])
                         : ((string)$definition['label'] . ' #' . (int)$row['id']),
-                    'admin_url' => isset($definition['admin_path']) && is_callable($definition['admin_path'])
-                        ? (string)$definition['admin_path']($row)
-                        : '',
+                    'admin_url' => (string)$definition['admin_path']($row),
                 ];
                 $usages[] = $usage;
             }
@@ -836,6 +913,9 @@ function mediaFindUsages(array $media, int $limit = 25): array
     return $limit > 0 ? array_slice($usages, 0, $limit) : $usages;
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaHasUsage(array $media): bool
 {
     return mediaFindUsages($media, 1) !== [];
@@ -858,6 +938,9 @@ function mediaFlashSet(string $type, string $message): void
     $_SESSION['media_library_flash'][$type][] = $message;
 }
 
+/**
+ * @return array<string,list<string>>
+ */
 function mediaFlashPull(): array
 {
     $flash = $_SESSION['media_library_flash'] ?? [];
@@ -870,6 +953,9 @@ function mediaStaffCanAccessPrivate(): bool
     return currentUserHasCapability('content_manage_shared');
 }
 
+/**
+ * @return array<string,mixed>|null
+ */
 function mediaGetById(int $id): ?array
 {
     if ($id <= 0) {
@@ -891,6 +977,9 @@ function mediaGetById(int $id): ?array
     }
 }
 
+/**
+ * @return array<string,mixed>|null
+ */
 function mediaGetPublicByStoredFilename(string $filename): ?array
 {
     $filename = basename(trim($filename));
@@ -914,6 +1003,9 @@ function mediaGetPublicByStoredFilename(string $filename): ?array
     }
 }
 
+/**
+ * @return array<string,mixed>|null
+ */
 function mediaGetPublicPdfByUrl(string $url): ?array
 {
     $url = trim($url);
@@ -962,6 +1054,9 @@ function mediaGetPublicPdfByUrl(string $url): ?array
     return ($media !== null && mediaCanPreviewPdf($media)) ? $media : null;
 }
 
+/**
+ * @param array<string,mixed> $media
+ */
 function mediaDownloadName(array $media): string
 {
     return safeDownloadName(mediaOriginalName($media), mediaStoredFilename($media));

@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * @return array<string,array{label:string}>
+ */
 function formWebhookEventDefinitions(): array
 {
     return [
@@ -101,6 +104,9 @@ function normalizeFormWebhookUrl(string $url): string
     return $validated;
 }
 
+/**
+ * @return list<string>
+ */
 function formWebhookEventList(mixed $value): array
 {
     $rawItems = is_array($value)
@@ -125,12 +131,18 @@ function formWebhookEventStorage(mixed $value): string
     return implode(',', formWebhookEventList($value));
 }
 
+/**
+ * @param array<string,mixed> $form
+ */
 function formWebhookEnabled(array $form): bool
 {
     return (int)($form['webhook_enabled'] ?? 0) === 1
         && normalizeFormWebhookUrl((string)($form['webhook_url'] ?? '')) !== '';
 }
 
+/**
+ * @param array<string,mixed> $form
+ */
 function formWebhookWantsEvent(array $form, string $event): bool
 {
     if (!formWebhookEnabled($form)) {
@@ -140,6 +152,10 @@ function formWebhookWantsEvent(array $form, string $event): bool
     return in_array($event, formWebhookEventList((string)($form['webhook_events'] ?? '')), true);
 }
 
+/**
+ * @param array<string,mixed> $submission
+ * @return array{id:int,label:?string}|null
+ */
 function formWebhookAssigneePayload(array $submission): ?array
 {
     $assignedUserId = (int)($submission['assigned_user_id'] ?? 0);
@@ -170,6 +186,14 @@ function formWebhookAssigneePayload(array $submission): ?array
     ];
 }
 
+/**
+ * @param array<string,mixed> $form
+ * @param array<string,mixed> $submission
+ * @param array<string,array<string,mixed>> $fieldsByName
+ * @param array<string,mixed> $submissionData
+ * @param array<string,mixed> $context
+ * @return array<string,mixed>
+ */
 function formWebhookPayload(
     array $form,
     string $event,
@@ -245,6 +269,13 @@ function formWebhookSignature(string $secret, string $payload): string
     return 'sha256=' . hash_hmac('sha256', $payload, $secret);
 }
 
+/**
+ * @param array<string,mixed> $form
+ * @param array<string,mixed> $submission
+ * @param array<string,array<string,mixed>> $fieldsByName
+ * @param array<string,mixed> $submissionData
+ * @param array<string,mixed> $context
+ */
 function dispatchFormWebhook(
     array $form,
     string $event,

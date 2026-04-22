@@ -1,4 +1,5 @@
 <?php
+
 // Revize obsahu – ukládá snapshoty textových polí před každou úpravou
 
 /**
@@ -6,8 +7,8 @@
  *
  * @param string $entityType  Typ entity (article, news, page, event, faq, board, download, food, place)
  * @param int    $entityId    ID entity
- * @param array  $oldValues   Asociativní pole [field => old_value] – ukládají se jen změněná pole
- * @param array  $newValues   Asociativní pole [field => new_value]
+ * @param array<string,mixed> $oldValues  Asociativní pole [field => old_value] – ukládají se jen změněná pole
+ * @param array<string,mixed> $newValues  Asociativní pole [field => new_value]
  */
 function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldValues, array $newValues): void
 {
@@ -36,7 +37,14 @@ function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldVal
 /**
  * Načte historii revizí pro danou entitu.
  *
- * @return array Pole revizí seřazených od nejnovější
+ * @return list<array{
+ *   id:int,
+ *   field_name:string,
+ *   old_value:string,
+ *   new_value:string,
+ *   created_at:string,
+ *   user_name:string
+ * }> Pole revizí seřazených od nejnovější
  */
 function loadRevisions(PDO $pdo, string $entityType, int $entityId, int $limit = 50): array
 {
@@ -125,8 +133,8 @@ function revisionFieldLabel(string $entityType, string $fieldName): string
         'external_url' => 'Externí odkaz ke stažení',
         'is_featured' => 'Doporučená položka',
         'posted_date' => 'Datum vyvěšení',
-        'removal_date'=> 'Datum sejmutí',
-        'contact_name'=> 'Kontaktní osoba',
+        'removal_date' => 'Datum sejmutí',
+        'contact_name' => 'Kontaktní osoba',
         'contact_phone' => 'Telefon',
         'contact_email' => 'E-mail',
         'address'     => 'Adresa',
@@ -136,7 +144,7 @@ function revisionFieldLabel(string $entityType, string $fieldName): string
         'latitude'    => 'Zeměpisná šířka',
         'longitude'   => 'Zeměpisná délka',
         'is_pinned'   => 'Připnuto mezi důležité',
-        'is_published'=> 'Zveřejnění na webu',
+        'is_published' => 'Zveřejnění na webu',
         'valid_from'  => 'Platí od',
         'valid_to'    => 'Platí do',
         'is_current'  => 'Použít jako aktuální lístek',

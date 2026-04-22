@@ -1,8 +1,12 @@
 <?php
+
 // Prezentační funkce – slugy, URL, excerpty, hydratace, autoři – extrahováno z db.php
 
 // ──────────────────────── Multiblog helper funkce ────────────────────────────
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function getAllBlogs(): array
 {
     global $_CMS_BLOGS_CACHE;
@@ -24,6 +28,9 @@ function clearBlogCache(): void
     unset($_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE, $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE);
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function getBlogById(int $id): ?array
 {
     foreach (getAllBlogs() as $blog) {
@@ -34,6 +41,9 @@ function getBlogById(int $id): ?array
     return null;
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function getBlogBySlug(string $slug): ?array
 {
     foreach (getAllBlogs() as $blog) {
@@ -44,6 +54,9 @@ function getBlogBySlug(string $slug): ?array
     return null;
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function getBlogByLegacySlug(string $slug): ?array
 {
     $slug = slugify(trim($slug));
@@ -68,6 +81,9 @@ function getBlogByLegacySlug(string $slug): ?array
     }
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function getDefaultBlog(): ?array
 {
     $blogs = getAllBlogs();
@@ -84,6 +100,9 @@ function isMultiBlog(): bool
     return count(getAllBlogs()) > 1;
 }
 
+/**
+ * @return array<string, string>
+ */
 function blogMembershipRoleDefinitions(): array
 {
     return [
@@ -147,6 +166,9 @@ function blogHasExplicitMembers(int $blogId): bool
     return isset($blogMap[$blogId]);
 }
 
+/**
+ * @return list<array{blog_id:mixed, member_role:mixed}>
+ */
 function getUserBlogMemberships(?int $userId = null): array
 {
     global $_CMS_BLOG_MEMBERSHIP_CACHE;
@@ -178,6 +200,9 @@ function getUserBlogMemberships(?int $userId = null): array
     return $_CMS_BLOG_MEMBERSHIP_CACHE[$userId];
 }
 
+/**
+ * @return array<int, string>
+ */
 function getUserBlogMembershipMap(?int $userId = null): array
 {
     $map = [];
@@ -188,6 +213,9 @@ function getUserBlogMembershipMap(?int $userId = null): array
     return $map;
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function getWritableBlogsForUser(?int $userId = null): array
 {
     $userId = $userId ?? currentUserId();
@@ -226,6 +254,9 @@ function getWritableBlogsForUser(?int $userId = null): array
     ));
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function getTaxonomyManagedBlogsForUser(?int $userId = null): array
 {
     $userId = $userId ?? currentUserId();
@@ -331,7 +362,7 @@ function canCurrentUserManageAnyBlogTaxonomies(): bool
  */
 function loadTransferableBlogArticles(PDO $pdo, array $ids): array
 {
-    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn(int $id): bool => $id > 0)));
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
     if ($ids === []) {
         return [];
     }
@@ -551,6 +582,9 @@ function loadArticleTagDetails(PDO $pdo, int $articleId): array
     );
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function getBlogMembers(int $blogId): array
 {
     if ($blogId <= 0) {
@@ -573,6 +607,10 @@ function getBlogMembers(int $blogId): array
     }
 }
 
+/**
+ * @param array<string, mixed>|null $currentBlog
+ * @return list<array<string, mixed>>
+ */
 function getPublicBlogNavigationBlogs(?array $currentBlog = null): array
 {
     $currentBlogId = (int)($currentBlog['id'] ?? 0);
@@ -590,6 +628,9 @@ function getPublicBlogNavigationBlogs(?array $currentBlog = null): array
     return $visibleBlogs;
 }
 
+/**
+ * @param array<string, mixed> $article
+ */
 function articleBlogSlug(array $article): string
 {
     if (!empty($article['blog_slug'])) {
@@ -600,6 +641,9 @@ function articleBlogSlug(array $article): string
     return $blog ? (string)$blog['slug'] : 'blog';
 }
 
+/**
+ * @param array<string, mixed> $blog
+ */
 function blogIndexPath(array $blog): string
 {
     $slug = (string)($blog['slug'] ?? 'blog');
@@ -609,6 +653,9 @@ function blogIndexPath(array $blog): string
     return BASE_URL . '/' . rawurlencode($slug) . '/';
 }
 
+/**
+ * @param array<string, mixed> $blog
+ */
 function blogIndexUrl(array $blog): string
 {
     $path = (string)($blog['slug'] ?? 'blog');
@@ -618,12 +665,18 @@ function blogIndexUrl(array $blog): string
     return siteUrl('/' . rawurlencode($path) . '/');
 }
 
+/**
+ * @param array<string, mixed> $blog
+ */
 function blogFeedPath(array $blog): string
 {
     $slug = (string)($blog['slug'] ?? 'blog');
     return BASE_URL . '/feed.php?blog=' . rawurlencode($slug);
 }
 
+/**
+ * @param array<string, mixed> $blog
+ */
 function blogFeedUrl(array $blog): string
 {
     $slug = (string)($blog['slug'] ?? 'blog');
@@ -648,6 +701,9 @@ function saveBlogSlugRedirect(PDO $pdo, int $blogId, string $oldSlug): void
     }
 }
 
+/**
+ * @return list<string>
+ */
 function reservedBlogSlugs(): array
 {
     return [
@@ -661,12 +717,18 @@ function reservedBlogSlugs(): array
 
 function formatCzechDate(string $datetime): string
 {
-    if (trim($datetime) === '') return '';
+    if (trim($datetime) === '') {
+        return '';
+    }
     static $months = [
         '', 'ledna', 'února', 'března', 'dubna', 'května', 'června',
         'července', 'srpna', 'září', 'října', 'listopadu', 'prosince',
     ];
-    try { $dt = new \DateTime($datetime); } catch (\Exception $e) { return h($datetime); }
+    try {
+        $dt = new \DateTime($datetime);
+    } catch (\Exception $e) {
+        return h($datetime);
+    }
     return $dt->format('j') . '. ' . $months[(int)$dt->format('n')]
          . ' ' . $dt->format('Y, H:i');
 }
@@ -704,17 +766,17 @@ function articleReadingMeta(string $text, int $viewCount): string
 function slugify(string $text): string
 {
     $map = [
-        'á'=>'a','č'=>'c','ď'=>'d','é'=>'e','ě'=>'e','í'=>'i','ň'=>'n',
-        'ó'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ý'=>'y','ž'=>'z',
-        'Á'=>'a','Č'=>'c','Ď'=>'d','É'=>'e','Ě'=>'e','Í'=>'i','Ň'=>'n',
-        'Ó'=>'o','Ř'=>'r','Š'=>'s','Ť'=>'t','Ú'=>'u','Ů'=>'u','Ý'=>'y','Ž'=>'z',
+        'á' => 'a','č' => 'c','ď' => 'd','é' => 'e','ě' => 'e','í' => 'i','ň' => 'n',
+        'ó' => 'o','ř' => 'r','š' => 's','ť' => 't','ú' => 'u','ů' => 'u','ý' => 'y','ž' => 'z',
+        'Á' => 'a','Č' => 'c','Ď' => 'd','É' => 'e','Ě' => 'e','Í' => 'i','Ň' => 'n',
+        'Ó' => 'o','Ř' => 'r','Š' => 's','Ť' => 't','Ú' => 'u','Ů' => 'u','Ý' => 'y','Ž' => 'z',
         // slovenština
-        'ľ'=>'l','Ľ'=>'l','ŕ'=>'r','Ŕ'=>'r','ĺ'=>'l','Ĺ'=>'l','ô'=>'o','Ô'=>'o',
+        'ľ' => 'l','Ľ' => 'l','ŕ' => 'r','Ŕ' => 'r','ĺ' => 'l','Ĺ' => 'l','ô' => 'o','Ô' => 'o',
         // polština
-        'ą'=>'a','Ą'=>'a','ć'=>'c','Ć'=>'c','ę'=>'e','Ę'=>'e','ł'=>'l','Ł'=>'l',
-        'ń'=>'n','Ń'=>'n','ś'=>'s','Ś'=>'s','ź'=>'z','Ź'=>'z','ż'=>'z','Ż'=>'z',
+        'ą' => 'a','Ą' => 'a','ć' => 'c','Ć' => 'c','ę' => 'e','Ę' => 'e','ł' => 'l','Ł' => 'l',
+        'ń' => 'n','Ń' => 'n','ś' => 's','Ś' => 's','ź' => 'z','Ź' => 'z','ż' => 'z','Ż' => 'z',
         // němčina
-        'ä'=>'ae','Ä'=>'ae','ö'=>'oe','Ö'=>'oe','ü'=>'ue','Ü'=>'ue','ß'=>'ss',
+        'ä' => 'ae','Ä' => 'ae','ö' => 'oe','Ö' => 'oe','ü' => 'ue','Ü' => 'ue','ß' => 'ss',
     ];
     $text = strtr($text, $map);
     $text = mb_strtolower($text, 'UTF-8');
@@ -862,6 +924,10 @@ function newsPublicVisibilitySql(string $alias = ''): string
         . " AND ({$prefix}unpublish_at IS NULL OR {$prefix}unpublish_at > NOW())";
 }
 
+/**
+ * @param array<string, mixed> $news
+ * @return array<string, mixed>
+ */
 function newsRevisionSnapshot(array $news): array
 {
     $title = str_replace('â€¦', '…', newsTitleCandidate((string)($news['title'] ?? ''), (string)($news['content'] ?? '')));
@@ -927,12 +993,18 @@ function databaseDateTimeIsInFuture(string $dateTime): bool
     }
 }
 
+/**
+ * @param array<string, mixed> $show
+ */
 function podcastShowIsPublic(array $show): bool
 {
     return trim((string)($show['status'] ?? 'published')) === 'published'
         && (int)($show['is_published'] ?? 1) === 1;
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeIsScheduled(array $episode): bool
 {
     $publishAt = trim((string)($episode['publish_at'] ?? ''));
@@ -943,6 +1015,9 @@ function podcastEpisodeIsScheduled(array $episode): bool
     return databaseDateTimeIsInFuture($publishAt);
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeIsPublic(array $episode): bool
 {
     if (trim((string)($episode['status'] ?? 'published')) !== 'published') {
@@ -961,6 +1036,10 @@ function podcastEpisodeIsPublic(array $episode): bool
     return true;
 }
 
+/**
+ * @param array<string, mixed> $show
+ * @return array<string, mixed>
+ */
 function podcastShowRevisionSnapshot(array $show): array
 {
     return [
@@ -983,6 +1062,10 @@ function podcastShowRevisionSnapshot(array $show): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $episode
+ * @return array<string, mixed>
+ */
 function podcastEpisodeRevisionSnapshot(array $episode): array
 {
     return [
@@ -1002,6 +1085,9 @@ function podcastEpisodeRevisionSnapshot(array $episode): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventExcerpt(array $event, int $limit = 220): string
 {
     $excerpt = normalizePlainText((string)($event['excerpt'] ?? ''));
@@ -1022,6 +1108,9 @@ function boardTypeLabel(string $type): string
     return $definitions[normalizeBoardType($type)]['label'];
 }
 
+/**
+ * @param array<string, mixed> $document
+ */
 function boardExcerpt(array $document, int $limit = 220): string
 {
     $explicitExcerpt = normalizePlainText((string)($document['excerpt'] ?? ''));
@@ -1037,6 +1126,9 @@ function boardExcerpt(array $document, int $limit = 220): string
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $poll
+ */
 function pollExcerpt(array $poll, int $limit = 220): string
 {
     $descriptionExcerpt = normalizePlainText((string)($poll['description'] ?? ''));
@@ -1047,6 +1139,9 @@ function pollExcerpt(array $poll, int $limit = 220): string
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $faq
+ */
 function faqExcerpt(array $faq, int $limit = 220): string
 {
     $explicitExcerpt = normalizePlainText((string)($faq['excerpt'] ?? ''));
@@ -1071,6 +1166,11 @@ function faqPublicVisibilitySql(string $alias = ''): string
         . " AND {$prefix}is_published = 1";
 }
 
+/**
+ * @param array<string, mixed> $faq
+ * @param list<string> $categoryNames
+ * @return array<string, mixed>
+ */
 function faqRevisionSnapshot(array $faq, array $categoryNames = []): array
 {
     $categoryId = isset($faq['category_id']) && (int)$faq['category_id'] > 0
@@ -1106,6 +1206,9 @@ function placeKindLabel(string $kind): string
     return $definitions[normalizePlaceKind($kind)] ?? $definitions['sight'];
 }
 
+/**
+ * @param array<string, mixed> $place
+ */
 function placeExcerpt(array $place, int $limit = 220): string
 {
     $explicitExcerpt = normalizePlainText((string)($place['excerpt'] ?? ''));
@@ -1139,6 +1242,11 @@ function pollPublicVisibilitySql(string $alias = '', string $scope = 'all'): str
     };
 }
 
+/**
+ * @param array<string, mixed> $poll
+ * @param array<int, array{option_text?:mixed, text?:mixed}|string> $options
+ * @return array<string, mixed>
+ */
 function pollRevisionSnapshot(array $poll, array $options = []): array
 {
     $normalizedOptions = [];
@@ -1167,6 +1275,9 @@ function pollRevisionSnapshot(array $poll, array $options = []): array
     ];
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function placeKindOptions(): array
 {
     return [
@@ -1188,6 +1299,10 @@ function placePublicVisibilitySql(string $alias = ''): string
         . " AND COALESCE({$prefix}is_published, 1) = 1";
 }
 
+/**
+ * @param array<string, mixed> $place
+ * @return array<string, mixed>
+ */
 function placeRevisionSnapshot(array $place): array
 {
     return [
@@ -1212,6 +1327,9 @@ function placeRevisionSnapshot(array $place): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $place
+ */
 function placeStructuredData(array $place): string
 {
     $name = trim((string)($place['name'] ?? ''));
@@ -1253,13 +1371,13 @@ function placeStructuredData(array $place): string
             '@type' => 'PostalAddress',
             'streetAddress' => trim((string)($place['address'] ?? '')),
             'addressLocality' => trim((string)($place['locality'] ?? '')),
-        ], static fn($value): bool => $value !== '') : null,
+        ], static fn ($value): bool => $value !== '') : null,
         'geo' => !empty($place['has_coordinates']) ? [
             '@type' => 'GeoCoordinates',
             'latitude' => (string)($place['latitude'] ?? ''),
             'longitude' => (string)($place['longitude'] ?? ''),
         ] : null,
-    ], static fn($value): bool => $value !== '' && $value !== null);
+    ], static fn ($value): bool => $value !== '' && $value !== null);
 
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
@@ -1270,6 +1388,9 @@ function downloadTypeLabel(string $type): string
     return $definitions[normalizeDownloadType($type)]['label'];
 }
 
+/**
+ * @param array<string, mixed> $download
+ */
 function downloadExcerpt(array $download, int $limit = 220): string
 {
     $explicitExcerpt = normalizePlainText((string)($download['excerpt'] ?? ''));
@@ -1285,6 +1406,9 @@ function downloadExcerpt(array $download, int $limit = 220): string
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeExcerpt(array $episode, int $limit = 220): string
 {
     $descriptionExcerpt = normalizePlainText((string)($episode['description'] ?? ''));
@@ -1295,6 +1419,9 @@ function podcastEpisodeExcerpt(array $episode, int $limit = 220): string
     return mb_strimwidth($descriptionExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $download
+ */
 function downloadImageUrl(array $download): string
 {
     $filename = trim((string)($download['image_file'] ?? ''));
@@ -1305,6 +1432,9 @@ function downloadImageUrl(array $download): string
     return BASE_URL . '/uploads/downloads/images/' . rawurlencode($filename);
 }
 
+/**
+ * @param array<string, mixed> $show
+ */
 function podcastCoverUrl(array $show): string
 {
     $filename = trim((string)($show['cover_image'] ?? ''));
@@ -1316,6 +1446,9 @@ function podcastCoverUrl(array $show): string
     return BASE_URL . '/podcast/cover.php?id=' . $showId;
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeImageUrl(array $episode): string
 {
     $filename = trim((string)($episode['image_file'] ?? ''));
@@ -1327,6 +1460,9 @@ function podcastEpisodeImageUrl(array $episode): string
     return BASE_URL . '/podcast/image.php?id=' . $episodeId;
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeAudioUrl(array $episode): string
 {
     $audioFile = trim((string)($episode['audio_file'] ?? ''));
@@ -1452,6 +1588,9 @@ function podcastFeedSummary(string $value, int $limit = 4000): string
     return mb_strimwidth($value, 0, $limit, '...', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $show
+ */
 function podcastFeedManagingEditor(array $show): string
 {
     $ownerEmail = normalizePodcastOwnerEmail((string)($show['owner_email'] ?? ''));
@@ -1463,6 +1602,9 @@ function podcastFeedManagingEditor(array $show): string
     return trim((string)($show['author'] ?? ''));
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeEnclosureLength(array $episode): int
 {
     $filename = trim((string)($episode['audio_file'] ?? ''));
@@ -1479,6 +1621,9 @@ function podcastEpisodeEnclosureLength(array $episode): int
     return $size === false ? 0 : (int)$size;
 }
 
+/**
+ * @param array<string, mixed> $show
+ */
 function podcastShowStructuredData(array $show): string
 {
     $data = [
@@ -1515,6 +1660,10 @@ function podcastShowStructuredData(array $show): string
     return '  <script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>' . PHP_EOL;
 }
 
+/**
+ * @param array<string, mixed> $show
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodeStructuredData(array $show, array $episode): string
 {
     $data = [
@@ -1616,6 +1765,11 @@ function deletePodcastAudioFile(string $filename): void
  * @param array<string,mixed> $options
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @param array<string, mixed> $options
+ * @return array<string, mixed>
+ */
 function storePresentationUploadedFile(array $file, string $existingFilename, array $options): array
 {
     if (!koraUploadHasFile($file)) {
@@ -1703,6 +1857,9 @@ function squarePodcastImageUploadError(string $tmpPath, string $label): string
     return '';
 }
 
+/**
+ * @return array<string, string>
+ */
 function presentationImageMimeMap(): array
 {
     return [
@@ -1716,6 +1873,10 @@ function presentationImageMimeMap(): array
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function uploadPodcastCoverImage(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -1723,7 +1884,7 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
         'invalid_upload_error' => 'Obrázek coveru se nepodařilo zpracovat.',
         'allowed_mime_map' => ['image/jpeg' => 'jpg', 'image/png' => 'png'],
         'unsupported_type_error' => 'Cover musí být ve formátu JPG nebo PNG.',
-        'image_validator' => static fn(string $tmpPath): string => squarePodcastImageUploadError($tmpPath, 'Cover'),
+        'image_validator' => static fn (string $tmpPath): string => squarePodcastImageUploadError($tmpPath, 'Cover'),
         'directory' => dirname(__DIR__) . '/uploads/podcasts/covers/',
         'mkdir_error' => 'Adresář pro cover obrázky se nepodařilo vytvořit.',
         'move_error' => 'Cover obrázek se nepodařilo uložit.',
@@ -1736,6 +1897,10 @@ function uploadPodcastCoverImage(array $file, string $existingFilename = ''): ar
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function uploadPodcastEpisodeImage(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -1743,7 +1908,7 @@ function uploadPodcastEpisodeImage(array $file, string $existingFilename = ''): 
         'invalid_upload_error' => 'Obrázek epizody se nepodařilo zpracovat.',
         'allowed_mime_map' => ['image/jpeg' => 'jpg', 'image/png' => 'png'],
         'unsupported_type_error' => 'Obrázek epizody musí být ve formátu JPG nebo PNG.',
-        'image_validator' => static fn(string $tmpPath): string => squarePodcastImageUploadError($tmpPath, 'Obrázek epizody'),
+        'image_validator' => static fn (string $tmpPath): string => squarePodcastImageUploadError($tmpPath, 'Obrázek epizody'),
         'directory' => dirname(__DIR__) . '/uploads/podcasts/images/',
         'mkdir_error' => 'Adresář pro obrázky epizod se nepodařilo vytvořit.',
         'move_error' => 'Obrázek epizody se nepodařilo uložit.',
@@ -1755,6 +1920,10 @@ function uploadPodcastEpisodeImage(array $file, string $existingFilename = ''): 
 
 /**
  * @return array{filename:string,uploaded:bool,error:string}
+ */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
  */
 function uploadPodcastAudioFile(array $file, string $existingFilename = ''): array
 {
@@ -1813,6 +1982,10 @@ function deleteDownloadStoredFile(string $filename): void
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function uploadDownloadImage(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -1848,6 +2021,10 @@ function normalizeDownloadExternalUrl(string $value): string
     return $validated;
 }
 
+/**
+ * @param array<string, mixed> $download
+ * @return array<string, mixed>
+ */
 function downloadRevisionSnapshot(array $download): array
 {
     return [
@@ -1871,6 +2048,10 @@ function downloadRevisionSnapshot(array $download): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $download
+ * @return array<string, mixed>
+ */
 function hydrateDownloadPresentation(array $download): array
 {
     $download['slug'] = downloadSlug((string)($download['slug'] ?? ''));
@@ -1913,6 +2094,9 @@ function foodCardTypeLabel(string $type): string
     return $type === 'beverage' ? 'Nápojový lístek' : 'Jídelní lístek';
 }
 
+/**
+ * @param array<string, mixed> $card
+ */
 function foodCardValidityLabel(array $card): string
 {
     $from = !empty($card['valid_from']) ? formatCzechDate((string)$card['valid_from']) : null;
@@ -1931,6 +2115,9 @@ function foodCardValidityLabel(array $card): string
     return '';
 }
 
+/**
+ * @param array<string, mixed> $card
+ */
 function foodCardMetaLabel(array $card): string
 {
     $parts = [];
@@ -1976,6 +2163,9 @@ function foodCardScopeVisibilitySql(string $scope, string $alias = ''): string
     };
 }
 
+/**
+ * @param array<string, mixed> $card
+ */
 function foodCardCurrentState(array $card): string
 {
     $today = new \DateTimeImmutable('today');
@@ -2014,6 +2204,10 @@ function foodCardStateLabel(string $state): string
     };
 }
 
+/**
+ * @param array<string, mixed> $card
+ * @return array<string, mixed>
+ */
 function foodRevisionSnapshot(array $card): array
 {
     return [
@@ -2030,6 +2224,9 @@ function foodRevisionSnapshot(array $card): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $card
+ */
 function foodCardStructuredData(array $card): string
 {
     $name = trim((string)($card['title'] ?? ''));
@@ -2091,6 +2288,10 @@ function foodCardStructuredData(array $card): string
     ) . '</script>';
 }
 
+/**
+ * @param array<string, mixed> $card
+ * @return array<string, mixed>
+ */
 function hydrateFoodCardPresentation(array $card): array
 {
     $card['slug'] = foodCardSlug((string)($card['slug'] ?? ''));
@@ -2110,6 +2311,9 @@ function hydrateFoodCardPresentation(array $card): array
     return $card;
 }
 
+/**
+ * @param array<string, mixed> $blog
+ */
 function blogLogoUrl(array $blog): string
 {
     $filename = trim((string)($blog['logo_file'] ?? ''));
@@ -2120,6 +2324,9 @@ function blogLogoUrl(array $blog): string
     return BASE_URL . '/uploads/blogs/' . rawurlencode($filename);
 }
 
+/**
+ * @param array<string, mixed> $blog
+ */
 function blogLogoAltText(array $blog): string
 {
     if (blogLogoUrl($blog) === '') {
@@ -2147,6 +2354,10 @@ function deleteBlogLogoFile(string $filename): void
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function uploadBlogLogo(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -2163,6 +2374,9 @@ function uploadBlogLogo(array $file, string $existingFilename = ''): array
     ]);
 }
 
+/**
+ * @param array<string, mixed> $place
+ */
 function placeImageUrl(array $place): string
 {
     $requestPath = placeImageRequestPath($place);
@@ -2173,6 +2387,9 @@ function placeImageUrl(array $place): string
     return BASE_URL . $requestPath;
 }
 
+/**
+ * @param array<string, mixed> $place
+ */
 function placeImageRequestPath(array $place): string
 {
     $filename = trim((string)($place['image_file'] ?? ''));
@@ -2202,6 +2419,10 @@ function deletePlaceImageFile(string $filename): void
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function uploadPlaceImage(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -2218,6 +2439,9 @@ function uploadPlaceImage(array $file, string $existingFilename = ''): array
     ]);
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventImageUrl(array $event): string
 {
     $filename = trim((string)($event['image_file'] ?? ''));
@@ -2243,6 +2467,10 @@ function deleteEventImageFile(string $filename): void
 
 /**
  * @return array{filename:string,uploaded:bool,error:string}
+ */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
  */
 function uploadEventImage(array $file, string $existingFilename = ''): array
 {
@@ -2279,6 +2507,10 @@ function normalizePlaceUrl(string $value): string
     return $validated;
 }
 
+/**
+ * @param array<string, mixed> $place
+ * @return array<string, mixed>
+ */
 function hydratePlacePresentation(array $place): array
 {
     $place['slug'] = placeSlug((string)($place['slug'] ?? ''));
@@ -2300,7 +2532,7 @@ function hydratePlacePresentation(array $place): array
         implode(', ', array_filter([
             $place['address'],
             $place['locality'],
-        ], static fn(string $value): bool => $value !== ''))
+        ], static fn (string $value): bool => $value !== ''))
     );
 
     $latitude = trim((string)($place['latitude'] ?? ''));
@@ -2319,6 +2551,9 @@ function hydratePlacePresentation(array $place): array
     return $place;
 }
 
+/**
+ * @param array<string, mixed> $document
+ */
 function boardImageUrl(array $document): string
 {
     $filename = trim((string)($document['image_file'] ?? ''));
@@ -2347,6 +2582,10 @@ function deleteBoardImageFile(string $filename): void
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function uploadBoardImage(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -2363,6 +2602,10 @@ function uploadBoardImage(array $file, string $existingFilename = ''): array
     ]);
 }
 
+/**
+ * @param array<string, mixed> $document
+ * @return array<string, mixed>
+ */
 function hydrateBoardPresentation(array $document): array
 {
     $document['board_type'] = normalizeBoardType((string)($document['board_type'] ?? 'document'));
@@ -2381,6 +2624,9 @@ function hydrateBoardPresentation(array $document): array
     return $document;
 }
 
+/**
+ * @param array<string, mixed> $account
+ */
 function authorSlugCandidate(array $account): string
 {
     $nickname = trim((string)($account['nickname'] ?? ''));
@@ -2404,11 +2650,14 @@ function authorSlugCandidate(array $account): string
     return 'autor';
 }
 
+/**
+ * @param array<string, mixed> $params
+ */
 function appendUrlQuery(string $path, array $params): string
 {
     $query = http_build_query(array_filter(
         $params,
-        static fn($value): bool => $value !== null && $value !== ''
+        static fn ($value): bool => $value !== null && $value !== ''
     ));
 
     if ($query === '') {
@@ -2418,6 +2667,9 @@ function appendUrlQuery(string $path, array $params): string
     return $path . (str_contains($path, '?') ? '&' : '?') . $query;
 }
 
+/**
+ * @param array<string, mixed> $article
+ */
 function articlePublicRequestPath(array $article): string
 {
     $slug = articleSlug((string)($article['slug'] ?? ''));
@@ -2429,16 +2681,28 @@ function articlePublicRequestPath(array $article): string
     return '/blog/article.php?id=' . (int)($article['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $article
+ * @param array<string, mixed> $query
+ */
 function articlePublicPath(array $article, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(articlePublicRequestPath($article), $query);
 }
 
+/**
+ * @param array<string, mixed> $article
+ * @param array<string, mixed> $query
+ */
 function articlePublicUrl(array $article, array $query = []): string
 {
     return siteUrl(appendUrlQuery(articlePublicRequestPath($article), $query));
 }
 
+/**
+ * @param array<string, mixed> $page
+ * @return array<string, mixed>|null
+ */
 function pageBlogContext(array $page): ?array
 {
     $blogId = (int)($page['blog_id'] ?? 0);
@@ -2484,6 +2748,9 @@ function pageBlogContext(array $page): ?array
     return null;
 }
 
+/**
+ * @param array<string, mixed> $page
+ */
 function pagePublicRequestPath(array $page): string
 {
     $slug = pageSlug((string)($page['slug'] ?? ''));
@@ -2498,22 +2765,36 @@ function pagePublicRequestPath(array $page): string
     return '/';
 }
 
+/**
+ * @param array<string, mixed> $page
+ * @param array<string, mixed> $query
+ */
 function pagePublicPath(array $page, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(pagePublicRequestPath($page), $query);
 }
 
+/**
+ * @param array<string, mixed> $page
+ * @param array<string, mixed> $query
+ */
 function pagePublicUrl(array $page, array $query = []): string
 {
     return siteUrl(appendUrlQuery(pagePublicRequestPath($page), $query));
 }
 
+/**
+ * @param array<string, mixed> $article
+ */
 function articlePreviewPath(array $article): string
 {
     $previewToken = trim((string)($article['preview_token'] ?? ''));
     return articlePublicPath($article, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+/**
+ * @param array<string, mixed> $news
+ */
 function newsPublicRequestPath(array $news): string
 {
     $slug = newsSlug((string)($news['slug'] ?? ''));
@@ -2524,6 +2805,9 @@ function newsPublicRequestPath(array $news): string
     return '/news/article.php?id=' . (int)($news['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $show
+ */
 function podcastShowPublicRequestPath(array $show): string
 {
     $slug = podcastShowSlug((string)($show['slug'] ?? ''));
@@ -2534,16 +2818,27 @@ function podcastShowPublicRequestPath(array $show): string
     return '/podcast/index.php';
 }
 
+/**
+ * @param array<string, mixed> $show
+ * @param array<string, mixed> $query
+ */
 function podcastShowPublicPath(array $show, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(podcastShowPublicRequestPath($show), $query);
 }
 
+/**
+ * @param array<string, mixed> $show
+ * @param array<string, mixed> $query
+ */
 function podcastShowPublicUrl(array $show, array $query = []): string
 {
     return siteUrl(appendUrlQuery(podcastShowPublicRequestPath($show), $query));
 }
 
+/**
+ * @param array<string, mixed> $episode
+ */
 function podcastEpisodePublicRequestPath(array $episode): string
 {
     $showSlug = podcastShowSlug((string)($episode['show_slug'] ?? ''));
@@ -2555,16 +2850,27 @@ function podcastEpisodePublicRequestPath(array $episode): string
     return '/podcast/episode.php?id=' . (int)($episode['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $episode
+ * @param array<string, mixed> $query
+ */
 function podcastEpisodePublicPath(array $episode, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(podcastEpisodePublicRequestPath($episode), $query);
 }
 
+/**
+ * @param array<string, mixed> $episode
+ * @param array<string, mixed> $query
+ */
 function podcastEpisodePublicUrl(array $episode, array $query = []): string
 {
     return siteUrl(appendUrlQuery(podcastEpisodePublicRequestPath($episode), $query));
 }
 
+/**
+ * @param array<string, mixed> $faq
+ */
 function faqPublicRequestPath(array $faq): string
 {
     $slug = faqSlug((string)($faq['slug'] ?? ''));
@@ -2575,16 +2881,27 @@ function faqPublicRequestPath(array $faq): string
     return '/faq/item.php?id=' . (int)($faq['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $faq
+ * @param array<string, mixed> $query
+ */
 function faqPublicPath(array $faq, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(faqPublicRequestPath($faq), $query);
 }
 
+/**
+ * @param array<string, mixed> $faq
+ * @param array<string, mixed> $query
+ */
 function faqPublicUrl(array $faq, array $query = []): string
 {
     return siteUrl(appendUrlQuery(faqPublicRequestPath($faq), $query));
 }
 
+/**
+ * @param array<string, mixed> $poll
+ */
 function pollPublicRequestPath(array $poll): string
 {
     $slug = pollSlug((string)($poll['slug'] ?? ''));
@@ -2595,16 +2912,27 @@ function pollPublicRequestPath(array $poll): string
     return '/polls/index.php?id=' . (int)($poll['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $poll
+ * @param array<string, mixed> $query
+ */
 function pollPublicPath(array $poll, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(pollPublicRequestPath($poll), $query);
 }
 
+/**
+ * @param array<string, mixed> $poll
+ * @param array<string, mixed> $query
+ */
 function pollPublicUrl(array $poll, array $query = []): string
 {
     return siteUrl(appendUrlQuery(pollPublicRequestPath($poll), $query));
 }
 
+/**
+ * @param array<string, mixed> $card
+ */
 function foodCardPublicRequestPath(array $card): string
 {
     $slug = foodCardSlug((string)($card['slug'] ?? ''));
@@ -2615,16 +2943,27 @@ function foodCardPublicRequestPath(array $card): string
     return '/food/card.php?id=' . (int)($card['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $card
+ * @param array<string, mixed> $query
+ */
 function foodCardPublicPath(array $card, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(foodCardPublicRequestPath($card), $query);
 }
 
+/**
+ * @param array<string, mixed> $card
+ * @param array<string, mixed> $query
+ */
 function foodCardPublicUrl(array $card, array $query = []): string
 {
     return siteUrl(appendUrlQuery(foodCardPublicRequestPath($card), $query));
 }
 
+/**
+ * @param array<string, mixed> $resource
+ */
 function reservationResourcePublicRequestPath(array $resource): string
 {
     $slug = reservationResourceSlug((string)($resource['slug'] ?? ''));
@@ -2635,16 +2974,27 @@ function reservationResourcePublicRequestPath(array $resource): string
     return '/reservations/index.php';
 }
 
+/**
+ * @param array<string, mixed> $resource
+ * @param array<string, mixed> $query
+ */
 function reservationResourcePublicPath(array $resource, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(reservationResourcePublicRequestPath($resource), $query);
 }
 
+/**
+ * @param array<string, mixed> $resource
+ * @param array<string, mixed> $query
+ */
 function reservationResourcePublicUrl(array $resource, array $query = []): string
 {
     return siteUrl(appendUrlQuery(reservationResourcePublicRequestPath($resource), $query));
 }
 
+/**
+ * @param array<string, mixed> $album
+ */
 function galleryAlbumPublicRequestPath(array $album): string
 {
     $slug = galleryAlbumSlug((string)($album['slug'] ?? ''));
@@ -2655,11 +3005,19 @@ function galleryAlbumPublicRequestPath(array $album): string
     return '/gallery/album.php?id=' . (int)($album['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $album
+ * @param array<string, mixed> $query
+ */
 function galleryAlbumPublicPath(array $album, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(galleryAlbumPublicRequestPath($album), $query);
 }
 
+/**
+ * @param array<string, mixed> $album
+ * @param array<string, mixed> $query
+ */
 function galleryAlbumPublicUrl(array $album, array $query = []): string
 {
     return siteUrl(appendUrlQuery(galleryAlbumPublicRequestPath($album), $query));
@@ -2674,6 +3032,9 @@ function galleryAlbumPublicVisibilitySql(string $alias = ''): string
         . " AND COALESCE({$prefix}is_published, 1) = 1";
 }
 
+/**
+ * @param array<string, mixed> $photo
+ */
 function galleryPhotoPublicRequestPath(array $photo): string
 {
     $slug = galleryPhotoSlug((string)($photo['slug'] ?? ''));
@@ -2684,11 +3045,19 @@ function galleryPhotoPublicRequestPath(array $photo): string
     return '/gallery/photo.php?id=' . (int)($photo['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $photo
+ * @param array<string, mixed> $query
+ */
 function galleryPhotoPublicPath(array $photo, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(galleryPhotoPublicRequestPath($photo), $query);
 }
 
+/**
+ * @param array<string, mixed> $photo
+ * @param array<string, mixed> $query
+ */
 function galleryPhotoPublicUrl(array $photo, array $query = []): string
 {
     return siteUrl(appendUrlQuery(galleryPhotoPublicRequestPath($photo), $query));
@@ -2708,6 +3077,9 @@ function galleryPhotoPublicVisibilitySql(string $photoAlias = '', string $albumA
     return $conditions;
 }
 
+/**
+ * @param array<string, mixed> $photo
+ */
 function galleryPhotoMediaRequestPath(array $photo, string $size = 'full'): string
 {
     $photoId = (int)($photo['id'] ?? 0);
@@ -2719,18 +3091,30 @@ function galleryPhotoMediaRequestPath(array $photo, string $size = 'full'): stri
     return '/gallery/image.php?id=' . $photoId . '&size=' . $normalizedSize;
 }
 
+/**
+ * @param array<string, mixed> $photo
+ */
 function galleryPhotoMediaPath(array $photo, string $size = 'full'): string
 {
     $requestPath = galleryPhotoMediaRequestPath($photo, $size);
     return $requestPath !== '' ? BASE_URL . $requestPath : '';
 }
 
+/**
+ * @param array<string, mixed> $photo
+ */
 function galleryPhotoMediaUrl(array $photo, string $size = 'full'): string
 {
     $requestPath = galleryPhotoMediaRequestPath($photo, $size);
     return $requestPath !== '' ? siteUrl($requestPath) : '';
 }
 
+/**
+ * @param array<string, mixed> $album
+ * @param array<int, string> $albumNames
+ * @param array<int, string> $photoLabels
+ * @return array<string, mixed>
+ */
 function galleryAlbumRevisionSnapshot(array $album, array $albumNames = [], array $photoLabels = []): array
 {
     $parentId = isset($album['parent_id']) && (int)$album['parent_id'] > 0 ? (int)$album['parent_id'] : 0;
@@ -2747,6 +3131,10 @@ function galleryAlbumRevisionSnapshot(array $album, array $albumNames = [], arra
     ];
 }
 
+/**
+ * @param array<string, mixed> $photo
+ * @return array<string, mixed>
+ */
 function galleryPhotoRevisionSnapshot(array $photo, string $albumName = ''): array
 {
     return [
@@ -2759,6 +3147,10 @@ function galleryPhotoRevisionSnapshot(array $photo, string $albumName = ''): arr
     ];
 }
 
+/**
+ * @param array<string, mixed> $album
+ * @param list<array<string, mixed>> $photos
+ */
 function galleryAlbumStructuredData(array $album, array $photos = []): string
 {
     $items = [];
@@ -2775,7 +3167,7 @@ function galleryAlbumStructuredData(array $album, array $photos = []): string
             'thumbnailUrl' => trim((string)($photo['thumb_url'] ?? galleryPhotoMediaUrl($photo, 'thumb'))),
             'url' => galleryPhotoPublicUrl($photo),
             'caption' => trim((string)($photo['title'] ?? '')),
-        ], static fn($value): bool => $value !== '');
+        ], static fn ($value): bool => $value !== '');
     }
 
     $data = array_filter([
@@ -2786,11 +3178,15 @@ function galleryAlbumStructuredData(array $album, array $photos = []): string
         'url' => galleryAlbumPublicUrl($album),
         'image' => trim((string)($album['cover_url'] ?? '')),
         'associatedMedia' => $items !== [] ? $items : null,
-    ], static fn($value): bool => $value !== '' && $value !== null);
+    ], static fn ($value): bool => $value !== '' && $value !== null);
 
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
+/**
+ * @param array<string, mixed> $photo
+ * @param array<string, mixed> $album
+ */
 function galleryPhotoStructuredData(array $photo, array $album = []): string
 {
     $imageUrl = trim((string)($photo['image_url'] ?? galleryPhotoMediaUrl($photo, 'full')));
@@ -2810,46 +3206,69 @@ function galleryPhotoStructuredData(array $photo, array $album = []): string
             '@type' => 'ImageGallery',
             'name' => trim((string)($album['name'] ?? 'Galerie')),
             'url' => galleryAlbumPublicUrl($album),
-        ], static fn($value): bool => $value !== '') : null,
-    ], static fn($value): bool => $value !== '' && $value !== null);
+        ], static fn ($value): bool => $value !== '') : null,
+    ], static fn ($value): bool => $value !== '' && $value !== null);
 
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
+/**
+ * @param array<string, mixed> $news
+ * @param array<string, mixed> $query
+ */
 function newsPublicPath(array $news, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(newsPublicRequestPath($news), $query);
 }
 
+/**
+ * @param array<string, mixed> $news
+ */
 function newsPreviewPath(array $news): string
 {
     $previewToken = trim((string)($news['preview_token'] ?? ''));
     return newsPublicPath($news, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+/**
+ * @param array<string, mixed> $page
+ */
 function pagePreviewPath(array $page): string
 {
     $previewToken = trim((string)($page['preview_token'] ?? ''));
     return pagePublicPath($page, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventPreviewPath(array $event): string
 {
     $previewToken = trim((string)($event['preview_token'] ?? ''));
     return eventPublicPath($event, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+/**
+ * @param array<string, mixed> $item
+ */
 function boardPreviewPath(array $item): string
 {
     $previewToken = trim((string)($item['preview_token'] ?? ''));
     return boardPublicPath($item, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+/**
+ * @param array<string, mixed> $news
+ * @param array<string, mixed> $query
+ */
 function newsPublicUrl(array $news, array $query = []): string
 {
     return siteUrl(appendUrlQuery(newsPublicRequestPath($news), $query));
 }
 
+/**
+ * @param array<string, mixed> $news
+ */
 function newsStructuredData(array $news): string
 {
     $headline = trim((string)($news['title'] ?? ''));
@@ -2870,7 +3289,7 @@ function newsStructuredData(array $news): string
             '@type' => 'Person',
             'name' => trim((string)$news['author_name']),
             'url' => trim((string)($news['author_public_url'] ?? '')),
-        ], static fn($value): bool => $value !== '');
+        ], static fn ($value): bool => $value !== '');
     }
 
     $data = array_filter([
@@ -2887,12 +3306,15 @@ function newsStructuredData(array $news): string
             '@type' => 'Organization',
             'name' => getSetting('site_name', 'Kora CMS'),
             'url' => siteUrl('/'),
-        ], static fn($value): bool => $value !== ''),
-    ], static fn($value): bool => $value !== '' && $value !== null);
+        ], static fn ($value): bool => $value !== ''),
+    ], static fn ($value): bool => $value !== '' && $value !== null);
 
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
+/**
+ * @param array<string, mixed> $download
+ */
 function downloadPublicRequestPath(array $download): string
 {
     $slug = downloadSlug((string)($download['slug'] ?? ''));
@@ -2903,16 +3325,27 @@ function downloadPublicRequestPath(array $download): string
     return '/downloads/item.php?id=' . (int)($download['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $download
+ * @param array<string, mixed> $query
+ */
 function downloadPublicPath(array $download, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(downloadPublicRequestPath($download), $query);
 }
 
+/**
+ * @param array<string, mixed> $download
+ * @param array<string, mixed> $query
+ */
 function downloadPublicUrl(array $download, array $query = []): string
 {
     return siteUrl(appendUrlQuery(downloadPublicRequestPath($download), $query));
 }
 
+/**
+ * @param array<string, mixed> $document
+ */
 function boardPublicRequestPath(array $document): string
 {
     $slug = boardSlug((string)($document['slug'] ?? ''));
@@ -2923,11 +3356,19 @@ function boardPublicRequestPath(array $document): string
     return '/board/document.php?id=' . (int)($document['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $document
+ * @param array<string, mixed> $query
+ */
 function boardPublicPath(array $document, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(boardPublicRequestPath($document), $query);
 }
 
+/**
+ * @param array<string, mixed> $document
+ * @param array<string, mixed> $query
+ */
 function boardPublicUrl(array $document, array $query = []): string
 {
     return siteUrl(appendUrlQuery(boardPublicRequestPath($document), $query));
@@ -2973,6 +3414,9 @@ function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $sta
     }
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventPublicRequestPath(array $event): string
 {
     $slug = eventSlug((string)($event['slug'] ?? ''));
@@ -2983,6 +3427,9 @@ function eventPublicRequestPath(array $event): string
     return '/events/event.php?id=' . (int)($event['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $place
+ */
 function placePublicRequestPath(array $place): string
 {
     $slug = placeSlug((string)($place['slug'] ?? ''));
@@ -2993,26 +3440,45 @@ function placePublicRequestPath(array $place): string
     return '/places/place.php?id=' . (int)($place['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $place
+ * @param array<string, mixed> $query
+ */
 function placePublicPath(array $place, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(placePublicRequestPath($place), $query);
 }
 
+/**
+ * @param array<string, mixed> $place
+ * @param array<string, mixed> $query
+ */
 function placePublicUrl(array $place, array $query = []): string
 {
     return siteUrl(appendUrlQuery(placePublicRequestPath($place), $query));
 }
 
+/**
+ * @param array<string, mixed> $event
+ * @param array<string, mixed> $query
+ */
 function eventPublicPath(array $event, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(eventPublicRequestPath($event), $query);
 }
 
+/**
+ * @param array<string, mixed> $event
+ * @param array<string, mixed> $query
+ */
 function eventPublicUrl(array $event, array $query = []): string
 {
     return siteUrl(appendUrlQuery(eventPublicRequestPath($event), $query));
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventIcsRequestPath(array $event): string
 {
     $slug = eventSlug((string)($event['slug'] ?? ''));
@@ -3023,16 +3489,28 @@ function eventIcsRequestPath(array $event): string
     return '/events/ics.php?id=' . (int)($event['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $event
+ * @param array<string, mixed> $query
+ */
 function eventIcsPath(array $event, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(eventIcsRequestPath($event), $query);
 }
 
+/**
+ * @param array<string, mixed> $event
+ * @param array<string, mixed> $query
+ */
 function eventIcsUrl(array $event, array $query = []): string
 {
     return siteUrl(appendUrlQuery(eventIcsRequestPath($event), $query));
 }
 
+/**
+ * @param array<string, mixed> $event
+ * @return array<string, mixed>
+ */
 function eventRevisionSnapshot(array $event): array
 {
     return [
@@ -3056,6 +3534,10 @@ function eventRevisionSnapshot(array $event): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $event
+ * @return array<string, mixed>
+ */
 function hydrateEventPresentation(array $event): array
 {
     $event['slug'] = eventSlug((string)($event['slug'] ?? ''));
@@ -3086,6 +3568,9 @@ function hydrateEventPresentation(array $event): array
     return $event;
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventCurrentStatus(array $event, ?\DateTimeInterface $now = null): string
 {
     $nowTs = $now ? $now->getTimestamp() : time();
@@ -3152,6 +3637,9 @@ function eventScopeVisibilitySql(string $scope, string $alias = ''): string
     };
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventStructuredData(array $event): string
 {
     $data = [
@@ -3208,7 +3696,7 @@ function eventStructuredData(array $event): string
             '@type' => 'Organization',
             'name' => $organizerName,
             'email' => $organizerEmail !== '' ? 'mailto:' . $organizerEmail : '',
-        ], static fn($value): bool => $value !== '');
+        ], static fn ($value): bool => $value !== '');
     }
 
     $registrationUrl = trim((string)($event['registration_url'] ?? ''));
@@ -3223,6 +3711,9 @@ function eventStructuredData(array $event): string
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
+/**
+ * @param list<array<string, mixed>> $faqs
+ */
 function faqStructuredData(array $faqs, string $pageUrl = ''): string
 {
     $mainEntities = [];
@@ -3263,6 +3754,9 @@ function faqStructuredData(array $faqs, string $pageUrl = ''): string
     return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventIcsFilename(array $event): string
 {
     $slug = eventSlug((string)($event['slug'] ?? ''));
@@ -3273,6 +3767,9 @@ function eventIcsFilename(array $event): string
     return $slug . '.ics';
 }
 
+/**
+ * @param array<string, mixed> $event
+ */
 function eventIcsContent(array $event): string
 {
     $siteHost = (string)(parse_url(siteUrl('/'), PHP_URL_HOST) ?: 'localhost');
@@ -3409,7 +3906,7 @@ function movePageNavigationOrder(PDO $pdo, int $pageId, string $direction): bool
          ORDER BY nav_order, title, id"
     )->fetchAll();
 
-    $orderedIds = array_map(static fn(array $row): int => (int)$row['id'], $pages);
+    $orderedIds = array_map(static fn (array $row): int => (int)$row['id'], $pages);
     $currentIndex = array_search($pageId, $orderedIds, true);
     if ($currentIndex === false) {
         return false;
@@ -3556,6 +4053,9 @@ function uniqueFoodCardSlug(PDO $pdo, string $candidate, ?int $excludeId = null)
     }
 }
 
+/**
+ * @return array<string, string>
+ */
 function reservationBookingStatusLabels(): array
 {
     return [
@@ -3568,6 +4068,9 @@ function reservationBookingStatusLabels(): array
     ];
 }
 
+/**
+ * @return array<string, string>
+ */
 function reservationBookingStatusColors(): array
 {
     return [
@@ -3769,16 +4272,25 @@ function uniqueAuthorSlug(PDO $pdo, string $candidate, ?int $excludeId = null): 
     }
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorRoleValue(array $author): string
 {
     return trim((string)($author['author_role'] ?? $author['role'] ?? ''));
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorPublicSlugValue(array $author): string
 {
     return authorSlug((string)($author['author_slug'] ?? $author['slug'] ?? ''));
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorPublicEnabled(array $author): bool
 {
     return (int)($author['author_public_enabled'] ?? 0) === 1
@@ -3786,6 +4298,9 @@ function authorPublicEnabled(array $author): bool
         && authorPublicSlugValue($author) !== '';
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorDisplayName(array $author): string
 {
     $preferred = trim((string)($author['author_name'] ?? ''));
@@ -3827,6 +4342,9 @@ function normalizeAuthorWebsite(string $value): string
     return $validated;
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorPublicRequestPath(array $author): string
 {
     if (!authorPublicEnabled($author)) {
@@ -3841,6 +4359,9 @@ function authorIndexRequestPath(): string
     return '/authors/';
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorPublicPath(array $author): string
 {
     $path = authorPublicRequestPath($author);
@@ -3852,6 +4373,9 @@ function authorIndexPath(): string
     return BASE_URL . authorIndexRequestPath();
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorPublicUrl(array $author): string
 {
     $path = authorPublicRequestPath($author);
@@ -3863,6 +4387,9 @@ function authorIndexUrl(): string
     return siteUrl(authorIndexRequestPath());
 }
 
+/**
+ * @param array<string, mixed> $author
+ */
 function authorAvatarUrl(array $author): string
 {
     $avatarFile = trim((string)($author['author_avatar'] ?? ''));
@@ -3873,6 +4400,10 @@ function authorAvatarUrl(array $author): string
     return BASE_URL . '/uploads/authors/' . rawurlencode($avatarFile);
 }
 
+/**
+ * @param array<string, mixed> $author
+ * @return array<string, mixed>
+ */
 function hydrateAuthorPresentation(array $author): array
 {
     $author['author_display_name'] = authorDisplayName($author);
@@ -3883,6 +4414,10 @@ function hydrateAuthorPresentation(array $author): array
     return $author;
 }
 
+/**
+ * @param array<string, mixed> $news
+ * @return array<string, mixed>
+ */
 function hydrateNewsPresentation(array $news): array
 {
     $news['title'] = newsTitleCandidate((string)($news['title'] ?? ''), (string)($news['content'] ?? ''));
@@ -3901,6 +4436,10 @@ function hydrateNewsPresentation(array $news): array
     return $news;
 }
 
+/**
+ * @param array<string, mixed> $show
+ * @return array<string, mixed>
+ */
 function hydratePodcastShowPresentation(array $show): array
 {
     $show['slug'] = podcastShowSlug((string)($show['slug'] ?? ''));
@@ -3924,6 +4463,10 @@ function hydratePodcastShowPresentation(array $show): array
     return $show;
 }
 
+/**
+ * @param array<string, mixed> $episode
+ * @return array<string, mixed>
+ */
 function hydratePodcastEpisodePresentation(array $episode): array
 {
     $episode['slug'] = podcastEpisodeSlug((string)($episode['slug'] ?? ''));
@@ -3958,6 +4501,10 @@ function hydratePodcastEpisodePresentation(array $episode): array
     return $episode;
 }
 
+/**
+ * @param array<string, mixed> $faq
+ * @return array<string, mixed>
+ */
 function hydrateFaqPresentation(array $faq): array
 {
     $faq['question'] = trim((string)($faq['question'] ?? ''));
@@ -3974,6 +4521,10 @@ function hydrateFaqPresentation(array $faq): array
     return $faq;
 }
 
+/**
+ * @param array<string, mixed> $poll
+ * @return array<string, mixed>
+ */
 function hydratePollPresentation(array $poll): array
 {
     $poll['question'] = trim((string)($poll['question'] ?? ''));
@@ -4005,6 +4556,9 @@ function hydratePollPresentation(array $poll): array
     return $poll;
 }
 
+/**
+ * @param array<string, mixed> $album
+ */
 function galleryAlbumExcerpt(array $album, int $limit = 220): string
 {
     $explicitExcerpt = normalizePlainText((string)($album['description'] ?? ''));
@@ -4015,6 +4569,9 @@ function galleryAlbumExcerpt(array $album, int $limit = 220): string
     return mb_strimwidth($explicitExcerpt, 0, $limit, '...', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $photo
+ */
 function galleryPhotoLabel(array $photo): string
 {
     $title = trim((string)($photo['title'] ?? ''));
@@ -4032,6 +4589,10 @@ function galleryPhotoLabel(array $photo): string
     return 'Fotografie';
 }
 
+/**
+ * @param array<string, mixed> $album
+ * @return array<string, mixed>
+ */
 function hydrateGalleryAlbumPresentation(array $album): array
 {
     $album['name'] = trim((string)($album['name'] ?? ''));
@@ -4048,6 +4609,10 @@ function hydrateGalleryAlbumPresentation(array $album): array
     return $album;
 }
 
+/**
+ * @param array<string, mixed> $photo
+ * @return array<string, mixed>
+ */
 function hydrateGalleryPhotoPresentation(array $photo): array
 {
     $photo['slug'] = galleryPhotoSlug((string)($photo['slug'] ?? ''));
@@ -4063,6 +4628,9 @@ function hydrateGalleryPhotoPresentation(array $photo): array
     return $photo;
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array
 {
     $normalizedSlug = authorSlug($slug);
@@ -4083,6 +4651,9 @@ function fetchPublicAuthorBySlug(PDO $pdo, string $slug): ?array
     return $author ? hydrateAuthorPresentation($author) : null;
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function fetchPublicAuthorById(PDO $pdo, int $userId): ?array
 {
     if ($userId < 1) {
@@ -4102,6 +4673,9 @@ function fetchPublicAuthorById(PDO $pdo, int $userId): ?array
     return $author ? hydrateAuthorPresentation($author) : null;
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function fetchPublicAuthors(PDO $pdo): array
 {
     $authors = $pdo->query(
@@ -4130,6 +4704,9 @@ function fetchPublicAuthors(PDO $pdo): array
     );
 }
 
+/**
+ * @return array<string, mixed>|null
+ */
 function resolveHomeAuthor(PDO $pdo): ?array
 {
     $selectedAuthorId = (int)getSetting('home_author_user_id', '0');
@@ -4182,6 +4759,10 @@ function deleteAuthorAvatarFile(string $filename): void
     }
 }
 
+/**
+ * @param array<string, mixed> $file
+ * @return array<string, mixed>
+ */
 function storeUploadedAuthorAvatar(array $file, string $existingFilename = ''): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
@@ -4205,6 +4786,9 @@ function formSlug(string $input): string
     return slugify($input);
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function formFieldTypeDefinitions(): array
 {
     return [
@@ -4226,6 +4810,9 @@ function formFieldTypeDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string, array{label:string, is_open:bool}>
+ */
 function formSubmissionStatusDefinitions(): array
 {
     return [
@@ -4262,14 +4849,20 @@ function formSubmissionStatusLabel(string $status): string
     return $definitions[$normalized]['label'];
 }
 
+/**
+ * @return list<string>
+ */
 function formSubmissionOpenStatuses(): array
 {
     return array_keys(array_filter(
         formSubmissionStatusDefinitions(),
-        static fn(array $definition): bool => !empty($definition['is_open'])
+        static fn (array $definition): bool => !empty($definition['is_open'])
     ));
 }
 
+/**
+ * @return array<string, int>
+ */
 function formSubmissionStatusCounts(PDO $pdo, int $formId): array
 {
     $counts = array_fill_keys(array_keys(formSubmissionStatusDefinitions()), 0);
@@ -4289,6 +4882,9 @@ function formSubmissionStatusCounts(PDO $pdo, int $formId): array
     return $counts;
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function formSubmissionPriorityDefinitions(): array
 {
     return [
@@ -4352,6 +4948,10 @@ function formSubmissionPriorityFromText(string $value): string
     return 'medium';
 }
 
+/**
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ */
 function formSubmissionInferPriority(array $fieldsByName, array $submissionData): string
 {
     $candidates = $fieldsByName !== []
@@ -4372,7 +4972,7 @@ function formSubmissionInferPriority(array $fieldsByName, array $submissionData)
 
         $rawValue = $submissionData[$fieldName] ?? '';
         if (is_array($rawValue)) {
-            $rawValue = implode(' ', array_map(static fn($item): string => trim((string)$item), $rawValue));
+            $rawValue = implode(' ', array_map(static fn ($item): string => trim((string)$item), $rawValue));
         }
 
         $resolved = formSubmissionPriorityFromText((string)$rawValue);
@@ -4384,6 +4984,9 @@ function formSubmissionInferPriority(array $fieldsByName, array $submissionData)
     return 'medium';
 }
 
+/**
+ * @return list<string>
+ */
 function formSubmissionLabelsFromString(string $value): array
 {
     $parts = preg_split('/[,;\n\r]+/u', $value) ?: [];
@@ -4404,6 +5007,9 @@ function formSubmissionNormalizeLabels(string $value): string
     return implode(', ', formSubmissionLabelsFromString($value));
 }
 
+/**
+ * @return list<string>
+ */
 function formFieldNameVariants(string $fieldName): array
 {
     $fieldName = trim($fieldName);
@@ -4423,6 +5029,9 @@ function formFieldNameVariants(string $fieldName): array
     return $variants;
 }
 
+/**
+ * @param array<string, mixed> $submissionData
+ */
 function formSubmissionValueByFieldName(array $submissionData, string $fieldName): mixed
 {
     foreach (formFieldNameVariants($fieldName) as $candidateName) {
@@ -4434,10 +5043,14 @@ function formSubmissionValueByFieldName(array $submissionData, string $fieldName
     return '';
 }
 
+/**
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @return array<string, mixed>|null
+ */
 function formFieldDefinitionByName(array $fieldsByName, string $fieldName): ?array
 {
     foreach (formFieldNameVariants($fieldName) as $candidateName) {
-        if (isset($fieldsByName[$candidateName]) && is_array($fieldsByName[$candidateName])) {
+        if (isset($fieldsByName[$candidateName])) {
             return $fieldsByName[$candidateName];
         }
     }
@@ -4445,6 +5058,12 @@ function formFieldDefinitionByName(array $fieldsByName, string $fieldName): ?arr
     return null;
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ * @return array{email:string, field_name:string, field_label:string}|array{}
+ */
 function formSubmissionRecipient(array $form, array $fieldsByName, array $submissionData): array
 {
     $emailField = trim((string)($form['submitter_email_field'] ?? ''));
@@ -4477,6 +5096,9 @@ function formSubmissionRecipient(array $form, array $fieldsByName, array $submis
     return [];
 }
 
+/**
+ * @param array<string, mixed> $form
+ */
 function formSubmissionReferencePrefix(array $form): string
 {
     $slug = formSlug((string)($form['slug'] ?? ''));
@@ -4491,6 +5113,9 @@ function formSubmissionReferencePrefix(array $form): string
     return 'FORM';
 }
 
+/**
+ * @param array<string, mixed> $form
+ */
 function formSubmissionBuildReference(array $form, int $submissionId, string $createdAt = ''): string
 {
     $year = date('Y');
@@ -4507,6 +5132,10 @@ function formSubmissionBuildReference(array $form, int $submissionId, string $cr
         . '-' . str_pad((string)max(1, $submissionId), 4, '0', STR_PAD_LEFT);
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, mixed> $submission
+ */
 function formSubmissionReference(array $form, array $submission): string
 {
     $storedReference = trim((string)($submission['reference_code'] ?? ''));
@@ -4521,6 +5150,9 @@ function formSubmissionReference(array $form, array $submission): string
     );
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function formSubmissionAssignableUsers(PDO $pdo): array
 {
     $stmt = $pdo->query(
@@ -4533,6 +5165,9 @@ function formSubmissionAssignableUsers(PDO $pdo): array
     return $stmt ? $stmt->fetchAll() : [];
 }
 
+/**
+ * @param array<string, mixed> $user
+ */
 function formSubmissionAssigneeDisplayName(array $user): string
 {
     $displayName = trim((string)($user['nickname'] ?? ''));
@@ -4550,6 +5185,10 @@ function formSubmissionAssigneeDisplayName(array $user): string
     return $displayName . ' · ' . $roleLabel;
 }
 
+/**
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ */
 function formSubmissionSummary(array $fieldsByName, array $submissionData, int $maxParts = 2): string
 {
     $parts = [];
@@ -4592,6 +5231,9 @@ function formSubmissionHistoryCreate(PDO $pdo, int $submissionId, ?int $actorUse
     ]);
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function formSubmissionHistoryEntries(PDO $pdo, int $submissionId): array
 {
     $stmt = $pdo->prepare(
@@ -4611,6 +5253,9 @@ function formSubmissionHistoryEntries(PDO $pdo, int $submissionId): array
     return $stmt->fetchAll();
 }
 
+/**
+ * @param array<string, mixed> $historyRow
+ */
 function formSubmissionHistoryActorLabel(array $historyRow): string
 {
     if ((int)($historyRow['actor_user_id'] ?? 0) <= 0) {
@@ -4627,6 +5272,9 @@ function formSubmissionHistoryActorLabel(array $historyRow): string
     ]);
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function formFieldLayoutWidthDefinitions(): array
 {
     return [
@@ -4648,6 +5296,9 @@ function formFieldLayoutWidthLabel(string $value): string
     return formFieldLayoutWidthDefinitions()[$normalized]['label'] ?? 'Celá šířka';
 }
 
+/**
+ * @return array<string, array{label:string, requires_value:bool}>
+ */
 function formConditionOperatorDefinitions(): array
 {
     return [
@@ -4660,6 +5311,9 @@ function formConditionOperatorDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string, array{label:string}>
+ */
 function formSuccessBehaviorDefinitions(): array
 {
     return [
@@ -4700,11 +5354,17 @@ function normalizeFormFieldType(string $type): string
     return array_key_exists($normalized, formFieldTypeDefinitions()) ? $normalized : 'text';
 }
 
+/**
+ * @param array<string, mixed> $field
+ */
 function formFieldStoresSubmissionValue(array $field): bool
 {
     return !in_array(normalizeFormFieldType((string)($field['field_type'] ?? 'text')), ['section'], true);
 }
 
+/**
+ * @param array<string, mixed> $field
+ */
 function formFieldStartsNewRow(array $field): bool
 {
     if ((int)($field['start_new_row'] ?? 0) !== 1) {
@@ -4720,6 +5380,9 @@ function formFieldTypeLabel(string $type): string
     return formFieldTypeDefinitions()[$normalized]['label'] ?? 'Krátký text';
 }
 
+/**
+ * @return list<string>
+ */
 function formFieldOptionsList(string $rawOptions): array
 {
     $items = [];
@@ -4732,6 +5395,9 @@ function formFieldOptionsList(string $rawOptions): array
     return $items;
 }
 
+/**
+ * @return array<string, array{label:string, description:string, form:array<string, mixed>, fields:list<array<string, mixed>>}>
+ */
 function formPresetDefinitions(): array
 {
     return [
@@ -5176,12 +5842,19 @@ function formPresetDefinitions(): array
     ];
 }
 
+/**
+ * @return array{label:string, description:string, form:array<string, mixed>, fields:list<array<string, mixed>>}|null
+ */
 function formPresetDefinition(string $key): ?array
 {
     $definitions = formPresetDefinitions();
     return $definitions[$key] ?? null;
 }
 
+/**
+ * @param list<array<string, mixed>> $fields
+ * @return array<string, string>
+ */
 function formEmailFieldOptions(array $fields): array
 {
     $options = [];
@@ -5203,12 +5876,19 @@ function formEmailFieldOptions(array $fields): array
     return $options;
 }
 
+/**
+ * @param array<string, mixed> $field
+ */
 function formFieldAllowsMultipleFiles(array $field): bool
 {
     return normalizeFormFieldType((string)($field['field_type'] ?? 'text')) === 'file'
         && (int)($field['allow_multiple'] ?? 0) === 1;
 }
 
+/**
+ * @param array<string, mixed> $field
+ * @param array<string, mixed> $submissionData
+ */
 function formFieldConditionMatches(array $field, array $submissionData): bool
 {
     $controller = trim((string)($field['show_if_field'] ?? ''));
@@ -5221,7 +5901,7 @@ function formFieldConditionMatches(array $field, array $submissionData): bool
     $actual = $submissionData[$controller] ?? '';
 
     if (is_array($actual)) {
-        $actualValues = array_values(array_filter(array_map(static fn($item): string => trim((string)$item), $actual), static fn(string $item): bool => $item !== ''));
+        $actualValues = array_values(array_filter(array_map(static fn ($item): string => trim((string)$item), $actual), static fn (string $item): bool => $item !== ''));
         $expectedValues = formFieldOptionsList(str_replace(',', '|', $expected));
 
         return match ($operator) {
@@ -5259,6 +5939,13 @@ function defaultFormSubmitterConfirmationMessageTemplate(): string
     return "Děkujeme za odeslání formuláře „{{form_title}}“.\n\nVaše zpráva byla úspěšně přijata.\n\n— {{site_name}}";
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, array<string, mixed>> $fieldsByName
+ * @param array<string, mixed> $submissionData
+ * @param array<string, string> $extraPlaceholders
+ * @return array<string, string>
+ */
 function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $submissionData, array $extraPlaceholders = []): array
 {
     $siteName = getSetting('site_name', 'Kora CMS');
@@ -5279,11 +5966,17 @@ function formTemplatePlaceholderMap(array $form, array $fieldsByName, array $sub
     return array_merge($map, $extraPlaceholders);
 }
 
+/**
+ * @param array<string, string> $placeholderMap
+ */
 function formRenderTemplate(string $template, array $placeholderMap): string
 {
     return strtr($template, $placeholderMap);
 }
 
+/**
+ * @param array<string, mixed> $field
+ */
 function formPreviewSampleValueForField(array $field): mixed
 {
     $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
@@ -5317,6 +6010,10 @@ function formPreviewSampleValueForField(array $field): mixed
     };
 }
 
+/**
+ * @param list<array<string, mixed>> $fields
+ * @return array<string, mixed>
+ */
 function formPreviewSubmissionData(array $fields): array
 {
     $previewData = [];
@@ -5335,6 +6032,11 @@ function formPreviewSubmissionData(array $fields): array
     return $previewData;
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param list<array<string, mixed>> $fields
+ * @return array{subject:string, message:string, placeholder_map:array<string, string>}
+ */
 function formSubmitterConfirmationPreview(array $form, array $fields, string $subjectTemplate = '', string $messageTemplate = ''): array
 {
     $fieldsByName = [];
@@ -5428,6 +6130,9 @@ function formDeleteUploadedFile(string $storedName): void
     }
 }
 
+/**
+ * @param array<string, mixed> $item
+ */
 function formSubmissionStoredFileName(array $item): string
 {
     $storedName = formUploadStoredName((string)($item['stored_name'] ?? ''));
@@ -5448,6 +6153,9 @@ function formSubmissionStoredFileName(array $item): string
     return formUploadStoredName(rawurldecode((string)basename($legacyPath)));
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function formSubmissionFileItems(mixed $value): array
 {
     if (!is_array($value)) {
@@ -5455,7 +6163,7 @@ function formSubmissionFileItems(mixed $value): array
     }
 
     if (array_keys($value) === range(0, count($value) - 1)) {
-        return array_values(array_filter($value, static fn(mixed $item): bool => is_array($item)));
+        return array_values(array_filter($value, static fn (mixed $item): bool => is_array($item)));
     }
 
     return [$value];
@@ -5484,7 +6192,7 @@ function formSubmissionDisplayValue(mixed $value): string
                     $parts[] = (string)$item;
                 }
             }
-            return implode(', ', array_filter($parts, static fn(string $item): bool => $item !== ''));
+            return implode(', ', array_filter($parts, static fn (string $item): bool => $item !== ''));
         }
 
         $parts = [];
@@ -5500,6 +6208,9 @@ function formSubmissionDisplayValue(mixed $value): string
     return trim((string)$value);
 }
 
+/**
+ * @param array<string, mixed> $field
+ */
 function formSubmissionDisplayValueForField(array $field, mixed $value): string
 {
     $fieldType = normalizeFormFieldType((string)($field['field_type'] ?? 'text'));
@@ -5519,6 +6230,9 @@ function formSubmissionDisplayValueForField(array $field, mixed $value): string
     return formSubmissionDisplayValue($value);
 }
 
+/**
+ * @return list<string>
+ */
 function formCollectUploadedFilesFromSubmissionData(mixed $value): array
 {
     $files = [];
@@ -5570,6 +6284,9 @@ function uniqueFormSlug(PDO $pdo, string $candidate, ?int $excludeId = null): st
     }
 }
 
+/**
+ * @param array<string, mixed> $form
+ */
 function formPublicRequestPath(array $form): string
 {
     $slug = formSlug((string)($form['slug'] ?? ''));
@@ -5579,11 +6296,19 @@ function formPublicRequestPath(array $form): string
     return '/forms/index.php?id=' . (int)($form['id'] ?? 0);
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, mixed> $query
+ */
 function formPublicPath(array $form, array $query = []): string
 {
     return BASE_URL . appendUrlQuery(formPublicRequestPath($form), $query);
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @return list<array{label:string, url:string, variant:string}>
+ */
 function formResolveSuccessActions(array $form): array
 {
     $resolved = [];
@@ -5623,6 +6348,10 @@ function formResolveSuccessActions(array $form): array
     return $resolved;
 }
 
+/**
+ * @param array<string, mixed> $form
+ * @param array<string, mixed> $query
+ */
 function formPublicUrl(array $form, array $query = []): string
 {
     return siteUrl(appendUrlQuery(formPublicRequestPath($form), $query));
@@ -5633,6 +6362,10 @@ function formPublicUrl(array $form, array $query = []): string
 /**
  * Vrátí související články z téhož blogu – prioritně se stejnou kategorií
  * nebo sdílenými štítky. Výsledky se řadí podle počtu společných štítků a data.
+ */
+/**
+ * @param array<string, mixed> $article
+ * @return list<array<string, mixed>>
  */
 function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
 {
@@ -5704,7 +6437,7 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
 
     // Pokud nemáme dostatek výsledků s relevancí, doplníme nejnovější z blogu
     if (count($results) < $limit) {
-        $existingIds = array_map(static fn(array $row): int => (int)$row['id'], $results);
+        $existingIds = array_map(static fn (array $row): int => (int)$row['id'], $results);
         $existingIds[] = $articleId;
         $excludePlaceholders = implode(',', array_fill(0, count($existingIds), '?'));
         $fillParams = $existingIds;
@@ -5743,6 +6476,9 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
 
 /**
  * Vrátí pole ID: zadaná kategorie + všechny její přímé potomky.
+ */
+/**
+ * @return list<int>
  */
 function categoryWithChildrenIds(PDO $pdo, int $categoryId): array
 {

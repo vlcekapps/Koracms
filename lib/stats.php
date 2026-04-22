@@ -1,4 +1,5 @@
 <?php
+
 // Statistiky návštěvnosti, auto-complete rezervací, navigace – extrahováno z db.php
 
 // ─────────────────────────────── Statistiky ──────────────────────────────────
@@ -10,14 +11,22 @@
 function trackPageView(string $pageType = 'other', ?int $refId = null): void
 {
     static $done = false;
-    if ($done) return;
+    if ($done) {
+        return;
+    }
     $done = true;
 
-    if (getSetting('visitor_tracking_enabled', '0') !== '1') return;
-    if (isset($_SESSION['cms_user_id'])) return; // admin/spolupracovník
+    if (getSetting('visitor_tracking_enabled', '0') !== '1') {
+        return;
+    }
+    if (isset($_SESSION['cms_user_id'])) {
+        return;
+    } // admin/spolupracovník
 
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|wget|curl/i', $ua)) return;
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|wget|curl/i', $ua)) {
+        return;
+    }
 
     $ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $ipHash  = hash('sha256', $ip . '|' . date('Y-m-d'));
@@ -107,7 +116,9 @@ function getVisitorStats(): array
 function statsCleanup(): void
 {
     static $done = false;
-    if ($done) return;
+    if ($done) {
+        return;
+    }
     $done = true;
 
     try {
@@ -139,9 +150,13 @@ function statsCleanup(): void
 function autoCompleteBookings(): void
 {
     static $done = false;
-    if ($done) return;
+    if ($done) {
+        return;
+    }
     $done = true;
-    if (!isModuleEnabled('reservations')) return;
+    if (!isModuleEnabled('reservations')) {
+        return;
+    }
     try {
         $pdo = db_connect();
         // confirmed → completed
@@ -200,13 +215,17 @@ function navModuleOrder(): array
 {
     $defaults = array_keys(navModuleDefaults());
     $saved    = getSetting('nav_module_order', '');
-    if ($saved === '') return $defaults;
+    if ($saved === '') {
+        return $defaults;
+    }
 
-    $order = array_filter(explode(',', $saved), fn($k) => isset(navModuleDefaults()[$k]));
+    $order = array_filter(explode(',', $saved), fn ($k) => isset(navModuleDefaults()[$k]));
     $order = array_values($order);
     // Přidej nové moduly, které v uloženém pořadí chybí
     foreach ($defaults as $k) {
-        if (!in_array($k, $order, true)) $order[] = $k;
+        if (!in_array($k, $order, true)) {
+            $order[] = $k;
+        }
     }
     return $order;
 }
@@ -290,10 +309,10 @@ function loadPublicNavigationForms(): array
 function siteNav(string $current = ''): string
 {
     $b   = BASE_URL;
-    $cur = function(string $p) use ($current) {
+    $cur = function (string $p) use ($current) {
         return $current === $p ? ' aria-current="page"' : '';
     };
-    $li  = function(string $href, string $label, string $page) use ($b, $cur) {
+    $li  = function (string $href, string $label, string $page) use ($b, $cur) {
         return '<li><a href="' . $b . $href . '"' . $cur($page) . '>' . $label . '</a></li>' . "\n";
     };
 
@@ -330,7 +349,8 @@ function siteNav(string $current = ''): string
             foreach ($pageRows as $p) {
                 $pagesMap[(int)$p['id']] = $p;
             }
-        } catch (\PDOException $e) {}
+        } catch (\PDOException $e) {
+        }
 
         $renderedEntries = [];
         $renderUnifiedEntry = static function (string $entry) use (&$nav, &$renderedEntries, $moduleMap, $pagesMap, $visibleBlogEntries, $visibleForms, $li, $cur, $current): void {
@@ -434,18 +454,25 @@ function siteNav(string $current = ''): string
                        . ($current === 'page:' . $p['slug'] ? ' aria-current="page"' : '')
                        . '>' . h($p['title']) . '</a></li>' . "\n";
             }
-        } catch (\PDOException $e) {}
+        } catch (\PDOException $e) {
+        }
 
         $moduleMap = navModuleDefaults();
         foreach (navModuleOrder() as $key) {
-            if (!isModuleEnabled($key) || !isset($moduleMap[$key])) continue;
+            if (!isModuleEnabled($key) || !isset($moduleMap[$key])) {
+                continue;
+            }
             if ($key === 'blog') {
-                $visibleBlogs = array_filter(getAllBlogs(), static fn(array $blog): bool => (int)($blog['show_in_nav'] ?? 1) !== 0);
-                if (count($visibleBlogs) === 0) continue;
+                $visibleBlogs = array_filter(getAllBlogs(), static fn (array $blog): bool => (int)($blog['show_in_nav'] ?? 1) !== 0);
+                if (count($visibleBlogs) === 0) {
+                    continue;
+                }
             }
             if ($key === 'blog' && isMultiBlog()) {
                 foreach (getAllBlogs() as $blogEntry) {
-                    if (!(int)($blogEntry['show_in_nav'] ?? 1)) continue;
+                    if (!(int)($blogEntry['show_in_nav'] ?? 1)) {
+                        continue;
+                    }
                     $blogHref = blogIndexPath($blogEntry);
                     $blogNavKey = 'blog:' . $blogEntry['slug'];
                     $nav .= '<li><a href="' . h($blogHref) . '"' . $cur($blogNavKey) . '>' . h((string)$blogEntry['name']) . '</a></li>' . "\n";
@@ -461,7 +488,9 @@ function siteNav(string $current = ''): string
         }
     }
 
-    if (isLoggedIn()) $nav .= $li('/admin/index.php', 'Administrace', 'admin');
+    if (isLoggedIn()) {
+        $nav .= $li('/admin/index.php', 'Administrace', 'admin');
+    }
 
     $nav .= '</ul></nav>';
     return $nav;

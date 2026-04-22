@@ -1,4 +1,5 @@
 <?php
+
 // UI komponenty – patička, cookie banner, SEO, admin bar, a11y, favicon, údržba, log – extrahováno z db.php
 
 function siteFooter(): string
@@ -38,9 +39,13 @@ function siteFooter(): string
  */
 function cookieBanner(): string
 {
-    if (getSetting('cookie_consent_enabled', '0') !== '1') return '';
-    $text = h(getSetting('cookie_consent_text',
-        'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.'));
+    if (getSetting('cookie_consent_enabled', '0') !== '1') {
+        return '';
+    }
+    $text = h(getSetting(
+        'cookie_consent_text',
+        'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.'
+    ));
     $nonce = cspNonce();
     return '<div id="cookie-banner" role="dialog" aria-labelledby="cookie-heading" aria-modal="true"'
          . ' style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9000;'
@@ -88,30 +93,40 @@ function seoMeta(array $meta = []): string
 {
     $siteName = h(getSetting('site_name', 'Kora CMS'));
     $b        = BASE_URL;
-    $title = isset($meta['title'])       ? h($meta['title'])       : $siteName;
+    $title = isset($meta['title']) ? h($meta['title']) : $siteName;
     $desc  = isset($meta['description']) ? h($meta['description']) : h(getSetting('site_description', ''));
     $image = $meta['image'] ?? '';
-    $url   = isset($meta['url'])         ? h($meta['url'])         : '';
+    $url   = isset($meta['url']) ? h($meta['url']) : '';
     $canonical = isset($meta['canonical'])
         ? seoCanonicalUrl((string)$meta['canonical'])
         : seoCanonicalUrl((string)($meta['url'] ?? ''));
-    $type  = isset($meta['type'])        ? h($meta['type'])        : 'website';
+    $type  = isset($meta['type']) ? h($meta['type']) : 'website';
 
     if ($image === '') {
         $def = getSetting('og_image_default', '');
-        if ($def !== '') $image = h($b . '/uploads/' . $def);
+        if ($def !== '') {
+            $image = h($b . '/uploads/' . $def);
+        }
     } else {
         $image = h($image);
     }
 
     $out  = "  <meta name=\"description\" content=\"{$desc}\">\n";
-    if ($canonical !== '') $out .= '  <link rel="canonical" href="' . h($canonical) . "\">\n";
+    if ($canonical !== '') {
+        $out .= '  <link rel="canonical" href="' . h($canonical) . "\">\n";
+    }
     $out .= "  <meta property=\"og:type\" content=\"{$type}\">\n";
     $out .= "  <meta property=\"og:title\" content=\"{$title}\">\n";
     $out .= "  <meta property=\"og:site_name\" content=\"{$siteName}\">\n";
-    if ($desc  !== '') $out .= "  <meta property=\"og:description\" content=\"{$desc}\">\n";
-    if ($image !== '') $out .= "  <meta property=\"og:image\" content=\"{$image}\">\n";
-    if ($url   !== '') $out .= "  <meta property=\"og:url\" content=\"{$url}\">\n";
+    if ($desc  !== '') {
+        $out .= "  <meta property=\"og:description\" content=\"{$desc}\">\n";
+    }
+    if ($image !== '') {
+        $out .= "  <meta property=\"og:image\" content=\"{$image}\">\n";
+    }
+    if ($url   !== '') {
+        $out .= "  <meta property=\"og:url\" content=\"{$url}\">\n";
+    }
     return $out;
 }
 
@@ -162,7 +177,9 @@ function seoCanonicalUrl(string $target): string
  */
 function adminBar(string $editUrl = ''): string
 {
-    if (!isLoggedIn()) return '';
+    if (!isLoggedIn()) {
+        return '';
+    }
     $b   = BASE_URL;
     $out = '<div id="admin-bar" role="navigation" aria-label="Administrace webu"'
          . ' style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#222;'
@@ -204,7 +221,9 @@ function publicA11yStyleTag(): string
 function faviconTag(): string
 {
     $favicon = getSetting('site_favicon', '');
-    if ($favicon === '') return '';
+    if ($favicon === '') {
+        return '';
+    }
     $url = h(BASE_URL . '/uploads/site/' . $favicon);
     return "  <link rel=\"icon\" href=\"{$url}\">\n"
          . "  <link rel=\"apple-touch-icon\" href=\"{$url}\">\n";
@@ -216,10 +235,16 @@ function faviconTag(): string
  */
 function checkMaintenanceMode(): void
 {
-    if (getSetting('maintenance_mode', '0') !== '1') return;
-    if (isLoggedIn()) return;
+    if (getSetting('maintenance_mode', '0') !== '1') {
+        return;
+    }
+    if (isLoggedIn()) {
+        return;
+    }
     $script = $_SERVER['SCRIPT_FILENAME'] ?? '';
-    if (str_ends_with($script, DIRECTORY_SEPARATOR . 'maintenance.php')) return;
+    if (str_ends_with($script, DIRECTORY_SEPARATOR . 'maintenance.php')) {
+        return;
+    }
     include dirname(__DIR__) . '/maintenance.php';
     exit;
 }
@@ -272,8 +297,14 @@ function bulkFormOpen(string $module, string $redirectPage): string
 {
     return bulkActions($module, BASE_URL . '/admin/' . $redirectPage, 'Hromadné akce', 'položka', true);
 }
-function bulkFormClose(): string { return ''; }
-function bulkActionBar(bool $showPublish = true): string { return ''; }
+function bulkFormClose(): string
+{
+    return '';
+}
+function bulkActionBar(bool $showPublish = true): string
+{
+    return '';
+}
 
 /**
  * Vrátí JS pro select-all a enable/disable bulk tlačítek.

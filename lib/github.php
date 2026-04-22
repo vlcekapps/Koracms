@@ -170,10 +170,6 @@ function githubIssueMarkdownFileList(int $submissionId, string $fieldName, mixed
 
     $links = [];
     foreach ($items as $index => $item) {
-        if (!is_array($item)) {
-            continue;
-        }
-
         $originalName = trim((string)($item['original_name'] ?? ''));
         $storedName = formSubmissionStoredFileName($item);
         $url = $storedName !== ''

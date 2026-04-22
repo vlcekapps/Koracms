@@ -467,10 +467,12 @@ composer ci:basic
 `composer ci:basic` spustí:
 
 - PHP lint přes `build/lint_php.php`
-- úzký PSR-12 smoke check přes `composer format:check` nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně `lib/widgets.php`
+- úzký PSR-12 smoke check přes `composer format:check` nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně `lib/gallery.php`, `lib/media_library.php`, `lib/presentation.php`, `lib/revisions.php`, `lib/stats.php`, `lib/ui.php`, `lib/webhooks.php` a `lib/widgets.php`
 - PHPStan na levelu 5 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů
-- úzký PHPStan level 6 smoke check nad nejstabilnějšími helpery přes `composer analyse:strict`; vedle lint/bootstrap helperů už zahrnuje i `comments`, `content`, `definitions`, `github`, `mail`, `messages`, `stats`, `theme`, `ui` a `widgets`
+- úzký PHPStan level 6 smoke check nad nejstabilnějšími helpery přes `composer analyse:strict`; vedle lint/bootstrap helperů už zahrnuje i `comments`, `content`, `definitions`, `gallery`, `github`, `mail`, `media_library`, `messages`, `presentation`, `revisions`, `stats`, `theme`, `ui`, `webhooks` a `widgets`
 - unit testy přes `build/unit_tests.php`
+
+`composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn.
 
 GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Workflow používá aktuální `actions/checkout@v6`, aby CI neběželo na deprecated Node 20 checkout akci.
 
@@ -576,6 +578,12 @@ Před nasazením změn spusťte:
 composer ci:basic
 php build/runtime_audit.php
 php build/http_integration.php
+```
+
+Stejný balík lze nově pustit i jednou zkratkou:
+
+```bash
+composer ci:full
 ```
 
 Při větších zásazích doplňte i PHP lint:

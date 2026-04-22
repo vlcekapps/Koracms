@@ -1,4 +1,5 @@
 <?php
+
 // Galerie – breadcrumb, cover, thumbnail – extrahováno z db.php
 
 // ─────────────────────────────── Galerie ──────────────────────────────────
@@ -6,6 +7,8 @@
 /**
  * Sestaví drobečkový trail od kořene po dané album.
  * Vrací pole [ ['id'=>…, 'name'=>…], … ] od nejstaršího k aktuálnímu.
+ *
+ * @return list<array{id:int,name:string,slug:string,public_path:string}>
  */
 function gallery_breadcrumb(int $albumId): array
 {
@@ -18,10 +21,12 @@ function gallery_breadcrumb(int $albumId): array
         $stmt   = $pdo->prepare("SELECT id, name, slug, parent_id FROM cms_gallery_albums WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
-        if (!$row) break;
+        if (!$row) {
+            break;
+        }
         array_unshift($trail, [
             'id' => (int)$row['id'],
-            'name' => $row['name'],
+            'name' => (string)$row['name'],
             'slug' => galleryAlbumSlug((string)($row['slug'] ?? '')),
             'public_path' => galleryAlbumPublicPath($row),
         ]);
@@ -36,7 +41,9 @@ function gallery_breadcrumb(int $albumId): array
  */
 function gallery_cover_url(int $albumId, int $depth = 0): string
 {
-    if ($depth > 4) return '';
+    if ($depth > 4) {
+        return '';
+    }
     $pdo  = db_connect();
 
     $stmt = $pdo->prepare("SELECT cover_photo_id FROM cms_gallery_albums WHERE id = ?");
@@ -80,7 +87,9 @@ function gallery_cover_url(int $albumId, int $depth = 0): string
     );
     $stmt->execute([$albumId]);
     $sub = $stmt->fetch();
-    if ($sub) return gallery_cover_url((int)$sub['id'], $depth + 1);
+    if ($sub) {
+        return gallery_cover_url((int)$sub['id'], $depth + 1);
+    }
 
     return '';
 }
@@ -92,9 +101,13 @@ function gallery_cover_url(int $albumId, int $depth = 0): string
 function gallery_make_thumb(string $src, string $dst, int $maxDim = 300): bool
 {
     $info = @getimagesize($src);
-    if (!$info) return false;
+    if (!$info) {
+        return false;
+    }
     [$w, $h, $type] = $info;
-    if ($w <= 0 || $h <= 0) return false;
+    if ($w <= 0 || $h <= 0) {
+        return false;
+    }
 
     $image = match ($type) {
         IMAGETYPE_JPEG => @imagecreatefromjpeg($src),
@@ -103,7 +116,9 @@ function gallery_make_thumb(string $src, string $dst, int $maxDim = 300): bool
         IMAGETYPE_WEBP => @imagecreatefromwebp($src),
         default        => false,
     };
-    if (!$image) return false;
+    if (!$image) {
+        return false;
+    }
 
     if ($w <= $maxDim && $h <= $maxDim) {
         $newW = $w;
@@ -212,6 +227,8 @@ function pictureTag(string $src, string $alt, string $class = '', string $attrs 
 /**
  * Vygeneruje responsive velikosti obrázku při uploadu.
  * Vrátí pole vytvořených cest [šířka => cesta].
+ *
+ * @return array<int,string>
  */
 function generateResponsiveSizes(string $srcPath, string $destDir, string $baseName): array
 {
@@ -259,7 +276,9 @@ function buildAlbumPath(PDO $pdo, int $albumId): string
         $stmt = $pdo->prepare("SELECT id, name, parent_id FROM cms_gallery_albums WHERE id = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
-        if (!$row) break;
+        if (!$row) {
+            break;
+        }
         $name = str_replace(['/', '\\', "\0"], '_', (string)$row['name']);
         array_unshift($parts, $name);
         $id = $row['parent_id'] !== null ? (int)$row['parent_id'] : null;
@@ -271,6 +290,8 @@ function buildAlbumPath(PDO $pdo, int $albumId): string
  * Rekurzivně sesbírá všechny fotky z alba a jeho podalb.
  * Vrací pole [['zip_path' => 'Album/Sub/photo.jpg', 'disk_path' => '/abs/path/photo.jpg'], ...]
  * Prázdná alba vrací záznam s 'empty_dir' => true.
+ *
+ * @return list<array{zip_path:string,disk_path:string,empty_dir:bool}>
  */
 function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $galleryDir): array
 {
@@ -278,7 +299,9 @@ function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $gall
     $seen = [];
 
     $collect = static function (int $id, string $path) use ($pdo, $galleryDir, &$entries, &$seen, &$collect): void {
-        if (in_array($id, $seen, true)) return;
+        if (in_array($id, $seen, true)) {
+            return;
+        }
         $seen[] = $id;
 
         // Fotky tohoto alba
@@ -292,7 +315,9 @@ function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $gall
 
         foreach ($photos as $photo) {
             $filename = (string)$photo['filename'];
-            if ($filename === '') continue;
+            if ($filename === '') {
+                continue;
+            }
             $diskPath = $galleryDir . $filename;
             $entries[] = [
                 'zip_path' => $path . '/' . $filename,
