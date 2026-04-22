@@ -1613,6 +1613,65 @@ try {
 
     httpIntegrationPrintResult('content_reference_pdf_http', $pdfPickerIssues, $failures);
 
+    $publicFeedIssues = [];
+    saveSetting('module_blog', '1');
+    clearSettingsCache();
+
+    $feedBlogSlug = 'http-feed-blog-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)"
+    )->execute([
+        'HTTP Feed Blog',
+        $feedBlogSlug,
+        $adminUserId,
+    ]);
+    $feedBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $feedBlogId;
+
+    $feedArticleTitle = 'HTTP Feed Article ' . bin2hex(random_bytes(3));
+    $feedArticleBody = '<p>Feed fallback excerpt from article body only.</p><p><strong>Second paragraph.</strong></p>';
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status)
+         VALUES (?, ?, ?, '', ?, 1, ?, 'published')"
+    )->execute([
+        $feedArticleTitle,
+        'http-feed-article-' . bin2hex(random_bytes(4)),
+        $feedBlogId,
+        $feedArticleBody,
+        $adminUserId,
+    ]);
+    $createdArticles[] = (int)$pdo->lastInsertId();
+
+    $feedResponse = fetchUrl($baseUrl . BASE_URL . '/feed.php?blog=' . rawurlencode($feedBlogSlug), '', 0);
+    if (httpIntegrationStatusCode($feedResponse) !== 200) {
+        $publicFeedIssues[] = 'blog RSS feed nevrátil 200';
+    } else {
+        $hasRssContentType = false;
+        foreach ($feedResponse['headers'] as $feedHeader) {
+            if (stripos((string)$feedHeader, 'Content-Type: application/rss+xml') === 0) {
+                $hasRssContentType = true;
+                break;
+            }
+        }
+        if (!$hasRssContentType) {
+            $publicFeedIssues[] = 'blog RSS feed nevrací application/rss+xml';
+        }
+        if (!str_contains($feedResponse['body'], '<rss version="2.0"')) {
+            $publicFeedIssues[] = 'blog RSS feed neobsahuje RSS root element';
+        }
+        if (!str_contains($feedResponse['body'], htmlspecialchars($feedArticleTitle, ENT_XML1 | ENT_QUOTES, 'UTF-8'))) {
+            $publicFeedIssues[] = 'blog RSS feed neobsahuje vložený testovací článek';
+        }
+        if (!str_contains($feedResponse['body'], 'Feed fallback excerpt from article body only.')) {
+            $publicFeedIssues[] = 'blog RSS feed nevygeneroval excerpt z obsahu článku bez perexu';
+        }
+        if (str_contains($feedResponse['body'], 'Call to undefined function articleExcerpt')) {
+            $publicFeedIssues[] = 'blog RSS feed stále padá na chybějící articleExcerpt helper';
+        }
+    }
+
+    httpIntegrationPrintResult('public_feed_http', $publicFeedIssues, $failures);
+
     $reservationIssues = [];
     $resourceSlug = 'http-resource-' . bin2hex(random_bytes(4));
     $pdo->prepare(

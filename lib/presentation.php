@@ -914,6 +914,16 @@ function newsExcerpt(string $content, int $limit = 220): string
     return mb_strimwidth($plain, 0, $limit, '…', 'UTF-8');
 }
 
+function articleExcerpt(string $content, int $limit = 220): string
+{
+    $plain = normalizePlainText($content);
+    if ($plain === '') {
+        return '';
+    }
+
+    return mb_strimwidth($plain, 0, $limit, '…', 'UTF-8');
+}
+
 function newsPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
