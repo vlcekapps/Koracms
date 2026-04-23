@@ -62,7 +62,7 @@ adminHeader($pageTitle);
   </div>
 <?php endif; ?>
 
-<?php if ($id !== null && $photo !== null): ?>
+<?php if ($id !== null): ?>
   <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_save.php" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">

@@ -7,7 +7,7 @@ $pdo = db_connect();
 $mode = trim($_POST['mode'] ?? '');
 $albumId = inputInt('post', 'album_id');
 
-$redirectToAlbumPhotos = static function (?int $targetAlbumId): never {
+$redirectToAlbumPhotos = static function (?int $targetAlbumId) {
     $location = BASE_URL . '/admin/gallery_albums.php';
     if ($targetAlbumId !== null) {
         $location = BASE_URL . '/admin/gallery_photos.php?album_id=' . $targetAlbumId;
