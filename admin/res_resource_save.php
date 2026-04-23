@@ -73,11 +73,6 @@ if ($slug === '') {
     header('Location: ' . $redirectToForm($id, 'slug'));
     exit;
 }
-if ($capacity < 1) {
-    header('Location: ' . $redirectToForm($id, 'capacity'));
-    exit;
-}
-
 $stmtSlug = $pdo->prepare('SELECT id FROM cms_res_resources WHERE slug = ? AND id != ?');
 $stmtSlug->execute([$slug, $id ?? 0]);
 if ($stmtSlug->fetch()) {

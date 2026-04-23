@@ -104,7 +104,7 @@ if ($email) {
         'no_show'   => 'označena jako neomluvená',
     ];
 
-    $statusLabel = $statusLabels[$newStatus] ?? $newStatus;
+    $statusLabel = $statusLabels[$newStatus];
     $subject = 'Rezervace ' . $statusLabel . ' – ' . $booking['resource_name'];
 
     $body  = "Dobrý den,\n\n";
