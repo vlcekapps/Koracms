@@ -34,16 +34,15 @@ $categories = $pdo->query("SELECT id, name, sort_order, parent_id FROM cms_faq_c
 
 // Sestavíme strom kategorií
 $categoryTree = [];
-$categoryById = [];
-foreach ($categories as $cat) {
-    $categoryById[(int)$cat['id']] = $cat;
-}
 foreach ($categories as $cat) {
     $pid = $cat['parent_id'] !== null ? (int)$cat['parent_id'] : 0;
     $categoryTree[$pid][] = $cat;
 }
 
-function renderCategoryOptions(array $tree, array $byId, int $parentId = 0, int $depth = 0, ?int $excludeId = null): string
+/**
+ * @param array<int, list<array{id: mixed, name: mixed}>> $tree
+ */
+function renderCategoryOptions(array $tree, int $parentId = 0, int $depth = 0, ?int $excludeId = null): string
 {
     $out = '';
     foreach ($tree[$parentId] ?? [] as $cat) {
@@ -52,8 +51,8 @@ function renderCategoryOptions(array $tree, array $byId, int $parentId = 0, int 
             continue;
         }
         $prefix = str_repeat('— ', $depth);
-        $out .= '<option value="' . $cid . '">' . h($prefix . $cat['name']) . '</option>';
-        $out .= renderCategoryOptions($tree, $byId, $cid, $depth + 1, $excludeId);
+        $out .= '<option value="' . $cid . '">' . h($prefix . (string)$cat['name']) . '</option>';
+        $out .= renderCategoryOptions($tree, $cid, $depth + 1, $excludeId);
     }
     return $out;
 }
@@ -76,7 +75,7 @@ adminHeader('Kategorie znalostní báze');
         <label for="parent_id">Nadřazená kategorie</label>
         <select id="parent_id" name="parent_id">
           <option value="">— Kořenová —</option>
-          <?= renderCategoryOptions($categoryTree, $categoryById) ?>
+          <?= renderCategoryOptions($categoryTree) ?>
         </select>
       </div>
       <div>
