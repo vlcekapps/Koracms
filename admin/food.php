@@ -45,7 +45,7 @@ if ($scopeFilter !== 'all') {
     $whereParts[] = '(' . foodCardScopeVisibilitySql($scopeFilter, 'c') . ')';
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $stateOrderSql = "CASE
     WHEN c.valid_from IS NOT NULL AND c.valid_from > CURDATE() THEN 1
     WHEN c.valid_to IS NOT NULL AND c.valid_to < CURDATE() THEN 2
@@ -132,16 +132,17 @@ adminHeader('Jídelní a nápojový lístek');
 <?php else: ?>
   <?= bulkActions('food', BASE_URL . '/admin/food.php', 'Hromadné akce s jídelníčky', 'položka') ?>
   <?php
-  $groups = ['food' => [], 'beverage' => []];
+  $groups = [];
   foreach ($items as $item) {
       $groups[$item['type']][] = $item;
   }
   $labels = ['food' => 'Jídelní lístky', 'beverage' => 'Nápojové lístky'];
   $captions = ['food' => 'Přehled jídelních lístků', 'beverage' => 'Přehled nápojových lístků'];
-  foreach ($groups as $type => $rows):
-      if (empty($rows)) {
+  foreach (['food', 'beverage'] as $type):
+      if (!isset($groups[$type])) {
           continue;
       }
+      $rows = $groups[$type];
   ?>
   <h2 style="margin-top:2rem"><?= h($labels[$type]) ?></h2>
   <table>

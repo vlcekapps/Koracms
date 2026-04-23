@@ -17,7 +17,7 @@ $isValidDate = static function (string $value): bool {
     $dateTime = DateTime::createFromFormat('Y-m-d', $value);
     $errors = DateTime::getLastErrors();
     $hasErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+        && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
 
     return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d') === $value;
 };
