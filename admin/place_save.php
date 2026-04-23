@@ -25,7 +25,7 @@ $metaDescription = trim((string)($_POST['meta_description'] ?? ''));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 $redirectBase = BASE_URL . '/admin/place_form.php';
-$redirectToForm = static function (string $errorCode) use ($redirectBase, $id, $redirectTarget): never {
+$redirectToForm = static function (string $errorCode) use ($redirectBase, $id, $redirectTarget) {
     $query = ['err' => $errorCode];
     if ($id !== null) {
         $query['id'] = (string)$id;
@@ -106,7 +106,7 @@ if (isset($_POST['place_image_delete']) && empty($_FILES['place_image']['name'])
     $placeImageFilename = '';
 }
 
-if ($id !== null && $existingPlace) {
+if ($id !== null) {
     $oldSnapshot = placeRevisionSnapshot($existingPlace);
     $oldPath = placePublicPath($existingPlace);
 
