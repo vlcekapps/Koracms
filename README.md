@@ -469,7 +469,7 @@ composer ci:basic
 - PHP lint přes `build/lint_php.php`
 - úzký PSR-12 smoke check přes `composer format:check` nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně `lib/gallery.php`, `lib/media_library.php`, `lib/presentation.php`, `lib/revisions.php`, `lib/stats.php`, `lib/ui.php`, `lib/webhooks.php` a `lib/widgets.php`
 - PHPStan na levelu 5 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů
-- úzký PHPStan level 6 smoke check nad nejstabilnějšími helpery přes `composer analyse:strict`; vedle lint/bootstrap helperů aktuálně pokrývá 179 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, místa, widgety, komentáře, kontakty, chat, kategorie, newsletter, uživatele, galerie, převod obsahu, reorder endpointy a jednoduché akční endpointy
+- úzký PHPStan level 6 smoke check nad nejstabilnějšími helpery přes `composer analyse:strict`; vedle lint/bootstrap helperů aktuálně pokrývá 182 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, místa, widgety, komentáře, kontakty, chat, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
 - unit testy přes `build/unit_tests.php`
 
 `composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn.

@@ -29,7 +29,7 @@ if ($hierarchyFilter === 'root') {
 } elseif ($hierarchyFilter === 'nested') {
     $whereParts[] = 'a.parent_id IS NOT NULL';
 }
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.name, a.slug, a.parent_id, a.description, a.cover_photo_id,

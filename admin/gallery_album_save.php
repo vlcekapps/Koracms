@@ -10,7 +10,7 @@ $description = trim($_POST['description'] ?? '');
 $parentId = inputInt('post', 'parent_id');
 $coverId = inputInt('post', 'cover_photo_id');
 
-$redirectBack = static function (?int $albumId, string $error = ''): never {
+$redirectBack = static function (?int $albumId, string $error = '') {
     $path = '/admin/gallery_album_form.php';
     $query = [];
     if ($albumId !== null) {
@@ -29,12 +29,16 @@ if ($name === '') {
 
 $pdo = db_connect();
 
+$allAlbums = [];
+if ($parentId !== null || $id !== null) {
+    $allAlbums = $pdo->query("SELECT id, name, parent_id FROM cms_gallery_albums ORDER BY id")->fetchAll();
+}
+
 if ($parentId !== null) {
     if ($id !== null && $parentId === $id) {
         $redirectBack($id, 'parent');
     }
 
-    $allAlbums = $pdo->query("SELECT id, parent_id FROM cms_gallery_albums ORDER BY id")->fetchAll();
     $forbidden = $id !== null ? [$id] : [];
     if ($id !== null) {
         $changed = true;
