@@ -70,51 +70,49 @@ if ($direction === 'article_to_page') {
     exit;
 }
 
-if ($direction === 'page_to_article') {
-    $stmt = $pdo->prepare(
-        "SELECT id, title, slug, content, blog_id, is_published, status, created_at, updated_at
-         FROM cms_pages
-         WHERE id = ?"
-    );
-    $stmt->execute([$id]);
-    $page = $stmt->fetch();
+$stmt = $pdo->prepare(
+    "SELECT id, title, slug, content, blog_id, is_published, status, created_at, updated_at
+     FROM cms_pages
+     WHERE id = ?"
+);
+$stmt->execute([$id]);
+$page = $stmt->fetch();
 
-    if (!$page) {
-        header('Location: ' . BASE_URL . '/admin/pages.php');
-        exit;
-    }
-
-    $defaultBlogId = (int)(getDefaultBlog()['id'] ?? 1);
-    $targetBlogId = !empty($page['blog_id']) ? (int)$page['blog_id'] : $defaultBlogId;
-    $slug = uniqueArticleSlug($pdo, articleSlug((string)$page['slug'] ?: (string)$page['title']), null, $targetBlogId);
-    $status = (string)($page['status'] ?? 'published');
-    if ($status === '' || $status === 'published') {
-        $status = (int)$page['is_published'] ? 'published' : 'pending';
-    }
-
-    $pdo->prepare(
-        "INSERT INTO cms_articles (title, slug, perex, content, blog_id, status, comments_enabled, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, ?, 1, ?, ?)"
-    )->execute([
-        (string)$page['title'],
-        $slug,
-        (string)$page['content'],
-        $targetBlogId,
-        $status,
-        (string)$page['created_at'],
-        (string)($page['updated_at'] ?: $page['created_at']),
-    ]);
-    $newArticleId = (int)$pdo->lastInsertId();
-
-    $pdo->prepare("DELETE FROM cms_pages WHERE id = ?")->execute([$id]);
-    if (!empty($page['blog_id'])) {
-        normalizeBlogPageNavigationOrder($pdo, (int)$page['blog_id']);
-    } else {
-        normalizePageNavigationOrder($pdo);
-    }
-
-    logAction('convert_page_to_article', 'page_id=' . $id . ' article_id=' . $newArticleId . ' title=' . (string)$page['title']);
-
-    header('Location: ' . BASE_URL . '/admin/blog_form.php?id=' . $newArticleId);
+if (!$page) {
+    header('Location: ' . BASE_URL . '/admin/pages.php');
     exit;
 }
+
+$defaultBlogId = (int)(getDefaultBlog()['id'] ?? 1);
+$targetBlogId = !empty($page['blog_id']) ? (int)$page['blog_id'] : $defaultBlogId;
+$slug = uniqueArticleSlug($pdo, articleSlug((string)$page['slug'] ?: (string)$page['title']), null, $targetBlogId);
+$status = (string)($page['status'] ?? 'published');
+if ($status === '' || $status === 'published') {
+    $status = (int)$page['is_published'] ? 'published' : 'pending';
+}
+
+$pdo->prepare(
+    "INSERT INTO cms_articles (title, slug, perex, content, blog_id, status, comments_enabled, created_at, updated_at)
+     VALUES (?, ?, '', ?, ?, ?, 1, ?, ?)"
+)->execute([
+    (string)$page['title'],
+    $slug,
+    (string)$page['content'],
+    $targetBlogId,
+    $status,
+    (string)$page['created_at'],
+    (string)($page['updated_at'] ?: $page['created_at']),
+]);
+$newArticleId = (int)$pdo->lastInsertId();
+
+$pdo->prepare("DELETE FROM cms_pages WHERE id = ?")->execute([$id]);
+if (!empty($page['blog_id'])) {
+    normalizeBlogPageNavigationOrder($pdo, (int)$page['blog_id']);
+} else {
+    normalizePageNavigationOrder($pdo);
+}
+
+logAction('convert_page_to_article', 'page_id=' . $id . ' article_id=' . $newArticleId . ' title=' . (string)$page['title']);
+
+header('Location: ' . BASE_URL . '/admin/blog_form.php?id=' . $newArticleId);
+exit;
