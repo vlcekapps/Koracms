@@ -24,7 +24,7 @@ if ($id !== null) {
 
 // Content locking – pokus o získání zámku při editaci existující novinky
 $contentLockWarning = null;
-if ($item && $id !== null) {
+if ($item) {
     $contentLockWarning = acquireContentLock('news', $id);
 }
 
@@ -266,7 +266,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 })();
 </script>
 
-<?php if ($item && $id !== null): ?>
+<?php if ($item): ?>
 <script nonce="<?= cspNonce() ?>">
 (function () {
     var lockInterval = setInterval(function () {

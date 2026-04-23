@@ -13,7 +13,7 @@ $metaTitle = mb_substr(trim((string)($_POST['meta_title'] ?? '')), 0, 160);
 $metaDescription = trim((string)($_POST['meta_description'] ?? ''));
 
 $redirectBase = BASE_URL . '/admin/news_form.php';
-$redirectToForm = static function (string $errorCode) use ($redirectBase, $id): never {
+$redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);
@@ -202,9 +202,7 @@ if ($existingItem) {
 }
 
 // Uvolnění zámku obsahu po úspěšném uložení
-if ($id !== null) {
-    releaseContentLock('news', $id);
-}
+releaseContentLock('news', $id);
 
 header('Location: ' . BASE_URL . '/admin/news.php');
 exit;
