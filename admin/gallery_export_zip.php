@@ -56,7 +56,7 @@ foreach ($entries as $entry) {
     if ($entry['disk_path'] !== '' && is_file($entry['disk_path'])) {
         $filesToZip[] = $entry;
     } else {
-        error_log('gallery_export_zip: soubor nenalezen: ' . ($entry['disk_path'] ?? ''));
+        error_log('gallery_export_zip: soubor nenalezen: ' . $entry['disk_path']);
     }
 }
 
