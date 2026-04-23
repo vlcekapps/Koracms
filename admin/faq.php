@@ -40,7 +40,7 @@ if ($categoryFilter !== null && $categoryFilter > 0) {
     $params[] = $categoryFilter;
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 
 $stmt = $pdo->prepare(
     "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.is_published,

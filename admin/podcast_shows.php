@@ -27,7 +27,7 @@ if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(s.status, 'published') = 'published' AND COALESCE(s.is_published, 1) = 0";
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $perPage = 20;
 $pagination = paginate(
     $pdo,
