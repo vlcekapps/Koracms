@@ -26,7 +26,7 @@ $deleteStoredFile = isset($_POST['file_delete']);
 $deleteImage = isset($_POST['download_image_delete']);
 
 $redirectBase = BASE_URL . '/admin/download_form.php';
-$redirectWithError = static function (string $errorCode) use ($redirectBase, $id): never {
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id) {
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);
@@ -158,7 +158,7 @@ if (is_array($fileField) && ($fileField['name'] ?? '') !== '' && (int)($fileFiel
     }
 
     $newChecksum = hash_file('sha256', $targetPath);
-    if (!is_string($newChecksum) || $newChecksum === '') {
+    if ($newChecksum === false) {
         @unlink($targetPath);
         $redirectWithError('file');
     }
@@ -182,8 +182,8 @@ if ($storedFilename === '' && $checksumInput === '') {
 }
 
 if ($id !== null) {
-    $oldSnapshot = $existingDownload ? downloadRevisionSnapshot($existingDownload) : [];
-    $oldPath = $existingDownload ? downloadPublicPath($existingDownload) : '';
+    $oldSnapshot = downloadRevisionSnapshot($existingDownload);
+    $oldPath = downloadPublicPath($existingDownload);
 
     $requestedStatus = trim($_POST['article_status'] ?? '');
     if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {

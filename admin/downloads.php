@@ -93,7 +93,7 @@ if ($featuredFilter === 'featured') {
     $whereParts[] = 'd.is_featured = 0';
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $currentListUrl = BASE_URL . '/admin/downloads.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
 
 $stmt = $pdo->prepare(
