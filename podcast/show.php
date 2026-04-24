@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -72,7 +73,7 @@ $episodesStmt = $pdo->prepare(
 );
 $episodesStmt->execute([(int)$show['id'], $perPage, $offset]);
 $episodes = array_map(
-    static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
+    static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
 );
 

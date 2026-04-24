@@ -39,7 +39,7 @@ $episodesStmt = $pdo->prepare(
 );
 $episodesStmt->execute([(int)$show['id']]);
 $episodes = array_map(
-    static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
+    static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
 );
 
@@ -131,7 +131,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
             ? siteUrl(str_starts_with((string)$episode['image_url'], BASE_URL) ? substr((string)$episode['image_url'], strlen(BASE_URL)) : (string)$episode['image_url'])
             : $coverUrl
     );
-?>
+    ?>
     <item>
       <title><?= htmlspecialchars((string)$episode['title'], ENT_XML1, 'UTF-8') ?></title>
       <link><?= htmlspecialchars($itemLink, ENT_XML1, 'UTF-8') ?></link>

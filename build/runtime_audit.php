@@ -7008,6 +7008,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'media/file.php media/preview.php media/thumb.php')
         && str_contains($composerSource, 'news/index.php news/article.php')
         && str_contains($composerSource, 'places/index.php places/place.php places/image.php')
+        && str_contains($composerSource, 'podcast/index.php podcast/show.php podcast/episode.php podcast/feed.php podcast/image.php podcast/cover.php podcast/audio.php')
         && str_contains($composerSource, 'polls/index.php')
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/cancel_booking.php')
         && str_contains($composerSource, 'lib/backup.php lib/comments.php lib/content.php')

@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -34,7 +35,7 @@ $stmt = $pdo->prepare(
 $stmt->execute([$perPage, $offset]);
 $shows = $stmt->fetchAll();
 $shows = array_map(
-    static fn(array $show): array => hydratePodcastShowPresentation($show),
+    static fn (array $show): array => hydratePodcastShowPresentation($show),
     $shows
 );
 $pagerHtml = renderPager($page, $pages, '?', 'Stránkování podcastů');
