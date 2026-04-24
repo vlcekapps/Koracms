@@ -7064,7 +7064,8 @@ $foundationChecks = [
         && str_contains($composerSource, '"format:fix:admin-taxonomy"')
         && str_contains($composerSource, '@format:check:admin-taxonomy')
         && str_contains($composerSource, 'admin/blog_cats.php admin/blog_tags.php admin/blog_members.php admin/blog_pages.php')
-        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/res_categories.php admin/res_locations.php')
+        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/dl_cats.php admin/faq_cats.php')
+        && str_contains($composerSource, 'admin/res_categories.php admin/res_locations.php')
         && str_contains($composerSource, 'admin/page_reorder.php admin/gallery_photo_reorder.php admin/gallery_album_delete.php admin/gallery_photo_delete.php'),
     'php cs fixer admin overview smoke check exists' => str_contains($composerSource, '"format:check:admin-overview"')
         && str_contains($composerSource, '"format:fix:admin-overview"')
