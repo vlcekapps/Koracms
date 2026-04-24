@@ -45,7 +45,7 @@ if (!$cardRow) {
     http_response_code(404);
     $missingPath = $slug !== ''
         ? BASE_URL . '/food/card/' . rawurlencode($slug)
-        : BASE_URL . '/food/card.php' . ($cardId !== null ? '?id=' . urlencode((string)$cardId) : '');
+        : BASE_URL . '/food/card.php?id=' . urlencode((string)$cardId);
 
     renderPublicPage([
         'title' => 'Lístek nebyl nalezen - ' . $siteName,
