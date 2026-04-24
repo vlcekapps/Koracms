@@ -31,13 +31,16 @@ if (isModuleEnabled('newsletter')) {
 }
 try {
     $allAlbums = $pdo->query("SELECT id, name FROM cms_gallery_albums ORDER BY name")->fetchAll();
-} catch (\PDOException $e) {}
+} catch (\PDOException $e) {
+}
 try {
     $allShows = $pdo->query("SELECT id, title FROM cms_podcast_shows ORDER BY title ASC")->fetchAll();
-} catch (\PDOException $e) {}
+} catch (\PDOException $e) {
+}
 try {
     $allForms = $pdo->query("SELECT id, title FROM cms_forms WHERE is_active = 1 ORDER BY title ASC")->fetchAll();
-} catch (\PDOException $e) {}
+} catch (\PDOException $e) {
+}
 
 adminHeader('Widgety');
 ?>
@@ -78,26 +81,26 @@ adminHeader('Widgety');
     <?php else: ?>
       <ol style="list-style:none;padding:0;margin:0" data-sortable="widgets" data-zone="<?= h($zoneKey) ?>">
         <?php foreach ($allWidgets[$zoneKey] as $w):
-          $wSettings = widgetSettings($w);
-          $wTypeDef = $types[$w['widget_type']] ?? null;
-          $wTypeName = $wTypeDef ? $wTypeDef['name'] : $w['widget_type'];
-          $wTitle = trim((string)($w['title'] ?? ''));
-          $wDisplayTitle = $wTitle !== '' ? $wTitle : $wTypeName;
-          $wMetaParts = [];
-          if ($wTitle !== '' && $wTitle !== $wTypeName) {
-              $wMetaParts[] = $wTypeName;
-          }
-          if (!(int)$w['is_active']) {
-              $wMetaParts[] = 'neaktivní';
-          }
-          $wAvailability = widgetInstanceAvailability($w);
-          $wDisplayable = $wAvailability['displayable'];
-          $wDisplayWarning = (int)$w['is_active'] === 1 && !$wDisplayable;
-          $wDisplayReasons = $wAvailability['reasons'];
-          if ($wDisplayWarning) {
-              $wMetaParts[] = 'na webu se teď nezobrazí';
-          }
-        ?>
+            $wSettings = widgetSettings($w);
+            $wTypeDef = $types[$w['widget_type']] ?? null;
+            $wTypeName = $wTypeDef ? $wTypeDef['name'] : $w['widget_type'];
+            $wTitle = trim((string)($w['title'] ?? ''));
+            $wDisplayTitle = $wTitle !== '' ? $wTitle : $wTypeName;
+            $wMetaParts = [];
+            if ($wTitle !== '' && $wTitle !== $wTypeName) {
+                $wMetaParts[] = $wTypeName;
+            }
+            if (!(int)$w['is_active']) {
+                $wMetaParts[] = 'neaktivní';
+            }
+            $wAvailability = widgetInstanceAvailability($w);
+            $wDisplayable = $wAvailability['displayable'];
+            $wDisplayWarning = (int)$w['is_active'] === 1 && !$wDisplayable;
+            $wDisplayReasons = $wAvailability['reasons'];
+            if ($wDisplayWarning) {
+                $wMetaParts[] = 'na webu se teď nezobrazí';
+            }
+            ?>
           <li style="display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .5rem;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab<?= !(int)$w['is_active'] ? ';opacity:.5' : '' ?>"
               data-sort-id="<?= (int)$w['id'] ?>" tabindex="0"
               aria-label="<?= h($wDisplayTitle) ?> (<?= h($wTypeName) ?>)">

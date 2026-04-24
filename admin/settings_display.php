@@ -14,15 +14,17 @@ adminHeader('Pozice modulů');
 
 <?php
   $moduleMap = navModuleDefaults();
-  $navOrder  = navModuleOrder();
-  $total     = count($navOrder);
+$navOrder  = navModuleOrder();
+$total     = count($navOrder);
 ?>
 <ol style="list-style:none;padding:0;margin:0;max-width:480px">
 <?php foreach ($navOrder as $i => $key):
-  if (!isset($moduleMap[$key])) continue;
-  [, $label] = $moduleMap[$key];
-  $enabled   = isModuleEnabled($key);
-?>
+    if (!isset($moduleMap[$key])) {
+        continue;
+    }
+    [, $label] = $moduleMap[$key];
+    $enabled   = isModuleEnabled($key);
+    ?>
   <li style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #eee">
     <span style="min-width:160px<?= $enabled ? '' : ';color:#666' ?>">
       <?= h($label) ?><?= $enabled ? '' : ' <em>(vypnuto)</em>' ?>

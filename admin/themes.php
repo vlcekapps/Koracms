@@ -365,7 +365,7 @@ adminHeader('Vzhled a šablony');
           if ($selectedTheme === $themeKey) {
               $cardClasses[] = 'theme-card--selected';
           }
-        ?>
+          ?>
         <section class="<?= h(implode(' ', $cardClasses)) ?>">
           <div class="theme-card__heading">
             <input
@@ -480,12 +480,12 @@ adminHeader('Vzhled a šablony');
 
         <?php foreach ($themeSettingDefinitions as $settingKey => $definition): ?>
           <?php
-            $fieldId = 'theme-setting-' . preg_replace('/[^a-z0-9_-]+/i', '-', $settingKey);
+              $fieldId = 'theme-setting-' . preg_replace('/[^a-z0-9_-]+/i', '-', $settingKey);
             $helpId = $fieldId . '-help';
             $value = $themeSettingValues[$settingKey] ?? (string)$definition['default'];
             $settingAvailable = themeSettingIsAvailable($definition);
             $requiredModulesText = themeRequiredModulesDescription((array)($definition['requires_modules'] ?? []));
-          ?>
+            ?>
           <div style="margin-top:1rem">
             <label for="<?= h($fieldId) ?>"><?= h($definition['label']) ?></label>
 
@@ -511,7 +511,7 @@ adminHeader('Vzhled a šablony');
               </small>
             <?php else: ?>
               <?php
-                $availableOptions = themeAvailableSelectOptions($definition);
+                  $availableOptions = themeAvailableSelectOptions($definition);
                 $displayValue = themeAvailableSelectValue($definition, (string)$value);
                 $selectedOption = $definition['options'][$displayValue] ?? $definition['options'][$definition['default']];
                 $hiddenOptionLabels = [];
@@ -527,7 +527,7 @@ adminHeader('Vzhled a šablony');
                     }
                     $hiddenOptionLabels[] = $optionLabel;
                 }
-              ?>
+                ?>
               <?php if ($availableOptions === []): ?>
                 <p id="<?= h($helpId) ?>" style="margin:.5rem 0 0;color:#4b5563">
                   Pro tuto volbu teď není k dispozici žádná aktivní modulová varianta.
