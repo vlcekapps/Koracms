@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['2fa_pending_role']
         );
         unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_pending_email'],
-              $_SESSION['2fa_pending_superadmin'], $_SESSION['2fa_pending_name'],
-              $_SESSION['2fa_pending_role'], $_SESSION['2fa_pending_redirect']);
+            $_SESSION['2fa_pending_superadmin'], $_SESSION['2fa_pending_name'],
+            $_SESSION['2fa_pending_role'], $_SESSION['2fa_pending_redirect']);
         header('Location: ' . $redirect);
         exit;
     }

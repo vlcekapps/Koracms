@@ -66,7 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $name = $userRow['nickname'] !== '' ? $userRow['nickname']
                       : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
-                if ($name === '') $name = $inputEmail;
+                if ($name === '') {
+                    $name = $inputEmail;
+                }
                 loginUser((int)$userRow['id'], $inputEmail, (bool)$userRow['is_superadmin'], $name, $role);
                 $authenticated = true;
             }

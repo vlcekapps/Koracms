@@ -282,8 +282,8 @@ adminHeader('Můj profil');
       <div id="totp-setup" style="<?= $enableTwoFactorRequested ? '' : 'display:none;' ?>margin-top:1rem;padding:1rem;background:#f8f9fb;border-radius:8px">
         <?php
           $totpSetupSecret = $totpSetupSecret !== '' ? $totpSetupSecret : totpGenerateSecret();
-          $totpUri = totpUri($totpSetupSecret, $currentRow['email'], getSetting('site_name', 'Kora CMS'));
-          $qrUrl = totpQrUrl($totpUri);
+        $totpUri = totpUri($totpSetupSecret, $currentRow['email'], getSetting('site_name', 'Kora CMS'));
+        $qrUrl = totpQrUrl($totpUri);
         ?>
         <input type="hidden" name="totp_secret" value="<?= h($totpSetupSecret) ?>">
         <p><strong>1.</strong> Naskenujte QR kód v autentizační aplikaci:</p>

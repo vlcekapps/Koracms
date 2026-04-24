@@ -47,7 +47,7 @@ adminHeader('Správa modulů');
       'events'    => 'Události',
       'podcast'   => 'Podcast',
       'places'    => 'Zajímavá místa',
-      'newsletter'=> 'Newsletter',
+      'newsletter' => 'Newsletter',
       'downloads' => 'Ke stažení',
       'food'      => 'Jídelní lístek',
       'polls'     => 'Ankety',

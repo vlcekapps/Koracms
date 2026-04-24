@@ -6996,6 +6996,8 @@ $foundationChecks = [
         && str_contains($composerSource, '--dry-run')
         && str_contains($composerSource, '--path-mode=intersection')
         && str_contains($composerSource, 'build/lint_php.php build/phpstan_bootstrap.php')
+        && str_contains($composerSource, 'admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/profile.php')
+        && str_contains($composerSource, 'admin/settings_modules.php admin/settings_save.php admin/theme_preview.php')
         && str_contains($composerSource, 'author.php blog_router.php confirm_email.php feed.php health.php index.php maintenance.php')
         && str_contains($composerSource, 'newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php')
         && str_contains($composerSource, 'register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
