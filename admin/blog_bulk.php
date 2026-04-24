@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 verifyCsrf();
@@ -28,7 +29,7 @@ if ($action === 'delete' && $ids !== []) {
         $stmt->execute($params);
         $articles = array_values(array_filter(
             $stmt->fetchAll(),
-            static fn(array $article): bool => canCurrentUserWriteToBlog((int)($article['blog_id'] ?? 0))
+            static fn (array $article): bool => canCurrentUserWriteToBlog((int)($article['blog_id'] ?? 0))
         ));
     } else {
         $articles = [];

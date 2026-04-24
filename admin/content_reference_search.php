@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../db.php';
@@ -784,7 +785,7 @@ if ($requestedType === 'all' || $requestedType === 'page') {
 if (($requestedType === 'all' || $requestedType === 'news') && isModuleEnabled('news')) {
     try {
         $stmt = $pdo->prepare(
-             "SELECT id, title, slug, content, created_at, 'news' AS type
+            "SELECT id, title, slug, content, created_at, 'news' AS type
               FROM cms_news
               WHERE " . newsPublicVisibilitySql() . "
                 AND (title LIKE ? OR content LIKE ? OR slug LIKE ?)
@@ -1034,7 +1035,7 @@ if (($requestedType === 'all' || $requestedType === 'poll') && isModuleEnabled('
 
 usort(
     $results,
-    static fn(array $left, array $right): int => contentReferenceTimestamp($right) <=> contentReferenceTimestamp($left)
+    static fn (array $left, array $right): int => contentReferenceTimestamp($right) <=> contentReferenceTimestamp($left)
 );
 
 $results = array_slice($results, 0, 20);

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Export fotoalba do ZIP – rekurzivně včetně podalb.
  * Hierarchická struktura složek odpovídá albům v admin galerii.
@@ -33,7 +34,9 @@ foreach ($albumIds as $aid) {
     $albumStmt = $pdo->prepare("SELECT id, name, slug FROM cms_gallery_albums WHERE id = ?");
     $albumStmt->execute([$aid]);
     $album = $albumStmt->fetch();
-    if (!$album) continue;
+    if (!$album) {
+        continue;
+    }
 
     $albumName = str_replace(['/', '\\', "\0"], '_', (string)$album['name']);
     $albumNames[] = $albumName;
@@ -75,7 +78,9 @@ if (count($albumNames) === 1) {
 // ── ZipArchive (preferovaný) ──
 if (class_exists('ZipArchive')) {
     $tmpDir = dirname(__DIR__) . '/uploads/tmp';
-    if (!is_dir($tmpDir)) mkdir($tmpDir, 0755, true);
+    if (!is_dir($tmpDir)) {
+        mkdir($tmpDir, 0755, true);
+    }
     $tmpFile = $tmpDir . '/export_' . bin2hex(random_bytes(8)) . '.zip';
 
     $zip = new ZipArchive();
@@ -121,7 +126,9 @@ $entryCount = 0;
 
 $writeEntry = function (string $zipPath, string $diskPath) use ($out, &$centralDir, &$offset, &$entryCount): void {
     $data = file_get_contents($diskPath);
-    if ($data === false) return;
+    if ($data === false) {
+        return;
+    }
 
     $crc = crc32($data);
     $sizeUncompressed = strlen($data);
@@ -175,7 +182,9 @@ $writeEntry = function (string $zipPath, string $diskPath) use ($out, &$centralD
 };
 
 $writeDirEntry = function (string $zipPath) use ($out, &$centralDir, &$offset, &$entryCount): void {
-    if (!str_ends_with($zipPath, '/')) $zipPath .= '/';
+    if (!str_ends_with($zipPath, '/')) {
+        $zipPath .= '/';
+    }
 
     $nameBytes = $zipPath;
     $nameLen = strlen($nameBytes);

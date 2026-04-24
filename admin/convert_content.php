@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Převod obsahu: článek → stránka nebo stránka → článek.
  * POST: direction (article_to_page | page_to_article), id, csrf_token

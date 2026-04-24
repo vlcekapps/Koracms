@@ -7071,6 +7071,14 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/news.php admin/newsletter.php admin/pages.php admin/places.php admin/podcast.php')
         && str_contains($composerSource, 'admin/podcast_shows.php admin/polls.php admin/redirects.php admin/res_bookings.php admin/res_resources.php')
         && str_contains($composerSource, 'admin/review_queue.php admin/trash.php admin/users.php'),
+    'php cs fixer admin utility smoke check exists' => str_contains($composerSource, '"format:check:admin-utility"')
+        && str_contains($composerSource, '"format:fix:admin-utility"')
+        && str_contains($composerSource, '@format:check:admin-utility')
+        && str_contains($composerSource, 'admin/blog_bulk.php admin/blog_content_reference_search.php admin/blog_transfer.php')
+        && str_contains($composerSource, 'admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php')
+        && str_contains($composerSource, 'admin/gallery_export_zip.php admin/contact_message.php admin/chat_message.php admin/form_submission.php')
+        && str_contains($composerSource, 'admin/newsletter_history.php admin/newsletter_subscriber.php')
+        && str_contains($composerSource, 'admin/res_booking_add.php admin/res_booking_detail.php admin/settings_shared.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')

@@ -138,7 +138,7 @@ $notes       = $_POST['notes'] ?? '';
       <?php foreach ($users as $u):
           $uName = trim($u['first_name'] . ' ' . $u['last_name']);
           $uLabel = $uName !== '' ? $uName . ' (' . $u['email'] . ')' : $u['email'];
-      ?>
+          ?>
         <option value="<?= (int)$u['id'] ?>" <?= $userId === (int)$u['id'] ? 'selected' : '' ?>><?= h($uLabel) ?></option>
       <?php endforeach; ?>
     </select>

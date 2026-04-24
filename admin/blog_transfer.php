@@ -11,7 +11,7 @@ const BLOG_TRANSFER_SESSION_KEY = 'blog_transfer_selection';
 function blogTransferArticleIds(array $articles): array
 {
     return array_values(array_map(
-        static fn(array $article): int => (int)($article['id'] ?? 0),
+        static fn (array $article): int => (int)($article['id'] ?? 0),
         $articles
     ));
 }
@@ -120,7 +120,7 @@ function blogTransferTagSummary(array $tags): string
     }
 
     $names = array_values(array_filter(array_map(
-        static fn(array $tag): string => trim((string)$tag['name']),
+        static fn (array $tag): string => trim((string)$tag['name']),
         $tags
     )));
 
@@ -257,7 +257,7 @@ if (!is_array($selection) || !isset($selection['ids']) || !is_array($selection['
 }
 
 $pdo = db_connect();
-$selectionIds = array_values(array_unique(array_filter(array_map('intval', $selection['ids']), static fn(int $id): bool => $id > 0)));
+$selectionIds = array_values(array_unique(array_filter(array_map('intval', $selection['ids']), static fn (int $id): bool => $id > 0)));
 $writableBlogs = getWritableBlogsForUser();
 
 if (count($writableBlogs) < 2) {
@@ -282,17 +282,17 @@ usort($articles, static function (array $leftArticle, array $rightArticle): int 
 $articleIds = blogTransferArticleIds($articles);
 $articleTags = blogTransferLoadArticleTags($pdo, $articleIds);
 $sourceBlogIds = array_values(array_unique(array_map(
-    static fn(array $article): int => (int)($article['blog_id'] ?? 0),
+    static fn (array $article): int => (int)($article['blog_id'] ?? 0),
     $articles
 )));
 $sourceBlogNames = array_values(array_unique(array_filter(array_map(
-    static fn(array $article): string => trim((string)($article['blog_name'] ?? '')),
+    static fn (array $article): string => trim((string)($article['blog_name'] ?? '')),
     $articles
 ))));
 
 $targetBlogs = array_values(array_filter(
     $writableBlogs,
-    static fn(array $blog): bool => !in_array((int)($blog['id'] ?? 0), $sourceBlogIds, true)
+    static fn (array $blog): bool => !in_array((int)($blog['id'] ?? 0), $sourceBlogIds, true)
 ));
 $targetBlogMap = [];
 foreach ($targetBlogs as $targetBlogRow) {
@@ -360,10 +360,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
         $categoryStrategy = (string)($_POST['category_strategy'] ?? 'drop');
         $tagStrategy = (string)($_POST['tag_strategy'] ?? 'drop');
         $categoryMapSelections = is_array($_POST['category_map'] ?? null)
-            ? array_map(static fn($value): string => trim((string)$value), (array)$_POST['category_map'])
+            ? array_map(static fn ($value): string => trim((string)$value), (array)$_POST['category_map'])
             : [];
         $tagMapSelections = is_array($_POST['tag_map'] ?? null)
-            ? array_map(static fn($value): string => trim((string)$value), (array)$_POST['tag_map'])
+            ? array_map(static fn ($value): string => trim((string)$value), (array)$_POST['tag_map'])
             : [];
 
         if (!in_array($categoryStrategy, ['drop', 'create', 'map_existing'], true)) {
@@ -658,7 +658,7 @@ $selectedArticleCount = count($articles);
 $articleCountLabel = $selectedArticleCount === 1 ? 'článek' : ($selectedArticleCount <= 4 ? 'články' : 'článků');
 $missingCategoryNames = array_values($categoryResolution['missing']);
 $missingTagNames = array_values(array_map(
-    static fn(array $tag): string => (string)$tag['name'],
+    static fn (array $tag): string => (string)$tag['name'],
     $tagResolution['missing']
 ));
 
@@ -790,9 +790,9 @@ adminHeader('Přesun článků mezi blogy');
             <?php foreach ($categoryResolution['missing'] as $normalizedName => $categoryName): ?>
               <?php
               $categoryFieldName = blogTransferMappingFieldName('category', $normalizedName);
-              $categoryHelpId = $categoryFieldName . '-help';
-              $selectedCategoryValue = (string)($categoryMapSelections[$normalizedName] ?? '');
-              ?>
+                $categoryHelpId = $categoryFieldName . '-help';
+                $selectedCategoryValue = (string)($categoryMapSelections[$normalizedName] ?? '');
+                ?>
               <div style="margin-top:.85rem">
                 <label for="<?= h($categoryFieldName) ?>">
                   Zdrojová kategorie: <strong><?= h($categoryName) ?></strong>
@@ -858,12 +858,12 @@ adminHeader('Přesun článků mezi blogy');
             </p>
             <?php foreach ($tagResolution['missing'] as $tagKey => $missingTag): ?>
               <?php
-              $tagName = trim((string)$missingTag['name']);
-              $tagLabel = $tagName !== '' ? $tagName : trim((string)$missingTag['slug']);
-              $tagFieldName = blogTransferMappingFieldName('tag', $tagKey);
-              $tagHelpId = $tagFieldName . '-help';
-              $selectedTagValue = (string)($tagMapSelections[$tagKey] ?? '');
-              ?>
+                $tagName = trim((string)$missingTag['name']);
+                $tagLabel = $tagName !== '' ? $tagName : trim((string)$missingTag['slug']);
+                $tagFieldName = blogTransferMappingFieldName('tag', $tagKey);
+                $tagHelpId = $tagFieldName . '-help';
+                $selectedTagValue = (string)($tagMapSelections[$tagKey] ?? '');
+                ?>
               <div style="margin-top:.85rem">
                 <label for="<?= h($tagFieldName) ?>">
                   Zdrojový štítek: <strong><?= h($tagLabel) ?></strong>
