@@ -22,7 +22,7 @@ $adminNote = trim((string)($_POST['admin_note'] ?? ''));
 $deleteImage = isset($_POST['event_image_delete']);
 
 $redirectBase = BASE_URL . '/admin/event_form.php';
-$redirectToForm = static function (string $errorCode) use ($redirectBase, $id): never {
+$redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);
@@ -125,7 +125,7 @@ if ($deleteImage && $imageFilename !== '') {
     $imageFilename = '';
 }
 
-if ($id !== null && $existingEvent) {
+if ($id !== null) {
     if (($existingEvent['preview_token'] ?? '') === '') {
         $previewToken = bin2hex(random_bytes(16));
         $pdo->prepare("UPDATE cms_events SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
@@ -251,9 +251,7 @@ if ($id !== null && $existingEvent) {
 }
 
 // Uvolnění zámku obsahu po úspěšném uložení
-if ($id !== null) {
-    releaseContentLock('event', $id);
-}
+releaseContentLock('event', $id);
 
 header('Location: ' . BASE_URL . '/admin/events.php');
 exit;

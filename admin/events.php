@@ -46,7 +46,7 @@ if ($scopeFilter !== 'all') {
     $whereParts[] = '(' . eventScopeVisibilitySql($scopeFilter, 'e') . ')';
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $effectiveEndSql = eventEffectiveEndSql('e');
 
 $stmt = $pdo->prepare(
@@ -90,7 +90,7 @@ adminHeader('Události');
       <option value="all"<?= $typeFilter === 'all' ? ' selected' : '' ?>>Všechny typy</option>
       <?php foreach (eventKindDefinitions() as $typeKey => $typeMeta): ?>
         <option value="<?= h($typeKey) ?>"<?= $typeFilter === $typeKey ? ' selected' : '' ?>>
-          <?= h((string)($typeMeta['label'] ?? $typeKey)) ?>
+          <?= h((string)$typeMeta['label']) ?>
         </option>
       <?php endforeach; ?>
     </select>

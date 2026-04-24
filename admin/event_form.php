@@ -19,7 +19,7 @@ if ($id !== null) {
 
 // Content locking – pokus o získání zámku při editaci existující události
 $contentLockWarning = null;
-if ($event && $id !== null) {
+if ($event) {
     $contentLockWarning = acquireContentLock('event', $id);
 }
 
@@ -51,7 +51,7 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $currentEventKind = normalizeEventKind((string)($event['event_kind'] ?? 'general'));
 $eventKindHelpMap = [];
 foreach (eventKindDefinitions() as $typeKey => $typeMeta) {
-    $eventKindHelpMap[$typeKey] = (string)($typeMeta['help'] ?? '');
+    $eventKindHelpMap[$typeKey] = (string)$typeMeta['help'];
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
@@ -140,7 +140,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <select id="event_kind" name="event_kind" aria-describedby="event-kind-help">
       <?php foreach (eventKindDefinitions() as $typeKey => $typeMeta): ?>
         <option value="<?= h($typeKey) ?>"<?= $currentEventKind === $typeKey ? ' selected' : '' ?>>
-          <?= h((string)($typeMeta['label'] ?? $typeKey)) ?>
+          <?= h((string)$typeMeta['label']) ?>
         </option>
       <?php endforeach; ?>
     </select>
