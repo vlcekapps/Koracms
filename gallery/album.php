@@ -49,7 +49,7 @@ if ($album === null) {
     http_response_code(404);
     $missingPath = $albumSlug !== ''
         ? BASE_URL . '/gallery/album/' . rawurlencode($albumSlug)
-        : BASE_URL . '/gallery/album.php' . ($albumId !== null ? '?id=' . urlencode((string)$albumId) : '');
+        : BASE_URL . '/gallery/album.php?id=' . urlencode((string)$albumId);
 
     renderPublicPage([
         'title' => 'Album nenalezeno – ' . $siteName,
@@ -67,7 +67,7 @@ $album = hydrateGalleryAlbumPresentation($album);
 $listingQuery = array_filter([
     'q' => $searchQuery !== '' ? $searchQuery : null,
     'strana' => null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn($value): bool => $value !== null);
 
 if ($albumSlug === '') {
     header('Location: ' . galleryAlbumPublicPath($album, $listingQuery));
@@ -145,7 +145,7 @@ $photos = $photosStmt->fetchAll();
 $albumListingQuery = array_filter([
     'q' => $searchQuery !== '' ? $searchQuery : null,
     'strana' => $page > 1 ? (string)$page : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn($value): bool => $value !== null);
 
 foreach ($photos as &$photo) {
     $photo = hydrateGalleryPhotoPresentation($photo);

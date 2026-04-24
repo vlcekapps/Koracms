@@ -55,7 +55,7 @@ if ($photo === null) {
     http_response_code(404);
     $missingPath = $photoSlug !== ''
         ? BASE_URL . '/gallery/photo/' . rawurlencode($photoSlug)
-        : BASE_URL . '/gallery/photo.php' . ($photoId !== null ? '?id=' . urlencode((string)$photoId) : '');
+        : BASE_URL . '/gallery/photo.php?id=' . urlencode((string)$photoId);
 
     renderPublicPage([
         'title' => 'Fotografie nenalezena – ' . $siteName,
@@ -79,7 +79,7 @@ $album = hydrateGalleryAlbumPresentation([
 $listingQuery = array_filter([
     'q' => $searchQuery !== '' ? $searchQuery : null,
     'strana' => $listingPage > 1 ? (string)$listingPage : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn($value): bool => $value !== null);
 
 $photo = hydrateGalleryPhotoPresentation($photo);
 if ($photoSlug === '') {
