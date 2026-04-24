@@ -8,6 +8,13 @@ if (!isModuleEnabled('reservations')) {
     exit;
 }
 
+/**
+ * @param array<string, mixed> $resource
+ * @param array<int, array<string, mixed>> $hours
+ * @param list<string> $blockedDates
+ * @param array<string, list<array<string, mixed>>> $bookingsByDate
+ * @param array<int, list<array<string, mixed>>> $slotsByDow
+ */
 function dayAvailability(
     string $dateStr,
     array $resource,
@@ -61,10 +68,7 @@ function dayAvailability(
     }
 
     $maxConcurrent = (int)$resource['max_concurrent'];
-    $dayHours = $hours[$dayOfWeek] ?? null;
-    if (!$dayHours) {
-        return 'closed';
-    }
+    $dayHours = $hours[$dayOfWeek];
 
     $openAt = new DateTime($dateStr . ' ' . substr($dayHours['open_time'], 0, 5));
     $closeAt = new DateTime($dateStr . ' ' . substr($dayHours['close_time'], 0, 5));

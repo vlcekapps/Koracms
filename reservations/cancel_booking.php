@@ -47,7 +47,7 @@ if ($error === null) {
 }
 
 $success = false;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canCancel && $error === null) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canCancel) {
     verifyCsrf();
 
     $updateStmt = $pdo->prepare(

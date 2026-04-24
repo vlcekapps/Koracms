@@ -11,6 +11,9 @@ if (!isModuleEnabled('reservations')) {
 $currentUrl = BASE_URL . '/reservations/my.php';
 requirePublicLogin($currentUrl);
 
+/**
+ * @param array<string, mixed> $booking
+ */
 function canCancelBooking(array $booking, int $nowTs): bool
 {
     $hours = (int)$booking['cancellation_hours'];
