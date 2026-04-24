@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 verifyCsrf();
@@ -31,7 +32,7 @@ $redirectToForm = static function (?int $articleId, int $targetBlogId, string $e
     }
     if ($articleId !== null) {
         $params['id'] = $articleId;
-    } else if (!isset($params['blog_id'])) {
+    } elseif (!isset($params['blog_id'])) {
         $params['blog_id'] = $targetBlogId > 0 ? $targetBlogId : $blogId;
     }
 
@@ -157,7 +158,7 @@ if ($articleIsMovingToAnotherBlog && $categoryId === null && $categorySelectionM
 $validTagIds = [];
 $allowedTagRows = [];
 if ($tagIds !== []) {
-    $requestedTagIds = array_values(array_unique(array_filter(array_map('intval', $tagIds), static fn(int $tagId): bool => $tagId > 0)));
+    $requestedTagIds = array_values(array_unique(array_filter(array_map('intval', $tagIds), static fn (int $tagId): bool => $tagId > 0)));
     $tagCheckStmt = $pdo->prepare("SELECT id, name, slug FROM cms_tags WHERE blog_id = ? ORDER BY id");
     $tagCheckStmt->execute([$blogId]);
     $allowedTagRows = $tagCheckStmt->fetchAll() ?: [];

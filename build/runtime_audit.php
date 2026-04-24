@@ -7042,6 +7042,13 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php')
         && str_contains($composerSource, 'admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_reply.php admin/chat_update.php')
         && str_contains($composerSource, 'admin/newsletter_bulk.php admin/newsletter_send.php admin/newsletter_subscriber_action.php'),
+    'php cs fixer admin save smoke check exists' => str_contains($composerSource, '"format:check:admin-save"')
+        && str_contains($composerSource, '"format:fix:admin-save"')
+        && str_contains($composerSource, '@format:check:admin-save')
+        && str_contains($composerSource, 'admin/blog_save.php admin/board_save.php admin/download_save.php admin/event_save.php admin/faq_save.php')
+        && str_contains($composerSource, 'admin/food_save.php admin/form_save.php admin/gallery_album_save.php admin/gallery_photo_save.php admin/news_save.php')
+        && str_contains($composerSource, 'admin/page_save.php admin/place_save.php admin/podcast_save.php admin/podcast_show_save.php')
+        && str_contains($composerSource, 'admin/polls_save.php admin/res_booking_save.php admin/res_resource_save.php admin/user_save.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')

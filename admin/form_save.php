@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 verifyCsrf();
@@ -239,7 +240,7 @@ if ($id !== null) {
     $existingNames = $pdo->prepare("SELECT id, name FROM cms_form_fields WHERE form_id = ?");
     $existingNames->execute([$id]);
     $existingNames = $existingNames->fetchAll(PDO::FETCH_KEY_PAIR);
-    $usedFieldNames = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $existingNames)));
+    $usedFieldNames = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $existingNames)));
 
     foreach ($submittedFields as $fieldData) {
         $fieldId = (int)($fieldData['id'] ?? 0);
