@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX endpoint pro drag & drop řazení.
  * POST: csrf_token, module, order[] (pole ID v novém pořadí)

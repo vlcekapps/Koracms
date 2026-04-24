@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 verifyCsrf();
@@ -10,8 +11,8 @@ $redirect = internalRedirectTarget(
 );
 $action = trim((string)($_POST['action'] ?? ''));
 $ids = array_values(array_filter(
-    array_map(static fn($value): int => (int)$value, (array)($_POST['ids'] ?? [])),
-    static fn(int $value): bool => $value > 0
+    array_map(static fn ($value): int => (int)$value, (array)($_POST['ids'] ?? [])),
+    static fn (int $value): bool => $value > 0
 ));
 
 if ($ids === []) {

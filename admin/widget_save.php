@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('settings_manage', 'Přístup odepřen.');
 verifyCsrf();
@@ -31,7 +32,7 @@ if (!isset($zones[$zone])) {
 $settings = widgetSettings($widget);
 $type = $widget['widget_type'];
 
-  switch ($type) {
+switch ($type) {
     case 'intro':
         $settings['content'] = $_POST['widget_content'] ?? ($settings['content'] ?? ($settings['text'] ?? ''));
         unset($settings['text']);

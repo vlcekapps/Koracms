@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Generický bulk handler pro admin moduly.
  * POST parametry: module, action, ids[], csrf_token, redirect
@@ -24,7 +25,7 @@ $moduleConfig = match ($module) {
         'table'      => 'cms_news',
         'capability' => 'news_manage_own',
         'own_column' => 'author_id',
-        'own_check'  => static fn(): bool => canManageOwnNewsOnly(),
+        'own_check'  => static fn (): bool => canManageOwnNewsOnly(),
         'log_prefix' => 'news',
         'cleanup'    => null,
     ],
@@ -164,8 +165,12 @@ $moduleConfig = match ($module) {
                     continue;
                 }
                 $f = (string)$photo['filename'];
-                if ($f !== '' && is_file($dir . $f)) { @unlink($dir . $f); }
-                if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
+                if ($f !== '' && is_file($dir . $f)) {
+                    @unlink($dir . $f);
+                }
+                if ($f !== '' && is_file($thumbDir . $f)) {
+                    @unlink($thumbDir . $f);
+                }
                 $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
             }
@@ -204,8 +209,12 @@ $moduleConfig = match ($module) {
                 $photos->execute([$id]);
                 foreach ($photos->fetchAll() as $photo) {
                     $f = (string)$photo['filename'];
-                    if ($f !== '' && is_file($dir . $f)) { @unlink($dir . $f); }
-                    if ($f !== '' && is_file($thumbDir . $f)) { @unlink($thumbDir . $f); }
+                    if ($f !== '' && is_file($dir . $f)) {
+                        @unlink($dir . $f);
+                    }
+                    if ($f !== '' && is_file($thumbDir . $f)) {
+                        @unlink($thumbDir . $f);
+                    }
                     $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
                 }

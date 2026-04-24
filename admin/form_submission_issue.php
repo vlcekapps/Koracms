@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('settings_manage', 'Přístup odepřen. GitHub bridge mohou spravovat jen správci webu.');
 verifyCsrf();
@@ -116,7 +117,7 @@ $title = trim((string)($_POST['title'] ?? ''));
 $body = trim((string)($_POST['body'] ?? ''));
 $labels = array_values(array_filter(
     array_map('trim', explode(',', (string)($_POST['labels'] ?? ''))),
-    static fn(string $label): bool => $label !== ''
+    static fn (string $label): bool => $label !== ''
 ));
 
 if ($repository === '' || $title === '' || $body === '') {
