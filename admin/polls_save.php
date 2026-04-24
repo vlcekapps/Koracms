@@ -8,7 +8,7 @@ $id = inputInt('post', 'id');
 $defaultRedirect = BASE_URL . '/admin/polls.php';
 $redirectTarget = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), $defaultRedirect);
 
-$redirectToForm = static function (?int $pollId, string $errorCode, string $backUrl) use ($defaultRedirect): never {
+$redirectToForm = static function (?int $pollId, string $errorCode, string $backUrl) use ($defaultRedirect) {
     $params = ['err' => $errorCode];
     if ($pollId !== null) {
         $params['id'] = (string)$pollId;
@@ -33,7 +33,7 @@ $isValidDate = static function (string $value): bool {
     $dateTime = DateTime::createFromFormat('Y-m-d', $value);
     $errors = DateTime::getLastErrors();
     $hasErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+        && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
 
     return $dateTime !== false && !$hasErrors && $dateTime->format('Y-m-d') === $value;
 };
@@ -41,7 +41,7 @@ $isValidTime = static function (string $value): bool {
     $dateTime = DateTime::createFromFormat('H:i', $value);
     $errors = DateTime::getLastErrors();
     $hasErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+        && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
 
     return $dateTime !== false && !$hasErrors && $dateTime->format('H:i') === $value;
 };
@@ -49,7 +49,7 @@ $composeDateTime = static function (string $date, string $time): ?string {
     $dateTime = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
     $errors = DateTime::getLastErrors();
     $hasErrors = is_array($errors)
-        && (((int)($errors['warning_count'] ?? 0)) > 0 || ((int)($errors['error_count'] ?? 0)) > 0);
+        && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
 
     if ($dateTime === false || $hasErrors || $dateTime->format('Y-m-d H:i') !== ($date . ' ' . $time)) {
         return null;

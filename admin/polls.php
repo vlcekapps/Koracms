@@ -31,7 +31,7 @@ if ($statusFilter === 'active') {
     $whereParts[] = pollPublicVisibilitySql('p', 'archive');
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $pagination = paginate(
     $pdo,
     "SELECT COUNT(*) FROM cms_polls p {$whereSql}",
@@ -58,12 +58,12 @@ $listQuery = array_filter([
     'q' => $q !== '' ? $q : null,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
     'strana' => $page > 1 ? $page : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn($value): bool => $value !== null);
 $currentListUrl = BASE_URL . '/admin/polls.php' . ($listQuery !== [] ? '?' . http_build_query($listQuery) : '');
 $pagerQuery = array_filter([
     'q' => $q !== '' ? $q : null,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn($value): bool => $value !== null);
 $pagerBaseUrl = '?' . ($pagerQuery !== [] ? http_build_query($pagerQuery) . '&' : '');
 
 adminHeader('Ankety');

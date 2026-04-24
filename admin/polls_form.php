@@ -299,7 +299,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   <h2 style="margin-top:2rem">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
   <div role="list" aria-label="Výsledky ankety">
     <?php foreach ($options as $option): ?>
-      <?php $percentage = $totalVotes > 0 ? round((int)$option['vote_count'] / $totalVotes * 100, 1) : 0; ?>
+      <?php $percentage = round((int)$option['vote_count'] / $totalVotes * 100, 1); ?>
       <div role="listitem" style="margin-bottom:.75rem">
         <div style="display:flex;justify-content:space-between;margin-bottom:.2rem">
           <span><?= h((string)$option['option_text']) ?></span>
