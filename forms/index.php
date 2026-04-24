@@ -2,6 +2,9 @@
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
+/**
+ * @param array<string, mixed> $field
+ */
 function publicFormFieldAcceptsUpload(array $field, string $originalName, string $mimeType): bool
 {
     $acceptTypes = trim((string)($field['accept_types'] ?? ''));
@@ -35,6 +38,11 @@ function publicFormFieldAcceptsUpload(array $field, string $originalName, string
     return false;
 }
 
+/**
+ * @param array<string, mixed> $field
+ * @param array<string, mixed> $file
+ * @return array{error?: string, value?: array{original_name: string, stored_name: string, mime_type: string, file_size: int}}
+ */
 function storePublicFormUpload(array $field, array $file): array
 {
     $maxFileSizeBytes = max(1, (int)($field['max_file_size_mb'] ?? 10)) * 1024 * 1024;
@@ -75,6 +83,9 @@ function storePublicFormUpload(array $field, array $file): array
     ];
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function publicFormUploadEntries(mixed $fileInput): array
 {
     if (!is_array($fileInput) || !isset($fileInput['error'])) {
@@ -89,7 +100,7 @@ function publicFormUploadEntries(mixed $fileInput): array
     $names = (array)($fileInput['name'] ?? []);
     $types = (array)($fileInput['type'] ?? []);
     $tmpNames = (array)($fileInput['tmp_name'] ?? []);
-    $errors = (array)($fileInput['error'] ?? []);
+    $errors = (array)$fileInput['error'];
     $sizes = (array)($fileInput['size'] ?? []);
 
     foreach ($errors as $index => $errorCode) {
@@ -108,7 +119,7 @@ function publicFormUploadEntries(mixed $fileInput): array
 function publicFormUploadInputHasFile(mixed $fileInput): bool
 {
     foreach (publicFormUploadEntries($fileInput) as $entry) {
-        if ((int)($entry['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+        if ((int)$entry['error'] !== UPLOAD_ERR_NO_FILE) {
             return true;
         }
     }
@@ -116,11 +127,15 @@ function publicFormUploadInputHasFile(mixed $fileInput): bool
     return false;
 }
 
+/**
+ * @param array<string, mixed> $field
+ * @return array{error?: string, value?: mixed}
+ */
 function storePublicFormUploads(array $field, mixed $fileInput): array
 {
     $uploadedFiles = [];
     foreach (publicFormUploadEntries($fileInput) as $entry) {
-        if ((int)($entry['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        if ((int)$entry['error'] === UPLOAD_ERR_NO_FILE) {
             continue;
         }
 
@@ -209,7 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('form_submit_' . (int)$form['id'], 5, 300);
     $addFieldError = static function (string $fieldName, string $message) use (&$errors, &$fieldErrors): void {
         $errors[] = $message;
-        if (!isset($fieldErrors[$fieldName]) || !is_array($fieldErrors[$fieldName])) {
+        if (!is_array($fieldErrors[$fieldName] ?? null)) {
             $fieldErrors[$fieldName] = [];
         }
         $fieldErrors[$fieldName][] = $message;
