@@ -7,6 +7,10 @@ if (!isModuleEnabled('board')) {
     exit;
 }
 
+/**
+ * @param list<array<string, mixed>> $items
+ * @return array<string, list<array<string, mixed>>>
+ */
 function groupBoardByCategory(array $items): array
 {
     $grouped = [];
