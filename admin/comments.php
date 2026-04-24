@@ -96,6 +96,30 @@ if ($q !== '') {
 }
 $currentRedirect = BASE_URL . '/admin/comments.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
 
+$commentRows = [];
+foreach ($comments as $comment) {
+    $commentStatus = normalizeCommentStatus((string)$comment['status']);
+    $rowActions = [];
+    if ($commentStatus !== 'approved') {
+        $rowActions['approve'] = 'Schválit';
+    }
+    if ($commentStatus !== 'pending') {
+        $rowActions['pending'] = 'Do čekajících';
+    }
+    if ($commentStatus !== 'spam') {
+        $rowActions['spam'] = 'Spam';
+    }
+    if ($commentStatus !== 'trash') {
+        $rowActions['trash'] = 'Koš';
+    }
+
+    $commentRows[] = $comment + [
+        'article_title_display' => $comment['article_title'] ?: 'Bez článku',
+        'normalized_status' => $commentStatus,
+        'row_actions' => $rowActions,
+    ];
+}
+
 adminHeader('Komentáře');
 ?>
 
@@ -128,7 +152,7 @@ adminHeader('Komentáře');
   <?php endif; ?>
 </form>
 
-<?php if (empty($comments)): ?>
+<?php if (empty($commentRows)): ?>
   <p><?= $q !== '' || $filter !== 'all' ? 'Pro zvolený filtr tu teď nejsou žádné komentáře.' : 'Zatím tu nejsou žádné komentáře.' ?></p>
 <?php else: ?>
   <form method="post" action="<?= BASE_URL ?>/admin/comment_bulk.php" id="bulk-form">
@@ -170,11 +194,7 @@ adminHeader('Komentáře');
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($comments as $comment): ?>
-        <?php
-        $commentStatus = normalizeCommentStatus((string)$comment['status']);
-        $articleTitle = $comment['article_title'] ?: 'Bez článku';
-        ?>
+      <?php foreach ($commentRows as $comment): ?>
         <tr>
           <td>
             <input type="checkbox" name="ids[]" value="<?= (int)$comment['id'] ?>"
@@ -189,10 +209,10 @@ adminHeader('Komentáře');
           <td>
             <?php if (!empty($comment['article_id'])): ?>
               <a href="<?= h(articlePublicPath(['id' => (int)$comment['article_id'], 'slug' => (string)($comment['article_slug'] ?? '')])) ?>">
-                <?= h($articleTitle) ?>
+                <?= h((string)$comment['article_title_display']) ?>
               </a>
             <?php else: ?>
-              <?= h($articleTitle) ?>
+              <?= h((string)$comment['article_title_display']) ?>
             <?php endif; ?>
           </td>
           <td>
@@ -203,24 +223,9 @@ adminHeader('Komentáře');
               <?= formatCzechDate((string)$comment['created_at']) ?>
             </time>
           </td>
-          <td><?= h(commentStatusLabel($commentStatus)) ?></td>
+          <td><?= h(commentStatusLabel((string)$comment['normalized_status'])) ?></td>
           <td class="actions">
-            <?php
-            $rowActions = [];
-            if ($commentStatus !== 'approved') {
-                $rowActions['approve'] = 'Schválit';
-            }
-            if ($commentStatus !== 'pending') {
-                $rowActions['pending'] = 'Do čekajících';
-            }
-            if ($commentStatus !== 'spam') {
-                $rowActions['spam'] = 'Spam';
-            }
-            if ($commentStatus !== 'trash') {
-                $rowActions['trash'] = 'Koš';
-            }
-            foreach ($rowActions as $actionKey => $actionLabel):
-            ?>
+            <?php foreach ($comment['row_actions'] as $actionKey => $actionLabel): ?>
               <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">

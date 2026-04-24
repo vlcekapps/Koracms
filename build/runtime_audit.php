@@ -7042,6 +7042,10 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php')
         && str_contains($composerSource, 'admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_reply.php admin/chat_update.php')
         && str_contains($composerSource, 'admin/newsletter_bulk.php admin/newsletter_send.php admin/newsletter_subscriber_action.php'),
+    'php cs fixer admin moderation smoke check exists' => str_contains($composerSource, '"format:check:admin-moderation"')
+        && str_contains($composerSource, '"format:fix:admin-moderation"')
+        && str_contains($composerSource, '@format:check:admin-moderation')
+        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/chat.php'),
     'php cs fixer admin save smoke check exists' => str_contains($composerSource, '"format:check:admin-save"')
         && str_contains($composerSource, '"format:fix:admin-save"')
         && str_contains($composerSource, '@format:check:admin-save')

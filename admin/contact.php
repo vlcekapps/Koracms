@@ -78,6 +78,22 @@ $emptyStateText = match ($statusFilter) {
     default => 'Zatím tu nejsou žádné zprávy z kontaktního formuláře.',
 };
 
+$messageRows = [];
+foreach ($messages as $message) {
+    $messageStatus = normalizeMessageStatus((string)($message['status'] ?? 'new'));
+    $messageRows[] = $message + [
+        'detail_href' => 'contact_message.php?id=' . (int)$message['id'] . '&redirect=' . rawurlencode($currentRedirect),
+        'message_preview' => mb_strimwidth(
+            preg_replace('/\s+/u', ' ', trim((string)$message['message'])),
+            0,
+            140,
+            '…',
+            'UTF-8'
+        ),
+        'normalized_status' => $messageStatus,
+    ];
+}
+
 adminHeader('Kontakt');
 ?>
 
@@ -111,7 +127,7 @@ adminHeader('Kontakt');
   <?php endif; ?>
 </form>
 
-<?php if (empty($messages)): ?>
+<?php if (empty($messageRows)): ?>
   <p><?= h($emptyStateText) ?></p>
 <?php else: ?>
   <form method="post" action="<?= BASE_URL ?>/admin/contact_bulk.php" id="contact-bulk-form">
@@ -151,18 +167,7 @@ adminHeader('Kontakt');
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($messages as $message): ?>
-        <?php
-        $messageStatus = normalizeMessageStatus((string)($message['status'] ?? 'new'));
-        $detailHref = 'contact_message.php?id=' . (int)$message['id'] . '&redirect=' . rawurlencode($currentRedirect);
-        $messagePreview = mb_strimwidth(
-            preg_replace('/\s+/u', ' ', trim((string)$message['message'])),
-            0,
-            140,
-            '…',
-            'UTF-8'
-        );
-        ?>
+      <?php foreach ($messageRows as $message): ?>
         <tr>
           <td>
             <input type="checkbox" name="ids[]" value="<?= (int)$message['id'] ?>"
@@ -173,7 +178,7 @@ adminHeader('Kontakt');
           </td>
           <td>
             <strong><?= h((string)$message['subject']) ?></strong>
-            <br><small style="color:#555"><?= h($messagePreview) ?></small>
+            <br><small style="color:#555"><?= h((string)$message['message_preview']) ?></small>
           </td>
           <td>
             <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
@@ -181,13 +186,13 @@ adminHeader('Kontakt');
             </time>
           </td>
           <td>
-            <strong<?= $messageStatus === 'new' ? ' style="color:#9a3412"' : '' ?>>
-              <?= h(messageStatusLabel($messageStatus)) ?>
+            <strong<?= $message['normalized_status'] === 'new' ? ' style="color:#9a3412"' : '' ?>>
+              <?= h(messageStatusLabel((string)$message['normalized_status'])) ?>
             </strong>
           </td>
           <td class="actions">
-            <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
-            <?php if ($messageStatus !== 'read'): ?>
+            <a href="<?= h((string)$message['detail_href']) ?>" class="btn">Zobrazit detail</a>
+            <?php if ($message['normalized_status'] !== 'read'): ?>
               <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
@@ -196,7 +201,7 @@ adminHeader('Kontakt');
                 <button type="submit" class="btn">Označit jako přečtené</button>
               </form>
             <?php endif; ?>
-            <?php if ($messageStatus !== 'handled'): ?>
+            <?php if ($message['normalized_status'] !== 'handled'): ?>
               <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
@@ -205,7 +210,7 @@ adminHeader('Kontakt');
                 <button type="submit" class="btn">Označit jako vyřízené</button>
               </form>
             <?php endif; ?>
-            <?php if ($messageStatus !== 'new'): ?>
+            <?php if ($message['normalized_status'] !== 'new'): ?>
               <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
