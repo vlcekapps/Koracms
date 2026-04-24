@@ -6981,6 +6981,35 @@ if ($cronGuardIssues === []) {
 
 echo "=== foundation_guardrails ===\n";
 $foundationIssues = [];
+$formatCheckScriptText = '';
+$composerPayload = json_decode($composerSource, true);
+if (is_array($composerPayload) && isset($composerPayload['scripts']) && is_array($composerPayload['scripts'])) {
+    foreach ($composerPayload['scripts'] as $scriptName => $scriptCommand) {
+        if (!is_string($scriptName) || !str_starts_with($scriptName, 'format:check')) {
+            continue;
+        }
+        if (is_array($scriptCommand)) {
+            $formatCheckScriptText .= ' ' . implode(' ', array_map(
+                static fn ($part): string => is_scalar($part) ? (string)$part : '',
+                $scriptCommand,
+            ));
+            continue;
+        }
+        if (is_scalar($scriptCommand)) {
+            $formatCheckScriptText .= ' ' . (string)$scriptCommand;
+        }
+    }
+}
+$adminPhpPaths = glob(__DIR__ . '/../admin/*.php') ?: [];
+$adminPhpFiles = array_map(
+    static fn (string $path): string => 'admin/' . basename($path),
+    $adminPhpPaths,
+);
+sort($adminPhpFiles);
+preg_match_all('/admin\/[A-Za-z0-9_]+\.php/', $formatCheckScriptText, $formatCheckAdminMatches);
+$formatCheckedAdminFiles = array_values(array_unique($formatCheckAdminMatches[0] ?? []));
+sort($formatCheckedAdminFiles);
+$missingAdminFormatFiles = array_values(array_diff($adminPhpFiles, $formatCheckedAdminFiles));
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -7206,6 +7235,11 @@ foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {
         $foundationIssues[] = $label;
     }
+}
+if ($adminPhpFiles === []) {
+    $foundationIssues[] = 'admin formatter coverage could not scan admin PHP files';
+} elseif ($missingAdminFormatFiles !== []) {
+    $foundationIssues[] = 'php cs fixer missing admin format coverage: ' . implode(', ', $missingAdminFormatFiles);
 }
 
 $robotsProbe = fetchUrl($baseUrl . '/robots.txt', '', 0);
