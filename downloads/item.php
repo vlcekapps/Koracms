@@ -42,7 +42,7 @@ if (!$download) {
     $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/downloads/' . rawurlencode($slug)
-        : BASE_URL . '/downloads/item.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '');
+        : BASE_URL . '/downloads/item.php?id=' . urlencode((string)$id);
 
     renderPublicPage([
         'title' => 'Položka nenalezena - ' . $siteName,

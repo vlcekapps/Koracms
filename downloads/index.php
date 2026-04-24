@@ -7,6 +7,10 @@ if (!isModuleEnabled('downloads')) {
     exit;
 }
 
+/**
+ * @param list<array<string, mixed>> $items
+ * @return array<string, list<array<string, mixed>>>
+ */
 function groupDownloadsByCategory(array $items): array
 {
     $grouped = [];
