@@ -10,6 +10,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **Přísnější PHPStan smoke check – veřejné novinky mají samostatnou level 6 kontrolu** – `composer ci:basic` nově pouští i `composer analyse:strict:public-news` pro veřejný výpis a detail novinek; not-found URL detailu už nepoužívá redundantní větev po validaci vstupu.
 - **Přísnější PHPStan smoke check – veřejné jídelní a nápojové lístky mají samostatnou level 6 kontrolu** – `composer ci:basic` nově pouští i `composer analyse:strict:public-food` pro veřejný přehled, archiv a detail lístku; not-found URL detailu už nepoužívá redundantní větev po validaci vstupu.
 - **Přísnější PHPStan smoke check – veřejné FAQ má samostatnou level 6 kontrolu** – `composer ci:basic` nově pouští i `composer analyse:strict:public-faq` pro veřejný přehled a detail znalostní báze; helpery pro kategorické breadcrumbs/potomky mají přesnější array kontrakty a not-found URL detailu už nepoužívá redundantní větev po validaci vstupu.
 - **Přísnější PHPStan smoke check – veřejné události mají samostatnou level 6 kontrolu** – `composer ci:basic` nově pouští i `composer analyse:strict:public-events` pro veřejný výpis, detail a ICS export událostí; not-found URL detailu už nepoužívá redundantní větev po validaci vstupu.

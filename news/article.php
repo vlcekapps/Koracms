@@ -77,7 +77,7 @@ if (!$news) {
             'title' => 'Novinka nenalezena – ' . $siteName,
             'url' => $slug !== ''
                 ? siteUrl('/news/' . rawurlencode($slug))
-                : siteUrl('/news/article.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '')),
+                : siteUrl('/news/article.php?id=' . urlencode((string)$id)),
         ],
         'view' => 'not-found',
         'body_class' => 'page-news-not-found',
