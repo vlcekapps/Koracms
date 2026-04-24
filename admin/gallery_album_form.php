@@ -65,7 +65,7 @@ if ($id !== null) {
     );
     $stmt->execute([$id]);
     $photos = array_map(
-        static fn(array $photo): array => hydrateGalleryPhotoPresentation($photo),
+        static fn (array $photo): array => hydrateGalleryPhotoPresentation($photo),
         $stmt->fetchAll()
     );
 }
@@ -108,7 +108,9 @@ adminHeader($pageTitle);
     <select id="parent_id" name="parent_id"<?= adminFieldAttributes('parent_id', $errorKey, $fieldErrorMap) ?>>
       <option value="">— Nejvyšší úroveň —</option>
       <?php foreach ($allAlbums as $candidateAlbum): ?>
-        <?php if (in_array((int)$candidateAlbum['id'], $forbidden, true)) continue; ?>
+        <?php if (in_array((int)$candidateAlbum['id'], $forbidden, true)) {
+            continue;
+        } ?>
         <option value="<?= (int)$candidateAlbum['id'] ?>"<?= (string)$album['parent_id'] === (string)$candidateAlbum['id'] ? ' selected' : '' ?>>
           <?= h((string)$candidateAlbum['name']) ?>
         </option>

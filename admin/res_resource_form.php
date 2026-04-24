@@ -14,7 +14,10 @@ if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_res_resources WHERE id = ?");
     $stmt->execute([$id]);
     $resource = $stmt->fetch();
-    if (!$resource) { header('Location: res_resources.php'); exit; }
+    if (!$resource) {
+        header('Location: res_resources.php');
+        exit;
+    }
 
     $stmt = $pdo->prepare("SELECT * FROM cms_res_hours WHERE resource_id = ? ORDER BY day_of_week");
     $stmt->execute([$id]);
@@ -254,7 +257,7 @@ $fieldErrorMessages = [
           $isClosed  = $hRow ? (int)$hRow['is_closed'] : ($id ? 1 : 0);
           $openTime  = $hRow ? substr($hRow['open_time'], 0, 5) : '09:00';
           $closeTime = $hRow ? substr($hRow['close_time'], 0, 5) : '17:00';
-      ?>
+          ?>
         <tr>
           <td><?= h($dayNames[$d]) ?></td>
           <td>

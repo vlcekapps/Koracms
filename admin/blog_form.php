@@ -44,7 +44,7 @@ if ($allBlogs === []) {
     exit;
 }
 
-$accessibleBlogIds = array_map(static fn(array $blogEntry): int => (int)$blogEntry['id'], $allBlogs);
+$accessibleBlogIds = array_map(static fn (array $blogEntry): int => (int)$blogEntry['id'], $allBlogs);
 $defaultAccessibleBlog = $allBlogs[0];
 $sourceArticleBlogId = (int)($article['blog_id'] ?? 0);
 $requestedBlogId = (int)($_GET['blog_id'] ?? $article['blog_id'] ?? $defaultAccessibleBlog['id']);
@@ -110,7 +110,7 @@ try {
 
         $sourceTagDetails = loadArticleTagDetails($pdo, $id);
         $articleTagIds = array_values(array_map(
-            static fn(array $tag): int => (int)$tag['id'],
+            static fn (array $tag): int => (int)$tag['id'],
             $sourceTagDetails
         ));
     }
@@ -204,7 +204,7 @@ $initialTagIds = $articleIsMovingToSelectedBlog
     : $articleTagIds;
 $initialMissingCategoryName = trim((string)$initialMoveTaxonomyState['missing_category_name']);
 $initialMissingTagNames = array_values(array_filter(array_map(
-    static fn(array $tag): string => trim((string)$tag['name']),
+    static fn (array $tag): string => trim((string)$tag['name']),
     $initialMoveTaxonomyState['missing_tags']
 )));
 
@@ -356,7 +356,7 @@ adminHeader($pageTitle);
     } catch (\PDOException $e) {
         $authorName = '–';
     }
-    ?>
+?>
     <p style="color:#555;font-size:.9rem;margin-bottom:1rem">
       Autor: <strong><?= h($authorName) ?></strong>
     </p>
@@ -473,8 +473,8 @@ adminHeader($pageTitle);
     <label for="content">Text článku <span aria-hidden="true">*</span></label>
     <textarea id="content" name="content" rows="15" required aria-required="true"
               <?= !$useWysiwyg
-                  ? adminFieldAttributes('content', $err, $fieldErrorMap, ['blog-content-help'])
-                  : adminFieldAttributes('content', $err, $fieldErrorMap) ?>><?= h($article['content'] ?? '') ?></textarea>
+              ? adminFieldAttributes('content', $err, $fieldErrorMap, ['blog-content-help'])
+              : adminFieldAttributes('content', $err, $fieldErrorMap) ?>><?= h($article['content'] ?? '') ?></textarea>
     <?php if (!$useWysiwyg): ?><small id="blog-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small><?php endif; ?>
     <?php adminRenderFieldError('content', $err, $fieldErrorMap, $fieldErrorMessages['content']); ?>
     <?php if (!$useWysiwyg): ?>
@@ -616,17 +616,17 @@ adminHeader($pageTitle);
     const noCategoryLabel = <?= json_encode($noCategoryLabel, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const sourceArticleTaxonomy = <?= json_encode([
-        'categoryName' => $sourceCategoryName,
-        'tags' => array_map(
-            static function (array $tag): array {
-                return [
-                    'name' => (string)$tag['name'],
-                    'slug' => (string)$tag['slug'],
-                ];
-            },
-            $sourceTagDetails
-        ),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    'categoryName' => $sourceCategoryName,
+    'tags' => array_map(
+        static function (array $tag): array {
+            return [
+                'name' => (string)$tag['name'],
+                'slug' => (string)$tag['slug'],
+            ];
+        },
+        $sourceTagDetails
+    ),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogMeta = <?= json_encode(array_map(static function (array $blogEntry): array {
         return [
             'id' => (int)$blogEntry['id'],

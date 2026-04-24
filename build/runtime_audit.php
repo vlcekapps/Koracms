@@ -7049,6 +7049,13 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/food_save.php admin/form_save.php admin/gallery_album_save.php admin/gallery_photo_save.php admin/news_save.php')
         && str_contains($composerSource, 'admin/page_save.php admin/place_save.php admin/podcast_save.php admin/podcast_show_save.php')
         && str_contains($composerSource, 'admin/polls_save.php admin/res_booking_save.php admin/res_resource_save.php admin/user_save.php'),
+    'php cs fixer admin form smoke check exists' => str_contains($composerSource, '"format:check:admin-form"')
+        && str_contains($composerSource, '"format:fix:admin-form"')
+        && str_contains($composerSource, '@format:check:admin-form')
+        && str_contains($composerSource, 'admin/blog_form.php admin/board_form.php admin/download_form.php admin/event_form.php admin/faq_form.php')
+        && str_contains($composerSource, 'admin/food_form.php admin/form_form.php admin/gallery_album_form.php admin/gallery_photo_form.php admin/news_form.php')
+        && str_contains($composerSource, 'admin/newsletter_form.php admin/page_form.php admin/place_form.php admin/podcast_form.php admin/podcast_show_form.php')
+        && str_contains($composerSource, 'admin/polls_form.php admin/res_resource_form.php admin/user_form.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')

@@ -53,7 +53,7 @@ $fieldErrorMessages = [
 $pageTitle = $form
     ? 'Upravit formulář – ' . mb_strimwidth((string)$form['title'], 0, 60, '…', 'UTF-8')
     : ($presetDefinition !== null ? 'Nový formulář – ' . (string)$presetDefinition['label'] : 'Nový formulář');
-$newFieldDefaultSort = $fields !== [] ? (max(array_map(static fn(array $field): int => (int)$field['sort_order'], $fields)) + 1) : 0;
+$newFieldDefaultSort = $fields !== [] ? (max(array_map(static fn (array $field): int => (int)$field['sort_order'], $fields)) + 1) : 0;
 $formDefaults = $presetDefinition['form'] ?? [];
 $presetFields = (array)($presetDefinition['fields'] ?? []);
 $fieldSourceForOptions = $fields !== [] ? $fields : $presetFields;
