@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 header('Cache-Control: no-cache, no-store, must-revalidate');
 checkMaintenanceMode();

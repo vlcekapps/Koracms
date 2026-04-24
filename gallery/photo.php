@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -79,7 +80,7 @@ $album = hydrateGalleryAlbumPresentation([
 $listingQuery = array_filter([
     'q' => $searchQuery !== '' ? $searchQuery : null,
     'strana' => $listingPage > 1 ? (string)$listingPage : null,
-], static fn($value): bool => $value !== null);
+], static fn ($value): bool => $value !== null);
 
 $photo = hydrateGalleryPhotoPresentation($photo);
 if ($photoSlug === '') {
@@ -97,7 +98,7 @@ $sequenceStmt = $pdo->prepare(
      ORDER BY p.sort_order, p.id"
 );
 $sequenceStmt->execute([$albumId]);
-$orderedIds = array_map(static fn($value): int => (int)$value, $sequenceStmt->fetchAll(PDO::FETCH_COLUMN));
+$orderedIds = array_map(static fn ($value): int => (int)$value, $sequenceStmt->fetchAll(PDO::FETCH_COLUMN));
 $photoIndex = array_search((int)$photo['id'], $orderedIds, true);
 $photoPosition = $photoIndex === false ? null : $photoIndex + 1;
 $photoCount = count($orderedIds);

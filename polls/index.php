@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -226,7 +227,7 @@ if ($detailRequested) {
     );
     $listStmt->execute(array_merge($params, [$perPage, $offset]));
     $polls = array_map(
-        static fn(array $item): array => hydratePollPresentation($item),
+        static fn (array $item): array => hydratePollPresentation($item),
         $listStmt->fetchAll()
     );
 

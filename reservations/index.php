@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 header('Cache-Control: no-cache, no-store, must-revalidate');
 checkMaintenanceMode();
@@ -26,7 +27,7 @@ $resources = $pdo->query(
 )->fetchAll();
 
 $locationsByResource = [];
-$resourceIds = array_map(static fn(array $resource): int => (int)$resource['id'], $resources);
+$resourceIds = array_map(static fn (array $resource): int => (int)$resource['id'], $resources);
 if (!empty($resourceIds)) {
     $placeholders = implode(',', array_fill(0, count($resourceIds), '?'));
     $locStmt = $pdo->prepare(

@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -40,7 +41,7 @@ $categoryOptions = $pdo->query(
        AND TRIM(COALESCE(category, '')) <> ''
      ORDER BY category_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$categoryOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $categoryOptions)));
+$categoryOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $categoryOptions)));
 if ($categoryFilter !== '' && !in_array($categoryFilter, $categoryOptions, true)) {
     $categoryFilter = '';
 }
@@ -52,7 +53,7 @@ $localityOptions = $pdo->query(
        AND TRIM(COALESCE(locality, '')) <> ''
      ORDER BY locality_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$localityOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $localityOptions)));
+$localityOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $localityOptions)));
 if ($localityFilter !== '' && !in_array($localityFilter, $localityOptions, true)) {
     $localityFilter = '';
 }
@@ -100,7 +101,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $places = array_map(
-    static fn(array $place): array => hydratePlacePresentation($place),
+    static fn (array $place): array => hydratePlacePresentation($place),
     $stmt->fetchAll()
 );
 
@@ -171,7 +172,7 @@ renderPublicPage([
             'category' => $categoryFilter !== '' ? $categoryFilter : null,
             'locality' => $localityFilter !== '' ? $localityFilter : null,
             'strana' => $page > 1 ? (string)$page : null,
-        ], static fn($value): bool => $value !== null && $value !== ''),
+        ], static fn ($value): bool => $value !== null && $value !== ''),
     ],
     'current_nav' => 'places',
     'body_class' => 'page-places-index',

@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -67,7 +68,7 @@ $album = hydrateGalleryAlbumPresentation($album);
 $listingQuery = array_filter([
     'q' => $searchQuery !== '' ? $searchQuery : null,
     'strana' => null,
-], static fn($value): bool => $value !== null);
+], static fn ($value): bool => $value !== null);
 
 if ($albumSlug === '') {
     header('Location: ' . galleryAlbumPublicPath($album, $listingQuery));
@@ -145,7 +146,7 @@ $photos = $photosStmt->fetchAll();
 $albumListingQuery = array_filter([
     'q' => $searchQuery !== '' ? $searchQuery : null,
     'strana' => $page > 1 ? (string)$page : null,
-], static fn($value): bool => $value !== null);
+], static fn ($value): bool => $value !== null);
 
 foreach ($photos as &$photo) {
     $photo = hydrateGalleryPhotoPresentation($photo);
