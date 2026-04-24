@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -23,4 +24,3 @@ if ($filePath === '' || !is_file($filePath)) {
 }
 
 sendStoredFileDownload($filePath, mediaDownloadName($media));
-

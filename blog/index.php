@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -212,7 +213,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $articles = array_map(
-    static fn(array $article): array => hydrateAuthorPresentation($article),
+    static fn (array $article): array => hydrateAuthorPresentation($article),
     $stmt->fetchAll()
 );
 

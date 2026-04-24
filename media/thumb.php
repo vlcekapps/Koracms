@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -62,4 +63,3 @@ while (!feof($handle)) {
 }
 fclose($handle);
 exit;
-
