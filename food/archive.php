@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -111,7 +112,7 @@ $cardsStmt = $pdo->prepare(
 );
 $cardsStmt->execute(array_merge($params, [$perPage, $offset]));
 $cards = array_map(
-    static fn(array $card): array => hydrateFoodCardPresentation($card),
+    static fn (array $card): array => hydrateFoodCardPresentation($card),
     $cardsStmt->fetchAll()
 );
 

@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -125,7 +126,7 @@ $relatedStmt = $pdo->prepare(
 );
 $relatedStmt->execute($relatedParams);
 $relatedFaqs = array_map(
-    static fn(array $relatedFaq): array => hydrateFaqPresentation($relatedFaq),
+    static fn (array $relatedFaq): array => hydrateFaqPresentation($relatedFaq),
     $relatedStmt->fetchAll()
 );
 

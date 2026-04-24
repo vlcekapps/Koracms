@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -143,7 +144,7 @@ if ($q !== '') {
 }
 
 $faqs = array_map(
-    static fn(array $faq): array => hydrateFaqPresentation($faq),
+    static fn (array $faq): array => hydrateFaqPresentation($faq),
     $faqRows
 );
 
@@ -157,7 +158,7 @@ if ($filterCatId !== null && isset($catById[$filterCatId])) {
     $allowedCatIds = faqCategoryDescendantIds($catTree, $filterCatId);
     $filteredFaqs = array_values(array_filter(
         $faqs,
-        static fn(array $faq): bool => in_array((int)($faq['category_id'] ?? 0), $allowedCatIds, true)
+        static fn (array $faq): bool => in_array((int)($faq['category_id'] ?? 0), $allowedCatIds, true)
     ));
 }
 

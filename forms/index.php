@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -257,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($fieldType === 'checkbox_group') {
                 $rawValues = $_POST[$name] ?? [];
                 $previewData[$name] = is_array($rawValues)
-                    ? array_values(array_filter(array_map(static fn($item): string => trim((string)$item), $rawValues), static fn(string $item): bool => $item !== ''))
+                    ? array_values(array_filter(array_map(static fn ($item): string => trim((string)$item), $rawValues), static fn (string $item): bool => $item !== ''))
                     : [];
                 continue;
             }
@@ -305,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($fieldType === 'checkbox_group') {
                 $rawValues = $_POST[$name] ?? [];
                 $value = is_array($rawValues)
-                    ? array_values(array_filter(array_map(static fn($item): string => trim((string)$item), $rawValues), static fn(string $item): bool => $item !== ''))
+                    ? array_values(array_filter(array_map(static fn ($item): string => trim((string)$item), $rawValues), static fn (string $item): bool => $item !== ''))
                     : [];
                 $formData[$name] = $value;
 
