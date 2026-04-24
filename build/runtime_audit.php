@@ -7045,7 +7045,7 @@ $foundationChecks = [
     'php cs fixer admin moderation smoke check exists' => str_contains($composerSource, '"format:check:admin-moderation"')
         && str_contains($composerSource, '"format:fix:admin-moderation"')
         && str_contains($composerSource, '@format:check:admin-moderation')
-        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/chat.php'),
+        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/chat.php admin/form_submissions.php'),
     'php cs fixer admin save smoke check exists' => str_contains($composerSource, '"format:check:admin-save"')
         && str_contains($composerSource, '"format:fix:admin-save"')
         && str_contains($composerSource, '@format:check:admin-save')

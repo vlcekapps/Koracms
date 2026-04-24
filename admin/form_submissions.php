@@ -320,24 +320,24 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
       <?php foreach ($submissions as $submission): ?>
         <?php
         $submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
-        $submissionSummary = formSubmissionSummary($fieldDefinitions, $submissionData, 2);
-        if ($submissionSummary === '') {
-            $submissionSummary = 'Bez vyplněných hodnot, které by šly zobrazit v přehledu.';
-        }
-        $assigneeLabel = trim((string)($submission['assigned_email'] ?? '')) !== ''
-            ? formSubmissionAssigneeDisplayName([
-                'email' => (string)($submission['assigned_email'] ?? ''),
-                'first_name' => (string)($submission['assigned_first_name'] ?? ''),
-                'last_name' => (string)($submission['assigned_last_name'] ?? ''),
-                'nickname' => (string)($submission['assigned_nickname'] ?? ''),
-                'role' => (string)($submission['assigned_role'] ?? ''),
-                'is_superadmin' => (int)($submission['assigned_is_superadmin'] ?? 0),
-            ])
-            : 'Nepřiřazeno';
-        $detailHref = 'form_submission.php?id=' . (int)$submission['id']
-            . '&form_id=' . (int)$formId
-            . '&redirect=' . rawurlencode($currentRedirect);
-        ?>
+          $submissionSummary = formSubmissionSummary($fieldDefinitions, $submissionData, 2);
+          if ($submissionSummary === '') {
+              $submissionSummary = 'Bez vyplněných hodnot, které by šly zobrazit v přehledu.';
+          }
+          $assigneeLabel = trim((string)($submission['assigned_email'] ?? '')) !== ''
+              ? formSubmissionAssigneeDisplayName([
+                  'email' => (string)($submission['assigned_email'] ?? ''),
+                  'first_name' => (string)($submission['assigned_first_name'] ?? ''),
+                  'last_name' => (string)($submission['assigned_last_name'] ?? ''),
+                  'nickname' => (string)($submission['assigned_nickname'] ?? ''),
+                  'role' => (string)($submission['assigned_role'] ?? ''),
+                  'is_superadmin' => (int)($submission['assigned_is_superadmin'] ?? 0),
+              ])
+              : 'Nepřiřazeno';
+          $detailHref = 'form_submission.php?id=' . (int)$submission['id']
+              . '&form_id=' . (int)$formId
+              . '&redirect=' . rawurlencode($currentRedirect);
+          ?>
         <tr>
           <td>
             <input type="checkbox"
