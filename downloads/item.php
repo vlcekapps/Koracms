@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -78,7 +79,7 @@ if ((string)$download['series_key'] !== '') {
     );
     $versionsStmt->execute([(string)$download['series_key'], (int)$download['id']]);
     $otherVersions = array_map(
-        static fn(array $version): array => hydrateDownloadPresentation($version),
+        static fn (array $version): array => hydrateDownloadPresentation($version),
         $versionsStmt->fetchAll()
     );
 }

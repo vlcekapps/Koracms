@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -56,7 +57,7 @@ $locationOptions = $pdo->query(
        AND TRIM(COALESCE(location, '')) <> ''
      ORDER BY location_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$locationOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $locationOptions)));
+$locationOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $locationOptions)));
 if ($locationFilter !== '' && !in_array($locationFilter, $locationOptions, true)) {
     $locationFilter = '';
 }
@@ -150,7 +151,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $items = array_map(
-    static fn(array $event): array => hydrateEventPresentation($event),
+    static fn (array $event): array => hydrateEventPresentation($event),
     $stmt->fetchAll()
 );
 

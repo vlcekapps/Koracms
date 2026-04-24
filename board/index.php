@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -47,7 +48,7 @@ if (!preg_match('/^\d{4}-\d{2}$/', $monthFilter)) {
 }
 
 $categories = $pdo->query("SELECT id, name FROM cms_board_categories ORDER BY sort_order, name")->fetchAll();
-$validCategoryIds = array_map(static fn(array $category): int => (int)$category['id'], $categories);
+$validCategoryIds = array_map(static fn (array $category): int => (int)$category['id'], $categories);
 if ($categoryId !== null && !in_array($categoryId, $validCategoryIds, true)) {
     $categoryId = null;
 }
@@ -149,7 +150,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $items = array_map(
-    static fn(array $document): array => hydrateBoardPresentation($document),
+    static fn (array $document): array => hydrateBoardPresentation($document),
     $stmt->fetchAll()
 );
 

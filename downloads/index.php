@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 
@@ -62,7 +63,7 @@ $categories = $pdo->query(
      GROUP BY c.id, c.name
      ORDER BY c.name"
 )->fetchAll();
-$validCategoryIds = array_map(static fn(array $category): int => (int)$category['id'], $categories);
+$validCategoryIds = array_map(static fn (array $category): int => (int)$category['id'], $categories);
 if ($categoryId !== null && !in_array($categoryId, $validCategoryIds, true)) {
     $categoryId = null;
 }
@@ -76,7 +77,7 @@ $platformOptions = $pdo->query(
        AND TRIM(COALESCE(platform_label, '')) <> ''
      ORDER BY platform_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$platformOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $platformOptions)));
+$platformOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $platformOptions)));
 if ($platformFilter !== '' && !in_array($platformFilter, $platformOptions, true)) {
     $platformFilter = '';
 }
@@ -146,7 +147,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $items = array_map(
-    static fn(array $download): array => hydrateDownloadPresentation($download),
+    static fn (array $download): array => hydrateDownloadPresentation($download),
     $stmt->fetchAll()
 );
 
