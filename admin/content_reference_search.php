@@ -787,18 +787,18 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
         }
 
         $photoStmt = $pdo->prepare(
-            "SELECT p.id, p.slug, p.caption, p.alt_text, p.filename, p.created_at, a.name AS album_title,
-                    COALESCE(NULLIF(p.caption, ''), NULLIF(p.alt_text, ''), a.name, CONCAT('Fotografie #', p.id)) AS title,
+            "SELECT p.id, p.slug, p.title, p.filename, p.created_at, a.name AS album_title,
+                    COALESCE(NULLIF(p.title, ''), a.name, CONCAT('Fotografie #', p.id)) AS title,
                     'gallery_photo' AS type
              FROM cms_gallery_photos p
              INNER JOIN cms_gallery_albums a ON a.id = p.album_id
              WHERE a.status = 'published'
                AND a.is_published = 1
-               AND (p.caption LIKE ? OR p.alt_text LIKE ? OR p.slug LIKE ? OR a.name LIKE ?)
+               AND (p.title LIKE ? OR p.slug LIKE ? OR a.name LIKE ?)
              ORDER BY p.created_at DESC
              LIMIT 6"
         );
-        $photoStmt->execute([$like, $like, $like, $like]);
+        $photoStmt->execute([$like, $like, $like]);
         foreach ($photoStmt->fetchAll() as $row) {
             $results[] = contentReferenceResult($row);
         }

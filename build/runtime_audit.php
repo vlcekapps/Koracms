@@ -6155,6 +6155,7 @@ $contentSnippetIssues = [];
 $contentLibrarySource = (string)file_get_contents(dirname(__DIR__) . '/lib/content.php');
 $contentPickerSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_picker.php');
 $contentSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
+$contentSitemapSource = (string)file_get_contents(dirname(__DIR__) . '/sitemap.php');
 $contentHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
     : '';
@@ -6263,6 +6264,15 @@ if (!str_contains($contentSearchSource, "SELECT id, name AS title, slug, descrip
 }
 if (str_contains($contentSearchSource, "SELECT id, name AS title, slug, excerpt, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type")) {
     $contentSnippetIssues[] = 'content reference search gallery album query still references non-existent excerpt column';
+}
+if (str_contains($contentSearchSource, 'p.caption') || str_contains($contentSearchSource, 'p.alt_text')) {
+    $contentSnippetIssues[] = 'content reference search gallery photo query still references non-existent caption/alt_text columns';
+}
+if (!str_contains($contentSearchSource, 'p.title LIKE ? OR p.slug LIKE ? OR a.name LIKE ?')) {
+    $contentSnippetIssues[] = 'content reference search gallery photo query is not using real gallery photo fields';
+}
+if (!str_contains($contentSitemapSource, "galleryPhotoPublicVisibilitySql('p', 'a') . \"\n             ORDER BY p.created_at DESC, p.id DESC")) {
+    $contentSnippetIssues[] = 'sitemap gallery photo query must qualify created_at/id through the photo alias';
 }
 if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('content_reference_gallery_http'")) {
     $contentSnippetIssues[] = 'build/http_integration.php is missing gallery content picker coverage';

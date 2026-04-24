@@ -6,6 +6,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Opraveno
+- **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
+
 ### Změněno
 - **Přísnější PHPStan smoke check – level 6 nově zahrnuje i admin workflow anket** – `composer analyse:strict` se rozšířil na 213 stabilizovaných souborů včetně `admin/polls.php`, `admin/polls_form.php` a `admin/polls_save.php`; přehled anket už neskládá `WHERE` přes redundantní kontrolu vždy neprázdného seznamu podmínek, výsledky nepočítají procenta přes zbytečný fallback a validace data/času používá přesnější kontrakt `DateTime::getLastErrors()`.
 - **Přísnější PHPStan smoke check – level 6 nově zahrnuje i admin workflow událostí** – `composer analyse:strict` se rozšířil na 210 stabilizovaných souborů včetně `admin/events.php`, `admin/event_form.php` a `admin/event_save.php`; přehled událostí už neskládá `WHERE` přes redundantní kontrolu vždy neprázdného seznamu podmínek, metadata typů akcí používají přesnější kontrakt a save handler drží PHP 8.0 kompatibilitu bez návratového typu `never`.

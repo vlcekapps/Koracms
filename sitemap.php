@@ -278,7 +278,7 @@ if (isModuleEnabled('gallery')) {
              FROM cms_gallery_photos p
              INNER JOIN cms_gallery_albums a ON a.id = p.album_id
              WHERE " . galleryPhotoPublicVisibilitySql('p', 'a') . "
-             ORDER BY created_at DESC, id DESC"
+             ORDER BY p.created_at DESC, p.id DESC"
         )->fetchAll();
         foreach ($galleryPhotos as $galleryPhoto) {
             sitemapWriteUrl(galleryPhotoPublicUrl($galleryPhoto), 'monthly', '0.4', sitemapLastmod((string)($galleryPhoto['sitemap_lastmod'] ?? '')));
