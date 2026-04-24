@@ -10,6 +10,7 @@ if (!isModuleEnabled('faq')) {
 /**
  * Sestaví breadcrumbs pro FAQ kategorii.
  *
+ * @param array<int, array<string, mixed>> $catById
  * @return array<int, array<string, mixed>>
  */
 function faqCategoryBreadcrumbs(array $catById, int $categoryId): array
@@ -28,6 +29,7 @@ function faqCategoryBreadcrumbs(array $catById, int $categoryId): array
 /**
  * Vrátí seznam kategorií i s potomky pro filtrování.
  *
+ * @param array<int, list<array<string, mixed>>> $catTree
  * @return array<int>
  */
 function faqCategoryDescendantIds(array $catTree, int $categoryId): array

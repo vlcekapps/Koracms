@@ -50,7 +50,7 @@ if (!$faq) {
     $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/faq/' . rawurlencode($slug)
-        : BASE_URL . '/faq/item.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '');
+        : BASE_URL . '/faq/item.php?id=' . urlencode((string)$id);
 
     renderPublicPage([
         'title' => 'Položka nenalezena – ' . $siteName,
