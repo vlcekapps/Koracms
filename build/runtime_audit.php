@@ -7056,6 +7056,12 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/food_form.php admin/form_form.php admin/gallery_album_form.php admin/gallery_photo_form.php admin/news_form.php')
         && str_contains($composerSource, 'admin/newsletter_form.php admin/page_form.php admin/place_form.php admin/podcast_form.php admin/podcast_show_form.php')
         && str_contains($composerSource, 'admin/polls_form.php admin/res_resource_form.php admin/user_form.php'),
+    'php cs fixer admin taxonomy smoke check exists' => str_contains($composerSource, '"format:check:admin-taxonomy"')
+        && str_contains($composerSource, '"format:fix:admin-taxonomy"')
+        && str_contains($composerSource, '@format:check:admin-taxonomy')
+        && str_contains($composerSource, 'admin/blog_cats.php admin/blog_tags.php admin/blog_members.php admin/blog_pages.php')
+        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/res_categories.php admin/res_locations.php')
+        && str_contains($composerSource, 'admin/page_reorder.php admin/gallery_photo_reorder.php admin/gallery_album_delete.php admin/gallery_photo_delete.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')

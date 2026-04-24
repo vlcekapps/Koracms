@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $submittedOrder = array_values(array_filter(
         (array)($_POST['order'] ?? []),
-        static fn($value): bool => is_scalar($value) && (string)$value !== ''
+        static fn ($value): bool => is_scalar($value) && (string)$value !== ''
     ));
 
     $stmt = $pdo->prepare(
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          ORDER BY blog_nav_order, title, id"
     );
     $stmt->execute([(int)$blog['id']]);
-    $validIds = array_map(static fn(array $row): int => (int)$row['id'], $stmt->fetchAll());
+    $validIds = array_map(static fn (array $row): int => (int)$row['id'], $stmt->fetchAll());
     $validLookup = array_fill_keys($validIds, true);
 
     $normalizedOrder = [];

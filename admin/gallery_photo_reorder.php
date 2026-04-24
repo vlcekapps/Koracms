@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
 verifyCsrf();
@@ -28,7 +29,7 @@ $photosStmt = $pdo->prepare(
      ORDER BY sort_order, id"
 );
 $photosStmt->execute([$albumId]);
-$orderedIds = array_map(static fn($value): int => (int)$value, $photosStmt->fetchAll(PDO::FETCH_COLUMN));
+$orderedIds = array_map(static fn ($value): int => (int)$value, $photosStmt->fetchAll(PDO::FETCH_COLUMN));
 $currentIndex = array_search($photoId, $orderedIds, true);
 
 if ($currentIndex !== false) {

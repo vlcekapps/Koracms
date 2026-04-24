@@ -15,7 +15,7 @@ if ($allBlogs === []) {
     requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu štítků blogu nemáte potřebné oprávnění.');
 }
 
-$allowedBlogIds = array_map(static fn(array $blog): int => (int)$blog['id'], $allBlogs);
+$allowedBlogIds = array_map(static fn (array $blog): int => (int)$blog['id'], $allBlogs);
 $blogId = inputInt('get', 'blog_id') ?? inputInt('post', 'blog_id') ?? (int)($allBlogs[0]['id'] ?? 0);
 if (!in_array($blogId, $allowedBlogIds, true)) {
     $blogId = (int)($allBlogs[0]['id'] ?? 0);

@@ -16,7 +16,7 @@ if ($allBlogs === []) {
     requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu týmů blogů nemáte potřebné oprávnění.');
 }
 
-$accessibleBlogIds = array_map(static fn(array $blogRow): int => (int)$blogRow['id'], $allBlogs);
+$accessibleBlogIds = array_map(static fn (array $blogRow): int => (int)$blogRow['id'], $allBlogs);
 $blogId = inputInt('get', 'blog_id') ?? inputInt('post', 'blog_id') ?? (int)($allBlogs[0]['id'] ?? 0);
 if (!in_array($blogId, $accessibleBlogIds, true)) {
     $blogId = (int)($allBlogs[0]['id'] ?? 0);
@@ -208,7 +208,7 @@ $displayName = static function (array $userRow): string {
 
     return (string)($userRow['email'] ?? '');
 };
-$roleLabel = static fn(string $roleKey): string => $roleOptions[$roleKey] ?? 'Autor blogu';
+$roleLabel = static fn (string $roleKey): string => $roleOptions[$roleKey] ?? 'Autor blogu';
 
 usort($eligibleUsers, static function (array $leftUser, array $rightUser) use ($memberMap, $displayName): int {
     $leftAssigned = isset($memberMap[(int)($leftUser['id'] ?? 0)]) ? 0 : 1;
@@ -221,8 +221,8 @@ usort($eligibleUsers, static function (array $leftUser, array $rightUser) use ($
 });
 
 $assignedCount = count($memberMap);
-$managerCount = count(array_filter($memberMap, static fn(string $memberRole): bool => $memberRole === 'manager'));
-$authorCount = count(array_filter($memberMap, static fn(string $memberRole): bool => $memberRole === 'author'));
+$managerCount = count(array_filter($memberMap, static fn (string $memberRole): bool => $memberRole === 'manager'));
+$authorCount = count(array_filter($memberMap, static fn (string $memberRole): bool => $memberRole === 'author'));
 
 adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'] : ''));
 ?>
@@ -350,13 +350,13 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
           <?php foreach ($eligibleUsers as $eligibleUser): ?>
             <?php
             $userId = (int)($eligibleUser['id'] ?? 0);
-            $assignedRole = $memberMap[$userId] ?? '';
-            $isAssigned = $assignedRole !== '';
-            $otherMemberships = array_values(array_filter(
-                $allMembershipsByUser[$userId] ?? [],
-                static fn(array $membership): bool => (int)$membership['blog_id'] !== $blogId
-            ));
-            ?>
+              $assignedRole = $memberMap[$userId] ?? '';
+              $isAssigned = $assignedRole !== '';
+              $otherMemberships = array_values(array_filter(
+                  $allMembershipsByUser[$userId] ?? [],
+                  static fn (array $membership): bool => (int)$membership['blog_id'] !== $blogId
+              ));
+              ?>
             <tr>
               <td>
                 <?= h($displayName($eligibleUser)) ?>
