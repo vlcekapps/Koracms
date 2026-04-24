@@ -1,4 +1,5 @@
 <?php
+
 // Přejmenujte tento soubor na config.php a vyplňte své údaje.
 
 // Přihlašovací údaje k databázi

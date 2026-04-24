@@ -7044,7 +7044,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/page_positions.php admin/widget_add.php admin/widget_delete.php admin/widget_save.php')
         && str_contains($composerSource, 'admin/form_delete.php admin/form_submission_action.php admin/form_submission_bulk.php')
         && str_contains($composerSource, 'admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php')
-        && str_contains($composerSource, 'auth.php author.php blog_router.php confirm_email.php cron.php feed.php health.php index.php maintenance.php')
+        && str_contains($composerSource, 'auth.php author.php blog_router.php config.sample.php confirm_email.php cron.php feed.php health.php index.php maintenance.php')
         && str_contains($composerSource, 'newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php')
         && str_contains($composerSource, 'register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'authors/index.php blog/index.php blog/article.php blog/page.php')
