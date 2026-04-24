@@ -85,9 +85,9 @@ if ($canManageBlog && isModuleEnabled('blog')) {
 }
 
 if ($canManageNews && isModuleEnabled('news')) {
-$newsScopeSql = $canManageAllNews
-    ? 'SELECT COUNT(*) FROM cms_news WHERE deleted_at IS NULL'
-    : 'SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND deleted_at IS NULL';
+    $newsScopeSql = $canManageAllNews
+        ? 'SELECT COUNT(*) FROM cms_news WHERE deleted_at IS NULL'
+        : 'SELECT COUNT(*) FROM cms_news WHERE author_id = ? AND deleted_at IS NULL';
     $newsScopeParams = $canManageAllNews ? [] : [currentUserId()];
     $newsCount = $safeCount($pdo, $newsScopeSql, $newsScopeParams);
     if ($newsCount !== null) {
@@ -777,7 +777,7 @@ if ($showOperationalOverview && $canManageSettings):
     } catch (\PDOException $e) {
         $recentActivity = [];
     }
-?>
+    ?>
 <?php if ($recentActivity !== []): ?>
 <section aria-labelledby="activity-feed-heading" style="margin-top:1.5rem">
   <h2 id="activity-feed-heading">Poslední aktivita</h2>

@@ -7070,7 +7070,7 @@ $foundationChecks = [
     'php cs fixer admin overview smoke check exists' => str_contains($composerSource, '"format:check:admin-overview"')
         && str_contains($composerSource, '"format:fix:admin-overview"')
         && str_contains($composerSource, '@format:check:admin-overview')
-        && str_contains($composerSource, 'admin/audit_log.php admin/backup.php admin/blog.php admin/blogs.php admin/board.php')
+        && str_contains($composerSource, 'admin/index.php admin/audit_log.php admin/backup.php admin/blog.php admin/blogs.php admin/board.php')
         && str_contains($composerSource, 'admin/downloads.php admin/events.php admin/faq.php admin/food.php admin/forms.php')
         && str_contains($composerSource, 'admin/gallery_albums.php admin/gallery_photos.php admin/integrity.php admin/media.php admin/menu.php')
         && str_contains($composerSource, 'admin/news.php admin/newsletter.php admin/pages.php admin/places.php admin/podcast.php')
