@@ -85,7 +85,7 @@ $normalizeBoardDate = static function (string $value): ?string {
     }
 
     $errors = DateTimeImmutable::getLastErrors();
-    if ($errors !== false && (($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0)) {
+    if ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) {
         return null;
     }
 
@@ -192,13 +192,13 @@ if (!empty($_FILES['file']['name'])) {
 }
 
 if ($id !== null) {
-    if ($existingDocument && ($existingDocument['preview_token'] ?? '') === '') {
+    if (($existingDocument['preview_token'] ?? '') === '') {
         $previewToken = bin2hex(random_bytes(16));
         $pdo->prepare("UPDATE cms_board SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
     }
 
-    $oldSnapshot = $existingDocument ? $boardRevisionSnapshot($existingDocument) : [];
-    $oldPath = $existingDocument ? boardPublicPath($existingDocument) : '';
+    $oldSnapshot = $boardRevisionSnapshot($existingDocument);
+    $oldPath = boardPublicPath($existingDocument);
     $requestedStatus = trim($_POST['article_status'] ?? '');
     if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
         $requestedStatus = $existingDocument['status'] ?? 'published';
@@ -314,9 +314,7 @@ if ($id !== null) {
 }
 
 // Uvolnění zámku obsahu po úspěšném uložení
-if ($id !== null) {
-    releaseContentLock('board', $id);
-}
+releaseContentLock('board', $id);
 
 header('Location: ' . BASE_URL . '/admin/board.php');
 exit;

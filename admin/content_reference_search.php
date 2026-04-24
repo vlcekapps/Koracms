@@ -9,6 +9,9 @@ header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
+/**
+ * @return list<string>
+ */
 function contentReferenceAllowedTypes(): array
 {
     return [
@@ -54,6 +57,9 @@ function contentReferenceTypeLabel(string $type): string
     };
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function contentReferenceTitle(array $row): string
 {
     $type = (string)($row['type'] ?? '');
@@ -77,6 +83,9 @@ function contentReferenceTitle(array $row): string
     };
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function contentReferenceExcerpt(array $row, int $limit = 180): string
 {
     $type = (string)($row['type'] ?? '');
@@ -105,6 +114,9 @@ function contentReferenceExcerpt(array $row, int $limit = 180): string
     };
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function mediaReferenceKind(array $row): string
 {
     $mimeType = strtolower(trim((string)($row['mime_type'] ?? '')));
@@ -124,6 +136,9 @@ function mediaReferenceKind(array $row): string
     return 'media_file';
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function mediaReferencePublicPath(array $row): string
 {
     if ((int)($row['id'] ?? 0) <= 0 || trim((string)($row['filename'] ?? '')) === '') {
@@ -133,6 +148,9 @@ function mediaReferencePublicPath(array $row): string
     return mediaFileUrl($row);
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function mediaReferenceExcerpt(array $row, int $limit = 180): string
 {
     $parts = [];
@@ -161,6 +179,9 @@ function mediaReferenceExcerpt(array $row, int $limit = 180): string
     return mb_strimwidth(implode(' · ', $parts), 0, $limit, '…', 'UTF-8');
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function contentReferencePublicPath(array $row): string
 {
     return match ((string)($row['type'] ?? '')) {
@@ -183,6 +204,9 @@ function contentReferencePublicPath(array $row): string
     };
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function contentReferenceTimestamp(array $row): int
 {
     $value = trim((string)($row['created_at'] ?? ''));
@@ -194,6 +218,20 @@ function contentReferenceTimestamp(array $row): int
     return $timestamp !== false ? $timestamp : 0;
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array{
+ *     type: string,
+ *     kind_label: string,
+ *     title: string,
+ *     url: string,
+ *     path: string,
+ *     excerpt: string,
+ *     media_alt: string,
+ *     thumbnail_url: string,
+ *     insert_actions: list<array<string, mixed>>
+ * }
+ */
 function contentReferenceResult(array $row): array
 {
     $title = contentReferenceTitle($row);
@@ -272,6 +310,10 @@ function contentReferencePodcastEpisodeShortcode(string $showSlug, string $episo
     return '[podcast_episode]' . $showSlug . '/' . $episodeSlug . '[/podcast_episode]';
 }
 
+/**
+ * @param array<string, mixed> $extra
+ * @return array<string, mixed>
+ */
 function contentReferenceBuildAction(
     string $kind,
     string $label,
@@ -294,6 +336,9 @@ function contentReferenceBuildAction(
     return array_merge($action, $extra);
 }
 
+/**
+ * @param array<string, mixed> $row
+ */
 function contentReferenceThumbnailUrl(array $row): string
 {
     $type = (string)($row['type'] ?? '');
@@ -323,6 +368,10 @@ function contentReferenceThumbnailUrl(array $row): string
     return '';
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>|null
+ */
 function contentReferenceDownloadMediaAction(array $row): ?array
 {
     $externalUrl = normalizeDownloadExternalUrl((string)($row['external_url'] ?? ''));
@@ -386,6 +435,10 @@ function contentReferenceDownloadMediaAction(array $row): ?array
     return null;
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>|null
+ */
 function contentReferenceDownloadDirectLinkAction(array $row): ?array
 {
     $linkUrl = '';
@@ -411,6 +464,10 @@ function contentReferenceDownloadDirectLinkAction(array $row): ?array
     );
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>|null
+ */
 function contentReferencePodcastEpisodeMediaAction(array $row): ?array
 {
     $audioSrc = podcastEpisodeAudioUrl($row);
@@ -432,6 +489,10 @@ function contentReferencePodcastEpisodeMediaAction(array $row): ?array
     );
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>|null
+ */
 function contentReferenceMediaLibraryAction(array $row): ?array
 {
     $type = mediaReferenceKind($row);
@@ -499,6 +560,10 @@ function contentReferenceMediaLibraryAction(array $row): ?array
     return null;
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>|null
+ */
 function contentReferenceGalleryPhotoImageAction(array $row): ?array
 {
     $photo = hydrateGalleryPhotoPresentation($row);
@@ -517,6 +582,10 @@ function contentReferenceGalleryPhotoImageAction(array $row): ?array
     );
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return list<array<string, mixed>>
+ */
 function contentReferenceInsertActions(array $row): array
 {
     $actions = [

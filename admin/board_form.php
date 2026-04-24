@@ -19,7 +19,7 @@ if ($id !== null) {
 
 // Content locking – pokus o získání zámku při editaci existující položky
 $contentLockWarning = null;
-if ($document && $id !== null) {
+if ($document !== null) {
     $contentLockWarning = acquireContentLock('board', $id);
 }
 
@@ -50,7 +50,7 @@ $publicLabel = boardModulePublicLabel();
 $currentBoardType = normalizeBoardType((string)($document['board_type'] ?? 'document'));
 $boardTypeHelpMap = [];
 foreach (boardTypeDefinitions() as $typeKey => $typeMeta) {
-    $boardTypeHelpMap[$typeKey] = (string)($typeMeta['help'] ?? '');
+    $boardTypeHelpMap[$typeKey] = (string)$typeMeta['help'];
 }
 $err = trim($_GET['err'] ?? '');
 $formError = match ($err) {
@@ -348,7 +348,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 })();
 </script>
 
-<?php if ($document && $id !== null): ?>
+<?php if ($id !== null): ?>
 <script nonce="<?= cspNonce() ?>">
 (function () {
     var lockInterval = setInterval(function () {
