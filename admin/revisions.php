@@ -12,7 +12,7 @@ $allowedTypes = [
     'event'   => ['table' => 'cms_events',   'label' => 'Událost', 'title_col' => 'title', 'back' => 'event_form.php'],
     'faq'     => ['table' => 'cms_faqs',     'label' => 'FAQ', 'title_col' => 'question', 'back' => 'faq_form.php'],
     'board'   => ['table' => 'cms_board',    'label' => 'Položka vývěsky', 'title_col' => 'title', 'back' => 'board_form.php'],
-    'download'=> ['table' => 'cms_downloads','label' => 'Položka ke stažení', 'title_col' => 'title', 'back' => 'download_form.php'],
+    'download' => ['table' => 'cms_downloads','label' => 'Položka ke stažení', 'title_col' => 'title', 'back' => 'download_form.php'],
     'food'    => ['table' => 'cms_food_cards','label' => 'Jídelní nebo nápojový lístek', 'title_col' => 'title', 'back' => 'food_form.php'],
     'podcast_show' => ['table' => 'cms_podcast_shows', 'label' => 'Podcastový pořad', 'title_col' => 'title', 'back' => 'podcast_show_form.php'],
     'podcast_episode' => ['table' => 'cms_podcasts', 'label' => 'Podcastová epizoda', 'title_col' => 'title', 'back' => 'podcast_form.php'],
@@ -82,6 +82,18 @@ function simpleDiff(string $old, string $new): string
     return $out;
 }
 
+$revisionRows = [];
+foreach ($revisions as $revision) {
+    $old = (string)$revision['old_value'];
+    $new = (string)$revision['new_value'];
+    $revisionRows[] = $revision + [
+        'old_length' => mb_strlen($old),
+        'new_length' => mb_strlen($new),
+        'diff_html' => simpleDiff($old, $new),
+        'use_details' => mb_strlen($old) > 500 || mb_strlen($new) > 500,
+    ];
+}
+
 adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'], 0, 60));
 ?>
 
@@ -91,10 +103,10 @@ adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'],
 
 <p>
   <strong><?= h($config['label']) ?>:</strong> <?= h((string)$entity['entity_title']) ?><br>
-  <strong>Celkem revizí:</strong> <?= count($revisions) ?>
+  <strong>Celkem revizí:</strong> <?= count($revisionRows) ?>
 </p>
 
-<?php if (empty($revisions)): ?>
+<?php if (empty($revisionRows)): ?>
   <p>Pro tuto položku zatím nebyly zaznamenány žádné revize.</p>
 <?php else: ?>
   <table>
@@ -108,22 +120,19 @@ adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'],
       </tr>
     </thead>
     <tbody>
-    <?php foreach ($revisions as $rev): ?>
+    <?php foreach ($revisionRows as $rev): ?>
       <tr>
         <td><time datetime="<?= h(str_replace(' ', 'T', (string)$rev['created_at'])) ?>"><?= h(formatCzechDate((string)$rev['created_at'])) ?></time></td>
         <td><?= h((string)$rev['user_name']) ?></td>
         <td><?= h(revisionFieldLabel($entityType, (string)$rev['field_name'])) ?></td>
         <td style="max-width:600px;word-break:break-word">
-          <?php
-            $old = (string)$rev['old_value'];
-            $new = (string)$rev['new_value'];
-            if (mb_strlen($old) > 500 || mb_strlen($new) > 500): ?>
+          <?php if ((bool)$rev['use_details']): ?>
             <details>
-              <summary>Zobrazit diff (<?= mb_strlen($old) ?> → <?= mb_strlen($new) ?> znaků)</summary>
-              <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5;margin-top:.5rem"><?= simpleDiff($old, $new) ?></div>
+              <summary>Zobrazit diff (<?= (int)$rev['old_length'] ?> → <?= (int)$rev['new_length'] ?> znaků)</summary>
+              <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5;margin-top:.5rem"><?= $rev['diff_html'] ?></div>
             </details>
           <?php else: ?>
-            <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5"><?= simpleDiff($old, $new) ?></div>
+            <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5"><?= $rev['diff_html'] ?></div>
           <?php endif; ?>
         </td>
       </tr>

@@ -157,7 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     // Sestavit seznam fotek k stažení
     $photoList = [];
     foreach ($xml->table as $table) {
-        if ((string)$table['name'] !== 'p_photos') continue;
+        if ((string)$table['name'] !== 'p_photos') {
+            continue;
+        }
         foreach ($table->tablerow as $row) {
             $data = [];
             foreach ($row->tablecolumn as $col) {
@@ -289,7 +291,8 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
                 $pdo->prepare(
                     "UPDATE cms_gallery_photos SET filename = ? WHERE filename = ? OR title = ?"
                 )->execute([$safeFilename, $filename, $origTitle]);
-            } catch (\PDOException $e) {}
+            } catch (\PDOException $e) {
+            }
 
             $dl['downloaded']++;
         } else {
@@ -356,16 +359,28 @@ if (isset($_SESSION['photo_dl'])) {
     }
 }
 
+$downloadState = [];
+$downloadProgress = 0;
+if ($isDownloading) {
+    $downloadState = $_SESSION['photo_dl'];
+    $downloadTotal = (int)($downloadState['total'] ?? 0);
+    $downloadOffset = (int)($downloadState['offset'] ?? 0);
+    $downloadProgress = $downloadTotal > 0 ? round($downloadOffset / $downloadTotal * 100) : 0;
+}
+
+$albumsForSelect = !$isDownloading
+    ? $pdo->query("SELECT id, name FROM cms_gallery_albums ORDER BY name")->fetchAll()
+    : [];
+
 adminHeader('Stažení fotografií z eStránek');
 ?>
 
 <?php if ($isDownloading): ?>
-  <?php $dl = $_SESSION['photo_dl']; $progress = $dl['total'] > 0 ? round($dl['offset'] / $dl['total'] * 100) : 0; ?>
   <section style="background:#e3f2fd;border:1px solid #1565c0;border-radius:8px;padding:1rem;margin-bottom:1.5rem" role="status" aria-live="polite" aria-labelledby="dl-progress-heading">
     <h2 id="dl-progress-heading" style="margin-top:0">Stahování probíhá…</h2>
-    <p>Zpracováno <?= (int)$dl['offset'] ?> z <?= (int)$dl['total'] ?> fotografií (<?= $progress ?>%).</p>
-    <p>Staženo: <?= (int)$dl['downloaded'] ?> | Přeskočeno: <?= (int)$dl['skipped'] ?> | Neúspěšných: <?= (int)$dl['failed'] ?></p>
-    <progress value="<?= (int)$dl['offset'] ?>" max="<?= (int)$dl['total'] ?>" style="width:100%;height:1.5rem"><?= $progress ?>%</progress>
+    <p>Zpracováno <?= (int)$downloadState['offset'] ?> z <?= (int)$downloadState['total'] ?> fotografií (<?= $downloadProgress ?>%).</p>
+    <p>Staženo: <?= (int)$downloadState['downloaded'] ?> | Přeskočeno: <?= (int)$downloadState['skipped'] ?> | Neúspěšných: <?= (int)$downloadState['failed'] ?></p>
+    <progress value="<?= (int)$downloadState['offset'] ?>" max="<?= (int)$downloadState['total'] ?>" style="width:100%;height:1.5rem"><?= $downloadProgress ?>%</progress>
     <p style="margin-bottom:0"><small>Stránka se automaticky obnovuje po každé dávce <?= $batchSize ?> fotek.</small></p>
   </section>
 <?php endif; ?>
@@ -412,9 +427,7 @@ adminHeader('Stažení fotografií z eStránek');
       <label for="parent_album_id">Importovat alba do:</label>
       <select id="parent_album_id" name="parent_album_id" style="min-width:200px" aria-describedby="album-help">
         <option value="0">Nikam (do kořene galerie)</option>
-        <?php
-        $albumsForSelect = $pdo->query("SELECT id, name FROM cms_gallery_albums ORDER BY name")->fetchAll();
-        foreach ($albumsForSelect as $alb): ?>
+        <?php foreach ($albumsForSelect as $alb): ?>
           <option value="<?= (int)$alb['id'] ?>"><?= h((string)$alb['name']) ?></option>
         <?php endforeach; ?>
       </select>
