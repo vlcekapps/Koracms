@@ -1,14 +1,19 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu míst rezervací nemáte potřebné oprávnění.');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: res_locations.php'); exit;
+    header('Location: res_locations.php');
+    exit;
 }
 verifyCsrf();
 
 $id = inputInt('post', 'id');
-if ($id === null) { header('Location: res_locations.php'); exit; }
+if ($id === null) {
+    header('Location: res_locations.php');
+    exit;
+}
 
 $pdo = db_connect();
 

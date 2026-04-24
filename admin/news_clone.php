@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Duplikace novinky – vytvoří kopii s novým ID, stavem „draft" a aktuálním uživatelem jako autorem.
  * POST: csrf_token, id

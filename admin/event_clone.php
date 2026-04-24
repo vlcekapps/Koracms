@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Duplikace události – vytvoří kopii s novým ID, stavem „draft" a novým preview tokenem.
  * POST: csrf_token, id

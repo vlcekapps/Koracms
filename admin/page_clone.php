@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Duplikace stránky – vytvoří kopii s novým ID, stavem „draft" a skrytou viditelností.
  * POST: csrf_token, id

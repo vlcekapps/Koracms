@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('blog_taxonomies_manage', 'Přístup odepřen.');
 verifyCsrf();

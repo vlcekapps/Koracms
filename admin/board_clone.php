@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Duplikace položky úřední desky – vytvoří kopii s novým ID, stavem „draft" a dnešním datem vyvěšení.
  * POST: csrf_token, id

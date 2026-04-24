@@ -7026,6 +7026,15 @@ $foundationChecks = [
         && str_contains($composerSource, 'lib/revisions.php lib/stats.php lib/theme.php lib/totp.php lib/ui.php lib/uploads.php')
         && str_contains($composerSource, 'lib/webhooks.php lib/widgets.php')
         && str_contains($composerSource, '@format:check'),
+    'php cs fixer admin clone/delete smoke check exists' => str_contains($composerSource, '"format:check:admin-delete"')
+        && str_contains($composerSource, '"format:fix:admin-delete"')
+        && str_contains($composerSource, '@format:check:admin-delete')
+        && str_contains($composerSource, 'admin/blog_clone.php admin/blog_delete.php admin/blog_blog_delete.php admin/blog_cat_delete.php admin/blog_tag_delete.php')
+        && str_contains($composerSource, 'admin/board_clone.php admin/board_delete.php admin/news_clone.php admin/news_delete.php')
+        && str_contains($composerSource, 'admin/page_clone.php admin/page_delete.php admin/event_clone.php admin/event_delete.php')
+        && str_contains($composerSource, 'admin/download_delete.php admin/food_delete.php admin/faq_delete.php admin/faq_cat_delete.php')
+        && str_contains($composerSource, 'admin/dl_cat_delete.php admin/place_delete.php admin/polls_delete.php admin/podcast_delete.php admin/podcast_show_delete.php')
+        && str_contains($composerSource, 'admin/newsletter_subscriber_delete.php admin/user_delete.php admin/res_cat_delete.php admin/res_location_delete.php admin/res_resource_delete.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')
