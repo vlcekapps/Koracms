@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Cron endpoint – plánované úlohy CMS.
  *

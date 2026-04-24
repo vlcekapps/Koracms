@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i core vstupy `auth.php` a `cron.php`** – sdílené přihlášení, ACL/session helpery a cron endpoint jsou nově součástí `composer format:check` i `composer ci:basic`; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.
 - **PHPStan guardrail – runtime audit nově hlídá kompletní strict pokrytí administrace** – `php build/runtime_audit.php` porovnává všechny `admin/*.php` soubory s `analyse:strict*` skripty a při novém nepokrytém admin souboru vypíše konkrétní chybějící cestu.
 - **Code style guardrail – runtime audit nově hlídá kompletní formatter pokrytí administrace** – `php build/runtime_audit.php` při `foundation_guardrails` prochází všechny `admin/*.php` soubory a ověřuje, že každý z nich je v některém `format:check*` skriptu; pokud vznikne nový nepokrytý admin soubor, audit vypíše konkrétní cestu.
 - **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i administrační display obrazovky** – `composer ci:basic` nově spouští samostatný `composer format:check:admin-display` pro řazení modulů v navigaci, správu šablon a přehled widgetů; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.

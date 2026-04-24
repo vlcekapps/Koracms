@@ -1,4 +1,5 @@
 <?php
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
@@ -482,7 +483,9 @@ function requireLogin(string $loginUrl = '/admin/login.php'): void
             if ($u) {
                 $name = $u['nickname'] !== '' ? $u['nickname']
                       : trim($u['first_name'] . ' ' . $u['last_name']);
-                if ($name === '') $name = $u['email'];
+                if ($name === '') {
+                    $name = $u['email'];
+                }
                 $_SESSION['cms_user_id']    = (int)$u['id'];
                 $_SESSION['cms_user_email'] = $u['email'];
                 $_SESSION['cms_user_name']  = $name;
@@ -560,8 +563,15 @@ function logout(): void
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $p = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000,
-            $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $p['path'],
+            $p['domain'],
+            $p['secure'],
+            $p['httponly']
+        );
     }
     session_destroy();
 }
@@ -602,7 +612,9 @@ function captchaVerify(string $input): bool
 {
     $expected = $_SESSION['captcha_answer'] ?? null;
     unset($_SESSION['captcha_answer']);
-    if ($expected === null) return false;
+    if ($expected === null) {
+        return false;
+    }
     return (int)trim($input) === (int)$expected;
 }
 
