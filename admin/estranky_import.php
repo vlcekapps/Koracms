@@ -7,7 +7,9 @@ requireCapability('import_export_manage', 'Přístup odepřen. Pro import z eStr
 
 function esDecodeValue(string $value): string
 {
-    if ($value === '') return '';
+    if ($value === '') {
+        return '';
+    }
     $decoded = base64_decode($value, true);
     if ($decoded !== false && mb_check_encoding($decoded, 'UTF-8') && $decoded !== $value) {
         if (preg_match('/^[A-Za-z0-9+\/\r\n]+=*$/', trim($value))) {
@@ -129,7 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     foreach ($sections as $sec) {
         $secId = (int)($sec['id'] ?? 0);
         $secTitle = esDecodeValue((string)($sec['title'] ?? ''));
-        if ($secId <= 0 || $secTitle === '' || (int)($sec['lang'] ?? 1) !== 1) continue;
+        if ($secId <= 0 || $secTitle === '' || (int)($sec['lang'] ?? 1) !== 1) {
+            continue;
+        }
 
         $existing = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ? AND blog_id = ?");
         $existing->execute([$secTitle, $blogId]);
@@ -149,7 +153,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $insertedArticles = 0;
     $skippedArticles = 0;
     foreach ($articles as $art) {
-        if ((int)($art['lang'] ?? 1) !== 1) { $skippedArticles++; continue; }
+        if ((int)($art['lang'] ?? 1) !== 1) {
+            $skippedArticles++;
+            continue;
+        }
 
         $title = esDecodeValue((string)($art['title'] ?? ''));
         $content = esDecodeValue((string)($art['content'] ?? ''));
@@ -160,11 +167,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         $updatedAt = (string)($art['updated'] ?? $createdAt);
         $sectionId = (int)($art['section'] ?? 0);
 
-        if ($title === '') { $skippedArticles++; continue; }
+        if ($title === '') {
+            $skippedArticles++;
+            continue;
+        }
 
         $dupCheck = $pdo->prepare("SELECT id FROM cms_articles WHERE title = ? AND DATE(created_at) = DATE(?)");
         $dupCheck->execute([$title, $createdAt]);
-        if ($dupCheck->fetchColumn()) { $skippedArticles++; continue; }
+        if ($dupCheck->fetchColumn()) {
+            $skippedArticles++;
+            continue;
+        }
 
         $perex = trim(strip_tags($annotation));
         if ($perex === '' && str_contains($content, '<!--more-->')) {
@@ -206,7 +219,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $dirInfo = [];
     foreach ($directories as $dir) {
         $dirId = (int)($dir['id'] ?? 0);
-        if ($dirId <= 0) continue;
+        if ($dirId <= 0) {
+            continue;
+        }
         $dirInfo[$dirId] = [
             'title'  => $dirTitles[$dirId] ?? ('Album ' . $dirId),
             'parent' => (int)($dir['parent_directory'] ?? 0),
@@ -233,7 +248,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $parentSet = 0;
     foreach ($dirInfo as $dirId => $info) {
-        if ($info['parent'] <= 0 || !isset($albumMap[$info['parent']]) || !isset($albumMap[$dirId])) continue;
+        if ($info['parent'] <= 0 || !isset($albumMap[$info['parent']]) || !isset($albumMap[$dirId])) {
+            continue;
+        }
         $pdo->prepare("UPDATE cms_gallery_albums SET parent_id = ? WHERE id = ? AND (parent_id IS NULL OR parent_id = 0)")
             ->execute([$albumMap[$info['parent']], $albumMap[$dirId]]);
         $parentSet++;
@@ -246,7 +263,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         $photoId = (int)($photo['id'] ?? 0);
         $dirId = (int)($photo['directory'] ?? 0);
         $filename = esDecodeValue((string)($photo['filename'] ?? ''));
-        if ($photoId <= 0 || $filename === '' || !isset($albumMap[$dirId])) continue;
+        if ($photoId <= 0 || $filename === '' || !isset($albumMap[$dirId])) {
+            continue;
+        }
 
         $photoTitle = $photoTitles[$photoId] ?? pathinfo($filename, PATHINFO_FILENAME);
         $safeFilename = preg_replace('/[^a-z0-9_\-\.]/i', '_', $filename);
@@ -254,7 +273,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
         $dupCheck = $pdo->prepare("SELECT id FROM cms_gallery_photos WHERE album_id = ? AND (title = ? OR filename = ?)");
         $dupCheck->execute([$albumId, $photoTitle, $safeFilename]);
-        if ($dupCheck->fetchColumn()) continue;
+        if ($dupCheck->fetchColumn()) {
+            continue;
+        }
 
         $photoSlug = uniqueGalleryPhotoSlug($pdo, slugify($photoTitle) ?: 'foto-' . $photoId);
         $pdo->prepare("INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order) VALUES (?, ?, ?, ?, ?)")

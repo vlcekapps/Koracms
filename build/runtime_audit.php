@@ -7079,6 +7079,10 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/gallery_export_zip.php admin/contact_message.php admin/chat_message.php admin/form_submission.php')
         && str_contains($composerSource, 'admin/newsletter_history.php admin/newsletter_subscriber.php')
         && str_contains($composerSource, 'admin/res_booking_add.php admin/res_booking_detail.php admin/settings_shared.php'),
+    'php cs fixer admin maintenance smoke check exists' => str_contains($composerSource, '"format:check:admin-maintenance"')
+        && str_contains($composerSource, '"format:fix:admin-maintenance"')
+        && str_contains($composerSource, '@format:check:admin-maintenance')
+        && str_contains($composerSource, 'admin/settings.php admin/statistics.php admin/estranky_import.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')

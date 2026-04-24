@@ -15,10 +15,14 @@ $dateFrom = $_GET['from'] ?? date('Y-m-d', strtotime('-30 days'));
 $dateTo   = $_GET['to']   ?? date('Y-m-d');
 
 // Validace formátu
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) $dateFrom = date('Y-m-d', strtotime('-30 days'));
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo))   $dateTo   = date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
+    $dateFrom = date('Y-m-d', strtotime('-30 days'));
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+    $dateTo   = date('Y-m-d');
+}
 
-$fmt = fn(int $n) => number_format($n, 0, ',', "\u{00a0}");
+$fmt = fn (int $n) => number_format($n, 0, ',', "\u{00a0}");
 
 // ── Návštěvnost ─────────────────────────────────────────────────────────────
 $vs = getVisitorStats();
@@ -50,7 +54,9 @@ try {
         )->fetchColumn();
         $dailyData[$today] = ['views' => $todayViews, 'uv' => $todayUv];
     }
-} catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+} catch (\PDOException $e) {
+    error_log('admin/statistics: ' . $e->getMessage());
+}
 
 // Doplnit chybějící dny a spočítat maximum
 $chartDays = [];
@@ -65,7 +71,9 @@ while ($current <= $end) {
     $chartDays[] = ['date' => $d, 'label' => $current->format('j.n.'), 'views' => $v, 'uv' => $u];
     $totalViews += $v;
     $totalUv    += $u;
-    if ($v > $maxViews) $maxViews = $v;
+    if ($v > $maxViews) {
+        $maxViews = $v;
+    }
     $current->modify('+1 day');
 }
 $avgPerDay = count($chartDays) > 0 ? round($totalViews / count($chartDays), 1) : 0;
@@ -79,7 +87,9 @@ if (isModuleEnabled('blog')) {
              WHERE status = 'published' AND view_count > 0
              ORDER BY view_count DESC LIMIT 20"
         )->fetchAll();
-    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+    } catch (\PDOException $e) {
+        error_log('admin/statistics: ' . $e->getMessage());
+    }
 }
 
 // ── Rezervace ───────────────────────────────────────────────────────────────
@@ -94,13 +104,17 @@ if (isModuleEnabled('reservations')) {
              WHERE booking_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+    } catch (\PDOException $e) {
+        error_log('admin/statistics: ' . $e->getMessage());
+    }
 
     try {
         $resStatus = $pdo->query(
             "SELECT status, COUNT(*) AS cnt FROM cms_res_bookings GROUP BY status ORDER BY cnt DESC"
         )->fetchAll();
-    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+    } catch (\PDOException $e) {
+        error_log('admin/statistics: ' . $e->getMessage());
+    }
 
     try {
         $resTopRes = $pdo->query(
@@ -109,7 +123,9 @@ if (isModuleEnabled('reservations')) {
              JOIN cms_res_resources r ON r.id = b.resource_id
              GROUP BY b.resource_id ORDER BY cnt DESC LIMIT 10"
         )->fetchAll();
-    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+    } catch (\PDOException $e) {
+        error_log('admin/statistics: ' . $e->getMessage());
+    }
 }
 
 // ── Newsletter ──────────────────────────────────────────────────────────────
@@ -126,7 +142,9 @@ if (isModuleEnabled('newsletter')) {
                AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+    } catch (\PDOException $e) {
+        error_log('admin/statistics: ' . $e->getMessage());
+    }
 }
 
 // ── Komentáře ───────────────────────────────────────────────────────────────
@@ -165,7 +183,9 @@ if (isModuleEnabled('contact')) {
              WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
              GROUP BY m ORDER BY m"
         )->fetchAll();
-    } catch (\PDOException $e) { error_log('admin/statistics: ' . $e->getMessage()); }
+    } catch (\PDOException $e) {
+        error_log('admin/statistics: ' . $e->getMessage());
+    }
 }
 
 // ── Česky pojmenované měsíce ────────────────────────────────────────────────
@@ -174,7 +194,7 @@ $czMonths = [
     '05' => 'květen', '06' => 'červen', '07' => 'červenec', '08' => 'srpen',
     '09' => 'září', '10' => 'říjen', '11' => 'listopad', '12' => 'prosinec',
 ];
-$fmtMonth = function(string $ym) use ($czMonths): string {
+$fmtMonth = function (string $ym) use ($czMonths): string {
     $parts = explode('-', $ym);
     return ($czMonths[$parts[1]] ?? $parts[1]) . ' ' . $parts[0];
 };
@@ -307,8 +327,10 @@ adminHeader('Statistiky');
 
   <?php if (!empty($resMonthly)):
       $resMax = max(array_column($resMonthly, 'cnt'));
-      if ($resMax < 1) $resMax = 1;
-  ?>
+      if ($resMax < 1) {
+          $resMax = 1;
+      }
+      ?>
   <h3>Rezervace za posledních 6 měsíců</h3>
   <figure style="margin:0 0 1rem">
     <figcaption class="sr-only">Měsíční rezervace</figcaption>
@@ -358,8 +380,10 @@ adminHeader('Statistiky');
 
   <?php if (!empty($nlMonthly)):
       $nlMax = max(array_column($nlMonthly, 'cnt'));
-      if ($nlMax < 1) $nlMax = 1;
-  ?>
+      if ($nlMax < 1) {
+          $nlMax = 1;
+      }
+      ?>
   <h3>Noví odběratelé za posledních 6 měsíců</h3>
   <figure style="margin:0 0 1rem">
     <figcaption class="sr-only">Noví odběratelé newsletteru</figcaption>
@@ -397,8 +421,10 @@ adminHeader('Statistiky');
 
   <?php if (!empty($commentStats)):
       $cmMax = max(array_column($commentStats, 'cnt'));
-      if ($cmMax < 1) $cmMax = 1;
-  ?>
+      if ($cmMax < 1) {
+          $cmMax = 1;
+      }
+      ?>
   <h3>Komentáře za posledních 6 měsíců</h3>
   <figure style="margin:0 0 1rem">
     <figcaption class="sr-only">Aktivita komentářů</figcaption>
@@ -430,8 +456,10 @@ adminHeader('Statistiky');
 <!-- ── 6. Kontaktní zprávy ─────────────────────────────────────────────────── -->
 <?php if (isModuleEnabled('contact') && !empty($contactStats)):
     $ctMax = max(array_column($contactStats, 'cnt'));
-    if ($ctMax < 1) $ctMax = 1;
-?>
+    if ($ctMax < 1) {
+        $ctMax = 1;
+    }
+    ?>
 <section aria-labelledby="sec-contact">
   <h2 id="sec-contact">Kontaktní zprávy</h2>
   <h3>Zprávy za posledních 6 měsíců</h3>
