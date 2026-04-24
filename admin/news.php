@@ -51,7 +51,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $items = array_map(
-    static fn(array $item): array => hydrateNewsPresentation($item),
+    static fn (array $item): array => hydrateNewsPresentation($item),
     $stmt->fetchAll()
 );
 
@@ -60,7 +60,7 @@ $listQuery = array_filter([
     'q' => $q !== '' ? $q : null,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
     'strana' => $page > 1 ? $page : null,
-], static fn($value): bool => $value !== null);
+], static fn ($value): bool => $value !== null);
 $currentListUrl = BASE_URL . '/admin/news.php' . ($listQuery !== [] ? '?' . http_build_query($listQuery) : '');
 $pagerBaseUrl = '?' . http_build_query(array_filter([
     'q' => $q !== '' ? $q : null,

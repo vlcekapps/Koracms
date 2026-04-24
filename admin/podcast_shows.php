@@ -51,7 +51,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $shows = array_map(
-    static fn(array $show): array => hydratePodcastShowPresentation($show),
+    static fn (array $show): array => hydratePodcastShowPresentation($show),
     $stmt->fetchAll()
 );
 $canApprovePodcast = currentUserHasCapability('content_approve_shared');

@@ -50,7 +50,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $polls = array_map(
-    static fn(array $poll): array => hydratePollPresentation($poll),
+    static fn (array $poll): array => hydratePollPresentation($poll),
     $stmt->fetchAll()
 );
 
@@ -58,12 +58,12 @@ $listQuery = array_filter([
     'q' => $q !== '' ? $q : null,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
     'strana' => $page > 1 ? $page : null,
-], static fn($value): bool => $value !== null);
+], static fn ($value): bool => $value !== null);
 $currentListUrl = BASE_URL . '/admin/polls.php' . ($listQuery !== [] ? '?' . http_build_query($listQuery) : '');
 $pagerQuery = array_filter([
     'q' => $q !== '' ? $q : null,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
-], static fn($value): bool => $value !== null);
+], static fn ($value): bool => $value !== null);
 $pagerBaseUrl = '?' . ($pagerQuery !== [] ? http_build_query($pagerQuery) . '&' : '');
 
 adminHeader('Ankety');
@@ -122,7 +122,7 @@ adminHeader('Ankety');
             'scheduled' => 'color:#0b5fa5',
             default => 'color:#0a6a2f',
         };
-      ?>
+        ?>
       <tr<?= $state === 'scheduled' ? ' style="background:#eef6ff"' : '' ?>>
         <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
         <td>

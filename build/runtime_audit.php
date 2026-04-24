@@ -7062,6 +7062,15 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/blog_cats.php admin/blog_tags.php admin/blog_members.php admin/blog_pages.php')
         && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/res_categories.php admin/res_locations.php')
         && str_contains($composerSource, 'admin/page_reorder.php admin/gallery_photo_reorder.php admin/gallery_album_delete.php admin/gallery_photo_delete.php'),
+    'php cs fixer admin overview smoke check exists' => str_contains($composerSource, '"format:check:admin-overview"')
+        && str_contains($composerSource, '"format:fix:admin-overview"')
+        && str_contains($composerSource, '@format:check:admin-overview')
+        && str_contains($composerSource, 'admin/audit_log.php admin/backup.php admin/blog.php admin/blogs.php admin/board.php')
+        && str_contains($composerSource, 'admin/downloads.php admin/events.php admin/faq.php admin/food.php admin/forms.php')
+        && str_contains($composerSource, 'admin/gallery_albums.php admin/gallery_photos.php admin/integrity.php admin/media.php admin/menu.php')
+        && str_contains($composerSource, 'admin/news.php admin/newsletter.php admin/pages.php admin/places.php admin/podcast.php')
+        && str_contains($composerSource, 'admin/podcast_shows.php admin/polls.php admin/redirects.php admin/res_bookings.php admin/res_resources.php')
+        && str_contains($composerSource, 'admin/review_queue.php admin/trash.php admin/users.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')
@@ -7152,6 +7161,8 @@ $foundationChecks = [
         && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),
     'release zip excludes dev tooling and metadata' => str_contains($releaseScriptSource, "'vendor'")
+        && str_contains($releaseScriptSource, "'.github'")
+        && str_contains($releaseScriptSource, "'.gitattributes'")
         && str_contains($releaseScriptSource, "'composer.json'")
         && str_contains($releaseScriptSource, "'composer.lock'")
         && str_contains($releaseScriptSource, "'phpstan.neon.dist'")

@@ -102,13 +102,13 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Stránky',
                 'approval_module' => 'pages',
                 'manage_url' => 'pages.php',
-                'edit_builder' => static fn(array $row): string => 'page_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'page_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT id, title, slug, created_at
                           FROM cms_pages
                           WHERE status = 'pending'
                           ORDER BY created_at DESC
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)$row['created_at'],
                     'title' => (string)$row['title'],
                     'meta' => 'Slug: ' . (string)$row['slug'],
@@ -120,7 +120,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'FAQ',
                 'approval_module' => 'faq',
                 'manage_url' => 'faq.php',
-                'edit_builder' => static fn(array $row): string => 'faq_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'faq_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.created_at,
                                  c.name AS category_name
                           FROM cms_faqs f
@@ -128,7 +128,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                           WHERE f.status = 'pending'
                           ORDER BY f.sort_order, f.id
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)$row['created_at'],
                     'title' => (string)$row['question'],
                     'meta' => trim((string)$row['category_name']) !== ''
@@ -142,7 +142,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Úřední deska',
                 'approval_module' => 'board',
                 'manage_url' => 'board.php',
-                'edit_builder' => static fn(array $row): string => 'board_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'board_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT b.id, b.title, b.posted_date, b.created_at,
                                  COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
                           FROM cms_board b
@@ -150,7 +150,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                           WHERE b.status = 'pending'
                           ORDER BY b.posted_date DESC, b.created_at DESC
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)($row['posted_date'] ?: $row['created_at']),
                     'title' => (string)$row['title'],
                     'meta' => trim((string)$row['author_name']) !== '' ? 'Autor: ' . (string)$row['author_name'] : '',
@@ -162,7 +162,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Ke stažení',
                 'approval_module' => 'downloads',
                 'manage_url' => 'downloads.php',
-                'edit_builder' => static fn(array $row): string => 'download_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'download_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT d.id, d.title, d.original_name, d.created_at,
                                  COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
                           FROM cms_downloads d
@@ -170,7 +170,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                           WHERE d.status = 'pending'
                           ORDER BY d.created_at DESC
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)$row['created_at'],
                     'title' => (string)$row['title'],
                     'meta' => trim((string)$row['original_name']) !== '' ? 'Soubor: ' . (string)$row['original_name'] : ((trim((string)$row['author_name']) !== '') ? 'Autor: ' . (string)$row['author_name'] : ''),
@@ -182,13 +182,13 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Události',
                 'approval_module' => 'events',
                 'manage_url' => 'events.php',
-                'edit_builder' => static fn(array $row): string => 'event_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'event_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT id, title, location, event_date, created_at
                           FROM cms_events
                           WHERE status = 'pending'
                           ORDER BY event_date DESC, created_at DESC
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)($row['event_date'] ?: $row['created_at']),
                     'title' => (string)$row['title'],
                     'meta' => trim((string)$row['location']) !== '' ? 'Místo: ' . (string)$row['location'] : '',
@@ -200,13 +200,13 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Zajímavá místa',
                 'approval_module' => 'places',
                 'manage_url' => 'places.php',
-                'edit_builder' => static fn(array $row): string => 'place_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'place_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT id, name, category, created_at
                           FROM cms_places
                           WHERE status = 'pending'
                           ORDER BY sort_order, name
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)$row['created_at'],
                     'title' => (string)$row['name'],
                     'meta' => trim((string)$row['category']) !== '' ? 'Kategorie: ' . (string)$row['category'] : '',
@@ -218,14 +218,14 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Podcasty',
                 'approval_module' => 'podcasts',
                 'manage_url' => 'podcast_shows.php',
-                'edit_builder' => static fn(array $row): string => 'podcast_form.php?id=' . (int)$row['id'] . '&show_id=' . (int)$row['show_id'],
+                'edit_builder' => static fn (array $row): string => 'podcast_form.php?id=' . (int)$row['id'] . '&show_id=' . (int)$row['show_id'],
                 'sql' => "SELECT p.id, p.title, p.show_id, p.created_at, s.title AS show_title
                           FROM cms_podcasts p
                           LEFT JOIN cms_podcast_shows s ON s.id = p.show_id
                           WHERE p.status = 'pending'
                           ORDER BY p.created_at DESC
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)$row['created_at'],
                     'title' => (string)$row['title'],
                     'meta' => trim((string)$row['show_title']) !== '' ? 'Podcast: ' . (string)$row['show_title'] : '',
@@ -237,7 +237,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'module_label' => 'Jídelní lístky',
                 'approval_module' => 'food',
                 'manage_url' => 'food.php',
-                'edit_builder' => static fn(array $row): string => 'food_form.php?id=' . (int)$row['id'],
+                'edit_builder' => static fn (array $row): string => 'food_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT c.id, c.title, c.type, c.valid_from, c.created_at,
                                  COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
                           FROM cms_food_cards c
@@ -245,7 +245,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                           WHERE c.status = 'pending'
                           ORDER BY c.created_at DESC
                           LIMIT 10",
-                'row_builder' => static fn(array $row): array => [
+                'row_builder' => static fn (array $row): array => [
                     'sort_at' => (string)($row['valid_from'] ?: $row['created_at']),
                     'title' => (string)$row['title'],
                     'meta' => 'Typ: ' . ((string)$row['type'] === 'beverage' ? 'Nápojový lístek' : 'Jídelní lístek')
@@ -284,7 +284,7 @@ if (in_array($scope, ['all', 'content'], true)) {
 
     usort(
         $contentRows,
-        static fn(array $left, array $right): int => strcmp((string)$right['sort_at'], (string)$left['sort_at'])
+        static fn (array $left, array $right): int => strcmp((string)$right['sort_at'], (string)$left['sort_at'])
     );
 }
 

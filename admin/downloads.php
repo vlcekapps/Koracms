@@ -29,7 +29,7 @@ if ($typeFilter !== 'all' && !isset(downloadTypeDefinitions()[$typeFilter])) {
 }
 
 $categories = $pdo->query("SELECT id, name FROM cms_dl_categories ORDER BY name")->fetchAll();
-$validCategoryIds = array_map(static fn(array $category): int => (int)$category['id'], $categories);
+$validCategoryIds = array_map(static fn (array $category): int => (int)$category['id'], $categories);
 if ($categoryFilter !== null && !in_array($categoryFilter, $validCategoryIds, true)) {
     $categoryFilter = null;
 }
@@ -40,7 +40,7 @@ $platformOptions = $pdo->query(
      WHERE TRIM(COALESCE(platform_label, '')) <> ''
      ORDER BY platform_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$platformOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $platformOptions)));
+$platformOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $platformOptions)));
 if ($platformFilter !== '' && !in_array($platformFilter, $platformOptions, true)) {
     $platformFilter = '';
 }
@@ -111,7 +111,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $items = array_map(
-    static fn(array $download): array => hydrateDownloadPresentation($download),
+    static fn (array $download): array => hydrateDownloadPresentation($download),
     $stmt->fetchAll()
 );
 

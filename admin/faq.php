@@ -53,7 +53,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $faqs = array_map(
-    static fn(array $faq): array => hydrateFaqPresentation($faq),
+    static fn (array $faq): array => hydrateFaqPresentation($faq),
     $stmt->fetchAll()
 );
 

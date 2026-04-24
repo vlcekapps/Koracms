@@ -69,7 +69,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $items = array_map(
-    static fn(array $item): array => hydrateFoodCardPresentation($item),
+    static fn (array $item): array => hydrateFoodCardPresentation($item),
     $stmt->fetchAll()
 );
 
@@ -133,17 +133,17 @@ adminHeader('Jídelní a nápojový lístek');
   <?= bulkActions('food', BASE_URL . '/admin/food.php', 'Hromadné akce s jídelníčky', 'položka') ?>
   <?php
   $groups = [];
-  foreach ($items as $item) {
-      $groups[$item['type']][] = $item;
-  }
-  $labels = ['food' => 'Jídelní lístky', 'beverage' => 'Nápojové lístky'];
-  $captions = ['food' => 'Přehled jídelních lístků', 'beverage' => 'Přehled nápojových lístků'];
-  foreach (['food', 'beverage'] as $type):
-      if (!isset($groups[$type])) {
-          continue;
-      }
-      $rows = $groups[$type];
-  ?>
+    foreach ($items as $item) {
+        $groups[$item['type']][] = $item;
+    }
+    $labels = ['food' => 'Jídelní lístky', 'beverage' => 'Nápojové lístky'];
+    $captions = ['food' => 'Přehled jídelních lístků', 'beverage' => 'Přehled nápojových lístků'];
+    foreach (['food', 'beverage'] as $type):
+        if (!isset($groups[$type])) {
+            continue;
+        }
+        $rows = $groups[$type];
+        ?>
   <h2 style="margin-top:2rem"><?= h($labels[$type]) ?></h2>
   <table>
     <caption><?= h($captions[$type]) ?></caption>

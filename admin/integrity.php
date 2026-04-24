@@ -25,19 +25,27 @@ function scanPhpFiles(string $baseDir): array
     $skipDirs = ['vendor', 'node_modules', '.git', '.claude', 'uploads', 'themes'];
 
     foreach ($iterator as $file) {
-        if (!$file->isFile()) continue;
+        if (!$file->isFile()) {
+            continue;
+        }
 
         $ext = strtolower($file->getExtension());
-        if (!in_array($ext, ['php', 'htaccess'], true) && $file->getFilename() !== '.htaccess') continue;
+        if (!in_array($ext, ['php', 'htaccess'], true) && $file->getFilename() !== '.htaccess') {
+            continue;
+        }
 
         $relativePath = str_replace('\\', '/', substr($file->getPathname(), strlen($baseDir) + 1));
 
         // Přeskočit adresáře, které se mění legitimně
         $firstDir = explode('/', $relativePath)[0];
-        if (in_array($firstDir, $skipDirs, true)) continue;
+        if (in_array($firstDir, $skipDirs, true)) {
+            continue;
+        }
 
         // Přeskočit temp/cache soubory
-        if (str_contains($relativePath, '/tmp/') || str_contains($relativePath, '/cache/')) continue;
+        if (str_contains($relativePath, '/tmp/') || str_contains($relativePath, '/cache/')) {
+            continue;
+        }
 
         $hashes[$relativePath] = hash_file('sha256', $file->getPathname());
     }

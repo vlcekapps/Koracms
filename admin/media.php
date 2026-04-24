@@ -391,9 +391,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'bulk') {
         $selectedIds = array_values(array_unique(array_filter(array_map(
-            static fn($value): int => (int)$value,
+            static fn ($value): int => (int)$value,
             (array)($_POST['media_ids'] ?? [])
-        ), static fn(int $value): bool => $value > 0)));
+        ), static fn (int $value): bool => $value > 0)));
 
         $bulkAction = trim((string)($_POST['bulk_action'] ?? ''));
         if ($selectedIds === []) {
@@ -609,15 +609,15 @@ adminHeader('Knihovna médií');
 
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem">
         <?php foreach ($items as $item):
-          $mediaId = (int)$item['id'];
-          $kind = mediaDisplayKind($item);
-          $previewUrl = $kind === 'image' ? mediaThumbUrl($item) : '';
-          $fileUrl = mediaFileUrl($item);
-          $isUsed = $usageFlags[$mediaId] ?? false;
-          $isPublic = mediaIsPublic($item);
-          $isSvg = mediaIsSvgMime((string)$item['mime_type']);
-          $editUrl = mediaAdminPath(array_merge($state, ['edit' => $mediaId]));
-        ?>
+            $mediaId = (int)$item['id'];
+            $kind = mediaDisplayKind($item);
+            $previewUrl = $kind === 'image' ? mediaThumbUrl($item) : '';
+            $fileUrl = mediaFileUrl($item);
+            $isUsed = $usageFlags[$mediaId] ?? false;
+            $isPublic = mediaIsPublic($item);
+            $isSvg = mediaIsSvgMime((string)$item['mime_type']);
+            $editUrl = mediaAdminPath(array_merge($state, ['edit' => $mediaId]));
+            ?>
           <article style="border:1px solid #d6d6d6;border-radius:.85rem;background:#fff;overflow:hidden;display:flex;flex-direction:column">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .7rem;border-bottom:1px solid #e5e7eb;background:#f8fafc">
               <label style="margin:0;font-weight:600;display:flex;align-items:center;gap:.45rem">

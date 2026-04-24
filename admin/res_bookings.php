@@ -93,7 +93,7 @@ $filterParams = array_filter([
     'status' => $filterStatus,
     'date_from' => $dateFrom,
     'date_to' => $dateTo,
-], static fn($value): bool => $value !== '' && $value !== null);
+], static fn ($value): bool => $value !== '' && $value !== null);
 $paginationParams = $filterParams;
 $listRedirect = BASE_URL . '/admin/res_bookings.php';
 $currentRedirect = $listRedirect . ($paginationParams !== [] ? '?' . http_build_query($paginationParams + ['strana' => $page]) : ($page > 1 ? '?strana=' . $page : ''));
@@ -184,21 +184,21 @@ adminHeader('Rezervace');
     <?php foreach ($bookings as $booking): ?>
       <?php
       $customerLabel = trim((string)($booking['user_name'] ?? ''));
-      if ($customerLabel === '') {
-          $customerLabel = trim((string)($booking['guest_name'] ?? ''));
-      }
-      if ($customerLabel === '') {
-          $customerLabel = '–';
-      }
+        if ($customerLabel === '') {
+            $customerLabel = trim((string)($booking['guest_name'] ?? ''));
+        }
+        if ($customerLabel === '') {
+            $customerLabel = '–';
+        }
 
-      $resourcePublicPath = '';
-      if (!empty($booking['resource_slug'])) {
-          $resourcePublicPath = reservationResourcePublicPath($booking);
-      }
+        $resourcePublicPath = '';
+        if (!empty($booking['resource_slug'])) {
+            $resourcePublicPath = reservationResourcePublicPath($booking);
+        }
 
-      $detailHref = 'res_booking_detail.php?id=' . (int)$booking['id'];
-      $detailHref .= '&redirect=' . rawurlencode($currentRedirect);
-      ?>
+        $detailHref = 'res_booking_detail.php?id=' . (int)$booking['id'];
+        $detailHref .= '&redirect=' . rawurlencode($currentRedirect);
+        ?>
       <tr>
         <td><?= (int)$booking['id'] ?></td>
         <td>

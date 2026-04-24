@@ -66,7 +66,7 @@ $episodesStmt = $pdo->prepare(
 );
 $episodesStmt->execute(array_merge($params, [$perPage, $offset]));
 $episodes = array_map(
-    static fn(array $episode): array => hydratePodcastEpisodePresentation($episode),
+    static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
 );
 

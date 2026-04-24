@@ -72,7 +72,7 @@ foreach ($pages as $pageRow) {
 $savedNavigationOrder = array_values(array_filter(array_map(
     'trim',
     explode(',', getSetting('nav_order_unified', ''))
-), static fn(string $value): bool => $value !== ''));
+), static fn (string $value): bool => $value !== ''));
 
 $normalizedNavigationKeys = [];
 $seenNavigationKeys = [];
@@ -144,7 +144,7 @@ $currentRedirect = BASE_URL . '/admin/pages.php';
 $queryArgs = array_filter([
     'q' => $q,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn ($value): bool => $value !== null && $value !== '');
 if ($queryArgs !== []) {
     $currentRedirect .= '?' . http_build_query($queryArgs);
 }
@@ -206,9 +206,9 @@ adminHeader('Statické stránky');
       <?php foreach ($pages as $page): ?>
         <?php
         $pageId = (int)$page['id'];
-        $isBlogPageRow = !empty($page['blog_id']);
-        $publicPath = pagePublicPath($page);
-        ?>
+          $isBlogPageRow = !empty($page['blog_id']);
+          $publicPath = pagePublicPath($page);
+          ?>
         <tr>
           <td><input type="checkbox" name="ids[]" value="<?= $pageId ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$page['title']) ?>"></td>
           <td>

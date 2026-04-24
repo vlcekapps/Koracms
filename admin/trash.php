@@ -103,7 +103,7 @@ foreach ($modules as $moduleKey => $cfg) {
     }
 }
 
-usort($trashItems, fn($a, $b) => $b['deleted_at'] <=> $a['deleted_at']);
+usort($trashItems, fn ($a, $b) => $b['deleted_at'] <=> $a['deleted_at']);
 
 adminHeader('Koš');
 ?>

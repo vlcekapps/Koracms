@@ -7,9 +7,11 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
+- **Release ZIP balíček** – instalační archiv už výslovně vynechává `.github` a `.gitattributes`, takže se do produkčního balíčku nedostávají CI a git metadata.
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i vybrané admin přehledové obrazovky** – `composer ci:basic` nově spouští samostatný `composer format:check:admin-overview` pro stabilní přehledy obsahu, média, menu, audit log, integritu, koš a další admin seznamy; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.
 - **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i vybrané admin taxonomy a reorder obrazovky** – `composer ci:basic` nově spouští samostatný `composer format:check:admin-taxonomy` pro blogové kategorie/štítky/tým/stránky, vývěskové a rezervační kategorie/lokace a vybrané reorder/delete akce galerie; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.
 - **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i admin editorové formuláře** – `composer ci:basic` nově spouští samostatný `composer format:check:admin-form` pro editory článků, stránek, novinek, událostí, formulářů, galerie, podcastů, anket, rezervací a uživatelů; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.
 - **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i admin save handlery** – `composer ci:basic` nově spouští samostatný `composer format:check:admin-save` pro ukládání článků, stránek, novinek, událostí, formulářů, galerie, podcastů, anket, rezervací a uživatelů; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.

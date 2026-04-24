@@ -44,7 +44,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $albums = array_map(
-    static fn(array $album): array => hydrateGalleryAlbumPresentation($album),
+    static fn (array $album): array => hydrateGalleryAlbumPresentation($album),
     $stmt->fetchAll()
 );
 

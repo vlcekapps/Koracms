@@ -53,7 +53,7 @@ $photosStmt = $pdo->prepare(
 );
 $photosStmt->execute($params);
 $photos = array_map(
-    static fn(array $photo): array => hydrateGalleryPhotoPresentation($photo),
+    static fn (array $photo): array => hydrateGalleryPhotoPresentation($photo),
     $photosStmt->fetchAll()
 );
 
@@ -64,7 +64,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
     'q' => $q,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
     'sort' => $sortFilter !== 'position' ? $sortFilter : null,
-], static fn($value): bool => $value !== null && $value !== ''));
+], static fn ($value): bool => $value !== null && $value !== ''));
 ?>
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na seznam alb</a></p>

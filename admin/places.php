@@ -25,7 +25,7 @@ $categoryOptions = $pdo->query(
      WHERE TRIM(COALESCE(category, '')) <> ''
      ORDER BY category_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$categoryOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $categoryOptions)));
+$categoryOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $categoryOptions)));
 if ($categoryFilter !== '' && !in_array($categoryFilter, $categoryOptions, true)) {
     $categoryFilter = '';
 }
@@ -36,7 +36,7 @@ $localityOptions = $pdo->query(
      WHERE TRIM(COALESCE(locality, '')) <> ''
      ORDER BY locality_label"
 )->fetchAll(PDO::FETCH_COLUMN);
-$localityOptions = array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $localityOptions)));
+$localityOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $localityOptions)));
 if ($localityFilter !== '' && !in_array($localityFilter, $localityOptions, true)) {
     $localityFilter = '';
 }
@@ -94,7 +94,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute(array_merge($params, [$perPage, $offset]));
 $places = array_map(
-    static fn(array $place): array => hydratePlacePresentation($place),
+    static fn (array $place): array => hydratePlacePresentation($place),
     $stmt->fetchAll()
 );
 
@@ -105,7 +105,7 @@ $currentListQuery = array_filter([
     'category' => $categoryFilter !== '' ? $categoryFilter : null,
     'locality' => $localityFilter !== '' ? $localityFilter : null,
     'strana' => $page > 1 ? $page : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn ($value): bool => $value !== null && $value !== '');
 $currentListUrl = BASE_URL . '/admin/places.php' . ($currentListQuery !== [] ? '?' . http_build_query($currentListQuery) : '');
 
 $pagerParams = array_filter([
@@ -114,7 +114,7 @@ $pagerParams = array_filter([
     'kind' => $kindFilter !== 'all' ? $kindFilter : null,
     'category' => $categoryFilter !== '' ? $categoryFilter : null,
     'locality' => $localityFilter !== '' ? $localityFilter : null,
-], static fn($value): bool => $value !== null && $value !== '');
+], static fn ($value): bool => $value !== null && $value !== '');
 $pagerBaseUrl = '?' . ($pagerParams !== [] ? http_build_query($pagerParams) . '&' : '');
 
 adminHeader('Zajímavá místa');

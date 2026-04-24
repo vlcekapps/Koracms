@@ -48,9 +48,15 @@ $users = $pdo->query(
 )->fetchAll();
 
 $filterParams = [];
-if ($filterAction !== '') { $filterParams['action'] = $filterAction; }
-if ($filterUser !== '') { $filterParams['user'] = $filterUser; }
-if ($filterDate !== '') { $filterParams['date'] = $filterDate; }
+if ($filterAction !== '') {
+    $filterParams['action'] = $filterAction;
+}
+if ($filterUser !== '') {
+    $filterParams['user'] = $filterUser;
+}
+if ($filterDate !== '') {
+    $filterParams['date'] = $filterDate;
+}
 $baseUrl = BASE_URL . '/admin/audit_log.php';
 $paginBase = $baseUrl . ($filterParams !== [] ? '?' . http_build_query($filterParams) . '&' : '?');
 $hasFilter = $filterParams !== [];

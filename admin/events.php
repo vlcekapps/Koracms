@@ -70,7 +70,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $events = array_map(
-    static fn(array $event): array => hydrateEventPresentation($event),
+    static fn (array $event): array => hydrateEventPresentation($event),
     $stmt->fetchAll()
 );
 

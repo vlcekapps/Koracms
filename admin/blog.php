@@ -14,7 +14,7 @@ $allBlogs = $hasBlogs ? getAllBlogs() : [];
 $availableBlogs = $hasBlogs
     ? (canManageOwnBlogOnly() ? getWritableBlogsForUser() : $allBlogs)
     : [];
-$availableBlogIds = array_map(static fn(array $blog): int => (int)$blog['id'], $availableBlogs);
+$availableBlogIds = array_map(static fn (array $blog): int => (int)$blog['id'], $availableBlogs);
 if ($blogFilter !== '' && ctype_digit($blogFilter) && !in_array((int)$blogFilter, $availableBlogIds, true)) {
     $blogFilter = '';
 }

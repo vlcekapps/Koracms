@@ -112,9 +112,9 @@ if ($savedOrder !== '') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $order = (array)($_POST['order'] ?? []);
-    $order = array_values(array_filter($order, static fn($value) => is_string($value) && $value !== ''));
+    $order = array_values(array_filter($order, static fn ($value) => is_string($value) && $value !== ''));
 
-    $validKeys = array_map(static fn(array $item): string => (string)$item['key'], $navItems);
+    $validKeys = array_map(static fn (array $item): string => (string)$item['key'], $navItems);
     $validLookup = array_fill_keys($validKeys, true);
     $normalizedOrder = [];
     $seenKeys = [];
