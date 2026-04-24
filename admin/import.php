@@ -62,7 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                     $skip = ['admin_password'];
                     foreach ($data['settings'] as $row) {
-                        if (in_array($row['key'], $skip, true)) continue;
+                        if (in_array($row['key'], $skip, true)) {
+                            continue;
+                        }
                         $s->execute([$row['key'], $row['value']]);
                     }
                     $summary[] = 'Nastavení importována.';

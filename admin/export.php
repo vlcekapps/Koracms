@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
@@ -18,12 +19,12 @@ $tables = [
                              created_by_user_id,
                              created_at, updated_at
                       FROM cms_blogs",
-    'blog_members'=> "SELECT blog_id, user_id, member_role, created_at FROM cms_blog_members",
+    'blog_members' => "SELECT blog_id, user_id, member_role, created_at FROM cms_blog_members",
     'blog_slug_redirects' => "SELECT blog_id, old_slug, created_at FROM cms_blog_slug_redirects",
     'articles'    => "SELECT id, title, slug, perex, content, category_id, blog_id, comments_enabled, image_file,
                              meta_title, meta_description, publish_at, unpublish_at, admin_note, is_featured_in_blog,
                              status, created_at FROM cms_articles",
-    'article_tags'=> "SELECT article_id, tag_id FROM cms_article_tags",
+    'article_tags' => "SELECT article_id, tag_id FROM cms_article_tags",
     'tags'        => "SELECT id, name, slug, blog_id, created_at FROM cms_tags",
     'pages'       => "SELECT id, title, slug, content, blog_id, blog_nav_order, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
@@ -44,9 +45,9 @@ $tables = [
                                address, locality, latitude, longitude, contact_phone, contact_email,
                                opening_hours, meta_title, meta_description, is_published, sort_order, status, created_at, updated_at
                                FROM cms_places",
-    'gallery_albums'=> "SELECT id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at
+    'gallery_albums' => "SELECT id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at
                                FROM cms_gallery_albums",
-    'gallery_photos'=> "SELECT id, album_id, filename, title, slug, sort_order, created_at
+    'gallery_photos' => "SELECT id, album_id, filename, title, slug, sort_order, created_at
                                FROM cms_gallery_photos",
     'media'         => "SELECT id, filename, original_name, mime_type, file_size, folder, alt_text, caption, credit,
                                visibility, uploaded_by, created_at
@@ -68,7 +69,7 @@ $tables = [
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
     'polls'         => "SELECT id, question, slug, description, meta_title, meta_description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
     'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",
-    'faq_categories'=> "SELECT id, name, parent_id, sort_order, created_at FROM cms_faq_categories",
+    'faq_categories' => "SELECT id, name, parent_id, sort_order, created_at FROM cms_faq_categories",
     'faqs'          => "SELECT id, question, slug, excerpt, answer, category_id, meta_title, meta_description,
                                is_published, status, created_at, updated_at FROM cms_faqs",
     'board_categories' => "SELECT id, name, sort_order, created_at FROM cms_board_categories",
