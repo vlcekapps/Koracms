@@ -117,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['v
 
 $pageTitle = 'Ankety';
 $pageMetaTitle = 'Ankety – ' . $siteName;
+$metaDescription = '';
 $pageUrl = siteUrl(appendUrlQuery('/polls/index.php', array_filter([
     'archiv' => $archiv ? '1' : null,
     'q' => $q !== '' ? $q : null,
@@ -128,7 +129,7 @@ if ($detailRequested) {
         http_response_code(404);
         $missingUrl = $pollSlugValue !== ''
             ? siteUrl('/polls/' . rawurlencode($pollSlugValue))
-            : siteUrl('/polls/index.php' . ($pollId !== null ? '?id=' . urlencode((string)$pollId) : ''));
+            : siteUrl('/polls/index.php?id=' . urlencode((string)$pollId));
 
         renderPublicPage([
             'title' => 'Anketa nenalezena – ' . $siteName,
