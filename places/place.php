@@ -48,7 +48,7 @@ if (!$place) {
     $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/places/' . rawurlencode($slug)
-        : BASE_URL . '/places/place.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '');
+        : BASE_URL . '/places/place.php?id=' . urlencode((string)$id);
 
     renderPublicPage([
         'title' => 'Místo nenalezeno - ' . $siteName,
