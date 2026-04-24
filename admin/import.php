@@ -7,6 +7,7 @@ $success = false;
 $summary = [];
 
 /**
+ * @param list<string> $errors
  * @return array<string, mixed>|null
  */
 function importDecodeJsonUpload(string $path, array &$errors): ?array

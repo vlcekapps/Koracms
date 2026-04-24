@@ -37,6 +37,10 @@ function estrankyResolvePhotoBatchStorage(): ?string
     return null;
 }
 
+/**
+ * @param list<array<string, mixed>> $photoList
+ * @return array{id: string, storage: string}|null
+ */
 function estrankyCreatePhotoBatch(array $photoList): ?array
 {
     $storageKey = estrankyResolvePhotoBatchStorage();
@@ -56,6 +60,9 @@ function estrankyCreatePhotoBatch(array $photoList): ?array
         : null;
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
 function estrankyLoadPhotoBatch(string $batchId, string $storageKey): array
 {
     $batchPath = estrankyPhotoBatchDirectory($storageKey) . basename($batchId) . '.json';
@@ -91,7 +98,7 @@ function estrankyFetchRemotePhoto(string $url): string|false
                 CURLOPT_CONNECTTIMEOUT => 10,
                 CURLOPT_USERAGENT => 'KoraCMS-eStrankyImport/1.0',
                 CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
             ]);
             $data = curl_exec($curlHandle);
             $httpCode = (int)curl_getinfo($curlHandle, CURLINFO_RESPONSE_CODE);

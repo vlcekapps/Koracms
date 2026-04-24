@@ -12,6 +12,8 @@ unset($_SESSION['import_log']);
 
 /**
  * Parsuje WXR soubor a vrátí strukturovaná data.
+ *
+ * @return array<string, mixed>|null
  */
 function wpParseWxr(string $xmlPath): ?array
 {
@@ -114,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     verifyCsrf();
     set_time_limit(600);
 
-    $cachedPath = $_POST['wxr_cached'];
+    $cachedPath = trim((string)$_POST['wxr_cached']);
     if ($cachedPath === '' || !is_file($cachedPath) || !str_contains(basename($cachedPath), 'kora_wp_import_')) {
         $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Dočasný soubor nenalezen. Zkuste import znovu.'];
         header('Location: wp_import.php');
