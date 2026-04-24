@@ -18,7 +18,9 @@ unset($_SESSION['import_log']);
 function wpParseWxr(string $xmlPath): ?array
 {
     $xml = @simplexml_load_file($xmlPath);
-    if ($xml === false) return null;
+    if ($xml === false) {
+        return null;
+    }
 
     $ns = $xml->getNamespaces(true);
     $wpNsUri = $ns['wp'] ?? 'http://wordpress.org/export/1.2/';
@@ -40,7 +42,9 @@ function wpParseWxr(string $xmlPath): ?array
     foreach ($wp->tag as $t) {
         $slug = (string)($t->tag_slug ?? '');
         $name = (string)($t->tag_name ?? '');
-        if ($name !== '') $tags[$slug] = $name;
+        if ($name !== '') {
+            $tags[$slug] = $name;
+        }
     }
 
     $posts = [];
@@ -52,10 +56,14 @@ function wpParseWxr(string $xmlPath): ?array
 
         $postType = (string)($itemWp->post_type ?? '');
         $status = (string)($itemWp->status ?? '');
-        if (!in_array($status, ['publish', 'draft', 'pending'], true)) continue;
+        if (!in_array($status, ['publish', 'draft', 'pending'], true)) {
+            continue;
+        }
 
         $title = trim((string)($item->title ?? ''));
-        if ($title === '') continue;
+        if ($title === '') {
+            continue;
+        }
 
         $entry = [
             'wp_id'     => (int)($itemWp->post_id ?? 0),
@@ -75,17 +83,26 @@ function wpParseWxr(string $xmlPath): ?array
         foreach ($item->category as $cat) {
             $domain = (string)$cat['domain'];
             $nicename = (string)$cat['nicename'];
-            if ($domain === 'category') $entry['categories'][] = $nicename;
-            elseif ($domain === 'post_tag') $entry['tags'][] = $nicename;
+            if ($domain === 'category') {
+                $entry['categories'][] = $nicename;
+            } elseif ($domain === 'post_tag') {
+                $entry['tags'][] = $nicename;
+            }
         }
 
         foreach ($itemWp->comment as $cm) {
             $cmType = (string)($cm->comment_type ?? '');
             $cmApproved = (string)($cm->comment_approved ?? '');
-            if ($cmType !== '' && $cmType !== 'comment') continue;
-            if (!in_array($cmApproved, ['0', '1'], true)) continue;
+            if ($cmType !== '' && $cmType !== 'comment') {
+                continue;
+            }
+            if (!in_array($cmApproved, ['0', '1'], true)) {
+                continue;
+            }
             $cmContent = trim((string)($cm->comment_content ?? ''));
-            if ($cmContent === '') continue;
+            if ($cmContent === '') {
+                continue;
+            }
 
             $entry['comments'][] = [
                 'author'  => trim((string)($cm->comment_author ?? '')),
@@ -96,8 +113,11 @@ function wpParseWxr(string $xmlPath): ?array
             ];
         }
 
-        if ($postType === 'post') $posts[] = $entry;
-        elseif ($postType === 'page') $pages[] = $entry;
+        if ($postType === 'post') {
+            $posts[] = $entry;
+        } elseif ($postType === 'page') {
+            $pages[] = $entry;
+        }
     }
 
     return [
@@ -193,10 +213,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     $catMap = [];
     $insertedCats = 0;
     foreach ($data['categories'] as $slug => $name) {
-        if (!in_array($slug, $selectedCats, true)) continue;
-        $ex = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ? AND blog_id = ?"); $ex->execute([$name, $blogId]);
-        if ($eid = $ex->fetchColumn()) { $catMap[$slug] = (int)$eid; }
-        else { $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$name, $blogId]); $catMap[$slug] = (int)$pdo->lastInsertId(); $insertedCats++; }
+        if (!in_array($slug, $selectedCats, true)) {
+            continue;
+        }
+        $ex = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ? AND blog_id = ?");
+        $ex->execute([$name, $blogId]);
+        if ($eid = $ex->fetchColumn()) {
+            $catMap[$slug] = (int)$eid;
+        } else {
+            $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$name, $blogId]);
+            $catMap[$slug] = (int)$pdo->lastInsertId();
+            $insertedCats++;
+        }
     }
     $log[] = "<span aria-hidden=\"true\">✓</span> Kategorie: {$insertedCats} nových";
 
@@ -205,9 +233,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     $insertedTags = 0;
     foreach ($data['tags'] as $slug => $name) {
         $cmsSlug = slugify($name) ?: $slug;
-        $ex = $pdo->prepare("SELECT id FROM cms_tags WHERE slug = ? AND blog_id = ?"); $ex->execute([$cmsSlug, $blogId]);
-        if ($eid = $ex->fetchColumn()) { $tagMap[$slug] = (int)$eid; }
-        else { $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $cmsSlug, $blogId]); $tagMap[$slug] = (int)$pdo->lastInsertId(); $insertedTags++; }
+        $ex = $pdo->prepare("SELECT id FROM cms_tags WHERE slug = ? AND blog_id = ?");
+        $ex->execute([$cmsSlug, $blogId]);
+        if ($eid = $ex->fetchColumn()) {
+            $tagMap[$slug] = (int)$eid;
+        } else {
+            $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $cmsSlug, $blogId]);
+            $tagMap[$slug] = (int)$pdo->lastInsertId();
+            $insertedTags++;
+        }
     }
     $log[] = "<span aria-hidden=\"true\">✓</span> Tagy: {$insertedTags} nových";
 
@@ -229,13 +263,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         $title = $post['title'];
         $dup = $pdo->prepare("SELECT id FROM cms_articles WHERE title = ? AND DATE(created_at) = DATE(?)");
         $dup->execute([$title, $post['date']]);
-        if ($dup->fetchColumn()) { $skippedArticles++; continue; }
+        if ($dup->fetchColumn()) {
+            $skippedArticles++;
+            continue;
+        }
 
         $content = $post['content'];
         $excerpt = $post['excerpt'];
         if (str_contains($content, '<!--more-->')) {
             $parts = explode('<!--more-->', $content, 2);
-            if ($excerpt === '') $excerpt = trim(strip_tags($parts[0]));
+            if ($excerpt === '') {
+                $excerpt = trim(strip_tags($parts[0]));
+            }
             $content = trim($parts[1]);
         }
         $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $content);
@@ -257,7 +296,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         }
         foreach ($post['tags'] as $tagSlug) {
             if (isset($tagMap[$tagSlug])) {
-                try { $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?,?)")->execute([$articleId, $tagMap[$tagSlug]]); } catch (\PDOException $e) {}
+                try {
+                    $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?,?)")->execute([$articleId, $tagMap[$tagSlug]]);
+                } catch (\PDOException $e) {
+                }
             }
         }
         foreach ($post['comments'] as $cm) {
@@ -273,8 +315,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
     $insertedPages = 0;
     if ($importPages) {
         foreach ($data['pages'] as $page) {
-            $dup = $pdo->prepare("SELECT id FROM cms_pages WHERE title = ?"); $dup->execute([$page['title']]);
-            if ($dup->fetchColumn()) continue;
+            $dup = $pdo->prepare("SELECT id FROM cms_pages WHERE title = ?");
+            $dup->execute([$page['title']]);
+            if ($dup->fetchColumn()) {
+                continue;
+            }
             $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $page['content']);
             $slug = uniquePageSlug($pdo, pageSlug($page['slug'] ?: $page['title']));
             $pdo->prepare("INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, created_at) VALUES (?,?,?,?,1,?,?)")
@@ -301,7 +346,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['wxr_file']['tmp_nam
     if (is_uploaded_file($xmlPath)) {
         // Uložíme do uploads/tmp (spolehlivější než sys temp na Windows)
         $tmpDir = dirname(__DIR__) . '/uploads/tmp';
-        if (!is_dir($tmpDir)) mkdir($tmpDir, 0755, true);
+        if (!is_dir($tmpDir)) {
+            mkdir($tmpDir, 0755, true);
+        }
         $cachedPath = $tmpDir . '/kora_wp_import_' . bin2hex(random_bytes(8)) . '.xml';
         if (!move_uploaded_file($xmlPath, $cachedPath)) {
             copy($xmlPath, $cachedPath);
@@ -335,12 +382,15 @@ adminHeader('Import z WordPressu');
     $catCounts = [];
     $uncatCount = 0;
     foreach ($preview['posts'] as $p) {
-        if (empty($p['categories'])) { $uncatCount++; continue; }
+        if (empty($p['categories'])) {
+            $uncatCount++;
+            continue;
+        }
         foreach ($p['categories'] as $cs) {
             $catCounts[$cs] = ($catCounts[$cs] ?? 0) + 1;
         }
     }
-  ?>
+    ?>
   <section style="background:#fff4e6;border:1px solid #d7b600;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="preview-heading">
     <h2 id="preview-heading" style="margin-top:0">Náhled obsahu k importu</h2>
     <p>
