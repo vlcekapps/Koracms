@@ -8,8 +8,10 @@ if (!function_exists('getSetting')) {
 }
 
 $_siteName = getSetting('site_name', 'Kora CMS');
-$_msg      = getSetting('maintenance_text',
-    'Právě probíhá údržba webu. Brzy budeme zpět, děkujeme za trpělivost.');
+$_msg      = getSetting(
+    'maintenance_text',
+    'Právě probíhá údržba webu. Brzy budeme zpět, děkujeme za trpělivost.'
+);
 
 if (!headers_sent()) {
     http_response_code(503);

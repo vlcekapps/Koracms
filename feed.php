@@ -118,7 +118,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
     );
     $newsStmt->execute([20]);
     $newsItems = $newsStmt->fetchAll();
-?>
+    ?>
 <?php foreach ($newsItems as $newsItem): ?>
   <item>
     <title><?= htmlspecialchars(newsTitleCandidate((string)($newsItem['title'] ?? ''), (string)($newsItem['content'] ?? '')), ENT_XML1 | ENT_QUOTES, 'UTF-8') ?></title>

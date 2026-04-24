@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 requirePublicLogin(BASE_URL . '/public_profile.php');

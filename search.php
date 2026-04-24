@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 
@@ -42,7 +43,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
 
         // Fallback: LIKE
         $likeColumns = array_map('trim', explode(',', $ftColumns));
-        $likeConds = implode(' OR ', array_map(fn(string $col) => "{$col} LIKE ?", $likeColumns));
+        $likeConds = implode(' OR ', array_map(fn (string $col) => "{$col} LIKE ?", $likeColumns));
         $sql = $selectSql . " {$fromWhere} AND ({$likeConds}) ORDER BY {$orderBy} LIMIT {$limit}";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(array_merge($extraParams, array_fill(0, count($likeColumns), $like)));
@@ -52,7 +53,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('blog')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT a.id, a.title, a.slug, a.perex, a.created_at, 'blog' AS type, b.slug AS blog_slug",
                 "FROM cms_articles a LEFT JOIN cms_blogs b ON b.id = a.blog_id WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())",
                 'title, perex, content',
@@ -70,7 +73,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('news')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, title, slug, content AS perex, created_at, 'news' AS type",
                 "FROM cms_news WHERE " . newsPublicVisibilitySql(),
                 'title, content',
@@ -87,7 +92,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
 
     try {
         foreach ($ftSearch(
-            $pdo, $q, $like,
+            $pdo,
+            $q,
+            $like,
             "SELECT id, title, '' AS perex, created_at, 'page' AS type, slug",
             "FROM cms_pages WHERE is_published = 1",
             'title, content',
@@ -104,7 +111,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('events')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex, event_date AS created_at, 'event' AS type",
                 "FROM cms_events WHERE " . eventPublicVisibilitySql(),
                 'title, excerpt, description, program_note, location, organizer_name',
@@ -160,7 +169,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('faq')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, question AS title, slug, COALESCE(NULLIF(excerpt, ''), answer) AS perex,
                         COALESCE(updated_at, created_at) AS created_at, 'faq' AS type",
                 "FROM cms_faqs WHERE " . faqPublicVisibilitySql(),
@@ -221,7 +232,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('food')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(description, ''), title) AS perex,
                         COALESCE(valid_from, updated_at, created_at) AS created_at, 'food_card' AS type",
                 "FROM cms_food_cards WHERE status = 'published' AND is_published = 1",
@@ -240,7 +253,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('board')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
                         posted_date AS created_at, 'board' AS type",
                 "FROM cms_board WHERE " . boardPublicVisibilitySql(),
@@ -259,7 +274,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('downloads')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
                         COALESCE(release_date, created_at) AS created_at, 'download' AS type",
                 "FROM cms_downloads WHERE status = 'published' AND is_published = 1",
@@ -278,7 +295,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('places')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, name AS title, slug, COALESCE(NULLIF(excerpt, ''), description) AS perex,
                          created_at, 'place' AS type",
                 "FROM cms_places WHERE " . placePublicVisibilitySql(),
@@ -297,7 +316,9 @@ if ($q !== '' && mb_strlen($q) >= 2) {
     if (isModuleEnabled('polls')) {
         try {
             foreach ($ftSearch(
-                $pdo, $q, $like,
+                $pdo,
+                $q,
+                $like,
                 "SELECT id, question AS title, slug, COALESCE(NULLIF(description, ''), question) AS perex,
                         COALESCE(updated_at, created_at) AS created_at, 'poll' AS type",
                 "FROM cms_polls WHERE " . pollPublicVisibilitySql(),

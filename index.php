@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 
@@ -21,7 +22,7 @@ if (isModuleEnabled('news') && $homeNewsCount > 0) {
     );
     $stmt->execute([$homeNewsFetchLimit]);
     $latestNews = array_map(
-        static fn(array $news): array => hydrateNewsPresentation($news),
+        static fn (array $news): array => hydrateNewsPresentation($news),
         $stmt->fetchAll()
     );
 }
@@ -66,7 +67,7 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
     $stmt->execute([$homeBlogCount]);
     $latestArticles = $stmt->fetchAll();
     $latestArticles = array_map(
-        static fn(array $article): array => hydrateAuthorPresentation($article),
+        static fn (array $article): array => hydrateAuthorPresentation($article),
         $latestArticles
     );
 }
@@ -89,7 +90,7 @@ if (isModuleEnabled('board') && $homeBoardCount > 0) {
     );
     $stmt->execute([$homeBoardFetchLimit]);
     $latestBoard = array_map(
-        static fn(array $document): array => hydrateBoardPresentation($document),
+        static fn (array $document): array => hydrateBoardPresentation($document),
         $stmt->fetchAll()
     );
 }

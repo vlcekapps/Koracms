@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Front-controller pro dynamické blog slugy (multiblog).
  * Volán z .htaccess catch-all pravidel pro URL jako /cooking/ nebo /cooking/recipe-slug.
