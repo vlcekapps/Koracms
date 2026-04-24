@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('newsletter_manage', 'Přístup odepřen. Pro správu odběratelů newsletteru nemáte potřebné oprávnění.');
 verifyCsrf();
@@ -6,7 +7,7 @@ verifyCsrf();
 $redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/newsletter.php');
 $action = trim($_POST['action'] ?? '');
 $allowedActions = ['confirm', 'resend', 'delete'];
-$ids = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])), static fn(int $id): bool => $id > 0)));
+$ids = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])), static fn (int $id): bool => $id > 0)));
 
 if ($ids === [] || !in_array($action, $allowedActions, true)) {
     header('Location: ' . $redirect);
@@ -109,7 +110,7 @@ if ($action === 'resend') {
     exit;
 }
 
-$deleteIds = array_map(static fn(array $subscriber): int => (int)$subscriber['id'], $subscribers);
+$deleteIds = array_map(static fn (array $subscriber): int => (int)$subscriber['id'], $subscribers);
 $deletePlaceholders = implode(',', array_fill(0, count($deleteIds), '?'));
 $pdo->prepare("DELETE FROM cms_subscribers WHERE id IN ({$deletePlaceholders})")->execute($deleteIds);
 logAction('newsletter_subscriber_bulk_delete', 'count=' . count($deleteIds));

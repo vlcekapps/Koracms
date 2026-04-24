@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/../db.php';
 requireCapability('newsletter_manage', 'Přístup odepřen. Pro rozesílání newsletteru nemáte potřebné oprávnění.');
 verifyCsrf();

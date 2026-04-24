@@ -7035,6 +7035,13 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/download_delete.php admin/food_delete.php admin/faq_delete.php admin/faq_cat_delete.php')
         && str_contains($composerSource, 'admin/dl_cat_delete.php admin/place_delete.php admin/polls_delete.php admin/podcast_delete.php admin/podcast_show_delete.php')
         && str_contains($composerSource, 'admin/newsletter_subscriber_delete.php admin/user_delete.php admin/res_cat_delete.php admin/res_location_delete.php admin/res_resource_delete.php'),
+    'php cs fixer admin messaging smoke check exists' => str_contains($composerSource, '"format:check:admin-messaging"')
+        && str_contains($composerSource, '"format:fix:admin-messaging"')
+        && str_contains($composerSource, '@format:check:admin-messaging')
+        && str_contains($composerSource, 'admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php')
+        && str_contains($composerSource, 'admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php')
+        && str_contains($composerSource, 'admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_reply.php admin/chat_update.php')
+        && str_contains($composerSource, 'admin/newsletter_bulk.php admin/newsletter_send.php admin/newsletter_subscriber_action.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 5')
