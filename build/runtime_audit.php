@@ -6982,21 +6982,30 @@ if ($cronGuardIssues === []) {
 echo "=== foundation_guardrails ===\n";
 $foundationIssues = [];
 $formatCheckScriptText = '';
+$analyseStrictScriptText = '';
 $composerPayload = json_decode($composerSource, true);
 if (is_array($composerPayload) && isset($composerPayload['scripts']) && is_array($composerPayload['scripts'])) {
     foreach ($composerPayload['scripts'] as $scriptName => $scriptCommand) {
-        if (!is_string($scriptName) || !str_starts_with($scriptName, 'format:check')) {
+        if (!is_string($scriptName)) {
             continue;
         }
+        $scriptText = '';
         if (is_array($scriptCommand)) {
-            $formatCheckScriptText .= ' ' . implode(' ', array_map(
+            $scriptText = implode(' ', array_map(
                 static fn ($part): string => is_scalar($part) ? (string)$part : '',
                 $scriptCommand,
             ));
+        } elseif (is_scalar($scriptCommand)) {
+            $scriptText = (string)$scriptCommand;
+        }
+        if ($scriptText === '') {
             continue;
         }
-        if (is_scalar($scriptCommand)) {
-            $formatCheckScriptText .= ' ' . (string)$scriptCommand;
+        if (str_starts_with($scriptName, 'format:check')) {
+            $formatCheckScriptText .= ' ' . $scriptText;
+        }
+        if (str_starts_with($scriptName, 'analyse:strict')) {
+            $analyseStrictScriptText .= ' ' . $scriptText;
         }
     }
 }
@@ -7010,6 +7019,10 @@ preg_match_all('/admin\/[A-Za-z0-9_]+\.php/', $formatCheckScriptText, $formatChe
 $formatCheckedAdminFiles = array_values(array_unique($formatCheckAdminMatches[0] ?? []));
 sort($formatCheckedAdminFiles);
 $missingAdminFormatFiles = array_values(array_diff($adminPhpFiles, $formatCheckedAdminFiles));
+preg_match_all('/admin\/[A-Za-z0-9_]+\.php/', $analyseStrictScriptText, $phpstanStrictAdminMatches);
+$phpstanStrictAdminFiles = array_values(array_unique($phpstanStrictAdminMatches[0] ?? []));
+sort($phpstanStrictAdminFiles);
+$missingAdminPhpstanFiles = array_values(array_diff($adminPhpFiles, $phpstanStrictAdminFiles));
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -7240,6 +7253,9 @@ if ($adminPhpFiles === []) {
     $foundationIssues[] = 'admin formatter coverage could not scan admin PHP files';
 } elseif ($missingAdminFormatFiles !== []) {
     $foundationIssues[] = 'php cs fixer missing admin format coverage: ' . implode(', ', $missingAdminFormatFiles);
+}
+if ($adminPhpFiles !== [] && $missingAdminPhpstanFiles !== []) {
+    $foundationIssues[] = 'phpstan missing admin strict coverage: ' . implode(', ', $missingAdminPhpstanFiles);
 }
 
 $robotsProbe = fetchUrl($baseUrl . '/robots.txt', '', 0);
