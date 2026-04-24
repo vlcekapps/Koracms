@@ -69,7 +69,7 @@ if (!$event) {
     $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/events/' . rawurlencode($slug)
-        : BASE_URL . '/events/event.php' . ($id !== null ? '?id=' . urlencode((string)$id) : '');
+        : BASE_URL . '/events/event.php?id=' . urlencode((string)$id);
 
     renderPublicPage([
         'title' => 'Událost nenalezena - ' . $siteName,
