@@ -5,6 +5,7 @@
     [string]$PrereleaseLabel = "",
     [ValidateRange(0, 9999)]
     [int]$PrereleaseNumber = 0,
+    [switch]$SkipCi,
     [switch]$SkipPush
 )
 
@@ -199,6 +200,21 @@ function Invoke-ReleasePackageAudit {
     }
 }
 
+function Invoke-ReleaseBasicCi {
+    param([string]$ProjectRoot)
+
+    Write-Host "Spouštím základní CI před releasem ..."
+    Push-Location $ProjectRoot
+    try {
+        & composer ci:basic
+        if ($LASTEXITCODE -ne 0) {
+            throw "composer ci:basic selhal."
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
 function New-ReleaseZip {
     param([string]$ProjectRoot, [string]$OutPath)
 
@@ -253,6 +269,9 @@ function Write-ReleaseChecksum {
 
 Require-Command -Name git
 Require-Command -Name php
+if (-not $SkipCi) {
+    Require-Command -Name composer
+}
 
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $versionPath = Join-Path $projectRoot "VERSION"
@@ -260,6 +279,11 @@ $distDir     = Join-Path $projectRoot "dist"
 
 Assert-CleanWorkingTree
 Invoke-ReleasePackageAudit -ProjectRoot $projectRoot
+if ($SkipCi) {
+    Write-Warning "Přeskakuji composer ci:basic na základě -SkipCi. Používejte jen při vědomém nouzovém vydání."
+} else {
+    Invoke-ReleaseBasicCi -ProjectRoot $projectRoot
+}
 
 $currentVersion = Read-VersionFile -Path $versionPath
 $normalizedPrereleaseLabel = $PrereleaseLabel.Trim().ToLowerInvariant()
