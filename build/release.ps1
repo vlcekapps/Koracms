@@ -7,6 +7,7 @@
     [int]$PrereleaseNumber = 0,
     [switch]$FullCi,
     [switch]$SkipCi,
+    [switch]$DryRun,
     [switch]$SkipPush
 )
 
@@ -155,27 +156,39 @@ function Test-PrereleaseVersion {
     return (Parse-SemVer $Value)['Prerelease'] -ne ''
 }
 
+function Get-UpdatedChangelogContent {
+    param([string]$Content, [string]$NewVersion)
+
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+    $updated = $false
+    $dash = [char]0x2013  # en-dash
+
+    # 1) Nahradit ## [Unreleased] za ## [verze] - datum
+    if ($Content -match '(?m)^## \[Unreleased\]') {
+        $Content = $Content -replace '(?m)^## \[Unreleased\].*$', "## [$NewVersion] $dash $today"
+        $updated = $true
+    }
+    # 2) Nebo nahradit ## [verze] bez data za ## [verze] - datum
+    elseif ($Content -match ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$')) {
+        $Content = $Content -replace ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$'), "## [$NewVersion] $dash $today"
+        $updated = $true
+    }
+
+    return [PSCustomObject]@{
+        Updated = $updated
+        Content = $Content
+    }
+}
+
 function Update-Changelog {
     param([string]$Path, [string]$NewVersion)
     if (!(Test-Path $Path)) { return $false }
     $content = [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false))
-    $today = (Get-Date).ToString("yyyy-MM-dd")
-    $updated = $false
-    $dash = [char]0x2013  # en-dash
-    # 1) Nahradit ## [Unreleased] za ## [verze] - datum
-    if ($content -match '(?m)^## \[Unreleased\]') {
-        $content = $content -replace '(?m)^## \[Unreleased\].*$', "## [$NewVersion] $dash $today"
-        $updated = $true
+    $result = Get-UpdatedChangelogContent -Content $content -NewVersion $NewVersion
+    if ($result.Updated) {
+        [System.IO.File]::WriteAllText($Path, $result.Content, [System.Text.UTF8Encoding]::new($false))
     }
-    # 2) Nebo nahradit ## [verze] bez data za ## [verze] - datum
-    elseif ($content -match ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$')) {
-        $content = $content -replace ('(?m)^## \[' + [regex]::Escape($NewVersion) + '\]\s*$'), "## [$NewVersion] $dash $today"
-        $updated = $true
-    }
-    if ($updated) {
-        [System.IO.File]::WriteAllText($Path, $content, [System.Text.UTF8Encoding]::new($false))
-    }
-    return $updated
+    return $result.Updated
 }
 
 function Assert-CleanWorkingTree {
@@ -221,7 +234,11 @@ function Invoke-ReleaseCi {
 }
 
 function New-ReleaseZip {
-    param([string]$ProjectRoot, [string]$OutPath)
+    param(
+        [string]$ProjectRoot,
+        [string]$OutPath,
+        [hashtable]$FileOverrides = @{}
+    )
 
     $exclude = @('.git', '.github', '.gitignore', '.gitattributes', '.claude', 'uploads', 'build', 'dist', 'docs', 'vendor', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
     $adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"
@@ -245,6 +262,15 @@ function New-ReleaseZip {
             New-Item -ItemType Directory -Path $docsTempDir | Out-Null
         }
         Copy-Item -Path $adminGuideSource -Destination (Join-Path $docsTempDir "admin-guide.md") -Force
+
+        foreach ($relativePath in $FileOverrides.Keys) {
+            $targetPath = Join-Path $tempDir $relativePath
+            $targetDir = Split-Path -Parent $targetPath
+            if ($targetDir -and !(Test-Path $targetDir)) {
+                New-Item -ItemType Directory -Path $targetDir | Out-Null
+            }
+            [System.IO.File]::WriteAllText($targetPath, [string]$FileOverrides[$relativePath], [System.Text.UTF8Encoding]::new($false))
+        }
 
         if (Test-Path $OutPath) { Remove-Item $OutPath -Force }
         Compress-Archive -Path (Join-Path $tempDir '*') -DestinationPath $OutPath
@@ -322,26 +348,56 @@ Write-Host "Verze: $currentVersion → $newVersion"
 if ($isPrerelease) {
     Write-Host "Typ release: prerelease"
 }
+if ($DryRun) {
+    Write-Host "Režim: dry run (bez změny VERSION, CHANGELOG.md, git commitu, tagu, push nebo GitHub release)."
+}
 
-# Aktualizovat VERSION
-[System.IO.File]::WriteAllText($versionPath, $newVersion, [System.Text.UTF8Encoding]::new($false))
-
-# Aktualizovat CHANGELOG.md
 $changelogPath = Join-Path $projectRoot "CHANGELOG.md"
-$changelogUpdated = Update-Changelog -Path $changelogPath -NewVersion $newVersion
-if ($changelogUpdated) {
-    Write-Host "CHANGELOG.md aktualizován."
+$changelogUpdated = $false
+$packageFileOverrides = @{}
+
+if ($DryRun) {
+    $packageFileOverrides["VERSION"] = $newVersion
+
+    if (Test-Path $changelogPath) {
+        $changelogContent = [System.IO.File]::ReadAllText($changelogPath, [System.Text.UTF8Encoding]::new($false))
+        $changelogPreview = Get-UpdatedChangelogContent -Content $changelogContent -NewVersion $newVersion
+        if ($changelogPreview.Updated) {
+            $packageFileOverrides["CHANGELOG.md"] = $changelogPreview.Content
+            Write-Host "Dry run: ZIP použije náhled aktualizovaného CHANGELOG.md."
+        } else {
+            Write-Host "Dry run: CHANGELOG.md nemá sekci [Unreleased] ani [$newVersion] bez data – ZIP použije aktuální soubor."
+        }
+    }
+    Write-Host "Dry run: pracovní VERSION a CHANGELOG.md zůstávají beze změn."
 } else {
-    Write-Host "CHANGELOG.md: nebyla nalezena sekce [Unreleased] ani [$newVersion] bez data – beze změn."
+    # Aktualizovat VERSION
+    [System.IO.File]::WriteAllText($versionPath, $newVersion, [System.Text.UTF8Encoding]::new($false))
+
+    # Aktualizovat CHANGELOG.md
+    $changelogUpdated = Update-Changelog -Path $changelogPath -NewVersion $newVersion
+    if ($changelogUpdated) {
+        Write-Host "CHANGELOG.md aktualizován."
+    } else {
+        Write-Host "CHANGELOG.md: nebyla nalezena sekce [Unreleased] ani [$newVersion] bez data – beze změn."
+    }
 }
 
 # Vytvořit zip
 if (!(Test-Path $distDir)) { New-Item -ItemType Directory -Path $distDir | Out-Null }
 $zipPath = Join-Path $distDir "koracms-$newVersion.zip"
 Write-Host "Vytvářím $zipPath ..."
-New-ReleaseZip -ProjectRoot $projectRoot -OutPath $zipPath
+New-ReleaseZip -ProjectRoot $projectRoot -OutPath $zipPath -FileOverrides $packageFileOverrides
 $checksumPath = Write-ReleaseChecksum -Path $zipPath
 Write-Host "Checksum: $checksumPath"
+
+if ($DryRun) {
+    Write-Host ""
+    Write-Host "Dry run dokončen. Nebyl vytvořen commit, tag, push ani GitHub release."
+    Write-Host "Zip: $zipPath"
+    Write-Host "SHA-256: $checksumPath"
+    exit 0
+}
 
 # Commit + tag
 Invoke-Git @("add", "VERSION")

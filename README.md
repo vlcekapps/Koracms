@@ -455,7 +455,7 @@ Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vr
 ## Vývoj a CI
 
 Produkční běh Kora CMS zůstává bez Composer závislostí. Composer je použitý pouze pro vývojové nástroje v `require-dev`.
-Release ZIP se vytváří bez adresáře `vendor/` a bez vývojových metadata souborů jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`; pokud je v lokálním checkoutu máte po `composer install`, slouží jen pro lokální vývoj a CI. Release skript před vytvořením verze spouští statický release package audit i `composer ci:basic`, volitelně přes `-FullCi` také `composer ci:full`, aby se pravidla balíčku, `.gitignore` ochrana lokálních artefaktů ani quality gate nerozbily potichu, a k ZIPu generuje také `.sha256` checksum.
+Release ZIP se vytváří bez adresáře `vendor/` a bez vývojových metadata souborů jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`; pokud je v lokálním checkoutu máte po `composer install`, slouží jen pro lokální vývoj a CI. Release skript před vytvořením verze spouští statický release package audit i `composer ci:basic`, volitelně přes `-FullCi` také `composer ci:full`, aby se pravidla balíčku, `.gitignore` ochrana lokálních artefaktů ani quality gate nerozbily potichu, a k ZIPu generuje také `.sha256` checksum. Přepínač `-DryRun` projde stejný preflight a vytvoří ZIP se checksumem a náhledem nové verze, ale nemění pracovní `VERSION` ani `CHANGELOG.md`, nevytváří commit/tag/push a nezakládá GitHub release.
 
 Základní lokální kontrola:
 
@@ -473,7 +473,7 @@ composer ci:basic
 - statický release package audit, který hlídá, že instalační balíček a source archivy zůstávají bez vývojových nástrojů a lokálních metadat
 - unit testy přes `build/unit_tests.php`
 
-`composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn. Stejný plný balík lze vyžádat i při release přes `build/release.ps1 -FullCi`.
+`composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn. Stejný plný balík lze vyžádat i při release přes `build/release.ps1 -FullCi`; bezpečnou zkoušku bez zásahu do gitu spustíte přes `build/release.ps1 -DryRun`.
 
 GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Workflow používá aktuální `actions/checkout@v6`, aby CI neběželo na deprecated Node 20 checkout akci.
 
