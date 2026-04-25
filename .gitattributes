@@ -1,3 +1,27 @@
+# Keep source files stable across Windows/Linux checkouts.
+.gitattributes text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.neon text eol=lf
+*.neon.dist text eol=lf
+*.php text eol=lf
+*.ps1 text eol=lf
+*.sql text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Keep generated release/source archives focused on runtime files.
+.github export-ignore
+.github/** export-ignore
+.gitattributes export-ignore
+.php-cs-fixer.dist.php export-ignore
 AGENTS.md export-ignore
 build/runtime_audit.php export-ignore
+composer.json export-ignore
+composer.lock export-ignore
 docs export-ignore
+docs/** export-ignore
+phpstan.neon.dist export-ignore

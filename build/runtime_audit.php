@@ -23,6 +23,7 @@ $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) fil
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
+$gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7233,6 +7234,19 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, "'phpstan.neon.dist'")
         && str_contains($releaseScriptSource, "'.php-cs-fixer.dist.php'")
         && str_contains($releaseScriptSource, 'New-ReleaseZip'),
+    'repository attributes protect source archives and line endings' => str_contains($gitattributesSource, '.gitattributes text eol=lf')
+        && str_contains($gitattributesSource, '*.php text eol=lf')
+        && str_contains($gitattributesSource, '*.json text eol=lf')
+        && str_contains($gitattributesSource, '*.md text eol=lf')
+        && str_contains($gitattributesSource, '*.neon.dist text eol=lf')
+        && str_contains($gitattributesSource, '.github export-ignore')
+        && str_contains($gitattributesSource, '.github/** export-ignore')
+        && str_contains($gitattributesSource, '.gitattributes export-ignore')
+        && str_contains($gitattributesSource, '.php-cs-fixer.dist.php export-ignore')
+        && str_contains($gitattributesSource, 'composer.json export-ignore')
+        && str_contains($gitattributesSource, 'composer.lock export-ignore')
+        && str_contains($gitattributesSource, 'docs/** export-ignore')
+        && str_contains($gitattributesSource, 'phpstan.neon.dist export-ignore'),
     'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')'),
