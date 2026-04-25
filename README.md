@@ -455,7 +455,7 @@ Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vr
 ## Vývoj a CI
 
 Produkční běh Kora CMS zůstává bez Composer závislostí. Composer je použitý pouze pro vývojové nástroje v `require-dev`.
-Release ZIP se vytváří bez adresáře `vendor/` a bez vývojových metadata souborů jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`; pokud je v lokálním checkoutu máte po `composer install`, slouží jen pro lokální vývoj a CI. Release skript před vytvořením verze spouští statický release package audit, aby se tato pravidla nerozbila potichu.
+Release ZIP se vytváří bez adresáře `vendor/` a bez vývojových metadata souborů jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`; pokud je v lokálním checkoutu máte po `composer install`, slouží jen pro lokální vývoj a CI. Release skript před vytvořením verze spouští statický release package audit, aby se tato pravidla nerozbila potichu, a k ZIPu generuje také `.sha256` checksum.
 
 Základní lokální kontrola:
 

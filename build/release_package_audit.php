@@ -54,6 +54,11 @@ if (!is_file($releaseScriptPath)) {
         'Compress-Archive',
         '$adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"',
         'Copy-Item -Path $adminGuideSource -Destination (Join-Path $docsTempDir "admin-guide.md") -Force',
+        'function Write-ReleaseChecksum',
+        'Get-FileHash -Path $Path -Algorithm SHA256',
+        '$checksumPath = Write-ReleaseChecksum -Path $zipPath',
+        '& gh release upload $tagName $zipPath $checksumPath --clobber',
+        '$expectedAssets = @("koracms-$newVersion.zip", "koracms-$newVersion.zip.sha256")',
     ];
 
     foreach ($requiredReleaseSnippets as $snippet) {

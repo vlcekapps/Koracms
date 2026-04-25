@@ -232,6 +232,21 @@ function New-ReleaseZip {
     }
 }
 
+function Write-ReleaseChecksum {
+    param([string]$Path)
+
+    if (!(Test-Path $Path)) {
+        throw "Release asset pro checksum nebyl nalezen: $Path"
+    }
+
+    $hash = (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    $checksumPath = "$Path.sha256"
+    $fileName = Split-Path -Leaf $Path
+    [System.IO.File]::WriteAllText($checksumPath, "$hash  $fileName`n", [System.Text.UTF8Encoding]::new($false))
+
+    return $checksumPath
+}
+
 # ---------------------------------------------------------------------------
 # Hlavní průběh
 # ---------------------------------------------------------------------------
@@ -296,6 +311,8 @@ if (!(Test-Path $distDir)) { New-Item -ItemType Directory -Path $distDir | Out-N
 $zipPath = Join-Path $distDir "koracms-$newVersion.zip"
 Write-Host "Vytvářím $zipPath ..."
 New-ReleaseZip -ProjectRoot $projectRoot -OutPath $zipPath
+$checksumPath = Write-ReleaseChecksum -Path $zipPath
+Write-Host "Checksum: $checksumPath"
 
 # Commit + tag
 Invoke-Git @("add", "VERSION")
@@ -328,10 +345,10 @@ if ($releaseExists) {
     }
     & gh @editArgs
     if ($LASTEXITCODE -ne 0) { throw "Úprava GitHub release selhala." }
-    & gh release upload $tagName $zipPath --clobber
+    & gh release upload $tagName $zipPath $checksumPath --clobber
     if ($LASTEXITCODE -ne 0) { throw "Nahrání assetu do GitHub release selhalo." }
 } else {
-    $createArgs = @("release", "create", $tagName, $zipPath, "--target", "main", "--title", "Kora CMS $newVersion", "--generate-notes")
+    $createArgs = @("release", "create", $tagName, $zipPath, $checksumPath, "--target", "main", "--title", "Kora CMS $newVersion", "--generate-notes")
     if ($isPrerelease) {
         $createArgs += @("--prerelease", "--latest=false")
     }
@@ -340,10 +357,14 @@ if ($releaseExists) {
 }
 # Ověřit, že asset je skutečně přítomný
 $assets = & gh release view $tagName --json assets --jq ".assets[].name"
-if ($assets -notcontains "koracms-$newVersion.zip") {
-    throw "Asset koracms-$newVersion.zip nebyl nalezen v release $tagName."
+$expectedAssets = @("koracms-$newVersion.zip", "koracms-$newVersion.zip.sha256")
+foreach ($expectedAsset in $expectedAssets) {
+    if ($assets -notcontains $expectedAsset) {
+        throw "Asset $expectedAsset nebyl nalezen v release $tagName."
+    }
 }
 
 Write-Host ""
 Write-Host "Release $newVersion dokončen."
 Write-Host "Zip: $zipPath"
+Write-Host "SHA-256: $checksumPath"
