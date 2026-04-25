@@ -44,6 +44,10 @@ if (!is_file($releaseScriptPath)) {
     }
 
     $requiredReleaseSnippets = [
+        'Require-Command -Name php',
+        'function Invoke-ReleasePackageAudit',
+        'build\release_package_audit.php',
+        'Invoke-ReleasePackageAudit -ProjectRoot $projectRoot',
         'function New-ReleaseZip',
         '$exclude = @(',
         '$_.Name -notin $exclude',

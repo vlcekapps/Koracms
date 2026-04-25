@@ -184,6 +184,21 @@ function Assert-CleanWorkingTree {
     }
 }
 
+function Invoke-ReleasePackageAudit {
+    param([string]$ProjectRoot)
+
+    $auditPath = Join-Path $ProjectRoot "build\release_package_audit.php"
+    if (!(Test-Path $auditPath)) {
+        throw "Release package audit nebyl nalezen: $auditPath"
+    }
+
+    Write-Host "Kontroluji pravidla release balíčku ..."
+    & php $auditPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release package audit selhal."
+    }
+}
+
 function New-ReleaseZip {
     param([string]$ProjectRoot, [string]$OutPath)
 
@@ -222,12 +237,14 @@ function New-ReleaseZip {
 # ---------------------------------------------------------------------------
 
 Require-Command -Name git
+Require-Command -Name php
 
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $versionPath = Join-Path $projectRoot "VERSION"
 $distDir     = Join-Path $projectRoot "dist"
 
 Assert-CleanWorkingTree
+Invoke-ReleasePackageAudit -ProjectRoot $projectRoot
 
 $currentVersion = Read-VersionFile -Path $versionPath
 $normalizedPrereleaseLabel = $PrereleaseLabel.Trim().ToLowerInvariant()

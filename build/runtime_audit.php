@@ -7234,10 +7234,12 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, "'composer.lock'")
         && str_contains($releaseScriptSource, "'phpstan.neon.dist'")
         && str_contains($releaseScriptSource, "'.php-cs-fixer.dist.php'")
+        && str_contains($releaseScriptSource, 'Invoke-ReleasePackageAudit -ProjectRoot $projectRoot')
         && str_contains($releaseScriptSource, 'New-ReleaseZip'),
     'release package audit is wired into basic CI' => str_contains($composerSource, '"test:release-package"')
         && str_contains($composerSource, '@test:release-package')
         && str_contains($releasePackageAuditSource, 'release.ps1')
+        && str_contains($releasePackageAuditSource, 'Invoke-ReleasePackageAudit')
         && str_contains($releasePackageAuditSource, "'.github'")
         && str_contains($releasePackageAuditSource, 'build/release_package_audit.php export-ignore')
         && str_contains($releasePackageAuditSource, 'Release package audit OK'),
