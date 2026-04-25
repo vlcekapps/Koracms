@@ -5,6 +5,7 @@
     [string]$PrereleaseLabel = "",
     [ValidateRange(0, 9999)]
     [int]$PrereleaseNumber = 0,
+    [switch]$FullCi,
     [switch]$SkipCi,
     [switch]$SkipPush
 )
@@ -200,15 +201,19 @@ function Invoke-ReleasePackageAudit {
     }
 }
 
-function Invoke-ReleaseBasicCi {
-    param([string]$ProjectRoot)
+function Invoke-ReleaseCi {
+    param(
+        [string]$ProjectRoot,
+        [bool]$Full
+    )
 
-    Write-Host "Spouštím základní CI před releasem ..."
+    $scriptName = if ($Full) { 'ci:full' } else { 'ci:basic' }
+    Write-Host "Spouštím composer $scriptName před releasem ..."
     Push-Location $ProjectRoot
     try {
-        & composer ci:basic
+        & composer $scriptName
         if ($LASTEXITCODE -ne 0) {
-            throw "composer ci:basic selhal."
+            throw "composer $scriptName selhal."
         }
     } finally {
         Pop-Location
@@ -280,9 +285,9 @@ $distDir     = Join-Path $projectRoot "dist"
 Assert-CleanWorkingTree
 Invoke-ReleasePackageAudit -ProjectRoot $projectRoot
 if ($SkipCi) {
-    Write-Warning "Přeskakuji composer ci:basic na základě -SkipCi. Používejte jen při vědomém nouzovém vydání."
+    Write-Warning "Přeskakuji composer CI na základě -SkipCi. Používejte jen při vědomém nouzovém vydání."
 } else {
-    Invoke-ReleaseBasicCi -ProjectRoot $projectRoot
+    Invoke-ReleaseCi -ProjectRoot $projectRoot -Full:$FullCi
 }
 
 $currentVersion = Read-VersionFile -Path $versionPath
