@@ -16,6 +16,7 @@
 # Keep generated release/source archives focused on runtime files.
 .github export-ignore
 .github/** export-ignore
+.gitignore export-ignore
 .gitattributes export-ignore
 .php-cs-fixer.dist.php export-ignore
 AGENTS.md export-ignore

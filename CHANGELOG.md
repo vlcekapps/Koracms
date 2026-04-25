@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **Release guardrail – audit balíčku nově hlídá i `.gitignore` a source archiv bez `.gitignore`** – statický release audit ověřuje ignorování lokálních konfigurací, uploadů, `dist/`, `vendor/` a IDE/cache souborů; `.gitattributes` zároveň vynechává `.gitignore` ze source archivů.
 - **Release preflight – release skript před verzováním spouští základní CI** – `build/release.ps1` nově před úpravou `VERSION`, changelogu, commitem a tagováním spouští `composer ci:basic`; pro vědomé nouzové vydání existuje explicitní přepínač `-SkipCi`.
 - **Release artefakty – ZIP má nově samostatný SHA-256 checksum** – `build/release.ps1` vytváří vedle `dist/koracms-*.zip` také `dist/koracms-*.zip.sha256`, nahrává ho do GitHub release a ověřuje přítomnost obou assetů.
 - **Release preflight – release skript před vydáním spouští audit balíčku** – `build/release.ps1` nově před úpravou verze ověří pravidla release ZIPu přes `build/release_package_audit.php`, takže se vývojové soubory do instalačního balíčku nemohou vrátit potichu až při ostrém vydání.

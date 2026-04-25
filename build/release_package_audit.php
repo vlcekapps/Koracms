@@ -5,6 +5,7 @@ declare(strict_types=1);
 $projectRoot = dirname(__DIR__);
 $releaseScriptPath = $projectRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release.ps1';
 $gitattributesPath = $projectRoot . DIRECTORY_SEPARATOR . '.gitattributes';
+$gitignorePath = $projectRoot . DIRECTORY_SEPARATOR . '.gitignore';
 
 $issues = [];
 
@@ -82,6 +83,7 @@ if (!is_file($gitattributesPath)) {
     $requiredExportIgnores = [
         '.github export-ignore',
         '.github/** export-ignore',
+        '.gitignore export-ignore',
         '.gitattributes export-ignore',
         '.php-cs-fixer.dist.php export-ignore',
         'AGENTS.md export-ignore',
@@ -97,6 +99,34 @@ if (!is_file($gitattributesPath)) {
     foreach ($requiredExportIgnores as $rule) {
         if (!str_contains($gitattributesSource, $rule)) {
             $issues[] = '.gitattributes is missing source archive rule: ' . $rule;
+        }
+    }
+}
+
+if (!is_file($gitignorePath)) {
+    $issues[] = '.gitignore is missing.';
+} else {
+    $gitignoreSource = (string) file_get_contents($gitignorePath);
+
+    $requiredIgnoreRules = [
+        'config.php',
+        'aconfig.php',
+        'uploads/',
+        '.integrity_snapshot.json',
+        'dist/',
+        'vendor/',
+        '.php-cs-fixer.cache',
+        '.DS_Store',
+        'Thumbs.db',
+        '.vscode/',
+        '.idea/',
+        '.claude/',
+        '!docs/admin-guide.md',
+    ];
+
+    foreach ($requiredIgnoreRules as $rule) {
+        if (!str_contains($gitignoreSource, $rule)) {
+            $issues[] = '.gitignore is missing local/generated file rule: ' . $rule;
         }
     }
 }

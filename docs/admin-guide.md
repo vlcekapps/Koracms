@@ -722,7 +722,7 @@ Starší exporty zůstávají kompatibilní; chybějící novější pole se př
 
 ## Provozní bezpečnost a vývojové nástroje
 
-Kora CMS drží produkční běh bez Composer závislostí. Adresář `vendor/` vzniká po `composer install` jen pro lokální vývojové nástroje a CI, například PHPStan a PHP-CS-Fixer. Release balíček `dist/koracms-*.zip` záměrně neobsahuje ani `vendor/`, ani vývojové metadata soubory jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`. Release skript před vytvořením nové verze spouští statický release package audit i `composer ci:basic`, takže se pravidla balíčku i základní quality gate kontrolují při samotném vydání. Vedle ZIPu vzniká i `.sha256` soubor se SHA-256 otiskem artefaktu.
+Kora CMS drží produkční běh bez Composer závislostí. Adresář `vendor/` vzniká po `composer install` jen pro lokální vývojové nástroje a CI, například PHPStan a PHP-CS-Fixer. Release balíček `dist/koracms-*.zip` záměrně neobsahuje ani `vendor/`, ani vývojové metadata soubory jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`. Release skript před vytvořením nové verze spouští statický release package audit i `composer ci:basic`, takže se pravidla balíčku, `.gitignore` ochrana lokálních artefaktů i základní quality gate kontrolují při samotném vydání. Vedle ZIPu vzniká i `.sha256` soubor se SHA-256 otiskem artefaktu.
 
 Přihlašování a obnova hesla používají kombinovaný rate limiting:
 

@@ -25,6 +25,7 @@ $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string)
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
+$gitignoreSource = is_file(__DIR__ . '/../.gitignore') ? (string) file_get_contents(__DIR__ . '/../.gitignore') : '';
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7249,6 +7250,8 @@ $foundationChecks = [
         && str_contains($releasePackageAuditSource, 'Invoke-ReleaseBasicCi')
         && str_contains($releasePackageAuditSource, "'.github'")
         && str_contains($releasePackageAuditSource, 'Write-ReleaseChecksum')
+        && str_contains($releasePackageAuditSource, '$gitignorePath')
+        && str_contains($releasePackageAuditSource, '!docs/admin-guide.md')
         && str_contains($releasePackageAuditSource, 'build/release_package_audit.php export-ignore')
         && str_contains($releasePackageAuditSource, 'Release package audit OK'),
     'repository attributes protect source archives and line endings' => str_contains($gitattributesSource, '.gitattributes text eol=lf')
@@ -7258,6 +7261,7 @@ $foundationChecks = [
         && str_contains($gitattributesSource, '*.neon.dist text eol=lf')
         && str_contains($gitattributesSource, '.github export-ignore')
         && str_contains($gitattributesSource, '.github/** export-ignore')
+        && str_contains($gitattributesSource, '.gitignore export-ignore')
         && str_contains($gitattributesSource, '.gitattributes export-ignore')
         && str_contains($gitattributesSource, '.php-cs-fixer.dist.php export-ignore')
         && str_contains($gitattributesSource, 'build/release_package_audit.php export-ignore')
@@ -7265,6 +7269,19 @@ $foundationChecks = [
         && str_contains($gitattributesSource, 'composer.lock export-ignore')
         && str_contains($gitattributesSource, 'docs/** export-ignore')
         && str_contains($gitattributesSource, 'phpstan.neon.dist export-ignore'),
+    'gitignore protects local and generated artifacts' => str_contains($gitignoreSource, 'config.php')
+        && str_contains($gitignoreSource, 'aconfig.php')
+        && str_contains($gitignoreSource, 'uploads/')
+        && str_contains($gitignoreSource, '.integrity_snapshot.json')
+        && str_contains($gitignoreSource, 'dist/')
+        && str_contains($gitignoreSource, 'vendor/')
+        && str_contains($gitignoreSource, '.php-cs-fixer.cache')
+        && str_contains($gitignoreSource, '.DS_Store')
+        && str_contains($gitignoreSource, 'Thumbs.db')
+        && str_contains($gitignoreSource, '.vscode/')
+        && str_contains($gitignoreSource, '.idea/')
+        && str_contains($gitignoreSource, '.claude/')
+        && str_contains($gitignoreSource, '!docs/admin-guide.md'),
     'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')'),
