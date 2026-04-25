@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **Release guardrail – základní CI nově hlídá obsah release balíčku** – `composer ci:basic` spouští statický audit release skriptu a `.gitattributes`, aby instalační ZIP i source archivy dál vynechávaly vývojové nástroje, metadata repozitáře a generované složky.
 - **Repozitářové guardraily – `.gitattributes` nově drží LF konce řádků a čistší source archivy** – zdrojové texty mají explicitní `eol=lf` pravidla pro budoucí úpravy a `export-ignore` nově vynechává CI/dev metadata i Composer/PHPStan/PHP-CS-Fixer soubory také z git source archivů; runtime audit toto nastavení hlídá.
 - **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i vzorový konfig** – `config.sample.php` je nově součástí `composer format:check`, takže distribuční instalační šablona drží stejný PSR-12 styl a jednotné UTF-8/LF konce řádků jako ostatní stabilizované vstupy.
 - **Code style guardrail – PHP-CS-Fixer smoke check nově pokrývá i core vstupy `auth.php` a `cron.php`** – sdílené přihlášení, ACL/session helpery a cron endpoint jsou nově součástí `composer format:check` i `composer ci:basic`; soubory byly dorovnány na stejný PSR-12 styl bez změny chování.

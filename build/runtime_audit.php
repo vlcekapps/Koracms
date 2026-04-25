@@ -23,6 +23,7 @@ $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) fil
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
+$releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
 
 $runtimeAuditOriginalModuleSettings = [
@@ -7234,6 +7235,12 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, "'phpstan.neon.dist'")
         && str_contains($releaseScriptSource, "'.php-cs-fixer.dist.php'")
         && str_contains($releaseScriptSource, 'New-ReleaseZip'),
+    'release package audit is wired into basic CI' => str_contains($composerSource, '"test:release-package"')
+        && str_contains($composerSource, '@test:release-package')
+        && str_contains($releasePackageAuditSource, 'release.ps1')
+        && str_contains($releasePackageAuditSource, "'.github'")
+        && str_contains($releasePackageAuditSource, 'build/release_package_audit.php export-ignore')
+        && str_contains($releasePackageAuditSource, 'Release package audit OK'),
     'repository attributes protect source archives and line endings' => str_contains($gitattributesSource, '.gitattributes text eol=lf')
         && str_contains($gitattributesSource, '*.php text eol=lf')
         && str_contains($gitattributesSource, '*.json text eol=lf')
@@ -7243,6 +7250,7 @@ $foundationChecks = [
         && str_contains($gitattributesSource, '.github/** export-ignore')
         && str_contains($gitattributesSource, '.gitattributes export-ignore')
         && str_contains($gitattributesSource, '.php-cs-fixer.dist.php export-ignore')
+        && str_contains($gitattributesSource, 'build/release_package_audit.php export-ignore')
         && str_contains($gitattributesSource, 'composer.json export-ignore')
         && str_contains($gitattributesSource, 'composer.lock export-ignore')
         && str_contains($gitattributesSource, 'docs/** export-ignore')
