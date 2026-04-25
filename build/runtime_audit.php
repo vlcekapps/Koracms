@@ -7140,7 +7140,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/estranky_download_photos.php admin/wp_import.php admin/revisions.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
-        && str_contains($phpstanConfigSource, 'level: 5')
+        && str_contains($phpstanConfigSource, 'level: 6')
         && str_contains($phpstanConfigSource, 'bootstrapFiles')
         && str_contains($phpstanConfigSource, 'scanFiles')
         && str_contains($phpstanConfigSource, 'admin/content_reference_picker.php')
