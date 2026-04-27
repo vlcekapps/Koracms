@@ -24,6 +24,7 @@ $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string)
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
+$releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
 $gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
 $gitignoreSource = is_file(__DIR__ . '/../.gitignore') ? (string) file_get_contents(__DIR__ . '/../.gitignore') : '';
 
@@ -7270,6 +7271,23 @@ $foundationChecks = [
         && str_contains($releasePackageAuditSource, '!docs/admin-guide.md')
         && str_contains($releasePackageAuditSource, 'build/release_package_audit.php export-ignore')
         && str_contains($releasePackageAuditSource, 'Release package audit OK'),
+    'release dry run smoke is wired into basic CI' => str_contains($composerSource, '"test:release-smoke"')
+        && str_contains($composerSource, 'php build/release_smoke.php')
+        && str_contains($composerSource, '@test:release-smoke')
+        && str_contains($releaseSmokeSource, "DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release.ps1'")
+        && str_contains($releaseSmokeSource, 'pwsh')
+        && str_contains($releaseSmokeSource, 'powershell')
+        && str_contains($releaseSmokeSource, "['git', 'init', '--quiet']")
+        && str_contains($releaseSmokeSource, "['git', 'add', '--all']")
+        && str_contains($releaseSmokeSource, "['git', 'commit', '--quiet', '-m', 'Release smoke snapshot']")
+        && str_contains($releaseSmokeSource, "['git', 'status', '--short', '--untracked-files=all']")
+        && str_contains($releaseSmokeSource, "['git', 'tag', '--list']")
+        && str_contains($releaseSmokeSource, '-DryRun')
+        && str_contains($releaseSmokeSource, '-SkipCi')
+        && str_contains($releaseSmokeSource, 'System.IO.Compression.ZipFile')
+        && str_contains($releaseSmokeSource, 'ConvertTo-Json')
+        && str_contains($releaseSmokeSource, 'docs/admin-guide.md')
+        && str_contains($releaseSmokeSource, 'Release smoke OK'),
     'repository attributes protect source archives and line endings' => str_contains($gitattributesSource, '.gitattributes text eol=lf')
         && str_contains($gitattributesSource, '*.php text eol=lf')
         && str_contains($gitattributesSource, '*.json text eol=lf')
@@ -7281,6 +7299,7 @@ $foundationChecks = [
         && str_contains($gitattributesSource, '.gitattributes export-ignore')
         && str_contains($gitattributesSource, '.php-cs-fixer.dist.php export-ignore')
         && str_contains($gitattributesSource, 'build/release_package_audit.php export-ignore')
+        && str_contains($gitattributesSource, 'build/release_smoke.php export-ignore')
         && str_contains($gitattributesSource, 'composer.json export-ignore')
         && str_contains($gitattributesSource, 'composer.lock export-ignore')
         && str_contains($gitattributesSource, 'docs/** export-ignore')

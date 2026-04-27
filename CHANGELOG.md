@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **Release preflight – základní CI nově spouští i skutečný dry-run smoke test** – `composer ci:basic` nově provádí izolovaný `build/release.ps1 -DryRun -SkipCi` nad dočasným snapshot repozitářem, kontroluje čistý git stav po běhu a ověřuje obsah ZIPu i `.sha256` checksum bez zásahu do pracovního stromu.
 - **Release preflight – release skript má bezpečný dry-run režim** – `build/release.ps1 -DryRun` ověří release package audit a CI preflight, vytvoří ZIP se SHA-256 checksumem a náhledem nové verze, ale nemění pracovní `VERSION` ani `CHANGELOG.md`, nevytváří commit/tag/push a nezakládá GitHub release.
 - **Release preflight – release skript umí volitelně spustit plný CI balík** – `build/release.ps1 -FullCi` před verzováním spustí `composer ci:full`, tedy i runtime audit a HTTP integraci; výchozí release dál používá přenosnější `composer ci:basic`.
 - **Release guardrail – audit balíčku nově hlídá i `.gitignore` a source archiv bez `.gitignore`** – statický release audit ověřuje ignorování lokálních konfigurací, uploadů, `dist/`, `vendor/` a IDE/cache souborů; `.gitattributes` zároveň vynechává `.gitignore` ze source archivů.

@@ -101,6 +101,7 @@ if (!is_file($gitattributesPath)) {
         'AGENTS.md export-ignore',
         'build/runtime_audit.php export-ignore',
         'build/release_package_audit.php export-ignore',
+        'build/release_smoke.php export-ignore',
         'composer.json export-ignore',
         'composer.lock export-ignore',
         'docs export-ignore',

@@ -471,6 +471,7 @@ composer ci:basic
 - PHPStan na levelu 6 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů
 - samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 217 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
 - statický release package audit, který hlídá, že instalační balíček a source archivy zůstávají bez vývojových nástrojů a lokálních metadat
+- izolovaný release smoke test, který v dočasném snapshot repozitáři skutečně spustí `build/release.ps1 -DryRun -SkipCi`, ověří čistý git stav po běhu a zkontroluje obsah ZIPu i checksum
 - unit testy přes `build/unit_tests.php`
 
 `composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn. Stejný plný balík lze vyžádat i při release přes `build/release.ps1 -FullCi`; bezpečnou zkoušku bez zásahu do gitu spustíte přes `build/release.ps1 -DryRun`.

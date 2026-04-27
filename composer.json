@@ -62,6 +62,7 @@
     "test:runtime": "php build/runtime_audit.php",
     "test:http": "php build/http_integration.php",
     "test:release-package": "php build/release_package_audit.php",
+    "test:release-smoke": "php build/release_smoke.php",
     "ci:basic": [
       "@lint",
       "@format:check",
@@ -96,6 +97,7 @@
       "@analyse:strict:public-polls",
       "@analyse:strict:public-reservations",
       "@test:release-package",
+      "@test:release-smoke",
       "@test:unit"
     ],
     "ci:full": [
