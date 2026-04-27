@@ -58,6 +58,7 @@
     "format:check:admin-maintenance": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff --using-cache=no --allow-unsupported-php-version=yes --path-mode=intersection admin/settings.php admin/statistics.php admin/import.php admin/export.php admin/estranky_import.php admin/estranky_download_photos.php admin/wp_import.php admin/revisions.php",
     "format:fix:admin-maintenance": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --using-cache=no --allow-unsupported-php-version=yes --path-mode=intersection admin/settings.php admin/statistics.php admin/import.php admin/export.php admin/estranky_import.php admin/estranky_download_photos.php admin/wp_import.php admin/revisions.php",
     "lint": "php build/lint_php.php",
+    "test:composer-validate": "composer validate --strict",
     "test:unit": "php build/unit_tests.php",
     "test:runtime": "php build/runtime_audit.php",
     "test:http": "php build/http_integration.php",
@@ -65,6 +66,7 @@
     "test:release-smoke": "php build/release_smoke.php",
     "ci:basic": [
       "@lint",
+      "@test:composer-validate",
       "@format:check",
       "@format:check:admin-delete",
       "@format:check:admin-messaging",

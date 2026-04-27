@@ -7038,6 +7038,11 @@ $foundationChecks = [
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
+    'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')
+        && str_contains($composerSource, 'composer validate --strict')
+        && str_contains($composerSource, '@test:composer-validate')
+        && str_contains($ciWorkflowSource, 'Validate Composer config')
+        && str_contains($ciWorkflowSource, 'composer validate --strict'),
     'php cs fixer smoke check exists' => str_contains($composerSource, 'php-cs-fixer fix')
         && str_contains($composerSource, '--dry-run')
         && str_contains($composerSource, '--path-mode=intersection')
