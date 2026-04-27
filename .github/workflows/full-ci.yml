@@ -1,0 +1,31 @@
+name: Full CI
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+
+jobs:
+  full:
+    name: Full PHP quality checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          extensions: gd, mbstring, fileinfo, pdo, pdo_mysql
+          coverage: none
+
+      - name: Validate Composer config
+        run: composer validate --strict
+
+      - name: Install dev tools
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run full checks
+        run: composer ci:full

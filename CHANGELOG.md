@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **GitHub Actions – plný CI balík má nově vlastní workflow** – `.github/workflows/full-ci.yml` nově spouští `composer ci:full` ručně a v nočním plánu, takže runtime audit a HTTP integrace mají i vzdálený guardrail bez zpomalení každého běžného `push` nebo `pull_request`.
 - **CI parity – lokální `ci:basic` nově validuje i Composer metadata** – `composer ci:basic` teď spouští také `composer validate --strict`, takže lokální quality gate i release preflight hlídají stejný `composer.json` a `composer.lock` kontrakt jako GitHub Actions.
 - **Source archivy – `.gitattributes` nově vyřazuje celý `build/` adresář a CI to skutečně ověřuje** – izolovaný release smoke test vedle release ZIPu nově kontroluje i reálný `git archive` source balíček, takže se do GitHub source archivů nevrátí `build/`, `docs/` ani další export-ignored metadata jen kvůli rozbitému pravidlu.
 - **Release preflight – základní CI nově spouští i skutečný dry-run smoke test** – `composer ci:basic` nově provádí izolovaný `build/release.ps1 -DryRun -SkipCi` nad dočasným snapshot repozitářem, kontroluje čistý git stav po běhu a ověřuje obsah ZIPu i `.sha256` checksum bez zásahu do pracovního stromu.

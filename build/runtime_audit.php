@@ -22,6 +22,7 @@ $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_con
 $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) file_get_contents(__DIR__ . '/../phpstan.neon.dist') : '';
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
+$fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
@@ -7038,6 +7039,12 @@ $foundationChecks = [
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
+    'github actions full CI exists' => str_contains($fullCiWorkflowSource, 'workflow_dispatch:')
+        && str_contains($fullCiWorkflowSource, 'schedule:')
+        && str_contains($fullCiWorkflowSource, 'composer validate --strict')
+        && str_contains($fullCiWorkflowSource, 'composer ci:full')
+        && str_contains($fullCiWorkflowSource, 'shivammathur/setup-php')
+        && str_contains($fullCiWorkflowSource, 'actions/checkout@v6'),
     'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')
         && str_contains($composerSource, 'composer validate --strict')
         && str_contains($composerSource, '@test:composer-validate')
