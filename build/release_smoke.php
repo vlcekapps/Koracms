@@ -205,6 +205,105 @@ function removeTree(string $path): void
     @rmdir($path);
 }
 
+function writeTextFile(string $path, string $contents): void
+{
+    if (file_put_contents($path, $contents) === false) {
+        fail('Cannot write file: ' . $path);
+    }
+}
+
+function writeZipInspectHelperScript(string $path): void
+{
+    $script = <<<'PS'
+param([string]$ZipPath)
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $utf8
+$zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+
+try {
+    $entries = @($zip.Entries | ForEach-Object { $_.FullName })
+    $version = ''
+    $changelog = ''
+
+    $versionEntry = $zip.GetEntry('VERSION')
+    if ($null -ne $versionEntry) {
+        $reader = [System.IO.StreamReader]::new($versionEntry.Open(), $utf8, $true)
+        try {
+            $version = $reader.ReadToEnd()
+        } finally {
+            $reader.Dispose()
+        }
+    }
+
+    $changelogEntry = $zip.GetEntry('CHANGELOG.md')
+    if ($null -ne $changelogEntry) {
+        $reader = [System.IO.StreamReader]::new($changelogEntry.Open(), $utf8, $true)
+        try {
+            $changelog = $reader.ReadToEnd()
+        } finally {
+            $reader.Dispose()
+        }
+    }
+
+    [pscustomobject]@{
+        entries = $entries
+        version = $version
+        changelog = $changelog
+    } | ConvertTo-Json -Compress -Depth 4
+} finally {
+    $zip.Dispose()
+}
+PS;
+
+    writeTextFile($path, $script);
+}
+
+/**
+ * @return array{entries:mixed, version:mixed, changelog:mixed}
+ */
+function inspectZipArchive(string $powerShell, string $scriptPath, string $zipPath, string $cwd): array
+{
+    $output = runCheckedCommand(
+        [
+            $powerShell,
+            '-NoLogo',
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            $scriptPath,
+            $zipPath,
+        ],
+        $cwd,
+    );
+
+    $payload = json_decode($output, true);
+    if (!is_array($payload)) {
+        fail('Cannot parse ZIP inspection output for ' . $zipPath . '.');
+    }
+
+    return $payload;
+}
+
+/**
+ * @param array{entries:mixed} $payload
+ * @return list<string>
+ */
+function normalizedArchiveEntries(array $payload): array
+{
+    $entries = [];
+    foreach (($payload['entries'] ?? []) as $entry) {
+        if (is_string($entry)) {
+            $entries[] = str_replace('\\', '/', $entry);
+        }
+    }
+
+    return $entries;
+}
+
 if (!is_file($releaseScriptPath)) {
     fail('build/release.ps1 is missing.');
 }
@@ -218,6 +317,11 @@ $tempRoot = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
     . DIRECTORY_SEPARATOR
     . 'koracms_release_smoke_'
     . bin2hex(random_bytes(6));
+$zipInspectScriptPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+    . DIRECTORY_SEPARATOR
+    . 'koracms_release_smoke_zip_'
+    . bin2hex(random_bytes(6))
+    . '.ps1';
 
 $excludedRootEntries = [
     '.git',
@@ -243,6 +347,13 @@ try {
     runCheckedCommand(['git', 'config', 'commit.gpgsign', 'false'], $tempRoot);
     runCheckedCommand(['git', 'add', '--all'], $tempRoot);
     runCheckedCommand(['git', 'commit', '--quiet', '-m', 'Release smoke snapshot'], $tempRoot);
+
+    $snapshotVersion = trim((string) file_get_contents($tempRoot . DIRECTORY_SEPARATOR . 'VERSION'));
+    if ($snapshotVersion === '') {
+        fail('Cannot read VERSION from the release smoke snapshot.');
+    }
+
+    writeZipInspectHelperScript($zipInspectScriptPath);
 
     $releaseResult = runCommand(
         [
@@ -330,80 +441,8 @@ try {
         fail('Release smoke checksum file does not match the generated ZIP.');
     }
 
-    $zipInspectScriptPath = $tempRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release_smoke_zip_inspect.ps1';
-    $zipInspectScript = <<<'PS'
-param([string]$ZipPath)
-
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-
-$utf8 = [System.Text.UTF8Encoding]::new($false)
-[Console]::OutputEncoding = $utf8
-$zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
-
-try {
-    $entries = @($zip.Entries | ForEach-Object { $_.FullName })
-    $version = ''
-    $changelog = ''
-
-    $versionEntry = $zip.GetEntry('VERSION')
-    if ($null -ne $versionEntry) {
-        $reader = [System.IO.StreamReader]::new($versionEntry.Open(), $utf8, $true)
-        try {
-            $version = $reader.ReadToEnd()
-        } finally {
-            $reader.Dispose()
-        }
-    }
-
-    $changelogEntry = $zip.GetEntry('CHANGELOG.md')
-    if ($null -ne $changelogEntry) {
-        $reader = [System.IO.StreamReader]::new($changelogEntry.Open(), $utf8, $true)
-        try {
-            $changelog = $reader.ReadToEnd()
-        } finally {
-            $reader.Dispose()
-        }
-    }
-
-    [pscustomobject]@{
-        entries = $entries
-        version = $version
-        changelog = $changelog
-    } | ConvertTo-Json -Compress -Depth 4
-} finally {
-    $zip.Dispose()
-}
-PS;
-
-    if (file_put_contents($zipInspectScriptPath, $zipInspectScript) === false) {
-        fail('Cannot write the release smoke ZIP inspection helper.');
-    }
-
-    $zipInspectOutput = runCheckedCommand(
-        [
-            $powerShell,
-            '-NoLogo',
-            '-NoProfile',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-File',
-            $zipInspectScriptPath,
-            $zipPath,
-        ],
-        $tempRoot,
-    );
-
-    $zipPayload = json_decode($zipInspectOutput, true);
-    if (!is_array($zipPayload)) {
-        fail('Cannot parse the release smoke ZIP inspection output.');
-    }
-
-    $entries = [];
-    foreach (($zipPayload['entries'] ?? []) as $entry) {
-        if (is_string($entry)) {
-            $entries[] = str_replace('\\', '/', $entry);
-        }
-    }
+    $zipPayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $zipPath, $tempRoot);
+    $entries = normalizedArchiveEntries($zipPayload);
 
     foreach (['VERSION', 'CHANGELOG.md', 'docs/admin-guide.md'] as $requiredEntry) {
         if (!in_array($requiredEntry, $entries, true)) {
@@ -448,7 +487,57 @@ PS;
     if (!is_string($changelogContents) || !str_contains($changelogContents, '## [' . $expectedVersion . ']')) {
         fail('Release smoke ZIP does not contain the expected CHANGELOG preview.');
     }
+
+    $sourceArchivePath = $tempRoot . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'source-archive.zip';
+    runCheckedCommand(['git', 'archive', '--format=zip', '--output', $sourceArchivePath, 'HEAD'], $tempRoot);
+
+    if (!is_file($sourceArchivePath)) {
+        fail('Source archive ZIP was not created: ' . $sourceArchivePath);
+    }
+
+    $sourcePayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $sourceArchivePath, $tempRoot);
+    $sourceEntries = normalizedArchiveEntries($sourcePayload);
+
+    foreach (['VERSION', 'CHANGELOG.md', 'auth.php', 'themes/default/theme.json'] as $requiredEntry) {
+        if (!in_array($requiredEntry, $sourceEntries, true)) {
+            fail('Source archive is missing required file: ' . $requiredEntry);
+        }
+    }
+
+    foreach ($sourceEntries as $entry) {
+        if (str_starts_with($entry, '.github/')) {
+            fail('Source archive unexpectedly contains .github metadata.');
+        }
+        if (str_starts_with($entry, 'build/')) {
+            fail('Source archive unexpectedly contains build tooling: ' . $entry);
+        }
+        if (str_starts_with($entry, 'docs/')) {
+            fail('Source archive unexpectedly contains docs content: ' . $entry);
+        }
+    }
+
+    foreach ([
+        '.gitattributes',
+        '.gitignore',
+        '.php-cs-fixer.dist.php',
+        'AGENTS.md',
+        'composer.json',
+        'composer.lock',
+        'phpstan.neon.dist',
+    ] as $excludedFile) {
+        if (in_array($excludedFile, $sourceEntries, true)) {
+            fail('Source archive unexpectedly contains export-ignored file: ' . $excludedFile);
+        }
+    }
+
+    $sourceVersionContents = $sourcePayload['version'] ?? null;
+    if (!is_string($sourceVersionContents) || trim($sourceVersionContents) !== $snapshotVersion) {
+        fail('Source archive contains an unexpected VERSION value.');
+    }
 } finally {
+    if (is_file($zipInspectScriptPath)) {
+        @unlink($zipInspectScriptPath);
+    }
     removeTree($tempRoot);
 }
 

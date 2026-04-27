@@ -99,6 +99,8 @@ if (!is_file($gitattributesPath)) {
         '.gitattributes export-ignore',
         '.php-cs-fixer.dist.php export-ignore',
         'AGENTS.md export-ignore',
+        'build export-ignore',
+        'build/** export-ignore',
         'build/runtime_audit.php export-ignore',
         'build/release_package_audit.php export-ignore',
         'build/release_smoke.php export-ignore',
