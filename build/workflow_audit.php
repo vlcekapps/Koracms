@@ -21,6 +21,49 @@ function requireWorkflowSnippets(string $label, string $source, array $snippets,
 }
 
 /**
+ * @param list<string> $snippets
+ * @param list<string> $issues
+ */
+function forbidWorkflowSnippets(string $label, string $source, array $snippets, array &$issues): void
+{
+    foreach ($snippets as $snippet) {
+        if (str_contains($source, $snippet)) {
+            $issues[] = $label . ' contains forbidden workflow pattern: ' . $snippet;
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
+function auditWorkflowActionReferences(string $label, string $source, array &$issues): void
+{
+    $matchCount = preg_match_all('/^\s*uses:\s*([^\s#]+)/m', $source, $matches);
+    if ($matchCount === false || $matchCount === 0) {
+        $issues[] = $label . ' does not reference any GitHub Action.';
+        return;
+    }
+
+    foreach ($matches[1] as $actionReference) {
+        if (str_starts_with($actionReference, './')) {
+            continue;
+        }
+
+        if (!str_contains($actionReference, '@')) {
+            $issues[] = $label . ' uses an unpinned action: ' . $actionReference;
+            continue;
+        }
+
+        [, $reference] = explode('@', $actionReference, 2);
+        $isVersionTag = preg_match('/^v\d+(?:\.\d+){0,2}$/', $reference) === 1;
+        $isCommitSha = preg_match('/^[a-f0-9]{40}$/i', $reference) === 1;
+        if (!$isVersionTag && !$isCommitSha) {
+            $issues[] = $label . ' uses a floating action reference: ' . $actionReference;
+        }
+    }
+}
+
+/**
  * @param list<string> $issues
  */
 function loadWorkflow(string $path, string $label, array &$issues): string
@@ -62,10 +105,22 @@ if ($ciWorkflowSource !== '') {
         'composer install --no-interaction --no-progress --prefer-dist',
         'composer ci:basic',
     ], $issues);
+    forbidWorkflowSnippets('Basic CI', $ciWorkflowSource, [
+        "\t",
+        'pull_request_target:',
+        'contents: write',
+        'id-token: write',
+        'packages: write',
+        '${{ secrets.',
+        'github.event.pull_request.head.repo.full_name',
+        'curl |',
+        'curl -s |',
+        'bash <(',
+        'Invoke-Expression',
+        'Set-ExecutionPolicy Unrestricted',
+    ], $issues);
+    auditWorkflowActionReferences('Basic CI', $ciWorkflowSource, $issues);
 
-    if (str_contains($ciWorkflowSource, 'contents: write')) {
-        $issues[] = 'Basic CI grants write access to repository contents.';
-    }
     if (str_contains($ciWorkflowSource, 'composer ci:full')) {
         $issues[] = 'Basic CI should stay on composer ci:basic; full checks belong to full-ci.yml.';
     }
@@ -104,10 +159,22 @@ if ($fullCiWorkflowSource !== '') {
         'SELECT COUNT(*) FROM cms_settings',
         'composer ci:full',
     ], $issues);
+    forbidWorkflowSnippets('Full CI', $fullCiWorkflowSource, [
+        "\t",
+        'pull_request_target:',
+        'contents: write',
+        'id-token: write',
+        'packages: write',
+        '${{ secrets.',
+        'github.event.pull_request.head.repo.full_name',
+        'curl |',
+        'curl -s |',
+        'bash <(',
+        'Invoke-Expression',
+        'Set-ExecutionPolicy Unrestricted',
+    ], $issues);
+    auditWorkflowActionReferences('Full CI', $fullCiWorkflowSource, $issues);
 
-    if (str_contains($fullCiWorkflowSource, 'contents: write')) {
-        $issues[] = 'Full CI grants write access to repository contents.';
-    }
     if (!str_contains($fullCiWorkflowSource, 'curl -fsS "$KORA_TEST_BASE_URL/install.php"')) {
         $issues[] = 'Full CI does not verify that the local PHP server can serve install.php.';
     }

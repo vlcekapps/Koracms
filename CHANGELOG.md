@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **CI guardrails – workflow audit nově hlídá i bezpečnostní drift GitHub Actions** – `build/workflow_audit.php` kromě povinných kroků kontroluje také připnuté actions, zakázané write oprávnění, `pull_request_target`, secrets a rizikové shell vzory.
 - **CI guardrails – základní balík nově kontroluje i GitHub Actions workflow** – `composer ci:basic` spouští nový `build/workflow_audit.php`, který hlídá základní i plný CI workflow včetně minimálních oprávnění, timeoutů, řízení souběhu a runtime bootstrapu pro HTTP kontroly.
 - **GitHub Actions – CI workflow jsou nově ohraničené a plný běh si připraví runtime prostředí** – základní i plný workflow používají minimální `contents: read` oprávnění, řízení souběhu a timeouty; plný `composer ci:full` workflow si před runtime auditem a HTTP integrací připraví MySQL, `config.php`, vestavěný PHP server a čerstvou instalaci CMS.
 - **GitHub Actions – plný CI balík má nově vlastní workflow** – `.github/workflows/full-ci.yml` nově spouští `composer ci:full` ručně a v nočním plánu, takže runtime audit a HTTP integrace mají i vzdálený guardrail bez zpomalení každého běžného `push` nebo `pull_request`.

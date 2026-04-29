@@ -7074,7 +7074,12 @@ $foundationChecks = [
         && str_contains($composerSource, '@test:workflow')
         && str_contains($workflowAuditSource, 'Basic CI')
         && str_contains($workflowAuditSource, 'Full CI')
+        && str_contains($workflowAuditSource, 'forbidWorkflowSnippets')
+        && str_contains($workflowAuditSource, 'auditWorkflowActionReferences')
+        && str_contains($workflowAuditSource, 'pull_request_target:')
         && str_contains($workflowAuditSource, 'contents: write')
+        && str_contains($workflowAuditSource, '${{ secrets.')
+        && str_contains($workflowAuditSource, 'uses an unpinned action')
         && str_contains($workflowAuditSource, 'composer ci:full')
         && str_contains($composerSource, 'build/phpstan_bootstrap.php build/workflow_audit.php'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")

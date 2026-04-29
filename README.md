@@ -467,7 +467,7 @@ composer ci:basic
 `composer ci:basic` spustí:
 
 - PHP lint přes `build/lint_php.php`
-- audit GitHub Actions workflow přes `build/workflow_audit.php`, který hlídá základní a plný CI běh včetně oprávnění, timeoutů, souběhu a runtime bootstrapu pro HTTP kontroly
+- audit GitHub Actions workflow přes `build/workflow_audit.php`, který hlídá základní a plný CI běh včetně oprávnění, timeoutů, souběhu, připnutých actions, zakázaných write/secrets vzorů a runtime bootstrapu pro HTTP kontroly
 - úzký PSR-12 smoke check přes `composer format:check` nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně `lib/gallery.php`, `lib/media_library.php`, `lib/presentation.php`, `lib/revisions.php`, `lib/stats.php`, `lib/ui.php`, `lib/webhooks.php` a `lib/widgets.php`
 - PHPStan na levelu 6 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů
 - samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 218 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven, workflow auditu a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
