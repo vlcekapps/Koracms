@@ -30,6 +30,7 @@ parameters:
         - admin/settings_shared.php
         - build/lint_php.php
         - build/phpstan_bootstrap.php
+        - build/workflow_audit.php
         - lib/backup.php
         - lib/comments.php
         - lib/content.php
