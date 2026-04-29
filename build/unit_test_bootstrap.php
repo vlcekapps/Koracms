@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 /**
@@ -93,28 +94,47 @@ if (!function_exists('getSetting')) {
     }
 }
 if (!function_exists('getSettings')) {
+    /**
+     * @return array<string,string>
+     */
     function getSettings(): array
     {
         return [];
     }
 }
 if (!function_exists('saveSetting')) {
-    function saveSetting(string $key, string $value): void {}
+    function saveSetting(string $key, string $value): void
+    {
+    }
 }
 if (!function_exists('clearSettingsCache')) {
-    function clearSettingsCache(): void {}
+    function clearSettingsCache(): void
+    {
+    }
 }
 if (!function_exists('isModuleEnabled')) {
-    function isModuleEnabled(string $module): bool { return false; }
+    function isModuleEnabled(string $module): bool
+    {
+        return false;
+    }
 }
 if (!function_exists('koraStorageDirectory')) {
-    function koraStorageDirectory(): string { return sys_get_temp_dir(); }
+    function koraStorageDirectory(): string
+    {
+        return sys_get_temp_dir();
+    }
 }
 if (!function_exists('koraStoragePath')) {
-    function koraStoragePath(string $subpath = ''): string { return sys_get_temp_dir() . '/' . $subpath; }
+    function koraStoragePath(string $subpath = ''): string
+    {
+        return sys_get_temp_dir() . '/' . $subpath;
+    }
 }
 if (!function_exists('koraEnsureDirectory')) {
-    function koraEnsureDirectory(string $path, int $permissions = 0755): bool { return true; }
+    function koraEnsureDirectory(string $path, int $permissions = 0755): bool
+    {
+        return true;
+    }
 }
 
 // Nacteni lib souborů – kazdy ma require_once ale nemaji vedlejsi efekty pri loadu

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 if (!function_exists('fetchUrl')) {
@@ -26,7 +27,7 @@ if (!function_exists('fetchUrl')) {
         ]);
 
         $body = file_get_contents($url, false, $context);
-        $responseHeaders = $http_response_header ?? [];
+        $responseHeaders = $http_response_header;
         $status = $responseHeaders[0] ?? 'HTTP status unknown';
 
         return [
@@ -101,7 +102,7 @@ if (!function_exists('postUrl')) {
         ]);
 
         $body = file_get_contents($url, false, $context);
-        $responseHeaders = $http_response_header ?? [];
+        $responseHeaders = $http_response_header;
         $status = $responseHeaders[0] ?? 'HTTP status unknown';
 
         return [
@@ -162,7 +163,7 @@ if (!function_exists('postMultipartUrl')) {
         ]);
 
         $responseBody = file_get_contents($url, false, $context);
-        $responseHeaders = $http_response_header ?? [];
+        $responseHeaders = $http_response_header;
         $status = $responseHeaders[0] ?? 'HTTP status unknown';
 
         return [
@@ -174,6 +175,9 @@ if (!function_exists('postMultipartUrl')) {
 }
 
 if (!function_exists('responseHasLocationHeader')) {
+    /**
+     * @param list<string> $headers
+     */
     function responseLocationHeaderValue(array $headers): string
     {
         foreach ($headers as $header) {
@@ -185,6 +189,9 @@ if (!function_exists('responseHasLocationHeader')) {
         return '';
     }
 
+    /**
+     * @param list<string> $headers
+     */
     function responseMergeCookies(array $headers, string $existingCookie = ''): string
     {
         $cookieJar = [];
@@ -205,7 +212,7 @@ if (!function_exists('responseHasLocationHeader')) {
 
             $setCookiePayload = trim(substr($header, 11));
             $setCookieParts = explode(';', $setCookiePayload);
-            $cookiePair = trim($setCookieParts[0] ?? '');
+            $cookiePair = trim($setCookieParts[0]);
             if ($cookiePair === '' || !str_contains($cookiePair, '=')) {
                 continue;
             }
@@ -222,6 +229,9 @@ if (!function_exists('responseHasLocationHeader')) {
         return implode('; ', $serializedCookies);
     }
 
+    /**
+     * @param list<string> $headers
+     */
     function responseHasLocationHeader(array $headers, string $expectedPath, string $baseUrl = ''): bool
     {
         $expectedAbsolute = rtrim($baseUrl, '/') . $expectedPath;

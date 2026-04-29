@@ -5,7 +5,7 @@ declare(strict_types=1);
 $projectRoot = dirname(__DIR__);
 $releaseScriptPath = $projectRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release.ps1';
 
-function fail(string $message): never
+function fail(string $message): void
 {
     fwrite(STDERR, $message . PHP_EOL);
     exit(1);
@@ -431,10 +431,6 @@ try {
     }
 
     $expectedChecksum = hash_file('sha256', $zipPath);
-    if (!is_string($expectedChecksum) || $expectedChecksum === '') {
-        fail('Cannot compute SHA-256 for the release smoke ZIP.');
-    }
-
     $checksumLine = trim((string) file_get_contents($checksumPath));
     $expectedChecksumLine = $expectedChecksum . '  ' . basename($zipPath);
     if ($checksumLine !== $expectedChecksumLine) {

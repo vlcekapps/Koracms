@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 error_reporting(E_ALL);
@@ -1871,7 +1872,7 @@ if ($newsletterHistoryId !== false) {
 if ($pageId !== false) {
     $pages[] = ['label' => 'admin_page_form', 'url' => $baseUrl . '/admin/page_form.php?id=' . urlencode((string)$pageId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
- $pages[] = ['label' => 'admin_page_create_form', 'url' => $baseUrl . '/admin/page_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+$pages[] = ['label' => 'admin_page_create_form', 'url' => $baseUrl . '/admin/page_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
 if (!empty($articleRow['blog_id'])) {
     $pages[] = ['label' => 'admin_blog_pages', 'url' => $baseUrl . '/admin/blog_pages.php?blog_id=' . urlencode((string)$articleRow['blog_id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
@@ -2424,7 +2425,7 @@ foreach ($pages as $page) {
         ];
         $redundantHomeSnippets = array_filter(
             $redundantHomeSnippets,
-            static fn(string $label, string $snippet): bool => !str_contains($snippet, 'section-title section-title--hero'),
+            static fn (string $label, string $snippet): bool => !str_contains($snippet, 'section-title section-title--hero'),
             ARRAY_FILTER_USE_BOTH
         );
         foreach ($redundantHomeSnippets as $snippet => $label) {
@@ -4310,7 +4311,7 @@ foreach ($pages as $page) {
         }
         $issues = array_values(array_filter(
             $issues,
-            static fn(string $issue): bool => !preg_match('/^admin polls page is missing field: P/u', $issue)
+            static fn (string $issue): bool => !preg_match('/^admin polls page is missing field: P/u', $issue)
         ));
         if (!str_contains($result['body'], 'Přehled anket')) {
             $issues[] = 'admin polls page is missing field: Přehled anket';
@@ -4320,7 +4321,7 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_polls') {
         $issues = array_values(array_filter(
             $issues,
-            static fn(string $issue): bool =>
+            static fn (string $issue): bool =>
                 !in_array($issue, [
                     'admin polls page is missing field: Přehled anket',
                 ], true)
@@ -4333,7 +4334,7 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_polls') {
         $issues = array_values(array_filter(
             $issues,
-            static fn(string $issue): bool => !preg_match('/^admin polls page is missing field: P/u', $issue)
+            static fn (string $issue): bool => !preg_match('/^admin polls page is missing field: P/u', $issue)
         ));
         if (!str_contains($result['body'], 'name="status"') || !str_contains($result['body'], 'name="q"')) {
             $issues[] = 'admin polls page is missing filter controls';
@@ -4360,7 +4361,7 @@ foreach ($pages as $page) {
         }
         $issues = array_values(array_filter(
             $issues,
-            static fn(string $issue): bool => !preg_match('/^admin polls form is missing field: Z/u', $issue)
+            static fn (string $issue): bool => !preg_match('/^admin polls form is missing field: Z/u', $issue)
         ));
         if (!str_contains($result['body'], 'Zpět na ankety')) {
             $issues[] = 'admin polls form is missing field: Zpět na ankety';
@@ -4369,7 +4370,7 @@ foreach ($pages as $page) {
     if (in_array($page['label'], ['admin_polls_form', 'admin_polls_create_form'], true)) {
         $issues = array_values(array_filter(
             $issues,
-            static fn(string $issue): bool =>
+            static fn (string $issue): bool =>
                 !in_array($issue, [
                     'admin polls form is missing field: ZpÄ›t na ankety',
                     'admin polls form is missing field: Zpět na ankety',
@@ -4383,7 +4384,7 @@ foreach ($pages as $page) {
     if (in_array($page['label'], ['admin_polls_form', 'admin_polls_create_form'], true)) {
         $issues = array_values(array_filter(
             $issues,
-            static fn(string $issue): bool => !preg_match('/^admin polls form is missing field: Z/u', $issue)
+            static fn (string $issue): bool => !preg_match('/^admin polls form is missing field: Z/u', $issue)
         ));
         if (!str_contains($result['body'], 'name="redirect"')) {
             $issues[] = 'admin polls form is missing return redirect field';
@@ -5026,7 +5027,7 @@ foreach ($pages as $page) {
         } else {
             $issues = array_values(array_filter(
                 $issues,
-                static fn(string $issue): bool => $issue !== 'poll detail is missing back link'
+                static fn (string $issue): bool => $issue !== 'poll detail is missing back link'
             ));
         }
         if ($pollRow && !str_contains($result['body'], (string)($pollRow['excerpt'] ?? ''))) {
@@ -5038,7 +5039,7 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], 'href="' . BASE_URL . '/polls/index.php')) {
             $issues = array_values(array_filter(
                 $issues,
-                static fn(string $issue): bool =>
+                static fn (string $issue): bool =>
                     $issue !== 'poll detail is missing back link'
                     && $issue !== 'poll detail is missing clean back link'
             ));
@@ -6007,8 +6008,8 @@ echo "=== content_shortcodes ===\n";
 if ($articleId === false) {
     echo "OK\n";
 } else {
-$contentShortcodeIssues = [];
-$runtimeAuditPdfUrl = '/uploads/runtime-audit.pdf';
+    $contentShortcodeIssues = [];
+    $runtimeAuditPdfUrl = '/uploads/runtime-audit.pdf';
     $originalArticleContent = '';
     try {
         $originalContentStmt = $pdo->prepare("SELECT content FROM cms_articles WHERE id = ?");
@@ -6351,16 +6352,16 @@ if ($articleId === false) {
         }
         if ($articleCommentsColumnExists) {
             $articleDisabledProbe = fetchUrl($articleCanonicalUrl, '', 0);
-        if (!str_contains($articleDisabledProbe['status'], '200')) {
-            $commentGuardIssues[] = 'blog article did not load after disabling comments on article';
-        } else {
-            if (str_contains($articleDisabledProbe['body'], 'name="comment"')) {
-                $commentGuardIssues[] = 'comment form remained visible after disabling comments on article';
+            if (!str_contains($articleDisabledProbe['status'], '200')) {
+                $commentGuardIssues[] = 'blog article did not load after disabling comments on article';
+            } else {
+                if (str_contains($articleDisabledProbe['body'], 'name="comment"')) {
+                    $commentGuardIssues[] = 'comment form remained visible after disabling comments on article';
+                }
+                if (!str_contains($articleDisabledProbe['body'], 'Komentáře jsou u tohoto článku vypnuté.')) {
+                    $commentGuardIssues[] = 'missing public message for article-level disabled comments';
+                }
             }
-            if (!str_contains($articleDisabledProbe['body'], 'Komentáře jsou u tohoto článku vypnuté.')) {
-                $commentGuardIssues[] = 'missing public message for article-level disabled comments';
-            }
-        }
         }
     } finally {
         saveSetting('comments_enabled', $originalCommentsEnabled);
@@ -7205,6 +7206,15 @@ $foundationChecks = [
         && str_contains($composerSource, 'admin/settings.php admin/statistics.php admin/import.php admin/export.php')
         && str_contains($composerSource, 'admin/estranky_import.php')
         && str_contains($composerSource, 'admin/estranky_download_photos.php admin/wp_import.php admin/revisions.php'),
+    'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
+        && str_contains($composerSource, '"format:fix:build-tests"')
+        && str_contains($composerSource, '@format:check:build-tests')
+        && str_contains($composerSource, 'build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/unit_test_bootstrap.php build/unit_tests.php'),
+    'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
+        && str_contains($composerSource, '@analyse:strict:build-tests')
+        && str_contains($composerSource, '--level=6 build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 6')
@@ -7213,7 +7223,10 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'admin/content_reference_picker.php')
         && str_contains($phpstanConfigSource, 'admin/layout.php')
         && str_contains($phpstanConfigSource, 'admin/settings_shared.php')
+        && str_contains($phpstanConfigSource, 'build/http_test_helpers.php')
         && str_contains($phpstanConfigSource, 'build/phpstan_bootstrap.php')
+        && str_contains($phpstanConfigSource, 'build/release_package_audit.php')
+        && str_contains($phpstanConfigSource, 'build/release_smoke.php')
         && str_contains($phpstanConfigSource, 'auth.php')
         && str_contains($phpstanConfigSource, 'db.php')
         && str_contains($phpstanConfigSource, 'lib/content.php')
@@ -7612,7 +7625,7 @@ foreach ([
         $adminLoginRedirectIssues[] = 'admin 2FA is missing redirect fragment: ' . $adminLogin2faFragment;
     }
 }
- if ($adminHttpIntegrationSource === '') {
+if ($adminHttpIntegrationSource === '') {
     $adminLoginRedirectIssues[] = 'build/http_integration.php is missing for admin login redirect coverage';
 } else {
     foreach ([
@@ -8096,132 +8109,132 @@ try {
     if ($runtimeAuditHomepageUsesWidgets) {
         echo "OK\n";
     } else {
-    $newsModuleEnabled = isModuleEnabled('news');
-    $blogModuleEnabled = isModuleEnabled('blog');
-    $boardModuleEnabled = isModuleEnabled('board');
-    $pollModuleEnabled = isModuleEnabled('polls');
-    $newsletterModuleEnabled = isModuleEnabled('newsletter');
+        $newsModuleEnabled = isModuleEnabled('news');
+        $blogModuleEnabled = isModuleEnabled('blog');
+        $boardModuleEnabled = isModuleEnabled('board');
+        $pollModuleEnabled = isModuleEnabled('polls');
+        $newsletterModuleEnabled = isModuleEnabled('newsletter');
 
-    $composerSettings = [
-        'home_layout' => 'balanced',
-        'home_hero_visibility' => 'hide',
-        'home_featured_module' => $newsletterModuleEnabled
-            ? 'newsletter'
-            : ($blogModuleEnabled && $articleId
-                ? 'blog'
-                : ($boardModuleEnabled && $boardCount > 0
-                    ? 'board'
-                    : ($pollModuleEnabled && $activePollCount > 0 ? 'poll' : 'none'))),
-        'home_primary_order' => 'blog_news',
-        'home_utility_order' => $newsletterModuleEnabled
-            ? 'newsletter_cta_board_poll'
-            : 'cta_board_poll_newsletter',
-        'home_news_visibility' => $newsModuleEnabled && $newsCount > 0 ? 'hide' : 'show',
-        'home_blog_visibility' => $blogModuleEnabled && $articleId ? 'show' : 'hide',
-        'home_board_visibility' => $boardModuleEnabled && $boardCount > 0 ? 'show' : 'hide',
-        'home_poll_visibility' => $pollModuleEnabled && $activePollCount > 0 ? 'show' : 'hide',
-        'home_newsletter_visibility' => $newsletterModuleEnabled ? 'show' : 'hide',
-        'home_cta_visibility' => 'show',
-    ];
-    $expectedFeaturedModule = (string)$composerSettings['home_featured_module'];
-    $expectedHomeBlogItems = 0;
-    if ($blogModuleEnabled && (string)$composerSettings['home_blog_visibility'] === 'show') {
-        $expectedHomeBlogItems = min($articleCount, $homeBlogCountSetting);
-    }
-
-    saveThemeSettings($composerSettings, $originalActiveTheme);
-    clearSettingsCache();
-
-    $composerProbe = fetchUrl($baseUrl . '/', '', 0);
-    $composerIssues = [];
-    if (!str_contains($composerProbe['status'], '200')) {
-        $composerIssues[] = 'homepage composer probe did not load';
-    }
-    if (str_contains($composerProbe['body'], 'data-home-section="hero"')) {
-        $composerIssues[] = 'hero block remained visible after hiding it';
-    }
-    if (!str_contains($composerProbe['body'], 'data-home-section="cta"')) {
-        $composerIssues[] = 'CTA block was not rendered';
-    }
-    if (!str_contains($composerProbe['body'], 'data-home-section="featured"')) {
-        $composerIssues[] = 'featured block was not rendered';
-    }
-    if ($newsModuleEnabled && $newsCount > 0 && str_contains($composerProbe['body'], 'data-home-section="news"')) {
-        $composerIssues[] = 'news block remained visible after hiding it';
-    }
-    if ($expectedHomeBlogItems > 0 && !str_contains($composerProbe['body'], 'data-home-section="blog"')) {
-        $composerIssues[] = 'blog block was not rendered';
-    }
-    $actualHomeBlogItems = substr_count($composerProbe['body'], 'data-home-blog-item');
-    if ($actualHomeBlogItems !== $expectedHomeBlogItems) {
-        $composerIssues[] = 'homepage blog section rendered unexpected number of blog items';
-    }
-
-    $blogPos = strpos($composerProbe['body'], 'data-home-section="blog"');
-    $boardPos = strpos($composerProbe['body'], 'data-home-section="board"');
-    $ctaPos = strpos($composerProbe['body'], 'data-home-section="cta"');
-    $newsletterPos = strpos($composerProbe['body'], 'data-home-section="newsletter"');
-
-    if (
-        $expectedHomeBlogItems > 0
-        && $boardModuleEnabled
-        && $boardCount > 0
-        && $blogPos !== false
-        && $boardPos !== false
-        && $blogPos > $boardPos
-    ) {
-        $composerIssues[] = 'primary blog section was rendered after utility board section';
-    }
-    if ($newsletterModuleEnabled && $newsletterPos !== false && $ctaPos !== false && $newsletterPos > $ctaPos) {
-        $composerIssues[] = 'newsletter utility block was rendered after CTA despite configured order';
-    }
-
-    saveSetting('module_newsletter', '0');
-    clearSettingsCache();
-
-    $adminComposerProbe = fetchUrl($baseUrl . '/admin/themes.php', 'PHPSESSID=' . $auditSessionId, 0);
-    if (!str_contains($adminComposerProbe['status'], '200')) {
-        $composerIssues[] = 'admin themes page did not load after disabling newsletter module';
-    }
-    if (str_contains($adminComposerProbe['body'], 'theme_settings[home_newsletter_visibility]')) {
-        $composerIssues[] = 'newsletter visibility setting remained visible in admin after disabling module';
-    }
-    if (str_contains($adminComposerProbe['body'], '<option value="newsletter"')) {
-        $composerIssues[] = 'newsletter featured option remained visible in admin after disabling module';
-    }
-    if (str_contains($adminComposerProbe['body'], '<option value="news"')) {
-        $composerIssues[] = 'news remained available as featured source in admin';
-    }
-
-    $newsletterDisabledSettings = $composerSettings;
-    $newsletterDisabledSettings['home_featured_module'] = 'newsletter';
-    $newsletterDisabledSettings['home_newsletter_visibility'] = 'show';
-    $newsletterDisabledSettings['home_utility_order'] = 'newsletter_cta_board_poll';
-    saveThemeSettings($newsletterDisabledSettings, $originalActiveTheme);
-    clearSettingsCache();
-
-    $newsletterDisabledProbe = fetchUrl($baseUrl . '/', '', 0);
-    if (!str_contains($newsletterDisabledProbe['status'], '200')) {
-        $composerIssues[] = 'homepage did not load after disabling newsletter module';
-    }
-    if (str_contains($newsletterDisabledProbe['body'], 'data-feature-source="newsletter"')) {
-        $composerIssues[] = 'newsletter remained selected as featured source after disabling module';
-    }
-    if (str_contains($newsletterDisabledProbe['body'], 'data-home-section="newsletter"')) {
-        $composerIssues[] = 'newsletter block remained rendered after disabling module';
-    }
-    if (!str_contains($newsletterDisabledProbe['body'], 'data-home-section="cta"')) {
-        $composerIssues[] = 'CTA block disappeared after disabling newsletter module';
-    }
-
-    if ($composerIssues === []) {
-        echo "OK\n";
-    } else {
-        $failures++;
-        foreach ($composerIssues as $issue) {
-            echo '- ' . $issue . "\n";
+        $composerSettings = [
+            'home_layout' => 'balanced',
+            'home_hero_visibility' => 'hide',
+            'home_featured_module' => $newsletterModuleEnabled
+                ? 'newsletter'
+                : ($blogModuleEnabled && $articleId
+                    ? 'blog'
+                    : ($boardModuleEnabled && $boardCount > 0
+                        ? 'board'
+                        : ($pollModuleEnabled && $activePollCount > 0 ? 'poll' : 'none'))),
+            'home_primary_order' => 'blog_news',
+            'home_utility_order' => $newsletterModuleEnabled
+                ? 'newsletter_cta_board_poll'
+                : 'cta_board_poll_newsletter',
+            'home_news_visibility' => $newsModuleEnabled && $newsCount > 0 ? 'hide' : 'show',
+            'home_blog_visibility' => $blogModuleEnabled && $articleId ? 'show' : 'hide',
+            'home_board_visibility' => $boardModuleEnabled && $boardCount > 0 ? 'show' : 'hide',
+            'home_poll_visibility' => $pollModuleEnabled && $activePollCount > 0 ? 'show' : 'hide',
+            'home_newsletter_visibility' => $newsletterModuleEnabled ? 'show' : 'hide',
+            'home_cta_visibility' => 'show',
+        ];
+        $expectedFeaturedModule = (string)$composerSettings['home_featured_module'];
+        $expectedHomeBlogItems = 0;
+        if ($blogModuleEnabled && (string)$composerSettings['home_blog_visibility'] === 'show') {
+            $expectedHomeBlogItems = min($articleCount, $homeBlogCountSetting);
         }
-    }
+
+        saveThemeSettings($composerSettings, $originalActiveTheme);
+        clearSettingsCache();
+
+        $composerProbe = fetchUrl($baseUrl . '/', '', 0);
+        $composerIssues = [];
+        if (!str_contains($composerProbe['status'], '200')) {
+            $composerIssues[] = 'homepage composer probe did not load';
+        }
+        if (str_contains($composerProbe['body'], 'data-home-section="hero"')) {
+            $composerIssues[] = 'hero block remained visible after hiding it';
+        }
+        if (!str_contains($composerProbe['body'], 'data-home-section="cta"')) {
+            $composerIssues[] = 'CTA block was not rendered';
+        }
+        if (!str_contains($composerProbe['body'], 'data-home-section="featured"')) {
+            $composerIssues[] = 'featured block was not rendered';
+        }
+        if ($newsModuleEnabled && $newsCount > 0 && str_contains($composerProbe['body'], 'data-home-section="news"')) {
+            $composerIssues[] = 'news block remained visible after hiding it';
+        }
+        if ($expectedHomeBlogItems > 0 && !str_contains($composerProbe['body'], 'data-home-section="blog"')) {
+            $composerIssues[] = 'blog block was not rendered';
+        }
+        $actualHomeBlogItems = substr_count($composerProbe['body'], 'data-home-blog-item');
+        if ($actualHomeBlogItems !== $expectedHomeBlogItems) {
+            $composerIssues[] = 'homepage blog section rendered unexpected number of blog items';
+        }
+
+        $blogPos = strpos($composerProbe['body'], 'data-home-section="blog"');
+        $boardPos = strpos($composerProbe['body'], 'data-home-section="board"');
+        $ctaPos = strpos($composerProbe['body'], 'data-home-section="cta"');
+        $newsletterPos = strpos($composerProbe['body'], 'data-home-section="newsletter"');
+
+        if (
+            $expectedHomeBlogItems > 0
+            && $boardModuleEnabled
+            && $boardCount > 0
+            && $blogPos !== false
+            && $boardPos !== false
+            && $blogPos > $boardPos
+        ) {
+            $composerIssues[] = 'primary blog section was rendered after utility board section';
+        }
+        if ($newsletterModuleEnabled && $newsletterPos !== false && $ctaPos !== false && $newsletterPos > $ctaPos) {
+            $composerIssues[] = 'newsletter utility block was rendered after CTA despite configured order';
+        }
+
+        saveSetting('module_newsletter', '0');
+        clearSettingsCache();
+
+        $adminComposerProbe = fetchUrl($baseUrl . '/admin/themes.php', 'PHPSESSID=' . $auditSessionId, 0);
+        if (!str_contains($adminComposerProbe['status'], '200')) {
+            $composerIssues[] = 'admin themes page did not load after disabling newsletter module';
+        }
+        if (str_contains($adminComposerProbe['body'], 'theme_settings[home_newsletter_visibility]')) {
+            $composerIssues[] = 'newsletter visibility setting remained visible in admin after disabling module';
+        }
+        if (str_contains($adminComposerProbe['body'], '<option value="newsletter"')) {
+            $composerIssues[] = 'newsletter featured option remained visible in admin after disabling module';
+        }
+        if (str_contains($adminComposerProbe['body'], '<option value="news"')) {
+            $composerIssues[] = 'news remained available as featured source in admin';
+        }
+
+        $newsletterDisabledSettings = $composerSettings;
+        $newsletterDisabledSettings['home_featured_module'] = 'newsletter';
+        $newsletterDisabledSettings['home_newsletter_visibility'] = 'show';
+        $newsletterDisabledSettings['home_utility_order'] = 'newsletter_cta_board_poll';
+        saveThemeSettings($newsletterDisabledSettings, $originalActiveTheme);
+        clearSettingsCache();
+
+        $newsletterDisabledProbe = fetchUrl($baseUrl . '/', '', 0);
+        if (!str_contains($newsletterDisabledProbe['status'], '200')) {
+            $composerIssues[] = 'homepage did not load after disabling newsletter module';
+        }
+        if (str_contains($newsletterDisabledProbe['body'], 'data-feature-source="newsletter"')) {
+            $composerIssues[] = 'newsletter remained selected as featured source after disabling module';
+        }
+        if (str_contains($newsletterDisabledProbe['body'], 'data-home-section="newsletter"')) {
+            $composerIssues[] = 'newsletter block remained rendered after disabling module';
+        }
+        if (!str_contains($newsletterDisabledProbe['body'], 'data-home-section="cta"')) {
+            $composerIssues[] = 'CTA block disappeared after disabling newsletter module';
+        }
+
+        if ($composerIssues === []) {
+            echo "OK\n";
+        } else {
+            $failures++;
+            foreach ($composerIssues as $issue) {
+                echo '- ' . $issue . "\n";
+            }
+        }
     }
 } finally {
     saveSetting('module_newsletter', $originalNewsletterModule);
@@ -8360,11 +8373,11 @@ if (str_contains($validConfirmResult['status'], '200') && str_contains($validCon
 echo "=== smtp_connectivity ===\n";
 $smtpIssues = [];
 
-$smtpHost   = defined('SMTP_HOST')   ? SMTP_HOST   : (ini_get('SMTP') ?: 'localhost');
-$smtpPort   = defined('SMTP_PORT')   ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
+$smtpHost   = defined('SMTP_HOST') ? SMTP_HOST : (ini_get('SMTP') ?: 'localhost');
+$smtpPort   = defined('SMTP_PORT') ? (int) SMTP_PORT : (int)(ini_get('smtp_port') ?: 25);
 $smtpSecure = defined('SMTP_SECURE') ? SMTP_SECURE : '';
-$smtpUser   = defined('SMTP_USER')   ? SMTP_USER   : '';
-$smtpPass   = defined('SMTP_PASS')   ? SMTP_PASS   : '';
+$smtpUser   = defined('SMTP_USER') ? SMTP_USER : '';
+$smtpPass   = defined('SMTP_PASS') ? SMTP_PASS : '';
 $smtpIniHost = trim((string)ini_get('SMTP'));
 $contactEmail = getSetting('contact_email', '');
 $smtpConfigured = (
@@ -8382,87 +8395,102 @@ if (!$smtpConfigured) {
     echo "SKIP (SMTP není v tomto prostředí explicitně nakonfigurované)\n";
 } else {
     $smtpTarget = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
-$smtpSocket = @fsockopen($smtpTarget, $smtpPort, $smtpErrno, $smtpErrstr, 5);
-$smtpConnectivitySkipped = false;
-if (!$smtpSocket) {
-    $smtpConnectivitySkipped = true;
-    echo "SKIP (SMTP server {$smtpTarget}:{$smtpPort} není z tohoto prostředí dosažitelný: {$smtpErrstr})\n";
-} else {
-    $smtpGreeting = '';
-    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-        $smtpGreeting .= $smtpLine;
-        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
-    }
-    if (!str_starts_with(trim($smtpGreeting), '220')) {
-        $smtpIssues[] = 'unexpected SMTP greeting: ' . trim($smtpGreeting);
-    }
-
-    fwrite($smtpSocket, "EHLO localhost\r\n");
-    $smtpEhlo = '';
-    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-        $smtpEhlo .= $smtpLine;
-        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
-    }
-    if (!str_starts_with(trim($smtpEhlo), '250')) {
-        $smtpIssues[] = 'EHLO failed: ' . trim($smtpEhlo);
-    }
-
-    if ($smtpSecure === 'tls') {
-        fwrite($smtpSocket, "STARTTLS\r\n");
-        $smtpTls = '';
+    $smtpSocket = @fsockopen($smtpTarget, $smtpPort, $smtpErrno, $smtpErrstr, 5);
+    $smtpConnectivitySkipped = false;
+    if (!$smtpSocket) {
+        $smtpConnectivitySkipped = true;
+        echo "SKIP (SMTP server {$smtpTarget}:{$smtpPort} není z tohoto prostředí dosažitelný: {$smtpErrstr})\n";
+    } else {
+        $smtpGreeting = '';
         while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-            $smtpTls .= $smtpLine;
-            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
-        }
-        if (!str_starts_with(trim($smtpTls), '220')) {
-            $smtpIssues[] = 'STARTTLS not supported: ' . trim($smtpTls);
-        } else {
-            $smtpCrypto = @stream_socket_enable_crypto(
-                $smtpSocket, true,
-                STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
-            );
-            if (!$smtpCrypto) {
-                $smtpIssues[] = 'STARTTLS handshake failed';
+            $smtpGreeting .= $smtpLine;
+            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                break;
             }
         }
-    }
+        if (!str_starts_with(trim($smtpGreeting), '220')) {
+            $smtpIssues[] = 'unexpected SMTP greeting: ' . trim($smtpGreeting);
+        }
 
-    $smtpUser = defined('SMTP_USER') ? SMTP_USER : '';
-    $smtpPass = defined('SMTP_PASS') ? SMTP_PASS : '';
-    if ($smtpUser !== '' && $smtpPass !== '' && empty($smtpIssues)) {
+        fwrite($smtpSocket, "EHLO localhost\r\n");
+        $smtpEhlo = '';
+        while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+            $smtpEhlo .= $smtpLine;
+            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                break;
+            }
+        }
+        if (!str_starts_with(trim($smtpEhlo), '250')) {
+            $smtpIssues[] = 'EHLO failed: ' . trim($smtpEhlo);
+        }
+
         if ($smtpSecure === 'tls') {
-            fwrite($smtpSocket, "EHLO localhost\r\n");
+            fwrite($smtpSocket, "STARTTLS\r\n");
+            $smtpTls = '';
             while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
+                $smtpTls .= $smtpLine;
+                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                    break;
+                }
+            }
+            if (!str_starts_with(trim($smtpTls), '220')) {
+                $smtpIssues[] = 'STARTTLS not supported: ' . trim($smtpTls);
+            } else {
+                $smtpCrypto = @stream_socket_enable_crypto(
+                    $smtpSocket,
+                    true,
+                    STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
+                );
+                if (!$smtpCrypto) {
+                    $smtpIssues[] = 'STARTTLS handshake failed';
+                }
             }
         }
-        fwrite($smtpSocket, "AUTH LOGIN\r\n");
-        $smtpAuth = '';
-        while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-            $smtpAuth .= $smtpLine;
-            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
-        }
-        if (!str_starts_with(trim($smtpAuth), '334')) {
-            $smtpIssues[] = 'AUTH LOGIN not supported: ' . trim($smtpAuth);
-        } else {
-            fwrite($smtpSocket, base64_encode($smtpUser) . "\r\n");
-            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
-            }
-            fwrite($smtpSocket, base64_encode($smtpPass) . "\r\n");
-            $smtpLogin = '';
-            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-                $smtpLogin .= $smtpLine;
-                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') break;
-            }
-            if (!str_starts_with(trim($smtpLogin), '235')) {
-                $smtpIssues[] = 'AUTH LOGIN credentials rejected: ' . trim($smtpLogin);
-            }
-        }
-    }
 
-    fwrite($smtpSocket, "QUIT\r\n");
-    fclose($smtpSocket);
+        $smtpUser = defined('SMTP_USER') ? SMTP_USER : '';
+        $smtpPass = defined('SMTP_PASS') ? SMTP_PASS : '';
+        if ($smtpUser !== '' && $smtpPass !== '' && empty($smtpIssues)) {
+            if ($smtpSecure === 'tls') {
+                fwrite($smtpSocket, "EHLO localhost\r\n");
+                while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                    if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                        break;
+                    }
+                }
+            }
+            fwrite($smtpSocket, "AUTH LOGIN\r\n");
+            $smtpAuth = '';
+            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                $smtpAuth .= $smtpLine;
+                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                    break;
+                }
+            }
+            if (!str_starts_with(trim($smtpAuth), '334')) {
+                $smtpIssues[] = 'AUTH LOGIN not supported: ' . trim($smtpAuth);
+            } else {
+                fwrite($smtpSocket, base64_encode($smtpUser) . "\r\n");
+                while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                    if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                        break;
+                    }
+                }
+                fwrite($smtpSocket, base64_encode($smtpPass) . "\r\n");
+                $smtpLogin = '';
+                while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                    $smtpLogin .= $smtpLine;
+                    if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                        break;
+                    }
+                }
+                if (!str_starts_with(trim($smtpLogin), '235')) {
+                    $smtpIssues[] = 'AUTH LOGIN credentials rejected: ' . trim($smtpLogin);
+                }
+            }
+        }
+
+        fwrite($smtpSocket, "QUIT\r\n");
+        fclose($smtpSocket);
     }
 
     if (!$smtpConnectivitySkipped && !$contactEmailConfigured) {
@@ -8492,7 +8520,9 @@ $sendMailCallFiles = [
 ];
 foreach ($sendMailCallFiles as $sendMailFile) {
     $sendMailPath = dirname(__DIR__) . '/' . $sendMailFile;
-    if (!is_file($sendMailPath)) continue;
+    if (!is_file($sendMailPath)) {
+        continue;
+    }
     $sendMailSrc = file_get_contents($sendMailPath);
     // Hledáme volání sendMail() bez kontroly návratové hodnoty (řádek začíná jen sendMail)
     if (preg_match('/^\s+sendMail\(/m', $sendMailSrc)) {

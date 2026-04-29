@@ -28,8 +28,11 @@ parameters:
         - admin/content_reference_picker.php
         - admin/layout.php
         - admin/settings_shared.php
+        - build/http_test_helpers.php
         - build/lint_php.php
         - build/phpstan_bootstrap.php
+        - build/release_package_audit.php
+        - build/release_smoke.php
         - build/workflow_audit.php
         - build/workflow_audit_selftest.php
         - lib/backup.php

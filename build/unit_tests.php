@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 /**
@@ -57,6 +58,18 @@ function assert_contains(string $needle, string $haystack, string $label): void
         echo "    expected to contain: {$needle}\n";
         echo "    in: " . mb_substr($haystack, 0, 200) . "\n";
     }
+}
+
+function test_session_string(string $key): string
+{
+    return isset($_SESSION[$key]) && is_string($_SESSION[$key]) ? $_SESSION[$key] : '';
+}
+
+function test_failure_count(): int
+{
+    global $_TEST_FAIL;
+
+    return is_int($_TEST_FAIL) ? $_TEST_FAIL : 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -385,7 +398,7 @@ verifyCsrf(); // nema ukoncit skript, protoze token je validni
 
 $token2 = csrfToken();
 assert_true($token1 !== $token2, 'CSRF token rotated after verify');
-assert_equals($token1, $_SESSION['csrf_token_prev'] ?? '', 'previous token preserved');
+assert_equals($token1, test_session_string('csrf_token_prev'), 'previous token preserved');
 
 // Simulovat multi-tab: predchozi token je stale validni
 $_POST['csrf_token'] = $token1;
@@ -427,4 +440,4 @@ echo "  OK:     {$_TEST_PASS}\n";
 echo "  FAIL:   {$_TEST_FAIL}\n";
 echo "══════════════════════════════════════\n";
 
-exit($_TEST_FAIL > 0 ? 1 : 0);
+exit(test_failure_count() > 0 ? 1 : 0);

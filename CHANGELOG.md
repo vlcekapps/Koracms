@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Produkční logy galerií** – media picker už při hledání fotografií galerie nesahá na neexistující sloupce `cms_gallery_photos.caption` a `cms_gallery_photos.alt_text`; sitemap galerie zároveň kvalifikuje řazení přes alias fotografie, aby MySQL nehlásilo nejednoznačné `created_at`.
 
 ### Změněno
+- **CI guardrails – release a testovací build nástroje jsou pod PHPStanem i formátovacím smoke checkem** – základní CI nově staticky hlídá `release_smoke`, release package audit, HTTP test helpery a unit test harness; zároveň byla odstraněna jediná PHP 8.1+ signatura z release smoke testu, aby vývojové nástroje držely deklarovanou PHP 8.0 platformu.
 - **CI guardrails – workflow audit má vlastní negativní self-testy** – nový `build/workflow_audit_selftest.php` ověřuje, že audit projde na aktuálních workflow a selže na `pull_request_target`, secrets, plovoucích actions a rozbitém runtime bootstrapu.
 - **CI guardrails – workflow audit nově hlídá i bezpečnostní drift GitHub Actions** – `build/workflow_audit.php` kromě povinných kroků kontroluje také připnuté actions, zakázané write oprávnění, `pull_request_target`, secrets a rizikové shell vzory.
 - **CI guardrails – základní balík nově kontroluje i GitHub Actions workflow** – `composer ci:basic` spouští nový `build/workflow_audit.php`, který hlídá základní i plný CI workflow včetně minimálních oprávnění, timeoutů, řízení souběhu a runtime bootstrapu pro HTTP kontroly.

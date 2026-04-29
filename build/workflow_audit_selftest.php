@@ -49,7 +49,7 @@ function removeTree(string $path): void
  * @param list<string> $command
  * @return array{exitCode:int, output:string}
  */
-function runCommand(array $command, string $cwd): array
+function runWorkflowAuditCommand(array $command, string $cwd): array
 {
     $descriptorSpec = [
         0 => ['pipe', 'r'],
@@ -108,7 +108,7 @@ function runWorkflowAudit(string $ciSource, string $fullCiSource): array
         writeTextFile($ciPath, $ciSource);
         writeTextFile($fullCiPath, $fullCiSource);
 
-        return runCommand([PHP_BINARY, $workflowAuditPath, $ciPath, $fullCiPath], $projectRoot);
+        return runWorkflowAuditCommand([PHP_BINARY, $workflowAuditPath, $ciPath, $fullCiPath], $projectRoot);
     } finally {
         removeTree($tempRoot);
     }
