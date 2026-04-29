@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 $projectRoot = dirname(__DIR__);
-$ciWorkflowPath = $projectRoot . DIRECTORY_SEPARATOR . '.github' . DIRECTORY_SEPARATOR . 'workflows' . DIRECTORY_SEPARATOR . 'ci.yml';
-$fullCiWorkflowPath = $projectRoot . DIRECTORY_SEPARATOR . '.github' . DIRECTORY_SEPARATOR . 'workflows' . DIRECTORY_SEPARATOR . 'full-ci.yml';
+$defaultCiWorkflowPath = $projectRoot . DIRECTORY_SEPARATOR . '.github' . DIRECTORY_SEPARATOR . 'workflows' . DIRECTORY_SEPARATOR . 'ci.yml';
+$defaultFullCiWorkflowPath = $projectRoot . DIRECTORY_SEPARATOR . '.github' . DIRECTORY_SEPARATOR . 'workflows' . DIRECTORY_SEPARATOR . 'full-ci.yml';
+$ciWorkflowPath = (string)($argv[1] ?? $defaultCiWorkflowPath);
+$fullCiWorkflowPath = (string)($argv[2] ?? $defaultFullCiWorkflowPath);
 $issues = [];
 
 /**

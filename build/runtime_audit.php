@@ -30,6 +30,7 @@ $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ?
 $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
 $workflowAuditSource = is_file(__DIR__ . '/workflow_audit.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit.php') : '';
+$workflowAuditSelftestSource = is_file(__DIR__ . '/workflow_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit_selftest.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
@@ -7071,9 +7072,16 @@ $foundationChecks = [
         && str_contains($fullCiWorkflowSource, 'SELECT COUNT(*) FROM cms_settings'),
     'github actions workflow audit is wired into basic CI' => str_contains($composerSource, '"test:workflow"')
         && str_contains($composerSource, 'php build/workflow_audit.php')
+        && str_contains($composerSource, '"test:workflow-selftest"')
+        && str_contains($composerSource, 'php build/workflow_audit_selftest.php')
+        && str_contains($composerSource, '"format:check:workflow"')
+        && str_contains($composerSource, 'build/workflow_audit.php build/workflow_audit_selftest.php')
         && str_contains($composerSource, '@test:workflow')
+        && str_contains($composerSource, '@test:workflow-selftest')
+        && str_contains($composerSource, '@format:check:workflow')
         && str_contains($workflowAuditSource, 'Basic CI')
         && str_contains($workflowAuditSource, 'Full CI')
+        && str_contains($workflowAuditSource, '$argv[1]')
         && str_contains($workflowAuditSource, 'forbidWorkflowSnippets')
         && str_contains($workflowAuditSource, 'auditWorkflowActionReferences')
         && str_contains($workflowAuditSource, 'pull_request_target:')
@@ -7081,7 +7089,13 @@ $foundationChecks = [
         && str_contains($workflowAuditSource, '${{ secrets.')
         && str_contains($workflowAuditSource, 'uses an unpinned action')
         && str_contains($workflowAuditSource, 'composer ci:full')
-        && str_contains($composerSource, 'build/phpstan_bootstrap.php build/workflow_audit.php'),
+        && str_contains($workflowAuditSelftestSource, 'assertAuditPasses')
+        && str_contains($workflowAuditSelftestSource, 'assertAuditFails')
+        && str_contains($workflowAuditSelftestSource, 'actions/checkout@main')
+        && str_contains($workflowAuditSelftestSource, 'pull_request_target:')
+        && str_contains($workflowAuditSelftestSource, '${{ secrets.CI_TOKEN }}')
+        && str_contains($composerSource, 'build/phpstan_bootstrap.php build/workflow_audit.php')
+        && str_contains($phpstanConfigSource, 'build/workflow_audit_selftest.php'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
     'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')

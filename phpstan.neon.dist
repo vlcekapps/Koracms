@@ -31,6 +31,7 @@ parameters:
         - build/lint_php.php
         - build/phpstan_bootstrap.php
         - build/workflow_audit.php
+        - build/workflow_audit_selftest.php
         - lib/backup.php
         - lib/comments.php
         - lib/content.php
