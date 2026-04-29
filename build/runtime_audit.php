@@ -9,7 +9,11 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../cron.php';
 require_once __DIR__ . '/http_test_helpers.php';
 
-$baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
+$baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
+if (!is_string($baseUrlInput) || $baseUrlInput === '') {
+    $baseUrlInput = 'http://localhost';
+}
+$baseUrl = rtrim($baseUrlInput, '/');
 $pdo     = db_connect();
 $cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
 $adminBackupSource = (string) file_get_contents(__DIR__ . '/../admin/backup.php');
@@ -23,6 +27,8 @@ $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) fil
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
+$runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
+$httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
@@ -7039,12 +7045,31 @@ $foundationChecks = [
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
+    'github actions CI uses bounded read-only jobs' => str_contains($ciWorkflowSource, 'permissions:')
+        && str_contains($ciWorkflowSource, 'contents: read')
+        && str_contains($ciWorkflowSource, 'concurrency:')
+        && str_contains($ciWorkflowSource, 'cancel-in-progress: true')
+        && str_contains($ciWorkflowSource, 'timeout-minutes:')
+        && str_contains($fullCiWorkflowSource, 'permissions:')
+        && str_contains($fullCiWorkflowSource, 'contents: read')
+        && str_contains($fullCiWorkflowSource, 'concurrency:')
+        && str_contains($fullCiWorkflowSource, 'cancel-in-progress: true')
+        && str_contains($fullCiWorkflowSource, 'timeout-minutes:'),
     'github actions full CI exists' => str_contains($fullCiWorkflowSource, 'workflow_dispatch:')
         && str_contains($fullCiWorkflowSource, 'schedule:')
         && str_contains($fullCiWorkflowSource, 'composer validate --strict')
         && str_contains($fullCiWorkflowSource, 'composer ci:full')
         && str_contains($fullCiWorkflowSource, 'shivammathur/setup-php')
         && str_contains($fullCiWorkflowSource, 'actions/checkout@v6'),
+    'github actions full CI prepares runtime environment' => str_contains($fullCiWorkflowSource, 'services:')
+        && str_contains($fullCiWorkflowSource, 'mysql:8.0')
+        && str_contains($fullCiWorkflowSource, 'MYSQL_DATABASE: koracms_ci')
+        && str_contains($fullCiWorkflowSource, 'KORA_TEST_BASE_URL: http://127.0.0.1:8000')
+        && str_contains($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t .')
+        && str_contains($fullCiWorkflowSource, 'install.php')
+        && str_contains($fullCiWorkflowSource, 'SELECT COUNT(*) FROM cms_settings'),
+    'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
+        && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
     'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')
         && str_contains($composerSource, 'composer validate --strict')
         && str_contains($composerSource, '@test:composer-validate')

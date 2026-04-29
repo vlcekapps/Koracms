@@ -5,10 +5,35 @@ on:
   schedule:
     - cron: '17 2 * * *'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: full-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   full:
     name: Full PHP quality checks
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      KORA_TEST_BASE_URL: http://127.0.0.1:8000
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: koracms_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout
@@ -26,6 +51,58 @@ jobs:
 
       - name: Install dev tools
         run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare runtime config
+        run: |
+          mkdir -p ../kora_storage
+          cat > config.php <<'PHP'
+          <?php
+
+          $server   = '127.0.0.1';
+          $user     = 'root';
+          $pass     = 'root';
+          $database = 'koracms_ci';
+
+          define('BASE_URL', '');
+          define('KORA_STORAGE_DIR', __DIR__ . '/../kora_storage');
+
+          define('SMTP_HOST', 'localhost');
+          define('SMTP_PORT', 25);
+          define('SMTP_USER', '');
+          define('SMTP_PASS', '');
+          define('SMTP_SECURE', '');
+
+          define('GITHUB_ISSUES_TOKEN', '');
+          define('CRON_TOKEN', 'ci-cron-token');
+          PHP
+
+      - name: Start PHP server
+        run: |
+          php -S 127.0.0.1:8000 -t . > /tmp/koracms-server.log 2>&1 &
+          echo $! > /tmp/koracms-server.pid
+          for attempt in {1..20}; do
+            if curl -fsS "$KORA_TEST_BASE_URL/install.php" -o /tmp/koracms-install.html -c /tmp/koracms-cookies.txt; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/koracms-server.log
+          exit 1
+
+      - name: Install Kora CMS
+        run: |
+          CSRF_TOKEN="$(php -r '$html = (string) file_get_contents("/tmp/koracms-install.html"); if (!preg_match("/name=\"csrf_token\" value=\"([^\"]+)\"/", $html, $matches)) { fwrite(STDERR, "CSRF token not found\n"); exit(1); } echo html_entity_decode($matches[1], ENT_QUOTES, "UTF-8");')"
+          curl -fsS "$KORA_TEST_BASE_URL/install.php" \
+            -b /tmp/koracms-cookies.txt \
+            -c /tmp/koracms-cookies.txt \
+            -o /tmp/koracms-install-result.html \
+            --data-urlencode "csrf_token=$CSRF_TOKEN" \
+            --data-urlencode "site_name=Kora CI" \
+            --data-urlencode "site_desc=Automated full CI runtime" \
+            --data-urlencode "admin_email=admin@example.test" \
+            --data-urlencode "admin_pass=KoraAdmin!123" \
+            --data-urlencode "admin_pass2=KoraAdmin!123"
+          php -r 'require "db.php"; $count = (int) db_connect()->query("SELECT COUNT(*) FROM cms_settings")->fetchColumn(); if ($count < 1) { fwrite(STDERR, "Kora CMS install did not create settings\n"); exit(1); }'
 
       - name: Run full checks
         run: composer ci:full

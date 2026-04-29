@@ -9,7 +9,11 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../admin/settings_shared.php';
 require_once __DIR__ . '/http_test_helpers.php';
 
-$baseUrl = rtrim($argv[1] ?? 'http://localhost', '/');
+$baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
+if (!is_string($baseUrlInput) || $baseUrlInput === '') {
+    $baseUrlInput = 'http://localhost';
+}
+$baseUrl = rtrim($baseUrlInput, '/');
 $pdo = db_connect();
 $failures = 0;
 $createdUsers = [];

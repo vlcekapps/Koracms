@@ -477,7 +477,7 @@ composer ci:basic
 
 `composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn. Stejný plný balík lze vyžádat i při release přes `build/release.ps1 -FullCi`; bezpečnou zkoušku bez zásahu do gitu spustíte přes `build/release.ps1 -DryRun`.
 
-GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Samostatný workflow `.github/workflows/full-ci.yml` drží plný `composer ci:full` balík pro ruční spuštění (`workflow_dispatch`) a pravidelný noční běh, takže vzdálené runtime a HTTP kontroly mají vlastní guardrail bez zpomalování každého běžného push. Oba workflow používají aktuální `actions/checkout@v6`, aby CI neběželo na deprecated Node 20 checkout akci.
+GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Samostatný workflow `.github/workflows/full-ci.yml` drží plný `composer ci:full` balík pro ruční spuštění (`workflow_dispatch`) a pravidelný noční běh; před spuštěním si připraví MySQL, `config.php`, vestavěný PHP server a čerstvou instalaci CMS. Oba workflow používají aktuální `actions/checkout@v6`, minimální `contents: read` oprávnění, řízení souběhu a timeouty, aby CI neběželo na deprecated Node 20 checkout akci a nezůstávalo zbytečně viset.
 
 ---
 
