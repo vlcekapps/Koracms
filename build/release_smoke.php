@@ -352,6 +352,10 @@ try {
     if ($snapshotVersion === '') {
         fail('Cannot read VERSION from the release smoke snapshot.');
     }
+    $snapshotChangelogPath = $tempRoot . DIRECTORY_SEPARATOR . 'CHANGELOG.md';
+    $snapshotChangelog = is_file($snapshotChangelogPath)
+        ? (string) file_get_contents($snapshotChangelogPath)
+        : '';
 
     writeZipInspectHelperScript($zipInspectScriptPath);
 
@@ -480,8 +484,15 @@ try {
     }
 
     $changelogContents = $zipPayload['changelog'] ?? null;
-    if (!is_string($changelogContents) || !str_contains($changelogContents, '## [' . $expectedVersion . ']')) {
-        fail('Release smoke ZIP does not contain the expected CHANGELOG preview.');
+    if (!is_string($changelogContents)) {
+        fail('Release smoke ZIP does not contain CHANGELOG.md contents.');
+    }
+    if (str_contains($releaseOutput, 'Dry run: ZIP použije náhled aktualizovaného CHANGELOG.md.')) {
+        if (!str_contains($changelogContents, '## [' . $expectedVersion . ']')) {
+            fail('Release smoke ZIP does not contain the expected CHANGELOG preview.');
+        }
+    } elseif ($changelogContents !== $snapshotChangelog) {
+        fail('Release smoke ZIP changed CHANGELOG.md even though dry-run reported no changelog preview.');
     }
 
     $sourceArchivePath = $tempRoot . DIRECTORY_SEPARATOR . 'dist' . DIRECTORY_SEPARATOR . 'source-archive.zip';

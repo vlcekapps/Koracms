@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Opraveno
+- **Release smoke test po vydání** – kontrola dry-run balíčku už počítá i se stavem, kdy je `CHANGELOG.md` po releasu bez sekce `Unreleased` a ZIP má správně použít aktuální changelog beze změn.
+
 ## [3.3.10] – 2026-05-01
 
 ### Opraveno
