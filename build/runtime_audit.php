@@ -310,6 +310,7 @@ $galleryHiddenPhotoPath = '';
 $galleryHiddenPhotoUrl = '';
 $galleryHiddenPhotoTitle = '';
 $galleryPhotoMediaCanonicalUrl = '';
+$runtimeAuditGalleryFilename = '';
 $pollDetailId = false;
 $resourceRow = $pdo->query(
     "SELECT id, slug, max_advance_days FROM cms_res_resources WHERE is_active = 1 ORDER BY id LIMIT 1"
@@ -5290,18 +5291,20 @@ if ($galleryPhotoMediaCanonicalUrl !== '') {
         }
     }
 }
-$galleryDirectUploadProbe = fetchUrl($baseUrl . '/uploads/gallery/' . rawurlencode($runtimeAuditGalleryFilename), '', 0);
-if (!preg_match('/\s40[34]\s/', $galleryDirectUploadProbe['status'])) {
-    $galleryVisibilityIssues[] = 'direct uploads/gallery path is still publicly reachable';
+if ($runtimeAuditGalleryFilename !== '') {
+    $galleryDirectUploadProbe = fetchUrl($baseUrl . '/uploads/gallery/' . rawurlencode($runtimeAuditGalleryFilename), '', 0);
+    if (!preg_match('/\s40[34]\s/', $galleryDirectUploadProbe['status'])) {
+        $galleryVisibilityIssues[] = 'direct uploads/gallery path is still publicly reachable';
+    }
 }
 $gallerySearchProbe = fetchUrl($baseUrl . '/gallery/index.php?q=' . urlencode('Runtime audit skryté'), '', 0);
 if (!str_contains($gallerySearchProbe['status'], '200')) {
     $galleryVisibilityIssues[] = 'gallery search page did not load for visibility audit';
 } else {
-    if (str_contains($gallerySearchProbe['body'], $galleryHiddenAlbumTitle)) {
+    if ($galleryHiddenAlbumTitle !== '' && str_contains($gallerySearchProbe['body'], $galleryHiddenAlbumTitle)) {
         $galleryVisibilityIssues[] = 'gallery search still exposes hidden album';
     }
-    if (str_contains($gallerySearchProbe['body'], $galleryHiddenPhotoTitle)) {
+    if ($galleryHiddenPhotoTitle !== '' && str_contains($gallerySearchProbe['body'], $galleryHiddenPhotoTitle)) {
         $galleryVisibilityIssues[] = 'gallery search still exposes hidden photo';
     }
 }

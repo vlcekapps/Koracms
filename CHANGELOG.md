@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
+- **Noční Full CI pro čistou instalaci** – runtime audit galerie už nevolá kontrolu přímého souboru, pokud testovací galerie nemohla vzniknout, a prázdné názvy skrytých položek už nespouští falešné chyby vyhledávání.
 - **Release smoke test po vydání** – kontrola dry-run balíčku už počítá i se stavem, kdy je `CHANGELOG.md` po releasu bez sekce `Unreleased` a ZIP má správně použít aktuální changelog beze změn.
 
 ## [3.3.10] – 2026-05-01
