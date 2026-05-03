@@ -181,8 +181,8 @@ assertAuditFails(
 assertAuditFails(
     'Full CI runtime bootstrap guard',
     $ciWorkflowSource,
-    replaceRequired($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t .', 'php -S 127.0.0.1:9000 -t .', 'full CI PHP server command'),
-    'php -S 127.0.0.1:8000 -t .'
+    replaceRequired($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t . build/http_server_router.php', 'php -S 127.0.0.1:9000 -t .', 'full CI PHP server command'),
+    'php -S 127.0.0.1:8000 -t . build/http_server_router.php'
 );
 
 echo "Workflow audit self-test OK\n";

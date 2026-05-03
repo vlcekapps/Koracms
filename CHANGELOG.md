@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
+- **Noční Full CI a clean URL routování** – GitHub Actions už spouští vestavěný PHP server s testovacím routerem, který pro audit překládá čisté URL stejně jako produkční `.htaccess`, takže kontrola neexistujícího blogu vrací správné 404 i ve fresh CI instalaci.
 - **Noční Full CI pro čistou instalaci** – runtime audit galerie už nevolá kontrolu přímého souboru, pokud testovací galerie nemohla vzniknout, a prázdné názvy skrytých položek už nespouští falešné chyby vyhledávání.
 - **Release smoke test po vydání** – kontrola dry-run balíčku už počítá i se stavem, kdy je `CHANGELOG.md` po releasu bez sekce `Unreleased` a ZIP má správně použít aktuální changelog beze změn.
 

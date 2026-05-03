@@ -155,7 +155,7 @@ if ($fullCiWorkflowSource !== '') {
         'cat > config.php',
         "define('KORA_STORAGE_DIR', __DIR__ . '/../kora_storage');",
         'Start PHP server',
-        'php -S 127.0.0.1:8000 -t .',
+        'php -S 127.0.0.1:8000 -t . build/http_server_router.php',
         'Install Kora CMS',
         'csrf_token',
         'SELECT COUNT(*) FROM cms_settings',

@@ -7071,7 +7071,7 @@ $foundationChecks = [
         && str_contains($fullCiWorkflowSource, 'mysql:8.0')
         && str_contains($fullCiWorkflowSource, 'MYSQL_DATABASE: koracms_ci')
         && str_contains($fullCiWorkflowSource, 'KORA_TEST_BASE_URL: http://127.0.0.1:8000')
-        && str_contains($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t .')
+        && str_contains($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t . build/http_server_router.php')
         && str_contains($fullCiWorkflowSource, 'install.php')
         && str_contains($fullCiWorkflowSource, 'SELECT COUNT(*) FROM cms_settings'),
     'github actions workflow audit is wired into basic CI' => str_contains($composerSource, '"test:workflow"')
@@ -7099,7 +7099,9 @@ $foundationChecks = [
         && str_contains($workflowAuditSelftestSource, 'pull_request_target:')
         && str_contains($workflowAuditSelftestSource, '${{ secrets.CI_TOKEN }}')
         && str_contains($composerSource, 'build/phpstan_bootstrap.php build/workflow_audit.php')
-        && str_contains($phpstanConfigSource, 'build/workflow_audit_selftest.php'),
+        && str_contains($composerSource, 'build/http_server_router.php')
+        && str_contains($phpstanConfigSource, 'build/workflow_audit_selftest.php')
+        && str_contains($phpstanConfigSource, 'build/http_server_router.php'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
     'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')
@@ -7212,11 +7214,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
@@ -7226,6 +7228,7 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'admin/content_reference_picker.php')
         && str_contains($phpstanConfigSource, 'admin/layout.php')
         && str_contains($phpstanConfigSource, 'admin/settings_shared.php')
+        && str_contains($phpstanConfigSource, 'build/http_server_router.php')
         && str_contains($phpstanConfigSource, 'build/http_test_helpers.php')
         && str_contains($phpstanConfigSource, 'build/phpstan_bootstrap.php')
         && str_contains($phpstanConfigSource, 'build/release_package_audit.php')

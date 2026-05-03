@@ -78,7 +78,7 @@ jobs:
 
       - name: Start PHP server
         run: |
-          php -S 127.0.0.1:8000 -t . > /tmp/koracms-server.log 2>&1 &
+          php -S 127.0.0.1:8000 -t . build/http_server_router.php > /tmp/koracms-server.log 2>&1 &
           echo $! > /tmp/koracms-server.pid
           for attempt in {1..20}; do
             if curl -fsS "$KORA_TEST_BASE_URL/install.php" -o /tmp/koracms-install.html -c /tmp/koracms-cookies.txt; then

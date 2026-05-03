@@ -28,6 +28,7 @@ parameters:
         - admin/content_reference_picker.php
         - admin/layout.php
         - admin/settings_shared.php
+        - build/http_server_router.php
         - build/http_test_helpers.php
         - build/lint_php.php
         - build/phpstan_bootstrap.php
