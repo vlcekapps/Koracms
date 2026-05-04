@@ -102,6 +102,10 @@ if (is_file($staticPath)) {
 
 $routePath = trim($normalizedPath, '/');
 
+if ($routePath === '') {
+    return routeToScript('index.php');
+}
+
 if (preg_match('#^robots\.txt$#i', $routePath) === 1) {
     return routeToScript('robots.php');
 }

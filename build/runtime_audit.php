@@ -30,6 +30,7 @@ $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string)
 $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
 $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
+$httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string) file_get_contents(__DIR__ . '/http_server_router.php') : '';
 $workflowAuditSource = is_file(__DIR__ . '/workflow_audit.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit.php') : '';
 $workflowAuditSelftestSource = is_file(__DIR__ . '/workflow_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit_selftest.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
@@ -7101,7 +7102,9 @@ $foundationChecks = [
         && str_contains($composerSource, 'build/phpstan_bootstrap.php build/workflow_audit.php')
         && str_contains($composerSource, 'build/http_server_router.php')
         && str_contains($phpstanConfigSource, 'build/workflow_audit_selftest.php')
-        && str_contains($phpstanConfigSource, 'build/http_server_router.php'),
+        && str_contains($phpstanConfigSource, 'build/http_server_router.php')
+        && str_contains($httpServerRouterSource, "routeToScript('index.php')")
+        && !str_contains($httpServerRouterSource, 'Content-Security-Policy'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
     'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')
