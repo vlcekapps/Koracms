@@ -185,4 +185,11 @@ assertAuditFails(
     'php -S 127.0.0.1:8000 -t . build/http_server_router.php'
 );
 
+assertAuditFails(
+    'Full CI deterministic profile guard',
+    $ciWorkflowSource,
+    replaceRequired($fullCiWorkflowSource, 'site_profile=custom', 'site_profile=personal', 'full CI install profile'),
+    'site_profile=custom'
+);
+
 echo "Workflow audit self-test OK\n";

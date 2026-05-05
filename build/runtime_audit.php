@@ -7074,6 +7074,8 @@ $foundationChecks = [
         && str_contains($fullCiWorkflowSource, 'KORA_TEST_BASE_URL: http://127.0.0.1:8000')
         && str_contains($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t . build/http_server_router.php')
         && str_contains($fullCiWorkflowSource, 'install.php')
+        && str_contains($fullCiWorkflowSource, 'site_profile=custom')
+        && str_contains($fullCiWorkflowSource, 'did not keep site_profile=custom')
         && str_contains($fullCiWorkflowSource, 'SELECT COUNT(*) FROM cms_settings'),
     'github actions workflow audit is wired into basic CI' => str_contains($composerSource, '"test:workflow"')
         && str_contains($composerSource, 'php build/workflow_audit.php')
@@ -7104,6 +7106,9 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'build/workflow_audit_selftest.php')
         && str_contains($phpstanConfigSource, 'build/http_server_router.php')
         && str_contains($httpServerRouterSource, "routeToScript('index.php')")
+        && str_contains($httpServerRouterSource, '$routeScriptPath = null')
+        && str_contains($httpServerRouterSource, 'require $routeScriptPath')
+        && !str_contains($httpServerRouterSource, 'require $targetPath')
         && !str_contains($httpServerRouterSource, 'Content-Security-Policy'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),

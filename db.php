@@ -106,6 +106,11 @@ function koraStorageDirectory(): string
 {
     $configuredPath = defined('KORA_STORAGE_DIR') ? trim((string)KORA_STORAGE_DIR) : '';
     if ($configuredPath !== '') {
+        $resolvedPath = realpath($configuredPath);
+        if (is_string($resolvedPath)) {
+            return rtrim($resolvedPath, "\\/");
+        }
+
         return rtrim($configuredPath, "\\/");
     }
 

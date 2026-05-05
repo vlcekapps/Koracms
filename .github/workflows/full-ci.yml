@@ -99,10 +99,11 @@ jobs:
             --data-urlencode "csrf_token=$CSRF_TOKEN" \
             --data-urlencode "site_name=Kora CI" \
             --data-urlencode "site_desc=Automated full CI runtime" \
+            --data-urlencode "site_profile=custom" \
             --data-urlencode "admin_email=admin@example.test" \
             --data-urlencode "admin_pass=KoraAdmin!123" \
             --data-urlencode "admin_pass2=KoraAdmin!123"
-          php -r 'require "db.php"; $count = (int) db_connect()->query("SELECT COUNT(*) FROM cms_settings")->fetchColumn(); if ($count < 1) { fwrite(STDERR, "Kora CMS install did not create settings\n"); exit(1); }'
+          php -r 'require "db.php"; $pdo = db_connect(); $count = (int) $pdo->query("SELECT COUNT(*) FROM cms_settings")->fetchColumn(); $profile = (string) $pdo->query("SELECT value FROM cms_settings WHERE `key` = '\''site_profile'\''")->fetchColumn(); if ($count < 1) { fwrite(STDERR, "Kora CMS install did not create settings\n"); exit(1); } if ($profile !== "custom") { fwrite(STDERR, "Kora CMS full CI install did not keep site_profile=custom\n"); exit(1); }'
 
       - name: Run full checks
         run: composer ci:full

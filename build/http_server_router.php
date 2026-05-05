@@ -13,32 +13,26 @@ $decodedPath = rawurldecode($requestPath);
 $normalizedPath = '/' . ltrim(str_replace('\\', '/', $decodedPath), '/');
 $relativePath = ltrim($normalizedPath, '/');
 $staticPath = $projectRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+$routeScriptPath = null;
+$routeScriptWebPath = '';
+$routeParams = [];
+$routeHandled = false;
 
 /**
  * @param array<string, string> $params
+ * @return array{0:?string, 1:string, 2:array<string, string>, 3:bool}
  */
-function routeToScript(string $script, array $params = []): bool
+function routeToScript(string $script, array $params = []): array
 {
     global $projectRoot;
 
     $targetPath = $projectRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $script);
     if (!is_file($targetPath)) {
         http_response_code(404);
-        return true;
+        return [null, '', [], true];
     }
 
-    $queryString = (string)($_SERVER['QUERY_STRING'] ?? '');
-    $queryParams = [];
-    if ($queryString !== '') {
-        parse_str($queryString, $queryParams);
-    }
-
-    $_GET = array_merge($queryParams, $params);
-    $_REQUEST = array_merge($_REQUEST, $params);
-    $_SERVER['SCRIPT_FILENAME'] = $targetPath;
-
-    require $targetPath;
-    return true;
+    return [$targetPath, '/' . str_replace('\\', '/', $script), $params, true];
 }
 
 function denyRequest(): bool
@@ -103,54 +97,70 @@ if (is_file($staticPath)) {
 $routePath = trim($normalizedPath, '/');
 
 if ($routePath === '') {
-    return routeToScript('index.php');
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('index.php');
+} elseif (preg_match('#^robots\.txt$#i', $routePath) === 1) {
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('robots.php');
+} elseif (preg_match('#^sitemap\.xml$#i', $routePath) === 1) {
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('sitemap.php');
+} elseif (preg_match('#^authors/?$#i', $routePath) === 1) {
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('authors/index.php');
+} else {
+    $routeMap = [
+        '#^author/([a-z0-9-]+)/?$#i' => ['author.php', ['slug']],
+        '#^blog/([a-z0-9-]+)/?$#i' => ['blog/article.php', ['slug']],
+        '#^board/([a-z0-9-]+)/?$#i' => ['board/document.php', ['slug']],
+        '#^downloads/([a-z0-9-]+)/?$#i' => ['downloads/item.php', ['slug']],
+        '#^events/([a-z0-9-]+)\.ics$#i' => ['events/ics.php', ['slug']],
+        '#^events/([a-z0-9-]+)/?$#i' => ['events/event.php', ['slug']],
+        '#^faq/([a-z0-9-]+)/?$#i' => ['faq/item.php', ['slug']],
+        '#^forms/([a-z0-9-]+)/?$#i' => ['forms/index.php', ['slug']],
+        '#^food/card/([a-z0-9-]+)/?$#i' => ['food/card.php', ['slug']],
+        '#^gallery/album/([a-z0-9-]+)/?$#i' => ['gallery/album.php', ['slug']],
+        '#^gallery/photo/([a-z0-9-]+)/?$#i' => ['gallery/photo.php', ['slug']],
+        '#^news/([a-z0-9-]+)/?$#i' => ['news/article.php', ['slug']],
+        '#^polls/([a-z0-9-]+)/?$#i' => ['polls/index.php', ['slug']],
+        '#^places/([a-z0-9-]+)/?$#i' => ['places/place.php', ['slug']],
+        '#^podcast/([a-z0-9-]+)/([a-z0-9-]+)/?$#i' => ['podcast/episode.php', ['show', 'slug']],
+        '#^podcast/([a-z0-9-]+)/?$#i' => ['podcast/show.php', ['slug']],
+        '#^([a-z0-9-]+)/stranka/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'page_slug']],
+        '#^([a-z0-9-]+)/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'slug']],
+        '#^([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug']],
+    ];
+
+    foreach ($routeMap as $pattern => [$script, $parameterNames]) {
+        if (preg_match($pattern, $routePath, $matches) !== 1) {
+            continue;
+        }
+
+        $params = [];
+        foreach ($parameterNames as $index => $name) {
+            $params[$name] = (string)$matches[$index + 1];
+        }
+
+        [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript($script, $params);
+        break;
+    }
 }
 
-if (preg_match('#^robots\.txt$#i', $routePath) === 1) {
-    return routeToScript('robots.php');
-}
-
-if (preg_match('#^sitemap\.xml$#i', $routePath) === 1) {
-    return routeToScript('sitemap.php');
-}
-
-if (preg_match('#^authors/?$#i', $routePath) === 1) {
-    return routeToScript('authors/index.php');
-}
-
-$routeMap = [
-    '#^author/([a-z0-9-]+)/?$#i' => ['author.php', ['slug']],
-    '#^blog/([a-z0-9-]+)/?$#i' => ['blog/article.php', ['slug']],
-    '#^board/([a-z0-9-]+)/?$#i' => ['board/document.php', ['slug']],
-    '#^downloads/([a-z0-9-]+)/?$#i' => ['downloads/item.php', ['slug']],
-    '#^events/([a-z0-9-]+)\.ics$#i' => ['events/ics.php', ['slug']],
-    '#^events/([a-z0-9-]+)/?$#i' => ['events/event.php', ['slug']],
-    '#^faq/([a-z0-9-]+)/?$#i' => ['faq/item.php', ['slug']],
-    '#^forms/([a-z0-9-]+)/?$#i' => ['forms/index.php', ['slug']],
-    '#^food/card/([a-z0-9-]+)/?$#i' => ['food/card.php', ['slug']],
-    '#^gallery/album/([a-z0-9-]+)/?$#i' => ['gallery/album.php', ['slug']],
-    '#^gallery/photo/([a-z0-9-]+)/?$#i' => ['gallery/photo.php', ['slug']],
-    '#^news/([a-z0-9-]+)/?$#i' => ['news/article.php', ['slug']],
-    '#^polls/([a-z0-9-]+)/?$#i' => ['polls/index.php', ['slug']],
-    '#^places/([a-z0-9-]+)/?$#i' => ['places/place.php', ['slug']],
-    '#^podcast/([a-z0-9-]+)/([a-z0-9-]+)/?$#i' => ['podcast/episode.php', ['show', 'slug']],
-    '#^podcast/([a-z0-9-]+)/?$#i' => ['podcast/show.php', ['slug']],
-    '#^([a-z0-9-]+)/stranka/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'page_slug']],
-    '#^([a-z0-9-]+)/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'slug']],
-    '#^([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug']],
-];
-
-foreach ($routeMap as $pattern => [$script, $parameterNames]) {
-    if (preg_match($pattern, $routePath, $matches) !== 1) {
-        continue;
+if ($routeScriptPath !== null) {
+    $queryString = (string)($_SERVER['QUERY_STRING'] ?? '');
+    $queryParams = [];
+    if ($queryString !== '') {
+        parse_str($queryString, $queryParams);
     }
 
-    $params = [];
-    foreach ($parameterNames as $index => $name) {
-        $params[$name] = (string)$matches[$index + 1];
-    }
+    $_GET = array_merge($queryParams, $routeParams);
+    $_REQUEST = array_merge($_REQUEST, $routeParams);
+    $_SERVER['SCRIPT_FILENAME'] = $routeScriptPath;
+    $_SERVER['SCRIPT_NAME'] = $routeScriptWebPath;
+    $_SERVER['PHP_SELF'] = $routeScriptWebPath;
 
-    return routeToScript($script, $params);
+    require $routeScriptPath;
+    return true;
+}
+
+if ($routeHandled) {
+    return true;
 }
 
 http_response_code(404);

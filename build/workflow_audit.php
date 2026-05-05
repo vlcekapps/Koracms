@@ -158,6 +158,8 @@ if ($fullCiWorkflowSource !== '') {
         'php -S 127.0.0.1:8000 -t . build/http_server_router.php',
         'Install Kora CMS',
         'csrf_token',
+        'site_profile=custom',
+        'did not keep site_profile=custom',
         'SELECT COUNT(*) FROM cms_settings',
         'composer ci:full',
     ], $issues);

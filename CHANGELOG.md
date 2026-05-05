@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
+- **Noční Full CI a čisté URL přes vestavěný router** – testovací router už nenačítá cílové PHP skripty uvnitř funkce, takže `config.php` zůstává v globálním scope a čisté URL jako `/sitemap.xml` nebo `/authors` nepadají na prázdné databázové připojení; čerstvá Full CI instalace zároveň používá profil `custom`, aby audit nezdědil produkční preset modulů a šablony.
 - **Noční Full CI a bezpečnostní hlavičky homepage** – testovací router pro vestavěný PHP server nově posílá kořenovou adresu `/` přes `index.php`, takže fresh CI instalace dostává stejné CSP hlavičky jako běžný web pod Apache.
 - **Noční Full CI a clean URL routování** – GitHub Actions už spouští vestavěný PHP server s testovacím routerem, který pro audit překládá čisté URL stejně jako produkční `.htaccess`, takže kontrola neexistujícího blogu vrací správné 404 i ve fresh CI instalaci.
 - **Noční Full CI pro čistou instalaci** – runtime audit galerie už nevolá kontrolu přímého souboru, pokud testovací galerie nemohla vzniknout, a prázdné názvy skrytých položek už nespouští falešné chyby vyhledávání.
