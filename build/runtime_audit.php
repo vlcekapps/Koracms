@@ -382,6 +382,7 @@ $cleanup = [
     'form_ids' => [],
     'form_submission_ids' => [],
     'redirect_paths' => [],
+    'audit_log_ids' => [],
 ];
 
 $runtimeAuditActiveTheme = resolveThemeName(getSetting('active_theme', defaultThemeName()));
@@ -429,6 +430,12 @@ $_SESSION['cms_user_name'] = 'Runtime Audit';
 $_SESSION['cms_user_role'] = 'admin';
 $adminCsrfToken = csrfToken();
 session_write_close();
+
+$pdo->prepare(
+    "INSERT INTO cms_log (action, detail, user_id, created_at)
+     VALUES ('runtime_audit', 'Dočasný záznam pro ověření tabulky audit logu.', 1, NOW())"
+)->execute();
+$cleanup['audit_log_ids'][] = (int)$pdo->lastInsertId();
 
 $publicAuditSessionId = 'runtimeaudit-public-' . $runtimeAuditSessionSuffix;
 session_id($publicAuditSessionId);
@@ -6847,6 +6854,10 @@ if (!empty($cleanup['form_ids'])) {
     $pdo->prepare("DELETE FROM cms_form_submissions WHERE form_id IN ({$placeholders})")->execute($cleanup['form_ids']);
     $pdo->prepare("DELETE FROM cms_form_fields WHERE form_id IN ({$placeholders})")->execute($cleanup['form_ids']);
     $pdo->prepare("DELETE FROM cms_forms WHERE id IN ({$placeholders})")->execute($cleanup['form_ids']);
+}
+if (!empty($cleanup['audit_log_ids'])) {
+    $placeholders = implode(',', array_fill(0, count($cleanup['audit_log_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_log WHERE id IN ({$placeholders})")->execute($cleanup['audit_log_ids']);
 }
 if (!empty($cleanup['poll_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['poll_ids']), '?'));
