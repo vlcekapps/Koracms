@@ -8129,9 +8129,15 @@ try {
 $activeThemeSettingsKey = themeSettingStorageKey($originalActiveTheme);
 $originalThemeSettings = getSetting($activeThemeSettingsKey, '');
 $originalNewsletterModule = getSetting('module_newsletter', '0');
+$activeThemeSettingDefinitions = themeSettingDefinitions($originalActiveTheme);
+$activeThemeSupportsHomepageComposer = isset(
+    $activeThemeSettingDefinitions['home_layout'],
+    $activeThemeSettingDefinitions['home_featured_module'],
+    $activeThemeSettingDefinitions['home_cta_visibility']
+);
 echo "=== theme_home_composer ===\n";
 try {
-    if ($runtimeAuditHomepageUsesWidgets) {
+    if ($runtimeAuditHomepageUsesWidgets || !$activeThemeSupportsHomepageComposer) {
         echo "OK\n";
     } else {
         $newsModuleEnabled = isModuleEnabled('news');
@@ -8328,7 +8334,11 @@ try {
     if (!str_contains($customizationProbe['body'], 'site-header--split')) {
         $customizationIssues[] = 'header layout variant was not rendered';
     }
-    if (!$runtimeAuditHomepageUsesWidgets && !str_contains($customizationProbe['body'], 'page-stack--home-editorial')) {
+    if (
+        !$runtimeAuditHomepageUsesWidgets
+        && isset($activeThemeSettingDefinitions['home_layout'])
+        && !str_contains($customizationProbe['body'], 'page-stack--home-editorial')
+    ) {
         $customizationIssues[] = 'homepage layout variant was not rendered';
     }
 
