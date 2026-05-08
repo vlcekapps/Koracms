@@ -149,6 +149,7 @@ if ($fullCiWorkflowSource !== '') {
         'uses: actions/checkout@v6',
         'uses: shivammathur/setup-php@v2',
         "php-version: '8.0'",
+        'ini-values: post_max_size=20M, upload_max_filesize=20M',
         'composer validate --strict',
         'composer install --no-interaction --no-progress --prefer-dist',
         'Prepare runtime config',

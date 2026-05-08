@@ -30,13 +30,6 @@ if (!$resource) {
 $resId = (int)$resource['id'];
 
 $isGuest = false;
-if (!empty($resource['allow_guests'])) {
-    $isGuest = !isset($_SESSION['cms_user_id']);
-} else {
-    $currentUrl = BASE_URL . '/reservations/book.php?slug=' . urlencode($slug) . '&date=' . urlencode($dateStr);
-    requirePublicLogin($currentUrl);
-}
-
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
     header('Location: ' . BASE_URL . '/reservations/resource.php?slug=' . rawurlencode($slug));
     exit;
@@ -51,6 +44,13 @@ if (
 ) {
     header('Location: ' . BASE_URL . '/reservations/resource.php?slug=' . rawurlencode($slug));
     exit;
+}
+
+if (!empty($resource['allow_guests'])) {
+    $isGuest = !isset($_SESSION['cms_user_id']);
+} else {
+    $currentUrl = BASE_URL . '/reservations/book.php?slug=' . urlencode($slug) . '&date=' . urlencode($dateStr);
+    requirePublicLogin($currentUrl);
 }
 
 $today = new DateTime('today');

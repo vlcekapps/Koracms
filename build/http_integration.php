@@ -549,7 +549,7 @@ try {
         $settingsModulesIssues[] = 'uložení správy modulů nemíří zpět na settings_modules.php';
     }
     clearSettingsCache();
-    if (getSetting('module_forms', '0') !== '1') {
+    if (httpIntegrationSettingValue($pdo, 'module_forms') !== '1') {
         $settingsModulesIssues[] = 'první uložení správy modulů neuložilo povolení modulu formulářů';
     }
 

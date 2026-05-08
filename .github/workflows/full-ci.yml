@@ -45,6 +45,7 @@ jobs:
           php-version: '8.0'
           extensions: gd, mbstring, fileinfo, pdo, pdo_mysql
           coverage: none
+          ini-values: post_max_size=20M, upload_max_filesize=20M
 
       - name: Validate Composer config
         run: composer validate --strict
