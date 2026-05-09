@@ -10147,6 +10147,12 @@ foreach ([
         $adminFieldErrorIssues[] = 'admin layout is missing field-level error helper fragment: ' . $adminLayoutFragment;
     }
 }
+if (str_contains($adminLayoutSource, "info.setAttribute(\\'aria-live\\',\\'polite\\');")) {
+    $adminFieldErrorIssues[] = 'admin content word count still announces every input as a live region';
+}
+if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\',\\'content\\');")) {
+    $adminFieldErrorIssues[] = 'admin content word count is missing the non-live editor count marker';
+}
 $adminFieldErrorForms = [
     'page form' => [$pageFormSource, "adminFieldAttributes('title'", "adminRenderFieldError('title'", "adminFieldAttributes('unpublish_at'"],
     'blog form' => [$blogFormSource, "adminFieldAttributes('title'", "adminFieldAttributes('content'", "adminFieldAttributes('publish_at'"],

@@ -622,7 +622,7 @@ function adminFooter(): void
        . 'if(!ta)return;'
        . 'var info=document.createElement(\'small\');'
        . 'info.style.cssText=\'display:block;margin-top:.3rem;color:var(--admin-text-muted);font-size:.8rem\';'
-       . 'info.setAttribute(\'aria-live\',\'polite\');'
+       . 'info.setAttribute(\'data-editor-count\',\'content\');'
        . 'ta.parentNode.insertBefore(info,ta.nextSibling);'
        . 'function update(){'
        . 'var text=ta.value.replace(/<[^>]*>/g,\' \');'
