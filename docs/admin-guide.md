@@ -753,7 +753,7 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 | Widget | Popis |
 |--------|-------|
 | Úvodní text | Hlavní textový blok pro domovskou stránku s podporou HTML a snippetů |
-| Nejnovější články | Články z vybraného blogu |
+| Nejnovější články | Články z vybraného blogu; pod odkazem zobrazuje datum publikace, přibližnou dobu čtení a počet přečtení |
 | Novinky | Poslední novinky |
 | Doporučený obsah | Výběr z blogu, vývěsky, ankety nebo newsletteru |
 | Vývěska | Poslední oznámení |

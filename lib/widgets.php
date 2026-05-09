@@ -747,7 +747,7 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
     $params[] = $count;
 
     $stmt = $pdo->prepare(
-        "SELECT a.id, a.title, a.slug, a.perex, a.image_file, a.created_at, a.blog_id, a.view_count,
+        "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.blog_id, a.view_count,
                 b.slug AS blog_slug, c.name AS category
          FROM cms_articles a
          LEFT JOIN cms_blogs b ON b.id = a.blog_id
@@ -768,7 +768,12 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
         $out = '<section class="widget-card" aria-label="' . $title . '">';
         $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
         foreach ($articles as $a) {
-            $out .= '<li><a href="' . h(articlePublicPath($a)) . '">' . h($a['title']) . '</a></li>';
+            $createdAt = (string)($a['created_at'] ?? '');
+            $articleText = (string)($a['perex'] ?? '') . ' ' . (string)($a['content'] ?? '');
+            $out .= '<li><a href="' . h(articlePublicPath($a)) . '">' . h($a['title']) . '</a>'
+                . '<small class="widget-list__meta"><time datetime="' . h(str_replace(' ', 'T', $createdAt)) . '">'
+                . h(formatCzechDate($createdAt)) . '</time>, '
+                . h(articleReadingMeta($articleText, (int)($a['view_count'] ?? 0))) . '</small></li>';
         }
         $out .= '</ul></section>';
         return $out;
@@ -785,10 +790,14 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
                    . '</a>';
         }
         $out .= '<div class="card__body"><h3 class="card__title"><a href="' . h(articlePublicPath($a)) . '">' . h($a['title']) . '</a></h3>';
+        $createdAt = (string)($a['created_at'] ?? '');
+        $articleText = (string)($a['perex'] ?? '') . ' ' . (string)($a['content'] ?? '');
+        $out .= '<p class="meta-row meta-row--tight"><time datetime="' . h(str_replace(' ', 'T', $createdAt)) . '">'
+            . h(formatCzechDate($createdAt)) . '</time><span>'
+            . h(articleReadingMeta($articleText, (int)($a['view_count'] ?? 0))) . '</span></p>';
         if (!empty($a['perex'])) {
             $out .= '<p class="card__excerpt">' . h(mb_substr(strip_tags($a['perex']), 0, 150)) . '</p>';
         }
-        $out .= '<p class="meta-row"><time>' . formatCzechDate($a['created_at']) . '</time></p>';
         $out .= '</div></article>';
     }
     $out .= '</div></section>';

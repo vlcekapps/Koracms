@@ -2439,6 +2439,14 @@ body.theme-public textarea.form-control {
   border-bottom: none;
 }
 
+.widget-list__meta {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .sidebar-widgets {
   display: grid;
   gap: 1rem;
@@ -2468,6 +2476,10 @@ body.theme-public textarea.form-control {
 
 .footer-widgets .widget-list li {
   border-color: rgba(255, 255, 255, 0.1);
+}
+
+.footer-widgets .widget-list__meta {
+  color: rgba(245, 247, 250, 0.78);
 }
 
 .blog-brand-mark {

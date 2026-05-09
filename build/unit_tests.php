@@ -237,6 +237,11 @@ assert_equals(1, readingTime(''), 'empty text = 1 min');
 assert_equals(1, readingTime('hello'), 'single word = 1 min');
 assert_equals(1, readingTime(str_repeat('word ', 200)), '200 words = 1 min');
 assert_equals(2, readingTime(str_repeat('word ', 400)), '400 words = 2 min');
+assert_equals(
+    'přibližná doba čtení 1 min, přečteno 3 krát',
+    articleReadingMeta('krátký článek', 3),
+    'articleReadingMeta uses descriptive public copy'
+);
 
 // ─── 8. paginateArray() ────────────────────────────────────────────────────
 

@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## Unreleased
+
+### Změněno
+- **Widget Nejnovější články** – položky článků nově pod odkazem zobrazují datum, přibližnou dobu čtení a počet přečtení stejně jako klasický výpis článků.
+
 ## [3.3.11] – 2026-05-09
 
 ### Opraveno

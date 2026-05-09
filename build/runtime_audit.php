@@ -10527,6 +10527,7 @@ if (isModuleEnabled('forms')) {
 }
 $widgetSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_save.php');
 $widgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$widgetPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
 $widgetsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
 $settingsModulesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_modules.php');
 $widgetsMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
@@ -10585,6 +10586,12 @@ if (!str_contains($widgetSaveSource, '$rawBlogId === -1 ? -1')) {
 }
 if (!str_contains($widgetLibSource, "\$rawBlogId === -1")) {
     $widgetRenderIssues[] = 'latest articles widget is missing current-blog render fallback';
+}
+if (!str_contains($widgetLibSource, 'a.perex, a.content') || !str_contains($widgetLibSource, 'articleReadingMeta(')) {
+    $widgetRenderIssues[] = 'latest articles widget is missing reading-time metadata from article content';
+}
+if (!str_contains($widgetLibSource, 'widget-list__meta') || !str_contains($widgetPublicCssSource, '.widget-list__meta')) {
+    $widgetRenderIssues[] = 'latest articles widget is missing styled metadata under sidebar/footer links';
 }
 if (!str_contains($widgetSaveSource, "case 'social_links':")) {
     $widgetRenderIssues[] = 'widget save handler is missing social links settings persistence';
