@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
+- **Noční Full CI a rezervace na profilu `custom`** – HTTP integrační test rezervací si nově před rezervačním scénářem výslovně zapíná rezervační modul, takže kontrola neplatného data není závislá na výchozím profilu čisté instalace.
 - **Noční Full CI a HTTP integrační testy** – HTTP integrace nyní ověřuje uložení modulů přes čerstvý stav databáze po HTTP requestu, rezervace vrací neplatné datum zpět na detail zdroje ještě před přihlašovacím redirectem a Full CI má upload limity nastavené tak, aby oversized media test ověřoval aplikační limit.
 - **Noční Full CI a widgetová homepage** – runtime audit už nevyžaduje starý homepage composer u šablon, které jeho nastavení záměrně nemají v `theme.json`, a kontrolu layout varianty spouští jen tam, kde ji šablona skutečně podporuje.
 - **Noční Full CI a audit log na čisté instalaci** – runtime audit si nově před kontrolou `admin/audit_log.php` vytvoří dočasný záznam audit logu a po testu ho uklidí, takže guard tabulky nepadá na prázdné čerstvé databázi.

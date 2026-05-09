@@ -1677,6 +1677,9 @@ try {
     httpIntegrationPrintResult('public_feed_http', $publicFeedIssues, $failures);
 
     $reservationIssues = [];
+    saveSetting('module_reservations', '1');
+    clearSettingsCache();
+
     $resourceSlug = 'http-resource-' . bin2hex(random_bytes(4));
     $pdo->prepare(
         "INSERT INTO cms_res_resources
