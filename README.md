@@ -6,6 +6,7 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 
 ## Obsah
 
+- [Proč Kora CMS?](#proč-kora-cms)
 - [Požadavky](#požadavky)
 - [Instalace](#instalace)
 - [Konfigurace](#konfigurace)
@@ -25,6 +26,12 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 - [Nginx](#nginx)
 - [Ověření po změnách](#ověření-po-změnách)
 - [Další dokumentace](#další-dokumentace)
+
+---
+
+## Proč Kora CMS?
+
+Název Kora je krátký, dobře zapamatovatelný a záměrně českému uchu blízký. Evokuje kůru stromu: pevnou ochrannou vrstvu, která drží živý obsah pohromadě, ale nepřekáží růstu. Stejně má Kora CMS chránit a uspořádat obsah webu, zůstat stabilní, čitelný a přístupný, a přitom nevnucovat zbytečně složitý framework tam, kde stačí poctivě napsané PHP.
 
 ---
 
