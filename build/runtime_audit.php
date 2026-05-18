@@ -9214,6 +9214,9 @@ if (!str_contains($blogArticleControllerSource, "'image_alt' => \$articleSeoTitl
 if (!str_contains($authSource, 'function isSocialPreviewCrawler') || !str_contains($authSource, 'facebookexternalhit') || !str_contains($authSource, '$_SESSION = [];')) {
     $blogPublicIssues[] = 'auth bootstrap is missing cookie-free social preview crawler handling';
 }
+if (!str_contains($authSource, "header_remove('Cache-Control')") || !str_contains($authSource, 'public, max-age=300, s-maxage=300')) {
+    $blogPublicIssues[] = 'auth bootstrap is missing crawler-friendly cache headers';
+}
 foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
     if (!str_contains($uiSource, $socialMetaFragment)) {
         $blogPublicIssues[] = 'SEO meta renderer is missing ' . $socialMetaFragment;
