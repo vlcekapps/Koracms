@@ -87,7 +87,7 @@ function cookieBanner(): string
 /**
  * Vrátí HTML meta tagů pro SEO a Open Graph.
  *
- * @param array{title?:string,description?:string,image?:string,url?:string,canonical?:string,type?:string} $meta
+ * @param array{title?:string,description?:string,image?:string,image_alt?:string,image_width?:int|string,image_height?:int|string,image_type?:string,url?:string,canonical?:string,type?:string,published_time?:string,modified_time?:string,updated_time?:string} $meta
  */
 function seoMeta(array $meta = []): string
 {
@@ -95,6 +95,7 @@ function seoMeta(array $meta = []): string
     $title = isset($meta['title']) ? h($meta['title']) : $siteName;
     $desc  = isset($meta['description']) ? h($meta['description']) : h(getSetting('site_description', ''));
     $image = trim((string)($meta['image'] ?? ''));
+    $imageAlt = trim((string)($meta['image_alt'] ?? ''));
     $url   = isset($meta['url']) ? h($meta['url']) : '';
     $canonical = isset($meta['canonical'])
         ? seoCanonicalUrl((string)$meta['canonical'])
@@ -108,7 +109,17 @@ function seoMeta(array $meta = []): string
         }
     }
     $image = $image !== '' ? seoCanonicalUrl($image) : '';
+    $imageDetails = $image !== '' ? seoImageDetails($image) : [];
+    $imageWidth = seoPositiveInt($meta['image_width'] ?? ($imageDetails['width'] ?? 0));
+    $imageHeight = seoPositiveInt($meta['image_height'] ?? ($imageDetails['height'] ?? 0));
+    $imageType = trim((string)($meta['image_type'] ?? ($imageDetails['type'] ?? '')));
+    if ($imageAlt === '') {
+        $imageAlt = isset($meta['title']) ? trim((string)$meta['title']) : getSetting('site_name', 'Kora CMS');
+    }
     $twitterCard = $image !== '' ? 'summary_large_image' : 'summary';
+    $publishedTime = seoDateTime((string)($meta['published_time'] ?? ''));
+    $modifiedTime = seoDateTime((string)($meta['modified_time'] ?? ($meta['updated_time'] ?? '')));
+    $updatedTime = seoDateTime((string)($meta['updated_time'] ?? ($meta['modified_time'] ?? '')));
 
     $out  = "  <meta name=\"description\" content=\"{$desc}\">\n";
     if ($canonical !== '') {
@@ -117,14 +128,37 @@ function seoMeta(array $meta = []): string
     $out .= "  <meta property=\"og:type\" content=\"{$type}\">\n";
     $out .= "  <meta property=\"og:title\" content=\"{$title}\">\n";
     $out .= "  <meta property=\"og:site_name\" content=\"{$siteName}\">\n";
+    $out .= "  <meta property=\"og:locale\" content=\"cs_CZ\">\n";
     if ($desc  !== '') {
         $out .= "  <meta property=\"og:description\" content=\"{$desc}\">\n";
     }
     if ($image !== '') {
         $out .= '  <meta property="og:image" content="' . h($image) . "\">\n";
+        $out .= '  <meta property="og:image:secure_url" content="' . h($image) . "\">\n";
+        if ($imageType !== '') {
+            $out .= '  <meta property="og:image:type" content="' . h($imageType) . "\">\n";
+        }
+        if ($imageWidth > 0) {
+            $out .= '  <meta property="og:image:width" content="' . $imageWidth . "\">\n";
+        }
+        if ($imageHeight > 0) {
+            $out .= '  <meta property="og:image:height" content="' . $imageHeight . "\">\n";
+        }
+        if ($imageAlt !== '') {
+            $out .= '  <meta property="og:image:alt" content="' . h($imageAlt) . "\">\n";
+        }
     }
     if ($url   !== '') {
         $out .= "  <meta property=\"og:url\" content=\"{$url}\">\n";
+    }
+    if ($publishedTime !== '') {
+        $out .= '  <meta property="article:published_time" content="' . h($publishedTime) . "\">\n";
+    }
+    if ($modifiedTime !== '') {
+        $out .= '  <meta property="article:modified_time" content="' . h($modifiedTime) . "\">\n";
+    }
+    if ($updatedTime !== '') {
+        $out .= '  <meta property="og:updated_time" content="' . h($updatedTime) . "\">\n";
     }
     $out .= '  <meta name="twitter:card" content="' . h($twitterCard) . "\">\n";
     $out .= "  <meta name=\"twitter:title\" content=\"{$title}\">\n";
@@ -135,6 +169,70 @@ function seoMeta(array $meta = []): string
         $out .= '  <meta name="twitter:image" content="' . h($image) . "\">\n";
     }
     return $out;
+}
+
+function seoPositiveInt(mixed $value): int
+{
+    if (is_int($value)) {
+        return max(0, $value);
+    }
+
+    if (is_string($value) && preg_match('/^\d+$/', $value)) {
+        return max(0, (int)$value);
+    }
+
+    return 0;
+}
+
+function seoDateTime(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    $timestamp = strtotime($value);
+    if ($timestamp === false) {
+        return '';
+    }
+
+    return date(DATE_ATOM, $timestamp);
+}
+
+/**
+ * @return array{width?:int,height?:int,type?:string}
+ */
+function seoImageDetails(string $imageUrl): array
+{
+    $path = (string)(parse_url($imageUrl, PHP_URL_PATH) ?? '');
+    if ($path === '') {
+        return [];
+    }
+
+    $basePath = trim((string)(parse_url(siteUrl('/'), PHP_URL_PATH) ?? ''), '/');
+    $decodedPath = rawurldecode($path);
+    if ($basePath !== '' && str_starts_with(ltrim($decodedPath, '/'), $basePath . '/')) {
+        $decodedPath = '/' . substr(ltrim($decodedPath, '/'), strlen($basePath) + 1);
+    }
+    if (!str_starts_with($decodedPath, '/uploads/') || str_contains($decodedPath, '..')) {
+        return [];
+    }
+
+    $filePath = dirname(__DIR__) . str_replace('/', DIRECTORY_SEPARATOR, $decodedPath);
+    if (!is_file($filePath)) {
+        return [];
+    }
+
+    $imageInfo = @getimagesize($filePath);
+    if (!is_array($imageInfo)) {
+        return [];
+    }
+
+    return [
+        'width' => (int)$imageInfo[0],
+        'height' => (int)$imageInfo[1],
+        'type' => trim((string)$imageInfo['mime']),
+    ];
 }
 
 function seoCanonicalUrl(string $target): string

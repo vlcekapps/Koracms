@@ -9208,6 +9208,14 @@ if (!preg_match('/\s404\s/', $blogRouterProbe['status'])) {
 if (!str_contains($blogArticleControllerSource, 'blogLogoUrl($articleBlog)')) {
     $blogPublicIssues[] = 'blog article social image is missing blog logo fallback';
 }
+if (!str_contains($blogArticleControllerSource, "'image_alt' => \$articleSeoTitle") || !str_contains($blogArticleControllerSource, "'published_time' =>")) {
+    $blogPublicIssues[] = 'blog article social metadata is missing image alt or article timestamps';
+}
+foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
+    if (!str_contains($uiSource, $socialMetaFragment)) {
+        $blogPublicIssues[] = 'SEO meta renderer is missing ' . $socialMetaFragment;
+    }
+}
 if ($blogPublicIssues === []) {
     echo "OK\n";
 } else {

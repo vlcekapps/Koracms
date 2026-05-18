@@ -245,8 +245,11 @@ renderPublicPage([
         'title' => $articleSeoTitle,
         'description' => $articleSeoDescription,
         'image' => $articleSeoImage,
+        'image_alt' => $articleSeoTitle,
         'url' => articlePublicUrl($article),
         'type' => 'article',
+        'published_time' => (string)($article['publish_at'] ?? $article['created_at'] ?? ''),
+        'modified_time' => (string)($article['updated_at'] ?? $article['publish_at'] ?? $article['created_at'] ?? ''),
     ],
     'view' => 'modules/blog-article',
     'view_data' => [
