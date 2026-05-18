@@ -92,10 +92,9 @@ function cookieBanner(): string
 function seoMeta(array $meta = []): string
 {
     $siteName = h(getSetting('site_name', 'Kora CMS'));
-    $b        = BASE_URL;
     $title = isset($meta['title']) ? h($meta['title']) : $siteName;
     $desc  = isset($meta['description']) ? h($meta['description']) : h(getSetting('site_description', ''));
-    $image = $meta['image'] ?? '';
+    $image = trim((string)($meta['image'] ?? ''));
     $url   = isset($meta['url']) ? h($meta['url']) : '';
     $canonical = isset($meta['canonical'])
         ? seoCanonicalUrl((string)$meta['canonical'])
@@ -105,11 +104,11 @@ function seoMeta(array $meta = []): string
     if ($image === '') {
         $def = getSetting('og_image_default', '');
         if ($def !== '') {
-            $image = h($b . '/uploads/' . $def);
+            $image = '/uploads/' . ltrim($def, '/');
         }
-    } else {
-        $image = h($image);
     }
+    $image = $image !== '' ? seoCanonicalUrl($image) : '';
+    $twitterCard = $image !== '' ? 'summary_large_image' : 'summary';
 
     $out  = "  <meta name=\"description\" content=\"{$desc}\">\n";
     if ($canonical !== '') {
@@ -122,10 +121,18 @@ function seoMeta(array $meta = []): string
         $out .= "  <meta property=\"og:description\" content=\"{$desc}\">\n";
     }
     if ($image !== '') {
-        $out .= "  <meta property=\"og:image\" content=\"{$image}\">\n";
+        $out .= '  <meta property="og:image" content="' . h($image) . "\">\n";
     }
     if ($url   !== '') {
         $out .= "  <meta property=\"og:url\" content=\"{$url}\">\n";
+    }
+    $out .= '  <meta name="twitter:card" content="' . h($twitterCard) . "\">\n";
+    $out .= "  <meta name=\"twitter:title\" content=\"{$title}\">\n";
+    if ($desc !== '') {
+        $out .= "  <meta name=\"twitter:description\" content=\"{$desc}\">\n";
+    }
+    if ($image !== '') {
+        $out .= '  <meta name="twitter:image" content="' . h($image) . "\">\n";
     }
     return $out;
 }

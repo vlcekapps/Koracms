@@ -220,12 +220,23 @@ try {
 $captchaExpr = captchaGenerate();
 
 $related = ($previewToken === '') ? relatedArticles($pdo, $article, 3) : [];
+$articleSeoTitle = trim((string)(!empty($article['meta_title']) ? $article['meta_title'] : $article['title']));
+if ($articleSeoTitle === '') {
+    $articleSeoTitle = 'Článek';
+}
+$articleSeoDescription = trim((string)($article['meta_description'] ?? ''));
+if ($articleSeoDescription === '') {
+    $articleSeoDescription = trim((string)($article['perex'] ?? ''));
+}
+if ($articleSeoDescription === '') {
+    $articleSeoDescription = articleExcerpt((string)($article['content'] ?? ''), 220);
+}
 
 renderPublicPage([
-    'title' => (!empty($article['meta_title']) ? $article['meta_title'] : $article['title']) . ' – ' . $siteName,
+    'title' => $articleSeoTitle . ' – ' . $siteName,
     'meta' => [
-        'title' => !empty($article['meta_title']) ? $article['meta_title'] : $article['title'] . ' – ' . $siteName,
-        'description' => !empty($article['meta_description']) ? $article['meta_description'] : ($article['perex'] ?? ''),
+        'title' => $articleSeoTitle,
+        'description' => $articleSeoDescription,
         'image' => !empty($article['image_file'])
             ? BASE_URL . '/uploads/articles/' . rawurlencode($article['image_file'])
             : '',

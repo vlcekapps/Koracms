@@ -301,6 +301,9 @@ assert_equals('https://example.test/clanek', seoCanonicalUrl('/clanek'), 'relati
 assert_equals('https://example.com/clanek?strana=2', seoCanonicalUrl('https://example.com/clanek?strana=2#cast'), 'absolute canonical URL keeps query and drops fragment');
 assert_equals('', seoCanonicalUrl('javascript:alert(1)'), 'unsafe canonical URL rejected');
 assert_contains('<link rel="canonical" href="https://example.com/clanek">', seoMeta(['url' => 'https://example.com/clanek']), 'seoMeta renders canonical link');
+assert_contains('<meta property="og:image" content="https://example.test/uploads/articles/foto.jpg">', seoMeta(['image' => '/uploads/articles/foto.jpg']), 'seoMeta converts relative og:image to absolute URL');
+assert_contains('<meta name="twitter:card" content="summary_large_image">', seoMeta(['image' => '/uploads/articles/foto.jpg']), 'seoMeta uses large twitter card when image exists');
+assert_contains('<meta name="twitter:title" content="Titulek článku">', seoMeta(['title' => 'Titulek článku']), 'seoMeta renders twitter title');
 
 if ($oldHttps === null) {
     unset($_SERVER['HTTPS']);

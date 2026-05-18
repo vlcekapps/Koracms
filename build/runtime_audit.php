@@ -80,7 +80,8 @@ $runtimeAuditPublicVisitorStatsWidgetEnabled = isModuleEnabled('statistics')
     )->fetchColumn() > 0;
 
 $articleRow = $pdo->query(
-    "SELECT a.id, a.slug, a.blog_id, b.slug AS blog_slug
+    "SELECT a.id, a.title, a.slug, a.blog_id, a.meta_title, a.meta_description, a.perex, a.content, a.image_file,
+            b.slug AS blog_slug
      FROM cms_articles a
      LEFT JOIN cms_blogs b ON b.id = a.blog_id
      WHERE a.status = 'published'
@@ -4628,6 +4629,28 @@ foreach ($pages as $page) {
 
     if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
         $issues[] = 'blog article is missing public author link in byline';
+    }
+    if ($page['label'] === 'blog_article' && $articleId !== false && $articleRow) {
+        $expectedArticleMetaTitle = trim((string)($articleRow['meta_title'] ?? ''));
+        if ($expectedArticleMetaTitle === '') {
+            $expectedArticleMetaTitle = trim((string)($articleRow['title'] ?? ''));
+        }
+        $expectedArticleMetaDescription = trim((string)($articleRow['meta_description'] ?? ''));
+        if ($expectedArticleMetaDescription === '') {
+            $expectedArticleMetaDescription = trim((string)($articleRow['perex'] ?? ''));
+        }
+        if ($expectedArticleMetaDescription === '') {
+            $expectedArticleMetaDescription = articleExcerpt((string)($articleRow['content'] ?? ''), 220);
+        }
+        if ($expectedArticleMetaTitle !== '' && !str_contains($result['body'], '<meta property="og:title" content="' . h($expectedArticleMetaTitle) . '">')) {
+            $issues[] = 'blog article social title is not the standalone article title';
+        }
+        if ($expectedArticleMetaDescription !== '' && !str_contains($result['body'], '<meta property="og:description" content="' . h($expectedArticleMetaDescription) . '">')) {
+            $issues[] = 'blog article social description does not fall back to article text';
+        }
+        if (!str_contains($result['body'], '<meta name="twitter:title" content="' . h($expectedArticleMetaTitle) . '">')) {
+            $issues[] = 'blog article is missing twitter title metadata';
+        }
     }
     if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '') {
         foreach (['O autorovi', 'Profil autora', 'Web autora'] as $expectedFragment) {
