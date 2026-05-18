@@ -220,6 +220,7 @@ try {
 $captchaExpr = captchaGenerate();
 
 $related = ($previewToken === '') ? relatedArticles($pdo, $article, 3) : [];
+$articleBlog = $GLOBALS['current_blog'] ?? getBlogById((int)($article['blog_id'] ?? 1));
 $articleSeoTitle = trim((string)(!empty($article['meta_title']) ? $article['meta_title'] : $article['title']));
 if ($articleSeoTitle === '') {
     $articleSeoTitle = 'Článek';
@@ -231,22 +232,26 @@ if ($articleSeoDescription === '') {
 if ($articleSeoDescription === '') {
     $articleSeoDescription = articleExcerpt((string)($article['content'] ?? ''), 220);
 }
+$articleSeoImage = !empty($article['image_file'])
+    ? BASE_URL . '/uploads/articles/' . rawurlencode($article['image_file'])
+    : '';
+if ($articleSeoImage === '' && is_array($articleBlog)) {
+    $articleSeoImage = blogLogoUrl($articleBlog);
+}
 
 renderPublicPage([
     'title' => $articleSeoTitle . ' – ' . $siteName,
     'meta' => [
         'title' => $articleSeoTitle,
         'description' => $articleSeoDescription,
-        'image' => !empty($article['image_file'])
-            ? BASE_URL . '/uploads/articles/' . rawurlencode($article['image_file'])
-            : '',
+        'image' => $articleSeoImage,
         'url' => articlePublicUrl($article),
         'type' => 'article',
     ],
     'view' => 'modules/blog-article',
     'view_data' => [
         'article' => $article,
-        'blog' => $GLOBALS['current_blog'] ?? getBlogById((int)($article['blog_id'] ?? 1)),
+        'blog' => $articleBlog,
         'tags' => $tags,
         'comments' => $comments,
         'commentErrors' => $commentErrors,

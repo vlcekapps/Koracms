@@ -81,7 +81,7 @@ $runtimeAuditPublicVisitorStatsWidgetEnabled = isModuleEnabled('statistics')
 
 $articleRow = $pdo->query(
     "SELECT a.id, a.title, a.slug, a.blog_id, a.meta_title, a.meta_description, a.perex, a.content, a.image_file,
-            b.slug AS blog_slug
+            b.slug AS blog_slug, b.logo_file AS blog_logo_file
      FROM cms_articles a
      LEFT JOIN cms_blogs b ON b.id = a.blog_id
      WHERE a.status = 'published'
@@ -4651,6 +4651,18 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], '<meta name="twitter:title" content="' . h($expectedArticleMetaTitle) . '">')) {
             $issues[] = 'blog article is missing twitter title metadata';
         }
+        $expectedArticleMetaImage = trim((string)($articleRow['image_file'] ?? ''));
+        if ($expectedArticleMetaImage !== '') {
+            $expectedArticleMetaImage = '/uploads/articles/' . rawurlencode($expectedArticleMetaImage);
+        } else {
+            $expectedArticleMetaImage = trim((string)($articleRow['blog_logo_file'] ?? ''));
+            if ($expectedArticleMetaImage !== '') {
+                $expectedArticleMetaImage = '/uploads/blogs/' . rawurlencode($expectedArticleMetaImage);
+            }
+        }
+        if ($expectedArticleMetaImage !== '' && !str_contains($result['body'], '<meta property="og:image" content="' . h(siteUrl($expectedArticleMetaImage)) . '">')) {
+            $issues[] = 'blog article social image does not fall back to the blog logo';
+        }
     }
     if ($page['label'] === 'blog_article' && $articleId !== false && $runtimeAuditAuthorPath !== '') {
         foreach (['O autorovi', 'Profil autora', 'Web autora'] as $expectedFragment) {
@@ -8704,6 +8716,7 @@ $blogImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.
 $blogWpImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/wp_import.php');
 $blogEstrankyImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_import.php');
 $blogIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/index.php');
+$blogArticleControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/article.php');
 $blogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
 $blogFeedSource = (string)file_get_contents(dirname(__DIR__) . '/feed.php');
 $blogRouterSource = (string)file_get_contents(dirname(__DIR__) . '/blog_router.php');
@@ -9191,6 +9204,9 @@ if (!preg_match('/\s404\s/', $blogFeedProbe['status'])) {
 $blogRouterProbe = fetchUrl($baseUrl . '/__neexistujici_blog__/', '', 0);
 if (!preg_match('/\s404\s/', $blogRouterProbe['status'])) {
     $blogPublicIssues[] = 'blog router does not return 404 for unknown blog slug';
+}
+if (!str_contains($blogArticleControllerSource, 'blogLogoUrl($articleBlog)')) {
+    $blogPublicIssues[] = 'blog article social image is missing blog logo fallback';
 }
 if ($blogPublicIssues === []) {
     echo "OK\n";
