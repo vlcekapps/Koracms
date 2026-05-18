@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.4.1] – 2026-05-18
 
 ### Opraveno
 - **Sociální náhledy článků** – detail článku nově posílá pro Facebook a další sdílení samostatný titulek článku, popis s fallbackem z textu a absolutní obrázkovou URL, aby náhled nekončil jen obecným názvem webu.
