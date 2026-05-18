@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.4.4] – 2026-05-18
 
 ### Opraveno
 - **Facebook a sociální náhledy domény** – sociální crawlery už nedostávají PHP session cookie ani `no-store` session hlavičky a `og:url` je vždy absolutní URL, aby Facebook neměl důvod degradovat odkazy na pouhé zobrazení domény.
