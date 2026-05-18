@@ -52,6 +52,7 @@ function adminHtmlSnippetSupportMarkup(): string
     $snippets = [
         '<code>[audio]https://example.test/audio.mp3[/audio]</code>',
         '<code>[video]https://example.test/video.mp4[/video]</code>',
+        '<code>[video]https://www.youtube.com/watch?v=ID_VIDEA[/video]</code>',
     ];
 
     if (isModuleEnabled('gallery')) {

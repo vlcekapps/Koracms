@@ -6031,6 +6031,7 @@ if ($articleId === false) {
 <p>Runtime audit shortcode test.</p>
 [audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]
 [video src="/downloads/file.php?id=321" mime="video/mp4"][/video]
+[video]https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s[/video]
 [pdf src="{$runtimeAuditPdfUrl}" title="Runtime audit PDF" mime="application/pdf"][/pdf]
 [code]echo "Ahoj z code shortcodu";
 $soubor = "/uploads/runtime-audit.pdf";[/code]
@@ -6084,6 +6085,12 @@ HTML;
             }
             if (!str_contains($shortcodeProbe['body'], 'src="/downloads/file.php?id=321" type="video/mp4"')) {
                 $contentShortcodeIssues[] = 'video shortcode with safe download endpoint and mime attribute was not rendered';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'https://www.youtube-nocookie.com/embed/yIdGMYUmfgg?start=26')) {
+                $contentShortcodeIssues[] = 'youtube video shortcode was not rendered as privacy-friendly iframe';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'Otevřít video samostatně')) {
+                $contentShortcodeIssues[] = 'youtube video shortcode is missing standalone fallback link';
             }
             if (!str_contains($shortcodeProbe['body'], 'content-embed-card--pdf')) {
                 $contentShortcodeIssues[] = 'pdf shortcode was not rendered as embedded pdf card';
@@ -6196,6 +6203,8 @@ foreach ([
     '[place',
     '[event',
     '[board',
+    'contentYouTubeVideoId',
+    'youtube-nocookie.com/embed/',
 ] as $shortcodeFragment) {
     if (!str_contains($contentLibrarySource, $shortcodeFragment)) {
         $contentSnippetIssues[] = 'content parser is missing shortcode registration: ' . $shortcodeFragment;

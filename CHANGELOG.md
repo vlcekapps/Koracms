@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Opraveno
+- **Video shortcode** – `[video]...[/video]` nově kromě přímých video souborů správně zpracuje i běžné YouTube URL, včetně času začátku, a vykreslí přístupný vložený přehrávač s odkazem na samostatné otevření.
+
 ## [3.3.12] – 2026-05-09
 
 ### Změněno

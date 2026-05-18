@@ -332,7 +332,8 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 | Snippet | Výstup |
 |---|---|
 | `[audio]https://example.test/audio.mp3[/audio]` | HTML5 audio přehrávač |
-| `[video]https://example.test/video.mp4[/video]` | HTML5 video přehrávač |
+| `[video]https://example.test/video.mp4[/video]` | HTML5 video přehrávač pro přímý video soubor |
+| `[video]https://www.youtube.com/watch?v=ID_VIDEA[/video]` | Vložený YouTube přehrávač s odkazem na samostatné otevření |
 | `[pdf]https://example.test/dokument.pdf[/pdf]` | Náhled PDF s odkazem na samostatné otevření |
 | `[code]echo "Ahoj";[/code]` | Kopírovatelný blok obsahu s tlačítkem `Kopírovat do schránky` |
 | `[gallery]slug-alba[/gallery]` | Vložená galerie podle slugu |
@@ -345,7 +346,7 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 | `[event]slug-udalosti[/event]` | Teaser karta události |
 | `[board]slug-oznameni[/board]` | Teaser karta položky vývěsky |
 
-Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF z knihovny médií se nově vykresluje přes interní same-origin preview endpoint a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu. Při vložení obrázku přes content/media picker se do HTML zachová `alt` atribut, ale nevkládá se automatický `figcaption` z názvu média; když médium nemá vyplněný alternativní text, picker vloží `alt=""`, který lze v editoru ručně upravit. Externí iframe a externí audio/video embedy jsou na veřejném webu podporované přes CSP, pokud je cílový zdroj sám dovolí.
+Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF z knihovny médií se nově vykresluje přes interní same-origin preview endpoint a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu. Video snippet podporuje přímé video soubory i běžné YouTube URL (`watch`, `youtu.be`, `shorts`, `embed`) a YouTube vkládá přes privacy-friendly `youtube-nocookie.com`. Při vložení obrázku přes content/media picker se do HTML zachová `alt` atribut, ale nevkládá se automatický `figcaption` z názvu média; když médium nemá vyplněný alternativní text, picker vloží `alt=""`, který lze v editoru ručně upravit. Externí iframe a externí audio/video embedy jsou na veřejném webu podporované přes CSP, pokud je cílový zdroj sám dovolí.
 
 ---
 

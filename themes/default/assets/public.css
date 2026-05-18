@@ -1601,6 +1601,15 @@ body.theme-public textarea.form-control {
   min-height: 48rem;
 }
 
+.content-embed-frame--video {
+  aspect-ratio: 16 / 9;
+}
+
+.content-embed-frame--video iframe {
+  min-height: 0;
+  height: 100%;
+}
+
 .article-actions {
   display: flex;
   flex-wrap: wrap;

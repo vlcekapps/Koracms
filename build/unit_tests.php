@@ -361,6 +361,14 @@ assert_equals('https://example.com/audio.mp3', normalizeContentEmbedUrl('https:/
 assert_equals('/uploads/file.mp3', normalizeContentEmbedUrl('/uploads/file.mp3'), 'absolute path accepted');
 assert_equals('', normalizeContentEmbedUrl("https://example.com\nevil"), 'URL with newline rejected');
 assert_equals('', normalizeContentEmbedUrl('javascript:alert(1)'), 'javascript: rejected');
+assert_equals('kCy8R5fGHxY', contentYouTubeVideoId('https://www.youtube.com/watch?v=kCy8R5fGHxY'), 'YouTube watch URL id parsed');
+assert_equals('yIdGMYUmfgg', contentYouTubeVideoId('https://youtu.be/yIdGMYUmfgg?t=26s'), 'youtu.be URL id parsed');
+assert_equals(26, contentYouTubeStartSeconds('https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s'), 'YouTube t parameter parsed');
+assert_contains(
+    'https://www.youtube-nocookie.com/embed/yIdGMYUmfgg?start=26',
+    renderContentShortcodes('[video]https://www.youtube.com/watch?v=yIdGMYUmfgg&amp;t=26s[/video]'),
+    'YouTube video shortcode renders privacy-friendly iframe'
+);
 
 // ─── 13. githubIssueParseUrl() ───────────────────────────────────────────────
 

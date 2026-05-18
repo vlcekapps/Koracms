@@ -812,7 +812,7 @@ Content picker je přístupný dialog v HTML editoru, který umožňuje:
 Podporované obsahové snippety v HTML editoru:
 
 - `[audio]...[/audio]`
-- `[video]...[/video]`
+- `[video]...[/video]` pro přímé video soubory i běžné YouTube URL
 - `[pdf]...[/pdf]`
 - `[code]...[/code]`
 - `[gallery]slug-alba[/gallery]`
@@ -830,6 +830,7 @@ Praktické poznámky:
 - U veřejného PDF z knihovny médií nabízí picker akci `Vložit PDF náhled`, která vloží robustní shortcode navázaný na konkrétní médium.
 - PDF snippet vykreslí inline náhled dokumentu přes interní same-origin preview endpoint a pod ním ponechá i odkaz `Otevřít PDF samostatně`.
 - Starší PDF snippety, které už mají v obsahu jen cestu `/uploads/media/...`, fungují zpětně bez ruční úpravy.
+- YouTube URL ve video snippetu se převádí na vložený `youtube-nocookie.com` přehrávač a zachová i čas začátku z parametrů `t` nebo `start`.
 - Shortcode `[code]...[/code]` je určený pro kopírovatelný obsah, například příkazy, konfiguraci, kód nebo jiné krátké texty; na veřejném webu zobrazí blok s tlačítkem `Kopírovat do schránky`.
 - Při vložení obrázku z knihovny médií picker zachová `alt` atribut, ale nevkládá automatický `figcaption` z názvu média. Pokud médium nemá vyplněný alternativní text, vloží se `alt=""`, který lze v editoru ručně upravit.
 - Externí iframe a externí audio/video embedy ve veřejném HTML obsahu jsou podporované přes CSP, pokud je cílový zdroj sám dovolí.

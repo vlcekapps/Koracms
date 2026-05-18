@@ -40,6 +40,8 @@ function normalizeContentEmbedUrl(string $value): string
         return '';
     }
 
+    $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
     if (preg_match('/[\r\n<>"\']/', $value)) {
         return '';
     }
@@ -95,6 +97,101 @@ function contentEmbedMediaMimeType(string $url, string $type, string $preferredM
         'mov' => 'video/quicktime',
         default => '',
     };
+}
+
+function contentYouTubeHost(string $url): string
+{
+    $host = strtolower((string)(parse_url($url, PHP_URL_HOST) ?? ''));
+    foreach (['www.', 'm.'] as $prefix) {
+        if (str_starts_with($host, $prefix)) {
+            $host = substr($host, strlen($prefix));
+        }
+    }
+
+    return $host;
+}
+
+function contentYouTubeQueryValue(string $url, string $key): string
+{
+    $queryString = (string)(parse_url($url, PHP_URL_QUERY) ?? '');
+    if ($queryString === '') {
+        return '';
+    }
+
+    parse_str($queryString, $query);
+    $value = $query[$key] ?? '';
+
+    return is_scalar($value) ? trim((string)$value) : '';
+}
+
+function contentYouTubeVideoId(string $url): string
+{
+    $host = contentYouTubeHost($url);
+    $path = trim((string)(parse_url($url, PHP_URL_PATH) ?? ''), '/');
+    $segments = $path !== '' ? explode('/', $path) : [];
+    $candidate = '';
+
+    if ($host === 'youtu.be') {
+        $candidate = (string)($segments[0] ?? '');
+    } elseif ($host === 'youtube.com' || $host === 'youtube-nocookie.com') {
+        if ($path === 'watch') {
+            $candidate = contentYouTubeQueryValue($url, 'v');
+        } elseif (in_array((string)($segments[0] ?? ''), ['embed', 'shorts', 'live', 'v'], true)) {
+            $candidate = (string)($segments[1] ?? '');
+        }
+    }
+
+    return preg_match('/^[A-Za-z0-9_-]{11}$/', $candidate) === 1 ? $candidate : '';
+}
+
+function contentYouTubeTimeToSeconds(string $value): int
+{
+    $value = trim($value);
+    if ($value === '') {
+        return 0;
+    }
+
+    if (ctype_digit($value)) {
+        return max(0, (int)$value);
+    }
+
+    if (preg_match('/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/i', $value, $matches) !== 1) {
+        return 0;
+    }
+
+    $hours = (int)($matches[1] ?? 0);
+    $minutes = (int)($matches[2] ?? 0);
+    $seconds = (int)($matches[3] ?? 0);
+
+    return ($hours * 3600) + ($minutes * 60) + $seconds;
+}
+
+function contentYouTubeStartSeconds(string $url): int
+{
+    foreach (['start', 't'] as $key) {
+        $seconds = contentYouTubeTimeToSeconds(contentYouTubeQueryValue($url, $key));
+        if ($seconds > 0) {
+            return $seconds;
+        }
+    }
+
+    return 0;
+}
+
+function contentYouTubeEmbedUrl(string $url): string
+{
+    $videoId = contentYouTubeVideoId($url);
+    if ($videoId === '') {
+        return '';
+    }
+
+    $embedUrl = 'https://www.youtube-nocookie.com/embed/' . rawurlencode($videoId);
+    $startSeconds = contentYouTubeStartSeconds($url);
+    if ($startSeconds > 0) {
+        $embedUrl .= '?start=' . $startSeconds;
+    }
+
+    return $embedUrl;
 }
 
 function contentEmbedPdfMimeType(string $url, string $preferredMimeType = ''): string
@@ -205,9 +302,42 @@ function renderContentAudioShortcode(string $url, string $preferredMimeType = ''
         . "\n\n";
 }
 
-function renderContentVideoShortcode(string $url, string $preferredMimeType = ''): ?string
+function renderContentYouTubeVideoShortcode(string $url, string $title = ''): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
+    $embedUrl = $normalizedUrl !== '' ? contentYouTubeEmbedUrl($normalizedUrl) : '';
+    if ($normalizedUrl === '' || $embedUrl === '') {
+        return null;
+    }
+
+    $resolvedTitle = trim($title) !== '' ? trim($title) : 'YouTube video';
+    $escapedTitle = h($resolvedTitle);
+
+    return "\n\n"
+        . '<section class="content-embed-card content-embed-card--interactive content-embed-card--video" aria-label="Video: ' . $escapedTitle . '">'
+        . '<div class="content-embed-card__content">'
+        . '<p class="content-embed-card__eyebrow">Video</p>'
+        . '<p class="content-embed-card__title"><a href="' . h($normalizedUrl) . '">' . $escapedTitle . '</a></p>'
+        . '<p class="content-embed-card__excerpt">Vložené video se načítá z YouTube. Pokud se nepřehraje správně, otevřete ho samostatně.</p>'
+        . '<div class="content-embed-frame content-embed-frame--video">'
+        . '<iframe src="' . h($embedUrl) . '" title="Video: ' . $escapedTitle . '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>'
+        . '</div>'
+        . '<div class="content-embed-card__actions">'
+        . '<a class="button-secondary" href="' . h($normalizedUrl) . '">Otevřít video samostatně</a>'
+        . '</div>'
+        . '</div>'
+        . '</section>'
+        . "\n\n";
+}
+
+function renderContentVideoShortcode(string $url, string $preferredMimeType = '', string $title = ''): ?string
+{
+    $normalizedUrl = normalizeContentEmbedUrl($url);
+    $youtubeVideo = renderContentYouTubeVideoShortcode($normalizedUrl, $title);
+    if ($youtubeVideo !== null) {
+        return $youtubeVideo;
+    }
+
     $mimeType = contentEmbedMediaMimeType($normalizedUrl, 'video', $preferredMimeType);
 
     if ($normalizedUrl === '' || $mimeType === '') {
@@ -914,8 +1044,9 @@ function renderContentShortcodes(string $text): string
             }
 
             $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'video');
+            $title = trim((string)($attributes['title'] ?? $attributes['label'] ?? ''));
 
-            return renderContentVideoShortcode($source, $mimeType) ?? $matches[0];
+            return renderContentVideoShortcode($source, $mimeType, $title) ?? $matches[0];
         },
         $text
     ) ?? $text;
