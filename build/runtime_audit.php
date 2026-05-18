@@ -9211,10 +9211,33 @@ if (!str_contains($blogArticleControllerSource, 'blogLogoUrl($articleBlog)')) {
 if (!str_contains($blogArticleControllerSource, "'image_alt' => \$articleSeoTitle") || !str_contains($blogArticleControllerSource, "'published_time' =>")) {
     $blogPublicIssues[] = 'blog article social metadata is missing image alt or article timestamps';
 }
+if (!str_contains($authSource, 'function isSocialPreviewCrawler') || !str_contains($authSource, 'facebookexternalhit') || !str_contains($authSource, '$_SESSION = [];')) {
+    $blogPublicIssues[] = 'auth bootstrap is missing cookie-free social preview crawler handling';
+}
 foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
     if (!str_contains($uiSource, $socialMetaFragment)) {
         $blogPublicIssues[] = 'SEO meta renderer is missing ' . $socialMetaFragment;
     }
+}
+if (!str_contains($uiSource, "\$url = isset(\$meta['url']) ? seoCanonicalUrl")) {
+    $blogPublicIssues[] = 'SEO meta renderer does not normalize og:url to an absolute URL';
+}
+$socialPreviewProbePath = $articleCanonicalPath !== '' ? $articleCanonicalPath : '/';
+$socialPreviewProbe = fetchUrl($baseUrl . $socialPreviewProbePath, '', 0, 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)');
+foreach ($socialPreviewProbe['headers'] as $socialPreviewHeader) {
+    if (stripos($socialPreviewHeader, 'Set-Cookie:') === 0) {
+        $blogPublicIssues[] = 'social preview crawler receives a session cookie';
+        break;
+    }
+}
+foreach ($socialPreviewProbe['headers'] as $socialPreviewHeader) {
+    if (stripos($socialPreviewHeader, 'Cache-Control:') === 0 && stripos($socialPreviewHeader, 'no-store') !== false) {
+        $blogPublicIssues[] = 'social preview crawler receives no-store cache headers';
+        break;
+    }
+}
+if (str_contains($socialPreviewProbe['body'], '<meta property="og:url" content="/')) {
+    $blogPublicIssues[] = 'social preview response contains a relative og:url';
 }
 if ($blogPublicIssues === []) {
     echo "OK\n";

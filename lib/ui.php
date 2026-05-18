@@ -96,7 +96,7 @@ function seoMeta(array $meta = []): string
     $desc  = isset($meta['description']) ? h($meta['description']) : h(getSetting('site_description', ''));
     $image = trim((string)($meta['image'] ?? ''));
     $imageAlt = trim((string)($meta['image_alt'] ?? ''));
-    $url   = isset($meta['url']) ? h($meta['url']) : '';
+    $url = isset($meta['url']) ? seoCanonicalUrl((string)$meta['url']) : '';
     $canonical = isset($meta['canonical'])
         ? seoCanonicalUrl((string)$meta['canonical'])
         : seoCanonicalUrl((string)($meta['url'] ?? ''));
@@ -148,8 +148,8 @@ function seoMeta(array $meta = []): string
             $out .= '  <meta property="og:image:alt" content="' . h($imageAlt) . "\">\n";
         }
     }
-    if ($url   !== '') {
-        $out .= "  <meta property=\"og:url\" content=\"{$url}\">\n";
+    if ($url !== '') {
+        $out .= '  <meta property="og:url" content="' . h($url) . "\">\n";
     }
     if ($publishedTime !== '') {
         $out .= '  <meta property="article:published_time" content="' . h($publishedTime) . "\">\n";

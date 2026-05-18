@@ -6,10 +6,10 @@ if (!function_exists('fetchUrl')) {
     /**
      * @return array{status:string,headers:array<int,string>,body:string}
      */
-    function fetchUrl(string $url, string $cookie = '', int $maxRedirects = 20): array
+    function fetchUrl(string $url, string $cookie = '', int $maxRedirects = 20, string $userAgent = 'KoraHttpIntegration/1.0'): array
     {
         $headers = [
-            'User-Agent: KoraHttpIntegration/1.0',
+            'User-Agent: ' . $userAgent,
         ];
         if ($cookie !== '') {
             $headers[] = 'Cookie: ' . $cookie;

@@ -1,15 +1,32 @@
 <?php
 
+function isSocialPreviewCrawler(): bool
+{
+    $userAgent = strtolower(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')));
+    if ($userAgent === '') {
+        return false;
+    }
+
+    return preg_match(
+        '/facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|pinterest|vkshare|skypeuripreview|embedly|quora link preview|outbrain|applebot/',
+        $userAgent
+    ) === 1;
+}
+
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => '/',
-        'domain'   => '',
-        'secure'   => isset($_SERVER['HTTPS']),
-        'httponly' => true,
-        'samesite' => 'Strict',
-    ]);
-    session_start();
+    if (isSocialPreviewCrawler()) {
+        $_SESSION = [];
+    } else {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => isset($_SERVER['HTTPS']),
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ]);
+        session_start();
+    }
 }
 
 header('X-Content-Type-Options: nosniff');

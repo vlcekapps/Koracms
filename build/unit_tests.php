@@ -301,6 +301,7 @@ assert_equals('https://example.test/clanek', seoCanonicalUrl('/clanek'), 'relati
 assert_equals('https://example.com/clanek?strana=2', seoCanonicalUrl('https://example.com/clanek?strana=2#cast'), 'absolute canonical URL keeps query and drops fragment');
 assert_equals('', seoCanonicalUrl('javascript:alert(1)'), 'unsafe canonical URL rejected');
 assert_contains('<link rel="canonical" href="https://example.com/clanek">', seoMeta(['url' => 'https://example.com/clanek']), 'seoMeta renders canonical link');
+assert_contains('<meta property="og:url" content="https://example.test/index.php">', seoMeta(['url' => '/index.php']), 'seoMeta converts relative og:url to absolute URL');
 assert_contains('<meta property="og:image" content="https://example.test/uploads/articles/foto.jpg">', seoMeta(['image' => '/uploads/articles/foto.jpg']), 'seoMeta converts relative og:image to absolute URL');
 assert_contains('<meta property="og:image:width" content="1200">', seoMeta(['image' => '/uploads/articles/foto.jpg', 'image_width' => 1200, 'image_height' => 630, 'image_type' => 'image/jpeg', 'image_alt' => 'Popis obrázku']), 'seoMeta renders explicit og:image width');
 assert_contains('<meta property="og:image:height" content="630">', seoMeta(['image' => '/uploads/articles/foto.jpg', 'image_width' => 1200, 'image_height' => 630, 'image_type' => 'image/jpeg', 'image_alt' => 'Popis obrázku']), 'seoMeta renders explicit og:image height');
@@ -309,6 +310,11 @@ assert_contains('<meta property="og:image:alt" content="Popis obrázku">', seoMe
 assert_contains('<meta property="og:updated_time" content="2026-05-18T12:00:00+00:00">', seoMeta(['updated_time' => '2026-05-18 12:00:00 UTC']), 'seoMeta renders Open Graph update time');
 assert_contains('<meta name="twitter:card" content="summary_large_image">', seoMeta(['image' => '/uploads/articles/foto.jpg']), 'seoMeta uses large twitter card when image exists');
 assert_contains('<meta name="twitter:title" content="Titulek článku">', seoMeta(['title' => 'Titulek článku']), 'seoMeta renders twitter title');
+
+$_SERVER['HTTP_USER_AGENT'] = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+assert_equals(true, isSocialPreviewCrawler(), 'Facebook crawler is detected as social preview crawler');
+$_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0';
+assert_equals(false, isSocialPreviewCrawler(), 'Regular browser is not detected as social preview crawler');
 
 if ($oldHttps === null) {
     unset($_SERVER['HTTPS']);
