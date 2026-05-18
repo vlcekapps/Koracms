@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.4.5] – 2026-05-18
 
 ### Opraveno
 - **Facebook preview u URL s cestou** – sociální crawlery nyní dostávají explicitně veřejné krátce cacheovatelné hlavičky místo sessionového `no-store`, aby se Facebook nesnažil náhled zahodit a nahradit jen názvem domény.
