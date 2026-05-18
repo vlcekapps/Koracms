@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.4.2] – 2026-05-18
 
 ### Opraveno
 - **Sociální náhledy článků bez obrázku** – detail článku nově použije jako `og:image` logo příslušného blogu, pokud článek nemá vlastní obrázek, aby Facebook a další služby dostaly plnohodnotný náhled místo holého odkazu na doménu.
