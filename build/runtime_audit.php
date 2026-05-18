@@ -38,6 +38,7 @@ $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (
 $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
 $gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
 $gitignoreSource = is_file(__DIR__ . '/../.gitignore') ? (string) file_get_contents(__DIR__ . '/../.gitignore') : '';
+$homeSource = (string) file_get_contents(__DIR__ . '/../index.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -9214,8 +9215,16 @@ if (!str_contains($blogArticleControllerSource, "'image_alt' => \$articleSeoTitl
 if (!str_contains($authSource, 'function isSocialPreviewCrawler') || !str_contains($authSource, 'facebookexternalhit') || !str_contains($authSource, '$_SESSION = [];')) {
     $blogPublicIssues[] = 'auth bootstrap is missing cookie-free social preview crawler handling';
 }
-if (!str_contains($authSource, "header_remove('Cache-Control')") || !str_contains($authSource, 'public, max-age=300, s-maxage=300')) {
+if (
+    !str_contains($authSource, 'session_cache_limiter')
+    || !str_contains($authSource, 'header_register_callback')
+    || !str_contains($authSource, "header_remove('Set-Cookie')")
+    || !str_contains($authSource, 'public, max-age=300, s-maxage=300')
+) {
     $blogPublicIssues[] = 'auth bootstrap is missing crawler-friendly cache headers';
+}
+if (!str_contains($homeSource, "'url' => BASE_URL . '/'")) {
+    $blogPublicIssues[] = 'homepage social metadata should canonicalize og:url to the site root, not index.php';
 }
 foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
     if (!str_contains($uiSource, $socialMetaFragment)) {

@@ -4,6 +4,12 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Opraveno
+- **Facebook preview na produkčním hostingu** – crawler cache hlavičky se nyní vynucují až těsně před odesláním odpovědi a zároveň se vypíná PHP session cache limiter, aby se do odpovědi nedostala protichůdná kombinace `no-store` a `public`.
+- **Open Graph URL hlavní stránky** – hlavní stránka nově jako kanonickou sociální URL posílá kořen webu `/`, ne technickou adresu `/index.php`.
+
 ## [3.4.5] – 2026-05-18
 
 ### Opraveno

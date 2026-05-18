@@ -13,8 +13,33 @@ function isSocialPreviewCrawler(): bool
     ) === 1;
 }
 
+$isSocialPreviewCrawler = isSocialPreviewCrawler();
+if ($isSocialPreviewCrawler && session_status() === PHP_SESSION_NONE) {
+    session_cache_limiter('');
+}
+
+function sendSocialPreviewCacheHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    header_remove('Set-Cookie');
+    header_remove('Cache-Control');
+    header_remove('Pragma');
+    header_remove('Expires');
+    header('Cache-Control: public, max-age=300, s-maxage=300', true);
+    header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 300) . ' GMT', true);
+}
+
+if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {
+    header_register_callback('sendSocialPreviewCacheHeaders');
+} elseif ($isSocialPreviewCrawler) {
+    register_shutdown_function('sendSocialPreviewCacheHeaders');
+}
+
 if (session_status() === PHP_SESSION_NONE) {
-    if (isSocialPreviewCrawler()) {
+    if ($isSocialPreviewCrawler) {
         $_SESSION = [];
     } else {
         session_set_cookie_params([
@@ -47,12 +72,8 @@ if (function_exists('getSetting') && getSetting('ga4_measurement_id', '') !== ''
     $_CSP_EXTRA_CONNECT = ' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com';
 }
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'{$_CSP_EXTRA_CONNECT}; media-src 'self' https: data: blob:; frame-src 'self' https:; frame-ancestors 'none'");
-if (isSocialPreviewCrawler()) {
-    header_remove('Cache-Control');
-    header_remove('Pragma');
-    header_remove('Expires');
-    header('Cache-Control: public, max-age=300, s-maxage=300', true);
-    header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 300) . ' GMT', true);
+if ($isSocialPreviewCrawler) {
+    sendSocialPreviewCacheHeaders();
 }
 
 // ── 301/302 přesměrování z tabulky cms_redirects ─────────────────────────────

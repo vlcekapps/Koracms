@@ -116,7 +116,7 @@ $useWidgets = $widgetHtml !== '';
 renderPublicPage([
     'title' => $siteName,
     'meta' => [
-        'url' => BASE_URL . '/index.php',
+        'url' => BASE_URL . '/',
     ],
     'view' => 'home',
     'view_data' => [
