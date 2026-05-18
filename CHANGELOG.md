@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.4.3] – 2026-05-18
 
 ### Opraveno
 - **Open Graph metadata** – náhledové obrázky nově posílají i rozměry, MIME typ, alternativní text, `secure_url` a čas aktualizace článku, aby Facebook dostal co nejúplnější data pro nové načtení sdílené přílohy.
