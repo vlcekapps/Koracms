@@ -26,12 +26,24 @@ Options -Indexes
 </IfModule>
 
 # Bezpečnostní hlavičky
-<IfModule mod_headers.c>
+<IfModule mod_setenvif.c>
     SetEnvIfNoCase Request_URI "(^|/)media/preview\.php$" KORA_MEDIA_PREVIEW=1
+    SetEnvIfNoCase User-Agent "(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|pinterest|vkshare|skypeuripreview|embedly|quora link preview|outbrain|applebot)" KORA_SOCIAL_CRAWLER=1
+</IfModule>
+<IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN" env=KORA_MEDIA_PREVIEW
     Header always set X-Frame-Options "DENY" env=!KORA_MEDIA_PREVIEW
     Header always set Referrer-Policy "same-origin"
+    Header unset Set-Cookie env=KORA_SOCIAL_CRAWLER
+    Header always unset Set-Cookie env=KORA_SOCIAL_CRAWLER
+    Header unset Cache-Control env=KORA_SOCIAL_CRAWLER
+    Header always unset Cache-Control env=KORA_SOCIAL_CRAWLER
+    Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER
+    Header unset Pragma env=KORA_SOCIAL_CRAWLER
+    Header always unset Pragma env=KORA_SOCIAL_CRAWLER
+    Header unset Expires env=KORA_SOCIAL_CRAWLER
+    Header always unset Expires env=KORA_SOCIAL_CRAWLER
 </IfModule>
 
 <IfModule mod_rewrite.c>

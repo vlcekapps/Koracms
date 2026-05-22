@@ -29,7 +29,6 @@ function sendSocialPreviewCacheHeaders(): void
     header_remove('Pragma');
     header_remove('Expires');
     header('Cache-Control: public, max-age=300, s-maxage=300', true);
-    header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 300) . ' GMT', true);
 }
 
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {

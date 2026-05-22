@@ -9226,6 +9226,16 @@ if (
 if (!str_contains($homeSource, "'url' => BASE_URL . '/'")) {
     $blogPublicIssues[] = 'homepage social metadata should canonicalize og:url to the site root, not index.php';
 }
+if (
+    !str_contains($htaccessSource, 'KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'SetEnvIfNoCase User-Agent')
+    || !str_contains($htaccessSource, 'Header always unset Cache-Control env=KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'Header always unset Pragma env=KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'Header always unset Expires env=KORA_SOCIAL_CRAWLER')
+) {
+    $blogPublicIssues[] = '.htaccess is missing Apache-level social crawler cache override';
+}
 foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
     if (!str_contains($uiSource, $socialMetaFragment)) {
         $blogPublicIssues[] = 'SEO meta renderer is missing ' . $socialMetaFragment;
