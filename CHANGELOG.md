@@ -4,6 +4,11 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [Unreleased]
+
+### Přidáno
+- **Request ID a strukturované technické logy** – každá odpověď dostává `X-Request-ID` a globální neošetřené chyby se zapisují jako JSON záznam se stejným ID, metodou a cestou pro snazší dohledávání produkčních problémů.
+
 ## [3.4.7] – 2026-05-22
 
 ### Opraveno

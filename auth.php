@@ -13,6 +13,80 @@ function isSocialPreviewCrawler(): bool
     ) === 1;
 }
 
+function koraRequestId(): string
+{
+    $cachedRequestId = $GLOBALS['_KORA_REQUEST_ID'] ?? null;
+    if (is_string($cachedRequestId) && $cachedRequestId !== '') {
+        return $cachedRequestId;
+    }
+
+    $incomingRequestId = trim((string)($_SERVER['HTTP_X_REQUEST_ID'] ?? ''));
+    if ($incomingRequestId !== '' && preg_match('/\A[A-Za-z0-9._:-]{8,128}\z/', $incomingRequestId) === 1) {
+        $requestId = $incomingRequestId;
+    } else {
+        $requestId = bin2hex(random_bytes(12));
+    }
+
+    $GLOBALS['_KORA_REQUEST_ID'] = $requestId;
+    return $requestId;
+}
+
+function koraLogValue(mixed $value): string|int|float|bool|null
+{
+    if ($value === null || is_bool($value) || is_int($value) || is_float($value)) {
+        return $value;
+    }
+
+    if (is_string($value)) {
+        return mb_substr($value, 0, 1000);
+    }
+
+    if ($value instanceof \Throwable) {
+        return get_class($value) . ': ' . mb_substr($value->getMessage(), 0, 1000);
+    }
+
+    if (is_array($value)) {
+        return '[array:' . count($value) . ']';
+    }
+
+    return '[' . get_debug_type($value) . ']';
+}
+
+/**
+ * @param array<string,mixed> $context
+ */
+function koraLog(string $level, string $message, array $context = []): void
+{
+    $normalizedContext = [];
+    foreach ($context as $key => $value) {
+        if ($key === '') {
+            continue;
+        }
+        $normalizedContext[$key] = koraLogValue($value);
+    }
+
+    $requestPath = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    $record = [
+        'time' => date(DATE_ATOM),
+        'level' => $level,
+        'message' => $message,
+        'request_id' => koraRequestId(),
+        'method' => (string)($_SERVER['REQUEST_METHOD'] ?? 'CLI'),
+        'path' => is_string($requestPath) ? $requestPath : '',
+    ];
+    if ($normalizedContext !== []) {
+        $record['context'] = $normalizedContext;
+    }
+
+    $encodedRecord = json_encode($record, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    error_log($encodedRecord !== false ? $encodedRecord : '[koraLog] ' . $level . ': ' . $message);
+}
+
+$requestId = koraRequestId();
+if (!headers_sent()) {
+    header('X-Request-ID: ' . $requestId);
+}
+
 $isSocialPreviewCrawler = isSocialPreviewCrawler();
 if ($isSocialPreviewCrawler && session_status() === PHP_SESSION_NONE) {
     session_cache_limiter('');
@@ -703,7 +777,7 @@ function rateLimitApply(string $key, int $max, int $window): void
             exit;
         }
     } catch (\PDOException $e) {
-        error_log('rateLimit: ' . $e->getMessage());
+        koraLog('warning', 'rateLimit failed', ['exception' => $e]);
     }
 }
 

@@ -52,6 +52,7 @@ echo json_encode(
     [
         'status' => $overallStatus,
         'version' => KORA_VERSION,
+        'request_id' => koraRequestId(),
         'time' => date(DATE_ATOM),
         'checks' => $checks,
     ],

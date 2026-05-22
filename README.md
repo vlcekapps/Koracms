@@ -460,6 +460,8 @@ Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
 
 Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vrací HTTP 200, při selhání kritické kontroly HTTP 503.
 
+Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy nebo hosting pošle vlastní bezpečné `X-Request-ID`, Kora CMS ho převezme; jinak vytvoří nové náhodné ID. Stejné ID se zapisuje i do strukturovaných JSON záznamů technických chyb, takže lze konkrétní problém spárovat mezi odpovědí, PHP logem a monitoringem.
+
 ---
 
 ## Vývoj a CI

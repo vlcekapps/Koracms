@@ -133,7 +133,27 @@ assert_false(
     'IP and subject rate-limit keys do not collide'
 );
 
-// ─── 5. SQL backup identifier helpers ───────────────────────────────────────
+// ─── 5. Request ID and structured logs ──────────────────────────────────────
+
+test_section('Request ID and structured logs');
+
+$GLOBALS['_KORA_REQUEST_ID'] = null;
+$_SERVER['HTTP_X_REQUEST_ID'] = 'request-1234';
+assert_equals('request-1234', koraRequestId(), 'valid incoming request ID accepted');
+assert_equals('request-1234', koraRequestId(), 'request ID is stable within one request');
+
+$GLOBALS['_KORA_REQUEST_ID'] = null;
+$_SERVER['HTTP_X_REQUEST_ID'] = '../bad';
+$generatedRequestId = koraRequestId();
+assert_true(preg_match('/\A[a-f0-9]{24}\z/', $generatedRequestId) === 1, 'invalid incoming request ID is replaced');
+
+assert_equals('[array:2]', koraLogValue(['a' => 1, 'b' => 2]), 'array log context summarized');
+assert_contains('RuntimeException: Testovací chyba', (string)koraLogValue(new RuntimeException('Testovací chyba')), 'throwable log context summarized');
+
+unset($_SERVER['HTTP_X_REQUEST_ID']);
+$GLOBALS['_KORA_REQUEST_ID'] = null;
+
+// ─── 6. SQL backup identifier helpers ───────────────────────────────────────
 
 test_section('SQL backup identifiers');
 
@@ -152,7 +172,7 @@ try {
 }
 assert_true($invalidIdentifierRejected, 'invalid quoted identifier throws');
 
-// ─── 6. Upload helpers ─────────────────────────────────────────────────────
+// ─── 7. Upload helpers ─────────────────────────────────────────────────────
 
 test_section('Upload helpers');
 

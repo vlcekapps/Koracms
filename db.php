@@ -8,7 +8,12 @@ define('KORA_VERSION', trim((string)(file_get_contents(__DIR__ . '/VERSION') ?: 
 // Globální exception handler – zachytí neošetřené výjimky a zobrazí
 // uživatelsky přívětivou chybovou stránku místo bílé obrazovky.
 set_exception_handler(function (\Throwable $e): void {
-    error_log('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    koraLog('error', 'Uncaught exception', [
+        'exception' => get_class($e),
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+    ]);
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: text/html; charset=UTF-8');

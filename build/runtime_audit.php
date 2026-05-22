@@ -20,6 +20,8 @@ $cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
 $adminBackupSource = (string) file_get_contents(__DIR__ . '/../admin/backup.php');
 $backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php');
 $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
+$authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
+$dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
 $htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
 $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
@@ -7479,8 +7481,14 @@ $foundationChecks = [
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
     'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
         && str_contains($healthSource, "db_connect()->query('SELECT 1')")
+        && str_contains($healthSource, "'request_id' => koraRequestId()")
         && str_contains($healthSource, "'database' => ['status' => 'fail']")
         && str_contains($healthSource, "'storage' => ['status' => 'fail']"),
+    'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
+        && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
+        && str_contains($authSource, 'function koraLog(')
+        && str_contains($authSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
+        && str_contains($dbSource, "koraLog('error', 'Uncaught exception'"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {
