@@ -4,7 +4,7 @@ Všechny důležité změny projektu Kora CMS jsou dokumentovány v tomto soubor
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/)
 a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
-## [Unreleased]
+## [3.4.7] – 2026-05-22
 
 ### Opraveno
 - **Facebook preview URL s cestou na produkčním hostingu** – `.htaccess` nyní pro sociální crawlery přepisuje i serverové `no-store/no-cache` hlavičky, které hosting přidával nad rámec PHP, takže články, blogy i jejich náhledové obrázky nemají dostávat protichůdnou cache politiku.
