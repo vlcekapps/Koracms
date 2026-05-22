@@ -113,6 +113,44 @@ if (!function_exists('postUrl')) {
     }
 }
 
+if (!function_exists('postRawUrl')) {
+    /**
+     * @return array{status:string,headers:array<int,string>,body:string}
+     */
+    function postRawUrl(string $url, string $body, string $contentType = 'application/json', string $cookie = '', int $maxRedirects = 20): array
+    {
+        $headers = [
+            'User-Agent: KoraHttpIntegration/1.0',
+            'Content-Type: ' . $contentType,
+        ];
+        if ($cookie !== '') {
+            $headers[] = 'Cookie: ' . $cookie;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers) . "\r\n",
+                'content' => $body,
+                'ignore_errors' => true,
+                'timeout' => 20,
+                'follow_location' => $maxRedirects > 0 ? 1 : 0,
+                'max_redirects' => $maxRedirects,
+            ],
+        ]);
+
+        $responseBody = file_get_contents($url, false, $context);
+        $responseHeaders = $http_response_header;
+        $status = $responseHeaders[0] ?? 'HTTP status unknown';
+
+        return [
+            'status' => $status,
+            'headers' => $responseHeaders,
+            'body' => is_string($responseBody) ? $responseBody : '',
+        ];
+    }
+}
+
 if (!function_exists('postMultipartUrl')) {
     /**
      * @param array<string,string> $fields

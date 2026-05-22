@@ -358,6 +358,36 @@ try {
     $settingsSaveUrl = $baseUrl . BASE_URL . '/admin/settings_save.php';
     $settingsPageUrl = $baseUrl . BASE_URL . '/admin/settings.php';
 
+    $cspReportIssues = [];
+    $cspReportPayload = json_encode(
+        [
+            'csp-report' => [
+                'document-uri' => $baseUrl . BASE_URL . '/runtime-audit-csp?token=secret',
+                'blocked-uri' => 'https://example.test/tracker.js?private=1',
+                'violated-directive' => 'script-src-elem',
+                'effective-directive' => 'script-src-elem',
+                'source-file' => $baseUrl . BASE_URL . '/runtime-audit-csp.js?private=1',
+                'line-number' => 12,
+                'column-number' => 3,
+                'disposition' => 'report',
+            ],
+        ],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+    if (!is_string($cspReportPayload)) {
+        $cspReportIssues[] = 'nepodařilo se připravit CSP report payload';
+    } else {
+        $cspReportResponse = postRawUrl($baseUrl . BASE_URL . '/csp-report.php', $cspReportPayload, 'application/csp-report', '', 0);
+        if (httpIntegrationStatusCode($cspReportResponse) !== 204) {
+            $cspReportIssues[] = 'CSP report endpoint nevrátil 204';
+        }
+    }
+    $cspReportGetResponse = fetchUrl($baseUrl . BASE_URL . '/csp-report.php', '', 0);
+    if (httpIntegrationStatusCode($cspReportGetResponse) !== 405) {
+        $cspReportIssues[] = 'CSP report endpoint nepovolil jen POST';
+    }
+    httpIntegrationPrintResult('csp_report_http', $cspReportIssues, $failures);
+
     $validSiteName = 'HTTP Integration Site ' . date('His');
     $validSiteDescription = 'HTTP integration description ' . date('His');
     $validBoardLabel = 'Vývěska test ' . date('His');

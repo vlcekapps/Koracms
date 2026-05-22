@@ -462,6 +462,8 @@ Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vr
 
 Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy nebo hosting pošle vlastní bezpečné `X-Request-ID`, Kora CMS ho převezme; jinak vytvoří nové náhodné ID. Stejné ID se zapisuje i do strukturovaných JSON záznamů technických chyb, takže lze konkrétní problém spárovat mezi odpovědí, PHP logem a monitoringem.
 
+Veřejné odpovědi posílají také `Content-Security-Policy-Report-Only` s interním endpointem `csp-report.php`. Prohlížeče na něj mohou posílat porušení CSP bez blokování běžného provozu; CMS ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`.
+
 ---
 
 ## Vývoj a CI
