@@ -8,7 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Request ID a strukturované technické logy** – každá odpověď dostává `X-Request-ID` a globální neošetřené chyby se zapisují jako JSON záznam se stejným ID, metodou a cestou pro snazší dohledávání produkčních problémů.
-- **CSP Report-Only sběr porušení** – veřejné odpovědi nově posílají i report-only CSP hlavičku s interním endpointem `csp-report.php`, který ukládá očištěné JSONL záznamy do privátního úložiště pro bezpečnější ladění embedů a dalších zdrojů.
+- **CSP Report-Only sběr porušení** – veřejné odpovědi nově posílají i report-only CSP hlavičku s interním endpointem `csp-report.php`, který ukládá očištěné JSONL záznamy do privátního úložiště pro bezpečnější ladění embedů a dalších zdrojů; endpoint je chráněný vlastním rate limitem, aby nešel snadno zneužít k zahlcení logů.
 
 ## [3.4.7] – 2026-05-22
 

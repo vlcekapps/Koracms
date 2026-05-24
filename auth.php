@@ -749,7 +749,10 @@ function rateLimitKey(string $action, string $identifier): string
     return hash('sha256', $identifier . '|' . $action);
 }
 
-function rateLimitApply(string $key, int $max, int $window): void
+/**
+ * @param null|callable():void $onExceeded
+ */
+function rateLimitApply(string $key, int $max, int $window, ?callable $onExceeded = null): void
 {
     try {
         $pdo = db_connect();
@@ -773,6 +776,11 @@ function rateLimitApply(string $key, int $max, int $window): void
         $row = $stmt->fetch();
 
         if ($row && (int)$row['attempts'] > $max) {
+            if ($onExceeded !== null) {
+                $onExceeded();
+                exit;
+            }
+
             http_response_code(429);
             echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>429</title></head>'
                . '<body><p>Příliš mnoho pokusů. Zkuste to prosím za chvíli.</p></body></html>';
@@ -783,13 +791,19 @@ function rateLimitApply(string $key, int $max, int $window): void
     }
 }
 
-function rateLimit(string $action, int $max = 10, int $window = 60): void
+/**
+ * @param null|callable():void $onExceeded
+ */
+function rateLimit(string $action, int $max = 10, int $window = 60, ?callable $onExceeded = null): void
 {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    rateLimitApply(rateLimitKey($action, $ip), $max, $window);
+    rateLimitApply(rateLimitKey($action, $ip), $max, $window, $onExceeded);
 }
 
-function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60): void
+/**
+ * @param null|callable():void $onExceeded
+ */
+function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60, ?callable $onExceeded = null): void
 {
     $normalizedSubject = strtolower(trim($subject));
     if ($normalizedSubject === '') {
@@ -797,7 +811,7 @@ function rateLimitSubject(string $action, string $subject, int $max = 10, int $w
     }
 
     // Subject limit chrání konkrétní účet/token napříč IP adresami, aniž by ukládal e-mail v databázi.
-    rateLimitApply(rateLimitKey($action, 'subject:' . $normalizedSubject), $max, $window);
+    rateLimitApply(rateLimitKey($action, 'subject:' . $normalizedSubject), $max, $window, $onExceeded);
 }
 
 /**

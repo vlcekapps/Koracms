@@ -359,6 +359,7 @@ try {
     $settingsPageUrl = $baseUrl . BASE_URL . '/admin/settings.php';
 
     $cspReportIssues = [];
+    httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     $cspReportPayload = json_encode(
         [
             'csp-report' => [
@@ -386,6 +387,26 @@ try {
     if (httpIntegrationStatusCode($cspReportGetResponse) !== 405) {
         $cspReportIssues[] = 'CSP report endpoint nepovolil jen POST';
     }
+    $cspReportRateLimitIds = [];
+    foreach (['127.0.0.1', '::1', 'unknown'] as $cspReportIp) {
+        $cspReportRateLimitIds[] = hash('sha256', $cspReportIp . '|csp_report');
+    }
+    foreach ($cspReportRateLimitIds as $cspReportRateLimitId) {
+        $pdo->prepare(
+            "INSERT INTO cms_rate_limit (id, attempts, window_start) VALUES (?, 120, NOW())
+             ON DUPLICATE KEY UPDATE attempts = 120, window_start = NOW()"
+        )->execute([$cspReportRateLimitId]);
+    }
+    if (is_string($cspReportPayload)) {
+        $cspReportLimitedResponse = postRawUrl($baseUrl . BASE_URL . '/csp-report.php', $cspReportPayload, 'application/csp-report', '', 0);
+        if (httpIntegrationStatusCode($cspReportLimitedResponse) !== 429) {
+            $cspReportIssues[] = 'CSP report endpoint nevrátil 429 po překročení rate limitu';
+        }
+        if (!str_contains($cspReportLimitedResponse['body'], 'rate_limited')) {
+            $cspReportIssues[] = 'CSP report endpoint nevrátil JSON rate-limit odpověď';
+        }
+    }
+    httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     httpIntegrationPrintResult('csp_report_http', $cspReportIssues, $failures);
 
     $validSiteName = 'HTTP Integration Site ' . date('His');

@@ -113,12 +113,21 @@ function cspReportEntry(array $body): array
     ];
 }
 
+function cspReportRateLimitExceeded(): void
+{
+    header('Retry-After: 60');
+    http_response_code(429);
+    echo json_encode(['status' => 'rate_limited'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     header('Allow: POST');
     http_response_code(405);
     echo json_encode(['status' => 'method_not_allowed'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
+
+rateLimit('csp_report', 120, 60, 'cspReportRateLimitExceeded');
 
 $rawBody = file_get_contents('php://input', false, null, 0, 65537);
 if (!is_string($rawBody) || $rawBody === '') {

@@ -7730,10 +7730,12 @@ echo "=== auth_rate_limit_guardrails ===\n";
 $authRateLimitIssues = [];
 foreach ([
     'function rateLimitKey(string $action, string $identifier): string',
-    'function rateLimitApply(string $key, int $max, int $window): void',
-    'function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60): void',
+    'function rateLimitApply(string $key, int $max, int $window, ?callable $onExceeded = null): void',
+    'function rateLimit(string $action, int $max = 10, int $window = 60, ?callable $onExceeded = null): void',
+    'function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60, ?callable $onExceeded = null): void',
     "rateLimitKey(\$action, \$ip)",
     "rateLimitKey(\$action, 'subject:' . \$normalizedSubject)",
+    '$onExceeded();',
 ] as $authRateLimitFragment) {
     if (!str_contains($adminAuthSource, $authRateLimitFragment)) {
         $authRateLimitIssues[] = 'auth.php is missing rate-limit fragment: ' . $authRateLimitFragment;
@@ -7749,6 +7751,9 @@ foreach ([
     if (!str_contains($rateLimitSource, $ipFragment) || !str_contains($rateLimitSource, $subjectFragment)) {
         $authRateLimitIssues[] = $rateLimitSourceLabel . ' is missing combined IP and subject rate limiting';
     }
+}
+if (!str_contains($cspReportSource, "rateLimit('csp_report', 120, 60") || !str_contains($cspReportSource, 'function cspReportRateLimitExceeded')) {
+    $authRateLimitIssues[] = 'csp-report.php is missing dedicated JSON rate limiting';
 }
 if ($authRateLimitIssues === []) {
     echo "OK\n";
@@ -8679,7 +8684,7 @@ if (!str_contains($authSource, "frame-ancestors 'none'")) {
 if (!str_contains($authSource, 'Content-Security-Policy-Report-Only') || !str_contains($authSource, 'report-uri ' . "' . BASE_URL . '" . '/csp-report.php')) {
     $contentSecurityPolicyIssues[] = 'auth CSP is missing report-only collection endpoint';
 }
-foreach (['function cspReportBody', 'function cspReportEntry', "koraStoragePath('logs')", "csp_reports-' . date('Y-m-d') . '.jsonl", 'JSON_INVALID_UTF8_SUBSTITUTE'] as $cspReportSnippet) {
+foreach (['function cspReportBody', 'function cspReportEntry', "rateLimit('csp_report', 120, 60", "koraStoragePath('logs')", "csp_reports-' . date('Y-m-d') . '.jsonl", 'JSON_INVALID_UTF8_SUBSTITUTE'] as $cspReportSnippet) {
     if (!str_contains($cspReportSource, $cspReportSnippet)) {
         $contentSecurityPolicyIssues[] = 'csp-report.php is missing guardrail snippet: ' . $cspReportSnippet;
     }
