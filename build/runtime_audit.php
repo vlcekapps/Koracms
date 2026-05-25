@@ -6940,6 +6940,9 @@ try {
     $originalChatRetentionDays = getSetting('chat_retention_days', '0');
     $cronChatId = 0;
     $cronBackupFile = cronBackupDirectory() . 'kora_backup_' . date('Y-m-d') . '.sql';
+    $cronCspLogDirectory = cronLogDirectory();
+    $oldCspReportFile = $cronCspLogDirectory . 'csp_reports-runtime-audit-old.jsonl';
+    $recentCspReportFile = $cronCspLogDirectory . 'csp_reports-runtime-audit-recent.jsonl';
     $legacyBackupFile = __DIR__ . '/../uploads/backups/kora_backup_' . date('Y-m-d') . '.sql';
     $storageRoot = str_replace('\\', '/', rtrim(koraStorageDirectory(), '\\/'));
     $webRoot = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: dirname(__DIR__));
@@ -6972,6 +6975,12 @@ try {
         $cronChatId,
         'Zpráva byla označena jako vyřízená.',
     ]);
+    if (koraEnsureDirectory($cronCspLogDirectory)) {
+        file_put_contents($oldCspReportFile, "{}\n");
+        file_put_contents($recentCspReportFile, "{}\n");
+        touch($oldCspReportFile, time() - (31 * 86400));
+        touch($recentCspReportFile, time());
+    }
 
     $cronLog = runKoraCron($pdo);
     $rateLimitCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_rate_limit WHERE id = ?");
@@ -6990,6 +6999,12 @@ try {
     }
     if ($remainingCronChat !== 0 || $remainingCronChatHistory !== 0) {
         $cronIssues[] = 'cron did not clean old handled chat messages according to chat_retention_days';
+    }
+    if (is_file($oldCspReportFile)) {
+        $cronIssues[] = 'cron did not clean old CSP report JSONL logs';
+    }
+    if (!is_file($recentCspReportFile)) {
+        $cronIssues[] = 'cron removed a recent CSP report JSONL log';
     }
     if (!is_file($cronBackupFile)) {
         $cronIssues[] = 'cron did not keep SQL backups in private storage';
@@ -7018,6 +7033,8 @@ try {
         $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$cronChatId]);
         $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$cronChatId]);
     }
+    @unlink($oldCspReportFile);
+    @unlink($recentCspReportFile);
 } catch (\Throwable $e) {
     saveSetting('chat_retention_days', $originalChatRetentionDays ?? '0');
     clearSettingsCache();
@@ -7025,6 +7042,12 @@ try {
     if (!empty($cronChatId)) {
         $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$cronChatId]);
         $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$cronChatId]);
+    }
+    if (!empty($oldCspReportFile)) {
+        @unlink($oldCspReportFile);
+    }
+    if (!empty($recentCspReportFile)) {
+        @unlink($recentCspReportFile);
     }
     $failures++;
     echo '- cron runtime check failed: ' . $e->getMessage() . "\n";
@@ -7041,6 +7064,8 @@ $cronGuardChecks = [
     'cron backup table allowlist' => str_contains($cronSource, 'koraBackupTableNames($pdo)') && str_contains($cronSource, 'koraSqlQuoteIdentifier($tableName)'),
     'manual backup table allowlist' => str_contains($adminBackupSource, 'koraBackupTableNames($pdo)') && str_contains($adminBackupSource, 'koraSqlQuoteIdentifier($table)'),
     'backup helper validates identifiers' => str_contains($backupHelperSource, 'function koraSqlIdentifierAllowed') && str_contains($backupHelperSource, '/\A[A-Za-z0-9_]+\z/'),
+    'CSP report log retention' => str_contains($cronSource, 'function cronLogDirectory(): string')
+        && str_contains($cronSource, "cronDeleteOldFiles(cronLogDirectory(), ['csp_reports-*.jsonl'], 30 * 86400)"),
 ];
 foreach ($cronGuardChecks as $label => $ok) {
     if (!$ok) {

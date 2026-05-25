@@ -23,6 +23,39 @@ function cronBackupDirectory(): string
     return rtrim(koraStoragePath('backups'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 }
 
+function cronLogDirectory(): string
+{
+    return rtrim(koraStoragePath('logs'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+}
+
+/**
+ * @param list<string> $patterns
+ */
+function cronDeleteOldFiles(string $directory, array $patterns, int $maxAgeSeconds): int
+{
+    if ($maxAgeSeconds <= 0 || !is_dir($directory)) {
+        return 0;
+    }
+
+    $deletedFiles = 0;
+    $cutoff = time() - $maxAgeSeconds;
+    foreach ($patterns as $pattern) {
+        foreach (glob($directory . $pattern) ?: [] as $filePath) {
+            if (!is_file($filePath)) {
+                continue;
+            }
+            if ((int)@filemtime($filePath) >= $cutoff) {
+                continue;
+            }
+            if (@unlink($filePath)) {
+                $deletedFiles++;
+            }
+        }
+    }
+
+    return $deletedFiles;
+}
+
 /**
  * @param list<string> $log
  */
@@ -229,6 +262,12 @@ function runKoraCron(PDO $pdo): array
         }
     } catch (\PDOException $e) {
         cronAppendLog($log, 'Chyba čištění logu: ' . $e->getMessage());
+    }
+
+    // 4b. Čištění starých CSP report logů v privátním úložišti
+    $deletedCspReportFiles = cronDeleteOldFiles(cronLogDirectory(), ['csp_reports-*.jsonl'], 30 * 86400);
+    if ($deletedCspReportFiles > 0) {
+        cronAppendLog($log, "Smazáno {$deletedCspReportFiles} starých CSP report log souborů");
     }
 
     // 5. Čištění expirovaných zámků obsahu
