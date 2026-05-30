@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
+$isHeadRequest = requireReadOnlyHttpMethod();
 
 $pdo = db_connect();
 
@@ -91,13 +92,15 @@ foreach ($tables as $key => $sql) {
     }
 }
 
-logAction('export_json');
-
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $filename = 'cms-export-' . date('Y-m-d') . '.json';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Content-Length: ' . strlen($json));
+if ($isHeadRequest) {
+    exit;
+}
+logAction('export_json');
 echo $json;
 exit;

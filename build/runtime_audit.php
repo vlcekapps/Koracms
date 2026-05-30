@@ -57,6 +57,8 @@ $readOnlyPlacesImageSource = (string) file_get_contents(__DIR__ . '/../places/im
 $readOnlyPodcastAudioSource = (string) file_get_contents(__DIR__ . '/../podcast/audio.php');
 $readOnlyPodcastImageSource = (string) file_get_contents(__DIR__ . '/../podcast/image.php');
 $readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/cover.php');
+$adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php');
+$adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7553,6 +7555,10 @@ $foundationChecks = [
         && str_contains($readOnlyPodcastAudioSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($readOnlyPodcastImageSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($readOnlyPodcastCoverSource, '$isHeadRequest = requireReadOnlyHttpMethod();'),
+    'admin read-only export endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($adminExportSource, 'if ($isHeadRequest)')
+        && str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($adminFormSubmissionFileSource, 'if ($isHeadRequest)'),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
@@ -7685,6 +7691,24 @@ foreach ($fileMethodGuardUrls as $fileMethodGuardUrl => $fileMethodGuardLabel) {
     }
     if (!str_contains($fileMethodGuardProbe['status'], '405') || !$fileMethodGuardAllowHeaderFound) {
         $foundationIssues[] = $fileMethodGuardLabel . ' did not reject unsupported methods with Allow: GET, HEAD';
+    }
+}
+
+$adminReadOnlyMethodGuardUrls = [
+    '/admin/export.php' => 'admin/export.php',
+    '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
+];
+foreach ($adminReadOnlyMethodGuardUrls as $adminReadOnlyMethodGuardUrl => $adminReadOnlyMethodGuardLabel) {
+    $adminReadOnlyMethodGuardProbe = postRawUrl($baseUrl . $adminReadOnlyMethodGuardUrl, '', 'text/plain', 'PHPSESSID=' . $auditSessionId, 0);
+    $adminReadOnlyMethodGuardAllowHeaderFound = false;
+    foreach ($adminReadOnlyMethodGuardProbe['headers'] as $adminReadOnlyMethodGuardHeader) {
+        if (stripos($adminReadOnlyMethodGuardHeader, 'Allow:') === 0 && str_contains($adminReadOnlyMethodGuardHeader, 'GET') && str_contains($adminReadOnlyMethodGuardHeader, 'HEAD')) {
+            $adminReadOnlyMethodGuardAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (!str_contains($adminReadOnlyMethodGuardProbe['status'], '405') || !$adminReadOnlyMethodGuardAllowHeaderFound) {
+        $foundationIssues[] = $adminReadOnlyMethodGuardLabel . ' did not reject unsupported methods with Allow: GET, HEAD';
     }
 }
 

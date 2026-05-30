@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
+$isHeadRequest = requireReadOnlyHttpMethod();
 
 $submissionId = inputInt('get', 'id');
 $fieldName = trim((string)($_GET['field'] ?? ''));
@@ -63,6 +64,10 @@ if ($fileSize !== false) {
     header('Content-Length: ' . (string)$fileSize);
 }
 header('Content-Disposition: attachment; filename="' . $asciiName . '"; filename*=UTF-8\'\'' . rawurlencode($originalName));
+
+if ($isHeadRequest) {
+    exit;
+}
 
 $handle = fopen($filePath, 'rb');
 if ($handle === false) {

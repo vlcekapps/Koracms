@@ -505,6 +505,26 @@ try {
     }
     httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
 
+    $adminExportEndpointIssues = [];
+    $adminExportEndpointUrls = [
+        '/admin/export.php' => 'admin/export.php',
+        '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
+    ];
+    foreach ($adminExportEndpointUrls as $adminExportEndpointUrl => $adminExportEndpointLabel) {
+        $adminExportEndpointResponse = postRawUrl($baseUrl . BASE_URL . $adminExportEndpointUrl, '', 'text/plain', $adminSession['cookie'], 0);
+        $adminExportEndpointAllowHeaderFound = false;
+        foreach ($adminExportEndpointResponse['headers'] as $adminExportEndpointHeader) {
+            if (stripos($adminExportEndpointHeader, 'Allow:') === 0 && str_contains($adminExportEndpointHeader, 'GET') && str_contains($adminExportEndpointHeader, 'HEAD')) {
+                $adminExportEndpointAllowHeaderFound = true;
+                break;
+            }
+        }
+        if (httpIntegrationStatusCode($adminExportEndpointResponse) !== 405 || !$adminExportEndpointAllowHeaderFound) {
+            $adminExportEndpointIssues[] = $adminExportEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+        }
+    }
+    httpIntegrationPrintResult('admin_export_endpoints_http', $adminExportEndpointIssues, $failures);
+
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     $cspReportPayload = json_encode(
