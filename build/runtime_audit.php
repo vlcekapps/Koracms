@@ -60,6 +60,7 @@ $readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/
 $adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
+$adminContentReferenceSearchSource = (string) file_get_contents(__DIR__ . '/../admin/content_reference_search.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7556,12 +7557,14 @@ $foundationChecks = [
         && str_contains($readOnlyPodcastAudioSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($readOnlyPodcastImageSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($readOnlyPodcastCoverSource, '$isHeadRequest = requireReadOnlyHttpMethod();'),
-    'admin read-only export endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    'admin read-only endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminExportSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminFormSubmissionFileSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionsSource, '$isCsvExportHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($adminFormSubmissionsSource, 'if ($isCsvExportHeadRequest)'),
+        && str_contains($adminFormSubmissionsSource, 'if ($isCsvExportHeadRequest)')
+        && str_contains($adminContentReferenceSearchSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)'),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
@@ -7701,6 +7704,7 @@ $adminReadOnlyMethodGuardUrls = [
     '/admin/export.php' => 'admin/export.php',
     '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
     '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
+    '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
 ];
 foreach ($adminReadOnlyMethodGuardUrls as $adminReadOnlyMethodGuardUrl => $adminReadOnlyMethodGuardLabel) {
     $adminReadOnlyMethodGuardProbe = postRawUrl($baseUrl . $adminReadOnlyMethodGuardUrl, '', 'text/plain', 'PHPSESSID=' . $auditSessionId, 0);

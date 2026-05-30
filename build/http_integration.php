@@ -505,26 +505,27 @@ try {
     }
     httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
 
-    $adminExportEndpointIssues = [];
-    $adminExportEndpointUrls = [
+    $adminReadOnlyEndpointIssues = [];
+    $adminReadOnlyEndpointUrls = [
         '/admin/export.php' => 'admin/export.php',
         '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
         '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
+        '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
     ];
-    foreach ($adminExportEndpointUrls as $adminExportEndpointUrl => $adminExportEndpointLabel) {
-        $adminExportEndpointResponse = postRawUrl($baseUrl . BASE_URL . $adminExportEndpointUrl, '', 'text/plain', $adminSession['cookie'], 0);
-        $adminExportEndpointAllowHeaderFound = false;
-        foreach ($adminExportEndpointResponse['headers'] as $adminExportEndpointHeader) {
-            if (stripos($adminExportEndpointHeader, 'Allow:') === 0 && str_contains($adminExportEndpointHeader, 'GET') && str_contains($adminExportEndpointHeader, 'HEAD')) {
-                $adminExportEndpointAllowHeaderFound = true;
+    foreach ($adminReadOnlyEndpointUrls as $adminReadOnlyEndpointUrl => $adminReadOnlyEndpointLabel) {
+        $adminReadOnlyEndpointResponse = postRawUrl($baseUrl . BASE_URL . $adminReadOnlyEndpointUrl, '', 'text/plain', $adminSession['cookie'], 0);
+        $adminReadOnlyEndpointAllowHeaderFound = false;
+        foreach ($adminReadOnlyEndpointResponse['headers'] as $adminReadOnlyEndpointHeader) {
+            if (stripos($adminReadOnlyEndpointHeader, 'Allow:') === 0 && str_contains($adminReadOnlyEndpointHeader, 'GET') && str_contains($adminReadOnlyEndpointHeader, 'HEAD')) {
+                $adminReadOnlyEndpointAllowHeaderFound = true;
                 break;
             }
         }
-        if (httpIntegrationStatusCode($adminExportEndpointResponse) !== 405 || !$adminExportEndpointAllowHeaderFound) {
-            $adminExportEndpointIssues[] = $adminExportEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+        if (httpIntegrationStatusCode($adminReadOnlyEndpointResponse) !== 405 || !$adminReadOnlyEndpointAllowHeaderFound) {
+            $adminReadOnlyEndpointIssues[] = $adminReadOnlyEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
         }
     }
-    httpIntegrationPrintResult('admin_export_endpoints_http', $adminExportEndpointIssues, $failures);
+    httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
 
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);

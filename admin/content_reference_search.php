@@ -5,10 +5,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/../db.php';
 
 requireLogin(BASE_URL . '/admin/login.php');
+$isHeadRequest = requireReadOnlyHttpMethod();
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
+if ($isHeadRequest) {
+    exit;
+}
 
 /**
  * @return list<string>
