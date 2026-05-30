@@ -335,6 +335,7 @@ Kora CMS poskytuje globální RSS feed i samostatné feedy jednotlivých blogů.
 - Feed konkrétního blogu: `feed.php?blog=slug-blogu`
 - Blogový feed používá vlastní název, popis a self odkaz.
 - V blogovém feedu jsou jen články daného blogu.
+- RSS feedy jsou čtecí veřejné endpointy a podporují jen metody `GET` a `HEAD`.
 
 ---
 
@@ -744,7 +745,7 @@ Vývojové kontroly:
 - Veřejné i administrační požadavky dostávají `X-Request-ID`; globální neošetřené chyby a vybrané technické chyby se zapisují jako JSON záznamy se stejným `request_id`, metodou a cestou. Při dohledávání produkční chyby tak stačí porovnat ID z odpovědi nebo monitoringu s PHP logem.
 - `health.php` kromě databáze, privátního úložiště a orientačního stavu záloh uvádí i čas poslední nalezené SQL zálohy a čerstvost posledního běhu cronu. Podporuje jen `GET` a `HEAD`; ostatní metody vrací `405` s `Allow: GET, HEAD`. Cron při každém běhu uloží `cron_last_run_at`; health check ho hlásí jako `ok`, `stale` nebo `unknown`, aniž by čerstvá instalace bez prvního cronu hned spadla do chyby. Monitoring odpověď dostává s `Cache-Control: no-store`, aby se nevyhodnocoval starý stav z cache.
 - CSP se na veřejných odpovědích posílá i v režimu `Content-Security-Policy-Report-Only`. Prohlížeče tak mohou hlásit podezřelé nebo chybějící zdroje na `csp-report.php`, aniž by se návštěvníkovi rozbil legitimní obsah; endpoint přijímá jen `POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah, ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`, má vlastní rate limit proti zahlcení logů a cron čistí report soubory starší než 30 dní.
-- `robots.txt` se generuje přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu.
+- `robots.txt` se generuje přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa a globální i blogové RSS feedy.
 - `php build/runtime_audit.php` ověřuje runtime guardrails včetně release ZIP pravidel, rate limitingu a přístupnosti
 - `php build/http_integration.php` ověřuje důležité HTTP scénáře
 

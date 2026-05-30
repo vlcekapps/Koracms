@@ -26,6 +26,8 @@ $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
 $htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
 $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
+$sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
+$feedSource = (string) file_get_contents(__DIR__ . '/../feed.php');
 $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
 $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) file_get_contents(__DIR__ . '/../phpstan.neon.dist') : '';
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
@@ -7512,6 +7514,12 @@ $foundationChecks = [
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')')
         && str_contains($robotsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($robotsSource, "header('Allow: GET, HEAD')"),
+    'read-only discovery endpoints enforce HTTP methods' => str_contains($sitemapSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($sitemapSource, "header('Allow: GET, HEAD')")
+        && str_contains($sitemapSource, "if (\$requestMethod === 'HEAD')")
+        && str_contains($feedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($feedSource, "header('Allow: GET, HEAD')")
+        && str_contains($feedSource, "if (\$isHeadRequest)"),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
@@ -7571,6 +7579,30 @@ foreach ($robotsPostProbe['headers'] as $robotsPostHeader) {
 }
 if (!str_contains($robotsPostProbe['status'], '405') || !$robotsAllowHeaderFound) {
     $foundationIssues[] = 'robots.txt did not reject unsupported methods with Allow: GET, HEAD';
+}
+
+$sitemapPostProbe = postRawUrl($baseUrl . '/sitemap.xml', '', 'text/plain', '', 0);
+$sitemapAllowHeaderFound = false;
+foreach ($sitemapPostProbe['headers'] as $sitemapPostHeader) {
+    if (stripos($sitemapPostHeader, 'Allow:') === 0 && str_contains($sitemapPostHeader, 'GET') && str_contains($sitemapPostHeader, 'HEAD')) {
+        $sitemapAllowHeaderFound = true;
+        break;
+    }
+}
+if (!str_contains($sitemapPostProbe['status'], '405') || !$sitemapAllowHeaderFound) {
+    $foundationIssues[] = 'sitemap.xml did not reject unsupported methods with Allow: GET, HEAD';
+}
+
+$feedPostProbe = postRawUrl($baseUrl . '/feed.php', '', 'text/plain', '', 0);
+$feedAllowHeaderFound = false;
+foreach ($feedPostProbe['headers'] as $feedPostHeader) {
+    if (stripos($feedPostHeader, 'Allow:') === 0 && str_contains($feedPostHeader, 'GET') && str_contains($feedPostHeader, 'HEAD')) {
+        $feedAllowHeaderFound = true;
+        break;
+    }
+}
+if (!str_contains($feedPostProbe['status'], '405') || !$feedAllowHeaderFound) {
+    $foundationIssues[] = 'feed.php did not reject unsupported methods with Allow: GET, HEAD';
 }
 
 $healthProbe = fetchUrl($baseUrl . '/health.php', '', 0);

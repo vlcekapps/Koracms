@@ -411,6 +411,45 @@ try {
     }
     httpIntegrationPrintResult('robots_http', $robotsIssues, $failures);
 
+    $discoveryEndpointIssues = [];
+    $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+    if (httpIntegrationStatusCode($sitemapResponse) !== 200) {
+        $discoveryEndpointIssues[] = 'sitemap.xml nevrátil 200';
+    }
+    $hasSitemapContentType = false;
+    foreach ($sitemapResponse['headers'] as $sitemapHeader) {
+        if (stripos((string)$sitemapHeader, 'Content-Type: application/xml') === 0) {
+            $hasSitemapContentType = true;
+            break;
+        }
+    }
+    if (!$hasSitemapContentType || !str_contains($sitemapResponse['body'], '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')) {
+        $discoveryEndpointIssues[] = 'sitemap.xml nevrátil očekávaný XML výstup';
+    }
+    $sitemapPostResponse = postRawUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 'text/plain', '', 0);
+    $sitemapAllowHeaderFound = false;
+    foreach ($sitemapPostResponse['headers'] as $sitemapPostHeader) {
+        if (stripos($sitemapPostHeader, 'Allow:') === 0 && str_contains($sitemapPostHeader, 'GET') && str_contains($sitemapPostHeader, 'HEAD')) {
+            $sitemapAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (httpIntegrationStatusCode($sitemapPostResponse) !== 405 || !$sitemapAllowHeaderFound) {
+        $discoveryEndpointIssues[] = 'sitemap.xml neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    $feedPostResponse = postRawUrl($baseUrl . BASE_URL . '/feed.php', '', 'text/plain', '', 0);
+    $feedAllowHeaderFound = false;
+    foreach ($feedPostResponse['headers'] as $feedPostHeader) {
+        if (stripos($feedPostHeader, 'Allow:') === 0 && str_contains($feedPostHeader, 'GET') && str_contains($feedPostHeader, 'HEAD')) {
+            $feedAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (httpIntegrationStatusCode($feedPostResponse) !== 405 || !$feedAllowHeaderFound) {
+        $discoveryEndpointIssues[] = 'feed.php neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
+
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     $cspReportPayload = json_encode(

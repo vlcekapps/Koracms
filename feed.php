@@ -1,6 +1,16 @@
 <?php
 require_once __DIR__ . '/db.php';
 
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Allow: GET, HEAD');
+    http_response_code(405);
+    echo "Method not allowed\n";
+    exit;
+}
+$isHeadRequest = $requestMethod === 'HEAD';
+
 header('Content-Type: application/rss+xml; charset=UTF-8');
 
 $siteName = getSetting('site_name', 'Kora CMS');
@@ -52,6 +62,9 @@ if ($channelDescription === '') {
     $channelDescription = $channelTitle;
 }
 $selfUrl = $isBlogFeed ? blogFeedUrl($feedBlog) : siteUrl('/feed.php');
+if ($isHeadRequest) {
+    exit;
+}
 
 echo '<?xml version="1.0" encoding="UTF-8"?>';
 ?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">

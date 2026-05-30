@@ -1,7 +1,20 @@
 <?php
 require_once __DIR__ . '/db.php';
 
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Allow: GET, HEAD');
+    http_response_code(405);
+    echo "Method not allowed\n";
+    exit;
+}
+
 header('Content-Type: application/xml; charset=UTF-8');
+
+if ($requestMethod === 'HEAD') {
+    exit;
+}
 
 $pdo = db_connect();
 

@@ -280,7 +280,7 @@ Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce v
 
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
-CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek.
+CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek. Sitemapa je čistě čtecí endpoint a podporuje jen metody `GET` a `HEAD`.
 
 Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`.
 
@@ -465,7 +465,7 @@ Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy n
 
 Veřejné odpovědi posílají také `Content-Security-Policy-Report-Only` s interním endpointem `csp-report.php`. Prohlížeče na něj mohou posílat porušení CSP bez blokování běžného provozu; CMS ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`. Endpoint přijímá jen `POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah a má vlastní rate limit; při překročení vrací stručnou JSON odpověď `rate_limited`. Cron zároveň maže CSP report soubory starší než 30 dní, aby se privátní logy nehromadily donekonečna.
 
-Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu.
+Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa a globální i blogové RSS feedy.
 
 ---
 
