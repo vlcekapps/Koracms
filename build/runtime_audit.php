@@ -7514,6 +7514,8 @@ $foundationChecks = [
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
     'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
+        && str_contains($healthSource, "header('Cache-Control: no-store, max-age=0')")
+        && str_contains($healthSource, "header('Pragma: no-cache')")
         && str_contains($healthSource, "db_connect()->query('SELECT 1')")
         && str_contains($healthSource, "'request_id' => koraRequestId()")
         && str_contains($healthSource, "'database' => ['status' => 'fail']")
@@ -7563,6 +7565,15 @@ if (!str_contains($healthProbe['status'], '200')) {
     }
     if (!is_array($healthPayload) || !isset($healthPayload['checks']['backup']) || !is_array($healthPayload['checks']['backup']) || (($healthPayload['checks']['backup']['status'] ?? '') !== 'unknown' && empty($healthPayload['checks']['backup']['last_backup']))) {
         $foundationIssues[] = 'health.php did not include latest backup timestamp when a backup exists';
+    }
+    $healthCacheHeader = '';
+    foreach ($healthProbe['headers'] as $healthHeader) {
+        if (stripos($healthHeader, 'Cache-Control:') === 0) {
+            $healthCacheHeader .= ' ' . $healthHeader;
+        }
+    }
+    if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
+        $foundationIssues[] = 'health.php did not send no-store monitoring cache headers';
     }
 }
 

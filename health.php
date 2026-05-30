@@ -4,6 +4,9 @@ require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Robots-Tag: noindex');
+header('Cache-Control: no-store, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 $checks = [
     'database' => ['status' => 'fail'],
