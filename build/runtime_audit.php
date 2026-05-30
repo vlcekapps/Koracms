@@ -63,6 +63,8 @@ $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/fo
 $adminContentReferenceSearchSource = (string) file_get_contents(__DIR__ . '/../admin/content_reference_search.php');
 $adminContentLockRefreshSource = (string) file_get_contents(__DIR__ . '/../admin/content_lock_refresh.php');
 $adminReorderAjaxSource = (string) file_get_contents(__DIR__ . '/../admin/reorder_ajax.php');
+$adminGalleryExportZipSource = (string) file_get_contents(__DIR__ . '/../admin/gallery_export_zip.php');
+$adminThemesSource = (string) file_get_contents(__DIR__ . '/../admin/themes.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7596,6 +7598,12 @@ $foundationChecks = [
         && str_contains($adminReorderAjaxSource, "header('Cache-Control: no-store')")
         && str_contains($adminReorderAjaxSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($adminReorderAjaxSource, "header('Allow: POST')"),
+    'admin downloadable exports send safe headers' => str_contains($adminBackupSource, "header('Cache-Control: no-store')")
+        && str_contains($adminBackupSource, "header('X-Content-Type-Options: nosniff')")
+        && substr_count($adminGalleryExportZipSource, "header('Cache-Control: no-store')") >= 2
+        && substr_count($adminGalleryExportZipSource, "header('X-Content-Type-Options: nosniff')") >= 2
+        && str_contains($adminThemesSource, "header('Cache-Control: no-store')")
+        && str_contains($adminThemesSource, "header('X-Content-Type-Options: nosniff')"),
     'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')

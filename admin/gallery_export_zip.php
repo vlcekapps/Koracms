@@ -105,7 +105,8 @@ if (class_exists('ZipArchive')) {
     header('Content-Type: application/zip');
     header('Content-Disposition: attachment; filename="' . $zipFilename . '"');
     header('Content-Length: ' . $fileSize);
-    header('Cache-Control: no-cache');
+    header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
 
     readfile($tmpFile);
     @unlink($tmpFile);
@@ -117,7 +118,8 @@ if (class_exists('ZipArchive')) {
 // ── Fallback: streaming ZIP bez ZipArchive ──
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="' . $zipFilename . '"');
-header('Cache-Control: no-cache');
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
 
 $out = fopen('php://output', 'wb');
 $centralDir = '';
