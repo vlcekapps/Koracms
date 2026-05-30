@@ -38,7 +38,10 @@ foreach ($backupFiles as $backupFile) {
     }
 }
 if ($latestBackupTimestamp > 0) {
-    $checks['backup']['status'] = $latestBackupTimestamp >= time() - (2 * 86400) ? 'ok' : 'stale';
+    $checks['backup'] = [
+        'status' => $latestBackupTimestamp >= time() - (2 * 86400) ? 'ok' : 'stale',
+        'last_backup' => date(DATE_ATOM, $latestBackupTimestamp),
+    ];
 }
 
 $cronLastRun = getSetting('cron_last_run_at', '');

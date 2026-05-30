@@ -456,7 +456,7 @@ Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
 
 - databázové připojení
 - zapisovatelnost privátního úložiště
-- orientační stav poslední SQL zálohy
+- orientační stav a čas poslední SQL zálohy
 - orientační čerstvost posledního běhu cronu
 
 Endpoint nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vrací HTTP 200, při selhání kritické kontroly HTTP 503. Stav cronu je informační: čerstvá instalace bez prvního běhu cronu zůstane `unknown`, pozdější běh uloží `cron_last_run_at` a health check ho označí jako `ok` nebo `stale`.

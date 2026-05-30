@@ -7521,6 +7521,8 @@ $foundationChecks = [
     'health endpoint reports cron freshness' => str_contains($healthSource, "'cron' => ['status' => 'unknown']")
         && str_contains($healthSource, "getSetting('cron_last_run_at', '')")
         && str_contains($healthSource, "'last_run' => date(DATE_ATOM, \$cronLastRunTimestamp)"),
+    'health endpoint reports latest backup timestamp' => str_contains($healthSource, "'last_backup' => date(DATE_ATOM, \$latestBackupTimestamp)")
+        && str_contains($healthSource, "'backup' => ['status' => 'unknown']"),
     'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')
@@ -7558,6 +7560,9 @@ if (!str_contains($healthProbe['status'], '200')) {
     }
     if (!is_array($healthPayload) || !isset($healthPayload['checks']['cron']) || !is_array($healthPayload['checks']['cron'])) {
         $foundationIssues[] = 'health.php did not include cron freshness status';
+    }
+    if (!is_array($healthPayload) || !isset($healthPayload['checks']['backup']) || !is_array($healthPayload['checks']['backup']) || (($healthPayload['checks']['backup']['status'] ?? '') !== 'unknown' && empty($healthPayload['checks']['backup']['last_backup']))) {
+        $foundationIssues[] = 'health.php did not include latest backup timestamp when a backup exists';
     }
 }
 
