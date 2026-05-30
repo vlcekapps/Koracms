@@ -135,6 +135,8 @@ $currentRedirect = BASE_URL . appendUrlQuery('/admin/form_submissions.php', $cur
 if ($isCsvExport) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="formular-' . rawurlencode((string)$form['slug']) . '-' . date('Y-m-d') . '.csv"');
+    header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
     if ($isCsvExportHeadRequest) {
         exit;
     }

@@ -64,6 +64,8 @@ if ($fileSize !== false) {
     header('Content-Length: ' . (string)$fileSize);
 }
 header('Content-Disposition: attachment; filename="' . $asciiName . '"; filename*=UTF-8\'\'' . rawurlencode($originalName));
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
 
 if ($isHeadRequest) {
     exit;

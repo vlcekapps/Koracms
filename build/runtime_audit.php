@@ -7598,7 +7598,13 @@ $foundationChecks = [
         && str_contains($adminReorderAjaxSource, "header('Cache-Control: no-store')")
         && str_contains($adminReorderAjaxSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($adminReorderAjaxSource, "header('Allow: POST')"),
-    'admin downloadable exports send safe headers' => str_contains($adminBackupSource, "header('Cache-Control: no-store')")
+    'admin downloadable exports send safe headers' => str_contains($adminExportSource, "header('Cache-Control: no-store')")
+        && str_contains($adminExportSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($adminFormSubmissionFileSource, "header('Cache-Control: no-store')")
+        && str_contains($adminFormSubmissionFileSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($adminFormSubmissionsSource, "header('Cache-Control: no-store')")
+        && str_contains($adminFormSubmissionsSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($adminBackupSource, "header('Cache-Control: no-store')")
         && str_contains($adminBackupSource, "header('X-Content-Type-Options: nosniff')")
         && substr_count($adminGalleryExportZipSource, "header('Cache-Control: no-store')") >= 2
         && substr_count($adminGalleryExportZipSource, "header('X-Content-Type-Options: nosniff')") >= 2

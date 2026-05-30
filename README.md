@@ -469,7 +469,7 @@ Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HE
 
 Interní administrační JSON akce, které mění stav přes AJAX, jsou POST-only. Při jiné metodě vrací `405` s `Allow: POST` a odpovědi se posílají s `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby prohlížeč ani mezilehlá cache nepracovaly se zastaralým stavem.
 
-Administrační stažení citlivějších exportů, například SQL záloha databáze, ZIP export galerie nebo ZIP export šablony, posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`. Exporty se tím zbytečně neukládají v mezicache a prohlížeč je nemá interpretovat jako jiný typ obsahu.
+Administrační stažení citlivějších exportů, například JSON export CMS, CSV export odpovědí formulářů, přílohy formulářových odpovědí, SQL záloha databáze, ZIP export galerie nebo ZIP export šablony, posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`. Exporty se tím zbytečně neukládají v mezicache a prohlížeč je nemá interpretovat jako jiný typ obsahu.
 
 ---
 

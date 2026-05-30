@@ -98,6 +98,8 @@ $filename = 'cms-export-' . date('Y-m-d') . '.json';
 header('Content-Type: application/json; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Content-Length: ' . strlen($json));
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
 if ($isHeadRequest) {
     exit;
 }
