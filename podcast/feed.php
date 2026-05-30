@@ -1,6 +1,16 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Allow: GET, HEAD');
+    http_response_code(405);
+    echo "Method not allowed\n";
+    exit;
+}
+$isHeadRequest = $requestMethod === 'HEAD';
+
 if (!isModuleEnabled('podcast')) {
     http_response_code(404);
     exit;
@@ -55,6 +65,10 @@ $buildDate = date(DATE_RSS, strtotime((string)$buildDateSource));
 
 header('Content-Type: application/rss+xml; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
+
+if ($isHeadRequest) {
+    exit;
+}
 
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 ?>

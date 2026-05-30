@@ -28,6 +28,8 @@ $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
 $feedSource = (string) file_get_contents(__DIR__ . '/../feed.php');
+$podcastFeedSource = (string) file_get_contents(__DIR__ . '/../podcast/feed.php');
+$eventIcsSource = (string) file_get_contents(__DIR__ . '/../events/ics.php');
 $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
 $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) file_get_contents(__DIR__ . '/../phpstan.neon.dist') : '';
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
@@ -7519,7 +7521,13 @@ $foundationChecks = [
         && str_contains($sitemapSource, "if (\$requestMethod === 'HEAD')")
         && str_contains($feedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($feedSource, "header('Allow: GET, HEAD')")
-        && str_contains($feedSource, "if (\$isHeadRequest)"),
+        && str_contains($feedSource, "if (\$isHeadRequest)")
+        && str_contains($podcastFeedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($podcastFeedSource, "header('Allow: GET, HEAD')")
+        && str_contains($podcastFeedSource, "if (\$isHeadRequest)")
+        && str_contains($eventIcsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($eventIcsSource, "header('Allow: GET, HEAD')")
+        && str_contains($eventIcsSource, "if (\$isHeadRequest)"),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
@@ -7603,6 +7611,30 @@ foreach ($feedPostProbe['headers'] as $feedPostHeader) {
 }
 if (!str_contains($feedPostProbe['status'], '405') || !$feedAllowHeaderFound) {
     $foundationIssues[] = 'feed.php did not reject unsupported methods with Allow: GET, HEAD';
+}
+
+$podcastFeedPostProbe = postRawUrl($baseUrl . '/podcast/feed.php?slug=__missing__', '', 'text/plain', '', 0);
+$podcastFeedAllowHeaderFound = false;
+foreach ($podcastFeedPostProbe['headers'] as $podcastFeedPostHeader) {
+    if (stripos($podcastFeedPostHeader, 'Allow:') === 0 && str_contains($podcastFeedPostHeader, 'GET') && str_contains($podcastFeedPostHeader, 'HEAD')) {
+        $podcastFeedAllowHeaderFound = true;
+        break;
+    }
+}
+if (!str_contains($podcastFeedPostProbe['status'], '405') || !$podcastFeedAllowHeaderFound) {
+    $foundationIssues[] = 'podcast/feed.php did not reject unsupported methods with Allow: GET, HEAD';
+}
+
+$eventIcsPostProbe = postRawUrl($baseUrl . '/events/ics.php?slug=__missing__', '', 'text/plain', '', 0);
+$eventIcsAllowHeaderFound = false;
+foreach ($eventIcsPostProbe['headers'] as $eventIcsPostHeader) {
+    if (stripos($eventIcsPostHeader, 'Allow:') === 0 && str_contains($eventIcsPostHeader, 'GET') && str_contains($eventIcsPostHeader, 'HEAD')) {
+        $eventIcsAllowHeaderFound = true;
+        break;
+    }
+}
+if (!str_contains($eventIcsPostProbe['status'], '405') || !$eventIcsAllowHeaderFound) {
+    $foundationIssues[] = 'events/ics.php did not reject unsupported methods with Allow: GET, HEAD';
 }
 
 $healthProbe = fetchUrl($baseUrl . '/health.php', '', 0);

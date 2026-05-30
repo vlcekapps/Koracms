@@ -1,6 +1,17 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Allow: GET, HEAD');
+    http_response_code(405);
+    echo "Method not allowed\n";
+    exit;
+}
+$isHeadRequest = $requestMethod === 'HEAD';
+
 checkMaintenanceMode();
 
 if (!isModuleEnabled('events')) {
@@ -46,4 +57,7 @@ $event = hydrateEventPresentation($event);
 header('Content-Type: text/calendar; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . eventIcsFilename($event) . '"');
 header('X-Content-Type-Options: nosniff');
+if ($isHeadRequest) {
+    exit;
+}
 echo eventIcsContent($event);

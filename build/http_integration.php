@@ -330,7 +330,9 @@ try {
         'public_registration_enabled' => httpIntegrationSettingValue($pdo, 'public_registration_enabled'),
         'module_statistics' => httpIntegrationSettingValue($pdo, 'module_statistics'),
         'module_blog' => getSetting('module_blog', '0'),
+        'module_events' => getSetting('module_events', '0'),
         'module_gallery' => getSetting('module_gallery', '0'),
+        'module_podcast' => getSetting('module_podcast', '0'),
         'module_reservations' => getSetting('module_reservations', '0'),
         'module_forms' => getSetting('module_forms', '0'),
         'visitor_tracking_enabled' => getSetting('visitor_tracking_enabled', '0'),
@@ -412,6 +414,9 @@ try {
     httpIntegrationPrintResult('robots_http', $robotsIssues, $failures);
 
     $discoveryEndpointIssues = [];
+    saveSetting('module_events', '1');
+    saveSetting('module_podcast', '1');
+    clearSettingsCache();
     $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
     if (httpIntegrationStatusCode($sitemapResponse) !== 200) {
         $discoveryEndpointIssues[] = 'sitemap.xml nevrátil 200';
@@ -447,6 +452,28 @@ try {
     }
     if (httpIntegrationStatusCode($feedPostResponse) !== 405 || !$feedAllowHeaderFound) {
         $discoveryEndpointIssues[] = 'feed.php neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    $podcastFeedPostResponse = postRawUrl($baseUrl . BASE_URL . '/podcast/feed.php?slug=__missing__', '', 'text/plain', '', 0);
+    $podcastFeedAllowHeaderFound = false;
+    foreach ($podcastFeedPostResponse['headers'] as $podcastFeedPostHeader) {
+        if (stripos($podcastFeedPostHeader, 'Allow:') === 0 && str_contains($podcastFeedPostHeader, 'GET') && str_contains($podcastFeedPostHeader, 'HEAD')) {
+            $podcastFeedAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (httpIntegrationStatusCode($podcastFeedPostResponse) !== 405 || !$podcastFeedAllowHeaderFound) {
+        $discoveryEndpointIssues[] = 'podcast RSS feed neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    $eventIcsPostResponse = postRawUrl($baseUrl . BASE_URL . '/events/ics.php?slug=__missing__', '', 'text/plain', '', 0);
+    $eventIcsAllowHeaderFound = false;
+    foreach ($eventIcsPostResponse['headers'] as $eventIcsPostHeader) {
+        if (stripos($eventIcsPostHeader, 'Allow:') === 0 && str_contains($eventIcsPostHeader, 'GET') && str_contains($eventIcsPostHeader, 'HEAD')) {
+            $eventIcsAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (httpIntegrationStatusCode($eventIcsPostResponse) !== 405 || !$eventIcsAllowHeaderFound) {
+        $discoveryEndpointIssues[] = 'ICS export události neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
     }
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 

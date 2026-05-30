@@ -240,7 +240,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 |---|---|
 | **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, author archive, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, plánovaným skrytím a SEO fallbacky |
-| **Události** | Přehled akcí s datem, místem a detailem |
+| **Události** | Přehled akcí s datem, místem, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
 | **Podcasty** | Více pořadů, epizody, artwork, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
@@ -465,7 +465,7 @@ Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy n
 
 Veřejné odpovědi posílají také `Content-Security-Policy-Report-Only` s interním endpointem `csp-report.php`. Prohlížeče na něj mohou posílat porušení CSP bez blokování běžného provozu; CMS ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`. Endpoint přijímá jen `POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah a má vlastní rate limit; při překročení vrací stručnou JSON odpověď `rate_limited`. Cron zároveň maže CSP report soubory starší než 30 dní, aby se privátní logy nehromadily donekonečna.
 
-Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa a globální i blogové RSS feedy.
+Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa, globální, blogové i podcastové RSS feedy a ICS export událostí.
 
 ---
 
