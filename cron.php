@@ -376,6 +376,12 @@ function runKoraCron(PDO $pdo): array
         cronAppendLog($log, 'Chyba zálohy: nepodařilo se vytvořit privátní adresář pro zálohy');
     }
 
+    try {
+        saveSetting('cron_last_run_at', date(DATE_ATOM));
+    } catch (\Throwable $e) {
+        cronAppendLog($log, 'Chyba uložení času cronu: ' . $e->getMessage());
+    }
+
     return $log;
 }
 

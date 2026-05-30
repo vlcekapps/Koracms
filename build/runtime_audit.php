@@ -6983,6 +6983,9 @@ try {
     }
 
     $cronLog = runKoraCron($pdo);
+    $cronLastRunStmt = $pdo->prepare("SELECT value FROM cms_settings WHERE `key` = 'cron_last_run_at' LIMIT 1");
+    $cronLastRunStmt->execute();
+    $cronLastRunAt = (string)($cronLastRunStmt->fetchColumn() ?: '');
     $rateLimitCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_rate_limit WHERE id = ?");
     $rateLimitCheckStmt->execute([$cronRateLimitId]);
     $remainingRateLimit = (int)$rateLimitCheckStmt->fetchColumn();
@@ -6999,6 +7002,10 @@ try {
     }
     if ($remainingCronChat !== 0 || $remainingCronChatHistory !== 0) {
         $cronIssues[] = 'cron did not clean old handled chat messages according to chat_retention_days';
+    }
+    $cronLastRunTimestamp = strtotime($cronLastRunAt);
+    if ($cronLastRunAt === '' || $cronLastRunTimestamp === false || $cronLastRunTimestamp < time() - 300) {
+        $cronIssues[] = 'cron did not persist a fresh cron_last_run_at health timestamp';
     }
     if (is_file($oldCspReportFile)) {
         $cronIssues[] = 'cron did not clean old CSP report JSONL logs';
@@ -7511,6 +7518,9 @@ $foundationChecks = [
         && str_contains($healthSource, "'request_id' => koraRequestId()")
         && str_contains($healthSource, "'database' => ['status' => 'fail']")
         && str_contains($healthSource, "'storage' => ['status' => 'fail']"),
+    'health endpoint reports cron freshness' => str_contains($healthSource, "'cron' => ['status' => 'unknown']")
+        && str_contains($healthSource, "getSetting('cron_last_run_at', '')")
+        && str_contains($healthSource, "'last_run' => date(DATE_ATOM, \$cronLastRunTimestamp)"),
     'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')
@@ -7545,6 +7555,9 @@ if (!str_contains($healthProbe['status'], '200')) {
     $healthPayload = json_decode($healthProbe['body'], true);
     if (!is_array($healthPayload) || ($healthPayload['status'] ?? '') !== 'ok' || (($healthPayload['checks']['database']['status'] ?? '') !== 'ok')) {
         $foundationIssues[] = 'health.php did not report healthy database status';
+    }
+    if (!is_array($healthPayload) || !isset($healthPayload['checks']['cron']) || !is_array($healthPayload['checks']['cron'])) {
+        $foundationIssues[] = 'health.php did not include cron freshness status';
     }
 }
 

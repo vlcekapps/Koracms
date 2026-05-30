@@ -9,6 +9,7 @@ $checks = [
     'database' => ['status' => 'fail'],
     'storage' => ['status' => 'fail'],
     'backup' => ['status' => 'unknown'],
+    'cron' => ['status' => 'unknown'],
 ];
 
 try {
@@ -38,6 +39,17 @@ foreach ($backupFiles as $backupFile) {
 }
 if ($latestBackupTimestamp > 0) {
     $checks['backup']['status'] = $latestBackupTimestamp >= time() - (2 * 86400) ? 'ok' : 'stale';
+}
+
+$cronLastRun = getSetting('cron_last_run_at', '');
+if ($cronLastRun !== '') {
+    $cronLastRunTimestamp = strtotime($cronLastRun);
+    if ($cronLastRunTimestamp !== false) {
+        $checks['cron'] = [
+            'status' => $cronLastRunTimestamp >= time() - 86400 ? 'ok' : 'stale',
+            'last_run' => date(DATE_ATOM, $cronLastRunTimestamp),
+        ];
+    }
 }
 
 $overallStatus = 'ok';

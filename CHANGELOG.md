@@ -9,6 +9,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Přidáno
 - **Request ID a strukturované technické logy** – každá odpověď dostává `X-Request-ID` a globální neošetřené chyby se zapisují jako JSON záznam se stejným ID, metodou a cestou pro snazší dohledávání produkčních problémů.
 - **CSP Report-Only sběr porušení** – veřejné odpovědi nově posílají i report-only CSP hlavičku s interním endpointem `csp-report.php`, který ukládá očištěné JSONL záznamy do privátního úložiště pro bezpečnější ladění embedů a dalších zdrojů; endpoint je chráněný vlastním rate limitem, aby nešel snadno zneužít k zahlcení logů.
+- **Health check čerstvosti cronu** – `health.php` nově ukazuje i stav posledního běhu cronu (`ok`, `stale` nebo `unknown`) podle hodnoty `cron_last_run_at`, kterou cron ukládá při každém běhu.
 
 ### Změněno
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.
