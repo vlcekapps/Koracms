@@ -477,6 +477,34 @@ try {
     }
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 
+    $fileEndpointIssues = [];
+    $fileEndpointMethodUrls = [
+        '/media/file.php?id=0' => 'media/file.php',
+        '/media/preview.php?id=0' => 'media/preview.php',
+        '/media/thumb.php?id=0' => 'media/thumb.php',
+        '/downloads/file.php?id=0' => 'downloads/file.php',
+        '/board/file.php?id=0' => 'board/file.php',
+        '/gallery/image.php?id=0' => 'gallery/image.php',
+        '/places/image.php?id=0' => 'places/image.php',
+        '/podcast/audio.php?id=0' => 'podcast/audio.php',
+        '/podcast/image.php?id=0' => 'podcast/image.php',
+        '/podcast/cover.php?id=0' => 'podcast/cover.php',
+    ];
+    foreach ($fileEndpointMethodUrls as $fileEndpointUrl => $fileEndpointLabel) {
+        $fileEndpointResponse = postRawUrl($baseUrl . BASE_URL . $fileEndpointUrl, '', 'text/plain', '', 0);
+        $fileEndpointAllowHeaderFound = false;
+        foreach ($fileEndpointResponse['headers'] as $fileEndpointHeader) {
+            if (stripos($fileEndpointHeader, 'Allow:') === 0 && str_contains($fileEndpointHeader, 'GET') && str_contains($fileEndpointHeader, 'HEAD')) {
+                $fileEndpointAllowHeaderFound = true;
+                break;
+            }
+        }
+        if (httpIntegrationStatusCode($fileEndpointResponse) !== 405 || !$fileEndpointAllowHeaderFound) {
+            $fileEndpointIssues[] = $fileEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+        }
+    }
+    httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
+
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     $cspReportPayload = json_encode(

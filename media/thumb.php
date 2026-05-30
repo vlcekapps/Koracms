@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
+$isHeadRequest = requireReadOnlyHttpMethod();
 
 $mediaId = inputInt('get', 'id');
 if ($mediaId === null) {
@@ -46,6 +47,10 @@ header('X-Content-Type-Options: nosniff');
 $lastModified = filemtime($thumbPath);
 if ($lastModified !== false) {
     header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+}
+
+if ($isHeadRequest) {
+    exit;
 }
 
 $handle = fopen($thumbPath, 'rb');

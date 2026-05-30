@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
+requireReadOnlyHttpMethod();
 
 $mediaId = inputInt('get', 'id');
 if ($mediaId === null) {

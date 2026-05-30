@@ -16,6 +16,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **HTTP guardrails pro provozní endpointy** – `robots.php` nově výslovně podporuje jen `GET` a `HEAD`, zatímco `csp-report.php` posílá necacheovatelné JSON chyby s `request_id`, aby se chyby reportingu lépe dohledávaly v logu.
 - **HTTP guardrails pro sitemapu a RSS feedy** – `sitemap.php` i `feed.php` nově podporují jen `GET` a `HEAD`, ostatní metody odmítají přes `405` s `Allow: GET, HEAD`, a integrační testy hlídají XML/RSS výstup i odmítnutí zápisových metod.
 - **HTTP guardrails pro podcast RSS a ICS export** – `podcast/feed.php` a `events/ics.php` nově používají stejné čtecí omezení `GET/HEAD`, včetně testů na odmítnutí nepodporovaných metod.
+- **HTTP guardrails pro souborové endpointy** – mediální soubory, náhledy, thumbnail endpointy, soubory ke stažení, vývěska, galerie, místa a podcastová média nově sdíleně odmítají jiné metody než `GET/HEAD`; `HEAD` odpovědi zároveň posílají jen hlavičky bez těla.
 
 ### Změněno
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.

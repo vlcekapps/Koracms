@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
+requireReadOnlyHttpMethod();
 
 $id = inputInt('get', 'id');
 if ($id === null) {

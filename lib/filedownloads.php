@@ -42,6 +42,20 @@ function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): vo
     exit;
 }
 
+function requireReadOnlyHttpMethod(): bool
+{
+    $requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+    if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+        header('Content-Type: text/plain; charset=UTF-8');
+        header('Allow: GET, HEAD');
+        http_response_code(405);
+        echo "Method not allowed\n";
+        exit;
+    }
+
+    return $requestMethod === 'HEAD';
+}
+
 function sendStoredFileResponse(string $path, string $downloadName, string $disposition = 'attachment', string $mimeTypeOverride = ''): void
 {
     if (!is_file($path) || !is_readable($path)) {
@@ -77,6 +91,10 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
     header('Content-Disposition: ' . $disposition . '; filename="' . addcslashes($asciiFallback, "\\\"") . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') {
+        exit;
+    }
 
     $written = readfile($path);
     if ($written === false) {

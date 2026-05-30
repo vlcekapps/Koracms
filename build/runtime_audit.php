@@ -46,6 +46,17 @@ $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_ge
 $gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
 $gitignoreSource = is_file(__DIR__ . '/../.gitignore') ? (string) file_get_contents(__DIR__ . '/../.gitignore') : '';
 $homeSource = (string) file_get_contents(__DIR__ . '/../index.php');
+$fileDownloadHelperSource = (string) file_get_contents(__DIR__ . '/../lib/filedownloads.php');
+$readOnlyMediaFileSource = (string) file_get_contents(__DIR__ . '/../media/file.php');
+$readOnlyMediaPreviewSource = (string) file_get_contents(__DIR__ . '/../media/preview.php');
+$readOnlyMediaThumbSource = (string) file_get_contents(__DIR__ . '/../media/thumb.php');
+$readOnlyDownloadsFileSource = (string) file_get_contents(__DIR__ . '/../downloads/file.php');
+$readOnlyBoardFileSource = (string) file_get_contents(__DIR__ . '/../board/file.php');
+$readOnlyGalleryImageSource = (string) file_get_contents(__DIR__ . '/../gallery/image.php');
+$readOnlyPlacesImageSource = (string) file_get_contents(__DIR__ . '/../places/image.php');
+$readOnlyPodcastAudioSource = (string) file_get_contents(__DIR__ . '/../podcast/audio.php');
+$readOnlyPodcastImageSource = (string) file_get_contents(__DIR__ . '/../podcast/image.php');
+$readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/cover.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7528,6 +7539,20 @@ $foundationChecks = [
         && str_contains($eventIcsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($eventIcsSource, "header('Allow: GET, HEAD')")
         && str_contains($eventIcsSource, "if (\$isHeadRequest)"),
+    'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
+        && str_contains($fileDownloadHelperSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')")
+        && str_contains($fileDownloadHelperSource, "if ((\$_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD')"),
+    'public file endpoints enforce HTTP methods' => str_contains($readOnlyMediaFileSource, 'requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyMediaPreviewSource, 'requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyMediaThumbSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyDownloadsFileSource, 'requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyBoardFileSource, 'requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyGalleryImageSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyPlacesImageSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyPodcastAudioSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyPodcastImageSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($readOnlyPodcastCoverSource, '$isHeadRequest = requireReadOnlyHttpMethod();'),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
@@ -7635,6 +7660,32 @@ foreach ($eventIcsPostProbe['headers'] as $eventIcsPostHeader) {
 }
 if (!str_contains($eventIcsPostProbe['status'], '405') || !$eventIcsAllowHeaderFound) {
     $foundationIssues[] = 'events/ics.php did not reject unsupported methods with Allow: GET, HEAD';
+}
+
+$fileMethodGuardUrls = [
+    '/media/file.php?id=0' => 'media/file.php',
+    '/media/preview.php?id=0' => 'media/preview.php',
+    '/media/thumb.php?id=0' => 'media/thumb.php',
+    '/downloads/file.php?id=0' => 'downloads/file.php',
+    '/board/file.php?id=0' => 'board/file.php',
+    '/gallery/image.php?id=0' => 'gallery/image.php',
+    '/places/image.php?id=0' => 'places/image.php',
+    '/podcast/audio.php?id=0' => 'podcast/audio.php',
+    '/podcast/image.php?id=0' => 'podcast/image.php',
+    '/podcast/cover.php?id=0' => 'podcast/cover.php',
+];
+foreach ($fileMethodGuardUrls as $fileMethodGuardUrl => $fileMethodGuardLabel) {
+    $fileMethodGuardProbe = postRawUrl($baseUrl . $fileMethodGuardUrl, '', 'text/plain', '', 0);
+    $fileMethodGuardAllowHeaderFound = false;
+    foreach ($fileMethodGuardProbe['headers'] as $fileMethodGuardHeader) {
+        if (stripos($fileMethodGuardHeader, 'Allow:') === 0 && str_contains($fileMethodGuardHeader, 'GET') && str_contains($fileMethodGuardHeader, 'HEAD')) {
+            $fileMethodGuardAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (!str_contains($fileMethodGuardProbe['status'], '405') || !$fileMethodGuardAllowHeaderFound) {
+        $foundationIssues[] = $fileMethodGuardLabel . ' did not reject unsupported methods with Allow: GET, HEAD';
+    }
 }
 
 $healthProbe = fetchUrl($baseUrl . '/health.php', '', 0);
