@@ -4,6 +4,11 @@ requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 $pdo = db_connect();
 $formId = inputInt('get', 'id');
+$isCsvExport = isset($_GET['export']) && $_GET['export'] === 'csv';
+$isCsvExportHeadRequest = false;
+if ($isCsvExport) {
+    $isCsvExportHeadRequest = requireReadOnlyHttpMethod();
+}
 
 if ($formId === null) {
     header('Location: ' . BASE_URL . '/admin/forms.php');
@@ -127,9 +132,12 @@ if ($query !== '') {
 }
 $currentRedirect = BASE_URL . appendUrlQuery('/admin/form_submissions.php', $currentParams);
 
-if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+if ($isCsvExport) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="formular-' . rawurlencode((string)$form['slug']) . '-' . date('Y-m-d') . '.csv"');
+    if ($isCsvExportHeadRequest) {
+        exit;
+    }
 
     $out = fopen('php://output', 'w');
     fprintf($out, "\xEF\xBB\xBF");

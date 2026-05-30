@@ -509,6 +509,7 @@ try {
     $adminExportEndpointUrls = [
         '/admin/export.php' => 'admin/export.php',
         '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
+        '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
     ];
     foreach ($adminExportEndpointUrls as $adminExportEndpointUrl => $adminExportEndpointLabel) {
         $adminExportEndpointResponse = postRawUrl($baseUrl . BASE_URL . $adminExportEndpointUrl, '', 'text/plain', $adminSession['cookie'], 0);

@@ -465,7 +465,7 @@ Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy n
 
 Veřejné odpovědi posílají také `Content-Security-Policy-Report-Only` s interním endpointem `csp-report.php`. Prohlížeče na něj mohou posílat porušení CSP bez blokování běžného provozu; CMS ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`. Endpoint přijímá jen `POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah a má vlastní rate limit; při překročení vrací stručnou JSON odpověď `rate_limited`. Cron zároveň maže CSP report soubory starší než 30 dní, aby se privátní logy nehromadily donekonečna.
 
-Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa, globální, blogové i podcastové RSS feedy, ICS export událostí, veřejné souborové/media endpointy a read-only administrační exporty. U souborů vrací `HEAD` jen hlavičky, bez přenosu těla souboru.
+Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa, globální, blogové i podcastové RSS feedy, ICS export událostí, veřejné souborové/media endpointy a read-only administrační exporty včetně JSON/CSV výstupů a příloh formulářů. U souborů vrací `HEAD` jen hlavičky, bez přenosu těla souboru.
 
 ---
 
