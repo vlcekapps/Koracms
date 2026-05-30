@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 error_reporting(E_ALL);
@@ -357,6 +358,37 @@ try {
 
     $settingsSaveUrl = $baseUrl . BASE_URL . '/admin/settings_save.php';
     $settingsPageUrl = $baseUrl . BASE_URL . '/admin/settings.php';
+
+    $healthIssues = [];
+    $healthResponse = fetchUrl($baseUrl . BASE_URL . '/health.php', '', 0);
+    if (httpIntegrationStatusCode($healthResponse) !== 200) {
+        $healthIssues[] = 'health.php nevrátil 200 na zdravé lokální instalaci';
+    }
+    $healthPayload = json_decode($healthResponse['body'], true);
+    if (!is_array($healthPayload) || ($healthPayload['status'] ?? '') !== 'ok' || !isset($healthPayload['checks']['database'], $healthPayload['checks']['storage'], $healthPayload['checks']['backup'], $healthPayload['checks']['cron'])) {
+        $healthIssues[] = 'health.php nevrátil očekávaný JSON stav instalace';
+    }
+    $healthCacheHeader = '';
+    foreach ($healthResponse['headers'] as $healthHeader) {
+        if (stripos($healthHeader, 'Cache-Control:') === 0) {
+            $healthCacheHeader .= ' ' . $healthHeader;
+        }
+    }
+    if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
+        $healthIssues[] = 'health.php neposlal no-store cache hlavičky';
+    }
+    $healthPostResponse = postRawUrl($baseUrl . BASE_URL . '/health.php', '{}', 'application/json', '', 0);
+    $healthAllowHeaderFound = false;
+    foreach ($healthPostResponse['headers'] as $healthPostHeader) {
+        if (stripos($healthPostHeader, 'Allow:') === 0 && str_contains($healthPostHeader, 'GET') && str_contains($healthPostHeader, 'HEAD')) {
+            $healthAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (httpIntegrationStatusCode($healthPostResponse) !== 405 || !$healthAllowHeaderFound || !str_contains($healthPostResponse['body'], 'method_not_allowed')) {
+        $healthIssues[] = 'health.php neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    httpIntegrationPrintResult('health_http', $healthIssues, $failures);
 
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
@@ -971,7 +1003,7 @@ try {
     $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$visitorStatsWidgetId]);
     $createdWidgetIds = array_values(array_filter(
         $createdWidgetIds,
-        static fn(int $existingWidgetId): bool => $existingWidgetId !== $visitorStatsWidgetId
+        static fn (int $existingWidgetId): bool => $existingWidgetId !== $visitorStatsWidgetId
     ));
 
     $homeWithoutVisitorStatsWidget = fetchUrl($publicHomeUrl, '', 0);
@@ -1025,7 +1057,7 @@ try {
     $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$socialLinksWidgetId]);
     $createdWidgetIds = array_values(array_filter(
         $createdWidgetIds,
-        static fn(int $existingWidgetId): bool => $existingWidgetId !== $socialLinksWidgetId
+        static fn (int $existingWidgetId): bool => $existingWidgetId !== $socialLinksWidgetId
     ));
 
     $homeWithoutSocialLinksWidget = fetchUrl($publicHomeUrl, '', 0);
@@ -1097,7 +1129,7 @@ try {
     $pdo->prepare("DELETE FROM cms_widgets WHERE id IN (?, ?)")->execute([$hiddenSocialWidgetId, $hiddenVisitorStatsWidgetId]);
     $createdWidgetIds = array_values(array_filter(
         $createdWidgetIds,
-        static fn(int $existingWidgetId): bool => $existingWidgetId !== $hiddenSocialWidgetId && $existingWidgetId !== $hiddenVisitorStatsWidgetId
+        static fn (int $existingWidgetId): bool => $existingWidgetId !== $hiddenSocialWidgetId && $existingWidgetId !== $hiddenVisitorStatsWidgetId
     ));
 
     httpIntegrationPrintResult('widgets_admin_availability_http', $widgetsAdminAvailabilityIssues, $failures);
@@ -1204,7 +1236,7 @@ try {
     $pdo->prepare("DELETE FROM cms_widgets WHERE id IN (?, ?)")->execute([$searchWidgetId, $newsletterWidgetId]);
     $createdWidgetIds = array_values(array_filter(
         $createdWidgetIds,
-        static fn(int $existingWidgetId): bool => $existingWidgetId !== $searchWidgetId && $existingWidgetId !== $newsletterWidgetId
+        static fn (int $existingWidgetId): bool => $existingWidgetId !== $searchWidgetId && $existingWidgetId !== $newsletterWidgetId
     ));
 
     $homeWithoutFooterDiscoveryWidgets = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);

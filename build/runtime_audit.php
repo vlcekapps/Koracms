@@ -7516,6 +7516,9 @@ $foundationChecks = [
     'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
         && str_contains($healthSource, "header('Cache-Control: no-store, max-age=0')")
         && str_contains($healthSource, "header('Pragma: no-cache')")
+        && str_contains($healthSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($healthSource, "header('Allow: GET, HEAD')")
+        && str_contains($healthSource, "if (\$isHeadRequest)")
         && str_contains($healthSource, "db_connect()->query('SELECT 1')")
         && str_contains($healthSource, "'request_id' => koraRequestId()")
         && str_contains($healthSource, "'database' => ['status' => 'fail']")
@@ -7574,6 +7577,17 @@ if (!str_contains($healthProbe['status'], '200')) {
     }
     if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
         $foundationIssues[] = 'health.php did not send no-store monitoring cache headers';
+    }
+    $healthPostProbe = postRawUrl($baseUrl . '/health.php', '{}', 'application/json', '', 0);
+    $healthAllowHeaderFound = false;
+    foreach ($healthPostProbe['headers'] as $healthPostHeader) {
+        if (stripos($healthPostHeader, 'Allow:') === 0 && str_contains($healthPostHeader, 'GET') && str_contains($healthPostHeader, 'HEAD')) {
+            $healthAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (!str_contains($healthPostProbe['status'], '405') || !$healthAllowHeaderFound) {
+        $foundationIssues[] = 'health.php did not reject unsupported methods with Allow: GET, HEAD';
     }
 }
 

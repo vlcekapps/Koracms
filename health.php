@@ -8,6 +8,21 @@ header('Cache-Control: no-store, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+    header('Allow: GET, HEAD');
+    http_response_code(405);
+    echo json_encode(
+        [
+            'status' => 'method_not_allowed',
+            'request_id' => koraRequestId(),
+        ],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+    exit;
+}
+$isHeadRequest = $requestMethod === 'HEAD';
+
 $checks = [
     'database' => ['status' => 'fail'],
     'storage' => ['status' => 'fail'],
@@ -66,6 +81,9 @@ foreach (['database', 'storage'] as $requiredCheck) {
 }
 
 http_response_code($overallStatus === 'ok' ? 200 : 503);
+if ($isHeadRequest) {
+    exit;
+}
 echo json_encode(
     [
         'status' => $overallStatus,
