@@ -61,6 +61,8 @@ $adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php'
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
 $adminContentReferenceSearchSource = (string) file_get_contents(__DIR__ . '/../admin/content_reference_search.php');
+$adminContentLockRefreshSource = (string) file_get_contents(__DIR__ . '/../admin/content_lock_refresh.php');
+$adminReorderAjaxSource = (string) file_get_contents(__DIR__ . '/../admin/reorder_ajax.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7588,6 +7590,12 @@ $foundationChecks = [
         && str_contains($cspReportSource, 'function cspReportJsonResponse')
         && str_contains($cspReportSource, "'request_id' => koraRequestId()")
         && str_contains($cspReportSource, "header('Allow: POST')"),
+    'admin POST-only JSON endpoints send safe headers' => str_contains($adminContentLockRefreshSource, "header('Cache-Control: no-store')")
+        && str_contains($adminContentLockRefreshSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($adminContentLockRefreshSource, "header('Allow: POST')")
+        && str_contains($adminReorderAjaxSource, "header('Cache-Control: no-store')")
+        && str_contains($adminReorderAjaxSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($adminReorderAjaxSource, "header('Allow: POST')"),
     'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')

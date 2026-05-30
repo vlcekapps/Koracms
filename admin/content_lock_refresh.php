@@ -3,8 +3,11 @@
 require_once __DIR__ . '/../db.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Allow: POST');
     http_response_code(405);
     echo json_encode(['ok' => false]);
     exit;

@@ -18,6 +18,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **HTTP guardrails pro podcast RSS a ICS export** – `podcast/feed.php` a `events/ics.php` nově používají stejné čtecí omezení `GET/HEAD`, včetně testů na odmítnutí nepodporovaných metod.
 - **HTTP guardrails pro souborové endpointy** – mediální soubory, náhledy, thumbnail endpointy, soubory ke stažení, vývěska, galerie, místa a podcastová média nově sdíleně odmítají jiné metody než `GET/HEAD`; `HEAD` odpovědi zároveň posílají jen hlavičky bez těla.
 - **HTTP guardrails pro administrační read-only endpointy** – JSON export obsahu, CSV export formulářových odpovědí, stažení příloh z formulářových odpovědí i vyhledávání obsahu pro media picker nově používají stejné `GET/HEAD` omezení jako ostatní read-only výstupy; nepodporované metody končí `405` s `Allow: GET, HEAD`.
+- **HTTP guardrails pro administrační JSON akce** – POST-only AJAX endpointy pro obnovu content locku a řazení obsahu nově odmítají jiné metody přes `405` s `Allow: POST` a posílají `no-store` i `nosniff` hlavičky.
 
 ### Změněno
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.

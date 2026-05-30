@@ -527,6 +527,36 @@ try {
     }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
 
+    $adminJsonPostOnlyEndpointIssues = [];
+    $adminJsonPostOnlyEndpointUrls = [
+        '/admin/content_lock_refresh.php' => 'admin/content_lock_refresh.php',
+        '/admin/reorder_ajax.php' => 'admin/reorder_ajax.php',
+    ];
+    foreach ($adminJsonPostOnlyEndpointUrls as $adminJsonPostOnlyEndpointUrl => $adminJsonPostOnlyEndpointLabel) {
+        $adminJsonPostOnlyEndpointResponse = fetchUrl($baseUrl . BASE_URL . $adminJsonPostOnlyEndpointUrl, $adminSession['cookie'], 0);
+        $adminJsonPostOnlyEndpointAllowHeaderFound = false;
+        $adminJsonPostOnlyEndpointNoStoreFound = false;
+        $adminJsonPostOnlyEndpointNosniffFound = false;
+        foreach ($adminJsonPostOnlyEndpointResponse['headers'] as $adminJsonPostOnlyEndpointHeader) {
+            if (stripos($adminJsonPostOnlyEndpointHeader, 'Allow:') === 0 && str_contains($adminJsonPostOnlyEndpointHeader, 'POST')) {
+                $adminJsonPostOnlyEndpointAllowHeaderFound = true;
+            }
+            if (stripos($adminJsonPostOnlyEndpointHeader, 'Cache-Control:') === 0 && str_contains($adminJsonPostOnlyEndpointHeader, 'no-store')) {
+                $adminJsonPostOnlyEndpointNoStoreFound = true;
+            }
+            if (stripos($adminJsonPostOnlyEndpointHeader, 'X-Content-Type-Options:') === 0 && str_contains(strtolower($adminJsonPostOnlyEndpointHeader), 'nosniff')) {
+                $adminJsonPostOnlyEndpointNosniffFound = true;
+            }
+        }
+        if (httpIntegrationStatusCode($adminJsonPostOnlyEndpointResponse) !== 405 || !$adminJsonPostOnlyEndpointAllowHeaderFound) {
+            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neodmítl GET pomocí 405 a Allow: POST';
+        }
+        if (!$adminJsonPostOnlyEndpointNoStoreFound || !$adminJsonPostOnlyEndpointNosniffFound) {
+            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal bezpečné JSON hlavičky no-store a nosniff';
+        }
+    }
+    httpIntegrationPrintResult('admin_json_post_only_endpoints_http', $adminJsonPostOnlyEndpointIssues, $failures);
+
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     $cspReportPayload = json_encode(
