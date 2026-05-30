@@ -390,6 +390,27 @@ try {
     }
     httpIntegrationPrintResult('health_http', $healthIssues, $failures);
 
+    $robotsIssues = [];
+    $robotsResponse = fetchUrl($baseUrl . BASE_URL . '/robots.txt', '', 0);
+    if (httpIntegrationStatusCode($robotsResponse) !== 200) {
+        $robotsIssues[] = 'robots.txt nevrátil 200';
+    }
+    if (!str_contains($robotsResponse['body'], 'User-agent: *') || !str_contains($robotsResponse['body'], 'Disallow: ' . BASE_URL . '/admin/') || !str_contains($robotsResponse['body'], 'Sitemap: ')) {
+        $robotsIssues[] = 'robots.txt neobsahuje základní pravidla a sitemapu';
+    }
+    $robotsPostResponse = postRawUrl($baseUrl . BASE_URL . '/robots.txt', '', 'text/plain', '', 0);
+    $robotsAllowHeaderFound = false;
+    foreach ($robotsPostResponse['headers'] as $robotsPostHeader) {
+        if (stripos($robotsPostHeader, 'Allow:') === 0 && str_contains($robotsPostHeader, 'GET') && str_contains($robotsPostHeader, 'HEAD')) {
+            $robotsAllowHeaderFound = true;
+            break;
+        }
+    }
+    if (httpIntegrationStatusCode($robotsPostResponse) !== 405 || !$robotsAllowHeaderFound) {
+        $robotsIssues[] = 'robots.txt neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    httpIntegrationPrintResult('robots_http', $robotsIssues, $failures);
+
     $cspReportIssues = [];
     httpIntegrationClearLocalRateLimits($pdo, ['csp_report']);
     $cspReportPayload = json_encode(
@@ -416,8 +437,21 @@ try {
         }
     }
     $cspReportGetResponse = fetchUrl($baseUrl . BASE_URL . '/csp-report.php', '', 0);
-    if (httpIntegrationStatusCode($cspReportGetResponse) !== 405) {
-        $cspReportIssues[] = 'CSP report endpoint nepovolil jen POST';
+    $cspReportAllowHeaderFound = false;
+    $cspReportCacheHeader = '';
+    foreach ($cspReportGetResponse['headers'] as $cspReportGetHeader) {
+        if (stripos($cspReportGetHeader, 'Allow:') === 0 && str_contains($cspReportGetHeader, 'POST')) {
+            $cspReportAllowHeaderFound = true;
+        }
+        if (stripos($cspReportGetHeader, 'Cache-Control:') === 0) {
+            $cspReportCacheHeader .= ' ' . $cspReportGetHeader;
+        }
+    }
+    if (httpIntegrationStatusCode($cspReportGetResponse) !== 405 || !$cspReportAllowHeaderFound || !str_contains($cspReportGetResponse['body'], 'request_id')) {
+        $cspReportIssues[] = 'CSP report endpoint nepovolil jen POST a neposlal dohledatelnou JSON odpověď';
+    }
+    if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
+        $cspReportIssues[] = 'CSP report endpoint neposlal no-store cache hlavičky';
     }
     $cspReportRateLimitIds = [];
     foreach (['127.0.0.1', '::1', 'unknown'] as $cspReportIp) {

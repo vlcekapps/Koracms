@@ -4,6 +4,9 @@ require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Robots-Tag: noindex');
+header('Cache-Control: no-store, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 /**
  * @param array<mixed> $source
@@ -113,17 +116,28 @@ function cspReportEntry(array $body): array
     ];
 }
 
+/**
+ * @param array<string,string|int> $extra
+ */
+function cspReportJsonResponse(int $statusCode, string $status, array $extra = []): void
+{
+    http_response_code($statusCode);
+    echo json_encode(
+        ['status' => $status, 'request_id' => koraRequestId()] + $extra,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+}
+
 function cspReportRateLimitExceeded(): void
 {
     header('Retry-After: 60');
-    http_response_code(429);
-    echo json_encode(['status' => 'rate_limited'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    cspReportJsonResponse(429, 'rate_limited');
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if ($requestMethod !== 'POST') {
     header('Allow: POST');
-    http_response_code(405);
-    echo json_encode(['status' => 'method_not_allowed'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    cspReportJsonResponse(405, 'method_not_allowed');
     exit;
 }
 
@@ -131,21 +145,18 @@ rateLimit('csp_report', 120, 60, 'cspReportRateLimitExceeded');
 
 $rawBody = file_get_contents('php://input', false, null, 0, 65537);
 if (!is_string($rawBody) || $rawBody === '') {
-    http_response_code(400);
-    echo json_encode(['status' => 'empty_report'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    cspReportJsonResponse(400, 'empty_report');
     exit;
 }
 
 if (strlen($rawBody) > 65536) {
-    http_response_code(413);
-    echo json_encode(['status' => 'report_too_large'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    cspReportJsonResponse(413, 'report_too_large');
     exit;
 }
 
 $decodedReport = json_decode($rawBody, true);
 if (!is_array($decodedReport)) {
-    http_response_code(400);
-    echo json_encode(['status' => 'invalid_json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    cspReportJsonResponse(400, 'invalid_json');
     exit;
 }
 

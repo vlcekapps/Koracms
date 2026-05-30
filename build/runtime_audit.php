@@ -7509,7 +7509,9 @@ $foundationChecks = [
         && str_contains($gitignoreSource, '!docs/admin-guide.md'),
     'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
-        && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')'),
+        && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')')
+        && str_contains($robotsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($robotsSource, "header('Allow: GET, HEAD')"),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
@@ -7528,6 +7530,11 @@ $foundationChecks = [
         && str_contains($healthSource, "'last_run' => date(DATE_ATOM, \$cronLastRunTimestamp)"),
     'health endpoint reports latest backup timestamp' => str_contains($healthSource, "'last_backup' => date(DATE_ATOM, \$latestBackupTimestamp)")
         && str_contains($healthSource, "'backup' => ['status' => 'unknown']"),
+    'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, "header('Cache-Control: no-store, max-age=0')")
+        && str_contains($cspReportSource, "header('Pragma: no-cache')")
+        && str_contains($cspReportSource, 'function cspReportJsonResponse')
+        && str_contains($cspReportSource, "'request_id' => koraRequestId()")
+        && str_contains($cspReportSource, "header('Allow: POST')"),
     'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')
@@ -7553,6 +7560,17 @@ if (!str_contains($robotsProbe['status'], '200')) {
     $foundationIssues[] = 'robots.txt did not return 200';
 } elseif (!str_contains($robotsProbe['body'], 'Disallow: ' . BASE_URL . '/admin/') || !str_contains($robotsProbe['body'], 'Sitemap: ')) {
     $foundationIssues[] = 'robots.txt is missing admin disallow or sitemap';
+}
+$robotsPostProbe = postRawUrl($baseUrl . '/robots.txt', '', 'text/plain', '', 0);
+$robotsAllowHeaderFound = false;
+foreach ($robotsPostProbe['headers'] as $robotsPostHeader) {
+    if (stripos($robotsPostHeader, 'Allow:') === 0 && str_contains($robotsPostHeader, 'GET') && str_contains($robotsPostHeader, 'HEAD')) {
+        $robotsAllowHeaderFound = true;
+        break;
+    }
+}
+if (!str_contains($robotsPostProbe['status'], '405') || !$robotsAllowHeaderFound) {
+    $foundationIssues[] = 'robots.txt did not reject unsupported methods with Allow: GET, HEAD';
 }
 
 $healthProbe = fetchUrl($baseUrl . '/health.php', '', 0);
@@ -7589,6 +7607,24 @@ if (!str_contains($healthProbe['status'], '200')) {
     if (!str_contains($healthPostProbe['status'], '405') || !$healthAllowHeaderFound) {
         $foundationIssues[] = 'health.php did not reject unsupported methods with Allow: GET, HEAD';
     }
+}
+
+$cspReportGetProbe = fetchUrl($baseUrl . '/csp-report.php', '', 0);
+$cspReportAllowHeaderFound = false;
+$cspReportCacheHeader = '';
+foreach ($cspReportGetProbe['headers'] as $cspReportGetHeader) {
+    if (stripos($cspReportGetHeader, 'Allow:') === 0 && str_contains($cspReportGetHeader, 'POST')) {
+        $cspReportAllowHeaderFound = true;
+    }
+    if (stripos($cspReportGetHeader, 'Cache-Control:') === 0) {
+        $cspReportCacheHeader .= ' ' . $cspReportGetHeader;
+    }
+}
+if (!str_contains($cspReportGetProbe['status'], '405') || !$cspReportAllowHeaderFound || !str_contains($cspReportGetProbe['body'], 'request_id')) {
+    $foundationIssues[] = 'csp-report.php did not reject unsupported methods with a traceable JSON response';
+}
+if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
+    $foundationIssues[] = 'csp-report.php did not send no-store cache headers';
 }
 
 if ($foundationIssues === []) {

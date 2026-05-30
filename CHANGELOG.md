@@ -13,6 +13,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Health check poslední zálohy** – `health.php` nově u backup kontroly přidává i čas poslední nalezené SQL zálohy jako `last_backup`, aniž by zveřejňoval cesty nebo názvy souborů.
 - **Necacheovaný health check** – `health.php` nově explicitně posílá `Cache-Control: no-store`, aby monitoring nepracoval se zastaralým stavem databáze, záloh nebo cronu.
 - **HTTP guardrails pro health check** – `health.php` nově podporuje jen `GET` a `HEAD`, ostatní metody odmítá odpovědí `405` s `Allow: GET, HEAD`, a HTTP integrační testy hlídají JSON výstup i cache hlavičky.
+- **HTTP guardrails pro provozní endpointy** – `robots.php` nově výslovně podporuje jen `GET` a `HEAD`, zatímco `csp-report.php` posílá necacheovatelné JSON chyby s `request_id`, aby se chyby reportingu lépe dohledávaly v logu.
 
 ### Změněno
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.
