@@ -16,7 +16,7 @@ if ($token !== '') {
         $stmt->execute([$token]);
         $ok = $stmt->rowCount() > 0;
     } catch (\PDOException $e) {
-        error_log('subscribe_confirm: ' . $e->getMessage());
+        koraLog('warning', 'newsletter confirmation failed', ['exception' => $e]);
     }
 }
 

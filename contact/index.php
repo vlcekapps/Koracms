@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      VALUES (?, ?, ?, 0, 'new')"
                 )->execute([$from, $subject, $message]);
             } catch (\PDOException $e) {
-                error_log('contact INSERT failed: ' . $e->getMessage());
+                koraLog('warning', 'contact submission insert failed', ['exception' => $e]);
                 $errors[] = 'Zprávu se nepodařilo uložit. Zkuste to prosím později.';
             }
 

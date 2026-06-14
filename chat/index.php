@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . BASE_URL . '/chat/index.php?ok=pending');
             exit;
         } catch (\PDOException $e) {
-            error_log('chat INSERT failed: ' . $e->getMessage());
+            koraLog('warning', 'chat submission insert failed', ['exception' => $e]);
             $errors[] = 'Zprávu se nepodařilo uložit. Zkuste to prosím později.';
         }
     }

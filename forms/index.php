@@ -428,7 +428,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Odpověď byla přijata přes veřejný formulář.'
                 );
             } catch (\PDOException $e) {
-                error_log('form submit: ' . $e->getMessage());
+                koraLog('warning', 'public form submission insert failed', [
+                    'form_id' => (int)$form['id'],
+                    'exception' => $e,
+                ]);
                 $errors[] = 'Odeslání formuláře se nezdařilo. Zkuste to prosím později.';
             }
 

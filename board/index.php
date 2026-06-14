@@ -75,7 +75,7 @@ try {
         ];
     }
 } catch (\PDOException $e) {
-    error_log('board/index months: ' . $e->getMessage());
+    koraLog('warning', 'board archive months query failed', ['exception' => $e]);
 }
 
 $whereParts = [boardPublicVisibilitySql('b')];

@@ -30,6 +30,12 @@ $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
 $searchSource = (string) file_get_contents(__DIR__ . '/../search.php');
 $blogIndexSource = (string) file_get_contents(__DIR__ . '/../blog/index.php');
 $blogArticleSource = (string) file_get_contents(__DIR__ . '/../blog/article.php');
+$boardIndexSource = (string) file_get_contents(__DIR__ . '/../board/index.php');
+$contactIndexSource = (string) file_get_contents(__DIR__ . '/../contact/index.php');
+$chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
+$formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
+$subscribeConfirmSource = (string) file_get_contents(__DIR__ . '/../subscribe_confirm.php');
+$unsubscribeSource = (string) file_get_contents(__DIR__ . '/../unsubscribe.php');
 $feedSource = (string) file_get_contents(__DIR__ . '/../feed.php');
 $podcastFeedSource = (string) file_get_contents(__DIR__ . '/../podcast/feed.php');
 $eventIcsSource = (string) file_get_contents(__DIR__ . '/../events/ics.php');
@@ -7630,6 +7636,20 @@ $foundationChecks = [
         && str_contains($searchSource, "koraLog('warning', 'search source query failed'")
         && str_contains($sitemapSource, 'function sitemapLogSectionError')
         && str_contains($sitemapSource, "koraLog('warning', 'sitemap section query failed'"),
+    'public submission and token endpoints use structured recoverable error logs' => !str_contains($boardIndexSource, 'error_log(')
+        && !str_contains($contactIndexSource, 'error_log(')
+        && !str_contains($chatIndexSource, 'error_log(')
+        && !str_contains($formsIndexSource, 'error_log(')
+        && !str_contains($readOnlyDownloadsFileSource, 'error_log(')
+        && !str_contains($subscribeConfirmSource, 'error_log(')
+        && !str_contains($unsubscribeSource, 'error_log(')
+        && str_contains($boardIndexSource, "koraLog('warning', 'board archive months query failed'")
+        && str_contains($contactIndexSource, "koraLog('warning', 'contact submission insert failed'")
+        && str_contains($chatIndexSource, "koraLog('warning', 'chat submission insert failed'")
+        && str_contains($formsIndexSource, "koraLog('warning', 'public form submission insert failed'")
+        && str_contains($readOnlyDownloadsFileSource, "koraLog('warning', 'download count update failed'")
+        && str_contains($subscribeConfirmSource, "koraLog('warning', 'newsletter confirmation failed'")
+        && str_contains($unsubscribeSource, "koraLog('warning', 'newsletter unsubscribe failed'"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {

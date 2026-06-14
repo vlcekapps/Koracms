@@ -58,7 +58,7 @@ if (!$allowPrivateAccess && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
              WHERE id = ?"
         )->execute([$id]);
     } catch (\PDOException $e) {
-        error_log('downloads/file download_count: ' . $e->getMessage());
+        koraLog('warning', 'download count update failed', ['download_id' => $id, 'exception' => $e]);
     }
 }
 
