@@ -92,7 +92,7 @@ if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
         $pdo->prepare("UPDATE cms_articles SET view_count = view_count + 1 WHERE id = ?")->execute([$articleId]);
         $article['view_count'] = (int)($article['view_count'] ?? 0) + 1;
     } catch (\PDOException $e) {
-        error_log('article view_count: ' . $e->getMessage());
+        koraLog('warning', 'article view count update failed', ['article_id' => $articleId, 'exception' => $e]);
     }
 }
 
@@ -106,7 +106,7 @@ try {
     $ts->execute([$articleId]);
     $tags = $ts->fetchAll();
 } catch (\PDOException $e) {
-    error_log('article tags: ' . $e->getMessage());
+    koraLog('warning', 'article tags query failed', ['article_id' => $articleId, 'exception' => $e]);
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');

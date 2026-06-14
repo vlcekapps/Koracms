@@ -39,7 +39,7 @@ try {
     }
     unset($blogPage);
 } catch (\PDOException $e) {
-    error_log('blog/index pages: ' . $e->getMessage());
+    koraLog('warning', 'blog index pages query failed', ['blog_id' => $blogId, 'exception' => $e]);
 }
 
 $katId = inputInt('get', 'kat');
@@ -74,7 +74,7 @@ try {
     $tagStmt->execute([$blogId]);
     $allTags = $tagStmt->fetchAll();
 } catch (\PDOException $e) {
-    error_log('blog/index tags: ' . $e->getMessage());
+    koraLog('warning', 'blog index tags query failed', ['blog_id' => $blogId, 'exception' => $e]);
 }
 
 $blogArchives = [];
@@ -104,7 +104,7 @@ try {
         ];
     }
 } catch (\PDOException $e) {
-    error_log('blog/index archives: ' . $e->getMessage());
+    koraLog('warning', 'blog index archives query failed', ['blog_id' => $blogId, 'exception' => $e]);
 }
 
 $where = "WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND a.blog_id = ?";
@@ -190,7 +190,7 @@ if ($showFeaturedArticle) {
             $params[] = $featuredArticleId;
         }
     } catch (\PDOException $e) {
-        error_log('blog/index featured: ' . $e->getMessage());
+        koraLog('warning', 'blog index featured query failed', ['blog_id' => $blogId, 'exception' => $e]);
     }
 }
 

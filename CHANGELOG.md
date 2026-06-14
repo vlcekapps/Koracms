@@ -27,6 +27,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Změněno
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.
 - **Release workflow** – vydání verze nově v changelogu ponechá novou prázdnou sekci `Unreleased` nad právě vydanou verzí, takže další vývoj může rovnou zapisovat změny bez ruční přípravy changelogu.
+- **Provozní diagnostika veřejných stránek** – blog index, detail článku, vyhledávání a sitemapa nově logují dílčí obnovitelné chyby přes strukturované `koraLog()` záznamy s `request_id` a kontextem selhaného zdroje místo volného textu v PHP logu.
 
 ## [3.4.7] – 2026-05-22
 

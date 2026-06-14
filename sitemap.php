@@ -48,6 +48,11 @@ function sitemapWriteUrl(string $location, string $changefreq, string $priority,
     echo "  </url>\n";
 }
 
+function sitemapLogSectionError(string $section, \Throwable $e): void
+{
+    koraLog('warning', 'sitemap section query failed', ['section' => $section, 'exception' => $e]);
+}
+
 echo '<?xml version="1.0" encoding="UTF-8"?>';
 ?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -65,7 +70,7 @@ try {
         sitemapWriteUrl(pagePublicUrl($page), 'monthly', '0.8', sitemapLastmod((string)($page['sitemap_lastmod'] ?? '')));
     }
 } catch (\PDOException $e) {
-    error_log('sitemap pages: ' . $e->getMessage());
+    sitemapLogSectionError('pages', $e);
 }
 
 try {
@@ -83,7 +88,7 @@ try {
         }
     }
 } catch (\PDOException $e) {
-    error_log('sitemap authors: ' . $e->getMessage());
+    sitemapLogSectionError('authors', $e);
 }
 
 if (isModuleEnabled('blog')) {
@@ -103,7 +108,7 @@ if (isModuleEnabled('blog')) {
             sitemapWriteUrl(articlePublicUrl($article), 'weekly', '0.7', sitemapLastmod((string)($article['updated_at'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap blog: ' . $e->getMessage());
+        sitemapLogSectionError('blog', $e);
     }
 }
 
@@ -121,7 +126,7 @@ if (isModuleEnabled('news')) {
             sitemapWriteUrl(newsPublicUrl($newsItem), 'monthly', '0.5', sitemapLastmod((string)($newsItem['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap news: ' . $e->getMessage());
+        sitemapLogSectionError('news', $e);
     }
 }
 
@@ -139,7 +144,7 @@ if (isModuleEnabled('board')) {
             sitemapWriteUrl(boardPublicUrl($document), 'monthly', '0.5', sitemapLastmod((string)($document['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap board: ' . $e->getMessage());
+        sitemapLogSectionError('board', $e);
     }
 }
 
@@ -157,7 +162,7 @@ if (isModuleEnabled('downloads')) {
             sitemapWriteUrl(downloadPublicUrl($download), 'monthly', '0.5', sitemapLastmod((string)($download['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap downloads: ' . $e->getMessage());
+        sitemapLogSectionError('downloads', $e);
     }
 }
 
@@ -175,7 +180,7 @@ if (isModuleEnabled('faq')) {
             sitemapWriteUrl(faqPublicUrl($faq), 'monthly', '0.5', sitemapLastmod((string)($faq['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap faq: ' . $e->getMessage());
+        sitemapLogSectionError('faq', $e);
     }
 }
 
@@ -194,7 +199,7 @@ if (isModuleEnabled('food')) {
             sitemapWriteUrl(foodCardPublicUrl($foodCard), 'monthly', '0.5', sitemapLastmod((string)($foodCard['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap food: ' . $e->getMessage());
+        sitemapLogSectionError('food', $e);
     }
 }
 
@@ -212,7 +217,7 @@ if (isModuleEnabled('reservations')) {
             sitemapWriteUrl(reservationResourcePublicUrl($reservationResource), 'weekly', '0.5');
         }
     } catch (\PDOException $e) {
-        error_log('sitemap reservations: ' . $e->getMessage());
+        sitemapLogSectionError('reservations', $e);
     }
 }
 
@@ -230,7 +235,7 @@ if (isModuleEnabled('events')) {
             sitemapWriteUrl(eventPublicUrl($event), 'monthly', '0.5', sitemapLastmod((string)($event['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap events: ' . $e->getMessage());
+        sitemapLogSectionError('events', $e);
     }
 }
 
@@ -248,7 +253,7 @@ if (isModuleEnabled('podcast')) {
             sitemapWriteUrl(podcastShowPublicUrl($podcastShow), 'weekly', '0.5', sitemapLastmod((string)($podcastShow['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap podcast shows: ' . $e->getMessage());
+        sitemapLogSectionError('podcast_shows', $e);
     }
 
     try {
@@ -264,7 +269,7 @@ if (isModuleEnabled('podcast')) {
             sitemapWriteUrl(podcastEpisodePublicUrl($podcastEpisode), 'monthly', '0.5', sitemapLastmod((string)($podcastEpisode['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap podcast episodes: ' . $e->getMessage());
+        sitemapLogSectionError('podcast_episodes', $e);
     }
 }
 
@@ -282,7 +287,7 @@ if (isModuleEnabled('gallery')) {
             sitemapWriteUrl(galleryAlbumPublicUrl($galleryAlbum), 'monthly', '0.5', sitemapLastmod((string)($galleryAlbum['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap gallery albums: ' . $e->getMessage());
+        sitemapLogSectionError('gallery_albums', $e);
     }
 
     try {
@@ -297,7 +302,7 @@ if (isModuleEnabled('gallery')) {
             sitemapWriteUrl(galleryPhotoPublicUrl($galleryPhoto), 'monthly', '0.4', sitemapLastmod((string)($galleryPhoto['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap gallery photos: ' . $e->getMessage());
+        sitemapLogSectionError('gallery_photos', $e);
     }
 }
 
@@ -315,7 +320,7 @@ if (isModuleEnabled('places')) {
             sitemapWriteUrl(placePublicUrl($place), 'monthly', '0.5', sitemapLastmod((string)($place['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap places: ' . $e->getMessage());
+        sitemapLogSectionError('places', $e);
     }
 }
 
@@ -333,7 +338,7 @@ if (isModuleEnabled('polls')) {
             sitemapWriteUrl(pollPublicUrl($poll), 'monthly', '0.5', sitemapLastmod((string)($poll['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap polls: ' . $e->getMessage());
+        sitemapLogSectionError('polls', $e);
     }
 }
 
@@ -349,7 +354,7 @@ if (isModuleEnabled('forms')) {
             sitemapWriteUrl(formPublicUrl($form), 'monthly', '0.5', sitemapLastmod((string)($form['sitemap_lastmod'] ?? '')));
         }
     } catch (\PDOException $e) {
-        error_log('sitemap forms: ' . $e->getMessage());
+        sitemapLogSectionError('forms', $e);
     }
 }
 ?>

@@ -7,6 +7,11 @@ $siteName = getSetting('site_name', 'Kora CMS');
 $q        = trim($_GET['q'] ?? '');
 $results  = [];
 
+function searchLogSourceError(string $source, \Throwable $e): void
+{
+    koraLog('warning', 'search source query failed', ['source' => $source, 'exception' => $e]);
+}
+
 if ($q !== '' && mb_strlen($q) >= 2) {
     rateLimit('search', 30, 60);
     $pdo  = db_connect();
@@ -66,7 +71,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search blog: ' . $e->getMessage());
+            searchLogSourceError('blog', $e);
         }
     }
 
@@ -86,7 +91,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search news: ' . $e->getMessage());
+            searchLogSourceError('news', $e);
         }
     }
 
@@ -105,7 +110,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
             $results[] = $row;
         }
     } catch (\PDOException $e) {
-        error_log('search pages: ' . $e->getMessage());
+        searchLogSourceError('pages', $e);
     }
 
     if (isModuleEnabled('events')) {
@@ -124,7 +129,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search events: ' . $e->getMessage());
+            searchLogSourceError('events', $e);
         }
     }
 
@@ -143,7 +148,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search podcast_shows: ' . $e->getMessage());
+            searchLogSourceError('podcast_shows', $e);
         }
 
         try {
@@ -162,7 +167,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search podcast_episodes: ' . $e->getMessage());
+            searchLogSourceError('podcast_episodes', $e);
         }
     }
 
@@ -183,7 +188,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search faq: ' . $e->getMessage());
+            searchLogSourceError('faq', $e);
         }
     }
 
@@ -205,7 +210,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search gallery_albums: ' . $e->getMessage());
+            searchLogSourceError('gallery_albums', $e);
         }
 
         try {
@@ -225,7 +230,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search gallery_photos: ' . $e->getMessage());
+            searchLogSourceError('gallery_photos', $e);
         }
     }
 
@@ -246,7 +251,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search food: ' . $e->getMessage());
+            searchLogSourceError('food', $e);
         }
     }
 
@@ -267,7 +272,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search board: ' . $e->getMessage());
+            searchLogSourceError('board', $e);
         }
     }
 
@@ -288,7 +293,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search downloads: ' . $e->getMessage());
+            searchLogSourceError('downloads', $e);
         }
     }
 
@@ -309,7 +314,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search places: ' . $e->getMessage());
+            searchLogSourceError('places', $e);
         }
     }
 
@@ -330,7 +335,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search polls: ' . $e->getMessage());
+            searchLogSourceError('polls', $e);
         }
     }
 
@@ -352,7 +357,7 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $results[] = $row;
             }
         } catch (\PDOException $e) {
-            error_log('search reservations: ' . $e->getMessage());
+            searchLogSourceError('reservations', $e);
         }
     }
 }

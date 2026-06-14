@@ -27,6 +27,9 @@ $htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
 $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
+$searchSource = (string) file_get_contents(__DIR__ . '/../search.php');
+$blogIndexSource = (string) file_get_contents(__DIR__ . '/../blog/index.php');
+$blogArticleSource = (string) file_get_contents(__DIR__ . '/../blog/article.php');
 $feedSource = (string) file_get_contents(__DIR__ . '/../feed.php');
 $podcastFeedSource = (string) file_get_contents(__DIR__ . '/../podcast/feed.php');
 $eventIcsSource = (string) file_get_contents(__DIR__ . '/../events/ics.php');
@@ -7617,6 +7620,16 @@ $foundationChecks = [
         && str_contains($authSource, 'function koraLog(')
         && str_contains($authSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
         && str_contains($dbSource, "koraLog('error', 'Uncaught exception'"),
+    'public composite pages use structured recoverable error logs' => !str_contains($blogIndexSource, 'error_log(')
+        && !str_contains($blogArticleSource, 'error_log(')
+        && !str_contains($searchSource, 'error_log(')
+        && !str_contains($sitemapSource, 'error_log(')
+        && str_contains($blogIndexSource, "koraLog('warning', 'blog index pages query failed'")
+        && str_contains($blogArticleSource, "koraLog('warning', 'article tags query failed'")
+        && str_contains($searchSource, 'function searchLogSourceError')
+        && str_contains($searchSource, "koraLog('warning', 'search source query failed'")
+        && str_contains($sitemapSource, 'function sitemapLogSectionError')
+        && str_contains($sitemapSource, "koraLog('warning', 'sitemap section query failed'"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {
