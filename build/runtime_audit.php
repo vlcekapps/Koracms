@@ -20,6 +20,9 @@ $cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
 $adminBackupSource = (string) file_get_contents(__DIR__ . '/../admin/backup.php');
 $backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php');
 $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
+$revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php');
+$widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
+$mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
 $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
@@ -7660,6 +7663,17 @@ $foundationChecks = [
         && str_contains($adminFormsSource, "koraLog('warning', 'admin forms overview query failed'")
         && str_contains($adminStatisticsSource, 'function statisticsLogSectionError')
         && str_contains($adminStatisticsSource, "koraLog('warning', 'admin statistics section query failed'"),
+    'shared helper recoverable failures use structured logs' => !str_contains($uiSource, 'error_log(')
+        && !str_contains($revisionsSource, 'error_log(')
+        && !str_contains($widgetsSource, 'error_log(')
+        && !str_contains($mediaLibrarySource, 'error_log(')
+        && str_contains($uiSource, 'function contentLockLogError')
+        && str_contains($uiSource, "koraLog('warning', 'content lock operation failed'")
+        && str_contains($revisionsSource, 'function revisionLogError')
+        && str_contains($revisionsSource, "koraLog('warning', 'revision operation failed'")
+        && str_contains($widgetsSource, 'function widgetLogError')
+        && str_contains($widgetsSource, "koraLog('warning', 'widget operation failed'")
+        && str_contains($mediaLibrarySource, "koraLog('warning', 'media usage scan failed'"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {

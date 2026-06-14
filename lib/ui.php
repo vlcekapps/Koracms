@@ -617,10 +617,23 @@ function relativeTime(?string $datetime): string
 // ──────────────────────── Content locking ────────────────────────────────
 
 /**
+ * Zapíše technickou chybu práce se zámkem obsahu.
+ */
+function contentLockLogError(string $operation, string $entityType, int $entityId, \Throwable $e): void
+{
+    koraLog('warning', 'content lock operation failed', [
+        'operation' => $operation,
+        'entity_type' => $entityType,
+        'entity_id' => $entityId,
+        'exception' => $e,
+    ]);
+}
+
+/**
  * Pokusí se získat zámek obsahu. Pokud zámek drží jiný uživatel
  * a ještě nevypršel, vrátí informace o něm. Jinak zámek získá/obnoví a vrátí null.
  *
- * @return array{locked_by:string, locked_at:string}|null  null = zámek získán; pole = zamčeno jiným uživatelem
+ * @return array{locked_by:string, locked_at:string}|null null = zámek získán; pole = zamčeno jiným uživatelem
  */
 function acquireContentLock(string $entityType, int $entityId): ?array
 {
@@ -673,7 +686,7 @@ function acquireContentLock(string $entityType, int $entityId): ?array
 
         return null;
     } catch (\PDOException $e) {
-        error_log('acquireContentLock: ' . $e->getMessage());
+        contentLockLogError('acquire', $entityType, $entityId, $e);
         return null;
     }
 }
@@ -693,7 +706,7 @@ function releaseContentLock(string $entityType, int $entityId): void
             "DELETE FROM cms_content_locks WHERE entity_type = ? AND entity_id = ? AND user_id = ?"
         )->execute([$entityType, $entityId, $userId]);
     } catch (\PDOException $e) {
-        error_log('releaseContentLock: ' . $e->getMessage());
+        contentLockLogError('release', $entityType, $entityId, $e);
     }
 }
 
@@ -715,7 +728,7 @@ function refreshContentLock(string $entityType, int $entityId): bool
         $stmt->execute([$expiresAt, $entityType, $entityId, $userId]);
         return $stmt->rowCount() > 0;
     } catch (\PDOException $e) {
-        error_log('refreshContentLock: ' . $e->getMessage());
+        contentLockLogError('refresh', $entityType, $entityId, $e);
         return false;
     }
 }

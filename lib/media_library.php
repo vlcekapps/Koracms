@@ -905,7 +905,11 @@ function mediaFindUsages(array $media, int $limit = 25): array
                 $usages[] = $usage;
             }
         } catch (\PDOException $e) {
-            error_log('media usage scan ' . $tableName . ': ' . $e->getMessage());
+            koraLog('warning', 'media usage scan failed', [
+                'media_id' => $mediaId,
+                'source_table' => $tableName,
+                'exception' => $e,
+            ]);
         }
     }
 

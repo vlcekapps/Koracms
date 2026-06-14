@@ -618,6 +618,7 @@ function getWidgetsForZone(string $zone): array
             return widgetInstanceAvailability($w)['displayable'];
         });
     } catch (\PDOException $e) {
+        widgetLogError('load_zone', $zone, $e);
         return [];
     }
 }
@@ -641,6 +642,7 @@ function getAllWidgetsByZone(): array
             $zones[$row['zone']][] = $row;
         }
     } catch (\PDOException $e) {
+        widgetLogError('load_admin_overview', 'admin', $e);
     }
     return $zones;
 }
@@ -655,6 +657,23 @@ function widgetSettings(array $widget): array
 {
     $raw = $widget['settings'] ?? '{}';
     return is_string($raw) ? (json_decode($raw, true) ?: []) : (is_array($raw) ? $raw : []);
+}
+
+function widgetLogError(string $operation, string $zone, \Throwable $e, int $widgetId = 0, string $widgetType = ''): void
+{
+    $context = [
+        'operation' => $operation,
+        'zone' => $zone,
+        'exception' => $e,
+    ];
+    if ($widgetId > 0) {
+        $context['widget_id'] = $widgetId;
+    }
+    if ($widgetType !== '') {
+        $context['widget_type'] = $widgetType;
+    }
+
+    koraLog('warning', 'widget operation failed', $context);
 }
 
 /**
@@ -672,7 +691,13 @@ function renderZone(string $zone, string $wrapperClass = ''): string
         try {
             $out .= renderWidget($widget, $zone);
         } catch (\Throwable $e) {
-            error_log('Widget render error (id=' . (int)($widget['id'] ?? 0) . '): ' . $e->getMessage());
+            widgetLogError(
+                'render',
+                $zone,
+                $e,
+                (int)($widget['id'] ?? 0),
+                (string)($widget['widget_type'] ?? '')
+            );
         }
     }
 

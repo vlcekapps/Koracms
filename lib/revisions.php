@@ -3,12 +3,25 @@
 // Revize obsahu – ukládá snapshoty textových polí před každou úpravou
 
 /**
+ * Zapíše technickou chybu revizí bez ukládání samotného obsahu polí.
+ */
+function revisionLogError(string $operation, string $entityType, int $entityId, \Throwable $e): void
+{
+    koraLog('warning', 'revision operation failed', [
+        'operation' => $operation,
+        'entity_type' => $entityType,
+        'entity_id' => $entityId,
+        'exception' => $e,
+    ]);
+}
+
+/**
  * Uloží revizi (snapshot starého obsahu) před uložením změn.
  *
- * @param string $entityType  Typ entity (article, news, page, event, faq, board, download, food, place)
- * @param int    $entityId    ID entity
- * @param array<string,mixed> $oldValues  Asociativní pole [field => old_value] – ukládají se jen změněná pole
- * @param array<string,mixed> $newValues  Asociativní pole [field => new_value]
+ * @param string $entityType Typ entity (article, news, page, event, faq, board, download, food, place)
+ * @param int $entityId ID entity
+ * @param array<string,mixed> $oldValues Asociativní pole [field => old_value] – ukládají se jen změněná pole
+ * @param array<string,mixed> $newValues Asociativní pole [field => new_value]
  */
 function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldValues, array $newValues): void
 {
@@ -29,7 +42,7 @@ function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldVal
                  VALUES (?, ?, ?, ?, ?, ?, NOW())"
             )->execute([$entityType, $entityId, $field, $oldStr, $newStr, $userId ?: null]);
         } catch (\PDOException $e) {
-            error_log('saveRevision: ' . $e->getMessage());
+            revisionLogError('save', $entityType, $entityId, $e);
         }
     }
 }
@@ -61,7 +74,7 @@ function loadRevisions(PDO $pdo, string $entityType, int $entityId, int $limit =
         $stmt->execute([$entityType, $entityId, $limit]);
         return $stmt->fetchAll();
     } catch (\PDOException $e) {
-        error_log('loadRevisions: ' . $e->getMessage());
+        revisionLogError('load', $entityType, $entityId, $e);
         return [];
     }
 }
