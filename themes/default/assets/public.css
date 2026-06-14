@@ -880,6 +880,14 @@ body.theme-public textarea.form-control {
   margin-bottom: 1.25rem;
 }
 
+.page-blog-index .card-grid {
+  align-items: start;
+}
+
+.page-blog-index .card-grid > .card {
+  height: auto;
+}
+
 .blog-search-input {
   min-width: min(26rem, 100%);
 }

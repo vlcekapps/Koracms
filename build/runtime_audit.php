@@ -11314,6 +11314,12 @@ if (str_contains($themeFormsShowViewSource, '$value = h((string)$rawValue);')
     || !str_contains($themeFormsShowViewSource, '$value = is_array($rawValue) ? \'\' : h((string)$rawValue);')) {
     $themeLayoutIssues[] = 'default theme forms renderer still casts checkbox group values to string';
 }
+if (!str_contains($themePublicCssSource, '.page-blog-index .card-grid')
+    || !str_contains($themePublicCssSource, 'align-items: start')
+    || !str_contains($themePublicCssSource, '.page-blog-index .card-grid > .card')
+    || !str_contains($themePublicCssSource, 'height: auto')) {
+    $themeLayoutIssues[] = 'default theme blog index cards can still stretch to the tallest grid item';
+}
 foreach ([
     '.listing-filters',
     '.page-back-link',

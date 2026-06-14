@@ -21,6 +21,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **HTTP guardrails pro administrační JSON akce** – POST-only AJAX endpointy pro obnovu content locku a řazení obsahu nově odmítají jiné metody přes `405` s `Allow: POST` a posílají `no-store` i `nosniff` hlavičky.
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
+### Opraveno
+- **Výpis blogu v default šabloně** – karty článků na indexu blogu už se nenatahují podle nejvyšší karty v řádku, takže po odkazu „Číst článek“ nevzniká velké prázdné místo.
+
 ### Změněno
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.
 
