@@ -56,6 +56,19 @@ function requireReadOnlyHttpMethod(): bool
     return $requestMethod === 'HEAD';
 }
 
+/**
+ * @param array<string,mixed> $context
+ */
+function storedFileLogFailure(string $reason, string $path, array $context = []): void
+{
+    koraLog('warning', 'stored file response failed', array_merge([
+        'reason' => $reason,
+        'file_extension' => strtolower((string)pathinfo($path, PATHINFO_EXTENSION)),
+        'file_exists' => is_file($path),
+        'file_readable' => is_readable($path),
+    ], $context));
+}
+
 function sendStoredFileResponse(string $path, string $downloadName, string $disposition = 'attachment', string $mimeTypeOverride = ''): void
 {
     if (!is_file($path) || !is_readable($path)) {
@@ -73,7 +86,7 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
             $mimeType = $detectedType;
         }
     } catch (\Throwable $e) {
-        error_log('sendStoredFileDownload: ' . $e->getMessage());
+        storedFileLogFailure('mime_detection', $path, ['exception' => $e]);
     }
 
     $normalizedOverride = trim($mimeTypeOverride);
@@ -98,7 +111,11 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
 
     $written = readfile($path);
     if ($written === false) {
-        error_log('sendStoredFileDownload: nepodařilo se odeslat soubor ' . $path);
+        $contentLength = is_file($path) ? filesize($path) : false;
+        storedFileLogFailure('readfile', $path, [
+            'disposition' => $disposition,
+            'content_length' => is_int($contentLength) ? $contentLength : null,
+        ]);
     }
     exit;
 }

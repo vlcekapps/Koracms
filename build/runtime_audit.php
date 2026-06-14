@@ -77,6 +77,7 @@ $readOnlyPodcastAudioSource = (string) file_get_contents(__DIR__ . '/../podcast/
 $readOnlyPodcastImageSource = (string) file_get_contents(__DIR__ . '/../podcast/image.php');
 $readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/cover.php');
 $adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php');
+$adminBulkSource = (string) file_get_contents(__DIR__ . '/../admin/bulk.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
 $adminFormsSource = (string) file_get_contents(__DIR__ . '/../admin/forms.php');
@@ -7707,6 +7708,20 @@ $foundationChecks = [
         && str_contains($reservationsCancelSource, "mailLogFailure('notification_failed'")
         && str_contains($reservationsCancelBookingSource, "mailLogFailure('notification_failed'")
         && str_contains($adminResBookingSaveSource, "mailLogFailure('notification_failed'"),
+    'file operation logs avoid raw filesystem paths' => !str_contains($fileDownloadHelperSource, 'error_log(')
+        && !str_contains($adminGalleryExportZipSource, 'error_log(')
+        && !str_contains($adminBulkSource, 'error_log(')
+        && str_contains($fileDownloadHelperSource, 'function storedFileLogFailure')
+        && str_contains($fileDownloadHelperSource, "koraLog('warning', 'stored file response failed'")
+        && str_contains($adminGalleryExportZipSource, 'function galleryExportLogMissingFile')
+        && str_contains($adminGalleryExportZipSource, "koraLog('warning', 'gallery export source file missing'")
+        && str_contains($adminBulkSource, 'function adminBulkLogFileDeleteFailure')
+        && str_contains($adminBulkSource, "koraLog('warning', 'admin bulk operation failed'")
+        && !str_contains($fileDownloadHelperSource, 'sendStoredFileDownload:')
+        && !str_contains($adminGalleryExportZipSource, 'soubor nenalezen:')
+        && !str_contains($adminBulkSource, 'bulk board:')
+        && !str_contains($adminBulkSource, 'bulk download:')
+        && !str_contains($adminBulkSource, 'bulk place:'),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {

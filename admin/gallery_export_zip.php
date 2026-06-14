@@ -10,6 +10,20 @@ verifyCsrf();
 
 set_time_limit(0);
 
+/**
+ * @param array<string,mixed> $entry
+ */
+function galleryExportLogMissingFile(array $entry, int $albumCount): void
+{
+    $diskPath = (string)($entry['disk_path'] ?? '');
+    koraLog('warning', 'gallery export source file missing', [
+        'album_count' => $albumCount,
+        'file_extension' => strtolower((string)pathinfo($diskPath, PATHINFO_EXTENSION)),
+        'zip_path_present' => trim((string)($entry['zip_path'] ?? '')) !== '',
+        'disk_path_present' => trim($diskPath) !== '',
+    ]);
+}
+
 // Podpora jednoho alba (id) i více alb najednou (ids[])
 $albumIds = [];
 $singleId = inputInt('post', 'id');
@@ -59,7 +73,7 @@ foreach ($entries as $entry) {
     if ($entry['disk_path'] !== '' && is_file($entry['disk_path'])) {
         $filesToZip[] = $entry;
     } else {
-        error_log('gallery_export_zip: soubor nenalezen: ' . $entry['disk_path']);
+        galleryExportLogMissingFile($entry, count($albumIds));
     }
 }
 

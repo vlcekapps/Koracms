@@ -18,6 +18,26 @@ if ($ids === [] || $action === '' || $module === '') {
     exit;
 }
 
+/**
+ * @param array<string,mixed> $context
+ */
+function adminBulkLogFailure(string $operation, array $context = []): void
+{
+    koraLog('warning', 'admin bulk operation failed', array_merge([
+        'operation' => $operation,
+    ], $context));
+}
+
+function adminBulkLogFileDeleteFailure(string $module, int $entityId, string $fileRole, string $filePath): void
+{
+    adminBulkLogFailure('file_delete', [
+        'module' => $module,
+        'entity_id' => $entityId,
+        'file_role' => $fileRole,
+        'file_extension' => strtolower((string)pathinfo($filePath, PATHINFO_EXTENSION)),
+    ]);
+}
+
 $pdo = db_connect();
 
 $moduleConfig = match ($module) {
@@ -67,7 +87,7 @@ $moduleConfig = match ($module) {
                 $file = (string)$stmt->fetchColumn();
                 if ($file !== '' && is_file($dir . $file)) {
                     if (!unlink($dir . $file)) {
-                        error_log('bulk board: nelze smazat ' . $dir . $file);
+                        adminBulkLogFileDeleteFailure('board', (int)$id, 'image_file', $dir . $file);
                     }
                 }
             }
@@ -91,7 +111,7 @@ $moduleConfig = match ($module) {
                         $f = trim((string)($row[$col] ?? ''));
                         if ($f !== '' && is_file($path . $f)) {
                             if (!unlink($path . $f)) {
-                                error_log('bulk download: nelze smazat ' . $path . $f);
+                                adminBulkLogFileDeleteFailure('downloads', (int)$id, (string)$col, $path . $f);
                             }
                         }
                     }
@@ -113,7 +133,7 @@ $moduleConfig = match ($module) {
                 $file = (string)$stmt->fetchColumn();
                 if ($file !== '' && is_file($dir . $file)) {
                     if (!unlink($dir . $file)) {
-                        error_log('bulk place: nelze smazat ' . $dir . $file);
+                        adminBulkLogFileDeleteFailure('places', (int)$id, 'image_file', $dir . $file);
                     }
                 }
             }
@@ -291,7 +311,11 @@ if ($action === 'delete') {
         $pdo->prepare("UPDATE {$table} SET status = 'published' WHERE id IN ({$ph})")->execute($ids);
         logAction($moduleConfig['log_prefix'] . '_bulk_publish', 'ids=' . implode(',', $ids));
     } catch (\PDOException $e) {
-        error_log('bulk publish: ' . $e->getMessage());
+        adminBulkLogFailure('publish', [
+            'module' => $module,
+            'item_count' => count($ids),
+            'exception' => $e,
+        ]);
     }
 } elseif ($action === 'hide') {
     $ph = implode(',', array_fill(0, count($ids), '?'));
@@ -301,7 +325,11 @@ if ($action === 'delete') {
         $pdo->prepare("UPDATE {$table} SET status = 'pending' WHERE id IN ({$ph})")->execute($ids);
         logAction($moduleConfig['log_prefix'] . '_bulk_hide', 'ids=' . implode(',', $ids));
     } catch (\PDOException $e) {
-        error_log('bulk hide: ' . $e->getMessage());
+        adminBulkLogFailure('hide', [
+            'module' => $module,
+            'item_count' => count($ids),
+            'exception' => $e,
+        ]);
     }
 }
 
