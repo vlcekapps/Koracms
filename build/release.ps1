@@ -163,9 +163,9 @@ function Get-UpdatedChangelogContent {
     $updated = $false
     $dash = [char]0x2013  # en-dash
 
-    # 1) Nahradit ## [Unreleased] za ## [verze] - datum
+    # 1) Založit novou prázdnou sekci Unreleased a původní obsah přesunout pod vydanou verzi.
     if ($Content -match '(?m)^## \[Unreleased\]') {
-        $Content = $Content -replace '(?m)^## \[Unreleased\].*$', "## [$NewVersion] $dash $today"
+        $Content = $Content -replace '(?m)^## \[Unreleased\].*$', "## [Unreleased]`n`n## [$NewVersion] $dash $today"
         $updated = $true
     }
     # 2) Nebo nahradit ## [verze] bez data za ## [verze] - datum

@@ -487,9 +487,13 @@ try {
     if (!is_string($changelogContents)) {
         fail('Release smoke ZIP does not contain CHANGELOG.md contents.');
     }
+    $normalizedChangelogContents = str_replace(["\r\n", "\r"], "\n", $changelogContents);
     if (str_contains($releaseOutput, 'Dry run: ZIP použije náhled aktualizovaného CHANGELOG.md.')) {
         if (!str_contains($changelogContents, '## [' . $expectedVersion . ']')) {
             fail('Release smoke ZIP does not contain the expected CHANGELOG preview.');
+        }
+        if (!str_contains($normalizedChangelogContents, "## [Unreleased]\n\n## [" . $expectedVersion . ']')) {
+            fail('Release smoke ZIP does not keep a fresh Unreleased section above the released version.');
         }
     } elseif ($changelogContents !== $snapshotChangelog) {
         fail('Release smoke ZIP changed CHANGELOG.md even though dry-run reported no changelog preview.');

@@ -7449,6 +7449,7 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, '[switch]$SkipCi')
         && str_contains($releaseScriptSource, '[switch]$DryRun')
         && str_contains($releaseScriptSource, 'function Get-UpdatedChangelogContent')
+        && str_contains($releaseScriptSource, '## [Unreleased]`n`n## [$NewVersion]')
         && str_contains($releaseScriptSource, "'ci:basic'")
         && str_contains($releaseScriptSource, "'ci:full'")
         && str_contains($releaseScriptSource, 'New-ReleaseZip')
@@ -7496,6 +7497,7 @@ $foundationChecks = [
         && str_contains($releaseSmokeSource, 'ConvertTo-Json')
         && str_contains($releaseSmokeSource, 'docs/admin-guide.md')
         && str_contains($releaseSmokeSource, 'themes/default/theme.json')
+        && str_contains($releaseSmokeSource, 'Release smoke ZIP does not keep a fresh Unreleased section')
         && str_contains($releaseSmokeSource, 'Source archive unexpectedly contains build tooling')
         && str_contains($releaseSmokeSource, 'Source archive unexpectedly contains docs content')
         && str_contains($releaseSmokeSource, 'Release smoke OK'),

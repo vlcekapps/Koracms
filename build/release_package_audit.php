@@ -55,6 +55,7 @@ if (!is_file($releaseScriptPath)) {
         'Require-Command -Name composer',
         'function Invoke-ReleaseCi',
         'function Get-UpdatedChangelogContent',
+        '## [Unreleased]`n`n## [$NewVersion]',
         "'ci:basic'",
         "'ci:full'",
         '& composer $scriptName',
