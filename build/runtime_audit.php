@@ -23,6 +23,7 @@ $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
 $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php');
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
+$webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
 $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
@@ -7667,13 +7668,18 @@ $foundationChecks = [
         && !str_contains($revisionsSource, 'error_log(')
         && !str_contains($widgetsSource, 'error_log(')
         && !str_contains($mediaLibrarySource, 'error_log(')
+        && !str_contains($webhooksSource, 'error_log(')
         && str_contains($uiSource, 'function contentLockLogError')
         && str_contains($uiSource, "koraLog('warning', 'content lock operation failed'")
         && str_contains($revisionsSource, 'function revisionLogError')
         && str_contains($revisionsSource, "koraLog('warning', 'revision operation failed'")
         && str_contains($widgetsSource, 'function widgetLogError')
         && str_contains($widgetsSource, "koraLog('warning', 'widget operation failed'")
-        && str_contains($mediaLibrarySource, "koraLog('warning', 'media usage scan failed'"),
+        && str_contains($mediaLibrarySource, "koraLog('warning', 'media usage scan failed'")
+        && str_contains($webhooksSource, 'function formWebhookSafeLogContext')
+        && str_contains($webhooksSource, "koraLog('warning', 'form webhook dispatch failed'")
+        && !str_contains($webhooksSource, 'responsePreview')
+        && !str_contains($webhooksSource, "' body='"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {

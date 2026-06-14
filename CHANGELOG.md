@@ -31,6 +31,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Provozní diagnostika veřejných akcí** – kontakt, chat, veřejné formuláře, vývěska, stažení souboru a newsletterové potvrzovací odkazy nově používají stejné strukturované logování obnovitelných chyb bez ukládání obsahu zpráv, tokenů nebo e-mailových adres do kontextu logu.
 - **Provozní diagnostika administrace** – vyhledávání obsahu pro media picker, přehled formulářů a statistiky nově zapisují obnovitelné chyby přes strukturované `koraLog()` záznamy s bezpečným kontextem selhaného zdroje nebo sekce místo volného textu v PHP logu.
 - **Provozní diagnostika sdílených helperů** – zámky obsahu, revize, vykreslování widgetů a dopočítávání použití médií nově používají strukturované logování obnovitelných chyb bez ukládání samotného obsahu článků, formulářů nebo widgetů do logu.
+- **Bezpečnější diagnostika formulářových webhooků** – neúspěšné webhooky nově logují jen důvod selhání, event, ID formuláře, host endpointu a HTTP stav; celé webhook URL, query string ani tělo odpovědi protistrany se do PHP logu neukládají.
 
 ## [3.4.7] – 2026-05-22
 

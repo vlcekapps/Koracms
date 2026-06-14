@@ -271,6 +271,45 @@ function formWebhookSignature(string $secret, string $payload): string
 
 /**
  * @param array<string,mixed> $form
+ * @return array{
+ *   form_id:int,
+ *   event:string,
+ *   endpoint_scheme:string,
+ *   endpoint_host:string,
+ *   endpoint_port:int|null,
+ *   endpoint_has_path:bool
+ * }
+ */
+function formWebhookSafeLogContext(array $form, string $event, string $webhookUrl): array
+{
+    $parts = parse_url($webhookUrl);
+    $path = is_array($parts) ? trim((string)($parts['path'] ?? '')) : '';
+
+    return [
+        'form_id' => (int)($form['id'] ?? 0),
+        'event' => $event,
+        'endpoint_scheme' => is_array($parts) ? strtolower((string)($parts['scheme'] ?? '')) : '',
+        'endpoint_host' => is_array($parts) ? strtolower((string)($parts['host'] ?? '')) : '',
+        'endpoint_port' => is_array($parts) && isset($parts['port']) ? (int)$parts['port'] : null,
+        'endpoint_has_path' => $path !== '' && $path !== '/',
+    ];
+}
+
+/**
+ * @param array<string,mixed> $form
+ * @param array<string,mixed> $context
+ */
+function formWebhookLogFailure(array $form, string $event, string $webhookUrl, string $reason, array $context = []): void
+{
+    koraLog('warning', 'form webhook dispatch failed', array_merge(
+        formWebhookSafeLogContext($form, $event, $webhookUrl),
+        ['reason' => $reason],
+        $context
+    ));
+}
+
+/**
+ * @param array<string,mixed> $form
  * @param array<string,mixed> $submission
  * @param array<string,array<string,mixed>> $fieldsByName
  * @param array<string,mixed> $submissionData
@@ -298,7 +337,7 @@ function dispatchFormWebhook(
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
     );
     if (!is_string($payload)) {
-        error_log('form webhook failed: payload encoding error');
+        formWebhookLogFailure($form, $event, $webhookUrl, 'payload_encoding');
         return false;
     }
 
@@ -329,14 +368,16 @@ function dispatchFormWebhook(
     $response = @file_get_contents($webhookUrl, false, $contextOptions);
     $statusLine = $http_response_header[0] ?? '';
     if (!preg_match('#\s(\d{3})\s#', $statusLine, $matches)) {
-        error_log('form webhook failed: invalid HTTP response for ' . $event . ' to ' . $webhookUrl);
+        formWebhookLogFailure($form, $event, $webhookUrl, 'invalid_http_response');
         return false;
     }
 
     $statusCode = (int)$matches[1];
     if ($statusCode < 200 || $statusCode >= 300) {
-        $responsePreview = is_string($response) ? mb_strimwidth(trim($response), 0, 200, '…', 'UTF-8') : '';
-        error_log('form webhook failed: ' . $event . ' returned HTTP ' . $statusCode . ' for ' . $webhookUrl . ($responsePreview !== '' ? ' body=' . $responsePreview : ''));
+        formWebhookLogFailure($form, $event, $webhookUrl, 'http_status', [
+            'status_code' => $statusCode,
+            'response_body_present' => is_string($response) && trim($response) !== '',
+        ]);
         return false;
     }
 
