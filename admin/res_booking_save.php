@@ -128,7 +128,12 @@ if ($email) {
     $body .= "\nDěkujeme.\n";
 
     if (!sendMail($email, $subject, $body)) {
-        error_log("sendMail FAILED: změna stavu rezervace pro {$email}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'reservation_status_changed',
+            'booking_id' => $bookingId,
+            'status' => $newStatus,
+            'recipient_domain' => mailEmailDomain((string)$email),
+        ]);
     }
 }
 

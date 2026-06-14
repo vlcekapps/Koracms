@@ -74,7 +74,11 @@ if ($email !== '') {
         . "Čas: " . substr($booking['start_time'], 0, 5) . " – " . substr($booking['end_time'], 0, 5) . "\n\n"
         . "Pokud máte dotazy, kontaktujte nás.";
     if (!sendMail($email, 'Rezervace zrušena – ' . $booking['resource_name'], $mailBody)) {
-        error_log("sendMail FAILED: zrušení rezervace pro {$email}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'reservation_cancelled',
+            'booking_id' => $bookingId,
+            'recipient_domain' => mailEmailDomain((string)$email),
+        ]);
     }
 }
 

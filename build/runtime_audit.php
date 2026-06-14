@@ -24,6 +24,8 @@ $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php')
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
+$mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
+$commentsSource = (string) file_get_contents(__DIR__ . '/../lib/comments.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
 $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
@@ -40,6 +42,10 @@ $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
 $formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
 $subscribeConfirmSource = (string) file_get_contents(__DIR__ . '/../subscribe_confirm.php');
 $unsubscribeSource = (string) file_get_contents(__DIR__ . '/../unsubscribe.php');
+$passwordResetSource = (string) file_get_contents(__DIR__ . '/../reset_password.php');
+$reservationsBookSource = (string) file_get_contents(__DIR__ . '/../reservations/book.php');
+$reservationsCancelSource = (string) file_get_contents(__DIR__ . '/../reservations/cancel.php');
+$reservationsCancelBookingSource = (string) file_get_contents(__DIR__ . '/../reservations/cancel_booking.php');
 $feedSource = (string) file_get_contents(__DIR__ . '/../feed.php');
 $podcastFeedSource = (string) file_get_contents(__DIR__ . '/../podcast/feed.php');
 $eventIcsSource = (string) file_get_contents(__DIR__ . '/../events/ics.php');
@@ -80,6 +86,7 @@ $adminContentLockRefreshSource = (string) file_get_contents(__DIR__ . '/../admin
 $adminReorderAjaxSource = (string) file_get_contents(__DIR__ . '/../admin/reorder_ajax.php');
 $adminGalleryExportZipSource = (string) file_get_contents(__DIR__ . '/../admin/gallery_export_zip.php');
 $adminThemesSource = (string) file_get_contents(__DIR__ . '/../admin/themes.php');
+$adminResBookingSaveSource = (string) file_get_contents(__DIR__ . '/../admin/res_booking_save.php');
 
 $runtimeAuditOriginalModuleSettings = [
     'module_news' => getSetting('module_news', '0'),
@@ -7680,6 +7687,26 @@ $foundationChecks = [
         && str_contains($webhooksSource, "koraLog('warning', 'form webhook dispatch failed'")
         && !str_contains($webhooksSource, 'responsePreview')
         && !str_contains($webhooksSource, "' body='"),
+    'mail failures avoid raw recipient and SMTP response logs' => !str_contains($mailSource, 'error_log(')
+        && str_contains($mailSource, 'function mailLogFailure')
+        && str_contains($mailSource, "koraLog('warning', 'mail delivery failed'")
+        && str_contains($mailSource, 'function mailEmailDomain')
+        && str_contains($mailSource, 'function mailSmtpResponseCode')
+        && !str_contains($mailSource, 'SMTP said:')
+        && !str_contains($mailSource, 'got: {$resp}')
+        && !str_contains($mailSource, 'pro {$recipient}')
+        && !str_contains($commentsSource, 'sendMail FAILED')
+        && !str_contains($passwordResetSource, 'sendMail FAILED')
+        && !str_contains($reservationsBookSource, 'sendMail FAILED')
+        && !str_contains($reservationsCancelSource, 'sendMail FAILED')
+        && !str_contains($reservationsCancelBookingSource, 'sendMail FAILED')
+        && !str_contains($adminResBookingSaveSource, 'sendMail FAILED')
+        && str_contains($commentsSource, "mailLogFailure('notification_failed'")
+        && str_contains($passwordResetSource, "mailLogFailure('notification_failed'")
+        && str_contains($reservationsBookSource, "mailLogFailure('notification_failed'")
+        && str_contains($reservationsCancelSource, "mailLogFailure('notification_failed'")
+        && str_contains($reservationsCancelBookingSource, "mailLogFailure('notification_failed'")
+        && str_contains($adminResBookingSaveSource, "mailLogFailure('notification_failed'"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {

@@ -60,6 +60,34 @@ function mailSanitizeHeaderValue(string $value): string
     return trim((string)preg_replace('/[\r\n]+/', ' ', $value));
 }
 
+function mailEmailDomain(string $email): string
+{
+    $email = trim($email);
+    $atPos = strrpos($email, '@');
+    if ($atPos === false) {
+        return '';
+    }
+
+    return strtolower(substr($email, $atPos + 1));
+}
+
+function mailSmtpResponseCode(string $response): string
+{
+    if (preg_match('/^\s*(\d{3})\b/m', $response, $match) === 1) {
+        return $match[1];
+    }
+
+    return '';
+}
+
+/**
+ * @param array<string,mixed> $context
+ */
+function mailLogFailure(string $reason, array $context = []): void
+{
+    koraLog('warning', 'mail delivery failed', array_merge(['reason' => $reason], $context));
+}
+
 function mailNormalizeEol(string $value): string
 {
     return str_replace(["\r\n", "\r"], "\n", $value);
@@ -173,7 +201,10 @@ function sendMail(string $to, string $subject, string $body, array $options = []
     $safeReplyToName = mailSanitizeHeaderValue((string)($options['reply_to_name'] ?? ''));
 
     if (!filter_var($safeFrom, FILTER_VALIDATE_EMAIL) || !filter_var($safeTo, FILTER_VALIDATE_EMAIL)) {
-        error_log('sendMail FAILED: invalid sender or recipient address');
+        mailLogFailure('invalid_address', [
+            'from_domain' => mailEmailDomain($safeFrom),
+            'to_domain' => mailEmailDomain($safeTo),
+        ]);
         return false;
     }
     if ($safeReplyTo !== '' && !filter_var($safeReplyTo, FILTER_VALIDATE_EMAIL)) {
@@ -201,7 +232,12 @@ function sendMail(string $to, string $subject, string $body, array $options = []
     $target = ($smtpSecure === 'ssl') ? 'ssl://' . $smtpHost : $smtpHost;
     $smtp = @fsockopen($target, $smtpPort, $errno, $errstr, 5);
     if (!$smtp) {
-        error_log("sendMail FAILED: connect {$target}:{$smtpPort} – {$errstr}");
+        mailLogFailure('smtp_connect', [
+            'smtp_host' => mailSanitizeHeaderValue((string)$smtpHost),
+            'smtp_port' => $smtpPort,
+            'smtp_secure' => (string)$smtpSecure,
+            'error_no' => $errno,
+        ]);
         return false;
     }
 
@@ -217,10 +253,17 @@ function sendMail(string $to, string $subject, string $body, array $options = []
         return $response;
     };
 
-    $expect = function (string $prefix) use ($read, &$smtp): ?string {
+    $expect = function (string $prefix) use ($read, &$smtp, $smtpHost, $smtpPort, $smtpSecure): ?string {
         $resp = $read();
         if (!str_starts_with(trim($resp), $prefix)) {
-            error_log("sendMail FAILED: expected {$prefix}, got: {$resp}");
+            mailLogFailure('smtp_unexpected_response', [
+                'expected_prefix' => $prefix,
+                'smtp_code' => mailSmtpResponseCode($resp),
+                'smtp_host' => mailSanitizeHeaderValue((string)$smtpHost),
+                'smtp_port' => $smtpPort,
+                'smtp_secure' => (string)$smtpSecure,
+                'response_present' => trim($resp) !== '',
+            ]);
             fwrite($smtp, "QUIT\r\n");
             fclose($smtp);
             return null;
@@ -244,7 +287,11 @@ function sendMail(string $to, string $subject, string $body, array $options = []
             return false;
         }
         if (!stream_socket_enable_crypto($smtp, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
-            error_log("sendMail FAILED: STARTTLS handshake selhalo");
+            mailLogFailure('starttls_handshake', [
+                'smtp_host' => mailSanitizeHeaderValue((string)$smtpHost),
+                'smtp_port' => $smtpPort,
+                'smtp_secure' => (string)$smtpSecure,
+            ]);
             fclose($smtp);
             return false;
         }
@@ -304,7 +351,13 @@ function sendMail(string $to, string $subject, string $body, array $options = []
 
     $ok = str_starts_with(trim($dataResp), '250');
     if (!$ok) {
-        error_log("sendMail FAILED: SMTP said: {$dataResp}");
+        mailLogFailure('smtp_data_response', [
+            'smtp_code' => mailSmtpResponseCode($dataResp),
+            'smtp_host' => mailSanitizeHeaderValue((string)$smtpHost),
+            'smtp_port' => $smtpPort,
+            'smtp_secure' => (string)$smtpSecure,
+            'response_present' => trim($dataResp) !== '',
+        ]);
     }
     return $ok;
 }
@@ -370,7 +423,10 @@ function notifyFormSubmission(
     }
 
     if (!sendMail($recipient, $subject, $body)) {
-        error_log("sendMail FAILED: notifikace formuláře pro {$recipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'form_submission',
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
     }
 }
 
@@ -413,7 +469,11 @@ function sendFormSubmitterConfirmation(array $form, array $fieldsByName, array $
     $body = formRenderTemplate($bodyTemplate, formTemplatePlaceholderMap($form, $fieldsByName, $submissionData, $extraPlaceholders));
 
     if (!sendMail($recipient, $subject, $body)) {
-        error_log("sendMail FAILED: potvrzení odesílateli formuláře pro {$recipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'form_submitter_confirmation',
+            'form_id' => (int)($form['id'] ?? 0),
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
         return false;
     }
 
@@ -434,7 +494,10 @@ function sendFormSubmissionReply(string $recipient, string $subject, string $mes
     }
 
     if (!sendMail($normalizedRecipient, $normalizedSubject, $normalizedMessage)) {
-        error_log("sendMail FAILED: odpověď odesílateli formuláře pro {$normalizedRecipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'form_submission_reply',
+            'recipient_domain' => mailEmailDomain($normalizedRecipient),
+        ]);
         return false;
     }
 
@@ -462,7 +525,10 @@ function notifyPendingContent(string $moduleLabel, string $title, string $adminP
         . "Ke schválení: {$adminUrl}\n";
 
     if (!sendMail($recipient, "Obsah čeká na schválení: {$title} – {$siteName}", $body)) {
-        error_log("sendMail FAILED: notifikace pending obsahu pro {$recipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'pending_content',
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
     }
 }
 
@@ -488,6 +554,9 @@ function notifyChatMessage(string $authorName, string $message): void
         . "Správa chatu: {$adminUrl}\n";
 
     if (!sendMail($recipient, "Nová zpráva v chatu – {$siteName}", $body)) {
-        error_log("sendMail FAILED: notifikace chatu pro {$recipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'chat_message',
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
     }
 }

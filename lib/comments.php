@@ -288,7 +288,11 @@ function notifyAdminAboutPendingComment(array $article, string $authorName, stri
         . "Moderace: {$adminUrl}\n";
 
     if (!sendMail($recipient, 'Nový komentář čeká na schválení', $message)) {
-        error_log("sendMail FAILED: notifikace o komentáři pro {$recipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'comment_pending',
+            'article_id' => (int)($article['id'] ?? 0),
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
     }
 }
 
@@ -372,7 +376,11 @@ function notifyAuthorAboutApprovedComment(array $comment): void
         . "\n\nDěkujeme.\n";
 
     if (!sendMail($recipient, 'Váš komentář byl schválen', $message)) {
-        error_log("sendMail FAILED: notifikace o schválení komentáře pro {$recipient}");
+        mailLogFailure('notification_failed', [
+            'notification' => 'comment_approved',
+            'article_id' => $articleId,
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
     }
 }
 

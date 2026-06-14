@@ -50,7 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                           . "Pokud jste o obnovení nežádali, tento email ignorujte.\n\n"
                           . "— " . $siteName;
                 if (!sendMail($userRow['email'], $subject, $body)) {
-                    error_log("sendMail FAILED: reset hesla pro {$userRow['email']}");
+                    mailLogFailure('notification_failed', [
+                        'notification' => 'password_reset',
+                        'user_id' => (int)$userRow['id'],
+                        'recipient_domain' => mailEmailDomain((string)$userRow['email']),
+                    ]);
                 }
             }
 

@@ -345,7 +345,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             . $cancelUrl . "\n\n"
                             . "Děkujeme za rezervaci.";
                         if (!sendMail($guestEmail, 'Rezervace – ' . $resource['name'], $mailBody)) {
-                            error_log("sendMail FAILED: potvrzení rezervace pro {$guestEmail}");
+                            mailLogFailure('notification_failed', [
+                                'notification' => 'reservation_created',
+                                'resource_id' => $resId,
+                                'recipient_domain' => mailEmailDomain($guestEmail),
+                            ]);
                         }
                     }
 
