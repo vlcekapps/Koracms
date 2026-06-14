@@ -40,7 +40,11 @@ try {
     $stmt->execute($params);
     $forms = $stmt->fetchAll();
 } catch (\PDOException $e) {
-    error_log('admin/forms: ' . $e->getMessage());
+    koraLog('warning', 'admin forms overview query failed', [
+        'status_filter' => $statusFilter,
+        'has_query' => $query !== '',
+        'exception' => $e,
+    ]);
 }
 
 adminHeader('Formuláře');

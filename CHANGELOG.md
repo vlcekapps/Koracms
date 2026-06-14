@@ -29,6 +29,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Release workflow** – vydání verze nově v changelogu ponechá novou prázdnou sekci `Unreleased` nad právě vydanou verzí, takže další vývoj může rovnou zapisovat změny bez ruční přípravy changelogu.
 - **Provozní diagnostika veřejných stránek** – blog index, detail článku, vyhledávání a sitemapa nově logují dílčí obnovitelné chyby přes strukturované `koraLog()` záznamy s `request_id` a kontextem selhaného zdroje místo volného textu v PHP logu.
 - **Provozní diagnostika veřejných akcí** – kontakt, chat, veřejné formuláře, vývěska, stažení souboru a newsletterové potvrzovací odkazy nově používají stejné strukturované logování obnovitelných chyb bez ukládání obsahu zpráv, tokenů nebo e-mailových adres do kontextu logu.
+- **Provozní diagnostika administrace** – vyhledávání obsahu pro media picker, přehled formulářů a statistiky nově zapisují obnovitelné chyby přes strukturované `koraLog()` záznamy s bezpečným kontextem selhaného zdroje nebo sekce místo volného textu v PHP logu.
 
 ## [3.4.7] – 2026-05-22
 

@@ -37,6 +37,11 @@ function contentReferenceAllowedTypes(): array
     ];
 }
 
+function contentReferenceLogSourceError(string $source, \Throwable $e): void
+{
+    koraLog('warning', 'content reference search source failed', ['source' => $source, 'exception' => $e]);
+}
+
 function contentReferenceTypeLabel(string $type): string
 {
     return match ($type) {
@@ -763,7 +768,7 @@ if (($requestedType === 'all' || $requestedType === 'blog') && isModuleEnabled('
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('blog', $e);
     }
 }
 
@@ -782,7 +787,7 @@ if ($requestedType === 'all' || $requestedType === 'page') {
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('page', $e);
     }
 }
 
@@ -801,7 +806,7 @@ if (($requestedType === 'all' || $requestedType === 'news') && isModuleEnabled('
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('news', $e);
     }
 }
 
@@ -820,7 +825,7 @@ if (($requestedType === 'all' || $requestedType === 'event') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('event', $e);
     }
 }
 
@@ -840,7 +845,7 @@ if (($requestedType === 'all' || $requestedType === 'faq') && isModuleEnabled('f
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('faq', $e);
     }
 }
 
@@ -877,7 +882,7 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('gallery', $e);
     }
 }
 
@@ -913,7 +918,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('podcast', $e);
     }
 }
 
@@ -933,7 +938,7 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('download', $e);
     }
 }
 
@@ -952,7 +957,7 @@ if (($requestedType === 'all' || $requestedType === 'forms') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('forms', $e);
     }
 }
 
@@ -973,7 +978,7 @@ if ($requestedType === 'all' || $requestedType === 'media') {
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('media', $e);
     }
 }
 
@@ -992,7 +997,7 @@ if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('place', $e);
     }
 }
 
@@ -1013,7 +1018,7 @@ if (($requestedType === 'all' || $requestedType === 'board') && isModuleEnabled(
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('board', $e);
     }
 }
 
@@ -1033,7 +1038,7 @@ if (($requestedType === 'all' || $requestedType === 'poll') && isModuleEnabled('
             $results[] = contentReferenceResult($row);
         }
     } catch (\PDOException $e) {
-        error_log('content_reference_search: ' . $e->getMessage());
+        contentReferenceLogSourceError('poll', $e);
     }
 }
 

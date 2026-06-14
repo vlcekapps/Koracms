@@ -69,6 +69,8 @@ $readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/
 $adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
+$adminFormsSource = (string) file_get_contents(__DIR__ . '/../admin/forms.php');
+$adminStatisticsSource = (string) file_get_contents(__DIR__ . '/../admin/statistics.php');
 $adminContentReferenceSearchSource = (string) file_get_contents(__DIR__ . '/../admin/content_reference_search.php');
 $adminContentLockRefreshSource = (string) file_get_contents(__DIR__ . '/../admin/content_lock_refresh.php');
 $adminReorderAjaxSource = (string) file_get_contents(__DIR__ . '/../admin/reorder_ajax.php');
@@ -7650,6 +7652,14 @@ $foundationChecks = [
         && str_contains($readOnlyDownloadsFileSource, "koraLog('warning', 'download count update failed'")
         && str_contains($subscribeConfirmSource, "koraLog('warning', 'newsletter confirmation failed'")
         && str_contains($unsubscribeSource, "koraLog('warning', 'newsletter unsubscribe failed'"),
+    'admin composite pages use structured recoverable error logs' => !str_contains($adminContentReferenceSearchSource, 'error_log(')
+        && !str_contains($adminFormsSource, 'error_log(')
+        && !str_contains($adminStatisticsSource, 'error_log(')
+        && str_contains($adminContentReferenceSearchSource, 'function contentReferenceLogSourceError')
+        && str_contains($adminContentReferenceSearchSource, "koraLog('warning', 'content reference search source failed'")
+        && str_contains($adminFormsSource, "koraLog('warning', 'admin forms overview query failed'")
+        && str_contains($adminStatisticsSource, 'function statisticsLogSectionError')
+        && str_contains($adminStatisticsSource, "koraLog('warning', 'admin statistics section query failed'"),
 ];
 foreach ($foundationChecks as $label => $ok) {
     if (!$ok) {

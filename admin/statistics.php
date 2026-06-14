@@ -24,6 +24,14 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
 
 $fmt = fn (int $n) => number_format($n, 0, ',', "\u{00a0}");
 
+function statisticsLogSectionError(string $section, \Throwable $e): void
+{
+    koraLog('warning', 'admin statistics section query failed', [
+        'section' => $section,
+        'exception' => $e,
+    ]);
+}
+
 // ── Návštěvnost ─────────────────────────────────────────────────────────────
 $vs = getVisitorStats();
 
@@ -55,7 +63,7 @@ try {
         $dailyData[$today] = ['views' => $todayViews, 'uv' => $todayUv];
     }
 } catch (\PDOException $e) {
-    error_log('admin/statistics: ' . $e->getMessage());
+    statisticsLogSectionError('daily_visits', $e);
 }
 
 // Doplnit chybějící dny a spočítat maximum
@@ -88,7 +96,7 @@ if (isModuleEnabled('blog')) {
              ORDER BY view_count DESC LIMIT 20"
         )->fetchAll();
     } catch (\PDOException $e) {
-        error_log('admin/statistics: ' . $e->getMessage());
+        statisticsLogSectionError('top_articles', $e);
     }
 }
 
@@ -105,7 +113,7 @@ if (isModuleEnabled('reservations')) {
              GROUP BY m ORDER BY m"
         )->fetchAll();
     } catch (\PDOException $e) {
-        error_log('admin/statistics: ' . $e->getMessage());
+        statisticsLogSectionError('reservations_monthly', $e);
     }
 
     try {
@@ -113,7 +121,7 @@ if (isModuleEnabled('reservations')) {
             "SELECT status, COUNT(*) AS cnt FROM cms_res_bookings GROUP BY status ORDER BY cnt DESC"
         )->fetchAll();
     } catch (\PDOException $e) {
-        error_log('admin/statistics: ' . $e->getMessage());
+        statisticsLogSectionError('reservations_status', $e);
     }
 
     try {
@@ -124,7 +132,7 @@ if (isModuleEnabled('reservations')) {
              GROUP BY b.resource_id ORDER BY cnt DESC LIMIT 10"
         )->fetchAll();
     } catch (\PDOException $e) {
-        error_log('admin/statistics: ' . $e->getMessage());
+        statisticsLogSectionError('reservations_top_resources', $e);
     }
 }
 
@@ -143,7 +151,7 @@ if (isModuleEnabled('newsletter')) {
              GROUP BY m ORDER BY m"
         )->fetchAll();
     } catch (\PDOException $e) {
-        error_log('admin/statistics: ' . $e->getMessage());
+        statisticsLogSectionError('newsletter', $e);
     }
 }
 
@@ -184,7 +192,7 @@ if (isModuleEnabled('contact')) {
              GROUP BY m ORDER BY m"
         )->fetchAll();
     } catch (\PDOException $e) {
-        error_log('admin/statistics: ' . $e->getMessage());
+        statisticsLogSectionError('contact', $e);
     }
 }
 
