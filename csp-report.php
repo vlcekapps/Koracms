@@ -117,6 +117,18 @@ function cspReportEntry(array $body): array
 }
 
 /**
+ * @param array<string,string|int> $entry
+ */
+function cspReportIsNoisyAllowedInlineStyle(array $entry): bool
+{
+    $blockedUri = strtolower((string)($entry['blocked_uri'] ?? ''));
+    $effectiveDirective = strtolower((string)($entry['effective_directive'] ?? ''));
+
+    return $blockedUri === 'inline'
+        && in_array($effectiveDirective, ['style-src', 'style-src-attr', 'style-src-elem'], true);
+}
+
+/**
  * @param array<string,string|int> $extra
  */
 function cspReportJsonResponse(int $statusCode, string $status, array $extra = []): void
@@ -160,17 +172,23 @@ if (!is_array($decodedReport)) {
     exit;
 }
 
+$reportEntry = cspReportEntry(cspReportBody($decodedReport));
+if (cspReportIsNoisyAllowedInlineStyle($reportEntry)) {
+    http_response_code(204);
+    exit;
+}
+
 $logDirectory = koraStoragePath('logs');
 if (koraEnsureDirectory($logDirectory)) {
-    $logLine = json_encode(cspReportEntry(cspReportBody($decodedReport)), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    $logLine = json_encode($reportEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     if ($logLine !== false) {
         $logPath = $logDirectory . DIRECTORY_SEPARATOR . 'csp_reports-' . date('Y-m-d') . '.jsonl';
         if (@file_put_contents($logPath, $logLine . PHP_EOL, FILE_APPEND | LOCK_EX) === false) {
-            koraLog('warning', 'CSP report could not be written', ['path' => $logPath]);
+            koraLog('warning', 'CSP report could not be written');
         }
     }
 } else {
-    koraLog('warning', 'CSP report log directory is not writable', ['path' => $logDirectory]);
+    koraLog('warning', 'CSP report log directory is not writable');
 }
 
 http_response_code(204);

@@ -144,7 +144,8 @@ if (function_exists('getSetting') && getSetting('ga4_measurement_id', '') !== ''
     $_CSP_EXTRA_SCRIPT = ' https://www.googletagmanager.com';
     $_CSP_EXTRA_CONNECT = ' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com';
 }
-$cspPolicy = "default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'{$_CSP_EXTRA_CONNECT}; media-src 'self' https: data: blob:; frame-src 'self' https:; frame-ancestors 'none'";
+$cspStylePolicy = "style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; style-src-elem 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; style-src-attr 'unsafe-inline'";
+$cspPolicy = "default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; {$cspStylePolicy}; img-src 'self' data:; font-src 'self'; connect-src 'self'{$_CSP_EXTRA_CONNECT}; media-src 'self' https: data: blob:; frame-src 'self' https:; frame-ancestors 'none'";
 header('Content-Security-Policy: ' . $cspPolicy);
 header('Content-Security-Policy-Report-Only: ' . $cspPolicy . '; report-uri ' . BASE_URL . '/csp-report.php');
 if ($isSocialPreviewCrawler) {

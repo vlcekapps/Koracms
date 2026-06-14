@@ -25,6 +25,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Výpis blogu v default šabloně** – karty článků na indexu blogu už se nenatahují podle nejvyšší karty v řádku, takže po odkazu „Číst článek“ nevzniká velké prázdné místo.
 
 ### Změněno
+- **Tišší CSP Report-Only logy** – CSP hlavička nově explicitně povoluje dnes používané inline styly přes `style-src-elem` a `style-src-attr` a `csp-report.php` staré inline-style reporty nezapisuje do JSONL, takže se privátní CSP logy neplní očekávaným šumem z administrace.
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.
 - **Release workflow** – vydání verze nově v changelogu ponechá novou prázdnou sekci `Unreleased` nad právě vydanou verzí, takže další vývoj může rovnou zapisovat změny bez ruční přípravy changelogu.
 - **Provozní diagnostika veřejných stránek** – blog index, detail článku, vyhledávání a sitemapa nově logují dílčí obnovitelné chyby přes strukturované `koraLog()` záznamy s `request_id` a kontextem selhaného zdroje místo volného textu v PHP logu.

@@ -582,6 +582,37 @@ try {
             $cspReportIssues[] = 'CSP report endpoint nevrátil 204';
         }
     }
+    $cspInlineStylePayload = json_encode(
+        [
+            'csp-report' => [
+                'document-uri' => $baseUrl . BASE_URL . '/',
+                'blocked-uri' => 'inline',
+                'violated-directive' => 'style-src-attr',
+                'effective-directive' => 'style-src-attr',
+                'source-file' => $baseUrl . BASE_URL . '/',
+                'line-number' => 1,
+                'column-number' => 1,
+                'disposition' => 'report',
+            ],
+        ],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+    $cspReportLogPath = koraStoragePath('logs') . DIRECTORY_SEPARATOR . 'csp_reports-' . date('Y-m-d') . '.jsonl';
+    clearstatcache(true, $cspReportLogPath);
+    $cspReportLogSizeBeforeNoise = is_file($cspReportLogPath) ? filesize($cspReportLogPath) : false;
+    if (!is_string($cspInlineStylePayload)) {
+        $cspReportIssues[] = 'nepodařilo se připravit CSP inline-style report payload';
+    } else {
+        $cspInlineStyleResponse = postRawUrl($baseUrl . BASE_URL . '/csp-report.php', $cspInlineStylePayload, 'application/csp-report', '', 0);
+        if (httpIntegrationStatusCode($cspInlineStyleResponse) !== 204) {
+            $cspReportIssues[] = 'CSP inline-style noise report endpoint nevrátil 204';
+        }
+        clearstatcache(true, $cspReportLogPath);
+        $cspReportLogSizeAfterNoise = is_file($cspReportLogPath) ? filesize($cspReportLogPath) : false;
+        if ($cspReportLogSizeBeforeNoise === false ? $cspReportLogSizeAfterNoise !== false : $cspReportLogSizeAfterNoise !== $cspReportLogSizeBeforeNoise) {
+            $cspReportIssues[] = 'CSP inline-style noise report se zapsal do JSONL logu';
+        }
+    }
     $cspReportGetResponse = fetchUrl($baseUrl . BASE_URL . '/csp-report.php', '', 0);
     $cspReportAllowHeaderFound = false;
     $cspReportCacheHeader = '';

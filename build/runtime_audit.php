@@ -9061,13 +9061,19 @@ if (!str_contains($authSource, "frame-src 'self' https:;")) {
 if (!str_contains($authSource, "frame-ancestors 'none'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP no longer protects pages against third-party framing';
 }
+if (!str_contains($authSource, 'style-src-elem \'self\' \'nonce-{$_CSP_NONCE}\' \'unsafe-inline\';') || !str_contains($authSource, "style-src-attr 'unsafe-inline'")) {
+    $contentSecurityPolicyIssues[] = 'auth CSP report policy would collect noisy inline style reports';
+}
 if (!str_contains($authSource, 'Content-Security-Policy-Report-Only') || !str_contains($authSource, 'report-uri ' . "' . BASE_URL . '" . '/csp-report.php')) {
     $contentSecurityPolicyIssues[] = 'auth CSP is missing report-only collection endpoint';
 }
-foreach (['function cspReportBody', 'function cspReportEntry', "rateLimit('csp_report', 120, 60", "koraStoragePath('logs')", "csp_reports-' . date('Y-m-d') . '.jsonl", 'JSON_INVALID_UTF8_SUBSTITUTE'] as $cspReportSnippet) {
+foreach (['function cspReportBody', 'function cspReportEntry', 'function cspReportIsNoisyAllowedInlineStyle', "rateLimit('csp_report', 120, 60", "koraStoragePath('logs')", "csp_reports-' . date('Y-m-d') . '.jsonl", 'JSON_INVALID_UTF8_SUBSTITUTE'] as $cspReportSnippet) {
     if (!str_contains($cspReportSource, $cspReportSnippet)) {
         $contentSecurityPolicyIssues[] = 'csp-report.php is missing guardrail snippet: ' . $cspReportSnippet;
     }
+}
+if (str_contains($cspReportSource, "['path' => \$logPath]") || str_contains($cspReportSource, "['path' => \$logDirectory]")) {
+    $contentSecurityPolicyIssues[] = 'csp-report.php logs raw filesystem paths on write failures';
 }
 $contentSecurityPolicyProbe = fetchUrl($baseUrl . '/', '', 0);
 $contentSecurityPolicyHeaderFound = false;
@@ -9078,6 +9084,9 @@ foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
         $contentSecurityPolicyReportOnlyHeaderFound = true;
         if (!str_contains($normalizedHeader, 'report-uri ' . BASE_URL . '/csp-report.php')) {
             $contentSecurityPolicyIssues[] = 'public CSP report-only header is missing csp-report.php report-uri';
+        }
+        if (!str_contains($normalizedHeader, "style-src-attr 'unsafe-inline'")) {
+            $contentSecurityPolicyIssues[] = 'public CSP report-only header would collect noisy inline style attribute reports';
         }
         continue;
     }
