@@ -725,6 +725,38 @@ function renderWidget(array $widget, string $zone = 'homepage'): string
     return '';
 }
 
+/**
+ * @param array<string,mixed> $widget
+ */
+function widgetHeadingId(array $widget): string
+{
+    $widgetId = (int)($widget['id'] ?? 0);
+    if ($widgetId > 0) {
+        return 'w-' . $widgetId . '-title';
+    }
+
+    $type = is_scalar($widget['widget_type'] ?? null) ? (string)$widget['widget_type'] : 'widget';
+    $title = is_scalar($widget['title'] ?? null) ? (string)$widget['title'] : '';
+
+    return 'w-auto-' . substr(hash('sha256', $type . '|' . $title), 0, 12) . '-title';
+}
+
+/**
+ * @param array<string,mixed> $widget
+ */
+function widgetCardStart(array $widget): string
+{
+    return '<section class="widget-card" aria-labelledby="' . h(widgetHeadingId($widget)) . '">';
+}
+
+/**
+ * @param array<string,mixed> $widget
+ */
+function widgetCardTitle(array $widget, string $titleHtml): string
+{
+    return '<h3 id="' . h(widgetHeadingId($widget)) . '" class="widget-card__title">' . $titleHtml . '</h3>';
+}
+
 // ──────────────── Widget render funkce ───────────────────────────────────────
 
 /**
@@ -741,7 +773,9 @@ function renderWidget_intro(array $widget, array $settings, string $zone): strin
         return '<section class="surface home-section" aria-label="' . h($widget['title'] ?: 'Úvod') . '">'
              . '<div class="prose">' . renderContent($content) . '</div></section>';
     }
-    return '<section class="widget-card" aria-label="' . h($widget['title'] ?: 'Úvod') . '">'
+    $title = h($widget['title'] ?: 'Úvod');
+    return widgetCardStart($widget)
+         . widgetCardTitle($widget, $title)
          . '<div class="prose">' . renderContent($content) . '</div></section>';
 }
 
@@ -790,8 +824,8 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
     $title = h($widget['title'] ?: 'Nejnovější články');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($articles as $a) {
             $createdAt = (string)($a['created_at'] ?? '');
             $articleText = (string)($a['perex'] ?? '') . ' ' . (string)($a['content'] ?? '');
@@ -852,8 +886,8 @@ function renderWidget_latest_news(array $widget, array $settings, string $zone):
     $title = h($widget['title'] ?: 'Novinky');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($items as $n) {
             $out .= '<li><a href="' . h(newsPublicPath($n)) . '">' . h($n['title']) . '</a></li>';
         }
@@ -902,8 +936,8 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
     $title = h($widget['title'] ?: 'Ke stažení');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($items as $download) {
             $meta = [];
             if ($download['version_label'] !== '') {
@@ -991,8 +1025,8 @@ function renderWidget_latest_faq(array $widget, array $settings, string $zone): 
     $title = h($widget['title'] ?: 'Nejčastější dotazy');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($items as $faq) {
             $out .= '<li><a href="' . h(faqPublicPath($faq)) . '">' . h($faq['question']) . '</a></li>';
         }
@@ -1046,8 +1080,8 @@ function renderWidget_latest_places(array $widget, array $settings, string $zone
     $title = h($widget['title'] ?: 'Zajímavá místa');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($places as $place) {
             $out .= '<li><a href="' . h(placePublicPath($place)) . '">' . h($place['name']) . '</a>';
             if ($place['locality'] !== '') {
@@ -1125,8 +1159,8 @@ function renderWidget_latest_podcast_episodes(array $widget, array $settings, st
     $title = h($widget['title'] ?: 'Nejnovější epizody');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($episodes as $episode) {
             $out .= '<li><a href="' . h(podcastEpisodePublicPath($episode)) . '">' . h($episode['title']) . '</a>';
             $out .= '<br><small>' . h((string)$episode['show_title']) . ' · ' . h(formatCzechDate((string)$episode['display_date'])) . '</small></li>';
@@ -1180,8 +1214,8 @@ function renderWidget_poll(array $widget, array $settings, string $zone): string
     $path = pollPublicPath($poll);
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        return '<section class="widget-card" aria-label="' . $title . '">'
-             . '<h3 class="widget-card__title">' . $title . '</h3>'
+        return widgetCardStart($widget)
+             . widgetCardTitle($widget, $title)
              . '<p><strong>' . h($poll['question']) . '</strong></p>'
              . '<p><a href="' . h($path) . '">Hlasovat</a></p></section>';
     }
@@ -1235,8 +1269,8 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
     }
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        return '<section class="widget-card" aria-label="' . $title . '">'
-             . '<h3 class="widget-card__title">' . $title . '</h3>'
+        return widgetCardStart($widget)
+             . widgetCardTitle($widget, $title)
              . $flashHtml
              . $formHtml
              . '</section>';
@@ -1273,8 +1307,8 @@ function renderWidget_board(array $widget, array $settings, string $zone): strin
     $title = h($widget['title'] ?: boardModulePublicLabel());
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($items as $b) {
             $out .= '<li><a href="' . h(boardPublicPath($b)) . '">' . h($b['title']) . '</a></li>';
         }
@@ -1323,8 +1357,8 @@ function renderWidget_upcoming_events(array $widget, array $settings, string $zo
     $title = h($widget['title'] ?: 'Nadcházející události');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3><ul class="widget-list">';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title) . '<ul class="widget-list">';
         foreach ($items as $e) {
             $out .= '<li><a href="' . h(eventPublicPath($e)) . '">' . h($e['title']) . '</a>'
                    . '<br><small>' . h($e['event_status_label']) . ' · ' . formatCzechDate($e['event_date']) . '</small></li>';
@@ -1357,8 +1391,8 @@ function renderWidget_custom_html(array $widget, array $settings, string $zone):
     $title = h($widget['title'] ?: 'Vlastní blok');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        return '<section class="widget-card" aria-label="' . $title . '">'
-             . '<h3 class="widget-card__title">' . $title . '</h3>'
+        return widgetCardStart($widget)
+             . widgetCardTitle($widget, $title)
              . '<div class="prose">' . renderContent($content) . '</div></section>';
     }
 
@@ -1398,8 +1432,8 @@ function renderWidget_search(array $widget, array $settings, string $zone): stri
              . '</section>';
     }
 
-    return '<section class="widget-card" aria-label="' . $title . '">'
-         . '<h3 class="widget-card__title">' . $title . '</h3>'
+    return widgetCardStart($widget)
+         . widgetCardTitle($widget, $title)
          . $formHtml
          . '</section>';
 }
@@ -1424,15 +1458,15 @@ function renderWidget_visitor_stats(array $widget, array $settings, string $zone
     ];
     $title = h($widget['title'] ?: 'Statistiky návštěvnosti');
     $counterClass = 'visitor-counter ' . ($zone === 'footer' ? 'visitor-counter--footer' : 'visitor-counter--surface');
-    $titleId = 'w-' . (int)$widget['id'] . '-title';
+    $titleId = widgetHeadingId($widget);
 
     if ($zone === 'homepage') {
-        $out = '<section class="surface home-section" aria-labelledby="' . $titleId . '">';
-        $out .= '<div class="section-heading"><div><h2 id="' . $titleId . '" class="section-title">' . $title . '</h2></div></div>';
+        $out = '<section class="surface home-section" aria-labelledby="' . h($titleId) . '">';
+        $out .= '<div class="section-heading"><div><h2 id="' . h($titleId) . '" class="section-title">' . $title . '</h2></div></div>';
         $out .= '<ul class="' . h($counterClass) . '">';
     } else {
-        $out = '<section class="widget-card" aria-labelledby="' . $titleId . '">';
-        $out .= '<h3 id="' . $titleId . '" class="widget-card__title">' . $title . '</h3>';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title);
         $out .= '<ul class="' . h($counterClass) . '">';
     }
 
@@ -1485,8 +1519,8 @@ function renderWidget_social_links(array $widget, array $settings, string $zone)
             . '</section>';
     }
 
-    return '<section class="widget-card" aria-label="' . $title . '">'
-        . '<h3 class="widget-card__title">' . $title . '</h3>'
+    return widgetCardStart($widget)
+        . widgetCardTitle($widget, $title)
         . $listHtml
         . '</section>';
 }
@@ -1503,12 +1537,13 @@ function renderWidget_contact_info(array $widget, array $settings, string $zone)
         return '';
     }
     $title = h($widget['title'] ?: 'Kontakt');
-    $tag = $zone === 'homepage' ? 'h2' : 'h3';
-    $wrapperStart = $zone === 'homepage'
-        ? '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
-        : '<section class="widget-card" aria-label="' . $title . '">';
-    $out = $wrapperStart;
-    $out .= '<' . $tag . ($zone === 'homepage' ? ' id="w-' . (int)$widget['id'] . '-title" class="section-title"' : ' class="widget-card__title"') . '>' . $title . '</' . $tag . '>';
+    if ($zone === 'homepage') {
+        $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
+        $out .= '<h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2>';
+    } else {
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title);
+    }
     if ($siteName !== '') {
         $out .= '<p><strong>' . h($siteName) . '</strong></p>';
     }
@@ -1570,8 +1605,8 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
         $title = h($useSourceSpecificTitle ? 'Zvýrazněná položka' : $rawWidgetTitle);
 
         if ($zone === 'sidebar' || $zone === 'footer') {
-            $out = '<section class="widget-card" aria-label="' . $title . '">';
-            $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+            $out = widgetCardStart($widget);
+            $out .= widgetCardTitle($widget, $title);
             $out .= '<p><a href="' . h(boardPublicPath($document)) . '"><strong>' . h($document['title']) . '</strong></a></p>';
             if ($document['excerpt_plain'] !== '') {
                 $out .= '<p>' . h(mb_substr((string)$document['excerpt_plain'], 0, 160)) . '</p>';
@@ -1604,8 +1639,8 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
         }
         $title = h($useSourceSpecificTitle ? 'Doporučený článek' : $rawWidgetTitle);
         if ($zone === 'sidebar' || $zone === 'footer') {
-            return '<section class="widget-card" aria-label="' . $title . '">'
-                 . '<h3 class="widget-card__title">' . $title . '</h3>'
+            return widgetCardStart($widget)
+                 . widgetCardTitle($widget, $title)
                  . '<p><a href="' . h(articlePublicPath($article)) . '"><strong>' . h($article['title']) . '</strong></a></p>'
                  . '</section>';
         }
@@ -1657,8 +1692,8 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     $title = h($widget['title'] ?: 'Galerie');
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title);
         $out .= '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem">';
         foreach ($photos as $p) {
             $out .= '<img src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.3rem">';
@@ -1709,8 +1744,8 @@ function renderWidget_selected_form(array $widget, array $settings, string $zone
     $description = trim((string)($form['description'] ?? ''));
 
     if ($zone === 'sidebar' || $zone === 'footer') {
-        $out = '<section class="widget-card" aria-label="' . $title . '">';
-        $out .= '<h3 class="widget-card__title">' . $title . '</h3>';
+        $out = widgetCardStart($widget);
+        $out .= widgetCardTitle($widget, $title);
         if ($description !== '') {
             $out .= '<p>' . h(mb_substr(strip_tags($description), 0, 180)) . '</p>';
         }

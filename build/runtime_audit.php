@@ -10983,6 +10983,13 @@ if (!str_contains($widgetSearchOne, 'role="search"')) {
 if (!str_contains($widgetSearchOne, '<fieldset class="widget-form-fieldset">') || !str_contains($widgetSearchOne, 'widget-search-legend-101')) {
     $widgetRenderIssues[] = 'search widget is missing fieldset/legend semantics';
 }
+if (!str_contains($widgetSearchOne, '<section class="widget-card" aria-labelledby="w-101-title">')
+    || !str_contains($widgetSearchOne, '<h3 id="w-101-title" class="widget-card__title">')) {
+    $widgetRenderIssues[] = 'sidebar/footer widget cards are missing heading-backed aria-labelledby semantics';
+}
+if (str_contains($widgetSearchOne, '<section class="widget-card" aria-label=')) {
+    $widgetRenderIssues[] = 'search widget still renders the legacy aria-label-only widget card';
+}
 if (!str_contains($blogWidgetLibSource, "\$settings['content'] ?? (\$settings['text'] ?? '')")) {
     $widgetRenderIssues[] = 'intro widget is missing settings-based HTML content fallback';
 }
@@ -11115,6 +11122,14 @@ if (!str_contains($widgetLibSource, 'a.perex, a.content') || !str_contains($widg
 }
 if (!str_contains($widgetLibSource, 'widget-list__meta') || !str_contains($widgetPublicCssSource, '.widget-list__meta')) {
     $widgetRenderIssues[] = 'latest articles widget is missing styled metadata under sidebar/footer links';
+}
+foreach (['function widgetHeadingId', 'function widgetCardStart', 'function widgetCardTitle'] as $widgetCardHelperFragment) {
+    if (!str_contains($widgetLibSource, $widgetCardHelperFragment)) {
+        $widgetRenderIssues[] = 'widget library is missing shared widget card helper: ' . $widgetCardHelperFragment;
+    }
+}
+if (str_contains($widgetLibSource, '<section class="widget-card" aria-label="')) {
+    $widgetRenderIssues[] = 'widget-card renderers still contain the legacy aria-label-only section pattern';
 }
 if (!str_contains($widgetSaveSource, "case 'social_links':")) {
     $widgetRenderIssues[] = 'widget save handler is missing social links settings persistence';
