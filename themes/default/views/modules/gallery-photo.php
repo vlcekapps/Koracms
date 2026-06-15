@@ -41,7 +41,8 @@ $photoCount = (int)($photoCount ?? 0);
       <?php endif; ?>
     </figure>
 
-    <nav class="button-row button-row--start" aria-label="Navigace mezi fotografiemi">
+    <h2 id="gallery-photo-nav-heading" class="sr-only">Navigace mezi fotografiemi</h2>
+    <nav class="button-row button-row--start" aria-labelledby="gallery-photo-nav-heading">
       <?php if ($prevPhoto !== null): ?>
         <a class="button-secondary" href="<?= h((string)$prevPhoto['public_path']) ?>">← Předchozí</a>
       <?php else: ?>

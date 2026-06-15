@@ -52,7 +52,8 @@ $showAuthorPanel = !empty($article['author_public_path'])
     </div>
 
     <?php if (!empty($tags)): ?>
-      <nav aria-label="Tagy článku">
+      <h2 id="blog-article-tags-heading" class="sr-only">Tagy článku</h2>
+      <nav aria-labelledby="blog-article-tags-heading">
         <ul class="chip-list">
           <?php foreach ($tags as $tag): ?>
             <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?tag=<?= rawurlencode($tag['slug']) ?>">#<?= h($tag['name']) ?></a></li>

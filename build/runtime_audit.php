@@ -4738,6 +4738,20 @@ foreach ($pages as $page) {
         }
     }
 
+    if ($page['label'] === 'public_profile') {
+        foreach ([
+            'id="profile-links-heading"',
+            'aria-labelledby="profile-links-heading"',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'public profile is missing heading-backed account navigation fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '<nav aria-label="')) {
+            $issues[] = 'public profile still uses aria-label-only account navigation';
+        }
+    }
+
     if ($page['label'] === 'news_index' && $newsCanonicalPath !== '' && !str_contains($result['body'], $newsCanonicalPath)) {
         $issues[] = 'news listing is missing detail links';
     }
@@ -4937,6 +4951,8 @@ foreach ($pages as $page) {
             'Další fotografie v albu',
             '<h2 id="gallery-photo-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>',
             '<nav aria-labelledby="gallery-photo-breadcrumb-heading">',
+            'id="gallery-photo-nav-heading"',
+            'aria-labelledby="gallery-photo-nav-heading"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'gallery photo is missing fragment: ' . $expectedFragment;
@@ -4944,6 +4960,9 @@ foreach ($pages as $page) {
         }
         if (str_contains($result['body'], '<nav aria-label="Drobečková navigace"')) {
             $issues[] = 'gallery photo still uses aria-label-only breadcrumb navigation';
+        }
+        if (str_contains($result['body'], 'aria-label="Navigace mezi fotografiemi"')) {
+            $issues[] = 'gallery photo still uses aria-label-only photo navigation';
         }
         if (str_contains($result['body'], '/uploads/gallery/')) {
             $issues[] = 'gallery photo still exposes uploads/gallery paths';
@@ -5294,10 +5313,15 @@ foreach ($pages as $page) {
         foreach ([
             'Zpět na přehled zdrojů',
             'Jak rezervace fungují',
+            'id="reservation-calendar-nav-heading"',
+            'aria-labelledby="reservation-calendar-nav-heading"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'reservations resource page is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'class="calendar-nav" aria-label="Navigace v kalendáři"')) {
+            $issues[] = 'reservations resource still uses aria-label-only calendar navigation';
         }
     }
 
@@ -9698,6 +9722,7 @@ if ($blogAdminIssues === []) {
 
 echo "=== blog_public_guardrails ===\n";
 $blogPublicIssues = [];
+$blogArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-article.php');
 $blogFeedProbe = fetchUrl($baseUrl . '/feed.php?blog=__neexistujici__', '', 0);
 if (!preg_match('/\s404\s/', $blogFeedProbe['status'])) {
     $blogPublicIssues[] = 'per-blog RSS feed does not return 404 for unknown blog slug';
@@ -9725,6 +9750,13 @@ if (
 }
 if (!str_contains($homeSource, "'url' => BASE_URL . '/'")) {
     $blogPublicIssues[] = 'homepage social metadata should canonicalize og:url to the site root, not index.php';
+}
+if (!str_contains($blogArticleViewSource, 'id="blog-article-tags-heading"')
+    || !str_contains($blogArticleViewSource, 'aria-labelledby="blog-article-tags-heading"')) {
+    $blogPublicIssues[] = 'blog article tags navigation is missing heading-backed aria-labelledby semantics';
+}
+if (str_contains($blogArticleViewSource, 'aria-label="Tagy článku"')) {
+    $blogPublicIssues[] = 'blog article tags navigation still uses aria-label-only semantics';
 }
 if (
     !str_contains($htaccessSource, 'KORA_SOCIAL_CRAWLER')
@@ -9812,6 +9844,23 @@ if (!str_contains($faqArticleViewSource, 'id="faq-breadcrumb-heading"')
 }
 if (str_contains($faqArticleViewSource, 'aria-label="Drobečková navigace"')) {
     $faqSourceIssues[] = 'public faq article still uses aria-label-only breadcrumb navigation';
+}
+foreach ([
+    'faq-category-nav-heading',
+    'faq-current-categories-heading',
+] as $faqNavHeadingId) {
+    if (!str_contains($faqIndexViewSource, 'id="' . $faqNavHeadingId . '"')
+        || !str_contains($faqIndexViewSource, 'aria-labelledby="' . $faqNavHeadingId . '"')) {
+        $faqSourceIssues[] = 'public faq navigation is missing heading-backed semantics for ' . $faqNavHeadingId;
+    }
+}
+foreach ([
+    'aria-label="Kategorie znalostní báze"',
+    'aria-label="Kategorie v aktuálním výběru"',
+] as $legacyFaqNavFragment) {
+    if (str_contains($faqIndexViewSource, $legacyFaqNavFragment)) {
+        $faqSourceIssues[] = 'public faq index still uses aria-label-only navigation: ' . $legacyFaqNavFragment;
+    }
 }
 if (!str_contains($faqIndexViewSource, 'listing-shell__pager')) {
     $faqSourceIssues[] = 'public faq template is missing pager output';

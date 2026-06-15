@@ -107,7 +107,8 @@
       </div>
     </div>
 
-    <nav class="calendar-nav" aria-label="Navigace v kalendáři">
+    <h3 id="reservation-calendar-nav-heading" class="sr-only">Navigace v kalendáři</h3>
+    <nav class="calendar-nav" aria-labelledby="reservation-calendar-nav-heading">
       <a class="button-secondary" href="<?= h($prevMonthUrl) ?>#reservation-calendar-title"><span aria-hidden="true">←</span> <?= h($prevMonthLabel) ?></a>
       <a class="button-secondary" href="<?= h($nextMonthUrl) ?>#reservation-calendar-title"><?= h($nextMonthLabel) ?> <span aria-hidden="true">→</span></a>
     </nav>

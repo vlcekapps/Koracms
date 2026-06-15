@@ -4,7 +4,8 @@
     <h1 id="profile-title" class="section-title section-title--hero">Můj profil</h1>
     <p class="section-subtitle">Spravujte své kontaktní údaje, profil a přístupové heslo.</p>
 
-    <nav aria-label="Uživatelské odkazy">
+    <h2 id="profile-links-heading" class="sr-only">Uživatelské odkazy</h2>
+    <nav aria-labelledby="profile-links-heading">
       <ul class="account-nav">
         <?php if ($showReservationsLink): ?>
           <li><a class="button-secondary" href="<?= BASE_URL ?>/reservations/my.php">Moje rezervace</a></li>

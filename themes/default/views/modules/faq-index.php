@@ -121,8 +121,8 @@ $renderCatNav = static function (array $tree, int $parentId, int $depth, ?int $a
     </form>
 
     <?php if (!empty($catTree[0])): ?>
-      <nav aria-label="Kategorie znalostní báze" class="kb-sidebar">
-        <h2 class="section-title section-title--compact">Kategorie</h2>
+      <nav aria-labelledby="faq-category-nav-heading" class="kb-sidebar">
+        <h2 id="faq-category-nav-heading" class="section-title section-title--compact">Kategorie</h2>
         <a href="<?= h($categoryRootUrl) ?>"<?= $filterCatId === null ? ' aria-current="page"' : '' ?> class="kb-tree__root-link">Vše</a>
         <?= $renderCatNav($catTree, 0, 0, $filterCatId, $renderCatNav) ?>
       </nav>
@@ -147,7 +147,8 @@ $renderCatNav = static function (array $tree, int $parentId, int $depth, ?int $a
       </p>
     <?php else: ?>
       <?php if ($multipleCategories): ?>
-        <nav aria-label="Kategorie v aktuálním výběru">
+        <h2 id="faq-current-categories-heading" class="sr-only">Kategorie v aktuálním výběru</h2>
+        <nav aria-labelledby="faq-current-categories-heading">
           <ul class="chip-list">
             <?php $categoryIndex = 0; foreach ($grouped as $categoryName => $items): ?>
               <li><a class="chip-link" href="#faq-category-<?= $categoryIndex ?>"><?= h($categoryName) ?> (<?= count($items) ?>)</a></li>
