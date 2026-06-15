@@ -10966,8 +10966,16 @@ if ($widgetRegistryIssues === []) {
 echo "=== widget_render_guardrails ===\n";
 $widgetRenderIssues = [];
 $widgetRenderNow = date('Y-m-d H:i:s');
+$widgetIntroHome = renderWidget_intro(['id' => 105, 'title' => 'Úvod'], ['content' => '<p>Audit intro widgetu.</p>'], 'homepage');
 $widgetSearchOne = renderWidget_search(['id' => 101, 'title' => 'Vyhledávání'], [], 'sidebar');
 $widgetSearchTwo = renderWidget_search(['id' => 202, 'title' => 'Vyhledávání'], [], 'sidebar');
+if (!str_contains($widgetIntroHome, '<section class="surface home-section" aria-labelledby="w-105-title">')
+    || !str_contains($widgetIntroHome, '<h2 id="w-105-title" class="sr-only">')) {
+    $widgetRenderIssues[] = 'homepage intro widget is missing a screen-reader heading with aria-labelledby';
+}
+if (str_contains($widgetIntroHome, '<section class="surface home-section" aria-label=')) {
+    $widgetRenderIssues[] = 'homepage intro widget still renders legacy aria-label-only section markup';
+}
 if (!str_contains($widgetSearchOne, 'widget-search-q-101')) {
     $widgetRenderIssues[] = 'search widget does not use unique input id for first instance';
 }

@@ -769,11 +769,13 @@ function renderWidget_intro(array $widget, array $settings, string $zone): strin
     if (trim($content) === '') {
         return '';
     }
+    $title = h($widget['title'] ?: 'Úvod');
     if ($zone === 'homepage') {
-        return '<section class="surface home-section" aria-label="' . h($widget['title'] ?: 'Úvod') . '">'
+        $titleId = widgetHeadingId($widget);
+        return '<section class="surface home-section" aria-labelledby="' . h($titleId) . '">'
+             . '<h2 id="' . h($titleId) . '" class="sr-only">' . $title . '</h2>'
              . '<div class="prose">' . renderContent($content) . '</div></section>';
     }
-    $title = h($widget['title'] ?: 'Úvod');
     return widgetCardStart($widget)
          . widgetCardTitle($widget, $title)
          . '<div class="prose">' . renderContent($content) . '</div></section>';

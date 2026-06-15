@@ -22,6 +22,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Úvodní widget na domovské stránce** – úvodní blok na homepage nově používá skutečný skrytý nadpis napojený přes `aria-labelledby` místo samotného `aria-label`, takže je dohledatelný i při navigaci čtečkou obrazovky podle nadpisů.
 - **Widgety v postranním panelu a patičce** – veřejné `widget-card` oblasti nově používají viditelné nadpisy přes `aria-labelledby` místo duplicitních `aria-label`, takže jsou lépe dohledatelné i při navigaci čtečkou obrazovky podle nadpisů.
 - **Výpis blogu v default šabloně** – karty článků na indexu blogu už se nenatahují podle nejvyšší karty v řádku, takže po odkazu „Číst článek“ nevzniká velké prázdné místo.
 - **Doporučený článek na blogu v default šabloně** – karta doporučeného článku nad výpisem už se nenatahuje na výšku celé blogové sekce, takže po odkazu „Číst článek“ nevzniká dlouhá prázdná plocha.

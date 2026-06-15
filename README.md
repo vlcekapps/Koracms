@@ -375,7 +375,7 @@ Widget `Náhled galerie` vykresluje poslední veřejné fotografie jako responzi
 
 Widget `Nejnovější články` zobrazuje u každého článku odkaz a pod ním metadata článku: datum a čas publikace, přibližnou dobu čtení a počet přečtení. Metadata se počítají ze stejného obsahu článku jako běžné veřejné výpisy, takže sidebar, footer i homepage widget dávají návštěvníkům konzistentní informaci.
 
-Widget `Úvodní text` je nově jediný podporovaný způsob, jak spravovat hlavní úvodní blok domovské stránky. Samostatné pole v `Obecných nastaveních` už neexistuje. Intro widget umí HTML i běžné snippety z HTML editoru a pokud zůstane prázdný, na webu se vůbec nevykreslí.
+Widget `Úvodní text` je nově jediný podporovaný způsob, jak spravovat hlavní úvodní blok domovské stránky. Samostatné pole v `Obecných nastaveních` už neexistuje. Intro widget umí HTML i běžné snippety z HTML editoru a pokud zůstane prázdný, na webu se vůbec nevykreslí. Na homepage má zároveň skrytý nadpis pro čtečky obrazovky, takže se dá najít i navigací po nadpisech bez změny vizuálního vzhledu.
 
 Widgety respektují stav modulů i skutečnou dostupnost obsahu. Vypnutý modul se nenabízí a aktivní widget se na webu nevyrenderuje ani tehdy, když pro něj není obsah, je navázaný na neexistující formulář nebo má prázdnou konfiguraci. Správa widgetů na to nově umí přímo upozornit textem `Na webu se teď nezobrazí: ...`.
 

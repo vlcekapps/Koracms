@@ -143,6 +143,7 @@ Platí tato pravidla:
 - homepage intro má jediný zdroj pravdy ve widgetech
 - widget `Úvodní text` umí HTML a stejné snippety jako ostatní obsahové bloky
 - pokud obsah widgetu zůstane prázdný, na webu se vůbec nevykreslí
+- na homepage má widget skrytý nadpis pro čtečky obrazovky, takže se dá najít i navigací po nadpisech bez vizuální změny stránky
 - po aktualizaci starší instalace `migrate.php` automaticky převede původní `home_intro` do intro widgetu na homepage
 
 Prakticky to znamená, že stejného výsledku jako dřívější pole v nastavení webu nově dosáhnete tím, že intro widget umístíte na homepage na požadovanou pozici.
