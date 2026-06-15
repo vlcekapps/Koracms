@@ -24,6 +24,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ### Opraveno
 - **Výpis blogu v default šabloně** – karty článků na indexu blogu už se nenatahují podle nejvyšší karty v řádku, takže po odkazu „Číst článek“ nevzniká velké prázdné místo.
 - **Doporučený článek na blogu v default šabloně** – karta doporučeného článku nad výpisem už se nenatahuje na výšku celé blogové sekce, takže po odkazu „Číst článek“ nevzniká dlouhá prázdná plocha.
+- **Karty v default šabloně** – základní karta už nepoužívá globální `height: 100%` a gridy zarovnávají položky nahoru, aby samostatné nebo vyšší karty nevytvářely zbytečnou prázdnou plochu pod obsahem.
 
 ### Změněno
 - **Tišší CSP Report-Only logy** – CSP hlavička nově explicitně povoluje dnes používané inline styly přes `style-src-elem` a `style-src-attr` a `csp-report.php` staré inline-style reporty nezapisuje do JSONL, takže se privátní CSP logy neplní očekávaným šumem z administrace.

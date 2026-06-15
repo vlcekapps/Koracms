@@ -11430,11 +11430,12 @@ if (str_contains($themeFormsShowViewSource, '$value = h((string)$rawValue);')
     || !str_contains($themeFormsShowViewSource, '$value = is_array($rawValue) ? \'\' : h((string)$rawValue);')) {
     $themeLayoutIssues[] = 'default theme forms renderer still casts checkbox group values to string';
 }
-if (!str_contains($themePublicCssSource, '.page-blog-index .card-grid')
-    || !str_contains($themePublicCssSource, 'align-items: start')
-    || !str_contains($themePublicCssSource, '.page-blog-index .card')
-    || !str_contains($themePublicCssSource, 'height: auto')) {
-    $themeLayoutIssues[] = 'default theme blog index cards can still stretch across the listing section';
+if (preg_match('/\.card-grid\s*\{[^}]*align-items:\s*start/s', $themePublicCssSource) !== 1
+    || preg_match('/\.card\s*\{[^}]*height:\s*auto/s', $themePublicCssSource) !== 1) {
+    $themeLayoutIssues[] = 'default theme cards can still stretch across grid or section height';
+}
+if (preg_match('/\.card\s*\{[^}]*height:\s*100%/s', $themePublicCssSource) === 1) {
+    $themeLayoutIssues[] = 'default theme base card still uses height: 100%';
 }
 foreach ([
     '.listing-filters',

@@ -382,6 +382,7 @@ body.theme-public textarea.form-control {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  align-items: start;
 }
 
 .card-grid--compact {
@@ -389,7 +390,7 @@ body.theme-public textarea.form-control {
 }
 
 .card {
-  height: 100%;
+  height: auto;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--border-soft);
@@ -878,10 +879,6 @@ body.theme-public textarea.form-control {
 
 .blog-featured-article {
   margin-bottom: 1.25rem;
-}
-
-.page-blog-index .card-grid {
-  align-items: start;
 }
 
 .page-blog-index .card {
