@@ -28,6 +28,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Karty v default šabloně** – základní karta už nepoužívá globální `height: 100%` a gridy zarovnávají položky nahoru, aby samostatné nebo vyšší karty nevytvářely zbytečnou prázdnou plochu pod obsahem.
 
 ### Změněno
+- **Widget náhledu galerie** – veřejný náhled fotografií ve widgetech už nepoužívá inline layout styly, ale sdílené třídy v default šabloně, takže je výstup lépe udržovatelný a méně šumí v CSP reportech.
 - **Tišší CSP Report-Only logy** – CSP hlavička nově explicitně povoluje dnes používané inline styly přes `style-src-elem` a `style-src-attr` a `csp-report.php` staré inline-style reporty nezapisuje do JSONL, takže se privátní CSP logy neplní očekávaným šumem z administrace.
 - **Retence CSP report logů** – pravidelný `cron.php` nově maže soubory `logs/csp_reports-*.jsonl` starší než 30 dní, aby se privátní report-only logy nehromadily bez omezení.
 - **Release workflow** – vydání verze nově v changelogu ponechá novou prázdnou sekci `Unreleased` nad právě vydanou verzí, takže další vývoj může rovnou zapisovat změny bez ruční přípravy changelogu.

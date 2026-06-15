@@ -1694,24 +1694,24 @@ function renderWidget_gallery_preview(array $widget, array $settings, string $zo
     if ($zone === 'sidebar' || $zone === 'footer') {
         $out = widgetCardStart($widget);
         $out .= widgetCardTitle($widget, $title);
-        $out .= '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem">';
+        $out .= '<div class="widget-gallery-grid widget-gallery-grid--compact">';
         foreach ($photos as $p) {
-            $out .= '<img src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.3rem">';
+            $out .= '<img class="widget-gallery-grid__image" src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy">';
         }
         $out .= '</div>';
-        $out .= '<p style="margin-top:.5rem"><a href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></p>';
+        $out .= '<p class="widget-gallery-link"><a href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></p>';
         $out .= '</section>';
         return $out;
     }
 
     $out = '<section class="surface home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">';
     $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
-    $out .= '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem">';
+    $out .= '<div class="widget-gallery-grid widget-gallery-grid--wide">';
     foreach ($photos as $p) {
-        $out .= '<img src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:.5rem">';
+        $out .= '<img class="widget-gallery-grid__image" src="' . h((string)$p['thumb_url']) . '" alt="' . h((string)($p['title'] ?? $p['label'])) . '" loading="lazy">';
     }
     $out .= '</div>';
-    $out .= '<div class="button-row button-row--start" style="margin-top:.75rem"><a class="button-secondary" href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></div>';
+    $out .= '<div class="button-row button-row--start widget-gallery-actions"><a class="button-secondary" href="' . BASE_URL . '/gallery/index.php">Celá galerie</a></div>';
     $out .= '</section>';
     return $out;
 }

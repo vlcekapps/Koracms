@@ -2461,6 +2461,39 @@ body.theme-public textarea.form-control {
   line-height: 1.45;
 }
 
+.widget-gallery-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.widget-gallery-grid--compact {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+}
+
+.widget-gallery-grid--wide {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.widget-gallery-grid__image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.widget-gallery-grid--compact .widget-gallery-grid__image {
+  border-radius: 0.3rem;
+}
+
+.widget-gallery-link {
+  margin-top: 0.5rem;
+}
+
+.widget-gallery-actions {
+  margin-top: 0.75rem;
+}
+
 .sidebar-widgets {
   display: grid;
   gap: 1rem;

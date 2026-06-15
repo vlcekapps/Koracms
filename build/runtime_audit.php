@@ -11131,6 +11131,22 @@ foreach (['function widgetHeadingId', 'function widgetCardStart', 'function widg
 if (str_contains($widgetLibSource, '<section class="widget-card" aria-label="')) {
     $widgetRenderIssues[] = 'widget-card renderers still contain the legacy aria-label-only section pattern';
 }
+foreach (['.widget-gallery-grid', '.widget-gallery-grid--compact', '.widget-gallery-grid--wide', '.widget-gallery-grid__image', '.widget-gallery-actions'] as $widgetGalleryCssSelector) {
+    if (!str_contains($widgetPublicCssSource, $widgetGalleryCssSelector)) {
+        $widgetRenderIssues[] = 'gallery widget CSS is missing selector ' . $widgetGalleryCssSelector;
+    }
+}
+foreach ([
+    'style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem"',
+    'style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem"',
+    'style="width:100%;aspect-ratio:1;object-fit:cover',
+    'style="margin-top:.5rem"',
+    'style="margin-top:.75rem"',
+] as $legacyGalleryWidgetInlineStyle) {
+    if (str_contains($widgetLibSource, $legacyGalleryWidgetInlineStyle)) {
+        $widgetRenderIssues[] = 'gallery widget still contains legacy inline layout style: ' . $legacyGalleryWidgetInlineStyle;
+    }
+}
 if (!str_contains($widgetSaveSource, "case 'social_links':")) {
     $widgetRenderIssues[] = 'widget save handler is missing social links settings persistence';
 }

@@ -371,6 +371,8 @@ Homepage, sidebar i footer se skládají přes widgetový systém. V administrac
 
 Widgety pokrývají typické potřeby: úvodní text, nejnovější články, novinky, události, anketa, newsletter, ke stažení, FAQ, místa, podcasty, galerie, vybraný formulář, vyhledávání, kontaktní údaje, sociální sítě, statistiky návštěvnosti a vlastní HTML.
 
+Widget `Náhled galerie` vykresluje poslední veřejné fotografie jako responzivní náhledový grid. Na homepage, v sidebaru i ve footeru používá stejné šablonové CSS třídy, takže výstup zůstává konzistentní a bez inline layout stylů.
+
 Widget `Nejnovější články` zobrazuje u každého článku odkaz a pod ním metadata článku: datum a čas publikace, přibližnou dobu čtení a počet přečtení. Metadata se počítají ze stejného obsahu článku jako běžné veřejné výpisy, takže sidebar, footer i homepage widget dávají návštěvníkům konzistentní informaci.
 
 Widget `Úvodní text` je nově jediný podporovaný způsob, jak spravovat hlavní úvodní blok domovské stránky. Samostatné pole v `Obecných nastaveních` už neexistuje. Intro widget umí HTML i běžné snippety z HTML editoru a pokud zůstane prázdný, na webu se vůbec nevykreslí.

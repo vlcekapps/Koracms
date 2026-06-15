@@ -773,7 +773,7 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 | Zajímavá místa | Výběr z turistického adresáře |
 | Nejnovější epizody podcastu | Poslední epizody |
 | Vybraný formulář | Konkrétní veřejný formulář (jen pokud existuje alespoň jeden aktivní) |
-| Náhled galerie | Výběr posledních veřejných fotografií |
+| Náhled galerie | Výběr posledních veřejných fotografií jako responzivní náhledový grid |
 | Vyhledávání | Vyhledávací pole a tlačítko `Hledat` |
 | Kontaktní údaje | Adresa, telefon, e-mail |
 | Sociální sítě | Odkazy na vyplněné profily Facebook / YouTube / Instagram / X |
@@ -781,6 +781,8 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 | Vlastní HTML | Libovolný HTML kód |
 
 Widgety respektují stav modulů – vypnutý modul se v nabídce widgetů nezobrazuje.
+
+Veřejné widgety v sidebaru a footeru používají skutečné viditelné nadpisy jako název oblasti. Náhled galerie se zároveň styluje přes šablonové CSS třídy, takže se do HTML nevkládají inline layout styly.
 
 Dialog `Nastavení` u widgetu nově používá skutečné `fieldset` a `legend` pro základní i typově specifická nastavení. Skrytá pole se při změně typu widgetu zároveň deaktivují, takže se nedostanou ani do tab orderu, ani do odeslaného formuláře.
 
