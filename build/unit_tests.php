@@ -290,6 +290,17 @@ assert_equals(1, $p['perPage'], 'perPage 0 treated as 1');
 $p = paginateArray(-5, 10, 1);
 assert_equals(0, $p['total'], 'negative total treated as 0');
 
+test_section('renderPager()');
+
+$pagerHtml = renderPager(2, 3, '/items?', 'Strankovani testu', 'Predchozi', 'Dalsi');
+assert_contains('class="sr-only">Strankovani testu</h2>', $pagerHtml, 'pager renders a real hidden heading');
+assert_contains('<nav aria-labelledby="pager-heading-', $pagerHtml, 'pager nav is labelled by heading');
+assert_false(str_contains($pagerHtml, '<nav aria-label='), 'pager no longer uses aria-label-only nav');
+assert_contains('rel="prev"', $pagerHtml, 'pager keeps previous relation');
+assert_contains('rel="next"', $pagerHtml, 'pager keeps next relation');
+assert_contains('class="sr-only">Stránkování</h2>', renderPager(1, 2, '/items?', ''), 'pager uses fallback heading when label is empty');
+assert_equals('', renderPager(1, 1, '/items?', 'Strankovani testu'), 'single-page pager stays empty');
+
 // ─── 9. formatFileSize() ───────────────────────────────────────────────────
 
 test_section('formatFileSize()');

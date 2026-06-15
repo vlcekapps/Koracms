@@ -46,7 +46,15 @@ function renderPager(int $page, int $totalPages, string $baseUrl, string $ariaLa
         return '';
     }
 
-    $out = '<nav aria-label="' . h($ariaLabel) . '">' . "\n" . '  <ul class="pager">' . "\n";
+    static $pagerInstance = 0;
+
+    $headingText = trim($ariaLabel) !== '' ? $ariaLabel : 'Stránkování';
+    $pagerInstance++;
+    $headingId = 'pager-heading-' . $pagerInstance . '-' . substr(sha1($headingText), 0, 8);
+
+    $out = '<h2 id="' . h($headingId) . '" class="sr-only">' . h($headingText) . '</h2>' . "\n"
+        . '<nav aria-labelledby="' . h($headingId) . '">' . "\n"
+        . '  <ul class="pager">' . "\n";
 
     if ($page > 1) {
         $out .= '    <li><a href="' . h($baseUrl) . 'strana=' . ($page - 1) . '" rel="prev"><span aria-hidden="true">&larr;</span> ' . h($prevLabel) . '</a></li>' . "\n";

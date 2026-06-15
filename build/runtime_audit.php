@@ -22,6 +22,7 @@ $backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php')
 $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
 $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php');
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
+$paginationSource = (string) file_get_contents(__DIR__ . '/../lib/pagination.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
@@ -7351,6 +7352,10 @@ $foundationChecks = [
         && !str_contains($httpServerRouterSource, 'Content-Security-Policy'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
+    'pagination helper uses heading-backed navigation' => str_contains($paginationSource, 'class="sr-only"')
+        && str_contains($paginationSource, 'aria-labelledby="')
+        && str_contains($paginationSource, 'pager-heading-')
+        && !str_contains($paginationSource, '<nav aria-label='),
     'composer schema validation is wired into local and GitHub basic CI' => str_contains($composerSource, '"test:composer-validate"')
         && str_contains($composerSource, 'composer validate --strict')
         && str_contains($composerSource, '@test:composer-validate')
