@@ -4,7 +4,8 @@ $backLabel = (string)($backLabel ?? 'Zpět do archivu');
 ?>
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="food-card-title">
-    <nav aria-label="Drobečková navigace">
+    <h2 id="food-card-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>
+    <nav aria-labelledby="food-card-breadcrumb-heading">
       <ol class="breadcrumb-list">
         <li><a href="<?= BASE_URL ?>/food/index.php">Jídelní lístek</a></li>
         <li><a href="<?= BASE_URL ?>/food/archive.php">Archiv</a></li>

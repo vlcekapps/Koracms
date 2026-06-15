@@ -6,7 +6,8 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
 ?>
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="podcast-episode-title">
-    <nav aria-label="Drobečková navigace">
+    <h2 id="podcast-episode-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>
+    <nav aria-labelledby="podcast-episode-breadcrumb-heading">
       <ol class="breadcrumb-list">
         <li><a href="<?= BASE_URL ?>/podcast/index.php">Podcasty</a></li>
         <li><a href="<?= h((string)$show['public_path']) ?>"><?= h((string)$show['title']) ?></a></li>

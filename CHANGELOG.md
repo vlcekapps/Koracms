@@ -22,6 +22,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Drobečková navigace veřejných detailů** – detail FAQ, jídelní lístek, album galerie, fotografie galerie a epizoda podcastu nově pojmenovávají breadcrumb navigaci skrytým nadpisem přes `aria-labelledby`; stejný guardrail platí i pro podmíněné drobečky ve FAQ indexu.
 - **Filtrační navigace veřejných výpisů** – přepínání rozsahu výpisu u vývěsky, akcí, FAQ, jídelních lístků a anket nově používá skutečné skryté nadpisy přes `aria-labelledby` místo samotných `aria-label`.
 - **Veřejné vyhledávací formuláře** – globální hledání, hledání v novinkách a hledání v anketách nově pojmenovávají `search` landmark skutečným skrytým nadpisem přes `aria-labelledby` místo samostatného `aria-label`.
 - **Úvodní widget na domovské stránce** – úvodní blok na homepage nově používá skutečný skrytý nadpis napojený přes `aria-labelledby` místo samotného `aria-label`, takže je dohledatelný i při navigaci čtečkou obrazovky podle nadpisů.

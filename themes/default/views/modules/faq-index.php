@@ -45,7 +45,8 @@ $renderCatNav = static function (array $tree, int $parentId, int $depth, ?int $a
     </div>
 
     <?php if ($breadcrumbs !== []): ?>
-      <nav aria-label="Drobečková navigace">
+      <h2 id="faq-index-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>
+      <nav aria-labelledby="faq-index-breadcrumb-heading">
         <ol class="breadcrumbs">
           <li><a href="<?= BASE_URL ?>/faq/index.php">Znalostní báze</a></li>
           <?php foreach ($breadcrumbs as $i => $crumb): ?>

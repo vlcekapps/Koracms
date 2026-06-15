@@ -4855,6 +4855,17 @@ foreach ($pages as $page) {
         if (!str_contains($result['body'], 'Zpět na aktuální lístek') && !str_contains($result['body'], 'Zpět do archivu')) {
             $issues[] = 'food card is missing back navigation';
         }
+        foreach ([
+            '<h2 id="food-card-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>',
+            '<nav aria-labelledby="food-card-breadcrumb-heading">',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'food card is missing heading-backed breadcrumb fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '<nav aria-label="Drobečková navigace"')) {
+            $issues[] = 'food card still uses aria-label-only breadcrumb navigation';
+        }
     }
 
     if ($page['label'] === 'faq_article') {
@@ -4899,10 +4910,15 @@ foreach ($pages as $page) {
         foreach ([
             'name="q"',
             'Hledat v albu',
+            '<h2 id="gallery-album-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>',
+            '<nav aria-labelledby="gallery-album-breadcrumb-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'gallery album is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], '<nav aria-label="Drobečková navigace"')) {
+            $issues[] = 'gallery album still uses aria-label-only breadcrumb navigation';
         }
         if (str_contains($result['body'], '/uploads/gallery/')) {
             $issues[] = 'gallery album still exposes uploads/gallery paths';
@@ -4919,10 +4935,15 @@ foreach ($pages as $page) {
         foreach ([
             'Kopírovat odkaz',
             'Další fotografie v albu',
+            '<h2 id="gallery-photo-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>',
+            '<nav aria-labelledby="gallery-photo-breadcrumb-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'gallery photo is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], '<nav aria-label="Drobečková navigace"')) {
+            $issues[] = 'gallery photo still uses aria-label-only breadcrumb navigation';
         }
         if (str_contains($result['body'], '/uploads/gallery/')) {
             $issues[] = 'gallery photo still exposes uploads/gallery paths';
@@ -5228,6 +5249,17 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'application/ld+json')) {
             $issues[] = 'podcast episode is missing structured data';
+        }
+        foreach ([
+            '<h2 id="podcast-episode-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>',
+            '<nav aria-labelledby="podcast-episode-breadcrumb-heading">',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'podcast episode is missing heading-backed breadcrumb fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], '<nav aria-label="Drobečková navigace"')) {
+            $issues[] = 'podcast episode still uses aria-label-only breadcrumb navigation';
         }
         if (str_contains($result['body'], '/uploads/podcasts/')) {
             $issues[] = 'podcast episode still exposes direct uploads paths';
@@ -9744,6 +9776,7 @@ $faqSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_save.p
 $faqFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_form.php');
 $faqIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/faq/index.php');
 $faqIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-index.php');
+$faqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-article.php');
 $faqItemSource = (string)file_get_contents(dirname(__DIR__) . '/faq/item.php');
 if (!str_contains($faqSaveSource, 'upsertPathRedirect')) {
     $faqSourceIssues[] = 'faq save is missing slug redirect persistence';
@@ -9765,6 +9798,20 @@ if (!str_contains($faqIndexControllerSource, 'faqStructuredData(')) {
 }
 if (!str_contains($faqIndexViewSource, '$displayModeLinks') || !str_contains($faqIndexViewSource, 'tab-nav')) {
     $faqSourceIssues[] = 'public faq template is missing inline display toggle';
+}
+if (!str_contains($faqIndexViewSource, 'id="faq-index-breadcrumb-heading"')
+    || !str_contains($faqIndexViewSource, 'aria-labelledby="faq-index-breadcrumb-heading"')) {
+    $faqSourceIssues[] = 'public faq index breadcrumbs are missing heading-backed aria-labelledby semantics';
+}
+if (str_contains($faqIndexViewSource, 'aria-label="Drobečková navigace"')) {
+    $faqSourceIssues[] = 'public faq index still uses aria-label-only breadcrumb navigation';
+}
+if (!str_contains($faqArticleViewSource, 'id="faq-breadcrumb-heading"')
+    || !str_contains($faqArticleViewSource, 'aria-labelledby="faq-breadcrumb-heading"')) {
+    $faqSourceIssues[] = 'public faq article breadcrumbs are missing heading-backed aria-labelledby semantics';
+}
+if (str_contains($faqArticleViewSource, 'aria-label="Drobečková navigace"')) {
+    $faqSourceIssues[] = 'public faq article still uses aria-label-only breadcrumb navigation';
 }
 if (!str_contains($faqIndexViewSource, 'listing-shell__pager')) {
     $faqSourceIssues[] = 'public faq template is missing pager output';

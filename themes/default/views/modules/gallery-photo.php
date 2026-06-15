@@ -13,7 +13,8 @@ $photoCount = (int)($photoCount ?? 0);
 ?>
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="gallery-photo-title">
-    <nav aria-label="Drobečková navigace">
+    <h2 id="gallery-photo-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>
+    <nav aria-labelledby="gallery-photo-breadcrumb-heading">
       <ol class="breadcrumb-list">
         <li><a href="<?= BASE_URL ?>/gallery/index.php">Galerie</a></li>
         <?php foreach ($trail as $crumb): ?>

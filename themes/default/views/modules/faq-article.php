@@ -6,7 +6,8 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/faq/index.php'));
 <div class="article-layout">
   <article class="surface" aria-labelledby="faq-title">
     <?php if (!empty($breadcrumbs)): ?>
-      <nav aria-label="Drobečková navigace">
+      <h2 id="faq-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>
+      <nav aria-labelledby="faq-breadcrumb-heading">
         <ol class="breadcrumbs">
           <li><a href="<?= BASE_URL ?>/faq/index.php">Znalostní báze</a></li>
           <?php foreach ($breadcrumbs as $crumb): ?>
