@@ -33,6 +33,27 @@ function parseContentShortcodeAttributes(string $rawAttributes): array
     return $attributes;
 }
 
+function contentSectionHeadingId(string $prefix, string $label): string
+{
+    /** @var array<string,int> $counters */
+    static $counters = [];
+
+    $normalizedPrefix = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($prefix)) ?? '';
+    $normalizedPrefix = trim($normalizedPrefix, '-');
+    if ($normalizedPrefix === '') {
+        $normalizedPrefix = 'content-section';
+    }
+
+    $counters[$normalizedPrefix] = ($counters[$normalizedPrefix] ?? 0) + 1;
+
+    return $normalizedPrefix . '-' . $counters[$normalizedPrefix] . '-' . substr(sha1($label), 0, 8);
+}
+
+function contentSectionHiddenHeading(string $headingId, string $label): string
+{
+    return '<h2 id="' . h($headingId) . '" class="sr-only">' . h($label) . '</h2>';
+}
+
 function normalizeContentEmbedUrl(string $value): string
 {
     $value = trim($value);
@@ -231,7 +252,7 @@ function contentEmbedPdfTitle(string $url, string $preferredTitle = ''): string
  */
 function contentResolvePdfMedia(int $mediaId, string $url): ?array
 {
-    if ($mediaId > 0) {
+    if ($mediaId > 0 && function_exists('mediaGetById') && function_exists('mediaCanPreviewPdf')) {
         $media = mediaGetById($mediaId);
         if ($media !== null && mediaCanPreviewPdf($media)) {
             return $media;
@@ -239,6 +260,10 @@ function contentResolvePdfMedia(int $mediaId, string $url): ?array
     }
 
     if ($url === '') {
+        return null;
+    }
+
+    if (!function_exists('mediaGetPublicPdfByUrl')) {
         return null;
     }
 
@@ -270,9 +295,12 @@ function renderContentCodeShortcode(string $body): ?string
 
     $blockId = 'content-code-block-' . $contentCodeShortcodeIndex;
     $codeId = $blockId . '-code';
+    $headingLabel = 'Kopírovatelný obsah';
+    $headingId = contentSectionHeadingId('content-code-heading', $headingLabel);
 
     return "\n\n"
-        . '<section class="content-code-block" aria-label="Kopírovatelný obsah">'
+        . '<section class="content-code-block" aria-labelledby="' . h($headingId) . '">'
+        . contentSectionHiddenHeading($headingId, $headingLabel)
         . '<pre class="content-code-block__pre"><code id="' . h($codeId) . '">' . h($code) . '</code></pre>'
         . '<div class="content-code-block__actions">'
         . '<button type="button" class="button-secondary content-code-block__copy js-copy-content" data-copy-target="' . h($codeId) . '" data-copy-label="Kopírovat do schránky">Kopírovat do schránky</button>'
@@ -312,9 +340,12 @@ function renderContentYouTubeVideoShortcode(string $url, string $title = ''): ?s
 
     $resolvedTitle = trim($title) !== '' ? trim($title) : 'YouTube video';
     $escapedTitle = h($resolvedTitle);
+    $headingLabel = 'Video: ' . $resolvedTitle;
+    $headingId = contentSectionHeadingId('content-video-heading', $headingLabel);
 
     return "\n\n"
-        . '<section class="content-embed-card content-embed-card--interactive content-embed-card--video" aria-label="Video: ' . $escapedTitle . '">'
+        . '<section class="content-embed-card content-embed-card--interactive content-embed-card--video" aria-labelledby="' . h($headingId) . '">'
+        . contentSectionHiddenHeading($headingId, $headingLabel)
         . '<div class="content-embed-card__content">'
         . '<p class="content-embed-card__eyebrow">Video</p>'
         . '<p class="content-embed-card__title"><a href="' . h($normalizedUrl) . '">' . $escapedTitle . '</a></p>'
@@ -373,9 +404,12 @@ function renderContentPdfShortcode(string $url, string $title = '', string $pref
     $escapedPreviewUrl = h($previewUrl);
     $escapedOpenUrl = h($openUrl);
     $escapedTitle = h($resolvedTitle);
+    $headingLabel = 'PDF dokument: ' . $resolvedTitle;
+    $headingId = contentSectionHeadingId('content-pdf-heading', $headingLabel);
 
     return "\n\n"
-        . '<section class="content-embed-card content-embed-card--pdf" aria-label="PDF dokument: ' . $escapedTitle . '">'
+        . '<section class="content-embed-card content-embed-card--pdf" aria-labelledby="' . h($headingId) . '">'
+        . contentSectionHiddenHeading($headingId, $headingLabel)
         . '<div class="content-embed-card__content">'
         . '<p class="content-embed-card__eyebrow">PDF dokument</p>'
         . '<p class="content-embed-card__title"><a href="' . $escapedOpenUrl . '">' . $escapedTitle . '</a></p>'
@@ -433,8 +467,12 @@ function renderContentGalleryShortcode(string $slug): ?string
         return '';
     }
 
+    $headingLabel = 'Fotogalerie: ' . (string)$album['name'];
+    $headingId = contentSectionHeadingId('content-gallery-heading', $headingLabel);
+
     $html = "\n\n"
-        . '<section class="content-gallery-embed" aria-label="Fotogalerie: ' . h((string)$album['name']) . '">'
+        . '<section class="content-gallery-embed" aria-labelledby="' . h($headingId) . '">'
+        . contentSectionHiddenHeading($headingId, $headingLabel)
         . '<div class="content-gallery-embed__header">'
         . '<p class="content-gallery-embed__eyebrow">Fotogalerie</p>'
         . '<p class="content-gallery-embed__title"><a href="' . h((string)$album['public_path']) . '">' . h((string)$album['name']) . '</a></p>';
@@ -569,7 +607,12 @@ function renderContentEmbedCard(array $config): string
         $classes .= ' content-embed-card--with-media';
     }
 
-    $html = "\n\n" . '<section class="' . h($classes) . '" aria-label="' . h($eyebrow . ': ' . $title) . '">';
+    $headingLabel = $eyebrow . ': ' . $title;
+    $headingId = contentSectionHeadingId('content-card-heading', $headingLabel);
+
+    $html = "\n\n"
+        . '<section class="' . h($classes) . '" aria-labelledby="' . h($headingId) . '">'
+        . contentSectionHiddenHeading($headingId, $headingLabel);
 
     if ($mediaUrl !== '') {
         $html .= '<div class="content-embed-card__media">'
@@ -633,8 +676,12 @@ function renderContentInteractiveEmbed(array $config): string
         $classes .= ' content-embed-card--' . preg_replace('/[^a-z0-9_-]+/i', '-', $modifier);
     }
 
+    $headingLabel = $eyebrow . ': ' . $title;
+    $headingId = contentSectionHeadingId('content-interactive-heading', $headingLabel);
+
     $html = "\n\n"
-        . '<section class="' . h($classes) . '" aria-label="' . h($eyebrow . ': ' . $title) . '">'
+        . '<section class="' . h($classes) . '" aria-labelledby="' . h($headingId) . '">'
+        . contentSectionHiddenHeading($headingId, $headingLabel)
         . '<div class="content-embed-card__content">'
         . '<p class="content-embed-card__eyebrow">' . h($eyebrow) . '</p>'
         . '<p class="content-embed-card__title"><a href="' . h($url) . '">' . h($title) . '</a></p>';

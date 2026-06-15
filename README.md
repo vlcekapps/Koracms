@@ -346,7 +346,7 @@ Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložen
 | `[event]slug-udalosti[/event]` | Teaser karta události |
 | `[board]slug-oznameni[/board]` | Teaser karta položky vývěsky |
 
-Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF z knihovny médií se nově vykresluje přes interní same-origin preview endpoint a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu. Video snippet podporuje přímé video soubory i běžné YouTube URL (`watch`, `youtu.be`, `shorts`, `embed`) a YouTube vkládá přes privacy-friendly `youtube-nocookie.com`. Při vložení obrázku přes content/media picker se do HTML zachová `alt` atribut, ale nevkládá se automatický `figcaption` z názvu média; když médium nemá vyplněný alternativní text, picker vloží `alt=""`, který lze v editoru ručně upravit. Externí iframe a externí audio/video embedy jsou na veřejném webu podporované přes CSP, pokud je cílový zdroj sám dovolí.
+Snippety fungují ve všech HTML polích, která CMS veřejně renderuje přes `renderContent()`. Formuláře a ankety se vkládají jako živé interaktivní embedy, PDF z knihovny médií se nově vykresluje přes interní same-origin preview endpoint a ostatní snippety jako sjednocené obsahové karty nebo kopírovatelné bloky obsahu. Tyto vložené bloky mají skrytý nadpis napojený přes `aria-labelledby`, takže jsou dohledatelné i navigací čtečkou obrazovky podle nadpisů bez vizuální změny obsahu. Video snippet podporuje přímé video soubory i běžné YouTube URL (`watch`, `youtu.be`, `shorts`, `embed`) a YouTube vkládá přes privacy-friendly `youtube-nocookie.com`. Při vložení obrázku přes content/media picker se do HTML zachová `alt` atribut, ale nevkládá se automatický `figcaption` z názvu média; když médium nemá vyplněný alternativní text, picker vloží `alt=""`, který lze v editoru ručně upravit. Externí iframe a externí audio/video embedy jsou na veřejném webu podporované přes CSP, pokud je cílový zdroj sám dovolí.
 
 ---
 
@@ -417,7 +417,7 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 - viditelný focus stav
 - sémantické HTML
 - formuláře přes `label`, `fieldset`, `legend`
-- vyhledávací, filtrační, drobečkové, stránkovací a další pomocné navigační landmarky pojmenované skutečnými nadpisy přes `aria-labelledby`
+- vyhledávací, filtrační, drobečkové, stránkovací, obsahové embed bloky a další pomocné navigační landmarky pojmenované skutečnými nadpisy přes `aria-labelledby`
 - helper texty přes `aria-describedby`
 - přístupné dialogy s návratem fokusu
 - klávesnicová ovladatelnost i tam, kde je drag & drop

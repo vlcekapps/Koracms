@@ -750,7 +750,7 @@ Vývojové kontroly:
 - `robots.txt` se generuje přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa, globální, blogové i podcastové RSS feedy, ICS export událostí, veřejné souborové/media endpointy a read-only administrační endpointy včetně JSON/CSV výstupů, příloh formulářů a vyhledávání obsahu pro media picker; u souborů `HEAD` posílá jen hlavičky, bez těla souboru.
 - Interní administrační JSON akce, které mění stav přes AJAX, jsou POST-only. Při jiné metodě vrací `405` s `Allow: POST` a odpovědi posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se v administraci necachoval zastaralý stav.
 - Administrační stažení citlivějších exportů, například JSON export CMS, CSV export odpovědí formulářů, přílohy formulářových odpovědí, SQL záloha databáze, ZIP export galerie nebo ZIP export šablony, posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
-- `php build/runtime_audit.php` ověřuje runtime guardrails včetně release ZIP pravidel, rate limitingu a přístupnosti; u veřejných vyhledávacích formulářů, filtračních navigací, drobečkové navigace, stránkování a dalších pomocných navigací hlídá i skutečné nadpisy napojené přes `aria-labelledby`
+- `php build/runtime_audit.php` ověřuje runtime guardrails včetně release ZIP pravidel, rate limitingu a přístupnosti; u veřejných vyhledávacích formulářů, filtračních navigací, drobečkové navigace, stránkování, obsahových embed bloků a dalších pomocných navigací hlídá i skutečné nadpisy napojené přes `aria-labelledby`
 - `php build/http_integration.php` ověřuje důležité HTTP scénáře
 
 ---
@@ -843,6 +843,7 @@ Praktické poznámky:
 - Starší PDF snippety, které už mají v obsahu jen cestu `/uploads/media/...`, fungují zpětně bez ruční úpravy.
 - YouTube URL ve video snippetu se převádí na vložený `youtube-nocookie.com` přehrávač a zachová i čas začátku z parametrů `t` nebo `start`.
 - Shortcode `[code]...[/code]` je určený pro kopírovatelný obsah, například příkazy, konfiguraci, kód nebo jiné krátké texty; na veřejném webu zobrazí blok s tlačítkem `Kopírovat do schránky`.
+- Obsahové karty a vložené bloky ze snippetů mají skrytý nadpis napojený přes `aria-labelledby`, takže je uživatel čtečky obrazovky najde i navigací po nadpisech.
 - Při vložení obrázku z knihovny médií picker zachová `alt` atribut, ale nevkládá automatický `figcaption` z názvu média. Pokud médium nemá vyplněný alternativní text, vloží se `alt=""`, který lze v editoru ručně upravit.
 - Externí iframe a externí audio/video embedy ve veřejném HTML obsahu jsou podporované přes CSP, pokud je cílový zdroj sám dovolí.
 

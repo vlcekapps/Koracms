@@ -409,11 +409,46 @@ assert_equals('', normalizeContentEmbedUrl('javascript:alert(1)'), 'javascript: 
 assert_equals('kCy8R5fGHxY', contentYouTubeVideoId('https://www.youtube.com/watch?v=kCy8R5fGHxY'), 'YouTube watch URL id parsed');
 assert_equals('yIdGMYUmfgg', contentYouTubeVideoId('https://youtu.be/yIdGMYUmfgg?t=26s'), 'youtu.be URL id parsed');
 assert_equals(26, contentYouTubeStartSeconds('https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s'), 'YouTube t parameter parsed');
+$youtubeShortcodeHtml = renderContentShortcodes('[video]https://www.youtube.com/watch?v=yIdGMYUmfgg&amp;t=26s[/video]');
 assert_contains(
     'https://www.youtube-nocookie.com/embed/yIdGMYUmfgg?start=26',
-    renderContentShortcodes('[video]https://www.youtube.com/watch?v=yIdGMYUmfgg&amp;t=26s[/video]'),
+    $youtubeShortcodeHtml,
     'YouTube video shortcode renders privacy-friendly iframe'
 );
+
+test_section('content shortcode heading semantics');
+
+assert_contains('aria-labelledby="content-video-heading-', $youtubeShortcodeHtml, 'YouTube video shortcode card is labelled by a real heading');
+assert_false(str_contains($youtubeShortcodeHtml, 'aria-label="Video:'), 'YouTube video shortcode no longer uses aria-label-only section');
+
+$codeShortcodeHtml = renderContentCodeShortcode('kopirovat do schranky');
+assert_true($codeShortcodeHtml !== null, 'code shortcode renders non-empty block');
+assert_contains('aria-labelledby="content-code-heading-', (string)$codeShortcodeHtml, 'code shortcode block is labelled by a real heading');
+assert_contains('class="sr-only">Kopírovatelný obsah</h2>', (string)$codeShortcodeHtml, 'code shortcode heading text is available to screen readers');
+assert_false(str_contains((string)$codeShortcodeHtml, '<section class="content-code-block" aria-label='), 'code shortcode no longer uses aria-label-only section');
+
+$pdfShortcodeHtml = renderContentPdfShortcode('https://example.com/dokument.pdf', 'Ukázka PDF', 'application/pdf');
+assert_true($pdfShortcodeHtml !== null, 'pdf shortcode renders valid external pdf card');
+assert_contains('aria-labelledby="content-pdf-heading-', (string)$pdfShortcodeHtml, 'pdf shortcode card is labelled by a real heading');
+assert_contains('class="sr-only">PDF dokument: Ukázka PDF</h2>', (string)$pdfShortcodeHtml, 'pdf shortcode heading includes document title');
+assert_false(str_contains((string)$pdfShortcodeHtml, 'aria-label="PDF dokument:'), 'pdf shortcode no longer uses aria-label-only section');
+
+$contentCardHtml = renderContentEmbedCard([
+    'title' => 'Ukázkový odkaz',
+    'url' => '/ukazka',
+    'eyebrow' => 'Obsah webu',
+]);
+assert_contains('aria-labelledby="content-card-heading-', $contentCardHtml, 'content embed card is labelled by a real heading');
+assert_false(str_contains($contentCardHtml, 'aria-label='), 'content embed card no longer uses aria-label-only section');
+
+$interactiveEmbedHtml = renderContentInteractiveEmbed([
+    'title' => 'Ukázkový formulář',
+    'url' => '/forms/ukazka',
+    'embed_url' => '/forms/ukazka?embed=1',
+    'eyebrow' => 'Formulář',
+]);
+assert_contains('aria-labelledby="content-interactive-heading-', $interactiveEmbedHtml, 'interactive embed card is labelled by a real heading');
+assert_false(str_contains($interactiveEmbedHtml, 'aria-label='), 'interactive embed card no longer uses aria-label-only section');
 
 // ─── 13. githubIssueParseUrl() ───────────────────────────────────────────────
 

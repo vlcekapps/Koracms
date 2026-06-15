@@ -6277,11 +6277,17 @@ HTML;
             if (!str_contains($shortcodeProbe['body'], 'https://www.youtube-nocookie.com/embed/yIdGMYUmfgg?start=26')) {
                 $contentShortcodeIssues[] = 'youtube video shortcode was not rendered as privacy-friendly iframe';
             }
+            if (!str_contains($shortcodeProbe['body'], 'aria-labelledby="content-video-heading-')) {
+                $contentShortcodeIssues[] = 'youtube video shortcode is missing heading-backed section label';
+            }
             if (!str_contains($shortcodeProbe['body'], 'Otevřít video samostatně')) {
                 $contentShortcodeIssues[] = 'youtube video shortcode is missing standalone fallback link';
             }
             if (!str_contains($shortcodeProbe['body'], 'content-embed-card--pdf')) {
                 $contentShortcodeIssues[] = 'pdf shortcode was not rendered as embedded pdf card';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'aria-labelledby="content-pdf-heading-')) {
+                $contentShortcodeIssues[] = 'pdf shortcode is missing heading-backed section label';
             }
             if (!str_contains($shortcodeProbe['body'], 'title="PDF dokument: Runtime audit PDF"')) {
                 $contentShortcodeIssues[] = 'pdf shortcode is missing accessible iframe title';
@@ -6291,6 +6297,9 @@ HTML;
             }
             if (!str_contains($shortcodeProbe['body'], 'content-code-block')) {
                 $contentShortcodeIssues[] = 'code shortcode was not rendered as copyable code block';
+            }
+            if (!str_contains($shortcodeProbe['body'], 'aria-labelledby="content-code-heading-')) {
+                $contentShortcodeIssues[] = 'code shortcode is missing heading-backed section label';
             }
             if (!str_contains($shortcodeProbe['body'], 'class="button-secondary content-code-block__copy js-copy-content"')) {
                 $contentShortcodeIssues[] = 'code shortcode is missing copy button';
@@ -6304,8 +6313,14 @@ HTML;
             if (!empty($galleryAlbumRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-gallery-embed')) {
                 $contentShortcodeIssues[] = 'gallery shortcode was not rendered as embedded gallery';
             }
+            if (!empty($galleryAlbumRow['slug']) && !str_contains($shortcodeProbe['body'], 'aria-labelledby="content-gallery-heading-')) {
+                $contentShortcodeIssues[] = 'gallery shortcode is missing heading-backed section label';
+            }
             if ($runtimeAuditFormSlug !== '' && !str_contains($shortcodeProbe['body'], 'content-embed-frame--form')) {
                 $contentShortcodeIssues[] = 'form shortcode was not rendered as interactive embed';
+            }
+            if ($runtimeAuditFormSlug !== '' && !str_contains($shortcodeProbe['body'], 'aria-labelledby="content-interactive-heading-')) {
+                $contentShortcodeIssues[] = 'interactive shortcode is missing heading-backed section label';
             }
             if ($runtimeAuditFormPath !== '' && !str_contains($shortcodeProbe['body'], $runtimeAuditFormPath . '?embed=1')) {
                 $contentShortcodeIssues[] = 'form shortcode is missing embedded form iframe target';
@@ -6318,6 +6333,9 @@ HTML;
             }
             if (!empty($downloadRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-card--download')) {
                 $contentShortcodeIssues[] = 'download shortcode was not rendered as teaser card';
+            }
+            if (!empty($downloadRow['slug']) && !str_contains($shortcodeProbe['body'], 'aria-labelledby="content-card-heading-')) {
+                $contentShortcodeIssues[] = 'content card shortcode is missing heading-backed section label';
             }
             if (!empty($downloadRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$downloadRow['title'])) {
                 $contentShortcodeIssues[] = 'download shortcode is missing download title';
@@ -6351,6 +6369,9 @@ HTML;
             }
             if (!empty($boardRow['slug']) && !str_contains($shortcodeProbe['body'], (string)$boardRow['title'])) {
                 $contentShortcodeIssues[] = 'board shortcode is missing board title';
+            }
+            if (preg_match('/<section[^>]+(?:content-code-block|content-embed-card|content-gallery-embed)[^>]+aria-label=/i', $shortcodeProbe['body']) === 1) {
+                $contentShortcodeIssues[] = 'content shortcodes still render aria-label-only sections';
             }
         }
     } finally {
@@ -6459,6 +6480,25 @@ if (!str_contains($contentLibrarySource, 'content-embed-card content-embed-card-
 }
 if (!str_contains($contentLibrarySource, 'content-code-block__copy js-copy-content')) {
     $contentSnippetIssues[] = 'content renderer is missing copyable code block markup';
+}
+if (!str_contains($contentLibrarySource, 'function contentSectionHeadingId(string $prefix, string $label): string')
+    || !str_contains($contentLibrarySource, 'function contentSectionHiddenHeading(string $headingId, string $label): string')) {
+    $contentSnippetIssues[] = 'content renderer is missing shared heading-backed section helpers';
+}
+foreach ([
+    'content-code-heading',
+    'content-video-heading',
+    'content-pdf-heading',
+    'content-gallery-heading',
+    'content-card-heading',
+    'content-interactive-heading',
+] as $contentHeadingPrefix) {
+    if (!str_contains($contentLibrarySource, $contentHeadingPrefix)) {
+        $contentSnippetIssues[] = 'content renderer is missing heading prefix: ' . $contentHeadingPrefix;
+    }
+}
+if (str_contains($contentLibrarySource, 'aria-label=')) {
+    $contentSnippetIssues[] = 'content renderer still contains aria-label-only section markup';
 }
 if (!str_contains($contentLibrarySource, '/\\[code(?:\\s+([^\\]]*))?\\](.*?)\\[\\/code\\]/is')) {
     $contentSnippetIssues[] = 'content renderer is missing code shortcode parser';
