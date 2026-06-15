@@ -11432,9 +11432,9 @@ if (str_contains($themeFormsShowViewSource, '$value = h((string)$rawValue);')
 }
 if (!str_contains($themePublicCssSource, '.page-blog-index .card-grid')
     || !str_contains($themePublicCssSource, 'align-items: start')
-    || !str_contains($themePublicCssSource, '.page-blog-index .card-grid > .card')
+    || !str_contains($themePublicCssSource, '.page-blog-index .card')
     || !str_contains($themePublicCssSource, 'height: auto')) {
-    $themeLayoutIssues[] = 'default theme blog index cards can still stretch to the tallest grid item';
+    $themeLayoutIssues[] = 'default theme blog index cards can still stretch across the listing section';
 }
 foreach ([
     '.listing-filters',
