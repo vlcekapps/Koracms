@@ -26,7 +26,8 @@ $pageHeading = (string)($pageHeading ?? 'Archiv lístků');
     </div>
 
     <?php if ($scopeLinks !== []): ?>
-      <nav class="tab-nav" aria-label="Rozsah výpisu lístků">
+      <h2 id="food-archive-scope-heading" class="sr-only">Rozsah výpisu lístků</h2>
+      <nav class="tab-nav" aria-labelledby="food-archive-scope-heading">
         <?php foreach ($scopeLinks as $scopeLink): ?>
           <a class="tab-nav__link<?= !empty($scopeLink['active']) ? ' is-active' : '' ?>"
              href="<?= h((string)$scopeLink['url']) ?>"

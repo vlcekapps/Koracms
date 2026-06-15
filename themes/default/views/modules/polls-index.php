@@ -119,7 +119,8 @@ $q = trim((string)($q ?? ''));
         </div>
       </div>
 
-      <nav aria-label="Filtr anket">
+      <h2 id="polls-filter-heading" class="sr-only">Filtr anket</h2>
+      <nav aria-labelledby="polls-filter-heading">
         <ul class="chip-list">
           <?php if ($archiv): ?>
             <li><a class="chip-link" href="<?= h($activeUrl) ?>">Aktivní ankety</a></li>

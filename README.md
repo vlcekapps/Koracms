@@ -417,7 +417,7 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 - viditelný focus stav
 - sémantické HTML
 - formuláře přes `label`, `fieldset`, `legend`
-- vyhledávací landmarky pojmenované skutečnými nadpisy přes `aria-labelledby`
+- vyhledávací a filtrační landmarky pojmenované skutečnými nadpisy přes `aria-labelledby`
 - helper texty přes `aria-describedby`
 - přístupné dialogy s návratem fokusu
 - klávesnicová ovladatelnost i tam, kde je drag & drop

@@ -26,7 +26,8 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
     </div>
 
     <?php if ($scopeLinks !== []): ?>
-      <nav class="tab-nav" aria-label="Rozsah výpisu akcí">
+      <h2 id="events-scope-heading" class="sr-only">Rozsah výpisu akcí</h2>
+      <nav class="tab-nav" aria-labelledby="events-scope-heading">
         <?php foreach ($scopeLinks as $scopeLink): ?>
           <a class="tab-nav__link<?= !empty($scopeLink['active']) ? ' is-active' : '' ?>"
              href="<?= h((string)$scopeLink['url']) ?>"

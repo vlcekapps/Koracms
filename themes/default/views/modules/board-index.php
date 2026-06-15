@@ -23,7 +23,8 @@ $pageHeading = (string)($pageHeading ?? $boardLabel);
     </div>
 
     <?php if ($scopeLinks !== []): ?>
-      <nav class="tab-nav" aria-label="Rozsah výpisu vývěsky">
+      <h2 id="board-scope-heading" class="sr-only">Rozsah výpisu vývěsky</h2>
+      <nav class="tab-nav" aria-labelledby="board-scope-heading">
         <?php foreach ($scopeLinks as $scopeLink): ?>
           <a class="tab-nav__link<?= !empty($scopeLink['active']) ? ' is-active' : '' ?>"
              href="<?= h((string)$scopeLink['url']) ?>"

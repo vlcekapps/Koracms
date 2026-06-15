@@ -750,7 +750,7 @@ Vývojové kontroly:
 - `robots.txt` se generuje přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa, globální, blogové i podcastové RSS feedy, ICS export událostí, veřejné souborové/media endpointy a read-only administrační endpointy včetně JSON/CSV výstupů, příloh formulářů a vyhledávání obsahu pro media picker; u souborů `HEAD` posílá jen hlavičky, bez těla souboru.
 - Interní administrační JSON akce, které mění stav přes AJAX, jsou POST-only. Při jiné metodě vrací `405` s `Allow: POST` a odpovědi posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se v administraci necachoval zastaralý stav.
 - Administrační stažení citlivějších exportů, například JSON export CMS, CSV export odpovědí formulářů, přílohy formulářových odpovědí, SQL záloha databáze, ZIP export galerie nebo ZIP export šablony, posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
-- `php build/runtime_audit.php` ověřuje runtime guardrails včetně release ZIP pravidel, rate limitingu a přístupnosti; u veřejných vyhledávacích formulářů hlídá i skutečné skryté nadpisy napojené přes `aria-labelledby`
+- `php build/runtime_audit.php` ověřuje runtime guardrails včetně release ZIP pravidel, rate limitingu a přístupnosti; u veřejných vyhledávacích formulářů a filtračních navigací hlídá i skutečné skryté nadpisy napojené přes `aria-labelledby`
 - `php build/http_integration.php` ověřuje důležité HTTP scénáře
 
 ---

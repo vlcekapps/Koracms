@@ -2519,10 +2519,15 @@ foreach ($pages as $page) {
             'name="month"',
             'name="scope"',
             'Filtrovat položky vývěsky',
+            '<h2 id="board-scope-heading" class="sr-only">Rozsah výpisu vývěsky</h2>',
+            '<nav class="tab-nav" aria-labelledby="board-scope-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'board listing is missing filter fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'class="tab-nav" aria-label="Rozsah výpisu vývěsky"')) {
+            $issues[] = 'board listing still uses aria-label-only scope navigation';
         }
         if ($boardFutureTitle !== '' && str_contains($result['body'], $boardFutureTitle)) {
             $issues[] = 'board listing still exposes future-dated item';
@@ -4793,11 +4798,16 @@ foreach ($pages as $page) {
             'name="q"',
             'name="kat"',
             'tab-nav',
+            '<h2 id="faq-display-mode-heading" class="sr-only">Zobrazení znalostní báze</h2>',
+            '<nav class="tab-nav" aria-labelledby="faq-display-mode-heading">',
             'application/ld+json',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'faq listing is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'class="tab-nav" aria-label="Zobrazení znalostní báze"')) {
+            $issues[] = 'faq listing still uses aria-label-only display navigation';
         }
     }
 
@@ -4820,10 +4830,15 @@ foreach ($pages as $page) {
             'Připravujeme',
             'Archivní',
             'Všechny lístky',
+            '<h2 id="food-archive-scope-heading" class="sr-only">Rozsah výpisu lístků</h2>',
+            '<nav class="tab-nav" aria-labelledby="food-archive-scope-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'food archive is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'class="tab-nav" aria-label="Rozsah výpisu lístků"')) {
+            $issues[] = 'food archive still uses aria-label-only scope navigation';
         }
         if ($runtimeAuditFoodFutureTitle !== '' && !str_contains($result['body'], $runtimeAuditFoodFutureTitle)) {
             $issues[] = 'food archive is missing upcoming food fixture';
@@ -4925,10 +4940,15 @@ foreach ($pages as $page) {
             'Období',
             'Přidat do kalendáře',
             'Připravujeme',
+            '<h2 id="events-scope-heading" class="sr-only">Rozsah výpisu akcí</h2>',
+            '<nav class="tab-nav" aria-labelledby="events-scope-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'events listing is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'class="tab-nav" aria-label="Rozsah výpisu akcí"')) {
+            $issues[] = 'events listing still uses aria-label-only scope navigation';
         }
         if ($eventFutureTitle !== '' && !str_contains($result['body'], $eventFutureTitle)) {
             $issues[] = 'events listing is missing the runtime audit future event';
@@ -5111,10 +5131,15 @@ foreach ($pages as $page) {
             'Archiv',
             '<h2 id="poll-search-heading" class="sr-only">Hledání v anketách</h2>',
             '<form method="get" class="listing-filters" role="search" aria-labelledby="poll-search-heading">',
+            '<h2 id="polls-filter-heading" class="sr-only">Filtr anket</h2>',
+            '<nav aria-labelledby="polls-filter-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'polls listing is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], '<nav aria-label="Filtr anket"')) {
+            $issues[] = 'polls listing still uses aria-label-only filter navigation';
         }
         if (str_contains($result['body'], 'aria-label="Hledání v anketách"')) {
             $issues[] = 'polls listing still uses aria-label-only search landmark';

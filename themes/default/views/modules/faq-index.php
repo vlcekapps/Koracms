@@ -63,7 +63,8 @@ $renderCatNav = static function (array $tree, int $parentId, int $depth, ?int $a
     <?php endif; ?>
 
     <?php if ($displayModeLinks !== []): ?>
-      <nav class="tab-nav" aria-label="Zobrazení znalostní báze">
+      <h2 id="faq-display-mode-heading" class="sr-only">Zobrazení znalostní báze</h2>
+      <nav class="tab-nav" aria-labelledby="faq-display-mode-heading">
         <?php foreach ($displayModeLinks as $displayModeLink): ?>
           <a class="tab-nav__link<?= !empty($displayModeLink['active']) ? ' is-active' : '' ?>"
              href="<?= h((string)$displayModeLink['url']) ?>"
