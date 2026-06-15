@@ -22,7 +22,8 @@ $renderAuthorName = static function (array $item): string {
       </div>
     </div>
 
-    <form method="get" class="stack stack--tight" role="search" aria-label="Hledání v novinkách">
+    <h2 id="news-search-heading" class="sr-only">Hledání v novinkách</h2>
+    <form method="get" class="stack stack--tight" role="search" aria-labelledby="news-search-heading">
       <label for="news-search">Hledat v novinkách</label>
       <div class="form-inline">
         <input

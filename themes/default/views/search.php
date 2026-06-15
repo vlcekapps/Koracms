@@ -3,12 +3,13 @@
     <h1 id="search-title" class="section-title section-title--hero">Vyhledávání</h1>
     <p class="section-subtitle">Najděte články, novinky, stránky a další obsah napříč celým webem.</p>
 
-    <form method="get" role="search" class="form-stack">
+    <h2 id="search-form-title" class="sr-only">Hledání na webu</h2>
+    <form method="get" role="search" class="form-stack" aria-labelledby="search-form-title">
       <div class="search-form-row">
         <div class="field">
           <label for="q">Hledat na webu</label>
           <input type="search" id="q" name="q" class="form-control" required minlength="2"
-                 value="<?= h($q) ?>" aria-label="Hledaný výraz">
+                 value="<?= h($q) ?>">
         </div>
         <button type="submit" class="button-primary">Hledat</button>
       </div>

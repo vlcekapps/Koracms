@@ -2592,6 +2592,17 @@ foreach ($pages as $page) {
                 $issues[] = 'search still contains legacy copy: ' . $legacySnippet;
             }
         }
+        foreach ([
+            '<h2 id="search-form-title" class="sr-only">Hledání na webu</h2>',
+            '<form method="get" role="search" class="form-stack" aria-labelledby="search-form-title">',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'global search form is missing heading-backed search landmark fragment: ' . $expectedFragment;
+            }
+        }
+        if (str_contains($result['body'], 'aria-label="Hledaný výraz"')) {
+            $issues[] = 'global search input still contains redundant aria-label instead of relying on its visible label';
+        }
     }
 
     if ($page['label'] === 'public_author' && str_contains($result['body'], 'Publikace')) {
@@ -4734,10 +4745,15 @@ foreach ($pages as $page) {
         foreach ([
             'name="q"',
             'Hledat v novinkách',
+            '<h2 id="news-search-heading" class="sr-only">Hledání v novinkách</h2>',
+            '<form method="get" class="stack stack--tight" role="search" aria-labelledby="news-search-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'news listing is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'role="search" aria-label="Hledání v novinkách"')) {
+            $issues[] = 'news listing still uses aria-label-only search landmark';
         }
         if ($runtimeAuditNewsExpiredTitle !== '' && str_contains($result['body'], $runtimeAuditNewsExpiredTitle)) {
             $issues[] = 'news listing still exposes expired news';
@@ -5085,7 +5101,7 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'polls_index') {
+    if (in_array($page['label'], ['polls_index', 'polls_index_search'], true)) {
         if ($pollCanonicalPath !== '' && !str_contains($result['body'], $pollCanonicalPath)) {
             $issues[] = 'polls listing is missing detail links';
         }
@@ -5093,10 +5109,15 @@ foreach ($pages as $page) {
             'name="q"',
             'Aktivní ankety',
             'Archiv',
+            '<h2 id="poll-search-heading" class="sr-only">Hledání v anketách</h2>',
+            '<form method="get" class="listing-filters" role="search" aria-labelledby="poll-search-heading">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'polls listing is missing fragment: ' . $expectedFragment;
             }
+        }
+        if (str_contains($result['body'], 'aria-label="Hledání v anketách"')) {
+            $issues[] = 'polls listing still uses aria-label-only search landmark';
         }
     }
 
