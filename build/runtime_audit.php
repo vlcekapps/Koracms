@@ -11644,6 +11644,9 @@ $themeEventsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/t
 $themeFaqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-article.php');
 $themeFormsShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/forms-show.php');
 $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
+$themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
+$themeReservationCancelBookingViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-cancel-booking.php');
+$themeFoodCardViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-card.php');
 if (!str_contains($themeBaseLayoutSource, 'aria-labelledby="page-sidebar-heading"')
     || !str_contains($themeBaseLayoutSource, '<h2 id="page-sidebar-heading" class="sr-only">Postranní panel</h2>')) {
     $themeLayoutIssues[] = 'default theme sidebar is missing heading-backed landmark semantics';
@@ -11651,6 +11654,32 @@ if (!str_contains($themeBaseLayoutSource, 'aria-labelledby="page-sidebar-heading
 if (str_contains($themeBaseLayoutSource, "querySelector('[role=\"status\"]:not(#a11y-live),[role=\"alert\"]')")
     || str_contains($themeBaseLayoutSource, "message.removeAttribute('role');")) {
     $themeLayoutIssues[] = 'default theme layout still mutates server-rendered status roles on page load';
+}
+if (!str_contains($themeBaseLayoutSource, "closest('[data-confirm]')")
+    || !str_contains($themeBaseLayoutSource, 'window.confirm(message)')) {
+    $themeLayoutIssues[] = 'default theme layout is missing nonce-backed data-confirm handling';
+}
+if (!str_contains($themeBaseLayoutSource, "closest('.js-print-page')")
+    || !str_contains($themeBaseLayoutSource, 'window.print()')) {
+    $themeLayoutIssues[] = 'default theme layout is missing nonce-backed print button handling';
+}
+if (!str_contains($themeAccountReservationsViewSource, 'data-confirm="Opravdu chcete zrušit tuto rezervaci?"')) {
+    $themeLayoutIssues[] = 'account reservations view is missing data-confirm reservation cancellation';
+}
+if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Opravdu zrušit rezervaci?"')) {
+    $themeLayoutIssues[] = 'reservation cancellation view is missing data-confirm submit guard';
+}
+if (!str_contains($themeFoodCardViewSource, 'js-print-page')) {
+    $themeLayoutIssues[] = 'food card view is missing shared print button hook';
+}
+foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/themes/default/views')) as $themeViewFile) {
+    if (!$themeViewFile instanceof SplFileInfo || !$themeViewFile->isFile() || $themeViewFile->getExtension() !== 'php') {
+        continue;
+    }
+    $themeViewSource = (string)file_get_contents($themeViewFile->getPathname());
+    if (str_contains($themeViewSource, 'onclick=')) {
+        $themeLayoutIssues[] = 'default theme view still contains inline onclick handler: ' . $themeViewFile->getFilename();
+    }
 }
 if (str_contains($themeFormsShowViewSource, '$value = h((string)$rawValue);')
     || !str_contains($themeFormsShowViewSource, '$value = is_array($rawValue) ? \'\' : h((string)$rawValue);')) {

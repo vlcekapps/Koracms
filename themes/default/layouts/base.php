@@ -70,6 +70,20 @@ $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? 
 </div>
 <script nonce="<?= cspNonce() ?>">
 document.addEventListener('click', function (e) {
+  var confirmTarget = e.target.closest('[data-confirm]');
+  if (!confirmTarget) return;
+  var message = confirmTarget.getAttribute('data-confirm') || '';
+  if (message && !window.confirm(message)) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+});
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.js-print-page');
+  if (!btn) return;
+  window.print();
+});
+document.addEventListener('click', function (e) {
   var btn = e.target.closest('.js-copy-link');
   if (!btn) return;
   var url = btn.getAttribute('data-url') || window.location.href;

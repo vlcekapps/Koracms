@@ -39,7 +39,7 @@ $backLabel = (string)($backLabel ?? 'Zpět do archivu');
     <div class="button-row button-row--start">
       <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> <?= h($backLabel) ?></a>
       <a class="button-secondary" href="<?= BASE_URL ?>/food/index.php">Aktuální lístek</a>
-      <button type="button" class="button-secondary" onclick="window.print()">Vytisknout</button>
+      <button type="button" class="button-secondary js-print-page">Vytisknout</button>
     </div>
   </section>
 </div>

@@ -49,7 +49,7 @@
                             <form method="post" action="<?= BASE_URL ?>/reservations/cancel.php" class="inline-form">
                               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                               <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-                              <button type="submit" class="button-danger" onclick="return confirm('Opravdu chcete zrušit tuto rezervaci?')">Zrušit</button>
+                              <button type="submit" class="button-danger" data-confirm="Opravdu chcete zrušit tuto rezervaci?">Zrušit</button>
                             </form>
                           <?php else: ?>
                             <span class="table-muted">Nelze zrušit</span>

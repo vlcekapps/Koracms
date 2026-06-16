@@ -40,7 +40,7 @@
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <input type="hidden" name="token" value="<?= h($token) ?>">
         <div class="button-row button-row--start">
-          <button type="submit" class="button-danger" onclick="return confirm('Opravdu zrušit rezervaci?')">Zrušit rezervaci</button>
+          <button type="submit" class="button-danger" data-confirm="Opravdu zrušit rezervaci?">Zrušit rezervaci</button>
           <a class="button-secondary" href="<?= BASE_URL ?>/reservations/index.php">Zpět</a>
         </div>
       </form>
