@@ -415,6 +415,8 @@ Dlouho běžící administrační formuláře, například import z WordPressu n
 
 Editor anket v administraci používá pro přidávání a odebírání možností odpovědi datové atributy a delegovaný listener v nonce skriptu formuláře, ne inline `onclick` handlery.
 
+Rezervační formuláře v administraci používají stejný princip pro přepínání typu zákazníka, práci se sloty a blokovanými dny. Runtime audit navíc hlídá, aby se do admin PHP souborů nevracely inline `onclick`, `onchange`, `onsubmit` ani `oninput` atributy.
+
 ---
 
 ## Přístupnost

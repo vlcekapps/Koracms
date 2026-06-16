@@ -10852,6 +10852,7 @@ $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_fo
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
+$reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_add.php');
 $galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
 $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
@@ -10915,6 +10916,26 @@ foreach ([
     foreach ($adminSubmitOnceSpec as $adminSubmitOnceFragment) {
         if (!str_contains($adminSubmitOnceSource, (string)$adminSubmitOnceFragment)) {
             $adminFieldErrorIssues[] = $adminSubmitOnceLabel . ' is missing submit-once fragment: ' . $adminSubmitOnceFragment;
+        }
+    }
+}
+foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/admin')) as $adminPhpFile) {
+    if (!$adminPhpFile instanceof SplFileInfo || !$adminPhpFile->isFile() || $adminPhpFile->getExtension() !== 'php') {
+        continue;
+    }
+    $adminPhpSource = (string)file_get_contents($adminPhpFile->getPathname());
+    if (preg_match('/\son(?:click|change|submit|input)\s*=/i', $adminPhpSource) === 1) {
+        $adminFieldErrorIssues[] = 'admin PHP file still contains inline event handler: ' . $adminPhpFile->getFilename();
+    }
+}
+foreach ([
+    'reservation booking add form' => [$reservationBookingAddFormSource, 'data-booking-mode-toggle', "radio.addEventListener('change', toggleMode)"],
+    'reservation resource form' => [$reservationFormSource, 'data-add-slot', 'data-remove-slot', 'data-remove-blocked'],
+] as $adminEventHandlerLabel => $adminEventHandlerSpec) {
+    $adminEventHandlerSource = array_shift($adminEventHandlerSpec);
+    foreach ($adminEventHandlerSpec as $adminEventHandlerFragment) {
+        if (!str_contains((string)$adminEventHandlerSource, (string)$adminEventHandlerFragment)) {
+            $adminFieldErrorIssues[] = $adminEventHandlerLabel . ' is missing event handler fragment: ' . $adminEventHandlerFragment;
         }
     }
 }

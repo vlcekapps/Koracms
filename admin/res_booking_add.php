@@ -122,11 +122,11 @@ $notes       = $_POST['notes'] ?? '';
     <div style="display:flex;gap:1.5rem;margin-top:.5rem">
       <label style="display:inline;font-weight:normal">
         <input type="radio" name="mode" value="user" <?= $mode !== 'guest' ? 'checked' : '' ?>
-               onchange="toggleMode()"> Registrovaný uživatel
+               data-booking-mode-toggle> Registrovaný uživatel
       </label>
       <label style="display:inline;font-weight:normal">
         <input type="radio" name="mode" value="guest" <?= $mode === 'guest' ? 'checked' : '' ?>
-               onchange="toggleMode()"> Host
+               data-booking-mode-toggle> Host
       </label>
     </div>
   </fieldset>
@@ -198,11 +198,25 @@ $notes       = $_POST['notes'] ?? '';
 </form>
 
 <script nonce="<?= cspNonce() ?>">
-function toggleMode() {
-  var isGuest = document.querySelector('input[name="mode"][value="guest"]').checked;
-  document.getElementById('user-fields').style.display = isGuest ? 'none' : '';
-  document.getElementById('guest-fields').style.display = isGuest ? '' : 'none';
-}
+(function () {
+  function toggleMode() {
+    var guestToggle = document.querySelector('input[name="mode"][value="guest"]');
+    var userFields = document.getElementById('user-fields');
+    var guestFields = document.getElementById('guest-fields');
+    if (!guestToggle || !userFields || !guestFields) {
+      return;
+    }
+    var isGuest = guestToggle.checked;
+    userFields.style.display = isGuest ? 'none' : '';
+    guestFields.style.display = isGuest ? '' : 'none';
+  }
+
+  document.querySelectorAll('[data-booking-mode-toggle]').forEach(function (radio) {
+    radio.addEventListener('change', toggleMode);
+  });
+
+  toggleMode();
+})();
 </script>
 
 <?php adminFooter(); ?>

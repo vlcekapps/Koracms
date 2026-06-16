@@ -328,12 +328,12 @@ $fieldErrorMessages = [
               <input type="number" id="slot_max_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][max_bookings][]" min="1" style="width:4rem"
                      value="<?= (int)$sl['max_bookings'] ?>" title="Max. rezervací">
               <button type="button" class="btn btn-danger btn-remove-slot"
-                      aria-label="Odebrat slot" onclick="removeSlot(this)">Odebrat</button>
+                      aria-label="Odebrat slot" data-remove-slot>Odebrat</button>
             </div>
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
-      <button type="button" class="btn btn-add-slot" data-day="<?= $d ?>" onclick="addSlot(<?= $d ?>)" style="margin-top:.2rem">+ Přidat slot</button>
+      <button type="button" class="btn btn-add-slot" data-day="<?= $d ?>" data-add-slot style="margin-top:.2rem">+ Přidat slot</button>
     </fieldset>
     <?php endfor; ?>
   </fieldset>
@@ -363,7 +363,7 @@ $fieldErrorMessages = [
           <input type="date" name="blocked_dates[]" value="<?= h($bl['blocked_date']) ?>" style="width:auto" aria-label="Datum blokování">
           <input type="text" name="blocked_reasons[]" value="<?= h($bl['reason'] ?? '') ?>" maxlength="255" style="width:auto" aria-label="Důvod blokování">
           <button type="button" class="btn btn-danger"
-                  aria-label="Odebrat blokovaný den" onclick="removeBlocked(this)">Odebrat</button>
+                  aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>
         </div>
       <?php endforeach; ?>
     </div>
@@ -413,8 +413,11 @@ $fieldErrorMessages = [
   var slotCounter = document.querySelectorAll('.slot-row').length + 100;
 
   // ── Add slot ──
-  window.addSlot = function (day) {
+  function addSlot(day) {
     var container = document.getElementById('day-slots-' + day);
+    if (!container) {
+      return;
+    }
     var idx = slotCounter++;
     var div = document.createElement('div');
     div.className = 'slot-row';
@@ -426,22 +429,45 @@ $fieldErrorMessages = [
       '<input type="time" id="slot_end_' + day + '_' + idx + '" name="slots[' + day + '][end_time][]" style="width:auto" value="10:00">' +
       '<label for="slot_max_' + day + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
       '<input type="number" id="slot_max_' + day + '_' + idx + '" name="slots[' + day + '][max_bookings][]" min="1" style="width:4rem" value="1" title="Max. rezervací">' +
-      '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" onclick="removeSlot(this)">Odebrat</button>';
+      '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" data-remove-slot>Odebrat</button>';
     container.appendChild(div);
     div.querySelector('input[type="time"]').focus();
     if (live) live.textContent = 'Slot přidán';
-  };
+  }
 
   // ── Remove slot ──
-  window.removeSlot = function (btn) {
+  function removeSlot(btn) {
     var row = btn.closest('.slot-row');
+    if (!row || !row.parentNode) {
+      return;
+    }
     var container = row.parentNode;
     var prev = row.previousElementSibling;
     row.remove();
     if (prev) { var inp = prev.querySelector('input[type="time"]'); if (inp) inp.focus(); }
     else { var first = container.querySelector('input[type="time"]'); if (first) first.focus(); }
     if (live) live.textContent = 'Slot odebrán';
-  };
+  }
+
+  document.querySelectorAll('[data-add-slot]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      addSlot(button.getAttribute('data-day'));
+    });
+  });
+
+  if (slotsSection) {
+    slotsSection.addEventListener('click', function (event) {
+      var target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      var button = target.closest('[data-remove-slot]');
+      if (!button || !slotsSection.contains(button)) {
+        return;
+      }
+      removeSlot(button);
+    });
+  }
 
   // ── Bulk generator ──
   document.getElementById('btn-generate').addEventListener('click', function () {
@@ -487,7 +513,7 @@ $fieldErrorMessages = [
           '<input type="time" id="slot_end_' + d + '_' + idx + '" name="slots[' + d + '][end_time][]" style="width:auto" value="' + generated[g].end + '">' +
           '<label for="slot_max_' + d + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
           '<input type="number" id="slot_max_' + d + '_' + idx + '" name="slots[' + d + '][max_bookings][]" min="1" style="width:4rem" value="1" title="Max. rezervací">' +
-          '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" onclick="removeSlot(this)">Odebrat</button>';
+          '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" data-remove-slot>Odebrat</button>';
         container.appendChild(div);
       }
     }
@@ -513,7 +539,7 @@ $fieldErrorMessages = [
       '<input type="hidden" name="blocked_ids[]" value="0">' +
       '<input type="date" name="blocked_dates[]" value="' + dateVal + '" style="width:auto" aria-label="Datum blokování">' +
       '<input type="text" name="blocked_reasons[]" value="' + reasonVal.replace(/"/g, '&quot;') + '" maxlength="255" style="width:auto" aria-label="Důvod blokování">' +
-      '<button type="button" class="btn btn-danger" aria-label="Odebrat blokovaný den" onclick="removeBlocked(this)">Odebrat</button>';
+      '<button type="button" class="btn btn-danger" aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>';
     blockedList.appendChild(div);
 
     document.getElementById('block_date').value = '';
@@ -522,8 +548,11 @@ $fieldErrorMessages = [
     if (live) live.textContent = 'Blokovaný den přidán';
   });
 
-  window.removeBlocked = function (btn) {
+  function removeBlocked(btn) {
     var row = btn.closest('.blocked-row');
+    if (!row) {
+      return;
+    }
     var bid = row.getAttribute('data-blocked-id');
     if (bid && bid !== '0') {
       deletedBlockedIds.push(bid);
@@ -531,7 +560,21 @@ $fieldErrorMessages = [
     }
     row.remove();
     if (live) live.textContent = 'Blokovaný den odebrán';
-  };
+  }
+
+  if (blockedList) {
+    blockedList.addEventListener('click', function (event) {
+      var target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      var button = target.closest('[data-remove-blocked]');
+      if (!button || !blockedList.contains(button)) {
+        return;
+      }
+      removeBlocked(button);
+    });
+  }
 })();
 </script>
 
