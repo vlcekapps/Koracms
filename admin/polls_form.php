@@ -228,7 +228,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
                 type="button"
                 class="btn btn-danger btn-remove-option"
                 aria-label="Odebrat možnost <?= $index + 1 ?>"
-                onclick="removeOption(this)"
+                data-poll-option-remove
               >Odebrat</button>
             <?php endif; ?>
           </div>
@@ -252,13 +252,13 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
               type="button"
               class="btn btn-danger btn-remove-option"
               aria-label="Odebrat možnost <?= $index + 1 ?>"
-              onclick="removeOption(this)"
+              data-poll-option-remove
             >Odebrat</button>
           </div>
         <?php endfor; ?>
       <?php endif; ?>
     </div>
-    <button type="button" id="add-option" class="btn" onclick="addOption()" style="margin-top:.5rem">+ Přidat možnost</button>
+    <button type="button" id="add-option" class="btn" data-poll-option-add style="margin-top:.5rem">+ Přidat možnost</button>
   </fieldset>
 
   <fieldset style="margin-top:1rem">
@@ -342,9 +342,13 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   const addButton = document.getElementById('add-option');
   const live = document.getElementById('a11y-live');
 
+  if (!list || !addButton) {
+    return;
+  }
+
   function updateState() {
     const rows = list.querySelectorAll('.option-row');
-    const removable = list.querySelectorAll('.btn-remove-option');
+    const removable = list.querySelectorAll('[data-poll-option-remove]');
     removable.forEach((button) => {
       button.disabled = rows.length <= 2;
     });
@@ -366,7 +370,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     });
   }
 
-  window.addOption = function () {
+  function addOption() {
     const rows = list.querySelectorAll('.option-row');
     if (rows.length >= 10) {
       return;
@@ -379,7 +383,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
       '<input type="hidden" name="option_ids[]" value="0">' +
       '<label for="option_' + counter + '" class="sr-only">Možnost ' + (rows.length + 1) + '</label>' +
       '<input type="text" id="option_' + counter + '" name="options[]" required aria-required="true" maxlength="500" style="flex:1">' +
-      '<button type="button" class="btn btn-danger btn-remove-option" aria-label="Odebrat možnost ' + (rows.length + 1) + '" onclick="removeOption(this)">Odebrat</button>';
+      '<button type="button" class="btn btn-danger btn-remove-option" data-poll-option-remove aria-label="Odebrat možnost ' + (rows.length + 1) + '">Odebrat</button>';
     counter += 1;
     list.appendChild(div);
     updateState();
@@ -387,9 +391,9 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     if (live) {
       live.textContent = 'Přidána nová možnost.';
     }
-  };
+  }
 
-  window.removeOption = function (button) {
+  function removeOption(button) {
     const rows = list.querySelectorAll('.option-row');
     if (rows.length <= 2) {
       return;
@@ -406,7 +410,16 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     if (live) {
       live.textContent = 'Možnost odebrána.';
     }
-  };
+  }
+
+  addButton.addEventListener('click', addOption);
+  list.addEventListener('click', function (event) {
+    const button = event.target instanceof Element ? event.target.closest('[data-poll-option-remove]') : null;
+    if (!button || !list.contains(button)) {
+      return;
+    }
+    removeOption(button);
+  });
 
   updateState();
 })();

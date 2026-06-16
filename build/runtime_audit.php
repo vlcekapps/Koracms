@@ -10166,6 +10166,19 @@ if (!str_contains($pollFormSource, 'revisions.php?type=poll')) {
 if (!str_contains($pollFormSource, 'name="meta_title"') || !str_contains($pollFormSource, 'name="meta_description"')) {
     $pollSourceIssues[] = 'poll form is missing SEO fields';
 }
+if (str_contains($pollFormSource, 'onclick="removeOption(this)"') || str_contains($pollFormSource, 'onclick="addOption()"')) {
+    $pollSourceIssues[] = 'poll form still uses inline option editor onclick handlers';
+}
+foreach ([
+    'data-poll-option-add',
+    'data-poll-option-remove',
+    "addButton.addEventListener('click', addOption)",
+    "list.addEventListener('click'",
+] as $pollOptionEditorFragment) {
+    if (!str_contains($pollFormSource, $pollOptionEditorFragment)) {
+        $pollSourceIssues[] = 'poll form is missing option editor fragment: ' . $pollOptionEditorFragment;
+    }
+}
 if (!str_contains($pollListSource, 'paginate(')) {
     $pollSourceIssues[] = 'poll admin list is missing pagination support';
 }
