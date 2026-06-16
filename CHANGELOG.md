@@ -35,6 +35,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Karty v default šabloně** – základní karta už nepoužívá globální `height: 100%` a gridy zarovnávají položky nahoru, aby samostatné nebo vyšší karty nevytvářely zbytečnou prázdnou plochu pod obsahem.
 
 ### Změněno
+- **Importní formuláře v administraci** – tlačítka importu z WordPressu a eStránek už nepoužívají inline `onclick` pro zablokování opakovaného odeslání; používají sdílený `data-submit-once` handler v nonce skriptu administrace.
 - **Admin potvrzovací formuláře** – jednoduché destruktivní akce v přehledech komentářů, zpráv, fotek, odběratelů, stránek, rezervací a fronty ke schválení nově používají `data-confirm` obsloužený nonce skriptem i na události `submit`, místo inline `onsubmit="return confirm(...)"`.
 - **Veřejné akce v default šabloně** – potvrzení zrušení rezervace a tlačítko tisku jídelního lístku už nepoužívají inline `onclick`, ale sdílený nonce skript přes `data-confirm` a `js-print-page`, takže veřejná šablona méně spoléhá na CSP fallback `unsafe-inline`.
 - **Widget náhledu galerie** – veřejný náhled fotografií ve widgetech už nepoužívá inline layout styly, ale sdílené třídy v default šabloně, takže je výstup lépe udržovatelný a méně šumí v CSP reportech.

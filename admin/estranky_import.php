@@ -333,8 +333,7 @@ adminHeader('Import z eStránek');
   </fieldset>
 
   <div style="margin-top:1rem">
-    <button type="submit" class="btn btn-primary"
-            onclick="this.disabled=true;this.textContent='Importuji, čekejte prosím…';this.form.submit();return true;">Spustit import</button>
+    <button type="submit" class="btn btn-primary" data-submit-once="Importuji, čekejte prosím…">Spustit import</button>
     <a href="index.php" class="btn">Zpět</a>
   </div>
 </form>

@@ -458,8 +458,7 @@ adminHeader('Import z WordPressu');
       </fieldset>
 
       <div style="margin-top:1rem">
-        <button type="submit" class="btn btn-primary"
-                onclick="this.disabled=true;this.textContent='Importuji, čekejte prosím…';this.form.submit();return true;">Importovat vybraný obsah</button>
+        <button type="submit" class="btn btn-primary" data-submit-once="Importuji, čekejte prosím…">Importovat vybraný obsah</button>
         <a href="wp_import.php" class="btn">Zrušit</a>
       </div>
     </form>
@@ -482,8 +481,7 @@ adminHeader('Import z WordPressu');
     </fieldset>
 
     <div style="margin-top:1rem">
-      <button type="submit" class="btn btn-primary"
-              onclick="this.disabled=true;this.textContent='Načítám náhled…';this.form.submit();return true;">Načíst a zobrazit náhled</button>
+      <button type="submit" class="btn btn-primary" data-submit-once="Načítám náhled…">Načíst a zobrazit náhled</button>
       <a href="index.php" class="btn">Zpět</a>
     </div>
   </form>

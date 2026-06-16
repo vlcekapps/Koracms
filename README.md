@@ -411,6 +411,8 @@ Veřejná default šablona nepoužívá pro potvrzení akcí a tisk inline `oncl
 
 V administraci používají jednoduché potvrzovací formuláře stejný `data-confirm` vzor i pro událost `submit`, takže potvrzení funguje také při odeslání klávesnicí a není vázané na inline `onsubmit` JavaScript.
 
+Dlouho běžící administrační formuláře, například import z WordPressu nebo eStránek, používají `data-submit-once`. Sdílený nonce skript po odeslání změní text tlačítka a zablokuje opakované kliknutí bez inline `onclick` handleru.
+
 ---
 
 ## Přístupnost

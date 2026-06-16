@@ -10865,7 +10865,7 @@ if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\'
 }
 if (!str_contains($adminLayoutSource, 'document.addEventListener("submit"')
     || !str_contains($adminLayoutSource, 'form[data-confirm]')
-    || !str_contains($adminLayoutSource, 'b.tagName==="FORM"')) {
+    || !str_contains($adminLayoutSource, 'b.tagName!=="FORM"')) {
     $adminFieldErrorIssues[] = 'admin layout is missing submit-safe data-confirm handling for forms';
 }
 foreach ([
@@ -10883,6 +10883,26 @@ foreach ([
     $adminConfirmSource = (string)file_get_contents(dirname(__DIR__) . $adminConfirmPath);
     if (str_contains($adminConfirmSource, 'onsubmit="return confirm(')) {
         $adminFieldErrorIssues[] = $adminConfirmLabel . ' still uses inline onsubmit confirm';
+    }
+}
+if (!str_contains($adminLayoutSource, '[data-submit-once]')
+    || !str_contains($adminLayoutSource, 'data-submit-once-clicked')
+    || !str_contains($adminLayoutSource, 'e.submitter')) {
+    $adminFieldErrorIssues[] = 'admin layout is missing submit-once handling for long-running forms';
+}
+foreach ([
+    'WordPress import' => ['/admin/wp_import.php', 'data-submit-once="Importuji, čekejte prosím…"', 'data-submit-once="Načítám náhled…"'],
+    'eStránky import' => ['/admin/estranky_import.php', 'data-submit-once="Importuji, čekejte prosím…"'],
+] as $adminSubmitOnceLabel => $adminSubmitOnceSpec) {
+    $adminSubmitOncePath = array_shift($adminSubmitOnceSpec);
+    $adminSubmitOnceSource = (string)file_get_contents(dirname(__DIR__) . (string)$adminSubmitOncePath);
+    if (str_contains($adminSubmitOnceSource, 'onclick="this.disabled=true;this.textContent=')) {
+        $adminFieldErrorIssues[] = $adminSubmitOnceLabel . ' still uses inline submit-once onclick';
+    }
+    foreach ($adminSubmitOnceSpec as $adminSubmitOnceFragment) {
+        if (!str_contains($adminSubmitOnceSource, (string)$adminSubmitOnceFragment)) {
+            $adminFieldErrorIssues[] = $adminSubmitOnceLabel . ' is missing submit-once fragment: ' . $adminSubmitOnceFragment;
+        }
     }
 }
 $adminFieldErrorForms = [
