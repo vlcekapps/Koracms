@@ -92,7 +92,7 @@ adminHeader('Detail odběratele');
     </form>
 
     <form method="post" action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php"
-          onsubmit="return confirm('Opravdu znovu poslat potvrzovací e-mail tomuto odběrateli?')">
+          data-confirm="Opravdu znovu poslat potvrzovací e-mail tomuto odběrateli?">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="id" value="<?= (int)$subscriber['id'] ?>">
       <input type="hidden" name="action" value="resend">
@@ -102,7 +102,7 @@ adminHeader('Detail odběratele');
   <?php endif; ?>
 
   <form method="post" action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php"
-        onsubmit="return confirm('Smazat tohoto odběratele?')">
+        data-confirm="Smazat tohoto odběratele?">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$subscriber['id'] ?>">
     <input type="hidden" name="action" value="delete">

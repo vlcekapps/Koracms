@@ -506,7 +506,7 @@ adminHeader('Ke schválení');
                   <input type="hidden" name="redirect" value="<?= h($redirectPath) ?>">
                   <button type="submit" class="btn btn-success">Schválit</button>
                 </form>
-                <form action="res_booking_save.php" method="post" style="display:inline" onsubmit="return confirm('Zamítnout rezervaci?')">
+                <form action="res_booking_save.php" method="post" style="display:inline" data-confirm="Zamítnout rezervaci?">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="booking_id" value="<?= (int)$reservationRow['id'] ?>">
                   <input type="hidden" name="action" value="reject">

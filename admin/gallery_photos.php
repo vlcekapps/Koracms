@@ -179,7 +179,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
               </form>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_delete.php"
-                  onsubmit="return confirm('Smazat tuto fotografii?')">
+                  data-confirm="Smazat tuto fotografii?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
               <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">

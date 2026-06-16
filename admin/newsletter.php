@@ -213,7 +213,7 @@ adminHeader('Newsletter');
             <td class="actions">
               <a class="btn" href="newsletter_subscriber.php?id=<?= (int)$subscriber['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Zobrazit detail</a>
               <form action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php" method="post" style="display:inline"
-                    onsubmit="return confirm('Smazat tohoto odběratele?')">
+                    data-confirm="Smazat tohoto odběratele?">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$subscriber['id'] ?>">
                 <input type="hidden" name="action" value="delete">

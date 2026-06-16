@@ -409,6 +409,8 @@ V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend 
 
 Veřejná default šablona nepoužívá pro potvrzení akcí a tisk inline `onclick` handlery. Potvrzení běží přes `data-confirm` a tisk přes `js-print-page` v nonce skriptu layoutu, což snižuje závislost na CSP fallbacku `unsafe-inline`.
 
+V administraci používají jednoduché potvrzovací formuláře stejný `data-confirm` vzor i pro událost `submit`, takže potvrzení funguje také při odeslání klávesnicí a není vázané na inline `onsubmit` JavaScript.
+
 ---
 
 ## Přístupnost

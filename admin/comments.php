@@ -235,7 +235,7 @@ adminHeader('Komentáře');
               </form>
             <?php endforeach; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php" style="display:inline"
-                  onsubmit="return confirm('Smazat tento komentář trvale?')">
+                  data-confirm="Smazat tento komentář trvale?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
               <input type="hidden" name="filter" value="<?= h($filter) ?>">

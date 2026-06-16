@@ -10863,6 +10863,28 @@ if (str_contains($adminLayoutSource, "info.setAttribute(\\'aria-live\\',\\'polit
 if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\',\\'content\\');")) {
     $adminFieldErrorIssues[] = 'admin content word count is missing the non-live editor count marker';
 }
+if (!str_contains($adminLayoutSource, 'document.addEventListener("submit"')
+    || !str_contains($adminLayoutSource, 'form[data-confirm]')
+    || !str_contains($adminLayoutSource, 'b.tagName==="FORM"')) {
+    $adminFieldErrorIssues[] = 'admin layout is missing submit-safe data-confirm handling for forms';
+}
+foreach ([
+    'comments overview' => '/admin/comments.php',
+    'chat message detail' => '/admin/chat_message.php',
+    'contact overview' => '/admin/contact.php',
+    'contact message detail' => '/admin/contact_message.php',
+    'gallery photos' => '/admin/gallery_photos.php',
+    'newsletter overview' => '/admin/newsletter.php',
+    'newsletter subscriber detail' => '/admin/newsletter_subscriber.php',
+    'pages overview' => '/admin/pages.php',
+    'reservation bookings' => '/admin/res_bookings.php',
+    'review queue' => '/admin/review_queue.php',
+] as $adminConfirmLabel => $adminConfirmPath) {
+    $adminConfirmSource = (string)file_get_contents(dirname(__DIR__) . $adminConfirmPath);
+    if (str_contains($adminConfirmSource, 'onsubmit="return confirm(')) {
+        $adminFieldErrorIssues[] = $adminConfirmLabel . ' still uses inline onsubmit confirm';
+    }
+}
 $adminFieldErrorForms = [
     'page form' => [$pageFormSource, "adminFieldAttributes('title'", "adminRenderFieldError('title'", "adminFieldAttributes('unpublish_at'"],
     'blog form' => [$blogFormSource, "adminFieldAttributes('title'", "adminFieldAttributes('content'", "adminFieldAttributes('publish_at'"],

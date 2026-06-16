@@ -262,7 +262,7 @@ adminHeader('Statické stránky');
               <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php" style="display:inline"
-                  onsubmit="return confirm('Převést stránku na článek blogu?')">
+                  data-confirm="Převést stránku na článek blogu?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="direction" value="page_to_article">
               <input type="hidden" name="id" value="<?= $pageId ?>">
@@ -274,7 +274,7 @@ adminHeader('Statické stránky');
               <button type="submit" class="btn" data-confirm="Vytvořit kopii stránky?">Duplikovat</button>
             </form>
             <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
-                  onsubmit="return confirm('Smazat tuto stránku?')">
+                  data-confirm="Smazat tuto stránku?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= $pageId ?>">
               <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">

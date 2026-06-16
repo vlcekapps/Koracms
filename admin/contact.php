@@ -220,7 +220,7 @@ adminHeader('Kontakt');
               </form>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline"
-                  onsubmit="return confirm('Smazat tuto kontaktní zprávu trvale?')">
+                  data-confirm="Smazat tuto kontaktní zprávu trvale?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
               <input type="hidden" name="action" value="delete">
