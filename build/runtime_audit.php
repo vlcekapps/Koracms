@@ -10923,8 +10923,11 @@ $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $formBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
 $formSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_save.php');
 $presentationHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
+$boardCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cats.php');
 $boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
+$downloadCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
 $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
+$faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
@@ -11108,6 +11111,40 @@ foreach ([
     foreach ($adminInboxGuardrail['fragments'] as $adminInboxUtilityFragment) {
         if (!str_contains($adminInboxSource, $adminInboxUtilityFragment)) {
             $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' is missing utility class fragment: ' . $adminInboxUtilityFragment;
+        }
+    }
+}
+foreach ([
+    'board categories' => [
+        'source' => $boardCatsSource,
+        'fragments' => [
+            'button-row button-row--baseline',
+            'class="admin-input-auto"',
+        ],
+    ],
+    'download categories' => [
+        'source' => $downloadCatsSource,
+        'fragments' => [
+            'class="btn admin-action-row"',
+            'button-row button-row--baseline',
+            'class="admin-input-auto"',
+        ],
+    ],
+    'faq categories' => [
+        'source' => $faqCatsSource,
+        'fragments' => [
+            'button-row button-row--baseline',
+            'class="admin-input-auto"',
+        ],
+    ],
+] as $adminCategoryLabel => $adminCategoryGuardrail) {
+    $adminCategorySource = (string)$adminCategoryGuardrail['source'];
+    if (str_contains($adminCategorySource, 'style=')) {
+        $adminFieldErrorIssues[] = 'admin ' . $adminCategoryLabel . ' page still contains inline style attributes';
+    }
+    foreach ($adminCategoryGuardrail['fragments'] as $adminCategoryUtilityFragment) {
+        if (!str_contains($adminCategorySource, $adminCategoryUtilityFragment)) {
+            $adminFieldErrorIssues[] = 'admin ' . $adminCategoryLabel . ' page is missing utility class fragment: ' . $adminCategoryUtilityFragment;
         }
     }
 }

@@ -38,7 +38,7 @@ adminHeader('Ke stažení – kategorie');
     <legend>Nová kategorie</legend>
     <label for="name">Název <span aria-hidden="true">*</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
-    <button type="submit" style="margin-top:.5rem">Přidat kategorii</button>
+    <button type="submit" class="btn admin-action-row">Přidat kategorii</button>
   </fieldset>
 </form>
 
@@ -54,12 +54,12 @@ adminHeader('Ke stažení – kategorie');
       <tr>
         <td>
           <?php if ($editId === (int)$cat['id']): ?>
-            <form method="post" style="display:flex;gap:.4rem;align-items:center" novalidate>
+            <form method="post" class="button-row button-row--baseline" novalidate>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id"  value="<?= (int)$cat['id'] ?>">
               <label for="name-<?= (int)$cat['id'] ?>" class="sr-only">Název kategorie</label>
               <input type="text" id="name-<?= (int)$cat['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h($cat['name']) ?>" style="width:auto">
+                     value="<?= h($cat['name']) ?>" class="admin-input-auto">
               <button type="submit" class="btn">Uložit</button>
               <a href="dl_cats.php">Zrušit</a>
             </form>
@@ -71,7 +71,7 @@ adminHeader('Ke stažení – kategorie');
           <?php if ($editId !== (int)$cat['id']): ?>
             <a href="dl_cats.php?edit=<?= (int)$cat['id'] ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="dl_cat_delete.php" method="post" style="display:inline">
+          <form action="dl_cat_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$cat['id'] ?>">
             <button type="submit" class="btn btn-danger"
