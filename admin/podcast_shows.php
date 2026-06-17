@@ -84,11 +84,11 @@ adminHeader('Podcasty');
 ?>
 <p><a href="podcast_show_form.php?redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">+ Přidat podcast</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v podcastech</label>
     <input type="search" id="q" name="q" placeholder="Hledat v podcastech…"
-           value="<?= h($q) ?>" style="width:300px">
+           value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -131,15 +131,15 @@ adminHeader('Podcasty');
       <tr>
         <td>
           <strong><?= h((string)$show['title']) ?></strong><br>
-          <small style="color:#555"><?= h((string)$show['public_path']) ?></small>
+          <small class="table-meta"><?= h((string)$show['public_path']) ?></small>
           <?php if ($show['description_plain'] !== ''): ?>
-            <br><small style="color:#555"><?= h(mb_strimwidth((string)$show['description_plain'], 0, 120, '…', 'UTF-8')) ?></small>
+            <br><small class="table-meta"><?= h(mb_strimwidth((string)$show['description_plain'], 0, 120, '…', 'UTF-8')) ?></small>
           <?php endif; ?>
         </td>
         <td>
           <?= h(trim((string)($show['author'] ?? '')) !== '' ? (string)$show['author'] : '–') ?>
           <?php if (trim((string)($show['category'] ?? '')) !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$show['category']) ?></small>
+            <br><small class="table-meta"><?= h((string)$show['category']) ?></small>
           <?php endif; ?>
         </td>
         <td>
@@ -167,7 +167,7 @@ adminHeader('Podcasty');
           <?php endif; ?>
           <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed</a>
           <?php if ((string)$show['status'] === 'pending' && $canApprovePodcast): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="podcast_shows">
               <input type="hidden" name="id" value="<?= (int)$show['id'] ?>">
@@ -175,7 +175,7 @@ adminHeader('Podcasty');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="podcast_show_delete.php" method="post" style="display:inline">
+          <form action="podcast_show_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$show['id'] ?>">
             <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
@@ -188,7 +188,7 @@ adminHeader('Podcasty');
     </tbody>
   </table>
   <?php if ($pagerHtml !== ''): ?>
-    <div style="margin-top:1rem">
+    <div class="admin-action-row">
       <?= $pagerHtml ?>
     </div>
   <?php endif; ?>

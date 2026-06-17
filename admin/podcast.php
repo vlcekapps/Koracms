@@ -106,12 +106,12 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
 
 <p><a href="podcast_form.php?show_id=<?= (int)$showId ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">+ Přidat epizodu</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
   <div>
     <label for="q" class="visually-hidden">Hledat v epizodách</label>
     <input type="search" id="q" name="q" placeholder="Hledat v epizodách…"
-           value="<?= h($q) ?>" style="width:300px">
+           value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -157,9 +157,9 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
             <strong>Epizoda <?= (int)$episode['episode_num'] ?></strong><br>
           <?php endif; ?>
           <strong><?= h((string)$episode['title']) ?></strong><br>
-          <small style="color:#555"><?= h((string)$episode['public_path']) ?></small>
+          <small class="table-meta"><?= h((string)$episode['public_path']) ?></small>
           <?php if ($episode['excerpt'] !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$episode['excerpt']) ?></small>
+            <br><small class="table-meta"><?= h((string)$episode['excerpt']) ?></small>
           <?php endif; ?>
         </td>
         <td>
@@ -169,7 +169,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
             –
           <?php endif; ?>
           <?php if (trim((string)($episode['duration'] ?? '')) !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$episode['duration']) ?></small>
+            <br><small class="table-meta"><?= h((string)$episode['duration']) ?></small>
           <?php endif; ?>
         </td>
         <td>
@@ -187,7 +187,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
             <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ((string)$episode['status'] === 'pending' && $canApprovePodcast): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="podcasts">
               <input type="hidden" name="id" value="<?= (int)$episode['id'] ?>">
@@ -195,7 +195,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="podcast_delete.php" method="post" style="display:inline">
+          <form action="podcast_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$episode['id'] ?>">
             <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
@@ -209,7 +209,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
     </tbody>
   </table>
   <?php if ($pagerHtml !== ''): ?>
-    <div style="margin-top:1rem">
+    <div class="admin-action-row">
       <?= $pagerHtml ?>
     </div>
   <?php endif; ?>

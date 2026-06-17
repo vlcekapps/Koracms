@@ -10952,6 +10952,8 @@ $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.
 $newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
+$podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
+$podcastShowsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
 $trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
 $newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
@@ -11175,6 +11177,24 @@ foreach ([
             'button-row button-row--baseline admin-stack-sm',
             'class="admin-search-input"',
             'class="table-meta"',
+        ],
+    ],
+    'podcast episodes overview' => [
+        'source' => $podcastEpisodesOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
+            'class="admin-action-row"',
+        ],
+    ],
+    'podcast shows overview' => [
+        'source' => $podcastShowsOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
+            'class="admin-action-row"',
         ],
     ],
 ] as $adminInboxLabel => $adminInboxGuardrail) {
