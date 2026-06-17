@@ -45,11 +45,177 @@ try {
 adminHeader('Widgety');
 ?>
 
-<p style="font-size:.9rem">Přidávejte, přesouvejte a nastavujte widgety v jednotlivých zónách webu. Přetažením myší nebo klávesou Ctrl+šipka změníte pořadí. Aktivní widgety, které se teď na webu nedokážou zobrazit, tu uvidíte s vysvětlením přímo nad tlačítkem Nastavení.</p>
+<style nonce="<?= cspNonce() ?>">
+  .widgets-intro {
+    font-size: .9rem;
+  }
 
-<fieldset id="widget-add" style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+  .widget-panel {
+    margin-bottom: 1.5rem;
+    border: 1px solid #d6d6d6;
+    border-radius: 10px;
+    padding: .85rem 1rem;
+  }
+
+  .widget-add-zone {
+    margin-bottom: .75rem;
+    max-width: 18rem;
+  }
+
+  .widget-add-actions,
+  .widget-sort-item__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+  }
+
+  .widget-inline-form {
+    display: inline;
+  }
+
+  .widget-button--compact {
+    font-size: .85rem;
+  }
+
+  .widget-empty,
+  .widget-help--flush {
+    margin: 0;
+  }
+
+  .widget-sort-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .widget-sort-item {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .65rem .5rem;
+    border-bottom: 1px solid #eee;
+    flex-wrap: wrap;
+    cursor: grab;
+  }
+
+  .widget-sort-item--inactive {
+    opacity: .5;
+  }
+
+  .widget-sort-item--dragging {
+    opacity: .4;
+  }
+
+  .widget-sort-item__body {
+    min-width: 14rem;
+    flex: 1 1 16rem;
+  }
+
+  .widget-sort-item__meta {
+    color: #555;
+  }
+
+  .widget-sort-item__tools {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    align-items: flex-start;
+  }
+
+  .widget-sort-item__warning {
+    margin: 0;
+    max-width: 26rem;
+  }
+
+  .widget-sort-item__actions {
+    gap: .4rem;
+  }
+
+  .widget-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .54);
+    z-index: 1000;
+  }
+
+  .widget-dialog[hidden],
+  .widget-dialog-overlay[hidden],
+  .widget-dialog-field[hidden],
+  .widget-dialog-fieldset[hidden] {
+    display: none !important;
+  }
+
+  .widget-dialog {
+    position: fixed;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    width: min(32rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    padding: 1.2rem;
+    border: 1px solid #cbd5e1;
+    border-radius: .9rem;
+    background: #fff;
+    box-shadow: 0 28px 60px rgba(15, 23, 42, .28);
+    z-index: 1001;
+  }
+
+  .widget-dialog__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .widget-dialog__title {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .widget-dialog__description {
+    margin-top: 0;
+  }
+
+  .widget-dialog-fieldset {
+    margin: 0 0 1rem;
+    border: 1px solid #d6d6d6;
+    border-radius: 10px;
+    padding: .85rem 1rem;
+  }
+
+  .widget-dialog-fieldset--dynamic,
+  .widget-dialog-fieldset--nested {
+    margin: 0;
+  }
+
+  .widget-dialog-field {
+    margin-top: .75rem;
+  }
+
+  .widget-dialog-field--compact {
+    margin-top: .5rem;
+  }
+
+  .widget-dialog-checkbox {
+    font-weight: normal;
+    margin-top: .5rem;
+  }
+
+  .widget-dialog-number-input {
+    width: 6rem;
+  }
+
+  .widget-dialog-actions {
+    margin-top: 1rem;
+  }
+</style>
+
+<p class="widgets-intro">Přidávejte, přesouvejte a nastavujte widgety v jednotlivých zónách webu. Přetažením myší nebo klávesou Ctrl+šipka změníte pořadí. Aktivní widgety, které se teď na webu nedokážou zobrazit, tu uvidíte s vysvětlením přímo nad tlačítkem Nastavení.</p>
+
+<fieldset id="widget-add" class="widget-panel">
   <legend>Přidat widget do zóny</legend>
-  <div style="margin-bottom:.75rem;max-width:18rem">
+  <div class="widget-add-zone">
     <label for="widget-add-zone">Cílová zóna</label>
     <select id="widget-add-zone" name="widget_add_zone">
       <?php foreach ($zones as $zoneKey => $zoneLabel): ?>
@@ -57,29 +223,29 @@ adminHeader('Widgety');
       <?php endforeach; ?>
     </select>
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center">
+  <div class="widget-add-actions">
     <?php foreach ($available as $wType => $wDef): ?>
-      <form method="post" action="widget_add.php" style="display:inline">
+      <form method="post" action="widget_add.php" class="widget-inline-form">
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <input type="hidden" name="widget_type" value="<?= h($wType) ?>">
         <input type="hidden" name="zone" value="<?= h($selectedAddZone) ?>" class="widget-add-zone-input">
-        <button type="submit" class="btn" style="font-size:.85rem">Přidat <?= h($wDef['name']) ?></button>
+        <button type="submit" class="btn widget-button--compact">Přidat <?= h($wDef['name']) ?></button>
       </form>
     <?php endforeach; ?>
     <?php if (empty($available)): ?>
-      <p class="field-help" style="margin:0">Žádné widgety nejsou dostupné. Zapněte moduly v <a href="settings_modules.php">Správě modulů</a>.</p>
+      <p class="field-help widget-empty">Žádné widgety nejsou dostupné. Zapněte moduly v <a href="settings_modules.php">Správě modulů</a>.</p>
     <?php endif; ?>
   </div>
 </fieldset>
 
 <?php foreach ($zones as $zoneKey => $zoneLabel): ?>
-  <fieldset id="widget-zone-<?= h($zoneKey) ?>" style="margin-bottom:1.5rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+  <fieldset id="widget-zone-<?= h($zoneKey) ?>" class="widget-panel">
     <legend><?= h($zoneLabel) ?></legend>
 
     <?php if (empty($allWidgets[$zoneKey])): ?>
-      <p class="field-help" style="margin:0">Žádné widgety v této zóně. <a href="widgets.php?zone=<?= h($zoneKey) ?>#widget-add">Vyberte <?= h(mb_strtolower($zoneLabel)) ?> a přidejte první widget</a>.</p>
+      <p class="field-help widget-empty">Žádné widgety v této zóně. <a href="widgets.php?zone=<?= h($zoneKey) ?>#widget-add">Vyberte <?= h(mb_strtolower($zoneLabel)) ?> a přidejte první widget</a>.</p>
     <?php else: ?>
-      <ol style="list-style:none;padding:0;margin:0" data-sortable="widgets" data-zone="<?= h($zoneKey) ?>">
+      <ol class="widget-sort-list" data-sortable="widgets" data-zone="<?= h($zoneKey) ?>">
         <?php foreach ($allWidgets[$zoneKey] as $w):
             $wSettings = widgetSettings($w);
             $wTypeDef = $types[$w['widget_type']] ?? null;
@@ -101,23 +267,23 @@ adminHeader('Widgety');
                 $wMetaParts[] = 'na webu se teď nezobrazí';
             }
             ?>
-          <li style="display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .5rem;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab<?= !(int)$w['is_active'] ? ';opacity:.5' : '' ?>"
+          <li class="widget-sort-item<?= !(int)$w['is_active'] ? ' widget-sort-item--inactive' : '' ?>"
               data-sort-id="<?= (int)$w['id'] ?>" tabindex="0"
               aria-label="<?= h($wDisplayTitle) ?> (<?= h($wTypeName) ?>)">
 
-            <div style="min-width:14rem;flex:1 1 16rem">
+            <div class="widget-sort-item__body">
               <strong><?= h($wDisplayTitle) ?></strong>
               <?php if ($wMetaParts !== []): ?>
-                <br><small style="color:#555"><?= h(implode(' · ', $wMetaParts)) ?></small>
+                <br><small class="widget-sort-item__meta"><?= h(implode(' · ', $wMetaParts)) ?></small>
               <?php endif; ?>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start">
+            <div class="widget-sort-item__tools">
               <?php if ($wDisplayWarning && $wDisplayReasons !== []): ?>
-                <p class="field-help" style="margin:0;max-width:26rem">Na webu se teď nezobrazí: <?= h(implode('; ', $wDisplayReasons)) ?>.</p>
+                <p class="field-help widget-sort-item__warning">Na webu se teď nezobrazí: <?= h(implode('; ', $wDisplayReasons)) ?>.</p>
               <?php endif; ?>
-              <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-                <button type="button" class="btn widget-edit-btn" style="font-size:.85rem"
+              <div class="widget-sort-item__actions">
+                <button type="button" class="btn widget-button--compact widget-edit-btn"
                         aria-label="Nastavení widgetu <?= h($wDisplayTitle) ?>"
                         aria-haspopup="dialog"
                         aria-controls="widget-dialog"
@@ -128,10 +294,10 @@ adminHeader('Widgety');
                         data-widget-zone="<?= h($w['zone']) ?>"
                         data-widget-active="<?= (int)$w['is_active'] ?>"
                         data-widget-settings="<?= h(json_encode($wSettings, JSON_UNESCAPED_UNICODE)) ?>">Nastavení</button>
-                <form method="post" action="widget_delete.php" style="display:inline">
+                <form method="post" action="widget_delete.php" class="widget-inline-form">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
-                  <button type="submit" class="btn btn-danger" style="font-size:.85rem"
+                  <button type="submit" class="btn btn-danger widget-button--compact"
                           data-confirm="<?= h('Odebrat widget „' . $wDisplayTitle . '“?') ?>"
                           aria-label="Odebrat widget <?= h($wDisplayTitle) ?>">✕</button>
                 </form>
@@ -145,22 +311,18 @@ adminHeader('Widgety');
 <?php endforeach; ?>
 
 <!-- Modal dialog pro nastavení widgetu -->
-<div id="widget-overlay" hidden style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
-<section id="widget-dialog" role="dialog" aria-modal="true" aria-labelledby="widget-dialog-title" aria-describedby="widget-dialog-description" hidden
-         style="display:none;position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
-                width:min(32rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto;
-                padding:1.2rem;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;
-                box-shadow:0 28px 60px rgba(15,23,42,.28);z-index:1001">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-    <h2 id="widget-dialog-title" style="margin:0;font-size:1.15rem">Nastavení widgetu</h2>
+<div id="widget-overlay" class="widget-dialog-overlay" hidden></div>
+<section id="widget-dialog" class="widget-dialog" role="dialog" aria-modal="true" aria-labelledby="widget-dialog-title" aria-describedby="widget-dialog-description" hidden>
+  <div class="widget-dialog__header">
+    <h2 id="widget-dialog-title" class="widget-dialog__title">Nastavení widgetu</h2>
     <button type="button" id="widget-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
   </div>
-  <p id="widget-dialog-description" class="field-help" style="margin-top:0">Upravte název, zónu a další nastavení vybraného widgetu.</p>
+  <p id="widget-dialog-description" class="field-help widget-dialog__description">Upravte název, zónu a další nastavení vybraného widgetu.</p>
   <form method="post" action="widget_save.php" novalidate id="widget-dialog-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="widget_id" id="wd-id">
 
-    <fieldset id="wd-basic-fieldset" style="margin:0 0 1rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <fieldset id="wd-basic-fieldset" class="widget-dialog-fieldset">
       <legend>Základní nastavení widgetu</legend>
 
       <label for="wd-title">Název widgetu</label>
@@ -173,22 +335,22 @@ adminHeader('Widgety');
         <?php endforeach; ?>
       </select>
 
-      <label style="font-weight:normal;margin-top:.5rem">
+      <label class="widget-dialog-checkbox">
         <input type="checkbox" name="is_active" value="1" id="wd-active"> Aktivní
       </label>
     </fieldset>
 
-    <fieldset id="wd-dynamic-fieldset" style="display:none;margin:0;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem" hidden aria-hidden="true" aria-describedby="wd-dynamic-help">
+    <fieldset id="wd-dynamic-fieldset" class="widget-dialog-fieldset widget-dialog-fieldset--dynamic" hidden aria-hidden="true" aria-describedby="wd-dynamic-help">
       <legend id="wd-dynamic-legend">Doplňující nastavení widgetu</legend>
-      <p id="wd-dynamic-help" class="field-help" style="margin-top:0">Zobrazují se jen pole, která jsou relevantní pro vybraný typ widgetu.</p>
+      <p id="wd-dynamic-help" class="field-help widget-dialog__description">Zobrazují se jen pole, která jsou relevantní pro vybraný typ widgetu.</p>
 
       <!-- Dynamická pole dle typu -->
-      <div id="wd-field-count" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-count" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-count">Počet položek</label>
-        <input type="number" id="wd-count" name="widget_count" min="1" max="50" value="5" style="width:6rem" disabled>
+        <input type="number" id="wd-count" class="widget-dialog-number-input" name="widget_count" min="1" max="50" value="5" disabled>
       </div>
 
-      <div id="wd-field-blog" style="display:none;margin-top:.5rem" hidden aria-hidden="true">
+      <div id="wd-field-blog" class="widget-dialog-field widget-dialog-field--compact" hidden aria-hidden="true">
         <label for="wd-blog">Blog</label>
         <select id="wd-blog" name="widget_blog_id" aria-describedby="wd-blog-help" disabled>
           <option value="0">Všechny blogy</option>
@@ -202,7 +364,7 @@ adminHeader('Widgety');
         <small id="wd-blog-help" class="field-help">Vyberte konkrétní blog, nebo nechte widget reagovat na právě otevřený blog.</small>
       </div>
 
-      <div id="wd-field-source" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-source" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-source">Zdroj</label>
         <select id="wd-source" name="widget_source" disabled>
           <?php foreach ($featuredSourceOptions as $sourceKey => $sourceLabel): ?>
@@ -211,13 +373,13 @@ adminHeader('Widgety');
         </select>
       </div>
 
-      <div id="wd-field-cta" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-cta" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-cta">Úvodní text widgetu</label>
         <input type="text" id="wd-cta" name="widget_cta_text" maxlength="500" aria-describedby="wd-cta-help" disabled>
         <small id="wd-cta-help" class="field-help">Krátký doprovodný text zobrazený nad vyhledáváním nebo newsletter formulářem.</small>
       </div>
 
-      <div id="wd-field-album" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-album" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-album">Album</label>
         <select id="wd-album" name="widget_album_id" disabled>
           <option value="0">Všechny fotky</option>
@@ -227,7 +389,7 @@ adminHeader('Widgety');
         </select>
       </div>
 
-      <div id="wd-field-show" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-show" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-show">Pořad</label>
         <select id="wd-show" name="widget_show_id" disabled>
           <option value="0">Všechny pořady</option>
@@ -237,7 +399,7 @@ adminHeader('Widgety');
         </select>
       </div>
 
-      <div id="wd-field-form" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-form" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-form">Formulář</label>
         <select id="wd-form" name="widget_form_id" aria-describedby="wd-form-help" disabled>
           <option value="0">Vyberte formulář</option>
@@ -248,17 +410,17 @@ adminHeader('Widgety');
         <small id="wd-form-help" class="field-help">Na webu se zobrazí jen aktivní formulář.</small>
       </div>
 
-      <div id="wd-field-content" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
+      <div id="wd-field-content" class="widget-dialog-field" hidden aria-hidden="true">
         <label for="wd-content">HTML obsah</label>
         <textarea id="wd-content" name="widget_content" rows="6" aria-describedby="wd-content-help" disabled></textarea>
         <small id="wd-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
         <?php renderAdminContentReferencePicker('wd-content'); ?>
       </div>
 
-      <div id="wd-field-social" style="display:none;margin-top:.75rem" hidden aria-hidden="true">
-        <fieldset style="margin:0;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+      <div id="wd-field-social" class="widget-dialog-field" hidden aria-hidden="true">
+        <fieldset class="widget-dialog-fieldset widget-dialog-fieldset--nested">
           <legend>Odkazy na sociální sítě</legend>
-          <p id="wd-social-help" class="field-help" style="margin-top:0">Vyplňte jen odkazy, které chcete v tomto widgetu zobrazit. Když pole necháte prázdná, widget se na webu nevykreslí.</p>
+          <p id="wd-social-help" class="field-help widget-dialog__description">Vyplňte jen odkazy, které chcete v tomto widgetu zobrazit. Když pole necháte prázdná, widget se na webu nevykreslí.</p>
           <?php foreach (widgetSocialLinkDefinitions() as $socialSettingKey => $socialLabel): ?>
             <?php $socialFieldId = 'wd-' . str_replace('_', '-', $socialSettingKey); ?>
             <label for="<?= h($socialFieldId) ?>"><?= h($socialLabel) ?></label>
@@ -268,7 +430,7 @@ adminHeader('Widgety');
       </div>
     </fieldset>
 
-    <div class="button-row" style="margin-top:1rem">
+    <div class="button-row widget-dialog-actions">
       <button type="submit" class="btn">Uložit</button>
       <button type="button" id="widget-dialog-cancel" class="btn">Zrušit</button>
     </div>
@@ -283,7 +445,6 @@ adminHeader('Widgety');
   var cancelBtn = document.getElementById('widget-dialog-cancel');
   var addZoneSelect = document.getElementById('widget-add-zone');
   var lastTrigger = null;
-  var previousBodyOverflow = '';
   var countTypes = ['latest_articles','latest_news','board','upcoming_events','latest_downloads','latest_faq','latest_places','latest_podcast_episodes'];
   var socialFieldKeys = ['social_facebook','social_youtube','social_instagram','social_twitter'];
   var multiBlog = <?= count($allBlogs) > 1 ? 'true' : 'false' ?>;
@@ -300,14 +461,12 @@ adminHeader('Widgety');
   function toggleDialogField(fieldName, visible) {
     var field = document.getElementById('wd-field-' + fieldName);
     if (!field) return;
-    field.style.display = visible ? '' : 'none';
     field.hidden = !visible;
     field.setAttribute('aria-hidden', visible ? 'false' : 'true');
     setFieldDisabledState(field, !visible);
   }
 
   function setDynamicFieldsetVisibility(visible) {
-    dynamicFieldset.style.display = visible ? '' : 'none';
     dynamicFieldset.hidden = !visible;
     dynamicFieldset.setAttribute('aria-hidden', visible ? 'false' : 'true');
   }
@@ -418,12 +577,9 @@ adminHeader('Widgety');
       || type === 'social_links'
     );
 
-    previousBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('admin-modal-open');
     overlay.hidden = false;
     dialog.hidden = false;
-    overlay.style.display = '';
-    dialog.style.display = '';
     btn.setAttribute('aria-expanded', 'true');
     window.requestAnimationFrame(function () {
       document.getElementById('wd-title').focus();
@@ -434,9 +590,7 @@ adminHeader('Widgety');
     if (lastTrigger) {
       lastTrigger.setAttribute('aria-expanded', 'false');
     }
-    document.body.style.overflow = previousBodyOverflow;
-    overlay.style.display = 'none';
-    dialog.style.display = 'none';
+    document.body.classList.remove('admin-modal-open');
     overlay.hidden = true;
     dialog.hidden = true;
     if (lastTrigger) lastTrigger.focus();
@@ -472,7 +626,7 @@ adminHeader('Widgety');
 
     list.addEventListener('dragstart',function(e){
       var t=e.target.closest('[data-sort-id]');if(!t)return;
-      dragged=t;t.style.opacity='0.4';e.dataTransfer.effectAllowed='move';
+      dragged=t;t.classList.add('widget-sort-item--dragging');e.dataTransfer.effectAllowed='move';
     });
     list.addEventListener('dragover',function(e){
       e.preventDefault();e.dataTransfer.dropEffect='move';
@@ -481,7 +635,7 @@ adminHeader('Widgety');
       if(e.clientY<r.top+r.height/2)list.insertBefore(dragged,t);else list.insertBefore(dragged,t.nextSibling);}
     });
     list.addEventListener('dragend',function(){
-      if(dragged)dragged.style.opacity='';dragged=null;saveZone(list);
+      if(dragged)dragged.classList.remove('widget-sort-item--dragging');dragged=null;saveZone(list);
     });
     list.addEventListener('keydown',function(e){
       if(!e.ctrlKey||!['ArrowUp','ArrowDown'].includes(e.key))return;

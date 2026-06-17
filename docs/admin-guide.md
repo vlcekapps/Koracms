@@ -834,7 +834,7 @@ Widgety respektují stav modulů – vypnutý modul se v nabídce widgetů nezob
 
 Veřejné widgety v sidebaru a footeru používají skutečné viditelné nadpisy jako název oblasti. Náhled galerie se zároveň styluje přes šablonové CSS třídy, takže se do HTML nevkládají inline layout styly.
 
-Dialog `Nastavení` u widgetu nově používá skutečné `fieldset` a `legend` pro základní i typově specifická nastavení. Skrytá pole se při změně typu widgetu zároveň deaktivují, takže se nedostanou ani do tab orderu, ani do odeslaného formuláře.
+Dialog `Nastavení` u widgetu nově používá skutečné `fieldset` a `legend` pro základní i typově specifická nastavení. Skrytá pole se při změně typu widgetu zároveň deaktivují, takže se nedostanou ani do tab orderu, ani do odeslaného formuláře. Prezentační styly přehledu widgetů, dialogu a drag stavu jsou uložené v nonce CSS třídách, ne v lokálních `style` atributech.
 
 Zároveň ale platí, že i aktivní widget se může dočasně nevykreslit. Typické důvody:
 

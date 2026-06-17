@@ -12334,6 +12334,11 @@ foreach ([
     'aria-describedby="wd-blog-help"',
     'aria-describedby="wd-form-help"',
     'aria-describedby="wd-content-help"',
+    'class="widget-panel"',
+    'class="widget-dialog"',
+    'class="widget-dialog-overlay"',
+    'class="widget-dialog-fieldset widget-dialog-fieldset--dynamic"',
+    'class="widget-sort-list"',
 ] as $widgetAdminDialogFragment) {
     if (!str_contains($widgetsAdminSource, $widgetAdminDialogFragment)) {
         $widgetRenderIssues[] = 'admin widgets dialog is missing accessibility fragment: ' . $widgetAdminDialogFragment;
@@ -12346,10 +12351,20 @@ foreach ([
     "el.disabled = disabled;",
     'function getDialogFocusableElements()',
     'el.offsetParent !== null',
+    "document.body.classList.add('admin-modal-open')",
+    "document.body.classList.remove('admin-modal-open')",
+    "t.classList.add('widget-sort-item--dragging')",
+    "dragged.classList.remove('widget-sort-item--dragging')",
 ] as $widgetAdminDialogJsFragment) {
     if (!str_contains($widgetsAdminSource, $widgetAdminDialogJsFragment)) {
         $widgetRenderIssues[] = 'admin widgets dialog is missing accessibility JS fragment: ' . $widgetAdminDialogJsFragment;
     }
+}
+if (str_contains($widgetsAdminSource, 'style=')) {
+    $widgetRenderIssues[] = 'admin widgets page still contains inline style attributes';
+}
+if (str_contains($widgetsAdminSource, '.style')) {
+    $widgetRenderIssues[] = 'admin widgets page still mutates inline styles via JavaScript';
 }
 foreach ([
     'widgetSocialLinkDefinitions()',
