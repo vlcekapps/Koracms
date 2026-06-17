@@ -518,6 +518,7 @@ function adminHeader(string $pageTitle): void
        . '      width: 100%; padding: .35rem; margin-top: .2rem; background: var(--admin-input-bg); color: var(--admin-text); border: 1px solid var(--admin-input-border); }' . "\n"
        . '    textarea { min-height: 200px; }' . "\n"
        . '    .actions form { display: inline; }' . "\n"
+       . '    .table-row--scheduled { background:var(--admin-scheduled-bg); }' . "\n"
        . '    .badge { display:inline-block; min-width:1.4rem; padding:.1rem .45rem; border-radius:999px; background:var(--admin-badge-bg); color:#fff; font-size:.75rem; text-align:center; }' . "\n"
        . '    .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .55rem; border-radius:999px; border:1px solid transparent; font-size:.82rem; font-weight:700; line-height:1.25; }' . "\n"
        . '    .status-badge--pending { background:var(--admin-pending-bg); border-color:var(--admin-pending-border); color:var(--admin-pending-text); }' . "\n"

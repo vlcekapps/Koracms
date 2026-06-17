@@ -10934,6 +10934,7 @@ $newsFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news_form
 $faqFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_form.php');
 $foodFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_form.php');
 $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
+$pollsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls.php');
 $formBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
 $formSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_save.php');
 $presentationHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
@@ -10982,6 +10983,7 @@ $pagesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
 $podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
+$menuOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');
 $settingsDisplaySource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_display.php');
 $trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
 $usersOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
@@ -11034,6 +11036,7 @@ foreach ([
     '.admin-order-item__label--muted',
     '.field-help--flush',
     '.table-note',
+    '.table-row--scheduled',
     '.table-cell--detail',
     '.table-cell--prewrap',
     '.revision-diff-cell',
@@ -11132,6 +11135,19 @@ foreach ([
     }
 }
 foreach ([
+    'admin menu overview' => [
+        'source' => $menuOverviewSource,
+        'fragments' => [
+            'class="admin-description"',
+            'field-help field-help--flush',
+            'class="admin-sort-list"',
+            'class="admin-sort-item',
+            'admin-sort-item--muted',
+            'class="admin-sort-item__body"',
+            'class="table-meta"',
+            'button-row admin-action-row',
+        ],
+    ],
     'board overview' => [
         'source' => $boardOverviewSource,
         'fragments' => [
@@ -11329,6 +11345,19 @@ foreach ([
             'class="admin-copy--compact"',
             'class="field-help"',
             'class="button-row admin-action-row"',
+        ],
+    ],
+    'polls overview' => [
+        'source' => $pollsOverviewSource,
+        'fragments' => [
+            'button-row button-row--start',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-row--scheduled"',
+            'class="table-meta"',
+            'class="status-badge ',
+            'status-badge--scheduled',
+            '<td class="actions">',
         ],
     ],
     'podcast episodes overview' => [

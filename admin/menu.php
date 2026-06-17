@@ -149,23 +149,23 @@ adminHeader('Navigace webu');
   <p class="success" role="status">Pořadí statických stránek se nyní spravuje tady společně s moduly a blogy.</p>
 <?php endif; ?>
 
-<p style="font-size:.9rem">Tady určujete skutečné pořadí hlavní navigace webu napříč moduly, blogy, formuláři a statickými stránkami. Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. Položky označené jako mimo navigaci nebo nezveřejněné tu zůstávají kvůli přehledu, ale návštěvníkům se teď nezobrazí.</p>
+<p class="admin-description">Tady určujete skutečné pořadí hlavní navigace webu napříč moduly, blogy, formuláři a statickými stránkami. Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. Položky označené jako mimo navigaci nebo nezveřejněné tu zůstávají kvůli přehledu, ale návštěvníkům se teď nezobrazí.</p>
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <p id="nav-order-help" class="field-help" style="margin-top:0">Potřebujete změnit stav položky? U stránek použijte „Upravit stránku“, u formulářů „Upravit formulář“, u blogů „Správa blogů“ a u modulů „Správa modulů“.</p>
+  <p id="nav-order-help" class="field-help field-help--flush">Potřebujete změnit stav položky? U stránek použijte „Upravit stránku“, u formulářů „Upravit formulář“, u blogů „Správa blogů“ a u modulů „Správa modulů“.</p>
   <p id="nav-order-status" class="visually-hidden" role="status" aria-live="polite"></p>
-  <ol style="list-style:none;padding:0;margin:0;max-width:62rem" id="nav-list" data-sortable="nav_unified">
+  <ol class="admin-sort-list" id="nav-list" data-sortable="nav_unified">
     <?php $total = count($navItems); ?>
     <?php foreach ($navItems as $index => $item): ?>
-      <li style="display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab<?= !$item['enabled'] ? ';opacity:.5' : '' ?>"
+      <li class="admin-sort-item<?= !$item['enabled'] ? ' admin-sort-item--muted' : '' ?>"
           data-sort-id="<?= h($item['key']) ?>"
           tabindex="0"
           aria-describedby="nav-order-help">
         <input type="hidden" name="order[]" value="<?= h($item['key']) ?>">
-        <div style="min-width:14rem;flex:1 1 16rem">
+        <div class="admin-sort-item__body">
           <strong><?= h($item['label']) ?></strong>
-          <br><small style="color:#555"><?= h($item['sublabel']) ?><?= !$item['enabled'] ? ' · na webu se teď nezobrazí' : '' ?></small>
+          <br><small class="table-meta"><?= h($item['sublabel']) ?><?= !$item['enabled'] ? ' · na webu se teď nezobrazí' : '' ?></small>
         </div>
 
         <button type="button" class="btn nav-move-up"
@@ -183,7 +183,7 @@ adminHeader('Navigace webu');
     <?php endforeach; ?>
   </ol>
 
-  <div style="margin-top:1rem">
+  <div class="button-row admin-action-row">
     <button type="submit" class="btn">Uložit pořadí</button>
   </div>
 </form>

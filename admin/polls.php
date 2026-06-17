@@ -68,12 +68,12 @@ $pagerBaseUrl = '?' . ($pagerQuery !== [] ? http_build_query($pagerQuery) . '&' 
 
 adminHeader('Ankety');
 ?>
-<p><a href="polls_form.php?redirect=<?= urlencode($currentListUrl) ?>" class="btn">+ Nová anketa</a></p>
+<p class="button-row button-row--start"><a href="polls_form.php?redirect=<?= urlencode($currentListUrl) ?>" class="btn">+ Nová anketa</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v anketách</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v anketách..." value="<?= h($q) ?>" style="width:320px">
+    <input type="search" id="q" name="q" placeholder="Hledat v anketách..." value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -117,22 +117,22 @@ adminHeader('Ankety');
     <?php foreach ($polls as $poll): ?>
       <?php
         $state = (string)($poll['state'] ?? 'active');
-        $stateStyle = match ($state) {
-            'closed' => 'color:#666',
-            'scheduled' => 'color:#0b5fa5',
-            default => 'color:#0a6a2f',
+        $stateBadgeClass = match ($state) {
+            'closed' => 'status-badge--neutral',
+            'scheduled' => 'status-badge--scheduled',
+            default => 'status-badge--published',
         };
         ?>
-      <tr<?= $state === 'scheduled' ? ' style="background:#eef6ff"' : '' ?>>
+      <tr<?= $state === 'scheduled' ? ' class="table-row--scheduled"' : '' ?>>
         <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
         <td>
           <strong><?= h((string)$poll['question']) ?></strong><br>
-          <small style="color:#555">/polls/<?= h((string)$poll['slug']) ?></small>
+          <small class="table-meta">/polls/<?= h((string)$poll['slug']) ?></small>
           <?php if ($poll['excerpt'] !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$poll['excerpt']) ?></small>
+            <br><small class="table-meta"><?= h((string)$poll['excerpt']) ?></small>
           <?php endif; ?>
         </td>
-        <td><strong style="<?= $stateStyle ?>"><?= h((string)$poll['state_label']) ?></strong></td>
+        <td><strong class="status-badge <?= h($stateBadgeClass) ?>"><?= h((string)$poll['state_label']) ?></strong></td>
         <td><?= (int)($poll['vote_count'] ?? 0) ?></td>
         <td><?= !empty($poll['start_date']) ? h(formatCzechDate((string)$poll['start_date'])) : '–' ?></td>
         <td><?= !empty($poll['end_date']) ? h(formatCzechDate((string)$poll['end_date'])) : '–' ?></td>
@@ -141,7 +141,7 @@ adminHeader('Ankety');
           <?php if ($state !== 'scheduled'): ?>
             <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
-          <form action="polls_delete.php" method="post" style="display:inline">
+          <form action="polls_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$poll['id'] ?>">
             <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
