@@ -10908,6 +10908,7 @@ $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/g
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
 $userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_save.php');
 $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
+$blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
 $newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
@@ -10930,6 +10931,9 @@ if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\'
 }
 foreach ([
     '.button-row--between',
+    '.btn-muted',
+    '.admin-select-sm',
+    '.admin-select-md',
     '.admin-fieldset-card',
     '.field-help--flush',
     '.table-note',
@@ -10962,6 +10966,22 @@ foreach ([
 }
 if (str_contains($newsletterOverviewSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin newsletter overview still contains inline style attributes';
+}
+if (str_contains($blogOverviewSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin blog overview still contains inline style attributes';
+}
+foreach ([
+    'admin-search-input',
+    'admin-select-md',
+    'admin-select-sm',
+    'admin-fieldset-card',
+    'field-help field-help--flush',
+    'class="btn btn-muted"',
+    'class="table-note"',
+] as $blogOverviewUtilityFragment) {
+    if (!str_contains($blogOverviewSource, $blogOverviewUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin blog overview is missing utility class fragment: ' . $blogOverviewUtilityFragment;
+    }
 }
 foreach ([
     'admin-search-input',

@@ -176,12 +176,12 @@ adminHeader($blogCaptionTitle);
 <?php endif; ?>
 
 <?php if ($availableBlogs !== []): ?>
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+<form method="get" class="button-row admin-stack-sm">
   <label for="q" class="visually-hidden">Hledat</label>
   <input type="search" id="q" name="q" placeholder="Hledat v článcích…"
-         value="<?= h($q) ?>" style="width:300px">
+         value="<?= h($q) ?>" class="admin-search-input">
   <label for="cat" class="visually-hidden">Kategorie</label>
-  <select id="cat" name="cat" style="min-width:180px">
+  <select id="cat" name="cat" class="admin-select-md">
     <option value="">Všechny kategorie</option>
     <option value="none"<?= $cat === 'none' ? ' selected' : '' ?>>Bez kategorie</option>
     <?php foreach ($categories as $category): ?>
@@ -190,7 +190,7 @@ adminHeader($blogCaptionTitle);
   </select>
   <?php if ($multiBlog): ?>
     <label for="blog" class="visually-hidden">Blog</label>
-    <select id="blog" name="blog" style="min-width:150px">
+    <select id="blog" name="blog" class="admin-select-sm">
       <option value="">Všechny blogy</option>
       <?php foreach ($availableBlogs as $blog): ?>
         <option value="<?= (int)$blog['id'] ?>"<?= $blogFilter === (string)$blog['id'] ? ' selected' : '' ?>><?= h((string)$blog['name']) ?></option>
@@ -220,9 +220,9 @@ adminHeader($blogCaptionTitle);
 <form method="post" action="blog_bulk.php" id="bulk-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-  <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+  <fieldset class="admin-fieldset-card">
     <legend>Hromadné akce s vybranými články</legend>
-    <p data-selection-status="blog" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný článek.</p>
+    <p data-selection-status="blog" class="field-help field-help--flush" aria-live="polite">Zatím není vybraný žádný článek.</p>
     <div class="button-row">
       <?php if ($multiBlog): ?>
         <button type="submit" name="action" value="move" class="btn bulk-action-btn" disabled>Přesunout do jiného blogu</button>
@@ -274,10 +274,10 @@ adminHeader($blogCaptionTitle);
           <a href="blog_form.php?id=<?= (int)$article['id'] ?>" class="btn">Upravit</a>
           <?php if (!empty($article['preview_token'])): ?>
             <a href="<?= h(articlePreviewPath($article)) ?>"
-               target="_blank" class="btn" style="background:#555;color:#fff">Náhled</a>
+               target="_blank" class="btn btn-muted">Náhled</a>
           <?php endif; ?>
           <?php if ($article['status'] === 'pending' && $canApproveBlog): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="articles">
               <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
@@ -285,20 +285,20 @@ adminHeader($blogCaptionTitle);
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="convert_content.php" method="post" style="display:inline">
+          <form action="convert_content.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="direction" value="article_to_page">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
             <button type="submit" class="btn"
                   data-confirm="Převést článek na statickou stránku?"><span aria-hidden="true">→</span> Stránka</button>
           </form>
-          <form action="blog_clone.php" method="post" style="display:inline">
+          <form action="blog_clone.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
             <button type="submit" class="btn"
                     data-confirm="Vytvořit kopii článku?">Duplikovat</button>
           </form>
-          <form action="blog_delete.php" method="post" style="display:inline">
+          <form action="blog_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
             <button type="submit" class="btn btn-danger"
@@ -309,7 +309,7 @@ adminHeader($blogCaptionTitle);
     <?php endforeach; ?>
     </tbody>
   </table>
-  <div style="margin-top:.75rem;color:#555" aria-hidden="true">
+  <div class="table-note" aria-hidden="true">
     Po výběru článků můžete nahoře použít hromadnou akci<?= $multiBlog ? ' včetně přesunu do jiného blogu' : '' ?>.
   </div>
 </form>
