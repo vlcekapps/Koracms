@@ -157,16 +157,16 @@ adminHeader('Statické stránky');
   <a href="<?= BASE_URL ?>/admin/menu.php" class="btn">Navigace webu</a>
 </p>
 
-<p class="field-help" style="margin-top:0">Globální statické stránky se řadí v <a href="<?= BASE_URL ?>/admin/menu.php">Navigaci webu</a>. Blogové stránky mají vlastní pořadí jen uvnitř konkrétního blogu.</p>
+<p class="field-help field-help--flush">Globální statické stránky se řadí v <a href="<?= BASE_URL ?>/admin/menu.php">Navigaci webu</a>. Blogové stránky mají vlastní pořadí jen uvnitř konkrétního blogu.</p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q">Hledat</label>
-    <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název, slug nebo obsah stránky">
+    <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název, slug nebo obsah stránky" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
-    <select id="status" name="status" style="width:auto">
+    <select id="status" name="status" class="admin-input-auto">
       <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
       <option value="published"<?= $statusFilter === 'published' ? ' selected' : '' ?>>Publikováno</option>
       <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
@@ -215,7 +215,7 @@ adminHeader('Statické stránky');
             <strong><?= h((string)$page['title']) ?></strong>
             <br><small><?= h((string)$page['slug']) ?></small>
             <?php if (!empty($page['created_at'])): ?>
-              <br><small style="color:#555">Vytvořeno <?= h((string)$page['created_at']) ?></small>
+              <br><small class="table-meta">Vytvořeno <?= h((string)$page['created_at']) ?></small>
             <?php endif; ?>
           </td>
           <td>
@@ -250,7 +250,7 @@ adminHeader('Statické stránky');
               <a href="<?= BASE_URL ?>/admin/blog_pages.php?blog_id=<?= (int)$page['blog_id'] ?>" class="btn">Pořadí blogu</a>
             <?php endif; ?>
             <?php if ($page['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-              <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
+              <form action="<?= BASE_URL ?>/admin/approve.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="module" value="pages">
                 <input type="hidden" name="id" value="<?= $pageId ?>">
@@ -261,19 +261,19 @@ adminHeader('Statické stránky');
             <?php if ((int)$page['is_published'] === 1 && (string)$page['status'] === 'published'): ?>
               <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php" style="display:inline"
+            <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php"
                   data-confirm="Převést stránku na článek blogu?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="direction" value="page_to_article">
               <input type="hidden" name="id" value="<?= $pageId ?>">
               <button type="submit" class="btn"><span aria-hidden="true">→</span> Článek</button>
             </form>
-            <form action="<?= BASE_URL ?>/admin/page_clone.php" method="post" style="display:inline">
+            <form action="<?= BASE_URL ?>/admin/page_clone.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= $pageId ?>">
               <button type="submit" class="btn" data-confirm="Vytvořit kopii stránky?">Duplikovat</button>
             </form>
-            <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php" style="display:inline"
+            <form method="post" action="<?= BASE_URL ?>/admin/page_delete.php"
                   data-confirm="Smazat tuto stránku?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= $pageId ?>">

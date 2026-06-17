@@ -10945,6 +10945,7 @@ $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_fo
 $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 $formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
+$formSubmissionsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submissions.php');
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 $importAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
@@ -10977,6 +10978,7 @@ $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.
 $newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $newsletterHistorySource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_history.php');
+$pagesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.php');
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
 $podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
@@ -11214,6 +11216,18 @@ foreach ([
             '<td class="actions">',
         ],
     ],
+    'form submissions overview' => [
+        'source' => $formSubmissionsOverviewSource,
+        'fragments' => [
+            'class="button-row admin-stack-sm"',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="admin-fieldset-card"',
+            'field-help field-help--flush',
+            'class="table-meta"',
+            'class="table-note"',
+        ],
+    ],
     'news overview' => [
         'source' => $newsOverviewSource,
         'fragments' => [
@@ -11294,6 +11308,17 @@ foreach ([
         'source' => $newsletterHistorySource,
         'fragments' => [
             'class="table-cell--prewrap"',
+        ],
+    ],
+    'pages overview' => [
+        'source' => $pagesOverviewSource,
+        'fragments' => [
+            'field-help field-help--flush',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="admin-input-auto"',
+            'class="table-meta"',
+            '<td class="actions">',
         ],
     ],
     'newsletter form' => [

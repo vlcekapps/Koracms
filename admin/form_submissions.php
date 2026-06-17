@@ -229,7 +229,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 
 <p class="section-subtitle">Z přijatých odpovědí můžete udělat skutečný pracovní inbox: přiřadit řešitele, přidat interní poznámku, měnit stav a otevřít detail jednotlivého hlášení.</p>
 
-<nav aria-label="Filtr odpovědí formuláře" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Filtr odpovědí formuláře" class="button-row admin-stack-sm">
   <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'new', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'new' ? ' aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>
@@ -247,11 +247,11 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
   </a>
 </nav>
 
-<form method="get" class="filters" style="margin:1rem 0">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <input type="hidden" name="id" value="<?= (int)$formId ?>">
   <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
   <label for="submissions-q">Hledat v odpovědích</label>
-  <input type="search" id="submissions-q" name="q" value="<?= h($query) ?>" placeholder="Reference, obsah odpovědi nebo interní poznámka">
+  <input type="search" id="submissions-q" name="q" value="<?= h($query) ?>" placeholder="Reference, obsah odpovědi nebo interní poznámka" class="admin-search-input">
   <label for="submissions-priority">Priorita</label>
   <select id="submissions-priority" name="priority">
     <option value="all">Všechny priority</option>
@@ -288,9 +288,9 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="form_id" value="<?= (int)$formId ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými odpověďmi</legend>
-      <p data-selection-status="form-submissions" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná odpověď.</p>
+      <p data-selection-status="form-submissions" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná odpověď.</p>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <?php if ($statusFilter === $bulkAction): ?>
@@ -362,7 +362,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
           <td>
             <?= h($submissionSummary) ?>
             <?php if (trim((string)($submission['internal_note'] ?? '')) !== ''): ?>
-              <br><small style="color:#555">Interní poznámka: <?= h(mb_strimwidth(trim((string)$submission['internal_note']), 0, 110, '…', 'UTF-8')) ?></small>
+              <br><small class="table-meta">Interní poznámka: <?= h(mb_strimwidth(trim((string)$submission['internal_note']), 0, 110, '…', 'UTF-8')) ?></small>
             <?php endif; ?>
           </td>
           <td>
@@ -383,7 +383,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
           </td>
           <td class="actions">
             <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
-            <form action="form_submission_delete.php" method="post" style="display:inline">
+            <form action="form_submission_delete.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
               <input type="hidden" name="form_id" value="<?= (int)$formId ?>">
@@ -396,7 +396,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
     </tbody>
   </table>
 
-  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru odpovědí můžete použít hromadné akce nahoře.</div>
+  <div class="table-note" aria-hidden="true">Po výběru odpovědí můžete použít hromadné akce nahoře.</div>
 
   <script nonce="<?= h(cspNonce()) ?>">
   (() => {
