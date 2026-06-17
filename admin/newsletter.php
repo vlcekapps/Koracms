@@ -113,10 +113,10 @@ adminHeader('Newsletter');
   <p class="error" role="alert"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
-<div class="button-row" style="justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem">
+<div class="button-row button-row--between button-row--top admin-stack-md">
   <div>
-    <p style="margin:.2rem 0 .45rem">Tady spravujete odběratele newsletteru a kontrolujete historii odeslaných rozesílek.</p>
-    <p style="margin:.2rem 0 0">
+    <p class="admin-copy">Tady spravujete odběratele newsletteru a kontrolujete historii odeslaných rozesílek.</p>
+    <p class="admin-copy admin-copy--compact">
       <strong><?= $subscriberCounts['confirmed'] ?></strong> potvrzených odběratelů,
       <strong><?= $subscriberCounts['pending'] ?></strong> čeká na potvrzení,
       <strong><?= $sentNewsletterCount ?></strong> rozesílek v historii.
@@ -125,7 +125,7 @@ adminHeader('Newsletter');
   <a href="newsletter_form.php" class="btn">+ Nová rozesílka</a>
 </div>
 
-<nav aria-label="Filtr odběratelů newsletteru" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Filtr odběratelů newsletteru" class="button-row admin-stack-sm">
   <a href="?status=all" <?= $statusFilter === 'all' ? 'aria-current="page"' : '' ?>>
     Všichni (<?= $totalSubscribers ?>)
   </a>
@@ -137,20 +137,20 @@ adminHeader('Newsletter');
   </a>
 </nav>
 
-<form method="get" class="button-row" style="margin-bottom:1.5rem">
+<form method="get" class="button-row admin-stack-md">
   <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
   <label for="q" class="sr-only">Hledat v odběratelích a historii newsletterů</label>
   <input type="search" id="q" name="q" placeholder="Hledat podle e-mailu nebo předmětu rozesílky…"
-         value="<?= h($q) ?>" style="width:min(100%, 24rem)">
+         value="<?= h($q) ?>" class="admin-search-input">
   <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
     <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
-<section aria-labelledby="newsletter-subscribers-heading" style="margin-bottom:2rem">
-  <div class="button-row" style="justify-content:space-between;align-items:baseline">
-    <h2 id="newsletter-subscribers-heading" style="margin-bottom:.5rem">Odběratelé newsletteru</h2>
+<section aria-labelledby="newsletter-subscribers-heading" class="admin-stack-lg">
+  <div class="button-row button-row--between button-row--baseline admin-heading-row">
+    <h2 id="newsletter-subscribers-heading">Odběratelé newsletteru</h2>
     <small><?= count($subscribers) ?> zobrazených odběratelů</small>
   </div>
 
@@ -160,9 +160,9 @@ adminHeader('Newsletter');
     <form method="post" action="<?= BASE_URL ?>/admin/newsletter_bulk.php" id="newsletter-bulk-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-      <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+      <fieldset class="admin-fieldset-card">
         <legend>Hromadné akce s vybranými odběrateli</legend>
-        <p data-selection-status="newsletter-subscribers" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný odběratel.</p>
+        <p data-selection-status="newsletter-subscribers" class="field-help field-help--flush" aria-live="polite">Zatím není vybraný žádný odběratel.</p>
         <div class="button-row">
           <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
             <?php if (($bulkAction === 'confirm' || $bulkAction === 'resend') && $statusFilter === 'confirmed'): ?>
@@ -201,7 +201,7 @@ adminHeader('Newsletter');
             </td>
             <td><a href="mailto:<?= h((string)$subscriber['email']) ?>"><?= h((string)$subscriber['email']) ?></a></td>
             <td>
-              <strong<?= !$isConfirmed ? ' style="color:#9a3412"' : '' ?>>
+              <strong<?= !$isConfirmed ? ' class="text-pending"' : '' ?>>
                 <?= h(newsletterSubscriberStatusLabel($isConfirmed)) ?>
               </strong>
             </td>
@@ -212,7 +212,7 @@ adminHeader('Newsletter');
             </td>
             <td class="actions">
               <a class="btn" href="newsletter_subscriber.php?id=<?= (int)$subscriber['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Zobrazit detail</a>
-              <form action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php" method="post" style="display:inline"
+              <form action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php" method="post"
                     data-confirm="Smazat tohoto odběratele?">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$subscriber['id'] ?>">
@@ -225,7 +225,7 @@ adminHeader('Newsletter');
         <?php endforeach; ?>
       </tbody>
     </table>
-    <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru odběratelů můžete použít hromadné akce nahoře.</div>
+    <div class="table-note" aria-hidden="true">Po výběru odběratelů můžete použít hromadné akce nahoře.</div>
 
     <script nonce="<?= cspNonce() ?>">
     (() => {
@@ -270,8 +270,8 @@ adminHeader('Newsletter');
 </section>
 
 <section aria-labelledby="newsletter-history-heading">
-  <div class="button-row" style="justify-content:space-between;align-items:baseline">
-    <h2 id="newsletter-history-heading" style="margin-bottom:.5rem">Poslední rozesílky</h2>
+  <div class="button-row button-row--between button-row--baseline admin-heading-row">
+    <h2 id="newsletter-history-heading">Poslední rozesílky</h2>
     <small><?= count($newsletters) ?> zobrazených rozesílek</small>
   </div>
 

@@ -10908,6 +10908,7 @@ $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/g
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
 $userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_save.php');
 $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
+$newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
 $newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
 foreach ([
@@ -10926,6 +10927,31 @@ if (str_contains($adminLayoutSource, "info.setAttribute(\\'aria-live\\',\\'polit
 }
 if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\',\\'content\\');")) {
     $adminFieldErrorIssues[] = 'admin content word count is missing the non-live editor count marker';
+}
+foreach ([
+    '.button-row--between',
+    '.admin-fieldset-card',
+    '.field-help--flush',
+    '.table-note',
+    '.text-pending',
+] as $adminLayoutUtilityFragment) {
+    if (!str_contains($adminLayoutSource, $adminLayoutUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin layout is missing shared utility class: ' . $adminLayoutUtilityFragment;
+    }
+}
+if (str_contains($newsletterOverviewSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin newsletter overview still contains inline style attributes';
+}
+foreach ([
+    'admin-search-input',
+    'admin-fieldset-card',
+    'field-help field-help--flush',
+    'class="text-pending"',
+    'class="table-note"',
+] as $newsletterUtilityFragment) {
+    if (!str_contains($newsletterOverviewSource, $newsletterUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin newsletter overview is missing utility class fragment: ' . $newsletterUtilityFragment;
+    }
 }
 if (!str_contains($adminLayoutSource, 'document.addEventListener("submit"')
     || !str_contains($adminLayoutSource, 'form[data-confirm]')
