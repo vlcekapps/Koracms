@@ -64,15 +64,15 @@ $hasFilter = $filterParams !== [];
 adminHeader('Audit log');
 ?>
 
-<p style="font-size:.9rem">Záznam akcí provedených v administraci – přihlášení, úpravy obsahu, změny nastavení a další.</p>
+<p class="admin-description">Záznam akcí provedených v administraci – přihlášení, úpravy obsahu, změny nastavení a další.</p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+<form method="get" class="button-row admin-stack-sm">
   <label for="action" class="visually-hidden">Akce</label>
   <input type="text" id="action" name="action" placeholder="Hledat akci…"
-         value="<?= h($filterAction) ?>" style="width:200px">
+         value="<?= h($filterAction) ?>" class="admin-input-sm">
 
   <label for="user" class="visually-hidden">Uživatel</label>
-  <select id="user" name="user" style="min-width:150px">
+  <select id="user" name="user" class="admin-select-sm">
     <option value="">Všichni uživatelé</option>
     <?php foreach ($users as $u): ?>
       <option value="<?= (int)$u['user_id'] ?>"<?= $filterUser === (string)$u['user_id'] ? ' selected' : '' ?>><?= h((string)$u['name']) ?></option>
@@ -80,7 +80,7 @@ adminHeader('Audit log');
   </select>
 
   <label for="date" class="visually-hidden">Datum</label>
-  <input type="date" id="date" name="date" value="<?= h($filterDate) ?>" style="width:auto">
+  <input type="date" id="date" name="date" value="<?= h($filterDate) ?>" class="admin-input-auto">
 
   <button type="submit" class="btn">Filtrovat</button>
   <?php if ($hasFilter): ?>
@@ -107,7 +107,7 @@ adminHeader('Audit log');
         <td><time datetime="<?= h(str_replace(' ', 'T', (string)$entry['created_at'])) ?>"><?= h((string)$entry['created_at']) ?></time></td>
         <td><?= h((string)$entry['user_name']) ?></td>
         <td><code><?= h((string)$entry['action']) ?></code></td>
-        <td style="max-width:400px;word-break:break-word;font-size:.88rem"><?= h(mb_substr((string)$entry['detail'], 0, 200)) ?></td>
+        <td class="table-cell--detail"><?= h(mb_substr((string)$entry['detail'], 0, 200)) ?></td>
       </tr>
     <?php endforeach; ?>
     </tbody>

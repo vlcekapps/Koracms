@@ -10908,6 +10908,7 @@ $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/g
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
 $userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_save.php');
 $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
+$auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
@@ -10934,9 +10935,13 @@ foreach ([
     '.btn-muted',
     '.admin-select-sm',
     '.admin-select-md',
+    '.admin-description',
+    '.admin-input-sm',
+    '.admin-input-auto',
     '.admin-fieldset-card',
     '.field-help--flush',
     '.table-note',
+    '.table-cell--detail',
     '.text-pending',
     '.admin-nav-user',
     '.admin-nav-bottom',
@@ -10966,6 +10971,21 @@ foreach ([
 }
 if (str_contains($newsletterOverviewSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin newsletter overview still contains inline style attributes';
+}
+if (str_contains($auditLogSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin audit log still contains inline style attributes';
+}
+foreach ([
+    'class="admin-description"',
+    'button-row admin-stack-sm',
+    'class="admin-input-sm"',
+    'class="admin-select-sm"',
+    'class="admin-input-auto"',
+    'class="table-cell--detail"',
+] as $auditLogUtilityFragment) {
+    if (!str_contains($auditLogSource, $auditLogUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin audit log is missing utility class fragment: ' . $auditLogUtilityFragment;
+    }
 }
 if (str_contains($blogOverviewSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin blog overview still contains inline style attributes';
