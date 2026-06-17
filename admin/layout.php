@@ -512,6 +512,7 @@ function adminHeader(string $pageTitle): void
        . '    .admin-action-row { margin-top:1rem; }' . "\n"
        . '    .admin-preview-block { margin:.75rem 0; }' . "\n"
        . '    .admin-image-preview { max-width:16rem; height:auto; border:1px solid var(--admin-border); border-radius:.75rem; }' . "\n"
+       . '    .admin-image-preview--medium { display:block; max-width:300px; }' . "\n"
        . '    .admin-image-preview--wide { display:block; max-width:280px; width:100%; }' . "\n"
        . '    .admin-inline-edit-form { display:flex; flex-direction:column; gap:.4rem; }' . "\n"
        . '    .admin-sort-list { list-style:none; padding:0; margin:0; max-width:62rem; }' . "\n"

@@ -69,10 +69,10 @@ adminHeader($pageTitle);
     <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
     <input type="hidden" name="mode" value="edit">
 
-    <div style="margin-bottom:1rem">
+    <div class="admin-stack-sm">
       <img src="<?= h((string)$photo['thumb_url']) ?>"
            alt="<?= h((string)$photo['label']) ?>"
-           style="max-width:300px;height:auto;display:block;">
+           class="admin-image-preview admin-image-preview--medium">
     </div>
 
     <fieldset>
@@ -93,18 +93,18 @@ adminHeader($pageTitle);
       <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">
       <small class="field-help">Pořadí můžete rychle upravit i přímo v přehledu fotografií pomocí tlačítek Nahoru a Dolů.</small>
 
-      <div style="margin-top:.75rem">
-        <label>
+      <div class="admin-field-row">
+        <label class="admin-checkbox-label">
           <input type="checkbox" name="is_published" value="1"<?= (int)($photo['is_published'] ?? 1) === 1 ? ' checked' : '' ?>>
           Publikováno (viditelné na webu)
         </label>
       </div>
 
-      <div style="margin-top:1.5rem">
+      <div class="button-row admin-fieldset-spaced">
         <button type="submit">Uložit změny</button>
-        <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Zrušit</a>
-        <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_photo&amp;id=<?= (int)$photo['id'] ?>" style="margin-left:1rem">Historie revizí</a>
-        <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+        <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>">Zrušit</a>
+        <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_photo&amp;id=<?= (int)$photo['id'] ?>">Historie revizí</a>
+        <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
       </div>
     </fieldset>
   </form>
@@ -154,11 +154,11 @@ adminHeader($pageTitle);
              multiple required aria-required="true" aria-describedby="gallery-photos-help">
       <small id="gallery-photos-help" class="field-help">Můžete vybrat více fotografií najednou. Povolené jsou JPEG, PNG, GIF a WebP do 10 MB na soubor.</small>
 
-      <p style="margin:.75rem 0 0;color:#555">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
+      <p class="admin-description admin-description--muted admin-action-row">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
 
-      <div style="margin-top:1.5rem">
+      <div class="button-row admin-fieldset-spaced">
         <button type="submit">Nahrát fotografie</button>
-        <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Zrušit</a>
+        <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>">Zrušit</a>
       </div>
     </fieldset>
   </form>

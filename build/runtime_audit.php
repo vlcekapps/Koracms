@@ -11037,6 +11037,7 @@ foreach ([
     '.admin-action-row',
     '.admin-preview-block',
     '.admin-image-preview',
+    '.admin-image-preview--medium',
     '.admin-image-preview--wide',
     '.admin-inline-edit-form',
     '.admin-section-heading',
@@ -11422,6 +11423,17 @@ foreach ([
             'class="admin-search-input"',
             'class="admin-thumb"',
             'class="table-meta"',
+        ],
+    ],
+    'gallery photo form' => [
+        'source' => $galleryPhotoFormSource,
+        'fragments' => [
+            'class="admin-stack-sm"',
+            'class="admin-image-preview admin-image-preview--medium"',
+            'class="admin-field-row"',
+            'class="admin-checkbox-label"',
+            'class="button-row admin-fieldset-spaced"',
+            'class="admin-description admin-description--muted admin-action-row"',
         ],
     ],
     'import page' => [
