@@ -245,9 +245,9 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
 </p>
 
 <?php if (count($allBlogs) > 1): ?>
-  <form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
-    <label for="blog_id">Blog:</label>
-    <select id="blog_id" name="blog_id" style="min-width:15rem">
+  <form method="get" class="button-row admin-stack-sm">
+    <label for="blog_id" class="admin-inline-label">Blog:</label>
+    <select id="blog_id" name="blog_id" class="admin-select-lg">
       <?php foreach ($allBlogs as $blogRow): ?>
         <option value="<?= (int)$blogRow['id'] ?>"<?= (int)$blogRow['id'] === $blogId ? ' selected' : '' ?>><?= h((string)$blogRow['name']) ?></option>
       <?php endforeach; ?>
@@ -284,7 +284,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
   </p>
 
   <?php if (empty($blogCreator['created_by_user_id']) && $canAssignBlogCreator): ?>
-    <form method="post" novalidate style="margin-top:1rem">
+    <form method="post" novalidate class="admin-action-row">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="action" value="set_creator">
       <input type="hidden" name="blog_id" value="<?= $blogId ?>">
@@ -311,7 +311,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
         <small id="creator-user-help" class="field-help">Vybrat můžete jen interní účet. Doplnění zakladatele automaticky nepřidá uživatele do týmu blogu.</small>
         <?php adminRenderFieldError('creator_user_id', $creatorFieldErrors, [], 'Vyberte prosím interního uživatele, kterého chcete evidovat jako zakladatele.'); ?>
 
-        <div class="button-row" style="margin-top:1rem">
+        <div class="button-row admin-action-row">
           <button type="submit" class="btn">Uložit zakladatele</button>
         </div>
       </fieldset>
@@ -370,7 +370,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
                 <?php if ($otherMemberships === []): ?>
                   <small class="field-help">Jen tento blog nebo zatím bez dalších přiřazení.</small>
                 <?php else: ?>
-                  <ul style="margin:0;padding-left:1rem">
+                  <ul class="table-list-compact">
                     <?php foreach ($otherMemberships as $membership): ?>
                       <li>
                         <?= h((string)$membership['blog_name']) ?>
@@ -398,7 +398,7 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
       </table>
     <?php endif; ?>
 
-    <div class="button-row" style="margin-top:1rem">
+    <div class="button-row admin-action-row">
       <button type="submit" class="btn">Uložit tým blogu</button>
     </div>
   </fieldset>

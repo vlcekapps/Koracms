@@ -11007,10 +11007,15 @@ foreach ([
     '.admin-input-xs',
     '.admin-select-sm',
     '.admin-select-md',
+    '.admin-select-lg',
+    '.admin-inline-label',
+    '.admin-checkbox-label',
     '.admin-description',
     '.admin-input-sm',
     '.admin-input-auto',
     '.admin-fieldset-card',
+    '.admin-fieldset-spaced',
+    '.admin-field-row',
     '.admin-action-row',
     '.admin-inline-edit-form',
     '.admin-section-heading',
@@ -11143,6 +11148,16 @@ foreach ([
         'source' => $chatMessageDetailSource,
         'fragments' => [
             'class="table-cell--prewrap"',
+        ],
+    ],
+    'blog members' => [
+        'source' => $blogMembersSource,
+        'fragments' => [
+            'class="button-row admin-stack-sm"',
+            'class="admin-inline-label"',
+            'class="admin-select-lg"',
+            'class="table-list-compact"',
+            'class="button-row admin-action-row"',
         ],
     ],
     'contact overview' => [
@@ -11301,6 +11316,16 @@ foreach ([
             'class="admin-input-auto"',
             'class="btn admin-action-row"',
             'class="admin-inline-edit-form"',
+        ],
+    ],
+    'module settings' => [
+        'source' => $settingsModulesSource,
+        'fragments' => [
+            'class="admin-checkbox-label"',
+            'class="admin-fieldset-spaced"',
+            'class="admin-field-row"',
+            'class="admin-input-xs"',
+            'class="admin-action-row"',
         ],
     ],
     'settings display overview' => [

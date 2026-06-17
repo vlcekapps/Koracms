@@ -60,29 +60,29 @@ adminHeader('Správa modulů');
       <div>
         <input type="checkbox" id="module_<?= $k ?>" name="module_<?= $k ?>" value="1"
                <?= isModuleEnabled($k) ? 'checked' : '' ?>>
-        <label for="module_<?= $k ?>" style="display:inline;font-weight:normal"><?= h($label) ?></label>
+        <label for="module_<?= $k ?>" class="admin-checkbox-label"><?= h($label) ?></label>
       </div>
     <?php endforeach; ?>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem">
+  <fieldset class="admin-fieldset-spaced">
     <legend>Sledování návštěvnosti</legend>
     <div>
       <input type="checkbox" id="visitor_tracking_enabled" name="visitor_tracking_enabled" value="1"
              <?= getSetting('visitor_tracking_enabled', '0') === '1' ? 'checked' : '' ?>>
-      <label for="visitor_tracking_enabled" style="display:inline;font-weight:normal">Sledovat návštěvnost webu</label>
+      <label for="visitor_tracking_enabled" class="admin-checkbox-label">Sledovat návštěvnost webu</label>
     </div>
-    <p class="field-help" style="margin:.35rem 0 0">Veřejné statistiky se zobrazí jen tehdy, když je aktivní sledování návštěvnosti a současně zapnete widget <a href="widgets.php">Statistiky návštěvnosti ve Správě widgetů</a>.</p>
-    <div style="margin-top:.5rem">
+    <p class="field-help">Veřejné statistiky se zobrazí jen tehdy, když je aktivní sledování návštěvnosti a současně zapnete widget <a href="widgets.php">Statistiky návštěvnosti ve Správě widgetů</a>.</p>
+    <div class="admin-field-row">
       <label for="stats_retention_days">Uchovávat podrobná data (dní):</label>
       <input type="number" id="stats_retention_days" name="stats_retention_days" min="1" max="3650"
              value="<?= h(getSetting('stats_retention_days', '90')) ?>"
-             style="width:6rem" aria-describedby="retention-hint">
-      <small id="retention-hint">Po této době se raw data smažou, souhrnné statistiky zůstanou.</small>
+             class="admin-input-xs" aria-describedby="retention-hint">
+      <small id="retention-hint" class="field-help">Po této době se raw data smažou, souhrnné statistiky zůstanou.</small>
     </div>
   </fieldset>
 
-  <button type="submit" style="margin-top:1rem">Uložit moduly</button>
+  <button type="submit" class="admin-action-row">Uložit moduly</button>
 </form>
 
 <?php adminFooter(); ?>
