@@ -119,11 +119,11 @@ adminHeader('Ke stažení');
 ?>
 <p><a href="download_form.php" class="btn">+ Přidat položku</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q">Hledat</label>
     <input type="search" id="q" name="q" placeholder="Název, popis, platforma, požadavky…"
-           value="<?= h($q) ?>" style="width:320px">
+           value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -215,12 +215,12 @@ adminHeader('Ke stažení');
         <td><input type="checkbox" name="ids[]" value="<?= (int)$download['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$download['title']) ?>"></td>
         <td>
           <strong><?= h((string)$download['title']) ?></strong><br>
-          <small style="color:#555">/downloads/<?= h((string)$download['slug']) ?></small>
+          <small class="table-meta">/downloads/<?= h((string)$download['slug']) ?></small>
           <?php if ($download['category_name'] !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$download['category_name']) ?></small>
+            <br><small class="table-meta"><?= h((string)$download['category_name']) ?></small>
           <?php endif; ?>
           <?php if (!empty($download['image_file'])): ?>
-            <br><small style="color:#555">Náhledový obrázek připojen</small>
+            <br><small class="table-meta">Náhledový obrázek připojen</small>
           <?php endif; ?>
         </td>
         <td>
@@ -229,19 +229,19 @@ adminHeader('Ke stažení');
           <?php endif; ?>
           <strong><?= h((string)$download['download_type_label']) ?></strong>
           <?php if ($download['version_label'] !== ''): ?>
-            <br><small style="color:#555">Verze <?= h((string)$download['version_label']) ?></small>
+            <br><small class="table-meta">Verze <?= h((string)$download['version_label']) ?></small>
           <?php endif; ?>
           <?php if ($download['release_date_label'] !== ''): ?>
-            <br><small style="color:#555">Vydáno <?= h((string)$download['release_date_label']) ?></small>
+            <br><small class="table-meta">Vydáno <?= h((string)$download['release_date_label']) ?></small>
           <?php endif; ?>
           <?php if ($download['platform_label'] !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$download['platform_label']) ?></small>
+            <br><small class="table-meta"><?= h((string)$download['platform_label']) ?></small>
           <?php endif; ?>
           <?php if ($download['license_label'] !== ''): ?>
-            <br><small style="color:#555">Licence: <?= h((string)$download['license_label']) ?></small>
+            <br><small class="table-meta">Licence: <?= h((string)$download['license_label']) ?></small>
           <?php endif; ?>
           <?php if ($download['series_key'] !== ''): ?>
-            <br><small style="color:#555">Skupina verzí: <?= h((string)$download['series_key']) ?></small>
+            <br><small class="table-meta">Skupina verzí: <?= h((string)$download['series_key']) ?></small>
           <?php endif; ?>
         </td>
         <td>
@@ -254,7 +254,7 @@ adminHeader('Ke stažení');
               <small>(<?= h(formatFileSize((int)$download['file_size'])) ?>)</small>
             <?php endif; ?>
           <?php else: ?>
-            <small style="color:#555">Bez lokálního souboru</small>
+            <small class="table-meta">Bez lokálního souboru</small>
           <?php endif; ?>
           <?php if ($download['has_external_url']): ?>
             <br><a href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer">Externí odkaz</a>
@@ -262,7 +262,7 @@ adminHeader('Ke stažení');
           <?php if ($download['has_project_url']): ?>
             <br><a href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer">Domovská stránka projektu</a>
           <?php endif; ?>
-          <br><small style="color:#555"><?= h((string)$download['download_count_label']) ?></small>
+          <br><small class="table-meta"><?= h((string)$download['download_count_label']) ?></small>
         </td>
         <td><?= $download['author_name'] ? h((string)$download['author_name']) : '<em>–</em>' ?></td>
         <td>
@@ -280,7 +280,7 @@ adminHeader('Ke stažení');
             <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($download['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="downloads">
               <input type="hidden" name="id" value="<?= (int)$download['id'] ?>">
@@ -288,7 +288,7 @@ adminHeader('Ke stažení');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="download_delete.php" method="post" style="display:inline">
+          <form action="download_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$download['id'] ?>">
             <button type="submit" class="btn btn-danger"

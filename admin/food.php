@@ -77,16 +77,16 @@ $canApprove = currentUserHasCapability('content_approve_shared');
 
 adminHeader('Jídelní a nápojový lístek');
 ?>
-<p>
+<p class="button-row button-row--start admin-stack-sm">
   <a href="food_form.php?type=food" class="btn">+ Nový jídelní lístek</a>
-  <a href="food_form.php?type=beverage" class="btn" style="margin-left:.5rem">+ Nový nápojový lístek</a>
+  <a href="food_form.php?type=beverage" class="btn">+ Nový nápojový lístek</a>
 </p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v lístcích</label>
     <input type="search" id="q" name="q" placeholder="Hledat v lístcích…"
-           value="<?= h($q) ?>" style="width:300px">
+           value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -144,7 +144,7 @@ adminHeader('Jídelní a nápojový lístek');
         }
         $rows = $groups[$type];
         ?>
-  <h2 style="margin-top:2rem"><?= h($labels[$type]) ?></h2>
+  <h2 class="admin-section-heading"><?= h($labels[$type]) ?></h2>
   <table>
     <caption><?= h($captions[$type]) ?></caption>
     <thead>
@@ -167,21 +167,21 @@ adminHeader('Jídelní a nápojový lístek');
           <?php else: ?>
             <?= h((string)$card['title']) ?>
           <?php endif; ?>
-          <br><small style="color:#555">/food/card/<?= h((string)$card['slug']) ?></small>
+          <br><small class="table-meta">/food/card/<?= h((string)$card['slug']) ?></small>
           <?php if (!empty($card['description'])): ?>
-            <br><small style="color:#555"><?= h((string)$card['description']) ?></small>
+            <br><small class="table-meta"><?= h((string)$card['description']) ?></small>
           <?php endif; ?>
         </td>
         <td>
           <strong><?= h((string)($card['state_label'] ?? 'Platí nyní')) ?></strong>
-          <br><small style="color:#555"><?= h((string)($card['validity_label'] !== '' ? $card['validity_label'] : 'Bez omezení')) ?></small>
+          <br><small class="table-meta"><?= h((string)($card['validity_label'] !== '' ? $card['validity_label'] : 'Bez omezení')) ?></small>
         </td>
         <td><?= h((string)($card['author_name'] ?: '–')) ?></td>
         <td>
           <?php if ($card['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
           <?php elseif ((int)$card['is_published'] === 1): ?>
-            <?= $card['is_current'] ? '<strong style="color:#060">Aktuální</strong>' : 'Publikováno' ?>
+            <?= $card['is_current'] ? '<strong class="status-badge status-badge--current">Aktuální</strong>' : 'Publikováno' ?>
           <?php else: ?>
             <strong>Skryto</strong>
           <?php endif; ?>
@@ -193,7 +193,7 @@ adminHeader('Jídelní a nápojový lístek');
             <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($card['status'] === 'pending' && $canApprove): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="food">
               <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
@@ -201,7 +201,7 @@ adminHeader('Jídelní a nápojový lístek');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="food_delete.php" method="post" style="display:inline">
+          <form action="food_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
             <button type="submit" class="btn btn-danger"

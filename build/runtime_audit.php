@@ -10946,7 +10946,9 @@ $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
 $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
+$downloadsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/events.php');
+$foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
 $newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
@@ -10981,6 +10983,7 @@ foreach ([
     '.admin-input-auto',
     '.admin-fieldset-card',
     '.admin-action-row',
+    '.admin-section-heading',
     '.admin-sort-list',
     '.admin-sort-item',
     '.admin-sort-item--muted',
@@ -11139,12 +11142,31 @@ foreach ([
             'class="table-meta"',
         ],
     ],
+    'downloads overview' => [
+        'source' => $downloadsOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
+        ],
+    ],
     'events overview' => [
         'source' => $eventsOverviewSource,
         'fragments' => [
             'button-row button-row--baseline admin-stack-sm',
             'class="admin-search-input"',
             'class="table-meta"',
+        ],
+    ],
+    'food overview' => [
+        'source' => $foodOverviewSource,
+        'fragments' => [
+            'button-row button-row--start admin-stack-sm',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="admin-section-heading"',
+            'class="table-meta"',
+            'status-badge status-badge--current',
         ],
     ],
     'places overview' => [
