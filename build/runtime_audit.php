@@ -10936,6 +10936,7 @@ if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\'
     $adminFieldErrorIssues[] = 'admin content word count is missing the non-live editor count marker';
 }
 foreach ([
+    '.button-row--start',
     '.button-row--between',
     '.btn-muted',
     '.admin-select-sm',
@@ -10944,6 +10945,12 @@ foreach ([
     '.admin-input-sm',
     '.admin-input-auto',
     '.admin-fieldset-card',
+    '.admin-action-row',
+    '.admin-sort-list',
+    '.admin-sort-item',
+    '.admin-sort-item--muted',
+    '.admin-sort-item--dragging',
+    '.admin-sort-item__body',
     '.field-help--flush',
     '.table-note',
     '.table-cell--detail',
@@ -11804,6 +11811,23 @@ if (!str_contains($blogStaticPageSaveSource, '$targetBlogId') || !str_contains($
 }
 if (!str_contains($blogStaticPagesAdminSource, 'blog_nav_order') || !str_contains($blogStaticPagesAdminSource, 'Uložit pořadí') || !str_contains($blogStaticPagesAdminSource, 'blog-page-order-status')) {
     $blogStaticPageIssues[] = 'blog page ordering admin screen is missing reorder persistence or accessibility helpers';
+}
+if (str_contains($blogStaticPagesAdminSource, 'style=')) {
+    $blogStaticPageIssues[] = 'blog page ordering admin screen still contains inline style attributes';
+}
+foreach ([
+    'class="admin-description"',
+    'field-help field-help--flush',
+    'class="admin-sort-list"',
+    'class="admin-sort-item',
+    'class="admin-sort-item__body"',
+    'class="table-meta"',
+    'class="admin-action-row"',
+    'admin-sort-item--dragging',
+] as $blogStaticPagesAdminUtilityFragment) {
+    if (!str_contains($blogStaticPagesAdminSource, $blogStaticPagesAdminUtilityFragment)) {
+        $blogStaticPageIssues[] = 'blog page ordering admin screen is missing utility class fragment: ' . $blogStaticPagesAdminUtilityFragment;
+    }
 }
 if (!str_contains($blogStaticPagesListSource, 'Blogová stránka') || !str_contains($blogStaticPagesListSource, '/admin/blog_pages.php?blog_id=')) {
     $blogStaticPageIssues[] = 'pages overview is missing blog page classification or reorder link';

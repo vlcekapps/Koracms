@@ -83,7 +83,7 @@ adminHeader('Pořadí stránek blogu');
   <a href="<?= BASE_URL ?>/admin/page_form.php?blog_id=<?= (int)$blog['id'] ?>&amp;redirect=<?= rawurlencode($returnUrl) ?>" class="btn">+ Nová stránka blogu</a>
 </p>
 
-<p style="margin-top:0;font-size:.9rem">Tady určujete pořadí statických stránek blogu <strong><?= h((string)$blog['name']) ?></strong>. Toto pořadí je oddělené od globální hlavní navigace webu.</p>
+<p class="admin-description">Tady určujete pořadí statických stránek blogu <strong><?= h((string)$blog['name']) ?></strong>. Toto pořadí je oddělené od globální hlavní navigace webu.</p>
 
 <?php if ($pages === []): ?>
   <p>Blog zatím nemá žádné vlastní statické stránky. <a href="<?= BASE_URL ?>/admin/page_form.php?blog_id=<?= (int)$blog['id'] ?>&amp;redirect=<?= rawurlencode($returnUrl) ?>">Vytvořit první stránku blogu</a>.</p>
@@ -91,25 +91,25 @@ adminHeader('Pořadí stránek blogu');
   <form method="post" novalidate>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($returnUrl) ?>">
-    <p id="blog-page-order-help" class="field-help" style="margin-top:0">Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. U skrytých či neschválených stránek zůstává pořadí zachované, ale na webu se teď nezobrazí.</p>
+    <p id="blog-page-order-help" class="field-help field-help--flush">Přetahujte myší nebo použijte tlačítka Nahoru/Dolů. U skrytých či neschválených stránek zůstává pořadí zachované, ale na webu se teď nezobrazí.</p>
     <p id="blog-page-order-status" class="visually-hidden" role="status" aria-live="polite"></p>
 
-    <ol id="blog-page-list" style="list-style:none;padding:0;margin:0;max-width:62rem">
+    <ol id="blog-page-list" class="admin-sort-list">
       <?php $total = count($pages); ?>
       <?php foreach ($pages as $index => $page): ?>
         <?php $publicPath = ((int)$page['is_published'] === 1 && (string)$page['status'] === 'published') ? pagePublicPath($page + ['blog_id' => $blog['id'], 'blog_slug' => $blog['slug']]) : ''; ?>
-        <li style="display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid #eee;flex-wrap:wrap;cursor:grab<?= ((int)$page['is_published'] !== 1 || (string)$page['status'] !== 'published') ? ';opacity:.6' : '' ?>"
+        <li class="admin-sort-item<?= ((int)$page['is_published'] !== 1 || (string)$page['status'] !== 'published') ? ' admin-sort-item--muted' : '' ?>"
             data-sort-id="<?= (int)$page['id'] ?>"
             tabindex="0"
             aria-describedby="blog-page-order-help">
           <input type="hidden" name="order[]" value="<?= (int)$page['id'] ?>">
-          <div style="min-width:14rem;flex:1 1 18rem">
+          <div class="admin-sort-item__body">
             <strong><?= h((string)$page['title']) ?></strong>
-            <br><small style="color:#555"><?= h((string)$page['slug']) ?></small>
+            <br><small class="table-meta"><?= h((string)$page['slug']) ?></small>
             <?php if ((int)$page['is_published'] !== 1): ?>
-              <br><small style="color:#555">Nezveřejněná stránka</small>
+              <br><small class="table-meta">Nezveřejněná stránka</small>
             <?php elseif ((string)$page['status'] !== 'published'): ?>
-              <br><small style="color:#555">Čeká na schválení</small>
+              <br><small class="table-meta">Čeká na schválení</small>
             <?php endif; ?>
           </div>
           <button type="button" class="btn blog-page-move-up"<?= $index === 0 ? ' disabled aria-disabled="true"' : ' aria-disabled="false"' ?> aria-label="Posunout <?= h((string)$page['title']) ?> nahoru">
@@ -126,7 +126,7 @@ adminHeader('Pořadí stránek blogu');
       <?php endforeach; ?>
     </ol>
 
-    <div style="margin-top:1rem">
+    <div class="admin-action-row">
       <button type="submit" class="btn">Uložit pořadí</button>
     </div>
   </form>
@@ -223,7 +223,7 @@ adminHeader('Pořadí stránek blogu');
               return;
           }
           dragged = item;
-          item.style.opacity = '0.4';
+          item.classList.add('admin-sort-item--dragging');
           event.dataTransfer.effectAllowed = 'move';
       });
       list.addEventListener('dragover', function (event) {
@@ -242,7 +242,7 @@ adminHeader('Pořadí stránek blogu');
       });
       list.addEventListener('dragend', function () {
           if (dragged) {
-              dragged.style.opacity = '';
+              dragged.classList.remove('admin-sort-item--dragging');
               updateHiddenInputs();
               announce(dragged.querySelector('strong').textContent + ' přesunuto na pozici ' + itemPosition(dragged) + '.');
           }
