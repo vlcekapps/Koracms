@@ -125,9 +125,9 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
 </p>
 
 <?php if (count($allBlogs) > 1): ?>
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
+<form method="get" class="button-row admin-stack-sm">
   <label for="blog_id">Blog:</label>
-  <select id="blog_id" name="blog_id" style="min-width:150px">
+  <select id="blog_id" name="blog_id" class="admin-select-sm">
     <?php foreach ($allBlogs as $blog): ?>
       <option value="<?= (int)$blog['id'] ?>"<?= (int)$blog['id'] === $blogId ? ' selected' : '' ?>><?= h((string)$blog['name']) ?></option>
     <?php endforeach; ?>
@@ -141,7 +141,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
   <input type="hidden" name="blog_id" value="<?= $blogId ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
-    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+    <div class="button-row button-row--baseline">
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
@@ -173,14 +173,14 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
         <td><input type="checkbox" name="ids[]" value="<?= (int)$category['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$category['name']) ?>"></td>
         <td>
           <?php if ($editId === (int)$category['id']): ?>
-            <form method="post" style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap" novalidate>
+            <form method="post" class="button-row button-row--baseline" novalidate>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
               <input type="text" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h((string)$category['name']) ?>" style="width:auto">
+                     value="<?= h((string)$category['name']) ?>" class="admin-input-auto">
               <label for="edit-parent-<?= (int)$category['id'] ?>" class="sr-only">Nadřazená kategorie</label>
-              <select id="edit-parent-<?= (int)$category['id'] ?>" name="parent_id" style="width:auto">
+              <select id="edit-parent-<?= (int)$category['id'] ?>" name="parent_id" class="admin-input-auto">
                 <option value="">— Kořenová —</option>
                 <?= renderBlogCategoryOptions($blogCatTree, $blogCatById, 0, 0, (int)$category['id']) ?>
               </select>
@@ -202,7 +202,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
           <?php if ($editId !== (int)$category['id']): ?>
             <a href="blog_cats.php?edit=<?= (int)$category['id'] ?>&amp;blog_id=<?= $blogId ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="blog_cat_delete.php" method="post" style="display:inline">
+          <form action="blog_cat_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
             <button type="submit" class="btn btn-danger"

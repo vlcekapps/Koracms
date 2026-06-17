@@ -78,9 +78,9 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
 </p>
 
 <?php if (count($allBlogs) > 1): ?>
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
+<form method="get" class="button-row admin-stack-sm">
   <label for="blog_id">Blog:</label>
-  <select id="blog_id" name="blog_id" style="min-width:150px">
+  <select id="blog_id" name="blog_id" class="admin-select-sm">
     <?php foreach ($allBlogs as $blog): ?>
       <option value="<?= (int)$blog['id'] ?>"<?= (int)$blog['id'] === $blogId ? ' selected' : '' ?>><?= h((string)$blog['name']) ?></option>
     <?php endforeach; ?>
@@ -96,7 +96,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
     <legend>Nový štítek</legend>
     <label for="name">Název <span aria-hidden="true">*</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="100">
-    <button type="submit" style="margin-top:.5rem">Přidat štítek</button>
+    <button type="submit" class="btn admin-action-row">Přidat štítek</button>
   </fieldset>
 </form>
 
@@ -112,12 +112,12 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
       <tr>
         <td>
           <?php if ($editId === (int)$tag['id']): ?>
-            <form method="post" style="display:flex;gap:.4rem;align-items:center">
+            <form method="post" class="button-row button-row--baseline">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$tag['id'] ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
               <input type="text" name="name" required aria-required="true" maxlength="100"
-                     value="<?= h((string)$tag['name']) ?>" style="width:auto">
+                     value="<?= h((string)$tag['name']) ?>" class="admin-input-auto">
               <button type="submit" class="btn">Uložit</button>
               <a href="blog_tags.php?blog_id=<?= $blogId ?>">Zrušit</a>
             </form>
@@ -130,7 +130,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
           <?php if ($editId !== (int)$tag['id']): ?>
             <a href="blog_tags.php?edit=<?= (int)$tag['id'] ?>&amp;blog_id=<?= $blogId ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="blog_tag_delete.php" method="post" style="display:inline">
+          <form action="blog_tag_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$tag['id'] ?>">
             <button type="submit" class="btn btn-danger"

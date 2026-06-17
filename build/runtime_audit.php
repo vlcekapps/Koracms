@@ -9423,11 +9423,38 @@ if (!str_contains($blogCatsSource, 'if (!hasAnyBlogs())')) {
 if (!str_contains($blogCatsSource, 'getTaxonomyManagedBlogsForUser()')) {
     $blogAdminIssues[] = 'blog categories page is missing manageable-blog filtering';
 }
+if (str_contains($blogCatsSource, 'style=')) {
+    $blogAdminIssues[] = 'blog categories page still contains inline style attributes';
+}
+foreach ([
+    'button-row admin-stack-sm',
+    'class="admin-select-sm"',
+    'button-row button-row--baseline',
+    'class="admin-input-auto"',
+] as $blogCatsUtilityFragment) {
+    if (!str_contains($blogCatsSource, $blogCatsUtilityFragment)) {
+        $blogAdminIssues[] = 'blog categories page is missing utility class fragment: ' . $blogCatsUtilityFragment;
+    }
+}
 if (!str_contains($blogTagsSource, 'if (!hasAnyBlogs())')) {
     $blogAdminIssues[] = 'blog tags page is missing no-blog redirect guard';
 }
 if (!str_contains($blogTagsSource, 'getTaxonomyManagedBlogsForUser()')) {
     $blogAdminIssues[] = 'blog tags page is missing manageable-blog filtering';
+}
+if (str_contains($blogTagsSource, 'style=')) {
+    $blogAdminIssues[] = 'blog tags page still contains inline style attributes';
+}
+foreach ([
+    'button-row admin-stack-sm',
+    'class="admin-select-sm"',
+    'class="btn admin-action-row"',
+    'button-row button-row--baseline',
+    'class="admin-input-auto"',
+] as $blogTagsUtilityFragment) {
+    if (!str_contains($blogTagsSource, $blogTagsUtilityFragment)) {
+        $blogAdminIssues[] = 'blog tags page is missing utility class fragment: ' . $blogTagsUtilityFragment;
+    }
 }
 if (!str_contains($blogMembersSource, 'cms_blog_members')) {
     $blogAdminIssues[] = 'blog team management page is missing membership persistence';
@@ -10981,6 +11008,12 @@ foreach ([
     if (str_contains($adminLayoutSource, $adminLayoutInlineStyleFragment)) {
         $adminFieldErrorIssues[] = 'admin layout still contains generated inline style fragment: ' . $adminLayoutInlineStyleFragment;
     }
+}
+if (str_contains($uiSource, '<fieldset style=') || str_contains($uiSource, 'aria-live="polite" style=')) {
+    $adminFieldErrorIssues[] = 'shared bulkActions helper still contains inline style attributes';
+}
+if (!str_contains($uiSource, '<fieldset class="admin-fieldset-card">') || !str_contains($uiSource, 'field-help field-help--flush')) {
+    $adminFieldErrorIssues[] = 'shared bulkActions helper is missing shared admin fieldset/status utility classes';
 }
 if (str_contains($newsletterOverviewSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin newsletter overview still contains inline style attributes';

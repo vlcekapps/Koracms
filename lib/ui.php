@@ -384,9 +384,9 @@ function bulkActions(string $module, string $redirect, string $legend, string $i
          . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
          . '<input type="hidden" name="module" value="' . h($module) . '">'
          . '<input type="hidden" name="redirect" value="' . h($redirect) . '">'
-         . '<fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">'
+         . '<fieldset class="admin-fieldset-card">'
          . '<legend>' . h($legend) . '</legend>'
-         . '<p id="bulk-status" data-selection-status="bulk" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná ' . h($itemLabel) . '.</p>'
+         . '<p id="bulk-status" data-selection-status="bulk" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná ' . h($itemLabel) . '.</p>'
          . '<div class="button-row">'
          . '<button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled data-confirm="Smazat vybrané?">Smazat vybrané</button>';
     if ($showPublish) {
