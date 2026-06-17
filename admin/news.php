@@ -74,10 +74,10 @@ adminHeader('Novinky');
 ?>
 <p><a href="news_form.php" class="btn">+ Přidat novinku</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v novinkách</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v novinkách…" value="<?= h($q) ?>" style="width:300px">
+    <input type="search" id="q" name="q" placeholder="Hledat v novinkách…" value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -121,12 +121,12 @@ adminHeader('Novinky');
         <td><input type="checkbox" name="ids[]" value="<?= (int)$item['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$item['title']) ?>"></td>
         <td>
           <strong><?= h((string)$item['title']) ?></strong><br>
-          <small style="color:#555">/news/<?= h((string)$item['slug']) ?></small>
+          <small class="table-meta">/news/<?= h((string)$item['slug']) ?></small>
           <?php if ($item['excerpt'] !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$item['excerpt']) ?></small>
+            <br><small class="table-meta"><?= h((string)$item['excerpt']) ?></small>
           <?php endif; ?>
           <?php if (!empty($item['unpublish_at'])): ?>
-            <br><small style="color:#555">Skryje se: <?= h(formatCzechDate((string)$item['unpublish_at'])) ?></small>
+            <br><small class="table-meta">Skryje se: <?= h(formatCzechDate((string)$item['unpublish_at'])) ?></small>
           <?php endif; ?>
         </td>
         <td><?= $item['author_name'] ? h((string)$item['author_name']) : '<em>–</em>' ?></td>
@@ -144,7 +144,7 @@ adminHeader('Novinky');
             <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($item['status'] === 'pending' && $canApproveNews): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="news">
               <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
@@ -152,12 +152,12 @@ adminHeader('Novinky');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="news_clone.php" method="post" style="display:inline">
+          <form action="news_clone.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
             <button type="submit" class="btn" data-confirm="Vytvořit kopii novinky?">Duplikovat</button>
           </form>
-          <form action="news_delete.php" method="post" style="display:inline">
+          <form action="news_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
             <button type="submit" class="btn btn-danger" data-confirm="Smazat novinku?">Smazat</button>

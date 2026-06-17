@@ -78,11 +78,11 @@ adminHeader('Události');
 ?>
 <p><a href="event_form.php" class="btn">+ Přidat událost</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v událostech</label>
     <input type="search" id="q" name="q" placeholder="Hledat v událostech…"
-           value="<?= h($q) ?>" style="width:300px">
+           value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="typ">Typ akce</label>
@@ -147,7 +147,7 @@ adminHeader('Události');
         <td><input type="checkbox" name="ids[]" value="<?= (int)$event['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$event['title']) ?>"></td>
         <td>
           <strong><?= h((string)$event['title']) ?></strong><br>
-          <small style="color:#555">/events/<?= h((string)($event['slug'] ?? '')) ?></small>
+          <small class="table-meta">/events/<?= h((string)($event['slug'] ?? '')) ?></small>
         </td>
         <td>
           <span class="status-badge"><?= h((string)($event['event_kind_label'] ?? 'Akce')) ?></span><br>
@@ -155,7 +155,7 @@ adminHeader('Události');
           <?php if (!empty($event['event_end'])): ?>
             <br><small>do <?= h(formatCzechDate((string)$event['event_end'])) ?></small>
           <?php endif; ?>
-          <br><small style="color:#555"><?= h((string)($event['event_status_label'] ?? 'Připravujeme')) ?></small>
+          <br><small class="table-meta"><?= h((string)($event['event_status_label'] ?? 'Připravujeme')) ?></small>
         </td>
         <td><?= h((string)($event['location'] !== '' ? $event['location'] : '–')) ?></td>
         <td>
@@ -173,7 +173,7 @@ adminHeader('Události');
             <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if (($event['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="events">
               <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">
@@ -181,12 +181,12 @@ adminHeader('Události');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="event_clone.php" method="post" style="display:inline">
+          <form action="event_clone.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">
             <button type="submit" class="btn" data-confirm="Vytvořit kopii události?">Duplikovat</button>
           </form>
-          <form action="event_delete.php" method="post" style="display:inline">
+          <form action="event_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">
             <button type="submit" class="btn btn-danger"

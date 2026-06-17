@@ -121,10 +121,10 @@ adminHeader('Zajímavá místa');
 ?>
 <p><a href="place_form.php?redirect=<?= urlencode($currentListUrl) ?>" class="btn">+ Přidat místo</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v místech</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v místech…" value="<?= h($q) ?>" style="width:300px">
+    <input type="search" id="q" name="q" placeholder="Hledat v místech…" value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -195,21 +195,21 @@ adminHeader('Zajímavá místa');
         <td><input type="checkbox" name="ids[]" value="<?= (int)$place['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$place['name']) ?>"></td>
         <td>
           <strong><?= h((string)$place['name']) ?></strong><br>
-          <small style="color:#555">/places/<?= h((string)$place['slug']) ?></small>
+          <small class="table-meta">/places/<?= h((string)$place['slug']) ?></small>
           <?php if (!empty($place['category'])): ?>
-            <br><small style="color:#555"><?= h((string)$place['category']) ?></small>
+            <br><small class="table-meta"><?= h((string)$place['category']) ?></small>
           <?php endif; ?>
           <?php if (!empty($place['image_file'])): ?>
-            <br><small style="color:#555">Obrázek připojen</small>
+            <br><small class="table-meta">Obrázek připojen</small>
           <?php endif; ?>
           <?php if ($place['meta_title'] !== '' || $place['meta_description'] !== ''): ?>
-            <br><small style="color:#555">SEO metadata vyplněná</small>
+            <br><small class="table-meta">SEO metadata vyplněná</small>
           <?php endif; ?>
         </td>
         <td>
           <strong><?= h((string)$place['place_kind_label']) ?></strong>
           <?php if (!empty($place['locality'])): ?>
-            <br><small style="color:#555"><?= h((string)$place['locality']) ?></small>
+            <br><small class="table-meta"><?= h((string)$place['locality']) ?></small>
           <?php endif; ?>
           <?php if (!empty($place['url'])): ?>
             <br><a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Externí web</a>
@@ -230,7 +230,7 @@ adminHeader('Zajímavá místa');
             <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($place['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="places">
               <input type="hidden" name="id" value="<?= (int)$place['id'] ?>">
@@ -238,7 +238,7 @@ adminHeader('Zajímavá místa');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="place_delete.php" method="post" style="display:inline">
+          <form action="place_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$place['id'] ?>">
             <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">

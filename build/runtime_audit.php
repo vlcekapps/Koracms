@@ -10946,7 +10946,10 @@ $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
 $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
+$eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/events.php');
+$newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
+$placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
 $trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
 $newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
@@ -11123,6 +11126,30 @@ foreach ([
         'source' => $faqOverviewSource,
         'fragments' => [
             'button-row button-row--start',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
+        ],
+    ],
+    'news overview' => [
+        'source' => $newsOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
+        ],
+    ],
+    'events overview' => [
+        'source' => $eventsOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
+        ],
+    ],
+    'places overview' => [
+        'source' => $placesOverviewSource,
+        'fragments' => [
             'button-row button-row--baseline admin-stack-sm',
             'class="admin-search-input"',
             'class="table-meta"',
