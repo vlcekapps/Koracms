@@ -58,7 +58,7 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="admin-description admin-description--flush">
   Vyplňte potřebné údaje k otázce a odpovědi. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -95,13 +95,12 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
            value="<?= h((string)($faq['meta_title'] ?? '')) ?>">
 
     <label for="meta_description">Meta popis</label>
-    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="faq-seo-help"
-              style="min-height:0"><?= h((string)($faq['meta_description'] ?? '')) ?></textarea>
+    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="faq-seo-help" class="admin-textarea-compact"><?= h((string)($faq['meta_description'] ?? '')) ?></textarea>
     <small id="faq-seo-help" class="field-help">Volitelné. Pokud je nevyplníte, použije se otázka a shrnutí FAQ.</small>
 
     <label for="answer">Odpověď <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <?php if ($useWysiwyg): ?>
-      <div id="editor-answer" style="min-height:220px"><?= (string)($faq['answer'] ?? '') ?></div>
+      <div id="editor-answer" class="admin-rich-editor-lg"><?= (string)($faq['answer'] ?? '') ?></div>
       <input type="hidden" id="answer" name="answer" value="<?= h((string)($faq['answer'] ?? '')) ?>">
       <?php adminRenderFieldError('answer', $err, $fieldErrorMap, $fieldErrorMessages['answer']); ?>
     <?php else: ?>
@@ -122,14 +121,16 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
       <?php endforeach; ?>
     </select>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="faq-published-help"
-             <?= (int)($faq['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
-    <small id="faq-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, otázka zůstane uložená jen v administraci.</small>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="faq-published-help"
+               <?= (int)($faq['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+      <small id="faq-published-help" class="field-help">Když volbu vypnete, otázka zůstane uložená jen v administraci.</small>
+    </div>
 
-    <div style="margin-top:1rem">
+    <div class="admin-field-row">
       <label for="article_status">Stav</label>
       <select id="article_status" name="article_status">
         <option value="draft"<?= ($faq['status'] ?? '') === 'draft' ? ' selected' : '' ?>>Koncept</option>
@@ -140,11 +141,11 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
       </select>
     </div>
 
-    <div style="margin-top:1.5rem">
+    <div class="button-row admin-fieldset-spaced">
       <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku FAQ' ?></button>
-      <a href="faq.php" style="margin-left:1rem">Zrušit</a>
+      <a href="faq.php">Zrušit</a>
       <?php if (($faq['status'] ?? 'published') === 'published' && (int)($faq['is_published'] ?? 1) === 1 && !empty($faq['slug'])): ?>
-        <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+        <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
       <?php endif; ?>
     </div>
   </fieldset>
