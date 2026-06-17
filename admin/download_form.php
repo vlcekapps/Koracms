@@ -75,7 +75,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 <?php endif; ?>
 
 <p><a href="downloads.php"><span aria-hidden="true">←</span> Zpět na přehled ke stažení</a></p>
-<p style="margin-top:0;color:#555">
+<p class="admin-description admin-description--flush admin-description--muted">
   Vytvořte přehlednou kartu ke stažení. Může odkazovat na lokální soubor, externí stránku projektu, nebo na obojí zároveň.
 </p>
 
@@ -123,7 +123,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
     <label for="description">Popis položky</label>
     <?php if ($editorMode === 'wysiwyg'): ?>
-      <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
+      <div id="description_editor" class="quill-editor admin-rich-editor-md"></div>
       <textarea id="description" name="description" rows="10" class="visually-hidden" aria-describedby="download-description-help"><?= h((string)$download['description']) ?></textarea>
       <small id="download-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
@@ -145,10 +145,12 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if ((string)$download['filename'] !== ''): ?>
-      <label style="font-weight:normal;margin-top:.75rem">
-        <input type="checkbox" name="file_delete" value="1">
-        Odebrat stávající soubor a ponechat jen detail / externí odkaz
-      </label>
+      <div class="admin-field-row">
+        <label class="admin-checkbox-label">
+          <input type="checkbox" name="file_delete" value="1">
+          Odebrat stávající soubor a ponechat jen detail / externí odkaz
+        </label>
+      </div>
     <?php endif; ?>
 
     <label for="external_url">Externí odkaz ke stažení</label>
@@ -209,30 +211,34 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <label for="download_image">Náhledový obrázek</label>
     <input type="file" id="download_image" name="download_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp">
     <?php if ((string)$download['image_url'] !== ''): ?>
-      <div style="margin:.75rem 0">
-        <img src="<?= h((string)$download['image_url']) ?>" alt="Náhled obrázku" style="max-width:16rem;height:auto;border:1px solid #d6d6d6;border-radius:.75rem">
+      <div class="admin-preview-block">
+        <img src="<?= h((string)$download['image_url']) ?>" alt="Náhled obrázku" class="admin-image-preview">
       </div>
-      <label style="font-weight:normal">
+      <label class="admin-checkbox-label">
         <input type="checkbox" name="download_image_delete" value="1">
         Odebrat stávající náhledový obrázek
       </label>
     <?php endif; ?>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_featured" value="1"<?= (int)($download['is_featured'] ?? 0) === 1 ? ' checked' : '' ?>>
-      Doporučená položka
-    </label>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_featured" value="1"<?= (int)($download['is_featured'] ?? 0) === 1 ? ' checked' : '' ?>>
+        Doporučená položka
+      </label>
+    </div>
     <small class="field-help">Doporučené položky se ve výpisech řadí výš a můžete na ně cílit i filtry.</small>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="download-published-help"
-             <?= (int)($download['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
-    <small id="download-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, položka se na veřejném webu nezobrazí.</small>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="download-published-help"
+               <?= (int)($download['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+    </div>
+    <small id="download-published-help" class="field-help">Když volbu vypnete, položka se na veřejném webu nezobrazí.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Stav publikace</legend>
     <label for="article_status">Stav</label>
     <select id="article_status" name="article_status">
@@ -244,11 +250,11 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     </select>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat položku ke stažení' ?></button>
-    <a href="downloads.php" style="margin-left:1rem">Zrušit</a>
+    <a href="downloads.php">Zrušit</a>
     <?php if ($id !== null && (string)$download['slug'] !== '' && (string)$download['status'] === 'published' && (int)($download['is_published'] ?? 0) === 1): ?>
-      <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
   </div>
 </form>
