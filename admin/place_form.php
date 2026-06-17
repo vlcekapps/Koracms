@@ -83,7 +83,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="admin-description admin-description--flush">
   Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -146,7 +146,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="description">Detailní popis</label>
     <?php if ($useWysiwyg): ?>
-      <div id="editor-description" style="min-height:220px"><?= (string)$place['description'] ?></div>
+      <div id="editor-description" class="admin-rich-editor-frame admin-rich-editor-lg"><?= (string)$place['description'] ?></div>
       <input type="hidden" id="description" name="description" value="<?= h((string)$place['description']) ?>">
     <?php else: ?>
       <textarea id="description" name="description" rows="8" aria-describedby="place-description-help"><?= h((string)$place['description']) ?></textarea>
@@ -164,14 +164,14 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
            value="<?= h((string)$place['url']) ?>">
     <?php adminRenderFieldError('url', $err, $fieldErrorMap, $fieldErrorMessages['url']); ?>
 
-    <div style="display:flex;gap:1rem;flex-wrap:wrap">
-      <div style="flex:1 1 12rem">
+    <div class="admin-form-grid">
+      <div class="admin-form-grid__cell">
         <label for="latitude">Zeměpisná šířka</label>
         <input type="text" id="latitude" name="latitude" inputmode="decimal"
                <?= adminFieldAttributes('latitude', $err, $fieldErrorMap, ['place-coordinates-help'], 'place-coordinates-error') ?>
                value="<?= h((string)$place['latitude']) ?>">
       </div>
-      <div style="flex:1 1 12rem">
+      <div class="admin-form-grid__cell">
         <label for="longitude">Zeměpisná délka</label>
         <input type="text" id="longitude" name="longitude" inputmode="decimal"
                <?= adminFieldAttributes('longitude', $err, $fieldErrorMap, ['place-coordinates-help'], 'place-coordinates-error') ?>
@@ -214,9 +214,9 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="place_image">Hlavní obrázek</label>
     <?php if (!empty($place['image_file'])): ?>
-      <div style="margin:.5rem 0">
+      <div class="admin-preview-block">
         <img src="<?= h((string)$place['image_url']) ?>" alt="Náhled obrázku"
-             style="display:block;max-width:320px;width:100%;border-radius:12px;border:1px solid #d0d7de">
+             class="admin-image-preview admin-image-preview--large">
       </div>
     <?php endif; ?>
     <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
@@ -228,21 +228,25 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
       <small id="place-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if (!empty($place['image_file'])): ?>
-      <label for="place_image_delete" style="font-weight:normal;margin-top:.35rem">
-        <input type="checkbox" id="place_image_delete" name="place_image_delete" value="1">
-        Smazat aktuální obrázek
-      </label>
+      <div class="admin-field-row">
+        <label for="place_image_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="place_image_delete" name="place_image_delete" value="1">
+          Smazat aktuální obrázek
+        </label>
+      </div>
     <?php endif; ?>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="place-published-help"
-             <?= (int)$place['is_published'] === 1 ? 'checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
-    <small id="place-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, místo zůstane uložené jen v administraci a skryje se i jeho obrázek.</small>
+    <div class="admin-action-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="place-published-help"
+               <?= (int)$place['is_published'] === 1 ? 'checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+    </div>
+    <small id="place-published-help" class="field-help">Když volbu vypnete, místo zůstane uložené jen v administraci a skryje se i jeho obrázek.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Stav publikace</legend>
     <label for="article_status">Stav</label>
     <select id="article_status" name="article_status">
@@ -254,11 +258,11 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     </select>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
-    <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($backUrl) ?>">Zrušit</a>
     <?php if (($place['status'] ?? 'published') === 'published' && (int)($place['is_published'] ?? 1) === 1 && !empty($place['slug'])): ?>
-      <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
   </div>
 </form>
