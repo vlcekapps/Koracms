@@ -80,7 +80,7 @@ adminHeader($pageTitle);
 ?>
 
 <?php if ($contentLockWarning !== null): ?>
-  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+  <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
     Tuto stránku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
     (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
@@ -89,17 +89,16 @@ adminHeader($pageTitle);
 <?php endif; ?>
 
 <?php if ($id): ?>
-  <p>
+  <div class="button-row button-row--baseline admin-stack-sm">
     <a href="revisions.php?type=page&amp;id=<?= (int)$id ?>">Historie revizí</a>
-    ·
-    <form action="convert_content.php" method="post" style="display:inline">
+    <form action="convert_content.php" method="post" class="admin-inline-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="direction" value="page_to_article">
       <input type="hidden" name="id" value="<?= (int)$id ?>">
       <button type="submit" class="btn"
               data-confirm="Převést stránku na článek blogu? Stránka bude smazána a nahrazena článkem.">Převést na článek</button>
     </form>
-  </p>
+  </div>
 <?php endif; ?>
 
 <?php if ($err === 'required'): ?>
@@ -119,7 +118,7 @@ adminHeader($pageTitle);
     <a href="<?= BASE_URL ?>/admin/blog_pages.php?blog_id=<?= (int)$selectedBlog['id'] ?>">Pořadí stránek blogu</a>
   <?php endif; ?>
 </p>
-<p style="margin-top:0;font-size:.9rem">Vyplňte základní údaje stránky. Můžete ji ponechat jako globální statickou stránku, nebo ji přiřadit ke konkrétnímu blogu.</p>
+<p class="admin-description admin-description--flush">Vyplňte základní údaje stránky. Můžete ji ponechat jako globální statickou stránku, nebo ji přiřadit ke konkrétnímu blogu.</p>
 
 <form method="post" action="<?= BASE_URL ?>/admin/page_save.php" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -171,16 +170,20 @@ adminHeader($pageTitle);
       <?php renderAdminContentReferencePicker('content'); ?>
     <?php endif; ?>
 
-    <label style="font-weight:normal; margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="page-published-help"<?= !empty($page['is_published']) ? ' checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
+    <div class="admin-action-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="page-published-help"<?= !empty($page['is_published']) ? ' checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+    </div>
     <small id="page-published-help" class="field-help">Když volbu vypnete, stránka se na veřejném webu nezobrazí.</small>
 
-    <label style="font-weight:normal; margin-top:.5rem">
-      <input type="checkbox" id="show_in_nav" name="show_in_nav" value="1" aria-describedby="page-nav-help"<?= !$isBlogPage && !empty($page['show_in_nav']) ? ' checked' : '' ?><?= $isBlogPage ? ' disabled aria-disabled="true"' : '' ?>>
-      Zobrazit v hlavní navigaci
-    </label>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" id="show_in_nav" name="show_in_nav" value="1" aria-describedby="page-nav-help"<?= !$isBlogPage && !empty($page['show_in_nav']) ? ' checked' : '' ?><?= $isBlogPage ? ' disabled aria-disabled="true"' : '' ?>>
+        Zobrazit v hlavní navigaci
+      </label>
+    </div>
     <small id="page-nav-help" class="field-help">
       <?php if ($isBlogPage): ?>
         Blogové stránky se v hlavní navigaci webu nezobrazují. Pro tento obsah se použije navigace uvnitř blogu.
@@ -201,39 +204,37 @@ adminHeader($pageTitle);
 
     <label for="publish_at">Plánované publikování</label>
     <input type="datetime-local" id="publish_at" name="publish_at"
-           style="width:auto" value="<?= h(!empty($page['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['publish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(!empty($page['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['publish_at'])) : '') ?>">
     <small class="field-help">Nechte prázdné, pokud se má stránka zveřejnit hned.</small>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>
-           style="width:auto" value="<?= h(!empty($page['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['unpublish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(!empty($page['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['unpublish_at'])) : '') ?>">
     <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
     <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Interní poznámka</legend>
     <label for="admin_note" class="visually-hidden">Interní poznámka</label>
     <textarea id="admin_note" name="admin_note" rows="2" aria-describedby="admin-note-help"
-              style="min-height:0"><?= h((string)($page['admin_note'] ?? '')) ?></textarea>
+              class="admin-textarea-compact"><?= h((string)($page['admin_note'] ?? '')) ?></textarea>
     <small id="admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
   </fieldset>
 
-  <fieldset>
-    <div style="margin-top:1.5rem">
-      <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit stránku' ?></button>
-      <a href="<?= h($redirect) ?>" style="margin-left:1rem">Zrušit</a>
-      <?php if ($publicPath !== ''): ?>
-        <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu <span aria-hidden="true">↗</span></a>
-      <?php endif; ?>
-      <?php if ($id !== null && !empty($page['preview_token'])): ?>
-        <a href="<?= h(pagePreviewPath($page)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
-      <?php elseif ($id !== null): ?>
-        <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
-      <?php endif; ?>
-    </div>
-  </fieldset>
+  <div class="button-row admin-fieldset-spaced">
+    <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit stránku' ?></button>
+    <a href="<?= h($redirect) ?>">Zrušit</a>
+    <?php if ($publicPath !== ''): ?>
+      <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu <span aria-hidden="true">↗</span></a>
+    <?php endif; ?>
+    <?php if ($id !== null && !empty($page['preview_token'])): ?>
+      <a href="<?= h(pagePreviewPath($page)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
+    <?php elseif ($id !== null): ?>
+      <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
+    <?php endif; ?>
+  </div>
 </form>
 
 <?php if ($useWysiwyg): ?>
@@ -243,10 +244,9 @@ adminHeader($pageTitle);
 (function () {
     const ta = document.getElementById('content');
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem';
-    wrapper.style.minHeight = '300px';
+    wrapper.className = 'admin-rich-editor-frame admin-rich-editor-tall';
     ta.parentNode.insertBefore(wrapper, ta);
-    ta.style.display = 'none';
+    ta.hidden = true;
     const quill = new Quill(wrapper, {
         theme: 'snow',
         modules: { toolbar: [

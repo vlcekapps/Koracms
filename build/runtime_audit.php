@@ -11018,6 +11018,7 @@ foreach ([
     '.admin-select-lg',
     '.admin-inline-label',
     '.admin-checkbox-label',
+    '.admin-inline-form',
     '.admin-description',
     '.admin-description--flush',
     '.admin-description--muted',
@@ -11028,6 +11029,7 @@ foreach ([
     '.admin-rich-editor-base',
     '.admin-rich-editor-md',
     '.admin-rich-editor-lg',
+    '.admin-rich-editor-tall',
     '.admin-fieldset-card',
     '.admin-fieldset-spaced',
     '.admin-field-row',
@@ -11445,6 +11447,23 @@ foreach ([
             '<td class="actions">',
         ],
     ],
+    'page form' => [
+        'source' => $pageFormSource,
+        'fragments' => [
+            'class="admin-warning-box"',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-inline-form"',
+            'class="admin-description admin-description--flush"',
+            'class="admin-checkbox-label"',
+            'class="admin-field-row"',
+            'class="admin-input-auto"',
+            'class="admin-fieldset-card admin-action-row"',
+            'class="admin-textarea-compact"',
+            'class="button-row admin-fieldset-spaced"',
+            "wrapper.className = 'admin-rich-editor-frame admin-rich-editor-tall';",
+            'ta.hidden = true;',
+        ],
+    ],
     'newsletter form' => [
         'source' => $newsletterFormValidationSource,
         'fragments' => [
@@ -11555,6 +11574,9 @@ foreach ([
 }
 if (str_contains($eventFormSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin event form still mutates inline styles via JavaScript';
+}
+if (str_contains($pageFormSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin page form still mutates inline styles via JavaScript';
 }
 foreach ([
     'board categories' => [
