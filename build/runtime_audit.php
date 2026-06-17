@@ -10959,6 +10959,7 @@ $reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . 
 $reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
 $reservationResourcesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resources.php');
 $revisionsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/revisions.php');
+$reviewQueueSource = (string)file_get_contents(dirname(__DIR__) . '/admin/review_queue.php');
 $redirectsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/redirects.php');
 $galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
 $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
@@ -11019,6 +11020,7 @@ foreach ([
     '.admin-inline-label',
     '.admin-checkbox-label',
     '.admin-inline-form',
+    '.admin-copy--flush',
     '.admin-description',
     '.admin-description--flush',
     '.admin-description--muted',
@@ -11060,6 +11062,10 @@ foreach ([
     '.admin-order-item',
     '.admin-order-item__label',
     '.admin-order-item__label--muted',
+    '.admin-summary-grid',
+    '.admin-summary-card',
+    '.admin-summary-card__heading',
+    '.admin-summary-card__value',
     '.field-help--flush',
     '.field-help--indented',
     '.table-note',
@@ -11509,6 +11515,8 @@ foreach ([
             'class="admin-copy--compact"',
             'class="field-help"',
             'class="button-row admin-action-row"',
+            "wrapper.className = 'admin-rich-editor-frame admin-rich-editor-md';",
+            'ta.hidden = true;',
         ],
     ],
     'polls overview' => [
@@ -11602,6 +11610,21 @@ foreach ([
             'class="revision-diff__insert"',
         ],
     ],
+    'review queue' => [
+        'source' => $reviewQueueSource,
+        'fragments' => [
+            'class="button-row admin-stack-sm"',
+            'class="admin-stack-md"',
+            'class="admin-summary-grid"',
+            'class="admin-summary-card"',
+            'class="admin-summary-card__heading"',
+            'class="admin-summary-card__value"',
+            'class="admin-copy--flush"',
+            'class="admin-fieldset-spaced"',
+            'class="admin-inline-form"',
+            'class="table-cell--prewrap"',
+        ],
+    ],
     'module settings' => [
         'source' => $settingsModulesSource,
         'fragments' => [
@@ -11662,6 +11685,9 @@ if (str_contains($pageFormSource, '.style')) {
 }
 if (str_contains($userFormSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin user form still mutates inline styles via JavaScript';
+}
+if (str_contains($newsletterFormValidationSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin newsletter form still mutates inline styles via JavaScript';
 }
 foreach ([
     'board categories' => [

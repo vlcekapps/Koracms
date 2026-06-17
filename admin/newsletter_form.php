@@ -80,9 +80,9 @@ adminHeader('Nová rozesílka');
   (function () {
       const ta = document.getElementById('body');
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem;min-height:250px';
+      wrapper.className = 'admin-rich-editor-frame admin-rich-editor-md';
       ta.parentNode.insertBefore(wrapper, ta);
-      ta.style.display = 'none';
+      ta.hidden = true;
       const quill = new Quill(wrapper, { theme: 'snow' });
       if (ta.value.trim() !== '') {
           quill.root.innerHTML = ta.value;

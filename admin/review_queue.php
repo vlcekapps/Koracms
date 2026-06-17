@@ -331,7 +331,7 @@ adminHeader('Ke schválení');
 
 <p>Na jednom místě najdete obsah, komentáře i rezervace, které čekají na vaši reakci.</p>
 
-<nav aria-label="Filtr fronty ke schválení" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Filtr fronty ke schválení" class="button-row admin-stack-sm">
   <?php foreach ($scopeTabs as $scopeTab): ?>
     <?php if (!$scopeTab['visible']): ?>
       <?php continue; ?>
@@ -344,14 +344,14 @@ adminHeader('Ke schválení');
 </nav>
 
 <?php if ($summaryItems !== []): ?>
-<section aria-labelledby="queue-summary-heading" style="margin-bottom:1.5rem">
+<section aria-labelledby="queue-summary-heading" class="admin-stack-md">
   <h2 id="queue-summary-heading">Rychlý přehled</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem">
+  <div class="admin-summary-grid">
     <?php foreach ($summaryItems as $summaryItem): ?>
-      <section style="border:1px solid #d6d6d6;border-radius:10px;padding:1rem;background:#fff">
-        <h3 style="margin:.1rem 0 .35rem;font-size:1rem"><?= h($summaryItem['label']) ?></h3>
-        <p style="margin:.2rem 0 .75rem;font-size:1.8rem;font-weight:700"><?= (int)$summaryItem['count'] ?></p>
-        <p style="margin:0"><a href="<?= h($summaryItem['url']) ?>">Přejít do seznamu <span aria-hidden="true">→</span></a></p>
+      <section class="admin-summary-card">
+        <h3 class="admin-summary-card__heading"><?= h($summaryItem['label']) ?></h3>
+        <p class="admin-summary-card__value"><?= (int)$summaryItem['count'] ?></p>
+        <p class="admin-copy--flush"><a href="<?= h($summaryItem['url']) ?>">Přejít do seznamu <span aria-hidden="true">→</span></a></p>
       </section>
     <?php endforeach; ?>
   </div>
@@ -362,7 +362,7 @@ adminHeader('Ke schválení');
 
 <?php if (in_array($scope, ['all', 'content'], true)): ?>
   <?php $hasVisibleRows = $contentRows !== []; ?>
-  <section aria-labelledby="queue-content-heading" style="margin-top:1.5rem">
+  <section aria-labelledby="queue-content-heading" class="admin-fieldset-spaced">
     <h2 id="queue-content-heading">Obsah čekající na schválení</h2>
     <?php if ($contentRows === []): ?>
       <p>Zatím nic ke schválení.</p>
@@ -393,7 +393,7 @@ adminHeader('Ke schválení');
               </td>
               <td class="actions">
                 <a href="<?= h($row['edit_url']) ?>" class="btn">Upravit</a>
-                <form action="approve.php" method="post" style="display:inline">
+                <form action="approve.php" method="post" class="admin-inline-form">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="module" value="<?= h($row['approval_module']) ?>">
                   <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
@@ -412,7 +412,7 @@ adminHeader('Ke schválení');
 
 <?php if (in_array($scope, ['all', 'comments'], true) && isModuleEnabled('blog') && currentUserHasCapability('comments_manage')): ?>
   <?php $hasVisibleRows = $hasVisibleRows || $commentRows !== []; ?>
-  <section aria-labelledby="queue-comments-heading" style="margin-top:1.5rem">
+  <section aria-labelledby="queue-comments-heading" class="admin-fieldset-spaced">
     <h2 id="queue-comments-heading">Komentáře čekající na moderaci</h2>
     <?php if ($commentRows === []): ?>
       <p>Zatím nic ke schválení.</p>
@@ -446,11 +446,11 @@ adminHeader('Ke schválení');
                   <?= h((string)($commentRow['article_title'] ?: 'Bez článku')) ?>
                 <?php endif; ?>
               </td>
-              <td><div style="max-width:30rem;white-space:pre-wrap"><?= h(mb_strimwidth((string)$commentRow['content'], 0, 180, '…')) ?></div></td>
+              <td><div class="table-cell--prewrap"><?= h(mb_strimwidth((string)$commentRow['content'], 0, 180, '…')) ?></div></td>
               <td><time datetime="<?= h(str_replace(' ', 'T', (string)$commentRow['created_at'])) ?>"><?= formatCzechDate((string)$commentRow['created_at']) ?></time></td>
               <td class="actions">
                 <?php foreach (['approve' => 'Schválit', 'spam' => 'Spam', 'trash' => 'Koš'] as $actionKey => $actionLabel): ?>
-                  <form action="comment_action.php" method="post" style="display:inline">
+                  <form action="comment_action.php" method="post" class="admin-inline-form">
                     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                     <input type="hidden" name="id" value="<?= (int)$commentRow['id'] ?>">
                     <input type="hidden" name="filter" value="pending">
@@ -471,7 +471,7 @@ adminHeader('Ke schválení');
 
 <?php if (in_array($scope, ['all', 'reservations'], true) && isModuleEnabled('reservations') && currentUserHasCapability('bookings_manage')): ?>
   <?php $hasVisibleRows = $hasVisibleRows || $reservationRows !== []; ?>
-  <section aria-labelledby="queue-reservations-heading" style="margin-top:1.5rem">
+  <section aria-labelledby="queue-reservations-heading" class="admin-fieldset-spaced">
     <h2 id="queue-reservations-heading">Rezervace čekající na schválení</h2>
     <?php if ($reservationRows === []): ?>
       <p>Zatím nic ke schválení.</p>
@@ -499,14 +499,14 @@ adminHeader('Ke schválení');
               <td><?= (int)$reservationRow['party_size'] ?></td>
               <td class="actions">
                 <a href="res_booking_detail.php?id=<?= (int)$reservationRow['id'] ?>&amp;redirect=<?= rawurlencode($redirectPath) ?>" class="btn">Zobrazit detail</a>
-                <form action="res_booking_save.php" method="post" style="display:inline">
+                <form action="res_booking_save.php" method="post" class="admin-inline-form">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="booking_id" value="<?= (int)$reservationRow['id'] ?>">
                   <input type="hidden" name="action" value="approve">
                   <input type="hidden" name="redirect" value="<?= h($redirectPath) ?>">
                   <button type="submit" class="btn btn-success">Schválit</button>
                 </form>
-                <form action="res_booking_save.php" method="post" style="display:inline" data-confirm="Zamítnout rezervaci?">
+                <form action="res_booking_save.php" method="post" class="admin-inline-form" data-confirm="Zamítnout rezervaci?">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="booking_id" value="<?= (int)$reservationRow['id'] ?>">
                   <input type="hidden" name="action" value="reject">
