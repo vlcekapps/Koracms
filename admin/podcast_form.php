@@ -111,7 +111,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 
 <p><a href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na epizody podcastu</a></p>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="admin-description admin-description--flush">
   Vyplňte základní údaje o epizodě. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -144,26 +144,26 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
            value="<?= h((string)$episode['subtitle']) ?>">
     <small id="podcast-episode-subtitle-help" class="field-help">Volitelné. Hodí se pro Apple Podcasts a další aplikace jako krátký doplněk názvu epizody.</small>
 
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
-      <div style="flex:1 1 12rem">
+    <div class="admin-form-grid admin-form-grid--end">
+      <div class="admin-form-grid__cell">
         <label for="episode_num">Číslo epizody</label>
-        <input type="number" id="episode_num" name="episode_num" min="1" style="width:100%"
+        <input type="number" id="episode_num" name="episode_num" min="1"
                value="<?= !empty($episode['episode_num']) ? (int)$episode['episode_num'] : '' ?>">
       </div>
-      <div style="flex:1 1 12rem">
+      <div class="admin-form-grid__cell">
         <label for="season_num">Číslo série</label>
-        <input type="number" id="season_num" name="season_num" min="1" style="width:100%"
+        <input type="number" id="season_num" name="season_num" min="1"
                value="<?= !empty($episode['season_num']) ? (int)$episode['season_num'] : '' ?>">
       </div>
-      <div style="flex:1 1 12rem">
+      <div class="admin-form-grid__cell">
         <label for="duration">Délka</label>
         <input type="text" id="duration" name="duration" maxlength="20" aria-describedby="podcast-episode-duration-help"
                value="<?= h((string)$episode['duration']) ?>">
         <small id="podcast-episode-duration-help" class="field-help">Například <code>42:30</code>.</small>
       </div>
-      <div style="flex:1 1 16rem">
+      <div class="admin-form-grid__cell admin-form-grid__cell--date">
         <label for="publish_at">Plánované zveřejnění</label>
-        <input type="datetime-local" id="publish_at" name="publish_at" style="width:100%"
+        <input type="datetime-local" id="publish_at" name="publish_at"
                <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['podcast-episode-publish-help']) ?>
                value="<?= h($publishInput) ?>">
       </div>
@@ -171,8 +171,8 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <small id="podcast-episode-publish-help" class="field-help">Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.</small>
     <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
 
-    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start">
-      <div style="flex:1 1 12rem">
+    <div class="admin-form-grid admin-form-grid--start">
+      <div class="admin-form-grid__cell">
         <label for="episode_type">Typ epizody</label>
         <select id="episode_type" name="episode_type">
           <option value="full"<?= (string)$episode['episode_type'] === 'full' ? ' selected' : '' ?>>Plná epizoda</option>
@@ -181,7 +181,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
         </select>
       </div>
 
-      <div style="flex:1 1 12rem">
+      <div class="admin-form-grid__cell">
         <label for="explicit_mode">Explicitní obsah</label>
         <select id="explicit_mode" name="explicit_mode">
           <option value="inherit"<?= (string)$episode['explicit_mode'] === 'inherit' ? ' selected' : '' ?>>Převzít z pořadu</option>
@@ -192,10 +192,12 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       </div>
     </div>
 
-    <label for="block_from_feed" style="font-weight:normal;margin-top:.5rem">
-      <input type="checkbox" id="block_from_feed" name="block_from_feed" value="1"<?= !empty($episode['block_from_feed']) ? ' checked' : '' ?>>
-      Skrýt epizodu z RSS feedu
-    </label>
+    <div class="admin-field-row">
+      <label for="block_from_feed" class="admin-checkbox-label">
+        <input type="checkbox" id="block_from_feed" name="block_from_feed" value="1"<?= !empty($episode['block_from_feed']) ? ' checked' : '' ?>>
+        Skrýt epizodu z RSS feedu
+      </label>
+    </div>
   </fieldset>
 
   <fieldset>
@@ -211,10 +213,12 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       <small id="podcast-episode-audio-current" class="field-help">Aktuální soubor je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if ((string)$episode['audio_file'] !== ''): ?>
-      <label for="audio_file_delete" style="font-weight:normal;margin-top:.5rem">
-        <input type="checkbox" id="audio_file_delete" name="audio_file_delete" value="1">
-        Odebrat stávající audio soubor
-      </label>
+      <div class="admin-field-row">
+        <label for="audio_file_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="audio_file_delete" name="audio_file_delete" value="1">
+          Odebrat stávající audio soubor
+        </label>
+      </div>
     <?php endif; ?>
 
     <label for="audio_url">Externí audio odkaz</label>
@@ -227,8 +231,8 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 
     <label for="image_file">Obrázek epizody</label>
     <?php if ((string)$episode['image_url'] !== ''): ?>
-      <div style="margin:.75rem 0">
-        <img src="<?= h((string)$episode['image_url']) ?>" alt="Náhled obrázku epizody" style="display:block;max-width:18rem;width:100%;border-radius:1rem;border:1px solid #d6d6d6">
+      <div class="admin-preview-block">
+        <img src="<?= h((string)$episode['image_url']) ?>" alt="Náhled obrázku epizody" class="admin-image-preview admin-image-preview--podcast">
       </div>
       <small id="podcast-episode-image-current" class="field-help">Aktuální obrázek epizody je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
@@ -237,15 +241,17 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <small id="podcast-episode-image-help" class="field-help">Volitelné. Pokud chcete pro epizodu vlastní artwork, nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.</small>
     <?php adminRenderFieldError('image_file', $err, $fieldErrorMap, $fieldErrorMessages['image_file']); ?>
     <?php if ((string)$episode['image_file'] !== ''): ?>
-      <label for="image_file_delete" style="font-weight:normal;margin-top:.5rem">
-        <input type="checkbox" id="image_file_delete" name="image_file_delete" value="1">
-        Odebrat stávající obrázek epizody
-      </label>
+      <div class="admin-field-row">
+        <label for="image_file_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="image_file_delete" name="image_file_delete" value="1">
+          Odebrat stávající obrázek epizody
+        </label>
+      </div>
     <?php endif; ?>
 
     <label for="description">Popis epizody</label>
     <?php if ($useWysiwyg): ?>
-      <div id="description_editor" class="quill-editor" style="min-height:16rem"></div>
+      <div id="description_editor" class="quill-editor admin-rich-editor-md"></div>
       <textarea id="description" name="description" rows="10" class="visually-hidden" aria-describedby="podcast-episode-description-help"><?= h((string)$episode['description']) ?></textarea>
       <small id="podcast-episode-description-help" class="field-help">HTML textarea je přístupnější varianta; WYSIWYG je jen volitelný vizuální režim.</small>
     <?php else: ?>
@@ -255,7 +261,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php endif; ?>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Stav publikace</legend>
     <label for="article_status">Stav</label>
     <select id="article_status" name="article_status">
@@ -267,14 +273,14 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     </select>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat epizodu podcastu' ?></button>
-    <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($backUrl) ?>">Zrušit</a>
     <?php if ($id !== null && (string)$episode['status'] === 'published' && empty($episode['is_scheduled']) && !empty($show['is_public'])): ?>
-      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($id !== null): ?>
-      <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_episode&id=' . (int)$episode['id']) ?>" style="margin-left:1rem">Historie změn</a>
+      <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_episode&id=' . (int)$episode['id']) ?>">Historie změn</a>
     <?php endif; ?>
   </div>
 </form>
