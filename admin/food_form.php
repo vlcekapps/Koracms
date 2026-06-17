@@ -70,7 +70,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="admin-description admin-description--flush">
   Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -86,7 +86,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
     <legend>Údaje o lístku</legend>
 
     <label for="type">Typ lístku <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <select id="type" name="type" style="width:auto">
+    <select id="type" name="type" class="admin-input-auto">
       <option value="food"<?= $card['type'] === 'food' ? ' selected' : '' ?>>Jídelní lístek</option>
       <option value="beverage"<?= $card['type'] === 'beverage' ? ' selected' : '' ?>>Nápojový lístek</option>
     </select>
@@ -106,8 +106,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
     <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="description">Krátká poznámka</label>
-    <textarea id="description" name="description" rows="2" aria-describedby="food-description-help"
-              style="min-height:0"><?= h((string)($card['description'] ?? '')) ?></textarea>
+    <textarea id="description" name="description" rows="2" aria-describedby="food-description-help" class="admin-textarea-compact"><?= h((string)($card['description'] ?? '')) ?></textarea>
     <small id="food-description-help" class="field-help">Volitelné. Zobrazí se v archivu i na detailu lístku.</small>
 
     <label for="content">Obsah lístku</label>
@@ -117,10 +116,10 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
       <?php renderAdminContentReferencePicker('content'); ?>
     <?php endif; ?>
 
-    <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
+    <div class="admin-date-row">
       <div>
         <label for="valid_from">Platí od</label>
-        <input type="date" id="valid_from" name="valid_from" style="width:auto"
+        <input type="date" id="valid_from" name="valid_from" class="admin-input-auto"
                <?= adminFieldAttributes('valid_from', $err, $fieldErrorMap, [], 'food-valid-from-error') ?>
                value="<?= h((string)($card['valid_from'] ?? '')) ?>">
         <?php if (adminFieldHasError('valid_from', $err, $fieldErrorMap)): ?>
@@ -131,7 +130,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
       </div>
       <div>
         <label for="valid_to">Platí do</label>
-        <input type="date" id="valid_to" name="valid_to" style="width:auto"
+        <input type="date" id="valid_to" name="valid_to" class="admin-input-auto"
                <?= adminFieldAttributes('valid_to', $err, $fieldErrorMap, ['food-valid-to-help'], 'food-valid-to-error') ?>
                value="<?= h((string)($card['valid_to'] ?? '')) ?>">
         <small id="food-valid-to-help" class="field-help">Nechte prázdné, pokud má lístek platit bez data konce. Platnost se používá i pro rozlišení aktuálních, připravovaných a archivních lístků na webu.</small>
@@ -145,30 +144,34 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
   </fieldset>
 
   <?php if (currentUserHasCapability('content_approve_shared')): ?>
-  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.75rem 1rem">
+  <fieldset class="admin-fieldset-card admin-fieldset-spaced">
     <legend>Aktualita a zveřejnění</legend>
 
-    <label style="font-weight:normal;margin-top:.25rem">
-      <input type="checkbox" name="is_current" value="1" aria-describedby="food-current-help"
-             <?= (int)($card['is_current'] ?? 0) === 1 ? 'checked' : '' ?>>
-      <strong>Použít jako aktuální lístek</strong>
-    </label>
-    <small id="food-current-help" class="field-help" style="margin-left:1.4rem">Při uložení se automaticky odznačí předchozí aktuální lístek stejného typu.</small>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_current" value="1" aria-describedby="food-current-help"
+               <?= (int)($card['is_current'] ?? 0) === 1 ? 'checked' : '' ?>>
+        <strong>Použít jako aktuální lístek</strong>
+      </label>
+      <small id="food-current-help" class="field-help field-help--indented">Při uložení se automaticky odznačí předchozí aktuální lístek stejného typu.</small>
+    </div>
 
-    <label style="font-weight:normal;margin-top:.75rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="food-published-help"
-             <?= (int)($card['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
-    <small id="food-published-help" class="field-help" style="margin-left:1.4rem">Když volbu vypnete, lístek se neobjeví ani v aktuálním přehledu, ani v archivu.</small>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="food-published-help"
+               <?= (int)($card['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+      <small id="food-published-help" class="field-help field-help--indented">Když volbu vypnete, lístek se neobjeví ani v aktuálním přehledu, ani v archivu.</small>
+    </div>
   </fieldset>
   <?php endif; ?>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat ' . $foodTypeLabel ?></button>
-    <a href="food.php" style="margin-left:1rem">Zrušit</a>
+    <a href="food.php">Zrušit</a>
     <?php if ($card['is_publicly_visible'] && (string)$card['slug'] !== ''): ?>
-      <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
   </div>
 </form>
@@ -206,10 +209,9 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 (function () {
     const textarea = document.getElementById('content');
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem';
-    wrapper.style.minHeight = '350px';
+    wrapper.className = 'admin-rich-editor-frame admin-rich-editor-xl';
     textarea.parentNode.insertBefore(wrapper, textarea);
-    textarea.style.display = 'none';
+    textarea.hidden = true;
 
     const quill = new Quill(wrapper, {
         theme: 'snow',
