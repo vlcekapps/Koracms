@@ -10934,9 +10934,30 @@ foreach ([
     '.field-help--flush',
     '.table-note',
     '.text-pending',
+    '.admin-nav-user',
+    '.admin-nav-bottom',
+    '.autosave-banner',
+    '.editor-count',
+    '.seo-preview',
+    '.admin-footer',
 ] as $adminLayoutUtilityFragment) {
     if (!str_contains($adminLayoutSource, $adminLayoutUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin layout is missing shared utility class: ' . $adminLayoutUtilityFragment;
+    }
+}
+foreach ([
+    '$item[\'style\']',
+    'summary_style',
+    '<summary style="',
+    'banner.style.cssText',
+    '<button type="button" style=',
+    'info.style.cssText',
+    'box.style.cssText',
+    '<div style="font-size:1.1rem;color:var(--admin-link)',
+    '<footer style=',
+] as $adminLayoutInlineStyleFragment) {
+    if (str_contains($adminLayoutSource, $adminLayoutInlineStyleFragment)) {
+        $adminFieldErrorIssues[] = 'admin layout still contains generated inline style fragment: ' . $adminLayoutInlineStyleFragment;
     }
 }
 if (str_contains($newsletterOverviewSource, 'style=')) {

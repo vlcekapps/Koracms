@@ -103,13 +103,11 @@ function adminHeader(string $pageTitle): void
         : ($pendingComments < 5 ? 'čekající komentáře' : 'čekajících komentářů');
 
     $renderItem = static function (array $item): string {
-        $style = isset($item['style']) ? ' style="' . $item['style'] . '"' : '';
-        return '    <li><a href="' . $item['url'] . '"' . $style . '>' . $item['label'] . '</a></li>' . "\n";
+        return '    <li><a href="' . $item['url'] . '">' . $item['label'] . '</a></li>' . "\n";
     };
 
     $renderNestedItem = static function (array $item): string {
-        $style = $item['style'] ?? 'padding-left:.95rem;font-size:.85rem;color:#ddd';
-        return '          <li><a href="' . $item['url'] . '" style="' . $style . '">' . $item['label'] . '</a></li>' . "\n";
+        return '          <li><a class="nav-link--nested" href="' . $item['url'] . '">' . $item['label'] . '</a></li>' . "\n";
     };
 
     $renderNavSection = static function (string $id, string $heading, array $items) use ($renderItem, $renderNestedItem): string {
@@ -127,10 +125,9 @@ function adminHeader(string $pageTitle): void
                 continue;
             }
 
-            $summaryStyle = $item['summary_style'] ?? 'cursor:pointer;color:#ddd;font-size:.9rem;padding:.45rem .35rem;border-radius:4px;list-style:none;user-select:none';
             $html .= '      <li>' . "\n"
                 . '        <details>' . "\n"
-                . '          <summary style="' . $summaryStyle . '">' . $item['label'] . '</summary>' . "\n"
+                . '          <summary class="nav-summary">' . $item['label'] . '</summary>' . "\n"
                 . '          <ul class="nav-list--nested">' . "\n";
 
             foreach ($item['items'] as $childItem) {
@@ -463,7 +460,9 @@ function adminHeader(string $pageTitle): void
        . '    nav a, nav summary { display: block; min-height: 2.25rem; line-height: 1.35; border-radius: 4px; }' . "\n"
        . '    nav a { color: var(--admin-nav-text); text-decoration: none; font-size: .9rem; padding: .45rem .35rem; }' . "\n"
        . '    nav summary { color: var(--admin-nav-summary); font-size: .85rem; }' . "\n"
+       . '    nav .nav-summary { cursor:pointer; color:var(--admin-nav-text); font-size:.9rem; padding:.45rem .35rem; border-radius:4px; list-style:none; user-select:none; }' . "\n"
        . '    nav .nav-list--nested { margin:.2rem 0 0; padding:0; list-style:none; }' . "\n"
+       . '    nav .nav-link--nested { padding-left:.95rem; font-size:.85rem; color:var(--admin-nav-text); }' . "\n"
        . '    nav a:hover, nav a:focus, nav summary:hover, nav summary:focus { background: var(--admin-nav-hover); color: #fff; text-decoration: none; }' . "\n"
        . '    main { flex: 1; padding: 1.5rem 2rem; }' . "\n"
        . '    h1 { margin-top: 0; }' . "\n"
@@ -516,6 +515,17 @@ function adminHeader(string $pageTitle): void
        . '    nav a:focus-visible { outline-color: var(--admin-focus-nav); }' . "\n"
        . '    .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }' . "\n"
        . '    .skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:var(--admin-focus);color:#fff;font-size:1rem;text-decoration:none;z-index:9999; }' . "\n"
+       . '    .admin-nav-user { font-size:.8rem; color:var(--admin-nav-summary); margin:0 0 .75rem; }' . "\n"
+       . '    .admin-nav-bottom { margin-top:.8rem; }' . "\n"
+       . '    .autosave-banner { background:var(--admin-pending-bg); border:1px solid var(--admin-pending-border); color:var(--admin-pending-text); padding:.7rem 1rem; border-radius:6px; margin-bottom:1rem; display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; }' . "\n"
+       . '    .autosave-banner__button { padding:.3rem .8rem; cursor:pointer; }' . "\n"
+       . '    .editor-count { display:block; margin-top:.3rem; color:var(--admin-text-muted); font-size:.8rem; }' . "\n"
+       . '    .seo-preview { margin-top:.8rem; padding:.8rem; background:var(--admin-surface); border:1px solid var(--admin-border); border-radius:8px; font-family:Arial,sans-serif; max-width:600px; }' . "\n"
+       . '    .seo-preview__title { font-size:1.1rem; color:var(--admin-link); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }' . "\n"
+       . '    .seo-preview__url { font-size:.8rem; color:var(--admin-success); margin:.2rem 0; }' . "\n"
+       . '    .seo-preview__desc { font-size:.85rem; color:var(--admin-text-muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }' . "\n"
+       . '    .seo-preview__counts { color:var(--admin-text-muted); margin-top:.4rem; display:block; }' . "\n"
+       . '    .admin-footer { text-align:center; padding:.5rem; font-size:.75rem; color:var(--admin-footer-text); }' . "\n"
        . '    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important; } }' . "\n"
        . '  </style>' . "\n"
        . '</head>' . "\n"
@@ -526,7 +536,7 @@ function adminHeader(string $pageTitle): void
 
     $userName = h(currentUserDisplayName());
     if ($userName !== '') {
-        echo '  <p style="font-size:.8rem;color:var(--admin-nav-summary);margin:0 0 .75rem"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
+        echo '  <p class="admin-nav-user"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
     }
 
     echo '  <ul>' . "\n";
@@ -540,7 +550,7 @@ function adminHeader(string $pageTitle): void
     echo $renderNavSection('nav-reservations', 'Rezervace', $reservationItems);
     echo $renderNavSection('nav-settings', 'Nastavení a správa', $settingsItems);
 
-    echo '  <ul style="margin-top:.8rem">' . "\n";
+    echo '  <ul class="admin-nav-bottom">' . "\n";
     foreach ($bottomItems as $item) {
         echo $renderItem($item);
     }
@@ -622,10 +632,10 @@ function adminFooter(): void
        . 'if(saved._ts&&(Date.now()-saved._ts)<86400000){'
        . 'var banner=document.createElement(\'div\');'
        . 'banner.setAttribute(\'role\',\'status\');'
-       . 'banner.style.cssText=\'background:var(--admin-pending-bg);border:1px solid var(--admin-pending-border);color:var(--admin-pending-text);padding:.7rem 1rem;border-radius:6px;margin-bottom:1rem;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap\';'
+       . 'banner.className=\'autosave-banner\';'
        . 'banner.innerHTML=\'<span>Nalezen neuložený koncept z \'+new Date(saved._ts).toLocaleString(\'cs-CZ\')+\'.</span>\''
-       . '+\'<button type="button" style="padding:.3rem .8rem;cursor:pointer">Obnovit</button>\''
-       . '+\'<button type="button" style="padding:.3rem .8rem;cursor:pointer">Zahodit</button>\';'
+       . '+\'<button type="button" class="autosave-banner__button">Obnovit</button>\''
+       . '+\'<button type="button" class="autosave-banner__button">Zahodit</button>\';'
        . 'var btns=banner.querySelectorAll(\'button\');'
        . 'btns[0].addEventListener(\'click\',function(){restore(saved);banner.remove();});'
        . 'btns[1].addEventListener(\'click\',function(){localStorage.removeItem(key);banner.remove();});'
@@ -642,7 +652,7 @@ function adminFooter(): void
        . 'var ta=document.querySelector(\'textarea[name="content"]\');'
        . 'if(!ta)return;'
        . 'var info=document.createElement(\'small\');'
-       . 'info.style.cssText=\'display:block;margin-top:.3rem;color:var(--admin-text-muted);font-size:.8rem\';'
+       . 'info.className=\'editor-count\';'
        . 'info.setAttribute(\'data-editor-count\',\'content\');'
        . 'ta.parentNode.insertBefore(info,ta.nextSibling);'
        . 'function update(){'
@@ -664,11 +674,11 @@ function adminFooter(): void
        . 'var title=document.getElementById("title");'
        . 'var slug=document.getElementById("slug");'
        . 'var box=document.createElement("div");'
-       . 'box.style.cssText="margin-top:.8rem;padding:.8rem;background:var(--admin-surface);border:1px solid var(--admin-border);border-radius:8px;font-family:arial,sans-serif;max-width:600px";'
-       . 'box.innerHTML=\'<div style="font-size:1.1rem;color:var(--admin-link);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="seo-prev-title"></div>\''
-       . '+\'<div style="font-size:.8rem;color:var(--admin-success);margin:.2rem 0" id="seo-prev-url"></div>\''
-       . '+\'<div style="font-size:.85rem;color:var(--admin-text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden" id="seo-prev-desc"></div>\''
-       . '+\'<small style="color:var(--admin-text-muted);margin-top:.4rem;display:block" id="seo-prev-counts"></small>\';'
+       . 'box.className="seo-preview";'
+       . 'box.innerHTML=\'<div class="seo-preview__title" id="seo-prev-title"></div>\''
+       . '+\'<div class="seo-preview__url" id="seo-prev-url"></div>\''
+       . '+\'<div class="seo-preview__desc" id="seo-prev-desc"></div>\''
+       . '+\'<small class="seo-preview__counts" id="seo-prev-counts"></small>\';'
        . 'md.parentNode.insertBefore(box,md.nextSibling);'
        . 'var pt=document.getElementById("seo-prev-title");'
        . 'var pu=document.getElementById("seo-prev-url");'
@@ -692,7 +702,7 @@ function adminFooter(): void
        . '})();'
        . '</script>'
        . '</main>'
-       . '<footer style="text-align:center;padding:.5rem;font-size:.75rem;color:var(--admin-footer-text)">'
+       . '<footer class="admin-footer">'
        . 'Kora CMS ' . $version
        . '</footer>'
        . '</body></html>';
