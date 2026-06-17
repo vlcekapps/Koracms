@@ -417,6 +417,8 @@ Editor anket v administraci používá pro přidávání a odebírání možnost
 
 Rezervační formuláře v administraci používají stejný princip pro přepínání typu zákazníka, práci se sloty a blokovanými dny. Runtime audit navíc hlídá, aby se do admin PHP souborů nevracely inline `onclick`, `onchange`, `onsubmit` ani `oninput` atributy.
 
+Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
+
 ---
 
 ## Přístupnost

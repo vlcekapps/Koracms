@@ -341,6 +341,14 @@ assert_contains('<meta property="og:image:alt" content="Popis obrázku">', seoMe
 assert_contains('<meta property="og:updated_time" content="2026-05-18T12:00:00+00:00">', seoMeta(['updated_time' => '2026-05-18 12:00:00 UTC']), 'seoMeta renders Open Graph update time');
 assert_contains('<meta name="twitter:card" content="summary_large_image">', seoMeta(['image' => '/uploads/articles/foto.jpg']), 'seoMeta uses large twitter card when image exists');
 assert_contains('<meta name="twitter:title" content="Titulek článku">', seoMeta(['title' => 'Titulek článku']), 'seoMeta renders twitter title');
+$structuredDataHtml = structuredDataScript([
+    '@context' => 'https://schema.org',
+    '@type' => 'Thing',
+    'name' => 'Žluťoučký kůň',
+]);
+assert_contains('<script type="application/ld+json" nonce="', $structuredDataHtml, 'structuredDataScript renders CSP nonce');
+assert_contains('"@type":"Thing"', $structuredDataHtml, 'structuredDataScript renders JSON-LD payload');
+assert_false(str_contains($structuredDataHtml, '<script type="application/ld+json">'), 'structuredDataScript does not render raw non-nonced script');
 
 $_SERVER['HTTP_USER_AGENT'] = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 assert_equals(true, isSocialPreviewCrawler(), 'Facebook crawler is detected as social preview crawler');

@@ -1338,6 +1338,20 @@ function placeRevisionSnapshot(array $place): array
 }
 
 /**
+ * @param array<string, mixed> $data
+ */
+function structuredDataScript(array $data, string $indent = ''): string
+{
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($json === false) {
+        return '';
+    }
+
+    $nonce = function_exists('cspNonce') ? ' nonce="' . h(cspNonce()) . '"' : '';
+    return $indent . '<script type="application/ld+json"' . $nonce . '>' . $json . '</script>';
+}
+
+/**
  * @param array<string, mixed> $place
  */
 function placeStructuredData(array $place): string
@@ -1389,7 +1403,7 @@ function placeStructuredData(array $place): string
         ] : null,
     ], static fn ($value): bool => $value !== '' && $value !== null);
 
-    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+    return structuredDataScript($data);
 }
 
 function downloadTypeLabel(string $type): string
@@ -1667,7 +1681,7 @@ function podcastShowStructuredData(array $show): string
         $data['sameAs'] = [$websiteUrl];
     }
 
-    return '  <script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>' . PHP_EOL;
+    return structuredDataScript($data, '  ') . PHP_EOL;
 }
 
 /**
@@ -1723,7 +1737,7 @@ function podcastEpisodeStructuredData(array $show, array $episode): string
         $data['duration'] = sprintf('PT%dH%dM%dS', $hours, $minutes, $seconds);
     }
 
-    return '  <script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>' . PHP_EOL;
+    return structuredDataScript($data, '  ') . PHP_EOL;
 }
 
 function deletePodcastCoverFile(string $filename): void
@@ -2292,10 +2306,7 @@ function foodCardStructuredData(array $card): string
         }
     }
 
-    return '<script type="application/ld+json">' . json_encode(
-        $data,
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-    ) . '</script>';
+    return structuredDataScript($data);
 }
 
 /**
@@ -3190,7 +3201,7 @@ function galleryAlbumStructuredData(array $album, array $photos = []): string
         'associatedMedia' => $items !== [] ? $items : null,
     ], static fn ($value): bool => $value !== '' && $value !== null);
 
-    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+    return structuredDataScript($data);
 }
 
 /**
@@ -3219,7 +3230,7 @@ function galleryPhotoStructuredData(array $photo, array $album = []): string
         ], static fn ($value): bool => $value !== '') : null,
     ], static fn ($value): bool => $value !== '' && $value !== null);
 
-    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+    return structuredDataScript($data);
 }
 
 /**
@@ -3319,7 +3330,7 @@ function newsStructuredData(array $news): string
         ], static fn ($value): bool => $value !== ''),
     ], static fn ($value): bool => $value !== '' && $value !== null);
 
-    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+    return structuredDataScript($data);
 }
 
 /**
@@ -3718,7 +3729,7 @@ function eventStructuredData(array $event): string
         ];
     }
 
-    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+    return structuredDataScript($data);
 }
 
 /**
@@ -3761,7 +3772,7 @@ function faqStructuredData(array $faqs, string $pageUrl = ''): string
         $data['url'] = $pageUrl;
     }
 
-    return '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+    return structuredDataScript($data);
 }
 
 /**

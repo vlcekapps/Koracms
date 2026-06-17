@@ -23,6 +23,7 @@ $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
 $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php');
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
 $paginationSource = (string) file_get_contents(__DIR__ . '/../lib/pagination.php');
+$presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
@@ -9210,6 +9211,18 @@ if (!str_contains($authSource, "frame-ancestors 'none'")) {
 }
 if (!str_contains($authSource, 'style-src-elem \'self\' \'nonce-{$_CSP_NONCE}\' \'unsafe-inline\';') || !str_contains($authSource, "style-src-attr 'unsafe-inline'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP report policy would collect noisy inline style reports';
+}
+if (!str_contains($presentationSource, 'function structuredDataScript(array $data, string $indent = \'\'): string')
+    || !str_contains($presentationSource, '<script type="application/ld+json"\' . $nonce')
+    || !str_contains($presentationSource, 'JSON_INVALID_UTF8_SUBSTITUTE')) {
+    $contentSecurityPolicyIssues[] = 'presentation structured data is missing nonce-backed JSON-LD helper';
+}
+if (preg_match('/return\s+[\'"]\s*<script type="application\/ld\+json">/', $presentationSource) === 1
+    || str_contains($presentationSource, "return '  <script type=\"application/ld+json\">")) {
+    $contentSecurityPolicyIssues[] = 'presentation structured data still renders raw non-nonced JSON-LD script';
+}
+if (substr_count($presentationSource, 'return structuredDataScript(') < 9) {
+    $contentSecurityPolicyIssues[] = 'not all structured data helpers use structuredDataScript';
 }
 if (!str_contains($authSource, 'Content-Security-Policy-Report-Only') || !str_contains($authSource, 'report-uri ' . "' . BASE_URL . '" . '/csp-report.php')) {
     $contentSecurityPolicyIssues[] = 'auth CSP is missing report-only collection endpoint';
