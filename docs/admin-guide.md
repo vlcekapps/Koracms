@@ -895,6 +895,7 @@ Praktické poznámky:
 - Obsahové karty a vložené bloky ze snippetů mají skrytý nadpis napojený přes `aria-labelledby`, takže je uživatel čtečky obrazovky najde i navigací po nadpisech.
 - Při vložení obrázku z knihovny médií picker zachová `alt` atribut, ale nevkládá automatický `figcaption` z názvu média. Pokud médium nemá vyplněný alternativní text, vloží se `alt=""`, který lze v editoru ručně upravit.
 - Externí iframe a externí audio/video embedy ve veřejném HTML obsahu jsou podporované přes CSP, pokud je cílový zdroj sám dovolí.
+- Dialog content/media pickeru používá pro otevření a zavření atribut `hidden`, sdílené CSS třídy a `admin-modal-open` na těle stránky. Nevkládá lokální `style` atributy ani nemění `element.style`, takže méně zatěžuje CSP reporty a drží konzistentní fokusové chování.
 
 ---
 

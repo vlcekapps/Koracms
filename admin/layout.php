@@ -473,6 +473,7 @@ function adminHeader(string $pageTitle): void
        . '    .btn-danger { background: var(--admin-btn-danger-bg); color: #fff; border: 1px solid var(--admin-btn-danger-border); }' . "\n"
        . '    .btn-success { background: var(--admin-btn-success-bg); color: #fff; border: 1px solid var(--admin-btn-success-border); }' . "\n"
        . '    .btn-muted { background:#555; color:#fff; border-color:#444; }' . "\n"
+       . '    .admin-modal-open { overflow:hidden; }' . "\n"
        . '    .button-row { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }' . "\n"
        . '    .button-row--start { justify-content:flex-start; }' . "\n"
        . '    .button-row--between { justify-content:space-between; }' . "\n"

@@ -142,6 +142,23 @@ function renderAdminContentReferencePicker(string $textareaId): void
     font-size: 1.2rem;
   }
 
+  .content-reference-picker-dialog__description {
+    margin-top: .35rem;
+  }
+
+  .content-reference-picker-fieldset {
+    margin: 0;
+    border: 1px solid #ccc;
+    padding: .5rem 1rem;
+  }
+
+  .content-reference-picker-status {
+    margin: .85rem 0 0;
+    color: #555;
+    font-size: .92rem;
+    line-height: 1.45;
+  }
+
   .content-reference-picker-toolbar {
     display: grid;
     grid-template-columns: minmax(15rem, 2fr) minmax(12rem, 1fr) auto;
@@ -273,24 +290,23 @@ function renderAdminContentReferencePicker(string $textareaId): void
       <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku, formulář, anketu, médium nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz, HTML blok, fotogalerii, obrázek, přehrávač nebo obsahový snippet.</small>
     </div>
 
-    <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden style="display:none"></div>
+    <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden></div>
     <section id="<?= h($pickerId) ?>-picker-dialog"
              class="content-reference-picker-dialog"
              role="dialog"
              aria-modal="true"
              aria-labelledby="<?= h($pickerId) ?>-picker-title"
              aria-describedby="<?= h($pickerId) ?>-picker-description"
-             hidden
-             style="display:none">
+             hidden>
       <div class="content-reference-picker-dialog__header">
         <div>
           <h2 id="<?= h($pickerId) ?>-picker-title" class="content-reference-picker-dialog__title">Vložit odkaz nebo HTML z webu</h2>
-          <p id="<?= h($pickerId) ?>-picker-description" class="field-help" style="margin-top:.35rem">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz, HTML blok a podle typu výsledku i jako fotogalerii, obrázek, přehrávač, formulář, anketu nebo obsahovou kartu.</p>
+          <p id="<?= h($pickerId) ?>-picker-description" class="field-help content-reference-picker-dialog__description">Tento nástroj je dostupný v režimu čistého HTML editoru. Vyhledaný obsah můžete vložit jako inline odkaz, HTML blok a podle typu výsledku i jako fotogalerii, obrázek, přehrávač, formulář, anketu nebo obsahovou kartu.</p>
         </div>
         <button type="button" class="btn" id="<?= h($pickerId) ?>-picker-close">Zavřít</button>
       </div>
 
-      <fieldset style="margin:0;border:1px solid #ccc;padding:.5rem 1rem">
+      <fieldset class="content-reference-picker-fieldset">
         <legend>Vyhledání obsahu</legend>
         <div class="content-reference-picker-toolbar">
           <div>
@@ -316,7 +332,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
         <small id="<?= h($pickerId) ?>-picker-selection-help" class="field-help">Pokud máte v editoru označený text, při vložení odkazu se použije jako text odkazu. Jinak se vloží název nalezené položky.</small>
       </fieldset>
 
-      <p id="<?= h($pickerId) ?>-picker-status" aria-live="polite" aria-atomic="true" style="margin:.85rem 0 0;color:#555;font-size:.92rem;line-height:1.45"></p>
+      <p id="<?= h($pickerId) ?>-picker-status" class="content-reference-picker-status" aria-live="polite" aria-atomic="true"></p>
       <div id="<?= h($pickerId) ?>-picker-results" class="content-reference-picker-results" aria-live="polite"></div>
     </section>
 
@@ -337,7 +353,6 @@ function renderAdminContentReferencePicker(string $textareaId): void
         const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
         let lastTrigger = null;
         let savedSelection = { start: 0, end: 0, text: '' };
-        let previousBodyOverflow = '';
         let isSearching = false;
 
         if (!textarea || !openButton || !dialog || !overlay || !queryInput || !typeSelect || !searchButton || !statusNode || !resultsNode) {
@@ -474,11 +489,9 @@ function renderAdminContentReferencePicker(string $textareaId): void
 
         const closeDialog = (restoreFocus = true) => {
             dialog.hidden = true;
-            dialog.style.display = 'none';
             overlay.hidden = true;
-            overlay.style.display = 'none';
             openButton.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = previousBodyOverflow;
+            document.body.classList.remove('admin-modal-open');
             if (restoreFocus) {
                 (lastTrigger || openButton).focus();
             }
@@ -487,12 +500,9 @@ function renderAdminContentReferencePicker(string $textareaId): void
         const openDialog = () => {
             rememberSelection();
             lastTrigger = document.activeElement;
-            previousBodyOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('admin-modal-open');
             overlay.hidden = false;
-            overlay.style.display = '';
             dialog.hidden = false;
-            dialog.style.display = '';
             openButton.setAttribute('aria-expanded', 'true');
             if (!statusNode.textContent.trim()) {
                 setStatus('Zadejte alespoň 2 znaky a vyhledejte obsah.');

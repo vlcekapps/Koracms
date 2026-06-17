@@ -6429,6 +6429,11 @@ foreach ([
     "searchButton.setAttribute('aria-disabled', pending ? 'true' : 'false');",
     'if (!dialog.hidden && !dialog.contains(document.activeElement)) {',
     'searchButton.focus();',
+    'content-reference-picker-dialog__description',
+    'content-reference-picker-fieldset',
+    'content-reference-picker-status',
+    "document.body.classList.add('admin-modal-open')",
+    "document.body.classList.remove('admin-modal-open')",
 ] as $pickerFragment) {
     if (!str_contains($contentPickerSource, $pickerFragment)) {
         $contentSnippetIssues[] = 'content picker is missing snippet helper fragment: ' . $pickerFragment;
@@ -6437,9 +6442,15 @@ foreach ([
 foreach ([
     'searchButton.disabled = true;',
     'searchButton.disabled = false;',
+    'style="display:none"',
+    'style="margin-top:.35rem"',
+    'style="margin:0;border:1px solid #ccc;padding:.5rem 1rem"',
+    'style="margin:.85rem 0 0;color:#555;font-size:.92rem;line-height:1.45"',
+    '.style.display',
+    'document.body.style.overflow',
 ] as $pickerForbiddenFragment) {
     if (str_contains($contentPickerSource, $pickerForbiddenFragment)) {
-        $contentSnippetIssues[] = 'content picker still disables focused search button during search: ' . $pickerForbiddenFragment;
+        $contentSnippetIssues[] = 'content picker still uses forbidden focus/style fragment: ' . $pickerForbiddenFragment;
     }
 }
 
@@ -11030,6 +11041,7 @@ foreach ([
     '.admin-input-sm',
     '.admin-input-compact',
     '.admin-input-auto',
+    '.admin-modal-open',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',
