@@ -294,7 +294,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 
 <?php if ($useWysiwyg): ?>
   <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+  <script nonce="<?= cspNonce() ?>" src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
   <script nonce="<?= cspNonce() ?>">
   (() => {
     const descriptionField = document.getElementById('description');

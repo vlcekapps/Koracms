@@ -12,7 +12,7 @@
 <?php $ga4Id = getSetting('ga4_measurement_id', ''); if ($ga4Id !== ''): ?>
 <?php $cookieConsentEnabled = getSetting('cookie_consent_enabled', '0') === '1'; ?>
 <?php if (!$cookieConsentEnabled): ?>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=<?= h($ga4Id) ?>"></script>
+  <script async nonce="<?= cspNonce() ?>" src="https://www.googletagmanager.com/gtag/js?id=<?= h($ga4Id) ?>"></script>
   <script nonce="<?= cspNonce() ?>">window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','<?= h($ga4Id) ?>');</script>
 <?php else: ?>
   <script nonce="<?= cspNonce() ?>">
@@ -21,6 +21,7 @@
     function getCk(n){var v='; '+document.cookie,p=v.split('; '+n+'=');if(p.length===2)return p.pop().split(';').shift();}
     if(getCk('cms_cookie')==='1'){
       var s=document.createElement('script');s.async=true;
+      s.nonce='<?= h(cspNonce()) ?>';
       s.src='https://www.googletagmanager.com/gtag/js?id=<?= h($ga4Id) ?>';
       document.head.appendChild(s);
       window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}

@@ -9209,8 +9209,20 @@ if (!str_contains($authSource, "frame-src 'self' https:;")) {
 if (!str_contains($authSource, "frame-ancestors 'none'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP no longer protects pages against third-party framing';
 }
-if (!str_contains($authSource, 'style-src-elem \'self\' \'nonce-{$_CSP_NONCE}\' \'unsafe-inline\';') || !str_contains($authSource, "style-src-attr 'unsafe-inline'")) {
+if (!str_contains($authSource, 'style-src-elem \'self\' \'nonce-{$_CSP_NONCE}\' \'unsafe-inline\'{$_CSP_EXTRA_STYLE};') || !str_contains($authSource, "style-src-attr 'unsafe-inline'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP report policy would collect noisy inline style reports';
+}
+foreach ([
+    'script-src \'self\' \'nonce-{$_CSP_NONCE}\' \'unsafe-inline\'{$_CSP_EXTRA_SCRIPT}',
+    'font-src \'self\'{$_CSP_EXTRA_FONT}',
+    'https://www.googletagmanager.com',
+    'https://cdn.jsdelivr.net',
+    'https://cdn.quilljs.com',
+    'https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com',
+] as $cspTrustedSourceFragment) {
+    if (!str_contains($authSource, $cspTrustedSourceFragment)) {
+        $contentSecurityPolicyIssues[] = 'auth CSP is missing trusted source fragment: ' . $cspTrustedSourceFragment;
+    }
 }
 if (!str_contains($presentationSource, 'function structuredDataScript(array $data, string $indent = \'\'): string')
     || !str_contains($presentationSource, '<script type="application/ld+json"\' . $nonce')
@@ -9234,6 +9246,23 @@ foreach (['function cspReportBody', 'function cspReportEntry', 'function cspRepo
 }
 if (str_contains($cspReportSource, "['path' => \$logPath]") || str_contains($cspReportSource, "['path' => \$logDirectory]")) {
     $contentSecurityPolicyIssues[] = 'csp-report.php logs raw filesystem paths on write failures';
+}
+$publicHeadSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/partials/head.php');
+if (!str_contains($publicHeadSource, '<script async nonce="<?= cspNonce() ?>" src="https://www.googletagmanager.com/gtag/js?id=')
+    || !str_contains($publicHeadSource, "s.nonce='<?= h(cspNonce()) ?>';")) {
+    $contentSecurityPolicyIssues[] = 'public head GA scripts are missing CSP nonce support';
+}
+if (!str_contains($uiSource, "s.nonce=' . json_encode(\$nonce) . ';")) {
+    $contentSecurityPolicyIssues[] = 'cookie banner delayed GA loader is missing CSP nonce support';
+}
+foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/admin')) as $cspAdminFile) {
+    if (!$cspAdminFile instanceof SplFileInfo || !$cspAdminFile->isFile() || $cspAdminFile->getExtension() !== 'php') {
+        continue;
+    }
+    $cspAdminSource = (string)file_get_contents($cspAdminFile->getPathname());
+    if (preg_match('/<script\s+(?![^>]*\bnonce=)[^>]*\bsrc="https:\/\/cdn\.(?:jsdelivr|quilljs)\.com/i', $cspAdminSource) === 1) {
+        $contentSecurityPolicyIssues[] = 'admin external editor script is missing nonce: ' . $cspAdminFile->getFilename();
+    }
 }
 $contentSecurityPolicyProbe = fetchUrl($baseUrl . '/', '', 0);
 $contentSecurityPolicyHeaderFound = false;
@@ -9262,6 +9291,14 @@ foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
     }
     if (!str_contains($normalizedHeader, "frame-ancestors 'none'")) {
         $contentSecurityPolicyIssues[] = 'public response header no longer protects against third-party framing';
+    }
+    foreach (['https://www.googletagmanager.com', 'https://cdn.jsdelivr.net', 'https://cdn.quilljs.com'] as $expectedCspSource) {
+        if (!str_contains($normalizedHeader, $expectedCspSource)) {
+            $contentSecurityPolicyIssues[] = 'public response header is missing trusted script/style source: ' . $expectedCspSource;
+        }
+    }
+    if (!str_contains($normalizedHeader, "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com")) {
+        $contentSecurityPolicyIssues[] = 'public response header is missing GA connect-src allowance';
     }
 }
 if (!$contentSecurityPolicyHeaderFound) {

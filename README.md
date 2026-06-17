@@ -419,6 +419,8 @@ Rezervační formuláře v administraci používají stejný princip pro přepí
 
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 
+CSP allowlist obsahuje také explicitní zdroje, které CMS samo vkládá pro Google Analytics a volitelný Quill editor. Externí GA/Quill skripty se renderují s nonce a runtime audit hlídá, aby se nové CDN skripty nepřidávaly bez stejné ochrany.
+
 ---
 
 ## Přístupnost

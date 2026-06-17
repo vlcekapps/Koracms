@@ -138,14 +138,14 @@ if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
 // 'unsafe-inline' zůstává jako fallback pro prohlížeče bez podpory nonce
 // a pro inline style atributy (nonce nepokrývá style="...").
 $_CSP_NONCE = base64_encode(random_bytes(16));
-$_CSP_EXTRA_SCRIPT = '';
-$_CSP_EXTRA_CONNECT = '';
-if (function_exists('getSetting') && getSetting('ga4_measurement_id', '') !== '') {
-    $_CSP_EXTRA_SCRIPT = ' https://www.googletagmanager.com';
-    $_CSP_EXTRA_CONNECT = ' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com';
-}
-$cspStylePolicy = "style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; style-src-elem 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'; style-src-attr 'unsafe-inline'";
-$cspPolicy = "default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; {$cspStylePolicy}; img-src 'self' data:; font-src 'self'; connect-src 'self'{$_CSP_EXTRA_CONNECT}; media-src 'self' https: data: blob:; frame-src 'self' https:; frame-ancestors 'none'";
+// CSP se skládá dřív, než jsou dostupná nastavení z DB, proto allowlist drží
+// jen externí zdroje, které první CMS šablony samy umí vložit.
+$_CSP_EXTRA_SCRIPT = ' https://www.googletagmanager.com https://cdn.jsdelivr.net https://cdn.quilljs.com';
+$_CSP_EXTRA_STYLE = ' https://cdn.jsdelivr.net https://cdn.quilljs.com';
+$_CSP_EXTRA_FONT = ' https://cdn.jsdelivr.net https://cdn.quilljs.com';
+$_CSP_EXTRA_CONNECT = ' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com';
+$cspStylePolicy = "style-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_STYLE}; style-src-elem 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_STYLE}; style-src-attr 'unsafe-inline'";
+$cspPolicy = "default-src 'self'; script-src 'self' 'nonce-{$_CSP_NONCE}' 'unsafe-inline'{$_CSP_EXTRA_SCRIPT}; {$cspStylePolicy}; img-src 'self' data:; font-src 'self'{$_CSP_EXTRA_FONT}; connect-src 'self'{$_CSP_EXTRA_CONNECT}; media-src 'self' https: data: blob:; frame-src 'self' https:; frame-ancestors 'none'";
 header('Content-Security-Policy: ' . $cspPolicy);
 header('Content-Security-Policy-Report-Only: ' . $cspPolicy . '; report-uri ' . BASE_URL . '/csp-report.php');
 if ($isSocialPreviewCrawler) {

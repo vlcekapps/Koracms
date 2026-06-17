@@ -35,6 +35,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Karty v default šabloně** – základní karta už nepoužívá globální `height: 100%` a gridy zarovnávají položky nahoru, aby samostatné nebo vyšší karty nevytvářely zbytečnou prázdnou plochu pod obsahem.
 
 ### Změněno
+- **CSP allowlist pro vlastní externí skripty CMS** – politika nově explicitně povoluje jen externí zdroje, které CMS samo vkládá (`googletagmanager.com`, `cdn.jsdelivr.net`, `cdn.quilljs.com` a analytické connect endpointy), a externí GA/Quill skripty dostávají CSP nonce.
 - **Strukturovaná data a CSP** – JSON-LD výstupy pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nově používají sdílený helper s CSP nonce, takže structured data zůstanou připravená na budoucí zpřísnění `script-src`.
 - **Rezervační formuláře v administraci** – ruční vytvoření rezervace a editor zdrojů rezervací už nepoužívají inline `onchange` ani `onclick`; přepínání polí, sloty a blokované dny obsluhují datové atributy a nonce skripty.
 - **Editor anket v administraci** – přidávání a odebírání možností odpovědi už nepoužívá inline `onclick`, ale datové atributy a delegované listenery v nonce skriptu formuláře.

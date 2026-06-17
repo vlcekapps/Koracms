@@ -380,7 +380,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script nonce="<?= cspNonce() ?>" src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <script nonce="<?= cspNonce() ?>">
 (function () {
     const editors = Array.from(document.querySelectorAll('textarea[data-wysiwyg="1"]'));

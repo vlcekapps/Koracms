@@ -178,7 +178,7 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script nonce="<?= cspNonce() ?>" src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('answer');

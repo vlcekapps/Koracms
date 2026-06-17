@@ -371,7 +371,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
 <?php if ($useWysiwyg): ?>
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script nonce="<?= cspNonce() ?>" src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script nonce="<?= cspNonce() ?>">
 (function () {
     const textarea = document.getElementById('description');
