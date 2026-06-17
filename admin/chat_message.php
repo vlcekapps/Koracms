@@ -155,7 +155,7 @@ adminHeader('Chat zpráva');
     </tr>
     <tr>
       <th scope="row">Zpráva</th>
-      <td style="white-space:pre-wrap"><?= h((string)$message['message']) ?></td>
+      <td class="table-cell--prewrap"><?= h((string)$message['message']) ?></td>
     </tr>
   </tbody>
 </table>

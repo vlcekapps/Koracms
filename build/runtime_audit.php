@@ -10948,8 +10948,10 @@ $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log
 $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
+$chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_message.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
 $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
+$contactMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_message.php');
 $downloadsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/events.php');
 $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
@@ -11118,6 +11120,12 @@ foreach ([
             'class="table-note"',
         ],
     ],
+    'chat message detail' => [
+        'source' => $chatMessageDetailSource,
+        'fragments' => [
+            'class="table-cell--prewrap"',
+        ],
+    ],
     'contact overview' => [
         'source' => $contactOverviewSource,
         'fragments' => [
@@ -11128,6 +11136,12 @@ foreach ([
             'class="table-meta"',
             'class="text-pending"',
             'class="table-note"',
+        ],
+    ],
+    'contact message detail' => [
+        'source' => $contactMessageDetailSource,
+        'fragments' => [
+            'class="table-cell--prewrap"',
         ],
     ],
     'comments overview' => [
