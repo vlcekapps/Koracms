@@ -22,6 +22,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Import newsletterové historie** – ruční JSON import už správně obnovuje uložené newslettery se stejným počtem SQL sloupců a hodnot, takže se import nezastaví na chybě placeholderů.
 - **Obsahové snippety a embedy** – kopírovatelný `[code]`, YouTube video, PDF náhled, vložená galerie a obsahové karty z media/content pickeru nově pojmenovávají své sekce skrytým nadpisem přes `aria-labelledby` místo samotného `aria-label`.
 - **Stránkování** – sdílený pager nově pojmenovává stránkovací navigaci skutečným skrytým nadpisem přes `aria-labelledby` místo samotného `aria-label`; pokud by popisek chyběl, použije bezpečný fallback `Stránkování`.
 - **Pomocné navigace ve veřejné části** – profilové odkazy, tagy článku, navigace mezi fotografiemi, kalendář rezervací a kategoriové navigace FAQ nově používají skutečný nadpis přes `aria-labelledby` místo samotného `aria-label`.
@@ -48,6 +49,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Přehled alb a fotografií galerie v administraci** – filtry, hromadné akce, cesty v tabulkách, náhledy fotografií a akční formuláře používají sdílené administrační utility třídy místo lokálních `style` atributů; runtime audit hlídá jejich návrat.
 - **Přehled uživatelů a pozice modulů v administraci** – autorské štítky, kompaktní seznamy blogů a řadicí seznam modulů používají sdílené administrační utility třídy místo lokálních `style` atributů; runtime audit hlídá jejich návrat.
 - **Detaily kontaktních a chatových zpráv v administraci** – dlouhé texty zpráv používají sdílenou třídu pro zachování řádků místo lokálního `style` atributu; runtime audit hlídá jejich návrat.
+- **Import, historie newsletteru a 2FA přihlášení v administraci** – drobné odsazení akcí, zalomení dlouhého obsahu newsletteru a vzhled 2FA kódu používají CSS třídy místo lokálních `style` atributů; runtime audit hlídá jejich návrat.
 - **Kategorie vývěsky, FAQ a stažení v administraci** – formuláře pro přidání, inline editaci a mazání kategorií používají sdílené administrační utility třídy místo lokálních `style` atributů; runtime audit hlídá, aby se inline styly do těchto menších taxonomií nevracely.
 - **Kategorie a lokality rezervací v administraci** – filtry, přidávací formuláře, inline editace a mazací formuláře používají sdílené administrační utility třídy místo lokálních `style` atributů; runtime audit hlídá jejich návrat.
 - **Kategorie a štítky blogu v administraci** – výběr blogu, inline editace taxonomií, tlačítka a mazací formuláře používají sdílené administrační utility třídy; sdílený helper hromadných akcí už negeneruje lokální `style` atributy.

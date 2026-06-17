@@ -80,6 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     :focus-visible { outline: 3px solid var(--login-focus); outline-offset: 2px; }
     .skip-link { position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden; z-index:999; }
     .skip-link:focus { position:fixed; top:0; left:0; width:auto; height:auto; padding:.75rem 1.5rem; background:var(--login-focus); color:#fff; text-decoration:none; z-index:9999; }
+    .totp-code-input { font-size:1.5rem; text-align:center; letter-spacing:.3rem; }
+    .login-secondary-action { margin-top:2rem; }
   </style>
 </head>
 <body>
@@ -100,13 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <label for="totp_code">Kód <span aria-hidden="true">*</span></label>
       <input type="text" id="totp_code" name="totp_code" required aria-required="true"
              autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}"
-             maxlength="6" placeholder="000000" style="font-size:1.5rem;text-align:center;letter-spacing:.3rem">
+             maxlength="6" placeholder="000000" class="totp-code-input">
 
       <button type="submit">Ověřit</button>
     </fieldset>
   </form>
 
-  <p style="margin-top:2rem"><a href="<?= h($backToLoginUrl) ?>">Zpět na přihlášení</a></p>
+  <p class="login-secondary-action"><a href="<?= h($backToLoginUrl) ?>">Zpět na přihlášení</a></p>
 </main>
 </body>
 </html>

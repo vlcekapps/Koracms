@@ -30,6 +30,7 @@ $createdMediaIds = [];
 $createdBoardIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
+$createdNewsletterIds = [];
 $createdTempFiles = [];
 
 /**
@@ -1090,12 +1091,26 @@ try {
     ];
 
     $utf8ImportSiteName = 'HTTP Import UTF-8 ' . bin2hex(random_bytes(4)) . ' Žluťoučký kůň';
+    $importNewsletterId = (int)$pdo->query('SELECT COALESCE(MAX(id), 0) + 1000 FROM cms_newsletters')->fetchColumn();
+    $createdNewsletterIds[] = $importNewsletterId;
+    $importNewsletterSubject = 'HTTP import newsletter ' . bin2hex(random_bytes(4));
+    $importNewsletterBody = "Dobrý den,\n\nImport newsletteru funguje.";
     $validImportPayload = [
         'site' => 'cms',
         'settings' => [
             [
                 'key' => 'site_name',
                 'value' => $utf8ImportSiteName,
+            ],
+        ],
+        'newsletters' => [
+            [
+                'id' => $importNewsletterId,
+                'subject' => $importNewsletterSubject,
+                'body' => $importNewsletterBody,
+                'recipient_count' => 2,
+                'sent_at' => '2026-01-02 03:04:05',
+                'created_at' => '2026-01-02 03:00:00',
             ],
         ],
     ];
@@ -1126,6 +1141,16 @@ try {
     clearSettingsCache();
     if (httpIntegrationSettingValue($pdo, 'site_name') !== $utf8ImportSiteName) {
         $jsonImportIssues[] = 'validní UTF-8 JSON import neuložil českou diakritiku do nastavení';
+    }
+    $importedNewsletterStmt = $pdo->prepare('SELECT subject, body, recipient_count, sent_at FROM cms_newsletters WHERE id = ? LIMIT 1');
+    $importedNewsletterStmt->execute([$importNewsletterId]);
+    $importedNewsletter = $importedNewsletterStmt->fetch();
+    if (!is_array($importedNewsletter)
+        || (string)($importedNewsletter['subject'] ?? '') !== $importNewsletterSubject
+        || (string)($importedNewsletter['body'] ?? '') !== $importNewsletterBody
+        || (int)($importedNewsletter['recipient_count'] ?? 0) !== 2
+        || (string)($importedNewsletter['sent_at'] ?? '') !== '2026-01-02 03:04:05') {
+        $jsonImportIssues[] = 'validní UTF-8 JSON import neobnovil historii newsletteru';
     }
     httpIntegrationRestoreSettings($originalImportSettings);
 
@@ -3695,6 +3720,10 @@ try {
 
     foreach ($createdWidgetIds as $widgetIdToDelete) {
         $pdo->prepare("DELETE FROM cms_widgets WHERE id = ?")->execute([$widgetIdToDelete]);
+    }
+
+    foreach ($createdNewsletterIds as $newsletterIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_newsletters WHERE id = ?")->execute([$newsletterIdToDelete]);
     }
 
     foreach ($createdResourceIds as $resourceId) {

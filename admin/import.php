@@ -891,7 +891,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_newsletters
                          (id, subject, body, recipient_count, sent_at, created_at)
-                         VALUES (?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?)"
                     );
                     foreach ($data['newsletters'] as $row) {
                         $ins->execute([
@@ -950,7 +950,7 @@ adminHeader('Import / Export dat');
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <label for="import_file">JSON soubor (export z tohoto CMS)</label>
   <input type="file" id="import_file" name="import_file" accept=".json,application/json" required aria-required="true">
-  <button type="submit" class="btn" style="margin-top:1rem">Importovat</button>
+  <button type="submit" class="btn admin-action-row">Importovat</button>
 </form>
 
 <?php adminFooter(); ?>

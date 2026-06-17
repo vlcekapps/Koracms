@@ -66,7 +66,7 @@ adminHeader('Odeslaná rozesílka');
     </tr>
     <tr>
       <th scope="row">Obsah</th>
-      <td style="white-space:pre-wrap"><?= h((string)$newsletter['body']) ?></td>
+      <td class="table-cell--prewrap"><?= h((string)$newsletter['body']) ?></td>
     </tr>
   </tbody>
 </table>

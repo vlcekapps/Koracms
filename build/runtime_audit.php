@@ -8228,9 +8228,19 @@ foreach ([
     'cancel_2fa=1&redirect=',
     "\$_SESSION['2fa_pending_redirect']",
     "header('Location: ' . \$redirect);",
+    'class="totp-code-input"',
+    'class="login-secondary-action"',
 ] as $adminLogin2faFragment) {
     if (!str_contains($adminLogin2faSource, $adminLogin2faFragment)) {
-        $adminLoginRedirectIssues[] = 'admin 2FA is missing redirect fragment: ' . $adminLogin2faFragment;
+        $adminLoginRedirectIssues[] = 'admin 2FA is missing login fragment: ' . $adminLogin2faFragment;
+    }
+}
+foreach ([
+    'style="font-size:1.5rem;text-align:center;letter-spacing:.3rem"',
+    'style="margin-top:2rem"',
+] as $adminLogin2faInlineStyleFragment) {
+    if (str_contains($adminLogin2faSource, $adminLogin2faInlineStyleFragment)) {
+        $adminLoginRedirectIssues[] = 'admin 2FA still contains inline style fragment: ' . $adminLogin2faInlineStyleFragment;
     }
 }
 if ($adminHttpIntegrationSource === '') {
@@ -9780,6 +9790,10 @@ if (!str_contains($blogImportSource, 'logo_alt_text')) {
 if (!str_contains($blogWidgetAdminSource, 'value="-1">Aktuální blog (na blogových stránkách)')) {
     $blogAdminIssues[] = 'widget editor is missing current-blog context option for latest articles';
 }
+if (!str_contains($blogImportSource, "INSERT IGNORE INTO cms_newsletters\n                         (id, subject, body, recipient_count, sent_at, created_at)\n                         VALUES (?,?,?,?,?,?)")
+    || str_contains($blogImportSource, "INSERT IGNORE INTO cms_newsletters\n                         (id, subject, body, recipient_count, sent_at, created_at)\n                         VALUES (?,?,?,?,?,?,?)")) {
+    $blogAdminIssues[] = 'import newsletter restore has mismatched column/value placeholders';
+}
 if (!str_contains($blogWidgetSaveSource, '$rawBlogId === -1 ? -1')) {
     $blogAdminIssues[] = 'widget save is missing current-blog context persistence';
 }
@@ -10932,6 +10946,7 @@ $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.p
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
+$importAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
@@ -10957,6 +10972,7 @@ $eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/eve
 $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
 $newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
+$newsletterHistorySource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_history.php');
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
 $podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
@@ -11224,6 +11240,18 @@ foreach ([
             'class="admin-search-input"',
             'class="admin-thumb"',
             'class="table-meta"',
+        ],
+    ],
+    'import page' => [
+        'source' => $importAdminSource,
+        'fragments' => [
+            'class="btn admin-action-row"',
+        ],
+    ],
+    'newsletter history detail' => [
+        'source' => $newsletterHistorySource,
+        'fragments' => [
+            'class="table-cell--prewrap"',
         ],
     ],
     'podcast episodes overview' => [

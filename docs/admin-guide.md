@@ -111,6 +111,7 @@ Platí tato pravidla:
 - export z Kora CMS zapisuje JSON s českou diakritikou v UTF-8
 - import nově odmítne JSON soubor s neplatným UTF-8, aby se poškozené texty neuložily do databáze
 - UTF-8 BOM na začátku souboru nevadí; import si ho automaticky odstraní
+- import obnovuje i historii odeslaných newsletterů včetně předmětu, obsahu, počtu příjemců a času odeslání
 - ruční SQL restore mimo administraci musí používat klientské spojení `utf8mb4`, jinak se české znaky mohou změnit na `?`
 
 Prakticky to znamená, že běžný export a následný import přes administraci je bezpečný i pro české texty. Největší riziko poškození diakritiky vzniká až při ručním importu SQL dumpu přes nástroj nebo klienta, který nepoužívá `utf8mb4`.
@@ -762,6 +763,7 @@ Vývojové kontroly:
 - Přehled alb a fotografií galerie v administraci používá sdílené utility třídy pro filtry, hromadné akce, cesty v tabulkách, náhledy fotografií a akční formuláře místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto přehledů nevracely.
 - Přehled uživatelů a pozice modulů v administraci používají sdílené utility třídy pro autorské štítky, kompaktní seznamy blogů a řadicí seznam modulů místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto menších přehledů nevracely.
 - Detaily kontaktních a chatových zpráv v administraci používají sdílenou třídu pro zachování řádků dlouhého textu místo lokálního `style` atributu; runtime audit hlídá, aby se čistě prezentační inline styly do těchto detailů nevracely.
+- Import, historie newsletteru a 2FA přihlášení v administraci používají CSS třídy pro odsazení akcí, zalomení dlouhého obsahu newsletteru a vzhled 2FA kódu místo lokálních `style` atributů; runtime audit hlídá, aby se tyto drobné prezentační styly nevracely přímo do HTML atributů.
 - Kategorie vývěsky, FAQ a stažení v administraci používají sdílené utility třídy pro přidání, inline editaci a mazání kategorií místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto menších taxonomií nevracely.
 - Kategorie a lokality rezervací v administraci používají sdílené utility třídy pro filtry, přidávací formuláře, inline editaci a mazání místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto rezervačních číselníků nevracely.
 - Kategorie a štítky blogu v administraci používají sdílené utility třídy pro výběr blogu, inline editaci taxonomií, tlačítka a mazací formuláře místo lokálních `style` atributů. Stejný směr drží i sdílený helper hromadných akcí, který používá `admin-fieldset-card` a `field-help--flush`.
