@@ -10930,6 +10930,8 @@ $downloadCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_ca
 $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
 $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
+$galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
+$galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
@@ -10998,6 +11000,7 @@ foreach ([
     '.table-note',
     '.table-cell--detail',
     '.table-cell--prewrap',
+    '.admin-thumb',
     '.inline-badge',
     '.inline-badge--warning',
     '.inline-badge--info',
@@ -11179,6 +11182,25 @@ foreach ([
         'fragments' => [
             'button-row button-row--baseline admin-stack-sm',
             'class="admin-search-input"',
+            'class="table-meta"',
+        ],
+    ],
+    'gallery albums overview' => [
+        'source' => $galleryAlbumsOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="admin-fieldset-card"',
+            'field-help field-help--flush',
+            'class="table-meta"',
+        ],
+    ],
+    'gallery photos overview' => [
+        'source' => $galleryPhotosOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="admin-thumb"',
             'class="table-meta"',
         ],
     ],

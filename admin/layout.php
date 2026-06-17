@@ -522,6 +522,7 @@ function adminHeader(string $pageTitle): void
        . '    .table-meta { display:block; margin-top:.2rem; color:var(--admin-text-meta); font-size:.85rem; line-height:1.4; }' . "\n"
        . '    .table-cell--detail { max-width:400px; word-break:break-word; font-size:.88rem; }' . "\n"
        . '    .table-cell--prewrap { max-width:36rem; white-space:pre-wrap; }' . "\n"
+       . '    .admin-thumb { width:80px; height:60px; object-fit:cover; }' . "\n"
        . '    .inline-badge { display:inline-block; margin-left:.4rem; padding:.1rem .45rem; border-radius:999px; font-size:.78rem; font-weight:600; }' . "\n"
        . '    .inline-badge--warning { background:#fff1c2; color:#7a4a00; }' . "\n"
        . '    .inline-badge--info { background:#eef4fb; color:#1b4d7a; }' . "\n"

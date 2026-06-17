@@ -53,10 +53,10 @@ adminHeader('Alba galerie');
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_album_form.php" class="btn">+ Nové album</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v albech</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v albech..." value="<?= h($q) ?>" style="width:320px">
+    <input type="search" id="q" name="q" placeholder="Hledat v albech..." value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -94,9 +94,9 @@ adminHeader('Alba galerie');
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="module" value="gallery_albums">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/gallery_albums.php">
-    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými alby</legend>
-      <p id="bulk-status" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybrané žádné album.</p>
+      <p id="bulk-status" class="field-help field-help--flush" aria-live="polite">Zatím není vybrané žádné album.</p>
       <div class="button-row">
         <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
                 disabled data-confirm="Smazat vybraná alba včetně fotografií?">Smazat vybrané</button>
@@ -124,7 +124,7 @@ adminHeader('Alba galerie');
           <td><input type="checkbox" name="ids[]" value="<?= (int)$album['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$album['name']) ?>"></td>
           <td>
             <?= $album['parent_id'] ? '— ' : '' ?><strong><?= h($album['name']) ?></strong>
-            <br><small style="color:#555"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>
+            <br><small class="table-meta"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>
           </td>
           <td><?= $album['parent_name'] !== null ? h((string)$album['parent_name']) : '–' ?></td>
           <td><?= (int)$album['photo_count'] ?><?= (int)$album['sub_count'] > 0 ? ' <small>(+' . (int)$album['sub_count'] . ' podalb)</small>' : '' ?></td>
@@ -145,7 +145,7 @@ adminHeader('Alba galerie');
               <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
             <?php if (($album['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-              <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
+              <form action="<?= BASE_URL ?>/admin/approve.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="module" value="gallery_albums">
                 <input type="hidden" name="id" value="<?= (int)$album['id'] ?>">

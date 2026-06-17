@@ -71,11 +71,11 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_photo_form.php?album_id=<?= (int)$album['id'] ?>" class="btn">+ Přidat fotografie</a></p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
   <div>
     <label for="q" class="visually-hidden">Hledat ve fotografiích</label>
-    <input type="search" id="q" name="q" placeholder="Hledat ve fotografiích..." value="<?= h($q) ?>" style="width:320px">
+    <input type="search" id="q" name="q" placeholder="Hledat ve fotografiích..." value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -130,11 +130,11 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
           <td>
             <img src="<?= h((string)$photo['thumb_url']) ?>"
                  alt="<?= h((string)$photo['label']) ?>"
-                 style="width:80px;height:60px;object-fit:cover;">
+                 class="admin-thumb">
           </td>
           <td>
             <strong><?= h((string)$photo['label']) ?></strong><br>
-            <small style="color:#555"><?= h(parse_url((string)$photo['public_path'], PHP_URL_PATH) ?: (string)$photo['public_path']) ?></small>
+            <small class="table-meta"><?= h(parse_url((string)$photo['public_path'], PHP_URL_PATH) ?: (string)$photo['public_path']) ?></small>
           </td>
           <td><?= (int)$photo['sort_order'] ?></td>
           <td>
@@ -153,7 +153,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
             <?php if ((int)($photo['is_published'] ?? 1) === 1 && ($photo['status'] ?? 'published') === 'published'): ?>
               <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
             <?php endif; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php" style="display:inline">
+            <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
               <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
@@ -161,7 +161,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
               <input type="hidden" name="redirect" value="<?= h($currentUrl) ?>">
               <button type="submit" class="btn"<?= $sortFilter !== 'position' ? ' disabled aria-disabled="true" title="Rychlé přesuny fungují při řazení podle pořadí."' : '' ?>>Nahoru</button>
             </form>
-            <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php" style="display:inline">
+            <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
               <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
@@ -170,7 +170,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
               <button type="submit" class="btn"<?= $sortFilter !== 'position' ? ' disabled aria-disabled="true" title="Rychlé přesuny fungují při řazení podle pořadí."' : '' ?>>Dolů</button>
             </form>
             <?php if (($photo['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-              <form action="<?= BASE_URL ?>/admin/approve.php" method="post" style="display:inline">
+              <form action="<?= BASE_URL ?>/admin/approve.php" method="post">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="module" value="gallery_photos">
                 <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
