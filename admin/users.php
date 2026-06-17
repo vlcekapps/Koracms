@@ -68,8 +68,8 @@ adminHeader('Uživatelé a role');
       <td>
         <?= $displayName !== '' ? h($displayName) : '<em>–</em>' ?>
         <?php if ($account['role'] !== 'public' && (int)($account['author_public_enabled'] ?? 0) === 1 && (string)($account['author_slug'] ?? '') !== ''): ?>
-          <div style="margin-top:.35rem">
-            <small style="display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:999px;background:#edf5fc;color:#15486d;font-weight:700">
+          <div>
+            <small class="inline-badge inline-badge--info inline-badge--standalone">
               Veřejný autor
             </small>
           </div>
@@ -90,7 +90,7 @@ adminHeader('Uživatelé a role');
             <small class="field-help">Bez přiřazení k blogům</small>
           <?php endif; ?>
         <?php else: ?>
-          <ul style="margin:0;padding-left:1rem">
+          <ul class="table-list-compact">
             <?php foreach ($assignedBlogs as $assignedBlog): ?>
               <li>
                 <?= h((string)$assignedBlog['blog_name']) ?>
@@ -108,7 +108,7 @@ adminHeader('Uživatelé a role');
           <?php if (!empty($assignedBlogs) && currentUserHasCapability('blog_taxonomies_manage')): ?>
             <a href="blog_members.php?blog_id=<?= (int)$assignedBlogs[0]['blog_id'] ?>" class="btn">Blogy</a>
           <?php endif; ?>
-          <form action="user_delete.php" method="post" style="display:inline">
+          <form action="user_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$account['id'] ?>">
             <button type="submit" class="btn btn-danger"

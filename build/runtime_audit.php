@@ -10958,7 +10958,9 @@ $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
 $podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
+$settingsDisplaySource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_display.php');
 $trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
+$usersOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
 $newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
 foreach ([
@@ -10996,14 +10998,20 @@ foreach ([
     '.admin-sort-item--muted',
     '.admin-sort-item--dragging',
     '.admin-sort-item__body',
+    '.admin-order-list',
+    '.admin-order-item',
+    '.admin-order-item__label',
+    '.admin-order-item__label--muted',
     '.field-help--flush',
     '.table-note',
     '.table-cell--detail',
     '.table-cell--prewrap',
     '.admin-thumb',
     '.inline-badge',
+    '.inline-badge--standalone',
     '.inline-badge--warning',
     '.inline-badge--info',
+    '.table-list-compact',
     '.text-pending',
     '.admin-nav-user',
     '.admin-nav-bottom',
@@ -11220,6 +11228,23 @@ foreach ([
             'class="admin-search-input"',
             'class="table-meta"',
             'class="admin-action-row"',
+        ],
+    ],
+    'settings display overview' => [
+        'source' => $settingsDisplaySource,
+        'fragments' => [
+            'class="admin-order-list"',
+            'class="admin-order-item"',
+            'admin-order-item__label',
+            'admin-order-item__label--muted',
+        ],
+    ],
+    'users overview' => [
+        'source' => $usersOverviewSource,
+        'fragments' => [
+            'inline-badge inline-badge--info inline-badge--standalone',
+            'class="table-list-compact"',
+            '<td class="actions">',
         ],
     ],
 ] as $adminInboxLabel => $adminInboxGuardrail) {

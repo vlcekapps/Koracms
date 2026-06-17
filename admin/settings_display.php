@@ -17,7 +17,7 @@ adminHeader('Pozice modulů');
 $navOrder  = navModuleOrder();
 $total     = count($navOrder);
 ?>
-<ol style="list-style:none;padding:0;margin:0;max-width:480px">
+<ol class="admin-order-list">
 <?php foreach ($navOrder as $i => $key):
     if (!isset($moduleMap[$key])) {
         continue;
@@ -25,12 +25,12 @@ $total     = count($navOrder);
     [, $label] = $moduleMap[$key];
     $enabled   = isModuleEnabled($key);
     ?>
-  <li style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #eee">
-    <span style="min-width:160px<?= $enabled ? '' : ';color:#666' ?>">
+  <li class="admin-order-item">
+    <span class="admin-order-item__label<?= $enabled ? '' : ' admin-order-item__label--muted' ?>">
       <?= h($label) ?><?= $enabled ? '' : ' <em>(vypnuto)</em>' ?>
     </span>
 
-    <form method="post" action="nav_reorder.php" style="display:inline;margin:0">
+    <form method="post" action="nav_reorder.php">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="module" value="<?= h($key) ?>">
       <input type="hidden" name="dir" value="up">
@@ -41,7 +41,7 @@ $total     = count($navOrder);
       </button>
     </form>
 
-    <form method="post" action="nav_reorder.php" style="display:inline;margin:0">
+    <form method="post" action="nav_reorder.php">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="module" value="<?= h($key) ?>">
       <input type="hidden" name="dir" value="down">
