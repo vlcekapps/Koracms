@@ -98,7 +98,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 <?php endif; ?>
 
 <?php if ($contentLockWarning !== null): ?>
-  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+  <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
     Tuto událost právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
     (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
@@ -110,7 +110,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p style="margin-top:0;color:#555">
+<p class="admin-description admin-description--flush admin-description--muted">
   Vyplňte potřebné údaje k této události. Můžete doplnit i stručné shrnutí, obrázek, pořadatele, registrační odkaz nebo poznámku k přístupnosti.
 </p>
 
@@ -155,13 +155,13 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
            value="<?= h((string)$event['location']) ?>">
   </fieldset>
 
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Termín konání</legend>
 
-    <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+    <div class="button-row button-row--baseline">
       <div>
         <label for="event_date">Začátek <span aria-hidden="true">*</span></label>
-        <input type="date" id="event_date" name="event_date" required aria-required="true" style="width:auto;display:block;margin-top:.2rem"
+        <input type="date" id="event_date" name="event_date" required aria-required="true" class="admin-input-auto"
                <?= adminFieldAttributes('event_date', $err, $fieldErrorMap, [], 'event-dates-error') ?>
                value="<?= !empty($event['event_date']) ? h(date('Y-m-d', strtotime((string)$event['event_date']))) : '' ?>">
         <?php if (adminFieldHasError('event_date', $err, $fieldErrorMap)): ?>
@@ -172,20 +172,20 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
       </div>
       <div>
         <label for="event_time">Čas začátku</label>
-        <input type="time" id="event_time" name="event_time" style="width:auto;display:block;margin-top:.2rem"
+        <input type="time" id="event_time" name="event_time" class="admin-input-auto"
                <?= adminFieldAttributes('event_time', $err, $fieldErrorMap, ['event-time-help'], 'event-dates-error') ?>
                value="<?= !empty($event['event_date']) ? h(date('H:i', strtotime((string)$event['event_date']))) : '' ?>">
         <small id="event-time-help" class="field-help">Nechte prázdné jen tehdy, pokud nevadí výchozí čas 00:00.</small>
       </div>
       <div>
         <label for="event_end_date">Konec</label>
-        <input type="date" id="event_end_date" name="event_end_date" style="width:auto;display:block;margin-top:.2rem"
+        <input type="date" id="event_end_date" name="event_end_date" class="admin-input-auto"
                <?= adminFieldAttributes('event_end_date', $err, $fieldErrorMap, ['event-end-help'], 'event-dates-error') ?>
                value="<?= !empty($event['event_end']) ? h(date('Y-m-d', strtotime((string)$event['event_end']))) : '' ?>">
       </div>
       <div>
         <label for="event_end_time">Čas konce</label>
-        <input type="time" id="event_end_time" name="event_end_time" style="width:auto;display:block;margin-top:.2rem"
+        <input type="time" id="event_end_time" name="event_end_time" class="admin-input-auto"
                <?= adminFieldAttributes('event_end_time', $err, $fieldErrorMap, ['event-end-help'], 'event-dates-error') ?>
                value="<?= !empty($event['event_end']) ? h(date('H:i', strtotime((string)$event['event_end']))) : '' ?>">
       </div>
@@ -252,47 +252,51 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <small id="event-image-help" class="field-help">Volitelné. Hodí se pro přehled akcí, detail události i sdílení na webu.</small>
     <?php adminRenderFieldError('event_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if ((string)$event['image_url'] !== ''): ?>
-      <div style="margin:.75rem 0">
-        <img src="<?= h((string)$event['image_url']) ?>" alt="Náhled obrázku události" style="max-width:16rem;height:auto;border-radius:12px">
+      <div class="admin-preview-block">
+        <img src="<?= h((string)$event['image_url']) ?>" alt="Náhled obrázku události" class="admin-image-preview">
       </div>
       <small id="event-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
-      <label style="font-weight:normal;margin-top:.75rem">
-        <input type="checkbox" id="event_image_delete" name="event_image_delete" value="1">
-        Smazat aktuální obrázek
-      </label>
+      <div class="admin-field-row">
+        <label class="admin-checkbox-label">
+          <input type="checkbox" id="event_image_delete" name="event_image_delete" value="1">
+          Smazat aktuální obrázek
+        </label>
+      </div>
     <?php endif; ?>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="event-published-help"
-             <?= (int)($event['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
-    <small id="event-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, událost zůstane uložená jen v administraci.</small>
+    <div class="admin-action-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="event-published-help"
+               <?= (int)($event['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+    </div>
+    <small id="event-published-help" class="field-help">Když volbu vypnete, událost zůstane uložená jen v administraci.</small>
 
     <label for="publish_at">Plánované publikování</label>
-    <input type="datetime-local" id="publish_at" name="publish_at" style="width:auto"
+    <input type="datetime-local" id="publish_at" name="publish_at" class="admin-input-auto"
            <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['event-publish-help']) ?>
            value="<?= h(!empty($event['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['publish_at'])) : '') ?>">
     <small id="event-publish-help" class="field-help">Nechte prázdné pro okamžité zveřejnění.</small>
     <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
-    <input type="datetime-local" id="unpublish_at" name="unpublish_at"
+    <input type="datetime-local" id="unpublish_at" name="unpublish_at" class="admin-input-auto"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['event-unpublish-help']) ?>
-           style="width:auto" value="<?= h(!empty($event['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['unpublish_at'])) : '') ?>">
+           value="<?= h(!empty($event['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['unpublish_at'])) : '') ?>">
     <small id="event-unpublish-help" class="field-help">Volitelné. V zadaný čas se událost skryje z veřejného webu, ale zůstane v administraci.</small>
     <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Interní poznámka</legend>
     <label for="admin_note" class="visually-hidden">Interní poznámka</label>
     <textarea id="admin_note" name="admin_note" rows="2" aria-describedby="event-admin-note-help"
-              style="min-height:0"><?= h((string)$event['admin_note']) ?></textarea>
+              class="admin-textarea-compact"><?= h((string)$event['admin_note']) ?></textarea>
     <small id="event-admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Stav publikace</legend>
     <label for="article_status">Stav</label>
     <select id="article_status" name="article_status">
@@ -304,16 +308,16 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     </select>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat událost' ?></button>
-    <a href="events.php" style="margin-left:1rem">Zrušit</a>
+    <a href="events.php">Zrušit</a>
     <?php if ($id !== null && (string)$event['status'] === 'published' && (int)($event['is_published'] ?? 0) === 1): ?>
-      <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($id !== null && !empty($event['preview_token'])): ?>
-      <a href="<?= h(eventPreviewPath($event)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+      <a href="<?= h(eventPreviewPath($event)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
     <?php elseif ($id !== null): ?>
-      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+      <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>
   </div>
 </form>
@@ -390,9 +394,9 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 
     editors.forEach((textarea) => {
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem;min-height:200px';
+        wrapper.className = 'admin-rich-editor-frame admin-rich-editor-base';
         textarea.parentNode.insertBefore(wrapper, textarea);
-        textarea.style.display = 'none';
+        textarea.hidden = true;
         const quill = new Quill(wrapper, { theme: 'snow' });
         quill.root.innerHTML = textarea.value;
         textarea.form?.addEventListener('submit', function () {

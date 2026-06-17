@@ -497,6 +497,7 @@ function adminHeader(string $pageTitle): void
        . '    .admin-input-auto { width:auto; }' . "\n"
        . '    .admin-textarea-compact { min-height:0; }' . "\n"
        . '    .admin-rich-editor-sm { min-height:180px; }' . "\n"
+       . '    .admin-rich-editor-base { min-height:200px; }' . "\n"
        . '    .admin-rich-editor-md { min-height:16rem; }' . "\n"
        . '    .admin-rich-editor-lg { min-height:220px; }' . "\n"
        . '    .admin-select-sm { min-width:150px; }' . "\n"

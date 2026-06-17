@@ -11025,6 +11025,7 @@ foreach ([
     '.admin-input-auto',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
+    '.admin-rich-editor-base',
     '.admin-rich-editor-md',
     '.admin-rich-editor-lg',
     '.admin-fieldset-card',
@@ -11331,6 +11332,23 @@ foreach ([
             'class="table-meta"',
         ],
     ],
+    'event form' => [
+        'source' => $eventFormSource,
+        'fragments' => [
+            'class="admin-warning-box"',
+            'class="admin-description admin-description--flush admin-description--muted"',
+            'class="admin-fieldset-card admin-action-row"',
+            'class="button-row button-row--baseline"',
+            'class="admin-input-auto"',
+            'class="admin-preview-block"',
+            'class="admin-image-preview"',
+            'class="admin-checkbox-label',
+            'class="admin-textarea-compact"',
+            'class="button-row admin-fieldset-spaced"',
+            "wrapper.className = 'admin-rich-editor-frame admin-rich-editor-base';",
+            'textarea.hidden = true;',
+        ],
+    ],
     'food overview' => [
         'source' => $foodOverviewSource,
         'fragments' => [
@@ -11522,6 +11540,9 @@ foreach ([
             $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' is missing utility class fragment: ' . $adminInboxUtilityFragment;
         }
     }
+}
+if (str_contains($eventFormSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin event form still mutates inline styles via JavaScript';
 }
 foreach ([
     'board categories' => [
