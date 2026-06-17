@@ -44,10 +44,10 @@ adminHeader('Kategorie zdrojů rezervací');
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q">Hledat</label>
-    <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název kategorie">
+    <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název kategorie" class="admin-search-input">
   </div>
   <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
@@ -59,14 +59,14 @@ adminHeader('Kategorie zdrojů rezervací');
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
-    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+    <div class="button-row button-row--baseline">
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
       </div>
       <div>
         <label for="sort_order">Pořadí</label>
-        <input type="number" id="sort_order" name="sort_order" min="0" style="width:5rem" value="0">
+        <input type="number" id="sort_order" name="sort_order" min="0" class="admin-input-xs" value="0">
       </div>
       <button type="submit" class="btn">Přidat kategorii</button>
     </div>
@@ -85,14 +85,14 @@ adminHeader('Kategorie zdrojů rezervací');
       <tr>
         <?php if ($editId === (int)$category['id']): ?>
           <td colspan="3">
-            <form method="post" style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap" novalidate>
+            <form method="post" class="button-row button-row--baseline" novalidate>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
               <label for="name-<?= (int)$category['id'] ?>" class="sr-only">Název kategorie</label>
               <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h((string)$category['name']) ?>" style="width:auto">
+                     value="<?= h((string)$category['name']) ?>" class="admin-input-auto">
               <label for="sort-<?= (int)$category['id'] ?>" class="sr-only">Pořadí</label>
-              <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0" style="width:5rem"
+              <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0" class="admin-input-xs"
                      value="<?= (int)$category['sort_order'] ?>">
               <button type="submit" class="btn">Uložit</button>
               <a href="res_categories.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
@@ -107,7 +107,7 @@ adminHeader('Kategorie zdrojů rezervací');
           <?php if ($editId !== (int)$category['id']): ?>
             <a href="res_categories.php?edit=<?= (int)$category['id'] ?><?= $q !== '' ? '&amp;q=' . rawurlencode($q) : '' ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="res_cat_delete.php" method="post" style="display:inline">
+          <form action="res_cat_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
             <button type="submit" class="btn btn-danger"

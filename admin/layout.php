@@ -487,6 +487,7 @@ function adminHeader(string $pageTitle): void
        . '    .admin-heading-row h2 { margin-bottom:.5rem; }' . "\n"
        . '    .admin-section-heading { margin-top:2rem; }' . "\n"
        . '    .admin-search-input { width:min(100%,24rem); }' . "\n"
+       . '    .admin-input-xs { width:5rem; }' . "\n"
        . '    .admin-input-sm { width:200px; }' . "\n"
        . '    .admin-input-auto { width:auto; }' . "\n"
        . '    .admin-select-sm { min-width:150px; }' . "\n"

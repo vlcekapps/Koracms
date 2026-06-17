@@ -44,10 +44,10 @@ adminHeader('Lokality rezervací');
 <?php if ($success): ?><p class="success" role="status">Místo uloženo.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q">Hledat</label>
-    <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název nebo adresa">
+    <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název nebo adresa" class="admin-search-input">
   </div>
   <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
@@ -59,7 +59,7 @@ adminHeader('Lokality rezervací');
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nové místo</legend>
-    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+    <div class="button-row button-row--baseline">
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
@@ -67,7 +67,7 @@ adminHeader('Lokality rezervací');
       </div>
       <div>
         <label for="address">Adresa</label>
-        <input type="text" id="address" name="address" maxlength="500" style="min-width:20rem"
+        <input type="text" id="address" name="address" maxlength="500" class="admin-search-input"
                placeholder="Ulice, číslo domu, PSČ, město">
       </div>
       <button type="submit" class="btn">Přidat místo</button>
@@ -87,15 +87,15 @@ adminHeader('Lokality rezervací');
       <tr>
         <?php if ($editId === (int)$location['id']): ?>
           <td colspan="3">
-            <form method="post" style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap" novalidate>
+            <form method="post" class="button-row button-row--baseline" novalidate>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$location['id'] ?>">
               <label for="name-<?= (int)$location['id'] ?>" class="sr-only">Název místa</label>
               <input type="text" id="name-<?= (int)$location['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h((string)$location['name']) ?>" style="width:auto">
+                     value="<?= h((string)$location['name']) ?>" class="admin-input-auto">
               <label for="addr-<?= (int)$location['id'] ?>" class="sr-only">Adresa místa</label>
               <input type="text" id="addr-<?= (int)$location['id'] ?>" name="address" maxlength="500"
-                     value="<?= h((string)$location['address']) ?>" style="width:auto;min-width:15rem">
+                     value="<?= h((string)$location['address']) ?>" class="admin-search-input">
               <button type="submit" class="btn">Uložit</button>
               <a href="res_locations.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
             </form>
@@ -109,7 +109,7 @@ adminHeader('Lokality rezervací');
           <?php if ($editId !== (int)$location['id']): ?>
             <a href="res_locations.php?edit=<?= (int)$location['id'] ?><?= $q !== '' ? '&amp;q=' . rawurlencode($q) : '' ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="res_location_delete.php" method="post" style="display:inline">
+          <form action="res_location_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$location['id'] ?>">
             <button type="submit" class="btn btn-danger"

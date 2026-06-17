@@ -10933,8 +10933,10 @@ $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.ph
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
+$reservationCategoriesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_categories.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_add.php');
+$reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
 $galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
 $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
@@ -10978,6 +10980,7 @@ foreach ([
     '.button-row--start',
     '.button-row--between',
     '.btn-muted',
+    '.admin-input-xs',
     '.admin-select-sm',
     '.admin-select-md',
     '.admin-description',
@@ -11228,6 +11231,23 @@ foreach ([
         'source' => $faqCatsSource,
         'fragments' => [
             'button-row button-row--baseline',
+            'class="admin-input-auto"',
+        ],
+    ],
+    'reservation categories' => [
+        'source' => $reservationCategoriesSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="admin-input-xs"',
+            'class="admin-input-auto"',
+        ],
+    ],
+    'reservation locations' => [
+        'source' => $reservationLocationsSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
             'class="admin-input-auto"',
         ],
     ],
