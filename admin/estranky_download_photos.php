@@ -376,24 +376,24 @@ adminHeader('Stažení fotografií z eStránek');
 ?>
 
 <?php if ($isDownloading): ?>
-  <section style="background:#e3f2fd;border:1px solid #1565c0;border-radius:8px;padding:1rem;margin-bottom:1.5rem" role="status" aria-live="polite" aria-labelledby="dl-progress-heading">
-    <h2 id="dl-progress-heading" style="margin-top:0">Stahování probíhá…</h2>
+  <section class="admin-panel admin-panel--info" role="status" aria-live="polite" aria-labelledby="dl-progress-heading">
+    <h2 id="dl-progress-heading" class="admin-panel__heading">Stahování probíhá…</h2>
     <p>Zpracováno <?= (int)$downloadState['offset'] ?> z <?= (int)$downloadState['total'] ?> fotografií (<?= $downloadProgress ?>%).</p>
     <p>Staženo: <?= (int)$downloadState['downloaded'] ?> | Přeskočeno: <?= (int)$downloadState['skipped'] ?> | Neúspěšných: <?= (int)$downloadState['failed'] ?></p>
-    <progress value="<?= (int)$downloadState['offset'] ?>" max="<?= (int)$downloadState['total'] ?>" style="width:100%;height:1.5rem"><?= $downloadProgress ?>%</progress>
-    <p style="margin-bottom:0"><small>Stránka se automaticky obnovuje po každé dávce <?= $batchSize ?> fotek.</small></p>
+    <progress class="admin-progress admin-progress--lg" value="<?= (int)$downloadState['offset'] ?>" max="<?= (int)$downloadState['total'] ?>"><?= $downloadProgress ?>%</progress>
+    <p class="admin-panel__footer"><small>Stránka se automaticky obnovuje po každé dávce <?= $batchSize ?> fotek.</small></p>
   </section>
 <?php endif; ?>
 
 <?php if ($log !== null): ?>
-  <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="dl-result-heading">
-    <h2 id="dl-result-heading" style="margin-top:0"><span aria-hidden="true">✓</span> Stahování dokončeno</h2>
-    <ul style="margin:0">
+  <section class="admin-panel admin-panel--success" aria-labelledby="dl-result-heading">
+    <h2 id="dl-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Stahování dokončeno</h2>
+    <ul class="admin-panel__list">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
       <?php endforeach; ?>
     </ul>
-    <p style="margin-bottom:0"><a href="gallery_albums.php">Galerie</a> · <a href="estranky_download_photos.php">Stáhnout znovu</a></p>
+    <p class="admin-panel__footer"><a href="gallery_albums.php">Galerie</a> · <a href="estranky_download_photos.php">Stáhnout znovu</a></p>
   </section>
 <?php endif; ?>
 
@@ -406,7 +406,7 @@ adminHeader('Stažení fotografií z eStránek');
   <fieldset>
     <legend>Parametry stahování</legend>
 
-    <div style="margin-bottom:.75rem">
+    <div class="admin-field-row">
       <label for="xml_file">XML záloha z eStránek <span aria-hidden="true">*</span></label>
       <input type="file" id="xml_file" name="xml_file" required aria-required="true"
              accept=".xml,application/xml,text/xml"
@@ -414,18 +414,18 @@ adminHeader('Stažení fotografií z eStránek');
       <small id="xml-help">Stejný XML soubor zálohy, který jste použili pro import obsahu.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="admin-field-row">
       <label for="site_url">URL webu na eStránkách <span aria-hidden="true">*</span></label>
       <input type="url" id="site_url" name="site_url" required aria-required="true"
-             style="width:100%;max-width:600px"
+             class="admin-input-wide"
              placeholder="https://www.example.cz"
              aria-describedby="url-help">
       <small id="url-help">Hlavní URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="admin-field-row">
       <label for="parent_album_id">Importovat alba do:</label>
-      <select id="parent_album_id" name="parent_album_id" style="min-width:200px" aria-describedby="album-help">
+      <select id="parent_album_id" name="parent_album_id" class="admin-select-md" aria-describedby="album-help">
         <option value="0">Nikam (do kořene galerie)</option>
         <?php foreach ($albumsForSelect as $alb): ?>
           <option value="<?= (int)$alb['id'] ?>"><?= h((string)$alb['name']) ?></option>
@@ -435,14 +435,14 @@ adminHeader('Stažení fotografií z eStránek');
     </div>
   </fieldset>
 
-  <div style="margin-top:1rem">
+  <div class="button-row admin-action-row">
     <button type="submit" class="btn">Spustit stahování</button>
     <a href="index.php" class="btn">Zpět</a>
   </div>
 </form>
 
-<section style="margin-top:2rem;padding:1rem;background:#fffbe6;border:1px solid #d7b600;border-radius:8px" aria-labelledby="dl-info-heading">
-  <h2 id="dl-info-heading" style="margin-top:0">Jak to funguje</h2>
+<section class="admin-panel admin-panel--warning admin-panel--spaced" aria-labelledby="dl-info-heading">
+  <h2 id="dl-info-heading" class="admin-panel__heading">Jak to funguje</h2>
   <ul>
     <li>Skript projde XML zálohu a zjistí ID a název každé fotky</li>
     <li>Stáhne originál z <code>/img/original/{id}/{filename}</code></li>

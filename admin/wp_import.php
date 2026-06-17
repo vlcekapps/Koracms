@@ -365,14 +365,14 @@ adminHeader('Import z WordPressu');
 ?>
 
 <?php if ($log !== null): ?>
-  <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="import-result-heading">
-    <h2 id="import-result-heading" style="margin-top:0"><span aria-hidden="true">✓</span> Import dokončen</h2>
-    <ul style="margin:0">
+  <section class="admin-panel admin-panel--success" aria-labelledby="import-result-heading">
+    <h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Import dokončen</h2>
+    <ul class="admin-panel__list">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
       <?php endforeach; ?>
     </ul>
-    <p style="margin-bottom:0"><a href="blog.php">Články</a> · <a href="pages.php">Stránky</a> · <a href="index.php">Dashboard</a></p>
+    <p class="admin-panel__footer"><a href="blog.php">Články</a> · <a href="pages.php">Stránky</a> · <a href="index.php">Dashboard</a></p>
   </section>
 <?php endif; ?>
 
@@ -391,8 +391,8 @@ adminHeader('Import z WordPressu');
         }
     }
     ?>
-  <section style="background:#fff4e6;border:1px solid #d7b600;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="preview-heading">
-    <h2 id="preview-heading" style="margin-top:0">Náhled obsahu k importu</h2>
+  <section class="admin-panel admin-panel--warning" aria-labelledby="preview-heading">
+    <h2 id="preview-heading" class="admin-panel__heading">Náhled obsahu k importu</h2>
     <p>
       <strong>Web:</strong> <?= h($preview['title']) ?> ·
       <strong>Články:</strong> <?= count($preview['posts']) ?> ·
@@ -411,45 +411,45 @@ adminHeader('Import z WordPressu');
         <p>Zaškrtněte kategorie, jejichž články chcete importovat. Články ze spamových kategorií můžete nechat odškrtnuté.</p>
 
         <?php foreach ($preview['categories'] as $slug => $name): ?>
-          <div style="margin:.3rem 0">
+          <div class="admin-check-row">
             <label>
               <input type="checkbox" name="import_cats[]" value="<?= h($slug) ?>" checked>
               <?= h($name) ?>
-              <small style="color:#555">(<?= $catCounts[$slug] ?? 0 ?> článků)</small>
+              <small class="admin-inline-meta">(<?= $catCounts[$slug] ?? 0 ?> článků)</small>
             </label>
           </div>
         <?php endforeach; ?>
 
         <?php if ($uncatCount > 0): ?>
-          <div style="margin:.5rem 0;padding-top:.3rem;border-top:1px solid #e0d8c8">
+          <div class="admin-check-row admin-check-row--separated">
             <label>
               <input type="checkbox" name="import_uncategorized" value="1">
               Nekategorizované články
-              <small style="color:#555">(<?= $uncatCount ?> článků – může obsahovat spam)</small>
+              <small class="admin-inline-meta">(<?= $uncatCount ?> článků – může obsahovat spam)</small>
             </label>
           </div>
         <?php endif; ?>
       </fieldset>
 
-      <fieldset style="margin-top:1rem">
+      <fieldset class="admin-fieldset-spaced">
         <legend>Další volby</legend>
-        <div style="margin:.3rem 0">
+        <div class="admin-check-row">
           <label for="wp_target_blog">Importovat do blogu:</label>
-          <select id="wp_target_blog" name="target_blog_id" style="min-width:200px">
+          <select id="wp_target_blog" name="target_blog_id" class="admin-select-md">
             <option value="0">Vytvořit nový blog z importu</option>
             <?php foreach (getAllBlogs() as $b): ?>
               <option value="<?= (int)$b['id'] ?>"><?= h((string)$b['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
-        <div style="margin:.3rem 0">
+        <div class="admin-check-row">
           <label>
             <input type="checkbox" name="import_site_info" value="1" checked>
             Převzít název a popis do vybraného blogu
-            <small style="color:#555">(<?= h($preview['title']) ?>)</small>
+            <small class="admin-inline-meta">(<?= h($preview['title']) ?>)</small>
           </label>
         </div>
-        <div style="margin:.3rem 0">
+        <div class="admin-check-row">
           <label>
             <input type="checkbox" name="import_pages" value="1" checked>
             Importovat statické stránky (<?= count($preview['pages']) ?>)
@@ -457,7 +457,7 @@ adminHeader('Import z WordPressu');
         </div>
       </fieldset>
 
-      <div style="margin-top:1rem">
+      <div class="button-row admin-action-row">
         <button type="submit" class="btn btn-primary" data-submit-once="Importuji, čekejte prosím…">Importovat vybraný obsah</button>
         <a href="wp_import.php" class="btn">Zrušit</a>
       </div>
@@ -471,7 +471,7 @@ adminHeader('Import z WordPressu');
 
     <fieldset>
       <legend>Zdroj dat</legend>
-      <div style="margin-bottom:.75rem">
+      <div class="admin-field-row">
         <label for="wxr_file">WordPress XML export (WXR) <span aria-hidden="true">*</span></label>
         <input type="file" id="wxr_file" name="wxr_file" required aria-required="true"
                accept=".xml,application/xml,text/xml"
@@ -480,14 +480,14 @@ adminHeader('Import z WordPressu');
       </div>
     </fieldset>
 
-    <div style="margin-top:1rem">
+    <div class="button-row admin-action-row">
       <button type="submit" class="btn btn-primary" data-submit-once="Načítám náhled…">Načíst a zobrazit náhled</button>
       <a href="index.php" class="btn">Zpět</a>
     </div>
   </form>
 
-  <section style="margin-top:2rem;padding:1rem;background:#fffbe6;border:1px solid #d7b600;border-radius:8px" aria-labelledby="import-info-heading">
-    <h2 id="import-info-heading" style="margin-top:0">Jak získat export z WordPressu</h2>
+  <section class="admin-panel admin-panel--warning admin-panel--spaced" aria-labelledby="import-info-heading">
+    <h2 id="import-info-heading" class="admin-panel__heading">Jak získat export z WordPressu</h2>
     <ol>
       <li>Přihlaste se do administrace WordPressu</li>
       <li>Přejděte na <strong>Nástroje → Export</strong></li>

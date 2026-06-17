@@ -296,14 +296,14 @@ adminHeader('Import z eStránek');
 ?>
 
 <?php if ($log !== null): ?>
-  <section style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1.5rem" aria-labelledby="import-result-heading">
-    <h2 id="import-result-heading" style="margin-top:0"><span aria-hidden="true">✓</span> Import dokončen</h2>
-    <ul style="margin:0">
+  <section class="admin-panel admin-panel--success" aria-labelledby="import-result-heading">
+    <h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Import dokončen</h2>
+    <ul class="admin-panel__list">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
       <?php endforeach; ?>
     </ul>
-    <p style="margin-bottom:0"><a href="blog.php">Přejít na články</a> · <a href="gallery_albums.php">Galerie</a> · <a href="estranky_download_photos.php">Stáhnout fotky</a></p>
+    <p class="admin-panel__footer"><a href="blog.php">Přejít na články</a> · <a href="gallery_albums.php">Galerie</a> · <a href="estranky_download_photos.php">Stáhnout fotky</a></p>
   </section>
 <?php endif; ?>
 
@@ -314,16 +314,16 @@ adminHeader('Import z eStránek');
 
   <fieldset>
     <legend>Zdroj dat</legend>
-    <div style="margin-bottom:.75rem">
+    <div class="admin-field-row">
       <label for="xml_file">XML záloha z eStránek <span aria-hidden="true">*</span></label>
       <input type="file" id="xml_file" name="xml_file" required aria-required="true"
              accept=".xml,application/xml,text/xml"
              aria-describedby="xml-help">
       <small id="xml-help">Vyberte XML soubor zálohy exportovaný z eStránek.</small>
     </div>
-    <div style="margin-bottom:.75rem">
+    <div class="admin-field-row">
       <label for="es_target_blog">Importovat články do blogu:</label>
-      <select id="es_target_blog" name="target_blog_id" style="min-width:200px">
+      <select id="es_target_blog" name="target_blog_id" class="admin-select-md">
         <option value="0">Vytvořit nový blog z importu</option>
         <?php foreach (getAllBlogs() as $b): ?>
           <option value="<?= (int)$b['id'] ?>"><?= h((string)$b['name']) ?></option>
@@ -332,14 +332,14 @@ adminHeader('Import z eStránek');
     </div>
   </fieldset>
 
-  <div style="margin-top:1rem">
+  <div class="button-row admin-action-row">
     <button type="submit" class="btn btn-primary" data-submit-once="Importuji, čekejte prosím…">Spustit import</button>
     <a href="index.php" class="btn">Zpět</a>
   </div>
 </form>
 
-<section style="margin-top:2rem;padding:1rem;background:#fffbe6;border:1px solid #d7b600;border-radius:8px" aria-labelledby="import-info-heading">
-  <h2 id="import-info-heading" style="margin-top:0">Co se importuje</h2>
+<section class="admin-panel admin-panel--warning admin-panel--spaced" aria-labelledby="import-info-heading">
+  <h2 id="import-info-heading" class="admin-panel__heading">Co se importuje</h2>
   <ul>
     <li><strong>Články</strong> – z tabulky <code>a_articles</code> (pouze primární jazyk); base64-dekódovaný obsah a titulek</li>
     <li><strong>Sekce → Kategorie</strong> – z tabulky <code>a_sections</code> → kategorie blogu v Kora CMS</li>

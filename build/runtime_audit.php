@@ -10950,6 +10950,9 @@ $formSubmissionsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 $importAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
+$wpImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/wp_import.php');
+$estrankyImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_import.php');
+$estrankyPhotoDownloadSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
@@ -11072,6 +11075,19 @@ foreach ([
     '.admin-result-item',
     '.admin-result-row',
     '.admin-progress',
+    '.admin-progress--lg',
+    '.admin-panel',
+    '.admin-panel--success',
+    '.admin-panel--warning',
+    '.admin-panel--info',
+    '.admin-panel--spaced',
+    '.admin-panel__heading',
+    '.admin-panel__list',
+    '.admin-panel__footer',
+    '.admin-check-row',
+    '.admin-check-row--separated',
+    '.admin-inline-meta',
+    '.admin-input-wide',
     '.field-help--flush',
     '.field-help--indented',
     '.table-note',
@@ -11523,6 +11539,52 @@ foreach ([
             'class="button-row admin-action-row"',
             "wrapper.className = 'admin-rich-editor-frame admin-rich-editor-md';",
             'ta.hidden = true;',
+        ],
+    ],
+    'WordPress import' => [
+        'source' => $wpImportSource,
+        'fragments' => [
+            'class="admin-panel admin-panel--success"',
+            'class="admin-panel admin-panel--warning"',
+            'class="admin-panel admin-panel--warning admin-panel--spaced"',
+            'class="admin-panel__heading"',
+            'class="admin-panel__list"',
+            'class="admin-panel__footer"',
+            'class="admin-check-row"',
+            'class="admin-check-row admin-check-row--separated"',
+            'class="admin-inline-meta"',
+            'class="admin-select-md"',
+            'class="admin-field-row"',
+            'class="button-row admin-action-row"',
+        ],
+    ],
+    'eStranky import' => [
+        'source' => $estrankyImportSource,
+        'fragments' => [
+            'class="admin-panel admin-panel--success"',
+            'class="admin-panel admin-panel--warning admin-panel--spaced"',
+            'class="admin-panel__heading"',
+            'class="admin-panel__list"',
+            'class="admin-panel__footer"',
+            'class="admin-field-row"',
+            'class="admin-select-md"',
+            'class="button-row admin-action-row"',
+        ],
+    ],
+    'eStranky photo download' => [
+        'source' => $estrankyPhotoDownloadSource,
+        'fragments' => [
+            'class="admin-panel admin-panel--info"',
+            'class="admin-panel admin-panel--success"',
+            'class="admin-panel admin-panel--warning admin-panel--spaced"',
+            'class="admin-panel__heading"',
+            'class="admin-panel__list"',
+            'class="admin-panel__footer"',
+            'class="admin-progress admin-progress--lg"',
+            'class="admin-field-row"',
+            'class="admin-input-wide"',
+            'class="admin-select-md"',
+            'class="button-row admin-action-row"',
         ],
     ],
     'polls overview' => [
