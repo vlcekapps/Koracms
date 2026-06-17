@@ -10925,9 +10925,11 @@ $formSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_save
 $presentationHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
 $boardCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cats.php');
 $boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
+$boardOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board.php');
 $downloadCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
 $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
 $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
+$faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
@@ -10985,6 +10987,9 @@ foreach ([
     '.table-note',
     '.table-cell--detail',
     '.table-cell--prewrap',
+    '.inline-badge',
+    '.inline-badge--warning',
+    '.inline-badge--info',
     '.text-pending',
     '.admin-nav-user',
     '.admin-nav-bottom',
@@ -11070,6 +11075,17 @@ foreach ([
     }
 }
 foreach ([
+    'board overview' => [
+        'source' => $boardOverviewSource,
+        'fragments' => [
+            'button-row button-row--start',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="inline-badge inline-badge--warning"',
+            'class="inline-badge inline-badge--info"',
+            'class="table-meta"',
+        ],
+    ],
     'chat overview' => [
         'source' => $chatOverviewSource,
         'fragments' => [
@@ -11101,6 +11117,15 @@ foreach ([
             'field-help field-help--flush',
             'class="table-cell--prewrap"',
             'class="table-note"',
+        ],
+    ],
+    'faq overview' => [
+        'source' => $faqOverviewSource,
+        'fragments' => [
+            'button-row button-row--start',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-search-input"',
+            'class="table-meta"',
         ],
     ],
 ] as $adminInboxLabel => $adminInboxGuardrail) {

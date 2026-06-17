@@ -61,16 +61,16 @@ $canApproveFaq = currentUserHasCapability('content_approve_shared');
 
 adminHeader('Znalostní báze');
 ?>
-<p>
+<p class="button-row button-row--start">
   <a href="faq_form.php" class="btn">+ Přidat otázku</a>
-  <a href="faq_cats.php" style="margin-left:1rem">Kategorie FAQ</a>
+  <a href="faq_cats.php">Kategorie FAQ</a>
 </p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat ve FAQ</label>
     <input type="search" id="q" name="q" placeholder="Hledat ve FAQ…"
-           value="<?= h($q) ?>" style="width:300px">
+           value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -125,9 +125,9 @@ adminHeader('Znalostní báze');
         <td><input type="checkbox" name="ids[]" value="<?= (int)$faq['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$faq['question']) ?>"></td>
         <td>
           <strong><?= h((string)$faq['question']) ?></strong><br>
-          <small style="color:#555">/faq/<?= h((string)$faq['slug']) ?></small>
+          <small class="table-meta">/faq/<?= h((string)$faq['slug']) ?></small>
           <?php if ($faq['excerpt'] !== ''): ?>
-            <br><small style="color:#555"><?= h((string)$faq['excerpt']) ?></small>
+            <br><small class="table-meta"><?= h((string)$faq['excerpt']) ?></small>
           <?php endif; ?>
         </td>
         <td><?= h((string)($faq['category_name'] ?: '–')) ?></td>
@@ -146,7 +146,7 @@ adminHeader('Znalostní báze');
             <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($faq['status'] === 'pending' && $canApproveFaq): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="faq">
               <input type="hidden" name="id" value="<?= (int)$faq['id'] ?>">
@@ -154,7 +154,7 @@ adminHeader('Znalostní báze');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="faq_delete.php" method="post" style="display:inline">
+          <form action="faq_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$faq['id'] ?>">
             <button type="submit" class="btn btn-danger"

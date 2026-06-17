@@ -51,18 +51,18 @@ $publicLabel = boardModulePublicLabel();
 
 adminHeader('Úřední deska');
 ?>
-<p style="margin-top:0;color:#555">
+<p class="field-help field-help--flush">
   Návštěvníci tuto sekci na webu vidí jako <strong><?= h($publicLabel) ?></strong>.
 </p>
-<p>
+<p class="button-row button-row--start">
   <a href="board_form.php" class="btn">+ Přidat položku</a>
-  <a href="board_cats.php" style="margin-left:1rem">Kategorie vývěsky</a>
+  <a href="board_cats.php">Kategorie vývěsky</a>
 </p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q" class="visually-hidden">Hledat v modulu Úřední deska</label>
-    <input type="search" id="q" name="q" placeholder="Hledat v položkách..." value="<?= h($q) ?>" style="width:320px">
+    <input type="search" id="q" name="q" placeholder="Hledat v položkách..." value="<?= h($q) ?>" class="admin-search-input">
   </div>
   <div>
     <label for="status">Stav</label>
@@ -106,13 +106,13 @@ adminHeader('Úřední deska');
         <td>
           <strong><?= h((string)$document['title']) ?></strong>
           <?php if ((int)($document['is_pinned'] ?? 0) === 1): ?>
-            <span style="display:inline-block;margin-left:.4rem;padding:.1rem .45rem;border-radius:999px;background:#fff1c2;color:#7a4a00;font-size:.78rem;font-weight:600">Připnuto</span>
+            <span class="inline-badge inline-badge--warning">Připnuto</span>
           <?php endif; ?>
           <?php if ((string)($document['image_file'] ?? '') !== ''): ?>
-            <span style="display:inline-block;margin-left:.4rem;padding:.1rem .45rem;border-radius:999px;background:#eef4fb;color:#1b4d7a;font-size:.78rem;font-weight:600">Obrázek</span>
+            <span class="inline-badge inline-badge--info">Obrázek</span>
           <?php endif; ?>
           <br>
-          <small style="color:#555">/board/<?= h((string)($document['slug'] ?? '')) ?></small>
+          <small class="table-meta">/board/<?= h((string)($document['slug'] ?? '')) ?></small>
         </td>
         <td><?= h(boardTypeLabel((string)($document['board_type'] ?? 'document'))) ?></td>
         <td><?= $document['category_name'] ? h((string)$document['category_name']) : '<em>-</em>' ?></td>
@@ -152,7 +152,7 @@ adminHeader('Úřední deska');
             <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($document['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
-            <form action="approve.php" method="post" style="display:inline">
+            <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="module" value="board">
               <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
@@ -160,12 +160,12 @@ adminHeader('Úřední deska');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="board_clone.php" method="post" style="display:inline">
+          <form action="board_clone.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
             <button type="submit" class="btn" data-confirm="Vytvořit kopii položky?">Duplikovat</button>
           </form>
-          <form action="board_delete.php" method="post" style="display:inline">
+          <form action="board_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
             <button type="submit" class="btn btn-danger" data-confirm="Smazat položku?">Smazat</button>
