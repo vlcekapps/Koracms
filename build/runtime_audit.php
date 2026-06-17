@@ -10911,6 +10911,9 @@ $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/ad
 $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
 $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
+$commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
+$contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
@@ -10944,6 +10947,7 @@ foreach ([
     '.field-help--flush',
     '.table-note',
     '.table-cell--detail',
+    '.table-cell--prewrap',
     '.text-pending',
     '.admin-nav-user',
     '.admin-nav-bottom',
@@ -11020,6 +11024,51 @@ foreach ([
 ] as $newsletterUtilityFragment) {
     if (!str_contains($newsletterOverviewSource, $newsletterUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin newsletter overview is missing utility class fragment: ' . $newsletterUtilityFragment;
+    }
+}
+foreach ([
+    'chat overview' => [
+        'source' => $chatOverviewSource,
+        'fragments' => [
+            'button-row admin-stack-sm',
+            'admin-search-input',
+            'admin-fieldset-card',
+            'field-help field-help--flush',
+            'class="table-note"',
+        ],
+    ],
+    'contact overview' => [
+        'source' => $contactOverviewSource,
+        'fragments' => [
+            'button-row admin-stack-sm',
+            'admin-search-input',
+            'admin-fieldset-card',
+            'field-help field-help--flush',
+            'class="table-meta"',
+            'class="text-pending"',
+            'class="table-note"',
+        ],
+    ],
+    'comments overview' => [
+        'source' => $commentsOverviewSource,
+        'fragments' => [
+            'button-row admin-stack-sm',
+            'admin-search-input',
+            'admin-fieldset-card',
+            'field-help field-help--flush',
+            'class="table-cell--prewrap"',
+            'class="table-note"',
+        ],
+    ],
+] as $adminInboxLabel => $adminInboxGuardrail) {
+    $adminInboxSource = (string)$adminInboxGuardrail['source'];
+    if (str_contains($adminInboxSource, 'style=')) {
+        $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' still contains inline style attributes';
+    }
+    foreach ($adminInboxGuardrail['fragments'] as $adminInboxUtilityFragment) {
+        if (!str_contains($adminInboxSource, $adminInboxUtilityFragment)) {
+            $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' is missing utility class fragment: ' . $adminInboxUtilityFragment;
+        }
     }
 }
 if (str_contains($trashAdminSource, 'style=')) {

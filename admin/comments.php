@@ -123,7 +123,7 @@ foreach ($comments as $comment) {
 adminHeader('Komentáře');
 ?>
 
-<nav aria-label="Filtr komentářů" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Filtr komentářů" class="button-row admin-stack-sm">
   <a href="?filter=pending" <?= $filter === 'pending' ? 'aria-current="page"' : '' ?>>
     Čekající (<?= $statusCounts['pending'] ?>)
   </a>
@@ -141,11 +141,11 @@ adminHeader('Komentáře');
   </a>
 </nav>
 
-<form method="get" class="button-row" style="margin-bottom:1rem">
+<form method="get" class="button-row admin-stack-sm">
   <input type="hidden" name="filter" value="<?= h($filter) ?>">
   <label for="q" class="sr-only">Hledat v komentářích</label>
   <input type="search" id="q" name="q" placeholder="Hledat v komentářích…"
-         value="<?= h($q) ?>" style="width:min(100%, 24rem)">
+         value="<?= h($q) ?>" class="admin-search-input">
   <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
     <a href="?filter=<?= h($filter) ?>" class="btn">Zrušit filtr</a>
@@ -158,9 +158,9 @@ adminHeader('Komentáře');
   <form method="post" action="<?= BASE_URL ?>/admin/comment_bulk.php" id="bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými komentáři</legend>
-      <p data-selection-status="comments" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraný žádný komentář.</p>
+      <p data-selection-status="comments" class="field-help field-help--flush" aria-live="polite">Zatím není vybraný žádný komentář.</p>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <?php if (($bulkAction === 'approve' && $filter === 'approved')
@@ -216,7 +216,7 @@ adminHeader('Komentáře');
             <?php endif; ?>
           </td>
           <td>
-            <div style="max-width:36rem;white-space:pre-wrap"><?= h($comment['content']) ?></div>
+            <div class="table-cell--prewrap"><?= h($comment['content']) ?></div>
           </td>
           <td>
             <time datetime="<?= h(str_replace(' ', 'T', (string)$comment['created_at'])) ?>">
@@ -226,7 +226,7 @@ adminHeader('Komentáře');
           <td><?= h(commentStatusLabel((string)$comment['normalized_status'])) ?></td>
           <td class="actions">
             <?php foreach ($comment['row_actions'] as $actionKey => $actionLabel): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
                 <input type="hidden" name="filter" value="<?= h($filter) ?>">
@@ -234,7 +234,7 @@ adminHeader('Komentáře');
                 <button type="submit" class="btn"><?= h($actionLabel) ?></button>
               </form>
             <?php endforeach; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php" style="display:inline"
+            <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php"
                   data-confirm="Smazat tento komentář trvale?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
@@ -247,7 +247,7 @@ adminHeader('Komentáře');
       <?php endforeach; ?>
     </tbody>
   </table>
-  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru komentářů můžete použít hromadné akce nahoře.</div>
+  <div class="table-note" aria-hidden="true">Po výběru komentářů můžete použít hromadné akce nahoře.</div>
 
   <script nonce="<?= cspNonce() ?>">
   (() => {

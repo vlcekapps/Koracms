@@ -101,7 +101,7 @@ adminHeader('Kontakt');
   <p class="success" role="status">Kontaktní zprávy byly aktualizovány.</p>
 <?php endif; ?>
 
-<nav aria-label="Filtr kontaktních zpráv" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Filtr kontaktních zpráv" class="button-row admin-stack-sm">
   <a href="?status=new" <?= $statusFilter === 'new' ? 'aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>
@@ -116,11 +116,11 @@ adminHeader('Kontakt');
   </a>
 </nav>
 
-<form method="get" class="button-row" style="margin-bottom:1rem">
+<form method="get" class="button-row admin-stack-sm">
   <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
   <label for="q" class="sr-only">Hledat v kontaktních zprávách</label>
   <input type="search" id="q" name="q" placeholder="Hledat v kontaktních zprávách…"
-         value="<?= h($q) ?>" style="width:min(100%, 24rem)">
+         value="<?= h($q) ?>" class="admin-search-input">
   <button type="submit" class="btn">Použít filtr</button>
   <?php if ($q !== ''): ?>
     <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit filtr</a>
@@ -133,9 +133,9 @@ adminHeader('Kontakt');
   <form method="post" action="<?= BASE_URL ?>/admin/contact_bulk.php" id="contact-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými zprávami</legend>
-      <p data-selection-status="contact" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná zpráva.</p>
+      <p data-selection-status="contact" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná zpráva.</p>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <?php if (($bulkAction === 'read' && $statusFilter === 'read')
@@ -178,7 +178,7 @@ adminHeader('Kontakt');
           </td>
           <td>
             <strong><?= h((string)$message['subject']) ?></strong>
-            <br><small style="color:#555"><?= h((string)$message['message_preview']) ?></small>
+            <br><small class="table-meta"><?= h((string)$message['message_preview']) ?></small>
           </td>
           <td>
             <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
@@ -186,14 +186,14 @@ adminHeader('Kontakt');
             </time>
           </td>
           <td>
-            <strong<?= $message['normalized_status'] === 'new' ? ' style="color:#9a3412"' : '' ?>>
+            <strong<?= $message['normalized_status'] === 'new' ? ' class="text-pending"' : '' ?>>
               <?= h(messageStatusLabel((string)$message['normalized_status'])) ?>
             </strong>
           </td>
           <td class="actions">
             <a href="<?= h((string)$message['detail_href']) ?>" class="btn">Zobrazit detail</a>
             <?php if ($message['normalized_status'] !== 'read'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="read">
@@ -202,7 +202,7 @@ adminHeader('Kontakt');
               </form>
             <?php endif; ?>
             <?php if ($message['normalized_status'] !== 'handled'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="handled">
@@ -211,7 +211,7 @@ adminHeader('Kontakt');
               </form>
             <?php endif; ?>
             <?php if ($message['normalized_status'] !== 'new'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="new">
@@ -219,7 +219,7 @@ adminHeader('Kontakt');
                 <button type="submit" class="btn">Označit jako nové</button>
               </form>
             <?php endif; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" style="display:inline"
+            <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php"
                   data-confirm="Smazat tuto kontaktní zprávu trvale?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
@@ -232,7 +232,7 @@ adminHeader('Kontakt');
       <?php endforeach; ?>
     </tbody>
   </table>
-  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
+  <div class="table-note" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
 
   <script nonce="<?= cspNonce() ?>">
   (() => {

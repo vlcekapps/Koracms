@@ -123,7 +123,7 @@ adminHeader('Chat');
   <p class="success" role="status">Chat zprávy byly aktualizovány.</p>
 <?php endif; ?>
 
-<nav aria-label="Stav chat zpráv" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Stav chat zpráv" class="button-row admin-stack-sm">
   <a href="?status=new&amp;visibility=<?= h($visibilityFilter) ?>" <?= $statusFilter === 'new' ? 'aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>
@@ -138,7 +138,7 @@ adminHeader('Chat');
   </a>
 </nav>
 
-<nav aria-label="Veřejná viditelnost chat zpráv" class="button-row" style="margin-bottom:1rem">
+<nav aria-label="Veřejná viditelnost chat zpráv" class="button-row admin-stack-sm">
   <a href="?status=<?= h($statusFilter) ?>&amp;visibility=pending" <?= $visibilityFilter === 'pending' ? 'aria-current="page"' : '' ?>>
     Ke schválení (<?= $visibilityCounts['pending'] ?>)
   </a>
@@ -153,14 +153,14 @@ adminHeader('Chat');
   </a>
 </nav>
 
-<form method="get" style="margin-bottom:1rem">
+<form method="get" class="admin-stack-sm">
   <fieldset class="button-row">
     <legend class="sr-only">Hledat v chat zprávách</legend>
     <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
     <input type="hidden" name="visibility" value="<?= h($visibilityFilter) ?>">
     <label for="q" class="sr-only">Hledat v chat zprávách</label>
     <input type="search" id="q" name="q" placeholder="Hledat v chat zprávách…"
-           value="<?= h($queryText) ?>" style="width:min(100%, 24rem)">
+           value="<?= h($queryText) ?>" class="admin-search-input">
     <button type="submit" class="btn">Použít filtr</button>
     <?php if ($queryText !== ''): ?>
       <a href="?status=<?= h($statusFilter) ?>&amp;visibility=<?= h($visibilityFilter) ?>" class="btn">Zrušit filtr</a>
@@ -174,9 +174,9 @@ adminHeader('Chat');
   <form method="post" action="<?= BASE_URL ?>/admin/chat_bulk.php" id="chat-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-    <fieldset style="margin:0 0 .85rem;border:1px solid #d6d6d6;border-radius:10px;padding:.85rem 1rem">
+    <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými zprávami</legend>
-      <p data-selection-status="chat" class="field-help" aria-live="polite" style="margin-top:0">Zatím není vybraná žádná zpráva.</p>
+      <p data-selection-status="chat" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná zpráva.</p>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <button type="submit" form="chat-bulk-form" name="action" value="<?= h($bulkAction) ?>"
@@ -230,7 +230,7 @@ adminHeader('Chat');
           <td class="actions">
             <a href="<?= h((string)$message['detail_href']) ?>" class="btn">Zobrazit detail</a>
             <?php if ($message['normalized_visibility'] !== 'approved'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="approve">
@@ -239,7 +239,7 @@ adminHeader('Chat');
               </form>
             <?php endif; ?>
             <?php if ($message['normalized_visibility'] !== 'hidden'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="hide">
@@ -248,7 +248,7 @@ adminHeader('Chat');
               </form>
             <?php endif; ?>
             <?php if ($message['normalized_status'] !== 'read'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="read">
@@ -257,7 +257,7 @@ adminHeader('Chat');
               </form>
             <?php endif; ?>
             <?php if ($message['normalized_status'] !== 'handled'): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php" style="display:inline">
+              <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
                 <input type="hidden" name="action" value="handled">
@@ -280,7 +280,7 @@ adminHeader('Chat');
       'Starší zprávy'
   ) ?>
 
-  <div style="margin-top:.75rem;color:#555" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
+  <div class="table-note" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
 
   <script nonce="<?= cspNonce() ?>">
   (() => {

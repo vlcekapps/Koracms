@@ -513,6 +513,7 @@ function adminHeader(string $pageTitle): void
        . '    .table-row--pending { background:var(--admin-pending-row); }' . "\n"
        . '    .table-meta { display:block; margin-top:.2rem; color:var(--admin-text-meta); font-size:.85rem; line-height:1.4; }' . "\n"
        . '    .table-cell--detail { max-width:400px; word-break:break-word; font-size:.88rem; }' . "\n"
+       . '    .table-cell--prewrap { max-width:36rem; white-space:pre-wrap; }' . "\n"
        . '    .field-help { display:block; margin:.35rem 0 0; color:var(--admin-field-help); font-size:.92rem; line-height:1.45; font-weight:normal; }' . "\n"
        . '    .field-error { color:var(--admin-error); font-weight:700; }' . "\n"
        . '    .field-help code { font-size:.95em; }' . "\n"
