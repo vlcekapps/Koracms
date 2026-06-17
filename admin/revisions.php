@@ -64,10 +64,10 @@ function simpleDiff(string $old, string $new): string
             $oi++;
             $ni++;
         } elseif ($oi < count($oldWords) && !in_array($ow, array_slice($newWords, $ni, 10), true)) {
-            $out .= '<del style="background:#fdd;text-decoration:line-through">' . h($ow) . '</del>';
+            $out .= '<del class="revision-diff__delete">' . h($ow) . '</del>';
             $oi++;
         } elseif ($ni < count($newWords)) {
-            $out .= '<ins style="background:#dfd;text-decoration:none">' . h($nw) . '</ins>';
+            $out .= '<ins class="revision-diff__insert">' . h($nw) . '</ins>';
             $ni++;
         } else {
             $oi++;
@@ -97,7 +97,7 @@ foreach ($revisions as $revision) {
 adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'], 0, 60));
 ?>
 
-<div style="margin-bottom:1rem">
+<div class="admin-stack-sm">
   <a href="<?= h($config['back']) ?>?id=<?= $entityId ?>" class="btn">&larr; Zpět na editaci</a>
 </div>
 
@@ -125,14 +125,14 @@ adminHeader('Historie revizí – ' . mb_substr((string)$entity['entity_title'],
         <td><time datetime="<?= h(str_replace(' ', 'T', (string)$rev['created_at'])) ?>"><?= h(formatCzechDate((string)$rev['created_at'])) ?></time></td>
         <td><?= h((string)$rev['user_name']) ?></td>
         <td><?= h(revisionFieldLabel($entityType, (string)$rev['field_name'])) ?></td>
-        <td style="max-width:600px;word-break:break-word">
+        <td class="revision-diff-cell">
           <?php if ((bool)$rev['use_details']): ?>
             <details>
               <summary>Zobrazit diff (<?= (int)$rev['old_length'] ?> → <?= (int)$rev['new_length'] ?> znaků)</summary>
-              <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5;margin-top:.5rem"><?= $rev['diff_html'] ?></div>
+              <div class="revision-diff revision-diff--details"><?= $rev['diff_html'] ?></div>
             </details>
           <?php else: ?>
-            <div style="white-space:pre-wrap;font-size:.88rem;line-height:1.5"><?= $rev['diff_html'] ?></div>
+            <div class="revision-diff"><?= $rev['diff_html'] ?></div>
           <?php endif; ?>
         </td>
       </tr>

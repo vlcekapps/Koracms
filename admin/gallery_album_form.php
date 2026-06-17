@@ -130,20 +130,20 @@ adminHeader($pageTitle);
       </select>
     <?php endif; ?>
 
-    <div style="margin-top:.75rem">
+    <div class="admin-field-row">
       <label>
         <input type="checkbox" name="is_published" value="1"<?= (int)($album['is_published'] ?? 1) === 1 ? ' checked' : '' ?>>
         Publikováno (viditelné na webu)
       </label>
     </div>
 
-    <div style="margin-top:1.5rem">
+    <div class="button-row admin-action-row">
       <button type="submit"><?= $id ? 'Uložit změny' : 'Vytvořit album' ?></button>
-      <a href="<?= BASE_URL ?>/admin/gallery_albums.php" style="margin-left:1rem">Zrušit</a>
+      <a href="<?= BASE_URL ?>/admin/gallery_albums.php">Zrušit</a>
       <?php if ($id !== null): ?>
-        <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_album&amp;id=<?= (int)$album['id'] ?>" style="margin-left:1rem">Historie revizí</a>
+        <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_album&amp;id=<?= (int)$album['id'] ?>">Historie revizí</a>
         <?php $albumPublicPath = galleryAlbumPublicPath($album); ?>
-        <a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+        <a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
       <?php endif; ?>
     </div>
   </fieldset>

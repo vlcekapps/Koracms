@@ -52,20 +52,20 @@ $slotModeLabels = [
 
 adminHeader('Zdroje rezervací');
 ?>
-<p>
+<p class="button-row button-row--start admin-stack-sm">
   <a href="res_resource_form.php" class="btn">+ Přidat zdroj</a>
-  <a href="res_categories.php" class="btn" style="margin-left:.5rem">Kategorie zdrojů rezervací</a>
-  <a href="res_locations.php" class="btn" style="margin-left:.5rem">Lokality rezervací</a>
+  <a href="res_categories.php" class="btn">Kategorie zdrojů rezervací</a>
+  <a href="res_locations.php" class="btn">Lokality rezervací</a>
 </p>
 
-<form method="get" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
     <label for="q">Hledat</label>
     <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Název, slug, kategorie nebo místo">
   </div>
   <div>
     <label for="status">Stav</label>
-    <select id="status" name="status" style="width:auto">
+    <select id="status" name="status" class="admin-input-auto">
       <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
       <option value="active"<?= $statusFilter === 'active' ? ' selected' : '' ?>>Aktivní</option>
       <option value="inactive"<?= $statusFilter === 'inactive' ? ' selected' : '' ?>>Neaktivní</option>
@@ -112,7 +112,7 @@ adminHeader('Zdroje rezervací');
             <br><small>Místa: <?= h((string)$resource['location_names']) ?></small>
           <?php endif; ?>
           <?php if (!empty($resource['description'])): ?>
-            <br><small style="color:#555"><?= h(mb_strimwidth((string)$resource['description'], 0, 110, '…', 'UTF-8')) ?></small>
+            <br><small class="table-meta"><?= h(mb_strimwidth((string)$resource['description'], 0, 110, '…', 'UTF-8')) ?></small>
           <?php endif; ?>
         </td>
         <td><?= h((string)($slotModeLabels[$resource['slot_mode']] ?? $resource['slot_mode'])) ?></td>
@@ -127,7 +127,7 @@ adminHeader('Zdroje rezervací');
           <?php if ((int)$resource['is_active'] === 1): ?>
             <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
           <?php endif; ?>
-          <form action="res_resource_delete.php" method="post" style="display:inline">
+          <form action="res_resource_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$resource['id'] ?>">
             <button type="submit" class="btn btn-danger"

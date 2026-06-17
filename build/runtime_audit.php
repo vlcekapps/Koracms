@@ -10955,6 +10955,8 @@ $reservationCategoriesSource = (string)file_get_contents(dirname(__DIR__) . '/ad
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_add.php');
 $reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
+$reservationResourcesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resources.php');
+$revisionsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/revisions.php');
 $redirectsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/redirects.php');
 $galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
 $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
@@ -11032,6 +11034,11 @@ foreach ([
     '.table-note',
     '.table-cell--detail',
     '.table-cell--prewrap',
+    '.revision-diff-cell',
+    '.revision-diff',
+    '.revision-diff--details',
+    '.revision-diff__delete',
+    '.revision-diff__insert',
     '.admin-thumb',
     '.inline-badge',
     '.inline-badge--standalone',
@@ -11260,6 +11267,14 @@ foreach ([
             'class="table-meta"',
         ],
     ],
+    'gallery album form' => [
+        'source' => $galleryAlbumFormSource,
+        'fragments' => [
+            'class="admin-field-row"',
+            'class="button-row admin-action-row"',
+            'revisions.php?type=gallery_album',
+        ],
+    ],
     'gallery photos overview' => [
         'source' => $galleryPhotosOverviewSource,
         'fragments' => [
@@ -11316,6 +11331,26 @@ foreach ([
             'class="admin-input-auto"',
             'class="btn admin-action-row"',
             'class="admin-inline-edit-form"',
+        ],
+    ],
+    'reservation resources overview' => [
+        'source' => $reservationResourcesSource,
+        'fragments' => [
+            'button-row button-row--start admin-stack-sm',
+            'button-row button-row--baseline admin-stack-sm',
+            'class="admin-input-auto"',
+            'class="table-meta"',
+            '<td class="actions">',
+        ],
+    ],
+    'revisions admin' => [
+        'source' => $revisionsAdminSource,
+        'fragments' => [
+            'class="admin-stack-sm"',
+            'class="revision-diff-cell"',
+            'class="revision-diff revision-diff--details"',
+            'class="revision-diff__delete"',
+            'class="revision-diff__insert"',
         ],
     ],
     'module settings' => [
