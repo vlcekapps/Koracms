@@ -122,10 +122,10 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
     </small>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-fieldset-spaced">
     <legend><?= $accountId !== null ? 'Změna hesla' : 'Heslo <span aria-hidden="true">*</span>' ?></legend>
     <?php if ($accountId !== null): ?>
-      <small id="password-help" class="field-help" style="margin-top:0">Ponechte prázdné pro beze změny.</small>
+      <small id="password-help" class="field-help field-help--flush">Ponechte prázdné pro beze změny.</small>
     <?php endif; ?>
     <label for="new_pass">Heslo (min. 8 znaků)</label>
     <input type="password" id="new_pass" name="new_pass" minlength="8"
@@ -138,10 +138,10 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
     <?php adminRenderFieldError('new_pass2', $formErrorFields, [], $fieldErrorMessages['new_pass2']); ?>
   </fieldset>
 
-  <fieldset id="author-fieldset" style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset id="author-fieldset" class="admin-fieldset-card admin-fieldset-spaced">
     <legend>Veřejný autor</legend>
 
-    <p id="author-role-note" style="margin-top:.35rem;color:#555;<?= $authorFieldsetAvailable ? 'display:none' : '' ?>">
+    <p id="author-role-note" class="admin-description admin-description--muted admin-field-row"<?= $authorFieldsetAvailable ? ' hidden' : '' ?>>
       Tento účet patří mezi veřejné uživatele, proto nemůže mít veřejný autorský profil.
     </p>
 
@@ -149,7 +149,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
       <div>
         <input type="checkbox" id="author_public_enabled" name="author_public_enabled" value="1"
                <?= (int)($account['author_public_enabled'] ?? 0) === 1 ? 'checked' : '' ?>>
-        <label for="author_public_enabled" style="display:inline;font-weight:normal">
+        <label for="author_public_enabled" class="admin-checkbox-label">
           Zpřístupnit veřejný autorský profil
         </label>
       </div>
@@ -180,19 +180,21 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
         <div id="author-avatar-current" class="field-help">
           Aktuální avatar:
           <img src="<?= BASE_URL ?>/uploads/authors/<?= rawurlencode((string)$account['author_avatar']) ?>"
-               alt="Aktuální avatar autora" style="height:48px;width:48px;object-fit:cover;border-radius:999px;vertical-align:middle">
+               alt="Aktuální avatar autora" class="admin-avatar-preview">
         </div>
       <?php endif; ?>
 
       <?php if (!empty($account['author_avatar'])): ?>
-        <label for="author_avatar_delete" style="font-weight:normal;margin-top:.35rem">
-          <input type="checkbox" id="author_avatar_delete" name="author_avatar_delete" value="1">
-          Smazat stávající avatar
-        </label>
+        <div class="admin-field-row">
+          <label for="author_avatar_delete" class="admin-checkbox-label">
+            <input type="checkbox" id="author_avatar_delete" name="author_avatar_delete" value="1">
+            Smazat stávající avatar
+          </label>
+        </div>
       <?php endif; ?>
 
       <?php if ((int)($account['author_public_enabled'] ?? 0) === 1 && !empty($account['author_public_path'])): ?>
-        <p style="margin-top:1rem">
+        <p class="admin-action-row">
           Veřejný profil:
           <a href="<?= h((string)$account['author_public_path']) ?>" target="_blank" rel="noopener noreferrer">
             <?= h((string)$account['author_public_path']) ?>
@@ -202,9 +204,9 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
     </div>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $accountId !== null ? 'Uložit změny' : 'Vytvořit účet' ?></button>
-    <a href="users.php" style="margin-left:1rem">Zrušit</a>
+    <a href="users.php">Zrušit</a>
   </div>
 </form>
 
@@ -250,7 +252,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
     const syncAuthorRole = () => {
         const isPublicRole = roleInput?.value === 'public';
         if (authorRoleNote) {
-            authorRoleNote.style.display = isPublicRole ? '' : 'none';
+            authorRoleNote.hidden = !isPublicRole;
         }
         if (authorFieldsWrap) {
             authorFieldsWrap.hidden = isPublicRole;

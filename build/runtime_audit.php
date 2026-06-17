@@ -11042,6 +11042,7 @@ foreach ([
     '.admin-image-preview--large',
     '.admin-image-preview--medium',
     '.admin-image-preview--wide',
+    '.admin-avatar-preview',
     '.admin-inline-edit-form',
     '.admin-section-heading',
     '.admin-sort-list',
@@ -11583,6 +11584,20 @@ foreach ([
             'admin-order-item__label--muted',
         ],
     ],
+    'user form' => [
+        'source' => $userFormSource,
+        'fragments' => [
+            'class="admin-fieldset-card admin-fieldset-spaced"',
+            'class="field-help field-help--flush"',
+            'class="admin-description admin-description--muted admin-field-row"',
+            'class="admin-checkbox-label"',
+            'class="admin-avatar-preview"',
+            'class="admin-field-row"',
+            'class="admin-action-row"',
+            'class="button-row admin-fieldset-spaced"',
+            'authorRoleNote.hidden = !isPublicRole;',
+        ],
+    ],
     'users overview' => [
         'source' => $usersOverviewSource,
         'fragments' => [
@@ -11607,6 +11622,9 @@ if (str_contains($eventFormSource, '.style')) {
 }
 if (str_contains($pageFormSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin page form still mutates inline styles via JavaScript';
+}
+if (str_contains($userFormSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin user form still mutates inline styles via JavaScript';
 }
 foreach ([
     'board categories' => [

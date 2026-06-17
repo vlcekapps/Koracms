@@ -517,6 +517,7 @@ function adminHeader(string $pageTitle): void
        . '    .admin-image-preview--large { display:block; max-width:320px; width:100%; }' . "\n"
        . '    .admin-image-preview--medium { display:block; max-width:300px; }' . "\n"
        . '    .admin-image-preview--wide { display:block; max-width:280px; width:100%; }' . "\n"
+       . '    .admin-avatar-preview { width:48px; height:48px; object-fit:cover; border:1px solid var(--admin-border); border-radius:999px; vertical-align:middle; }' . "\n"
        . '    .admin-inline-edit-form { display:flex; flex-direction:column; gap:.4rem; }' . "\n"
        . '    .admin-sort-list { list-style:none; padding:0; margin:0; max-width:62rem; }' . "\n"
        . '    .admin-sort-item { display:flex; align-items:center; gap:.75rem; padding:.55rem 0; border-bottom:1px solid var(--admin-border); flex-wrap:wrap; cursor:grab; }' . "\n"
