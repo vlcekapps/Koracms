@@ -736,6 +736,8 @@ Přihlašování a obnova hesla používají kombinovaný rate limiting:
 
 To chrání nejen proti opakovaným pokusům z jedné adresy, ale i proti útokům rozloženým přes více IP adres na stejný účet.
 
+Přepínač veřejné registrace v obecném nastavení blokuje registrační formulář a zároveň schovává odkazy na registraci ve veřejné přihlašovací obrazovce i ve společné patičce webu. Pokud jsou zapnuté rezervace, zůstane návštěvníkům dostupný odkaz na přihlášení, ale nové účty může při vypnuté registraci zakládat jen oprávněný správce.
+
 Vývojové kontroly:
 
 - `composer ci:basic` spustí PHP lint, `composer validate --strict`, audit GitHub Actions workflow včetně self-testu připnutých actions a zakázaných write/secrets vzorů, úzký PSR-12 smoke check přes PHP-CS-Fixer včetně build/test helperů, PHPStan na levelu 6, statický release package audit a unit testy; PHPStan používá bezpečný bootstrap `build/phpstan_bootstrap.php` a symbol scan, takže zná sdílené helpery bez načítání databáze nebo session a hlídá i release/testovací nástroje
@@ -781,6 +783,7 @@ Vývojové kontroly:
 - Editor FAQ v administraci používá sdílené utility třídy pro popis formuláře, kompaktní SEO textareu, WYSIWYG odpověď, zveřejnění a akční odkazy místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do tohoto formuláře nevracely.
 - Editor jídelních a nápojových lístků v administraci používá sdílené utility třídy pro popis formuláře, datumová pole, zveřejnění, aktuálnost, WYSIWYG rám a akční odkazy místo lokálních `style` atributů nebo JS `style` mutací; runtime audit hlídá, aby se čistě prezentační inline styly do tohoto formuláře nevracely.
 - Editor položek ke stažení v administraci používá sdílené utility třídy pro popis formuláře, WYSIWYG popis, checkboxy, náhled obrázku, stav publikace a akční odkazy místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do tohoto formuláře nevracely.
+- Editor vývěsky v administraci používá sdílené utility třídy pro upozornění na zámek obsahu, popisy, WYSIWYG detail, plánované publikování, checkboxy, náhled obrázku a akční odkazy místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do tohoto formuláře nevracely.
 - Společný layout administrace používá třídy pro navigaci, informaci o přihlášeném uživateli, autosave banner, počítadlo editoru, SEO náhled a patičku místo generovaných inline stylů. Runtime audit hlídá návrat starých fragmentů, aby se CSP postupně méně opírala o historický inline fallback.
 - `robots.txt` se generuje přes `robots.php`, podporuje jen `GET` a `HEAD`, zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na aktuální sitemapu. Stejné čtecí omezení metod používají také XML sitemapa, globální, blogové i podcastové RSS feedy, ICS export událostí, veřejné souborové/media endpointy a read-only administrační endpointy včetně JSON/CSV výstupů, příloh formulářů a vyhledávání obsahu pro media picker; u souborů `HEAD` posílá jen hlavičky, bez těla souboru.
 - Interní administrační JSON akce, které mění stav přes AJAX, jsou POST-only. Při jiné metodě vrací `405` s `Allow: POST` a odpovědi posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se v administraci necachoval zastaralý stav.

@@ -14,20 +14,25 @@ function siteFooter(): string
     $version = KORA_VERSION;
 
     $footerWidgets = renderZone('footer', 'footer-widgets');
+    $accountLinks = '';
+    if (isModuleEnabled('reservations')) {
+        if (isLoggedIn() && isPublicUser()) {
+            $accountLinks = "<a href=\"{$b}/reservations/my.php\">Moje rezervace</a> &middot; "
+                . "<a href=\"{$b}/public_profile.php\">Můj profil</a> &middot; "
+                . "<a href=\"{$b}/public_logout.php\">Odhlásit se</a>";
+        } elseif ($publicRegistrationEnabled) {
+            $accountLinks = "<a href=\"{$b}/public_login.php\">Přihlášení</a> &middot; "
+                . "<a href=\"{$b}/register.php\">Registrace</a>";
+        } else {
+            $accountLinks = "<a href=\"{$b}/public_login.php\">Přihlášení</a>";
+        }
+    }
 
     return "<footer>\n"
          . $footerWidgets
          . "  <p>&copy; {$year} {$siteName}</p>\n"
          . "  <p><a href=\"{$b}/feed.php\">RSS</a></p>\n"
-         . (isModuleEnabled('reservations') && ($publicRegistrationEnabled || (isLoggedIn() && isPublicUser()))
-             ? "  <p>"
-               . (isLoggedIn()
-                   ? (isPublicUser()
-                       ? "<a href=\"{$b}/reservations/my.php\">Moje rezervace</a> · <a href=\"{$b}/public_profile.php\">Můj profil</a> · <a href=\"{$b}/public_logout.php\">Odhlásit se</a>"
-                       : '')
-                   : "<a href=\"{$b}/public_login.php\">Přihlášení</a> · <a href=\"{$b}/register.php\">Registrace</a>")
-               . "</p>\n"
-             : '')
+         . ($accountLinks !== '' ? "  <p>{$accountLinks}</p>\n" : '')
          . "  <p><small><a href=\"https://github.com/vlcekapps/Koracms\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$version}</a></small></p>\n"
          . "</footer>\n"
          . cookieBanner();

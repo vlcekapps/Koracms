@@ -90,7 +90,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 ?>
 
 <?php if ($contentLockWarning !== null): ?>
-  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+  <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
     Tuto položku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
     (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
@@ -106,10 +106,10 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   <p><a href="revisions.php?type=board&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
 <?php endif; ?>
 
-<p style="margin-top:0;color:#555">
+<p class="admin-description admin-description--flush admin-description--muted">
   Na veřejném webu se modul aktuálně zobrazuje jako <strong><?= h($publicLabel) ?></strong>.
 </p>
-<p style="margin-top:0;font-size:.9rem">
+<p class="admin-description admin-description--flush">
   Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -163,7 +163,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="description">Detailní popis</label>
     <?php if ($useWysiwyg): ?>
-      <div id="editor-description" style="min-height:180px"><?= (string)($document['description'] ?? '') ?></div>
+      <div id="editor-description" class="admin-rich-editor-sm"><?= (string)($document['description'] ?? '') ?></div>
       <input type="hidden" id="description" name="description" aria-describedby="board-description-help" value="<?= h((string)($document['description'] ?? '')) ?>">
       <small id="board-description-help" class="field-help">Vyplňte, když chcete na detailu doplnit delší text.</small>
     <?php else: ?>
@@ -204,12 +204,12 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="publish_at">Plánované publikování (přesný čas)</label>
     <input type="datetime-local" id="publish_at" name="publish_at"
-           style="width:auto" value="<?= h(!empty($document['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['publish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(!empty($document['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['publish_at'])) : '') ?>">
     <small class="field-help">Volitelné. Pokud je vyplněné, položka se na veřejném webu zobrazí až v zadaný čas (přesnější než datum vyvěšení).</small>
 
     <label for="unpublish_at">Plánované sejmutí (přesný čas)</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
-           style="width:auto" value="<?= h(!empty($document['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['unpublish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(!empty($document['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['unpublish_at'])) : '') ?>">
     <small class="field-help">Volitelné. Přesnější alternativa k datu sejmutí výše.</small>
 
     <label for="article_status">Stav</label>
@@ -222,10 +222,12 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     </select>
     <small id="board-status-help" class="field-help">Koncept je viditelný jen v administraci.</small>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_pinned" value="1" aria-describedby="board-pinned-help"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
-      Připnout mezi důležité položky
-    </label>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_pinned" value="1" aria-describedby="board-pinned-help"<?= (int)($document['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
+        Připnout mezi důležité položky
+      </label>
+    </div>
     <small id="board-pinned-help" class="field-help">Připnuté položky se zobrazují výš ve výpisu a mohou lépe fungovat i v homepage bloku.</small>
   </fieldset>
 
@@ -234,9 +236,9 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="board_image">Obrázek oznámení</label>
     <?php if (!empty($document['image_file'])): ?>
-      <div style="margin:.5rem 0">
+      <div class="admin-preview-block">
         <img src="<?= h(boardImageUrl($document)) ?>" alt="Náhled obrázku"
-             style="display:block;max-width:280px;width:100%;border-radius:12px;border:1px solid #d0d7de">
+             class="admin-image-preview admin-image-preview--wide">
       </div>
     <?php endif; ?>
     <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
@@ -248,10 +250,12 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
       <small id="board-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
     <?php if (!empty($document['image_file'])): ?>
-      <label for="board_image_delete" style="font-weight:normal;margin-top:.35rem">
-        <input type="checkbox" id="board_image_delete" name="board_image_delete" value="1">
-        Smazat aktuální obrázek
-      </label>
+      <div class="admin-field-row">
+        <label for="board_image_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="board_image_delete" name="board_image_delete" value="1">
+          Smazat aktuální obrázek
+        </label>
+      </div>
     <?php endif; ?>
 
     <label for="contact_name">Kontaktní osoba</label>
@@ -283,28 +287,30 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
       <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor, pokud ji chcete nahradit.</small>
     <?php endif; ?>
 
-    <label style="font-weight:normal;margin-top:1rem">
-      <input type="checkbox" name="is_published" value="1" aria-describedby="board-published-help"
-             <?= (int)($document['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
-      Zveřejnit na webu
-    </label>
-    <small id="board-published-help" class="field-help" style="margin-top:.2rem">Když volbu vypnete, položka zůstane uložená jen v administraci.</small>
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_published" value="1" aria-describedby="board-published-help"
+               <?= (int)($document['is_published'] ?? 1) === 1 ? 'checked' : '' ?>>
+        Zveřejnit na webu
+      </label>
+    </div>
+    <small id="board-published-help" class="field-help">Když volbu vypnete, položka zůstane uložená jen v administraci.</small>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat položku sekce' ?></button>
-    <a href="board.php" style="margin-left:1rem">Zrušit</a>
+    <a href="board.php">Zrušit</a>
     <?php if (($document['status'] ?? 'published') === 'published'
         && (int)($document['is_published'] ?? 1) === 1
         && !empty($document['slug'])
         && (string)($document['posted_date'] ?? '') !== ''
         && (string)$document['posted_date'] <= date('Y-m-d')): ?>
-      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($id && !empty($document['preview_token'])): ?>
-      <a href="<?= h(boardPreviewPath($document)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+      <a href="<?= h(boardPreviewPath($document)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
     <?php elseif ($id): ?>
-      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+      <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>
   </div>
 </form>
