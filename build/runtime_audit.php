@@ -11066,6 +11066,12 @@ foreach ([
     '.admin-summary-card',
     '.admin-summary-card__heading',
     '.admin-summary-card__value',
+    '.admin-option-row',
+    '.admin-option-row__input',
+    '.admin-result-list',
+    '.admin-result-item',
+    '.admin-result-row',
+    '.admin-progress',
     '.field-help--flush',
     '.field-help--indented',
     '.table-note',
@@ -11532,6 +11538,27 @@ foreach ([
             '<td class="actions">',
         ],
     ],
+    'poll form' => [
+        'source' => $pollFormValidationSource,
+        'fragments' => [
+            'class="admin-description admin-description--flush"',
+            'class="admin-fieldset-card admin-action-row"',
+            'class="field-help field-help--flush"',
+            'class="admin-form-grid admin-form-grid--end"',
+            'class="admin-input-auto"',
+            'class="option-row admin-option-row"',
+            'class="admin-option-row__input"',
+            'class="btn admin-action-row"',
+            'class="button-row admin-fieldset-spaced"',
+            'class="admin-section-heading"',
+            'class="admin-result-list"',
+            'class="admin-result-item"',
+            'class="admin-result-row"',
+            'class="admin-progress"',
+            '<progress class="admin-progress"',
+            "div.className = 'option-row admin-option-row';",
+        ],
+    ],
     'podcast episodes overview' => [
         'source' => $podcastEpisodesOverviewSource,
         'fragments' => [
@@ -11688,6 +11715,9 @@ if (str_contains($userFormSource, '.style')) {
 }
 if (str_contains($newsletterFormValidationSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin newsletter form still mutates inline styles via JavaScript';
+}
+if (str_contains($pollFormValidationSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin poll form still mutates inline styles via JavaScript';
 }
 foreach ([
     'board categories' => [

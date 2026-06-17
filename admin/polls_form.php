@@ -89,7 +89,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
 <?php endif; ?>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="admin-description admin-description--flush">
   Vyplňte otázku, možnosti a případné časové omezení. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -144,17 +144,17 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     </select>
   </fieldset>
 
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Časové omezení</legend>
-    <small id="poll-timing-help" class="field-help" style="margin-top:0">Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.</small>
-    <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+    <small id="poll-timing-help" class="field-help field-help--flush">Vyplňte jen pokud má anketa začít nebo skončit v konkrétní čas.</small>
+    <div class="admin-form-grid admin-form-grid--end">
       <div>
         <label for="start_date">Začátek – datum</label>
         <input
           type="date"
           id="start_date"
           name="start_date"
-          style="width:auto;display:block;margin-top:.2rem"
+          class="admin-input-auto"
           <?= adminFieldAttributes('start_date', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['start_date']) ? h(date('Y-m-d', strtotime((string)$poll['start_date']))) : '' ?>"
         >
@@ -165,7 +165,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           type="time"
           id="start_time"
           name="start_time"
-          style="width:auto;display:block;margin-top:.2rem"
+          class="admin-input-auto"
           <?= adminFieldAttributes('start_time', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['start_date']) ? h(date('H:i', strtotime((string)$poll['start_date']))) : '' ?>"
         >
@@ -176,7 +176,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           type="date"
           id="end_date"
           name="end_date"
-          style="width:auto;display:block;margin-top:.2rem"
+          class="admin-input-auto"
           <?= adminFieldAttributes('end_date', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['end_date']) ? h(date('Y-m-d', strtotime((string)$poll['end_date']))) : '' ?>"
         >
@@ -187,7 +187,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           type="time"
           id="end_time"
           name="end_time"
-          style="width:auto;display:block;margin-top:.2rem"
+          class="admin-input-auto"
           <?= adminFieldAttributes('end_time', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
           value="<?= !empty($poll['end_date']) ? h(date('H:i', strtotime((string)$poll['end_date']))) : '' ?>"
         >
@@ -200,7 +200,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     <?php endif; ?>
   </fieldset>
 
-  <fieldset id="options-fieldset" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem"<?= adminFieldHasError('options', $err, $fieldErrorMap) ? ' aria-describedby="poll-options-error"' : '' ?>>
+  <fieldset id="options-fieldset" class="admin-fieldset-card admin-action-row"<?= adminFieldHasError('options', $err, $fieldErrorMap) ? ' aria-describedby="poll-options-error"' : '' ?>>
     <legend>Možnosti odpovědi <span aria-hidden="true">*</span><span class="sr-only">(povinné, min. 2, max. 10)</span></legend>
     <?php if ($optionsErrorMessage !== ''): ?>
       <small id="poll-options-error" class="field-help field-error"><?= h($optionsErrorMessage) ?></small>
@@ -208,7 +208,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     <div id="options-list">
       <?php if (!empty($options)): ?>
         <?php foreach ($options as $index => $option): ?>
-          <div class="option-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+          <div class="option-row admin-option-row">
             <input type="hidden" name="option_ids[]" value="<?= (int)$option['id'] ?>">
             <label for="option_<?= $index ?>" class="sr-only">Možnost <?= $index + 1 ?></label>
             <input
@@ -219,10 +219,10 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
               aria-required="true"
               maxlength="500"
               value="<?= h((string)$option['option_text']) ?>"
-              style="flex:1"
+              class="admin-option-row__input"
             >
             <?php if ((int)$option['vote_count'] > 0): ?>
-              <span style="font-size:.85rem;color:#666">(<?= (int)$option['vote_count'] ?> hlasů)</span>
+              <span class="table-meta">(<?= (int)$option['vote_count'] ?> hlasů)</span>
             <?php else: ?>
               <button
                 type="button"
@@ -235,7 +235,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
         <?php endforeach; ?>
       <?php else: ?>
         <?php for ($index = 0; $index < 2; $index++): ?>
-          <div class="option-row" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+          <div class="option-row admin-option-row">
             <input type="hidden" name="option_ids[]" value="0">
             <label for="option_<?= $index ?>" class="sr-only">Možnost <?= $index + 1 ?></label>
             <input
@@ -246,7 +246,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
               aria-required="true"
               maxlength="500"
               value=""
-              style="flex:1"
+              class="admin-option-row__input"
             >
             <button
               type="button"
@@ -258,10 +258,10 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
         <?php endfor; ?>
       <?php endif; ?>
     </div>
-    <button type="button" id="add-option" class="btn" data-poll-option-add style="margin-top:.5rem">+ Přidat možnost</button>
+    <button type="button" id="add-option" class="btn admin-action-row" data-poll-option-add>+ Přidat možnost</button>
   </fieldset>
 
-  <fieldset style="margin-top:1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Vyhledávače a sdílení</legend>
 
     <label for="meta_title">Meta titulek</label>
@@ -286,28 +286,26 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     <small id="poll-meta-description-help" class="field-help">Volitelné. Pokud pole nevyplníte, použije se popis ankety nebo automatický fallback.</small>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit anketu' ?></button>
     <?php if ($id !== null && (string)$poll['slug'] !== '' && (string)($poll['state'] ?? '') !== 'scheduled'): ?>
-      <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
-    <a href="<?= h($backUrl) ?>" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($backUrl) ?>">Zrušit</a>
   </div>
 </form>
 
 <?php if ($id !== null && $totalVotes > 0): ?>
-  <h2 style="margin-top:2rem">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
-  <div role="list" aria-label="Výsledky ankety">
+  <h2 class="admin-section-heading">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
+  <div role="list" class="admin-result-list" aria-label="Výsledky ankety">
     <?php foreach ($options as $option): ?>
       <?php $percentage = round((int)$option['vote_count'] / $totalVotes * 100, 1); ?>
-      <div role="listitem" style="margin-bottom:.75rem">
-        <div style="display:flex;justify-content:space-between;margin-bottom:.2rem">
+      <div role="listitem" class="admin-result-item">
+        <div class="admin-result-row">
           <span><?= h((string)$option['option_text']) ?></span>
           <span><?= $percentage ?> % (<?= (int)$option['vote_count'] ?> hlasů)</span>
         </div>
-        <div style="background:#e8e8e8;border-radius:4px;overflow:hidden" aria-hidden="true">
-          <div style="background:#005fcc;height:1.2rem;width:<?= $percentage ?>%;min-width:<?= $percentage > 0 ? '2px' : '0' ?>"></div>
-        </div>
+        <progress class="admin-progress" value="<?= h((string)$percentage) ?>" max="100" aria-hidden="true"><?= h((string)$percentage) ?> %</progress>
       </div>
     <?php endforeach; ?>
   </div>
@@ -377,12 +375,11 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     }
 
     const div = document.createElement('div');
-    div.className = 'option-row';
-    div.style.cssText = 'display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem';
+    div.className = 'option-row admin-option-row';
     div.innerHTML =
       '<input type="hidden" name="option_ids[]" value="0">' +
       '<label for="option_' + counter + '" class="sr-only">Možnost ' + (rows.length + 1) + '</label>' +
-      '<input type="text" id="option_' + counter + '" name="options[]" required aria-required="true" maxlength="500" style="flex:1">' +
+      '<input type="text" id="option_' + counter + '" name="options[]" required aria-required="true" maxlength="500" class="admin-option-row__input">' +
       '<button type="button" class="btn btn-danger btn-remove-option" data-poll-option-remove aria-label="Odebrat možnost ' + (rows.length + 1) + '">Odebrat</button>';
     counter += 1;
     list.appendChild(div);
