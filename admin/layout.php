@@ -494,6 +494,7 @@ function adminHeader(string $pageTitle): void
        . '    .admin-select-md { min-width:180px; }' . "\n"
        . '    .admin-fieldset-card { margin:0 0 .85rem; border:1px solid var(--admin-border); border-radius:10px; padding:.85rem 1rem; }' . "\n"
        . '    .admin-action-row { margin-top:1rem; }' . "\n"
+       . '    .admin-inline-edit-form { display:flex; flex-direction:column; gap:.4rem; }' . "\n"
        . '    .admin-sort-list { list-style:none; padding:0; margin:0; max-width:62rem; }' . "\n"
        . '    .admin-sort-item { display:flex; align-items:center; gap:.75rem; padding:.55rem 0; border-bottom:1px solid var(--admin-border); flex-wrap:wrap; cursor:grab; }' . "\n"
        . '    .admin-sort-item--muted, .admin-sort-item--dragging { opacity:.6; }' . "\n"

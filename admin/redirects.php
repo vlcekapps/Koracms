@@ -64,7 +64,7 @@ adminHeader('Přesměrování (301/302)');
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 
-<p style="font-size:.9rem">Spravujte přesměrování starých URL na nové. Užitečné po importu obsahu z jiného webu nebo po změně slug adresy.</p>
+<p class="admin-description">Spravujte přesměrování starých URL na nové. Užitečné po importu obsahu z jiného webu nebo po změně slug adresy.</p>
 
 <form method="post" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -82,13 +82,13 @@ adminHeader('Přesměrování (301/302)');
     <small id="new-path-help" class="field-help">Relativní cesta nebo úplná URL, např. <code>/blog/novy-clanek</code></small>
 
     <label for="status_code">Typ přesměrování</label>
-    <select id="status_code" name="status_code" aria-describedby="status-code-help" style="width:auto">
+    <select id="status_code" name="status_code" aria-describedby="status-code-help" class="admin-input-auto">
       <option value="301">301 – Trvalé</option>
       <option value="302">302 – Dočasné</option>
     </select>
     <small id="status-code-help" class="field-help">301 je vhodné pro trvalý přesun obsahu (vyhledávače přenesou hodnocení). 302 pro dočasné přesměrování.</small>
 
-    <button type="submit" class="btn" style="margin-top:.5rem">Přidat přesměrování</button>
+    <button type="submit" class="btn admin-action-row">Přidat přesměrování</button>
   </fieldset>
 </form>
 
@@ -112,14 +112,14 @@ adminHeader('Přesměrování (301/302)');
       <tr>
         <td>
           <?php if ($editId === (int)$r['id']): ?>
-            <form method="post" style="display:flex;flex-direction:column;gap:.4rem">
+            <form method="post" class="admin-inline-edit-form">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$r['id'] ?>">
               <input type="text" name="old_path" required aria-required="true" aria-label="Stará cesta" maxlength="500"
                      value="<?= h((string)$r['old_path']) ?>">
               <input type="text" name="new_path" required aria-required="true" aria-label="Nová cesta" maxlength="500"
                      value="<?= h((string)$r['new_path']) ?>">
-              <select name="status_code" aria-label="Typ přesměrování" style="width:auto">
+              <select name="status_code" aria-label="Typ přesměrování" class="admin-input-auto">
                 <option value="301"<?= (int)$r['status_code'] === 301 ? ' selected' : '' ?>>301</option>
                 <option value="302"<?= (int)$r['status_code'] === 302 ? ' selected' : '' ?>>302</option>
               </select>

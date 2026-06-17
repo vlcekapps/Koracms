@@ -30,10 +30,10 @@ adminHeader('Nová rozesílka');
 
 <p><a href="newsletter.php">&larr; Zpět na newsletter</a></p>
 
-<div class="button-row" style="justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem">
+<div class="button-row button-row--between button-row--top admin-stack-md">
   <div>
-    <p style="margin:.2rem 0 .45rem">Rozesílka se odešle všem potvrzeným odběratelům newsletteru.</p>
-    <p style="margin:.2rem 0 0">
+    <p class="admin-copy">Rozesílka se odešle všem potvrzeným odběratelům newsletteru.</p>
+    <p class="admin-copy--compact">
       Odeslání proběhne na <strong><?= $confirmedCount ?></strong> potvrzených odběratelů.
       <?php if ($pendingCount > 0): ?>
         Dalších <strong><?= $pendingCount ?></strong> odběrů zatím čeká na potvrzení.
@@ -59,11 +59,11 @@ adminHeader('Nová rozesílka');
       <textarea id="body" name="body" rows="15" required aria-required="true"<?= adminFieldAttributes('body', $formErrorFields) ?>><?= h((string)$formState['body']) ?></textarea>
       <?php adminRenderFieldError('body', $formErrorFields, [], $fieldErrorMessages['body']); ?>
 
-      <p style="margin-top:.5rem;font-size:.95rem;color:#444">
+      <p class="field-help">
         Do každého e-mailu se automaticky přidá odkaz pro odhlášení z odběru.
       </p>
 
-      <div class="button-row" style="margin-top:1.5rem">
+      <div class="button-row admin-action-row">
         <button type="submit" class="btn"
                 data-confirm="Opravdu odeslat newsletter <?= $confirmedCount ?> potvrzeným odběratelům?">
           Odeslat rozesílku

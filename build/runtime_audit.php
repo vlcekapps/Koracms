@@ -10944,6 +10944,7 @@ $downloadCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_ca
 $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
 $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
+$formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 $importAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
@@ -10954,6 +10955,7 @@ $reservationCategoriesSource = (string)file_get_contents(dirname(__DIR__) . '/ad
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_add.php');
 $reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
+$redirectsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/redirects.php');
 $galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_album_form.php');
 $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
@@ -11010,6 +11012,7 @@ foreach ([
     '.admin-input-auto',
     '.admin-fieldset-card',
     '.admin-action-row',
+    '.admin-inline-edit-form',
     '.admin-section-heading',
     '.admin-sort-list',
     '.admin-sort-item',
@@ -11180,6 +11183,15 @@ foreach ([
             'class="table-meta"',
         ],
     ],
+    'forms overview' => [
+        'source' => $formsOverviewSource,
+        'fragments' => [
+            'button-row button-row--baseline admin-stack-sm',
+            'class="table-meta"',
+            'class="text-pending"',
+            '<td class="actions">',
+        ],
+    ],
     'news overview' => [
         'source' => $newsOverviewSource,
         'fragments' => [
@@ -11254,6 +11266,16 @@ foreach ([
             'class="table-cell--prewrap"',
         ],
     ],
+    'newsletter form' => [
+        'source' => $newsletterFormValidationSource,
+        'fragments' => [
+            'button-row button-row--between button-row--top admin-stack-md',
+            'class="admin-copy"',
+            'class="admin-copy--compact"',
+            'class="field-help"',
+            'class="button-row admin-action-row"',
+        ],
+    ],
     'podcast episodes overview' => [
         'source' => $podcastEpisodesOverviewSource,
         'fragments' => [
@@ -11270,6 +11292,15 @@ foreach ([
             'class="admin-search-input"',
             'class="table-meta"',
             'class="admin-action-row"',
+        ],
+    ],
+    'redirects admin' => [
+        'source' => $redirectsAdminSource,
+        'fragments' => [
+            'class="admin-description"',
+            'class="admin-input-auto"',
+            'class="btn admin-action-row"',
+            'class="admin-inline-edit-form"',
         ],
     ],
     'settings display overview' => [

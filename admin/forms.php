@@ -60,7 +60,7 @@ adminHeader('Formuláře');
 
 <p class="section-subtitle">Na jednom místě připravíte veřejné formuláře, jejich pole i přehled doručených odpovědí.</p>
 
-<form method="get" class="filters" style="margin:1rem 0">
+<form method="get" class="button-row button-row--baseline admin-stack-sm">
   <label for="forms-q">Hledat formuláře</label>
   <input type="search" id="forms-q" name="q" value="<?= h($query) ?>" placeholder="Název, adresa nebo popis">
 
@@ -101,7 +101,7 @@ adminHeader('Formuláře');
       <tr>
         <td>
           <strong><?= h((string)$form['title']) ?></strong><br>
-          <small style="color:#555">/forms/<?= h((string)$form['slug']) ?></small>
+          <small class="table-meta">/forms/<?= h((string)$form['slug']) ?></small>
         </td>
         <td><?= (int)$form['field_count'] ?></td>
         <td><?= (int)$form['submission_count'] ?></td>
@@ -109,7 +109,7 @@ adminHeader('Formuláře');
           <?php if ((int)$form['open_submission_count'] > 0): ?>
             <strong><?= (int)$form['open_submission_count'] ?></strong>
             <?php if ((int)$form['new_submission_count'] > 0): ?>
-              <br><small style="color:#9a3412">nové: <?= (int)$form['new_submission_count'] ?></small>
+              <br><small class="text-pending">nové: <?= (int)$form['new_submission_count'] ?></small>
             <?php endif; ?>
           <?php else: ?>
             0
@@ -117,7 +117,7 @@ adminHeader('Formuláře');
         </td>
         <td>
           <?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?>
-          <br><small style="color:#555"><?= (int)($form['show_in_nav'] ?? 0) === 1 ? 'v navigaci webu' : 'mimo navigaci' ?></small>
+          <br><small class="table-meta"><?= (int)($form['show_in_nav'] ?? 0) === 1 ? 'v navigaci webu' : 'mimo navigaci' ?></small>
         </td>
         <td class="actions">
           <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit</a>
@@ -125,7 +125,7 @@ adminHeader('Formuláře');
             <a href="form_submissions.php?id=<?= (int)$form['id'] ?>">Odpovědi (<?= (int)$form['submission_count'] ?>)</a>
           <?php endif; ?>
           <a href="<?= h(formPublicPath($form)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
-          <form action="form_delete.php" method="post" style="display:inline">
+          <form action="form_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
             <input type="hidden" name="redirect" value="<?= h((string)($_SERVER['REQUEST_URI'] ?? (BASE_URL . '/admin/forms.php'))) ?>">
