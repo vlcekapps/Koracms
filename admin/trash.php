@@ -109,7 +109,7 @@ adminHeader('Koš');
 ?>
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
 
-<p style="font-size:.9rem">Smazané položky lze obnovit nebo trvale odstranit. Položky v koši se nezobrazují na veřejném webu ani v admin přehledech.</p>
+<p class="admin-description">Smazané položky lze obnovit nebo trvale odstranit. Položky v koši se nezobrazují na veřejném webu ani v admin přehledech.</p>
 
 <?php if (empty($trashItems)): ?>
   <p>Koš je prázdný.</p>
@@ -131,14 +131,14 @@ adminHeader('Koš');
         <td><?= h($item['title']) ?></td>
         <td><time datetime="<?= h(str_replace(' ', 'T', $item['deleted_at'])) ?>"><?= h($item['deleted_at']) ?></time></td>
         <td class="actions">
-          <form method="post" style="display:inline">
+          <form method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="module" value="<?= h($item['module']) ?>">
             <input type="hidden" name="id" value="<?= $item['id'] ?>">
             <input type="hidden" name="action" value="restore">
             <button type="submit" class="btn">Obnovit</button>
           </form>
-          <form method="post" style="display:inline">
+          <form method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="module" value="<?= h($item['module']) ?>">
             <input type="hidden" name="id" value="<?= $item['id'] ?>">

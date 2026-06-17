@@ -10909,8 +10909,10 @@ $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_save.php');
 $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
 $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
+$backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
+$trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
 $newsletterSendValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_send.php');
 foreach ([
@@ -10975,6 +10977,12 @@ if (str_contains($newsletterOverviewSource, 'style=')) {
 if (str_contains($auditLogSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin audit log still contains inline style attributes';
 }
+if (str_contains($backupAdminSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin backup page still contains inline style attributes';
+}
+if (!str_contains($backupAdminSource, 'class="admin-description"')) {
+    $adminFieldErrorIssues[] = 'admin backup page is missing shared description styling';
+}
 foreach ([
     'class="admin-description"',
     'button-row admin-stack-sm',
@@ -11012,6 +11020,17 @@ foreach ([
 ] as $newsletterUtilityFragment) {
     if (!str_contains($newsletterOverviewSource, $newsletterUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin newsletter overview is missing utility class fragment: ' . $newsletterUtilityFragment;
+    }
+}
+if (str_contains($trashAdminSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin trash page still contains inline style attributes';
+}
+foreach ([
+    'class="admin-description"',
+    '<td class="actions">',
+] as $trashAdminUtilityFragment) {
+    if (!str_contains($trashAdminSource, $trashAdminUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin trash page is missing utility class fragment: ' . $trashAdminUtilityFragment;
     }
 }
 if (!str_contains($adminLayoutSource, 'document.addEventListener("submit"')

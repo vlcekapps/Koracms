@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     require_once __DIR__ . '/layout.php';
     adminHeader('Záloha databáze');
     ?>
-    <p style="font-size:.9rem">Stáhne kompletní zálohu databáze jako SQL soubor. Záloha obsahuje strukturu i data všech tabulek CMS.</p>
+    <p class="admin-description">Stáhne kompletní zálohu databáze jako SQL soubor. Záloha obsahuje strukturu i data všech tabulek CMS.</p>
 
     <form method="post" novalidate>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
