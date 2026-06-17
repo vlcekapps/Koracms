@@ -75,7 +75,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 ?>
 
 <?php if ($contentLockWarning !== null): ?>
-  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+  <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
     Tuto novinku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
     (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
@@ -92,7 +92,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 <?php endif; ?>
 
 <?php if ($authorName !== ''): ?>
-  <p style="color:#555;font-size:.9rem;margin-bottom:1rem">
+  <p class="admin-description admin-description--muted admin-stack-sm">
     Autor: <strong><?= h($authorName) ?></strong>
   </p>
 <?php endif; ?>
@@ -148,7 +148,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <?php renderAdminContentReferencePicker('content'); ?>
   </fieldset>
 
-  <fieldset style="margin-top:1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Zveřejnění</legend>
 
     <p>
@@ -173,7 +173,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       type="datetime-local"
       id="publish_at"
       name="publish_at"
-      style="width:auto"
+      class="admin-input-auto"
       value="<?= h(!empty($item['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$item['publish_at'])) : '') ?>"
     >
     <small class="field-help">Nechte prázdné, pokud se má novinka zveřejnit hned.</small>
@@ -184,7 +184,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       id="unpublish_at"
       name="unpublish_at"
       <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>
-      style="width:auto"
+      class="admin-input-auto"
       value="<?= h(!empty($item['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$item['unpublish_at'])) : '') ?>"
     >
     <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
@@ -196,12 +196,12 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       name="admin_note"
       rows="2"
       aria-describedby="admin-note-help"
-      style="min-height:0"
+      class="admin-textarea-compact"
     ><?= h((string)($item['admin_note'] ?? '')) ?></textarea>
     <small id="admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1rem">
+  <fieldset class="admin-fieldset-card admin-action-row">
     <legend>Vyhledávače a sdílení</legend>
 
     <label for="meta_title">Meta titulek</label>
@@ -226,16 +226,16 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <small id="meta-description-help" class="field-help">Volitelné. Pokud pole nevyplníte, použije se automatický výtah z textu novinky.</small>
   </fieldset>
 
-  <div style="margin-top:1rem">
+  <div class="button-row admin-fieldset-spaced">
     <button type="submit"><?= $item ? 'Uložit změny' : 'Přidat novinku' ?></button>
-    <a href="news.php" style="margin-left:1rem">Zrušit</a>
+    <a href="news.php">Zrušit</a>
     <?php if ($item && ($item['status'] ?? 'published') === 'published'): ?>
-      <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Zobrazit na webu</a>
+      <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($item && !empty($item['preview_token'])): ?>
-      <a href="<?= h(newsPreviewPath($item)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+      <a href="<?= h(newsPreviewPath($item)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
     <?php elseif ($item): ?>
-      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled")</small>
+      <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>
   </div>
 </form>

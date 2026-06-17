@@ -11303,6 +11303,18 @@ foreach ([
             'class="table-meta"',
         ],
     ],
+    'news form' => [
+        'source' => $newsFormSource,
+        'fragments' => [
+            'class="admin-warning-box"',
+            'class="admin-description admin-description--muted admin-stack-sm"',
+            'class="admin-fieldset-card admin-action-row"',
+            'class="admin-input-auto"',
+            'class="admin-textarea-compact"',
+            'class="button-row admin-fieldset-spaced"',
+            'field-help field-help--flush',
+        ],
+    ],
     'downloads overview' => [
         'source' => $downloadsOverviewSource,
         'fragments' => [
