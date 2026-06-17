@@ -10968,6 +10968,7 @@ $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/ad
 $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
 $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$blogTransferAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
 $chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_message.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
@@ -11183,6 +11184,15 @@ foreach ([
             'class="admin-select-lg"',
             'class="table-list-compact"',
             'class="button-row admin-action-row"',
+        ],
+    ],
+    'blog transfer admin' => [
+        'source' => $blogTransferAdminSource,
+        'fragments' => [
+            'class="admin-stack-sm"',
+            'class="button-row admin-action-row"',
+            'class="admin-fieldset-spaced"',
+            'class="admin-field-row"',
         ],
     ],
     'contact overview' => [

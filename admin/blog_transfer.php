@@ -676,7 +676,7 @@ adminHeader('Přesun článků mezi blogy');
   <?php endif; ?>
 </p>
 
-<form method="get" action="blog_transfer.php" style="margin-bottom:1rem" novalidate>
+<form method="get" action="blog_transfer.php" class="admin-stack-sm" novalidate>
   <fieldset>
     <legend>Přesun článků</legend>
     <p class="field-help" id="transfer-summary-help">
@@ -713,14 +713,14 @@ adminHeader('Přesun článků mezi blogy');
         Nabízí se jen blogy, do kterých teď smíte zapisovat a které nejsou zdrojem vybraných článků.
       </small>
       <?php adminRenderFieldError('target_blog_id', $fieldErrors, [], 'Vyberte prosím cílový blog, do kterého se mají články přesunout.'); ?>
-      <div class="button-row" style="margin-top:1rem">
+      <div class="button-row admin-action-row">
         <button type="submit" class="btn">Načíst možnosti převodu</button>
       </div>
     <?php endif; ?>
   </fieldset>
 </form>
 
-<section aria-labelledby="transfer-articles-heading" style="margin-bottom:1rem">
+<section aria-labelledby="transfer-articles-heading" class="admin-stack-sm">
   <h2 id="transfer-articles-heading">Vybrané články</h2>
   <table>
     <caption>Vybrané články pro přesun</caption>
@@ -752,7 +752,7 @@ adminHeader('Přesun článků mezi blogy');
     <input type="hidden" name="target_blog_id" value="<?= (int)$targetBlog['id'] ?>">
     <input type="hidden" name="redirect" value="<?= h($returnUrl) ?>">
 
-    <fieldset style="margin-bottom:1rem">
+    <fieldset class="admin-stack-sm">
       <legend>Kategorie v cílovém blogu</legend>
       <?php if ($missingCategoryNames === []): ?>
         <p class="field-help">Všechny použité kategorie už v cílovém blogu existují a při přesunu se automaticky namapují.</p>
@@ -782,7 +782,7 @@ adminHeader('Přesun článků mezi blogy');
         <?php endif; ?>
         <?php adminRenderFieldError('category_strategy', $fieldErrors, [], 'Zvolte prosím způsob, jak naložit s chybějícími kategoriemi.'); ?>
         <?php if ($categoryStrategy === 'map_existing' && $canMapExistingCategories): ?>
-          <fieldset style="margin-top:1rem">
+          <fieldset class="admin-fieldset-spaced">
             <legend>Ruční mapování kategorií</legend>
             <p class="field-help" id="transfer-category-map-help">
               Pro každou chybějící zdrojovou kategorii vyberte odpovídající kategorii v cílovém blogu, nebo potvrďte přesun bez kategorie.
@@ -793,7 +793,7 @@ adminHeader('Přesun článků mezi blogy');
                 $categoryHelpId = $categoryFieldName . '-help';
                 $selectedCategoryValue = (string)($categoryMapSelections[$normalizedName] ?? '');
                 ?>
-              <div style="margin-top:.85rem">
+              <div class="admin-field-row">
                 <label for="<?= h($categoryFieldName) ?>">
                   Zdrojová kategorie: <strong><?= h($categoryName) ?></strong>
                 </label>
@@ -821,7 +821,7 @@ adminHeader('Přesun článků mezi blogy');
       <?php endif; ?>
     </fieldset>
 
-    <fieldset style="margin-bottom:1rem">
+    <fieldset class="admin-stack-sm">
       <legend>Štítky v cílovém blogu</legend>
       <?php if ($missingTagNames === []): ?>
         <p class="field-help">Všechny použité štítky už v cílovém blogu existují a při přesunu se automaticky namapují.</p>
@@ -851,7 +851,7 @@ adminHeader('Přesun článků mezi blogy');
         <?php endif; ?>
         <?php adminRenderFieldError('tag_strategy', $fieldErrors, [], 'Zvolte prosím způsob, jak naložit s chybějícími štítky.'); ?>
         <?php if ($tagStrategy === 'map_existing' && $canMapExistingTags): ?>
-          <fieldset style="margin-top:1rem">
+          <fieldset class="admin-fieldset-spaced">
             <legend>Ruční mapování štítků</legend>
             <p class="field-help" id="transfer-tag-map-help">
               Pro každý chybějící zdrojový štítek vyberte odpovídající štítek v cílovém blogu, nebo potvrďte přesun bez štítku.
@@ -864,7 +864,7 @@ adminHeader('Přesun článků mezi blogy');
                 $tagHelpId = $tagFieldName . '-help';
                 $selectedTagValue = (string)($tagMapSelections[$tagKey] ?? '');
                 ?>
-              <div style="margin-top:.85rem">
+              <div class="admin-field-row">
                 <label for="<?= h($tagFieldName) ?>">
                   Zdrojový štítek: <strong><?= h($tagLabel) ?></strong>
                 </label>
