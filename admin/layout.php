@@ -854,6 +854,7 @@ function adminHeader(string $pageTitle): void
        . '    nav a:focus-visible { outline-color: var(--admin-focus-nav); }' . "\n"
        . '    .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }' . "\n"
        . '    .skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:var(--admin-focus);color:#fff;font-size:1rem;text-decoration:none;z-index:9999; }' . "\n"
+       . '    .admin-nav-site { margin:0 0 .75rem; color:var(--admin-nav-summary); font-size:.95rem; font-weight:700; }' . "\n"
        . '    .admin-nav-user { font-size:.8rem; color:var(--admin-nav-summary); margin:0 0 .75rem; }' . "\n"
        . '    .admin-nav-bottom { margin-top:.8rem; }' . "\n"
        . '    .autosave-banner { background:var(--admin-pending-bg); border:1px solid var(--admin-pending-border); color:var(--admin-pending-text); padding:.7rem 1rem; border-radius:6px; margin-bottom:1rem; display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; }' . "\n"
@@ -873,8 +874,9 @@ function adminHeader(string $pageTitle): void
        . '</head>' . "\n"
        . '<body>' . "\n"
        . '<a href="#obsah" class="skip-link">Přeskočit na obsah</a>' . "\n"
-       . '<nav aria-label="Administrace">' . "\n"
-       . '  <h2>' . $siteName . '</h2>' . "\n";
+       . '<nav aria-labelledby="admin-nav-heading">' . "\n"
+       . '  <h2 id="admin-nav-heading">Administrace</h2>' . "\n"
+       . '  <p class="admin-nav-site">' . $siteName . '</p>' . "\n";
 
     $userName = h(currentUserDisplayName());
     if ($userName !== '') {
@@ -907,12 +909,7 @@ function adminFooter(): void
 {
     $version = KORA_VERSION;
     $nonce = cspNonce();
-    echo '<script nonce="' . $nonce . '">document.addEventListener("DOMContentLoaded",function(){'
-       . 'var l=document.getElementById("a11y-live");if(!l)return;'
-       . 'var m=document.querySelector(\'[role="status"]:not(#a11y-live),[role="alert"]\');'
-       . 'if(m){var t=m.textContent.trim();if(t)setTimeout(function(){l.textContent=t;},150);m.removeAttribute("role");}'
-       . '});</script>'
-       . '<script nonce="' . $nonce . '">document.addEventListener("click",function(e){'
+    echo '<script nonce="' . $nonce . '">document.addEventListener("click",function(e){'
        . 'var b=e.target.closest("[data-confirm]");'
        . 'if(b&&b.tagName!=="FORM"&&!confirm(b.dataset.confirm)){e.preventDefault();e.stopPropagation();return;}'
        . 'var once=e.target.closest("[data-submit-once]");'

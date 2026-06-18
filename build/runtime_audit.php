@@ -11233,6 +11233,18 @@ if (str_contains($adminLayoutSource, "info.setAttribute(\\'aria-live\\',\\'polit
 if (!str_contains($adminLayoutSource, "info.setAttribute(\\'data-editor-count\\',\\'content\\');")) {
     $adminFieldErrorIssues[] = 'admin content word count is missing the non-live editor count marker';
 }
+if (!str_contains($adminLayoutSource, '<nav aria-labelledby="admin-nav-heading">')
+    || !str_contains($adminLayoutSource, '<h2 id="admin-nav-heading">Administrace</h2>')
+    || !str_contains($adminLayoutSource, 'class="admin-nav-site"')) {
+    $adminFieldErrorIssues[] = 'admin layout navigation is missing heading-backed landmark semantics';
+}
+if (str_contains($adminLayoutSource, 'removeAttribute("role")')
+    || str_contains($adminLayoutSource, "removeAttribute('role')")) {
+    $adminFieldErrorIssues[] = 'admin layout still removes role from server-rendered status or alert messages';
+}
+if (str_contains($adminLayoutSource, '[role="status"]:not(#a11y-live),[role="alert"]')) {
+    $adminFieldErrorIssues[] = 'admin layout still re-announces server-rendered status or alert messages through the client live region';
+}
 foreach ([
     '.button-row--start',
     '.button-row--between',
@@ -11538,6 +11550,7 @@ foreach ([
     '.inline-badge--info',
     '.table-list-compact',
     '.text-pending',
+    '.admin-nav-site',
     '.admin-nav-user',
     '.admin-nav-bottom',
     '.autosave-banner',
