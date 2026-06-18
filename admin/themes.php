@@ -200,113 +200,6 @@ $exportThemeDefault = in_array($selectedTheme, $availableThemeKeys, true)
 adminHeader('Vzhled a šablony');
 ?>
 
-<style nonce="<?= cspNonce() ?>">
-  .theme-catalog {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-  }
-
-  .theme-card {
-    display: grid;
-    gap: 0.85rem;
-    height: 100%;
-    padding: 1rem;
-    border: 1px solid #cfd7df;
-    border-radius: 12px;
-    background: #fafafa;
-  }
-
-  .theme-card--selected {
-    border-color: #0b5f8a;
-    box-shadow: 0 0 0 3px rgba(11, 95, 138, 0.12);
-    background: #f5fbff;
-  }
-
-  .theme-card__heading {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  .theme-card__heading input[type="radio"] {
-    margin-top: 0.25rem;
-  }
-
-  .theme-card__title {
-    display: inline;
-    margin-top: 0;
-    font-weight: 700;
-  }
-
-  .theme-card__preview {
-    display: block;
-    overflow: hidden;
-    border: 1px solid #d7dfe7;
-    border-radius: 10px;
-    background: #ffffff;
-    aspect-ratio: 16 / 10;
-  }
-
-  .theme-card__preview img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .theme-card__placeholder {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    padding: 1rem;
-    color: #44515e;
-    text-align: center;
-    background:
-      linear-gradient(135deg, rgba(11, 95, 138, 0.08), rgba(155, 93, 27, 0.08)),
-      #ffffff;
-    font-weight: 600;
-  }
-
-  .theme-card__swatches {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .theme-card__swatch {
-    display: inline-block;
-    width: 1.35rem;
-    height: 1.35rem;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-    border-radius: 999px;
-  }
-
-  .theme-card__meta {
-    margin: 0;
-    color: #444;
-  }
-
-  .theme-card__summary,
-  .theme-card__description,
-  .theme-card__status {
-    margin: 0;
-    color: #333;
-  }
-
-  .theme-card__status strong {
-    display: inline-block;
-    margin-right: 0.35rem;
-  }
-
-  .theme-card__hint {
-    margin: 0.5rem 0 0;
-    color: #4b5563;
-  }
-</style>
-
 <?php if ($successMessage !== ''): ?>
   <p class="success" role="status"><?= h($successMessage) ?></p>
 <?php endif; ?>
@@ -397,24 +290,24 @@ adminHeader('Vzhled a šablony');
           </div>
 
           <?php if (!empty($manifest['preview']['colors'])): ?>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem" aria-label="Barevný náhled šablony">
+            <div class="theme-card__swatches" aria-hidden="true">
               <?php foreach ($manifest['preview']['colors'] as $previewColor): ?>
-                <span
-                  aria-hidden="true"
-                  style="display:inline-block;width:1.35rem;height:1.35rem;border-radius:999px;border:1px solid rgba(0,0,0,.18);background:<?= h($previewColor) ?>"></span>
+                <svg class="theme-card__swatch" viewBox="0 0 16 16" focusable="false">
+                  <circle cx="8" cy="8" r="7" fill="<?= h((string)$previewColor) ?>"></circle>
+                </svg>
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
 
           <?php if (!empty($manifest['preview']['summary'])): ?>
-            <p style="margin:.6rem 0 0;color:#333"><?= h($manifest['preview']['summary']) ?></p>
+            <p class="theme-card__summary"><?= h($manifest['preview']['summary']) ?></p>
           <?php endif; ?>
 
           <?php if ($manifest['description'] !== ''): ?>
-            <p style="margin:.6rem 0 0"><?= h($manifest['description']) ?></p>
+            <p class="theme-card__description"><?= h($manifest['description']) ?></p>
           <?php endif; ?>
 
-          <p style="margin:.6rem 0 0;color:#333">
+          <p class="theme-card__status">
             <?php if ($isEffectiveTheme): ?>
               <strong>Právě se používá na veřejném webu.</strong>
             <?php endif; ?>
@@ -435,7 +328,7 @@ adminHeader('Vzhled a šablony');
     </p>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem">
+  <fieldset class="admin-fieldset-spaced">
     <legend>Stav konfigurace</legend>
     <p><strong>Uložená hodnota:</strong> <code><?= h($configuredTheme) ?></code></p>
     <p><strong>Runtime používá:</strong> <code><?= h($effectiveTheme) ?></code></p>
@@ -443,7 +336,7 @@ adminHeader('Vzhled a šablony');
     <p><strong>Adresář šablon:</strong> <code>/themes</code></p>
   </fieldset>
 
-  <div class="button-row" style="margin-top:1rem">
+  <div class="button-row admin-action-row">
     <button type="submit" name="form_action" value="activate_theme" class="btn">Uložit šablonu</button>
     <button type="submit" name="form_action" value="preview_theme" class="btn">Spustit živý náhled</button>
     <?php if ($previewIsActive): ?>
@@ -452,8 +345,8 @@ adminHeader('Vzhled a šablony');
   </div>
 </form>
 
-<section style="margin-top:2rem;border-top:1px solid #ddd;padding-top:1.5rem">
-  <h2 style="margin-top:0">Vzhled vybrané šablony</h2>
+<section class="admin-section-block">
+  <h2 class="admin-section-block__heading">Vzhled vybrané šablony</h2>
   <p>
     Nastavení níže upravují šablonu <strong><?= h($editableManifest['name']) ?></strong>.
     <?php if ($previewIsActive): ?>
@@ -487,17 +380,17 @@ adminHeader('Vzhled a šablony');
             $settingAvailable = themeSettingIsAvailable($definition);
             $requiredModulesText = themeRequiredModulesDescription((array)($definition['requires_modules'] ?? []));
             ?>
-          <div style="margin-top:1rem">
+          <div class="theme-setting-row">
             <label for="<?= h($fieldId) ?>"><?= h($definition['label']) ?></label>
 
             <?php if (!$settingAvailable): ?>
-              <p id="<?= h($helpId) ?>" style="margin:.5rem 0 0;color:#4b5563">
+              <p id="<?= h($helpId) ?>" class="field-help theme-card__hint">
                 Toto nastavení je k dispozici jen při zapnutém modulu
                 <strong><?= h($requiredModulesText) ?></strong>.
                 Uložená hodnota zůstává beze změny a homepage ji znovu použije, až modul znovu aktivujete.
               </p>
             <?php elseif ($definition['type'] === 'color'): ?>
-              <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+              <div class="theme-setting-color-row">
                 <input
                   type="color"
                   id="<?= h($fieldId) ?>"
@@ -530,7 +423,7 @@ adminHeader('Vzhled a šablony');
                 }
                 ?>
               <?php if ($availableOptions === []): ?>
-                <p id="<?= h($helpId) ?>" style="margin:.5rem 0 0;color:#4b5563">
+                <p id="<?= h($helpId) ?>" class="field-help theme-card__hint">
                   Pro tuto volbu teď není k dispozici žádná aktivní modulová varianta.
                   Uložená hodnota zůstává beze změny.
                 </p>
@@ -562,7 +455,7 @@ adminHeader('Vzhled a šablony');
         <?php endforeach; ?>
       </fieldset>
 
-      <div class="button-row" style="margin-top:1rem">
+      <div class="button-row admin-action-row">
         <button type="submit" name="form_action" value="save_theme_settings" class="btn">Uložit vzhled</button>
         <button type="submit" name="form_action" value="preview_theme_settings" class="btn">Náhled se zadaným vzhledem</button>
         <button type="submit" name="form_action" value="reset_theme_settings" class="btn">Obnovit výchozí vzhled</button>
@@ -571,16 +464,16 @@ adminHeader('Vzhled a šablony');
   <?php endif; ?>
 </section>
 
-<section style="margin-top:2rem;border-top:1px solid #ddd;padding-top:1.5rem">
-  <h2 style="margin-top:0">Import a export balíčků</h2>
+<section class="admin-section-block">
+  <h2 class="admin-section-block__heading">Import a export balíčků</h2>
   <p>
     Portable theme package je bezpečný ZIP formát pro přenos vzhledu mezi instalacemi.
     Obsahuje jen <code>theme.json</code> a statické assety v <code>assets/</code>;
     PHP layouty, partialy a view override soubory se do balíčku vědomě nepouštějí.
   </p>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(18rem,1fr));gap:1rem">
-    <form method="post" enctype="multipart/form-data" novalidate style="border:1px solid #ccc;border-radius:8px;padding:1rem;background:#fafafa">
+  <div class="theme-package-grid">
+    <form method="post" enctype="multipart/form-data" novalidate class="theme-package-card">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
       <fieldset>
@@ -598,12 +491,12 @@ adminHeader('Vzhled a šablony');
         </small>
       </fieldset>
 
-      <div class="button-row" style="margin-top:1rem">
+      <div class="button-row admin-action-row">
         <button type="submit" name="form_action" value="import_theme_package" class="btn">Importovat balíček</button>
       </div>
     </form>
 
-    <form method="post" novalidate style="border:1px solid #ccc;border-radius:8px;padding:1rem;background:#fafafa">
+    <form method="post" novalidate class="theme-package-card">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
       <fieldset>
@@ -623,7 +516,7 @@ adminHeader('Vzhled a šablony');
         </small>
       </fieldset>
 
-      <div class="button-row" style="margin-top:1rem">
+      <div class="button-row admin-action-row">
         <button type="submit" name="form_action" value="export_theme_package" class="btn">Exportovat balíček</button>
       </div>
     </form>

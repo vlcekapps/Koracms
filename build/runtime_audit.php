@@ -11165,6 +11165,26 @@ foreach ([
     '.admin-panel__heading',
     '.admin-panel__list',
     '.admin-panel__footer',
+    '.admin-section-block',
+    '.admin-section-block__heading',
+    '.theme-catalog',
+    '.theme-card',
+    '.theme-card--selected',
+    '.theme-card__heading',
+    '.theme-card__title',
+    '.theme-card__preview',
+    '.theme-card__placeholder',
+    '.theme-card__swatches',
+    '.theme-card__swatch',
+    '.theme-card__meta',
+    '.theme-card__summary',
+    '.theme-card__description',
+    '.theme-card__status',
+    '.theme-card__hint',
+    '.theme-setting-row',
+    '.theme-setting-color-row',
+    '.theme-package-grid',
+    '.theme-package-card',
     '.admin-check-row',
     '.admin-check-row--separated',
     '.admin-profile-totp-panel',
@@ -11224,6 +11244,24 @@ if (str_contains($uiSource, '<fieldset style=') || str_contains($uiSource, 'aria
 }
 if (!str_contains($uiSource, '<fieldset class="admin-fieldset-card">') || !str_contains($uiSource, 'field-help field-help--flush')) {
     $adminFieldErrorIssues[] = 'shared bulkActions helper is missing shared admin fieldset/status utility classes';
+}
+if (str_contains($adminThemesSource, '<style nonce="<?= cspNonce() ?>">') || preg_match('/<[^>]+\sstyle=/i', $adminThemesSource) === 1) {
+    $adminFieldErrorIssues[] = 'admin themes page still contains local style blocks or inline style attributes';
+}
+foreach ([
+    'class="theme-catalog"',
+    'class="theme-card__swatches"',
+    '<svg class="theme-card__swatch"',
+    'class="admin-section-block"',
+    'class="theme-package-grid"',
+    'class="theme-package-card"',
+] as $themeAdminUtilityFragment) {
+    if (!str_contains($adminThemesSource, $themeAdminUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin themes page is missing utility class fragment: ' . $themeAdminUtilityFragment;
+    }
+}
+if (str_contains($adminThemesSource, 'background:<?= h($previewColor) ?>')) {
+    $adminFieldErrorIssues[] = 'admin themes color preview still relies on inline background styles';
 }
 if (str_contains($newsletterOverviewSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin newsletter overview still contains inline style attributes';
