@@ -100,20 +100,6 @@ $filterBaseQuery = $filterParams !== [] ? http_build_query($filterParams) : '';
 
 adminHeader('Rezervace');
 ?>
-<style nonce="<?= cspNonce() ?>">
-  .res-bookings-toolbar { margin-bottom:1rem; }
-  .res-bookings-filter { margin-bottom:1rem; }
-  .res-bookings-filter-row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-end; }
-  .res-bookings-filter-select { width:auto; }
-  .res-bookings-hidden-note { color:#666; font-size:.85rem; margin-top:-.5rem; margin-bottom:1rem; }
-  .res-bookings-pager-list { list-style:none; display:flex; gap:.5rem; padding:0; margin-top:1rem; flex-wrap:wrap; }
-  .res-booking-status--pending { color:#8a4b00; }
-  .res-booking-status--confirmed { color:#1b5e20; }
-  .res-booking-status--cancelled { color:#666; }
-  .res-booking-status--rejected { color:#b71c1c; }
-  .res-booking-status--completed { color:#005fcc; }
-  .res-booking-status--no_show { color:#6d0000; }
-</style>
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Rezervace byla úspěšně aktualizována.</p>
 <?php endif; ?>

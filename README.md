@@ -316,6 +316,8 @@ Administrace používá capability model – uživatelé vidí jen to, co potře
 
 Fronta **Ke schválení** sjednocuje čekající obsah, komentáře a rezervace na jednom místě.
 
+Rezervační administrace pro přehled, ruční vytvoření a detail rezervace používá sdílenou admin CSS vrstvu bez lokálních `<style>` bloků, takže drží stejnou CSP a údržbovou hygienu jako ostatní stabilizované administrační obrazovky.
+
 ---
 
 ## HTML editor a snippety

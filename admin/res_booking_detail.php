@@ -52,23 +52,6 @@ $statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? ''
 
 adminHeader('Detail rezervace #' . (int)$booking['id']);
 ?>
-<style nonce="<?= cspNonce() ?>">
-  .res-booking-status--pending { color:#8a4b00; }
-  .res-booking-status--confirmed { color:#1b5e20; }
-  .res-booking-status--cancelled { color:#666; }
-  .res-booking-status--rejected { color:#b71c1c; }
-  .res-booking-status--completed { color:#005fcc; }
-  .res-booking-status--no_show { color:#6d0000; }
-  .res-booking-actions { margin-bottom:1rem; align-items:flex-start; }
-  .res-booking-form { margin-bottom:1rem; }
-  .res-booking-fieldset { border:1px solid var(--admin-border); border-radius:10px; padding:.85rem 1rem; }
-  .res-booking-textarea--reject { min-height:80px; }
-  .res-booking-textarea--compact { min-height:60px; max-width:400px; }
-  .res-booking-action-row { margin-top:.5rem; }
-  .res-booking-complete-button { background:#005fcc; color:#fff; }
-  .res-booking-pending-note { color:#666; font-style:italic; }
-</style>
-
 <?php if (isset($_GET['ok'])): ?>
   <p role="status" class="success">Rezervace byla úspěšně aktualizována.</p>
 <?php endif; ?>

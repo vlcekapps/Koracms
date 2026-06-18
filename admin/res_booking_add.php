@@ -100,18 +100,6 @@ $endTime     = $_POST['end_time'] ?? '';
 $partySize   = $_POST['party_size'] ?? '1';
 $notes       = $_POST['notes'] ?? '';
 ?>
-<style nonce="<?= cspNonce() ?>">
-  .res-booking-required-note { margin-top:0; font-size:.9rem; }
-  .res-booking-mode-row { display:flex; gap:1.5rem; margin-top:.5rem; flex-wrap:wrap; }
-  .res-booking-fieldset { border:1px solid var(--admin-border); border-radius:10px; padding:.85rem 1rem; margin-top:1rem; }
-  .res-booking-time-row { display:flex; gap:1rem; flex-wrap:wrap; }
-  .res-booking-input-auto { width:auto; }
-  .res-booking-input-stacked { width:auto; display:block; margin-top:.2rem; }
-  .res-booking-party-size { width:100px; }
-  .res-booking-note { min-height:80px; }
-  .res-booking-actions { margin-top:1.5rem; }
-</style>
-
 <?php if ($err !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($err) ?></p>
 <?php endif; ?>
@@ -166,7 +154,7 @@ $notes       = $_POST['notes'] ?? '';
     <input type="text" id="guest_phone" name="guest_phone" maxlength="50" autocomplete="tel" value="<?= h($guestPhone) ?>">
   </div>
 
-  <fieldset class="res-booking-fieldset">
+  <fieldset class="res-booking-fieldset res-booking-fieldset--spaced">
     <legend>Rezervace</legend>
 
     <label for="resource_id">Zdroj <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>

@@ -11211,6 +11211,34 @@ foreach ([
     '.settings-current-favicon',
     '.settings-current-logo',
     '.settings-submit',
+    '.res-bookings-toolbar',
+    '.res-bookings-filter',
+    '.res-bookings-filter-row',
+    '.res-bookings-filter-select',
+    '.res-bookings-hidden-note',
+    '.res-bookings-pager-list',
+    '.res-booking-status--pending',
+    '.res-booking-status--confirmed',
+    '.res-booking-status--cancelled',
+    '.res-booking-status--rejected',
+    '.res-booking-status--completed',
+    '.res-booking-status--no_show',
+    '.res-booking-required-note',
+    '.res-booking-mode-row',
+    '.res-booking-fieldset',
+    '.res-booking-fieldset--spaced',
+    '.res-booking-time-row',
+    '.res-booking-input-auto',
+    '.res-booking-input-stacked',
+    '.res-booking-party-size',
+    '.res-booking-note',
+    '.res-booking-actions',
+    '.res-booking-form',
+    '.res-booking-textarea--reject',
+    '.res-booking-textarea--compact',
+    '.res-booking-action-row',
+    '.res-booking-complete-button',
+    '.res-booking-pending-note',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',
@@ -12281,7 +12309,6 @@ foreach ([
 foreach ([
     'reservation bookings overview' => [
         $reservationBookingsOverviewSource,
-        '<style nonce="<?= cspNonce() ?>">',
         'class="button-row res-bookings-toolbar"',
         'class="res-bookings-filter"',
         'class="res-booking-status--<?= h($statusKey) ?>"',
@@ -12289,15 +12316,14 @@ foreach ([
     ],
     'reservation booking add form' => [
         $reservationBookingAddFormSource,
-        '<style nonce="<?= cspNonce() ?>">',
         'class="res-booking-mode-row"',
         'id="user-fields"<?= $mode ===',
         'id="guest-fields"<?= $mode !==',
+        'class="res-booking-fieldset res-booking-fieldset--spaced"',
         'class="button-row res-booking-actions"',
     ],
     'reservation booking detail' => [
         $reservationBookingDetailSource,
-        '<style nonce="<?= cspNonce() ?>">',
         'class="res-booking-status--<?= h($statusKey) ?>"',
         'class="button-row button-row--top res-booking-actions"',
         'class="res-booking-fieldset"',
@@ -12305,8 +12331,8 @@ foreach ([
     ],
 ] as $reservationAdminLabel => $reservationAdminFragments) {
     $reservationAdminSource = (string)array_shift($reservationAdminFragments);
-    if (str_contains($reservationAdminSource, 'style=') || str_contains($reservationAdminSource, '.style')) {
-        $adminFieldErrorIssues[] = $reservationAdminLabel . ' still contains inline style markup or JS style mutations';
+    if (str_contains($reservationAdminSource, '<style') || str_contains($reservationAdminSource, 'style=') || str_contains($reservationAdminSource, '.style')) {
+        $adminFieldErrorIssues[] = $reservationAdminLabel . ' still contains local style blocks, inline style markup or JS style mutations';
     }
     foreach ($reservationAdminFragments as $reservationAdminFragment) {
         if (!str_contains($reservationAdminSource, (string)$reservationAdminFragment)) {
