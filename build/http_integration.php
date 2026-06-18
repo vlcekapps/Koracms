@@ -2232,7 +2232,7 @@ try {
     if (!preg_match('/name="tags\[\]"\s+value="' . preg_quote((string)$sharedTargetTagId, '/') . '"[^>]*checked/', $editAutoFormResponse['body'])) {
         $blogTransferIssues[] = 'editor článku při změně blogu nepředvyplnil odpovídající cílový štítek';
     }
-    if (!str_contains($editAutoFormResponse['body'], 'id="blog-missing-category-group" style="margin-top:.75rem" hidden') || !str_contains($editAutoFormResponse['body'], 'id="blog-missing-tags-group" style="margin-top:.75rem" hidden')) {
+    if (!str_contains($editAutoFormResponse['body'], 'id="blog-missing-category-group" class="blog-form-missing-taxonomy" hidden') || !str_contains($editAutoFormResponse['body'], 'id="blog-missing-tags-group" class="blog-form-missing-taxonomy" hidden')) {
         $blogTransferIssues[] = 'editor článku neschovává sekci chybějících taxonomií, když se cílové taxonomie podařilo automaticky namapovat';
     }
 

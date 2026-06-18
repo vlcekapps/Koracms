@@ -9492,6 +9492,23 @@ if (!str_contains($blogFormSource, 'name="is_featured_in_blog"')) {
 if (!str_contains($blogFormSource, 'canCurrentUserManageBlogTaxonomies($currentBlogId)')) {
     $blogAdminIssues[] = 'article form is missing taxonomy management guard for multiblog links';
 }
+if (str_contains($blogFormSource, '<style') || str_contains($blogFormSource, 'style=') || str_contains($blogFormSource, '.style')) {
+    $blogAdminIssues[] = 'article form still contains local style blocks, inline style attributes or JS style mutations';
+}
+foreach ([
+    'class="admin-warning-box"',
+    'class="admin-inline-form"',
+    'class="blog-form-missing-taxonomy"',
+    'class="blog-form-fieldset"',
+    'class="blog-form-tag-label"',
+    'class="button-row blog-form-actions"',
+    'blog-form-wysiwyg-wrapper',
+    'textarea.hidden = true',
+] as $blogFormStyleFragment) {
+    if (!str_contains($blogFormSource, $blogFormStyleFragment)) {
+        $blogAdminIssues[] = 'article form is missing shared style fragment: ' . $blogFormStyleFragment;
+    }
+}
 if (!str_contains($blogCatsSource, 'if (!hasAnyBlogs())')) {
     $blogAdminIssues[] = 'blog categories page is missing no-blog redirect guard';
 }
@@ -11289,6 +11306,14 @@ foreach ([
     '.media-usage-fieldset',
     '.media-empty-usage',
     '.media-usage-list',
+    '.blog-form-missing-taxonomy',
+    '.blog-form-fieldset',
+    '.blog-form-fieldset--seo',
+    '.blog-form-tag-label',
+    '.blog-form-checkbox-row',
+    '.blog-form-actions',
+    '.blog-form-preview-note',
+    '.blog-form-wysiwyg-wrapper',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',

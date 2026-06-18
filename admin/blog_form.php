@@ -250,7 +250,7 @@ adminHeader($pageTitle);
 ?>
 
 <?php if ($contentLockWarning !== null): ?>
-  <div role="alert" style="background:#fff3cd;border:1px solid #ffc107;padding:.75rem 1rem;margin-bottom:1rem;border-radius:4px;color:#856404">
+  <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
     Tento článek právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>
     (od <?= h(date('H:i', strtotime((string)$contentLockWarning['locked_at']))) ?>).
@@ -288,7 +288,7 @@ adminHeader($pageTitle);
   <p>
     <a href="revisions.php?type=article&amp;id=<?= (int)$article['id'] ?>">Historie revizí</a>
     ·
-    <form action="convert_content.php" method="post" style="display:inline">
+    <form action="convert_content.php" method="post" class="admin-inline-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="direction" value="article_to_page">
       <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
@@ -357,11 +357,11 @@ adminHeader($pageTitle);
         $authorName = '–';
     }
 ?>
-    <p style="color:#555;font-size:.9rem;margin-bottom:1rem">
+    <p class="admin-description admin-description--muted admin-stack-sm">
       Autor: <strong><?= h($authorName) ?></strong>
     </p>
   <?php elseif (!$article): ?>
-    <p style="color:#555;font-size:.9rem;margin-bottom:1rem">
+    <p class="admin-description admin-description--muted admin-stack-sm">
       Autor: <strong><?= h(currentUserDisplayName()) ?></strong>
     </p>
   <?php endif; ?>
@@ -394,7 +394,7 @@ adminHeader($pageTitle);
     <?php endif; ?>
     <?php adminRenderFieldError('category_id', $err, $fieldErrorMap, $fieldErrorMessages['category_target']); ?>
     <?php if (isMultiBlog() && $article): ?>
-      <div id="blog-missing-category-group" style="margin-top:.75rem"<?= ($articleIsMovingToSelectedBlog && $initialMissingCategoryName !== '') ? '' : ' hidden' ?>>
+      <div id="blog-missing-category-group" class="blog-form-missing-taxonomy"<?= ($articleIsMovingToSelectedBlog && $initialMissingCategoryName !== '') ? '' : ' hidden' ?>>
         <p id="blog-missing-category-description" class="field-help">
           <?php if ($articleIsMovingToSelectedBlog && $initialMissingCategoryName !== ''): ?>
             Původní kategorie článku „<?= h($initialMissingCategoryName) ?>“ v cílovém blogu neexistuje.
@@ -404,14 +404,14 @@ adminHeader($pageTitle);
           <input type="radio" id="missing-category-action-drop" name="missing_category_action" value="drop"
                  <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
                  <?= $err === 'missing_category_action' && $initialCanCreateTargetTaxonomies ? '' : ' checked' ?>>
-          <label for="missing-category-action-drop" style="display:inline;font-weight:normal">Bez kategorie</label>
+          <label for="missing-category-action-drop" class="admin-checkbox-label">Bez kategorie</label>
         </div>
         <?php if ($canCreateTaxonomiesAnywhere): ?>
           <div id="blog-missing-category-create-option"<?= $initialCanCreateTargetTaxonomies ? '' : ' hidden' ?>>
             <input type="radio" id="missing-category-action-create" name="missing_category_action" value="create"
                    <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
                    <?= $err === 'missing_category_action' && $initialCanCreateTargetTaxonomies ? ' checked' : '' ?>>
-            <label for="missing-category-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící kategorii v cílovém blogu</label>
+            <label for="missing-category-action-create" class="admin-checkbox-label">Vytvořit chybějící kategorii v cílovém blogu</label>
           </div>
         <?php endif; ?>
         <small id="blog-missing-category-help" class="field-help">Tato volba řeší jen původní kategorii článku, která v cílovém blogu zatím neexistuje.</small>
@@ -420,11 +420,11 @@ adminHeader($pageTitle);
     <?php endif; ?>
   </fieldset>
 
-  <fieldset id="article-tags-fieldset" style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help blog-taxonomy-transfer-help' . ($err === 'tags_target' ? ' blog-tags-error' : '') . '"' : ($err === 'tags_target' ? ' aria-describedby="blog-tags-error"' : '') ?>>
+  <fieldset id="article-tags-fieldset" class="blog-form-fieldset"<?= empty($allTags) ? ' hidden' : '' ?><?= isMultiBlog() ? ' aria-describedby="blog-tags-help blog-taxonomy-transfer-help' . ($err === 'tags_target' ? ' blog-tags-error' : '') . '"' : ($err === 'tags_target' ? ' aria-describedby="blog-tags-error"' : '') ?>>
     <legend>Štítky článku</legend>
     <div id="article-tags-options">
       <?php foreach ($allTags as $tag): ?>
-        <label style="display:inline-block;margin-right:1rem;font-weight:normal">
+        <label class="blog-form-tag-label">
           <input type="checkbox" name="tags[]" value="<?= (int)$tag['id'] ?>"
                  <?= in_array((int)$tag['id'], $initialTagIds, true) ? 'checked' : '' ?>>
           <?= h($tag['name']) ?>
@@ -438,7 +438,7 @@ adminHeader($pageTitle);
       <small id="blog-tags-error" class="field-help field-error"><?= h($fieldErrorMessages['tags_target']) ?></small>
     <?php endif; ?>
     <?php if (isMultiBlog() && $article): ?>
-      <div id="blog-missing-tags-group" style="margin-top:.75rem"<?= ($articleIsMovingToSelectedBlog && $initialMissingTagNames !== []) ? '' : ' hidden' ?>>
+      <div id="blog-missing-tags-group" class="blog-form-missing-taxonomy"<?= ($articleIsMovingToSelectedBlog && $initialMissingTagNames !== []) ? '' : ' hidden' ?>>
         <p id="blog-missing-tags-description" class="field-help">
           <?php if ($articleIsMovingToSelectedBlog && $initialMissingTagNames !== []): ?>
             V cílovém blogu chybí původní štítky: <?= h(implode(', ', $initialMissingTagNames)) ?>.
@@ -448,14 +448,14 @@ adminHeader($pageTitle);
           <input type="radio" id="missing-tags-action-drop" name="missing_tags_action" value="drop"
                  <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
                  <?= $err === 'missing_tags_action' && $initialCanCreateTargetTaxonomies ? '' : ' checked' ?>>
-          <label for="missing-tags-action-drop" style="display:inline;font-weight:normal">Bez chybějících štítků</label>
+          <label for="missing-tags-action-drop" class="admin-checkbox-label">Bez chybějících štítků</label>
         </div>
         <?php if ($canCreateTaxonomiesAnywhere): ?>
           <div id="blog-missing-tags-create-option"<?= $initialCanCreateTargetTaxonomies ? '' : ' hidden' ?>>
             <input type="radio" id="missing-tags-action-create" name="missing_tags_action" value="create"
                    <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
                    <?= $err === 'missing_tags_action' && $initialCanCreateTargetTaxonomies ? ' checked' : '' ?>>
-            <label for="missing-tags-action-create" style="display:inline;font-weight:normal">Vytvořit chybějící štítky v cílovém blogu</label>
+            <label for="missing-tags-action-create" class="admin-checkbox-label">Vytvořit chybějící štítky v cílovém blogu</label>
           </div>
         <?php endif; ?>
         <small id="blog-missing-tags-help" class="field-help">Tato volba se týká jen původních štítků, které v cílovém blogu zatím neexistují.</small>
@@ -491,7 +491,7 @@ adminHeader($pageTitle);
       <small id="blog-image-help" class="field-help">Volitelné. Hodí se pro úvodní náhled článku.</small>
     <?php endif; ?>
     <?php if (!empty($article['image_file'])): ?>
-      <label style="font-weight:normal;margin-top:.3rem">
+      <label class="blog-form-checkbox-row">
         <input type="checkbox" name="image_delete" value="1"> Smazat stávající obrázek
       </label>
     <?php endif; ?>
@@ -499,7 +499,7 @@ adminHeader($pageTitle);
     <label for="publish_at">Plánované publikování</label>
     <input type="datetime-local" id="publish_at" name="publish_at"
            <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['blog-publish-at-help'], 'blog-publish-at-error') ?>
-           style="width:auto" value="<?= h($publishAtInput) ?>">
+           class="admin-input-auto" value="<?= h($publishAtInput) ?>">
     <small id="blog-publish-at-help" class="field-help">Nechte prázdné, pokud se má článek zveřejnit hned.</small>
     <?php if (adminFieldHasError('publish_at', $err, $fieldErrorMap)): ?>
       <small id="blog-publish-at-error" class="field-help field-error">
@@ -510,7 +510,7 @@ adminHeader($pageTitle);
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['blog-unpublish-at-help'], 'blog-unpublish-at-error') ?>
-           style="width:auto" value="<?= h(!empty($article['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$article['unpublish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(!empty($article['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$article['unpublish_at'])) : '') ?>">
     <small id="blog-unpublish-at-help" class="field-help">Volitelné. Článek se v zadaný čas automaticky skryje z veřejného webu.</small>
     <?php if (adminFieldHasError('unpublish_at', $err, $fieldErrorMap)): ?>
       <small id="blog-unpublish-at-error" class="field-help field-error">
@@ -519,51 +519,51 @@ adminHeader($pageTitle);
     <?php endif; ?>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="blog-form-fieldset">
     <legend>Komentáře</legend>
     <div>
       <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1" aria-describedby="blog-comments-help"
              <?= $defaultCommentsEnabled === 1 ? 'checked' : '' ?>>
-      <label for="comments_enabled" style="display:inline;font-weight:normal">
+      <label for="comments_enabled" class="admin-checkbox-label">
         Povolit komentáře u tohoto článku
       </label>
     </div>
     <small id="blog-comments-help" class="field-help">Globální pravidla moderace nastavíte v základním nastavení webu.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="blog-form-fieldset">
     <legend>Zvýraznění v blogu</legend>
     <div>
       <input type="checkbox" id="is_featured_in_blog" name="is_featured_in_blog" value="1" aria-describedby="blog-featured-help"
              <?= (int)($article['is_featured_in_blog'] ?? 0) === 1 ? 'checked' : '' ?>>
-      <label for="is_featured_in_blog" style="display:inline;font-weight:normal">
+      <label for="is_featured_in_blog" class="admin-checkbox-label">
         Zvýraznit jako doporučený článek tohoto blogu
       </label>
     </div>
     <small id="blog-featured-help" class="field-help">Na hlavním indexu blogu se bez aktivních filtrů zobrazí jako doporučený článek jen jedna položka. Pokud tuto volbu zapnete zde, předchozí doporučený článek stejného blogu se automaticky vypne.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="blog-form-fieldset blog-form-fieldset--seo">
     <legend>Vyhledávače a sdílení</legend>
-    <small id="blog-seo-help" class="field-help" style="margin-top:0">Nepovinné. Ponechte prázdné pro automatické hodnoty.</small>
+    <small id="blog-seo-help" class="field-help field-help--flush">Nepovinné. Ponechte prázdné pro automatické hodnoty.</small>
     <label for="meta_title">Meta titulek</label>
     <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-seo-help"
            value="<?= h($article['meta_title'] ?? '') ?>">
 
     <label for="meta_description">Meta popis</label>
     <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="blog-seo-help"
-              style="min-height:0"><?= h($article['meta_description'] ?? '') ?></textarea>
+              class="admin-textarea-compact"><?= h($article['meta_description'] ?? '') ?></textarea>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="blog-form-fieldset">
     <legend>Interní poznámka</legend>
     <label for="admin_note" class="visually-hidden">Interní poznámka</label>
     <textarea id="admin_note" name="admin_note" rows="2" aria-describedby="admin-note-help"
-              style="min-height:0"><?= h($article['admin_note'] ?? '') ?></textarea>
+              class="admin-textarea-compact"><?= h($article['admin_note'] ?? '') ?></textarea>
     <small id="admin-note-help" class="field-help">Viditelná jen v administraci. Na veřejném webu se nezobrazuje.</small>
   </fieldset>
 
-  <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="blog-form-fieldset">
     <legend>Stav článku</legend>
     <label for="article_status" class="visually-hidden">Stav článku</label>
     <select id="article_status" name="article_status" aria-describedby="article-status-help">
@@ -576,13 +576,13 @@ adminHeader($pageTitle);
     <small id="article-status-help" class="field-help">Koncept je viditelný jen v administraci. Čeká na schválení upozorní správce.</small>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row blog-form-actions">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
-    <a href="<?= h($articleListUrl) ?>" style="margin-left:1rem">Zrušit</a>
+    <a href="<?= h($articleListUrl) ?>">Zrušit</a>
     <?php if ($article && !empty($article['preview_token'])): ?>
-      <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer" style="margin-left:1rem">Náhled</a>
+      <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
     <?php elseif ($article): ?>
-      <small style="margin-left:1rem;color:#666">(Uložte pro aktivaci odkazu „Náhled“)</small>
+      <small class="blog-form-preview-note">(Uložte pro aktivaci odkazu „Náhled“)</small>
     <?php endif; ?>
   </div>
 </form>
@@ -877,7 +877,7 @@ adminHeader($pageTitle);
         tagsFieldset.hidden = false;
         tagsContainer.innerHTML = tags.map((tag) => {
             const checked = selectedTags.has(Number(tag.id)) ? ' checked' : '';
-            return '<label style="display:inline-block;margin-right:1rem;font-weight:normal">'
+            return '<label class="blog-form-tag-label">'
                 + '<input type="checkbox" name="tags[]" value="' + String(tag.id) + '"' + checked + '>'
                 + ' ' + String(tag.name)
                 + '</label>';
@@ -937,9 +937,9 @@ adminHeader($pageTitle);
 (function () {
     const textarea = document.getElementById('content');
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'background:#fff;border:1px solid #ccc;margin-top:.2rem;min-height:300px';
+    wrapper.className = 'blog-form-wysiwyg-wrapper';
     textarea.parentNode.insertBefore(wrapper, textarea);
-    textarea.style.display = 'none';
+    textarea.hidden = true;
 
     const quill = new Quill(wrapper, {
         theme: 'snow',
