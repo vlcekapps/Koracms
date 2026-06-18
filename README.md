@@ -421,6 +421,8 @@ Editor anket v administraci používá pro přidávání a odebírání možnost
 
 Rezervační formuláře v administraci používají stejný princip pro přepínání typu zákazníka, práci se sloty a blokovanými dny. Runtime audit navíc hlídá, aby se do admin PHP souborů nevracely inline `onclick`, `onchange`, `onsubmit` ani `oninput` atributy.
 
+Editor formulářů v administraci používá sdílené admin CSS třídy pro základní nastavení formuláře, potvrzovací e-mail, webhooky, editor polí i náhled potvrzení. Form builder tak zůstává bez lokálních `style` atributů a runtime audit hlídá, aby se tento vzor nevrátil.
+
 Administrátorský dashboard používá sdílené panely, karty a sémantický `<progress>` pro mini graf návštěvnosti místo lokálních `style` atributů. Runtime audit tím drží i hlavní přehled administrace v linii postupného zpřísňování CSP.
 
 Přihlašovací obrazovky administrace včetně 2FA používají sdílený CSS helper s CSP nonce místo duplicitních lokálních `<style>` bloků. Tím zůstává skip link, viditelný focus i TOTP pole konzistentní bez dalšího inline stylového driftu.

@@ -12469,6 +12469,32 @@ if (!str_contains($formBuilderSource, '$flash = is_array($_SESSION[\'form_flash\
     || !str_contains($formBuilderSource, '<p class="success" role="status"><?= h($successMessage) ?></p>')) {
     $adminFieldErrorIssues[] = 'form builder is missing success flash handling after save';
 }
+if (str_contains($formBuilderSource, '<style') || preg_match('/<[^>]+\sstyle=/i', $formBuilderSource) === 1 || str_contains($formBuilderSource, '.style')) {
+    $adminFieldErrorIssues[] = 'form builder still contains local style blocks, inline style attributes or JS style mutations';
+}
+foreach ([
+    'class="form-builder-row"',
+    'class="form-builder-preview"',
+    'class="form-builder-action-grid"',
+    'class="form-builder-field-grid"',
+    'class="form-builder-condition-grid"',
+    'class="form-builder-new-field"',
+] as $formBuilderUtilityFragment) {
+    if (!str_contains($formBuilderSource, $formBuilderUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'form builder is missing shared style fragment: ' . $formBuilderUtilityFragment;
+    }
+}
+foreach ([
+    '.form-builder-row',
+    '.form-builder-preview',
+    '.form-builder-field-grid',
+    '.form-builder-condition-grid',
+    '.form-builder-new-field',
+] as $formBuilderLayoutFragment) {
+    if (!str_contains($adminLayoutSource, $formBuilderLayoutFragment)) {
+        $adminFieldErrorIssues[] = 'admin layout is missing form builder style fragment: ' . $formBuilderLayoutFragment;
+    }
+}
 if (!str_contains($formSaveSource, 'adminAvailableSubmitterEmailFields') || !str_contains($formSaveSource, '$presetSubmitterEmailField') || !str_contains($formSaveSource, '$existingSubmitterEmailField')) {
     $adminFieldErrorIssues[] = 'form save is missing fallback resolution for submitter confirmation email field';
 }

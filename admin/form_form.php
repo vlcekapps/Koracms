@@ -154,12 +154,12 @@ adminHeader($pageTitle);
 <?php else: ?>
   <p class="section-subtitle">Nejdřív vytvořte základ formuláře. Hned po uložení budete moci přidat jeho pole, sekce, podmínky zobrazení, rozložení polí, přílohy, potvrzovací e-mail i navazující kroky po odeslání.</p>
   <?php if ($presetDefinition !== null): ?>
-    <div class="notice notice-info" style="margin-bottom:1rem">
+    <div class="notice notice-info form-builder-preset">
       <p><strong>Šablona:</strong> <?= h((string)$presetDefinition['label']) ?></p>
       <p><?= h((string)$presetDefinition['description']) ?></p>
       <?php if (!empty($presetDefinition['fields'])): ?>
-        <p class="field-help" style="margin-bottom:.5rem">Po prvním uložení se automaticky přidají tato pole:</p>
-        <ul class="field-help" style="margin:0;padding-left:1.25rem">
+        <p class="field-help form-builder-preset-list-intro">Po prvním uložení se automaticky přidají tato pole:</p>
+        <ul class="field-help form-builder-preset-list">
           <?php foreach ($presetDefinition['fields'] as $presetField): ?>
             <li><?= h((string)$presetField['label']) ?> (<?= h(formFieldTypeLabel((string)$presetField['field_type'])) ?>)</li>
           <?php endforeach; ?>
@@ -181,56 +181,56 @@ adminHeader($pageTitle);
   <fieldset>
     <legend>Základní údaje formuláře</legend>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="title">Název formuláře <span aria-hidden="true">*</span></label>
       <input type="text" id="title" name="title" required aria-required="true"
              maxlength="255"<?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
-             value="<?= h((string)($form['title'] ?? ($formDefaults['title'] ?? ''))) ?>" style="width:100%;max-width:500px">
+             value="<?= h((string)($form['title'] ?? ($formDefaults['title'] ?? ''))) ?>" class="form-builder-control-md">
       <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="slug">Slug (URL)</label>
       <input type="text" id="slug" name="slug" maxlength="255"
              <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['slug-help']) ?>
-             value="<?= h((string)($form['slug'] ?? ($formDefaults['slug'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             value="<?= h((string)($form['slug'] ?? ($formDefaults['slug'] ?? ''))) ?>" class="form-builder-control-md"
              >
       <small id="slug-help" class="field-help">Necháte-li prázdné, adresa se vytvoří automaticky podle názvu formuláře.</small>
       <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="description">Popis formuláře</label>
-      <textarea id="description" name="description" rows="3" style="width:100%;max-width:500px"><?= h((string)($form['description'] ?? ($formDefaults['description'] ?? ''))) ?></textarea>
+      <textarea id="description" name="description" rows="3" class="form-builder-control-md"><?= h((string)($form['description'] ?? ($formDefaults['description'] ?? ''))) ?></textarea>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="submit_label">Text tlačítka pro odeslání</label>
       <input type="text" id="submit_label" name="submit_label" maxlength="100"
-             value="<?= h((string)($form['submit_label'] ?? ($formDefaults['submit_label'] ?? 'Odeslat formulář'))) ?>" style="width:100%;max-width:500px"
+             value="<?= h((string)($form['submit_label'] ?? ($formDefaults['submit_label'] ?? 'Odeslat formulář'))) ?>" class="form-builder-control-md"
              aria-describedby="submit-label-help">
       <small id="submit-label-help" class="field-help">Například „Odeslat hlášení“, „Nahlásit chybu“ nebo „Poslat zprávu“.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="notification_email">E-mail pro notifikaci</label>
       <input type="email" id="notification_email" name="notification_email" maxlength="255"
              <?= adminFieldAttributes('notification_email', $err, $fieldErrorMap, ['notification-email-help']) ?>
-             value="<?= h((string)($form['notification_email'] ?? ($formDefaults['notification_email'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             value="<?= h((string)($form['notification_email'] ?? ($formDefaults['notification_email'] ?? ''))) ?>" class="form-builder-control-md"
              autocomplete="email">
       <small id="notification-email-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se hlavní administrátorský nebo kontaktní e-mail webu.</small>
       <?php adminRenderFieldError('notification_email', $err, $fieldErrorMap, $fieldErrorMessages['notification_email']); ?>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="notification_subject">Předmět notifikačního e-mailu</label>
       <input type="text" id="notification_subject" name="notification_subject" maxlength="255"
-             value="<?= h((string)($form['notification_subject'] ?? ($formDefaults['notification_subject'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             value="<?= h((string)($form['notification_subject'] ?? ($formDefaults['notification_subject'] ?? ''))) ?>" class="form-builder-control-md"
              aria-describedby="notification-subject-help">
       <small id="notification-subject-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se výchozí předmět podle názvu formuláře.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="is_active">
         <input type="checkbox" id="is_active" name="is_active" value="1"<?= ((int)($form['is_active'] ?? ($formDefaults['is_active'] ?? 1)) === 1) ? ' checked' : '' ?> aria-describedby="is-active-help">
         Zveřejnit formulář na webu
@@ -238,7 +238,7 @@ adminHeader($pageTitle);
       <small id="is-active-help" class="field-help">Neaktivní formulář zůstane uložený, ale návštěvníci ho na webu neuvidí.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="show_in_nav">
         <input type="checkbox" id="show_in_nav" name="show_in_nav" value="1"<?= ((int)($form['show_in_nav'] ?? ($formDefaults['show_in_nav'] ?? 0)) === 1) ? ' checked' : '' ?> aria-describedby="show-in-nav-help">
         Zobrazit formulář v navigaci webu
@@ -246,7 +246,7 @@ adminHeader($pageTitle);
       <small id="show-in-nav-help" class="field-help">Použije se jen u aktivního formuláře. Skutečné pořadí v menu upravíte na stránce <a href="<?= BASE_URL ?>/admin/menu.php">Navigace webu</a>.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="use_honeypot">
         <input type="checkbox" id="use_honeypot" name="use_honeypot" value="1"<?= ((int)($form['use_honeypot'] ?? ($formDefaults['use_honeypot'] ?? 1)) === 1) ? ' checked' : '' ?> aria-describedby="use-honeypot-help">
         Použít antispam honeypot
@@ -258,7 +258,7 @@ adminHeader($pageTitle);
   <fieldset>
     <legend>Potvrzení odesílateli</legend>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="submitter_confirmation_enabled">
         <input type="checkbox" id="submitter_confirmation_enabled" name="submitter_confirmation_enabled" value="1"<?= ((int)($form['submitter_confirmation_enabled'] ?? ($formDefaults['submitter_confirmation_enabled'] ?? 0)) === 1) ? ' checked' : '' ?> aria-describedby="submitter-confirmation-enabled-help">
         Poslat odesílateli potvrzovací e-mail
@@ -266,11 +266,11 @@ adminHeader($pageTitle);
       <small id="submitter-confirmation-enabled-help" class="field-help">Volitelné. Po odeslání formuláře odešle potvrzení na e-mail vybraný v jednom z polí formuláře.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="submitter_email_field">Pole s e-mailovou adresou odesílatele</label>
       <select id="submitter_email_field" name="submitter_email_field"
               <?= adminFieldAttributes('submitter_email_field', $err, $fieldErrorMap, ['submitter-email-field-help']) ?>
-              style="width:100%;max-width:500px">
+              class="form-builder-control-md">
         <option value="">Nevybráno</option>
         <?php foreach ($emailFieldOptions as $fieldName => $fieldLabel): ?>
           <option value="<?= h($fieldName) ?>"<?= $submitterEmailFieldValue === $fieldName ? ' selected' : '' ?>><?= h($fieldLabel) ?> (<?= h($fieldName) ?>)</option>
@@ -280,38 +280,38 @@ adminHeader($pageTitle);
       <?php adminRenderFieldError('submitter_email_field', $err, $fieldErrorMap, $fieldErrorMessages['submitter_email_field']); ?>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="submitter_confirmation_subject">Předmět potvrzovacího e-mailu</label>
       <input type="text" id="submitter_confirmation_subject" name="submitter_confirmation_subject" maxlength="255"
-             value="<?= h($submitterConfirmationSubjectValue) ?>" style="width:100%;max-width:500px"
+             value="<?= h($submitterConfirmationSubjectValue) ?>" class="form-builder-control-md"
              aria-describedby="submitter-confirmation-subject-help">
       <small id="submitter-confirmation-subject-help" class="field-help">Volitelné. Když pole necháte prázdné, použije se výchozí předmět podle názvu formuláře. Ukázku vidíte hned níže.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="submitter_confirmation_message">Text potvrzovacího e-mailu</label>
-      <textarea id="submitter_confirmation_message" name="submitter_confirmation_message" rows="6" style="width:100%;max-width:700px"
+      <textarea id="submitter_confirmation_message" name="submitter_confirmation_message" rows="6" class="form-builder-control-lg"
                 aria-describedby="submitter-confirmation-message-help"><?= h($submitterConfirmationMessageValue) ?></textarea>
       <small id="submitter-confirmation-message-help" class="field-help">Můžete použít zástupné proměnné <code>{{site_name}}</code>, <code>{{form_title}}</code>, <code>{{success_message}}</code>, <code>{{submission_date}}</code>, <code>{{submission_reference}}</code> a také <code>{{field:nazev_pole}}</code> podle interního klíče pole.</small>
     </div>
 
-    <section id="submitter-confirmation-preview" aria-labelledby="submitter-confirmation-preview-title" style="margin-top:1rem;border:1px solid #d6d6d6;border-radius:8px;padding:1rem;background:#fafafa">
-      <h3 id="submitter-confirmation-preview-title" style="margin-top:0">Ukázka potvrzovacího e-mailu</h3>
-      <p class="field-help" style="margin-top:0">Ukázka používá názvy a vzorová data z aktuálně uložených nebo předpřipravených polí formuláře.</p>
+    <section id="submitter-confirmation-preview" aria-labelledby="submitter-confirmation-preview-title" class="form-builder-preview">
+      <h3 id="submitter-confirmation-preview-title" class="form-builder-preview-title">Ukázka potvrzovacího e-mailu</h3>
+      <p class="field-help form-builder-help-flush">Ukázka používá názvy a vzorová data z aktuálně uložených nebo předpřipravených polí formuláře.</p>
 
-      <div style="margin-bottom:.75rem">
+      <div class="form-builder-row">
         <strong>Předmět</strong>
-        <div id="submitter-confirmation-subject-preview" style="margin-top:.35rem;padding:.65rem .75rem;border:1px solid #d6d6d6;border-radius:6px;background:#fff"><?= nl2br(h($submitterConfirmationPreview['subject'])) ?></div>
+        <div id="submitter-confirmation-subject-preview" class="form-builder-preview-box"><?= nl2br(h($submitterConfirmationPreview['subject'])) ?></div>
       </div>
 
-      <div style="margin-bottom:.75rem">
+      <div class="form-builder-row">
         <strong>Text zprávy</strong>
-        <pre id="submitter-confirmation-message-preview" style="margin:.35rem 0 0;padding:.75rem;border:1px solid #d6d6d6;border-radius:6px;background:#fff;white-space:pre-wrap;font:inherit"><?= h($submitterConfirmationPreview['message']) ?></pre>
+        <pre id="submitter-confirmation-message-preview" class="form-builder-preview-message"><?= h($submitterConfirmationPreview['message']) ?></pre>
       </div>
 
       <details>
         <summary>Dostupné proměnné a jejich ukázkové hodnoty</summary>
-        <ul style="margin:.75rem 0 0;padding-left:1.25rem">
+        <ul class="form-builder-placeholder-list">
           <?php foreach ($submitterConfirmationPreview['placeholder_map'] as $token => $sampleValue): ?>
             <li><code><?= h($token) ?></code> = <?= h($sampleValue !== '' ? $sampleValue : '—') ?></li>
           <?php endforeach; ?>
@@ -324,16 +324,16 @@ adminHeader($pageTitle);
     <legend>Po odeslání formuláře</legend>
     <p class="field-help">Tady určíte, co návštěvník uvidí po úspěšném odeslání a jaké další kroky mu formulář nabídne.</p>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="success_message">Zpráva po odeslání</label>
-      <textarea id="success_message" name="success_message" rows="2" style="width:100%;max-width:700px"
+      <textarea id="success_message" name="success_message" rows="2" class="form-builder-control-lg"
                 aria-describedby="success-help"><?= h((string)($form['success_message'] ?? ($formDefaults['success_message'] ?? 'Formulář byl úspěšně odeslán. Děkujeme!'))) ?></textarea>
       <small id="success-help" class="field-help">Zobrazí se návštěvníkovi tehdy, když po odeslání zůstane na stránce formuláře.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="success_behavior">Režim po odeslání</label>
-      <select id="success_behavior" name="success_behavior" aria-describedby="success-behavior-help" style="width:100%;max-width:500px">
+      <select id="success_behavior" name="success_behavior" aria-describedby="success-behavior-help" class="form-builder-control-md">
         <?php foreach ($successBehaviors as $successBehaviorKey => $successBehaviorDefinition): ?>
           <option value="<?= h($successBehaviorKey) ?>"<?= $successBehaviorValue === $successBehaviorKey ? ' selected' : '' ?>><?= h((string)$successBehaviorDefinition['label']) ?></option>
         <?php endforeach; ?>
@@ -341,15 +341,15 @@ adminHeader($pageTitle);
       <small id="success-behavior-help" class="field-help">Přesměrování použijte tehdy, když má návštěvník po odeslání pokračovat na jiné interní stránce. Jinak může zůstat na místě a uvidí potvrzení i volitelná tlačítka.</small>
     </div>
 
-    <div data-after-submit-redirect style="margin-bottom:.75rem">
+    <div data-after-submit-redirect class="form-builder-row">
       <label for="redirect_url">Kam přesměrovat po odeslání</label>
       <input type="text" id="redirect_url" name="redirect_url" maxlength="500"
-             value="<?= h((string)($form['redirect_url'] ?? ($formDefaults['redirect_url'] ?? ''))) ?>" style="width:100%;max-width:500px"
+             value="<?= h((string)($form['redirect_url'] ?? ($formDefaults['redirect_url'] ?? ''))) ?>" class="form-builder-control-md"
              aria-describedby="redirect-url-help" placeholder="/dekujeme">
       <small id="redirect-url-help" class="field-help">Zadejte interní cestu v rámci webu, například <code>/dekujeme</code>. Použije se jen v režimu přesměrování.</small>
     </div>
 
-    <div data-after-submit-actions style="display:grid;grid-template-columns:minmax(14rem,1fr) minmax(18rem,1.2fr);gap:.75rem;align-items:end;margin-top:.5rem">
+    <div data-after-submit-actions class="form-builder-action-grid">
       <div>
         <label for="success_primary_label">Primární tlačítko po odeslání</label>
         <input type="text" id="success_primary_label" name="success_primary_label" maxlength="120"
@@ -386,7 +386,7 @@ adminHeader($pageTitle);
     <legend>Webhooky a automatizace</legend>
     <p class="field-help">Webhook umí po klíčových událostech formuláře poslat JSON do externí služby, třeba do vlastního issue trackeru, automatizačního nástroje nebo helpdesku.</p>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="webhook_enabled">
         <input type="checkbox" id="webhook_enabled" name="webhook_enabled" value="1"<?= $webhookEnabledValue ? ' checked' : '' ?> aria-describedby="webhook-enabled-help">
         Zapnout webhook pro tento formulář
@@ -394,31 +394,31 @@ adminHeader($pageTitle);
       <small id="webhook-enabled-help" class="field-help">Když je webhook vypnutý, formulář funguje normálně dál a žádná data nikam neposílá.</small>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="webhook_url">Adresa webhooku</label>
       <input type="url" id="webhook_url" name="webhook_url" maxlength="500"
              <?= adminFieldAttributes('webhook_url', $err, $fieldErrorMap, ['webhook-url-help']) ?>
-             value="<?= h($webhookUrlValue) ?>" style="width:100%;max-width:52rem"
+             value="<?= h($webhookUrlValue) ?>" class="form-builder-control-xl"
              placeholder="https://example.test/hooks/forms">
       <small id="webhook-url-help" class="field-help">Použijte HTTPS adresu služby, která má přijímat JSON POST. Lokální a privátní adresy formulář z bezpečnostních důvodů nepovolí.</small>
       <?php adminRenderFieldError('webhook_url', $err, $fieldErrorMap, $fieldErrorMessages['webhook_url']); ?>
     </div>
 
-    <div style="margin-bottom:.75rem">
+    <div class="form-builder-row">
       <label for="webhook_secret">Tajný klíč pro podpis</label>
       <input type="text" id="webhook_secret" name="webhook_secret" maxlength="255"
-             value="<?= h($webhookSecretValue) ?>" style="width:100%;max-width:32rem"
+             value="<?= h($webhookSecretValue) ?>" class="form-builder-control-secret"
              aria-describedby="webhook-secret-help" autocomplete="off">
       <small id="webhook-secret-help" class="field-help">Volitelné. Pokud ho vyplníte, webhook dostane hlavičku <code>X-Kora-Signature</code> s HMAC SHA-256 podpisem.</small>
     </div>
 
-    <fieldset style="border:1px solid #ddd;padding:.75rem 1rem">
+    <fieldset class="form-builder-event-fieldset">
       <legend>Kdy webhook spustit</legend>
-      <p class="field-help" style="margin-top:0">Vyberte události, které mají do externí služby posílat nový payload.</p>
+      <p class="field-help form-builder-help-flush">Vyberte události, které mají do externí služby posílat nový payload.</p>
       <?php foreach ($webhookEventDefinitions as $webhookEventKey => $webhookEventDefinition): ?>
         <?php $webhookEventId = 'webhook-event-' . preg_replace('/[^a-z0-9_-]+/i', '-', $webhookEventKey); ?>
-        <div style="margin:.35rem 0">
-          <label for="<?= h($webhookEventId) ?>" style="font-weight:normal">
+        <div class="form-builder-event-row">
+          <label for="<?= h($webhookEventId) ?>" class="admin-checkbox-label">
             <input type="checkbox"
                    id="<?= h($webhookEventId) ?>"
                    name="webhook_events[]"
@@ -444,10 +444,10 @@ adminHeader($pageTitle);
     <div id="fields-container">
       <?php foreach ($fields as $i => $field): ?>
         <?php $fieldEditorContext = $fieldEditorLegend($field, $i); ?>
-        <fieldset class="field-row" style="border:1px solid #d6d6d6;border-radius:8px;padding:.75rem;margin-bottom:.75rem;background:#fafafa">
+        <fieldset class="field-row form-builder-field-card">
           <legend class="sr-only"><?= h($fieldEditorContext) ?></legend>
           <input type="hidden" name="fields[<?= $i ?>][id]" value="<?= (int)$field['id'] ?>">
-          <div style="display:grid;grid-template-columns:minmax(12rem,1.4fr) minmax(10rem,.9fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(11rem,.9fr) 6rem;gap:.5rem;align-items:end">
+          <div class="form-builder-field-grid">
             <div>
               <label for="field-label-<?= $i ?>">Popisek <span aria-hidden="true">*</span></label>
               <input type="text" id="field-label-<?= $i ?>" name="fields[<?= $i ?>][label]" required
@@ -485,10 +485,10 @@ adminHeader($pageTitle);
             <div>
               <label for="field-sort-<?= $i ?>">Pořadí</label>
               <input type="number" id="field-sort-<?= $i ?>" name="fields[<?= $i ?>][sort_order]" min="0"
-                     value="<?= (int)$field['sort_order'] ?>" style="width:5rem">
+                     value="<?= (int)$field['sort_order'] ?>" class="admin-input-xs">
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr) minmax(10rem,.8fr) minmax(11rem,.9fr);gap:.5rem;align-items:end;margin-top:.5rem">
+          <div class="form-builder-field-grid form-builder-field-grid--secondary">
             <div>
               <label for="field-default-value-<?= $i ?>">Výchozí hodnota</label>
               <input type="text" id="field-default-value-<?= $i ?>" name="fields[<?= $i ?>][default_value]"
@@ -506,7 +506,7 @@ adminHeader($pageTitle);
             <div>
               <label for="field-max-size-<?= $i ?>">Max. velikost souboru (MB)</label>
               <input type="number" id="field-max-size-<?= $i ?>" name="fields[<?= $i ?>][max_file_size_mb]" min="1" max="100"
-                     value="<?= (int)($field['max_file_size_mb'] ?? 10) ?>" style="width:7rem"
+                     value="<?= (int)($field['max_file_size_mb'] ?? 10) ?>" class="form-builder-input-sm"
                      aria-describedby="field-max-size-help-<?= $i ?>">
               <small id="field-max-size-help-<?= $i ?>" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
             </div>
@@ -520,7 +520,7 @@ adminHeader($pageTitle);
               <small id="field-layout-width-help-<?= $i ?>" class="field-help">Určuje šířku pole na veřejné stránce formuláře.</small>
             </div>
           </div>
-          <div data-condition-row style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,.9fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
+          <div data-condition-row class="form-builder-condition-grid">
             <div>
               <label for="field-show-if-field-<?= $i ?>">Zobrazit jen když</label>
               <select id="field-show-if-field-<?= $i ?>" name="fields[<?= $i ?>][show_if_field]" aria-describedby="field-show-if-field-help-<?= $i ?>">
@@ -548,7 +548,7 @@ adminHeader($pageTitle);
               <small id="field-show-if-value-help-<?= $i ?>" class="field-help">Pro více hodnot použijte oddělovač <code>|</code>. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
             </div>
           </div>
-          <div style="margin-top:.5rem;display:flex;gap:1rem;align-items:center">
+          <div class="form-builder-check-row">
             <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?> aria-label="<?= h('Povinné pole: ' . $fieldEditorContext) ?>"> Povinné pole</label>
             <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?> aria-label="<?= h('Povolit více souborů: ' . $fieldEditorContext) ?>"> Povolit více souborů</label>
             <label><input type="checkbox" name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field['start_new_row'] ?? 0) === 1 ? ' checked' : '' ?> aria-label="<?= h('Začít na novém řádku: ' . $fieldEditorContext) ?>"> Začít na novém řádku</label>
@@ -560,9 +560,9 @@ adminHeader($pageTitle);
 
     <h3>Přidat nové pole</h3>
     <p class="field-help">Nové pole se po uložení přidá na konec formuláře. Typ <strong>Sekce formuláře</strong> použijte pro nový blok s mezititulkem a nápovědou. Pořadí, šířku i řádek pak můžete případně upravit přímo tady.</p>
-    <fieldset style="border:1px dashed #b8b0a4;border-radius:8px;padding:.75rem;background:#fff">
+    <fieldset class="form-builder-new-field">
       <legend class="sr-only">Nastavení nového pole formuláře</legend>
-      <div style="display:grid;grid-template-columns:minmax(12rem,1.4fr) minmax(10rem,.9fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(11rem,.9fr) 6rem;gap:.5rem;align-items:end">
+      <div class="form-builder-field-grid">
         <div>
           <label for="new-field-label">Popisek</label>
           <input type="text" id="new-field-label" name="new_field_label">
@@ -592,10 +592,10 @@ adminHeader($pageTitle);
         </div>
         <div>
           <label for="new-field-sort">Pořadí</label>
-          <input type="number" id="new-field-sort" name="new_field_sort" min="0" value="<?= $newFieldDefaultSort ?>" style="width:5rem">
+          <input type="number" id="new-field-sort" name="new_field_sort" min="0" value="<?= $newFieldDefaultSort ?>" class="admin-input-xs">
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,1fr) minmax(10rem,.8fr) minmax(11rem,.9fr);gap:.5rem;align-items:end;margin-top:.5rem">
+      <div class="form-builder-field-grid form-builder-field-grid--secondary">
         <div>
           <label for="new-field-default-value">Výchozí hodnota</label>
           <input type="text" id="new-field-default-value" name="new_field_default_value" aria-describedby="new-field-default-value-help">
@@ -608,7 +608,7 @@ adminHeader($pageTitle);
         </div>
         <div>
           <label for="new-field-max-size">Max. velikost souboru (MB)</label>
-          <input type="number" id="new-field-max-size" name="new_field_max_file_size_mb" min="1" max="100" value="10" style="width:7rem"
+          <input type="number" id="new-field-max-size" name="new_field_max_file_size_mb" min="1" max="100" value="10" class="form-builder-input-sm"
                  aria-describedby="new-field-max-size-help">
           <small id="new-field-max-size-help" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
         </div>
@@ -622,7 +622,7 @@ adminHeader($pageTitle);
           <small id="new-field-layout-width-help" class="field-help">Určuje šířku pole na veřejné stránce formuláře.</small>
         </div>
       </div>
-      <div data-condition-row style="display:grid;grid-template-columns:minmax(12rem,1fr) minmax(12rem,.9fr) minmax(12rem,1fr);gap:.5rem;align-items:end;margin-top:.5rem">
+      <div data-condition-row class="form-builder-condition-grid">
         <div>
           <label for="new-field-show-if-field">Zobrazit jen když</label>
           <select id="new-field-show-if-field" name="new_field_show_if_field" aria-describedby="new-field-show-if-field-help">
@@ -648,10 +648,10 @@ adminHeader($pageTitle);
           <small id="new-field-show-if-value-help" class="field-help">Pro více hodnot použijte oddělovač <code>|</code>. Pro checkbox nebo souhlas použijte <code>1</code>.</small>
         </div>
       </div>
-      <div style="margin-top:.5rem">
+      <div class="form-builder-check-row">
         <label><input type="checkbox" name="new_field_required" value="1" aria-label="Povinné nové pole"> Povinné pole</label>
-        <label style="margin-left:1rem"><input type="checkbox" name="new_field_allow_multiple" value="1" aria-label="Povolit více souborů u nového pole"> Povolit více souborů</label>
-        <label style="margin-left:1rem"><input type="checkbox" name="new_field_start_new_row" value="1" aria-label="Začít nové pole na novém řádku"> Začít na novém řádku</label>
+        <label><input type="checkbox" name="new_field_allow_multiple" value="1" aria-label="Povolit více souborů u nového pole"> Povolit více souborů</label>
+        <label><input type="checkbox" name="new_field_start_new_row" value="1" aria-label="Začít nové pole na novém řádku"> Začít na novém řádku</label>
       </div>
     </fieldset>
   </fieldset>
@@ -659,7 +659,7 @@ adminHeader($pageTitle);
     <p><em>Po vytvoření formuláře budete moci přidat jeho pole, jejich pořadí i potvrzovací zprávu.</em></p>
   <?php endif; ?>
 
-  <div class="button-row" style="margin-top:1rem">
+  <div class="button-row form-builder-actions">
     <button type="submit" class="btn btn-primary"><?= $form ? 'Uložit změny' : 'Vytvořit formulář' ?></button>
     <a href="forms.php" class="btn">Zrušit</a>
   </div>
