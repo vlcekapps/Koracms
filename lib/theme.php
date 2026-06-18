@@ -845,7 +845,12 @@ function themeCssVariablesStyleTag(?string $themeKey = null): string
         return '';
     }
 
-    return "  <style>:root{" . implode(';', $declarations) . ";}</style>\n";
+    $nonce = function_exists('cspNonce') ? cspNonce() : '';
+    $nonceAttribute = $nonce !== ''
+        ? ' nonce="' . htmlspecialchars($nonce, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"'
+        : '';
+
+    return "  <style{$nonceAttribute}>:root{" . implode(';', $declarations) . ";}</style>\n";
 }
 
 function themeDirectoryPath(string $themeKey): string

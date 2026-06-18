@@ -421,6 +421,8 @@ Administrátorský dashboard používá sdílené panely, karty a sémantický `
 
 Kontrola integrity a detail odpovědi formuláře v administraci používají sdílené administrační CSS třídy místo vlastních lokálních `<style>` bloků. Runtime audit hlídá, aby se tyto čistě prezentační styly nevracely přímo do jednotlivých obrazovek.
 
+Veřejná hlavička šablony přidává CSP nonce i k dynamickému `<style>` bloku s theme CSS proměnnými. Díky tomu se vlastní barevné nastavení šablon drží stejného bezpečnostního režimu jako ostatní interní inline styly.
+
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 
 CSP allowlist obsahuje také explicitní zdroje, které CMS samo vkládá pro Google Analytics a volitelný Quill editor. Externí GA/Quill skripty se renderují s nonce a runtime audit hlídá, aby se nové CDN skripty nepřidávaly bez stejné ochrany.

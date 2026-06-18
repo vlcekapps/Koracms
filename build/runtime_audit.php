@@ -24,6 +24,7 @@ $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php')
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
 $paginationSource = (string) file_get_contents(__DIR__ . '/../lib/pagination.php');
 $presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation.php');
+$themeSource = (string) file_get_contents(__DIR__ . '/../lib/theme.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
@@ -9274,6 +9275,10 @@ if (!str_contains($publicHeadSource, '<script async nonce="<?= cspNonce() ?>" sr
     || !str_contains($publicHeadSource, "s.nonce='<?= h(cspNonce()) ?>';")) {
     $contentSecurityPolicyIssues[] = 'public head GA scripts are missing CSP nonce support';
 }
+if (!str_contains($themeSource, '$nonce = function_exists(\'cspNonce\') ? cspNonce() : \'\';')
+    || !str_contains($themeSource, '<style{$nonceAttribute}>:root{')) {
+    $contentSecurityPolicyIssues[] = 'theme CSS variables style tag is missing CSP nonce support';
+}
 if (!str_contains($uiSource, "s.nonce=' . json_encode(\$nonce) . ';")) {
     $contentSecurityPolicyIssues[] = 'cookie banner delayed GA loader is missing CSP nonce support';
 }
@@ -9307,6 +9312,9 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__
 $contentSecurityPolicyProbe = fetchUrl($baseUrl . '/', '', 0);
 $contentSecurityPolicyHeaderFound = false;
 $contentSecurityPolicyReportOnlyHeaderFound = false;
+if (preg_match('/<style\s+nonce="[^"]+">:root\{--/i', $contentSecurityPolicyProbe['body']) !== 1) {
+    $contentSecurityPolicyIssues[] = 'public theme CSS variables are not rendered with a nonce-backed style tag';
+}
 foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
     $normalizedHeader = strtolower((string)$securityHeader);
     if (str_starts_with($normalizedHeader, 'content-security-policy-report-only:')) {
