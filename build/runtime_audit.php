@@ -11203,6 +11203,35 @@ foreach ([
     '.theme-setting-color-row',
     '.theme-package-grid',
     '.theme-package-card',
+    '.integrity-panel',
+    '.integrity-panel--success',
+    '.integrity-panel--warning',
+    '.integrity-panel--danger',
+    '.integrity-panel--info',
+    '.integrity-panel--spaced',
+    '.integrity-actions',
+    '.integrity-result',
+    '.integrity-copy--flush',
+    '.integrity-copy--footer',
+    '.integrity-copy--top',
+    '.integrity-heading--flush',
+    '.integrity-heading--danger',
+    '.integrity-heading--modified',
+    '.integrity-heading--muted',
+    '.form-submission-grid',
+    '.form-submission-field',
+    '.form-submission-field--top',
+    '.form-submission-actions',
+    '.form-submission-actions--compact',
+    '.form-submission-help--spaced',
+    '.form-submission-help--top',
+    '.form-submission-control',
+    '.form-submission-control--sm',
+    '.form-submission-control--md',
+    '.form-submission-control--lg',
+    '.form-submission-history',
+    '.form-submission-history__item',
+    '.form-submission-delete-form',
     '.admin-check-row',
     '.admin-check-row--separated',
     '.admin-profile-totp-panel',
@@ -11350,11 +11379,10 @@ if (str_contains($backupAdminSource, 'style=')) {
 if (!str_contains($backupAdminSource, 'class="admin-description"')) {
     $adminFieldErrorIssues[] = 'admin backup page is missing shared description styling';
 }
-if (str_contains($integrityAdminSource, 'style=')) {
-    $adminFieldErrorIssues[] = 'admin integrity page still contains inline style attributes';
+if (str_contains($integrityAdminSource, '<style') || str_contains($integrityAdminSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin integrity page still contains local style blocks or inline style attributes';
 }
 foreach ([
-    '<style nonce="<?= cspNonce() ?>">',
     'class="integrity-panel integrity-panel--success"',
     'class="integrity-panel integrity-panel--warning"',
     'class="integrity-panel integrity-panel--danger"',
@@ -11556,7 +11584,6 @@ foreach ([
     'form submission detail' => [
         'source' => $formSubmissionDetailSource,
         'fragments' => [
-            '<style nonce="<?= cspNonce() ?>">',
             'class="admin-inline-form"',
             'class="form-submission-grid"',
             'class="form-submission-control form-submission-control--md"',
@@ -11994,6 +12021,9 @@ foreach ([
             $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' is missing utility class fragment: ' . $adminInboxUtilityFragment;
         }
     }
+}
+if (str_contains($formSubmissionDetailSource, '<style') || str_contains($formSubmissionDetailSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin form submission detail still contains local style blocks or inline style attributes';
 }
 if (str_contains($menuOverviewSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin menu overview still mutates inline styles via JavaScript';

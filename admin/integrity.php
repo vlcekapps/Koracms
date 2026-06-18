@@ -103,23 +103,6 @@ if ($snapshot !== null && ($action === 'check' || $_SERVER['REQUEST_METHOD'] ===
 
 adminHeader('Kontrola integrity souborů');
 ?>
-<style nonce="<?= cspNonce() ?>">
-  .integrity-panel { border:1px solid var(--admin-border); border-radius:8px; padding:1rem; margin-bottom:1rem; }
-  .integrity-panel--success { background:var(--admin-published-bg); border-color:var(--admin-published-border); color:var(--admin-published-text); }
-  .integrity-panel--warning { background:var(--admin-pending-bg); border-color:var(--admin-pending-border); color:var(--admin-pending-text); }
-  .integrity-panel--danger { background:#fff0f0; border-color:#c62828; color:#5f1414; }
-  .integrity-panel--info { background:#f5f7fa; border-color:#d6d6d6; }
-  .integrity-panel--spaced { margin-top:2rem; }
-  .integrity-actions { margin:1rem 0; }
-  .integrity-result { margin-top:1.5rem; }
-  .integrity-copy--flush { margin:0; }
-  .integrity-copy--footer { margin-bottom:0; }
-  .integrity-copy--top { margin-top:1rem; }
-  .integrity-heading--flush { margin-top:0; }
-  .integrity-heading--danger { color:#c62828; }
-  .integrity-heading--modified { color:#d84315; }
-  .integrity-heading--muted { color:#555; }
-</style>
 
 <?php if (!empty($log)): ?>
   <div class="integrity-panel integrity-panel--success" role="status">

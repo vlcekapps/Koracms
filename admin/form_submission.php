@@ -164,22 +164,6 @@ $canManageFormIntegrations = currentUserHasCapability('settings_manage');
 
 adminHeader('Detail odpovědi formuláře');
 ?>
-<style nonce="<?= cspNonce() ?>">
-  .form-submission-grid { display:grid; grid-template-columns:repeat(2,minmax(14rem,1fr)); gap:1rem; align-items:start; }
-  .form-submission-field { margin-bottom:.75rem; }
-  .form-submission-field--top { margin-top:1rem; }
-  .form-submission-actions { margin-top:1rem; }
-  .form-submission-actions--compact { margin-top:.75rem; }
-  .form-submission-help--spaced { margin-bottom:.75rem; }
-  .form-submission-help--top { margin-top:.75rem; }
-  .form-submission-control { width:100%; }
-  .form-submission-control--sm { max-width:32rem; }
-  .form-submission-control--md { max-width:52rem; }
-  .form-submission-control--lg { max-width:60rem; }
-  .form-submission-history { padding-left:1.25rem; }
-  .form-submission-history__item { margin-bottom:.75rem; }
-  .form-submission-delete-form { margin-top:1rem; }
-</style>
 
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Workflow odpovědi formuláře byl aktualizován.</p>

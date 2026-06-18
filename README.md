@@ -419,6 +419,8 @@ Rezervační formuláře v administraci používají stejný princip pro přepí
 
 Administrátorský dashboard používá sdílené panely, karty a sémantický `<progress>` pro mini graf návštěvnosti místo lokálních `style` atributů. Runtime audit tím drží i hlavní přehled administrace v linii postupného zpřísňování CSP.
 
+Kontrola integrity a detail odpovědi formuláře v administraci používají sdílené administrační CSS třídy místo vlastních lokálních `<style>` bloků. Runtime audit hlídá, aby se tyto čistě prezentační styly nevracely přímo do jednotlivých obrazovek.
+
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 
 CSP allowlist obsahuje také explicitní zdroje, které CMS samo vkládá pro Google Analytics a volitelný Quill editor. Externí GA/Quill skripty se renderují s nonce a runtime audit hlídá, aby se nové CDN skripty nepřidávaly bez stejné ochrany.
