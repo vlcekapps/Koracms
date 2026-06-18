@@ -47,22 +47,6 @@ $settingsSections[] = ['id' => 'settings-operation', 'label' => 'Provoz webu'];
 
 adminHeader('Nastavení webu');
 ?>
-<style nonce="<?= cspNonce() ?>">
-  .settings-nav { margin:1rem 0 1.5rem; }
-  .settings-checkbox-row { margin-top:1rem; }
-  .settings-checkbox-row--compact { margin-top:.5rem; }
-  .settings-note { margin-top:.5rem; font-size:.9rem; color:var(--admin-field-help); }
-  .settings-muted { margin-top:.25rem; color:var(--admin-field-help); }
-  .settings-profile-card { margin-top:.85rem; padding:.85rem 1rem; border:1px solid var(--admin-border); border-radius:10px; }
-  .settings-profile-description { margin:.45rem 0 0 1.8rem; color:var(--admin-text-muted); }
-  .settings-fieldset-spaced { margin-top:1rem; }
-  .settings-form-row { margin-bottom:.75rem; }
-  .settings-input-short { width:20rem; }
-  .settings-code-textarea { width:100%; max-width:600px; font-family:monospace; font-size:.85rem; }
-  .settings-current-favicon { height:20px; vertical-align:middle; }
-  .settings-current-logo { max-height:40px; vertical-align:middle; }
-  .settings-submit { margin-top:1rem; }
-</style>
 
 <?php if ($successMessage !== ''): ?>
   <p class="success" role="status"><?= h($successMessage) ?></p>

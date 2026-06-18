@@ -10674,11 +10674,10 @@ foreach ([
         $settingsPrgIssues[] = 'settings page is missing PRG/view fragment: ' . $settingsViewFragment;
     }
 }
-if (str_contains($settingsAdminSource, 'style=') || str_contains($settingsAdminSource, '.style')) {
-    $settingsPrgIssues[] = 'settings page still contains inline style markup or JS style mutations';
+if (str_contains($settingsAdminSource, '<style') || str_contains($settingsAdminSource, 'style=') || str_contains($settingsAdminSource, '.style')) {
+    $settingsPrgIssues[] = 'settings page still contains local style blocks, inline style markup or JS style mutations';
 }
 foreach ([
-    '<style nonce="<?= cspNonce() ?>">',
     'class="button-row settings-nav"',
     'class="settings-profile-card"',
     'class="settings-code-textarea"',
@@ -11198,6 +11197,20 @@ foreach ([
     '.widget-dialog-checkbox',
     '.widget-dialog-number-input',
     '.widget-dialog-actions',
+    '.settings-nav',
+    '.settings-checkbox-row',
+    '.settings-checkbox-row--compact',
+    '.settings-note',
+    '.settings-muted',
+    '.settings-profile-card',
+    '.settings-profile-description',
+    '.settings-fieldset-spaced',
+    '.settings-form-row',
+    '.settings-input-short',
+    '.settings-code-textarea',
+    '.settings-current-favicon',
+    '.settings-current-logo',
+    '.settings-submit',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',
