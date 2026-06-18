@@ -97,7 +97,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
 
     if (!$stylesPrinted) {
         $stylesPrinted = true;
-        echo adminContentReferencePickerStyleTag();
+        echo adminContentReferencePickerStylesheetTag();
     }
     ?>
     <div class="content-reference-picker-launch">

@@ -427,7 +427,7 @@ Administrátorský dashboard používá sdílené panely, karty a sémantický `
 
 Přihlašovací obrazovky administrace včetně 2FA načítají sdílený statický stylesheet `admin/assets/login.css` místo generovaného inline `<style>` helperu. Tím zůstává skip link, viditelný focus i TOTP pole konzistentní bez dalšího inline stylového driftu.
 
-Content/media picker v administraci používá sdílený CSS helper s CSP nonce pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.
+Content/media picker v administraci načítá sdílený statický stylesheet `admin/assets/content-reference-picker.css` pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního i generovaného `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.
 
 Editor článku blogu používá sdílené admin CSS třídy pro zámek obsahu, taxonomie při změně blogu, plánování publikace, SEO, interní poznámku, stav článku, akční řádek i WYSIWYG wrapper. Díky tomu už samotný formulář článku nepotřebuje lokální `style` atributy ani JS mutace `element.style`.
 

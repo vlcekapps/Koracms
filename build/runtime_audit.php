@@ -6399,6 +6399,8 @@ echo "=== content_snippet_guardrails ===\n";
 $contentSnippetIssues = [];
 $contentLibrarySource = (string)file_get_contents(dirname(__DIR__) . '/lib/content.php');
 $contentPickerSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_picker.php');
+$contentPickerCssPath = dirname(__DIR__) . '/admin/assets/content-reference-picker.css';
+$contentPickerCssSource = is_file($contentPickerCssPath) ? (string)file_get_contents($contentPickerCssPath) : '';
 $contentSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
 $contentSitemapSource = (string)file_get_contents(dirname(__DIR__) . '/sitemap.php');
 $contentHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
@@ -6429,7 +6431,7 @@ foreach ([
     '[form]slug-formulare[/form]',
     '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
     'let isSearching = false;',
-    'adminContentReferencePickerStyleTag()',
+    'adminContentReferencePickerStylesheetTag()',
     "searchButton.setAttribute('aria-disabled', pending ? 'true' : 'false');",
     'if (!dialog.hidden && !dialog.contains(document.activeElement)) {',
     'searchButton.focus();',
@@ -6459,13 +6461,24 @@ foreach ([
     }
 }
 foreach ([
-    'function adminContentReferencePickerStyleTag(): string',
-    '.content-reference-picker-overlay {',
-    '.content-reference-picker-dialog {',
-    '.content-reference-picker-result--with-thumb {',
-] as $pickerStyleHelperFragment) {
-    if (!str_contains($uiSource, $pickerStyleHelperFragment)) {
-        $contentSnippetIssues[] = 'shared UI helper is missing content picker style fragment: ' . $pickerStyleHelperFragment;
+    'function adminContentReferencePickerStylesheetTag(): string',
+    '/admin/assets/content-reference-picker.css',
+] as $pickerStylesheetHelperFragment) {
+    if (!str_contains($uiSource, $pickerStylesheetHelperFragment)) {
+        $contentSnippetIssues[] = 'shared UI helper is missing content picker stylesheet fragment: ' . $pickerStylesheetHelperFragment;
+    }
+}
+if (str_contains($uiSource, 'function adminContentReferencePickerStyleTag(): string')) {
+    $contentSnippetIssues[] = 'shared UI helper still exposes inline content picker style tag';
+}
+foreach ([
+    '.content-reference-picker-overlay',
+    '.content-reference-picker-dialog',
+    '.content-reference-picker-result--with-thumb',
+    '@media (max-width: 720px)',
+] as $pickerCssFragment) {
+    if (!str_contains($contentPickerCssSource, $pickerCssFragment)) {
+        $contentSnippetIssues[] = 'content picker stylesheet is missing fragment: ' . $pickerCssFragment;
     }
 }
 
