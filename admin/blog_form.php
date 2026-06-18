@@ -115,7 +115,12 @@ try {
         ));
     }
 } catch (\PDOException $e) {
-    error_log('admin/blog_form tags: ' . $e->getMessage());
+    koraLog('warning', 'admin article form taxonomy query failed', [
+        'section' => 'current_tags',
+        'article_id' => $id,
+        'blog_id' => $currentBlogId,
+        'exception' => $e,
+    ]);
 }
 
 $blogFormOptions = [];
@@ -143,7 +148,12 @@ if (isMultiBlog()) {
             ];
         }
     } catch (\PDOException $e) {
-        error_log('admin/blog_form all categories: ' . $e->getMessage());
+        koraLog('warning', 'admin article form taxonomy query failed', [
+            'section' => 'all_categories',
+            'article_id' => $id,
+            'blog_id' => $currentBlogId,
+            'exception' => $e,
+        ]);
     }
 
     try {
@@ -160,7 +170,12 @@ if (isMultiBlog()) {
             ];
         }
     } catch (\PDOException $e) {
-        error_log('admin/blog_form all tags: ' . $e->getMessage());
+        koraLog('warning', 'admin article form taxonomy query failed', [
+            'section' => 'all_tags',
+            'article_id' => $id,
+            'blog_id' => $currentBlogId,
+            'exception' => $e,
+        ]);
     }
 }
 

@@ -409,6 +409,8 @@ Kora CMS používá:
 
 Přihlášení do administrace, veřejné přihlášení i obnovení hesla používají kombinovaný rate limiting. Systém hlídá počet pokusů podle IP adresy a zároveň podle hashovaného účtu nebo tokenu. Do databáze se neukládá e-mail ani token v čitelné podobě, pouze odvozený SHA-256 klíč.
 
+Technické recoverable chyby se postupně zapisují přes strukturovaný `koraLog()` formát s `request_id`, metodou a cestou. Administrační ukládání článků, přesun článků mezi blogy a ukládání anket už nepoužívá surové `error_log()` zprávy bez kontextu.
+
 V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
 
 Veřejná default šablona nepoužívá pro potvrzení akcí a tisk inline `onclick` handlery. Potvrzení běží přes `data-confirm` a tisk přes `js-print-page` v nonce skriptu layoutu, což snižuje závislost na CSP fallbacku `unsafe-inline`.

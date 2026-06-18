@@ -435,7 +435,11 @@ try {
     $pdo->commit();
 } catch (\Throwable $e) {
     $pdo->rollBack();
-    error_log('admin/blog_save: ' . $e->getMessage());
+    koraLog('warning', 'admin article save failed', [
+        'article_id' => $id,
+        'blog_id' => $blogId,
+        'exception' => $e,
+    ]);
     header('Location: ' . $redirect);
     exit;
 }

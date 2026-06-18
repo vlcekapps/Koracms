@@ -647,7 +647,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                error_log('blog_transfer: ' . $e->getMessage());
+                koraLog('warning', 'admin article transfer failed', [
+                    'article_count' => count($articleIds),
+                    'target_blog_id' => (int)($targetBlog['id'] ?? 0),
+                    'exception' => $e,
+                ]);
                 $error = 'Přesun článků se nepodařilo dokončit. Zkuste to prosím znovu.';
             }
         }

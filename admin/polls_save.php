@@ -269,7 +269,10 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    error_log('poll save: ' . $e->getMessage());
+    koraLog('warning', 'admin poll save failed', [
+        'poll_id' => $id,
+        'exception' => $e,
+    ]);
     $redirectToForm($id, 'save', $redirectTarget);
 }
 

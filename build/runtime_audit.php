@@ -9583,6 +9583,10 @@ if (!str_contains($blogFormSource, 'canCurrentUserManageBlogTaxonomies($currentB
 if (str_contains($blogFormSource, '<style') || str_contains($blogFormSource, 'style=') || str_contains($blogFormSource, '.style')) {
     $blogAdminIssues[] = 'article form still contains local style blocks, inline style attributes or JS style mutations';
 }
+if (str_contains($blogFormSource, 'error_log(')
+    || !str_contains($blogFormSource, "koraLog('warning', 'admin article form taxonomy query failed'")) {
+    $blogAdminIssues[] = 'article form taxonomy fallback no longer uses structured recoverable logging';
+}
 foreach ([
     'class="admin-warning-box"',
     'class="admin-inline-form"',
@@ -9711,8 +9715,16 @@ if (!str_contains($blogTransferSource, 'array_key_exists($tagKey, $manualTagAssi
 if (!str_contains($blogTransferSource, 'internalRedirectTarget')) {
     $blogAdminIssues[] = 'blog transfer page is missing validated redirect handling';
 }
+if (str_contains($blogTransferSource, 'error_log(')
+    || !str_contains($blogTransferSource, "koraLog('warning', 'admin article transfer failed'")) {
+    $blogAdminIssues[] = 'blog transfer page no longer uses structured recoverable logging';
+}
 if (!str_contains($blogSaveSource, 'canCurrentUserWriteToBlog($blogId)')) {
     $blogAdminIssues[] = 'article save is missing writable-blog enforcement';
+}
+if (str_contains($blogSaveSource, 'error_log(')
+    || !str_contains($blogSaveSource, "koraLog('warning', 'admin article save failed'")) {
+    $blogAdminIssues[] = 'article save no longer uses structured recoverable logging';
 }
 if (!str_contains($blogSaveSource, 'cms_categories WHERE id = ? AND blog_id = ?')) {
     $blogAdminIssues[] = 'article save no longer validates category within selected blog';
@@ -10431,6 +10443,10 @@ if (!str_contains($pollSaveSource, 'upsertPathRedirect')) {
 }
 if (!str_contains($pollSaveSource, 'internalRedirectTarget(')) {
     $pollSourceIssues[] = 'poll save is missing validated redirect handling';
+}
+if (str_contains($pollSaveSource, 'error_log(')
+    || !str_contains($pollSaveSource, "koraLog('warning', 'admin poll save failed'")) {
+    $pollSourceIssues[] = 'poll save no longer uses structured recoverable logging';
 }
 if (!str_contains($pollDeleteSource, 'internalRedirectTarget(')) {
     $pollSourceIssues[] = 'poll delete is missing validated redirect handling';
