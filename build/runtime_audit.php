@@ -83,6 +83,7 @@ $adminBulkSource = (string) file_get_contents(__DIR__ . '/../admin/bulk.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
 $adminFormsSource = (string) file_get_contents(__DIR__ . '/../admin/forms.php');
+$adminIndexSource = (string) file_get_contents(__DIR__ . '/../admin/index.php');
 $adminStatisticsSource = (string) file_get_contents(__DIR__ . '/../admin/statistics.php');
 $adminContentReferenceSearchSource = (string) file_get_contents(__DIR__ . '/../admin/content_reference_search.php');
 $adminContentLockRefreshSource = (string) file_get_contents(__DIR__ . '/../admin/content_lock_refresh.php');
@@ -11105,6 +11106,11 @@ foreach ([
     '.admin-description',
     '.admin-description--flush',
     '.admin-description--muted',
+    '.admin-stack-sm',
+    '.admin-stack-md',
+    '.admin-stack-lg',
+    '.admin-section-spaced',
+    '.admin-section-spaced--balanced',
     '.admin-input-sm',
     '.admin-input-compact',
     '.admin-input-auto',
@@ -11153,6 +11159,7 @@ foreach ([
     '.admin-summary-card',
     '.admin-summary-card__heading',
     '.admin-summary-card__value',
+    '.admin-summary-card__footer',
     '.admin-stat-chart',
     '.admin-stat-chart--compact',
     '.admin-stat-bars',
@@ -11171,6 +11178,7 @@ foreach ([
     '.admin-panel--success',
     '.admin-panel--warning',
     '.admin-panel--info',
+    '.admin-panel--danger',
     '.admin-panel--spaced',
     '.admin-panel__heading',
     '.admin-panel__list',
@@ -11301,6 +11309,36 @@ foreach ([
 ] as $adminStatisticsLegacyChartFragment) {
     if (str_contains($adminStatisticsSource, $adminStatisticsLegacyChartFragment)) {
         $adminFieldErrorIssues[] = 'admin statistics page still contains legacy inline chart fragment: ' . $adminStatisticsLegacyChartFragment;
+    }
+}
+if (preg_match('/<[^>]+\sstyle=/i', $adminIndexSource) === 1) {
+    $adminFieldErrorIssues[] = 'admin dashboard still contains inline style attributes';
+}
+foreach ([
+    'class="admin-panel admin-panel--danger"',
+    'class="admin-section-spaced',
+    'class="admin-summary-grid',
+    'class="admin-summary-card__footer"',
+    'class="admin-stat-chart admin-stat-chart--compact"',
+    '<progress',
+    'class="admin-stat-progress"',
+    'class="table-cell--detail"',
+] as $adminIndexUtilityFragment) {
+    if (!str_contains($adminIndexSource, $adminIndexUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin dashboard is missing utility fragment: ' . $adminIndexUtilityFragment;
+    }
+}
+foreach ([
+    'background:#fff0f0',
+    'background:#e3f2fd',
+    'background:<?= h($statItem[\'background\']) ?>',
+    'display:flex;align-items:flex-end',
+    'height:<?=',
+    'style="margin-top:1.5rem"',
+    'style="max-width:400px',
+] as $adminIndexLegacyStyleFragment) {
+    if (str_contains($adminIndexSource, $adminIndexLegacyStyleFragment)) {
+        $adminFieldErrorIssues[] = 'admin dashboard still contains legacy inline style fragment: ' . $adminIndexLegacyStyleFragment;
     }
 }
 if (str_contains($auditLogSource, 'style=')) {

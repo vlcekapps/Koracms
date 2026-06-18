@@ -515,10 +515,10 @@ adminHeader('Přehled');
 </p>
 
 <?php if ($integrityWarning): ?>
-<section style="background:#fff0f0;border:2px solid #c62828;padding:1rem;margin:1rem 0;border-radius:8px" role="alert" aria-labelledby="integrity-warning-heading">
-  <h2 id="integrity-warning-heading" style="margin-top:0;color:#c62828">⚠ Změna integrity souborů</h2>
+<section class="admin-panel admin-panel--danger" role="alert" aria-labelledby="integrity-warning-heading">
+  <h2 id="integrity-warning-heading" class="admin-panel__heading">⚠ Změna integrity souborů</h2>
   <p>Od posledního snapshotu byly detekovány změny v PHP souborech. To může být způsobeno legitimním nasazením nové verze, nebo neautorizovaným přístupem.</p>
-  <p><a href="integrity.php?action=check" class="btn" style="background:#c62828;color:#fff">Zkontrolovat integritu</a></p>
+  <p class="admin-panel__footer"><a href="integrity.php?action=check" class="btn btn-danger">Zkontrolovat integritu</a></p>
 </section>
 <?php endif; ?>
 
@@ -547,8 +547,8 @@ if (isSuperAdmin()) {
     }
 
     if ($updateAvailable): ?>
-    <section style="background:#e3f2fd;border:1px solid #1565c0;padding:1rem;margin:1rem 0;border-radius:8px" aria-labelledby="update-heading">
-      <h2 id="update-heading" style="margin-top:0;color:#1565c0">Dostupná aktualizace</h2>
+    <section class="admin-panel admin-panel--info" aria-labelledby="update-heading">
+      <h2 id="update-heading" class="admin-panel__heading">Dostupná aktualizace</h2>
       <p>Je k dispozici nová verze Kora CMS: <strong><?= h($latestVersion) ?></strong> (nainstalovaná: <?= h(KORA_VERSION) ?>).</p>
     </section>
     <?php endif;
@@ -556,10 +556,10 @@ if (isSuperAdmin()) {
 ?>
 
 <?php if ($pendingReviewItems !== []): ?>
-<section style="background:#fffbe6;border:1px solid #d7b600;padding:1rem;margin:1rem 0" aria-labelledby="pending-attention-heading">
-  <h2 id="pending-attention-heading" style="margin-top:0">Co potřebuje pozornost</h2>
+<section class="admin-panel admin-panel--warning" aria-labelledby="pending-attention-heading">
+  <h2 id="pending-attention-heading" class="admin-panel__heading">Co potřebuje pozornost</h2>
   <p>Máte <strong><?= (int)$pendingReviewTotal ?></strong> položek, které čekají na schválení nebo vyřízení.</p>
-  <ul>
+  <ul class="admin-panel__list">
     <?php foreach ($pendingReviewItems as $item): ?>
       <li>
         <?= h($item['label']) ?>: <strong><?= (int)$item['count'] ?></strong>
@@ -572,9 +572,9 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if (!empty($quickLinks)): ?>
-<section aria-labelledby="task-links-heading" style="margin-bottom:1.5rem">
+<section class="admin-stack-md" aria-labelledby="task-links-heading">
   <h2 id="task-links-heading"><?= h($dashboardFocusHeading) ?></h2>
-  <p style="margin-top:0;color:#555"><?= h($dashboardFocusIntro) ?></p>
+  <p class="admin-description admin-description--flush admin-description--muted"><?= h($dashboardFocusIntro) ?></p>
   <nav aria-label="Na čem chcete pracovat" class="button-row">
     <?php foreach ($quickLinks as $link): ?>
       <a href="<?= h($link['url']) ?>" class="btn"><?= h($link['label']) ?></a>
@@ -584,20 +584,20 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($contentSummaries !== []): ?>
-<section aria-labelledby="content-summary-heading-new" style="margin:1.5rem 0">
+<section class="admin-section-spaced--balanced" aria-labelledby="content-summary-heading-new">
   <h2 id="content-summary-heading-new">Práce s obsahem</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem">
+  <div class="admin-summary-grid">
     <?php foreach ($contentSummaries as $summary): ?>
-      <section style="border:1px solid #d6d6d6;border-radius:10px;padding:1rem;background:#fff">
-        <h3 style="margin-top:0"><?= h($summary['heading']) ?></h3>
-        <ul style="margin:0;padding-left:1.1rem">
+      <section class="admin-summary-card">
+        <h3 class="admin-summary-card__heading"><?= h($summary['heading']) ?></h3>
+        <ul class="table-list-compact">
           <?php foreach ($summary['items'] as $label => $value): ?>
-            <li style="padding:.15rem 0">
+            <li>
               <strong><?= h($label) ?>:</strong> <?= (int)$value ?>
             </li>
           <?php endforeach; ?>
         </ul>
-        <p style="margin-bottom:0"><a href="<?= h($summary['url']) ?>">Otevřít sekci <span aria-hidden="true">→</span></a></p>
+        <p class="admin-summary-card__footer"><a href="<?= h($summary['url']) ?>">Otevřít sekci <span aria-hidden="true">→</span></a></p>
       </section>
     <?php endforeach; ?>
   </div>
@@ -605,9 +605,9 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($scheduledContent !== []): ?>
-<section aria-labelledby="scheduled-heading" style="margin:1.5rem 0">
+<section class="admin-section-spaced--balanced" aria-labelledby="scheduled-heading">
   <h2 id="scheduled-heading">Naplánovaný obsah</h2>
-  <p style="margin-top:0;color:#555">Články, které se automaticky zveřejní v budoucnu.</p>
+  <p class="admin-description admin-description--flush admin-description--muted">Články, které se automaticky zveřejní v budoucnu.</p>
   <table>
     <caption class="sr-only">Naplánované publikace</caption>
     <thead>
@@ -637,7 +637,7 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($overviewRows !== []): ?>
-<section aria-labelledby="overview-heading-new" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="overview-heading-new">
   <h2 id="overview-heading-new"><?= $showOperationalOverview ? 'Přehled administrace' : 'Další přehledy' ?></h2>
   <?php if ($showOperationalOverview): ?>
     <table>
@@ -664,7 +664,7 @@ if (isSuperAdmin()) {
       <?php foreach ($overviewRows as $row): ?>
         <li>
           <a href="<?= h($row['url']) ?>"><?= h($row['label']) ?></a>
-          <span style="color:#555"> · <?= (int)$row['count'] ?></span>
+          <span class="admin-inline-meta"> · <?= (int)$row['count'] ?></span>
         </li>
       <?php endforeach; ?>
     </ul>
@@ -675,7 +675,7 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($showContentSecondaryBlocks && $pages !== []): ?>
-<section aria-labelledby="pages-heading-new" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="pages-heading-new">
   <h2 id="pages-heading-new">Důležité stránky webu</h2>
   <ul>
     <?php foreach ($pages as $page): ?>
@@ -692,7 +692,7 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($showContentSecondaryBlocks && $upcomingEvents !== []): ?>
-<section aria-labelledby="events-heading-new" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="events-heading-new">
   <h2 id="events-heading-new">Nejbližší události</h2>
   <ul>
     <?php foreach ($upcomingEvents as $eventItem): ?>
@@ -711,7 +711,7 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($showReservationSecondaryBlocks && $reservationSummary !== null): ?>
-<section aria-labelledby="reservations-heading-new" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="reservations-heading-new">
   <h2 id="reservations-heading-new">Přehled rezervací</h2>
   <ul>
     <li>Nadcházejících rezervací za 7 dnů: <strong><?= (int)$reservationSummary['upcoming'] ?></strong></li>
@@ -722,37 +722,39 @@ if (isSuperAdmin()) {
 <?php endif; ?>
 
 <?php if ($visitorStats !== null): ?>
-<section aria-labelledby="stats-heading-new" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="stats-heading-new">
   <h2 id="stats-heading-new">Návštěvnost webu</h2>
-  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem" role="list" aria-label="Souhrn návštěvnosti">
+  <div class="admin-summary-grid admin-stack-sm" role="list" aria-label="Souhrn návštěvnosti">
     <?php foreach ([
-        ['label' => 'Online', 'value' => (int)$visitorStats['online'], 'background' => '#f0f7ff'],
-        ['label' => 'Dnes', 'value' => (int)$visitorStats['today'], 'background' => '#f0fff0'],
-        ['label' => 'Tento měsíc', 'value' => (int)$visitorStats['month'], 'background' => '#fffbea'],
-        ['label' => 'Celkem', 'value' => (int)$visitorStats['total'], 'background' => '#fff2f2'],
+        ['label' => 'Online', 'value' => (int)$visitorStats['online']],
+        ['label' => 'Dnes', 'value' => (int)$visitorStats['today']],
+        ['label' => 'Tento měsíc', 'value' => (int)$visitorStats['month']],
+        ['label' => 'Celkem', 'value' => (int)$visitorStats['total']],
     ] as $statItem): ?>
-      <div role="listitem" style="background:<?= h($statItem['background']) ?>;padding:.75rem 1rem;border-radius:8px;min-width:120px;text-align:center">
-        <div style="font-size:1.5rem;font-weight:700"><?= number_format($statItem['value'], 0, ',', ' ') ?></div>
-        <div style="font-size:.9rem;color:#444"><?= h($statItem['label']) ?></div>
+      <div class="admin-summary-card" role="listitem">
+        <div class="admin-summary-card__value"><?= number_format($statItem['value'], 0, ',', ' ') ?></div>
+        <div class="admin-summary-card__heading"><?= h($statItem['label']) ?></div>
       </div>
     <?php endforeach; ?>
   </div>
 
   <?php if ($chartData !== []): ?>
-  <figure style="margin:0">
-    <figcaption class="sr-only">Návštěvnost za posledních 7 dnů</figcaption>
-    <div style="display:flex;align-items:flex-end;gap:4px;height:100px" aria-hidden="true">
+  <figure class="admin-stat-chart admin-stat-chart--compact">
+    <figcaption>Návštěvnost za posledních 7 dnů</figcaption>
+    <ol class="admin-stat-bars">
       <?php foreach ($chartData as $chartItem): ?>
-        <div
-          style="flex:1;background:#005fcc;min-height:2px;height:<?= (int)round(($chartItem['views'] / $maxViews) * 100) ?>%"
-          title="<?= h($chartItem['label']) ?>: <?= (int)$chartItem['views'] ?> zobrazení"></div>
+        <li class="admin-stat-bar">
+          <span class="admin-stat-bar__label"><?= h($chartItem['label']) ?></span>
+          <progress
+            class="admin-stat-progress"
+            value="<?= (int)$chartItem['views'] ?>"
+            max="<?= (int)$maxViews ?>"
+            aria-label="<?= h($chartItem['label']) ?>: zobrazení"
+          ><?= (int)$chartItem['views'] ?></progress>
+          <span class="admin-stat-bar__value"><?= number_format((int)$chartItem['views'], 0, ',', ' ') ?> zobrazení</span>
+        </li>
       <?php endforeach; ?>
-    </div>
-    <div style="display:flex;gap:4px" aria-hidden="true">
-      <?php foreach ($chartData as $chartItem): ?>
-        <span style="flex:1;text-align:center;font-size:.75rem;color:#666"><?= h($chartItem['label']) ?></span>
-      <?php endforeach; ?>
-    </div>
+    </ol>
   </figure>
   <p><a href="statistics.php">Podrobné statistiky <span aria-hidden="true">→</span></a></p>
   <?php endif; ?>
@@ -779,7 +781,7 @@ if ($showOperationalOverview && $canManageSettings):
     }
     ?>
 <?php if ($recentActivity !== []): ?>
-<section aria-labelledby="activity-feed-heading" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="activity-feed-heading">
   <h2 id="activity-feed-heading">Poslední aktivita</h2>
   <table>
     <caption class="sr-only">Posledních 15 akcí v systému</caption>
@@ -802,7 +804,7 @@ if ($showOperationalOverview && $canManageSettings):
           </td>
           <td><?= h((string)$actEntry['user_name']) ?></td>
           <td><code><?= h((string)$actEntry['action']) ?></code></td>
-          <td style="max-width:400px;word-break:break-word;font-size:.88rem"><?= h(mb_substr((string)$actEntry['detail'], 0, 80)) ?><?= mb_strlen((string)$actEntry['detail']) > 80 ? '…' : '' ?></td>
+          <td class="table-cell--detail"><?= h(mb_substr((string)$actEntry['detail'], 0, 80)) ?><?= mb_strlen((string)$actEntry['detail']) > 80 ? '…' : '' ?></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
@@ -813,7 +815,7 @@ if ($showOperationalOverview && $canManageSettings):
 <?php endif; ?>
 
 <?php if ($showOperationalOverview && $enabledModules !== []): ?>
-<section aria-labelledby="modules-heading-new" style="margin-top:1.5rem">
+<section class="admin-section-spaced" aria-labelledby="modules-heading-new">
   <h2 id="modules-heading-new">Zapnuté moduly na webu</h2>
   <p><?= h(implode(', ', $enabledModules)) ?></p>
 </section>

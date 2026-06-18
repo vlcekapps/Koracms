@@ -417,6 +417,8 @@ Editor anket v administraci používá pro přidávání a odebírání možnost
 
 Rezervační formuláře v administraci používají stejný princip pro přepínání typu zákazníka, práci se sloty a blokovanými dny. Runtime audit navíc hlídá, aby se do admin PHP souborů nevracely inline `onclick`, `onchange`, `onsubmit` ani `oninput` atributy.
 
+Administrátorský dashboard používá sdílené panely, karty a sémantický `<progress>` pro mini graf návštěvnosti místo lokálních `style` atributů. Runtime audit tím drží i hlavní přehled administrace v linii postupného zpřísňování CSP.
+
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 
 CSP allowlist obsahuje také explicitní zdroje, které CMS samo vkládá pro Google Analytics a volitelný Quill editor. Externí GA/Quill skripty se renderují s nonce a runtime audit hlídá, aby se nové CDN skripty nepřidávaly bez stejné ochrany.
