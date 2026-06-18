@@ -506,7 +506,7 @@ adminHeader('Knihovna médií');
   <p class="error" role="alert"><?= h($message) ?></p>
 <?php endforeach; ?>
 
-<form method="post" enctype="multipart/form-data" novalidate style="margin-bottom:1.5rem">
+<form method="post" enctype="multipart/form-data" novalidate class="media-upload-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="action" value="upload">
   <input type="hidden" name="return_to" value="<?= h(mediaAdminPath($state)) ?>">
@@ -526,14 +526,14 @@ adminHeader('Knihovna médií');
     </select>
     <small class="field-help">Veřejná média lze vkládat do obsahu. Soukromá média se vydávají jen přes chráněný endpoint pro správce obsahu.</small>
 
-    <button type="submit" class="btn" style="margin-top:.75rem">Nahrát soubory</button>
+    <button type="submit" class="btn media-upload-submit">Nahrát soubory</button>
   </fieldset>
 </form>
 
-<form method="get" style="margin-bottom:1rem">
+<form method="get" class="media-filter-form">
   <fieldset>
     <legend>Filtry knihovny médií</legend>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;align-items:end">
+    <div class="media-filter-grid">
       <div>
         <label for="q">Hledat</label>
         <input type="search" id="q" name="q" value="<?= h($state['q']) ?>" placeholder="Název, alt text, titulek, kredit">
@@ -572,7 +572,7 @@ adminHeader('Knihovna médií');
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="button-row" style="margin-top:1.4rem">
+      <div class="button-row media-filter-actions">
         <button type="submit" class="btn">Použít filtry</button>
         <?php if ($state['q'] !== '' || $state['type'] !== '' || $state['visibility'] !== '' || $state['usage'] !== '' || (int)$state['uploader'] > 0): ?>
           <a href="media.php" class="btn">Zrušit</a>
@@ -582,7 +582,7 @@ adminHeader('Knihovna médií');
   </fieldset>
 </form>
 
-<p class="field-help" style="margin-bottom:1rem">
+<p class="field-help media-result-summary">
   Nalezeno médií: <strong><?= number_format($totalItems, 0, ',', ' ') ?></strong>.
   Použitá média nelze smazat ani přepnout do soukromého režimu, dokud zůstávají vložená v obsahu.
 </p>
@@ -590,15 +590,15 @@ adminHeader('Knihovna médií');
 <?php if ($items === []): ?>
   <p>Žádná média neodpovídají zadanému filtru.</p>
 <?php else: ?>
-  <form method="post" style="margin-bottom:1rem">
+  <form method="post" class="media-bulk-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="action" value="bulk">
     <input type="hidden" name="return_to" value="<?= h(mediaAdminPath($state)) ?>">
     <fieldset>
       <legend>Hromadné akce s médii</legend>
-      <div class="button-row" style="margin-bottom:1rem">
-        <label for="bulk_action" style="margin-top:0">Akce</label>
-        <select id="bulk_action" name="bulk_action" style="max-width:280px">
+      <div class="button-row media-bulk-actions">
+        <label for="bulk_action" class="media-bulk-label">Akce</label>
+        <select id="bulk_action" name="bulk_action" class="media-bulk-select">
           <option value="">Vyberte akci</option>
           <option value="make_public">Změnit na veřejné</option>
           <option value="make_private">Změnit na soukromé</option>
@@ -607,7 +607,7 @@ adminHeader('Knihovna médií');
         <button type="submit" class="btn">Provést</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem">
+      <div class="media-grid">
         <?php foreach ($items as $item):
             $mediaId = (int)$item['id'];
             $kind = mediaDisplayKind($item);
@@ -618,9 +618,9 @@ adminHeader('Knihovna médií');
             $isSvg = mediaIsSvgMime((string)$item['mime_type']);
             $editUrl = mediaAdminPath(array_merge($state, ['edit' => $mediaId]));
             ?>
-          <article style="border:1px solid #d6d6d6;border-radius:.85rem;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .7rem;border-bottom:1px solid #e5e7eb;background:#f8fafc">
-              <label style="margin:0;font-weight:600;display:flex;align-items:center;gap:.45rem">
+          <article class="media-card">
+            <div class="media-card__header">
+              <label class="media-card__checkbox">
                 <input type="checkbox" name="media_ids[]" value="<?= $mediaId ?>">
                 Vybrat
               </label>
@@ -628,18 +628,18 @@ adminHeader('Knihovna médií');
             </div>
 
             <?php if ($previewUrl !== ''): ?>
-              <a href="<?= h($fileUrl) ?>" target="_blank" rel="noopener" style="display:block">
-                <img src="<?= h($previewUrl) ?>" alt="<?= h(trim((string)($item['alt_text'] ?? '')) !== '' ? (string)$item['alt_text'] : (string)$item['original_name']) ?>" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;display:block">
+              <a href="<?= h($fileUrl) ?>" target="_blank" rel="noopener" class="media-card__link">
+                <img src="<?= h($previewUrl) ?>" alt="<?= h(trim((string)($item['alt_text'] ?? '')) !== '' ? (string)$item['alt_text'] : (string)$item['original_name']) ?>" loading="lazy" class="media-card__image">
               </a>
             <?php else: ?>
-              <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#f0f2f5;color:#334155;font-weight:700">
+              <div class="media-card__placeholder">
                 <?= h(strtoupper($kind === 'file' ? ($isSvg ? 'SVG' : 'FILE') : $kind)) ?>
               </div>
             <?php endif; ?>
 
-            <div style="padding:.75rem;display:grid;gap:.45rem">
+            <div class="media-card__body">
               <div>
-                <strong style="display:block;word-break:break-word"><?= h((string)$item['original_name']) ?></strong>
+                <strong class="media-card__title"><?= h((string)$item['original_name']) ?></strong>
                 <span class="table-meta"><?= h((string)$item['mime_type']) ?> · <?= h(number_format(((int)$item['file_size']) / 1024, 0, ',', ' ')) ?> KB</span>
                 <span class="table-meta">Nahrál: <?= h((string)$item['uploader_name']) ?></span>
               </div>
@@ -689,11 +689,11 @@ adminHeader('Knihovna médií');
 <?php endif; ?>
 
 <?php if ($editItem !== null): ?>
-  <section style="margin-top:2rem;border-top:1px solid #d6d6d6;padding-top:1.5rem">
-    <h2 style="margin-top:0">Úprava média: <?= h((string)$editItem['original_name']) ?></h2>
+  <section class="media-edit-section">
+    <h2 class="media-edit-title">Úprava média: <?= h((string)$editItem['original_name']) ?></h2>
     <p class="field-help">Zde upravíte metadata, viditelnost a případně nahradíte soubor bez změny jeho ID a odkazů.</p>
 
-    <div style="display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1fr);gap:1.5rem">
+    <div class="media-edit-grid">
       <div>
         <form method="post" novalidate>
           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -706,13 +706,13 @@ adminHeader('Knihovna médií');
             <label for="alt_text">Alt text</label>
             <input type="text" id="alt_text" name="alt_text" aria-describedby="alt-text-help" value="<?= h((string)($editItem['alt_text'] ?? '')) ?>">
             <?php if (trim((string)($editItem['alt_text'] ?? '')) === '' && mediaIsImageMime((string)($editItem['mime_type'] ?? ''))): ?>
-              <small id="alt-text-help" class="field-help" style="color:#b42318"><strong>Upozornění:</strong> Obrázek nemá vyplněný alt text. Pro přístupnost (WCAG 2.2) jej prosím doplňte.</small>
+              <small id="alt-text-help" class="field-help media-alt-warning"><strong>Upozornění:</strong> Obrázek nemá vyplněný alt text. Pro přístupnost (WCAG 2.2) jej prosím doplňte.</small>
             <?php else: ?>
               <small id="alt-text-help" class="field-help">Popis obrázku pro čtečky obrazovky a vyhledávače.</small>
             <?php endif; ?>
 
             <label for="caption">Titulek</label>
-            <textarea id="caption" name="caption" rows="3" style="min-height:7rem"><?= h((string)($editItem['caption'] ?? '')) ?></textarea>
+            <textarea id="caption" name="caption" rows="3" class="media-caption-textarea"><?= h((string)($editItem['caption'] ?? '')) ?></textarea>
 
             <label for="credit">Kredit</label>
             <input type="text" id="credit" name="credit" value="<?= h((string)($editItem['credit'] ?? '')) ?>">
@@ -725,14 +725,14 @@ adminHeader('Knihovna médií');
             </select>
             <small class="field-help">Soukromé médium není dostupné veřejně a nevkládá se do veřejného content pickeru.</small>
 
-            <div class="button-row" style="margin-top:1rem">
+            <div class="button-row media-edit-actions">
               <button type="submit" class="btn btn-success">Uložit metadata</button>
               <a href="<?= h(mediaAdminPath(array_merge($state, ['edit' => 0]))) ?>" class="btn">Zavřít detail</a>
             </div>
           </fieldset>
         </form>
 
-        <form method="post" enctype="multipart/form-data" novalidate style="margin-top:1rem">
+        <form method="post" enctype="multipart/form-data" novalidate class="media-replace-form">
           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
           <input type="hidden" name="action" value="replace">
           <input type="hidden" name="media_id" value="<?= (int)$editItem['id'] ?>">
@@ -743,7 +743,7 @@ adminHeader('Knihovna médií');
             <input type="file" id="replacement_file" name="replacement_file" required aria-required="true"
                    accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt">
             <small class="field-help">Náhradní soubor musí zůstat ve stejné MIME rodině. U veřejných souborů se zachovává i přípona, aby staré odkazy zůstaly funkční.</small>
-            <button type="submit" class="btn" style="margin-top:.8rem">Nahradit soubor</button>
+            <button type="submit" class="btn media-replace-submit">Nahradit soubor</button>
           </fieldset>
         </form>
       </div>
@@ -751,28 +751,28 @@ adminHeader('Knihovna médií');
       <div>
         <fieldset>
           <legend>Informace o souboru</legend>
-          <dl style="display:grid;grid-template-columns:auto 1fr;gap:.35rem .75rem;margin:0">
+          <dl class="media-info-list">
             <dt><strong>ID</strong></dt>
-            <dd style="margin:0"><?= (int)$editItem['id'] ?></dd>
+            <dd><?= (int)$editItem['id'] ?></dd>
             <dt><strong>Název</strong></dt>
-            <dd style="margin:0;word-break:break-word"><?= h((string)$editItem['original_name']) ?></dd>
+            <dd class="media-info-list__value--break"><?= h((string)$editItem['original_name']) ?></dd>
             <dt><strong>MIME</strong></dt>
-            <dd style="margin:0"><?= h((string)$editItem['mime_type']) ?></dd>
+            <dd><?= h((string)$editItem['mime_type']) ?></dd>
             <dt><strong>Velikost</strong></dt>
-            <dd style="margin:0"><?= h(number_format(((int)$editItem['file_size']) / 1024, 0, ',', ' ')) ?> KB</dd>
+            <dd><?= h(number_format(((int)$editItem['file_size']) / 1024, 0, ',', ' ')) ?> KB</dd>
             <dt><strong>URL</strong></dt>
-            <dd style="margin:0;word-break:break-all"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener"><?= h(mediaFileUrl($editItem)) ?></a></dd>
+            <dd class="media-info-list__value--url"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener"><?= h(mediaFileUrl($editItem)) ?></a></dd>
             <dt><strong>Použití</strong></dt>
-            <dd style="margin:0"><?= $editUsages === [] ? 'Nepoužité' : 'Použité na ' . count($editUsages) . ' místě/místech' ?></dd>
+            <dd><?= $editUsages === [] ? 'Nepoužité' : 'Použité na ' . count($editUsages) . ' místě/místech' ?></dd>
           </dl>
         </fieldset>
 
-        <fieldset style="margin-top:1rem">
+        <fieldset class="media-usage-fieldset">
           <legend>Použití v obsahu</legend>
           <?php if ($editUsages === []): ?>
-            <p style="margin:0">Toto médium zatím není nikde nalezené.</p>
+            <p class="media-empty-usage">Toto médium zatím není nikde nalezené.</p>
           <?php else: ?>
-            <ul style="margin:0;padding-left:1.2rem">
+            <ul class="media-usage-list">
               <?php foreach ($editUsages as $usage): ?>
                 <li>
                   <strong><?= h((string)$usage['label']) ?>:</strong>

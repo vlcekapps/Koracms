@@ -10483,6 +10483,23 @@ if (!str_contains($mediaAdminSource, 'window.prompt(')) {
 if (str_contains($mediaAdminSource, 'image/svg+xml,image/svg')) {
     $mediaLibraryIssues[] = 'media admin upload accept still allows SVG';
 }
+if (str_contains($mediaAdminSource, '<style') || str_contains($mediaAdminSource, 'style=') || str_contains($mediaAdminSource, '.style')) {
+    $mediaLibraryIssues[] = 'media admin still contains local style blocks, inline style markup or JS style mutations';
+}
+foreach ([
+    'class="media-upload-form"',
+    'class="media-filter-grid"',
+    'class="media-grid"',
+    'class="media-card"',
+    'class="media-card__image"',
+    'class="media-edit-section"',
+    'class="media-info-list"',
+    'class="media-usage-list"',
+] as $mediaAdminClassFragment) {
+    if (!str_contains($mediaAdminSource, $mediaAdminClassFragment)) {
+        $mediaLibraryIssues[] = 'media admin is missing shared CSS class fragment: ' . $mediaAdminClassFragment;
+    }
+}
 if (!str_contains($mediaHelperSource, 'SVG soubory už knihovna médií nepřijímá')) {
     $mediaLibraryIssues[] = 'media helper is missing explicit SVG upload rejection';
 }
@@ -11239,6 +11256,39 @@ foreach ([
     '.res-booking-action-row',
     '.res-booking-complete-button',
     '.res-booking-pending-note',
+    '.media-upload-form',
+    '.media-upload-submit',
+    '.media-filter-form',
+    '.media-bulk-form',
+    '.media-filter-grid',
+    '.media-filter-actions',
+    '.media-result-summary',
+    '.media-bulk-actions',
+    '.media-bulk-label',
+    '.media-bulk-select',
+    '.media-grid',
+    '.media-card',
+    '.media-card__header',
+    '.media-card__checkbox',
+    '.media-card__link',
+    '.media-card__image',
+    '.media-card__placeholder',
+    '.media-card__body',
+    '.media-card__title',
+    '.media-edit-section',
+    '.media-edit-title',
+    '.media-edit-grid',
+    '.media-alt-warning',
+    '.media-caption-textarea',
+    '.media-edit-actions',
+    '.media-replace-form',
+    '.media-replace-submit',
+    '.media-info-list',
+    '.media-info-list__value--break',
+    '.media-info-list__value--url',
+    '.media-usage-fieldset',
+    '.media-empty-usage',
+    '.media-usage-list',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',

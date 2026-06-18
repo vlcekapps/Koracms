@@ -270,7 +270,7 @@ Modul **Galerie** nově chrání neveřejná alba i fotografie i na úrovni deta
 
 Modul **Chat** nově funguje jako moderovaná veřejná nástěnka: nové zprávy se nejdřív ukládají ke schválení, veřejně se nezobrazuje e-mail ani web autora, veřejný výpis podporuje hledání, řazení a stránkování a administrace nabízí inbox workflow se schvalováním, interní poznámkou, historií změn a odpovědí e-mailem.
 
-Knihovna **Média** nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery místo ručně skládaných `/uploads/media/...` URL, blokuje mazání používaných souborů a podporuje náhradu souboru, rozšířená metadata i hromadné akce v administraci.
+Knihovna **Média** nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery místo ručně skládaných `/uploads/media/...` URL, blokuje mazání používaných souborů a podporuje náhradu souboru, rozšířená metadata i hromadné akce v administraci. Admin obrazovka médií používá pro upload, filtry, grid, hromadné akce a detail metadat sdílenou CSS vrstvu bez lokálních `style` atributů.
 
 Modul **Ankety** nově používá stejný publikační helper jako widgety, sitemapa a vyhledávání, takže aktivní a archivní ankety drží konzistentní veřejnou viditelnost. Součástí modulu je veřejné fulltextové hledání, stránkování indexu, redirect při změně slugu, širší revize a volitelná SEO pole `meta title` a `meta description`.
 
