@@ -2212,7 +2212,9 @@ function analyzeHtml(string $html): array
         $issues[] = 'php warning/error rendered in HTML';
     }
 
-    $hasLinkedPublicStylesheet = str_contains($html, '/assets/public.css') || str_contains($html, '/assets/public-core.css');
+    $hasLinkedPublicStylesheet = str_contains($html, '/assets/public.css')
+        || str_contains($html, '/assets/public-core.css')
+        || str_contains($html, '/admin/assets/layout.css');
     if (str_contains($html, 'class="skip-link"') && !str_contains($html, '.skip-link') && !$hasLinkedPublicStylesheet) {
         $issues[] = 'skip-link without CSS definition';
     }
@@ -11145,6 +11147,7 @@ if ($utf8CopyIssues === []) {
 echo "=== admin_field_error_guardrails ===\n";
 $adminFieldErrorIssues = [];
 $adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
+$adminLayoutCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/layout.css');
 $pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $newsFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news_form.php');
@@ -11220,12 +11223,26 @@ foreach ([
     'function adminFieldHasError(',
     'function adminFieldAttributes(',
     'function adminRenderFieldError(',
-    '.field-error {',
-    'input[aria-invalid="true"]',
 ] as $adminLayoutFragment) {
     if (!str_contains($adminLayoutSource, $adminLayoutFragment)) {
         $adminFieldErrorIssues[] = 'admin layout is missing field-level error helper fragment: ' . $adminLayoutFragment;
     }
+}
+foreach ([
+    '.field-error {',
+    'input[aria-invalid="true"]',
+] as $adminLayoutFragment) {
+    if (!str_contains($adminLayoutCssSource, $adminLayoutFragment)) {
+        $adminFieldErrorIssues[] = 'admin layout is missing field-level error helper fragment: ' . $adminLayoutFragment;
+    }
+}
+if (!str_contains($adminLayoutSource, '/admin/assets/layout.css')
+    || str_contains($adminLayoutSource, '<style nonce')
+    || str_contains($adminLayoutSource, '<style>')) {
+    $adminFieldErrorIssues[] = 'admin layout must load shared static layout.css instead of rendering an inline style block';
+}
+if (!str_contains($adminLayoutCssSource, ':root {') || !str_contains($adminLayoutCssSource, '.skip-link:focus')) {
+    $adminFieldErrorIssues[] = 'admin layout stylesheet is missing core admin CSS fragments';
 }
 if (str_contains($adminLayoutSource, "info.setAttribute(\\'aria-live\\',\\'polite\\');")) {
     $adminFieldErrorIssues[] = 'admin content word count still announces every input as a live region';
@@ -11560,7 +11577,7 @@ foreach ([
     '.seo-preview',
     '.admin-footer',
 ] as $adminLayoutUtilityFragment) {
-    if (!str_contains($adminLayoutSource, $adminLayoutUtilityFragment)) {
+    if (!str_contains($adminLayoutCssSource, $adminLayoutUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin layout is missing shared utility class: ' . $adminLayoutUtilityFragment;
     }
 }
@@ -12578,7 +12595,7 @@ foreach ([
     '.form-builder-condition-grid',
     '.form-builder-new-field',
 ] as $formBuilderLayoutFragment) {
-    if (!str_contains($adminLayoutSource, $formBuilderLayoutFragment)) {
+    if (!str_contains($adminLayoutCssSource, $formBuilderLayoutFragment)) {
         $adminFieldErrorIssues[] = 'admin layout is missing form builder style fragment: ' . $formBuilderLayoutFragment;
     }
 }
