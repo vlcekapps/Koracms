@@ -531,6 +531,8 @@ function adminHeader(string $pageTitle): void
        . '    .admin-sort-item { display:flex; align-items:center; gap:.75rem; padding:.55rem 0; border-bottom:1px solid var(--admin-border); flex-wrap:wrap; cursor:grab; }' . "\n"
        . '    .admin-sort-item--muted, .admin-sort-item--dragging { opacity:.6; }' . "\n"
        . '    .admin-sort-item__body { min-width:14rem; flex:1 1 18rem; }' . "\n"
+       . '    .admin-sort-controls { display:inline-flex; gap:2px; margin-left:6px; vertical-align:middle; }' . "\n"
+       . '    .admin-sort-control { padding:1px 6px; cursor:pointer; font-size:.85rem; line-height:1; }' . "\n"
        . '    .admin-order-list { list-style:none; padding:0; margin:0; max-width:30rem; }' . "\n"
        . '    .admin-order-item { display:flex; align-items:center; gap:.5rem; padding:.4rem 0; border-bottom:1px solid var(--admin-border); flex-wrap:wrap; }' . "\n"
        . '    .admin-order-item__label { min-width:10rem; }' . "\n"

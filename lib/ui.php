@@ -52,20 +52,13 @@ function cookieBanner(): string
         'Tento web používá soubory cookies ke zlepšení vašeho zážitku z prohlížení.'
     ));
     $nonce = cspNonce();
-    return '<div id="cookie-banner" role="dialog" aria-labelledby="cookie-heading" aria-modal="true"'
-         . ' style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9000;'
-         . 'background:#222;color:#fff;padding:1rem 1.5rem;'
-         . 'box-shadow:0 -2px 8px rgba(0,0,0,.4)">' . "\n"
-         . '  <p id="cookie-heading" style="margin:0 0 .75rem">' . "\n"
+    return '<div id="cookie-banner" role="dialog" aria-labelledby="cookie-heading" aria-modal="true" class="cookie-banner" hidden>' . "\n"
+         . '  <p id="cookie-heading" class="cookie-banner__heading">' . "\n"
          . '    <strong>Soubory cookies</strong> &ndash; ' . $text . "\n"
          . '  </p>' . "\n"
-         . '  <div style="display:flex;gap:.75rem;flex-wrap:wrap">' . "\n"
-         . '    <button id="cookie-accept" type="button"'
-         . ' style="padding:.4rem 1rem;background:#4caf50;border:none;color:#fff;'
-         . 'cursor:pointer;border-radius:3px;font-size:1rem">Přijmout</button>' . "\n"
-         . '    <button id="cookie-decline" type="button"'
-         . ' style="padding:.4rem 1rem;background:#777;border:none;color:#fff;'
-         . 'cursor:pointer;border-radius:3px;font-size:1rem">Odmítnout</button>' . "\n"
+         . '  <div class="cookie-banner__actions">' . "\n"
+         . '    <button id="cookie-accept" type="button" class="cookie-banner__button cookie-banner__button--accept">Přijmout</button>' . "\n"
+         . '    <button id="cookie-decline" type="button" class="cookie-banner__button cookie-banner__button--decline">Odmítnout</button>' . "\n"
          . '  </div>' . "\n"
          . '</div>' . "\n"
          . '<script nonce="' . $nonce . '">' . "\n"
@@ -75,8 +68,8 @@ function cookieBanner(): string
          . '  var b=document.getElementById(\'cookie-banner\');' . "\n"
          . '  var ac=document.getElementById(\'cookie-accept\');' . "\n"
          . '  var dc=document.getElementById(\'cookie-decline\');' . "\n"
-         . '  if(!getCk(\'cms_cookie\')){b.style.display=\'block\';setTimeout(function(){ac.focus();},50);}' . "\n"
-         . '  function hide(v){setCk(\'cms_cookie\',v,365);b.style.display=\'none\';}' . "\n"
+         . '  if(!getCk(\'cms_cookie\')){b.hidden=false;setTimeout(function(){ac.focus();},50);}' . "\n"
+         . '  function hide(v){setCk(\'cms_cookie\',v,365);b.hidden=true;}' . "\n"
          . '  ac.addEventListener(\'click\',function(){hide(\'1\');if(window._koraGa4Id){var s=document.createElement(\'script\');s.async=true;s.nonce=' . json_encode($nonce) . ';s.src=\'https://www.googletagmanager.com/gtag/js?id=\'+window._koraGa4Id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag(\'js\',new Date());gtag(\'config\',window._koraGa4Id);}});' . "\n"
          . '  dc.addEventListener(\'click\',function(){hide(\'0\');});' . "\n"
          . '  b.addEventListener(\'keydown\',function(e){' . "\n"
@@ -291,19 +284,13 @@ function adminBar(string $editUrl = ''): string
         return '';
     }
     $b   = BASE_URL;
-    $out = '<div id="admin-bar" role="navigation" aria-label="Administrace webu"'
-         . ' style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#222;'
-         . 'color:#fff;display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;'
-         . 'font-size:.85rem">'
-         . '<a href="' . $b . '/admin/index.php" style="color:#ddd;text-decoration:none;display:inline-flex;'
-         . 'align-items:center;min-height:2rem;padding:.35rem .6rem;border-radius:4px"><span aria-hidden="true">&#9881;</span> Admin</a>';
+    $out = '<div id="admin-bar" role="navigation" aria-label="Administrace webu" class="public-admin-bar">'
+         . '<a href="' . $b . '/admin/index.php" class="public-admin-bar__link"><span aria-hidden="true">&#9881;</span> Admin</a>';
     if ($editUrl !== '') {
-        $out .= ' <a href="' . h($editUrl) . '" style="color:#ffd700;text-decoration:none;display:inline-flex;'
-              . 'align-items:center;min-height:2rem;padding:.35rem .6rem;border-radius:4px">&#9998; Upravit</a>';
+        $out .= ' <a href="' . h($editUrl) . '" class="public-admin-bar__link public-admin-bar__link--edit">&#9998; Upravit</a>';
     }
-    $out .= '<span style="margin-left:auto">'
-          . '<a href="' . $b . '/admin/logout.php" style="color:#ddd;text-decoration:none;display:inline-flex;'
-          . 'align-items:center;min-height:2rem;padding:.35rem .6rem;border-radius:4px">Odhlásit se</a>'
+    $out .= '<span class="public-admin-bar__spacer">'
+          . '<a href="' . $b . '/admin/logout.php" class="public-admin-bar__link">Odhlásit se</a>'
           . '</span>';
     $out .= '</div>';
     return $out;
@@ -322,6 +309,20 @@ function publicA11yStyleTag(): string
          . "  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;"
          . " clip:rect(0,0,0,0); white-space:nowrap; border:0; }\n"
          . "  :focus-visible { outline:3px solid #005fcc; outline-offset:2px; }\n"
+         . "  .cookie-banner { position:fixed; bottom:0; left:0; right:0; z-index:9000; background:#222;"
+         . " color:#fff; padding:1rem 1.5rem; box-shadow:0 -2px 8px rgba(0,0,0,.4); }\n"
+         . "  .cookie-banner__heading { margin:0 0 .75rem; }\n"
+         . "  .cookie-banner__actions { display:flex; gap:.75rem; flex-wrap:wrap; }\n"
+         . "  .cookie-banner__button { padding:.4rem 1rem; border:none; color:#fff; cursor:pointer;"
+         . " border-radius:3px; font-size:1rem; }\n"
+         . "  .cookie-banner__button--accept { background:#4caf50; }\n"
+         . "  .cookie-banner__button--decline { background:#777; }\n"
+         . "  .public-admin-bar { position:fixed; bottom:0; left:0; right:0; z-index:9999; background:#222;"
+         . " color:#fff; display:flex; align-items:center; gap:.5rem; padding:.45rem .75rem; font-size:.85rem; }\n"
+         . "  .public-admin-bar__link { color:#ddd; text-decoration:none; display:inline-flex; align-items:center;"
+         . " min-height:2rem; padding:.35rem .6rem; border-radius:4px; }\n"
+         . "  .public-admin-bar__link--edit { color:#ffd700; }\n"
+         . "  .public-admin-bar__spacer { margin-left:auto; }\n"
          . "</style>\n";
 }
 
@@ -471,7 +472,7 @@ function sortableJs(): string
         . 'items().forEach(function(el){el.setAttribute("draggable","true");});'
         . 'list.addEventListener("dragstart",function(e){'
         . 'var t=e.target.closest("[data-sort-id]");if(!t)return;'
-        . 'dragged=t;t.style.opacity="0.4";'
+        . 'dragged=t;t.classList.add("admin-sort-item--dragging");'
         . 'e.dataTransfer.effectAllowed="move";'
         . '});'
         . 'list.addEventListener("dragover",function(e){'
@@ -483,7 +484,7 @@ function sortableJs(): string
         . '}'
         . '});'
         . 'list.addEventListener("dragend",function(){'
-        . 'if(dragged)dragged.style.opacity="";dragged=null;save();'
+        . 'if(dragged)dragged.classList.remove("admin-sort-item--dragging");dragged=null;save();'
         . '});'
         // Save function
         . 'function save(){'
@@ -510,14 +511,14 @@ function sortableJs(): string
         // Visible ↑/↓ buttons
         . 'items().forEach(function(el){'
         . 'var wrap=document.createElement("span");'
-        . 'wrap.style.cssText="display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle";'
+        . 'wrap.className="admin-sort-controls";'
         . 'var up=document.createElement("button");up.type="button";up.textContent="↑";'
         . 'up.title="Posunout nahoru";up.setAttribute("aria-label","Posunout nahoru");'
-        . 'up.style.cssText="padding:1px 6px;cursor:pointer;font-size:.85rem;line-height:1";'
+        . 'up.className="admin-sort-control";'
         . 'up.addEventListener("click",function(){moveItem(el,"up");});'
         . 'var dn=document.createElement("button");dn.type="button";dn.textContent="↓";'
         . 'dn.title="Posunout dolů";dn.setAttribute("aria-label","Posunout dolů");'
-        . 'dn.style.cssText="padding:1px 6px;cursor:pointer;font-size:.85rem;line-height:1";'
+        . 'dn.className="admin-sort-control";'
         . 'dn.addEventListener("click",function(){moveItem(el,"down");});'
         . 'wrap.appendChild(up);wrap.appendChild(dn);'
         . 'el.appendChild(wrap);'

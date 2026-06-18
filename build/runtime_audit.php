@@ -9276,6 +9276,24 @@ if (!str_contains($publicHeadSource, '<script async nonce="<?= cspNonce() ?>" sr
 if (!str_contains($uiSource, "s.nonce=' . json_encode(\$nonce) . ';")) {
     $contentSecurityPolicyIssues[] = 'cookie banner delayed GA loader is missing CSP nonce support';
 }
+if (str_contains($uiSource, 'style=') || str_contains($uiSource, '.style') || str_contains($uiSource, 'style.cssText')) {
+    $contentSecurityPolicyIssues[] = 'shared UI helpers still contain inline style markup or JS style mutations';
+}
+foreach ([
+    'class="cookie-banner" hidden',
+    'b.hidden=false',
+    'b.hidden=true',
+    'class="public-admin-bar"',
+    'public-admin-bar__link--edit',
+    'admin-sort-controls',
+    'admin-sort-control',
+    'classList.add("admin-sort-item--dragging")',
+    'classList.remove("admin-sort-item--dragging")',
+] as $sharedUiClassFragment) {
+    if (!str_contains($uiSource, $sharedUiClassFragment)) {
+        $contentSecurityPolicyIssues[] = 'shared UI helper is missing class-based CSP-safe fragment: ' . $sharedUiClassFragment;
+    }
+}
 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/admin')) as $cspAdminFile) {
     if (!$cspAdminFile instanceof SplFileInfo || !$cspAdminFile->isFile() || $cspAdminFile->getExtension() !== 'php') {
         continue;
@@ -11105,6 +11123,8 @@ foreach ([
     '.admin-sort-item--muted',
     '.admin-sort-item--dragging',
     '.admin-sort-item__body',
+    '.admin-sort-controls',
+    '.admin-sort-control',
     '.admin-order-list',
     '.admin-order-item',
     '.admin-order-item__label',
