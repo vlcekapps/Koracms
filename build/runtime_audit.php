@@ -10984,6 +10984,8 @@ $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/po
 $reservationCategoriesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_categories.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_add.php');
+$reservationBookingDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_detail.php');
+$reservationBookingsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_bookings.php');
 $reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
 $reservationResourcesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resources.php');
 $revisionsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/revisions.php');
@@ -11956,13 +11958,49 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__
     }
 }
 foreach ([
-    'reservation booking add form' => [$reservationBookingAddFormSource, 'data-booking-mode-toggle', "radio.addEventListener('change', toggleMode)"],
+    'reservation booking add form' => [$reservationBookingAddFormSource, 'data-booking-mode-toggle', "radio.addEventListener('change', toggleMode)", 'userFields.hidden = isGuest;', 'guestFields.hidden = !isGuest;'],
     'reservation resource form' => [$reservationFormSource, 'data-add-slot', 'data-remove-slot', 'data-remove-blocked'],
 ] as $adminEventHandlerLabel => $adminEventHandlerSpec) {
     $adminEventHandlerSource = array_shift($adminEventHandlerSpec);
     foreach ($adminEventHandlerSpec as $adminEventHandlerFragment) {
         if (!str_contains((string)$adminEventHandlerSource, (string)$adminEventHandlerFragment)) {
             $adminFieldErrorIssues[] = $adminEventHandlerLabel . ' is missing event handler fragment: ' . $adminEventHandlerFragment;
+        }
+    }
+}
+foreach ([
+    'reservation bookings overview' => [
+        $reservationBookingsOverviewSource,
+        '<style nonce="<?= cspNonce() ?>">',
+        'class="button-row res-bookings-toolbar"',
+        'class="res-bookings-filter"',
+        'class="res-booking-status--<?= h($statusKey) ?>"',
+        'class="res-bookings-pager-list"',
+    ],
+    'reservation booking add form' => [
+        $reservationBookingAddFormSource,
+        '<style nonce="<?= cspNonce() ?>">',
+        'class="res-booking-mode-row"',
+        'id="user-fields"<?= $mode ===',
+        'id="guest-fields"<?= $mode !==',
+        'class="button-row res-booking-actions"',
+    ],
+    'reservation booking detail' => [
+        $reservationBookingDetailSource,
+        '<style nonce="<?= cspNonce() ?>">',
+        'class="res-booking-status--<?= h($statusKey) ?>"',
+        'class="button-row button-row--top res-booking-actions"',
+        'class="res-booking-fieldset"',
+        'res-booking-complete-button',
+    ],
+] as $reservationAdminLabel => $reservationAdminFragments) {
+    $reservationAdminSource = (string)array_shift($reservationAdminFragments);
+    if (str_contains($reservationAdminSource, 'style=') || str_contains($reservationAdminSource, '.style')) {
+        $adminFieldErrorIssues[] = $reservationAdminLabel . ' still contains inline style markup or JS style mutations';
+    }
+    foreach ($reservationAdminFragments as $reservationAdminFragment) {
+        if (!str_contains($reservationAdminSource, (string)$reservationAdminFragment)) {
+            $adminFieldErrorIssues[] = $reservationAdminLabel . ' is missing reservation admin style fragment: ' . $reservationAdminFragment;
         }
     }
 }

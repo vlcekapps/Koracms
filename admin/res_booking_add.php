@@ -100,6 +100,17 @@ $endTime     = $_POST['end_time'] ?? '';
 $partySize   = $_POST['party_size'] ?? '1';
 $notes       = $_POST['notes'] ?? '';
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .res-booking-required-note { margin-top:0; font-size:.9rem; }
+  .res-booking-mode-row { display:flex; gap:1.5rem; margin-top:.5rem; flex-wrap:wrap; }
+  .res-booking-fieldset { border:1px solid var(--admin-border); border-radius:10px; padding:.85rem 1rem; margin-top:1rem; }
+  .res-booking-time-row { display:flex; gap:1rem; flex-wrap:wrap; }
+  .res-booking-input-auto { width:auto; }
+  .res-booking-input-stacked { width:auto; display:block; margin-top:.2rem; }
+  .res-booking-party-size { width:100px; }
+  .res-booking-note { min-height:80px; }
+  .res-booking-actions { margin-top:1.5rem; }
+</style>
 
 <?php if ($err !== ''): ?>
   <p role="alert" class="error" id="form-error"><?= h($err) ?></p>
@@ -109,7 +120,7 @@ $notes       = $_POST['notes'] ?? '';
   <p role="status" class="success">Rezervace byla vytvořena.</p>
 <?php endif; ?>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="res-booking-required-note">
   Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -119,19 +130,19 @@ $notes       = $_POST['notes'] ?? '';
 
   <fieldset>
     <legend>Typ zákazníka</legend>
-    <div style="display:flex;gap:1.5rem;margin-top:.5rem">
-      <label style="display:inline;font-weight:normal">
+    <div class="res-booking-mode-row">
+      <label class="admin-checkbox-label">
         <input type="radio" name="mode" value="user" <?= $mode !== 'guest' ? 'checked' : '' ?>
                data-booking-mode-toggle> Registrovaný uživatel
       </label>
-      <label style="display:inline;font-weight:normal">
+      <label class="admin-checkbox-label">
         <input type="radio" name="mode" value="guest" <?= $mode === 'guest' ? 'checked' : '' ?>
                data-booking-mode-toggle> Host
       </label>
     </div>
   </fieldset>
 
-  <div id="user-fields" style="<?= $mode === 'guest' ? 'display:none' : '' ?>">
+  <div id="user-fields"<?= $mode === 'guest' ? ' hidden' : '' ?>>
     <label for="user_id">Uživatel <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <select id="user_id" name="user_id">
       <option value="">– Vyberte –</option>
@@ -144,7 +155,7 @@ $notes       = $_POST['notes'] ?? '';
     </select>
   </div>
 
-  <div id="guest-fields" style="<?= $mode !== 'guest' ? 'display:none' : '' ?>">
+  <div id="guest-fields"<?= $mode !== 'guest' ? ' hidden' : '' ?>>
     <label for="guest_name">Jméno hosta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="guest_name" name="guest_name" maxlength="255" autocomplete="name" value="<?= h($guestName) ?>">
 
@@ -155,7 +166,7 @@ $notes       = $_POST['notes'] ?? '';
     <input type="text" id="guest_phone" name="guest_phone" maxlength="50" autocomplete="tel" value="<?= h($guestPhone) ?>">
   </div>
 
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset class="res-booking-fieldset">
     <legend>Rezervace</legend>
 
     <label for="resource_id">Zdroj <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
@@ -168,32 +179,32 @@ $notes       = $_POST['notes'] ?? '';
 
     <label for="booking_date">Datum <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="date" id="booking_date" name="booking_date" required aria-required="true"
-           value="<?= h($bookingDate) ?>" style="width:auto">
+           value="<?= h($bookingDate) ?>" class="res-booking-input-auto">
 
-    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+    <div class="res-booking-time-row">
       <div>
         <label for="start_time">Začátek <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
         <input type="time" id="start_time" name="start_time" required aria-required="true"
-               value="<?= h($startTime) ?>" style="width:auto;display:block;margin-top:.2rem">
+               value="<?= h($startTime) ?>" class="res-booking-input-stacked">
       </div>
       <div>
         <label for="end_time">Konec <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
         <input type="time" id="end_time" name="end_time" required aria-required="true"
-               value="<?= h($endTime) ?>" style="width:auto;display:block;margin-top:.2rem">
+               value="<?= h($endTime) ?>" class="res-booking-input-stacked">
       </div>
     </div>
 
     <label for="party_size">Počet osob</label>
-    <input type="number" id="party_size" name="party_size" min="1" value="<?= h($partySize) ?>" style="width:100px">
+    <input type="number" id="party_size" name="party_size" min="1" value="<?= h($partySize) ?>" class="res-booking-party-size">
 
     <label for="notes">Poznámka</label>
-    <textarea id="notes" name="notes" rows="3" style="min-height:80px" aria-describedby="booking-notes-help"><?= h($notes) ?></textarea>
+    <textarea id="notes" name="notes" rows="3" class="res-booking-note" aria-describedby="booking-notes-help"><?= h($notes) ?></textarea>
     <small id="booking-notes-help" class="field-help">Nepovinné pole.</small>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row res-booking-actions">
     <button type="submit" class="btn">Vytvořit rezervaci</button>
-    <a href="res_bookings.php" style="margin-left:1rem">Zrušit</a>
+    <a href="res_bookings.php" class="btn">Zrušit</a>
   </div>
 </form>
 
@@ -207,8 +218,8 @@ $notes       = $_POST['notes'] ?? '';
       return;
     }
     var isGuest = guestToggle.checked;
-    userFields.style.display = isGuest ? 'none' : '';
-    guestFields.style.display = isGuest ? '' : 'none';
+    userFields.hidden = isGuest;
+    guestFields.hidden = !isGuest;
   }
 
   document.querySelectorAll('[data-booking-mode-toggle]').forEach(function (radio) {

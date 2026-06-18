@@ -85,7 +85,6 @@ $resources = $pdo->query(
 )->fetchAll();
 
 $statusLabels = reservationBookingStatusLabels();
-$statusColors = reservationBookingStatusColors();
 
 $filterParams = array_filter([
     'q' => $q,
@@ -101,25 +100,39 @@ $filterBaseQuery = $filterParams !== [] ? http_build_query($filterParams) : '';
 
 adminHeader('Rezervace');
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .res-bookings-toolbar { margin-bottom:1rem; }
+  .res-bookings-filter { margin-bottom:1rem; }
+  .res-bookings-filter-row { display:flex; gap:.5rem; flex-wrap:wrap; align-items:flex-end; }
+  .res-bookings-filter-select { width:auto; }
+  .res-bookings-hidden-note { color:#666; font-size:.85rem; margin-top:-.5rem; margin-bottom:1rem; }
+  .res-bookings-pager-list { list-style:none; display:flex; gap:.5rem; padding:0; margin-top:1rem; flex-wrap:wrap; }
+  .res-booking-status--pending { color:#8a4b00; }
+  .res-booking-status--confirmed { color:#1b5e20; }
+  .res-booking-status--cancelled { color:#666; }
+  .res-booking-status--rejected { color:#b71c1c; }
+  .res-booking-status--completed { color:#005fcc; }
+  .res-booking-status--no_show { color:#6d0000; }
+</style>
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Rezervace byla úspěšně aktualizována.</p>
 <?php endif; ?>
-<p>
+<p class="button-row res-bookings-toolbar">
   <a href="res_booking_add.php" class="btn">+ Přidat rezervaci</a>
-  <a href="res_resources.php" class="btn" style="margin-left:.5rem">Zdroje rezervací</a>
+  <a href="res_resources.php" class="btn">Zdroje rezervací</a>
 </p>
 
-<form method="get" aria-labelledby="filter-heading" style="margin-bottom:1rem">
-  <fieldset style="border:1px solid #ddd;padding:.5rem 1rem">
-    <legend id="filter-heading" style="font-weight:bold">Filtrovat rezervace</legend>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+<form method="get" aria-labelledby="filter-heading" class="res-bookings-filter">
+  <fieldset class="admin-fieldset-card">
+    <legend id="filter-heading">Filtrovat rezervace</legend>
+    <div class="res-bookings-filter-row">
       <div>
         <label for="q">Hledat</label>
         <input type="search" id="q" name="q" value="<?= h($q) ?>" placeholder="Jméno, e-mail, zdroj nebo poznámka">
       </div>
       <div>
         <label for="resource_id">Zdroj</label>
-        <select id="resource_id" name="resource_id" style="width:auto">
+        <select id="resource_id" name="resource_id" class="res-bookings-filter-select">
           <option value="">– Všechny –</option>
           <?php foreach ($resources as $resource): ?>
             <option value="<?= (int)$resource['id'] ?>"<?= $filterResource === (int)$resource['id'] ? ' selected' : '' ?>><?= h((string)$resource['name']) ?></option>
@@ -128,7 +141,7 @@ adminHeader('Rezervace');
       </div>
       <div>
         <label for="status">Stav</label>
-        <select id="status" name="status" style="width:auto">
+        <select id="status" name="status" class="res-bookings-filter-select">
           <option value="">– Všechny –</option>
           <?php foreach ($statusLabels as $statusKey => $statusLabel): ?>
             <option value="<?= h($statusKey) ?>"<?= $filterStatus === $statusKey ? ' selected' : '' ?>><?= h($statusLabel) ?></option>
@@ -137,16 +150,16 @@ adminHeader('Rezervace');
       </div>
       <div>
         <label for="date_from">Datum od</label>
-        <input type="date" id="date_from" name="date_from" value="<?= h($dateFrom) ?>" style="width:auto">
+        <input type="date" id="date_from" name="date_from" value="<?= h($dateFrom) ?>" class="res-bookings-filter-select">
       </div>
       <div>
         <label for="date_to">Datum do</label>
-        <input type="date" id="date_to" name="date_to" value="<?= h($dateTo) ?>" style="width:auto">
+        <input type="date" id="date_to" name="date_to" value="<?= h($dateTo) ?>" class="res-bookings-filter-select">
       </div>
       <div>
         <button type="submit" class="btn">Použít filtr</button>
         <?php if ($filterParams !== []): ?>
-          <a href="res_bookings.php" class="btn" style="margin-left:.25rem">Zrušit filtr</a>
+          <a href="res_bookings.php" class="btn">Zrušit filtr</a>
         <?php endif; ?>
       </div>
     </div>
@@ -159,7 +172,7 @@ adminHeader('Rezervace');
          WHERE status IN ('cancelled','rejected') AND booking_date < DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
     )->fetchColumn();
     if ($hiddenCount > 0): ?>
-  <p style="color:#666;font-size:.85rem;margin-top:-.5rem;margin-bottom:1rem">
+  <p class="res-bookings-hidden-note">
     (<?= $hiddenCount ?> starších zrušených nebo zamítnutých rezervací je skryto. Pro zobrazení všech použijte filtr.)
   </p>
 <?php endif; endif; ?>
@@ -198,6 +211,7 @@ adminHeader('Rezervace');
 
         $detailHref = 'res_booking_detail.php?id=' . (int)$booking['id'];
         $detailHref .= '&redirect=' . rawurlencode($currentRedirect);
+        $statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? '')) ?: 'unknown';
         ?>
       <tr>
         <td><?= (int)$booking['id'] ?></td>
@@ -214,21 +228,21 @@ adminHeader('Rezervace');
         </td>
         <td><?= (int)$booking['party_size'] ?></td>
         <td>
-          <strong style="color:<?= h((string)($statusColors[$booking['status']] ?? '#333333')) ?>">
+          <strong class="res-booking-status--<?= h($statusKey) ?>">
             <?= h((string)($statusLabels[$booking['status']] ?? $booking['status'])) ?>
           </strong>
         </td>
         <td class="actions">
           <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
           <?php if ($booking['status'] === 'pending'): ?>
-            <form action="res_booking_save.php" method="post" style="display:inline">
+            <form action="res_booking_save.php" method="post" class="admin-inline-form">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
               <input type="hidden" name="action" value="approve">
               <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
-            <form action="res_booking_save.php" method="post" style="display:inline" data-confirm="Zamítnout rezervaci?">
+            <form action="res_booking_save.php" method="post" class="admin-inline-form" data-confirm="Zamítnout rezervaci?">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
               <input type="hidden" name="action" value="reject">
@@ -244,7 +258,7 @@ adminHeader('Rezervace');
 
   <?php if ($pages > 1): ?>
   <nav aria-label="Stránkování rezervací">
-    <ul style="list-style:none;display:flex;gap:.5rem;padding:0;margin-top:1rem;flex-wrap:wrap">
+    <ul class="res-bookings-pager-list">
       <?php if ($page > 1): ?>
         <li><a href="?<?= h($filterBaseQuery !== '' ? $filterBaseQuery . '&amp;' : '') ?>strana=<?= $page - 1 ?>" rel="prev"><span aria-hidden="true">‹</span> Předchozí stránka</a></li>
       <?php endif; ?>

@@ -29,7 +29,6 @@ if (!$booking) {
 }
 
 $statusLabels = reservationBookingStatusLabels();
-$statusColors = reservationBookingStatusColors();
 $redirect = internalRedirectTarget(trim($_GET['redirect'] ?? ''), BASE_URL . '/admin/res_bookings.php');
 $resourcePublicPath = !empty($booking['resource_slug']) ? reservationResourcePublicPath($booking) : '';
 
@@ -49,9 +48,26 @@ if (!empty($booking['user_id'])) {
 
 $bookingEndDt = new DateTime((string)$booking['booking_date'] . ' ' . (string)$booking['end_time']);
 $canComplete = in_array($booking['status'], ['pending', 'confirmed'], true) && $bookingEndDt <= new DateTime();
+$statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? '')) ?: 'unknown';
 
 adminHeader('Detail rezervace #' . (int)$booking['id']);
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .res-booking-status--pending { color:#8a4b00; }
+  .res-booking-status--confirmed { color:#1b5e20; }
+  .res-booking-status--cancelled { color:#666; }
+  .res-booking-status--rejected { color:#b71c1c; }
+  .res-booking-status--completed { color:#005fcc; }
+  .res-booking-status--no_show { color:#6d0000; }
+  .res-booking-actions { margin-bottom:1rem; align-items:flex-start; }
+  .res-booking-form { margin-bottom:1rem; }
+  .res-booking-fieldset { border:1px solid var(--admin-border); border-radius:10px; padding:.85rem 1rem; }
+  .res-booking-textarea--reject { min-height:80px; }
+  .res-booking-textarea--compact { min-height:60px; max-width:400px; }
+  .res-booking-action-row { margin-top:.5rem; }
+  .res-booking-complete-button { background:#005fcc; color:#fff; }
+  .res-booking-pending-note { color:#666; font-style:italic; }
+</style>
 
 <?php if (isset($_GET['ok'])): ?>
   <p role="status" class="success">Rezervace byla úspěšně aktualizována.</p>
@@ -83,7 +99,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
     <tr>
       <th scope="row">Stav</th>
       <td>
-        <strong style="color:<?= h((string)($statusColors[$booking['status']] ?? '#333333')) ?>">
+        <strong class="res-booking-status--<?= h($statusKey) ?>">
           <?= h((string)($statusLabels[$booking['status']] ?? $booking['status'])) ?>
         </strong>
       </td>
@@ -102,7 +118,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
 <h2>Co můžete udělat</h2>
 
 <?php if ($booking['status'] === 'pending'): ?>
-  <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1rem">
+  <div class="button-row button-row--top res-booking-actions">
     <form action="res_booking_save.php" method="post">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
@@ -116,12 +132,12 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
       <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
       <input type="hidden" name="action" value="reject">
       <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-      <fieldset style="border:1px solid #ccc;padding:.5rem 1rem">
+      <fieldset class="res-booking-fieldset">
         <legend>Zamítnutí</legend>
         <label for="admin_note_reject">Poznámka</label>
-        <textarea id="admin_note_reject" name="admin_note" rows="3" style="min-height:80px" aria-describedby="admin-note-reject-help"></textarea>
+        <textarea id="admin_note_reject" name="admin_note" rows="3" class="res-booking-textarea--reject" aria-describedby="admin-note-reject-help"></textarea>
         <small id="admin-note-reject-help" class="field-help">Nepovinné pole.</small>
-        <div style="margin-top:.5rem">
+        <div class="res-booking-action-row">
           <button type="submit" class="btn btn-danger" data-confirm="Zamítnout rezervaci?">Zamítnout</button>
         </div>
       </fieldset>
@@ -130,44 +146,44 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
 <?php endif; ?>
 
 <?php if ($booking['status'] === 'confirmed'): ?>
-  <form action="res_booking_save.php" method="post" style="margin-bottom:1rem">
+  <form action="res_booking_save.php" method="post" class="res-booking-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="cancel">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
     <label for="admin_note_cancel">Poznámka</label>
-    <textarea id="admin_note_cancel" name="admin_note" rows="2" style="min-height:60px;max-width:400px" aria-describedby="admin-note-cancel-help"></textarea>
+    <textarea id="admin_note_cancel" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-cancel-help"></textarea>
     <small id="admin-note-cancel-help" class="field-help">Nepovinné pole.</small>
-    <div style="margin-top:.5rem">
+    <div class="res-booking-action-row">
       <button type="submit" class="btn btn-danger" data-confirm="Zrušit rezervaci?">Zrušit</button>
     </div>
   </form>
 <?php endif; ?>
 
 <?php if ($canComplete): ?>
-  <form action="res_booking_save.php" method="post" style="margin-bottom:1rem">
+  <form action="res_booking_save.php" method="post" class="res-booking-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="complete">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-    <button type="submit" class="btn" style="background:#005fcc;color:#fff">Označit jako dokončenou</button>
+    <button type="submit" class="btn res-booking-complete-button">Označit jako dokončenou</button>
   </form>
 <?php elseif (in_array($booking['status'], ['pending', 'confirmed'], true)): ?>
-  <p style="color:#666;font-style:italic">Označit jako dokončenou bude možné po <?= h($bookingEndDt->format('d.m.Y H:i')) ?>.</p>
+  <p class="res-booking-pending-note">Označit jako dokončenou bude možné po <?= h($bookingEndDt->format('d.m.Y H:i')) ?>.</p>
 <?php endif; ?>
 
 <?php if (in_array($booking['status'], ['confirmed', 'completed'], true) && (string)$booking['booking_date'] < date('Y-m-d')): ?>
-  <form action="res_booking_save.php" method="post" style="margin-bottom:1rem">
+  <form action="res_booking_save.php" method="post" class="res-booking-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="no_show">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-    <fieldset style="border:1px solid #ccc;padding:.5rem 1rem">
+    <fieldset class="res-booking-fieldset">
       <legend>Neomluvená absence</legend>
       <label for="admin_note_noshow">Poznámka</label>
-      <textarea id="admin_note_noshow" name="admin_note" rows="2" style="min-height:60px;max-width:400px" aria-describedby="admin-note-noshow-help"></textarea>
+      <textarea id="admin_note_noshow" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-noshow-help"></textarea>
       <small id="admin-note-noshow-help" class="field-help">Nepovinné pole.</small>
-      <div style="margin-top:.5rem">
+      <div class="res-booking-action-row">
         <button type="submit" class="btn btn-danger"
                 data-confirm="Označit rezervaci jako neomluvenou? Tato akce se zaznamená do historie.">Nedostavil se</button>
       </div>
