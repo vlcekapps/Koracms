@@ -83,6 +83,17 @@ document.addEventListener('click', function (e) {
   if (!btn) return;
   window.print();
 });
+function copyTextFallback(value) {
+  var ta = document.createElement('textarea');
+  ta.value = value;
+  ta.className = 'clipboard-fallback-control';
+  ta.setAttribute('aria-hidden', 'true');
+  ta.setAttribute('tabindex', '-1');
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('.js-copy-link');
   if (!btn) return;
@@ -95,14 +106,7 @@ document.addEventListener('click', function (e) {
       setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
     });
   } else {
-    var ta = document.createElement('textarea');
-    ta.value = url;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    copyTextFallback(url);
     btn.textContent = 'Zkopírováno!';
     if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
     setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
@@ -124,14 +128,7 @@ document.addEventListener('click', function (e) {
       setTimeout(function () { btn.textContent = defaultLabel; }, 2000);
     });
   } else {
-    var ta = document.createElement('textarea');
-    ta.value = payload;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    copyTextFallback(payload);
     btn.textContent = 'Zkopírováno!';
     if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
     setTimeout(function () { btn.textContent = defaultLabel; }, 2000);

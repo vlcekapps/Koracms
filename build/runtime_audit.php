@@ -12871,6 +12871,14 @@ if (!str_contains($themeBaseLayoutSource, "closest('.js-print-page')")
     || !str_contains($themeBaseLayoutSource, 'window.print()')) {
     $themeLayoutIssues[] = 'default theme layout is missing nonce-backed print button handling';
 }
+if (str_contains($themeBaseLayoutSource, 'style=') || str_contains($themeBaseLayoutSource, '.style') || str_contains($themeBaseLayoutSource, 'style.cssText')) {
+    $themeLayoutIssues[] = 'default theme layout still contains inline style markup or JS style mutations';
+}
+if (!str_contains($themeBaseLayoutSource, 'function copyTextFallback(value)')
+    || !str_contains($themeBaseLayoutSource, "ta.className = 'clipboard-fallback-control';")
+    || !str_contains($themePublicCssSource, '.clipboard-fallback-control')) {
+    $themeLayoutIssues[] = 'default theme clipboard fallback is missing class-based styling';
+}
 if (!str_contains($themeAccountReservationsViewSource, 'data-confirm="Opravdu chcete zrušit tuto rezervaci?"')) {
     $themeLayoutIssues[] = 'account reservations view is missing data-confirm reservation cancellation';
 }

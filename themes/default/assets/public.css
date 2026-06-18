@@ -90,6 +90,15 @@ body.theme-public textarea.form-control {
   resize: vertical;
 }
 
+.clipboard-fallback-control {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
 .container {
   width: min(var(--container), calc(100% - 2rem));
   margin-inline: auto;
