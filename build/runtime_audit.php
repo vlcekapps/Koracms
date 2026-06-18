@@ -11118,6 +11118,9 @@ foreach ([
     '.admin-fieldset-card',
     '.admin-fieldset-spaced',
     '.admin-field-row',
+    '.admin-filter-form',
+    '.admin-filter-fieldset',
+    '.admin-compact-label',
     '.admin-form-grid',
     '.admin-form-grid--start',
     '.admin-form-grid--end',
@@ -11150,6 +11153,13 @@ foreach ([
     '.admin-summary-card',
     '.admin-summary-card__heading',
     '.admin-summary-card__value',
+    '.admin-stat-chart',
+    '.admin-stat-chart--compact',
+    '.admin-stat-bars',
+    '.admin-stat-bar',
+    '.admin-stat-bar__label',
+    '.admin-stat-bar__value',
+    '.admin-stat-progress',
     '.admin-option-row',
     '.admin-option-row__input',
     '.admin-result-list',
@@ -11265,6 +11275,33 @@ if (str_contains($adminThemesSource, 'background:<?= h($previewColor) ?>')) {
 }
 if (str_contains($newsletterOverviewSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin newsletter overview still contains inline style attributes';
+}
+if (preg_match('/<[^>]+\sstyle=/i', $adminStatisticsSource) === 1) {
+    $adminFieldErrorIssues[] = 'admin statistics page still contains inline style attributes';
+}
+foreach ([
+    'class="admin-filter-form"',
+    'class="admin-summary-grid',
+    'class="admin-stat-chart',
+    '<progress',
+    'class="admin-stat-progress"',
+] as $adminStatisticsUtilityFragment) {
+    if (!str_contains($adminStatisticsSource, $adminStatisticsUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin statistics page is missing utility fragment: ' . $adminStatisticsUtilityFragment;
+    }
+}
+foreach ([
+    'height:<?=',
+    'display:flex;align-items:flex-end',
+    'background:#005fcc',
+    'background:#2e7d32',
+    'background:#1565c0',
+    'background:#6a1b9a',
+    'background:#e65100',
+] as $adminStatisticsLegacyChartFragment) {
+    if (str_contains($adminStatisticsSource, $adminStatisticsLegacyChartFragment)) {
+        $adminFieldErrorIssues[] = 'admin statistics page still contains legacy inline chart fragment: ' . $adminStatisticsLegacyChartFragment;
+    }
 }
 if (str_contains($auditLogSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin audit log still contains inline style attributes';

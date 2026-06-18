@@ -220,18 +220,18 @@ $statusLabels = [
 adminHeader('Statistiky');
 ?>
 
-<form method="get" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1.5rem">
-  <fieldset style="border:none;padding:0;margin:0;display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+<form method="get" class="admin-filter-form">
+  <fieldset class="admin-filter-fieldset admin-form-grid admin-form-grid--end">
     <legend class="sr-only">Období pro statistiky</legend>
-    <div>
-      <label for="from" style="display:block;margin:0;font-size:.85rem">Od</label>
+    <div class="admin-form-grid__cell">
+      <label for="from" class="admin-compact-label">Od</label>
       <input type="date" id="from" name="from" value="<?= h($dateFrom) ?>"
-             style="width:auto;margin:0">
+             class="admin-input-auto">
     </div>
-    <div>
-      <label for="to" style="display:block;margin:0;font-size:.85rem">Do</label>
+    <div class="admin-form-grid__cell">
+      <label for="to" class="admin-compact-label">Do</label>
       <input type="date" id="to" name="to" value="<?= h($dateTo) ?>"
-             style="width:auto;margin:0">
+             class="admin-input-auto">
     </div>
     <button type="submit" class="btn">Zobrazit</button>
   </fieldset>
@@ -241,22 +241,22 @@ adminHeader('Statistiky');
 <section aria-labelledby="sec-visitors">
   <h2 id="sec-visitors">Návštěvnost</h2>
 
-  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem" role="list" aria-label="Souhrn návštěvnosti">
-    <div role="listitem" style="background:#f0f7ff;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['online']) ?></div>
-      <div style="font-size:.85rem;color:#555">Online</div>
+  <div class="admin-summary-grid admin-stack-sm" role="list" aria-label="Souhrn návštěvnosti">
+    <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__value"><?= $fmt($vs['online']) ?></div>
+      <div class="admin-summary-card__heading">Online</div>
     </div>
-    <div role="listitem" style="background:#f0fff0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['today']) ?></div>
-      <div style="font-size:.85rem;color:#555">Dnes</div>
+    <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__value"><?= $fmt($vs['today']) ?></div>
+      <div class="admin-summary-card__heading">Dnes</div>
     </div>
-    <div role="listitem" style="background:#fffff0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['month']) ?></div>
-      <div style="font-size:.85rem;color:#555">Tento měsíc</div>
+    <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__value"><?= $fmt($vs['month']) ?></div>
+      <div class="admin-summary-card__heading">Tento měsíc</div>
     </div>
-    <div role="listitem" style="background:#fff0f0;padding:.75rem 1.25rem;border-radius:4px;min-width:110px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:bold"><?= $fmt($vs['total']) ?></div>
-      <div style="font-size:.85rem;color:#555">Celkem</div>
+    <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__value"><?= $fmt($vs['total']) ?></div>
+      <div class="admin-summary-card__heading">Celkem</div>
     </div>
   </div>
 
@@ -267,21 +267,24 @@ adminHeader('Statistiky');
   </p>
 
   <?php if (!empty($chartDays)): ?>
-  <figure style="margin:0 0 1.5rem">
-    <figcaption class="sr-only">Denní návštěvnost</figcaption>
-    <div style="display:flex;align-items:flex-end;gap:2px;height:120px" aria-hidden="true">
+  <figure class="admin-stat-chart">
+    <figcaption>Denní návštěvnost</figcaption>
+    <ol class="admin-stat-bars">
       <?php foreach ($chartDays as $d): ?>
-        <div style="flex:1;background:#005fcc;min-height:2px;height:<?= round($d['views'] / $maxViews * 100) ?>%"
-             title="<?= h($d['label']) ?>: <?= $d['views'] ?> zobrazení, <?= $d['uv'] ?> unikátních"></div>
+        <li class="admin-stat-bar">
+          <span class="admin-stat-bar__label"><?= h($d['label']) ?></span>
+          <progress
+            class="admin-stat-progress"
+            value="<?= (int)$d['views'] ?>"
+            max="<?= (int)$maxViews ?>"
+            aria-label="<?= h($d['label']) ?>: zobrazení"
+          ><?= (int)$d['views'] ?></progress>
+          <span class="admin-stat-bar__value">
+            <?= $fmt((int)$d['views']) ?> zobrazení, <?= $fmt((int)$d['uv']) ?> unikátních
+          </span>
+        </li>
       <?php endforeach; ?>
-    </div>
-    <?php if (count($chartDays) <= 31): ?>
-    <div style="display:flex;gap:2px" aria-hidden="true">
-      <?php foreach ($chartDays as $d): ?>
-        <span style="flex:1;text-align:center;font-size:.6rem;color:#666"><?= h($d['label']) ?></span>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+    </ol>
     <table class="sr-only">
       <caption>Denní návštěvnost za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
       <thead><tr><th scope="col">Den</th><th scope="col">Zobrazení</th><th scope="col">Unikátní</th></tr></thead>
@@ -340,19 +343,22 @@ adminHeader('Statistiky');
       }
       ?>
   <h3>Rezervace za posledních 6 měsíců</h3>
-  <figure style="margin:0 0 1rem">
-    <figcaption class="sr-only">Měsíční rezervace</figcaption>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:100px" aria-hidden="true">
+  <figure class="admin-stat-chart admin-stat-chart--compact">
+    <figcaption>Měsíční rezervace</figcaption>
+    <ol class="admin-stat-bars">
       <?php foreach ($resMonthly as $r): ?>
-        <div style="flex:1;background:#2e7d32;min-height:2px;height:<?= round((int)$r['cnt'] / $resMax * 100) ?>%"
-             title="<?= h($fmtMonth($r['m'])) ?>: <?= $r['cnt'] ?>"></div>
+        <li class="admin-stat-bar">
+          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <progress
+            class="admin-stat-progress"
+            value="<?= (int)$r['cnt'] ?>"
+            max="<?= (int)$resMax ?>"
+            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: rezervace"
+          ><?= (int)$r['cnt'] ?></progress>
+          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+        </li>
       <?php endforeach; ?>
-    </div>
-    <div style="display:flex;gap:6px" aria-hidden="true">
-      <?php foreach ($resMonthly as $r): ?>
-        <span style="flex:1;text-align:center;font-size:.7rem;color:#666"><?= h($fmtMonth($r['m'])) ?></span>
-      <?php endforeach; ?>
-    </div>
+    </ol>
     <table class="sr-only">
       <caption>Rezervace za posledních 6 měsíců</caption>
       <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
@@ -393,19 +399,22 @@ adminHeader('Statistiky');
       }
       ?>
   <h3>Noví odběratelé za posledních 6 měsíců</h3>
-  <figure style="margin:0 0 1rem">
-    <figcaption class="sr-only">Noví odběratelé newsletteru</figcaption>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:100px" aria-hidden="true">
+  <figure class="admin-stat-chart admin-stat-chart--compact">
+    <figcaption>Noví odběratelé newsletteru</figcaption>
+    <ol class="admin-stat-bars">
       <?php foreach ($nlMonthly as $r): ?>
-        <div style="flex:1;background:#1565c0;min-height:2px;height:<?= round((int)$r['cnt'] / $nlMax * 100) ?>%"
-             title="<?= h($fmtMonth($r['m'])) ?>: <?= $r['cnt'] ?>"></div>
+        <li class="admin-stat-bar">
+          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <progress
+            class="admin-stat-progress"
+            value="<?= (int)$r['cnt'] ?>"
+            max="<?= (int)$nlMax ?>"
+            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: noví odběratelé"
+          ><?= (int)$r['cnt'] ?></progress>
+          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+        </li>
       <?php endforeach; ?>
-    </div>
-    <div style="display:flex;gap:6px" aria-hidden="true">
-      <?php foreach ($nlMonthly as $r): ?>
-        <span style="flex:1;text-align:center;font-size:.7rem;color:#666"><?= h($fmtMonth($r['m'])) ?></span>
-      <?php endforeach; ?>
-    </div>
+    </ol>
     <table class="sr-only">
       <caption>Noví odběratelé za posledních 6 měsíců</caption>
       <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
@@ -434,19 +443,22 @@ adminHeader('Statistiky');
       }
       ?>
   <h3>Komentáře za posledních 6 měsíců</h3>
-  <figure style="margin:0 0 1rem">
-    <figcaption class="sr-only">Aktivita komentářů</figcaption>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:100px" aria-hidden="true">
+  <figure class="admin-stat-chart admin-stat-chart--compact">
+    <figcaption>Aktivita komentářů</figcaption>
+    <ol class="admin-stat-bars">
       <?php foreach ($commentStats as $r): ?>
-        <div style="flex:1;background:#6a1b9a;min-height:2px;height:<?= round((int)$r['cnt'] / $cmMax * 100) ?>%"
-             title="<?= h($fmtMonth($r['m'])) ?>: <?= $r['cnt'] ?>"></div>
+        <li class="admin-stat-bar">
+          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <progress
+            class="admin-stat-progress"
+            value="<?= (int)$r['cnt'] ?>"
+            max="<?= (int)$cmMax ?>"
+            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: komentáře"
+          ><?= (int)$r['cnt'] ?></progress>
+          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+        </li>
       <?php endforeach; ?>
-    </div>
-    <div style="display:flex;gap:6px" aria-hidden="true">
-      <?php foreach ($commentStats as $r): ?>
-        <span style="flex:1;text-align:center;font-size:.7rem;color:#666"><?= h($fmtMonth($r['m'])) ?></span>
-      <?php endforeach; ?>
-    </div>
+    </ol>
     <table class="sr-only">
       <caption>Komentáře za posledních 6 měsíců</caption>
       <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
@@ -471,19 +483,22 @@ adminHeader('Statistiky');
 <section aria-labelledby="sec-contact">
   <h2 id="sec-contact">Kontaktní zprávy</h2>
   <h3>Zprávy za posledních 6 měsíců</h3>
-  <figure style="margin:0 0 1rem">
-    <figcaption class="sr-only">Kontaktní zprávy</figcaption>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:100px" aria-hidden="true">
+  <figure class="admin-stat-chart admin-stat-chart--compact">
+    <figcaption>Kontaktní zprávy</figcaption>
+    <ol class="admin-stat-bars">
       <?php foreach ($contactStats as $r): ?>
-        <div style="flex:1;background:#e65100;min-height:2px;height:<?= round((int)$r['cnt'] / $ctMax * 100) ?>%"
-             title="<?= h($fmtMonth($r['m'])) ?>: <?= $r['cnt'] ?>"></div>
+        <li class="admin-stat-bar">
+          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <progress
+            class="admin-stat-progress"
+            value="<?= (int)$r['cnt'] ?>"
+            max="<?= (int)$ctMax ?>"
+            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: kontaktní zprávy"
+          ><?= (int)$r['cnt'] ?></progress>
+          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+        </li>
       <?php endforeach; ?>
-    </div>
-    <div style="display:flex;gap:6px" aria-hidden="true">
-      <?php foreach ($contactStats as $r): ?>
-        <span style="flex:1;text-align:center;font-size:.7rem;color:#666"><?= h($fmtMonth($r['m'])) ?></span>
-      <?php endforeach; ?>
-    </div>
+    </ol>
     <table class="sr-only">
       <caption>Kontaktní zprávy za posledních 6 měsíců</caption>
       <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
