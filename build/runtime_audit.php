@@ -11168,6 +11168,36 @@ foreach ([
     '.blog-logo-current',
     '.blog-logo-preview',
     '.blog-dialog-label-spaced',
+    '.widgets-intro',
+    '.widget-panel',
+    '.widget-add-zone',
+    '.widget-add-actions',
+    '.widget-inline-form',
+    '.widget-button--compact',
+    '.widget-empty',
+    '.widget-help--flush',
+    '.widget-sort-list',
+    '.widget-sort-item',
+    '.widget-sort-item--inactive',
+    '.widget-sort-item--dragging',
+    '.widget-sort-item__body',
+    '.widget-sort-item__meta',
+    '.widget-sort-item__tools',
+    '.widget-sort-item__warning',
+    '.widget-sort-item__actions',
+    '.widget-dialog-overlay',
+    '.widget-dialog',
+    '.widget-dialog__header',
+    '.widget-dialog__title',
+    '.widget-dialog__description',
+    '.widget-dialog-fieldset',
+    '.widget-dialog-fieldset--dynamic',
+    '.widget-dialog-fieldset--nested',
+    '.widget-dialog-field',
+    '.widget-dialog-field--compact',
+    '.widget-dialog-checkbox',
+    '.widget-dialog-number-input',
+    '.widget-dialog-actions',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',
@@ -12732,8 +12762,8 @@ foreach ([
         $widgetRenderIssues[] = 'admin widgets dialog is missing accessibility JS fragment: ' . $widgetAdminDialogJsFragment;
     }
 }
-if (str_contains($widgetsAdminSource, 'style=')) {
-    $widgetRenderIssues[] = 'admin widgets page still contains inline style attributes';
+if (str_contains($widgetsAdminSource, '<style') || str_contains($widgetsAdminSource, 'style=')) {
+    $widgetRenderIssues[] = 'admin widgets page still contains local style blocks or inline style attributes';
 }
 if (str_contains($widgetsAdminSource, '.style')) {
     $widgetRenderIssues[] = 'admin widgets page still mutates inline styles via JavaScript';

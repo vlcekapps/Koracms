@@ -377,7 +377,7 @@ Widget `Nejnovější články` zobrazuje u každého článku odkaz a pod ním 
 
 Widget `Úvodní text` je nově jediný podporovaný způsob, jak spravovat hlavní úvodní blok domovské stránky. Samostatné pole v `Obecných nastaveních` už neexistuje. Intro widget umí HTML i běžné snippety z HTML editoru a pokud zůstane prázdný, na webu se vůbec nevykreslí. Na homepage má zároveň skrytý nadpis pro čtečky obrazovky, takže se dá najít i navigací po nadpisech bez změny vizuálního vzhledu.
 
-Widgety respektují stav modulů i skutečnou dostupnost obsahu. Vypnutý modul se nenabízí a aktivní widget se na webu nevyrenderuje ani tehdy, když pro něj není obsah, je navázaný na neexistující formulář nebo má prázdnou konfiguraci. Správa widgetů na to nově umí přímo upozornit textem `Na webu se teď nezobrazí: ...`.
+Widgety respektují stav modulů i skutečnou dostupnost obsahu. Vypnutý modul se nenabízí a aktivní widget se na webu nevyrenderuje ani tehdy, když pro něj není obsah, je navázaný na neexistující formulář nebo má prázdnou konfiguraci. Správa widgetů na to nově umí přímo upozornit textem `Na webu se teď nezobrazí: ...` a používá sdílenou admin CSS vrstvu bez lokálního `<style>` bloku.
 
 Footer už neobsahuje natvrdo zapsané odkazy na sociální sítě, vyhledávání ani odběr novinek. Sociální sítě se nově nastavují přímo v widgetu `Sociální sítě`, widget `Vyhledávání` vykresluje hledací pole a widget `Newsletter` rovnou přihlašovací formulář k odběru.
 
