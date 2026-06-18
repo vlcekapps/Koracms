@@ -435,7 +435,7 @@ Kontrola integrity a detail odpovědi formuláře v administraci používají sd
 
 Veřejná hlavička šablony přidává CSP nonce i k dynamickému `<style>` bloku s theme CSS proměnnými. Díky tomu se vlastní barevné nastavení šablon drží stejného bezpečnostního režimu jako ostatní interní inline styly.
 
-Veřejné šablony už pro skip link, `.sr-only`, cookie lištu a veřejný admin bar nepotřebují generovaný inline a11y `<style>` helper; tyto styly se načítají ze sdíleného `themes/default/assets/public-core.css` před CSS aktivní šablony. Samostatné instalační a migrační obrazovky si kvůli nezávislosti na theme assetech ponechávají vlastní fallback.
+Veřejné šablony už pro skip link, `.sr-only`, cookie lištu a veřejný admin bar nepotřebují generovaný inline a11y `<style>` helper; tyto styly se načítají ze sdíleného `themes/default/assets/public-core.css` před CSS aktivní šablony. Samostatné systémové obrazovky `install.php`, `migrate.php` a `maintenance.php` jsou nezávislé na šabloně, ale používají společný statický stylesheet `assets/standalone.css` místo lokálních inline `<style>` bloků.
 
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 

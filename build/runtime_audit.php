@@ -8231,6 +8231,54 @@ if (!str_contains($migrateProbe['status'], '302')) {
     }
 }
 
+echo "=== standalone_system_pages_guardrails ===\n";
+$standalonePageIssues = [];
+$maintenanceSource = (string)file_get_contents(__DIR__ . '/../maintenance.php');
+$standaloneCssPath = dirname(__DIR__) . '/assets/standalone.css';
+$standaloneCssSource = is_file($standaloneCssPath) ? (string)file_get_contents($standaloneCssPath) : '';
+if (!str_contains($uiSource, 'function standaloneStylesheetTag(): string')
+    || !str_contains($uiSource, '/assets/standalone.css')
+    || str_contains($uiSource, 'function publicA11yStyleTag(): string')) {
+    $standalonePageIssues[] = 'shared UI helpers are missing standalone stylesheet helper or still expose inline public a11y style tag';
+}
+foreach ([
+    '.standalone-page',
+    '.skip-link:focus',
+    '.standalone-page--install',
+    '.migrate-warning',
+    '.migrate-log',
+    '.maintenance-box',
+] as $standaloneCssFragment) {
+    if (!str_contains($standaloneCssSource, $standaloneCssFragment)) {
+        $standalonePageIssues[] = 'standalone stylesheet is missing fragment: ' . $standaloneCssFragment;
+    }
+}
+foreach ([
+    'install.php' => [$installSource, 'standalone-page--install'],
+    'migrate.php' => [$migrateSource, 'standalone-page--migrate'],
+    'maintenance.php' => [$maintenanceSource, 'standalone-page--maintenance'],
+] as $standalonePageName => [$standalonePageSource, $standaloneBodyClass]) {
+    if (!str_contains($standalonePageSource, 'standaloneStylesheetTag()')
+        || !str_contains($standalonePageSource, $standaloneBodyClass)) {
+        $standalonePageIssues[] = $standalonePageName . ' is missing shared standalone stylesheet or body class';
+    }
+    if (str_contains($standalonePageSource, '<style') || str_contains($standalonePageSource, 'publicA11yStyleTag()')) {
+        $standalonePageIssues[] = $standalonePageName . ' still renders local inline styles';
+    }
+}
+if (!str_contains($maintenanceSource, '<a href="#obsah" class="skip-link">')
+    || !str_contains($maintenanceSource, '<main id="obsah" class="maintenance-box">')) {
+    $standalonePageIssues[] = 'maintenance.php is missing skip link or main content target';
+}
+if ($standalonePageIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($standalonePageIssues as $standalonePageIssue) {
+        echo '- ' . $standalonePageIssue . "\n";
+    }
+}
+
 echo "=== admin_login_redirect_guardrails ===\n";
 $adminLoginRedirectIssues = [];
 $adminAuthSource = (string)file_get_contents(dirname(__DIR__) . '/auth.php');

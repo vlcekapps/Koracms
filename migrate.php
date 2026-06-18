@@ -20,20 +20,14 @@ if (!$isCli) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Potvrzení migrace databáze</title>
-<?= publicA11yStyleTag() ?>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-    .warning { background: #fff4e5; border: 1px solid #c77700; color: #7a4300; padding: .9rem 1rem; border-radius: 6px; }
-    form { margin-top: 1.5rem; }
-    button { padding: .6rem 1.2rem; }
-  </style>
+<?= standaloneStylesheetTag() ?>
 </head>
-<body>
+<body class="standalone-page standalone-page--migrate">
 <a href="#obsah" class="skip-link">Přeskočit na obsah</a>
 <main id="obsah">
   <h1>Migrace databáze</h1>
-  <p class="warning"><strong>Tato akce upraví databázové schéma a výchozí nastavení.</strong> Spouštějte ji jen po aktualizaci systému a pouze jako superadmin.</p>
-  <form method="post">
+  <p class="migrate-warning"><strong>Tato akce upraví databázové schéma a výchozí nastavení.</strong> Spouštějte ji jen po aktualizaci systému a pouze jako superadmin.</p>
+  <form method="post" class="migrate-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <button type="submit">Spustit migraci</button>
   </form>
@@ -2875,20 +2869,19 @@ if ($isCli) {
 <head>
   <meta charset="utf-8">
   <title>Migrace databáze</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-    li { margin: .2rem 0; font-size: .9rem; }
-    h2 { margin-top: 1.5rem; font-size: 1rem; color: #555; text-transform: uppercase; letter-spacing: .05em; }
-  </style>
+<?= standaloneStylesheetTag() ?>
 </head>
-<body>
-<h1>Migrace databáze</h1>
-<ul>
-  <?php foreach ($log as $line): ?>
-    <li><?= $line ?></li>
-  <?php endforeach; ?>
-</ul>
-<p><strong>Hotovo. Smažte nebo přejmenujte soubor <code>migrate.php</code>.</strong></p>
-<p><a href="<?= BASE_URL ?>/admin/index.php">Přejít do administrace →</a></p>
+<body class="standalone-page standalone-page--migrate">
+<a href="#obsah" class="skip-link">Přeskočit na obsah</a>
+<main id="obsah">
+  <h1>Migrace databáze</h1>
+  <ul class="migrate-log">
+    <?php foreach ($log as $line): ?>
+      <li><?= $line ?></li>
+    <?php endforeach; ?>
+  </ul>
+  <p><strong>Hotovo. Smažte nebo přejmenujte soubor <code>migrate.php</code>.</strong></p>
+  <p><a href="<?= BASE_URL ?>/admin/index.php">Přejít do administrace →</a></p>
+</main>
 </body>
 </html>

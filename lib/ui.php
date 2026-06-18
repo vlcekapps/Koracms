@@ -313,33 +313,11 @@ function adminContentReferencePickerStylesheetTag(): string
 }
 
 /**
- * Vrátí sdílené a11y styly pro skip link, screen-reader text a focus ring.
+ * Vrátí odkaz na sdílené styly pro samostatné systémové obrazovky.
  */
-function publicA11yStyleTag(): string
+function standaloneStylesheetTag(): string
 {
-    $nonce = cspNonce();
-    return "<style nonce=\"{$nonce}\">\n"
-         . "  .skip-link { position:absolute; left:-9999px; top:auto; }\n"
-         . "  .skip-link:focus { left:1rem; top:1rem; z-index:9999; background:#fff; color:#000;"
-         . " padding:.5rem 1rem; border:2px solid #000; text-decoration:none; }\n"
-         . "  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;"
-         . " clip:rect(0,0,0,0); white-space:nowrap; border:0; }\n"
-         . "  :focus-visible { outline:3px solid #005fcc; outline-offset:2px; }\n"
-         . "  .cookie-banner { position:fixed; bottom:0; left:0; right:0; z-index:9000; background:#222;"
-         . " color:#fff; padding:1rem 1.5rem; box-shadow:0 -2px 8px rgba(0,0,0,.4); }\n"
-         . "  .cookie-banner__heading { margin:0 0 .75rem; }\n"
-         . "  .cookie-banner__actions { display:flex; gap:.75rem; flex-wrap:wrap; }\n"
-         . "  .cookie-banner__button { padding:.4rem 1rem; border:none; color:#fff; cursor:pointer;"
-         . " border-radius:3px; font-size:1rem; }\n"
-         . "  .cookie-banner__button--accept { background:#4caf50; }\n"
-         . "  .cookie-banner__button--decline { background:#777; }\n"
-         . "  .public-admin-bar { position:fixed; bottom:0; left:0; right:0; z-index:9999; background:#222;"
-         . " color:#fff; display:flex; align-items:center; gap:.5rem; padding:.45rem .75rem; font-size:.85rem; }\n"
-         . "  .public-admin-bar__link { color:#ddd; text-decoration:none; display:inline-flex; align-items:center;"
-         . " min-height:2rem; padding:.35rem .6rem; border-radius:4px; }\n"
-         . "  .public-admin-bar__link--edit { color:#ffd700; }\n"
-         . "  .public-admin-bar__spacer { margin-left:auto; }\n"
-         . "</style>\n";
+    return '  <link rel="stylesheet" href="' . h(BASE_URL . '/assets/standalone.css') . '">' . "\n";
 }
 
 /**

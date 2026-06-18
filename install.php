@@ -976,33 +976,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Instalace Kora CMS</title>
-<?= publicA11yStyleTag() ?>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
-    label { display: block; margin-top: 1rem; font-weight: bold; }
-    input, textarea { width: 100%; box-sizing: border-box; padding: .4rem; margin-top: .25rem; }
-    button { margin-top: 1.5rem; padding: .5rem 1.5rem; }
-    .error { color: #c00; }
-    .success { color: #060; }
-    .profile-option { margin-top: .9rem; padding: .85rem 1rem; border: 1px solid #d0d7de; border-radius: 10px; }
-    .profile-option input { width: auto; margin-right: .5rem; }
-    .profile-option label { display: inline; margin-top: 0; }
-    .profile-option p { margin: .4rem 0 0 1.8rem; color: #444; font-size: .95rem; }
-  </style>
+<?= standaloneStylesheetTag() ?>
 </head>
-<body>
+<body class="standalone-page standalone-page--install">
 <a href="#obsah" class="skip-link">Přeskočit na obsah</a>
 <main id="obsah">
   <h1>Instalace Kora CMS</h1>
 
   <?php if ($success): ?>
-    <p class="success" role="status"><strong>Instalace proběhla úspěšně.</strong><br>
+    <p class="standalone-success" role="status"><strong>Instalace proběhla úspěšně.</strong><br>
     Smažte nebo přejmenujte soubor <code>install.php</code>.</p>
     <p><a href="<?= BASE_URL ?>/admin/login.php">Přejít do administrace →</a></p>
   <?php else: ?>
 
     <?php if (!empty($errors)): ?>
-      <ul id="install-errors" class="error" role="alert">
+      <ul id="install-errors" class="standalone-error" role="alert">
         <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
       </ul>
     <?php endif; ?>
@@ -1020,7 +1008,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <legend>Profil webu</legend>
         <p>Vyberte výchozí směr webu. Instalace podle něj přednastaví moduly, domovskou stránku i doporučenou šablonu.</p>
         <?php foreach ($siteProfiles as $profileKey => $profile): ?>
-          <div class="profile-option">
+          <div class="install-profile-option">
             <input type="radio" id="site_profile_<?= h($profileKey) ?>" name="site_profile" value="<?= h($profileKey) ?>"
                    <?= $selectedSiteProfile === $profileKey ? 'checked' : '' ?>>
             <label for="site_profile_<?= h($profileKey) ?>">
