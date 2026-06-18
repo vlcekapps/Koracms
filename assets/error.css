@@ -1,0 +1,18 @@
+.error-page {
+  max-width: 40em;
+  margin: 4em auto;
+  padding: 0 1em;
+  color: #333;
+  font-family: system-ui, sans-serif;
+}
+
+.error-page h1 {
+  color: #b00;
+}
+
+.error-page pre {
+  padding: 1em;
+  overflow: auto;
+  background: #f4f4f4;
+  font-size: 0.85em;
+}

@@ -824,7 +824,7 @@ function honeypotField(): string
     $honeypotCounter++;
     $honeypotId = 'hp_website_' . $honeypotCounter;
 
-    return '<div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">'
+    return '<div class="honeypot-field" aria-hidden="true">'
          . '<label for="' . h($honeypotId) . '">Website</label>'
          . '<input type="text" id="' . h($honeypotId) . '" name="hp_website" tabindex="-1" autocomplete="off">'
          . '</div>';

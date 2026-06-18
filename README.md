@@ -441,6 +441,8 @@ Veřejná hlavička šablony přidává CSP nonce i k dynamickému `<style>` blo
 
 Veřejné šablony už pro skip link, `.sr-only`, cookie lištu a veřejný admin bar nepotřebují generovaný inline a11y `<style>` helper; tyto styly se načítají ze sdíleného `themes/default/assets/public-core.css` před CSS aktivní šablony. Samostatné systémové obrazovky `install.php`, `migrate.php` a `maintenance.php` jsou nezávislé na šabloně, ale používají společný statický stylesheet `assets/standalone.css` místo lokálních inline `<style>` bloků.
 
+Nouzová chybová stránka používá `assets/error.css` a antispamový honeypot sdílenou třídu `.honeypot-field`, takže ani tyto pomocné výstupy nepotřebují lokální inline styly.
+
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 
 CSP allowlist obsahuje také explicitní zdroje, které CMS samo vkládá pro Google Analytics a volitelný Quill editor. Externí GA/Quill skripty se renderují s nonce a runtime audit hlídá, aby se nové CDN skripty nepřidávaly bez stejné ochrany.

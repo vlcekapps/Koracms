@@ -28,6 +28,14 @@
   clip: rect(0, 0, 0, 0);
 }
 
+.honeypot-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 :focus-visible {
   outline: 3px solid #005fcc;
   outline-offset: 2px;

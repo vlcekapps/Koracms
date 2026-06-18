@@ -31,6 +31,9 @@ $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
 $commentsSource = (string) file_get_contents(__DIR__ . '/../lib/comments.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
+$errorPageCssSource = is_file(__DIR__ . '/../assets/error.css') ? (string) file_get_contents(__DIR__ . '/../assets/error.css') : '';
+$publicCoreCssSource = is_file(__DIR__ . '/../themes/default/assets/public-core.css') ? (string) file_get_contents(__DIR__ . '/../themes/default/assets/public-core.css') : '';
+$adminLayoutStylesheetSource = is_file(__DIR__ . '/../admin/assets/layout.css') ? (string) file_get_contents(__DIR__ . '/../admin/assets/layout.css') : '';
 $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
 $htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
 $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
@@ -7829,6 +7832,15 @@ $foundationChecks = [
         && str_contains($authSource, 'function koraLog(')
         && str_contains($authSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
         && str_contains($dbSource, "koraLog('error', 'Uncaught exception'"),
+    'uncaught exception page uses static error stylesheet' => str_contains($dbSource, '/assets/error.css')
+        && str_contains($dbSource, 'class="error-page"')
+        && !str_contains($dbSource, '<style>body{font-family:system-ui')
+        && str_contains($errorPageCssSource, '.error-page')
+        && str_contains($errorPageCssSource, '.error-page pre'),
+    'anti-spam honeypot uses shared CSS class' => str_contains($authSource, 'class="honeypot-field"')
+        && !str_contains($authSource, 'style="position:absolute;left:-9999px')
+        && str_contains($publicCoreCssSource, '.honeypot-field')
+        && str_contains($adminLayoutStylesheetSource, '.honeypot-field'),
     'public composite pages use structured recoverable error logs' => !str_contains($blogIndexSource, 'error_log(')
         && !str_contains($blogArticleSource, 'error_log(')
         && !str_contains($searchSource, 'error_log(')
@@ -11287,6 +11299,7 @@ foreach ([
     '.admin-input-compact',
     '.admin-input-auto',
     '.admin-modal-open',
+    '.honeypot-field',
     '.blog-admin-fieldset',
     '.blog-admin-fieldset--flush',
     '.blog-admin-control-auto',
@@ -13432,6 +13445,7 @@ if (!str_contains($themeHeadPartialSource, "themeAssetUrl('assets/public-core.cs
 foreach ([
     '.skip-link',
     '.sr-only',
+    '.honeypot-field',
     '.cookie-banner',
     '.public-admin-bar',
     '.public-admin-bar__link--edit',

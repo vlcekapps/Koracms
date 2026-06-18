@@ -37,6 +37,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Karty v default šabloně** – základní karta už nepoužívá globální `height: 100%` a gridy zarovnávají položky nahoru, aby samostatné nebo vyšší karty nevytvářely zbytečnou prázdnou plochu pod obsahem.
 
 ### Změněno
+- **Nouzová chybová stránka a honeypot helper** – globální chybová stránka načítá statický `assets/error.css` místo inline `<style>` bloku a antispamový honeypot používá sdílenou CSS třídu `.honeypot-field`, takže i tyto pomocné výstupy méně spoléhají na historický inline-style fallback CSP.
 - **CSP allowlist pro vlastní externí skripty CMS** – politika nově explicitně povoluje jen externí zdroje, které CMS samo vkládá (`googletagmanager.com`, `cdn.jsdelivr.net`, `cdn.quilljs.com` a analytické connect endpointy), a externí GA/Quill skripty dostávají CSP nonce.
 - **Veřejné CSS proměnné šablony** – dynamický `<style>` blok s theme proměnnými ve veřejné hlavičce nově dostává CSP nonce stejně jako ostatní interní inline styly; runtime audit hlídá zdroj helperu i vyrenderovanou homepage.
 - **Strukturovaná data a CSP** – JSON-LD výstupy pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nově používají sdílený helper s CSP nonce, takže structured data zůstanou připravená na budoucí zpřísnění `script-src`.

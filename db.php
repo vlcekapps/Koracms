@@ -20,8 +20,7 @@ set_exception_handler(function (\Throwable $e): void {
     }
     $debug = (ini_get('display_errors') === '1');
     echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>Chyba serveru</title>'
-       . '<style>body{font-family:system-ui,sans-serif;max-width:40em;margin:4em auto;padding:0 1em;color:#333}'
-       . 'h1{color:#b00}pre{background:#f4f4f4;padding:1em;overflow:auto;font-size:.85em}</style></head><body>'
+       . '<link rel="stylesheet" href="' . h(BASE_URL . '/assets/error.css') . '"></head><body class="error-page">'
        . '<h1>Omlouváme se, došlo k chybě</h1>'
        . '<p>Stránku se nepodařilo načíst. Zkuste to prosím později.</p>';
     if ($debug) {

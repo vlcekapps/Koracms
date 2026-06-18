@@ -514,6 +514,7 @@ textarea { min-height: 200px; }
 .field-help code { font-size:.95em; }
 input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] { border:2px solid var(--admin-invalid-border); }
 .sr-only, .visually-hidden { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
+.honeypot-field { position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden; }
 :focus-visible { outline: 3px solid var(--admin-focus); outline-offset: 2px; }
 nav a:focus-visible { outline-color: var(--admin-focus-nav); }
 .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }
