@@ -297,6 +297,51 @@ function adminBar(string $editUrl = ''): string
 }
 
 /**
+ * Vrátí sdílené styly pro samostatné administrační přihlašovací obrazovky.
+ */
+function adminLoginStyleTag(): string
+{
+    $nonce = h(cspNonce());
+
+    return "<style nonce=\"{$nonce}\">\n"
+         . "  :root {\n"
+         . "    --login-bg: #ffffff;\n"
+         . "    --login-text: #1a1a2e;\n"
+         . "    --login-error: #c00;\n"
+         . "    --login-focus: #005fcc;\n"
+         . "    --login-input-bg: #fff;\n"
+         . "    --login-input-border: #aaa;\n"
+         . "    --login-btn-bg: #f8fafc;\n"
+         . "    --login-btn-text: #102a43;\n"
+         . "    --login-btn-border: #c6d0db;\n"
+         . "  }\n"
+         . "  @media (prefers-color-scheme: dark) {\n"
+         . "    :root {\n"
+         . "      --login-bg: #1a1a2e;\n"
+         . "      --login-text: #e0e0e0;\n"
+         . "      --login-error: #f08080;\n"
+         . "      --login-focus: #4da6ff;\n"
+         . "      --login-input-bg: #252540;\n"
+         . "      --login-input-border: #4a4a65;\n"
+         . "      --login-btn-bg: #252540;\n"
+         . "      --login-btn-text: #e0e0e0;\n"
+         . "      --login-btn-border: #4a4a65;\n"
+         . "    }\n"
+         . "  }\n"
+         . "  body { font-family: system-ui, sans-serif; max-width: 380px; margin: 4rem auto; padding: 0 1rem; background: var(--login-bg); color: var(--login-text); }\n"
+         . "  label { display: block; margin-top: 1rem; font-weight: bold; }\n"
+         . "  input { width: 100%; padding: .4rem; margin-top: .25rem; box-sizing: border-box; background: var(--login-input-bg); color: var(--login-text); border: 1px solid var(--login-input-border); }\n"
+         . "  button { margin-top: 1.5rem; padding: .5rem 1.5rem; background: var(--login-btn-bg); color: var(--login-btn-text); border: 1px solid var(--login-btn-border); cursor: pointer; }\n"
+         . "  .error { color: var(--login-error); }\n"
+         . "  :focus-visible { outline: 3px solid var(--login-focus); outline-offset: 2px; }\n"
+         . "  .skip-link { position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden; z-index:999; }\n"
+         . "  .skip-link:focus { position:fixed; top:0; left:0; width:auto; height:auto; padding:.75rem 1.5rem; background:var(--login-focus); color:#fff; text-decoration:none; z-index:9999; }\n"
+         . "  .totp-code-input { font-size:1.5rem; text-align:center; letter-spacing:.3rem; }\n"
+         . "  .login-secondary-action { margin-top:2rem; }\n"
+         . "</style>\n";
+}
+
+/**
  * Vrátí sdílené a11y styly pro skip link, screen-reader text a focus ring.
  */
 function publicA11yStyleTag(): string

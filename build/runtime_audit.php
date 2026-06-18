@@ -8231,6 +8231,7 @@ foreach ([
     "\$_SESSION['2fa_pending_redirect']",
     'name="redirect"',
     "header('Location: ' . \$redirect);",
+    'adminLoginStyleTag()',
 ] as $adminLoginFragment) {
     if (!str_contains($adminLoginSource, $adminLoginFragment)) {
         $adminLoginRedirectIssues[] = 'admin login is missing redirect fragment: ' . $adminLoginFragment;
@@ -8243,9 +8244,23 @@ foreach ([
     "header('Location: ' . \$redirect);",
     'class="totp-code-input"',
     'class="login-secondary-action"',
+    'adminLoginStyleTag()',
 ] as $adminLogin2faFragment) {
     if (!str_contains($adminLogin2faSource, $adminLogin2faFragment)) {
         $adminLoginRedirectIssues[] = 'admin 2FA is missing login fragment: ' . $adminLogin2faFragment;
+    }
+}
+if (!str_contains($uiSource, 'function adminLoginStyleTag(): string')
+    || !str_contains($uiSource, '.totp-code-input { font-size:1.5rem; text-align:center; letter-spacing:.3rem; }')
+    || !str_contains($uiSource, 'nonce=\"{$nonce}\"')) {
+    $adminLoginRedirectIssues[] = 'shared UI helper is missing nonce-backed admin login style tag';
+}
+foreach ([
+    'admin login' => $adminLoginSource,
+    'admin 2FA login' => $adminLogin2faSource,
+] as $adminLoginStyleLabel => $adminLoginStyleSource) {
+    if (str_contains($adminLoginStyleSource, '<style') || str_contains($adminLoginStyleSource, 'style=')) {
+        $adminLoginRedirectIssues[] = $adminLoginStyleLabel . ' still contains local style blocks or inline style attributes';
     }
 }
 foreach ([

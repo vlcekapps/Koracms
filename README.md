@@ -419,6 +419,8 @@ Rezervační formuláře v administraci používají stejný princip pro přepí
 
 Administrátorský dashboard používá sdílené panely, karty a sémantický `<progress>` pro mini graf návštěvnosti místo lokálních `style` atributů. Runtime audit tím drží i hlavní přehled administrace v linii postupného zpřísňování CSP.
 
+Přihlašovací obrazovky administrace včetně 2FA používají sdílený CSS helper s CSP nonce místo duplicitních lokálních `<style>` bloků. Tím zůstává skip link, viditelný focus i TOTP pole konzistentní bez dalšího inline stylového driftu.
+
 Kontrola integrity a detail odpovědi formuláře v administraci používají sdílené administrační CSS třídy místo vlastních lokálních `<style>` bloků. Runtime audit hlídá, aby se tyto čistě prezentační styly nevracely přímo do jednotlivých obrazovek.
 
 Veřejná hlavička šablony přidává CSP nonce i k dynamickému `<style>` bloku s theme CSS proměnnými. Díky tomu se vlastní barevné nastavení šablon drží stejného bezpečnostního režimu jako ostatní interní inline styly.
