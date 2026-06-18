@@ -252,6 +252,7 @@ Správa týmů je teď viditelná i z více míst:
 - **Uživatelé a role** nově obsahují sloupec `Blogy`, kde je vidět přiřazení každého interního účtu
 - **Správa blogů** zobrazuje i počet členů týmu u každého blogu
 - **Správa blogů** zároveň nově nabízí rychlé odkazy `Články blogu`, `Kategorie blogu`, `Štítky blogu` a `Stránky blogu`, takže lze z jednoho přehledu přejít rovnou na správu konkrétního blogu
+- **Správa blogů** používá pro formulář vytvoření blogu, dialog úprav a náhled loga nonce CSS třídy bez lokálních `style` atributů, takže méně zatěžuje CSP reporty a drží konzistentní modální chování
 
 To je užitečné hlavně ve chvíli, kdy jeden autor spravuje více blogů nebo když chcete rychle zkontrolovat, zda má nový redaktor přístup opravdu jen tam, kam patří.
 

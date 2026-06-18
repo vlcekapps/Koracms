@@ -9612,6 +9612,11 @@ foreach ([
     'aria-describedby="bd-description-help"',
     'aria-describedby="bd-meta-help"',
     'aria-describedby="bd-feed-help"',
+    'class="blog-admin-fieldset"',
+    'class="blog-dialog"',
+    'class="blog-dialog-overlay"',
+    'class="blog-logo-preview"',
+    'class="blog-sort-row"',
 ] as $blogDialogAccessibilityFragment) {
     if (!str_contains($blogsAdminSource, $blogDialogAccessibilityFragment)) {
         $blogAdminIssues[] = 'blog admin forms are missing accessibility fragment: ' . $blogDialogAccessibilityFragment;
@@ -9621,10 +9626,18 @@ foreach ([
     "dialogTitle.textContent = 'Upravit blog: ' + (btn.dataset.blogName || 'Blog');",
     'function getDialogFocusableElements()',
     'el.offsetParent !== null',
+    "document.body.classList.add('admin-modal-open')",
+    "document.body.classList.remove('admin-modal-open')",
 ] as $blogDialogJsFragment) {
     if (!str_contains($blogsAdminSource, $blogDialogJsFragment)) {
         $blogAdminIssues[] = 'blog edit dialog is missing accessibility JS fragment: ' . $blogDialogJsFragment;
     }
+}
+if (str_contains($blogsAdminSource, 'style=')) {
+    $blogAdminIssues[] = 'blog admin overview still contains inline style attributes';
+}
+if (str_contains($blogsAdminSource, '.style')) {
+    $blogAdminIssues[] = 'blog admin overview still mutates inline styles via JavaScript';
 }
 if (!str_contains($blogListSource, 'value="article_to_page"') || !str_contains($blogListSource, 'aria-hidden="true"')) {
     $blogAdminIssues[] = 'blog list still exposes the article-to-page arrow to screen readers';

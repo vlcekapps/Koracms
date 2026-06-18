@@ -120,6 +120,100 @@ $defaultBlogId = (int)(getDefaultBlog()['id'] ?? 0);
 
 adminHeader('Správa blogů');
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .blog-admin-fieldset {
+    margin: 0 0 1rem;
+  }
+
+  .blog-admin-fieldset--flush {
+    margin: 0;
+  }
+
+  .blog-admin-control-auto {
+    width: auto;
+  }
+
+  .blog-admin-check-row {
+    margin-top: .5rem;
+  }
+
+  .blog-admin-form-actions {
+    margin-top: .75rem;
+  }
+
+  .blog-admin-form-actions--dialog {
+    margin-top: 1rem;
+  }
+
+  .blog-sort-row {
+    cursor: grab;
+  }
+
+  .blog-button--compact {
+    font-size: .85rem;
+  }
+
+  .blog-inline-form {
+    display: inline;
+  }
+
+  .blog-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .54);
+    z-index: 1000;
+  }
+
+  .blog-dialog[hidden],
+  .blog-dialog-overlay[hidden] {
+    display: none !important;
+  }
+
+  .blog-dialog {
+    position: fixed;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    padding: 1.2rem;
+    border: 1px solid #cbd5e1;
+    border-radius: .9rem;
+    background: #fff;
+    box-shadow: 0 28px 60px rgba(15, 23, 42, .28);
+    z-index: 1001;
+  }
+
+  .blog-dialog__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .blog-dialog__title {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .blog-dialog__description,
+  .blog-logo-current {
+    margin-top: 0;
+  }
+
+  .blog-logo-preview {
+    display: block;
+    margin-top: .4rem;
+    max-width: min(100%, 20rem);
+    max-height: 7rem;
+    height: auto;
+    width: auto;
+  }
+
+  .blog-dialog-label-spaced {
+    margin-top: .75rem;
+  }
+</style>
 <?php if ($message === 'no_blog'): ?>
   <p role="status"><strong>Nejdřív vytvořte blog.</strong> Kategorie, štítky i články se spravují až uvnitř existujícího blogu.</p>
 <?php endif; ?>
@@ -132,7 +226,7 @@ adminHeader('Správa blogů');
 
 <form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <fieldset style="margin:0 0 1rem">
+  <fieldset class="blog-admin-fieldset">
     <legend>Základní údaje blogu</legend>
     <label for="name">Název blogu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
@@ -148,7 +242,7 @@ adminHeader('Správa blogů');
     <small id="blog-description-help" class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
   </fieldset>
 
-  <fieldset style="margin:0 0 1rem">
+  <fieldset class="blog-admin-fieldset">
     <legend>Obsah a metadata blogu</legend>
     <label for="intro_content">Rozšířený úvod blogu</label>
     <textarea id="intro_content" name="intro_content" rows="5" aria-describedby="blog-intro-help"></textarea>
@@ -166,11 +260,11 @@ adminHeader('Správa blogů');
     <input type="text" id="rss_subtitle" name="rss_subtitle" maxlength="255" aria-describedby="blog-feed-help">
 
     <label for="feed_item_limit">Počet článků v RSS feedu</label>
-    <input type="number" id="feed_item_limit" name="feed_item_limit" min="1" max="100" value="20" style="width:auto" aria-describedby="blog-feed-help">
+    <input type="number" id="feed_item_limit" class="blog-admin-control-auto" name="feed_item_limit" min="1" max="100" value="20" aria-describedby="blog-feed-help">
     <small id="blog-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
   </fieldset>
 
-  <fieldset style="margin:0">
+  <fieldset class="blog-admin-fieldset blog-admin-fieldset--flush">
     <legend>Logo a zobrazení blogu</legend>
     <label for="logo_file">Logo blogu</label>
     <input type="file" id="logo_file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="blog-logo-help">
@@ -180,15 +274,15 @@ adminHeader('Správa blogů');
     <input type="text" id="logo_alt_text" name="logo_alt_text" maxlength="255" aria-describedby="blog-logo-alt-help">
     <small id="blog-logo-alt-help" class="field-help">Volitelné. Pokud pole necháte prázdné, logo zůstane dekorativní a čtečky obrazovek ho přeskočí. Vyplňte ho jen tehdy, když logo nese smysluplnou informaci.</small>
 
-    <div style="margin-top:.5rem">
+    <div class="blog-admin-check-row">
       <label><input type="checkbox" name="comments_default" value="1" checked> Ve výchozím stavu povolit komentáře u nových článků</label>
     </div>
 
-    <div style="margin-top:.5rem">
+    <div class="blog-admin-check-row">
       <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
     </div>
   </fieldset>
-  <div class="button-row" style="margin-top:.75rem">
+  <div class="button-row blog-admin-form-actions">
     <button type="submit" class="btn">Vytvořit blog</button>
   </div>
 </form>
@@ -211,7 +305,7 @@ adminHeader('Správa blogů');
     </thead>
     <tbody data-sortable="blogs">
     <?php foreach ($blogs as $blog): ?>
-      <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" style="cursor:grab">
+      <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" class="blog-sort-row">
         <td>
           <?= h((string)$blog['name']) ?>
           <?php if ((int)$blog['id'] === $defaultBlogId): ?>
@@ -249,7 +343,7 @@ adminHeader('Správa blogů');
         <td class="actions">
           <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener">Zobrazit na webu</a>
           <a href="<?= h(blogFeedPath($blog)) ?>" class="btn" target="_blank" rel="noopener">RSS feed</a>
-          <button type="button" class="btn blog-edit-btn" style="font-size:.85rem"
+          <button type="button" class="btn blog-button--compact blog-edit-btn"
                   aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
                   aria-haspopup="dialog"
                   aria-controls="blog-dialog"
@@ -272,7 +366,7 @@ adminHeader('Správa blogů');
           <a href="blog_tags.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Štítky blogu</a>
           <a href="blog_pages.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Stránky blogu</a>
           <a href="blog_members.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Tým blogu</a>
-          <form action="blog_blog_delete.php" method="post" style="display:inline">
+          <form action="blog_blog_delete.php" method="post" class="blog-inline-form">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
             <?php if (count($blogs) > 1): ?>
@@ -290,22 +384,18 @@ adminHeader('Správa blogů');
   </table>
 <?php endif; ?>
 
-<div id="blog-overlay" hidden style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.54);z-index:1000"></div>
-<section id="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title" aria-describedby="blog-dialog-description" hidden
-         style="display:none;position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);
-                width:min(30rem,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto;
-                padding:1.2rem;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;
-                box-shadow:0 28px 60px rgba(15,23,42,.28);z-index:1001">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-    <h2 id="blog-dialog-title" style="margin:0;font-size:1.15rem">Upravit blog</h2>
+<div id="blog-overlay" class="blog-dialog-overlay" hidden></div>
+<section id="blog-dialog" class="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title" aria-describedby="blog-dialog-description" hidden>
+  <div class="blog-dialog__header">
+    <h2 id="blog-dialog-title" class="blog-dialog__title">Upravit blog</h2>
     <button type="button" id="blog-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
   </div>
-  <p id="blog-dialog-description" class="field-help" style="margin-top:0">Upravte název, adresu, logo a viditelnost blogu v navigaci webu.</p>
+  <p id="blog-dialog-description" class="field-help blog-dialog__description">Upravte název, adresu, logo a viditelnost blogu v navigaci webu.</p>
   <form method="post" enctype="multipart/form-data" novalidate id="blog-dialog-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="update_id" id="bd-id">
 
-    <fieldset style="margin:0 0 1rem">
+    <fieldset class="blog-admin-fieldset">
       <legend>Základní údaje blogu</legend>
 
       <label for="bd-name">Název blogu <span aria-hidden="true">*</span></label>
@@ -321,7 +411,7 @@ adminHeader('Správa blogů');
       <small id="bd-description-help" class="field-help">Krátký úvod blogu zobrazený na jeho veřejném indexu.</small>
     </fieldset>
 
-    <fieldset style="margin:0 0 1rem">
+    <fieldset class="blog-admin-fieldset">
       <legend>Obsah a metadata blogu</legend>
 
       <label for="bd-intro-content">Rozšířený úvod blogu</label>
@@ -340,40 +430,40 @@ adminHeader('Správa blogů');
       <input type="text" id="bd-rss-subtitle" name="rss_subtitle" maxlength="255" aria-describedby="bd-feed-help">
 
       <label for="bd-feed-item-limit">Počet článků v RSS feedu</label>
-      <input type="number" id="bd-feed-item-limit" name="feed_item_limit" min="1" max="100" style="width:auto" aria-describedby="bd-feed-help">
+      <input type="number" id="bd-feed-item-limit" class="blog-admin-control-auto" name="feed_item_limit" min="1" max="100" aria-describedby="bd-feed-help">
       <small id="bd-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
     </fieldset>
 
-    <fieldset style="margin:0">
+    <fieldset class="blog-admin-fieldset blog-admin-fieldset--flush">
       <legend>Logo a zobrazení blogu</legend>
 
-      <div id="bd-logo-current" hidden style="margin-top:0">
+      <div id="bd-logo-current" class="blog-logo-current" hidden>
         <span class="field-help">Aktuální logo</span><br>
-        <img id="bd-logo-preview" src="" alt="" style="display:block;margin-top:.4rem;max-width:min(100%,20rem);max-height:7rem;height:auto;width:auto">
+        <img id="bd-logo-preview" class="blog-logo-preview" src="" alt="">
       </div>
 
-      <label for="bd-logo-file" style="margin-top:.75rem">Logo blogu</label>
+      <label for="bd-logo-file" class="blog-dialog-label-spaced">Logo blogu</label>
       <input type="file" id="bd-logo-file" name="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" aria-describedby="bd-logo-help">
       <small id="bd-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu.</small>
 
-      <label for="bd-logo-alt-text" style="margin-top:.75rem">Alternativní text loga</label>
+      <label for="bd-logo-alt-text" class="blog-dialog-label-spaced">Alternativní text loga</label>
       <input type="text" id="bd-logo-alt-text" name="logo_alt_text" maxlength="255" aria-describedby="bd-logo-alt-help">
       <small id="bd-logo-alt-help" class="field-help">Volitelné. Když pole necháte prázdné, logo zůstane dekorativní a čtečky ho přeskočí.</small>
 
-      <div id="bd-logo-delete-wrap" style="margin-top:.5rem" hidden>
+      <div id="bd-logo-delete-wrap" class="blog-admin-check-row" hidden>
         <label><input type="checkbox" name="logo_file_delete" value="1" id="bd-logo-delete"> Odebrat aktuální logo</label>
       </div>
 
-      <div style="margin-top:.5rem">
+      <div class="blog-admin-check-row">
         <label><input type="checkbox" name="comments_default" value="1" id="bd-comments-default"> Ve výchozím stavu povolit komentáře u nových článků</label>
       </div>
 
-      <div style="margin-top:.5rem">
+      <div class="blog-admin-check-row">
         <label><input type="checkbox" name="show_in_nav" value="1" id="bd-nav"> Zobrazit v navigaci webu</label>
       </div>
     </fieldset>
 
-    <div class="button-row" style="margin-top:1rem">
+    <div class="button-row blog-admin-form-actions--dialog">
       <button type="submit" class="btn">Uložit změny</button>
       <button type="button" id="blog-dialog-cancel" class="btn">Zrušit</button>
     </div>
@@ -387,7 +477,6 @@ adminHeader('Správa blogů');
     var closeBtn = document.getElementById('blog-dialog-close');
     var cancelBtn = document.getElementById('blog-dialog-cancel');
     var lastTrigger = null;
-    var previousBodyOverflow = '';
     var logoPreviewWrap = document.getElementById('bd-logo-current');
     var logoPreview = document.getElementById('bd-logo-preview');
     var logoDeleteWrap = document.getElementById('bd-logo-delete-wrap');
@@ -431,12 +520,9 @@ adminHeader('Správa blogů');
             logoPreviewWrap.hidden = true;
             logoDeleteWrap.hidden = true;
         }
-        previousBodyOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('admin-modal-open');
         overlay.hidden = false;
         dialog.hidden = false;
-        overlay.style.display = '';
-        dialog.style.display = '';
         btn.setAttribute('aria-expanded', 'true');
         window.requestAnimationFrame(function () {
             document.getElementById('bd-name').focus();
@@ -447,9 +533,7 @@ adminHeader('Správa blogů');
         if (lastTrigger) {
             lastTrigger.setAttribute('aria-expanded', 'false');
         }
-        document.body.style.overflow = previousBodyOverflow;
-        overlay.style.display = 'none';
-        dialog.style.display = 'none';
+        document.body.classList.remove('admin-modal-open');
         overlay.hidden = true;
         dialog.hidden = true;
         if (lastTrigger) lastTrigger.focus();
