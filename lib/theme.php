@@ -1935,6 +1935,7 @@ function renderPublicEmbedPage(array $pageData): void
     $mainClass = trim('site-main site-main--embed ' . (string)($pageData['main_class'] ?? ''));
     $bodyClassAttr = implode(' ', array_unique(array_filter($bodyClasses)));
     $extraHeadHtml = (string)($pageData['extra_head_html'] ?? '');
+    $coreStylesheetUrl = themeAssetUrl('assets/public-core.css', defaultThemeName());
     $stylesheetUrl = themeAssetUrl('assets/public.css', $themeName);
 
     echo "<!DOCTYPE html>\n";
@@ -1943,9 +1944,9 @@ function renderPublicEmbedPage(array $pageData): void
     echo '  <meta charset="utf-8">' . "\n";
     echo '  <meta name="viewport" content="width=device-width, initial-scale=1">' . "\n";
     echo '  <title>' . h((string)$meta['title']) . "</title>\n";
-    echo publicA11yStyleTag();
     echo faviconTag();
     echo seoMeta($meta);
+    echo '  <link rel="stylesheet" href="' . h($coreStylesheetUrl) . '">' . "\n";
     echo '  <link rel="stylesheet" href="' . h($stylesheetUrl) . '">' . "\n";
     echo $extraHeadHtml;
     echo "</head>\n";

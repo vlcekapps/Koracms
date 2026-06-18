@@ -1,0 +1,107 @@
+.skip-link {
+  position: absolute;
+  inset-block-start: auto;
+  inset-inline-start: -9999px;
+}
+
+.skip-link:focus {
+  position: fixed;
+  inset-block-start: 1rem;
+  inset-inline-start: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  color: #000;
+  text-decoration: none;
+  background: #fff;
+  border: 2px solid #000;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+:focus-visible {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+}
+
+.cookie-banner {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9000;
+  padding: 1rem 1.5rem;
+  color: #fff;
+  background: #222;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.cookie-banner__heading {
+  margin: 0 0 0.75rem;
+}
+
+.cookie-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.cookie-banner__button {
+  padding: 0.4rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  background: #777;
+  border: 0;
+  border-radius: 3px;
+  font-size: 1rem;
+}
+
+.cookie-banner__button--accept {
+  background: #2f7d32;
+}
+
+.cookie-banner__button--decline {
+  background: #595959;
+}
+
+.public-admin-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9999;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  color: #fff;
+  background: #222;
+  font-size: 0.85rem;
+}
+
+.public-admin-bar__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.6rem;
+  color: #ddd;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.public-admin-bar__link--edit {
+  color: #ffd700;
+}
+
+.public-admin-bar__spacer {
+  margin-left: auto;
+}

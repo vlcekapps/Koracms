@@ -2212,15 +2212,16 @@ function analyzeHtml(string $html): array
         $issues[] = 'php warning/error rendered in HTML';
     }
 
-    if (str_contains($html, 'class="skip-link"') && !str_contains($html, '.skip-link')) {
+    $hasLinkedPublicStylesheet = str_contains($html, '/assets/public.css') || str_contains($html, '/assets/public-core.css');
+    if (str_contains($html, 'class="skip-link"') && !str_contains($html, '.skip-link') && !$hasLinkedPublicStylesheet) {
         $issues[] = 'skip-link without CSS definition';
     }
 
-    if (str_contains($html, 'class="sr-only"') && !str_contains($html, '.sr-only')) {
+    if (str_contains($html, 'class="sr-only"') && !str_contains($html, '.sr-only') && !$hasLinkedPublicStylesheet) {
         $issues[] = 'sr-only helper without CSS definition';
     }
 
-    if (str_contains($html, 'class="visually-hidden"') && !str_contains($html, '.visually-hidden')) {
+    if (str_contains($html, 'class="visually-hidden"') && !str_contains($html, '.visually-hidden') && !$hasLinkedPublicStylesheet) {
         $issues[] = 'visually-hidden helper without CSS definition';
     }
 
@@ -13278,6 +13279,9 @@ if ($menuAdminIssues === []) {
 echo "=== theme_layout_guardrails ===\n";
 $themeLayoutIssues = [];
 $themeBaseLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/layouts/base.php');
+$themeHeadPartialSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/partials/head.php');
+$themeRuntimeSource = (string)file_get_contents(dirname(__DIR__) . '/lib/theme.php');
+$themeCoreCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public-core.css');
 $themePublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
 $themePageViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/page.php');
 $themeBlogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
@@ -13314,6 +13318,24 @@ if (!str_contains($themeBaseLayoutSource, 'function copyTextFallback(value)')
     || !str_contains($themeBaseLayoutSource, "ta.className = 'clipboard-fallback-control';")
     || !str_contains($themePublicCssSource, '.clipboard-fallback-control')) {
     $themeLayoutIssues[] = 'default theme clipboard fallback is missing class-based styling';
+}
+if (str_contains($themeHeadPartialSource, 'publicA11yStyleTag()') || str_contains($themeRuntimeSource, 'echo publicA11yStyleTag();')) {
+    $themeLayoutIssues[] = 'public theme head still renders shared a11y styles inline instead of using public-core.css';
+}
+if (!str_contains($themeHeadPartialSource, "themeAssetUrl('assets/public-core.css', defaultThemeName())")
+    || !str_contains($themeRuntimeSource, "themeAssetUrl('assets/public-core.css', defaultThemeName())")) {
+    $themeLayoutIssues[] = 'public theme head is missing the shared public-core.css stylesheet';
+}
+foreach ([
+    '.skip-link',
+    '.sr-only',
+    '.cookie-banner',
+    '.public-admin-bar',
+    '.public-admin-bar__link--edit',
+] as $themeSharedCssFragment) {
+    if (!str_contains($themeCoreCssSource, $themeSharedCssFragment)) {
+        $themeLayoutIssues[] = 'shared public core CSS is missing helper fragment: ' . $themeSharedCssFragment;
+    }
 }
 if (!str_contains($themeAccountReservationsViewSource, 'data-confirm="Opravdu chcete zrušit tuto rezervaci?"')) {
     $themeLayoutIssues[] = 'account reservations view is missing data-confirm reservation cancellation';

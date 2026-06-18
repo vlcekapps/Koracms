@@ -3,7 +3,7 @@
 <?= faviconTag() ?>
 <?= seoMeta($meta) ?>
   <title><?= h($pageTitle) ?></title>
-<?= publicA11yStyleTag() ?>
+  <link rel="stylesheet" href="<?= h(themeAssetUrl('assets/public-core.css', defaultThemeName())) ?>">
   <link rel="stylesheet" href="<?= h(themeAssetUrl('assets/public.css', $themeName)) ?>">
 <?= themeCssVariablesStyleTag($themeName) ?>
 <?php if (!empty($extraHeadHtml)): ?>

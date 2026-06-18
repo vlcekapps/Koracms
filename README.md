@@ -435,6 +435,8 @@ Kontrola integrity a detail odpovědi formuláře v administraci používají sd
 
 Veřejná hlavička šablony přidává CSP nonce i k dynamickému `<style>` bloku s theme CSS proměnnými. Díky tomu se vlastní barevné nastavení šablon drží stejného bezpečnostního režimu jako ostatní interní inline styly.
 
+Veřejné šablony už pro skip link, `.sr-only`, cookie lištu a veřejný admin bar nepotřebují generovaný inline a11y `<style>` helper; tyto styly se načítají ze sdíleného `themes/default/assets/public-core.css` před CSS aktivní šablony. Samostatné instalační a migrační obrazovky si kvůli nezávislosti na theme assetech ponechávají vlastní fallback.
+
 Veřejná JSON-LD strukturovaná data se vykreslují přes sdílený helper s CSP nonce, takže SEO metadata pro místa, podcasty, jídelní lístky, galerii, novinky, události a FAQ nejsou závislá na inline-script fallbacku.
 
 CSP allowlist obsahuje také explicitní zdroje, které CMS samo vkládá pro Google Analytics a volitelný Quill editor. Externí GA/Quill skripty se renderují s nonce a runtime audit hlídá, aby se nové CDN skripty nepřidávaly bez stejné ochrany.
