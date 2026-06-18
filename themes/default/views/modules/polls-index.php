@@ -69,9 +69,12 @@ $q = trim((string)($q ?? ''));
                   <span><?= h((string)$option['option_text']) ?></span>
                   <span><?= $percentage ?>&nbsp;% (<?= (int)$option['vote_count'] ?>&nbsp;hlasů)</span>
                 </div>
-                <div class="poll-result__track" aria-hidden="true">
-                  <div class="poll-result__fill" style="width:<?= $percentage ?>%"></div>
-                </div>
+                <progress
+                  class="poll-result__track"
+                  value="<?= h((string)$percentage) ?>"
+                  max="100"
+                  aria-label="Podíl hlasů pro možnost <?= h((string)$option['option_text']) ?>"
+                ><?= $percentage ?> %</progress>
               </div>
             <?php endforeach; ?>
           </div>

@@ -10274,6 +10274,7 @@ $pollListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls.php
 $pollDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_delete.php');
 $pollIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/polls/index.php');
 $pollIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
+$pollPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
 $pollHomeSource = (string)file_get_contents(dirname(__DIR__) . '/index.php');
 $pollContentSource = (string)file_get_contents(dirname(__DIR__) . '/lib/content.php');
 $pollSearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
@@ -10332,6 +10333,22 @@ if (!str_contains($pollIndexViewSource, 'name="q"')) {
 }
 if (!str_contains($pollIndexViewSource, 'renderPager(')) {
     $pollSourceIssues[] = 'poll public view is missing pager output';
+}
+if (str_contains($pollIndexViewSource, 'poll-result__fill') || str_contains($pollIndexViewSource, 'style="width:')) {
+    $pollSourceIssues[] = 'poll public results still use inline-width result bars';
+}
+if (!str_contains($pollIndexViewSource, '<progress')
+    || !str_contains($pollIndexViewSource, 'class="poll-result__track"')
+    || !str_contains($pollIndexViewSource, 'aria-label="Podíl hlasů pro možnost')) {
+    $pollSourceIssues[] = 'poll public results are missing semantic progress bars';
+}
+foreach ([
+    '.poll-result__track::-webkit-progress-value',
+    '.poll-result__track::-moz-progress-bar',
+] as $pollProgressCssFragment) {
+    if (!str_contains($pollPublicCssSource, $pollProgressCssFragment)) {
+        $pollSourceIssues[] = 'poll public CSS is missing progress styling fragment: ' . $pollProgressCssFragment;
+    }
 }
 if (!str_contains($pollSearchSource, 'pollPublicVisibilitySql()')) {
     $pollSourceIssues[] = 'search no longer protects poll visibility';
