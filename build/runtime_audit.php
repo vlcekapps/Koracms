@@ -11150,6 +11150,10 @@ foreach ([
     '.admin-panel__footer',
     '.admin-check-row',
     '.admin-check-row--separated',
+    '.admin-profile-totp-panel',
+    '.admin-totp-qr',
+    '.admin-totp-code-input',
+    '.admin-code-break',
     '.admin-inline-meta',
     '.admin-input-wide',
     '.field-help--flush',
@@ -12087,6 +12091,24 @@ if (!str_contains($formSaveSource, 'function formFlashSet(array $flash): void')
 }
 if (!str_contains($formSaveSource, 'adminUniquePresetFieldName') || !str_contains($formSaveSource, '$presetFieldName = adminUniquePresetFieldName(')) {
     $adminFieldErrorIssues[] = 'form save is missing exact preset field name preservation for template-backed forms';
+}
+if (str_contains($profileFormValidationSource, 'style=') || str_contains($profileFormValidationSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin profile form still contains inline style markup or JS style mutations';
+}
+foreach ([
+    'class="admin-fieldset-card admin-fieldset-spaced"',
+    'class="field-help field-help--flush"',
+    'class="admin-profile-totp-panel"',
+    'setup.hidden = !this.checked;',
+    'class="admin-totp-qr"',
+    'class="admin-code-break"',
+    'class="admin-totp-code-input"',
+    'class="admin-avatar-preview"',
+    'class="admin-checkbox-label"',
+] as $profileUtilityFragment) {
+    if (!str_contains($profileFormValidationSource, $profileUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin profile form is missing utility fragment: ' . $profileUtilityFragment;
+    }
 }
 if (
     !str_contains($presentationHelpersSource, 'function formFieldNameVariants(')

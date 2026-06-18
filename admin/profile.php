@@ -253,9 +253,9 @@ adminHeader('Můj profil');
     <?php adminRenderFieldError('email', $fieldErrors, [], $fieldErrorMessages['email']); ?>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-fieldset-spaced">
     <legend>Změna hesla</legend>
-    <small id="profile-password-help" class="field-help" style="margin-top:0">Vyplňte jen pokud chcete změnit.</small>
+    <small id="profile-password-help" class="field-help field-help--flush">Vyplňte jen pokud chcete změnit.</small>
     <label for="new_pass">Nové heslo (min. 8 znaků)</label>
     <input type="password" id="new_pass" name="new_pass" minlength="8" autocomplete="new-password"<?= adminFieldAttributes('new_pass', $fieldErrors, [], ['profile-password-help']) ?>>
     <?php adminRenderFieldError('new_pass', $fieldErrors, [], $fieldErrorMessages['new_pass']); ?>
@@ -265,21 +265,21 @@ adminHeader('Můj profil');
     <?php adminRenderFieldError('new_pass2', $fieldErrors, [], $fieldErrorMessages['new_pass2']); ?>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-fieldset-spaced">
     <legend>Dvoufázové ověření (2FA)</legend>
     <?php $hasTOTP = !empty($currentRow['totp_secret']); ?>
     <?php if ($hasTOTP): ?>
-      <p style="color:#1b5e20"><strong>✓ TOTP ověření je aktivní.</strong></p>
+      <p class="success"><strong>✓ TOTP ověření je aktivní.</strong></p>
       <p class="field-help">Při přihlášení budete vyzváni k zadání kódu z autentizační aplikace.</p>
-      <label style="font-weight:normal">
+      <label class="admin-checkbox-label">
         <input type="checkbox" name="disable_2fa" value="1"> Deaktivovat dvoufázové ověření
       </label>
     <?php else: ?>
       <p class="field-help">Zvyšte zabezpečení svého účtu. Použijte FreeOTP, Authy, Google Authenticator nebo jinou TOTP aplikaci.</p>
-      <label style="font-weight:normal">
+      <label class="admin-checkbox-label">
         <input type="checkbox" name="enable_2fa" value="1" id="enable_2fa_check"<?= $enableTwoFactorRequested ? ' checked' : '' ?>> Aktivovat dvoufázové ověření
       </label>
-      <div id="totp-setup" style="<?= $enableTwoFactorRequested ? '' : 'display:none;' ?>margin-top:1rem;padding:1rem;background:#f8f9fb;border-radius:8px">
+      <div id="totp-setup" class="admin-profile-totp-panel"<?= $enableTwoFactorRequested ? '' : ' hidden' ?>>
         <?php
           $totpSetupSecret = $totpSetupSecret !== '' ? $totpSetupSecret : totpGenerateSecret();
         $totpUri = totpUri($totpSetupSecret, $currentRow['email'], getSetting('site_name', 'Kora CMS'));
@@ -287,31 +287,33 @@ adminHeader('Můj profil');
         ?>
         <input type="hidden" name="totp_secret" value="<?= h($totpSetupSecret) ?>">
         <p><strong>1.</strong> Naskenujte QR kód v autentizační aplikaci:</p>
-        <img src="<?= h($qrUrl) ?>" alt="QR kód pro TOTP nastavení" style="display:block;margin:.5rem 0">
-        <p><strong>2.</strong> Nebo ručně zadejte klíč: <code style="word-break:break-all"><?= h($totpSetupSecret) ?></code></p>
+        <img src="<?= h($qrUrl) ?>" alt="QR kód pro TOTP nastavení" class="admin-totp-qr">
+        <p><strong>2.</strong> Nebo ručně zadejte klíč: <code class="admin-code-break"><?= h($totpSetupSecret) ?></code></p>
         <p><strong>3.</strong> Zadejte ověřovací kód z aplikace pro potvrzení:</p>
         <label for="totp_verify">Ověřovací kód <span aria-hidden="true">*</span></label>
         <input type="text" id="totp_verify" name="totp_verify" inputmode="numeric" pattern="[0-9]{6}"
                maxlength="6" placeholder="000000" autocomplete="one-time-code"
-               value="<?= h((string)($_POST['totp_verify'] ?? '')) ?>"<?= adminFieldAttributes('totp_verify', $fieldErrors) ?>
-               style="width:10rem;font-size:1.2rem;text-align:center;letter-spacing:.2rem">
+               class="admin-totp-code-input" value="<?= h((string)($_POST['totp_verify'] ?? '')) ?>"<?= adminFieldAttributes('totp_verify', $fieldErrors) ?>>
         <?php adminRenderFieldError('totp_verify', $fieldErrors, [], $fieldErrorMessages['totp_verify']); ?>
       </div>
       <script nonce="<?= cspNonce() ?>">
       document.getElementById('enable_2fa_check')?.addEventListener('change', function(){
-        document.getElementById('totp-setup').style.display = this.checked ? '' : 'none';
+        const setup = document.getElementById('totp-setup');
+        if (setup) {
+          setup.hidden = !this.checked;
+        }
       });
       </script>
     <?php endif; ?>
   </fieldset>
 
-  <fieldset style="margin-top:1.5rem;border:1px solid #ccc;padding:.5rem 1rem">
+  <fieldset class="admin-fieldset-card admin-fieldset-spaced">
     <legend>Veřejný autor</legend>
 
     <div>
       <input type="checkbox" id="author_public_enabled" name="author_public_enabled" value="1"
              <?= (int)($currentRow['author_public_enabled'] ?? 0) === 1 ? 'checked' : '' ?>>
-      <label for="author_public_enabled" style="display:inline;font-weight:normal">
+      <label for="author_public_enabled" class="admin-checkbox-label">
         Zpřístupnit veřejný autorský profil
       </label>
     </div>
@@ -342,26 +344,30 @@ adminHeader('Můj profil');
       <div id="profile-author-avatar-current" class="field-help">
         Aktuální avatar:
         <img src="<?= BASE_URL ?>/uploads/authors/<?= rawurlencode($currentRow['author_avatar']) ?>"
-             alt="Aktuální avatar autora" style="height:48px;width:48px;object-fit:cover;border-radius:999px;vertical-align:middle">
+             alt="Aktuální avatar autora" class="admin-avatar-preview">
       </div>
     <?php endif; ?>
 
     <?php if (!empty($currentRow['author_avatar'])): ?>
-      <label for="author_avatar_delete" style="font-weight:normal;margin-top:.35rem">
-        <input type="checkbox" id="author_avatar_delete" name="author_avatar_delete" value="1">
-        Smazat stávající avatar
-      </label>
+      <div class="admin-check-row">
+        <label for="author_avatar_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="author_avatar_delete" name="author_avatar_delete" value="1">
+          Smazat stávající avatar
+        </label>
+      </div>
     <?php endif; ?>
 
     <?php if ((int)($currentRow['author_public_enabled'] ?? 0) === 1 && $authorProfileUrl !== ''): ?>
-      <p style="margin-top:1rem">
+      <p class="admin-action-row">
         Veřejný profil:
         <a href="<?= h($authorProfileUrl) ?>" target="_blank" rel="noopener noreferrer"><?= h($authorProfileUrl) ?></a>
       </p>
     <?php endif; ?>
   </fieldset>
 
-  <button type="submit" style="margin-top:1.5rem">Uložit profil</button>
+  <div class="admin-action-row">
+    <button type="submit">Uložit profil</button>
+  </div>
 </form>
 
 <script nonce="<?= cspNonce() ?>">
