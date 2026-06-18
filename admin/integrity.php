@@ -103,18 +103,35 @@ if ($snapshot !== null && ($action === 'check' || $_SERVER['REQUEST_METHOD'] ===
 
 adminHeader('Kontrola integrity souborů');
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .integrity-panel { border:1px solid var(--admin-border); border-radius:8px; padding:1rem; margin-bottom:1rem; }
+  .integrity-panel--success { background:var(--admin-published-bg); border-color:var(--admin-published-border); color:var(--admin-published-text); }
+  .integrity-panel--warning { background:var(--admin-pending-bg); border-color:var(--admin-pending-border); color:var(--admin-pending-text); }
+  .integrity-panel--danger { background:#fff0f0; border-color:#c62828; color:#5f1414; }
+  .integrity-panel--info { background:#f5f7fa; border-color:#d6d6d6; }
+  .integrity-panel--spaced { margin-top:2rem; }
+  .integrity-actions { margin:1rem 0; }
+  .integrity-result { margin-top:1.5rem; }
+  .integrity-copy--flush { margin:0; }
+  .integrity-copy--footer { margin-bottom:0; }
+  .integrity-copy--top { margin-top:1rem; }
+  .integrity-heading--flush { margin-top:0; }
+  .integrity-heading--danger { color:#c62828; }
+  .integrity-heading--modified { color:#d84315; }
+  .integrity-heading--muted { color:#555; }
+</style>
 
 <?php if (!empty($log)): ?>
-  <div style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem;margin-bottom:1rem" role="status">
-    <?php foreach ($log as $line): ?><p style="margin:0"><?= $line ?></p><?php endforeach; ?>
+  <div class="integrity-panel integrity-panel--success" role="status">
+    <?php foreach ($log as $line): ?><p class="integrity-copy--flush"><?= $line ?></p><?php endforeach; ?>
   </div>
 <?php endif; ?>
 
 <p>Kontrola integrity sleduje změny v PHP souborech. Porovnává aktuální SHA-256 hashe s uloženým snapshotem a hlásí nové, změněné nebo smazané soubory.</p>
 
 <?php if ($snapshot === null): ?>
-  <div style="background:#fff4e6;border:1px solid #d7b600;border-radius:8px;padding:1rem;margin:1rem 0" role="alert">
-    <p style="margin:0"><strong>Žádný snapshot nebyl vytvořen.</strong> Vygenerujte první snapshot pro zahájení sledování.</p>
+  <div class="integrity-panel integrity-panel--warning" role="alert">
+    <p class="integrity-copy--flush"><strong>Žádný snapshot nebyl vytvořen.</strong> Vygenerujte první snapshot pro zahájení sledování.</p>
   </div>
 <?php else: ?>
   <p>
@@ -123,11 +140,11 @@ adminHeader('Kontrola integrity souborů');
   </p>
 <?php endif; ?>
 
-<div style="display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap">
+<div class="button-row integrity-actions">
   <?php if ($snapshot !== null): ?>
     <a href="integrity.php?action=check" class="btn btn-primary">Zkontrolovat integritu</a>
   <?php endif; ?>
-  <form method="post" style="display:inline">
+  <form method="post" class="admin-inline-form">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="action" value="generate">
     <button type="submit" class="btn"
@@ -138,19 +155,19 @@ adminHeader('Kontrola integrity souborů');
 </div>
 
 <?php if ($action === 'check' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $snapshot !== null)): ?>
-  <section aria-labelledby="check-result-heading" style="margin-top:1.5rem">
+  <section aria-labelledby="check-result-heading" class="integrity-result">
     <?php if (!$hasChanges): ?>
-      <div style="background:#edf8ef;border:1px solid #2e7d32;border-radius:8px;padding:1rem" role="status">
-        <h2 id="check-result-heading" style="margin-top:0">✓ Integrita v pořádku</h2>
-        <p style="margin-bottom:0">Všechny sledované soubory odpovídají uloženému snapshotu. Žádné neočekávané změny.</p>
+      <div class="integrity-panel integrity-panel--success" role="status">
+        <h2 id="check-result-heading" class="integrity-heading--flush">✓ Integrita v pořádku</h2>
+        <p class="integrity-copy--footer">Všechny sledované soubory odpovídají uloženému snapshotu. Žádné neočekávané změny.</p>
       </div>
     <?php else: ?>
-      <div style="background:#fff0f0;border:1px solid #c62828;border-radius:8px;padding:1rem" role="alert">
-        <h2 id="check-result-heading" style="margin-top:0">⚠ Zjištěny změny</h2>
+      <div class="integrity-panel integrity-panel--danger" role="alert">
+        <h2 id="check-result-heading" class="integrity-heading--flush">⚠ Zjištěny změny</h2>
         <p>Od posledního snapshotu (<?= h($snapshot['generated_at'] ?? '?') ?>) byly detekovány následující změny:</p>
 
         <?php if (!empty($changes['new'])): ?>
-          <h3 style="color:#c62828">Nové soubory (<?= count($changes['new']) ?>)</h3>
+          <h3 class="integrity-heading--danger">Nové soubory (<?= count($changes['new']) ?>)</h3>
           <p>Tyto soubory nebyly v původním snapshotu – mohou být legitimní (deploy, update) nebo podvržené.</p>
           <table>
             <caption class="sr-only">Nové soubory od posledního snapshotu</caption>
@@ -164,7 +181,7 @@ adminHeader('Kontrola integrity souborů');
         <?php endif; ?>
 
         <?php if (!empty($changes['modified'])): ?>
-          <h3 style="color:#d84315">Změněné soubory (<?= count($changes['modified']) ?>)</h3>
+          <h3 class="integrity-heading--modified">Změněné soubory (<?= count($changes['modified']) ?>)</h3>
           <p>Obsah těchto souborů se liší od snapshotu – ověřte, že změny jsou legitimní.</p>
           <table>
             <caption class="sr-only">Změněné soubory od posledního snapshotu</caption>
@@ -178,7 +195,7 @@ adminHeader('Kontrola integrity souborů');
         <?php endif; ?>
 
         <?php if (!empty($changes['deleted'])): ?>
-          <h3 style="color:#555">Smazané soubory (<?= count($changes['deleted']) ?>)</h3>
+          <h3 class="integrity-heading--muted">Smazané soubory (<?= count($changes['deleted']) ?>)</h3>
           <table>
             <caption class="sr-only">Smazané soubory od posledního snapshotu</caption>
             <thead><tr><th scope="col">Soubor</th></tr></thead>
@@ -190,14 +207,14 @@ adminHeader('Kontrola integrity souborů');
           </table>
         <?php endif; ?>
 
-        <p style="margin-top:1rem">Pokud jsou změny legitimní (po nasazení nové verze), obnovte snapshot tlačítkem výše.</p>
+        <p class="integrity-copy--top">Pokud jsou změny legitimní (po nasazení nové verze), obnovte snapshot tlačítkem výše.</p>
       </div>
     <?php endif; ?>
   </section>
 <?php endif; ?>
 
-<section style="margin-top:2rem;padding:1rem;background:#f5f7fa;border:1px solid #d6d6d6;border-radius:8px" aria-labelledby="integrity-info-heading">
-  <h2 id="integrity-info-heading" style="margin-top:0">Jak to funguje</h2>
+<section class="integrity-panel integrity-panel--info integrity-panel--spaced" aria-labelledby="integrity-info-heading">
+  <h2 id="integrity-info-heading" class="integrity-heading--flush">Jak to funguje</h2>
   <ul>
     <li><strong>Snapshot</strong> – uloží SHA-256 hash každého PHP souboru a <code>.htaccess</code></li>
     <li><strong>Kontrola</strong> – porovná aktuální hashe s uloženým snapshotem</li>

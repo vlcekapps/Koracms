@@ -10995,6 +10995,7 @@ $userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
 $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
 $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
+$integrityAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/integrity.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $blogTransferAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
@@ -11176,6 +11177,23 @@ if (str_contains($backupAdminSource, 'style=')) {
 }
 if (!str_contains($backupAdminSource, 'class="admin-description"')) {
     $adminFieldErrorIssues[] = 'admin backup page is missing shared description styling';
+}
+if (str_contains($integrityAdminSource, 'style=')) {
+    $adminFieldErrorIssues[] = 'admin integrity page still contains inline style attributes';
+}
+foreach ([
+    '<style nonce="<?= cspNonce() ?>">',
+    'class="integrity-panel integrity-panel--success"',
+    'class="integrity-panel integrity-panel--warning"',
+    'class="integrity-panel integrity-panel--danger"',
+    'class="button-row integrity-actions"',
+    'class="admin-inline-form"',
+    'class="integrity-result"',
+    'class="integrity-panel integrity-panel--info integrity-panel--spaced"',
+] as $integrityAdminUtilityFragment) {
+    if (!str_contains($integrityAdminSource, $integrityAdminUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin integrity page is missing utility class fragment: ' . $integrityAdminUtilityFragment;
+    }
 }
 foreach ([
     'class="admin-description"',
