@@ -10603,6 +10603,21 @@ foreach ([
         $settingsPrgIssues[] = 'settings page is missing PRG/view fragment: ' . $settingsViewFragment;
     }
 }
+if (str_contains($settingsAdminSource, 'style=') || str_contains($settingsAdminSource, '.style')) {
+    $settingsPrgIssues[] = 'settings page still contains inline style markup or JS style mutations';
+}
+foreach ([
+    '<style nonce="<?= cspNonce() ?>">',
+    'class="button-row settings-nav"',
+    'class="settings-profile-card"',
+    'class="settings-code-textarea"',
+    'class="settings-current-logo"',
+    'class="btn settings-submit"',
+] as $settingsStyleFragment) {
+    if (!str_contains($settingsAdminSource, $settingsStyleFragment)) {
+        $settingsPrgIssues[] = 'settings page is missing CSS class fragment: ' . $settingsStyleFragment;
+    }
+}
 foreach ([
     'function settingsFlashPull(): array',
     'function settingsFlashSet(array $flash): void',

@@ -47,6 +47,22 @@ $settingsSections[] = ['id' => 'settings-operation', 'label' => 'Provoz webu'];
 
 adminHeader('Nastavení webu');
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .settings-nav { margin:1rem 0 1.5rem; }
+  .settings-checkbox-row { margin-top:1rem; }
+  .settings-checkbox-row--compact { margin-top:.5rem; }
+  .settings-note { margin-top:.5rem; font-size:.9rem; color:var(--admin-field-help); }
+  .settings-muted { margin-top:.25rem; color:var(--admin-field-help); }
+  .settings-profile-card { margin-top:.85rem; padding:.85rem 1rem; border:1px solid var(--admin-border); border-radius:10px; }
+  .settings-profile-description { margin:.45rem 0 0 1.8rem; color:var(--admin-text-muted); }
+  .settings-fieldset-spaced { margin-top:1rem; }
+  .settings-form-row { margin-bottom:.75rem; }
+  .settings-input-short { width:20rem; }
+  .settings-code-textarea { width:100%; max-width:600px; font-family:monospace; font-size:.85rem; }
+  .settings-current-favicon { height:20px; vertical-align:middle; }
+  .settings-current-logo { max-height:40px; vertical-align:middle; }
+  .settings-submit { margin-top:1rem; }
+</style>
 
 <?php if ($successMessage !== ''): ?>
   <p class="success" role="status"><?= h($successMessage) ?></p>
@@ -60,7 +76,7 @@ adminHeader('Nastavení webu');
 
 <p>Tady nastavíte identitu webu, domovskou stránku, komentáře, vzhled i provoz webu. Pokud hledáte heslo nebo osobní údaje účtu, najdete je v <a href="profile.php">Mém profilu</a>.</p>
 
-<nav aria-label="Sekce nastavení webu" class="button-row" style="margin:1rem 0 1.5rem">
+<nav aria-label="Sekce nastavení webu" class="button-row settings-nav">
   <?php foreach ($settingsSections as $section): ?>
     <a href="#<?= h($section['id']) ?>"><?= h($section['label']) ?></a>
   <?php endforeach; ?>
@@ -85,11 +101,11 @@ adminHeader('Nastavení webu');
            value="<?= h($formState['contact_email']) ?>"<?= adminFieldAttributes('contact_email', $fieldErrors) ?>>
     <?php adminRenderFieldError('contact_email', $fieldErrors, [], $fieldMessageFor('contact_email')); ?>
 
-    <div style="margin-top:1rem">
+    <div class="settings-checkbox-row">
       <input type="checkbox" id="public_registration_enabled" name="public_registration_enabled" value="1"
              aria-describedby="public-registration-help"
              <?= $formState['public_registration_enabled'] === '1' ? 'checked' : '' ?>>
-      <label for="public_registration_enabled" style="display:inline;font-weight:normal">
+      <label for="public_registration_enabled" class="admin-checkbox-label">
         Povolit veřejnou registraci uživatelů
       </label>
     </div>
@@ -105,19 +121,19 @@ adminHeader('Nastavení webu');
 
   <fieldset id="settings-profile">
     <legend>Profil webu</legend>
-    <p style="margin-top:.25rem;color:#555">Profil pomáhá držet vhodné výchozí moduly, domovskou stránku a doporučenou šablonu pro typ webu, který tvoříte.</p>
+    <p class="settings-muted">Profil pomáhá držet vhodné výchozí moduly, domovskou stránku a doporučenou šablonu pro typ webu, který tvoříte.</p>
     <?php foreach ($siteProfiles as $profileKey => $profile): ?>
-      <div style="margin-top:.85rem;padding:.85rem 1rem;border:1px solid #d0d7de;border-radius:10px">
+      <div class="settings-profile-card">
         <input type="radio" id="site_profile_<?= h($profileKey) ?>" name="site_profile" value="<?= h($profileKey) ?>"
                <?= $formState['site_profile'] === $profileKey ? 'checked' : '' ?>>
-        <label for="site_profile_<?= h($profileKey) ?>" style="display:inline;margin-top:0"><?= h($profile['label']) ?></label>
-        <p style="margin:.45rem 0 0 1.8rem;color:#444"><?= h($profile['description']) ?></p>
+        <label for="site_profile_<?= h($profileKey) ?>" class="admin-checkbox-label"><?= h($profile['label']) ?></label>
+        <p class="settings-profile-description"><?= h($profile['description']) ?></p>
       </div>
     <?php endforeach; ?>
-    <div style="margin-top:1rem">
+    <div class="settings-checkbox-row">
       <input type="checkbox" id="apply_site_profile" name="apply_site_profile" value="1" aria-describedby="apply-site-profile-help"
              <?= $formState['apply_site_profile'] === '1' ? 'checked' : '' ?>>
-      <label for="apply_site_profile" style="display:inline;font-weight:normal">
+      <label for="apply_site_profile" class="admin-checkbox-label">
         Použít doporučené moduly, pořadí navigace a vzhled pro zvolený profil
       </label>
     </div>
@@ -147,7 +163,7 @@ adminHeader('Nastavení webu');
       <input type="checkbox" id="blog_authors_index_enabled" name="blog_authors_index_enabled" value="1"
              aria-describedby="blog-authors-index-help"
              <?= $formState['blog_authors_index_enabled'] === '1' ? 'checked' : '' ?>>
-      <label for="blog_authors_index_enabled" style="display:inline;font-weight:normal">
+      <label for="blog_authors_index_enabled" class="admin-checkbox-label">
         Zobrazovat na blogu odkaz na veřejný seznam autorů
       </label>
     </div>
@@ -160,19 +176,19 @@ adminHeader('Nastavení webu');
     <div>
       <input type="checkbox" id="comments_enabled" name="comments_enabled" value="1"
              <?= $formState['comments_enabled'] === '1' ? 'checked' : '' ?>>
-      <label for="comments_enabled" style="display:inline;font-weight:normal">
+      <label for="comments_enabled" class="admin-checkbox-label">
         Povolit komentáře u článků blogu
       </label>
     </div>
 
-    <fieldset style="margin-top:1rem;border:1px solid #ccc;padding:.75rem 1rem">
+    <fieldset class="admin-fieldset-card settings-fieldset-spaced">
       <legend>Moderace komentářů</legend>
-      <p style="margin-top:.25rem;color:#555">Zvolte, kdy se má nový komentář zveřejnit a kdy má čekat na schválení.</p>
+      <p class="settings-muted">Zvolte, kdy se má nový komentář zveřejnit a kdy má čekat na schválení.</p>
 
       <p>
         <input type="radio" id="comment_moderation_always" name="comment_moderation_mode" value="always"
                <?= $formState['comment_moderation_mode'] === 'always' ? 'checked' : '' ?>>
-        <label for="comment_moderation_always" style="display:inline;font-weight:normal">
+        <label for="comment_moderation_always" class="admin-checkbox-label">
           Vždy schvalovat každý nový komentář
         </label>
       </p>
@@ -180,7 +196,7 @@ adminHeader('Nastavení webu');
       <p>
         <input type="radio" id="comment_moderation_known" name="comment_moderation_mode" value="known"
                <?= $formState['comment_moderation_mode'] === 'known' ? 'checked' : '' ?>>
-        <label for="comment_moderation_known" style="display:inline;font-weight:normal">
+        <label for="comment_moderation_known" class="admin-checkbox-label">
           Automaticky schválit autora, který už má schválený komentář se stejným e-mailem
         </label>
       </p>
@@ -188,7 +204,7 @@ adminHeader('Nastavení webu');
       <p>
         <input type="radio" id="comment_moderation_none" name="comment_moderation_mode" value="none"
                <?= $formState['comment_moderation_mode'] === 'none' ? 'checked' : '' ?>>
-        <label for="comment_moderation_none" style="display:inline;font-weight:normal">
+        <label for="comment_moderation_none" class="admin-checkbox-label">
           Zveřejnit nový komentář ihned bez schválení
         </label>
       </p>
@@ -200,10 +216,10 @@ adminHeader('Nastavení webu');
            value="<?= h($formState['comment_close_days']) ?>">
     <small id="comment-close-days-help" class="field-help">Hodnota 0 znamená, že se komentáře automaticky neuzavírají.</small>
 
-    <div style="margin-top:1rem">
+    <div class="settings-checkbox-row">
       <input type="checkbox" id="comment_notify_admin" name="comment_notify_admin" value="1"
              <?= $formState['comment_notify_admin'] === '1' ? 'checked' : '' ?>>
-      <label for="comment_notify_admin" style="display:inline;font-weight:normal">
+      <label for="comment_notify_admin" class="admin-checkbox-label">
         Poslat upozornění administrátorovi, když nový komentář čeká na schválení
       </label>
     </div>
@@ -215,10 +231,10 @@ adminHeader('Nastavení webu');
     <small id="comment-notify-email-help" class="field-help">Nepovinné pole. Když ho necháte prázdné, použije se kontaktní e-mail webu.</small>
     <?php adminRenderFieldError('comment_notify_email', $fieldErrors, [], $fieldMessageFor('comment_notify_email')); ?>
 
-    <div style="margin-top:1rem">
+    <div class="settings-checkbox-row">
       <input type="checkbox" id="comment_notify_author_approve" name="comment_notify_author_approve" value="1" aria-describedby="comment-notify-author-help"
              <?= $formState['comment_notify_author_approve'] === '1' ? 'checked' : '' ?>>
-      <label for="comment_notify_author_approve" style="display:inline;font-weight:normal">
+      <label for="comment_notify_author_approve" class="admin-checkbox-label">
         Poslat autorovi e-mail, když jeho komentář schválíte
       </label>
     </div>
@@ -236,30 +252,30 @@ adminHeader('Nastavení webu');
 
   <fieldset id="settings-notifications">
     <legend>E-mailové notifikace</legend>
-    <p style="margin-top:.5rem;font-size:.9rem">Upozornění se odesílají na e-mail administrátora (případně kontaktní e-mail webu).</p>
+    <p class="settings-note">Upozornění se odesílají na e-mail administrátora (případně kontaktní e-mail webu).</p>
 
-    <div style="margin-top:.5rem">
+    <div class="settings-checkbox-row--compact">
       <input type="checkbox" id="notify_form_submission" name="notify_form_submission" value="1"
              <?= $formState['notify_form_submission'] === '1' ? 'checked' : '' ?>>
-      <label for="notify_form_submission" style="display:inline;font-weight:normal">
+      <label for="notify_form_submission" class="admin-checkbox-label">
         Upozornit na nové odeslání formuláře
       </label>
     </div>
 
-    <div style="margin-top:.5rem">
+    <div class="settings-checkbox-row--compact">
       <input type="checkbox" id="notify_pending_content" name="notify_pending_content" value="1"
              <?= $formState['notify_pending_content'] === '1' ? 'checked' : '' ?>>
-      <label for="notify_pending_content" style="display:inline;font-weight:normal">
+      <label for="notify_pending_content" class="admin-checkbox-label">
         Upozornit, když nový obsah čeká na schválení
       </label>
     </div>
 
     <?php if (isModuleEnabled('chat')): ?>
-    <div style="margin-top:.5rem">
+    <div class="settings-checkbox-row--compact">
       <input type="checkbox" id="notify_chat_message" name="notify_chat_message" value="1"
              aria-describedby="notify-chat-help"
              <?= $formState['notify_chat_message'] === '1' ? 'checked' : '' ?>>
-      <label for="notify_chat_message" style="display:inline;font-weight:normal">
+      <label for="notify_chat_message" class="admin-checkbox-label">
         Upozornit na novou zprávu v chatu
       </label>
     </div>
@@ -269,8 +285,8 @@ adminHeader('Nastavení webu');
 
   <fieldset id="settings-editor">
     <legend>Obsah a editor</legend>
-    <p style="margin-top:.5rem">
-      <label style="font-weight:normal">
+    <p class="settings-checkbox-row--compact">
+      <label class="admin-checkbox-label">
         <input type="radio" name="content_editor" value="html"
                aria-describedby="content-editor-help"
                <?= $formState['content_editor'] === 'html' ? 'checked' : '' ?>>
@@ -278,7 +294,7 @@ adminHeader('Nastavení webu');
       </label>
     </p>
     <p>
-      <label style="font-weight:normal">
+      <label class="admin-checkbox-label">
         <input type="radio" name="content_editor" value="wysiwyg"
                aria-describedby="content-editor-help"
                <?= $formState['content_editor'] === 'wysiwyg' ? 'checked' : '' ?>>
@@ -290,23 +306,23 @@ adminHeader('Nastavení webu');
 
   <fieldset id="settings-analytics">
     <legend>Google Analytics a vlastní kód</legend>
-    <div style="margin-bottom:.75rem">
+    <div class="settings-form-row">
       <label for="ga4_measurement_id">GA4 Measurement ID</label>
       <input type="text" id="ga4_measurement_id" name="ga4_measurement_id"
              value="<?= h($formState['ga4_measurement_id']) ?>"
-             placeholder="G-XXXXXXXXXX" style="width:20rem"
+             placeholder="G-XXXXXXXXXX" class="settings-input-short"
              aria-describedby="ga4-help">
       <small id="ga4-help" class="field-help">Zadejte Google Analytics 4 Measurement ID (např. G-8EV9896EKZ). Snippet se automaticky vloží do hlavičky webu.</small>
     </div>
-    <div style="margin-bottom:.75rem">
+    <div class="settings-form-row">
       <label for="custom_head_code">Vlastní kód do &lt;head&gt;</label>
-      <textarea id="custom_head_code" name="custom_head_code" rows="4" style="width:100%;max-width:600px;font-family:monospace;font-size:.85rem"
+      <textarea id="custom_head_code" name="custom_head_code" rows="4" class="settings-code-textarea"
                 aria-describedby="head-code-help"><?= h($formState['custom_head_code']) ?></textarea>
       <small id="head-code-help" class="field-help">HTML/JS kód vložený před &lt;/head&gt;. Slouží pro Google Tag Manager, meta tagy, ověřovací kódy apod.</small>
     </div>
-    <div style="margin-bottom:.75rem">
+    <div class="settings-form-row">
       <label for="custom_footer_code">Vlastní kód před &lt;/body&gt;</label>
-      <textarea id="custom_footer_code" name="custom_footer_code" rows="4" style="width:100%;max-width:600px;font-family:monospace;font-size:.85rem"
+      <textarea id="custom_footer_code" name="custom_footer_code" rows="4" class="settings-code-textarea"
                 aria-describedby="footer-code-help"><?= h($formState['custom_footer_code']) ?></textarea>
       <small id="footer-code-help" class="field-help">HTML/JS kód vložený před zavírací &lt;/body&gt;. Slouží pro analytické skripty, chat widgety apod.</small>
     </div>
@@ -324,7 +340,7 @@ adminHeader('Nastavení webu');
       <div id="site-favicon-current" class="field-help">
         Aktuální favicon:
         <img src="<?= BASE_URL ?>/uploads/site/<?= h($fav) ?>"
-             alt="Aktuální favicon" style="height:20px;vertical-align:middle">
+             alt="Aktuální favicon" class="settings-current-favicon">
       </div>
     <?php endif; ?>
 
@@ -338,7 +354,7 @@ adminHeader('Nastavení webu');
       <div id="site-logo-current" class="field-help">
         Aktuální logo:
         <img src="<?= BASE_URL ?>/uploads/site/<?= h($logo) ?>"
-             alt="Aktuální logo webu" style="max-height:40px;vertical-align:middle">
+             alt="Aktuální logo webu" class="settings-current-logo">
       </div>
     <?php endif; ?>
 
@@ -353,7 +369,7 @@ adminHeader('Nastavení webu');
     <div>
       <input type="checkbox" id="cookie_consent_enabled" name="cookie_consent_enabled" value="1"
              <?= $formState['cookie_consent_enabled'] === '1' ? 'checked' : '' ?>>
-      <label for="cookie_consent_enabled" style="display:inline;font-weight:normal">
+      <label for="cookie_consent_enabled" class="admin-checkbox-label">
         Zobrazovat cookie lištu
       </label>
     </div>
@@ -367,7 +383,7 @@ adminHeader('Nastavení webu');
     <div>
       <input type="checkbox" id="github_issues_enabled" name="github_issues_enabled" value="1" aria-describedby="github-issues-enabled-help"
              <?= $formState['github_issues_enabled'] === '1' ? 'checked' : '' ?>>
-      <label for="github_issues_enabled" style="display:inline;font-weight:normal">
+      <label for="github_issues_enabled" class="admin-checkbox-label">
         Povolit vytváření GitHub issues z odpovědí formulářů
       </label>
     </div>
@@ -396,7 +412,7 @@ adminHeader('Nastavení webu');
     <div>
       <input type="checkbox" id="maintenance_mode" name="maintenance_mode" value="1" aria-describedby="maintenance-mode-help"
              <?= $formState['maintenance_mode'] === '1' ? 'checked' : '' ?>>
-      <label for="maintenance_mode" style="display:inline;font-weight:normal">
+      <label for="maintenance_mode" class="admin-checkbox-label">
         Zapnout režim údržby
       </label>
     </div>
@@ -414,7 +430,7 @@ adminHeader('Nastavení webu');
     <?php endif; ?>
   </fieldset>
 
-  <button type="submit" style="margin-top:1rem">Uložit nastavení</button>
+  <button type="submit" class="btn settings-submit">Uložit nastavení</button>
 </form>
 
 <?php adminFooter(); ?>
