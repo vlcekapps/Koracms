@@ -94,7 +94,7 @@ $fieldErrorMessages = [
   <p role="alert" class="error" id="form-error">Zdroj se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to prosím znovu.</p>
 <?php endif; ?>
 
-<p style="margin-top:0;font-size:.9rem">
+<p class="res-resource-intro">
   Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací. Pole označená <span aria-hidden="true">*</span><span class="sr-only">hvězdičkou</span> jsou povinná.
 </p>
 
@@ -139,104 +139,104 @@ $fieldErrorMessages = [
     </select>
 
     <label for="capacity">Max. osob na jednu rezervaci <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="number" id="capacity" name="capacity" min="1" required aria-required="true" style="width:8rem"
+    <input type="number" id="capacity" name="capacity" min="1" required aria-required="true" class="admin-input-compact"
            <?= adminFieldAttributes('capacity', $err, $fieldErrorMap, ['resource-capacity-help']) ?>
            value="<?= (int)($resource['capacity'] ?? 1) ?>">
     <small id="resource-capacity-help" class="field-help">Kolik lidí může přijít v rámci jedné rezervace, například rodina nebo skupina.</small>
     <?php adminRenderFieldError('capacity', $err, $fieldErrorMap, $fieldErrorMessages['capacity']); ?>
 
-    <fieldset style="border:1px solid #ddd;padding:.5rem .75rem;margin-top:1rem">
+    <fieldset class="res-resource-location-fieldset">
       <legend>Lokality rezervací</legend>
       <?php if (empty($locations)): ?>
-        <p style="margin:.25rem 0;font-size:.9rem">Zatím tu nejsou žádné lokality rezervací. <a href="res_locations.php">Přidat lokalitu</a></p>
+        <p class="res-resource-empty-copy">Zatím tu nejsou žádné lokality rezervací. <a href="res_locations.php">Přidat lokalitu</a></p>
       <?php else: ?>
         <?php foreach ($locations as $loc): ?>
-          <div style="margin:.25rem 0">
+          <div class="res-resource-location-row">
             <input type="checkbox" id="loc_<?= (int)$loc['id'] ?>" name="location_ids[]" value="<?= (int)$loc['id'] ?>"
                    <?= in_array((int)$loc['id'], $selectedLocations) ? 'checked' : '' ?>>
-            <label for="loc_<?= (int)$loc['id'] ?>" style="display:inline;font-weight:normal">
-              <?= h($loc['name']) ?><?= $loc['address'] !== '' ? ' <span style="color:#666">(' . h($loc['address']) . ')</span>' : '' ?>
+            <label for="loc_<?= (int)$loc['id'] ?>" class="admin-checkbox-label">
+              <?= h($loc['name']) ?><?php if ($loc['address'] !== ''): ?> <span class="res-resource-location-address">(<?= h($loc['address']) ?>)</span><?php endif; ?>
             </label>
           </div>
         <?php endforeach; ?>
-        <p style="margin:.5rem 0 0;font-size:.85rem"><a href="res_locations.php">Spravovat lokality rezervací</a></p>
+        <p class="res-resource-manage-link"><a href="res_locations.php">Spravovat lokality rezervací</a></p>
       <?php endif; ?>
     </fieldset>
   </fieldset>
 
   <!-- B) Booking rules -->
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem">
+  <fieldset class="res-resource-fieldset">
     <legend>Pravidla rezervací</legend>
 
-    <fieldset style="border:none;padding:0;margin:1rem 0 0">
+    <fieldset class="res-resource-mode-fieldset">
       <legend>Způsob rezervací <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></legend>
-      <div style="margin:.3rem 0">
+      <div class="res-resource-option-row">
         <input type="radio" id="mode_slots" name="slot_mode" value="slots" aria-describedby="mode-slots-help"
                <?= ($resource['slot_mode'] ?? 'slots') === 'slots' ? 'checked' : '' ?>>
-        <label for="mode_slots" style="display:inline;font-weight:normal">Předdefinované sloty</label>
-        <small id="mode-slots-help" class="field-help" style="margin:.15rem 0 0 1.6rem">Přesné časové bloky pro každý den, například prohlídky muzea nebo vyhlídkové jízdy.</small>
+        <label for="mode_slots" class="admin-checkbox-label">Předdefinované sloty</label>
+        <small id="mode-slots-help" class="field-help res-resource-help-indented">Přesné časové bloky pro každý den, například prohlídky muzea nebo vyhlídkové jízdy.</small>
       </div>
-      <div style="margin:.3rem 0">
+      <div class="res-resource-option-row">
         <input type="radio" id="mode_range" name="slot_mode" value="range" aria-describedby="mode-range-help"
                <?= ($resource['slot_mode'] ?? '') === 'range' ? 'checked' : '' ?>>
-        <label for="mode_range" style="display:inline;font-weight:normal">Časový rozsah</label>
-        <small id="mode-range-help" class="field-help" style="margin:.15rem 0 0 1.6rem">Uživatel zadá začátek a konec, například u pronájmu sálu nebo sportoviště.</small>
+        <label for="mode_range" class="admin-checkbox-label">Časový rozsah</label>
+        <small id="mode-range-help" class="field-help res-resource-help-indented">Uživatel zadá začátek a konec, například u pronájmu sálu nebo sportoviště.</small>
       </div>
-      <div style="margin:.3rem 0">
+      <div class="res-resource-option-row">
         <input type="radio" id="mode_duration" name="slot_mode" value="duration" aria-describedby="mode-duration-help"
                <?= ($resource['slot_mode'] ?? '') === 'duration' ? 'checked' : '' ?>>
-        <label for="mode_duration" style="display:inline;font-weight:normal">Délka</label>
-        <small id="mode-duration-help" class="field-help" style="margin:.15rem 0 0 1.6rem">Uživatel zadá začátek a délka je fixní, například masáž na 60 minut nebo tenisový kurt na 90 minut.</small>
+        <label for="mode_duration" class="admin-checkbox-label">Délka</label>
+        <small id="mode-duration-help" class="field-help res-resource-help-indented">Uživatel zadá začátek a délka je fixní, například masáž na 60 minut nebo tenisový kurt na 90 minut.</small>
       </div>
     </fieldset>
 
-    <div id="duration-field" style="<?= ($resource['slot_mode'] ?? 'slots') !== 'duration' ? 'display:none' : '' ?>">
+    <div id="duration-field"<?= ($resource['slot_mode'] ?? 'slots') !== 'duration' ? ' hidden' : '' ?>>
       <label for="slot_duration_min">Délka slotu (minuty)</label>
-      <input type="number" id="slot_duration_min" name="slot_duration_min" min="1" style="width:8rem"
+      <input type="number" id="slot_duration_min" name="slot_duration_min" min="1" class="admin-input-compact"
              value="<?= (int)($resource['slot_duration_min'] ?? 60) ?>">
     </div>
 
     <label for="min_advance_hours">Nejpozději rezervovat (hodin předem)</label>
-    <input type="number" id="min_advance_hours" name="min_advance_hours" min="0" style="width:8rem"
+    <input type="number" id="min_advance_hours" name="min_advance_hours" min="0" class="admin-input-compact"
            aria-describedby="resource-min-advance-help"
            value="<?= (int)($resource['min_advance_hours'] ?? 1) ?>">
     <small id="resource-min-advance-help" class="field-help">Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.</small>
 
     <label for="max_advance_days">Nejdříve rezervovat (dní dopředu)</label>
-    <input type="number" id="max_advance_days" name="max_advance_days" min="1" style="width:8rem"
+    <input type="number" id="max_advance_days" name="max_advance_days" min="1" class="admin-input-compact"
            aria-describedby="resource-max-advance-help"
            value="<?= (int)($resource['max_advance_days'] ?? 30) ?>">
     <small id="resource-max-advance-help" class="field-help">Například 30 znamená, že rezervaci lze vytvořit nejvýš 30 dní dopředu.</small>
 
     <label for="cancellation_hours">Bezplatné zrušení do (hodin předem)</label>
-    <input type="number" id="cancellation_hours" name="cancellation_hours" min="0" style="width:8rem"
+    <input type="number" id="cancellation_hours" name="cancellation_hours" min="0" class="admin-input-compact"
            aria-describedby="resource-cancellation-help"
            value="<?= (int)($resource['cancellation_hours'] ?? 24) ?>">
     <small id="resource-cancellation-help" class="field-help">Hodnota 0 znamená, že rezervaci lze zrušit kdykoli před začátkem.</small>
 
-    <div style="margin-top:1rem">
+    <div class="res-resource-check-row">
       <input type="checkbox" id="requires_approval" name="requires_approval" value="1" aria-describedby="resource-requires-approval-help"
              <?= !empty($resource['requires_approval']) ? 'checked' : '' ?>>
-      <label for="requires_approval" style="display:inline;font-weight:normal">Vyžaduje schválení</label>
+      <label for="requires_approval" class="admin-checkbox-label">Vyžaduje schválení</label>
     </div>
-    <small id="resource-requires-approval-help" class="field-help" style="margin-top:.2rem">Rezervace bude čekat na ruční potvrzení administrátorem.</small>
+    <small id="resource-requires-approval-help" class="field-help res-resource-help-tight">Rezervace bude čekat na ruční potvrzení administrátorem.</small>
 
-    <div style="margin-top:.5rem">
+    <div class="res-resource-check-row res-resource-check-row--compact">
       <input type="checkbox" id="allow_guests" name="allow_guests" value="1" aria-describedby="resource-allow-guests-help"
              <?= !empty($resource['allow_guests']) ? 'checked' : '' ?>>
-      <label for="allow_guests" style="display:inline;font-weight:normal">Povolit rezervace bez registrace</label>
+      <label for="allow_guests" class="admin-checkbox-label">Povolit rezervace bez registrace</label>
     </div>
-    <small id="resource-allow-guests-help" class="field-help" style="margin-top:.2rem">Host vyplní jméno, e-mail a telefon přímo ve formuláři.</small>
+    <small id="resource-allow-guests-help" class="field-help res-resource-help-tight">Host vyplní jméno, e-mail a telefon přímo ve formuláři.</small>
 
     <label for="max_concurrent">Max. rezervací ve stejném čase</label>
-    <input type="number" id="max_concurrent" name="max_concurrent" min="1" style="width:8rem"
+    <input type="number" id="max_concurrent" name="max_concurrent" min="1" class="admin-input-compact"
            aria-describedby="resource-max-concurrent-help"
            value="<?= (int)($resource['max_concurrent'] ?? 1) ?>">
     <small id="resource-max-concurrent-help" class="field-help">Kolik nezávislých skupin nebo osob si může rezervovat stejný slot, například masáž = 1 a prohlídka = 10.</small>
   </fieldset>
 
   <!-- C) Opening hours -->
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem"<?= adminFieldHasError('hours', $err, $fieldErrorMap) ? ' aria-describedby="hours-error"' : '' ?>>
+  <fieldset class="res-resource-fieldset"<?= adminFieldHasError('hours', $err, $fieldErrorMap) ? ' aria-describedby="hours-error"' : '' ?>>
     <legend>Otevírací doba</legend>
     <?php if (adminFieldHasError('hours', $err, $fieldErrorMap)): ?>
       <small id="hours-error" class="field-help field-error"><?= h($fieldErrorMessages['hours']) ?></small>
@@ -267,12 +267,12 @@ $fieldErrorMessages = [
           </td>
           <td>
             <label for="open_<?= $d ?>" class="sr-only"><?= h($dayNames[$d]) ?> otevření</label>
-            <input type="time" id="open_<?= $d ?>" name="hours[<?= $d ?>][open_time]" style="width:auto"
+            <input type="time" id="open_<?= $d ?>" name="hours[<?= $d ?>][open_time]" class="admin-input-auto"
                    value="<?= h($openTime) ?>">
           </td>
           <td>
             <label for="close_<?= $d ?>" class="sr-only"><?= h($dayNames[$d]) ?> zavření</label>
-            <input type="time" id="close_<?= $d ?>" name="hours[<?= $d ?>][close_time]" style="width:auto"
+            <input type="time" id="close_<?= $d ?>" name="hours[<?= $d ?>][close_time]" class="admin-input-auto"
                    value="<?= h($closeTime) ?>">
           </td>
         </tr>
@@ -282,50 +282,50 @@ $fieldErrorMessages = [
   </fieldset>
 
   <!-- D) Predefined slots -->
-  <fieldset id="slots-section" style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem;<?= ($resource['slot_mode'] ?? 'slots') !== 'slots' ? 'display:none' : '' ?>"<?= adminFieldHasError('slots', $err, $fieldErrorMap) ? ' aria-describedby="slots-error"' : '' ?>>
+  <fieldset id="slots-section" class="res-resource-fieldset"<?= ($resource['slot_mode'] ?? 'slots') !== 'slots' ? ' hidden' : '' ?><?= adminFieldHasError('slots', $err, $fieldErrorMap) ? ' aria-describedby="slots-error"' : '' ?>>
     <legend>Časy k rezervaci</legend>
     <?php if (adminFieldHasError('slots', $err, $fieldErrorMap)): ?>
       <small id="slots-error" class="field-help field-error"><?= h($fieldErrorMessages['slots']) ?></small>
     <?php endif; ?>
 
-    <fieldset style="border:1px dashed #aaa;padding:.5rem 1rem;margin-bottom:1rem">
+    <fieldset class="res-resource-generator">
       <legend>Hromadné přidání slotů</legend>
-      <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+      <div class="res-resource-inline-grid">
         <div>
           <label for="gen_from">První slot od</label>
-          <input type="time" id="gen_from" style="width:auto;display:block;margin-top:.2rem" value="09:00">
+          <input type="time" id="gen_from" class="res-resource-inline-control" value="09:00">
         </div>
         <div>
           <label for="gen_length">Délka slotu (min)</label>
-          <input type="number" id="gen_length" min="1" style="width:5rem;display:block;margin-top:.2rem" value="60">
+          <input type="number" id="gen_length" min="1" class="res-resource-inline-control res-resource-inline-control--number" value="60">
         </div>
         <div>
           <label for="gen_gap">Mezera (min)</label>
-          <input type="number" id="gen_gap" min="0" style="width:5rem;display:block;margin-top:.2rem" value="0">
+          <input type="number" id="gen_gap" min="0" class="res-resource-inline-control res-resource-inline-control--number" value="0">
         </div>
         <div>
           <label for="gen_until">Poslední slot do</label>
-          <input type="time" id="gen_until" style="width:auto;display:block;margin-top:.2rem" value="17:00">
+          <input type="time" id="gen_until" class="res-resource-inline-control" value="17:00">
         </div>
-        <button type="button" id="btn-generate" class="btn" style="margin-bottom:.2rem">Generovat sloty</button>
+        <button type="button" id="btn-generate" class="btn res-resource-inline-button">Generovat sloty</button>
       </div>
     </fieldset>
 
     <?php for ($d = 0; $d < 7; $d++): ?>
-    <fieldset style="border:1px solid #ddd;padding:.3rem .5rem;margin-bottom:.5rem" data-day="<?= $d ?>">
+    <fieldset class="res-resource-day-fieldset" data-day="<?= $d ?>">
       <legend><?= h($dayNames[$d]) ?></legend>
       <div class="day-slots" id="day-slots-<?= $d ?>">
         <?php if (!empty($slotsByDay[$d])): ?>
           <?php foreach ($slotsByDay[$d] as $si => $sl): ?>
-            <div class="slot-row" style="display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem">
+            <div class="slot-row res-resource-slot-row">
               <label for="slot_start_<?= $d ?>_<?= $si ?>" class="sr-only">Začátek</label>
-              <input type="time" id="slot_start_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][start_time][]" style="width:auto"
+              <input type="time" id="slot_start_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][start_time][]" class="admin-input-auto"
                      value="<?= h(substr($sl['start_time'], 0, 5)) ?>">
               <label for="slot_end_<?= $d ?>_<?= $si ?>" class="sr-only">Konec</label>
-              <input type="time" id="slot_end_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][end_time][]" style="width:auto"
+              <input type="time" id="slot_end_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][end_time][]" class="admin-input-auto"
                      value="<?= h(substr($sl['end_time'], 0, 5)) ?>">
               <label for="slot_max_<?= $d ?>_<?= $si ?>" class="sr-only">Max. rezervací</label>
-              <input type="number" id="slot_max_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][max_bookings][]" min="1" style="width:4rem"
+              <input type="number" id="slot_max_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][max_bookings][]" min="1" class="res-resource-input-xxs"
                      value="<?= (int)$sl['max_bookings'] ?>" title="Max. rezervací">
               <button type="button" class="btn btn-danger btn-remove-slot"
                       aria-label="Odebrat slot" data-remove-slot>Odebrat</button>
@@ -333,35 +333,35 @@ $fieldErrorMessages = [
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
-      <button type="button" class="btn btn-add-slot" data-day="<?= $d ?>" data-add-slot style="margin-top:.2rem">+ Přidat slot</button>
+      <button type="button" class="btn btn-add-slot res-resource-add-slot" data-day="<?= $d ?>" data-add-slot>+ Přidat slot</button>
     </fieldset>
     <?php endfor; ?>
   </fieldset>
 
   <!-- E) Blocked dates -->
-  <fieldset style="border:1px solid #ccc;padding:.5rem 1rem;margin-top:1rem"<?= adminFieldHasError('blocked_dates', $err, $fieldErrorMap) ? ' aria-describedby="blocked-dates-error"' : '' ?>>
+  <fieldset class="res-resource-fieldset"<?= adminFieldHasError('blocked_dates', $err, $fieldErrorMap) ? ' aria-describedby="blocked-dates-error"' : '' ?>>
     <legend>Blokované dny</legend>
     <?php if (adminFieldHasError('blocked_dates', $err, $fieldErrorMap)): ?>
       <small id="blocked-dates-error" class="field-help field-error"><?= h($fieldErrorMessages['blocked_date']) ?></small>
     <?php endif; ?>
-    <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:.5rem">
+    <div class="res-resource-inline-grid res-resource-blocked-grid">
       <div>
         <label for="block_date">Datum</label>
-        <input type="date" id="block_date" style="width:auto;display:block;margin-top:.2rem">
+        <input type="date" id="block_date" class="res-resource-inline-control">
       </div>
       <div>
         <label for="block_reason">Důvod</label>
-        <input type="text" id="block_reason" maxlength="255" style="width:auto;display:block;margin-top:.2rem">
+        <input type="text" id="block_reason" maxlength="255" class="res-resource-inline-control">
       </div>
-      <button type="button" id="btn-add-blocked" class="btn" style="margin-bottom:.2rem">Přidat</button>
+      <button type="button" id="btn-add-blocked" class="btn res-resource-inline-button">Přidat</button>
     </div>
     <input type="hidden" name="deleted_blocked_ids" id="deleted_blocked_ids" value="">
     <div id="blocked-list">
       <?php foreach ($blocked as $bi => $bl): ?>
-        <div class="blocked-row" style="display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem" data-blocked-id="<?= (int)$bl['id'] ?>">
+        <div class="blocked-row res-resource-blocked-row" data-blocked-id="<?= (int)$bl['id'] ?>">
           <input type="hidden" name="blocked_ids[]" value="<?= (int)$bl['id'] ?>">
-          <input type="date" name="blocked_dates[]" value="<?= h($bl['blocked_date']) ?>" style="width:auto" aria-label="Datum blokování">
-          <input type="text" name="blocked_reasons[]" value="<?= h($bl['reason'] ?? '') ?>" maxlength="255" style="width:auto" aria-label="Důvod blokování">
+          <input type="date" name="blocked_dates[]" value="<?= h($bl['blocked_date']) ?>" class="admin-input-auto" aria-label="Datum blokování">
+          <input type="text" name="blocked_reasons[]" value="<?= h($bl['reason'] ?? '') ?>" maxlength="255" class="admin-input-auto" aria-label="Důvod blokování">
           <button type="button" class="btn btn-danger"
                   aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>
         </div>
@@ -369,9 +369,9 @@ $fieldErrorMessages = [
     </div>
   </fieldset>
 
-  <div style="margin-top:1.5rem">
+  <div class="button-row res-resource-actions">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Vytvořit zdroj rezervací' ?></button>
-    <a href="res_resources.php" style="margin-left:1rem">Zrušit</a>
+    <a href="res_resources.php">Zrušit</a>
   </div>
 </form>
 
@@ -402,8 +402,8 @@ $fieldErrorMessages = [
 
   function updateModeVisibility() {
     var mode = document.querySelector('input[name="slot_mode"]:checked').value;
-    durationField.style.display = mode === 'duration' ? '' : 'none';
-    slotsSection.style.display  = mode === 'slots' ? '' : 'none';
+    durationField.hidden = mode !== 'duration';
+    slotsSection.hidden = mode !== 'slots';
   }
   for (var i = 0; i < radios.length; i++) {
     radios[i].addEventListener('change', updateModeVisibility);
@@ -420,15 +420,14 @@ $fieldErrorMessages = [
     }
     var idx = slotCounter++;
     var div = document.createElement('div');
-    div.className = 'slot-row';
-    div.style.cssText = 'display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem';
+    div.className = 'slot-row res-resource-slot-row';
     div.innerHTML =
       '<label for="slot_start_' + day + '_' + idx + '" class="sr-only">Začátek</label>' +
-      '<input type="time" id="slot_start_' + day + '_' + idx + '" name="slots[' + day + '][start_time][]" style="width:auto" value="09:00">' +
+      '<input type="time" id="slot_start_' + day + '_' + idx + '" name="slots[' + day + '][start_time][]" class="admin-input-auto" value="09:00">' +
       '<label for="slot_end_' + day + '_' + idx + '" class="sr-only">Konec</label>' +
-      '<input type="time" id="slot_end_' + day + '_' + idx + '" name="slots[' + day + '][end_time][]" style="width:auto" value="10:00">' +
+      '<input type="time" id="slot_end_' + day + '_' + idx + '" name="slots[' + day + '][end_time][]" class="admin-input-auto" value="10:00">' +
       '<label for="slot_max_' + day + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
-      '<input type="number" id="slot_max_' + day + '_' + idx + '" name="slots[' + day + '][max_bookings][]" min="1" style="width:4rem" value="1" title="Max. rezervací">' +
+      '<input type="number" id="slot_max_' + day + '_' + idx + '" name="slots[' + day + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1" title="Max. rezervací">' +
       '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" data-remove-slot>Odebrat</button>';
     container.appendChild(div);
     div.querySelector('input[type="time"]').focus();
@@ -504,15 +503,14 @@ $fieldErrorMessages = [
       for (var g = 0; g < generated.length; g++) {
         var idx = slotCounter++;
         var div = document.createElement('div');
-        div.className = 'slot-row';
-        div.style.cssText = 'display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem';
+        div.className = 'slot-row res-resource-slot-row';
         div.innerHTML =
           '<label for="slot_start_' + d + '_' + idx + '" class="sr-only">Začátek</label>' +
-          '<input type="time" id="slot_start_' + d + '_' + idx + '" name="slots[' + d + '][start_time][]" style="width:auto" value="' + generated[g].start + '">' +
+          '<input type="time" id="slot_start_' + d + '_' + idx + '" name="slots[' + d + '][start_time][]" class="admin-input-auto" value="' + generated[g].start + '">' +
           '<label for="slot_end_' + d + '_' + idx + '" class="sr-only">Konec</label>' +
-          '<input type="time" id="slot_end_' + d + '_' + idx + '" name="slots[' + d + '][end_time][]" style="width:auto" value="' + generated[g].end + '">' +
+          '<input type="time" id="slot_end_' + d + '_' + idx + '" name="slots[' + d + '][end_time][]" class="admin-input-auto" value="' + generated[g].end + '">' +
           '<label for="slot_max_' + d + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
-          '<input type="number" id="slot_max_' + d + '_' + idx + '" name="slots[' + d + '][max_bookings][]" min="1" style="width:4rem" value="1" title="Max. rezervací">' +
+          '<input type="number" id="slot_max_' + d + '_' + idx + '" name="slots[' + d + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1" title="Max. rezervací">' +
           '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" data-remove-slot>Odebrat</button>';
         container.appendChild(div);
       }
@@ -533,12 +531,11 @@ $fieldErrorMessages = [
 
     var idx = blockedCounter++;
     var div = document.createElement('div');
-    div.className = 'blocked-row';
-    div.style.cssText = 'display:flex;gap:.4rem;align-items:center;margin-bottom:.3rem';
+    div.className = 'blocked-row res-resource-blocked-row';
     div.innerHTML =
       '<input type="hidden" name="blocked_ids[]" value="0">' +
-      '<input type="date" name="blocked_dates[]" value="' + dateVal + '" style="width:auto" aria-label="Datum blokování">' +
-      '<input type="text" name="blocked_reasons[]" value="' + reasonVal.replace(/"/g, '&quot;') + '" maxlength="255" style="width:auto" aria-label="Důvod blokování">' +
+      '<input type="date" name="blocked_dates[]" value="' + dateVal + '" class="admin-input-auto" aria-label="Datum blokování">' +
+      '<input type="text" name="blocked_reasons[]" value="' + reasonVal.replace(/"/g, '&quot;') + '" maxlength="255" class="admin-input-auto" aria-label="Důvod blokování">' +
       '<button type="button" class="btn btn-danger" aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>';
     blockedList.appendChild(div);
 
