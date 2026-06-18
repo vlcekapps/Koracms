@@ -10970,6 +10970,7 @@ $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_fo
 $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 $formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
+$formSubmissionDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission.php');
 $formSubmissionsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submissions.php');
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
@@ -11243,6 +11244,8 @@ foreach ([
             'class="admin-sort-list"',
             'class="admin-sort-item',
             'admin-sort-item--muted',
+            "classList.add('admin-sort-item--dragging')",
+            "classList.remove('admin-sort-item--dragging')",
             'class="admin-sort-item__body"',
             'class="table-meta"',
             'button-row admin-action-row',
@@ -11377,6 +11380,18 @@ foreach ([
             'field-help field-help--flush',
             'class="table-meta"',
             'class="table-note"',
+        ],
+    ],
+    'form submission detail' => [
+        'source' => $formSubmissionDetailSource,
+        'fragments' => [
+            '<style nonce="<?= cspNonce() ?>">',
+            'class="admin-inline-form"',
+            'class="form-submission-grid"',
+            'class="form-submission-control form-submission-control--md"',
+            'class="field-help form-submission-help--top"',
+            'class="form-submission-history"',
+            'class="form-submission-delete-form"',
         ],
     ],
     'news overview' => [
@@ -11808,6 +11823,9 @@ foreach ([
             $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' is missing utility class fragment: ' . $adminInboxUtilityFragment;
         }
     }
+}
+if (str_contains($menuOverviewSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin menu overview still mutates inline styles via JavaScript';
 }
 if (str_contains($eventFormSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin event form still mutates inline styles via JavaScript';

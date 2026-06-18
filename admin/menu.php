@@ -262,7 +262,7 @@ adminHeader('Navigace webu');
     var t = e.target.closest('[data-sort-id]');
     if (!t) return;
     dragged = t;
-    t.style.opacity = '0.4';
+    t.classList.add('admin-sort-item--dragging');
     e.dataTransfer.effectAllowed = 'move';
   });
   list.addEventListener('dragover', function(e){
@@ -279,7 +279,7 @@ adminHeader('Navigace webu');
   });
   list.addEventListener('dragend', function(){
     if (dragged) {
-      dragged.style.opacity = '';
+      dragged.classList.remove('admin-sort-item--dragging');
       updateHiddenInputs();
       announce(dragged.querySelector('strong').textContent + ' přesunuto na pozici ' + itemPosition(dragged) + '.');
     }

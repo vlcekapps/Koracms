@@ -164,6 +164,22 @@ $canManageFormIntegrations = currentUserHasCapability('settings_manage');
 
 adminHeader('Detail odpovědi formuláře');
 ?>
+<style nonce="<?= cspNonce() ?>">
+  .form-submission-grid { display:grid; grid-template-columns:repeat(2,minmax(14rem,1fr)); gap:1rem; align-items:start; }
+  .form-submission-field { margin-bottom:.75rem; }
+  .form-submission-field--top { margin-top:1rem; }
+  .form-submission-actions { margin-top:1rem; }
+  .form-submission-actions--compact { margin-top:.75rem; }
+  .form-submission-help--spaced { margin-bottom:.75rem; }
+  .form-submission-help--top { margin-top:.75rem; }
+  .form-submission-control { width:100%; }
+  .form-submission-control--sm { max-width:32rem; }
+  .form-submission-control--md { max-width:52rem; }
+  .form-submission-control--lg { max-width:60rem; }
+  .form-submission-history { padding-left:1.25rem; }
+  .form-submission-history__item { margin-bottom:.75rem; }
+  .form-submission-delete-form { margin-top:1rem; }
+</style>
 
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Workflow odpovědi formuláře byl aktualizován.</p>
@@ -293,7 +309,7 @@ adminHeader('Detail odpovědi formuláře');
 <h2>Rychlé kroky</h2>
 <div class="button-row">
   <?php if ($currentAdminUserId !== null && (int)($submission['assigned_user_id'] ?? 0) !== (int)$currentAdminUserId): ?>
-    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" class="admin-inline-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
       <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
@@ -301,7 +317,7 @@ adminHeader('Detail odpovědi formuláře');
     </form>
   <?php endif; ?>
   <?php if (normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) !== 'in_progress'): ?>
-    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" class="admin-inline-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
       <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
@@ -309,7 +325,7 @@ adminHeader('Detail odpovědi formuláře');
     </form>
   <?php endif; ?>
   <?php if (normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) !== 'resolved'): ?>
-    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" class="admin-inline-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
       <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
@@ -317,7 +333,7 @@ adminHeader('Detail odpovědi formuláře');
     </form>
   <?php endif; ?>
   <?php if (normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) !== 'closed'): ?>
-    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" style="display:inline">
+    <form method="post" action="<?= BASE_URL ?>/admin/form_submission_action.php" class="admin-inline-form">
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
       <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
@@ -333,10 +349,10 @@ adminHeader('Detail odpovědi formuláře');
   <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
   <fieldset>
     <legend>Workflow hlášení</legend>
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(14rem,1fr));gap:1rem;align-items:start">
+    <div class="form-submission-grid">
       <div>
         <label for="submission-status">Stav odpovědi</label>
-        <select id="submission-status" name="status" style="width:100%">
+        <select id="submission-status" name="status" class="form-submission-control">
           <?php foreach ($statusDefinitions as $statusKey => $statusDefinition): ?>
             <option value="<?= h($statusKey) ?>"<?= normalizeFormSubmissionStatus((string)($submission['status'] ?? 'new')) === $statusKey ? ' selected' : '' ?>>
               <?= h((string)$statusDefinition['label']) ?>
@@ -346,7 +362,7 @@ adminHeader('Detail odpovědi formuláře');
       </div>
       <div>
         <label for="submission-assigned-user">Přiřadit řešiteli</label>
-        <select id="submission-assigned-user" name="assigned_user_id" style="width:100%">
+        <select id="submission-assigned-user" name="assigned_user_id" class="form-submission-control">
           <option value="">Nepřiřazeno</option>
           <?php foreach ($assignableUsers as $assigneeUser): ?>
             <option value="<?= (int)$assigneeUser['id'] ?>"<?= (int)($submission['assigned_user_id'] ?? 0) === (int)$assigneeUser['id'] ? ' selected' : '' ?>>
@@ -357,7 +373,7 @@ adminHeader('Detail odpovědi formuláře');
       </div>
       <div>
         <label for="submission-priority">Priorita</label>
-        <select id="submission-priority" name="priority" style="width:100%">
+        <select id="submission-priority" name="priority" class="form-submission-control">
           <?php foreach ($priorityDefinitions as $priorityKey => $priorityDefinition): ?>
             <option value="<?= h($priorityKey) ?>"<?= normalizeFormSubmissionPriority((string)($submission['priority'] ?? 'medium')) === $priorityKey ? ' selected' : '' ?>>
               <?= h((string)$priorityDefinition['label']) ?>
@@ -367,17 +383,17 @@ adminHeader('Detail odpovědi formuláře');
       </div>
       <div>
         <label for="submission-labels">Štítky</label>
-        <input type="text" id="submission-labels" name="labels" value="<?= h($normalizedLabels) ?>" style="width:100%" aria-describedby="submission-labels-help">
+        <input type="text" id="submission-labels" name="labels" value="<?= h($normalizedLabels) ?>" class="form-submission-control" aria-describedby="submission-labels-help">
         <small id="submission-labels-help" class="field-help">Oddělujte je čárkou. Hodí se třeba pro modul, oblast nebo typ požadavku.</small>
       </div>
     </div>
-    <div style="margin-top:1rem">
+    <div class="form-submission-field--top">
       <label for="submission-internal-note">Interní poznámka</label>
-      <textarea id="submission-internal-note" name="internal_note" rows="6" style="width:100%;max-width:52rem" aria-describedby="submission-internal-note-help"><?= h((string)($submission['internal_note'] ?? '')) ?></textarea>
+      <textarea id="submission-internal-note" name="internal_note" rows="6" class="form-submission-control form-submission-control--md" aria-describedby="submission-internal-note-help"><?= h((string)($submission['internal_note'] ?? '')) ?></textarea>
       <small id="submission-internal-note-help" class="field-help">Sem patří interní postup, doplnění pro tým nebo třeba stručné shrnutí dalšího kroku. Na veřejném webu se nikdy nezobrazí.</small>
     </div>
   </fieldset>
-  <div class="button-row" style="margin-top:1rem">
+  <div class="button-row form-submission-actions">
     <button type="submit" class="btn btn-primary">Uložit změny workflow</button>
     <a href="<?= h($redirect) ?>" class="btn">Zrušit</a>
   </div>
@@ -388,7 +404,7 @@ adminHeader('Detail odpovědi formuláře');
 <?php if ($hasGitHubIssue): ?>
   <p>Toto hlášení už má připojené issue <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h($githubIssueLinkLabel) ?></a>.</p>
 <?php else: ?>
-  <p class="field-help" style="margin-bottom:.75rem">
+  <p class="field-help form-submission-help--spaced">
     Z tohoto hlášení si můžete připravit GitHub issue. Návrh lze otevřít ručně na GitHubu, zkopírovat do schránky
     a při zapnutém issue bridge i vytvořit přímo z administrace.
   </p>
@@ -406,45 +422,45 @@ adminHeader('Detail odpovědi formuláře');
     <fieldset>
       <legend>Připravit issue</legend>
 
-      <div style="margin-bottom:.75rem">
+      <div class="form-submission-field">
         <label for="github-issue-repository">Repozitář</label>
         <input type="text"
                id="github-issue-repository"
                name="repository"
                value="<?= h($githubIssueDraftRepository) ?>"
                placeholder="owner/repo"
-               style="width:100%;max-width:32rem"
+               class="form-submission-control form-submission-control--sm"
                aria-describedby="github-issue-repository-help">
         <small id="github-issue-repository-help" class="field-help">Můžete ponechat výchozí repozitář z nastavení webu, nebo sem zadat jiný ve formátu <code>owner/repo</code>.</small>
       </div>
 
-      <div style="margin-bottom:.75rem">
+      <div class="form-submission-field">
         <label for="github-issue-title">Název issue</label>
         <input type="text"
                id="github-issue-title"
                name="title"
                value="<?= h($githubIssueDraftTitle) ?>"
                maxlength="180"
-               style="width:100%;max-width:52rem">
+               class="form-submission-control form-submission-control--md">
       </div>
 
-      <div style="margin-bottom:.75rem">
+      <div class="form-submission-field">
         <label for="github-issue-labels">GitHub štítky</label>
         <input type="text"
                id="github-issue-labels"
                name="labels"
                value="<?= h($githubIssueDraftLabels) ?>"
-               style="width:100%;max-width:52rem"
+               class="form-submission-control form-submission-control--md"
                aria-describedby="github-issue-labels-help">
         <small id="github-issue-labels-help" class="field-help">Priorita z hlášení je do návrhu doplněná automaticky jako štítek <code>priority:…</code>. Štítky můžete před vytvořením issue upravit.</small>
       </div>
 
-      <div style="margin-bottom:.75rem">
+      <div class="form-submission-field">
         <label for="github-issue-body">Tělo issue</label>
         <textarea id="github-issue-body"
                   name="body"
                   rows="18"
-                  style="width:100%;max-width:60rem"
+                  class="form-submission-control form-submission-control--lg"
                   aria-describedby="github-issue-body-help"><?= h($githubIssueDraftBody) ?></textarea>
         <small id="github-issue-body-help" class="field-help">Interní poznámka správce se do issue nevkládá automaticky. Pokud ji chcete zveřejnit, přidejte ji sem ručně.</small>
       </div>
@@ -456,11 +472,11 @@ adminHeader('Detail odpovědi formuláře');
         <button type="button" class="btn" id="github-issue-open">Otevřít návrh na GitHubu</button>
         <button type="button" class="btn" id="github-issue-copy">Zkopírovat jako GitHub issue</button>
       </div>
-      <p id="github-issue-copy-status" class="field-help" aria-live="polite" style="margin-top:.75rem"></p>
+      <p id="github-issue-copy-status" class="field-help form-submission-help--top" aria-live="polite"></p>
     </fieldset>
   </form>
 
-  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_issue.php" style="margin-top:1rem">
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_issue.php" class="form-submission-actions">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
     <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
@@ -471,10 +487,10 @@ adminHeader('Detail odpovědi formuláře');
              id="existing-issue-url"
              name="existing_issue_url"
              placeholder="https://github.com/owner/repo/issues/123"
-             style="width:100%;max-width:52rem"
+             class="form-submission-control form-submission-control--md"
              aria-describedby="existing-issue-url-help">
       <small id="existing-issue-url-help" class="field-help">To se hodí hlavně tehdy, když si issue otevřete ručně přes tlačítko výše a potom ho chcete k hlášení uložit zpět.</small>
-      <div class="button-row" style="margin-top:.75rem">
+      <div class="button-row form-submission-actions--compact">
         <button type="submit" name="issue_action" value="link" class="btn">Připojit issue</button>
       </div>
     </fieldset>
@@ -558,13 +574,13 @@ adminHeader('Detail odpovědi formuláře');
     <fieldset>
       <legend>Poslat odpověď e-mailem</legend>
       <p class="field-help">Odpověď odejde na <strong><?= h((string)$replyRecipient['email']) ?></strong><?php if (trim((string)$replyRecipient['field_label']) !== ''): ?> z pole „<?= h((string)$replyRecipient['field_label']) ?>“<?php endif; ?>.</p>
-      <div style="margin-bottom:.75rem">
+      <div class="form-submission-field">
         <label for="reply-subject">Předmět odpovědi</label>
-        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" style="width:100%;max-width:52rem">
+        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" class="form-submission-control form-submission-control--md">
       </div>
-      <div style="margin-bottom:.75rem">
+      <div class="form-submission-field">
         <label for="reply-message">Text odpovědi</label>
-        <textarea id="reply-message" name="message" rows="8" style="width:100%;max-width:52rem" aria-describedby="reply-message-help"><?= h($replyMessage) ?></textarea>
+        <textarea id="reply-message" name="message" rows="8" class="form-submission-control form-submission-control--md" aria-describedby="reply-message-help"><?= h($replyMessage) ?></textarea>
         <small id="reply-message-help" class="field-help">Tato odpověď se zároveň uloží do interní historie hlášení.</small>
       </div>
       <div class="button-row">
@@ -578,9 +594,9 @@ adminHeader('Detail odpovědi formuláře');
 <?php if ($historyEntries === []): ?>
   <p>Zatím tu není žádná interní historie tohoto hlášení.</p>
 <?php else: ?>
-  <ul style="padding-left:1.25rem">
+  <ul class="form-submission-history">
     <?php foreach ($historyEntries as $historyEntry): ?>
-      <li style="margin-bottom:.75rem">
+      <li class="form-submission-history__item">
         <strong><?= h(formSubmissionHistoryActorLabel($historyEntry)) ?></strong>
         <span class="field-help">· <time datetime="<?= h(str_replace(' ', 'T', (string)$historyEntry['created_at'])) ?>"><?= formatCzechDate((string)$historyEntry['created_at']) ?></time></span><br>
         <?= nl2br(h((string)($historyEntry['message'] ?? ''))) ?>
@@ -589,7 +605,7 @@ adminHeader('Detail odpovědi formuláře');
   </ul>
 <?php endif; ?>
 
-<form method="post" action="<?= BASE_URL ?>/admin/form_submission_delete.php" style="margin-top:1rem">
+<form method="post" action="<?= BASE_URL ?>/admin/form_submission_delete.php" class="form-submission-delete-form">
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
   <input type="hidden" name="form_id" value="<?= (int)$formId ?>">
