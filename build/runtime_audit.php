@@ -7831,7 +7831,10 @@ $foundationChecks = [
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')
         && str_contains($authSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
-        && str_contains($dbSource, "koraLog('error', 'Uncaught exception'"),
+        && str_contains($dbSource, "koraLog('error', 'Uncaught exception'")
+        && str_contains($dbSource, "'file' => basename(\$exceptionFile)")
+        && str_contains($dbSource, "'file_hash' => hash('sha256', \$exceptionFile)")
+        && !str_contains($dbSource, "'file' => \$e->getFile()"),
     'uncaught exception page uses static error stylesheet' => str_contains($dbSource, '/assets/error.css')
         && str_contains($dbSource, 'class="error-page"')
         && !str_contains($dbSource, '<style>body{font-family:system-ui')
