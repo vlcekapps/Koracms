@@ -11085,6 +11085,7 @@ $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/ad
 $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
 $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
 $integrityAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/integrity.php');
+$blogsManagementSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $blogTransferAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
@@ -11150,6 +11151,23 @@ foreach ([
     '.admin-input-compact',
     '.admin-input-auto',
     '.admin-modal-open',
+    '.blog-admin-fieldset',
+    '.blog-admin-fieldset--flush',
+    '.blog-admin-control-auto',
+    '.blog-admin-check-row',
+    '.blog-admin-form-actions',
+    '.blog-admin-form-actions--dialog',
+    '.blog-sort-row',
+    '.blog-button--compact',
+    '.blog-inline-form',
+    '.blog-dialog-overlay',
+    '.blog-dialog',
+    '.blog-dialog__header',
+    '.blog-dialog__title',
+    '.blog-dialog__description',
+    '.blog-logo-current',
+    '.blog-logo-preview',
+    '.blog-dialog-label-spaced',
     '.admin-textarea-compact',
     '.admin-rich-editor-sm',
     '.admin-rich-editor-base',
@@ -11416,6 +11434,21 @@ if (!str_contains($backupAdminSource, 'class="admin-description"')) {
 }
 if (str_contains($integrityAdminSource, '<style') || str_contains($integrityAdminSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin integrity page still contains local style blocks or inline style attributes';
+}
+if (str_contains($blogsManagementSource, '<style') || preg_match('/<[^>]+\sstyle=/i', $blogsManagementSource) === 1 || str_contains($blogsManagementSource, '.style')) {
+    $adminFieldErrorIssues[] = 'admin blogs management page still contains local style blocks, inline style attributes or JS style mutations';
+}
+foreach ([
+    'class="blog-admin-fieldset"',
+    'class="blog-admin-control-auto"',
+    'class="blog-dialog"',
+    'class="blog-logo-preview"',
+    'class="blog-dialog-label-spaced"',
+    "document.body.classList.add('admin-modal-open')",
+] as $blogsManagementUtilityFragment) {
+    if (!str_contains($blogsManagementSource, $blogsManagementUtilityFragment)) {
+        $adminFieldErrorIssues[] = 'admin blogs management page is missing utility class fragment: ' . $blogsManagementUtilityFragment;
+    }
 }
 foreach ([
     'class="integrity-panel integrity-panel--success"',
