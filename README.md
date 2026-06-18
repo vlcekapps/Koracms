@@ -421,6 +421,8 @@ Administrátorský dashboard používá sdílené panely, karty a sémantický `
 
 Přihlašovací obrazovky administrace včetně 2FA používají sdílený CSS helper s CSP nonce místo duplicitních lokálních `<style>` bloků. Tím zůstává skip link, viditelný focus i TOTP pole konzistentní bez dalšího inline stylového driftu.
 
+Content/media picker v administraci používá sdílený CSS helper s CSP nonce pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.
+
 Kontrola integrity a detail odpovědi formuláře v administraci používají sdílené administrační CSS třídy místo vlastních lokálních `<style>` bloků. Runtime audit hlídá, aby se tyto čistě prezentační styly nevracely přímo do jednotlivých obrazovek.
 
 Veřejná hlavička šablony přidává CSP nonce i k dynamickému `<style>` bloku s theme CSS proměnnými. Díky tomu se vlastní barevné nastavení šablon drží stejného bezpečnostního režimu jako ostatní interní inline styly.

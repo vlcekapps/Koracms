@@ -6428,6 +6428,7 @@ foreach ([
     '[form]slug-formulare[/form]',
     '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
     'let isSearching = false;',
+    'adminContentReferencePickerStyleTag()',
     "searchButton.setAttribute('aria-disabled', pending ? 'true' : 'false');",
     'if (!dialog.hidden && !dialog.contains(document.activeElement)) {',
     'searchButton.focus();',
@@ -6450,9 +6451,20 @@ foreach ([
     'style="margin:.85rem 0 0;color:#555;font-size:.92rem;line-height:1.45"',
     '.style.display',
     'document.body.style.overflow',
+    '<style nonce=',
 ] as $pickerForbiddenFragment) {
     if (str_contains($contentPickerSource, $pickerForbiddenFragment)) {
         $contentSnippetIssues[] = 'content picker still uses forbidden focus/style fragment: ' . $pickerForbiddenFragment;
+    }
+}
+foreach ([
+    'function adminContentReferencePickerStyleTag(): string',
+    '.content-reference-picker-overlay {',
+    '.content-reference-picker-dialog {',
+    '.content-reference-picker-result--with-thumb {',
+] as $pickerStyleHelperFragment) {
+    if (!str_contains($uiSource, $pickerStyleHelperFragment)) {
+        $contentSnippetIssues[] = 'shared UI helper is missing content picker style fragment: ' . $pickerStyleHelperFragment;
     }
 }
 
