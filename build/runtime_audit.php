@@ -8223,6 +8223,8 @@ $adminLoginRedirectIssues = [];
 $adminAuthSource = (string)file_get_contents(dirname(__DIR__) . '/auth.php');
 $adminLoginSource = (string)file_get_contents(dirname(__DIR__) . '/admin/login.php');
 $adminLogin2faSource = (string)file_get_contents(dirname(__DIR__) . '/admin/login_2fa.php');
+$adminLoginCssPath = dirname(__DIR__) . '/admin/assets/login.css';
+$adminLoginCssSource = is_file($adminLoginCssPath) ? (string)file_get_contents($adminLoginCssPath) : '';
 $publicLoginSource = (string)file_get_contents(dirname(__DIR__) . '/public_login.php');
 $resetPasswordSource = (string)file_get_contents(dirname(__DIR__) . '/reset_password.php');
 $adminHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
@@ -8244,7 +8246,7 @@ foreach ([
     "\$_SESSION['2fa_pending_redirect']",
     'name="redirect"',
     "header('Location: ' . \$redirect);",
-    'adminLoginStyleTag()',
+    'adminLoginStylesheetTag()',
 ] as $adminLoginFragment) {
     if (!str_contains($adminLoginSource, $adminLoginFragment)) {
         $adminLoginRedirectIssues[] = 'admin login is missing redirect fragment: ' . $adminLoginFragment;
@@ -8257,16 +8259,26 @@ foreach ([
     "header('Location: ' . \$redirect);",
     'class="totp-code-input"',
     'class="login-secondary-action"',
-    'adminLoginStyleTag()',
+    'adminLoginStylesheetTag()',
 ] as $adminLogin2faFragment) {
     if (!str_contains($adminLogin2faSource, $adminLogin2faFragment)) {
         $adminLoginRedirectIssues[] = 'admin 2FA is missing login fragment: ' . $adminLogin2faFragment;
     }
 }
-if (!str_contains($uiSource, 'function adminLoginStyleTag(): string')
-    || !str_contains($uiSource, '.totp-code-input { font-size:1.5rem; text-align:center; letter-spacing:.3rem; }')
-    || !str_contains($uiSource, 'nonce=\"{$nonce}\"')) {
-    $adminLoginRedirectIssues[] = 'shared UI helper is missing nonce-backed admin login style tag';
+if (!str_contains($uiSource, 'function adminLoginStylesheetTag(): string')
+    || !str_contains($uiSource, "/admin/assets/login.css")
+    || str_contains($uiSource, 'function adminLoginStyleTag(): string')) {
+    $adminLoginRedirectIssues[] = 'shared UI helper is missing linked admin login stylesheet helper or still exposes inline style tag';
+}
+foreach ([
+    '.totp-code-input',
+    'letter-spacing: 0.3rem',
+    '.login-secondary-action',
+    '.skip-link:focus',
+] as $adminLoginCssFragment) {
+    if (!str_contains($adminLoginCssSource, $adminLoginCssFragment)) {
+        $adminLoginRedirectIssues[] = 'admin login stylesheet is missing fragment: ' . $adminLoginCssFragment;
+    }
 }
 foreach ([
     'admin login' => $adminLoginSource,
