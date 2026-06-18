@@ -7878,6 +7878,8 @@ $foundationChecks = [
         && !str_contains($widgetsSource, 'error_log(')
         && !str_contains($mediaLibrarySource, 'error_log(')
         && !str_contains($webhooksSource, 'error_log(')
+        && !str_contains($themeSource, 'error_log(')
+        && !str_contains($presentationSource, 'error_log(')
         && str_contains($uiSource, 'function contentLockLogError')
         && str_contains($uiSource, "koraLog('warning', 'content lock operation failed'")
         && str_contains($revisionsSource, 'function revisionLogError')
@@ -7887,6 +7889,12 @@ $foundationChecks = [
         && str_contains($mediaLibrarySource, "koraLog('warning', 'media usage scan failed'")
         && str_contains($webhooksSource, 'function formWebhookSafeLogContext')
         && str_contains($webhooksSource, "koraLog('warning', 'form webhook dispatch failed'")
+        && str_contains($themeSource, 'function themeLogFilesystemCleanupFailure')
+        && str_contains($themeSource, "koraLog('warning', 'theme filesystem cleanup failed'")
+        && str_contains($presentationSource, 'function presentationLogFileDeleteFailure')
+        && str_contains($presentationSource, "koraLog('warning', 'presentation file delete failed'")
+        && str_contains($presentationSource, "koraLog('warning', 'blog slug redirect save failed'")
+        && str_contains($presentationSource, "koraLog('warning', 'path redirect save failed'")
         && !str_contains($webhooksSource, 'responsePreview')
         && !str_contains($webhooksSource, "' body='"),
     'mail failures avoid raw recipient and SMTP response logs' => !str_contains($mailSource, 'error_log(')
@@ -7912,12 +7920,18 @@ $foundationChecks = [
     'file operation logs avoid raw filesystem paths' => !str_contains($fileDownloadHelperSource, 'error_log(')
         && !str_contains($adminGalleryExportZipSource, 'error_log(')
         && !str_contains($adminBulkSource, 'error_log(')
+        && !str_contains($themeSource, 'error_log(')
+        && !str_contains($presentationSource, 'error_log(')
         && str_contains($fileDownloadHelperSource, 'function storedFileLogFailure')
         && str_contains($fileDownloadHelperSource, "koraLog('warning', 'stored file response failed'")
         && str_contains($adminGalleryExportZipSource, 'function galleryExportLogMissingFile')
         && str_contains($adminGalleryExportZipSource, "koraLog('warning', 'gallery export source file missing'")
         && str_contains($adminBulkSource, 'function adminBulkLogFileDeleteFailure')
         && str_contains($adminBulkSource, "koraLog('warning', 'admin bulk operation failed'")
+        && str_contains($themeSource, 'path_hash')
+        && str_contains($themeSource, "themeLogFilesystemCleanupFailure('delete_file'")
+        && str_contains($presentationSource, 'path_hash')
+        && str_contains($presentationSource, "presentationLogFileDeleteFailure('podcast_cover'")
         && !str_contains($fileDownloadHelperSource, 'sendStoredFileDownload:')
         && !str_contains($adminGalleryExportZipSource, 'soubor nenalezen:')
         && !str_contains($adminBulkSource, 'bulk board:')
@@ -12820,6 +12834,13 @@ if (!str_contains($estrankyPhotoSource, 'function_exists(\'curl_init\')')) {
 }
 if (!str_contains($estrankyPhotoSource, 'function estrankyFallbackPhotoBatchDirectory')) {
     $estrankyPhotoIssues[] = 'eStránky photo downloader is missing uploads/tmp fallback for batch storage';
+}
+if (str_contains($estrankyPhotoSource, 'error_log(')
+    || !str_contains($estrankyPhotoSource, 'function estrankyLogPhotoImportIssue')
+    || !str_contains($estrankyPhotoSource, "estrankyLogPhotoImportIssue('estranky photo batch cleanup failed'")
+    || !str_contains($estrankyPhotoSource, "estrankyLogPhotoImportIssue('estranky parent album move failed'")
+    || !str_contains($estrankyPhotoSource, 'path_hash')) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader no longer uses structured sanitized logging';
 }
 
 if ($estrankyPhotoIssues === []) {

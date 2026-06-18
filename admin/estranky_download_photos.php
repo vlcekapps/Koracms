@@ -38,6 +38,14 @@ function estrankyResolvePhotoBatchStorage(): ?string
 }
 
 /**
+ * @param array<string, mixed> $context
+ */
+function estrankyLogPhotoImportIssue(string $message, array $context = []): void
+{
+    koraLog('warning', $message, $context);
+}
+
+/**
  * @param list<array<string, mixed>> $photoList
  * @return array{id: string, storage: string}|null
  */
@@ -82,7 +90,11 @@ function estrankyDeletePhotoBatch(?string $batchId, ?string $storageKey): void
 
     $batchPath = estrankyPhotoBatchDirectory($storageKey) . basename($batchId) . '.json';
     if (is_file($batchPath) && !@unlink($batchPath)) {
-        error_log('estranky photo batch cleanup failed: ' . $batchPath);
+        estrankyLogPhotoImportIssue('estranky photo batch cleanup failed', [
+            'storage' => $storageKey,
+            'batch_id_hash' => hash('sha256', basename($batchId)),
+            'path_hash' => hash('sha256', $batchPath),
+        ]);
     }
 }
 
@@ -322,7 +334,10 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
                 ) AND id != ?"
             )->execute([$dl['parent_album_id'], $dl['parent_album_id']]);
         } catch (\PDOException $e) {
-            error_log('estranky parent album move: ' . $e->getMessage());
+            estrankyLogPhotoImportIssue('estranky parent album move failed', [
+                'parent_album_id' => (int)$dl['parent_album_id'],
+                'exception' => $e,
+            ]);
         }
     }
 

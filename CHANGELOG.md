@@ -8,7 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Request ID a strukturované technické logy** – každá odpověď dostává `X-Request-ID` a globální neošetřené chyby se zapisují jako JSON záznam se stejným ID, metodou a cestou pro snazší dohledávání produkčních problémů.
-- **Strukturované logy administračních ukládání** – editor článku, uložení článku, přesun článků mezi blogy a uložení ankety zapisují recoverable chyby přes `koraLog()` s omezeným kontextem místo surových `error_log()` zpráv.
+- **Strukturované logy administračních ukládání a cleanupů** – editor článku, uložení článku, přesun článků mezi blogy, uložení ankety, mazání prezentačních souborů, cleanup šablon a import fotek z eStránek zapisují recoverable chyby přes `koraLog()` s omezeným kontextem místo surových `error_log()` zpráv.
 - **CSP Report-Only sběr porušení** – veřejné odpovědi nově posílají i report-only CSP hlavičku s interním endpointem `csp-report.php`, který ukládá očištěné JSONL záznamy do privátního úložiště pro bezpečnější ladění embedů a dalších zdrojů; endpoint je chráněný vlastním rate limitem, aby nešel snadno zneužít k zahlcení logů.
 - **Health check čerstvosti cronu** – `health.php` nově ukazuje i stav posledního běhu cronu (`ok`, `stale` nebo `unknown`) podle hodnoty `cron_last_run_at`, kterou cron ukládá při každém běhu.
 - **Health check poslední zálohy** – `health.php` nově u backup kontroly přidává i čas poslední nalezené SQL zálohy jako `last_backup`, aniž by zveřejňoval cesty nebo názvy souborů.

@@ -10,6 +10,15 @@ function themeBasePath(): string
     return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'themes';
 }
 
+function themeLogFilesystemCleanupFailure(string $operation, string $path): void
+{
+    koraLog('warning', 'theme filesystem cleanup failed', [
+        'operation' => $operation,
+        'name' => basename($path),
+        'path_hash' => hash('sha256', $path),
+    ]);
+}
+
 function isValidThemeKey(string $themeKey): bool
 {
     return preg_match('/^[a-z0-9][a-z0-9_-]*$/i', $themeKey) === 1;
@@ -1157,7 +1166,7 @@ function themeDeleteDirectory(string $path): void
 
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('themeDeleteDirectory: nelze smazat soubor ' . $path);
+            themeLogFilesystemCleanupFailure('delete_file', $path);
         }
         return;
     }
@@ -1170,17 +1179,17 @@ function themeDeleteDirectory(string $path): void
     foreach ($iterator as $item) {
         if ($item->isDir()) {
             if (!rmdir($item->getPathname())) {
-                error_log('themeDeleteDirectory: nelze smazat adresář ' . $item->getPathname());
+                themeLogFilesystemCleanupFailure('delete_directory', $item->getPathname());
             }
         } else {
             if (!unlink($item->getPathname())) {
-                error_log('themeDeleteDirectory: nelze smazat soubor ' . $item->getPathname());
+                themeLogFilesystemCleanupFailure('delete_file', $item->getPathname());
             }
         }
     }
 
     if (!rmdir($path)) {
-        error_log('themeDeleteDirectory: nelze smazat kořenový adresář ' . $path);
+        themeLogFilesystemCleanupFailure('delete_root_directory', $path);
     }
 }
 
@@ -1684,7 +1693,7 @@ function themeImportPortablePackageUpload(?array $upload): array
             throw new RuntimeException('Nepodařilo se přesunout importovanou šablonu do adresáře `themes/`.');
         }
         if (is_dir($tempImportDir) && !rmdir($tempImportDir)) {
-            error_log('themeImport: nelze smazat dočasný adresář ' . $tempImportDir);
+            themeLogFilesystemCleanupFailure('delete_import_temp_directory', $tempImportDir);
         }
     } catch (Throwable $exception) {
         themeDeleteDirectory($tempImportDir);

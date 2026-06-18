@@ -28,6 +28,15 @@ function clearBlogCache(): void
     unset($_CMS_BLOGS_CACHE, $_CMS_BLOG_MEMBERSHIPS_ENABLED_CACHE, $_CMS_BLOG_MEMBERSHIP_CACHE, $_CMS_BLOG_MEMBERSHIP_BLOG_MAP_CACHE);
 }
 
+function presentationLogFileDeleteFailure(string $scope, string $path): void
+{
+    koraLog('warning', 'presentation file delete failed', [
+        'scope' => $scope,
+        'filename' => basename($path),
+        'path_hash' => hash('sha256', $path),
+    ]);
+}
+
 /**
  * @return array<string, mixed>|null
  */
@@ -697,7 +706,11 @@ function saveBlogSlugRedirect(PDO $pdo, int $blogId, string $oldSlug): void
         );
         $stmt->execute([$blogId, $oldSlug]);
     } catch (\PDOException $e) {
-        error_log('presentation: nelze ulozit redirect stareho blog slug: ' . $e->getMessage());
+        koraLog('warning', 'blog slug redirect save failed', [
+            'blog_id' => $blogId,
+            'old_slug' => $oldSlug,
+            'exception' => $e,
+        ]);
     }
 }
 
@@ -1750,7 +1763,7 @@ function deletePodcastCoverFile(string $filename): void
     $path = podcastCoverFilePath($filename);
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('podcast_cover', $path);
         }
     }
 }
@@ -1765,7 +1778,7 @@ function deletePodcastEpisodeImageFile(string $filename): void
     $path = podcastEpisodeImageFilePath($filename);
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('podcast_episode_image', $path);
         }
     }
 }
@@ -1780,7 +1793,7 @@ function deletePodcastAudioFile(string $filename): void
     $path = podcastAudioFilePath($filename);
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('podcast_audio', $path);
         }
     }
 }
@@ -1983,7 +1996,7 @@ function deleteDownloadImageFile(string $filename): void
     $path = dirname(__DIR__) . '/uploads/downloads/images/' . $filename;
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('download_image', $path);
         }
     }
 }
@@ -1998,7 +2011,7 @@ function deleteDownloadStoredFile(string $filename): void
     $path = dirname(__DIR__) . '/uploads/downloads/' . $filename;
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('download_file', $path);
         }
     }
 }
@@ -2367,7 +2380,7 @@ function deleteBlogLogoFile(string $filename): void
     $path = dirname(__DIR__) . '/uploads/blogs/' . $filename;
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('blog_logo', $path);
         }
     }
 }
@@ -2432,7 +2445,7 @@ function deletePlaceImageFile(string $filename): void
     $path = dirname(__DIR__) . '/uploads/places/' . $filename;
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('place_image', $path);
         }
     }
 }
@@ -2482,7 +2495,7 @@ function deleteEventImageFile(string $filename): void
 
     $path = dirname(__DIR__) . '/uploads/events/images/' . $filename;
     if (is_file($path) && !unlink($path)) {
-        error_log('presentation: nelze smazat soubor ' . $path);
+        presentationLogFileDeleteFailure('event_image', $path);
     }
 }
 
@@ -2595,7 +2608,7 @@ function deleteBoardImageFile(string $filename): void
     $path = dirname(__DIR__) . '/uploads/board/images/' . $filename;
     if (is_file($path)) {
         if (!unlink($path)) {
-            error_log('presentation: nelze smazat soubor ' . $path);
+            presentationLogFileDeleteFailure('board_image', $path);
         }
     }
 }
@@ -3431,7 +3444,12 @@ function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $sta
         );
         $stmt->execute([$oldPath, $newPath, in_array($statusCode, [301, 302], true) ? $statusCode : 301]);
     } catch (\PDOException $e) {
-        error_log('presentation: nelze ulozit redirect cesty: ' . $e->getMessage());
+        koraLog('warning', 'path redirect save failed', [
+            'old_path_hash' => hash('sha256', $oldPath),
+            'new_path_hash' => hash('sha256', $newPath),
+            'status_code' => in_array($statusCode, [301, 302], true) ? $statusCode : 301,
+            'exception' => $e,
+        ]);
     }
 }
 
