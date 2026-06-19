@@ -32,6 +32,7 @@ parameters:
         - build/http_test_helpers.php
         - build/lint_php.php
         - build/phpstan_bootstrap.php
+        - build/repository_guardrails_audit.php
         - build/release_package_audit.php
         - build/release_smoke.php
         - build/source_encoding_audit.php
