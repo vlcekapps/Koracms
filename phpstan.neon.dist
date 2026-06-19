@@ -36,6 +36,7 @@ parameters:
         - build/release_smoke.php
         - build/workflow_audit.php
         - build/workflow_audit_selftest.php
+        - build/whitespace_audit.php
         - lib/backup.php
         - lib/comments.php
         - lib/content.php
