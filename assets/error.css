@@ -10,6 +10,20 @@
   color: #b00;
 }
 
+.error-page__request {
+  margin-block-start: 1.5rem;
+  color: #555;
+}
+
+.error-page__request code {
+  padding: 0.1rem 0.25rem;
+  color: #111;
+  background: #f4f4f4;
+  border-radius: 0.2rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.95em;
+}
+
 .error-page pre {
   padding: 1em;
   overflow: auto;

@@ -9,6 +9,7 @@ define('KORA_VERSION', trim((string)(file_get_contents(__DIR__ . '/VERSION') ?: 
 // uživatelsky přívětivou chybovou stránku místo bílé obrazovky.
 set_exception_handler(function (\Throwable $e): void {
     $exceptionFile = $e->getFile();
+    $requestId = koraRequestId();
     koraLog('error', 'Uncaught exception', [
         'exception' => get_class($e),
         'message' => $e->getMessage(),
@@ -19,12 +20,15 @@ set_exception_handler(function (\Throwable $e): void {
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: text/html; charset=UTF-8');
+        header('Cache-Control: no-store, max-age=0');
+        header('Pragma: no-cache');
     }
     $debug = (ini_get('display_errors') === '1');
     echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>Chyba serveru</title>'
        . '<link rel="stylesheet" href="' . h(BASE_URL . '/assets/error.css') . '"></head><body class="error-page">'
        . '<h1>Omlouváme se, došlo k chybě</h1>'
-       . '<p>Stránku se nepodařilo načíst. Zkuste to prosím později.</p>';
+       . '<p>Stránku se nepodařilo načíst. Zkuste to prosím později.</p>'
+       . '<p class="error-page__request">Kód požadavku pro podporu: <code>' . h($requestId) . '</code></p>';
     if ($debug) {
         echo '<pre>' . htmlspecialchars($e->getMessage() . "\n" . $e->getTraceAsString(), ENT_QUOTES, 'UTF-8') . '</pre>';
     }
