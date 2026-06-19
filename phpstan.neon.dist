@@ -35,6 +35,7 @@ parameters:
         - build/repository_guardrails_audit.php
         - build/config_sample_audit.php
         - build/version_metadata_audit.php
+        - build/schema_parity_audit.php
         - build/release_package_audit.php
         - build/release_smoke.php
         - build/source_encoding_audit.php

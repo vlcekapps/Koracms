@@ -544,6 +544,7 @@ composer ci:basic
 - repository guardrails audit přes `build/repository_guardrails_audit.php`, který hlídá rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`
 - config sample audit přes `build/config_sample_audit.php`, který hlídá, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
 - version metadata audit přes `build/version_metadata_audit.php`, který hlídá platný SemVer v `VERSION`, načítání `KORA_VERSION` z tohoto souboru a release dry-run práci s verzí v ZIP/source archive
+- schema parity audit přes `build/schema_parity_audit.php`, který hlídá kritické sloupce používané veřejnými endpointy proti driftu mezi `install.php`, `migrate.php` a aktuálním kódem
 - audit GitHub Actions workflow přes `build/workflow_audit.php` a jeho self-test `build/workflow_audit_selftest.php`, které hlídají základní a plný CI běh včetně oprávnění, timeoutů, souběhu, připnutých actions, zakázaných write/secrets vzorů a runtime bootstrapu pro HTTP kontroly
 - source encoding audit přes `build/source_encoding_audit.php`, který hlídá platné UTF-8 ve verzovaných textových zdrojích a nepovolený UTF-8 BOM
 - mojibake audit přes `build/mojibake_audit.php`, který hlídá typické zkomolené UTF-8 sekvence v českých textech a povoluje jen zdokumentované legacy opravy
@@ -556,7 +557,7 @@ composer ci:basic
 - izolovaný release smoke test, který v dočasném snapshot repozitáři skutečně spustí `build/release.ps1 -DryRun -SkipCi`, ověří čistý git stav po běhu, zkontroluje obsah release ZIPu i checksum a navíc ověří skutečný `git archive` source balíček podle `.gitattributes`
 - unit testy přes `build/unit_tests.php`
 
-`composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn. Stejný plný balík lze vyžádat i při release přes `build/release.ps1 -FullCi`; bezpečnou zkoušku bez zásahu do gitu spustíte přes `build/release.ps1 -DryRun`.
+`composer ci:full` navíc po `ci:basic` sekvenčně spustí ještě `php build/runtime_audit.php` a `php build/http_integration.php`, takže se hodí před releasem nebo po větší sadě změn. Pokud tyto dva audity spouštíte ručně, nepouštějte je paralelně nad stejnou lokální databází; oba používají dočasná testovací nastavení a paralelní běh může vyvolat falešné selhání. Stejný plný balík lze vyžádat i při release přes `build/release.ps1 -FullCi`; bezpečnou zkoušku bez zásahu do gitu spustíte přes `build/release.ps1 -DryRun`.
 
 GitHub Actions workflow v `.github/workflows/ci.yml` spouští stejný základní balík na `push` a `pull_request` do `main`. Samostatný workflow `.github/workflows/full-ci.yml` drží plný `composer ci:full` balík pro ruční spuštění (`workflow_dispatch`) a pravidelný noční běh; před spuštěním si připraví MySQL, `config.php`, vestavěný PHP server a čerstvou instalaci CMS. Oba workflow používají aktuální `actions/checkout@v6`, minimální `contents: read` oprávnění, řízení souběhu a timeouty, aby CI neběželo na deprecated Node 20 checkout akci a nezůstávalo zbytečně viset.
 
