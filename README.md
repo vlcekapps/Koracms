@@ -127,6 +127,7 @@ http://vas-web.cz/admin/login.php
 ## Konfigurace
 
 Veškerá konfigurace je v souboru `config.php`. Vzorový soubor `config.sample.php` obsahuje všechny dostupné konstanty s komentáři.
+Základní vývojová kontrola `composer ci:basic` hlídá přes `build/config_sample_audit.php`, aby tento vzor neztratil databázové proměnné, hlavní runtime konstanty ani vysvětlení pro privátní úložiště, SMTP, GitHub issue bridge a cron token.
 
 ### SMTP (e-maily)
 
@@ -540,6 +541,7 @@ composer ci:basic
 
 - PHP lint přes `build/lint_php.php`
 - repository guardrails audit přes `build/repository_guardrails_audit.php`, který hlídá rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`
+- config sample audit přes `build/config_sample_audit.php`, který hlídá, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
 - audit GitHub Actions workflow přes `build/workflow_audit.php` a jeho self-test `build/workflow_audit_selftest.php`, které hlídají základní a plný CI běh včetně oprávnění, timeoutů, souběhu, připnutých actions, zakázaných write/secrets vzorů a runtime bootstrapu pro HTTP kontroly
 - source encoding audit přes `build/source_encoding_audit.php`, který hlídá platné UTF-8 ve verzovaných textových zdrojích a nepovolený UTF-8 BOM
 - mojibake audit přes `build/mojibake_audit.php`, který hlídá typické zkomolené UTF-8 sekvence v českých textech a povoluje jen zdokumentované legacy opravy

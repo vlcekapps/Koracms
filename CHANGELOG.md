@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Repository guardrails audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/repository_guardrails_audit.php`, který hlídá repo pravidlo pro rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`.
+- **Config sample audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/config_sample_audit.php`, který hlídá, že `config.sample.php` obsahuje hlavní runtime konstanty, databázové proměnné a instalační vysvětlení pro cron, SMTP, privátní úložiště a GitHub issue bridge.
 - **Source encoding audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/source_encoding_audit.php`, který nad verzovanými textovými zdroji hlídá platné UTF-8 a nepovolený UTF-8 BOM; PowerShell skripty mají kvůli kompatibilitě staršího Windows PowerShellu výslovnou výjimku.
 - **Mojibake audit pro českou diakritiku** – `composer ci:basic` nově spouští `build/mojibake_audit.php`, který nad verzovanými textovými zdroji hlídá typické zkomolené UTF-8 sekvence a povoluje jen výslovně zdokumentované legacy opravy starších dat.
 - **Whitespace audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/whitespace_audit.php`, který nad verzovanými textovými zdroji hlídá koncové mezery a chybějící finální nový řádek; audit je zapojený i do PHPStan/formatter guardrailů.
