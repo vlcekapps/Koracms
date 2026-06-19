@@ -281,6 +281,8 @@ Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce v
 
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
+Ruční i automaticky ukládané `301/302` redirecty ověřují starou adresu jako interní cestu webu a novou adresu jako interní cestu nebo čistou `http/https` URL bez přihlašovacích údajů. Nejednoznačné cíle, nebezpečná schémata a CRLF znaky se odmítnou ještě před odesláním hlavičky `Location`.
+
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek. Sitemapa je čistě čtecí endpoint a podporuje jen metody `GET` a `HEAD`.
 
 Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`.

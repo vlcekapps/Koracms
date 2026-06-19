@@ -12423,6 +12423,9 @@ foreach ([
             'class="admin-input-auto"',
             'class="btn admin-action-row"',
             'class="admin-inline-edit-form"',
+            'internalRedirectTarget($oldPathInput',
+            'storedRedirectTarget($newPathInput',
+            'http://</code> či <code>https://</code>',
         ],
     ],
     'reservation resources overview' => [
@@ -12514,6 +12517,17 @@ foreach ([
 }
 if (str_contains($formSubmissionDetailSource, '<style') || str_contains($formSubmissionDetailSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin form submission detail still contains local style blocks or inline style attributes';
+}
+if (!str_contains($authSource, 'function storedRedirectTarget')
+    || !str_contains($authSource, 'stored redirect skipped unsafe target')
+    || !str_contains($authSource, "header('Location: ' . \$redirectTarget")
+) {
+    $adminFieldErrorIssues[] = 'stored redirect runtime no longer validates cms_redirects targets before sending Location';
+}
+if (!str_contains($presentationSource, 'internalRedirectTarget($oldPath')
+    || !str_contains($presentationSource, 'storedRedirectTarget($newPath')
+) {
+    $adminFieldErrorIssues[] = 'automatic slug redirect helper no longer shares stored redirect validation';
 }
 $adminHeadingBackedNavs = [
     'dashboard quick links' => [

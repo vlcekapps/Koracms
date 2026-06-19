@@ -122,6 +122,16 @@ assert_equals('', internalRedirectTarget("/admin\x00evil"), 'null byte rejected'
 assert_equals('/page.php?id=5#section', internalRedirectTarget('/page.php?id=5#section'), 'query and fragment preserved');
 assert_equals('', internalRedirectTarget('admin/index.php'), 'relative path (no leading /) rejected');
 
+test_section('storedRedirectTarget()');
+
+assert_equals('/nova-stranka', storedRedirectTarget('/nova-stranka'), 'stored redirect accepts internal path');
+assert_equals('https://example.com/nova-stranka', storedRedirectTarget('https://example.com/nova-stranka'), 'stored redirect accepts https URL');
+assert_equals('http://example.com/nova-stranka', storedRedirectTarget('http://example.com/nova-stranka'), 'stored redirect accepts http URL');
+assert_equals('', storedRedirectTarget('//example.com/nova-stranka'), 'stored redirect rejects protocol-relative URL');
+assert_equals('', storedRedirectTarget('javascript:alert(1)'), 'stored redirect rejects javascript scheme');
+assert_equals('', storedRedirectTarget('https://user:pass@example.com/private'), 'stored redirect rejects URL credentials');
+assert_equals('', storedRedirectTarget("https://example.com\r\nSet-Cookie: evil=1"), 'stored redirect rejects CRLF injection');
+
 // ─── 4. Rate-limit keys ─────────────────────────────────────────────────────
 
 test_section('rateLimitKey()');

@@ -3430,8 +3430,8 @@ function boardScopeVisibilitySql(string $scope, string $alias = ''): string
 
 function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $statusCode = 301): void
 {
-    $oldPath = trim($oldPath);
-    $newPath = trim($newPath);
+    $oldPath = internalRedirectTarget($oldPath, '');
+    $newPath = storedRedirectTarget($newPath, '');
     if ($oldPath === '' || $newPath === '' || $oldPath === $newPath) {
         return;
     }

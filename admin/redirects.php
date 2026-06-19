@@ -10,15 +10,21 @@ $editId = inputInt('get', 'edit');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $oldPath    = trim($_POST['old_path'] ?? '');
-    $newPath    = trim($_POST['new_path'] ?? '');
+    $oldPathInput = trim((string)($_POST['old_path'] ?? ''));
+    $newPathInput = trim((string)($_POST['new_path'] ?? ''));
+    $oldPath = internalRedirectTarget($oldPathInput, '');
+    $newPath = storedRedirectTarget($newPathInput, '');
     $statusCode = in_array((int)($_POST['status_code'] ?? 301), [301, 302], true) ? (int)$_POST['status_code'] : 301;
     $updateId   = inputInt('post', 'update_id');
 
-    if ($oldPath === '') {
+    if ($oldPathInput === '') {
         $error = 'Stará cesta je povinná.';
-    } elseif ($newPath === '') {
+    } elseif ($oldPath === '') {
+        $error = 'Stará cesta musí být interní cesta v rámci tohoto webu a začínat lomítkem.';
+    } elseif ($newPathInput === '') {
         $error = 'Nová cesta je povinná.';
+    } elseif ($newPath === '') {
+        $error = 'Nová cesta musí být interní cesta nebo úplná adresa začínající http:// či https:// bez přihlašovacích údajů.';
     } elseif ($oldPath === $newPath) {
         $error = 'Stará a nová cesta nesmí být stejné.';
     } elseif ($updateId !== null) {
@@ -74,12 +80,12 @@ adminHeader('Přesměrování (301/302)');
     <label for="old_path">Stará cesta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="old_path" name="old_path" required aria-required="true" maxlength="500"
            placeholder="/stara-stranka" aria-describedby="old-path-help">
-    <small id="old-path-help" class="field-help">Relativní cesta bez domény, např. <code>/blog/stary-clanek</code></small>
+    <small id="old-path-help" class="field-help">Interní cesta bez domény, např. <code>/blog/stary-clanek</code>.</small>
 
     <label for="new_path">Nová cesta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="new_path" name="new_path" required aria-required="true" maxlength="500"
            placeholder="/nova-stranka" aria-describedby="new-path-help">
-    <small id="new-path-help" class="field-help">Relativní cesta nebo úplná URL, např. <code>/blog/novy-clanek</code></small>
+    <small id="new-path-help" class="field-help">Interní cesta nebo úplná adresa začínající <code>http://</code> či <code>https://</code>, např. <code>/blog/novy-clanek</code>.</small>
 
     <label for="status_code">Typ přesměrování</label>
     <select id="status_code" name="status_code" aria-describedby="status-code-help" class="admin-input-auto">

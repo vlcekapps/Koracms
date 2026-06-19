@@ -737,6 +737,8 @@ Přihlašování a obnova hesla používají kombinovaný rate limiting:
 
 To chrání nejen proti opakovaným pokusům z jedné adresy, ale i proti útokům rozloženým přes více IP adres na stejný účet.
 
+Správa `301/302` přesměrování dovoluje jako starou adresu jen interní cestu webu. Nová adresa může být interní cesta nebo úplná `http://` či `https://` URL, ale CMS odmítá nebezpečná schémata, protocol-relative URL, CRLF znaky a adresy s přihlašovacími údaji; stejná validace platí i pro automatické redirecty při změně slugů.
+
 Recoverable chyby v administraci a souborových cleanupech se postupně převádějí na strukturovaný `koraLog()` formát. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů a import fotek z eStránek tak v technickém logu nespoléhají na surové `error_log()` zprávy, ale přidávají `request_id`, metodu, cestu a omezený kontext bez dumpu celé žádosti nebo plných lokálních cest.
 
 Přepínač veřejné registrace v obecném nastavení blokuje registrační formulář a zároveň schovává odkazy na registraci ve veřejné přihlašovací obrazovce i ve společné patičce webu. Pokud jsou zapnuté rezervace, zůstane návštěvníkům dostupný odkaz na přihlášení, ale nové účty může při vypnuté registraci zakládat jen oprávněný správce.

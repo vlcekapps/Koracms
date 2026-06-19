@@ -165,8 +165,21 @@ if ($isSocialPreviewCrawler) {
         $stmt->execute([$requestPath]);
         $redirect = $stmt->fetch();
         if ($redirect) {
+            $redirectTarget = storedRedirectTarget((string)($redirect['new_path'] ?? ''), '');
+            if ($redirectTarget === '') {
+                koraLog('warning', 'stored redirect skipped unsafe target', [
+                    'redirect_id' => (int)($redirect['id'] ?? 0),
+                    'new_path_hash' => hash('sha256', (string)($redirect['new_path'] ?? '')),
+                ]);
+
+                return;
+            }
+
+            $statusCode = in_array((int)($redirect['status_code'] ?? 301), [301, 302], true)
+                ? (int)$redirect['status_code']
+                : 301;
             db_connect()->prepare("UPDATE cms_redirects SET hit_count = hit_count + 1 WHERE id = ?")->execute([$redirect['id']]);
-            header('Location: ' . $redirect['new_path'], true, (int)$redirect['status_code']);
+            header('Location: ' . $redirectTarget, true, $statusCode);
             exit;
         }
     } catch (\PDOException $e) {
@@ -539,6 +552,42 @@ function internalRedirectTarget(string $target, string $default = ''): string
     $query    = isset($parts['query']) ? '?' . $parts['query'] : '';
     $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
     return $path . $query . $fragment;
+}
+
+/**
+ * Vrátí bezpečný cíl pro ručně uložené 301/302 přesměrování.
+ * Na rozdíl od návratových URL dovoluje i záměrnou úplnou http/https adresu.
+ */
+function storedRedirectTarget(string $target, string $default = ''): string
+{
+    $target = trim($target);
+    if ($target === '') {
+        return $default;
+    }
+
+    if (preg_match('/[\x00-\x1F\x7F]/', $target)) {
+        return $default;
+    }
+
+    $parts = parse_url($target);
+    if ($parts === false) {
+        return $default;
+    }
+
+    if (!isset($parts['scheme']) && !isset($parts['host'])) {
+        return internalRedirectTarget($target, $default);
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    if (!in_array($scheme, ['http', 'https'], true) || !isset($parts['host'])) {
+        return $default;
+    }
+
+    if (isset($parts['user']) || isset($parts['pass'])) {
+        return $default;
+    }
+
+    return $target;
 }
 
 function adminLoginRedirectTarget(string $target, string $default = ''): string
