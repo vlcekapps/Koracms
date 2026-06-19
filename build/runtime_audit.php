@@ -13538,6 +13538,7 @@ $themeFaqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/them
 $themeFormsShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/forms-show.php');
 $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
 $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
+$themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
 $themeReservationCancelBookingViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-cancel-booking.php');
 $themeFoodCardViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-card.php');
@@ -13559,6 +13560,11 @@ if (!str_contains($themeBaseLayoutSource, "closest('.js-print-page')")
 }
 if (str_contains($themeBaseLayoutSource, 'style=') || str_contains($themeBaseLayoutSource, '.style') || str_contains($themeBaseLayoutSource, 'style.cssText')) {
     $themeLayoutIssues[] = 'default theme layout still contains inline style markup or JS style mutations';
+}
+if (!str_contains($themeBaseLayoutSource, 'role="status" aria-labelledby="theme-preview-banner-heading"')
+    || !str_contains($themeBaseLayoutSource, '<strong id="theme-preview-banner-heading">Živý náhled:</strong>')
+    || str_contains($themeBaseLayoutSource, 'role="status" aria-label="Živý náhled šablony"')) {
+    $themeLayoutIssues[] = 'default theme preview banner is missing heading-backed status semantics';
 }
 if (!str_contains($themeBaseLayoutSource, 'function copyTextFallback(value)')
     || !str_contains($themeBaseLayoutSource, "ta.className = 'clipboard-fallback-control';")
@@ -13613,6 +13619,11 @@ $themeHeadingBackedGroups = [
         'source' => $themeChatViewSource,
         'required' => ['id="chat-messages-heading"', 'class="chat-stream" role="list" aria-labelledby="chat-messages-heading"', 'class="chat-message" role="listitem"'],
         'forbidden' => ['class="chat-stream" aria-label="Zprávy z chatu"'],
+    ],
+    'reservation calendar table' => [
+        'source' => $themeReservationsResourceViewSource,
+        'required' => ['class="calendar-table" aria-labelledby="reservation-calendar-caption"', '<caption id="reservation-calendar-caption" class="sr-only">Kalendář rezervací na'],
+        'forbidden' => ['class="calendar-table" aria-label="Kalendář rezervací na'],
     ],
 ];
 foreach ($themeHeadingBackedGroups as $themeGroupLabel => $themeGroupGuardrail) {

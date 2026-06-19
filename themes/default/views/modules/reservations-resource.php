@@ -114,7 +114,8 @@
     </nav>
 
     <div class="table-shell">
-      <table class="calendar-table" aria-label="Kalendář rezervací na <?= h($monthLabel) ?> <?= $year ?>">
+      <table class="calendar-table" aria-labelledby="reservation-calendar-caption">
+        <caption id="reservation-calendar-caption" class="sr-only">Kalendář rezervací na <?= h($monthLabel) ?> <?= $year ?></caption>
         <thead>
           <tr>
             <?php foreach ($dayLabels as $dayLabel): ?>

@@ -21,10 +21,10 @@ $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? 
 <body class="<?= h($bodyClassAttr) ?>">
 <?= adminBar($adminEditUrl) ?>
 <?php if ($themePreview !== []): ?>
-  <div class="theme-preview-banner" role="status" aria-label="Živý náhled šablony">
+  <div class="theme-preview-banner" role="status" aria-labelledby="theme-preview-banner-heading">
     <div class="container theme-preview-banner__inner">
       <p class="theme-preview-banner__text">
-        <strong>Živý náhled:</strong>
+        <strong id="theme-preview-banner-heading">Živý náhled:</strong>
         <?= h($themePreviewManifest['name'] ?? $themePreview['theme']) ?>
         <?php if ($themePreview['theme'] !== $configuredThemeName): ?>
           · aktivní web stále používá <code><?= h($configuredThemeName) ?></code>
