@@ -529,6 +529,7 @@ Administrační stažení citlivějších exportů, například JSON export CMS,
 
 Produkční běh Kora CMS zůstává bez Composer závislostí. Composer je použitý pouze pro vývojové nástroje v `require-dev`.
 Release ZIP se vytváří bez adresáře `vendor/` a bez vývojových metadata souborů jako `composer.json`, `composer.lock`, `phpstan.neon.dist` nebo `.php-cs-fixer.dist.php`; pokud je v lokálním checkoutu máte po `composer install`, slouží jen pro lokální vývoj a CI. Release skript před vytvořením verze spouští statický release package audit i `composer ci:basic`, volitelně přes `-FullCi` také `composer ci:full`, aby se pravidla balíčku, `.gitignore` ochrana lokálních artefaktů ani quality gate nerozbily potichu, a k ZIPu generuje také `.sha256` checksum. Přepínač `-DryRun` projde stejný preflight a vytvoří ZIP se checksumem a náhledem nové verze, ale nemění pracovní `VERSION` ani `CHANGELOG.md`, nevytváří commit/tag/push a nezakládá GitHub release; náhled changelogu stejně jako ostrý release zachová nahoře novou prázdnou sekci `Unreleased` pro další vývoj.
+Soubor `VERSION` je jediný zdroj pravdy pro runtime hodnotu `KORA_VERSION` i pro release balíčky. Základní CI to hlídá přes `build/version_metadata_audit.php`, aby se lokální verze, dry-run ZIP a source archive nerozjely do různých hodnot.
 
 Základní lokální kontrola:
 
@@ -542,6 +543,7 @@ composer ci:basic
 - PHP lint přes `build/lint_php.php`
 - repository guardrails audit přes `build/repository_guardrails_audit.php`, který hlídá rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`
 - config sample audit přes `build/config_sample_audit.php`, který hlídá, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
+- version metadata audit přes `build/version_metadata_audit.php`, který hlídá platný SemVer v `VERSION`, načítání `KORA_VERSION` z tohoto souboru a release dry-run práci s verzí v ZIP/source archive
 - audit GitHub Actions workflow přes `build/workflow_audit.php` a jeho self-test `build/workflow_audit_selftest.php`, které hlídají základní a plný CI běh včetně oprávnění, timeoutů, souběhu, připnutých actions, zakázaných write/secrets vzorů a runtime bootstrapu pro HTTP kontroly
 - source encoding audit přes `build/source_encoding_audit.php`, který hlídá platné UTF-8 ve verzovaných textových zdrojích a nepovolený UTF-8 BOM
 - mojibake audit přes `build/mojibake_audit.php`, který hlídá typické zkomolené UTF-8 sekvence v českých textech a povoluje jen zdokumentované legacy opravy
