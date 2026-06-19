@@ -330,29 +330,9 @@ function runKoraCron(PDO $pdo): array
                     fwrite($fh, "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n");
 
                     foreach ($tables as $tableName) {
-                        $quotedTableName = koraSqlQuoteIdentifier($tableName);
-                        $createTable = $pdo->query("SHOW CREATE TABLE {$quotedTableName}")->fetch();
-                        fwrite($fh, "DROP TABLE IF EXISTS {$quotedTableName};\n");
-                        fwrite($fh, $createTable['Create Table'] . ";\n\n");
-
-                        $rows = $pdo->query("SELECT * FROM {$quotedTableName}");
-                        $firstRow = true;
-                        $columnNames = null;
-                        foreach ($rows as $row) {
-                            if ($firstRow) {
-                                $columnNames = array_keys($row);
-                                $firstRow = false;
-                            }
-                            $values = [];
-                            foreach ($columnNames as $columnName) {
-                                $values[] = $row[$columnName] === null ? 'NULL' : $pdo->quote((string)$row[$columnName]);
-                            }
-                            fwrite($fh, "INSERT INTO {$quotedTableName} (" . koraSqlQuoteIdentifierList($columnNames) . ") VALUES (" . implode(', ', $values) . ");\n");
-                        }
-
-                        if (!$firstRow) {
-                            fwrite($fh, "\n");
-                        }
+                        koraSqlWriteTableDump($pdo, $tableName, static function (string $sql) use ($fh): void {
+                            fwrite($fh, $sql);
+                        });
                     }
 
                     fwrite($fh, "SET FOREIGN_KEY_CHECKS = 1;\n");

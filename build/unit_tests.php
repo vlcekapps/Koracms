@@ -174,6 +174,24 @@ assert_false(koraSqlIdentifierAllowed('cms_users;DROP'), 'SQL fragment identifie
 assert_equals('`cms_articles`', koraSqlQuoteIdentifier('cms_articles'), 'identifier quoted with backticks');
 assert_equals('`id`, `title`', koraSqlQuoteIdentifierList(['id', 'title']), 'identifier list quoted');
 
+if (!class_exists('KoraBackupQuoteTestPdo')) {
+    class KoraBackupQuoteTestPdo extends PDO
+    {
+        public function __construct()
+        {
+        }
+
+        public function quote(string $string, int $type = PDO::PARAM_STR): string|false
+        {
+            return "'" . str_replace("'", "''", $string) . "'";
+        }
+    }
+}
+
+$backupQuotePdo = new KoraBackupQuoteTestPdo();
+assert_equals('NULL', koraSqlQuoteValue($backupQuotePdo, null), 'backup SQL NULL value preserved');
+assert_equals("'O''Brien'", koraSqlQuoteValue($backupQuotePdo, "O'Brien"), 'backup SQL string value quoted through PDO');
+
 $invalidIdentifierRejected = false;
 try {
     koraSqlQuoteIdentifier('cms_users`evil');

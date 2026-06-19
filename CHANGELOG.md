@@ -31,6 +31,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **SQL zálohy databáze** – ruční záloha v administraci i automatická cron záloha nově sdílejí stejný exportní helper, explicitně čtou řádky jako asociativní pole a kontrolují výsledek `SHOW CREATE TABLE`, takže se výstup nespoléhá na globální PDO fetch mód ani na duplicitní ruční skládání dumpu.
 - **301/302 přesměrování** – ručně uložené redirecty nově validují starou cestu jako interní cestu webu a novou cestu jako interní cestu nebo čistou `http/https` adresu bez přihlašovacích údajů; runtime zároveň nebezpečný uložený cíl přeskočí místo odeslání neplatné `Location` hlavičky.
 - **Veřejný náhled šablony a rezervační kalendář** – banner živého náhledu a tabulka kalendáře rezervací nově používají skutečný textový popisek přes `aria-labelledby` nebo skrytý `<caption>` místo samostatného `aria-label`.
 - **Skupinové seznamy a volby** – jídelní taby, rezervační sloty, výsledky anket, veřejný chat a souhrny návštěvnosti v administraci nově pojmenovávají skupiny přes `aria-labelledby` napojené na skutečný nadpis nebo legendu místo samostatného `aria-label`.

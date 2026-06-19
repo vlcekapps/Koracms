@@ -48,40 +48,9 @@ echo "SET FOREIGN_KEY_CHECKS = 0;\n\n";
 $tables = koraBackupTableNames($pdo);
 
 foreach ($tables as $table) {
-    $quotedTable = koraSqlQuoteIdentifier($table);
-
-    // CREATE TABLE
-    $create = $pdo->query("SHOW CREATE TABLE {$quotedTable}")->fetch();
-    echo "DROP TABLE IF EXISTS {$quotedTable};\n";
-    echo $create['Create Table'] . ";\n\n";
-
-    // Data
-    $rows = $pdo->query("SELECT * FROM {$quotedTable}");
-    $first = true;
-    $columns = null;
-    $quotedColumns = '';
-
-    foreach ($rows as $row) {
-        if ($first) {
-            $columns = array_keys($row);
-            $quotedColumns = koraSqlQuoteIdentifierList($columns);
-            $first = false;
-        }
-
-        $values = [];
-        foreach ($columns as $col) {
-            if ($row[$col] === null) {
-                $values[] = 'NULL';
-            } else {
-                $values[] = $pdo->quote($row[$col]);
-            }
-        }
-        echo "INSERT INTO {$quotedTable} ({$quotedColumns}) VALUES (" . implode(', ', $values) . ");\n";
-    }
-
-    if (!$first) {
-        echo "\n";
-    }
+    koraSqlWriteTableDump($pdo, $table, static function (string $sql): void {
+        echo $sql;
+    });
 }
 
 echo "SET FOREIGN_KEY_CHECKS = 1;\n";

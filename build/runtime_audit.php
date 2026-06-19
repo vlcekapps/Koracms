@@ -7309,9 +7309,10 @@ $cronGuardChecks = [
     'publish skip message' => str_contains($cronSource, 'Přeskočeno plánované publikování pro {$tableName}: chybí sloupce'),
     'publish required columns guard' => str_contains($cronSource, "cronMissingColumns(\$pdo, \$tableName, ['publish_at', 'status', 'created_at'])"),
     'unpublish required columns guard' => str_contains($cronSource, "\$requiredColumns = \$config['has_published']"),
-    'cron backup table allowlist' => str_contains($cronSource, 'koraBackupTableNames($pdo)') && str_contains($cronSource, 'koraSqlQuoteIdentifier($tableName)'),
-    'manual backup table allowlist' => str_contains($adminBackupSource, 'koraBackupTableNames($pdo)') && str_contains($adminBackupSource, 'koraSqlQuoteIdentifier($table)'),
+    'cron backup table allowlist' => str_contains($cronSource, 'koraBackupTableNames($pdo)') && str_contains($cronSource, 'koraSqlWriteTableDump($pdo, $tableName'),
+    'manual backup table allowlist' => str_contains($adminBackupSource, 'koraBackupTableNames($pdo)') && str_contains($adminBackupSource, 'koraSqlWriteTableDump($pdo, $table'),
     'backup helper validates identifiers' => str_contains($backupHelperSource, 'function koraSqlIdentifierAllowed') && str_contains($backupHelperSource, '/\A[A-Za-z0-9_]+\z/'),
+    'backup helper centralizes table dump' => str_contains($backupHelperSource, 'function koraSqlWriteTableDump') && str_contains($backupHelperSource, 'PDO::FETCH_ASSOC') && str_contains($backupHelperSource, 'function koraSqlCreateTableStatement'),
     'CSP report log retention' => str_contains($cronSource, 'function cronLogDirectory(): string')
         && str_contains($cronSource, "cronDeleteOldFiles(cronLogDirectory(), ['csp_reports-*.jsonl'], 30 * 86400)"),
 ];

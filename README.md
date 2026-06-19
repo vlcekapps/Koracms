@@ -480,7 +480,7 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 
 ### Automatické zálohy
 
-Cron každý den vytvoří SQL zálohu databáze do privátního úložiště (`../kora_storage/backups/`). Zálohy se uchovávají 7 dní.
+Cron každý den vytvoří SQL zálohu databáze do privátního úložiště (`../kora_storage/backups/`). Zálohy se uchovávají 7 dní. Ruční export v administraci i automatická cron záloha používají stejný SQL dump helper, který povoluje jen CMS tabulky s bezpečným názvem a exportuje řádky explicitně jako asociativní data.
 
 ### Ruční záloha
 
