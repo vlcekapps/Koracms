@@ -66,6 +66,7 @@ $httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string
 $workflowAuditSource = is_file(__DIR__ . '/workflow_audit.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit.php') : '';
 $workflowAuditSelftestSource = is_file(__DIR__ . '/workflow_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit_selftest.php') : '';
 $sourceEncodingAuditSource = is_file(__DIR__ . '/source_encoding_audit.php') ? (string) file_get_contents(__DIR__ . '/source_encoding_audit.php') : '';
+$mojibakeAuditSource = is_file(__DIR__ . '/mojibake_audit.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit.php') : '';
 $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
@@ -4038,7 +4039,7 @@ foreach ($pages as $page) {
         foreach ([
             'Veřejná stránka',
             'Veřejná stránka zdroje',
-            '>VĹˇechny podcasty<',
+            '>Všechny podcasty<',
             '>Správa zdrojů<',
         ] as $forbiddenFragment) {
             if (str_contains($result['body'], $forbiddenFragment)) {
@@ -4460,7 +4461,6 @@ foreach ($pages as $page) {
             $issues,
             static fn (string $issue): bool =>
                 !in_array($issue, [
-                    'admin polls form is missing field: ZpÄ›t na ankety',
                     'admin polls form is missing field: Zpět na ankety',
                 ], true)
         ));
@@ -7457,6 +7457,15 @@ $foundationChecks = [
         && str_contains($sourceEncodingAuditSource, 'invalid UTF-8 encoding')
         && str_contains($sourceEncodingAuditSource, 'unexpected UTF-8 BOM')
         && str_contains($sourceEncodingAuditSource, "strtolower((string)pathinfo(str_replace('\\\\', '/', \$relativePath), PATHINFO_EXTENSION)) === 'ps1'"),
+    'mojibake audit is wired into local quality gates' => str_contains($composerSource, '"test:mojibake"')
+        && str_contains($composerSource, 'php build/mojibake_audit.php')
+        && str_contains($composerSource, '@test:mojibake')
+        && str_contains($composerSource, 'build/mojibake_audit.php')
+        && str_contains($phpstanConfigSource, 'build/mojibake_audit.php')
+        && str_contains($mojibakeAuditSource, 'suspicious mojibake fragment')
+        && str_contains($mojibakeAuditSource, 'isAllowedIntentionalMojibake')
+        && str_contains($mojibakeAuditSource, '$legacyBrokenSocialLinksTitle')
+        && str_contains($mojibakeAuditSource, "slugify('Ärger')"),
     'whitespace audit is wired into local quality gates' => str_contains($composerSource, '"test:whitespace"')
         && str_contains($composerSource, 'php build/whitespace_audit.php')
         && str_contains($composerSource, '@test:whitespace')
@@ -7590,6 +7599,7 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'build/release_package_audit.php')
         && str_contains($phpstanConfigSource, 'build/release_smoke.php')
         && str_contains($phpstanConfigSource, 'build/source_encoding_audit.php')
+        && str_contains($phpstanConfigSource, 'build/mojibake_audit.php')
         && str_contains($phpstanConfigSource, 'build/whitespace_audit.php')
         && str_contains($phpstanConfigSource, 'auth.php')
         && str_contains($phpstanConfigSource, 'db.php')
@@ -7658,7 +7668,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/source_encoding_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -11193,10 +11203,12 @@ foreach ([
         $utf8CopyIssues[] = 'runtime audit is missing expected UTF-8 fragment: ' . $expectedUtf8Fragment;
     }
 }
-if (str_contains($migrateSource, 'âś— Slugy jĂ­delnĂ­ch lĂ­stkĹŻ â€“ CHYBA:')) {
+$legacyFoodSlugMojibakeProbe = hex2bin('c3a2c59be2809420536c756779206ac482c2ad64656c6ec482c2ad6368206cc482c2ad73746bc4b9c5bb20c3a2e282ace2809c2043485942413a');
+if (is_string($legacyFoodSlugMojibakeProbe) && str_contains($migrateSource, $legacyFoodSlugMojibakeProbe)) {
     $utf8CopyIssues[] = 'migrate.php still contains mojibake in food slug migration log';
 }
-if (str_contains($blogFormSourceForUtf8, 'â€“ bez kategorie â€“')) {
+$legacyCategoryOptionMojibakeProbe = hex2bin('c3a2e282ace2809c2062657a206b617465676f72696520c3a2e282ace2809c');
+if (is_string($legacyCategoryOptionMojibakeProbe) && str_contains($blogFormSourceForUtf8, $legacyCategoryOptionMojibakeProbe)) {
     $utf8CopyIssues[] = 'blog form still contains mojibake in legacy category option copy';
 }
 foreach ([
@@ -12990,7 +13002,8 @@ if (($widgetDefs['intro']['requires_setting'] ?? null) !== null) {
 if (!str_contains($migrateSource, "VALUES ('footer', 'social_links', 'Sociální sítě'")) {
     $widgetRegistryIssues[] = 'widget migration does not insert the correct social links default title';
 }
-if (!str_contains($migrateSource, "WHERE widget_type = 'social_links'") || !str_contains($migrateSource, '$legacyBrokenSocialLinksTitle = \'SociĂˇlnĂ­ sĂ­tÄ›\'')) {
+$legacyBrokenSocialLinksTitleProbe = hex2bin('536f6369c482cb876c6ec482c2ad2073c482c2ad74c384e280ba');
+if (!str_contains($migrateSource, "WHERE widget_type = 'social_links'") || !is_string($legacyBrokenSocialLinksTitleProbe) || !str_contains($migrateSource, $legacyBrokenSocialLinksTitleProbe)) {
     $widgetRegistryIssues[] = 'widget migration is missing the repair step for previously corrupted social links titles';
 }
 if (!str_contains($migrateSource, "SELECT id, zone, sort_order, settings") || !str_contains($migrateSource, "WHERE widget_type = 'intro'")) {

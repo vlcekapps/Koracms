@@ -541,6 +541,7 @@ composer ci:basic
 - PHP lint přes `build/lint_php.php`
 - audit GitHub Actions workflow přes `build/workflow_audit.php` a jeho self-test `build/workflow_audit_selftest.php`, které hlídají základní a plný CI běh včetně oprávnění, timeoutů, souběhu, připnutých actions, zakázaných write/secrets vzorů a runtime bootstrapu pro HTTP kontroly
 - source encoding audit přes `build/source_encoding_audit.php`, který hlídá platné UTF-8 ve verzovaných textových zdrojích a nepovolený UTF-8 BOM
+- mojibake audit přes `build/mojibake_audit.php`, který hlídá typické zkomolené UTF-8 sekvence v českých textech a povoluje jen zdokumentované legacy opravy
 - whitespace audit přes `build/whitespace_audit.php`, který nad verzovanými textovými zdroji hlídá koncové mezery a chybějící finální nový řádek
 - úzký PSR-12 smoke check přes `composer format:check` a navazující build/test dávky nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně release smoke testů, HTTP test helperů, unit test harnessu a stabilních sdílených knihoven
 - PHPStan na levelu 6 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů a hlídá i release/testovací build nástroje proti návratu PHP 8.1+ typů do PHP 8.0 platformy

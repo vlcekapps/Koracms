@@ -508,7 +508,7 @@ verifyCsrf(); // stary token = previous, musi projit
 $token3 = csrfToken();
 assert_true($token2 !== $token3, 'CSRF token rotated after prev-token verify');
 
-// ─── 15. relativeTime() ─────────────────────────────────────────��───────────
+// --- 15. relativeTime() ------------------------------------------------------
 
 test_section('relativeTime()');
 
