@@ -241,7 +241,7 @@ adminHeader('Statistiky');
 <section aria-labelledby="sec-visitors">
   <h2 id="sec-visitors">Návštěvnost</h2>
 
-  <div class="admin-summary-grid admin-stack-sm" role="list" aria-label="Souhrn návštěvnosti">
+  <div class="admin-summary-grid admin-stack-sm" role="list" aria-labelledby="sec-visitors">
     <div class="admin-summary-card" role="listitem">
       <div class="admin-summary-card__value"><?= $fmt($vs['online']) ?></div>
       <div class="admin-summary-card__heading">Online</div>

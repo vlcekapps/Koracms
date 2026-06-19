@@ -7,7 +7,8 @@
       </div>
     </div>
 
-    <div class="tabs-nav" role="tablist" aria-label="Typ lístku">
+    <h2 id="food-tabs-heading" class="sr-only">Typ lístku</h2>
+    <div class="tabs-nav" role="tablist" aria-labelledby="food-tabs-heading">
       <button type="button" class="tabs-nav__tab" role="tab" aria-selected="true" aria-controls="food-panel-food"
               id="food-tab-food" data-tab="food" tabindex="0">Jídelní lístek</button>
       <button type="button" class="tabs-nav__tab" role="tab" aria-selected="false" aria-controls="food-panel-beverage"

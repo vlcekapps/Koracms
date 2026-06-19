@@ -724,7 +724,7 @@ if (isSuperAdmin()) {
 <?php if ($visitorStats !== null): ?>
 <section class="admin-section-spaced" aria-labelledby="stats-heading-new">
   <h2 id="stats-heading-new">Návštěvnost webu</h2>
-  <div class="admin-summary-grid admin-stack-sm" role="list" aria-label="Souhrn návštěvnosti">
+  <div class="admin-summary-grid admin-stack-sm" role="list" aria-labelledby="stats-heading-new">
     <?php foreach ([
         ['label' => 'Online', 'value' => (int)$visitorStats['online']],
         ['label' => 'Dnes', 'value' => (int)$visitorStats['today']],

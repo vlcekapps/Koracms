@@ -23,6 +23,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Skupinové seznamy a volby** – jídelní taby, rezervační sloty, výsledky anket, veřejný chat a souhrny návštěvnosti v administraci nově pojmenovávají skupiny přes `aria-labelledby` napojené na skutečný nadpis nebo legendu místo samostatného `aria-label`.
 - **Pomocné navigace v administraci** – veřejná administrační lišta, dashboardové rychlé odkazy, sekce nastavení, inbox filtry, newsletter, fronta ke schválení a stránkování rezervací nově používají skutečný nadpis přes `aria-labelledby` místo samostatného `aria-label` na navigačním landmarku.
 - **Import newsletterové historie** – ruční JSON import už správně obnovuje uložené newslettery se stejným počtem SQL sloupců a hodnot, takže se import nezastaví na chybě placeholderů.
 - **Obsahové snippety a embedy** – kopírovatelný `[code]`, YouTube video, PDF náhled, vložená galerie a obsahové karty z media/content pickeru nově pojmenovávají své sekce skrytým nadpisem přes `aria-labelledby` místo samotného `aria-label`.

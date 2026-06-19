@@ -43,9 +43,10 @@
         <?= $searchQuery !== '' ? 'Pro zadané hledání jsme zatím nenašli žádnou schválenou zprávu.' : 'Zatím tu nejsou žádné schválené zprávy.' ?>
       </p>
     <?php else: ?>
-      <div class="chat-stream" aria-label="Zprávy z chatu">
+      <h2 id="chat-messages-heading" class="sr-only">Zprávy z chatu</h2>
+      <div class="chat-stream" role="list" aria-labelledby="chat-messages-heading">
         <?php foreach ($messages as $message): ?>
-          <article class="chat-message">
+          <article class="chat-message" role="listitem">
             <header class="chat-message__header">
               <p class="meta-row">
                 <strong><?= h((string)$message['name']) ?></strong>

@@ -45,10 +45,10 @@
         <?= honeypotField() ?>
 
         <fieldset class="form-fieldset">
-          <legend>Výběr času</legend>
+          <legend id="reservation-time-legend">Výběr času</legend>
 
           <?php if ($slotMode === 'slots'): ?>
-            <div class="stack-list" role="radiogroup" aria-label="Dostupné časové sloty">
+            <div class="stack-list" role="radiogroup" aria-labelledby="reservation-time-legend">
               <?php foreach ($slots as $index => $slot): ?>
                 <label class="choice-card" for="slot-<?= $index ?>">
                   <input type="radio" id="slot-<?= $index ?>" name="slot"

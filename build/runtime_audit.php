@@ -11736,6 +11736,19 @@ foreach ([
         $adminFieldErrorIssues[] = 'admin dashboard still contains legacy inline style fragment: ' . $adminIndexLegacyStyleFragment;
     }
 }
+if (!str_contains($adminIndexSource, 'role="list" aria-labelledby="stats-heading-new"')
+    || str_contains($adminIndexSource, 'role="list" aria-label="Souhrn návštěvnosti"')) {
+    $adminFieldErrorIssues[] = 'admin dashboard visitor summary is missing heading-backed list semantics';
+}
+if (!str_contains($adminStatisticsSource, 'role="list" aria-labelledby="sec-visitors"')
+    || str_contains($adminStatisticsSource, 'role="list" aria-label="Souhrn návštěvnosti"')) {
+    $adminFieldErrorIssues[] = 'admin statistics visitor summary is missing heading-backed list semantics';
+}
+if (!str_contains($pollFormValidationSource, '<h2 id="poll-results-heading"')
+    || !str_contains($pollFormValidationSource, 'class="admin-result-list" aria-labelledby="poll-results-heading"')
+    || str_contains($pollFormValidationSource, 'class="admin-result-list" aria-label="Výsledky ankety"')) {
+    $adminFieldErrorIssues[] = 'admin poll results list is missing heading-backed list semantics';
+}
 if (str_contains($auditLogSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin audit log still contains inline style attributes';
 }
@@ -13517,12 +13530,14 @@ $themePublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/de
 $themePageViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/page.php');
 $themeBlogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
 $themeChatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat.php');
+$themeFoodIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-index.php');
 $themeDownloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
 $themeDownloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
 $themeEventsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-article.php');
 $themeFaqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-article.php');
 $themeFormsShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/forms-show.php');
 $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
+$themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
 $themeReservationCancelBookingViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-cancel-booking.php');
 $themeFoodCardViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-card.php');
@@ -13577,6 +13592,41 @@ if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Oprav
 }
 if (!str_contains($themeFoodCardViewSource, 'js-print-page')) {
     $themeLayoutIssues[] = 'food card view is missing shared print button hook';
+}
+$themeHeadingBackedGroups = [
+    'food tabs' => [
+        'source' => $themeFoodIndexViewSource,
+        'required' => ['id="food-tabs-heading"', 'role="tablist" aria-labelledby="food-tabs-heading"'],
+        'forbidden' => ['role="tablist" aria-label="Typ lístku"'],
+    ],
+    'reservation slot picker' => [
+        'source' => $themeReservationsBookViewSource,
+        'required' => ['<legend id="reservation-time-legend">Výběr času</legend>', 'role="radiogroup" aria-labelledby="reservation-time-legend"'],
+        'forbidden' => ['role="radiogroup" aria-label="Dostupné časové sloty"'],
+    ],
+    'poll results list' => [
+        'source' => $themePollsIndexViewSource,
+        'required' => ['class="poll-results" role="list" aria-labelledby="poll-results-title"'],
+        'forbidden' => ['class="poll-results" role="list" aria-label="Možnosti a výsledky hlasování"'],
+    ],
+    'chat message list' => [
+        'source' => $themeChatViewSource,
+        'required' => ['id="chat-messages-heading"', 'class="chat-stream" role="list" aria-labelledby="chat-messages-heading"', 'class="chat-message" role="listitem"'],
+        'forbidden' => ['class="chat-stream" aria-label="Zprávy z chatu"'],
+    ],
+];
+foreach ($themeHeadingBackedGroups as $themeGroupLabel => $themeGroupGuardrail) {
+    $themeGroupSource = (string)$themeGroupGuardrail['source'];
+    foreach ($themeGroupGuardrail['required'] as $themeGroupRequiredFragment) {
+        if (!str_contains($themeGroupSource, $themeGroupRequiredFragment)) {
+            $themeLayoutIssues[] = 'default theme ' . $themeGroupLabel . ' is missing heading-backed group fragment: ' . $themeGroupRequiredFragment;
+        }
+    }
+    foreach ($themeGroupGuardrail['forbidden'] as $themeGroupForbiddenFragment) {
+        if (str_contains($themeGroupSource, $themeGroupForbiddenFragment)) {
+            $themeLayoutIssues[] = 'default theme ' . $themeGroupLabel . ' still contains aria-label-only group semantics';
+        }
+    }
 }
 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/themes/default/views')) as $themeViewFile) {
     if (!$themeViewFile instanceof SplFileInfo || !$themeViewFile->isFile() || $themeViewFile->getExtension() !== 'php') {

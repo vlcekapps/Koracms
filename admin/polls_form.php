@@ -296,8 +296,8 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
 </form>
 
 <?php if ($id !== null && $totalVotes > 0): ?>
-  <h2 class="admin-section-heading">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
-  <div role="list" class="admin-result-list" aria-label="Výsledky ankety">
+  <h2 id="poll-results-heading" class="admin-section-heading">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
+  <div role="list" class="admin-result-list" aria-labelledby="poll-results-heading">
     <?php foreach ($options as $option): ?>
       <?php $percentage = round((int)$option['vote_count'] / $totalVotes * 100, 1); ?>
       <div role="listitem" class="admin-result-item">

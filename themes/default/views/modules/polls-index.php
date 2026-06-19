@@ -61,7 +61,7 @@ $q = trim((string)($q ?? ''));
         <section aria-labelledby="poll-results-title">
           <h2 id="poll-results-title" class="section-title section-title--compact">Výsledky</h2>
 
-          <div class="poll-results" role="list" aria-label="Možnosti a výsledky hlasování">
+          <div class="poll-results" role="list" aria-labelledby="poll-results-title">
             <?php foreach ($options as $option): ?>
               <?php $percentage = $totalVotes > 0 ? round(((int)$option['vote_count']) / $totalVotes * 100, 1) : 0; ?>
               <div class="poll-result" role="listitem">
