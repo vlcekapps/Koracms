@@ -47,6 +47,8 @@ try {
     ]);
 }
 
+$currentRedirect = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/admin/forms.php');
+
 adminHeader('Formuláře');
 ?>
 <div class="button-row">
@@ -128,7 +130,7 @@ adminHeader('Formuláře');
           <form action="form_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
-            <input type="hidden" name="redirect" value="<?= h((string)($_SERVER['REQUEST_URI'] ?? (BASE_URL . '/admin/forms.php'))) ?>">
+            <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
             <button type="submit" class="btn btn-danger"
                     data-confirm="Smazat formulář včetně všech odpovědí?">Smazat</button>
           </form>
