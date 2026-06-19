@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Source encoding audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/source_encoding_audit.php`, který nad verzovanými textovými zdroji hlídá platné UTF-8 a nepovolený UTF-8 BOM; PowerShell skripty mají kvůli kompatibilitě staršího Windows PowerShellu výslovnou výjimku.
 - **Whitespace audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/whitespace_audit.php`, který nad verzovanými textovými zdroji hlídá koncové mezery a chybějící finální nový řádek; audit je zapojený i do PHPStan/formatter guardrailů.
 - **Request ID a strukturované technické logy** – každá odpověď dostává `X-Request-ID` a globální neošetřené chyby se zapisují jako JSON záznam se stejným ID, metodou a cestou; místo plné lokální cesty souboru ukládají jen název souboru a hash cesty. Veřejná chybová stránka zároveň ukazuje bezpečný kód požadavku pro podporu a posílá necacheovatelné hlavičky.
 - **Strukturované logy administračních ukládání a cleanupů** – editor článku, uložení článku, přesun článků mezi blogy, uložení ankety, mazání prezentačních souborů, cleanup šablon a import fotek z eStránek zapisují recoverable chyby přes `koraLog()` s omezeným kontextem místo surových `error_log()` zpráv.
