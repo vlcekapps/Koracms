@@ -60,7 +60,8 @@ adminHeader('Nastavení webu');
 
 <p>Tady nastavíte identitu webu, domovskou stránku, komentáře, vzhled i provoz webu. Pokud hledáte heslo nebo osobní údaje účtu, najdete je v <a href="profile.php">Mém profilu</a>.</p>
 
-<nav aria-label="Sekce nastavení webu" class="button-row settings-nav">
+<nav aria-labelledby="settings-sections-heading" class="button-row settings-nav">
+  <h2 id="settings-sections-heading" class="sr-only">Sekce nastavení webu</h2>
   <?php foreach ($settingsSections as $section): ?>
     <a href="#<?= h($section['id']) ?>"><?= h($section['label']) ?></a>
   <?php endforeach; ?>

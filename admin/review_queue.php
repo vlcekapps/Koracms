@@ -331,7 +331,8 @@ adminHeader('Ke schválení');
 
 <p>Na jednom místě najdete obsah, komentáře i rezervace, které čekají na vaši reakci.</p>
 
-<nav aria-label="Filtr fronty ke schválení" class="button-row admin-stack-sm">
+<nav aria-labelledby="review-queue-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="review-queue-filter-heading" class="sr-only">Filtr fronty ke schválení</h2>
   <?php foreach ($scopeTabs as $scopeTab): ?>
     <?php if (!$scopeTab['visible']): ?>
       <?php continue; ?>

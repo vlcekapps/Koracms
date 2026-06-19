@@ -433,6 +433,8 @@ Přihlašovací obrazovky administrace včetně 2FA načítají sdílený static
 
 Společný layout administrace pojmenovává hlavní administrační navigaci skutečným nadpisem `Administrace` přes `aria-labelledby`. Serverové stavové a chybové hlášky si zároveň ponechávají vlastní `role` a skrytý live region slouží jen pro doplňková klientská oznámení.
 
+Veřejný admin bar a vybrané pomocné navigace v administraci, například filtry komentářů, kontaktních a chatových zpráv, odpovědí formulářů, newsletteru, fronty ke schválení, nastavení webu a stránkování rezervací, používají skutečné skryté nadpisy přes `aria-labelledby`. Čtečky obrazovky je tak najdou jako landmarky i při navigaci po nadpisech, bez vizuální změny rozhraní.
+
 Content/media picker v administraci načítá sdílený statický stylesheet `admin/assets/content-reference-picker.css` pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního i generovaného `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.
 
 Editor článku blogu používá sdílené admin CSS třídy pro zámek obsahu, taxonomie při změně blogu, plánování publikace, SEO, interní poznámku, stav článku, akční řádek i WYSIWYG wrapper. Díky tomu už samotný formulář článku nepotřebuje lokální `style` atributy ani JS mutace `element.style`.

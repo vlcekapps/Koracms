@@ -125,7 +125,8 @@ adminHeader('Newsletter');
   <a href="newsletter_form.php" class="btn">+ Nová rozesílka</a>
 </div>
 
-<nav aria-label="Filtr odběratelů newsletteru" class="button-row admin-stack-sm">
+<nav aria-labelledby="newsletter-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="newsletter-filter-heading" class="sr-only">Filtr odběratelů newsletteru</h2>
   <a href="?status=all" <?= $statusFilter === 'all' ? 'aria-current="page"' : '' ?>>
     Všichni (<?= $totalSubscribers ?>)
   </a>

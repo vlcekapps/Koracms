@@ -9422,6 +9422,11 @@ if (!str_contains($uiSource, "s.nonce=' . json_encode(\$nonce) . ';")) {
 if (str_contains($uiSource, 'style=') || str_contains($uiSource, '.style') || str_contains($uiSource, 'style.cssText')) {
     $contentSecurityPolicyIssues[] = 'shared UI helpers still contain inline style markup or JS style mutations';
 }
+if (!str_contains($uiSource, 'role="navigation" aria-labelledby="public-admin-bar-heading"')
+    || !str_contains($uiSource, '<h2 id="public-admin-bar-heading" class="sr-only">Administrace webu</h2>')
+    || str_contains($uiSource, 'role="navigation" aria-label="Administrace webu"')) {
+    $contentSecurityPolicyIssues[] = 'public admin bar is missing heading-backed navigation semantics';
+}
 foreach ([
     'class="cookie-banner" hidden',
     'b.hidden=false',
@@ -12400,6 +12405,71 @@ foreach ([
 }
 if (str_contains($formSubmissionDetailSource, '<style') || str_contains($formSubmissionDetailSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin form submission detail still contains local style blocks or inline style attributes';
+}
+$adminHeadingBackedNavs = [
+    'dashboard quick links' => [
+        'source' => $adminIndexSource,
+        'required' => ['<nav aria-labelledby="task-links-heading" class="button-row">'],
+        'forbidden' => ['<nav aria-label="Na čem chcete pracovat"'],
+    ],
+    'settings sections' => [
+        'source' => $settingsAdminSource,
+        'required' => ['<nav aria-labelledby="settings-sections-heading" class="button-row settings-nav">', '<h2 id="settings-sections-heading" class="sr-only">Sekce nastavení webu</h2>'],
+        'forbidden' => ['<nav aria-label="Sekce nastavení webu"'],
+    ],
+    'comments filter' => [
+        'source' => $commentsOverviewSource,
+        'required' => ['<nav aria-labelledby="comments-filter-heading" class="button-row admin-stack-sm">', '<h2 id="comments-filter-heading" class="sr-only">Filtr komentářů</h2>'],
+        'forbidden' => ['<nav aria-label="Filtr komentářů"'],
+    ],
+    'contact filter' => [
+        'source' => $contactOverviewSource,
+        'required' => ['<nav aria-labelledby="contact-filter-heading" class="button-row admin-stack-sm">', '<h2 id="contact-filter-heading" class="sr-only">Filtr kontaktních zpráv</h2>'],
+        'forbidden' => ['<nav aria-label="Filtr kontaktních zpráv"'],
+    ],
+    'chat status filter' => [
+        'source' => $chatOverviewSource,
+        'required' => ['<nav aria-labelledby="chat-status-filter-heading" class="button-row admin-stack-sm">', '<h2 id="chat-status-filter-heading" class="sr-only">Stav chat zpráv</h2>'],
+        'forbidden' => ['<nav aria-label="Stav chat zpráv"'],
+    ],
+    'chat visibility filter' => [
+        'source' => $chatOverviewSource,
+        'required' => ['<nav aria-labelledby="chat-visibility-filter-heading" class="button-row admin-stack-sm">', '<h2 id="chat-visibility-filter-heading" class="sr-only">Veřejná viditelnost chat zpráv</h2>'],
+        'forbidden' => ['<nav aria-label="Veřejná viditelnost chat zpráv"'],
+    ],
+    'form submissions filter' => [
+        'source' => $formSubmissionsOverviewSource,
+        'required' => ['<nav aria-labelledby="form-submissions-filter-heading" class="button-row admin-stack-sm">', '<h2 id="form-submissions-filter-heading" class="sr-only">Filtr odpovědí formuláře</h2>'],
+        'forbidden' => ['<nav aria-label="Filtr odpovědí formuláře"'],
+    ],
+    'newsletter filter' => [
+        'source' => $newsletterOverviewSource,
+        'required' => ['<nav aria-labelledby="newsletter-filter-heading" class="button-row admin-stack-sm">', '<h2 id="newsletter-filter-heading" class="sr-only">Filtr odběratelů newsletteru</h2>'],
+        'forbidden' => ['<nav aria-label="Filtr odběratelů newsletteru"'],
+    ],
+    'review queue filter' => [
+        'source' => $reviewQueueSource,
+        'required' => ['<nav aria-labelledby="review-queue-filter-heading" class="button-row admin-stack-sm">', '<h2 id="review-queue-filter-heading" class="sr-only">Filtr fronty ke schválení</h2>'],
+        'forbidden' => ['<nav aria-label="Filtr fronty ke schválení"'],
+    ],
+    'reservation bookings pager' => [
+        'source' => $reservationBookingsOverviewSource,
+        'required' => ['<nav aria-labelledby="reservation-bookings-pager-heading">', '<h2 id="reservation-bookings-pager-heading" class="sr-only">Stránkování rezervací</h2>'],
+        'forbidden' => ['<nav aria-label="Stránkování rezervací"'],
+    ],
+];
+foreach ($adminHeadingBackedNavs as $adminNavLabel => $adminNavGuardrail) {
+    $adminNavSource = (string)$adminNavGuardrail['source'];
+    foreach ($adminNavGuardrail['required'] as $adminNavRequiredFragment) {
+        if (!str_contains($adminNavSource, $adminNavRequiredFragment)) {
+            $adminFieldErrorIssues[] = 'admin ' . $adminNavLabel . ' is missing heading-backed aria-labelledby fragment: ' . $adminNavRequiredFragment;
+        }
+    }
+    foreach ($adminNavGuardrail['forbidden'] as $adminNavForbiddenFragment) {
+        if (str_contains($adminNavSource, $adminNavForbiddenFragment)) {
+            $adminFieldErrorIssues[] = 'admin ' . $adminNavLabel . ' still contains aria-label-only navigation fragment';
+        }
+    }
 }
 if (str_contains($menuOverviewSource, '.style')) {
     $adminFieldErrorIssues[] = 'admin menu overview still mutates inline styles via JavaScript';

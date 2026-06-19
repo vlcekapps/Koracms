@@ -123,7 +123,8 @@ adminHeader('Chat');
   <p class="success" role="status">Chat zprávy byly aktualizovány.</p>
 <?php endif; ?>
 
-<nav aria-label="Stav chat zpráv" class="button-row admin-stack-sm">
+<nav aria-labelledby="chat-status-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="chat-status-filter-heading" class="sr-only">Stav chat zpráv</h2>
   <a href="?status=new&amp;visibility=<?= h($visibilityFilter) ?>" <?= $statusFilter === 'new' ? 'aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>
@@ -138,7 +139,8 @@ adminHeader('Chat');
   </a>
 </nav>
 
-<nav aria-label="Veřejná viditelnost chat zpráv" class="button-row admin-stack-sm">
+<nav aria-labelledby="chat-visibility-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="chat-visibility-filter-heading" class="sr-only">Veřejná viditelnost chat zpráv</h2>
   <a href="?status=<?= h($statusFilter) ?>&amp;visibility=pending" <?= $visibilityFilter === 'pending' ? 'aria-current="page"' : '' ?>>
     Ke schválení (<?= $visibilityCounts['pending'] ?>)
   </a>

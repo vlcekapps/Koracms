@@ -229,7 +229,8 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 
 <p class="section-subtitle">Z přijatých odpovědí můžete udělat skutečný pracovní inbox: přiřadit řešitele, přidat interní poznámku, měnit stav a otevřít detail jednotlivého hlášení.</p>
 
-<nav aria-label="Filtr odpovědí formuláře" class="button-row admin-stack-sm">
+<nav aria-labelledby="form-submissions-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="form-submissions-filter-heading" class="sr-only">Filtr odpovědí formuláře</h2>
   <a href="<?= h(appendUrlQuery('form_submissions.php', ['id' => $formId, 'status' => 'new', 'priority' => $priorityFilter !== 'all' ? $priorityFilter : null, 'assigned' => $assignedFilter !== 'all' ? $assignedFilter : null, 'github' => $githubFilter !== 'all' ? $githubFilter : null, 'q' => $query !== '' ? $query : null])) ?>"<?= $statusFilter === 'new' ? ' aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>

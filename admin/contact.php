@@ -101,7 +101,8 @@ adminHeader('Kontakt');
   <p class="success" role="status">Kontaktní zprávy byly aktualizovány.</p>
 <?php endif; ?>
 
-<nav aria-label="Filtr kontaktních zpráv" class="button-row admin-stack-sm">
+<nav aria-labelledby="contact-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="contact-filter-heading" class="sr-only">Filtr kontaktních zpráv</h2>
   <a href="?status=new" <?= $statusFilter === 'new' ? 'aria-current="page"' : '' ?>>
     Nové (<?= $statusCounts['new'] ?>)
   </a>

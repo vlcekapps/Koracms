@@ -284,7 +284,8 @@ function adminBar(string $editUrl = ''): string
         return '';
     }
     $b   = BASE_URL;
-    $out = '<div id="admin-bar" role="navigation" aria-label="Administrace webu" class="public-admin-bar">'
+    $out = '<div id="admin-bar" role="navigation" aria-labelledby="public-admin-bar-heading" class="public-admin-bar">'
+         . '<h2 id="public-admin-bar-heading" class="sr-only">Administrace webu</h2>'
          . '<a href="' . $b . '/admin/index.php" class="public-admin-bar__link"><span aria-hidden="true">&#9881;</span> Admin</a>';
     if ($editUrl !== '') {
         $out .= ' <a href="' . h($editUrl) . '" class="public-admin-bar__link public-admin-bar__link--edit">&#9998; Upravit</a>';

@@ -243,7 +243,8 @@ adminHeader('Rezervace');
   </table>
 
   <?php if ($pages > 1): ?>
-  <nav aria-label="Stránkování rezervací">
+  <nav aria-labelledby="reservation-bookings-pager-heading">
+    <h2 id="reservation-bookings-pager-heading" class="sr-only">Stránkování rezervací</h2>
     <ul class="res-bookings-pager-list">
       <?php if ($page > 1): ?>
         <li><a href="?<?= h($filterBaseQuery !== '' ? $filterBaseQuery . '&amp;' : '') ?>strana=<?= $page - 1 ?>" rel="prev"><span aria-hidden="true">‹</span> Předchozí stránka</a></li>

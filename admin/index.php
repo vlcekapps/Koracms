@@ -575,7 +575,7 @@ if (isSuperAdmin()) {
 <section class="admin-stack-md" aria-labelledby="task-links-heading">
   <h2 id="task-links-heading"><?= h($dashboardFocusHeading) ?></h2>
   <p class="admin-description admin-description--flush admin-description--muted"><?= h($dashboardFocusIntro) ?></p>
-  <nav aria-label="Na čem chcete pracovat" class="button-row">
+  <nav aria-labelledby="task-links-heading" class="button-row">
     <?php foreach ($quickLinks as $link): ?>
       <a href="<?= h($link['url']) ?>" class="btn"><?= h($link['label']) ?></a>
     <?php endforeach; ?>

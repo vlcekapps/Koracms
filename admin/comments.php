@@ -123,7 +123,8 @@ foreach ($comments as $comment) {
 adminHeader('Komentáře');
 ?>
 
-<nav aria-label="Filtr komentářů" class="button-row admin-stack-sm">
+<nav aria-labelledby="comments-filter-heading" class="button-row admin-stack-sm">
+  <h2 id="comments-filter-heading" class="sr-only">Filtr komentářů</h2>
   <a href="?filter=pending" <?= $filter === 'pending' ? 'aria-current="page"' : '' ?>>
     Čekající (<?= $statusCounts['pending'] ?>)
   </a>
