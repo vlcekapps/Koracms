@@ -415,7 +415,7 @@ Přihlášení do administrace, veřejné přihlášení i obnovení hesla použ
 
 Technické recoverable chyby se postupně zapisují přes strukturovaný `koraLog()` formát s `request_id`, metodou a cestou. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Administrační ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů a import fotek z eStránek už nepoužívají surové `error_log()` zprávy bez kontextu nebo s plnými lokálními cestami.
 
-V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
+V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů a používá sdílenou upload validaci, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
 
 Náhledové obrázky článků, přílohy vývěsky, lokální soubory ke stažení a fotografie galerie používají stejnou sdílenou upload validaci pro stav PHP uploadu, MIME typ nebo bezpečnou příponu a finální uložení. Při výměně nebo odebrání obrázku se uklízí i staré miniatury, WebP a responsive varianty, aby se ve veřejných upload adresářích nehromadily nepoužívané soubory.
 

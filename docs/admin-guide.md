@@ -127,6 +127,7 @@ Platí tato pravidla:
 - nové SVG soubory se pro logo ani faviconu nepřijímají
 - favicona musí respektovat backend limit `256 KB`
 - logo musí respektovat backend limit `2 MB`
+- kontrola uploadu používá sdílenou validační vrstvu pro stav PHP uploadu, typ souboru a finální uložení
 - při chybě uploadu nebo neplatném dočasném souboru se formulář vrátí s čitelnou chybovou hláškou
 - ukládání běží přes PRG workflow, takže refresh po uložení neopakuje POST
 - validovaná pole nově vracejí i lokální field-level chyby s `aria-invalid` a zachováním zadaných hodnot po redirectu

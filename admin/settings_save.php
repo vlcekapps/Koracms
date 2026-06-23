@@ -122,48 +122,28 @@ $validateUpload = static function (
     string $sizeMessage,
     string $typeMessage
 ) use (&$errors, &$fieldErrors, &$fieldErrorMessages): ?array {
-    if (empty($fileData['name'])) {
+    if (!koraUploadHasFile($fileData)) {
         return null;
     }
 
-    $uploadError = (int)($fileData['error'] ?? UPLOAD_ERR_NO_FILE);
-    $tmpPath = (string)($fileData['tmp_name'] ?? '');
-    if ($uploadError !== UPLOAD_ERR_OK) {
-        $message = $fieldName === 'site_favicon' ? 'Favicon se nepodařilo nahrát.' : 'Logo se nepodařilo nahrát.';
+    $upload = koraInspectUploadedFile($fileData, [
+        'upload_error' => $fieldName === 'site_favicon' ? 'Favicon se nepodařilo nahrát.' : 'Logo se nepodařilo nahrát.',
+        'invalid_upload_error' => $emptyTempMessage,
+        'empty_file_error' => $emptyTempMessage,
+        'allowed_mime_map' => $allowedMimeTypes,
+        'unsupported_type_error' => $typeMessage,
+        'max_bytes' => $maxBytes,
+        'too_large_error' => $sizeMessage,
+    ]);
+    if (empty($upload['ok'])) {
+        $message = (string)($upload['error'] ?? $emptyTempMessage);
         $errors[] = $message;
         $fieldErrors[] = $fieldName;
         $fieldErrorMessages[$fieldName] = $message;
         return null;
     }
 
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        $errors[] = $emptyTempMessage;
-        $fieldErrors[] = $fieldName;
-        $fieldErrorMessages[$fieldName] = $emptyTempMessage;
-        return null;
-    }
-
-    if ((int)($fileData['size'] ?? 0) > $maxBytes) {
-        $errors[] = $sizeMessage;
-        $fieldErrors[] = $fieldName;
-        $fieldErrorMessages[$fieldName] = $sizeMessage;
-        return null;
-    }
-
-    $fileInfo = new finfo(FILEINFO_MIME_TYPE);
-    $mimeType = (string)$fileInfo->file($tmpPath);
-    if (!isset($allowedMimeTypes[$mimeType])) {
-        $errors[] = $typeMessage;
-        $fieldErrors[] = $fieldName;
-        $fieldErrorMessages[$fieldName] = $typeMessage;
-        return null;
-    }
-
-    return [
-        'tmp_path' => $tmpPath,
-        'mime' => $mimeType,
-        'extension' => $allowedMimeTypes[$mimeType],
-    ];
+    return $upload;
 };
 
 $faviconUpload = $validateUpload(
@@ -266,25 +246,35 @@ try {
     }
 
     if ($faviconUpload !== null) {
-        $faviconFilename = 'favicon.' . $faviconUpload['extension'];
-        $faviconPath = $siteDir . $faviconFilename;
-        if (!move_uploaded_file($faviconUpload['tmp_path'], $faviconPath)) {
-            throw new RuntimeException('Favicon se nepodařilo uložit.');
+        $faviconExtension = (string)($faviconUpload['extension'] ?? '');
+        $faviconFilename = 'favicon.' . $faviconExtension;
+        $storedFavicon = koraStoreInspectedUpload($faviconUpload, $siteDir, $faviconFilename, [
+            'mkdir_error' => 'Adresář pro soubory webu se nepodařilo připravit.',
+            'move_error' => 'Favicon se nepodařilo uložit.',
+        ]);
+        if (empty($storedFavicon['ok'])) {
+            throw new RuntimeException((string)($storedFavicon['error'] ?? 'Favicon se nepodařilo uložit.'));
         }
+        $faviconPath = (string)$storedFavicon['path'];
         $movedFiles[] = $faviconPath;
         saveSetting('site_favicon', $faviconFilename);
-        if ($faviconUpload['mime'] === 'image/png') {
+        if (($faviconUpload['mime_type'] ?? '') === 'image/png') {
             generateWebp($faviconPath);
             $generatedWebpFiles[] = preg_replace('/\.(png)$/i', '.webp', $faviconPath) ?: '';
         }
     }
 
     if ($logoUpload !== null) {
-        $logoFilename = 'logo.' . $logoUpload['extension'];
-        $logoPath = $siteDir . $logoFilename;
-        if (!move_uploaded_file($logoUpload['tmp_path'], $logoPath)) {
-            throw new RuntimeException('Logo se nepodařilo uložit.');
+        $logoExtension = (string)($logoUpload['extension'] ?? '');
+        $logoFilename = 'logo.' . $logoExtension;
+        $storedLogo = koraStoreInspectedUpload($logoUpload, $siteDir, $logoFilename, [
+            'mkdir_error' => 'Adresář pro soubory webu se nepodařilo připravit.',
+            'move_error' => 'Logo se nepodařilo uložit.',
+        ]);
+        if (empty($storedLogo['ok'])) {
+            throw new RuntimeException((string)($storedLogo['error'] ?? 'Logo se nepodařilo uložit.'));
         }
+        $logoPath = (string)$storedLogo['path'];
         $movedFiles[] = $logoPath;
         saveSetting('site_logo', $logoFilename);
         generateWebp($logoPath);

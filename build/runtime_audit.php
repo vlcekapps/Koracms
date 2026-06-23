@@ -10981,10 +10981,15 @@ foreach ([
     "header('Location: ' . BASE_URL . '/admin/settings.php');",
     '$movedFiles = [];',
     '$generatedWebpFiles = [];',
+    'koraInspectUploadedFile(',
+    'koraStoreInspectedUpload(',
 ] as $settingsSaveFragment) {
     if (!str_contains($settingsSaveSource, $settingsSaveFragment)) {
         $settingsPrgIssues[] = 'settings save handler is missing PRG/atomic fragment: ' . $settingsSaveFragment;
     }
+}
+if (str_contains($settingsSaveSource, 'is_uploaded_file(') || str_contains($settingsSaveSource, 'move_uploaded_file(') || str_contains($settingsSaveSource, 'new finfo(FILEINFO_MIME_TYPE)')) {
+    $settingsPrgIssues[] = 'settings save handler still performs direct upload storage or MIME detection';
 }
 foreach ([
     'settings-social',
