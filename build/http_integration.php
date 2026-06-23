@@ -915,6 +915,33 @@ try {
 
     httpIntegrationPrintResult('settings_modules_http', $settingsModulesIssues, $failures);
 
+    $logoutHeaderIssues = [];
+    $logoutHeaderSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Logout Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-admin-logout-cache');
+    $logoutHeaderResponse = fetchUrl($baseUrl . BASE_URL . '/admin/logout.php', $logoutHeaderSession['cookie'], 0);
+    if (httpIntegrationStatusCode($logoutHeaderResponse) !== 302) {
+        $logoutHeaderIssues[] = 'admin logout nevrátil 302 redirect';
+    }
+    if (!responseHasLocationHeader($logoutHeaderResponse['headers'], BASE_URL . '/index.php', $baseUrl)) {
+        $logoutHeaderIssues[] = 'admin logout nemíří na hlavní stránku';
+    }
+    $logoutClearSiteDataFound = false;
+    foreach ($logoutHeaderResponse['headers'] as $logoutHeader) {
+        if (stripos($logoutHeader, 'Clear-Site-Data:') === 0 && str_contains($logoutHeader, '"cache"')) {
+            $logoutClearSiteDataFound = true;
+            break;
+        }
+    }
+    if (!$logoutClearSiteDataFound) {
+        $logoutHeaderIssues[] = 'admin logout neposlal Clear-Site-Data: "cache"';
+    }
+    httpIntegrationPrintResult('logout_cache_clear_http', $logoutHeaderIssues, $failures);
+
     httpIntegrationClearLocalRateLimits($pdo, ['login', 'login_2fa']);
 
     $adminLoginRedirectIssues = [];

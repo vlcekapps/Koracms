@@ -8714,6 +8714,7 @@ foreach ([
     'session_regenerate_id(true)',
     "'expires' => time() - 42000",
     "'samesite' => \$p['samesite']",
+    'Clear-Site-Data: "cache"',
 ] as $sessionSecurityFragment) {
     if (!str_contains($adminAuthSource, $sessionSecurityFragment)) {
         $sessionSecurityIssues[] = 'auth.php is missing session hardening fragment: ' . $sessionSecurityFragment;

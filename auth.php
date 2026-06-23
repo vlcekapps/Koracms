@@ -778,6 +778,9 @@ function logout(): void
             ]
         );
     }
+    if (!headers_sent()) {
+        header('Clear-Site-Data: "cache"');
+    }
     session_destroy();
 }
 
