@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Další browser hardening hlavičky** – veřejné i administrační odpovědi nově posílají `Cross-Origin-Opener-Policy: same-origin` a `X-Permitted-Cross-Domain-Policies: none`; runtime audit hlídá zdroj i skutečné HTTP hlavičky.
 - **Noindex hlavička pro administraci a migrace** – administrační cesty včetně loginu, 2FA a `migrate.php` nově vedle necacheovatelných odpovědí posílají také `X-Robots-Tag: noindex, nofollow, noarchive`; HTTP integrace ověřuje reálné hlavičky.
 - **Necacheované administrační HTML odpovědi** – `auth.php` nově pro administrační cesty včetně loginu, 2FA a `migrate.php` centrálně posílá `Cache-Control: no-store, max-age=0`, `Pragma: no-cache` a `Expires: 0`; HTTP integrace i runtime audit hlídají zdroj i reálné hlavičky.
 - **Přísnější session hardening** – `auth.php` nově před startem session zapíná strict mode, cookies-only režim a vypíná session ID v URL; runtime audit hlídá tyto přepínače, bezpečné cookie atributy, bezpečné mazání session cookie při odhlášení i regeneraci session ID po přihlášení.

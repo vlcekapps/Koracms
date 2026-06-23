@@ -530,7 +530,7 @@ Session vrstva používá cookies-only režim, strict mode a vypnuté session ID
 
 Běžné administrační HTML odpovědi včetně loginu, 2FA a potvrzení migrace posílají `Cache-Control: no-store, max-age=0`, `Pragma: no-cache`, `Expires: 0` a `X-Robots-Tag: noindex, nofollow, noarchive`. Administrace se tak zbytečně neuchovává v prohlížeči nebo mezicache a nemá se indexovat, zatímco veřejné sociální náhledy mají dál vlastní krátce cacheovatelnou výjimku.
 
-Veřejné i administrační odpovědi posílají také bezpečnostní hlavičku `Permissions-Policy`. CMS tím explicitně zakazuje prohlížečové schopnosti, které nepoužívá, například kameru, mikrofon, geolokaci, platební API, USB nebo browsing topics. Záměrně neblokuje clipboard ani fullscreen, aby zůstala funkční kopírovací tlačítka a legitimní embedy.
+Veřejné i administrační odpovědi posílají také bezpečnostní hlavičky `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin` a `X-Permitted-Cross-Domain-Policies: none`. CMS tím explicitně zakazuje prohlížečové schopnosti, které nepoužívá, například kameru, mikrofon, geolokaci, platební API, USB nebo browsing topics, izoluje top-level okna od cross-origin opener vazeb a odmítá staré cross-domain policy soubory. Záměrně neblokuje clipboard ani fullscreen, aby zůstala funkční kopírovací tlačítka a legitimní embedy.
 
 Veřejné odpovědi posílají také `Content-Security-Policy-Report-Only` s interním endpointem `csp-report.php`. Prohlížeče na něj mohou posílat porušení CSP bez blokování běžného provozu; CMS ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`. Běžné inline styly, které historická administrace i některé helpery zatím používají, jsou v CSP výslovně povolené přes `style-src-elem` a `style-src-attr`; pokud dorazí starší inline-style report, endpoint ho potichu přijme, ale nezapíše ho do JSONL, aby logy neplnil očekávaný šum. Endpoint přijímá jen `POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah a má vlastní rate limit; při překročení vrací stručnou JSON odpověď `rate_limited`. Cron zároveň maže CSP report soubory starší než 30 dní, aby se privátní logy nehromadily donekonečna.
 
@@ -616,7 +616,9 @@ server {
     # Bezpečnostní hlavičky
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
     add_header Referrer-Policy "same-origin" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
     add_header Permissions-Policy "accelerometer=(), browsing-topics=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" always;
 
     # Zakázané soubory
