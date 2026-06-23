@@ -877,7 +877,7 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 
 Widgety respektují stav modulů – vypnutý modul se v nabídce widgetů nezobrazuje.
 
-Veřejné widgety v sidebaru a footeru používají skutečné viditelné nadpisy jako název oblasti. Náhled galerie se zároveň styluje přes šablonové CSS třídy, takže se do HTML nevkládají inline layout styly.
+Veřejné widgety v sidebaru a footeru používají skutečné viditelné nadpisy jako název oblasti. Náhled galerie se zároveň styluje přes šablonové CSS třídy, takže se do HTML nevkládají inline layout styly. Widget `Sociální sítě` u odkazů otevíraných v novém okně doplňuje bezpečné `rel="noopener noreferrer"` a přístupný název s informací, že se odkaz otevře v novém okně.
 
 Dialog `Nastavení` u widgetu nově používá skutečné `fieldset` a `legend` pro základní i typově specifická nastavení. Skrytá pole se při změně typu widgetu zároveň deaktivují, takže se nedostanou ani do tab orderu, ani do odeslaného formuláře. Prezentační styly přehledu widgetů, dialogu a drag stavu jsou uložené ve sdílené admin CSS vrstvě, ne v lokálním `<style>` bloku ani v lokálních `style` atributech.
 
@@ -893,7 +893,7 @@ Správa widgetů tyto stavy nově ukazuje přímo v přehledu textem `Na webu se
 
 Praktická poznámka k footeru:
 
-- odkazy na sociální sítě už se nenastavují v `Obecných nastaveních`, ale přímo ve widgetu `Sociální sítě`
+- odkazy na sociální sítě už se nenastavují v `Obecných nastaveních`, ale přímo ve widgetu `Sociální sítě`; odkazy se otevírají bezpečně v novém okně a čtečkám obrazovky tuto skutečnost oznamují
 - odkaz `Vyhledávání` je nahrazen widgetem s vlastním hledacím polem
 - odkaz `Odběr novinek` je nahrazen widgetem s inline formulářem pro přihlášení k newsletteru
 - veřejné statistiky návštěvnosti se už nezapínají samostatným checkboxem v `Správě modulů`; zobrazí se jen při aktivním modulu Statistiky, zapnutém sledování návštěvnosti a aktivním widgetu

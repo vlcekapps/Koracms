@@ -391,7 +391,7 @@ Widgety respektují stav modulů i skutečnou dostupnost obsahu. Vypnutý modul 
 
 Také obrazovka **Obecná nastavení** používá sdílenou admin CSS vrstvu pro navigaci sekcí, profilové karty, vlastní kód a branding náhledy. Nemá tedy vlastní lokální `<style>` blok ani prezentační `style` atributy.
 
-Footer už neobsahuje natvrdo zapsané odkazy na sociální sítě, vyhledávání ani odběr novinek. Sociální sítě se nově nastavují přímo v widgetu `Sociální sítě`, widget `Vyhledávání` vykresluje hledací pole a widget `Newsletter` rovnou přihlašovací formulář k odběru.
+Footer už neobsahuje natvrdo zapsané odkazy na sociální sítě, vyhledávání ani odběr novinek. Sociální sítě se nově nastavují přímo v widgetu `Sociální sítě`, widget `Vyhledávání` vykresluje hledací pole a widget `Newsletter` rovnou přihlašovací formulář k odběru. Sociální odkazy otevírané v novém okně mají bezpečné `rel="noopener noreferrer"` a přístupný název, který čtečkám obrazovky oznámí otevření v novém okně.
 
 Dialog `Nastavení` u widgetů nově používá skutečné skupiny polí přes `fieldset` a `legend`, navázané help texty a bezpečnější focus trap jen pro viditelné prvky. Stejný přístup používá i správa blogů, kde jsou create/edit formuláře rozdělené do sekcí `Základní údaje`, `Obsah a metadata` a `Logo a zobrazení`; dialog úprav blogu, náhled loga a modální stav se stylují přes sdílenou admin vrstvu bez lokálního `<style>` bloku.
 

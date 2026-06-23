@@ -13193,6 +13193,9 @@ $widgetRenderNow = date('Y-m-d H:i:s');
 $widgetIntroHome = renderWidget_intro(['id' => 105, 'title' => 'Úvod'], ['content' => '<p>Audit intro widgetu.</p>'], 'homepage');
 $widgetSearchOne = renderWidget_search(['id' => 101, 'title' => 'Vyhledávání'], [], 'sidebar');
 $widgetSearchTwo = renderWidget_search(['id' => 202, 'title' => 'Vyhledávání'], [], 'sidebar');
+$widgetNewsletterOne = renderWidget_newsletter(['id' => 111, 'title' => 'Newsletter'], ['cta_text' => 'Audit newsletter widgetu.'], 'footer');
+$widgetSocialOne = renderWidget_social_links(['id' => 404, 'title' => 'Sociální sítě'], ['social_facebook' => 'https://facebook.example/pvlcek'], 'footer');
+$widgetSocialUnsafe = renderWidget_social_links(['id' => 405, 'title' => 'Sociální sítě'], ['social_facebook' => 'javascript:alert(1)'], 'footer');
 if (!str_contains($widgetIntroHome, '<section class="surface home-section" aria-labelledby="w-105-title">')
     || !str_contains($widgetIntroHome, '<h2 id="w-105-title" class="sr-only">')) {
     $widgetRenderIssues[] = 'homepage intro widget is missing a screen-reader heading with aria-labelledby';
@@ -13215,12 +13218,56 @@ if (!str_contains($widgetSearchOne, 'role="search"')) {
 if (!str_contains($widgetSearchOne, '<fieldset class="widget-form-fieldset">') || !str_contains($widgetSearchOne, 'widget-search-legend-101')) {
     $widgetRenderIssues[] = 'search widget is missing fieldset/legend semantics';
 }
+foreach ([
+    'for="widget-search-q-101"',
+    'id="widget-search-q-101"',
+    'aria-describedby="widget-search-description-101"',
+    '<button type="submit" class="button-primary">Hledat</button>',
+] as $searchWidgetA11yFragment) {
+    if (!str_contains($widgetSearchOne, $searchWidgetA11yFragment)) {
+        $widgetRenderIssues[] = 'search widget is missing rendered accessibility fragment: ' . $searchWidgetA11yFragment;
+    }
+}
 if (!str_contains($widgetSearchOne, '<section class="widget-card" aria-labelledby="w-101-title">')
     || !str_contains($widgetSearchOne, '<h3 id="w-101-title" class="widget-card__title">')) {
     $widgetRenderIssues[] = 'sidebar/footer widget cards are missing heading-backed aria-labelledby semantics';
 }
 if (str_contains($widgetSearchOne, '<section class="widget-card" aria-label=')) {
     $widgetRenderIssues[] = 'search widget still renders the legacy aria-label-only widget card';
+}
+if (!str_contains($widgetNewsletterOne, '<section class="widget-card" aria-labelledby="w-111-title">')
+    || !str_contains($widgetNewsletterOne, '<h3 id="w-111-title" class="widget-card__title">')) {
+    $widgetRenderIssues[] = 'newsletter widget card is missing heading-backed aria-labelledby semantics';
+}
+foreach ([
+    '<fieldset class="widget-form-fieldset">',
+    'newsletter-widget-legend-111',
+    'for="newsletter-widget-email-111"',
+    'id="newsletter-widget-email-111"',
+    'aria-describedby="newsletter-widget-description-111"',
+    'name="return_url"',
+    '<button type="submit" class="button-primary">',
+] as $newsletterWidgetA11yFragment) {
+    if (!str_contains($widgetNewsletterOne, $newsletterWidgetA11yFragment)) {
+        $widgetRenderIssues[] = 'newsletter widget is missing rendered accessibility fragment: ' . $newsletterWidgetA11yFragment;
+    }
+}
+if (!str_contains($widgetSocialOne, '<section class="widget-card" aria-labelledby="w-404-title">')
+    || !str_contains($widgetSocialOne, '<h3 id="w-404-title" class="widget-card__title">')) {
+    $widgetRenderIssues[] = 'social links widget card is missing heading-backed aria-labelledby semantics';
+}
+foreach ([
+    'href="https://facebook.example/pvlcek"',
+    'aria-label="Facebook – otevře se v novém okně"',
+    'rel="noopener noreferrer"',
+    'target="_blank"',
+] as $socialWidgetA11yFragment) {
+    if (!str_contains($widgetSocialOne, $socialWidgetA11yFragment)) {
+        $widgetRenderIssues[] = 'social links widget is missing rendered safe-link fragment: ' . $socialWidgetA11yFragment;
+    }
+}
+if ($widgetSocialUnsafe !== '') {
+    $widgetRenderIssues[] = 'social links widget renders unsafe javascript URL';
 }
 if (!str_contains($blogWidgetLibSource, "\$settings['content'] ?? (\$settings['text'] ?? '')")) {
     $widgetRenderIssues[] = 'intro widget is missing settings-based HTML content fallback';
