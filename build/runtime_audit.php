@@ -2167,6 +2167,40 @@ function htmlTagLinesMissingTypeAttribute(string $source, string $tagName): arra
 }
 
 /**
+ * @return list<int>
+ */
+function htmlPostFormLinesMissingCsrfToken(string $source): array
+{
+    $pattern = '/<form\b(?:[^>"\']+|"[^"]*"|\'[^\']*\')*>/i';
+    if (!preg_match_all($pattern, $source, $matches, PREG_OFFSET_CAPTURE)) {
+        return [];
+    }
+
+    $issues = [];
+    foreach ($matches[0] as $match) {
+        $tag = (string)$match[0];
+        if (preg_match('/\bmethod\s*=\s*(["\'])?post\1?/i', $tag) !== 1) {
+            continue;
+        }
+
+        $offset = (int)$match[1];
+        $endOffset = stripos($source, '</form>', $offset);
+        if ($endOffset === false) {
+            $endOffset = $offset + 2000;
+        }
+
+        $formBlock = substr($source, $offset, $endOffset - $offset);
+        if (preg_match('/\bname\s*=\s*(["\'])csrf_token\1/i', $formBlock) === 1) {
+            continue;
+        }
+
+        $issues[] = substr_count(substr($source, 0, $offset), "\n") + 1;
+    }
+
+    return $issues;
+}
+
+/**
  * @return list<string>
  */
 function analyzeHtml(string $html): array
@@ -2241,6 +2275,13 @@ function analyzeHtml(string $html): array
     foreach ($xpath->query('//input') as $input) {
         if (!$input->hasAttribute('type')) {
             $issues[] = 'input without explicit type';
+        }
+    }
+
+    foreach ($xpath->query('//form[translate(@method, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "post"]') as $form) {
+        $csrfInputs = $xpath->query('.//input[translate(@name, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "csrf_token"]', $form);
+        if ($csrfInputs->length === 0) {
+            $issues[] = 'post form without csrf_token';
         }
     }
 
@@ -9735,6 +9776,36 @@ if ($formControlTypeIssues === []) {
     $failures++;
     foreach ($formControlTypeIssues as $formControlTypeIssue) {
         echo '- ' . $formControlTypeIssue . "\n";
+    }
+}
+
+echo "=== post_form_csrf_guardrails ===\n";
+$postFormCsrfIssues = [];
+foreach ([dirname(__DIR__) . '/admin', dirname(__DIR__) . '/lib', dirname(__DIR__) . '/themes'] as $postFormCsrfRoot) {
+    $postFormCsrfFiles = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($postFormCsrfRoot, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($postFormCsrfFiles as $postFormCsrfFile) {
+        if (!$postFormCsrfFile instanceof SplFileInfo || $postFormCsrfFile->getExtension() !== 'php') {
+            continue;
+        }
+
+        $postFormCsrfPath = $postFormCsrfFile->getPathname();
+        $postFormCsrfSource = (string)file_get_contents($postFormCsrfPath);
+        $postFormCsrfRelativePath = str_replace('\\', '/', substr($postFormCsrfPath, strlen(dirname(__DIR__) . DIRECTORY_SEPARATOR)));
+        foreach (htmlPostFormLinesMissingCsrfToken($postFormCsrfSource) as $postFormCsrfLine) {
+            $postFormCsrfIssues[] = $postFormCsrfRelativePath
+                . ' contains POST form without csrf_token on source line '
+                . $postFormCsrfLine;
+        }
+    }
+}
+if ($postFormCsrfIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($postFormCsrfIssues as $postFormCsrfIssue) {
+        echo '- ' . $postFormCsrfIssue . "\n";
     }
 }
 
