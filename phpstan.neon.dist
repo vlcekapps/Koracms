@@ -38,6 +38,7 @@ parameters:
         - build/version_metadata_audit.php
         - build/schema_parity_audit.php
         - build/redirect_guardrails_audit.php
+        - build/redirect_guardrails_audit_selftest.php
         - build/release_package_audit.php
         - build/release_smoke.php
         - build/theme_view_audit.php

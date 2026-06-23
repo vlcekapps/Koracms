@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Self-test redirect guardrails auditu** – `composer ci:basic` nově spouští izolovaný self-test, který v dočasném git repozitáři ověřuje, že návratové cíle z `redirect`, `return_url`, `next`, `filter_input()` i raw `REQUEST_URI` polí bez `internalRedirectTarget()` opravdu selžou.
 - **Self-test repository guardrails auditu** – `composer ci:basic` nově spouští i izolovaný self-test, který v dočasném git repozitáři ověřuje, že audit opravdu projde čisté ochranné soubory a selže na trackovaném `config.php`, `.env`, `vendor`, uživatelském uploadu i rezervované DB proměnné v souboru načítajícím `db.php`.
 - **Přísnější repository guardrails audit** – vývojová kontrola nově kromě rezervovaných DB proměnných hlídá, aby v repozitáři neskončily lokální konfigurace, `.env` soubory, `vendor`, `dist`, IDE/Claude metadata ani reálné uploady; výjimku mají jen ochranné `.htaccess` soubory v upload adresářích.
 - **Bezpečnější výchozí `config.sample.php` pro instalace** – vzorová konfigurace nově používá pro SMTP neutrální `localhost:25` bez autentizace místo ukázkové externí domény a config sample audit hlídá prázdné tokeny, prázdné SMTP přihlašovací údaje i absenci placeholderů typu ukázkový GitHub token nebo webový cron token.

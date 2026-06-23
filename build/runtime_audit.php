@@ -71,6 +71,7 @@ $configSampleAuditSource = is_file(__DIR__ . '/config_sample_audit.php') ? (stri
 $versionMetadataAuditSource = is_file(__DIR__ . '/version_metadata_audit.php') ? (string) file_get_contents(__DIR__ . '/version_metadata_audit.php') : '';
 $schemaParityAuditSource = is_file(__DIR__ . '/schema_parity_audit.php') ? (string) file_get_contents(__DIR__ . '/schema_parity_audit.php') : '';
 $redirectGuardrailsAuditSource = is_file(__DIR__ . '/redirect_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit.php') : '';
+$redirectGuardrailsAuditSelftestSource = is_file(__DIR__ . '/redirect_guardrails_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit_selftest.php') : '';
 $workflowAuditSource = is_file(__DIR__ . '/workflow_audit.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit.php') : '';
 $workflowAuditSelftestSource = is_file(__DIR__ . '/workflow_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit_selftest.php') : '';
 $themeViewAuditSource = is_file(__DIR__ . '/theme_view_audit.php') ? (string) file_get_contents(__DIR__ . '/theme_view_audit.php') : '';
@@ -7675,14 +7676,26 @@ $foundationChecks = [
         && str_contains($schemaParityAuditSource, 'articleExcerpt('),
     'redirect guardrails audit is wired into local quality gates' => str_contains($composerSource, '"test:redirect-guardrails"')
         && str_contains($composerSource, 'php build/redirect_guardrails_audit.php')
+        && str_contains($composerSource, '"test:redirect-guardrails-selftest"')
+        && str_contains($composerSource, 'php build/redirect_guardrails_audit_selftest.php')
         && str_contains($composerSource, '@test:redirect-guardrails')
+        && str_contains($composerSource, '@test:redirect-guardrails-selftest')
+        && str_contains($composerSource, 'build/redirect_guardrails_audit_selftest.php')
         && str_contains($composerSource, 'build/redirect_guardrails_audit.php')
         && str_contains($phpstanConfigSource, 'build/redirect_guardrails_audit.php')
+        && str_contains($phpstanConfigSource, 'build/redirect_guardrails_audit_selftest.php')
+        && str_contains($redirectGuardrailsAuditSource, 'redirectGuardrailsProjectRoot')
         && str_contains($redirectGuardrailsAuditSource, 'redirectGuardrailsReadsRequestRedirectTarget')
         && str_contains($redirectGuardrailsAuditSource, 'redirectGuardrailsOutputsRawRequestUriReturnField')
         && str_contains($redirectGuardrailsAuditSource, 'internalRedirectTarget(')
         && str_contains($redirectGuardrailsAuditSource, 'adminLoginRedirectTarget(')
-        && str_contains($redirectGuardrailsAuditSource, 'request-derived redirect target must use internalRedirectTarget()'),
+        && str_contains($redirectGuardrailsAuditSource, 'request-derived redirect target must use internalRedirectTarget()')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'assertRedirectGuardrailsPasses')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'assertRedirectGuardrailsFails')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'Raw GET redirect target guard')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'Raw POST return URL guard')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'filter_input redirect target guard')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'Raw REQUEST_URI return field guard'),
     'source encoding audit is wired into local quality gates' => str_contains($composerSource, '"test:encoding"')
         && str_contains($composerSource, 'php build/source_encoding_audit.php')
         && str_contains($composerSource, '@test:encoding')
@@ -7816,11 +7829,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')

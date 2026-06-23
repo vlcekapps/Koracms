@@ -570,7 +570,7 @@ composer ci:basic
 - config sample audit přes `build/config_sample_audit.php`, který hlídá, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
 - version metadata audit přes `build/version_metadata_audit.php`, který hlídá platný SemVer v `VERSION`, načítání `KORA_VERSION` z tohoto souboru a release dry-run práci s verzí v ZIP/source archive
 - schema parity audit přes `build/schema_parity_audit.php`, který hlídá kritické sloupce používané veřejnými endpointy proti driftu mezi `install.php`, `migrate.php` a aktuálním kódem
-- redirect guardrails audit přes `build/redirect_guardrails_audit.php`, který hlídá, že requestem nebo formulářem dodané návratové cíle typu `redirect`, `redirect_target` a `return_url` zůstávají validované přes sdílený bezpečný helper
+- redirect guardrails audit přes `build/redirect_guardrails_audit.php` a jeho self-test `build/redirect_guardrails_audit_selftest.php`, které hlídají, že requestem nebo formulářem dodané návratové cíle typu `redirect`, `redirect_target`, `next` a `return_url` zůstávají validované přes sdílený bezpečný helper
 - audit GitHub Actions workflow přes `build/workflow_audit.php` a jeho self-test `build/workflow_audit_selftest.php`, které hlídají základní a plný CI běh včetně oprávnění, timeoutů, souběhu, připnutých actions, zakázaných write/secrets vzorů a runtime bootstrapu pro HTTP kontroly
 - source encoding audit přes `build/source_encoding_audit.php`, který hlídá platné UTF-8 ve verzovaných textových zdrojích a nepovolený UTF-8 BOM
 - mojibake audit přes `build/mojibake_audit.php`, který hlídá typické zkomolené UTF-8 sekvence v českých textech a povoluje jen zdokumentované legacy opravy
