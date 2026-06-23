@@ -259,7 +259,7 @@ adminHeader('Statické stránky');
               </form>
             <?php endif; ?>
             <?php if ((int)$page['is_published'] === 1 && (string)$page['status'] === 'published'): ?>
-              <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+              <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php"
                   data-confirm="Převést stránku na článek blogu?">

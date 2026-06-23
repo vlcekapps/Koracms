@@ -141,7 +141,7 @@ adminHeader('Novinky');
         <td class="actions">
           <a href="news_form.php?id=<?= (int)$item['id'] ?>">Upravit</a>
           <?php if ($item['status'] === 'published'): ?>
-            <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+            <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($item['status'] === 'pending' && $canApproveNews): ?>
             <form action="approve.php" method="post">

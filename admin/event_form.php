@@ -312,10 +312,10 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat událost' ?></button>
     <a href="events.php">Zrušit</a>
     <?php if ($id !== null && (string)$event['status'] === 'published' && (int)($event['is_published'] ?? 0) === 1): ?>
-      <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+      <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($id !== null && !empty($event['preview_token'])): ?>
-      <a href="<?= h(eventPreviewPath($event)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
+      <a href="<?= h(eventPreviewPath($event)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Náhled')) ?>">Náhled</a>
     <?php elseif ($id !== null): ?>
       <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>

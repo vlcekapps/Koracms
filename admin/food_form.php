@@ -171,7 +171,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat ' . $foodTypeLabel ?></button>
     <a href="food.php">Zrušit</a>
     <?php if ($card['is_publicly_visible'] && (string)$card['slug'] !== ''): ?>
-      <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+      <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
     <?php endif; ?>
   </div>
 </form>

@@ -204,7 +204,7 @@ adminHeader('Rezervace');
         <td>
           <?= h((string)($booking['resource_name'] ?? '–')) ?>
           <?php if ($resourcePublicPath !== ''): ?>
-            <br><small><a href="<?= h($resourcePublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a></small>
+            <br><small><a href="<?= h($resourcePublicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a></small>
           <?php endif; ?>
         </td>
         <td><?= h($customerLabel) ?></td>

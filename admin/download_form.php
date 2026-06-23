@@ -254,7 +254,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat položku ke stažení' ?></button>
     <a href="downloads.php">Zrušit</a>
     <?php if ($id !== null && (string)$download['slug'] !== '' && (string)$download['status'] === 'published' && (int)($download['is_published'] ?? 0) === 1): ?>
-      <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+      <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
     <?php endif; ?>
   </div>
 </form>

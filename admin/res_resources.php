@@ -125,7 +125,7 @@ adminHeader('Zdroje rezervací');
         <td class="actions">
           <a href="res_resource_form.php?id=<?= (int)$resource['id'] ?>" class="btn">Upravit</a>
           <?php if ((int)$resource['is_active'] === 1): ?>
-            <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+            <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
           <?php endif; ?>
           <form action="res_resource_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

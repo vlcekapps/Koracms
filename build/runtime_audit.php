@@ -9643,6 +9643,27 @@ if ($contentSecurityPolicyIssues === []) {
     }
 }
 
+echo "=== admin_new_window_link_guardrails ===\n";
+$adminNewWindowIssues = [];
+foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
+    $adminNewWindowSource = (string)file_get_contents($adminNewWindowPath);
+    foreach (preg_split('/\R/', $adminNewWindowSource) ?: [] as $lineNumber => $line) {
+        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkLabel(')) {
+            $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                . ' contains target="_blank" without newWindowLinkLabel() on source line '
+                . ((int)$lineNumber + 1);
+        }
+    }
+}
+if ($adminNewWindowIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminNewWindowIssues as $adminNewWindowIssue) {
+        echo '- ' . $adminNewWindowIssue . "\n";
+    }
+}
+
 echo "=== blog_admin_guardrails ===\n";
 $blogAdminIssues = [];
 $blogLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');

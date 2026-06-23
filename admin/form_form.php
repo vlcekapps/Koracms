@@ -144,7 +144,7 @@ adminHeader($pageTitle);
   <?php if ($form): ?>
     <a href="form_submissions.php?id=<?= (int)$form['id'] ?>" class="btn">Odpovědi formuláře</a>
     <?php if ((int)($form['is_active'] ?? 0) === 1): ?>
-      <a href="<?= h(formPublicPath($form)) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+      <a href="<?= h(formPublicPath($form)) ?>" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
     <?php endif; ?>
   <?php endif; ?>
 </div>

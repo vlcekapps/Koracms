@@ -143,7 +143,7 @@ adminHeader('Znalostní báze');
         <td class="actions">
           <a href="faq_form.php?id=<?= (int)$faq['id'] ?>" class="btn">Upravit</a>
           <?php if ($faq['is_publicly_visible']): ?>
-            <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+            <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
           <?php endif; ?>
           <?php if ($faq['status'] === 'pending' && $canApproveFaq): ?>
             <form action="approve.php" method="post">

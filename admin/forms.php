@@ -126,7 +126,7 @@ adminHeader('Formuláře');
           <?php if ((int)$form['submission_count'] > 0): ?>
             <a href="form_submissions.php?id=<?= (int)$form['id'] ?>">Odpovědi (<?= (int)$form['submission_count'] ?>)</a>
           <?php endif; ?>
-          <a href="<?= h(formPublicPath($form)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+          <a href="<?= h(formPublicPath($form)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
           <form action="form_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">

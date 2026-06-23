@@ -230,10 +230,10 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <button type="submit"><?= $item ? 'Uložit změny' : 'Přidat novinku' ?></button>
     <a href="news.php">Zrušit</a>
     <?php if ($item && ($item['status'] ?? 'published') === 'published'): ?>
-      <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+      <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($item && !empty($item['preview_token'])): ?>
-      <a href="<?= h(newsPreviewPath($item)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
+      <a href="<?= h(newsPreviewPath($item)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Náhled')) ?>">Náhled</a>
     <?php elseif ($item): ?>
       <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>

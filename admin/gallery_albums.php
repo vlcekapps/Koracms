@@ -142,7 +142,7 @@ adminHeader('Alba galerie');
             <a href="<?= BASE_URL ?>/admin/gallery_album_form.php?id=<?= (int)$album['id'] ?>">Upravit</a>
             <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_album&amp;id=<?= (int)$album['id'] ?>">Historie revizí</a>
             <?php if ((int)($album['is_published'] ?? 1) === 1 && ($album['status'] ?? 'published') === 'published'): ?>
-              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+              <a href="<?= h((string)$album['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
             <?php endif; ?>
             <?php if (($album['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post">

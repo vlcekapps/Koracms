@@ -143,7 +143,7 @@ adminHeader($pageTitle);
       <?php if ($id !== null): ?>
         <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_album&amp;id=<?= (int)$album['id'] ?>">Historie revizí</a>
         <?php $albumPublicPath = galleryAlbumPublicPath($album); ?>
-        <a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+        <a href="<?= h($albumPublicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
       <?php endif; ?>
     </div>
   </fieldset>

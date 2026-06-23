@@ -628,7 +628,7 @@ adminHeader('Knihovna médií');
             </div>
 
             <?php if ($previewUrl !== ''): ?>
-              <a href="<?= h($fileUrl) ?>" target="_blank" rel="noopener" class="media-card__link">
+              <a href="<?= h($fileUrl) ?>" target="_blank" rel="noopener" class="media-card__link" aria-label="<?= h(newWindowLinkLabel((string)$item['original_name'], 'náhled média')) ?>">
                 <img src="<?= h($previewUrl) ?>" alt="<?= h(trim((string)($item['alt_text'] ?? '')) !== '' ? (string)$item['alt_text'] : (string)$item['original_name']) ?>" loading="lazy" class="media-card__image">
               </a>
             <?php else: ?>
@@ -656,7 +656,7 @@ adminHeader('Knihovna médií');
 
               <div class="button-row">
                 <a href="<?= h($editUrl) ?>" class="btn">Upravit</a>
-                <a href="<?= h($fileUrl) ?>" class="btn" target="_blank" rel="noopener">Otevřít</a>
+                <a href="<?= h($fileUrl) ?>" class="btn" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Otevřít', (string)$item['original_name'])) ?>">Otevřít</a>
                 <?php if ($isPublic): ?>
                   <button type="button" class="btn" data-copy="<?= h($fileUrl) ?>" data-label="<?= h((string)$item['original_name']) ?>">Kopírovat URL</button>
                 <?php endif; ?>
@@ -761,7 +761,7 @@ adminHeader('Knihovna médií');
             <dt><strong>Velikost</strong></dt>
             <dd><?= h(number_format(((int)$editItem['file_size']) / 1024, 0, ',', ' ')) ?> KB</dd>
             <dt><strong>URL</strong></dt>
-            <dd class="media-info-list__value--url"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener"><?= h(mediaFileUrl($editItem)) ?></a></dd>
+            <dd class="media-info-list__value--url"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel(mediaFileUrl($editItem), 'URL média')) ?>"><?= h(mediaFileUrl($editItem)) ?></a></dd>
             <dt><strong>Použití</strong></dt>
             <dd><?= $editUsages === [] ? 'Nepoužité' : 'Použité na ' . count($editUsages) . ' místě/místech' ?></dd>
           </dl>

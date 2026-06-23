@@ -22,7 +22,7 @@ function renderAdminFormSubmissionValue(array $field, mixed $value): string
             if (!is_array($item) || !isset($item['url'], $item['original_name'])) {
                 continue;
             }
-            $links[] = '<a href="' . h((string)$item['url']) . '" target="_blank" rel="noopener noreferrer">'
+            $links[] = '<a href="' . h((string)$item['url']) . '" target="_blank" rel="noopener noreferrer" aria-label="' . h(newWindowLinkLabel((string)$item['original_name'])) . '">'
                 . h((string)$item['original_name'])
                 . '</a>';
         }
@@ -56,7 +56,7 @@ function renderAdminFormSubmissionFiles(array $field, mixed $value, int $submiss
             continue;
         }
 
-        $links[] = '<a href="' . h(formSubmissionFileDownloadPath($submissionId, $fieldName, (int)$index)) . '" target="_blank" rel="noopener noreferrer">'
+        $links[] = '<a href="' . h(formSubmissionFileDownloadPath($submissionId, $fieldName, (int)$index)) . '" target="_blank" rel="noopener noreferrer" aria-label="' . h(newWindowLinkLabel($originalName, 'příloha formuláře')) . '">'
             . h($originalName)
             . '</a>';
     }
@@ -204,7 +204,7 @@ adminHeader('Detail odpovědi formuláře');
   <a href="<?= h($redirect) ?>" class="btn">Zpět na odpovědi formuláře</a>
   <a href="form_form.php?id=<?= (int)$formId ?>" class="btn">Upravit formulář</a>
   <?php if ((int)($submission['form_is_active'] ?? 0) === 1): ?>
-    <a href="<?= h(formPublicPath(['id' => $formId, 'slug' => (string)$submission['form_slug']])) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit formulář na webu</a>
+    <a href="<?= h(formPublicPath(['id' => $formId, 'slug' => (string)$submission['form_slug']])) ?>" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit formulář na webu')) ?>">Zobrazit formulář na webu</a>
   <?php endif; ?>
 </div>
 
@@ -258,7 +258,7 @@ adminHeader('Detail odpovědi formuláře');
       <th scope="row">GitHub issue</th>
       <td>
         <?php if ($hasGitHubIssue): ?>
-          <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h($githubIssueLinkLabel) ?></a>
+          <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel($githubIssueLinkLabel)) ?>"><?= h($githubIssueLinkLabel) ?></a>
         <?php else: ?>
           –
         <?php endif; ?>
@@ -386,7 +386,7 @@ adminHeader('Detail odpovědi formuláře');
 <?php if ($canManageFormIntegrations): ?>
 <h2>GitHub issue</h2>
 <?php if ($hasGitHubIssue): ?>
-  <p>Toto hlášení už má připojené issue <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h($githubIssueLinkLabel) ?></a>.</p>
+  <p>Toto hlášení už má připojené issue <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel($githubIssueLinkLabel)) ?>"><?= h($githubIssueLinkLabel) ?></a>.</p>
 <?php else: ?>
   <p class="field-help form-submission-help--spaced">
     Z tohoto hlášení si můžete připravit GitHub issue. Návrh lze otevřít ručně na GitHubu, zkopírovat do schránky

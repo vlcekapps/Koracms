@@ -305,10 +305,10 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
         && !empty($document['slug'])
         && (string)($document['posted_date'] ?? '') !== ''
         && (string)$document['posted_date'] <= date('Y-m-d')): ?>
-      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu</a>
+      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
     <?php endif; ?>
     <?php if ($id && !empty($document['preview_token'])): ?>
-      <a href="<?= h(boardPreviewPath($document)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
+      <a href="<?= h(boardPreviewPath($document)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Náhled')) ?>">Náhled</a>
     <?php elseif ($id): ?>
       <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>

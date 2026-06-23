@@ -196,7 +196,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
       <?php if ((int)($account['author_public_enabled'] ?? 0) === 1 && !empty($account['author_public_path'])): ?>
         <p class="admin-action-row">
           Veřejný profil:
-          <a href="<?= h((string)$account['author_public_path']) ?>" target="_blank" rel="noopener noreferrer">
+          <a href="<?= h((string)$account['author_public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)$account['author_public_path'], 'veřejný profil')) ?>">
             <?= h((string)$account['author_public_path']) ?>
           </a>
         </p>
