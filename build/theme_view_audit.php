@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 $projectRoot = dirname(__DIR__);
-$themeRoot = $projectRoot . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR . 'default';
+$themeRootArgument = trim((string)($argv[1] ?? ''));
+$themeRoot = $themeRootArgument !== ''
+    ? $themeRootArgument
+    : $projectRoot . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR . 'default';
 $issues = [];
 
 if (!is_dir($themeRoot)) {
-    fwrite(STDERR, "Default theme directory is missing.\n");
+    fwrite(STDERR, "Theme view directory is missing.\n");
     exit(1);
 }
 
