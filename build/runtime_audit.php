@@ -2244,6 +2244,31 @@ function analyzeHtml(string $html): array
         }
     }
 
+    foreach ($xpath->query('//iframe') as $iframe) {
+        if (trim($iframe->getAttribute('title')) === '') {
+            $issues[] = 'iframe without title';
+        }
+    }
+
+    foreach ($xpath->query('//a[translate(@target, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "_blank"]') as $link) {
+        $relTokens = preg_split('/\s+/', strtolower(trim($link->getAttribute('rel')))) ?: [];
+        if (!in_array('noopener', $relTokens, true)) {
+            $issues[] = 'target blank link without rel noopener';
+        }
+
+        $accessibleName = trim($link->getAttribute('aria-label'));
+        if ($accessibleName === '') {
+            $accessibleName = trim($link->getAttribute('title'));
+        }
+        if ($accessibleName === '') {
+            $accessibleName = trim((string)$link->textContent);
+        }
+
+        if (!preg_match('/(nov[eé]m\s+(okn[eě]|panelu)|new\s+window)/iu', $accessibleName)) {
+            $issues[] = 'target blank link without accessible new-window label';
+        }
+    }
+
     $fields = $xpath->query('//input[not(@type="hidden") and not(@type="submit") and not(@type="button") and not(@type="reset")] | //select | //textarea');
     foreach ($fields as $field) {
         $id = $field->getAttribute('id');

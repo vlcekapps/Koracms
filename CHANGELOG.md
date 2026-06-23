@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Runtime kontrola iframe a nových oken ve vyrenderovaném HTML** – runtime audit nově u reálných veřejných i administračních odpovědí hlídá `title` u `<iframe>` a u odkazů s `target="_blank"` vyžaduje bezpečné `rel="noopener"` i přístupný název oznamující otevření v novém okně nebo panelu.
 - **Guardrail pro explicitní typy formulářových prvků** – runtime audit nově vícerádkově kontroluje PHP zdroje v `admin/`, `lib/` a `themes/` i reálně vyrenderované HTML, aby se do výstupů nevrátily `<button>` nebo `<input>` bez explicitního `type`; chrání tak administraci i veřejné šablony před nečekaným odesláním formuláře a křehkou formulářovou sémantikou.
 - **Externí odkazy v navigaci** – hlavní navigace webu i pořadí blogových stránek nově umí přidat externí nebo interní odkaz s názvem, volitelným přístupným popisem pro čtečky obrazovky, stavem zobrazení a bezpečnou volbou otevření v novém okně; odkazy se řadí společně s moduly, stránkami, formuláři nebo blogovými stránkami a export/import je zachovává.
 - **Repository guardrails audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/repository_guardrails_audit.php`, který hlídá repo pravidlo pro rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`.
