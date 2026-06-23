@@ -230,11 +230,16 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
 
         $rel = themeViewAuditTagAttributeValue($match['tag'], 'rel');
         $relTokens = is_string($rel) ? preg_split('/\s+/', strtolower(trim($rel))) : [];
-        if (in_array('noopener', $relTokens ?: [], true) || in_array('noreferrer', $relTokens ?: [], true)) {
-            continue;
+        if (!in_array('noopener', $relTokens ?: [], true) && !in_array('noreferrer', $relTokens ?: [], true)) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without rel="noopener".';
         }
 
-        $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without rel="noopener".';
+        if (
+            !themeViewAuditTagHasAttribute($match['tag'], 'aria-label')
+            && !themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')
+        ) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without accessible new-window label.';
+        }
     }
 
     foreach (['input', 'select', 'textarea'] as $tagName) {

@@ -4494,6 +4494,24 @@ function navigationLinkHref(array $link): string
     return navigationLinkUrl((string)($link['url'] ?? ''));
 }
 
+function newWindowLinkLabel(string $label, string $supplement = ''): string
+{
+    $parts = [];
+    foreach ([$label, $supplement] as $part) {
+        $part = trim($part);
+        if ($part !== '') {
+            $parts[] = $part;
+        }
+    }
+
+    if ($parts === []) {
+        $parts[] = 'Odkaz';
+    }
+
+    $parts[] = 'otevře se v novém okně';
+    return implode(' – ', $parts);
+}
+
 /**
  * @param array<string, mixed> $link
  */
@@ -4516,11 +4534,11 @@ function navigationLinkAnchorAttributes(array $link): string
         $labelParts[] = $altText;
     }
     if ($opensInNewWindow) {
-        $labelParts[] = 'otevře se v novém okně';
-    }
-    if ($altText !== '' || $opensInNewWindow) {
+        $attributes[] = 'aria-label="' . h(newWindowLinkLabel($title, $altText)) . '"';
+    } elseif ($altText !== '') {
         $attributes[] = 'aria-label="' . h(implode(' – ', $labelParts)) . '"';
     }
+
     if ($opensInNewWindow) {
         $attributes[] = 'target="_blank"';
         $attributes[] = 'rel="noopener noreferrer"';

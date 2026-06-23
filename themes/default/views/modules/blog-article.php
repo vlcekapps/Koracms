@@ -90,7 +90,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
             <div class="button-row button-row--start">
               <a class="button-primary" href="<?= h((string)$article['author_public_path']) ?>">Profil autora</a>
               <?php if (!empty($article['author_website_url'])): ?>
-                <a class="button-secondary" href="<?= h((string)$article['author_website_url']) ?>" target="_blank" rel="noopener noreferrer">Web autora</a>
+                <a class="button-secondary" href="<?= h((string)$article['author_website_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Web autora')) ?>">Web autora</a>
               <?php endif; ?>
             </div>
           </div>

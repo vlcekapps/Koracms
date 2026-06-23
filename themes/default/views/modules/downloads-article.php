@@ -121,10 +121,10 @@ $otherVersions = $otherVersions ?? [];
                  download="<?= h((string)$download['original_name']) ?>">Stáhnout soubor</a>
             <?php endif; ?>
             <?php if ($download['has_external_url']): ?>
-              <a class="btn btn-secondary" href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít externí odkaz</a>
+              <a class="btn btn-secondary" href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Otevřít externí odkaz')) ?>">Otevřít externí odkaz</a>
             <?php endif; ?>
             <?php if ($download['has_project_url']): ?>
-              <a class="btn btn-secondary" href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer">Domovská stránka projektu</a>
+              <a class="btn btn-secondary" href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Domovská stránka projektu')) ?>">Domovská stránka projektu</a>
             <?php endif; ?>
           </div>
         </section>

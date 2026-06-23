@@ -154,7 +154,7 @@ assertThemeViewAuditPasses(
     <input id="fixture-input" name="fixture_input">
     <img src="/uploads/example.jpg" alt="">
     <iframe src="/media/preview.php?id=1" title="Náhled PDF"></iframe>
-    <a href="https://example.test" target="_blank" rel="noopener noreferrer">Externí odkaz</a>
+    <a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="Externí odkaz – otevře se v novém okně">Externí odkaz</a>
   </div>
   <script nonce="<?= cspNonce() ?>">document.documentElement.dataset.fixture='ok';</script>
 </section>
@@ -312,6 +312,14 @@ assertThemeViewAuditFails(
 <a href="https://example.test" target="_blank">Externí odkaz</a>
 PHP,
     'target="_blank" link without rel="noopener"'
+);
+
+assertThemeViewAuditFails(
+    'Blank target label guard',
+    <<<'PHP'
+<a href="https://example.test" target="_blank" rel="noopener noreferrer">Externí odkaz</a>
+PHP,
+    'target="_blank" link without accessible new-window label'
 );
 
 echo "Theme view audit self-test OK\n";

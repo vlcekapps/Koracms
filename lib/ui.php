@@ -33,7 +33,7 @@ function siteFooter(): string
          . "  <p>&copy; {$year} {$siteName}</p>\n"
          . "  <p><a href=\"{$b}/feed.php\">RSS</a></p>\n"
          . ($accountLinks !== '' ? "  <p>{$accountLinks}</p>\n" : '')
-         . "  <p><small><a href=\"https://github.com/vlcekapps/Koracms\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$version}</a></small></p>\n"
+         . "  <p><small><a href=\"https://github.com/vlcekapps/Koracms\" rel=\"noopener noreferrer\" target=\"_blank\" aria-label=\"" . h(newWindowLinkLabel('Kora CMS ' . $version)) . "\">Kora CMS {$version}</a></small></p>\n"
          . "</footer>\n"
          . cookieBanner();
 }

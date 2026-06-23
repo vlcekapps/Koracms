@@ -36,7 +36,7 @@ $backBlogLabel = trim((string)($backBlogLabel ?? ''));
           <a class="button-secondary" href="<?= h($backBlogPath) ?>"><?= h($backBlogLabel) ?></a>
         <?php endif; ?>
         <?php if ($author['author_website_url'] !== ''): ?>
-          <a class="button-secondary" href="<?= h($author['author_website_url']) ?>" rel="noopener noreferrer" target="_blank">Web autora</a>
+          <a class="button-secondary" href="<?= h($author['author_website_url']) ?>" rel="noopener noreferrer" target="_blank" aria-label="<?= h(newWindowLinkLabel('Web autora')) ?>">Web autora</a>
         <?php endif; ?>
       </div>
     </div>

@@ -7663,6 +7663,7 @@ $foundationChecks = [
         && str_contains($themeViewAuditSource, 'button without explicit type attribute')
         && str_contains($themeViewAuditSource, 'form control without matching label or ARIA label')
         && str_contains($themeViewAuditSource, 'target="_blank" link without rel="noopener"')
+        && str_contains($themeViewAuditSource, 'target="_blank" link without accessible new-window label')
         && str_contains($themeViewAuditSource, 'duplicate static id')
         && str_contains($themeViewAuditSource, 'missing static ')
         && str_contains($themeViewAuditSelftestSource, 'Duplicate static id guard')
@@ -7675,7 +7676,8 @@ $foundationChecks = [
         && str_contains($themeViewAuditSelftestSource, 'Iframe title guard')
         && str_contains($themeViewAuditSelftestSource, 'Button type guard')
         && str_contains($themeViewAuditSelftestSource, 'Form control label guard')
-        && str_contains($themeViewAuditSelftestSource, 'Blank target rel guard'),
+        && str_contains($themeViewAuditSelftestSource, 'Blank target rel guard')
+        && str_contains($themeViewAuditSelftestSource, 'Blank target label guard'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 6')
