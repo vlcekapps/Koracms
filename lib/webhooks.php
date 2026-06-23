@@ -80,13 +80,8 @@ function formWebhookHostAllowed(string $host): bool
 
 function normalizeFormWebhookUrl(string $url): string
 {
-    $url = trim($url);
-    if ($url === '') {
-        return '';
-    }
-
-    $validated = filter_var($url, FILTER_VALIDATE_URL);
-    if (!is_string($validated)) {
+    $validated = normalizeHttpExternalUrl($url, false);
+    if ($validated === '') {
         return '';
     }
 
@@ -95,9 +90,8 @@ function normalizeFormWebhookUrl(string $url): string
         return '';
     }
 
-    $scheme = strtolower((string)($parts['scheme'] ?? ''));
     $host = trim((string)($parts['host'] ?? ''));
-    if ($scheme !== 'https' || $host === '' || !formWebhookHostAllowed($host)) {
+    if (!str_starts_with(strtolower($validated), 'https://') || $host === '' || !formWebhookHostAllowed($host)) {
         return '';
     }
 

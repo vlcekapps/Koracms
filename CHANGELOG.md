@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Sdílená validace externích URL** – widgety sociálních sítí, podcasty, zajímavá místa a položky ke stažení nově používají jeden bezpečný normalizátor externích adres; běžné domény doplní na `https://`, ale odmítne interní cesty, protocol-relative URL, řídicí znaky, nebezpečná schémata i přihlašovací údaje v URL. Webhooky formulářů dál vyžadují explicitní veřejné `https://` URL a unit testy s runtime auditem hlídají, aby se pravidla nerozjela.
 - **Unit guardrail pro návrat po admin loginu** – `build/unit_tests.php` nově přímo ověřuje, že `adminLoginRedirectTarget()` dovolí jen interní administrační cíle a `migrate.php`, zachová query string, odmítne veřejné nebo externí cíle, protocol-relative URL, login/2FA smyčky i řídicí znaky; runtime audit hlídá, aby tyto bezpečnostní scénáře zůstaly v testovací sadě.
 - **Release ZIP odolný vůči dotfiles na Linuxu** – release skript nově vytváří instalační ZIP přes explicitní `.NET ZipArchive` průchod všemi soubory v dočasném balíčku, takže ochranný `uploads/.htaccess` nevypadne z artefaktu jen proto, že `Compress-Archive` na Linux runneru vynechá dotfile; release package audit návrat ke křehkému balení blokuje.
 - **Nosniff hlavička pro discovery endpointy** – `robots.txt`, XML sitemapa a globální RSS feed nově posílají explicitní `X-Content-Type-Options: nosniff`; HTTP integrace i runtime audit hlídají reálné odpovědi, aby prohlížeče neinterpretovaly textové, XML nebo RSS výstupy mimo deklarovaný typ.

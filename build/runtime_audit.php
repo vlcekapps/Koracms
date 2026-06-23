@@ -63,6 +63,7 @@ $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string)
 $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
 $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
+$unitTestsSource = is_file(__DIR__ . '/unit_tests.php') ? (string) file_get_contents(__DIR__ . '/unit_tests.php') : '';
 $httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string) file_get_contents(__DIR__ . '/http_server_router.php') : '';
 $repositoryGuardrailsAuditSource = is_file(__DIR__ . '/repository_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/repository_guardrails_audit.php') : '';
 $configSampleAuditSource = is_file(__DIR__ . '/config_sample_audit.php') ? (string) file_get_contents(__DIR__ . '/config_sample_audit.php') : '';
@@ -7572,6 +7573,17 @@ $foundationChecks = [
         && !str_contains($httpServerRouterSource, 'Content-Security-Policy'),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
+    'external URL normalization uses shared unsafe-target guardrails' => str_contains($authSource, 'function normalizeHttpExternalUrl(string $target, bool $prependScheme = true): string')
+        && str_contains($authSource, "isset(\$parts['user']) || isset(\$parts['pass'])")
+        && str_contains($authSource, "str_starts_with(\$target, '/')")
+        && str_contains($authSource, 'FILTER_VALIDATE_URL')
+        && str_contains($presentationSource, 'return normalizeHttpExternalUrl($value);')
+        && str_contains($widgetsSource, 'return normalizeHttpExternalUrl($value);')
+        && str_contains($webhooksSource, 'normalizeHttpExternalUrl($url, false)')
+        && str_contains($webhooksSource, 'formWebhookHostAllowed($host)')
+        && str_contains($unitTestsSource, "test_section('external URL normalizers')")
+        && str_contains($unitTestsSource, "normalizeHttpExternalUrl('https://user:pass@example.com/path')")
+        && str_contains($unitTestsSource, "normalizeHttpExternalUrl('//example.com/path')"),
     'pagination helper uses heading-backed navigation' => str_contains($paginationSource, 'class="sr-only"')
         && str_contains($paginationSource, 'aria-labelledby="')
         && str_contains($paginationSource, 'pager-heading-')

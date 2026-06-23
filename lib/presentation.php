@@ -1539,21 +1539,7 @@ function podcastAudioFilePath(string $filename): string
 
 function normalizePodcastWebsiteUrl(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') {
-        return '';
-    }
-
-    if (!preg_match('#^https?://#i', $value)) {
-        $value = 'https://' . ltrim($value, '/');
-    }
-
-    $validated = filter_var($value, FILTER_VALIDATE_URL);
-    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
-        return '';
-    }
-
-    return $validated;
+    return normalizeHttpExternalUrl($value);
 }
 
 function normalizePodcastEpisodeAudioUrl(string $value): string
@@ -2267,21 +2253,7 @@ function uploadDownloadImage(array $file, string $existingFilename = ''): array
 
 function normalizeDownloadExternalUrl(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') {
-        return '';
-    }
-
-    if (!preg_match('#^https?://#i', $value)) {
-        $value = 'https://' . ltrim($value, '/');
-    }
-
-    $validated = filter_var($value, FILTER_VALIDATE_URL);
-    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
-        return '';
-    }
-
-    return $validated;
+    return normalizeHttpExternalUrl($value);
 }
 
 /**
@@ -2750,21 +2722,7 @@ function uploadEventImage(array $file, string $existingFilename = ''): array
 
 function normalizePlaceUrl(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') {
-        return '';
-    }
-
-    if (!preg_match('#^https?://#i', $value)) {
-        $value = 'https://' . ltrim($value, '/');
-    }
-
-    $validated = filter_var($value, FILTER_VALIDATE_URL);
-    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
-        return '';
-    }
-
-    return $validated;
+    return normalizeHttpExternalUrl($value);
 }
 
 /**

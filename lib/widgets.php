@@ -523,21 +523,7 @@ function widgetSocialLinkDefinitions(): array
 
 function normalizeWidgetExternalUrl(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') {
-        return '';
-    }
-
-    if (!preg_match('#^https?://#i', $value)) {
-        $value = 'https://' . ltrim($value, '/');
-    }
-
-    $validated = filter_var($value, FILTER_VALIDATE_URL);
-    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
-        return '';
-    }
-
-    return $validated;
+    return normalizeHttpExternalUrl($value);
 }
 
 /**

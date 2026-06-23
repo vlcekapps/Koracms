@@ -283,6 +283,8 @@ Přehled blogů v administraci nově nabízí přímé odkazy na články, kateg
 
 Ruční i automaticky ukládané `301/302` redirecty ověřují starou adresu jako interní cestu webu a novou adresu jako interní cestu nebo čistou `http/https` URL bez přihlašovacích údajů. Nejednoznačné cíle, nebezpečná schémata a CRLF znaky se odmítnou ještě před odesláním hlavičky `Location`.
 
+Externí URL zadávané v administraci pro widgety sociálních sítí, podcasty, zajímavá místa a položky ke stažení používají sdílenou validaci: běžné domény bez schématu se doplní na `https://`, ale interní cesty, protocol-relative adresy, řídicí znaky, nebezpečná schémata a URL s přihlašovacími údaji se odmítnou. Webhooky formulářů zůstávají přísnější: vyžadují explicitní veřejné `https://` URL a dál procházejí ochranou proti privátním nebo lokálním hostům.
+
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek. Sitemapa je čistě čtecí endpoint a podporuje jen metody `GET` a `HEAD`.
 
 Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`.

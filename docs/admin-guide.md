@@ -68,6 +68,8 @@ Z detailu odpovědi lze:
 
 Formulář může po odeslání, změně workflow, odpovědi odesílateli nebo po vytvoření/napojení GitHub issue poslat JSON payload na vlastní endpoint.
 
+Webhook URL musí být zadaná jako explicitní veřejná `https://` adresa. CMS z bezpečnostních důvodů nebere holou doménu jako webhook, odmítá interní nebo lokální hosty, jiné schéma než HTTPS, řídicí znaky i URL s uživatelským jménem nebo heslem. Ostatní běžná externí URL pole v administraci mohou holou doménu doplnit na `https://`, ale používají stejný zákaz nebezpečných schémat, protocol-relative adres a přihlašovacích údajů v URL.
+
 ### Hotové šablony formulářů
 
 - Nahlášení chyby

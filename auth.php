@@ -625,6 +625,48 @@ function storedRedirectTarget(string $target, string $default = ''): string
     return $target;
 }
 
+function normalizeHttpExternalUrl(string $target, bool $prependScheme = true): string
+{
+    $target = trim($target);
+    if ($target === '') {
+        return '';
+    }
+
+    if (preg_match('/[\x00-\x1F\x7F]/', $target)) {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $target)) {
+        if (!$prependScheme || str_starts_with($target, '/')) {
+            return '';
+        }
+
+        $target = 'https://' . $target;
+    }
+
+    $validated = filter_var($target, FILTER_VALIDATE_URL);
+    if (!is_string($validated)) {
+        return '';
+    }
+
+    $parts = parse_url($validated);
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    $host = trim((string)($parts['host'] ?? ''));
+    if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+        return '';
+    }
+
+    if (isset($parts['user']) || isset($parts['pass'])) {
+        return '';
+    }
+
+    return $validated;
+}
+
 function adminLoginRedirectTarget(string $target, string $default = ''): string
 {
     $safeTarget = internalRedirectTarget($target, '');

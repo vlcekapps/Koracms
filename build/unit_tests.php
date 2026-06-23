@@ -187,6 +187,31 @@ assert_contains(
 
 // ─── 4. Rate-limit keys ─────────────────────────────────────────────────────
 
+test_section('external URL normalizers');
+
+assert_equals('https://example.com/path', normalizeHttpExternalUrl('example.com/path'), 'external URL helper prepends https');
+assert_equals('http://example.com/path', normalizeHttpExternalUrl('http://example.com/path'), 'external URL helper accepts http');
+assert_equals('https://example.com/path', normalizeHttpExternalUrl(' https://example.com/path '), 'external URL helper trims whitespace');
+assert_equals('', normalizeHttpExternalUrl('/kontakt'), 'external URL helper rejects internal path');
+assert_equals('', normalizeHttpExternalUrl('//example.com/path'), 'external URL helper rejects protocol-relative URL');
+assert_equals('', normalizeHttpExternalUrl('javascript:alert(1)'), 'external URL helper rejects unsafe scheme');
+assert_equals('', normalizeHttpExternalUrl('https://user:pass@example.com/path'), 'external URL helper rejects credentials');
+assert_equals('', normalizeHttpExternalUrl("https://example.com\npath"), 'external URL helper rejects control characters');
+assert_equals('', normalizeHttpExternalUrl('example.com/path', false), 'external URL helper can require explicit scheme');
+assert_equals('https://podcast.example/show', normalizePodcastWebsiteUrl('podcast.example/show'), 'podcast website URL uses shared external helper');
+assert_equals('', normalizePodcastWebsiteUrl('https://user:pass@example.com/show'), 'podcast website URL rejects credentials');
+assert_equals('https://downloads.example/item', normalizeDownloadExternalUrl('downloads.example/item'), 'download external URL uses shared external helper');
+assert_equals('', normalizeDownloadExternalUrl('/downloads/local'), 'download external URL rejects internal path');
+assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'place URL uses shared external helper');
+assert_equals('', normalizePlaceUrl('//places.example'), 'place URL rejects protocol-relative URL');
+assert_equals('https://social.example/profile', normalizeWidgetExternalUrl('social.example/profile'), 'widget external URL uses shared external helper');
+assert_equals('', normalizeWidgetExternalUrl('https://user:pass@social.example/profile'), 'widget external URL rejects credentials');
+assert_equals('https://example.com/hook', normalizeFormWebhookUrl('https://example.com/hook'), 'webhook URL accepts explicit public https URL');
+assert_equals('', normalizeFormWebhookUrl('example.com/hook'), 'webhook URL requires explicit scheme');
+assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook URL rejects non-https scheme');
+assert_equals('', normalizeFormWebhookUrl('https://user:pass@example.com/hook'), 'webhook URL rejects credentials');
+assert_equals('', normalizeFormWebhookUrl('https://localhost/hook'), 'webhook URL rejects localhost host');
+
 test_section('rateLimitKey()');
 
 assert_equals(hash('sha256', '127.0.0.1|login'), rateLimitKey('login', '127.0.0.1'), 'IP rate-limit key format preserved');
