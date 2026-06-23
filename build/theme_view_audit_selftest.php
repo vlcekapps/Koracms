@@ -274,6 +274,14 @@ PHP,
 );
 
 assertThemeViewAuditFails(
+    'Button type guard',
+    <<<'PHP'
+<button>Odeslat</button>
+PHP,
+    'button without explicit type attribute'
+);
+
+assertThemeViewAuditFails(
     'Blank target rel guard',
     <<<'PHP'
 <a href="https://example.test" target="_blank">Externí odkaz</a>

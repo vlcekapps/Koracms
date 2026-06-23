@@ -198,6 +198,12 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlTags($source, 'button') as $match) {
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'type')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a button without explicit type attribute.';
+        }
+    }
+
     foreach (themeViewAuditHtmlTags($source, 'a') as $match) {
         $target = themeViewAuditTagAttributeValue($match['tag'], 'target');
         if (!is_string($target) || strtolower(trim($target)) !== '_blank') {
