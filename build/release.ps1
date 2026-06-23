@@ -233,6 +233,44 @@ function Invoke-ReleaseCi {
     }
 }
 
+function Compress-ReleaseDirectory {
+    param(
+        [string]$SourceDir,
+        [string]$OutPath
+    )
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+    if (Test-Path $OutPath) {
+        Remove-Item $OutPath -Force
+    }
+
+    $outDir = Split-Path -Parent $OutPath
+    if ($outDir -and !(Test-Path $outDir)) {
+        New-Item -ItemType Directory -Path $outDir | Out-Null
+    }
+
+    $sourceRoot = (Resolve-Path -LiteralPath $SourceDir).ProviderPath
+    $sourceRoot = $sourceRoot.TrimEnd([char][System.IO.Path]::DirectorySeparatorChar, [char][System.IO.Path]::AltDirectorySeparatorChar)
+    $zipStream = [System.IO.File]::Open($OutPath, [System.IO.FileMode]::CreateNew)
+
+    try {
+        $archive = [System.IO.Compression.ZipArchive]::new($zipStream, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            Get-ChildItem -LiteralPath $sourceRoot -Recurse -Force -File | Sort-Object FullName | ForEach-Object {
+                $relativePath = $_.FullName.Substring($sourceRoot.Length).TrimStart([char][System.IO.Path]::DirectorySeparatorChar, [char][System.IO.Path]::AltDirectorySeparatorChar)
+                $entryName = $relativePath -replace '\\', '/'
+                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+            }
+        } finally {
+            $archive.Dispose()
+        }
+    } finally {
+        $zipStream.Dispose()
+    }
+}
+
 function New-ReleaseZip {
     param(
         [string]$ProjectRoot,
@@ -282,8 +320,7 @@ function New-ReleaseZip {
             [System.IO.File]::WriteAllText($targetPath, [string]$FileOverrides[$relativePath], [System.Text.UTF8Encoding]::new($false))
         }
 
-        if (Test-Path $OutPath) { Remove-Item $OutPath -Force }
-        Compress-Archive -Path (Join-Path $tempDir '*') -DestinationPath $OutPath
+        Compress-ReleaseDirectory -SourceDir $tempDir -OutPath $OutPath
     } finally {
         Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }

@@ -61,11 +61,15 @@ if (!is_file($releaseScriptPath)) {
         '& composer $scriptName',
         'Invoke-ReleaseCi -ProjectRoot $projectRoot -Full:$FullCi',
         'Přeskakuji composer CI na základě -SkipCi',
+        'function Compress-ReleaseDirectory',
+        'System.IO.Compression.ZipArchive',
+        'Get-ChildItem -LiteralPath $sourceRoot -Recurse -Force -File',
+        'CreateEntryFromFile',
         'function New-ReleaseZip',
         '[hashtable]$FileOverrides',
         '$exclude = @(',
         '$_.Name -notin $exclude',
-        'Compress-Archive',
+        'Compress-ReleaseDirectory -SourceDir $tempDir -OutPath $OutPath',
         '$adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"',
         'Copy-Item -Path $adminGuideSource -Destination (Join-Path $docsTempDir "admin-guide.md") -Force',
         '$uploadsHtaccessSource = Join-Path $ProjectRoot "uploads\.htaccess"',
@@ -88,6 +92,10 @@ if (!is_file($releaseScriptPath)) {
         if (!str_contains($releaseScriptSource, $snippet)) {
             $issues[] = 'build/release.ps1 is missing release packaging guard: ' . $snippet;
         }
+    }
+
+    if (str_contains($releaseScriptSource, 'Compress-Archive')) {
+        $issues[] = 'build/release.ps1 must not use Compress-Archive for release ZIPs because it can drop dotfiles on Linux.';
     }
 }
 
