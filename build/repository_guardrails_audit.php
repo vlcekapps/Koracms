@@ -52,6 +52,60 @@ function isRepositoryGuardrailPhpFile(string $relativePath): bool
     return strtolower((string)pathinfo($normalizedPath, PATHINFO_EXTENSION)) === 'php';
 }
 
+function isAllowedTrackedRepositoryArtifact(string $relativePath): bool
+{
+    $normalizedPath = str_replace('\\', '/', $relativePath);
+
+    return in_array($normalizedPath, [
+        'uploads/.htaccess',
+        'uploads/backups/.htaccess',
+    ], true);
+}
+
+function forbiddenTrackedRepositoryArtifactReason(string $relativePath): ?string
+{
+    $normalizedPath = str_replace('\\', '/', $relativePath);
+
+    if (isAllowedTrackedRepositoryArtifact($normalizedPath)) {
+        return null;
+    }
+
+    if (in_array($normalizedPath, ['config.php', 'aconfig.php'], true)) {
+        return 'sensitive local configuration must not be tracked';
+    }
+
+    if ($normalizedPath === '.env' || str_starts_with($normalizedPath, '.env.')) {
+        return 'environment file must not be tracked';
+    }
+
+    if ($normalizedPath === '.integrity_snapshot.json') {
+        return 'installation-specific integrity snapshot must not be tracked';
+    }
+
+    if ($normalizedPath === '.php-cs-fixer.cache') {
+        return 'generated tool cache must not be tracked';
+    }
+
+    if (in_array($normalizedPath, ['.DS_Store', 'Thumbs.db'], true)) {
+        return 'system metadata file must not be tracked';
+    }
+
+    foreach ([
+        'vendor/' => 'Composer vendor dependencies must not be tracked',
+        'dist/' => 'generated release artifacts must not be tracked',
+        '.claude/' => 'local Claude metadata must not be tracked',
+        '.vscode/' => 'local IDE metadata must not be tracked',
+        '.idea/' => 'local IDE metadata must not be tracked',
+        'uploads/' => 'user upload content must not be tracked',
+    ] as $prefix => $reason) {
+        if (str_starts_with($normalizedPath, $prefix)) {
+            return $reason;
+        }
+    }
+
+    return null;
+}
+
 function isAllowedDbConnectionVariableFile(string $relativePath): bool
 {
     $normalizedPath = str_replace('\\', '/', $relativePath);
@@ -98,6 +152,12 @@ function forbiddenDbConnectionVariableMatches(string $source): array
 }
 
 foreach (trackedRepositoryGuardrailFiles($projectRoot) as $relativePath) {
+    $artifactReason = forbiddenTrackedRepositoryArtifactReason($relativePath);
+    if ($artifactReason !== null) {
+        $issues[] = $relativePath . ': ' . $artifactReason;
+        continue;
+    }
+
     if (!isRepositoryGuardrailPhpFile($relativePath) || isAllowedDbConnectionVariableFile($relativePath)) {
         continue;
     }

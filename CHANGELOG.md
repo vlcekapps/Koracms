@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Přísnější repository guardrails audit** – vývojová kontrola nově kromě rezervovaných DB proměnných hlídá, aby v repozitáři neskončily lokální konfigurace, `.env` soubory, `vendor`, `dist`, IDE/Claude metadata ani reálné uploady; výjimku mají jen ochranné `.htaccess` soubory v upload adresářích.
 - **Bezpečnější výchozí `config.sample.php` pro instalace** – vzorová konfigurace nově používá pro SMTP neutrální `localhost:25` bez autentizace místo ukázkové externí domény a config sample audit hlídá prázdné tokeny, prázdné SMTP přihlašovací údaje i absenci placeholderů typu ukázkový GitHub token nebo webový cron token.
 - **Přísnější release smoke pro instalační balíčky** – izolovaný release smoke test nově ověřuje, že instalační ZIP i `git archive` source balík obsahují root `.htaccess`, `config.sample.php`, `install.php`, `migrate.php`, základní admin vstup, default šablonu i kritické CSS assety; zároveň hlídá, aby se do artefaktů nedostaly lokální IDE/Claude metadata, `dist`, `vendor`, citlivé konfigurace ani uživatelské uploady mimo ochranný `uploads/.htaccess`.
 - **Sjednocené přístupné popisky sociálních odkazů** – widget `Sociální sítě` nově používá stejný helper pro odkazy otevírané v novém okně jako ostatní části CMS, takže text pro čtečky obrazovky i bezpečné `_blank` chování zůstávají na jednom místě.
