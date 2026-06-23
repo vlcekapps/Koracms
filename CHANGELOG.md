@@ -7,7 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
-- **Guardrail pro explicitní typy formulářových prvků** – runtime audit nově vícerádkově kontroluje PHP zdroje v `admin/`, `lib/` a `themes/`, aby se do výstupů nevrátily `<button>` nebo `<input>` bez explicitního `type`; chrání tak administraci i veřejné šablony před nečekaným odesláním formuláře a křehkou formulářovou sémantikou.
+- **Guardrail pro explicitní typy formulářových prvků** – runtime audit nově vícerádkově kontroluje PHP zdroje v `admin/`, `lib/` a `themes/` i reálně vyrenderované HTML, aby se do výstupů nevrátily `<button>` nebo `<input>` bez explicitního `type`; chrání tak administraci i veřejné šablony před nečekaným odesláním formuláře a křehkou formulářovou sémantikou.
 - **Externí odkazy v navigaci** – hlavní navigace webu i pořadí blogových stránek nově umí přidat externí nebo interní odkaz s názvem, volitelným přístupným popisem pro čtečky obrazovky, stavem zobrazení a bezpečnou volbou otevření v novém okně; odkazy se řadí společně s moduly, stránkami, formuláři nebo blogovými stránkami a export/import je zachovává.
 - **Repository guardrails audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/repository_guardrails_audit.php`, který hlídá repo pravidlo pro rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`.
 - **Config sample audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/config_sample_audit.php`, který hlídá, že `config.sample.php` obsahuje hlavní runtime konstanty, databázové proměnné a instalační vysvětlení pro cron, SMTP, privátní úložiště a GitHub issue bridge.

@@ -2232,6 +2232,18 @@ function analyzeHtml(string $html): array
         }
     }
 
+    foreach ($xpath->query('//button') as $button) {
+        if (!$button->hasAttribute('type')) {
+            $issues[] = 'button without explicit type';
+        }
+    }
+
+    foreach ($xpath->query('//input') as $input) {
+        if (!$input->hasAttribute('type')) {
+            $issues[] = 'input without explicit type';
+        }
+    }
+
     $fields = $xpath->query('//input[not(@type="hidden") and not(@type="submit") and not(@type="button") and not(@type="reset")] | //select | //textarea');
     foreach ($fields as $field) {
         $id = $field->getAttribute('id');
