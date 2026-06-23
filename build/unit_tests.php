@@ -524,6 +524,8 @@ test_section('normalizeContentEmbedUrl()');
 assert_equals('', normalizeContentEmbedUrl(''), 'empty string');
 assert_equals('https://example.com/audio.mp3', normalizeContentEmbedUrl('https://example.com/audio.mp3'), 'valid HTTPS URL');
 assert_equals('/uploads/file.mp3', normalizeContentEmbedUrl('/uploads/file.mp3'), 'absolute path accepted');
+assert_equals('', normalizeContentEmbedUrl('//example.com/audio.mp3'), 'protocol-relative URL rejected');
+assert_equals('', normalizeContentEmbedUrl('https://user:pass@example.com/audio.mp3'), 'URL with credentials rejected');
 assert_equals('', normalizeContentEmbedUrl("https://example.com\nevil"), 'URL with newline rejected');
 assert_equals('', normalizeContentEmbedUrl('javascript:alert(1)'), 'javascript: rejected');
 assert_equals('kCy8R5fGHxY', contentYouTubeVideoId('https://www.youtube.com/watch?v=kCy8R5fGHxY'), 'YouTube watch URL id parsed');

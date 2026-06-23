@@ -63,13 +63,16 @@ function normalizeContentEmbedUrl(string $value): string
 
     $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-    if (preg_match('/[\r\n<>"\']/', $value)) {
+    if (preg_match('/[\x00-\x1F\x7F<>"\']/', $value)) {
         return '';
     }
 
     if (preg_match('#^https?://#i', $value)) {
-        $validated = filter_var($value, FILTER_VALIDATE_URL);
-        return is_string($validated) ? $validated : '';
+        return normalizeHttpExternalUrl($value, false);
+    }
+
+    if (str_starts_with($value, '//')) {
+        return '';
     }
 
     if (str_starts_with($value, '/')) {

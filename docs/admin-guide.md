@@ -950,6 +950,7 @@ Praktické poznámky:
 - PDF snippet vykreslí inline náhled dokumentu přes interní same-origin preview endpoint a pod ním ponechá i odkaz `Otevřít PDF samostatně`.
 - Starší PDF snippety, které už mají v obsahu jen cestu `/uploads/media/...`, fungují zpětně bez ruční úpravy.
 - YouTube URL ve video snippetu se převádí na vložený `youtube-nocookie.com` přehrávač a zachová i čas začátku z parametrů `t` nebo `start`.
+- URL ve snippetech pro audio, video a PDF musí být buď úplná `http://` / `https://` adresa bez přihlašovacích údajů, nebo interní absolutní cesta začínající jedním lomítkem, například `/uploads/media/soubor.pdf`. Protocol-relative adresy `//example.com/...` se z bezpečnostních důvodů odmítají.
 - Shortcode `[code]...[/code]` je určený pro kopírovatelný obsah, například příkazy, konfiguraci, kód nebo jiné krátké texty; na veřejném webu zobrazí blok s tlačítkem `Kopírovat do schránky`.
 - Obsahové karty a vložené bloky ze snippetů mají skrytý nadpis napojený přes `aria-labelledby`, takže je uživatel čtečky obrazovky najde i navigací po nadpisech.
 - Při vložení obrázku z knihovny médií picker zachová `alt` atribut, ale nevkládá automatický `figcaption` z názvu média. Pokud médium nemá vyplněný alternativní text, vloží se `alt=""`, který lze v editoru ručně upravit.
