@@ -2143,6 +2143,30 @@ if ($resourceSlug) {
 // aby audit a integrační scénáře používaly stejnou logiku cookies, redirectů a CSRF.
 
 /**
+ * @return list<int>
+ */
+function htmlTagLinesMissingTypeAttribute(string $source, string $tagName): array
+{
+    $pattern = '/<' . preg_quote($tagName, '/') . '\b(?:[^>"\']+|"[^"]*"|\'[^\']*\')*>/i';
+    if (!preg_match_all($pattern, $source, $matches, PREG_OFFSET_CAPTURE)) {
+        return [];
+    }
+
+    $issues = [];
+    foreach ($matches[0] as $match) {
+        $tag = (string)$match[0];
+        if (preg_match('/\btype\s*=/i', $tag) === 1) {
+            continue;
+        }
+
+        $offset = (int)$match[1];
+        $issues[] = substr_count(substr($source, 0, $offset), "\n") + 1;
+    }
+
+    return $issues;
+}
+
+/**
  * @return list<string>
  */
 function analyzeHtml(string $html): array
@@ -9640,6 +9664,40 @@ if ($contentSecurityPolicyIssues === []) {
     $failures++;
     foreach ($contentSecurityPolicyIssues as $contentSecurityPolicyIssue) {
         echo '- ' . $contentSecurityPolicyIssue . "\n";
+    }
+}
+
+echo "=== explicit_form_control_type_guardrails ===\n";
+$formControlTypeIssues = [];
+foreach ([dirname(__DIR__) . '/admin', dirname(__DIR__) . '/lib', dirname(__DIR__) . '/themes'] as $formControlTypeRoot) {
+    $formControlTypeFiles = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($formControlTypeRoot, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($formControlTypeFiles as $formControlTypeFile) {
+        if (!$formControlTypeFile instanceof SplFileInfo || $formControlTypeFile->getExtension() !== 'php') {
+            continue;
+        }
+
+        $formControlTypePath = $formControlTypeFile->getPathname();
+        $formControlTypeSource = (string)file_get_contents($formControlTypePath);
+        $formControlTypeRelativePath = str_replace('\\', '/', substr($formControlTypePath, strlen(dirname(__DIR__) . DIRECTORY_SEPARATOR)));
+        foreach (['button', 'input'] as $formControlTagName) {
+            foreach (htmlTagLinesMissingTypeAttribute($formControlTypeSource, $formControlTagName) as $formControlTypeLine) {
+                $formControlTypeIssues[] = $formControlTypeRelativePath
+                    . ' contains <'
+                    . $formControlTagName
+                    . '> without explicit type on source line '
+                    . $formControlTypeLine;
+            }
+        }
+    }
+}
+if ($formControlTypeIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($formControlTypeIssues as $formControlTypeIssue) {
+        echo '- ' . $formControlTypeIssue . "\n";
     }
 }
 
