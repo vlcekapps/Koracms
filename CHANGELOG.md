@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Sjednocená URL validace v migraci a eStránky downloaderu** – migrace starých sociálních odkazů do widgetu `Sociální sítě` i zadání základní URL pro stahování fotografií z eStránek nově používají sdílené http/https normalizátory; odmítají protocol-relative adresy, řídicí znaky, přihlašovací údaje v URL a nebezpečná schémata místo vlastního ručního skládání adres.
 - **Bezpečnější URL ve snippetech obsahu** – audio, video a PDF snippety nově používají stejný http/https normalizátor jako ostatní externí odkazy a odmítnou protocol-relative adresy, řídicí znaky i přihlašovací údaje v URL; interní absolutní cesty typu `/uploads/...` zůstávají podporované.
 - **Přísnější URL validace ve formulářích a profilech autorů** – veřejná pole typu `URL` ve Form Builderu nově používají sdílenou http/https validaci bez přihlašovacích údajů, řídicích znaků a nebezpečných schémat; web autora je napojený na stejný normalizátor jako ostatní externí adresy a chybové hlášky v administraci přesněji popisují podporované zadání.
 - **Sdílená validace externích URL** – widgety sociálních sítí, podcasty, zajímavá místa a položky ke stažení nově používají jeden bezpečný normalizátor externích adres; běžné domény doplní na `https://`, ale odmítne interní cesty, protocol-relative URL, řídicí znaky, nebezpečná schémata i přihlašovací údaje v URL. Webhooky formulářů dál vyžadují explicitní veřejné `https://` URL a unit testy s runtime auditem hlídají, aby se pravidla nerozjela.

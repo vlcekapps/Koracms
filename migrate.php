@@ -2522,12 +2522,8 @@ try {
                 continue;
             }
 
-            if (!preg_match('#^https?://#i', $rawSocialUrl)) {
-                $rawSocialUrl = 'https://' . ltrim($rawSocialUrl, '/');
-            }
-
-            $validatedSocialUrl = filter_var($rawSocialUrl, FILTER_VALIDATE_URL);
-            if (!is_string($validatedSocialUrl) || !preg_match('#^https?://#i', $validatedSocialUrl)) {
+            $validatedSocialUrl = normalizeWidgetExternalUrl($rawSocialUrl);
+            if ($validatedSocialUrl === '') {
                 continue;
             }
 

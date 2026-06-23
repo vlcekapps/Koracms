@@ -7502,6 +7502,8 @@ preg_match_all('/admin\/[A-Za-z0-9_]+\.php/', $analyseStrictScriptText, $phpstan
 $phpstanStrictAdminFiles = array_values(array_unique($phpstanStrictAdminMatches[0] ?? []));
 sort($phpstanStrictAdminFiles);
 $missingAdminPhpstanFiles = array_values(array_diff($adminPhpFiles, $phpstanStrictAdminFiles));
+$migrateSourceForUrlGuard = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
+$estrankyPhotoSourceForUrlGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -7584,6 +7586,10 @@ $foundationChecks = [
         && str_contains($contentLibrarySource, 'return normalizeHttpExternalUrl($value, false);')
         && str_contains($contentLibrarySource, "str_starts_with(\$value, '//')")
         && str_contains($widgetsSource, 'return normalizeHttpExternalUrl($value);')
+        && str_contains($migrateSourceForUrlGuard, 'normalizeWidgetExternalUrl($rawSocialUrl)')
+        && !str_contains($migrateSourceForUrlGuard, '$validatedSocialUrl = filter_var($rawSocialUrl, FILTER_VALIDATE_URL)')
+        && str_contains($estrankyPhotoSourceForUrlGuard, 'normalizeHttpExternalUrl((string)($_POST[\'site_url\'] ?? \'\'))')
+        && !str_contains($estrankyPhotoSourceForUrlGuard, "'https://' . \$siteUrl")
         && str_contains($webhooksSource, 'normalizeHttpExternalUrl($url, false)')
         && str_contains($webhooksSource, 'formWebhookHostAllowed($host)')
         && str_contains($unitTestsSource, "test_section('external URL normalizers')")

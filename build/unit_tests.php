@@ -205,6 +205,7 @@ assert_equals('', normalizeDownloadExternalUrl('/downloads/local'), 'download ex
 assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'place URL uses shared external helper');
 assert_equals('', normalizePlaceUrl('//places.example'), 'place URL rejects protocol-relative URL');
 assert_equals('https://social.example/profile', normalizeWidgetExternalUrl('social.example/profile'), 'widget external URL uses shared external helper');
+assert_equals('', normalizeWidgetExternalUrl('//social.example/profile'), 'widget external URL rejects protocol-relative URL');
 assert_equals('', normalizeWidgetExternalUrl('https://user:pass@social.example/profile'), 'widget external URL rejects credentials');
 assert_equals('https://author.example/profile', normalizeAuthorWebsite('author.example/profile'), 'author website URL uses shared external helper');
 assert_equals('', normalizeAuthorWebsite('/author/local'), 'author website URL rejects internal path');

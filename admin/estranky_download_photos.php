@@ -146,10 +146,7 @@ $batchSize = 20;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_name'])) {
     verifyCsrf();
 
-    $siteUrl = rtrim(trim($_POST['site_url'] ?? ''), '/');
-    if ($siteUrl !== '' && !str_starts_with($siteUrl, 'http://') && !str_starts_with($siteUrl, 'https://')) {
-        $siteUrl = 'https://' . $siteUrl;
-    }
+    $siteUrl = rtrim(normalizeHttpExternalUrl((string)($_POST['site_url'] ?? '')), '/');
     $parentAlbumId = inputInt('post', 'parent_album_id');
 
     /** @var array<string,mixed> $xmlFile */
@@ -160,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     ]);
 
     if ($siteUrl === '') {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Zadejte XML soubor a URL webu.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Zadejte XML soubor a platnou URL webu.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
@@ -447,7 +444,7 @@ adminHeader('Stažení fotografií z eStránek');
              class="admin-input-wide"
              placeholder="https://www.example.cz"
              aria-describedby="url-help">
-      <small id="url-help">Hlavní URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky.</small>
+      <small id="url-help">Hlavní URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky; URL nesmí obsahovat přihlašovací údaje ani nebezpečné schéma.</small>
     </div>
 
     <div class="admin-field-row">
