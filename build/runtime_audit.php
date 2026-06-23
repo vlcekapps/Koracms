@@ -9647,11 +9647,32 @@ echo "=== admin_new_window_link_guardrails ===\n";
 $adminNewWindowIssues = [];
 foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
     $adminNewWindowSource = (string)file_get_contents($adminNewWindowPath);
-    foreach (preg_split('/\R/', $adminNewWindowSource) ?: [] as $lineNumber => $line) {
+    $adminNewWindowLines = preg_split('/\R/', $adminNewWindowSource) ?: [];
+    foreach ($adminNewWindowLines as $lineNumber => $line) {
         if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkLabel(')) {
             $adminNewWindowIssues[] = basename($adminNewWindowPath)
                 . ' contains target="_blank" without newWindowLinkLabel() on source line '
                 . ((int)$lineNumber + 1);
+        }
+        if (str_contains($line, 'window.open(') && !str_contains($line, 'noopener,noreferrer')) {
+            $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                . ' contains window.open() without noopener,noreferrer on source line '
+                . ((int)$lineNumber + 1);
+        }
+        if (str_contains($line, ".target = '_blank'") || str_contains($line, '.target = "_blank"')) {
+            $adminDynamicLinkContext = implode("\n", array_slice($adminNewWindowLines, (int)$lineNumber, 6));
+            if (!str_contains($adminDynamicLinkContext, ".rel = 'noopener noreferrer'")
+                && !str_contains($adminDynamicLinkContext, '.rel = "noopener noreferrer"')) {
+                $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                    . ' contains dynamic target _blank without noopener noreferrer near source line '
+                    . ((int)$lineNumber + 1);
+            }
+            if (!str_contains($adminDynamicLinkContext, '.setAttribute(\'aria-label\'')
+                && !str_contains($adminDynamicLinkContext, '.setAttribute("aria-label"')) {
+                $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                    . ' contains dynamic target _blank without accessible label near source line '
+                    . ((int)$lineNumber + 1);
+            }
         }
     }
 }

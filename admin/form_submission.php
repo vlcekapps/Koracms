@@ -523,7 +523,7 @@ adminHeader('Detail odpovědi formuláře');
           if (draft.labels !== '') {
               query.set('labels', draft.labels);
           }
-          window.open('https://github.com/' + draft.repository + '/issues/new?' + query.toString(), '_blank', 'noopener');
+          window.open('https://github.com/' + draft.repository + '/issues/new?' + query.toString(), '_blank', 'noopener,noreferrer');
           copyStatus.textContent = 'Návrh issue byl otevřen na GitHubu v novém panelu.';
       });
 
