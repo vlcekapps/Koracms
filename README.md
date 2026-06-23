@@ -127,11 +127,11 @@ http://vas-web.cz/admin/login.php
 ## Konfigurace
 
 Veškerá konfigurace je v souboru `config.php`. Vzorový soubor `config.sample.php` obsahuje všechny dostupné konstanty s komentáři.
-Základní vývojová kontrola `composer ci:basic` hlídá přes `build/config_sample_audit.php`, aby tento vzor neztratil databázové proměnné, hlavní runtime konstanty ani vysvětlení pro privátní úložiště, SMTP, GitHub issue bridge a cron token.
+Základní vývojová kontrola `composer ci:basic` hlídá přes `build/config_sample_audit.php`, aby tento vzor neztratil databázové proměnné, hlavní runtime konstanty, bezpečné prázdné tokeny ani vysvětlení pro privátní úložiště, SMTP, GitHub issue bridge a cron token.
 
 ### SMTP (e-maily)
 
-Kora CMS používá e-maily pro registraci, obnovu hesla, newsletter, rezervace, formuláře a interní notifikace. Bez nastavení SMTP se CMS pokusí použít `localhost:25` bez autentizace.
+Kora CMS používá e-maily pro registraci, obnovu hesla, newsletter, rezervace, formuláře a interní notifikace. Vzorový `config.sample.php` používá bezpečný lokální default `localhost:25` bez autentizace; pro produkci hodnoty nahraďte údaji od svého poskytovatele SMTP.
 
 ```php
 define('SMTP_HOST', 'smtp.example.com');

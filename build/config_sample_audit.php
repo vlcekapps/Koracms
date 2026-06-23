@@ -83,6 +83,37 @@ foreach ([
     }
 }
 
+$expectedSafeDefaults = [
+    'BASE_URL' => "''",
+    'KORA_STORAGE_DIR' => "''",
+    'SMTP_HOST' => "'localhost'",
+    'SMTP_PORT' => '25',
+    'SMTP_USER' => "''",
+    'SMTP_PASS' => "''",
+    'SMTP_SECURE' => "''",
+    'GITHUB_ISSUES_TOKEN' => "''",
+    'CRON_TOKEN' => "''",
+];
+
+foreach ($expectedSafeDefaults as $constant => $expectedValue) {
+    $actualValue = $sampleDefines[$constant] ?? null;
+    if ($actualValue !== $expectedValue) {
+        $issues[] = 'config.sample.php should use safe default for ' . $constant . ': ' . $expectedValue;
+    }
+}
+
+foreach ([
+    'smtp.example.com',
+    'uzivatel@example.com',
+    'heslo-nebo-app-password',
+    'ghp_',
+    'VAS_CRON_TOKEN',
+] as $forbiddenPlaceholder) {
+    if (str_contains($configSampleSource, $forbiddenPlaceholder)) {
+        $issues[] = 'config.sample.php should not contain placeholder secret or external SMTP value: ' . $forbiddenPlaceholder;
+    }
+}
+
 foreach ([
     'Přejmenujte tento soubor na config.php',
     'Privátní úložiště mimo webroot',

@@ -7627,6 +7627,10 @@ $foundationChecks = [
         && str_contains($configSampleAuditSource, 'KORA_STORAGE_DIR')
         && str_contains($configSampleAuditSource, 'GITHUB_ISSUES_TOKEN')
         && str_contains($configSampleAuditSource, 'CRON_TOKEN')
+        && str_contains($configSampleAuditSource, '$expectedSafeDefaults')
+        && str_contains($configSampleAuditSource, "'SMTP_HOST' => \"'localhost'\"")
+        && str_contains($configSampleAuditSource, "'SMTP_PORT' => '25'")
+        && str_contains($configSampleAuditSource, 'smtp.example.com')
         && str_contains($configSampleAuditSource, 'config.sample.php is missing define('),
     'version metadata audit is wired into local quality gates' => str_contains($composerSource, '"test:version-metadata"')
         && str_contains($composerSource, 'php build/version_metadata_audit.php')

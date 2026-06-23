@@ -20,12 +20,13 @@ define('BASE_URL', '');
 define('KORA_STORAGE_DIR', '');
 
 // SMTP odesílání e-mailů
-// Pokud konstanty nejsou definovány, použije se localhost:25 bez autentizace.
-define('SMTP_HOST', 'smtp.example.com');
-define('SMTP_PORT', 587);
+// Výchozí hodnoty používají localhost:25 bez autentizace.
+// Pro produkci doplňte údaje od svého poskytovatele SMTP.
+define('SMTP_HOST', 'localhost');
+define('SMTP_PORT', 25);
 define('SMTP_USER', '');          // prázdné = bez autentizace
 define('SMTP_PASS', '');
-define('SMTP_SECURE', 'tls');     // '' (žádné), 'tls' (STARTTLS), 'ssl'
+define('SMTP_SECURE', '');        // '' (žádné), 'tls' (STARTTLS), 'ssl'
 
 // GitHub issue bridge pro odpovědi formulářů
 // Fine-grained token by měl mít oprávnění Issues: Read and write
@@ -34,5 +35,5 @@ define('GITHUB_ISSUES_TOKEN', '');
 // Token pro volitelný HTTP přístup ke cron.php
 // Doporučený způsob spouštění je CLI cron: php /cesta/k/webu/cron.php
 // Pokud musíte používat webový cron, nastavte sem dlouhý náhodný řetězec
-// a volejte např. https://vas-web.cz/cron.php?token=VAS_CRON_TOKEN
+// a volejte např. https://vas-web.cz/cron.php?token=dlouhy-nahodny-retezec
 define('CRON_TOKEN', '');
