@@ -54,7 +54,7 @@ function themeViewAuditIsDynamicAttributeValue(string $value): bool
  */
 function themeViewAuditStaticAttributeValues(string $source, string $attribute): array
 {
-    $pattern = '/\b' . preg_quote($attribute, '/') . '\s*=\s*([\'"])(.*?)\1/si';
+    $pattern = '/(?<![-:\w])' . preg_quote($attribute, '/') . '\s*=\s*([\'"])(.*?)\1/si';
     $matched = preg_match_all($pattern, $source, $rawMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
     if ($matched === false || $matched === 0) {
         return [];
@@ -108,7 +108,7 @@ function themeViewAuditCheckStaticIdReferences(string $relativePath, string $sou
         }
     }
 
-    foreach (['aria-labelledby', 'aria-describedby'] as $attribute) {
+    foreach (['aria-labelledby', 'aria-describedby', 'aria-controls'] as $attribute) {
         foreach (themeViewAuditStaticAttributeValues($source, $attribute) as $match) {
             $targets = preg_split('/\s+/', trim($match['value'])) ?: [];
             foreach ($targets as $target) {
@@ -126,6 +126,20 @@ function themeViewAuditCheckStaticIdReferences(string $relativePath, string $sou
                     . '".';
             }
         }
+    }
+
+    foreach (themeViewAuditStaticAttributeValues($source, 'for') as $match) {
+        $target = trim($match['value']);
+        if ($target === '' || isset($ids[$target])) {
+            continue;
+        }
+
+        $issues[] = $relativePath
+            . ':'
+            . $match['line']
+            . ' contains missing static label target "'
+            . $target
+            . '".';
     }
 }
 

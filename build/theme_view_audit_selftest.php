@@ -148,6 +148,11 @@ assertThemeViewAuditPasses(
 <?php $title = trim((string)($title ?? 'Ukázka')); ?>
 <section aria-labelledby="fixture-heading">
   <h2 id="fixture-heading"><?= h($title) ?></h2>
+  <button type="button" aria-controls="fixture-panel">Zobrazit</button>
+  <div id="fixture-panel">
+    <label for="fixture-input">Ukázkové pole</label>
+    <input id="fixture-input" name="fixture_input">
+  </div>
   <script nonce="<?= cspNonce() ?>">document.documentElement.dataset.fixture='ok';</script>
 </section>
 PHP
@@ -213,6 +218,22 @@ assertThemeViewAuditFails(
 </section>
 PHP,
     'missing static aria-labelledby target "missing-heading"'
+);
+
+assertThemeViewAuditFails(
+    'Missing static aria controls guard',
+    <<<'PHP'
+<button type="button" aria-controls="missing-panel">Otevřít</button>
+PHP,
+    'missing static aria-controls target "missing-panel"'
+);
+
+assertThemeViewAuditFails(
+    'Missing static label target guard',
+    <<<'PHP'
+<label for="missing-input">Pole</label>
+PHP,
+    'missing static label target "missing-input"'
 );
 
 echo "Theme view audit self-test OK\n";
