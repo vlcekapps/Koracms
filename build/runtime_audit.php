@@ -10677,6 +10677,7 @@ $galleryPhotoSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) .
 $wpImportSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/wp_import.php');
 $estrankyImportSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_import.php');
 $estrankyPhotoDownloadSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
+$themeUploadSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/lib/theme.php');
 $mediaHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 $mediaFileEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/file.php');
 $mediaPreviewEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/preview.php');
@@ -10713,6 +10714,7 @@ foreach ([
     'admin/wp_import.php' => [$wpImportSourceForUploads, 'koraStoreInspectedUpload('],
     'admin/estranky_import.php' => [$estrankyImportSourceForUploads, 'koraInspectUploadedFile('],
     'admin/estranky_download_photos.php' => [$estrankyPhotoDownloadSourceForUploads, 'koraInspectUploadedFile('],
+    'lib/theme.php' => [$themeUploadSourceForUploads, 'koraInspectUploadedFile('],
 ] as $uploadSourceLabel => [$uploadSource, $expectedHelper]) {
     if (!str_contains($uploadSource, $expectedHelper)) {
         $mediaLibraryIssues[] = $uploadSourceLabel . ' is missing shared upload helper: ' . $expectedHelper;

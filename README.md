@@ -300,6 +300,8 @@ V administraci lze:
 - měnit variantu hlavičky
 - importovat a exportovat portable ZIP balíčky šablon
 
+Import ZIP balíčku šablony používá sdílenou upload validaci ještě před tím, než CMS balíček rozbalí a zkontroluje manifest, povolené statické soubory a limity velikosti.
+
 Pokud aktivní šablona neobsahuje konkrétní view, systém automaticky použije `default`.
 
 ---

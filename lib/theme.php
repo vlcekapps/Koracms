@@ -1532,22 +1532,20 @@ function themeImportPortablePackageUpload(?array $upload): array
         ];
     }
 
-    $uploadError = (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($uploadError !== UPLOAD_ERR_OK) {
+    $inspectedUpload = koraInspectUploadedFile($upload, [
+        'no_file_error' => themeUploadErrorMessage(UPLOAD_ERR_NO_FILE),
+        'upload_error' => themeUploadErrorMessage((int)($upload['error'] ?? UPLOAD_ERR_NO_FILE)),
+        'invalid_upload_error' => 'Server nedostal platný upload ZIP balíčku šablony.',
+        'empty_file_error' => 'ZIP balíček šablony je prázdný.',
+    ]);
+    if (empty($inspectedUpload['ok'])) {
         return [
             'ok' => false,
-            'errors' => [themeUploadErrorMessage($uploadError)],
+            'errors' => [(string)($inspectedUpload['error'] ?? 'Nahrání ZIP balíčku šablony selhalo.')],
         ];
     }
 
-    $tmpName = (string)($upload['tmp_name'] ?? '');
-    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
-        return [
-            'ok' => false,
-            'errors' => ['Server nedostal platný upload ZIP balíčku šablony.'],
-        ];
-    }
-
+    $tmpName = (string)$inspectedUpload['tmp_path'];
     $zipResult = themeReadZipArchive($tmpName);
     if (!$zipResult['ok']) {
         return [

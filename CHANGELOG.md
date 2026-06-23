@@ -33,6 +33,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Opraveno
 - **Upload hardening branding assetů, příloh a galerií** – logo a favicona webu, přílohy vývěsky, lokální soubory ke stažení a hromadné nahrávání fotografií galerie nově používají sdílené upload helpery pro kontrolu PHP upload stavu, dočasného souboru, typu/formátu a finálního uložení; runtime audit hlídá, aby se do těchto handlerů nevrátila vlastní `finfo`/`move_uploaded_file` logika.
+- **Upload hardening balíčků šablon** – import portable ZIP balíčku šablony nově přebírá nahraný soubor přes sdílenou upload validaci ještě před vlastním rozbalením a manifest/package kontrolami.
 - **Upload hardening importních XML souborů** – import z WordPressu, import z eStránek i downloader fotografií z eStránek nově ověřují nahraný XML/WXR soubor přes sdílenou upload validaci; WordPress náhled navíc ukládá dočasnou cache přes stejný bezpečný helper jako ostatní uploady.
 - **Náhledový obrázek článku** – editor blogového článku nově používá sdílený upload helper, při chybě uploadu vrací srozumitelnou hlášku přímo u pole a při výměně nebo odebrání uklízí originál, miniaturu, WebP i responsive varianty.
 - **SQL zálohy databáze** – ruční záloha v administraci i automatická cron záloha nově sdílejí stejný exportní helper, explicitně čtou řádky jako asociativní pole a kontrolují výsledek `SHOW CREATE TABLE`, takže se výstup nespoléhá na globální PDO fetch mód ani na duplicitní ruční skládání dumpu.
