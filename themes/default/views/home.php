@@ -233,7 +233,8 @@ $renderNewsSection = static function (array $items, bool $compactCards = false) 
 
 $renderBlogSection = static function (array $items, bool $featureLead = false, bool $compactCards = false) use (
     $articleLink,
-    $renderAuthorName
+    $renderAuthorName,
+    $viewerIsAdmin
 ): string {
     if ($items === []) {
         return '';
@@ -284,7 +285,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
               <?php endif; ?>
               <p>
                 <a class="section-link" href="<?= h($articleLink($leadArticle)) ?>">Číst článek <span aria-hidden="true">→</span></a>
-                <?php if (isset($_SESSION['cms_user_id'])): ?>
+                <?php if (!empty($viewerIsAdmin)): ?>
                   · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$leadArticle['id'] ?>">Upravit</a>
                 <?php endif; ?>
               </p>
@@ -316,7 +317,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                   <?php endif; ?>
                   <p>
                     <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a>
-                    <?php if (isset($_SESSION['cms_user_id'])): ?>
+                    <?php if (!empty($viewerIsAdmin)): ?>
                       · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                     <?php endif; ?>
                   </p>
@@ -351,7 +352,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                 <?php endif; ?>
                 <p>
                   <a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a>
-                  <?php if (isset($_SESSION['cms_user_id'])): ?>
+                  <?php if (!empty($viewerIsAdmin)): ?>
                     · <a href="<?= BASE_URL ?>/admin/blog_form.php?id=<?= (int)$article['id'] ?>">Upravit</a>
                   <?php endif; ?>
                 </p>

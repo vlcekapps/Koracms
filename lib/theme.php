@@ -1870,9 +1870,17 @@ function renderPublicPage(array $pageData): void
         $bodyClasses[] = 'has-admin-bar';
     }
 
+    $viewData = is_array($pageData['view_data'] ?? null) ? $pageData['view_data'] : [];
+    if (!array_key_exists('viewerIsAdmin', $viewData)) {
+        $viewData['viewerIsAdmin'] = isLoggedIn();
+    }
+    if (!array_key_exists('currentDate', $viewData)) {
+        $viewData['currentDate'] = date('Y-m-d');
+    }
+
     $contentHtml = renderThemeView(
         $viewName,
-        is_array($pageData['view_data'] ?? null) ? $pageData['view_data'] : [],
+        $viewData,
         $themeName
     );
 
@@ -1886,6 +1894,7 @@ function renderPublicPage(array $pageData): void
     $bodyClassAttr = implode(' ', array_unique(array_filter($bodyClasses)));
     $themeManifest = themeManifest($themeName);
     $extraHeadHtml = (string)($pageData['extra_head_html'] ?? '');
+    $currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/index.php');
 
     $headerData = [
         'siteName' => $siteName,

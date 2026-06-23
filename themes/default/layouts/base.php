@@ -6,7 +6,7 @@ if ($configuredThemeName === '') {
     $configuredThemeName = defaultThemeName();
 }
 $configuredThemeName = themeExists($configuredThemeName) ? $configuredThemeName : defaultThemeName();
-$currentRequestUri = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/index.php');
+$currentRequestUri = (string)($currentRequestUri ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="cs">

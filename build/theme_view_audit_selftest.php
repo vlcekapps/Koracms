@@ -176,6 +176,16 @@ PHP,
 );
 
 assertThemeViewAuditFails(
+    'Runtime context superglobal guard',
+    <<<'PHP'
+<?php if (!empty($_SESSION['cms_user_id'])): ?>
+  <a href="/admin/">Administrace</a>
+<?php endif; ?>
+PHP,
+    'runtime context superglobal'
+);
+
+assertThemeViewAuditFails(
     'Database side effect guard',
     <<<'PHP'
 <?php $pdo = db_connect(); $stmt = $pdo->query('SELECT 1'); ?>
@@ -190,6 +200,14 @@ assertThemeViewAuditFails(
 <p style="color:red">Text</p>
 PHP,
     'inline style element or attribute'
+);
+
+assertThemeViewAuditFails(
+    'Runtime clock guard',
+    <<<'PHP'
+<time datetime="<?= h(date('Y-m-d')) ?>">Dnes</time>
+PHP,
+    'runtime clock'
 );
 
 assertThemeViewAuditFails(

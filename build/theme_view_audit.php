@@ -163,10 +163,12 @@ foreach (themeViewAuditFiles($themeRoot) as $path) {
 
     foreach ([
         'request input superglobal' => '/\$_(?:GET|POST|REQUEST|FILES|COOKIE)\b/',
+        'runtime context superglobal' => '/\$_(?:SESSION|SERVER|ENV)\b/',
         'database connection or query' => '/(?:db_connect\s*\(|new\s+PDO\b|PDO::|->\s*(?:prepare|query|exec)\s*\()/',
         'response header mutation' => '/\b(?:header|setcookie|http_response_code)\s*\(/',
         'filesystem write or mutation' => '/\b(?:file_put_contents|fopen|unlink|mkdir|rename|copy|move_uploaded_file|is_uploaded_file)\s*\(/',
         'network or mail side effect' => '/\b(?:curl_[a-z_]+|mail)\s*\(/',
+        'runtime clock' => '/\b(?:date|time|microtime)\s*\(/',
         'dynamic PHP include' => '/\b(?:require|require_once|include|include_once)\s*\(/',
         'eval' => '/\beval\s*\(/',
         'inline style element or attribute' => '/<style\b|style\s*=/i',
