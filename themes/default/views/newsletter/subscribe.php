@@ -14,17 +14,17 @@
         <p>Tato adresa je již přihlášena k odběru.</p>
       </div>
     <?php elseif ($state === 'mail_error'): ?>
-      <div id="form-errors" class="status-message status-message--error" role="alert">
+      <div id="newsletter-mail-error" class="status-message status-message--error" role="alert">
         <p>Adresa byla zaregistrována, ale potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.</p>
       </div>
     <?php elseif ($state === 'error'): ?>
-      <div id="form-errors" class="status-message status-message--error" role="alert">
+      <div id="newsletter-form-errors" class="status-message status-message--error" role="alert">
         <p>Zadejte platnou e-mailovou adresu.</p>
       </div>
     <?php endif; ?>
 
     <?php if ($state === 'form' || $state === 'error'): ?>
-      <form method="post" novalidate class="form-stack"<?php if ($state === 'error'): ?> aria-describedby="form-errors"<?php endif; ?>>
+      <form method="post" novalidate class="form-stack"<?php if ($state === 'error'): ?> aria-describedby="newsletter-form-errors"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <?= honeypotField() ?>
 

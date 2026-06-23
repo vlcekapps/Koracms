@@ -64,8 +64,8 @@
             </div>
           <?php elseif ($slotMode === 'range'): ?>
             <div class="field">
-              <label for="start_time">Začátek <span aria-hidden="true">*</span></label>
-              <select id="start_time" name="start_time" class="form-control" required aria-required="true">
+              <label for="reservation-start-time-range">Začátek <span aria-hidden="true">*</span></label>
+              <select id="reservation-start-time-range" name="start_time" class="form-control" required aria-required="true">
                 <option value="">-- vyberte --</option>
                 <?php foreach ($slots as $timeOption): ?>
                   <option value="<?= h($timeOption) ?>"<?= $formData['start_time'] === $timeOption ? ' selected' : '' ?>><?= h($timeOption) ?></option>
@@ -85,8 +85,8 @@
           <?php elseif ($slotMode === 'duration'): ?>
             <p class="help-text">Délka rezervace: <?= (int)$resource['slot_duration_min'] ?> minut.</p>
             <div class="field">
-              <label for="start_time">Čas začátku <span aria-hidden="true">*</span></label>
-              <select id="start_time" name="start_time" class="form-control" required aria-required="true">
+              <label for="reservation-start-time-duration">Čas začátku <span aria-hidden="true">*</span></label>
+              <select id="reservation-start-time-duration" name="start_time" class="form-control" required aria-required="true">
                 <option value="">-- vyberte --</option>
                 <?php foreach ($slots as $timeOption): ?>
                   <option value="<?= h($timeOption) ?>"<?= $formData['start_time'] === $timeOption ? ' selected' : '' ?>><?= h($timeOption) ?></option>

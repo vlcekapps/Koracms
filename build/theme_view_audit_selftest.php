@@ -153,6 +153,15 @@ assertThemeViewAuditPasses(
 PHP
 );
 
+assertThemeViewAuditPasses(
+    'Dynamic aria reference guard',
+    <<<'PHP'
+<section aria-labelledby="fixture-heading-<?= (int)$id ?>">
+  <h2 id="fixture-heading-<?= (int)$id ?>">Dynamická sekce</h2>
+</section>
+PHP
+);
+
 assertThemeViewAuditFails(
     'Request input guard',
     <<<'PHP'
@@ -184,6 +193,26 @@ assertThemeViewAuditFails(
 <script>document.documentElement.dataset.bad='1';</script>
 PHP,
     'script tag without CSP nonce'
+);
+
+assertThemeViewAuditFails(
+    'Duplicate static id guard',
+    <<<'PHP'
+<section id="duplicated-id">
+  <h2 id="duplicated-id">Duplicitní nadpis</h2>
+</section>
+PHP,
+    'duplicate static id "duplicated-id"'
+);
+
+assertThemeViewAuditFails(
+    'Missing static aria target guard',
+    <<<'PHP'
+<section aria-labelledby="missing-heading">
+  <p>Obsah bez cílového nadpisu.</p>
+</section>
+PHP,
+    'missing static aria-labelledby target "missing-heading"'
 );
 
 echo "Theme view audit self-test OK\n";

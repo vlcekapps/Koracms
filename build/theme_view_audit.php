@@ -39,6 +39,96 @@ function themeViewAuditRelativePath(string $path, string $themeRoot): string
     return str_replace('\\', '/', substr($path, strlen($themeRoot) + 1));
 }
 
+function themeViewAuditLineNumber(string $source, int $offset): int
+{
+    return substr_count(substr($source, 0, max(0, $offset)), "\n") + 1;
+}
+
+function themeViewAuditIsDynamicAttributeValue(string $value): bool
+{
+    return preg_match('/<\?(?:php|=)?|\$|\{|\}/', $value) === 1;
+}
+
+/**
+ * @return list<array{value:string,line:int}>
+ */
+function themeViewAuditStaticAttributeValues(string $source, string $attribute): array
+{
+    $pattern = '/\b' . preg_quote($attribute, '/') . '\s*=\s*([\'"])(.*?)\1/si';
+    $matched = preg_match_all($pattern, $source, $rawMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+    if ($matched === false || $matched === 0) {
+        return [];
+    }
+
+    /** @var list<array<int, array{0:string,1:int}>> $rawMatches */
+    $values = [];
+    foreach ($rawMatches as $match) {
+        $value = html_entity_decode($match[2][0], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($value === '' || themeViewAuditIsDynamicAttributeValue($value)) {
+            continue;
+        }
+
+        $values[] = [
+            'value' => $value,
+            'line' => themeViewAuditLineNumber($source, $match[0][1]),
+        ];
+    }
+
+    return $values;
+}
+
+/**
+ * @return array<string,list<int>>
+ */
+function themeViewAuditStaticIds(string $source): array
+{
+    $ids = [];
+    foreach (themeViewAuditStaticAttributeValues($source, 'id') as $match) {
+        $id = trim($match['value']);
+        if ($id === '') {
+            continue;
+        }
+
+        $ids[$id][] = $match['line'];
+    }
+
+    return $ids;
+}
+
+/**
+ * @param list<string> $issues
+ */
+function themeViewAuditCheckStaticIdReferences(string $relativePath, string $source, array &$issues): void
+{
+    $ids = themeViewAuditStaticIds($source);
+
+    foreach ($ids as $id => $lines) {
+        if (count($lines) > 1) {
+            $issues[] = $relativePath . ' contains duplicate static id "' . $id . '" on lines ' . implode(', ', $lines) . '.';
+        }
+    }
+
+    foreach (['aria-labelledby', 'aria-describedby'] as $attribute) {
+        foreach (themeViewAuditStaticAttributeValues($source, $attribute) as $match) {
+            $targets = preg_split('/\s+/', trim($match['value'])) ?: [];
+            foreach ($targets as $target) {
+                if ($target === '' || isset($ids[$target])) {
+                    continue;
+                }
+
+                $issues[] = $relativePath
+                    . ':'
+                    . $match['line']
+                    . ' contains missing static '
+                    . $attribute
+                    . ' target "'
+                    . $target
+                    . '".';
+            }
+        }
+    }
+}
+
 /**
  * @param list<string> $issues
  */
@@ -71,6 +161,8 @@ foreach (themeViewAuditFiles($themeRoot) as $path) {
     ] as $label => $pattern) {
         themeViewAuditForbidPattern($label, $relativePath, $source, $pattern, $issues);
     }
+
+    themeViewAuditCheckStaticIdReferences($relativePath, $source, $issues);
 
     if (preg_match_all('/<script\b[^>]*>/i', $source, $scriptMatches) !== false) {
         foreach ($scriptMatches[0] as $scriptTag) {

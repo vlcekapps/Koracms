@@ -70,6 +70,8 @@ $schemaParityAuditSource = is_file(__DIR__ . '/schema_parity_audit.php') ? (stri
 $redirectGuardrailsAuditSource = is_file(__DIR__ . '/redirect_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit.php') : '';
 $workflowAuditSource = is_file(__DIR__ . '/workflow_audit.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit.php') : '';
 $workflowAuditSelftestSource = is_file(__DIR__ . '/workflow_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit_selftest.php') : '';
+$themeViewAuditSource = is_file(__DIR__ . '/theme_view_audit.php') ? (string) file_get_contents(__DIR__ . '/theme_view_audit.php') : '';
+$themeViewAuditSelftestSource = is_file(__DIR__ . '/theme_view_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/theme_view_audit_selftest.php') : '';
 $sourceEncodingAuditSource = is_file(__DIR__ . '/source_encoding_audit.php') ? (string) file_get_contents(__DIR__ . '/source_encoding_audit.php') : '';
 $mojibakeAuditSource = is_file(__DIR__ . '/mojibake_audit.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit.php') : '';
 $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit.php') : '';
@@ -7651,6 +7653,12 @@ $foundationChecks = [
         && str_contains($composerSource, '"test:theme-views-selftest"')
         && str_contains($composerSource, 'php build/theme_view_audit_selftest.php')
         && str_contains($composerSource, '@test:theme-views-selftest'),
+    'theme view audit checks static id and aria references' => str_contains($themeViewAuditSource, 'themeViewAuditCheckStaticIdReferences')
+        && str_contains($themeViewAuditSource, "['aria-labelledby', 'aria-describedby']")
+        && str_contains($themeViewAuditSource, 'duplicate static id')
+        && str_contains($themeViewAuditSource, 'missing static ')
+        && str_contains($themeViewAuditSelftestSource, 'Duplicate static id guard')
+        && str_contains($themeViewAuditSelftestSource, 'Missing static aria target guard'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 6')
