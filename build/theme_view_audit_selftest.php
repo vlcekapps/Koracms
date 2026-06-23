@@ -171,6 +171,13 @@ PHP
 );
 
 assertThemeViewAuditPasses(
+    'Dynamic new-window label helper guard',
+    <<<'PHP'
+<a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Externí odkaz')) ?>">Externí odkaz</a>
+PHP
+);
+
+assertThemeViewAuditPasses(
     'Dynamic form label guard',
     <<<'PHP'
 <?php $fieldId = 'field-' . (int)$id; ?>
@@ -320,6 +327,14 @@ assertThemeViewAuditFails(
 <a href="https://example.test" target="_blank" rel="noopener noreferrer">Externí odkaz</a>
 PHP,
     'target="_blank" link without accessible new-window label'
+);
+
+assertThemeViewAuditFails(
+    'Blank target label copy guard',
+    <<<'PHP'
+<a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="Externí odkaz">Externí odkaz</a>
+PHP,
+    'target="_blank" link whose accessible label does not mention a new window'
 );
 
 echo "Theme view audit self-test OK\n";

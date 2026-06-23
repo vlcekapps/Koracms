@@ -137,6 +137,21 @@ test_section('navigation links');
 assert_equals('/kontakt', navigationLinkUrl('/kontakt'), 'navigation link accepts internal path');
 assert_equals('https://example.com', navigationLinkUrl('https://example.com'), 'navigation link accepts https URL');
 assert_equals('', navigationLinkUrl('javascript:alert(1)'), 'navigation link rejects unsafe scheme');
+assert_equals(
+    'Externí – otevře se v novém okně',
+    newWindowLinkLabel('Externí'),
+    'newWindowLinkLabel announces a new window'
+);
+assert_equals(
+    'Externí – Přístupný popis – otevře se v novém okně',
+    newWindowLinkLabel('Externí', 'Přístupný popis'),
+    'newWindowLinkLabel keeps supplemental accessible text'
+);
+assert_equals(
+    'Odkaz – otevře se v novém okně',
+    newWindowLinkLabel(''),
+    'newWindowLinkLabel has a safe fallback label'
+);
 assert_contains(
     'target="_blank"',
     navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),

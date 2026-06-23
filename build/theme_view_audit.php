@@ -143,6 +143,27 @@ function themeViewAuditControlType(string $tagName, string $tag): string
     return is_string($type) ? strtolower(trim($type)) : 'text';
 }
 
+function themeViewAuditTagHasNewWindowAccessibleName(string $tag): bool
+{
+    if (themeViewAuditTagHasAttribute($tag, 'aria-labelledby')) {
+        return true;
+    }
+
+    $ariaLabel = themeViewAuditTagAttributeValue($tag, 'aria-label');
+    if (!is_string($ariaLabel) || trim($ariaLabel) === '') {
+        return false;
+    }
+
+    if (themeViewAuditIsDynamicAttributeValue($ariaLabel)) {
+        return str_contains($ariaLabel, 'newWindowLinkLabel(');
+    }
+
+    $normalizedLabel = mb_strtolower(trim($ariaLabel), 'UTF-8');
+    return str_contains($normalizedLabel, 'novém okně')
+        || str_contains($normalizedLabel, 'novem okne')
+        || str_contains($normalizedLabel, 'new window');
+}
+
 /**
  * @param list<string> $issues
  */
@@ -239,6 +260,11 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
             && !themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')
         ) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without accessible new-window label.';
+            continue;
+        }
+
+        if (!themeViewAuditTagHasNewWindowAccessibleName($match['tag'])) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link whose accessible label does not mention a new window.';
         }
     }
 
