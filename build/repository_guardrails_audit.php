@@ -2,8 +2,29 @@
 
 declare(strict_types=1);
 
-$projectRoot = dirname(__DIR__);
+$projectRootArgument = $argv[1] ?? null;
+$projectRoot = repositoryGuardrailsProjectRoot(is_string($projectRootArgument) ? $projectRootArgument : null);
 $issues = [];
+
+function repositoryGuardrailsProjectRoot(?string $override): string
+{
+    if ($override !== null && $override !== '') {
+        $resolvedOverride = realpath($override);
+        if ($resolvedOverride !== false && is_dir($resolvedOverride)) {
+            return $resolvedOverride;
+        }
+    }
+
+    $environmentOverride = getenv('KORA_REPOSITORY_GUARDRAILS_ROOT');
+    if (is_string($environmentOverride) && $environmentOverride !== '') {
+        $resolvedEnvironmentOverride = realpath($environmentOverride);
+        if ($resolvedEnvironmentOverride !== false && is_dir($resolvedEnvironmentOverride)) {
+            return $resolvedEnvironmentOverride;
+        }
+    }
+
+    return dirname(__DIR__);
+}
 
 /**
  * @return list<string>

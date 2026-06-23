@@ -66,6 +66,7 @@ $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (stri
 $unitTestsSource = is_file(__DIR__ . '/unit_tests.php') ? (string) file_get_contents(__DIR__ . '/unit_tests.php') : '';
 $httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string) file_get_contents(__DIR__ . '/http_server_router.php') : '';
 $repositoryGuardrailsAuditSource = is_file(__DIR__ . '/repository_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/repository_guardrails_audit.php') : '';
+$repositoryGuardrailsAuditSelftestSource = is_file(__DIR__ . '/repository_guardrails_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/repository_guardrails_audit_selftest.php') : '';
 $configSampleAuditSource = is_file(__DIR__ . '/config_sample_audit.php') ? (string) file_get_contents(__DIR__ . '/config_sample_audit.php') : '';
 $versionMetadataAuditSource = is_file(__DIR__ . '/version_metadata_audit.php') ? (string) file_get_contents(__DIR__ . '/version_metadata_audit.php') : '';
 $schemaParityAuditSource = is_file(__DIR__ . '/schema_parity_audit.php') ? (string) file_get_contents(__DIR__ . '/schema_parity_audit.php') : '';
@@ -7608,9 +7609,15 @@ $foundationChecks = [
         && str_contains($ciWorkflowSource, 'composer validate --strict'),
     'repository guardrails audit is wired into local quality gates' => str_contains($composerSource, '"test:repo-guardrails"')
         && str_contains($composerSource, 'php build/repository_guardrails_audit.php')
+        && str_contains($composerSource, '"test:repo-guardrails-selftest"')
+        && str_contains($composerSource, 'php build/repository_guardrails_audit_selftest.php')
         && str_contains($composerSource, '@test:repo-guardrails')
+        && str_contains($composerSource, '@test:repo-guardrails-selftest')
+        && str_contains($composerSource, 'build/repository_guardrails_audit_selftest.php')
         && str_contains($composerSource, 'build/repository_guardrails_audit.php')
         && str_contains($phpstanConfigSource, 'build/repository_guardrails_audit.php')
+        && str_contains($phpstanConfigSource, 'build/repository_guardrails_audit_selftest.php')
+        && str_contains($repositoryGuardrailsAuditSource, 'repositoryGuardrailsProjectRoot')
         && str_contains($repositoryGuardrailsAuditSource, 'forbiddenTrackedRepositoryArtifactReason')
         && str_contains($repositoryGuardrailsAuditSource, 'sensitive local configuration must not be tracked')
         && str_contains($repositoryGuardrailsAuditSource, 'user upload content must not be tracked')
@@ -7621,7 +7628,15 @@ $foundationChecks = [
         && str_contains($repositoryGuardrailsAuditSource, 'reserved DB connection variable')
         && str_contains($repositoryGuardrailsAuditSource, 'build/unit_test_bootstrap.php')
         && str_contains($repositoryGuardrailsAuditSource, 'config.sample.php')
-        && str_contains($repositoryGuardrailsAuditSource, 'db.php'),
+        && str_contains($repositoryGuardrailsAuditSource, 'db.php')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, 'assertRepositoryGuardrailsPasses')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, 'assertRepositoryGuardrailsFails')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, 'config.php')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, '.env')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, 'vendor/autoload.php')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, 'uploads/media/file.pdf')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, 'Reserved DB variable guard')
+        && str_contains($repositoryGuardrailsAuditSelftestSource, "repositoryGuardrailsSelfTestVariable('user')"),
     'config sample audit is wired into local quality gates' => str_contains($composerSource, '"test:config-sample"')
         && str_contains($composerSource, 'php build/config_sample_audit.php')
         && str_contains($composerSource, '@test:config-sample')
@@ -7801,11 +7816,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
