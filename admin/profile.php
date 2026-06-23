@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($authorWebsiteInput !== '') {
         $authorWebsite = normalizeAuthorWebsite($authorWebsiteInput);
         if ($authorWebsite === '') {
-            $errors[] = 'Web autora musí být platná adresa začínající na http:// nebo https://.';
+            $errors[] = 'Web autora musí být platná veřejná adresa. Lze zadat i doménu bez schématu, CMS ji uloží jako https://.';
             $fieldErrors[] = 'author_website';
         }
     }
@@ -204,7 +204,7 @@ $fieldErrorMessages = [
     'new_pass' => 'Nové heslo musí mít alespoň 8 znaků.',
     'new_pass2' => 'Kontrolní heslo se musí shodovat s novým heslem.',
     'author_slug' => 'Zadejte jedinečný slug veřejného autora.',
-    'author_website' => 'Zadejte platnou adresu začínající na http:// nebo https://.',
+    'author_website' => 'Zadejte platnou veřejnou webovou adresu, například https://example.com.',
     'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP.',
     'totp_verify' => 'Zadejte platný šestimístný ověřovací kód.',
 ];

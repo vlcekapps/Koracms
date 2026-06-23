@@ -377,8 +377,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $addFieldError($name, 'Pole „' . $label . '“ musí být platná e-mailová adresa.');
             }
 
-            if ($fieldType === 'url' && $value !== '' && !filter_var($value, FILTER_VALIDATE_URL)) {
-                $addFieldError($name, 'Pole „' . $label . '“ musí být platná webová adresa.');
+            if ($fieldType === 'url' && $value !== '') {
+                $normalizedUrlValue = normalizePublicFormUrlFieldValue($value);
+                if ($normalizedUrlValue === '') {
+                    $addFieldError($name, 'Pole „' . $label . '“ musí být platná webová adresa začínající na http:// nebo https://.');
+                } else {
+                    $value = $normalizedUrlValue;
+                    $formData[$name] = $value;
+                }
             }
 
             if (in_array($fieldType, ['select', 'radio'], true) && $value !== '') {

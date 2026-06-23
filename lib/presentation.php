@@ -4939,21 +4939,7 @@ function authorDisplayName(array $author): string
 
 function normalizeAuthorWebsite(string $value): string
 {
-    $value = trim($value);
-    if ($value === '') {
-        return '';
-    }
-
-    if (!preg_match('#^https?://#i', $value)) {
-        $value = 'https://' . ltrim($value, '/');
-    }
-
-    $validated = filter_var($value, FILTER_VALIDATE_URL);
-    if (!is_string($validated) || !preg_match('#^https?://#i', $validated)) {
-        return '';
-    }
-
-    return $validated;
+    return normalizeHttpExternalUrl($value);
 }
 
 /**
@@ -5946,6 +5932,11 @@ function normalizeFormSuccessBehavior(string $value, string $redirectUrl = ''): 
     return trim($redirectUrl) !== '' ? 'redirect' : 'message';
 }
 
+function normalizePublicFormUrlFieldValue(string $value): string
+{
+    return normalizeHttpExternalUrl($value, false);
+}
+
 function normalizeFormConditionOperator(string $value, string $fallbackExpected = ''): string
 {
     $normalized = trim($value);
@@ -6373,7 +6364,7 @@ function formPresetDefinitions(): array
                 ['field_type' => 'email', 'label' => 'E-mail odesílatele', 'name' => 'email_odesilatele', 'default_value' => '', 'placeholder' => 'vas@email.cz', 'help_text' => 'Na tuto adresu můžeme poslat doplňující otázky i řešení.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 1, 'sort_order' => 20],
                 ['field_type' => 'radio', 'label' => 'Jak moc to spěchá', 'name' => 'nalehavost', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Pomůže nám správně seřadit příchozí žádosti.', 'options' => 'Nízká|Střední|Vysoká', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 30],
                 ['field_type' => 'checkbox_group', 'label' => 'Čeho se žádost týká', 'name' => 'ceho_se_zadost_tyka', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Můžete označit víc oblastí, pokud se dotaz týká více částí systému.', 'options' => 'Administrace|Veřejný web|Formuláře|Rezervace|Blogy|Šablony|Import a export', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'start_new_row' => 1, 'is_required' => 0, 'sort_order' => 40],
-                ['field_type' => 'url', 'label' => 'Adresa stránky nebo místa v systému', 'name' => 'adresa_mista', 'default_value' => '', 'placeholder' => 'https://example.com/admin/... nebo /blog/index.php', 'help_text' => 'Volitelné. Pomůže nám rychleji najít, čeho se problém týká.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 50],
+                ['field_type' => 'url', 'label' => 'Adresa stránky nebo místa v systému', 'name' => 'adresa_mista', 'default_value' => '', 'placeholder' => 'https://example.com/admin/...', 'help_text' => 'Volitelné. Vložte úplnou webovou adresu začínající na http:// nebo https://, aby šlo rychleji najít, čeho se problém týká.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 50],
                 ['field_type' => 'section', 'label' => 'Popis a co už jste zkusili', 'name' => 'popis_a_co_uz_jste_zkusili', 'default_value' => '', 'placeholder' => '', 'help_text' => 'Čím konkrétněji žádost popíšete, tím rychleji se v ní zorientujeme.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'is_required' => 0, 'sort_order' => 55],
                 ['field_type' => 'textarea', 'label' => 'Co potřebujete vyřešit', 'name' => 'co_potrebujete_vyresit', 'default_value' => '', 'placeholder' => 'Popište, s čím potřebujete pomoct nebo co nejde dokončit.', 'help_text' => '', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'full', 'start_new_row' => 1, 'is_required' => 1, 'sort_order' => 60],
                 ['field_type' => 'textarea', 'label' => 'Co jste už zkusili', 'name' => 'co_jste_uz_zkusili', 'default_value' => '', 'placeholder' => 'Například změna nastavení, odhlášení, jiný prohlížeč nebo znovunačtení stránky.', 'help_text' => 'Volitelné. Pomůže nám to nepokládat stejné první otázky znovu.', 'options' => '', 'accept_types' => '', 'max_file_size_mb' => 10, 'layout_width' => 'half', 'is_required' => 0, 'sort_order' => 70],

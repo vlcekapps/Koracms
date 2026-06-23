@@ -206,6 +206,12 @@ assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'pl
 assert_equals('', normalizePlaceUrl('//places.example'), 'place URL rejects protocol-relative URL');
 assert_equals('https://social.example/profile', normalizeWidgetExternalUrl('social.example/profile'), 'widget external URL uses shared external helper');
 assert_equals('', normalizeWidgetExternalUrl('https://user:pass@social.example/profile'), 'widget external URL rejects credentials');
+assert_equals('https://author.example/profile', normalizeAuthorWebsite('author.example/profile'), 'author website URL uses shared external helper');
+assert_equals('', normalizeAuthorWebsite('/author/local'), 'author website URL rejects internal path');
+assert_equals('https://example.com/problem', normalizePublicFormUrlFieldValue('https://example.com/problem'), 'public form URL field accepts explicit https URL');
+assert_equals('', normalizePublicFormUrlFieldValue('example.com/problem'), 'public form URL field requires explicit scheme');
+assert_equals('', normalizePublicFormUrlFieldValue('ftp://example.com/file'), 'public form URL field rejects non-http scheme');
+assert_equals('', normalizePublicFormUrlFieldValue('https://user:pass@example.com/problem'), 'public form URL field rejects credentials');
 assert_equals('https://example.com/hook', normalizeFormWebhookUrl('https://example.com/hook'), 'webhook URL accepts explicit public https URL');
 assert_equals('', normalizeFormWebhookUrl('example.com/hook'), 'webhook URL requires explicit scheme');
 assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook URL rejects non-https scheme');

@@ -285,6 +285,8 @@ Ruční i automaticky ukládané `301/302` redirecty ověřují starou adresu ja
 
 Externí URL zadávané v administraci pro widgety sociálních sítí, podcasty, zajímavá místa a položky ke stažení používají sdílenou validaci: běžné domény bez schématu se doplní na `https://`, ale interní cesty, protocol-relative adresy, řídicí znaky, nebezpečná schémata a URL s přihlašovacími údaji se odmítnou. Webhooky formulářů zůstávají přísnější: vyžadují explicitní veřejné `https://` URL a dál procházejí ochranou proti privátním nebo lokálním hostům.
 
+Stejný bezpečnostní základ používá i web autora. Pole typu `URL` ve veřejných formulářích jsou záměrně přísnější: návštěvník musí zadat úplnou adresu začínající na `http://` nebo `https://`, ne interní cestu ani holou doménu, aby se do odpovědí nedostaly nejednoznačné nebo nebezpečné odkazy.
+
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek. Sitemapa je čistě čtecí endpoint a podporuje jen metody `GET` a `HEAD`.
 
 Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`.

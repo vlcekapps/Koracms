@@ -7578,12 +7578,16 @@ $foundationChecks = [
         && str_contains($authSource, "str_starts_with(\$target, '/')")
         && str_contains($authSource, 'FILTER_VALIDATE_URL')
         && str_contains($presentationSource, 'return normalizeHttpExternalUrl($value);')
+        && str_contains($presentationSource, 'function normalizePublicFormUrlFieldValue(string $value): string')
+        && str_contains($presentationSource, 'return normalizeHttpExternalUrl($value, false);')
+        && str_contains($formsIndexSource, 'normalizePublicFormUrlFieldValue($value)')
         && str_contains($widgetsSource, 'return normalizeHttpExternalUrl($value);')
         && str_contains($webhooksSource, 'normalizeHttpExternalUrl($url, false)')
         && str_contains($webhooksSource, 'formWebhookHostAllowed($host)')
         && str_contains($unitTestsSource, "test_section('external URL normalizers')")
         && str_contains($unitTestsSource, "normalizeHttpExternalUrl('https://user:pass@example.com/path')")
-        && str_contains($unitTestsSource, "normalizeHttpExternalUrl('//example.com/path')"),
+        && str_contains($unitTestsSource, "normalizeHttpExternalUrl('//example.com/path')")
+        && str_contains($unitTestsSource, "normalizePublicFormUrlFieldValue('https://user:pass@example.com/problem')"),
     'pagination helper uses heading-backed navigation' => str_contains($paginationSource, 'class="sr-only"')
         && str_contains($paginationSource, 'aria-labelledby="')
         && str_contains($paginationSource, 'pager-heading-')

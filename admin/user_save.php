@@ -82,7 +82,7 @@ if ($authorFieldsAllowed) {
     if ($authorWebsiteInput !== '') {
         $authorWebsite = normalizeAuthorWebsite($authorWebsiteInput);
         if ($authorWebsite === '') {
-            $errors[] = 'Web autora musí být platná adresa začínající na http:// nebo https://.';
+            $errors[] = 'Web autora musí být platná veřejná adresa. Lze zadat i doménu bez schématu, CMS ji uloží jako https://.';
             $errorFields[] = 'author_website';
         }
     } else {

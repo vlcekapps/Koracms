@@ -27,6 +27,8 @@ Tento dokument doplňuje [README.md](../README.md) o podrobnější informace k 
 
 Každé pole může mít nápovědu, placeholder a výchozí hodnotu.
 
+Pole typu `url` ve veřejném formuláři vyžaduje úplnou adresu začínající na `http://` nebo `https://`. CMS tím odmítá interní cesty, holé domény, nebezpečná schémata, řídicí znaky a URL s přihlašovacími údaji. Pokud chcete od návštěvníka přijmout i volnější text typu interní cesty nebo poznámky k místu, použijte raději obyčejné textové pole.
+
 ### Sekce a rozložení
 
 - Formulář lze rozdělit do sekcí s vlastním mezititulkem a úvodním textem.

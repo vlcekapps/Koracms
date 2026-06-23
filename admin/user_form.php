@@ -62,7 +62,7 @@ $fieldErrorMessages = [
         : 'Zadejte heslo dlouhé alespoň 8 znaků.',
     'new_pass2' => 'Kontrolní heslo se musí shodovat s heslem.',
     'author_slug' => 'Zadejte jedinečný slug veřejného autora.',
-    'author_website' => 'Zadejte platnou adresu začínající na http:// nebo https://.',
+    'author_website' => 'Zadejte platnou veřejnou webovou adresu, například https://example.com.',
     'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP.',
 ];
 
