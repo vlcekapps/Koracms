@@ -318,9 +318,10 @@ if (!function_exists('koraPrimeTestSession')) {
             session_write_close();
         }
 
-        $sessionId = $sessionId !== null && $sessionId !== '' ? $sessionId : 'koratest-' . bin2hex(random_bytes(6));
+        $sessionId = $sessionId !== null && $sessionId !== '' ? $sessionId : '';
         session_id($sessionId);
         session_start();
+        $sessionId = session_id();
         foreach ($sessionData as $key => $value) {
             $_SESSION[$key] = $value;
         }

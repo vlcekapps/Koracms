@@ -487,9 +487,8 @@ if (!$publicUserRow) {
 }
 
 $runtimeAuditSessionSuffix = bin2hex(random_bytes(6));
-$auditSessionId = 'runtimeaudit-admin-' . $runtimeAuditSessionSuffix;
 session_write_close();
-session_id($auditSessionId);
+session_id('');
 session_start();
 $_SESSION['cms_logged_in'] = true;
 $_SESSION['cms_superadmin'] = true;
@@ -497,6 +496,7 @@ $_SESSION['cms_user_id'] = 1;
 $_SESSION['cms_user_name'] = 'Runtime Audit';
 $_SESSION['cms_user_role'] = 'admin';
 $adminCsrfToken = csrfToken();
+$auditSessionId = session_id();
 session_write_close();
 
 $pdo->prepare(
@@ -505,14 +505,14 @@ $pdo->prepare(
 )->execute();
 $cleanup['audit_log_ids'][] = (int)$pdo->lastInsertId();
 
-$publicAuditSessionId = 'runtimeaudit-public-' . $runtimeAuditSessionSuffix;
-session_id($publicAuditSessionId);
+session_id('');
 session_start();
 $_SESSION['cms_logged_in'] = true;
 $_SESSION['cms_superadmin'] = false;
 $_SESSION['cms_user_id'] = (int)$publicUserRow['id'];
 $_SESSION['cms_user_name'] = trim(((string)$publicUserRow['first_name']) . ' ' . ((string)$publicUserRow['last_name'])) ?: (string)$publicUserRow['email'];
 $_SESSION['cms_user_role'] = 'public';
+$publicAuditSessionId = session_id();
 session_write_close();
 
 $roleAuditUsers = [];
@@ -543,14 +543,14 @@ foreach ([
 
 $roleAuditSessions = [];
 foreach ($roleAuditUsers as $roleKey => $roleAuditUser) {
-    $roleAuditSessionId = 'runtimeaudit-' . str_replace('_', '-', $roleKey) . '-' . $runtimeAuditSessionSuffix;
-    session_id($roleAuditSessionId);
+    session_id('');
     session_start();
     $_SESSION['cms_logged_in'] = true;
     $_SESSION['cms_superadmin'] = false;
     $_SESSION['cms_user_id'] = (int)$roleAuditUser['id'];
     $_SESSION['cms_user_name'] = $roleAuditUser['name'];
     $_SESSION['cms_user_role'] = $roleKey;
+    $roleAuditSessionId = session_id();
     session_write_close();
     $roleAuditSessions[$roleKey] = $roleAuditSessionId;
 }
@@ -8687,6 +8687,32 @@ if ($authRateLimitIssues === []) {
 } else {
     $failures++;
     foreach ($authRateLimitIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== session_security_guardrails ===\n";
+$sessionSecurityIssues = [];
+foreach ([
+    "ini_set('session.use_strict_mode', '1')",
+    "ini_set('session.use_only_cookies', '1')",
+    "ini_set('session.use_trans_sid', '0')",
+    'session_set_cookie_params([',
+    "'httponly' => true",
+    "'samesite' => 'Strict'",
+    'session_regenerate_id(true)',
+    "'expires' => time() - 42000",
+    "'samesite' => \$p['samesite']",
+] as $sessionSecurityFragment) {
+    if (!str_contains($adminAuthSource, $sessionSecurityFragment)) {
+        $sessionSecurityIssues[] = 'auth.php is missing session hardening fragment: ' . $sessionSecurityFragment;
+    }
+}
+if ($sessionSecurityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($sessionSecurityIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

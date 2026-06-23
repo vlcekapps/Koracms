@@ -115,6 +115,9 @@ if (session_status() === PHP_SESSION_NONE) {
     if ($isSocialPreviewCrawler) {
         $_SESSION = [];
     } else {
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.use_trans_sid', '0');
         session_set_cookie_params([
             'lifetime' => 0,
             'path'     => '/',
@@ -737,11 +740,14 @@ function logout(): void
         setcookie(
             session_name(),
             '',
-            time() - 42000,
-            $p['path'],
-            $p['domain'],
-            $p['secure'],
-            $p['httponly']
+            [
+                'expires' => time() - 42000,
+                'path' => $p['path'],
+                'domain' => $p['domain'],
+                'secure' => $p['secure'],
+                'httponly' => $p['httponly'],
+                'samesite' => $p['samesite'],
+            ]
         );
     }
     session_destroy();
