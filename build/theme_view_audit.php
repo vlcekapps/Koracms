@@ -133,6 +133,16 @@ function themeViewAuditTagAttributeValue(string $tag, string $attribute): ?strin
     return html_entity_decode($match[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
+function themeViewAuditControlType(string $tagName, string $tag): string
+{
+    if ($tagName !== 'input') {
+        return '';
+    }
+
+    $type = themeViewAuditTagAttributeValue($tag, 'type');
+    return is_string($type) ? strtolower(trim($type)) : 'text';
+}
+
 /**
  * @param list<string> $issues
  */
@@ -186,6 +196,14 @@ function themeViewAuditCheckStaticIdReferences(string $relativePath, string $sou
  */
 function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $source, array &$issues): void
 {
+    $staticLabelTargets = [];
+    foreach (themeViewAuditStaticAttributeValues($source, 'for') as $match) {
+        $target = trim($match['value']);
+        if ($target !== '') {
+            $staticLabelTargets[$target] = true;
+        }
+    }
+
     foreach (themeViewAuditHtmlTags($source, 'img') as $match) {
         if (!themeViewAuditTagHasAttribute($match['tag'], 'alt')) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains an image without alt attribute.';
@@ -217,6 +235,33 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
 
         $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without rel="noopener".';
+    }
+
+    foreach (['input', 'select', 'textarea'] as $tagName) {
+        foreach (themeViewAuditHtmlTags($source, $tagName) as $match) {
+            $controlType = themeViewAuditControlType($tagName, $match['tag']);
+            if (in_array($controlType, ['hidden', 'submit', 'button', 'reset', 'image'], true)) {
+                continue;
+            }
+
+            if (
+                themeViewAuditTagHasAttribute($match['tag'], 'aria-label')
+                || themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')
+            ) {
+                continue;
+            }
+
+            $id = themeViewAuditTagAttributeValue($match['tag'], 'id');
+            if (!is_string($id) || trim($id) === '') {
+                $issues[] = $relativePath . ':' . $match['line'] . ' contains a form control without id or ARIA label.';
+                continue;
+            }
+
+            $id = trim($id);
+            if (!themeViewAuditIsDynamicAttributeValue($id) && !isset($staticLabelTargets[$id])) {
+                $issues[] = $relativePath . ':' . $match['line'] . ' contains a form control without matching label or ARIA label.';
+            }
+        }
     }
 }
 

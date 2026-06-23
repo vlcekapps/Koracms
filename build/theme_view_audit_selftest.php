@@ -170,6 +170,15 @@ assertThemeViewAuditPasses(
 PHP
 );
 
+assertThemeViewAuditPasses(
+    'Dynamic form label guard',
+    <<<'PHP'
+<?php $fieldId = 'field-' . (int)$id; ?>
+<label for="<?= $fieldId ?>">Dynamické pole</label>
+<input id="<?= $fieldId ?>" name="dynamic_field">
+PHP
+);
+
 assertThemeViewAuditFails(
     'Request input guard',
     <<<'PHP'
@@ -255,6 +264,22 @@ assertThemeViewAuditFails(
 <label for="missing-input">Pole</label>
 PHP,
     'missing static label target "missing-input"'
+);
+
+assertThemeViewAuditFails(
+    'Form control id guard',
+    <<<'PHP'
+<input name="q">
+PHP,
+    'form control without id or ARIA label'
+);
+
+assertThemeViewAuditFails(
+    'Form control label guard',
+    <<<'PHP'
+<input id="orphan-field" name="q">
+PHP,
+    'form control without matching label or ARIA label'
 );
 
 assertThemeViewAuditFails(

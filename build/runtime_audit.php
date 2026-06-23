@@ -7661,6 +7661,7 @@ $foundationChecks = [
         && str_contains($themeViewAuditSource, 'image without alt attribute')
         && str_contains($themeViewAuditSource, 'iframe without title attribute')
         && str_contains($themeViewAuditSource, 'button without explicit type attribute')
+        && str_contains($themeViewAuditSource, 'form control without matching label or ARIA label')
         && str_contains($themeViewAuditSource, 'target="_blank" link without rel="noopener"')
         && str_contains($themeViewAuditSource, 'duplicate static id')
         && str_contains($themeViewAuditSource, 'missing static ')
@@ -7673,6 +7674,7 @@ $foundationChecks = [
         && str_contains($themeViewAuditSelftestSource, 'Image alt guard')
         && str_contains($themeViewAuditSelftestSource, 'Iframe title guard')
         && str_contains($themeViewAuditSelftestSource, 'Button type guard')
+        && str_contains($themeViewAuditSelftestSource, 'Form control label guard')
         && str_contains($themeViewAuditSelftestSource, 'Blank target rel guard'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')

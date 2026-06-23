@@ -92,8 +92,8 @@ $hasItems = !empty($items);
           </div>
         </div>
 
-        <label class="filter-option-toggle">
-          <input type="checkbox" name="featured" value="1" <?= $featuredOnly ? 'checked' : '' ?>>
+        <label class="filter-option-toggle" for="downloads-filter-featured">
+          <input id="downloads-filter-featured" type="checkbox" name="featured" value="1" <?= $featuredOnly ? 'checked' : '' ?>>
           Jen doporučené položky
         </label>
 
