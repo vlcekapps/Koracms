@@ -133,6 +133,7 @@ Platí tato pravidla:
 - při chybě uploadu nebo neplatném dočasném souboru se formulář vrátí s čitelnou chybovou hláškou
 - ukládání běží přes PRG workflow, takže refresh po uložení neopakuje POST
 - validovaná pole nově vracejí i lokální field-level chyby s `aria-invalid` a zachováním zadaných hodnot po redirectu
+- Apache `uploads/.htaccess` současně blokuje běžné skriptové přípony v upload adresáři, například `.php`, `.phtml`, `.phar`, `.cgi`, `.pl`, `.py`, `.rb`, `.sh`, `.asp`, `.aspx` a `.jsp`; release ZIP obsahuje jen tento ochranný soubor bez lokálních médií a runtime audit hlídá, že se pojistka neztratí.
 
 To snižuje riziko, že se do veřejně servírovaných assetů dostane aktivní obsah nebo nepřiměřeně velký soubor.
 

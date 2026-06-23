@@ -12,6 +12,7 @@
 *.sql text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+**/.htaccess text eol=lf
 
 # Keep generated release/source archives focused on runtime files.
 .github export-ignore

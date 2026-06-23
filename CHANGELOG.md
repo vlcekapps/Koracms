@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Tvrdší ochrana upload adresáře** – `uploads/.htaccess` nově neblokuje jen `.php`, ale i běžné alternativní skriptové přípony jako `.phtml`, `.phar`, `.cgi`, `.pl`, `.py`, `.rb`, `.sh`, `.asp`, `.aspx` a `.jsp`; soubor je nově verzovaný a release balík ho přidává bez uživatelských médií, runtime audit hlídá, že se ochrana z uploadů neztratí.
 - **Origin isolation hlavička** – veřejné i administrační odpovědi nově posílají `Origin-Agent-Cluster: ?1`, aby prohlížeče izolovaly runtime webu podle originu; audit hlídá zdroj i reálné HTTP odpovědi bez zavádění COEP/CORP, které by mohly rozbíjet externí embedy.
 - **Šetrné čištění cache při odhlášení** – společný logout flow nově posílá `Clear-Site-Data: "cache"`, aby prohlížeč po odhlášení zahodil cache webu; záměrně nemaže cookies mimo session ani `localStorage`, aby se nerozbily cookie preference nebo neuložené autosave koncepty.
 - **Další browser hardening hlavičky** – veřejné i administrační odpovědi nově posílají `Cross-Origin-Opener-Policy: same-origin` a `X-Permitted-Cross-Domain-Policies: none`; runtime audit hlídá zdroj i skutečné HTTP hlavičky.

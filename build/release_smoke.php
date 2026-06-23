@@ -340,6 +340,15 @@ $excludedRootEntries = [
 
 try {
     copyProjectSnapshot($projectRoot, $tempRoot, $excludedRootEntries);
+    $sourceUploadsHtaccess = $projectRoot . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . '.htaccess';
+    if (!is_file($sourceUploadsHtaccess)) {
+        fail('Source uploads/.htaccess is missing.');
+    }
+    $snapshotUploadsDir = $tempRoot . DIRECTORY_SEPARATOR . 'uploads';
+    if (!mkdir($snapshotUploadsDir, 0777, true) && !is_dir($snapshotUploadsDir)) {
+        fail('Cannot create snapshot uploads directory.');
+    }
+    copyPath($sourceUploadsHtaccess, $snapshotUploadsDir . DIRECTORY_SEPARATOR . '.htaccess');
 
     runCheckedCommand(['git', 'init', '--quiet'], $tempRoot);
     runCheckedCommand(['git', 'config', 'user.email', 'release-smoke@example.invalid'], $tempRoot);
@@ -444,7 +453,7 @@ try {
     $zipPayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $zipPath, $tempRoot);
     $entries = normalizedArchiveEntries($zipPayload);
 
-    foreach (['VERSION', 'CHANGELOG.md', 'docs/admin-guide.md'] as $requiredEntry) {
+    foreach (['VERSION', 'CHANGELOG.md', 'docs/admin-guide.md', 'uploads/.htaccess'] as $requiredEntry) {
         if (!in_array($requiredEntry, $entries, true)) {
             fail('Release smoke ZIP is missing required file: ' . $requiredEntry);
         }
@@ -509,7 +518,7 @@ try {
     $sourcePayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $sourceArchivePath, $tempRoot);
     $sourceEntries = normalizedArchiveEntries($sourcePayload);
 
-    foreach (['VERSION', 'CHANGELOG.md', 'auth.php', 'themes/default/theme.json'] as $requiredEntry) {
+    foreach (['VERSION', 'CHANGELOG.md', 'auth.php', 'themes/default/theme.json', 'uploads/.htaccess'] as $requiredEntry) {
         if (!in_array($requiredEntry, $sourceEntries, true)) {
             fail('Source archive is missing required file: ' . $requiredEntry);
         }

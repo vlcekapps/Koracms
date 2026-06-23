@@ -45,6 +45,9 @@ function trackedSourceEncodingAuditFiles(string $projectRoot): array
 function shouldAuditSourceEncoding(string $relativePath): bool
 {
     $normalizedPath = str_replace('\\', '/', $relativePath);
+    if ($normalizedPath === 'uploads/.htaccess') {
+        return true;
+    }
     if (preg_match('#^(?:dist|uploads|vendor)/#', $normalizedPath) === 1) {
         return false;
     }

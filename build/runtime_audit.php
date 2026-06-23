@@ -36,6 +36,7 @@ $publicCoreCssSource = is_file(__DIR__ . '/../themes/default/assets/public-core.
 $adminLayoutStylesheetSource = is_file(__DIR__ . '/../admin/assets/layout.css') ? (string) file_get_contents(__DIR__ . '/../admin/assets/layout.css') : '';
 $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
 $htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
+$uploadsHtaccessSource = is_file(__DIR__ . '/../uploads/.htaccess') ? (string) file_get_contents(__DIR__ . '/../uploads/.htaccess') : '';
 $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
@@ -7622,6 +7623,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'build/source_encoding_audit.php')
         && str_contains($phpstanConfigSource, 'build/source_encoding_audit.php')
         && str_contains($sourceEncodingAuditSource, 'mb_check_encoding($contents, \'UTF-8\')')
+        && str_contains($sourceEncodingAuditSource, "\$normalizedPath === 'uploads/.htaccess'")
         && str_contains($sourceEncodingAuditSource, 'invalid UTF-8 encoding')
         && str_contains($sourceEncodingAuditSource, 'unexpected UTF-8 BOM')
         && str_contains($sourceEncodingAuditSource, "strtolower((string)pathinfo(str_replace('\\\\', '/', \$relativePath), PATHINFO_EXTENSION)) === 'ps1'"),
@@ -7631,6 +7633,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'build/mojibake_audit.php')
         && str_contains($phpstanConfigSource, 'build/mojibake_audit.php')
         && str_contains($mojibakeAuditSource, 'suspicious mojibake fragment')
+        && str_contains($mojibakeAuditSource, "\$normalizedPath === 'uploads/.htaccess'")
         && str_contains($mojibakeAuditSource, 'isAllowedIntentionalMojibake')
         && str_contains($mojibakeAuditSource, '$legacyBrokenSocialLinksTitle')
         && str_contains($mojibakeAuditSource, "slugify('Ärger')"),
@@ -7893,6 +7896,8 @@ $foundationChecks = [
     'dev tooling is protected from direct web access' => str_contains($htaccessSource, 'composer\.(json|lock)')
         && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),
+    'uploads htaccess blocks executable script extensions' => str_contains($uploadsHtaccessSource, '<FilesMatch "\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp)$">')
+        && str_contains($uploadsHtaccessSource, 'Require all denied'),
     'release zip excludes dev tooling and metadata' => str_contains($releaseScriptSource, "'vendor'")
         && str_contains($releaseScriptSource, "'.github'")
         && str_contains($releaseScriptSource, "'.gitattributes'")
@@ -7911,6 +7916,8 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, "'ci:full'")
         && str_contains($releaseScriptSource, 'New-ReleaseZip')
         && str_contains($releaseScriptSource, '[hashtable]$FileOverrides')
+        && str_contains($releaseScriptSource, '$uploadsHtaccessSource = Join-Path $ProjectRoot "uploads\.htaccess"')
+        && str_contains($releaseScriptSource, 'Copy-Item -Path $uploadsHtaccessSource -Destination (Join-Path $uploadsTempDir ".htaccess") -Force')
         && str_contains($releaseScriptSource, 'Write-ReleaseChecksum -Path $zipPath')
         && str_contains($releaseScriptSource, 'Get-FileHash -Path $Path -Algorithm SHA256')
         && str_contains($releaseScriptSource, 'koracms-$newVersion.zip.sha256')
@@ -7933,6 +7940,8 @@ $foundationChecks = [
         && str_contains($releasePackageAuditSource, 'Dry run dokončen')
         && str_contains($releasePackageAuditSource, '$packageFileOverrides["VERSION"] = $newVersion')
         && str_contains($releasePackageAuditSource, '$gitignorePath')
+        && str_contains($releasePackageAuditSource, 'uploads/*')
+        && str_contains($releasePackageAuditSource, '!uploads/.htaccess')
         && str_contains($releasePackageAuditSource, '!docs/admin-guide.md')
         && str_contains($releasePackageAuditSource, 'build/release_package_audit.php export-ignore')
         && str_contains($releasePackageAuditSource, 'Release package audit OK'),
@@ -7953,6 +7962,7 @@ $foundationChecks = [
         && str_contains($releaseSmokeSource, 'System.IO.Compression.ZipFile')
         && str_contains($releaseSmokeSource, 'ConvertTo-Json')
         && str_contains($releaseSmokeSource, 'docs/admin-guide.md')
+        && str_contains($releaseSmokeSource, 'uploads/.htaccess')
         && str_contains($releaseSmokeSource, 'themes/default/theme.json')
         && str_contains($releaseSmokeSource, 'Release smoke ZIP does not keep a fresh Unreleased section')
         && str_contains($releaseSmokeSource, 'Source archive unexpectedly contains build tooling')
@@ -7963,6 +7973,7 @@ $foundationChecks = [
         && str_contains($gitattributesSource, '*.json text eol=lf')
         && str_contains($gitattributesSource, '*.md text eol=lf')
         && str_contains($gitattributesSource, '*.neon.dist text eol=lf')
+        && str_contains($gitattributesSource, '**/.htaccess text eol=lf')
         && str_contains($gitattributesSource, '.github export-ignore')
         && str_contains($gitattributesSource, '.github/** export-ignore')
         && str_contains($gitattributesSource, '.gitignore export-ignore')
@@ -7978,7 +7989,8 @@ $foundationChecks = [
         && str_contains($gitattributesSource, 'phpstan.neon.dist export-ignore'),
     'gitignore protects local and generated artifacts' => str_contains($gitignoreSource, 'config.php')
         && str_contains($gitignoreSource, 'aconfig.php')
-        && str_contains($gitignoreSource, 'uploads/')
+        && str_contains($gitignoreSource, 'uploads/*')
+        && str_contains($gitignoreSource, '!uploads/.htaccess')
         && str_contains($gitignoreSource, '.integrity_snapshot.json')
         && str_contains($gitignoreSource, 'dist/')
         && str_contains($gitignoreSource, 'vendor/')

@@ -3,7 +3,8 @@ config.php
 aconfig.php
 
 # Uživatelsky nahraná média
-uploads/
+uploads/*
+!uploads/.htaccess
 
 # Integrity snapshot (specifický pro instalaci)
 .integrity_snapshot.json

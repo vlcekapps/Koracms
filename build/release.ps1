@@ -242,9 +242,13 @@ function New-ReleaseZip {
 
     $exclude = @('.git', '.github', '.gitignore', '.gitattributes', '.claude', 'uploads', 'build', 'dist', 'docs', 'vendor', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
     $adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"
+    $uploadsHtaccessSource = Join-Path $ProjectRoot "uploads\.htaccess"
 
     if (!(Test-Path $adminGuideSource)) {
         throw "Soubor docs/admin-guide.md nebyl nalezen. Release asset musí obsahovat administrátorský návod."
+    }
+    if (!(Test-Path $uploadsHtaccessSource)) {
+        throw "Soubor uploads/.htaccess nebyl nalezen. Release asset musí obsahovat ochranu upload adresáře."
     }
 
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("koracms_" + [System.Guid]::NewGuid().ToString("N"))
@@ -262,6 +266,12 @@ function New-ReleaseZip {
             New-Item -ItemType Directory -Path $docsTempDir | Out-Null
         }
         Copy-Item -Path $adminGuideSource -Destination (Join-Path $docsTempDir "admin-guide.md") -Force
+
+        $uploadsTempDir = Join-Path $tempDir "uploads"
+        if (!(Test-Path $uploadsTempDir)) {
+            New-Item -ItemType Directory -Path $uploadsTempDir | Out-Null
+        }
+        Copy-Item -Path $uploadsHtaccessSource -Destination (Join-Path $uploadsTempDir ".htaccess") -Force
 
         foreach ($relativePath in $FileOverrides.Keys) {
             $targetPath = Join-Path $tempDir $relativePath
