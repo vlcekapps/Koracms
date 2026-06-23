@@ -529,6 +529,43 @@ try {
     }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
 
+    $adminHtmlCacheHeaderIssues = [];
+    $adminHtmlCacheHeaderResponses = [
+        'admin/login.php' => fetchUrl($baseUrl . BASE_URL . '/admin/login.php', '', 0),
+        'admin/settings.php' => fetchUrl($settingsPageUrl, $adminSession['cookie'], 0),
+    ];
+    foreach ($adminHtmlCacheHeaderResponses as $adminHtmlCacheHeaderLabel => $adminHtmlCacheHeaderResponse) {
+        if (httpIntegrationStatusCode($adminHtmlCacheHeaderResponse) !== 200) {
+            $adminHtmlCacheHeaderIssues[] = $adminHtmlCacheHeaderLabel . ' nevrátilo 200 pro kontrolu cache hlaviček';
+            continue;
+        }
+
+        $adminHtmlCacheControl = '';
+        $adminHtmlPragmaFound = false;
+        $adminHtmlExpiresFound = false;
+        foreach ($adminHtmlCacheHeaderResponse['headers'] as $adminHtmlCacheHeader) {
+            if (stripos($adminHtmlCacheHeader, 'Cache-Control:') === 0) {
+                $adminHtmlCacheControl .= ' ' . $adminHtmlCacheHeader;
+                continue;
+            }
+            if (stripos($adminHtmlCacheHeader, 'Pragma:') === 0 && stripos($adminHtmlCacheHeader, 'no-cache') !== false) {
+                $adminHtmlPragmaFound = true;
+                continue;
+            }
+            if (stripos($adminHtmlCacheHeader, 'Expires:') === 0 && trim(substr($adminHtmlCacheHeader, 8)) === '0') {
+                $adminHtmlExpiresFound = true;
+            }
+        }
+
+        if (stripos($adminHtmlCacheControl, 'no-store') === false || stripos($adminHtmlCacheControl, 'max-age=0') === false) {
+            $adminHtmlCacheHeaderIssues[] = $adminHtmlCacheHeaderLabel . ' neposlalo Cache-Control: no-store, max-age=0';
+        }
+        if (!$adminHtmlPragmaFound || !$adminHtmlExpiresFound) {
+            $adminHtmlCacheHeaderIssues[] = $adminHtmlCacheHeaderLabel . ' neposlalo Pragma: no-cache a Expires: 0';
+        }
+    }
+    httpIntegrationPrintResult('admin_html_cache_headers_http', $adminHtmlCacheHeaderIssues, $failures);
+
     $adminJsonPostOnlyEndpointIssues = [];
     $adminJsonPostOnlyEndpointUrls = [
         '/admin/content_lock_refresh.php' => 'admin/content_lock_refresh.php',

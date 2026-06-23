@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Necacheované administrační HTML odpovědi** – `auth.php` nově pro administrační cesty včetně loginu, 2FA a `migrate.php` centrálně posílá `Cache-Control: no-store, max-age=0`, `Pragma: no-cache` a `Expires: 0`; HTTP integrace i runtime audit hlídají zdroj i reálné hlavičky.
 - **Přísnější session hardening** – `auth.php` nově před startem session zapíná strict mode, cookies-only režim a vypíná session ID v URL; runtime audit hlídá tyto přepínače, bezpečné cookie atributy, bezpečné mazání session cookie při odhlášení i regeneraci session ID po přihlášení.
 - **Permissions-Policy pro omezení nepotřebných prohlížečových API** – veřejné i administrační odpovědi nově posílají hlavičku `Permissions-Policy`, která zakazuje nepoužívané schopnosti jako kamera, mikrofon, geolokace, platební API nebo USB; runtime audit hlídá zdroj i skutečnou HTTP odpověď.
 - **CSRF guardrail pro POST formuláře** – runtime audit nově plošně hlídá PHP zdroje i reálně vyrenderované HTML, aby každý veřejný i administrační formulář s `method="post"` obsahoval skryté pole `csrf_token`; rozšiřuje tak ochranu proti regresím i mimo jednotlivé ručně napsané integrační scénáře.

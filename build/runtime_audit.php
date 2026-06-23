@@ -8025,6 +8025,14 @@ $foundationChecks = [
         && str_contains($adminFormSubmissionsSource, 'if ($isCsvExportHeadRequest)')
         && str_contains($adminContentReferenceSearchSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)'),
+    'admin HTML responses send no-store headers' => str_contains($authSource, 'function isAdminRequestPath')
+        && str_contains($authSource, "BASE_URL . '/admin/'")
+        && str_contains($authSource, "BASE_URL . '/migrate.php'")
+        && str_contains($authSource, 'function sendAdminNoStoreHeaders')
+        && str_contains($authSource, "header('Cache-Control: no-store, max-age=0')")
+        && str_contains($authSource, "header('Pragma: no-cache')")
+        && str_contains($authSource, "header('Expires: 0')")
+        && str_contains($authSource, 'if (!$isSocialPreviewCrawler && isAdminRequestPath())'),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
         && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),

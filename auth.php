@@ -105,6 +105,28 @@ function sendSocialPreviewCacheHeaders(): void
     header('Cache-Control: public, max-age=300, s-maxage=300', true);
 }
 
+function isAdminRequestPath(?string $requestUri = null): bool
+{
+    $requestPath = (string)(parse_url($requestUri ?? (string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?? '');
+    if ($requestPath === '') {
+        return false;
+    }
+
+    return str_starts_with($requestPath, BASE_URL . '/admin/')
+        || $requestPath === BASE_URL . '/migrate.php';
+}
+
+function sendAdminNoStoreHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    header('Cache-Control: no-store, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {
     header_register_callback('sendSocialPreviewCacheHeaders');
 } elseif ($isSocialPreviewCrawler) {
@@ -136,6 +158,9 @@ header('Referrer-Policy: same-origin');
 header('Permissions-Policy: accelerometer=(), browsing-topics=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()');
 if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
+if (!$isSocialPreviewCrawler && isAdminRequestPath()) {
+    sendAdminNoStoreHeaders();
 }
 
 // CSP nonce – per-request nonce pro inline skripty a styly.
