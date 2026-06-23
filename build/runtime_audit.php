@@ -7658,6 +7658,9 @@ $foundationChecks = [
         && str_contains($themeViewAuditSource, "themeViewAuditStaticAttributeValues(\$source, 'for')")
         && str_contains($themeViewAuditSource, 'runtime context superglobal')
         && str_contains($themeViewAuditSource, 'runtime clock')
+        && str_contains($themeViewAuditSource, 'image without alt attribute')
+        && str_contains($themeViewAuditSource, 'iframe without title attribute')
+        && str_contains($themeViewAuditSource, 'target="_blank" link without rel="noopener"')
         && str_contains($themeViewAuditSource, 'duplicate static id')
         && str_contains($themeViewAuditSource, 'missing static ')
         && str_contains($themeViewAuditSelftestSource, 'Duplicate static id guard')
@@ -7665,7 +7668,10 @@ $foundationChecks = [
         && str_contains($themeViewAuditSelftestSource, 'Missing static aria controls guard')
         && str_contains($themeViewAuditSelftestSource, 'Missing static label target guard')
         && str_contains($themeViewAuditSelftestSource, 'Runtime context superglobal guard')
-        && str_contains($themeViewAuditSelftestSource, 'Runtime clock guard'),
+        && str_contains($themeViewAuditSelftestSource, 'Runtime clock guard')
+        && str_contains($themeViewAuditSelftestSource, 'Image alt guard')
+        && str_contains($themeViewAuditSelftestSource, 'Iframe title guard')
+        && str_contains($themeViewAuditSelftestSource, 'Blank target rel guard'),
     'phpstan covers stable helper batches' => str_contains($composerSource, '"analyse"')
         && str_contains($composerSource, 'phpstan analyse')
         && str_contains($phpstanConfigSource, 'level: 6')

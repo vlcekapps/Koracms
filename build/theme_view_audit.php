@@ -96,6 +96,44 @@ function themeViewAuditStaticIds(string $source): array
 }
 
 /**
+ * @return list<array{tag:string,line:int}>
+ */
+function themeViewAuditHtmlTags(string $source, string $tagName): array
+{
+    $pattern = '/<' . preg_quote($tagName, '/') . '\b(?:<\?(?:php|=)?[\s\S]*?\?>|"[^"]*"|\'[^\']*\'|[^>])*>/i';
+    $matched = preg_match_all($pattern, $source, $rawMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+    if ($matched === false || $matched === 0) {
+        return [];
+    }
+
+    /** @var list<array<int, array{0:string,1:int}>> $rawMatches */
+    $tags = [];
+    foreach ($rawMatches as $match) {
+        $tags[] = [
+            'tag' => $match[0][0],
+            'line' => themeViewAuditLineNumber($source, $match[0][1]),
+        ];
+    }
+
+    return $tags;
+}
+
+function themeViewAuditTagHasAttribute(string $tag, string $attribute): bool
+{
+    return preg_match('/(?<![-:\w])' . preg_quote($attribute, '/') . '\s*=/si', $tag) === 1;
+}
+
+function themeViewAuditTagAttributeValue(string $tag, string $attribute): ?string
+{
+    $matched = preg_match('/(?<![-:\w])' . preg_quote($attribute, '/') . '\s*=\s*([\'"])(.*?)\1/si', $tag, $match);
+    if ($matched !== 1) {
+        return null;
+    }
+
+    return html_entity_decode($match[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+/**
  * @param list<string> $issues
  */
 function themeViewAuditCheckStaticIdReferences(string $relativePath, string $source, array &$issues): void
@@ -146,6 +184,39 @@ function themeViewAuditCheckStaticIdReferences(string $relativePath, string $sou
 /**
  * @param list<string> $issues
  */
+function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $source, array &$issues): void
+{
+    foreach (themeViewAuditHtmlTags($source, 'img') as $match) {
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'alt')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains an image without alt attribute.';
+        }
+    }
+
+    foreach (themeViewAuditHtmlTags($source, 'iframe') as $match) {
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'title')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains an iframe without title attribute.';
+        }
+    }
+
+    foreach (themeViewAuditHtmlTags($source, 'a') as $match) {
+        $target = themeViewAuditTagAttributeValue($match['tag'], 'target');
+        if (!is_string($target) || strtolower(trim($target)) !== '_blank') {
+            continue;
+        }
+
+        $rel = themeViewAuditTagAttributeValue($match['tag'], 'rel');
+        $relTokens = is_string($rel) ? preg_split('/\s+/', strtolower(trim($rel))) : [];
+        if (in_array('noopener', $relTokens ?: [], true) || in_array('noreferrer', $relTokens ?: [], true)) {
+            continue;
+        }
+
+        $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without rel="noopener".';
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
 function themeViewAuditForbidPattern(string $label, string $relativePath, string $source, string $pattern, array &$issues): void
 {
     if (preg_match($pattern, $source) === 1) {
@@ -179,6 +250,7 @@ foreach (themeViewAuditFiles($themeRoot) as $path) {
     }
 
     themeViewAuditCheckStaticIdReferences($relativePath, $source, $issues);
+    themeViewAuditCheckHtmlElementContracts($relativePath, $source, $issues);
 
     if (preg_match_all('/<script\b[^>]*>/i', $source, $scriptMatches) !== false) {
         foreach ($scriptMatches[0] as $scriptTag) {
