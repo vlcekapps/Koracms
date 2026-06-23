@@ -7963,6 +7963,7 @@ $foundationChecks = [
         && str_contains($releaseSmokeSource, '-SkipCi')
         && str_contains($releaseSmokeSource, 'System.IO.Compression.ZipFile')
         && str_contains($releaseSmokeSource, 'ConvertTo-Json')
+        && str_contains($releaseSmokeSource, 'README.md')
         && str_contains($releaseSmokeSource, 'docs/admin-guide.md')
         && str_contains($releaseSmokeSource, 'uploads/.htaccess')
         && str_contains($releaseSmokeSource, 'themes/default/theme.json')

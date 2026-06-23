@@ -453,7 +453,7 @@ try {
     $zipPayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $zipPath, $tempRoot);
     $entries = normalizedArchiveEntries($zipPayload);
 
-    foreach (['VERSION', 'CHANGELOG.md', 'docs/admin-guide.md', 'uploads/.htaccess'] as $requiredEntry) {
+    foreach (['VERSION', 'CHANGELOG.md', 'README.md', 'docs/admin-guide.md', 'uploads/.htaccess'] as $requiredEntry) {
         if (!in_array($requiredEntry, $entries, true)) {
             fail('Release smoke ZIP is missing required file: ' . $requiredEntry);
         }
@@ -518,7 +518,7 @@ try {
     $sourcePayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $sourceArchivePath, $tempRoot);
     $sourceEntries = normalizedArchiveEntries($sourcePayload);
 
-    foreach (['VERSION', 'CHANGELOG.md', 'auth.php', 'themes/default/theme.json', 'uploads/.htaccess'] as $requiredEntry) {
+    foreach (['VERSION', 'CHANGELOG.md', 'README.md', 'auth.php', 'themes/default/theme.json', 'uploads/.htaccess'] as $requiredEntry) {
         if (!in_array($requiredEntry, $sourceEntries, true)) {
             fail('Source archive is missing required file: ' . $requiredEntry);
         }
