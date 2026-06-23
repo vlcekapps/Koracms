@@ -127,7 +127,7 @@ http://vas-web.cz/admin/login.php
 ## Konfigurace
 
 Veškerá konfigurace je v souboru `config.php`. Vzorový soubor `config.sample.php` obsahuje všechny dostupné konstanty s komentáři.
-Základní vývojová kontrola `composer ci:basic` hlídá přes `build/config_sample_audit.php`, aby tento vzor neztratil databázové proměnné, hlavní runtime konstanty, bezpečné prázdné tokeny ani vysvětlení pro privátní úložiště, SMTP, GitHub issue bridge a cron token.
+Základní vývojová kontrola `composer ci:basic` hlídá přes `build/config_sample_audit.php` a jeho self-test `build/config_sample_audit_selftest.php`, aby tento vzor neztratil databázové proměnné, hlavní runtime konstanty, bezpečné prázdné tokeny ani vysvětlení pro privátní úložiště, SMTP, GitHub issue bridge a cron token.
 
 ### SMTP (e-maily)
 
@@ -567,7 +567,7 @@ composer ci:basic
 
 - PHP lint přes `build/lint_php.php`
 - repository guardrails audit přes `build/repository_guardrails_audit.php` a jeho self-test `build/repository_guardrails_audit_selftest.php`, které hlídají rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php` a zároveň blokují nechtěně verzované lokální konfigurace, `.env` soubory, `vendor`, `dist`, IDE/Claude metadata a uživatelské uploady mimo ochranné `.htaccess` soubory
-- config sample audit přes `build/config_sample_audit.php`, který hlídá, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
+- config sample audit přes `build/config_sample_audit.php` a jeho self-test `build/config_sample_audit_selftest.php`, které hlídají, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
 - version metadata audit přes `build/version_metadata_audit.php`, který hlídá platný SemVer v `VERSION`, načítání `KORA_VERSION` z tohoto souboru a release dry-run práci s verzí v ZIP/source archive
 - schema parity audit přes `build/schema_parity_audit.php`, který hlídá kritické sloupce používané veřejnými endpointy proti driftu mezi `install.php`, `migrate.php` a aktuálním kódem
 - redirect guardrails audit přes `build/redirect_guardrails_audit.php` a jeho self-test `build/redirect_guardrails_audit_selftest.php`, které hlídají, že requestem nebo formulářem dodané návratové cíle typu `redirect`, `redirect_target`, `next` a `return_url` zůstávají validované přes sdílený bezpečný helper
