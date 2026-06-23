@@ -137,8 +137,8 @@ adminHeader($blogCaptionTitle);
     <?php endif; ?>
   <?php endif; ?>
   <?php if ($activeBlog): ?>
-    <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
-    <a href="<?= h(blogFeedPath($activeBlog)) ?>" target="_blank" rel="noopener">RSS feed blogu</a>
+    <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
+    <a href="<?= h(blogFeedPath($activeBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 
@@ -274,7 +274,7 @@ adminHeader($blogCaptionTitle);
           <a href="blog_form.php?id=<?= (int)$article['id'] ?>" class="btn">Upravit</a>
           <?php if (!empty($article['preview_token'])): ?>
             <a href="<?= h(articlePreviewPath($article)) ?>"
-               target="_blank" class="btn btn-muted">Náhled</a>
+               target="_blank" rel="noopener noreferrer" class="btn btn-muted" aria-label="<?= h(newWindowLinkLabel('Náhled')) ?>">Náhled</a>
           <?php endif; ?>
           <?php if ($article['status'] === 'pending' && $canApproveBlog): ?>
             <form action="approve.php" method="post">

@@ -9654,6 +9654,7 @@ $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bl
 $blogBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bulk.php');
 $blogTransferSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
+$blogPagesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_pages.php');
 $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
 $blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
 $usersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
@@ -9749,6 +9750,24 @@ if (str_contains($blogFormSource, '<style') || str_contains($blogFormSource, 'st
 if (str_contains($blogFormSource, 'error_log(')
     || !str_contains($blogFormSource, "koraLog('warning', 'admin article form taxonomy query failed'")) {
     $blogAdminIssues[] = 'article form taxonomy fallback no longer uses structured recoverable logging';
+}
+foreach ([
+    'blog list' => $blogListSource,
+    'blog overview' => $blogsAdminSource,
+    'blog categories' => $blogCatsSource,
+    'blog tags' => $blogTagsSource,
+    'blog form' => $blogFormSource,
+    'blog members' => $blogMembersSource,
+    'blog pages' => $blogPagesAdminSource,
+    'blog transfer' => $blogTransferSource,
+] as $blogAdminNewWindowSourceName => $blogAdminNewWindowSource) {
+    foreach (preg_split('/\R/', $blogAdminNewWindowSource) ?: [] as $lineNumber => $line) {
+        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkLabel(')) {
+            $blogAdminIssues[] = $blogAdminNewWindowSourceName
+                . ' contains target="_blank" without newWindowLinkLabel() on source line '
+                . ((int)$lineNumber + 1);
+        }
+    }
 }
 foreach ([
     'class="admin-warning-box"',

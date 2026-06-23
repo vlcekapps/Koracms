@@ -676,7 +676,7 @@ adminHeader('Přesun článků mezi blogy');
 <p class="button-row button-row--start">
   <a href="<?= h($returnUrl) ?>"><span aria-hidden="true">←</span> Zpět na články</a>
   <?php if ($targetBlog !== null): ?>
-    <a href="<?= h(blogIndexPath($targetBlog)) ?>" target="_blank" rel="noopener">Zobrazit cílový blog na webu</a>
+    <a href="<?= h(blogIndexPath($targetBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit cílový blog na webu')) ?>">Zobrazit cílový blog na webu</a>
   <?php endif; ?>
 </p>
 

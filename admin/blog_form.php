@@ -282,8 +282,8 @@ adminHeader($pageTitle);
     <a id="blog-link-tags" href="<?= h($blogTagsUrl) ?>">Štítky blogu</a>
   <?php endif; ?>
   <?php if (isMultiBlog() && $currentBlog): ?>
-    <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener">Zobrazit blog na webu</a>
-    <a id="blog-link-feed" href="<?= h($blogFeedUrl) ?>" target="_blank" rel="noopener">RSS feed blogu</a>
+    <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
+    <a id="blog-link-feed" href="<?= h($blogFeedUrl) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 
@@ -505,7 +505,7 @@ adminHeader($pageTitle);
            <?= adminFieldAttributes('image', $err, $fieldErrorMap, [!empty($article['image_file']) ? 'blog-image-current' : 'blog-image-help'], 'blog-image-error') ?>>
     <?php if (!empty($article['image_file'])): ?>
       <small id="blog-image-current" class="field-help">Aktuální obrázek: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
-             target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?></a>.</small>
+             target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)$article['image_file'], 'aktuální náhledový obrázek')) ?>"><?= h((string)$article['image_file']) ?></a>.</small>
     <?php else: ?>
       <small id="blog-image-help" class="field-help">Volitelné. Hodí se pro úvodní náhled článku.</small>
     <?php endif; ?>
@@ -600,7 +600,7 @@ adminHeader($pageTitle);
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
     <a href="<?= h($articleListUrl) ?>">Zrušit</a>
     <?php if ($article && !empty($article['preview_token'])): ?>
-      <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer">Náhled</a>
+      <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Náhled')) ?>">Náhled</a>
     <?php elseif ($article): ?>
       <small class="blog-form-preview-note">(Uložte pro aktivaci odkazu „Náhled“)</small>
     <?php endif; ?>

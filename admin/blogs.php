@@ -247,8 +247,8 @@ adminHeader('Správa blogů');
           <?php endif; ?>
         </td>
         <td class="actions">
-          <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener">Zobrazit na webu</a>
-          <a href="<?= h(blogFeedPath($blog)) ?>" class="btn" target="_blank" rel="noopener">RSS feed</a>
+          <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+          <a href="<?= h(blogFeedPath($blog)) ?>" class="btn" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('RSS feed')) ?>">RSS feed</a>
           <button type="button" class="btn blog-button--compact blog-edit-btn"
                   aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
                   aria-haspopup="dialog"
