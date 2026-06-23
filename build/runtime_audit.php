@@ -2462,6 +2462,21 @@ if (!function_exists('responseHasLocationHeader')) {
 }
 
 /**
+ * @param array<int,string> $headers
+ */
+function runtimeAuditHeaderContains(array $headers, string $name, string $needle): bool
+{
+    $headerPrefix = strtolower($name) . ':';
+    foreach ($headers as $headerLine) {
+        if (str_starts_with(strtolower($headerLine), $headerPrefix) && stripos($headerLine, $needle) !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * @return list<string>
  */
 function analyzeUxHeuristics(string $html, string $label): array
@@ -8008,19 +8023,24 @@ $foundationChecks = [
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')')
         && str_contains($robotsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($robotsSource, "header('Allow: GET, HEAD')"),
+        && str_contains($robotsSource, "header('Allow: GET, HEAD')")
+        && str_contains($robotsSource, "header('X-Content-Type-Options: nosniff')"),
     'read-only discovery endpoints enforce HTTP methods' => str_contains($sitemapSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($sitemapSource, "header('Allow: GET, HEAD')")
         && str_contains($sitemapSource, "if (\$requestMethod === 'HEAD')")
+        && str_contains($sitemapSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($feedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($feedSource, "header('Allow: GET, HEAD')")
         && str_contains($feedSource, "if (\$isHeadRequest)")
+        && str_contains($feedSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($podcastFeedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($podcastFeedSource, "header('Allow: GET, HEAD')")
         && str_contains($podcastFeedSource, "if (\$isHeadRequest)")
+        && str_contains($podcastFeedSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($eventIcsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($eventIcsSource, "header('Allow: GET, HEAD')")
-        && str_contains($eventIcsSource, "if (\$isHeadRequest)"),
+        && str_contains($eventIcsSource, "if (\$isHeadRequest)")
+        && str_contains($eventIcsSource, "header('X-Content-Type-Options: nosniff')"),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
         && str_contains($fileDownloadHelperSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')")
@@ -8232,6 +8252,9 @@ if (!str_contains($robotsProbe['status'], '200')) {
 } elseif (!str_contains($robotsProbe['body'], 'Disallow: ' . BASE_URL . '/admin/') || !str_contains($robotsProbe['body'], 'Sitemap: ')) {
     $foundationIssues[] = 'robots.txt is missing admin disallow or sitemap';
 }
+if (!runtimeAuditHeaderContains($robotsProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
+    $foundationIssues[] = 'robots.txt did not send X-Content-Type-Options: nosniff';
+}
 $robotsPostProbe = postRawUrl($baseUrl . '/robots.txt', '', 'text/plain', '', 0);
 $robotsAllowHeaderFound = false;
 foreach ($robotsPostProbe['headers'] as $robotsPostHeader) {
@@ -8244,6 +8267,12 @@ if (!str_contains($robotsPostProbe['status'], '405') || !$robotsAllowHeaderFound
     $foundationIssues[] = 'robots.txt did not reject unsupported methods with Allow: GET, HEAD';
 }
 
+$sitemapProbe = fetchUrl($baseUrl . '/sitemap.xml', '', 0);
+if (!str_contains($sitemapProbe['status'], '200')) {
+    $foundationIssues[] = 'sitemap.xml did not return 200';
+} elseif (!runtimeAuditHeaderContains($sitemapProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
+    $foundationIssues[] = 'sitemap.xml did not send X-Content-Type-Options: nosniff';
+}
 $sitemapPostProbe = postRawUrl($baseUrl . '/sitemap.xml', '', 'text/plain', '', 0);
 $sitemapAllowHeaderFound = false;
 foreach ($sitemapPostProbe['headers'] as $sitemapPostHeader) {
@@ -8256,6 +8285,12 @@ if (!str_contains($sitemapPostProbe['status'], '405') || !$sitemapAllowHeaderFou
     $foundationIssues[] = 'sitemap.xml did not reject unsupported methods with Allow: GET, HEAD';
 }
 
+$feedProbe = fetchUrl($baseUrl . '/feed.php', '', 0);
+if (!str_contains($feedProbe['status'], '200')) {
+    $foundationIssues[] = 'feed.php did not return 200';
+} elseif (!runtimeAuditHeaderContains($feedProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
+    $foundationIssues[] = 'feed.php did not send X-Content-Type-Options: nosniff';
+}
 $feedPostProbe = postRawUrl($baseUrl . '/feed.php', '', 'text/plain', '', 0);
 $feedAllowHeaderFound = false;
 foreach ($feedPostProbe['headers'] as $feedPostHeader) {

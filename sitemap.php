@@ -11,6 +11,7 @@ if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
 }
 
 header('Content-Type: application/xml; charset=UTF-8');
+header('X-Content-Type-Options: nosniff');
 
 if ($requestMethod === 'HEAD') {
     exit;

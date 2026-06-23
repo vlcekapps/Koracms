@@ -3,6 +3,7 @@
 require_once __DIR__ . '/db.php';
 
 header('Content-Type: text/plain; charset=UTF-8');
+header('X-Content-Type-Options: nosniff');
 header('X-Robots-Tag: noindex');
 
 $requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');

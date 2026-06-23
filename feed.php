@@ -12,6 +12,7 @@ if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
 $isHeadRequest = $requestMethod === 'HEAD';
 
 header('Content-Type: application/rss+xml; charset=UTF-8');
+header('X-Content-Type-Options: nosniff');
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $siteDesc = getSetting('site_description', '');

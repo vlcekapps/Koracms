@@ -60,6 +60,22 @@ function httpIntegrationStatusCode(array $response): int
     return 0;
 }
 
+/**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
+ */
+function httpIntegrationHeaderContains(array $response, string $name, string $needle): bool
+{
+    $headerPrefix = strtolower($name) . ':';
+    foreach ($response['headers'] as $headerLine) {
+        $headerLine = (string)$headerLine;
+        if (str_starts_with(strtolower($headerLine), $headerPrefix) && stripos($headerLine, $needle) !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function httpIntegrationSettingValue(PDO $pdo, string $key): string
 {
     $stmt = $pdo->prepare("SELECT value FROM cms_settings WHERE `key` = ?");
@@ -402,6 +418,9 @@ try {
     if (!str_contains($robotsResponse['body'], 'User-agent: *') || !str_contains($robotsResponse['body'], 'Disallow: ' . BASE_URL . '/admin/') || !str_contains($robotsResponse['body'], 'Sitemap: ')) {
         $robotsIssues[] = 'robots.txt neobsahuje základní pravidla a sitemapu';
     }
+    if (!httpIntegrationHeaderContains($robotsResponse, 'X-Content-Type-Options', 'nosniff')) {
+        $robotsIssues[] = 'robots.txt neposílá X-Content-Type-Options: nosniff';
+    }
     $robotsPostResponse = postRawUrl($baseUrl . BASE_URL . '/robots.txt', '', 'text/plain', '', 0);
     $robotsAllowHeaderFound = false;
     foreach ($robotsPostResponse['headers'] as $robotsPostHeader) {
@@ -433,6 +452,9 @@ try {
     if (!$hasSitemapContentType || !str_contains($sitemapResponse['body'], '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')) {
         $discoveryEndpointIssues[] = 'sitemap.xml nevrátil očekávaný XML výstup';
     }
+    if (!httpIntegrationHeaderContains($sitemapResponse, 'X-Content-Type-Options', 'nosniff')) {
+        $discoveryEndpointIssues[] = 'sitemap.xml neposílá X-Content-Type-Options: nosniff';
+    }
     $sitemapPostResponse = postRawUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 'text/plain', '', 0);
     $sitemapAllowHeaderFound = false;
     foreach ($sitemapPostResponse['headers'] as $sitemapPostHeader) {
@@ -443,6 +465,16 @@ try {
     }
     if (httpIntegrationStatusCode($sitemapPostResponse) !== 405 || !$sitemapAllowHeaderFound) {
         $discoveryEndpointIssues[] = 'sitemap.xml neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    }
+    $feedResponse = fetchUrl($baseUrl . BASE_URL . '/feed.php', '', 0);
+    if (httpIntegrationStatusCode($feedResponse) !== 200) {
+        $discoveryEndpointIssues[] = 'feed.php nevrátil 200';
+    }
+    if (!httpIntegrationHeaderContains($feedResponse, 'Content-Type', 'application/rss+xml') || !str_contains($feedResponse['body'], '<rss')) {
+        $discoveryEndpointIssues[] = 'feed.php nevrátil očekávaný RSS výstup';
+    }
+    if (!httpIntegrationHeaderContains($feedResponse, 'X-Content-Type-Options', 'nosniff')) {
+        $discoveryEndpointIssues[] = 'feed.php neposílá X-Content-Type-Options: nosniff';
     }
     $feedPostResponse = postRawUrl($baseUrl . BASE_URL . '/feed.php', '', 'text/plain', '', 0);
     $feedAllowHeaderFound = false;
