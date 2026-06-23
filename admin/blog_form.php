@@ -282,8 +282,8 @@ adminHeader($pageTitle);
     <a id="blog-link-tags" href="<?= h($blogTagsUrl) ?>">Štítky blogu</a>
   <?php endif; ?>
   <?php if (isMultiBlog() && $currentBlog): ?>
-    <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
-    <a id="blog-link-feed" href="<?= h($blogFeedUrl) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
+    <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
+    <a id="blog-link-feed" href="<?= h($blogFeedUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 

@@ -680,7 +680,7 @@ if (isSuperAdmin()) {
   <ul>
     <?php foreach ($pages as $page): ?>
       <li>
-        <a href="<?= h(pagePublicPath($page)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel((string)$page['title'])) ?>">
+        <a href="<?= h(pagePublicPath($page)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)$page['title'])) ?>">
           <?= h((string)$page['title']) ?>
         </a>
         <?= (int)$page['is_published'] === 1 ? '' : ' <em>(koncept)</em>' ?>

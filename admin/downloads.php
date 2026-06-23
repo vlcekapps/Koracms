@@ -247,7 +247,7 @@ adminHeader('Ke stažení');
         <td>
           <?php if ($download['has_file']): ?>
             <a href="<?= moduleFileUrl('downloads', (int)$download['id']) ?>"
-               target="_blank" rel="noopener" download="<?= h((string)$download['original_name']) ?>" aria-label="<?= h(newWindowLinkLabel((string)$download['original_name'], 'soubor ke stažení')) ?>">
+               target="_blank" rel="noopener noreferrer" download="<?= h((string)$download['original_name']) ?>" aria-label="<?= h(newWindowLinkLabel((string)$download['original_name'], 'soubor ke stažení')) ?>">
               <?= h((string)$download['original_name']) ?>
             </a>
             <?php if ((int)$download['file_size'] > 0): ?>

@@ -2295,8 +2295,8 @@ function analyzeHtml(string $html): array
 
     foreach ($xpath->query('//a[translate(@target, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = "_blank"]') as $link) {
         $relTokens = preg_split('/\s+/', strtolower(trim($link->getAttribute('rel')))) ?: [];
-        if (!in_array('noopener', $relTokens, true)) {
-            $issues[] = 'target blank link without rel noopener';
+        if (!in_array('noopener', $relTokens, true) || !in_array('noreferrer', $relTokens, true)) {
+            $issues[] = 'target blank link without rel noopener noreferrer';
         }
 
         $accessibleName = trim($link->getAttribute('aria-label'));
@@ -7800,7 +7800,7 @@ $foundationChecks = [
         && str_contains($themeViewAuditSource, 'iframe without title attribute')
         && str_contains($themeViewAuditSource, 'button without explicit type attribute')
         && str_contains($themeViewAuditSource, 'form control without matching label or ARIA label')
-        && str_contains($themeViewAuditSource, 'target="_blank" link without rel="noopener"')
+        && str_contains($themeViewAuditSource, 'target="_blank" link without rel="noopener noreferrer"')
         && str_contains($themeViewAuditSource, 'target="_blank" link without accessible new-window label')
         && str_contains($themeViewAuditSource, 'themeViewAuditTagHasNewWindowAccessibleName')
         && str_contains($themeViewAuditSource, 'newWindowLinkLabel(')
@@ -10052,6 +10052,11 @@ foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
         if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkLabel(')) {
             $adminNewWindowIssues[] = basename($adminNewWindowPath)
                 . ' contains target="_blank" without newWindowLinkLabel() on source line '
+                . ((int)$lineNumber + 1);
+        }
+        if (str_contains($line, 'target="_blank"') && str_contains($line, 'rel="noopener"') && !str_contains($line, 'rel="noopener noreferrer"')) {
+            $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                . ' contains target="_blank" without rel="noopener noreferrer" on source line '
                 . ((int)$lineNumber + 1);
         }
         if (str_contains($line, 'window.open(') && !str_contains($line, 'noopener,noreferrer')) {

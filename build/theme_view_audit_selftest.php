@@ -318,7 +318,15 @@ assertThemeViewAuditFails(
     <<<'PHP'
 <a href="https://example.test" target="_blank">Externí odkaz</a>
 PHP,
-    'target="_blank" link without rel="noopener"'
+    'target="_blank" link without rel="noopener noreferrer"'
+);
+
+assertThemeViewAuditFails(
+    'Blank target noreferrer guard',
+    <<<'PHP'
+<a href="https://example.test" target="_blank" rel="noopener" aria-label="Externí odkaz – otevře se v novém okně">Externí odkaz</a>
+PHP,
+    'target="_blank" link without rel="noopener noreferrer"'
 );
 
 assertThemeViewAuditFails(

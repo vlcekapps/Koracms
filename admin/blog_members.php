@@ -239,8 +239,8 @@ adminHeader('Tým blogu' . ($currentBlog ? ' – ' . (string)$currentBlog['name'
   <a href="blog_cats.php?blog_id=<?= $blogId ?>">Kategorie blogu</a>
   <a href="blog_tags.php?blog_id=<?= $blogId ?>">Štítky blogu</a>
   <?php if ($currentBlog): ?>
-    <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
-    <a href="<?= h(blogFeedPath($currentBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
+    <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
+    <a href="<?= h(blogFeedPath($currentBlog)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 

@@ -137,8 +137,8 @@ adminHeader($blogCaptionTitle);
     <?php endif; ?>
   <?php endif; ?>
   <?php if ($activeBlog): ?>
-    <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
-    <a href="<?= h(blogFeedPath($activeBlog)) ?>" target="_blank" rel="noopener" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
+    <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
+    <a href="<?= h(blogFeedPath($activeBlog)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
   <?php endif; ?>
 </p>
 
