@@ -4071,9 +4071,10 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_blog_pages') {
         foreach ([
             'Pořadí stránek blogu',
-            'Tady určujete pořadí statických stránek blogu',
+            'Tady určujete pořadí statických stránek a externích odkazů blogu',
             'Uložit pořadí',
             'Nová stránka blogu',
+            'Přidat externí odkaz blogu',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin blog pages page is missing fragment: ' . $expectedFragment;
@@ -11180,6 +11181,12 @@ foreach (["\$err === 'publish_at'", "\$err === 'unpublish_at'", "\$err === 'publ
         $editorialValidationIssues[] = 'blog form is missing validation message branch: ' . $blogFormFragment;
     }
 }
+if (!str_contains($blogSaveSource, 'uploadArticleImage(') || str_contains($blogSaveSource, 'new finfo(FILEINFO_MIME_TYPE)') || str_contains($blogSaveSource, 'move_uploaded_file(')) {
+    $editorialValidationIssues[] = 'blog save article image upload is not using shared upload helpers';
+}
+if (!str_contains($blogFormSource, "'image_upload' => ['image']") || !str_contains($blogFormSource, 'blog-image-error')) {
+    $editorialValidationIssues[] = 'blog form is missing article image upload error feedback';
+}
 if (!str_contains($podcastEpisodeSaveSource, 'validateDateTimeLocal($publishAtInput)') || !str_contains($podcastEpisodeSaveSource, "redirectWithError('publish_at')")) {
     $editorialValidationIssues[] = 'podcast episode save is missing strict publish_at validation';
 }
@@ -13475,10 +13482,16 @@ if (str_contains($blogStaticStatsSource, 'aria-label="Hlavní navigace"')) {
 if (!str_contains($blogStaticInstallSource, 'blog_id') || !str_contains($blogStaticInstallSource, 'blog_nav_order') || !str_contains($blogStaticInstallSource, 'idx_pages_blog_nav')) {
     $blogStaticPageIssues[] = 'fresh install is missing blog page schema fields on cms_pages';
 }
+if (!str_contains($blogStaticInstallSource, 'CREATE TABLE IF NOT EXISTS cms_nav_links') || !str_contains($blogStaticInstallSource, 'idx_nav_links_scope')) {
+    $blogStaticPageIssues[] = 'fresh install is missing external navigation links schema';
+}
 if (!str_contains($blogStaticMigrateSource, 'cms_pages.blog_id') || !str_contains($blogStaticMigrateSource, 'cms_pages.blog_nav_order') || !str_contains($blogStaticMigrateSource, 'idx_pages_blog_nav')) {
     $blogStaticPageIssues[] = 'migration is missing blog page schema upgrade on cms_pages';
 }
-if (!str_contains($blogPresentationSource, 'function pageBlogContext') || !str_contains($blogPresentationSource, '/stranka/') || !str_contains($blogPresentationSource, 'function normalizeBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function nextBlogPageNavigationOrder')) {
+if (!str_contains($blogStaticMigrateSource, 'cms_nav_links') || !str_contains($blogStaticMigrateSource, 'idx_nav_links_scope')) {
+    $blogStaticPageIssues[] = 'migration is missing external navigation links schema';
+}
+if (!str_contains($blogPresentationSource, 'function pageBlogContext') || !str_contains($blogPresentationSource, '/stranka/') || !str_contains($blogPresentationSource, 'function normalizeBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function nextBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function navigationLinkAnchorAttributes')) {
     $blogStaticPageIssues[] = 'presentation helpers are missing blog page routing or ordering support';
 }
 if (!str_contains($blogRouterSource, '$pageSlug = pageSlug') || !str_contains($blogRouterSource, "require __DIR__ . '/blog/page.php'")) {
@@ -13490,10 +13503,10 @@ if (!str_contains($blogStaticHtaccessSource, '/stranka/') || !str_contains($blog
 if (!str_contains($blogStaticReadmeSource, '/blog_router.php?blog_slug=$1&page_slug=$2&$args')) {
     $blogStaticPageIssues[] = 'README nginx sample is missing the blog static page route';
 }
-if (!str_contains($blogIndexControllerSource, 'SELECT id, title, slug, blog_id, blog_nav_order') || !str_contains($blogIndexControllerSource, '$blogPages')) {
+if (!str_contains($blogIndexControllerSource, 'SELECT id, title, slug, blog_id, blog_nav_order') || !str_contains($blogIndexControllerSource, '$blogPages') || !str_contains($blogIndexControllerSource, 'loadNavigationLinks($pdo, $blogId, true)')) {
     $blogStaticPageIssues[] = 'blog index controller is missing loading of ordered blog pages';
 }
-if (!str_contains($blogIndexViewSource, 'Stránky blogu') || !str_contains($blogIndexViewSource, 'aria-labelledby="blog-pages-heading"')) {
+if (!str_contains($blogIndexViewSource, 'Stránky blogu') || !str_contains($blogIndexViewSource, 'aria-labelledby="blog-pages-heading"') || !str_contains($blogIndexViewSource, 'navigationLinkAnchorAttributes($blogPage)')) {
     $blogStaticPageIssues[] = 'blog index view is missing the labeled blog page navigation block';
 }
 if (!str_contains($blogStaticPageControllerSource, "'view' => 'page'") || !str_contains($blogStaticPageControllerSource, 'Zpět na blog') || !str_contains($blogStaticPageControllerSource, "'page-blog-static'")) {
@@ -13505,7 +13518,7 @@ if (!str_contains($blogStaticPageFormSource, 'name="blog_id"') || !str_contains(
 if (!str_contains($blogStaticPageSaveSource, '$targetBlogId') || !str_contains($blogStaticPageSaveSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticPageSaveSource, 'normalizeBlogPageNavigationOrder')) {
     $blogStaticPageIssues[] = 'page save is missing blog-specific persistence or ordering';
 }
-if (!str_contains($blogStaticPagesAdminSource, 'blog_nav_order') || !str_contains($blogStaticPagesAdminSource, 'Uložit pořadí') || !str_contains($blogStaticPagesAdminSource, 'blog-page-order-status')) {
+if (!str_contains($blogStaticPagesAdminSource, 'blog_nav_order') || !str_contains($blogStaticPagesAdminSource, 'Uložit pořadí') || !str_contains($blogStaticPagesAdminSource, 'blog-page-order-status') || !str_contains($blogStaticPagesAdminSource, 'Přidat externí odkaz blogu')) {
     $blogStaticPageIssues[] = 'blog page ordering admin screen is missing reorder persistence or accessibility helpers';
 }
 if (str_contains($blogStaticPagesAdminSource, 'style=')) {
@@ -13534,7 +13547,7 @@ if (!str_contains($blogStaticMenuSource, 'WHERE blog_id IS NULL AND deleted_at I
 if (!str_contains($blogStaticConvertSource, 'blog_nav_order') || !str_contains($blogStaticConvertSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticConvertSource, '$targetBlogId = !empty($page[\'blog_id\']) ? (int)$page[\'blog_id\'] : $defaultBlogId')) {
     $blogStaticPageIssues[] = 'content conversion is missing blog-preserving page/article behavior';
 }
-if (!str_contains($blogExportSource, 'blog_id, blog_nav_order') || !str_contains($blogImportSource, 'blog_id, blog_nav_order')) {
+if (!str_contains($blogExportSource, 'blog_id, blog_nav_order') || !str_contains($blogImportSource, 'blog_id, blog_nav_order') || !str_contains($blogExportSource, 'nav_links') || !str_contains($blogImportSource, 'nav_links')) {
     $blogStaticPageIssues[] = 'export/import is missing blog page fields';
 }
 if (!str_contains($blogStaticHttpIntegrationSource, "blog_static_pages_http")) {
@@ -13599,8 +13612,8 @@ if (!str_contains($adminMenuSource, 'Upravit formulář')) {
 if (!str_contains($publicNavSource, 'foreach (array_keys($visibleForms) as $formId)')) {
     $menuAdminIssues[] = 'public navigation does not append missing form entries safely';
 }
-if (!str_contains($publicNavSource, '$visibleBlogEntries, $visibleForms, $li, $cur, $current')) {
-    $menuAdminIssues[] = 'public navigation unified renderer is missing visible forms in closure scope';
+if (!str_contains($publicNavSource, '$visibleBlogEntries, $visibleForms, $visibleLinks, $li, $cur, $current')) {
+    $menuAdminIssues[] = 'public navigation unified renderer is missing visible forms or links in closure scope';
 }
 if (!str_contains($publicNavSource, 'loadPublicNavigationForms()')) {
     $menuAdminIssues[] = 'public navigation is not using the shared public form navigation helper';
@@ -13619,6 +13632,9 @@ if (!str_contains($adminFormFormSource, 'name="show_in_nav"')) {
 if (!str_contains($adminMenuSource, 'formVisibleInPublicNavigation($formRow)')
     || !str_contains($adminMenuSource, "implode(' · ', formPublicNavigationStatusParts(\$formRow))")) {
     $menuAdminIssues[] = 'admin menu is not using shared public form availability logic';
+}
+if (!str_contains($adminMenuSource, 'Přidat externí odkaz') || !str_contains($adminMenuSource, "key' => 'link:'") || !str_contains($publicNavSource, 'loadNavigationLinks(db_connect(), null, true)')) {
+    $menuAdminIssues[] = 'global navigation is missing external link management or rendering';
 }
 if ($httpIntegrationSource !== '' && !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('forms_nav_http'")) {
     $menuAdminIssues[] = 'http integration is missing forms navigation scenario';

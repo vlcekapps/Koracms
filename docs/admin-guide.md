@@ -251,7 +251,7 @@ Správa týmů je teď viditelná i z více míst:
 - **Tým blogu** ukazuje u každého uživatele i jeho další blogová přiřazení, takže je hned jasné, kdo píše do více blogů
 - **Uživatelé a role** nově obsahují sloupec `Blogy`, kde je vidět přiřazení každého interního účtu
 - **Správa blogů** zobrazuje i počet členů týmu u každého blogu
-- **Správa blogů** zároveň nově nabízí rychlé odkazy `Články blogu`, `Kategorie blogu`, `Štítky blogu` a `Stránky blogu`, takže lze z jednoho přehledu přejít rovnou na správu konkrétního blogu
+- **Správa blogů** zároveň nově nabízí rychlé odkazy `Články blogu`, `Kategorie blogu`, `Štítky blogu` a `Stránky a odkazy blogu`, takže lze z jednoho přehledu přejít rovnou na správu konkrétního blogu
 - **Správa blogů** používá pro formulář vytvoření blogu, dialog úprav a náhled loga sdílené admin CSS třídy bez lokálního `<style>` bloku a bez lokálních `style` atributů, takže méně zatěžuje CSP reporty a drží konzistentní modální chování
 
 To je užitečné hlavně ve chvíli, kdy jeden autor spravuje více blogů nebo když chcete rychle zkontrolovat, zda má nový redaktor přístup opravdu jen tam, kam patří.
@@ -264,8 +264,15 @@ Editor článku respektuje vybraný blog:
 - horní odkazy vedou na správný veřejný blog, jeho RSS feed a správu taxonomií
 - nové články mohou převzít výchozí komentáře z blogu
 - jeden článek v blogu lze označit jako `Doporučený článek blogu`
+- náhledový obrázek používá sdílenou upload validaci a při výměně nebo odebrání uklízí i staré miniatury, WebP a responsive varianty
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
+
+### Stránky a odkazy blogu
+
+Každý blog může mít vlastní horní navigaci nad výpisem článků. Do stejného pořadí lze přidat statické stránky blogu i externí nebo interní odkazy. Odkaz má název, cílovou adresu, volitelný přístupný popis pro čtečky obrazovky, přepínač zobrazení a volbu otevření v novém okně. Přístupný popis doplňuje viditelný název odkazu, aby čtečka nehlásila jiný název než ten, který je vidět na stránce. Pokud se odkaz otevírá v novém okně, veřejný výstup automaticky přidá bezpečné atributy `target="_blank"` a `rel="noopener noreferrer"` a oznámí nové okno i v přístupném názvu odkazu.
+
+Globální hlavní navigace v **Navigace webu** používá stejný model pro odkazy napříč celým webem. Blogové odkazy jsou ale oddělené od globální navigace a řadí se jen v kontextu konkrétního blogu.
 
 V přehledech `Statické stránky` a `Články` se pro převod obsahu dál zobrazuje šipka jako vizuální vodítko, ale pro čtečky obrazovky je nově skrytá. Asistivní technologie tak hlásí jen samotnou akci `Článek` nebo `Stránka`, ne dekorativní symbol před ní.
 
@@ -796,7 +803,7 @@ Vývojové kontroly:
 - Přehled rezervací, ruční vytvoření rezervace, detail rezervace a editor zdrojů rezervací v administraci používají sdílené admin CSS třídy a atribut `hidden` pro přepínané části formulářů místo lokálního `<style>` bloku, lokálních `style` atributů nebo JS `element.style` mutací; runtime audit hlídá návrat starého vzoru i u dynamicky přidávaných slotů a blokovaných dnů.
 - Knihovna médií v administraci používá sdílené admin CSS třídy pro upload, filtry, grid médií, hromadné akce, detail metadat a přehled použití místo lokálních `style` atributů; runtime audit hlídá návrat starého vzoru.
 - Kategorie a štítky blogu v administraci používají sdílené utility třídy pro výběr blogu, inline editaci taxonomií, tlačítka a mazací formuláře místo lokálních `style` atributů. Stejný směr drží i sdílený helper hromadných akcí, který používá `admin-fieldset-card` a `field-help--flush`.
-- Pořadí stránek blogu v administraci používá sdílené utility třídy pro popis, řadicí seznam, stavové poznámky a tlačítkový řádek místo lokálních `style` atributů. Stav přetahování se přepíná CSS třídou a runtime audit hlídá, aby se inline styly do obrazovky nevracely.
+- Pořadí stránek a odkazů blogu v administraci používá sdílené utility třídy pro popis, řadicí seznam, stavové poznámky, formulář externího odkazu a tlačítkový řádek místo lokálních `style` atributů. Stav přetahování se přepíná CSS třídou a runtime audit hlídá, aby se inline styly do obrazovky nevracely.
 - Přehledy chatu, kontaktních zpráv a komentářů v administraci používají sdílené utility třídy pro filtry, hledání, hromadné akce, stavové poznámky a akční formuláře místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto přehledů nevracely.
 - Audit log v administraci používá sdílené utility třídy pro popis stránky, filtry a zalomení dlouhých detailů akce místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do přehledu nevracely.
 - Kontrola integrity v administraci používá sdílené administrační CSS třídy pro stavové panely, výsledky kontroly, akční řádek a informační blok místo lokálního `<style>` bloku nebo `style` atributů; runtime audit hlídá návrat obou starých vzorů.

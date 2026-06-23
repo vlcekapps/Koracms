@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Externí odkazy v navigaci** – hlavní navigace webu i pořadí blogových stránek nově umí přidat externí nebo interní odkaz s názvem, volitelným přístupným popisem pro čtečky obrazovky, stavem zobrazení a bezpečnou volbou otevření v novém okně; odkazy se řadí společně s moduly, stránkami, formuláři nebo blogovými stránkami a export/import je zachovává.
 - **Repository guardrails audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/repository_guardrails_audit.php`, který hlídá repo pravidlo pro rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php`.
 - **Config sample audit pro vývojové kontroly** – `composer ci:basic` nově spouští `build/config_sample_audit.php`, který hlídá, že `config.sample.php` obsahuje hlavní runtime konstanty, databázové proměnné a instalační vysvětlení pro cron, SMTP, privátní úložiště a GitHub issue bridge.
 - **Version metadata audit pro release jistotu** – `composer ci:basic` nově spouští `build/version_metadata_audit.php`, který hlídá platný SemVer ve `VERSION`, načítání `KORA_VERSION` z tohoto souboru a konzistentní práci release skriptu i release smoke testu s verzí v ZIP/source archive.
@@ -31,6 +32,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Náhledový obrázek článku** – editor blogového článku nově používá sdílený upload helper, při chybě uploadu vrací srozumitelnou hlášku přímo u pole a při výměně nebo odebrání uklízí originál, miniaturu, WebP i responsive varianty.
 - **SQL zálohy databáze** – ruční záloha v administraci i automatická cron záloha nově sdílejí stejný exportní helper, explicitně čtou řádky jako asociativní pole a kontrolují výsledek `SHOW CREATE TABLE`, takže se výstup nespoléhá na globální PDO fetch mód ani na duplicitní ruční skládání dumpu.
 - **301/302 přesměrování** – ručně uložené redirecty nově validují starou cestu jako interní cestu webu a novou cestu jako interní cestu nebo čistou `http/https` adresu bez přihlašovacích údajů; runtime zároveň nebezpečný uložený cíl přeskočí místo odeslání neplatné `Location` hlavičky.
 - **Veřejný náhled šablony a rezervační kalendář** – banner živého náhledu a tabulka kalendáře rezervací nově používají skutečný textový popisek přes `aria-labelledby` nebo skrytý `<caption>` místo samostatného `aria-label`.

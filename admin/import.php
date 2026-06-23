@@ -227,6 +227,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Stránky importovány.';
                 }
 
+                // Externí odkazy navigace
+                if (!empty($data['nav_links']) && is_array($data['nav_links'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_nav_links
+                         (id, blog_id, title, url, alt_text, target_blank, is_active, nav_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['nav_links'] as $row) {
+                        $importTitle = trim((string)($row['title'] ?? ''));
+                        $importUrl = navigationLinkUrl((string)($row['url'] ?? ''));
+                        if ($importTitle === '' || $importUrl === '') {
+                            continue;
+                        }
+                        $importBlogId = !empty($row['blog_id']) ? (int)$row['blog_id'] : null;
+                        if ($importBlogId !== null && !getBlogById($importBlogId)) {
+                            $importBlogId = null;
+                        }
+                        $createdAt = (string)($row['created_at'] ?? date('Y-m-d H:i:s'));
+                        $updatedAt = (string)($row['updated_at'] ?? $createdAt);
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $importBlogId,
+                            mb_substr($importTitle, 0, 255),
+                            $importUrl,
+                            mb_substr(trim((string)($row['alt_text'] ?? '')), 0, 255),
+                            !empty($row['target_blank']) ? 1 : 0,
+                            !isset($row['is_active']) || (int)$row['is_active'] === 1 ? 1 : 0,
+                            (int)($row['nav_order'] ?? 0),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Externí odkazy navigace importovány.';
+                }
+
                 // Novinky
                 if (!empty($data['news']) && is_array($data['news'])) {
                     $ins = $pdo->prepare(

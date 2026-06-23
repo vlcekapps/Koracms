@@ -268,48 +268,20 @@ if ($publishAtSql !== null && $unpublishAtSql !== null && $unpublishAtSql <= $pu
 }
 
 $imageFile = null;
-if (!empty($_FILES['image']['name'])) {
-    $tmp = $_FILES['image']['tmp_name'];
-    $fileInfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $fileInfo->file($tmp);
-    $allowed = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-        'image/webp' => 'webp',
-    ];
-
-    if (isset($allowed[$mime])) {
-        $ext = $allowed[$mime];
-        $filename = uniqid('img_', true) . '.' . $ext;
-        $dir = __DIR__ . '/../uploads/articles/';
-        $thumbDir = $dir . 'thumbs/';
-
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-        if (!is_dir($thumbDir)) {
-            mkdir($thumbDir, 0755, true);
-        }
-
-        if (move_uploaded_file($tmp, $dir . $filename)) {
-            gallery_make_thumb($dir . $filename, $thumbDir . $filename, 400);
-            generateWebp($dir . $filename);
-            generateWebp($thumbDir . $filename);
-            generateResponsiveSizes($dir . $filename, $dir, $filename);
-            $imageFile = $filename;
-
-            if ($existingArticle && !empty($existingArticle['image_file'])) {
-                @unlink($dir . $existingArticle['image_file']);
-                @unlink($thumbDir . $existingArticle['image_file']);
-            }
-        }
+if (koraUploadHasFile($_FILES['image'] ?? null)) {
+    $articleImageUpload = uploadArticleImage(
+        is_array($_FILES['image'] ?? null) ? $_FILES['image'] : [],
+        $existingArticle ? (string)($existingArticle['image_file'] ?? '') : ''
+    );
+    if ((string)$articleImageUpload['error'] !== '') {
+        $redirectToForm($id, $blogId, 'image_upload');
+    }
+    if (!empty($articleImageUpload['uploaded'])) {
+        $imageFile = (string)$articleImageUpload['filename'];
     }
 } elseif (isset($_POST['image_delete']) && $_POST['image_delete'] === '1' && $existingArticle) {
     if (!empty($existingArticle['image_file'])) {
-        $dir = __DIR__ . '/../uploads/articles/';
-        @unlink($dir . $existingArticle['image_file']);
-        @unlink($dir . 'thumbs/' . $existingArticle['image_file']);
+        deleteArticleImageFile((string)$existingArticle['image_file']);
     }
     $imageFile = '';
 }

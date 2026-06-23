@@ -239,6 +239,7 @@ $fieldErrorMap = [
     'tags_target' => ['tags'],
     'missing_category_action' => ['missing_category_action'],
     'missing_tags_action' => ['missing_tags_action'],
+    'image_upload' => ['image'],
 ];
 $fieldErrorMessages = [
     'title' => 'Vyplňte prosím název článku.',
@@ -251,6 +252,7 @@ $fieldErrorMessages = [
     'tags_target' => 'Vybrané štítky nepatří do cílového blogu.',
     'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
+    'image_upload' => 'Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.',
 ];
 $publishAtInput = '';
 if (!empty($article['publish_at'])) {
@@ -331,6 +333,8 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
 <?php elseif ($err === 'missing_tags_action'): ?>
   <p role="alert" class="error" id="form-error">Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
+<?php elseif ($err === 'image_upload'): ?>
+  <p role="alert" class="error" id="form-error">Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.</p>
 <?php endif; ?>
 
 <form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
@@ -498,13 +502,14 @@ adminHeader($pageTitle);
 
     <label for="image">Náhledový obrázek</label>
     <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
-           aria-describedby="<?= !empty($article['image_file']) ? 'blog-image-current' : 'blog-image-help' ?>">
+           <?= adminFieldAttributes('image', $err, $fieldErrorMap, [!empty($article['image_file']) ? 'blog-image-current' : 'blog-image-help'], 'blog-image-error') ?>>
     <?php if (!empty($article['image_file'])): ?>
       <small id="blog-image-current" class="field-help">Aktuální obrázek: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
              target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?></a>.</small>
     <?php else: ?>
       <small id="blog-image-help" class="field-help">Volitelné. Hodí se pro úvodní náhled článku.</small>
     <?php endif; ?>
+    <?php adminRenderFieldError('image', $err, $fieldErrorMap, $fieldErrorMessages['image_upload'], 'blog-image-error'); ?>
     <?php if (!empty($article['image_file'])): ?>
       <label class="blog-form-checkbox-row">
         <input type="checkbox" name="image_delete" value="1"> Smazat stávající obrázek

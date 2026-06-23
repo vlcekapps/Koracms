@@ -80,7 +80,15 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
         <h2 id="blog-pages-heading" class="section-title section-title--compact">Stránky blogu</h2>
         <ul class="chip-list">
           <?php foreach ($blogPages as $blogPage): ?>
-            <li><a class="chip-link" href="<?= h(pagePublicPath($blogPage)) ?>"><?= h((string)$blogPage['title']) ?></a></li>
+            <?php if (($blogPage['item_type'] ?? 'page') === 'link'): ?>
+              <?php $linkAttributes = navigationLinkAnchorAttributes($blogPage); ?>
+              <?php if ($linkAttributes === '') {
+                  continue;
+              } ?>
+              <li><a class="chip-link" <?= $linkAttributes ?>><?= h((string)$blogPage['title']) ?></a></li>
+            <?php else: ?>
+              <li><a class="chip-link" href="<?= h(pagePublicPath($blogPage)) ?>"><?= h((string)$blogPage['title']) ?></a></li>
+            <?php endif; ?>
           <?php endforeach; ?>
         </ul>
       </nav>

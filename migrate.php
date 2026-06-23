@@ -271,6 +271,21 @@ $tables = [
         INDEX idx_pages_blog_nav (blog_id, blog_nav_order)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_nav_links' => "CREATE TABLE IF NOT EXISTS cms_nav_links (
+        id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        blog_id      INT          NULL DEFAULT NULL,
+        title        VARCHAR(255) NOT NULL,
+        url          VARCHAR(1000) NOT NULL,
+        alt_text     VARCHAR(255) NOT NULL DEFAULT '',
+        target_blank TINYINT(1)   NOT NULL DEFAULT 0,
+        is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+        nav_order    INT          NOT NULL DEFAULT 0,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_nav_links_scope (blog_id, nav_order),
+        INDEX idx_nav_links_active (blog_id, is_active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_events' => "CREATE TABLE IF NOT EXISTS cms_events (
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title        VARCHAR(255) NOT NULL,

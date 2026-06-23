@@ -336,6 +336,10 @@ function siteNav(string $current = ''): string
             }
         }
         $visibleForms = loadPublicNavigationForms();
+        $visibleLinks = [];
+        foreach (loadNavigationLinks(db_connect(), null, true) as $linkEntry) {
+            $visibleLinks[(int)$linkEntry['id']] = $linkEntry;
+        }
         $pagesMap = [];
         try {
             $pageRows = db_connect()->query(
@@ -353,7 +357,7 @@ function siteNav(string $current = ''): string
         }
 
         $renderedEntries = [];
-        $renderUnifiedEntry = static function (string $entry) use (&$nav, &$renderedEntries, $moduleMap, $pagesMap, $visibleBlogEntries, $visibleForms, $li, $cur, $current): void {
+        $renderUnifiedEntry = static function (string $entry) use (&$nav, &$renderedEntries, $moduleMap, $pagesMap, $visibleBlogEntries, $visibleForms, $visibleLinks, $li, $cur, $current): void {
             if ($entry === '' || isset($renderedEntries[$entry])) {
                 return;
             }
@@ -416,6 +420,20 @@ function siteNav(string $current = ''): string
                 $form = $visibleForms[$formId];
                 $nav .= '<li><a href="' . h(formPublicPath($form)) . '"' . ($current === 'form:' . $formId ? ' aria-current="page"' : '') . '>' . h((string)$form['title']) . '</a></li>' . "\n";
                 $renderedEntries[$entry] = true;
+                return;
+            }
+
+            if (str_starts_with($entry, 'link:')) {
+                $linkId = (int)substr($entry, 5);
+                if (!isset($visibleLinks[$linkId])) {
+                    return;
+                }
+                $attributes = navigationLinkAnchorAttributes($visibleLinks[$linkId]);
+                if ($attributes === '') {
+                    return;
+                }
+                $nav .= '<li><a ' . $attributes . '>' . h((string)$visibleLinks[$linkId]['title']) . '</a></li>' . "\n";
+                $renderedEntries[$entry] = true;
             }
         };
 
@@ -438,6 +456,9 @@ function siteNav(string $current = ''): string
         }
         foreach (array_keys($visibleForms) as $formId) {
             $renderUnifiedEntry('form:' . $formId);
+        }
+        foreach (array_keys($visibleLinks) as $linkId) {
+            $renderUnifiedEntry('link:' . $linkId);
         }
     } else {
         // Fallback: starý systém (stránky, pak moduly)
@@ -485,6 +506,14 @@ function siteNav(string $current = ''): string
 
         foreach (loadPublicNavigationForms() as $form) {
             $nav .= '<li><a href="' . h(formPublicPath($form)) . '"' . ($current === 'form:' . (int)$form['id'] ? ' aria-current="page"' : '') . '>' . h((string)$form['title']) . '</a></li>' . "\n";
+        }
+
+        foreach (loadNavigationLinks(db_connect(), null, true) as $linkEntry) {
+            $attributes = navigationLinkAnchorAttributes($linkEntry);
+            if ($attributes === '') {
+                continue;
+            }
+            $nav .= '<li><a ' . $attributes . '>' . h((string)$linkEntry['title']) . '</a></li>' . "\n";
         }
     }
 

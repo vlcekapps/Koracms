@@ -1907,6 +1907,128 @@ function presentationImageMimeMap(): array
     ];
 }
 
+function articleImageDirectory(): string
+{
+    return dirname(__DIR__) . '/uploads/articles/';
+}
+
+function articleImageThumbDirectory(): string
+{
+    return articleImageDirectory() . 'thumbs/';
+}
+
+function presentationWebpVariantPath(string $path): string
+{
+    $webpPath = preg_replace('/\.[a-z0-9]+$/i', '.webp', $path);
+    return is_string($webpPath) && $webpPath !== '' ? $webpPath : $path . '.webp';
+}
+
+function deleteArticleImageFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $directory = articleImageDirectory();
+    $thumbDirectory = articleImageThumbDirectory();
+    $baseName = pathinfo($filename, PATHINFO_FILENAME);
+    $extension = pathinfo($filename, PATHINFO_EXTENSION);
+    $paths = [
+        $directory . $filename,
+        $thumbDirectory . $filename,
+    ];
+
+    if ($baseName !== '' && $extension !== '') {
+        foreach ([400, 800, 1200] as $width) {
+            $paths[] = $directory . $baseName . '-' . $width . 'w.' . $extension;
+        }
+    }
+
+    $webpPaths = [];
+    foreach ($paths as $path) {
+        $webpPath = presentationWebpVariantPath($path);
+        if ($webpPath !== $path) {
+            $webpPaths[] = $webpPath;
+        }
+    }
+
+    foreach (array_unique(array_merge($paths, $webpPaths)) as $path) {
+        if (is_file($path) && !unlink($path)) {
+            presentationLogFileDeleteFailure('article_image', $path);
+        }
+    }
+}
+
+/**
+ * @param array<string, mixed> $file
+ * @return array{filename:string,uploaded:bool,error:string}
+ */
+function uploadArticleImage(array $file, string $existingFilename = ''): array
+{
+    if (!koraUploadHasFile($file)) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    $upload = koraInspectUploadedFile($file, [
+        'upload_error' => 'Náhledový obrázek článku se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Náhledový obrázek článku se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Náhledový obrázek článku musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+    ]);
+    if (empty($upload['ok'])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => (string)($upload['error'] ?? 'Náhledový obrázek článku se nepodařilo nahrát.'),
+        ];
+    }
+
+    $extension = (string)($upload['extension'] ?? '');
+    $filename = uniqid('img_', true) . ($extension !== '' ? '.' . $extension : '');
+    $storedUpload = koraStoreInspectedUpload($upload, articleImageDirectory(), $filename, [
+        'mkdir_error' => 'Adresář pro obrázky článků se nepodařilo vytvořit.',
+        'move_error' => 'Náhledový obrázek článku se nepodařilo uložit.',
+    ]);
+    if (empty($storedUpload['ok'])) {
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => (string)($storedUpload['error'] ?? 'Náhledový obrázek článku se nepodařilo uložit.'),
+        ];
+    }
+
+    $thumbDirectory = articleImageThumbDirectory();
+    if (!is_dir($thumbDirectory) && !mkdir($thumbDirectory, 0755, true) && !is_dir($thumbDirectory)) {
+        deleteArticleImageFile($filename);
+        return [
+            'filename' => $existingFilename,
+            'uploaded' => false,
+            'error' => 'Adresář pro náhledy článků se nepodařilo vytvořit.',
+        ];
+    }
+
+    $storedPath = (string)$storedUpload['path'];
+    gallery_make_thumb($storedPath, $thumbDirectory . $filename, 400);
+    generateWebp($storedPath);
+    generateWebp($thumbDirectory . $filename);
+    generateResponsiveSizes($storedPath, articleImageDirectory(), $filename);
+
+    if ($existingFilename !== '' && $existingFilename !== $filename) {
+        deleteArticleImageFile($existingFilename);
+    }
+
+    return [
+        'filename' => $filename,
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
@@ -3980,16 +4102,51 @@ function normalizeBlogPageNavigationOrder(PDO $pdo, int $blogId): void
     );
     $stmt->execute([$blogId]);
     $pages = $stmt->fetchAll();
+    $items = [];
+    foreach ($pages as $page) {
+        $items[] = [
+            'type' => 'page',
+            'id' => (int)$page['id'],
+            'order' => (int)($page['blog_nav_order'] ?? 0),
+            'title' => (string)$page['title'],
+        ];
+    }
+    foreach (loadNavigationLinks($pdo, $blogId, false) as $link) {
+        $items[] = [
+            'type' => 'link',
+            'id' => (int)$link['id'],
+            'order' => (int)($link['nav_order'] ?? 0),
+            'title' => (string)$link['title'],
+        ];
+    }
 
-    if ($pages === []) {
+    if ($items === []) {
         return;
     }
 
-    $update = $pdo->prepare("UPDATE cms_pages SET blog_nav_order = ? WHERE id = ?");
+    usort($items, static function (array $left, array $right): int {
+        $leftOrder = (int)$left['order'];
+        $rightOrder = (int)$right['order'];
+        if ($leftOrder !== $rightOrder) {
+            return $leftOrder <=> $rightOrder;
+        }
+
+        return strcasecmp((string)$left['title'], (string)$right['title']);
+    });
+
+    $updatePage = $pdo->prepare("UPDATE cms_pages SET blog_nav_order = ? WHERE id = ?");
+    $updateLink = null;
     $position = 1;
-    foreach ($pages as $page) {
-        if ((int)($page['blog_nav_order'] ?? 0) !== $position) {
-            $update->execute([$position, (int)$page['id']]);
+    foreach ($items as $item) {
+        if ((int)$item['order'] !== $position) {
+            if ($item['type'] === 'page') {
+                $updatePage->execute([$position, (int)$item['id']]);
+            } elseif ($item['type'] === 'link') {
+                if (!$updateLink instanceof PDOStatement) {
+                    $updateLink = $pdo->prepare("UPDATE cms_nav_links SET nav_order = ? WHERE id = ?");
+                }
+                $updateLink->execute([$position, (int)$item['id']]);
+            }
         }
         $position++;
     }
@@ -4001,11 +4158,146 @@ function nextBlogPageNavigationOrder(PDO $pdo, int $blogId): int
         return 0;
     }
 
-    normalizeBlogPageNavigationOrder($pdo, $blogId);
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT GREATEST(
+                COALESCE((SELECT MAX(blog_nav_order) FROM cms_pages WHERE blog_id = ? AND deleted_at IS NULL), 0),
+                COALESCE((SELECT MAX(nav_order) FROM cms_nav_links WHERE blog_id = ?), 0)
+            )"
+        );
+        $stmt->execute([$blogId, $blogId]);
+        return (int)$stmt->fetchColumn() + 1;
+    } catch (\PDOException $e) {
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(blog_nav_order), 0) FROM cms_pages WHERE blog_id = ? AND deleted_at IS NULL");
+        $stmt->execute([$blogId]);
+        return (int)$stmt->fetchColumn() + 1;
+    }
+}
 
-    $stmt = $pdo->prepare("SELECT COALESCE(MAX(blog_nav_order), 0) FROM cms_pages WHERE blog_id = ? AND deleted_at IS NULL");
-    $stmt->execute([$blogId]);
-    return (int)$stmt->fetchColumn() + 1;
+function navigationLinkUrl(string $target): string
+{
+    return storedRedirectTarget($target, '');
+}
+
+/**
+ * @param array<string, mixed> $link
+ */
+function navigationLinkHref(array $link): string
+{
+    return navigationLinkUrl((string)($link['url'] ?? ''));
+}
+
+/**
+ * @param array<string, mixed> $link
+ */
+function navigationLinkAnchorAttributes(array $link): string
+{
+    $href = navigationLinkHref($link);
+    if ($href === '') {
+        return '';
+    }
+
+    $attributes = ['href="' . h($href) . '"'];
+    $title = trim((string)($link['title'] ?? ''));
+    $altText = trim((string)($link['alt_text'] ?? ''));
+    $opensInNewWindow = (int)($link['target_blank'] ?? 0) === 1;
+    $labelParts = [];
+    if ($title !== '') {
+        $labelParts[] = $title;
+    }
+    if ($altText !== '') {
+        $labelParts[] = $altText;
+    }
+    if ($opensInNewWindow) {
+        $labelParts[] = 'otevře se v novém okně';
+    }
+    if ($altText !== '' || $opensInNewWindow) {
+        $attributes[] = 'aria-label="' . h(implode(' – ', $labelParts)) . '"';
+    }
+    if ($opensInNewWindow) {
+        $attributes[] = 'target="_blank"';
+        $attributes[] = 'rel="noopener noreferrer"';
+    }
+
+    return implode(' ', $attributes);
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function loadNavigationLinks(PDO $pdo, ?int $blogId = null, bool $publicOnly = false): array
+{
+    try {
+        if ($blogId === null) {
+            $sql = "SELECT id, blog_id, title, url, alt_text, target_blank, is_active, nav_order
+                    FROM cms_nav_links
+                    WHERE blog_id IS NULL";
+            $params = [];
+        } else {
+            $sql = "SELECT id, blog_id, title, url, alt_text, target_blank, is_active, nav_order
+                    FROM cms_nav_links
+                    WHERE blog_id = ?";
+            $params = [$blogId];
+        }
+        if ($publicOnly) {
+            $sql .= " AND is_active = 1";
+        }
+        $sql .= " ORDER BY nav_order, title, id";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $links = $stmt->fetchAll();
+    } catch (\PDOException $e) {
+        return [];
+    }
+
+    return array_values(array_filter(
+        $links,
+        static fn (array $link): bool => !$publicOnly || navigationLinkHref($link) !== ''
+    ));
+}
+
+function nextNavigationLinkOrder(PDO $pdo, ?int $blogId = null): int
+{
+    if ($blogId === null) {
+        try {
+            $maxOrder = (int)$pdo->query("SELECT COALESCE(MAX(nav_order), 0) FROM cms_nav_links WHERE blog_id IS NULL")->fetchColumn();
+            return $maxOrder + 1;
+        } catch (\PDOException $e) {
+            return 1;
+        }
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT GREATEST(
+                COALESCE((SELECT MAX(blog_nav_order) FROM cms_pages WHERE blog_id = ? AND deleted_at IS NULL), 0),
+                COALESCE((SELECT MAX(nav_order) FROM cms_nav_links WHERE blog_id = ?), 0)
+            )"
+        );
+        $stmt->execute([$blogId, $blogId]);
+        return (int)$stmt->fetchColumn() + 1;
+    } catch (\PDOException $e) {
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(blog_nav_order), 0) FROM cms_pages WHERE blog_id = ? AND deleted_at IS NULL");
+        $stmt->execute([$blogId]);
+        return (int)$stmt->fetchColumn() + 1;
+    }
+}
+
+function normalizeNavigationLinkOrder(PDO $pdo, ?int $blogId = null): void
+{
+    $links = loadNavigationLinks($pdo, $blogId, false);
+    if ($links === []) {
+        return;
+    }
+
+    $update = $pdo->prepare("UPDATE cms_nav_links SET nav_order = ? WHERE id = ?");
+    foreach ($links as $index => $link) {
+        $position = $index + 1;
+        if ((int)($link['nav_order'] ?? 0) !== $position) {
+            $update->execute([$position, (int)$link['id']]);
+        }
+    }
 }
 
 function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string

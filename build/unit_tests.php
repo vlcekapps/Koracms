@@ -132,6 +132,32 @@ assert_equals('', storedRedirectTarget('javascript:alert(1)'), 'stored redirect 
 assert_equals('', storedRedirectTarget('https://user:pass@example.com/private'), 'stored redirect rejects URL credentials');
 assert_equals('', storedRedirectTarget("https://example.com\r\nSet-Cookie: evil=1"), 'stored redirect rejects CRLF injection');
 
+test_section('navigation links');
+
+assert_equals('/kontakt', navigationLinkUrl('/kontakt'), 'navigation link accepts internal path');
+assert_equals('https://example.com', navigationLinkUrl('https://example.com'), 'navigation link accepts https URL');
+assert_equals('', navigationLinkUrl('javascript:alert(1)'), 'navigation link rejects unsafe scheme');
+assert_contains(
+    'target="_blank"',
+    navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),
+    'navigation link can open in new window'
+);
+assert_contains(
+    'rel="noopener noreferrer"',
+    navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),
+    'navigation link new window uses noopener noreferrer'
+);
+assert_contains(
+    'aria-label="Externí – Přístupný popis"',
+    navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'alt_text' => 'Přístupný popis']),
+    'navigation link optional screen reader label keeps visible label'
+);
+assert_contains(
+    'aria-label="Externí – otevře se v novém okně"',
+    navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),
+    'navigation link new window is announced accessibly'
+);
+
 // ─── 4. Rate-limit keys ─────────────────────────────────────────────────────
 
 test_section('rateLimitKey()');

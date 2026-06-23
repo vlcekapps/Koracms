@@ -362,9 +362,10 @@ Kora CMS používá jedno rozhraní pro správu pořadí navigace. V administrac
 - moduly
 - blogy
 - veřejné formuláře
+- externí a interní odkazy
 - statické stránky
 
-Položky lze libovolně kombinovat – stránka může být mezi moduly, formulář vedle blogu.
+Položky lze libovolně kombinovat – stránka může být mezi moduly, formulář vedle blogu a externí odkaz třeba mezi dvěma stránkami. U odkazu se nastavuje název, cílová adresa, volitelný popis pro čtečky obrazovky, který doplní viditelný název odkazu, a bezpečné otevření v novém okně. Stejný princip platí i pro blogové stránky: každý blog může mít vlastní statické stránky a vlastní odkazy v samostatném pořadí nad výpisem článků.
 
 Správa navigace u veřejných formulářů nově používá stejnou dostupnostní logiku jako samotný veřejný web. Pokud je formulář aktivní, zveřejněný a označený pro navigaci, admin už ho neoznačuje jako skrytý a hlavní navigace ho vykreslí stejným pravidlem jako ve veřejné části.
 
@@ -415,6 +416,8 @@ Přihlášení do administrace, veřejné přihlášení i obnovení hesla použ
 Technické recoverable chyby se postupně zapisují přes strukturovaný `koraLog()` formát s `request_id`, metodou a cestou. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Administrační ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů a import fotek z eStránek už nepoužívají surové `error_log()` zprávy bez kontextu nebo s plnými lokálními cestami.
 
 V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
+
+Náhledové obrázky článků používají stejnou sdílenou upload validaci pro stav PHP uploadu, MIME typ, příponu a finální uložení. Při výměně nebo odebrání obrázku se uklízí i staré miniatury, WebP a responsive varianty, aby se ve veřejných upload adresářích nehromadily nepoužívané soubory.
 
 Veřejná default šablona nepoužívá pro potvrzení akcí a tisk inline `onclick` handlery. Potvrzení běží přes `data-confirm` a tisk přes `js-print-page` v nonce skriptu layoutu, což snižuje závislost na CSP fallbacku `unsafe-inline`.
 

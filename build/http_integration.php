@@ -31,6 +31,7 @@ $createdBoardIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
+$createdNavLinkIds = [];
 $createdTempFiles = [];
 
 /**
@@ -2691,13 +2692,52 @@ try {
     if (!str_contains($blogPagesAdminResponse['body'], 'Pořadí stránek blogu')) {
         $blogStaticPagesIssues[] = 'správa pořadí blogových stránek nemá očekávaný nadpis';
     }
-    if ($blogPageOne && $blogPageTwo) {
+    if (!str_contains($blogPagesAdminResponse['body'], 'Přidat externí odkaz blogu')) {
+        $blogStaticPagesIssues[] = 'správa pořadí blogových stránek nenabízí externí odkazy blogu';
+    }
+
+    $blogExternalLinkTitle = 'HTTP externí odkaz blogu';
+    $blogExternalLinkUrl = 'https://example.com/blog-link-' . bin2hex(random_bytes(4));
+    $blogExternalLinkResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'save_link',
+            'title' => $blogExternalLinkTitle,
+            'url' => $blogExternalLinkUrl,
+            'alt_text' => 'Externí zdroj blogu pro HTTP test',
+            'target_blank' => '1',
+            'is_active' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($blogExternalLinkResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'uložení externího odkazu blogu nevrátilo redirect';
+    }
+    $blogExternalLinkStmt = $pdo->prepare("SELECT * FROM cms_nav_links WHERE blog_id = ? AND title = ? ORDER BY id DESC LIMIT 1");
+    $blogExternalLinkStmt->execute([$blogStaticMainId, $blogExternalLinkTitle]);
+    $blogExternalLink = $blogExternalLinkStmt->fetch() ?: null;
+    if (!$blogExternalLink) {
+        $blogStaticPagesIssues[] = 'externí odkaz blogu se nevytvořil';
+    } else {
+        $createdNavLinkIds[] = (int)$blogExternalLink['id'];
+        if ((string)($blogExternalLink['url'] ?? '') !== $blogExternalLinkUrl) {
+            $blogStaticPagesIssues[] = 'externí odkaz blogu neuložil cílovou URL';
+        }
+        if ((int)($blogExternalLink['target_blank'] ?? 0) !== 1) {
+            $blogStaticPagesIssues[] = 'externí odkaz blogu neuložil otevření v novém okně';
+        }
+    }
+
+    if ($blogPageOne && $blogPageTwo && $blogExternalLink) {
         $reorderResponse = postUrl(
             $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
             [
                 'csrf_token' => $adminSession['csrf'],
+                'action' => 'reorder',
                 'redirect' => BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
-                'order' => [(string)$blogPageTwo['id'], (string)$blogPageOne['id']],
+                'order' => ['page:' . (int)$blogPageTwo['id'], 'link:' . (int)$blogExternalLink['id'], 'page:' . (int)$blogPageOne['id']],
             ],
             $adminSession['cookie'],
             0
@@ -2711,11 +2751,15 @@ try {
         $reorderedStmt = $pdo->prepare("SELECT id, blog_nav_order FROM cms_pages WHERE id IN (?, ?) ORDER BY blog_nav_order, id");
         $reorderedStmt->execute([(int)$blogPageOne['id'], (int)$blogPageTwo['id']]);
         $reorderedRows = $reorderedStmt->fetchAll() ?: [];
+        $reorderedLinkStmt = $pdo->prepare("SELECT nav_order FROM cms_nav_links WHERE id = ?");
+        $reorderedLinkStmt->execute([(int)$blogExternalLink['id']]);
+        $reorderedLinkOrder = (int)$reorderedLinkStmt->fetchColumn();
         if (count($reorderedRows) !== 2
             || (int)$reorderedRows[0]['id'] !== (int)$blogPageTwo['id']
             || (int)$reorderedRows[0]['blog_nav_order'] !== 1
             || (int)$reorderedRows[1]['id'] !== (int)$blogPageOne['id']
-            || (int)$reorderedRows[1]['blog_nav_order'] !== 2) {
+            || (int)$reorderedRows[1]['blog_nav_order'] !== 3
+            || $reorderedLinkOrder !== 2) {
             $blogStaticPagesIssues[] = 'reorder blogových stránek neuložil očekávané pořadí';
         }
     }
@@ -2747,6 +2791,13 @@ try {
     }
     if (!str_contains($blogIndexResponse['body'], $blogPageOneTitle) || !str_contains($blogIndexResponse['body'], $blogPageTwoTitle)) {
         $blogStaticPagesIssues[] = 'veřejný blogový index neobsahuje odkazy na blogové stránky';
+    }
+    if (!str_contains($blogIndexResponse['body'], $blogExternalLinkTitle)
+        || !str_contains($blogIndexResponse['body'], $blogExternalLinkUrl)
+        || !str_contains($blogIndexResponse['body'], 'target="_blank"')
+        || !str_contains($blogIndexResponse['body'], 'rel="noopener noreferrer"')
+        || !str_contains($blogIndexResponse['body'], 'aria-label="HTTP externí odkaz blogu – Externí zdroj blogu pro HTTP test – otevře se v novém okně"')) {
+        $blogStaticPagesIssues[] = 'veřejný blogový index nezobrazuje externí odkaz blogu s bezpečnými atributy';
     }
     if (!str_contains($blogIndexResponse['body'], $blogArticleTitle)) {
         $blogStaticPagesIssues[] = 'veřejný blogový index nezobrazuje články pod navigací blogových stránek';
@@ -2832,7 +2883,7 @@ try {
         if ((int)($convertedPage['blog_id'] ?? 0) !== $blogStaticMainId) {
             $blogStaticPagesIssues[] = 'převod článku na stránku nezachoval blog původního článku';
         }
-        if ((int)($convertedPage['blog_nav_order'] ?? 0) !== 3) {
+        if ((int)($convertedPage['blog_nav_order'] ?? 0) !== 4) {
             $blogStaticPagesIssues[] = 'převod článku na stránku nezařadil novou blogovou stránku na konec pořadí';
         }
 
@@ -3761,6 +3812,9 @@ try {
     }
     foreach ($createdPageIds as $pageIdToDelete) {
         $pdo->prepare("DELETE FROM cms_pages WHERE id = ?")->execute([$pageIdToDelete]);
+    }
+    foreach ($createdNavLinkIds as $navLinkIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_nav_links WHERE id = ?")->execute([$navLinkIdToDelete]);
     }
     foreach ($createdGalleryAlbumIds as $galleryAlbumIdToDelete) {
         $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$galleryAlbumIdToDelete]);

@@ -35,9 +35,25 @@ try {
     $blogPageStmt->execute([$blogId]);
     $blogPages = $blogPageStmt->fetchAll();
     foreach ($blogPages as &$blogPage) {
+        $blogPage['item_type'] = 'page';
+        $blogPage['sort_order'] = (int)($blogPage['blog_nav_order'] ?? 0);
         $blogPage['blog_slug'] = $blog['slug'];
     }
     unset($blogPage);
+    foreach (loadNavigationLinks($pdo, $blogId, true) as $blogLink) {
+        $blogLink['item_type'] = 'link';
+        $blogLink['sort_order'] = (int)($blogLink['nav_order'] ?? 0);
+        $blogPages[] = $blogLink;
+    }
+    usort($blogPages, static function (array $left, array $right): int {
+        $leftOrder = (int)($left['sort_order'] ?? 0);
+        $rightOrder = (int)($right['sort_order'] ?? 0);
+        if ($leftOrder !== $rightOrder) {
+            return $leftOrder <=> $rightOrder;
+        }
+
+        return strcasecmp((string)($left['title'] ?? ''), (string)($right['title'] ?? ''));
+    });
 } catch (\PDOException $e) {
     koraLog('warning', 'blog index pages query failed', ['blog_id' => $blogId, 'exception' => $e]);
 }
