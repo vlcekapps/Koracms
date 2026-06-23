@@ -39,6 +39,7 @@ parameters:
         - build/redirect_guardrails_audit.php
         - build/release_package_audit.php
         - build/release_smoke.php
+        - build/theme_view_audit.php
         - build/source_encoding_audit.php
         - build/mojibake_audit.php
         - build/workflow_audit.php

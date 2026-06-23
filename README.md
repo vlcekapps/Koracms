@@ -302,6 +302,8 @@ V administraci lze:
 
 Import ZIP balíčku šablony používá sdílenou upload validaci ještě před tím, než CMS balíček rozbalí a zkontroluje manifest, povolené statické soubory a limity velikosti.
 
+Default šablona má vlastní theme view audit v `composer ci:basic`. Ten hlídá, aby PHP view soubory zůstaly čistou prezentační vrstvou bez přímé práce s request inputem, databází, souborovými zápisy, inline styly, inline event handlery nebo skripty bez CSP nonce.
+
 Pokud aktivní šablona neobsahuje konkrétní view, systém automaticky použije `default`.
 
 ---
@@ -564,6 +566,7 @@ composer ci:basic
 - samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 219 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven, workflow auditu, redirect guardrailů a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
 - validaci `composer.json` a `composer.lock` přes `composer validate --strict`, takže lokální `ci:basic` hlídá stejný Composer kontrakt jako GitHub Actions
 - statický release package audit, který hlídá, že instalační balíček a source archivy zůstávají bez vývojových nástrojů a lokálních metadat
+- theme view audit pro default šablonu, který hlídá oddělení prezentační vrstvy od requestu, databáze a souborových side effectů
 - izolovaný release smoke test, který v dočasném snapshot repozitáři skutečně spustí `build/release.ps1 -DryRun -SkipCi`, ověří čistý git stav po běhu, zkontroluje obsah release ZIPu i checksum a navíc ověří skutečný `git archive` source balíček podle `.gitattributes`
 - unit testy přes `build/unit_tests.php`
 
