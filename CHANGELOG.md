@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Permissions-Policy pro omezení nepotřebných prohlížečových API** – veřejné i administrační odpovědi nově posílají hlavičku `Permissions-Policy`, která zakazuje nepoužívané schopnosti jako kamera, mikrofon, geolokace, platební API nebo USB; runtime audit hlídá zdroj i skutečnou HTTP odpověď.
 - **CSRF guardrail pro POST formuláře** – runtime audit nově plošně hlídá PHP zdroje i reálně vyrenderované HTML, aby každý veřejný i administrační formulář s `method="post"` obsahoval skryté pole `csrf_token`; rozšiřuje tak ochranu proti regresím i mimo jednotlivé ručně napsané integrační scénáře.
 - **Runtime kontrola iframe a nových oken ve vyrenderovaném HTML** – runtime audit nově u reálných veřejných i administračních odpovědí hlídá `title` u `<iframe>` a u odkazů s `target="_blank"` vyžaduje bezpečné `rel="noopener"` i přístupný název oznamující otevření v novém okně nebo panelu.
 - **Guardrail pro explicitní typy formulářových prvků** – runtime audit nově vícerádkově kontroluje PHP zdroje v `admin/`, `lib/` a `themes/` i reálně vyrenderované HTML, aby se do výstupů nevrátily `<button>` nebo `<input>` bez explicitního `type`; chrání tak administraci i veřejné šablony před nečekaným odesláním formuláře a křehkou formulářovou sémantikou.

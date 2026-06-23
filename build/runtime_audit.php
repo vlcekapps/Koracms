@@ -2392,6 +2392,7 @@ function analyzeHeaders(array $headers): array
         'X-Content-Type-Options:',
         'X-Frame-Options:',
         'Referrer-Policy:',
+        'Permissions-Policy:',
         'Content-Security-Policy:',
     ];
 
@@ -9607,6 +9608,22 @@ if (!str_contains($authSource, "frame-src 'self' https:;")) {
 if (!str_contains($authSource, "frame-ancestors 'none'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP no longer protects pages against third-party framing';
 }
+foreach ([
+    'Permissions-Policy:',
+    'accelerometer=()',
+    'browsing-topics=()',
+    'camera=()',
+    'geolocation=()',
+    'gyroscope=()',
+    'magnetometer=()',
+    'microphone=()',
+    'payment=()',
+    'usb=()',
+] as $permissionsPolicyFragment) {
+    if (!str_contains($authSource, $permissionsPolicyFragment)) {
+        $contentSecurityPolicyIssues[] = 'auth Permissions-Policy is missing fragment: ' . $permissionsPolicyFragment;
+    }
+}
 if (!str_contains($authSource, 'style-src-elem \'self\' \'nonce-{$_CSP_NONCE}\' \'unsafe-inline\'{$_CSP_EXTRA_STYLE};') || !str_contains($authSource, "style-src-attr 'unsafe-inline'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP report policy would collect noisy inline style reports';
 }
@@ -9692,11 +9709,31 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__
 $contentSecurityPolicyProbe = fetchUrl($baseUrl . '/', '', 0);
 $contentSecurityPolicyHeaderFound = false;
 $contentSecurityPolicyReportOnlyHeaderFound = false;
+$permissionsPolicyHeaderFound = false;
 if (preg_match('/<style\s+nonce="[^"]+">:root\{--/i', $contentSecurityPolicyProbe['body']) !== 1) {
     $contentSecurityPolicyIssues[] = 'public theme CSS variables are not rendered with a nonce-backed style tag';
 }
 foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
     $normalizedHeader = strtolower((string)$securityHeader);
+    if (str_starts_with($normalizedHeader, 'permissions-policy:')) {
+        $permissionsPolicyHeaderFound = true;
+        foreach ([
+            'accelerometer=()',
+            'browsing-topics=()',
+            'camera=()',
+            'geolocation=()',
+            'gyroscope=()',
+            'magnetometer=()',
+            'microphone=()',
+            'payment=()',
+            'usb=()',
+        ] as $expectedPermissionsPolicyFragment) {
+            if (!str_contains($normalizedHeader, $expectedPermissionsPolicyFragment)) {
+                $contentSecurityPolicyIssues[] = 'public Permissions-Policy header is missing fragment: ' . $expectedPermissionsPolicyFragment;
+            }
+        }
+        continue;
+    }
     if (str_starts_with($normalizedHeader, 'content-security-policy-report-only:')) {
         $contentSecurityPolicyReportOnlyHeaderFound = true;
         if (!str_contains($normalizedHeader, 'report-uri ' . BASE_URL . '/csp-report.php')) {
@@ -9734,6 +9771,9 @@ if (!$contentSecurityPolicyHeaderFound) {
 }
 if (!$contentSecurityPolicyReportOnlyHeaderFound) {
     $contentSecurityPolicyIssues[] = 'public response is missing Content-Security-Policy-Report-Only header';
+}
+if (!$permissionsPolicyHeaderFound) {
+    $contentSecurityPolicyIssues[] = 'public response is missing Permissions-Policy header';
 }
 
 if ($contentSecurityPolicyIssues === []) {
