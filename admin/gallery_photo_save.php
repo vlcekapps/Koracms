@@ -96,11 +96,6 @@ if ($mode !== 'upload') {
     $redirectToAlbumPhotos(null);
 }
 
-$uploadDir = __DIR__ . '/../uploads/gallery/';
-$thumbDir = $uploadDir . 'thumbs/';
-
-$allowedMime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-$maxBytes = 10 * 1024 * 1024;
 $files = $_FILES['photos'] ?? [];
 $uploadedCount = 0;
 $canApproveContent = currentUserHasCapability('content_approve_shared');
@@ -118,33 +113,18 @@ if (!empty($files['name'])) {
         $origName = $files['name'][$index];
         $size = $files['size'][$index];
 
-        if ($error !== UPLOAD_ERR_OK || $size > $maxBytes) {
+        $photoUpload = uploadGalleryPhotoImage([
+            'name' => $origName,
+            'tmp_name' => $tmpName,
+            'size' => $size,
+            'error' => $error,
+        ]);
+        if (empty($photoUpload['uploaded'])) {
             continue;
         }
 
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($tmpName);
-        if (!in_array($mime, $allowedMime, true)) {
-            continue;
-        }
-
-        $ext = match ($mime) {
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-        };
-        $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-
-        if (!move_uploaded_file($tmpName, $uploadDir . $filename)) {
-            continue;
-        }
-
-        gallery_make_thumb($uploadDir . $filename, $thumbDir . $filename, 300);
-        generateWebp($uploadDir . $filename);
-        generateWebp($thumbDir . $filename);
-
-        $slugCandidate = pathinfo((string)$origName, PATHINFO_FILENAME);
+        $filename = (string)$photoUpload['filename'];
+        $slugCandidate = pathinfo((string)$photoUpload['original_name'], PATHINFO_FILENAME);
         $resolvedSlug = uniqueGalleryPhotoSlug($pdo, $slugCandidate);
         $pdo->prepare(
             "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order, is_published, status)

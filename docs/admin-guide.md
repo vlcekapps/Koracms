@@ -440,6 +440,7 @@ Fotografie lze rychle přesouvat i přímo v přehledu alba pomocí tlačítek `
 - Skrytá alba a skryté fotografie se nevracejí ani ve vyhledávání a nejsou ani v sitemapě.
 - Obrázky se nově zobrazují přes serverový endpoint `gallery/image.php`, takže veřejný HTML výstup už neodkazuje přímo do `/uploads/gallery/`.
 - Přímý přístup do `/uploads/gallery/` je zablokovaný na úrovni serveru.
+- Hromadné nahrávání fotografií používá sdílenou upload validaci pro stav uploadu, velikost, MIME typ a finální uložení souboru.
 
 To znamená, že „skryté“ už neznamená jen „není v přehledu“, ale skutečně se neukazuje ani přes detail, vyhledávání a běžné veřejné odkazy.
 
@@ -570,6 +571,7 @@ Formulář nově zobrazuje i kontextovou nápovědu podle typu položky a odkaz 
 - Veřejně publikovaná položka může nabídnout přílohu ke stažení přes bezpečný serverový endpoint.
 - Neveřejné přílohy už nejsou dostupné každému přihlášenému účtu.
 - Přístup k neveřejné příloze má jen správce obsahu nebo schvalovatel.
+- Nahrání přílohy používá sdílenou upload validaci pro stav uploadu, MIME typ a finální uložení, takže se pravidla ukládání neliší od ostatních modulů.
 
 ### Revize a změny slugů
 
@@ -625,6 +627,7 @@ Každá položka může mít:
 - Neveřejné nebo neschválené soubory nestáhne libovolný přihlášený účet.
 - Přístup k neveřejným souborům má jen správce obsahu nebo schvalovatel.
 - Počet veřejných stažení se zapisuje do statistiky položky.
+- Lokální soubory ke stažení používají sdílenou upload validaci pro stav uploadu, bezpečnou příponu, finální uložení a automatický výpočet SHA-256 checksumu.
 
 ### Co patří do README a co sem
 

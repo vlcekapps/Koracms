@@ -10671,6 +10671,9 @@ $presentationUploadSource = (string)file_get_contents(dirname(__DIR__) . '/lib/p
 $mediaSearchSource = (string)file_get_contents(dirname(__DIR__) . '/admin/content_reference_search.php');
 $mediaExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
 $mediaImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
+$boardSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/board_save.php');
+$downloadSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/download_save.php');
+$galleryPhotoSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_save.php');
 $mediaHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 $mediaFileEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/file.php');
 $mediaPreviewEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/preview.php');
@@ -10699,6 +10702,18 @@ if (!str_contains($publicFormsSource, 'koraInspectUploadedFile(') || !str_contai
 }
 if (!str_contains($presentationUploadSource, 'function storePresentationUploadedFile(') || !str_contains($presentationUploadSource, 'koraInspectUploadedFile(')) {
     $mediaLibraryIssues[] = 'presentation upload path is not using shared upload helpers';
+}
+foreach ([
+    'admin/board_save.php' => [$boardSaveSourceForUploads, 'uploadBoardStoredFile('],
+    'admin/download_save.php' => [$downloadSaveSourceForUploads, 'uploadDownloadStoredFile('],
+    'admin/gallery_photo_save.php' => [$galleryPhotoSaveSourceForUploads, 'uploadGalleryPhotoImage('],
+] as $uploadSourceLabel => [$uploadSource, $expectedHelper]) {
+    if (!str_contains($uploadSource, $expectedHelper)) {
+        $mediaLibraryIssues[] = $uploadSourceLabel . ' is missing shared upload helper: ' . $expectedHelper;
+    }
+    if (str_contains($uploadSource, 'move_uploaded_file(') || str_contains($uploadSource, 'new finfo(FILEINFO_MIME_TYPE)') || str_contains($uploadSource, 'new \\finfo(FILEINFO_MIME_TYPE)')) {
+        $mediaLibraryIssues[] = $uploadSourceLabel . ' still performs direct upload storage or MIME detection';
+    }
 }
 foreach ([
     'lib/media_library.php' => $mediaHelperSource,

@@ -417,7 +417,7 @@ Technické recoverable chyby se postupně zapisují přes strukturovaný `koraLo
 
 V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.
 
-Náhledové obrázky článků používají stejnou sdílenou upload validaci pro stav PHP uploadu, MIME typ, příponu a finální uložení. Při výměně nebo odebrání obrázku se uklízí i staré miniatury, WebP a responsive varianty, aby se ve veřejných upload adresářích nehromadily nepoužívané soubory.
+Náhledové obrázky článků, přílohy vývěsky, lokální soubory ke stažení a fotografie galerie používají stejnou sdílenou upload validaci pro stav PHP uploadu, MIME typ nebo bezpečnou příponu a finální uložení. Při výměně nebo odebrání obrázku se uklízí i staré miniatury, WebP a responsive varianty, aby se ve veřejných upload adresářích nehromadily nepoužívané soubory.
 
 Veřejná default šablona nepoužívá pro potvrzení akcí a tisk inline `onclick` handlery. Potvrzení běží přes `data-confirm` a tisk přes `js-print-page` v nonce skriptu layoutu, což snižuje závislost na CSP fallbacku `unsafe-inline`.
 

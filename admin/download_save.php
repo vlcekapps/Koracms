@@ -125,53 +125,21 @@ if ($deleteStoredFile && $storedFilename !== '') {
     }
 }
 
-$allowedExtensions = [
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'odt', 'ods', 'odp', 'zip', '7z', 'tar', 'gz', 'bz2',
-    'txt', 'exe', 'msi', 'apk', 'jar', 'dmg', 'pkg', 'deb', 'rpm', 'appimage',
-];
-
 $fileField = $_FILES['file'] ?? null;
-if (is_array($fileField) && ($fileField['name'] ?? '') !== '' && (int)($fileField['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-    if ((int)($fileField['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+if (koraUploadHasFile($fileField)) {
+    $storedFileUpload = uploadDownloadStoredFile(
+        is_array($fileField) ? $fileField : [],
+        $storedFilename
+    );
+    if ((string)$storedFileUpload['error'] !== '') {
         $redirectWithError('file');
     }
-
-    $tmpPath = (string)($fileField['tmp_name'] ?? '');
-    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        $redirectWithError('file');
+    if (!empty($storedFileUpload['uploaded'])) {
+        $storedFilename = (string)$storedFileUpload['filename'];
+        $originalName = (string)$storedFileUpload['original_name'];
+        $fileSize = (int)$storedFileUpload['file_size'];
+        $checksumSha256 = (string)$storedFileUpload['checksum'];
     }
-
-    $extension = strtolower(pathinfo((string)$fileField['name'], PATHINFO_EXTENSION));
-    if (!in_array($extension, $allowedExtensions, true)) {
-        $redirectWithError('file');
-    }
-
-    $directory = __DIR__ . '/../uploads/downloads/';
-    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
-        $redirectWithError('file');
-    }
-
-    $newStoredFilename = uniqid('dl_', true) . '.' . $extension;
-    $targetPath = $directory . $newStoredFilename;
-    if (!move_uploaded_file($tmpPath, $targetPath)) {
-        $redirectWithError('file');
-    }
-
-    $newChecksum = hash_file('sha256', $targetPath);
-    if ($newChecksum === false) {
-        @unlink($targetPath);
-        $redirectWithError('file');
-    }
-
-    if ($storedFilename !== '' && $storedFilename !== $newStoredFilename) {
-        deleteDownloadStoredFile($storedFilename);
-    }
-
-    $storedFilename = $newStoredFilename;
-    $originalName = basename((string)$fileField['name']);
-    $fileSize = (int)($fileField['size'] ?? 0);
-    $checksumSha256 = normalizeDownloadChecksum($newChecksum);
 }
 
 if ($storedFilename === '' && $externalUrl === '') {

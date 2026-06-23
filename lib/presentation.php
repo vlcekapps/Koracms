@@ -2139,6 +2139,110 @@ function deleteDownloadStoredFile(string $filename): void
 }
 
 /**
+ * @return list<string>
+ */
+function downloadAllowedFileExtensions(): array
+{
+    return [
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        'odt', 'ods', 'odp', 'zip', '7z', 'tar', 'gz', 'bz2',
+        'txt', 'exe', 'msi', 'apk', 'jar', 'dmg', 'pkg', 'deb', 'rpm', 'appimage',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $file
+ * @return array{filename:string,original_name:string,file_size:int,checksum:string,uploaded:bool,error:string}
+ */
+function uploadDownloadStoredFile(array $file, string $existingFilename = ''): array
+{
+    if (!koraUploadHasFile($file)) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'checksum' => '',
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    $upload = koraInspectUploadedFile($file, [
+        'upload_error' => 'Soubor se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Soubor se nepodařilo zpracovat.',
+    ]);
+    if (empty($upload['ok'])) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'checksum' => '',
+            'uploaded' => false,
+            'error' => (string)($upload['error'] ?? 'Soubor se nepodařilo nahrát.'),
+        ];
+    }
+
+    $extension = strtolower((string)($upload['extension'] ?? ''));
+    if ($extension === '' || !in_array($extension, downloadAllowedFileExtensions(), true)) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'checksum' => '',
+            'uploaded' => false,
+            'error' => 'Soubor má nepovolený formát.',
+        ];
+    }
+
+    $storedName = uniqid('dl_', true) . '.' . $extension;
+    $storedUpload = koraStoreInspectedUpload(
+        $upload,
+        dirname(__DIR__) . '/uploads/downloads/',
+        $storedName,
+        [
+            'mkdir_error' => 'Adresář pro soubory ke stažení se nepodařilo vytvořit.',
+            'move_error' => 'Soubor se nepodařilo uložit.',
+        ]
+    );
+    if (empty($storedUpload['ok'])) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'checksum' => '',
+            'uploaded' => false,
+            'error' => (string)($storedUpload['error'] ?? 'Soubor se nepodařilo uložit.'),
+        ];
+    }
+
+    $checksum = hash_file('sha256', (string)$storedUpload['path']);
+    if ($checksum === false) {
+        deleteDownloadStoredFile($storedName);
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'checksum' => '',
+            'uploaded' => false,
+            'error' => 'Kontrolní součet souboru se nepodařilo dopočítat.',
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $storedName) {
+        deleteDownloadStoredFile($existingFilename);
+    }
+
+    return [
+        'filename' => $storedName,
+        'original_name' => basename((string)($upload['original_name'] ?? '')),
+        'file_size' => (int)($upload['file_size'] ?? 0),
+        'checksum' => normalizeDownloadChecksum($checksum),
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
+/**
  * @return array{filename:string,uploaded:bool,error:string}
  */
 /**
@@ -2735,6 +2839,107 @@ function deleteBoardImageFile(string $filename): void
     }
 }
 
+function deleteBoardStoredFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    $path = dirname(__DIR__) . '/uploads/board/' . $filename;
+    if (is_file($path) && !unlink($path)) {
+        presentationLogFileDeleteFailure('board_file', $path);
+    }
+}
+
+/**
+ * @return array<string, string>
+ */
+function boardAttachmentMimeMap(): array
+{
+    return [
+        'application/pdf' => 'pdf',
+        'application/msword' => 'doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+        'application/vnd.ms-excel' => 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+        'application/vnd.ms-powerpoint' => 'ppt',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+        'application/vnd.oasis.opendocument.text' => 'odt',
+        'application/vnd.oasis.opendocument.spreadsheet' => 'ods',
+        'application/vnd.oasis.opendocument.presentation' => 'odp',
+        'application/zip' => 'zip',
+        'application/x-zip-compressed' => 'zip',
+        'text/plain' => 'txt',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $file
+ * @return array{filename:string,original_name:string,file_size:int,uploaded:bool,error:string}
+ */
+function uploadBoardStoredFile(array $file, string $existingFilename = ''): array
+{
+    if (!koraUploadHasFile($file)) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    $upload = koraInspectUploadedFile($file, [
+        'upload_error' => 'Soubor přílohy se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Soubor přílohy se nepodařilo zpracovat.',
+        'allowed_mime_map' => boardAttachmentMimeMap(),
+        'unsupported_type_error' => 'Soubor přílohy má nepovolený formát.',
+    ]);
+    if (empty($upload['ok'])) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'uploaded' => false,
+            'error' => (string)($upload['error'] ?? 'Soubor přílohy se nepodařilo nahrát.'),
+        ];
+    }
+
+    $extension = (string)($upload['extension'] ?? '');
+    $storedName = uniqid('board_', true) . ($extension !== '' ? '.' . $extension : '');
+    $storedUpload = koraStoreInspectedUpload(
+        $upload,
+        dirname(__DIR__) . '/uploads/board/',
+        $storedName,
+        [
+            'mkdir_error' => 'Adresář pro přílohy vývěsky se nepodařilo vytvořit.',
+            'move_error' => 'Soubor přílohy se nepodařilo uložit.',
+        ]
+    );
+    if (empty($storedUpload['ok'])) {
+        return [
+            'filename' => $existingFilename,
+            'original_name' => '',
+            'file_size' => 0,
+            'uploaded' => false,
+            'error' => (string)($storedUpload['error'] ?? 'Soubor přílohy se nepodařilo uložit.'),
+        ];
+    }
+
+    if ($existingFilename !== '' && $existingFilename !== $storedName) {
+        deleteBoardStoredFile($existingFilename);
+    }
+
+    return [
+        'filename' => $storedName,
+        'original_name' => basename((string)($upload['original_name'] ?? '')),
+        'file_size' => (int)($upload['file_size'] ?? 0),
+        'uploaded' => true,
+        'error' => '',
+    ];
+}
+
 /**
  * @return array{filename:string,uploaded:bool,error:string}
  */
@@ -3263,6 +3468,108 @@ function galleryPhotoMediaUrl(array $photo, string $size = 'full'): string
 {
     $requestPath = galleryPhotoMediaRequestPath($photo, $size);
     return $requestPath !== '' ? siteUrl($requestPath) : '';
+}
+
+function galleryPhotoUploadDirectory(): string
+{
+    return dirname(__DIR__) . '/uploads/gallery/';
+}
+
+function galleryPhotoThumbDirectory(): string
+{
+    return galleryPhotoUploadDirectory() . 'thumbs/';
+}
+
+function deleteGalleryPhotoFile(string $filename): void
+{
+    $filename = basename($filename);
+    if ($filename === '') {
+        return;
+    }
+
+    foreach ([
+        galleryPhotoUploadDirectory() . $filename,
+        galleryPhotoThumbDirectory() . $filename,
+    ] as $path) {
+        if (is_file($path) && !unlink($path)) {
+            presentationLogFileDeleteFailure('gallery_photo', $path);
+        }
+    }
+}
+
+/**
+ * @param array<string, mixed> $file
+ * @return array{filename:string,original_name:string,uploaded:bool,error:string}
+ */
+function uploadGalleryPhotoImage(array $file): array
+{
+    if (!koraUploadHasFile($file)) {
+        return [
+            'filename' => '',
+            'original_name' => '',
+            'uploaded' => false,
+            'error' => '',
+        ];
+    }
+
+    $upload = koraInspectUploadedFile($file, [
+        'upload_error' => 'Fotografii se nepodařilo nahrát.',
+        'invalid_upload_error' => 'Fotografii se nepodařilo zpracovat.',
+        'allowed_mime_map' => presentationImageMimeMap(),
+        'unsupported_type_error' => 'Fotografie musí být ve formátu JPEG, PNG, GIF nebo WebP.',
+        'max_bytes' => 10 * 1024 * 1024,
+        'too_large_error' => 'Fotografie je příliš velká.',
+    ]);
+    if (empty($upload['ok'])) {
+        return [
+            'filename' => '',
+            'original_name' => '',
+            'uploaded' => false,
+            'error' => (string)($upload['error'] ?? 'Fotografii se nepodařilo nahrát.'),
+        ];
+    }
+
+    $extension = (string)($upload['extension'] ?? '');
+    $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . ($extension !== '' ? '.' . $extension : '');
+    $storedUpload = koraStoreInspectedUpload(
+        $upload,
+        galleryPhotoUploadDirectory(),
+        $filename,
+        [
+            'mkdir_error' => 'Adresář pro fotografie se nepodařilo vytvořit.',
+            'move_error' => 'Fotografii se nepodařilo uložit.',
+        ]
+    );
+    if (empty($storedUpload['ok'])) {
+        return [
+            'filename' => '',
+            'original_name' => '',
+            'uploaded' => false,
+            'error' => (string)($storedUpload['error'] ?? 'Fotografii se nepodařilo uložit.'),
+        ];
+    }
+
+    $thumbDirectory = galleryPhotoThumbDirectory();
+    if (!is_dir($thumbDirectory) && !mkdir($thumbDirectory, 0755, true) && !is_dir($thumbDirectory)) {
+        deleteGalleryPhotoFile($filename);
+        return [
+            'filename' => '',
+            'original_name' => '',
+            'uploaded' => false,
+            'error' => 'Adresář pro miniatury galerie se nepodařilo vytvořit.',
+        ];
+    }
+
+    gallery_make_thumb((string)$storedUpload['path'], $thumbDirectory . $filename, 300);
+    generateWebp((string)$storedUpload['path']);
+    generateWebp($thumbDirectory . $filename);
+
+    return [
+        'filename' => $filename,
+        'original_name' => basename((string)($upload['original_name'] ?? '')),
+        'uploaded' => true,
+        'error' => '',
+    ];
 }
 
 /**

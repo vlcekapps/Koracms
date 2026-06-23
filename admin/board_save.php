@@ -146,50 +146,19 @@ $newFilename = null;
 $newOriginalName = null;
 $newFileSize = null;
 
-if (!empty($_FILES['file']['name'])) {
-    $tmpPath = (string)($_FILES['file']['tmp_name'] ?? '');
-    $mime = $tmpPath !== '' ? (string)(new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) : '';
-
-    $allowed = [
-        'application/pdf' => 'pdf',
-        'application/msword' => 'doc',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
-        'application/vnd.ms-excel' => 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
-        'application/vnd.ms-powerpoint' => 'ppt',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-        'application/vnd.oasis.opendocument.text' => 'odt',
-        'application/vnd.oasis.opendocument.spreadsheet' => 'ods',
-        'application/vnd.oasis.opendocument.presentation' => 'odp',
-        'application/zip' => 'zip',
-        'application/x-zip-compressed' => 'zip',
-        'text/plain' => 'txt',
-    ];
-
-    if ($tmpPath === '' || !isset($allowed[$mime])) {
+if (koraUploadHasFile($_FILES['file'] ?? null)) {
+    $storedFileUpload = uploadBoardStoredFile(
+        is_array($_FILES['file'] ?? null) ? $_FILES['file'] : [],
+        $existingDocument ? (string)($existingDocument['filename'] ?? '') : ''
+    );
+    if ((string)$storedFileUpload['error'] !== '') {
         $redirectToForm($id, 'file');
     }
-
-    $uploadDir = __DIR__ . '/../uploads/board/';
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-        $redirectToForm($id, 'file');
+    if (!empty($storedFileUpload['uploaded'])) {
+        $newFilename = (string)$storedFileUpload['filename'];
+        $newOriginalName = (string)$storedFileUpload['original_name'];
+        $newFileSize = (int)$storedFileUpload['file_size'];
     }
-
-    $storedName = uniqid('board_', true) . '.' . $allowed[$mime];
-    if (!move_uploaded_file($tmpPath, $uploadDir . $storedName)) {
-        $redirectToForm($id, 'file');
-    }
-
-    if ($existingDocument && !empty($existingDocument['filename'])) {
-        $oldFile = $uploadDir . basename((string)$existingDocument['filename']);
-        if (is_file($oldFile)) {
-            @unlink($oldFile);
-        }
-    }
-
-    $newFilename = $storedName;
-    $newOriginalName = basename((string)$_FILES['file']['name']);
-    $newFileSize = (int)($_FILES['file']['size'] ?? 0);
 }
 
 if ($id !== null) {
