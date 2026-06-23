@@ -155,6 +155,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 0');
+header('X-Download-Options: noopen');
 header('X-Permitted-Cross-Domain-Policies: none');
 header('Referrer-Policy: same-origin');
 header('Cross-Origin-Opener-Policy: same-origin');

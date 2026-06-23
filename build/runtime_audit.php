@@ -2392,6 +2392,8 @@ function analyzeHeaders(array $headers): array
     $required = [
         'X-Content-Type-Options:',
         'X-Frame-Options:',
+        'X-XSS-Protection:',
+        'X-Download-Options:',
         'X-Permitted-Cross-Domain-Policies:',
         'Referrer-Policy:',
         'Cross-Origin-Opener-Policy:',
@@ -9660,12 +9662,22 @@ if (!str_contains($authSource, "frame-ancestors 'none'")) {
     $contentSecurityPolicyIssues[] = 'auth CSP no longer protects pages against third-party framing';
 }
 foreach ([
+    'X-XSS-Protection: 0',
+    'X-Download-Options: noopen',
     'X-Permitted-Cross-Domain-Policies: none',
     'Cross-Origin-Opener-Policy: same-origin',
     'Origin-Agent-Cluster: ?1',
 ] as $browserIsolationHeaderFragment) {
     if (!str_contains($authSource, $browserIsolationHeaderFragment)) {
         $contentSecurityPolicyIssues[] = 'auth browser isolation header is missing fragment: ' . $browserIsolationHeaderFragment;
+    }
+}
+foreach ([
+    'Header always set X-XSS-Protection "0"',
+    'Header always set X-Download-Options "noopen"',
+] as $apacheBrowserHardeningFragment) {
+    if (!str_contains($htaccessSource, $apacheBrowserHardeningFragment)) {
+        $contentSecurityPolicyIssues[] = '.htaccess browser hardening header is missing fragment: ' . $apacheBrowserHardeningFragment;
     }
 }
 foreach ([
@@ -9773,11 +9785,27 @@ $permissionsPolicyHeaderFound = false;
 $crossDomainPoliciesHeaderFound = false;
 $crossOriginOpenerPolicyHeaderFound = false;
 $originAgentClusterHeaderFound = false;
+$xssProtectionHeaderFound = false;
+$downloadOptionsHeaderFound = false;
 if (preg_match('/<style\s+nonce="[^"]+">:root\{--/i', $contentSecurityPolicyProbe['body']) !== 1) {
     $contentSecurityPolicyIssues[] = 'public theme CSS variables are not rendered with a nonce-backed style tag';
 }
 foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
     $normalizedHeader = strtolower((string)$securityHeader);
+    if (str_starts_with($normalizedHeader, 'x-xss-protection:')) {
+        $xssProtectionHeaderFound = true;
+        if (!str_contains($normalizedHeader, '0')) {
+            $contentSecurityPolicyIssues[] = 'public X-XSS-Protection header is not disabled';
+        }
+        continue;
+    }
+    if (str_starts_with($normalizedHeader, 'x-download-options:')) {
+        $downloadOptionsHeaderFound = true;
+        if (!str_contains($normalizedHeader, 'noopen')) {
+            $contentSecurityPolicyIssues[] = 'public X-Download-Options header is not set to noopen';
+        }
+        continue;
+    }
     if (str_starts_with($normalizedHeader, 'x-permitted-cross-domain-policies:')) {
         $crossDomainPoliciesHeaderFound = true;
         if (!str_contains($normalizedHeader, 'none')) {
@@ -9858,6 +9886,12 @@ if (!$contentSecurityPolicyReportOnlyHeaderFound) {
 }
 if (!$permissionsPolicyHeaderFound) {
     $contentSecurityPolicyIssues[] = 'public response is missing Permissions-Policy header';
+}
+if (!$xssProtectionHeaderFound) {
+    $contentSecurityPolicyIssues[] = 'public response is missing X-XSS-Protection header';
+}
+if (!$downloadOptionsHeaderFound) {
+    $contentSecurityPolicyIssues[] = 'public response is missing X-Download-Options header';
 }
 if (!$crossDomainPoliciesHeaderFound) {
     $contentSecurityPolicyIssues[] = 'public response is missing X-Permitted-Cross-Domain-Policies header';
