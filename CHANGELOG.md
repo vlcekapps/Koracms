@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Přísnější canonical URL v SEO metadatech** – helper pro `<link rel="canonical">`, `og:url` a relativní SEO obrázky nově odmítá řídicí znaky, protocol-relative URL i adresy s přihlašovacími údaji, místo aby riskantní vstup částečně opravoval.
 - **Sjednocená URL validace v migraci a eStránky downloaderu** – migrace starých sociálních odkazů do widgetu `Sociální sítě` i zadání základní URL pro stahování fotografií z eStránek nově používají sdílené http/https normalizátory; odmítají protocol-relative adresy, řídicí znaky, přihlašovací údaje v URL a nebezpečná schémata místo vlastního ručního skládání adres.
 - **Bezpečnější URL ve snippetech obsahu** – audio, video a PDF snippety nově používají stejný http/https normalizátor jako ostatní externí odkazy a odmítnou protocol-relative adresy, řídicí znaky i přihlašovací údaje v URL; interní absolutní cesty typu `/uploads/...` zůstávají podporované.
 - **Přísnější URL validace ve formulářích a profilech autorů** – veřejná pole typu `URL` ve Form Builderu nově používají sdílenou http/https validaci bez přihlašovacích údajů, řídicích znaků a nebezpečných schémat; web autora je napojený na stejný normalizátor jako ostatní externí adresy a chybové hlášky v administraci přesněji popisují podporované zadání.

@@ -8099,7 +8099,11 @@ $foundationChecks = [
         && str_contains($authSource, 'if (!$isSocialPreviewCrawler && isAdminRequestPath())'),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
-        && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))'),
+        && str_contains($uiSource, 'seoCanonicalUrl((string)($meta[\'url\'] ?? \'\'))')
+        && str_contains($uiSource, "preg_match('/[\\x00-\\x1F\\x7F]/', \$target)")
+        && str_contains($unitTestsSource, "seoCanonicalUrl('//example.com/clanek')")
+        && str_contains($unitTestsSource, "seoCanonicalUrl('https://user:pass@example.com/clanek')")
+        && str_contains($unitTestsSource, "https://example.com/clanek\\nSet-Cookie: evil=1"),
     'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
         && str_contains($healthSource, "header('Cache-Control: no-store, max-age=0')")
         && str_contains($healthSource, "header('Pragma: no-cache')")

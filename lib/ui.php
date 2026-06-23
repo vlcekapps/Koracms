@@ -235,8 +235,12 @@ function seoImageDetails(string $imageUrl): array
 
 function seoCanonicalUrl(string $target): string
 {
-    $target = trim(str_replace(["\r", "\n"], '', $target));
+    $target = trim($target);
     if ($target === '') {
+        return '';
+    }
+
+    if (preg_match('/[\x00-\x1F\x7F]/', $target)) {
         return '';
     }
 

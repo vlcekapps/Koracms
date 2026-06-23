@@ -289,7 +289,7 @@ Stejný bezpečnostní základ používá i web autora. Pole typu `URL` ve veře
 
 CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných veřejných stránek. Sitemapa je čistě čtecí endpoint a podporuje jen metody `GET` a `HEAD`.
 
-Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`.
+Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`; canonical helper přijímá jen interní cesty nebo platné `http://` / `https://` adresy bez přihlašovacích údajů, řídicích znaků a protocol-relative tvaru.
 
 ---
 
