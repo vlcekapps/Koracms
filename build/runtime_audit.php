@@ -10674,6 +10674,9 @@ $mediaImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import
 $boardSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/board_save.php');
 $downloadSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/download_save.php');
 $galleryPhotoSaveSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_save.php');
+$wpImportSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/wp_import.php');
+$estrankyImportSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_import.php');
+$estrankyPhotoDownloadSourceForUploads = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
 $mediaHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 $mediaFileEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/file.php');
 $mediaPreviewEndpointSource = (string)file_get_contents(dirname(__DIR__) . '/media/preview.php');
@@ -10707,11 +10710,14 @@ foreach ([
     'admin/board_save.php' => [$boardSaveSourceForUploads, 'uploadBoardStoredFile('],
     'admin/download_save.php' => [$downloadSaveSourceForUploads, 'uploadDownloadStoredFile('],
     'admin/gallery_photo_save.php' => [$galleryPhotoSaveSourceForUploads, 'uploadGalleryPhotoImage('],
+    'admin/wp_import.php' => [$wpImportSourceForUploads, 'koraStoreInspectedUpload('],
+    'admin/estranky_import.php' => [$estrankyImportSourceForUploads, 'koraInspectUploadedFile('],
+    'admin/estranky_download_photos.php' => [$estrankyPhotoDownloadSourceForUploads, 'koraInspectUploadedFile('],
 ] as $uploadSourceLabel => [$uploadSource, $expectedHelper]) {
     if (!str_contains($uploadSource, $expectedHelper)) {
         $mediaLibraryIssues[] = $uploadSourceLabel . ' is missing shared upload helper: ' . $expectedHelper;
     }
-    if (str_contains($uploadSource, 'move_uploaded_file(') || str_contains($uploadSource, 'new finfo(FILEINFO_MIME_TYPE)') || str_contains($uploadSource, 'new \\finfo(FILEINFO_MIME_TYPE)')) {
+    if (str_contains($uploadSource, 'is_uploaded_file(') || str_contains($uploadSource, 'move_uploaded_file(') || str_contains($uploadSource, 'new finfo(FILEINFO_MIME_TYPE)') || str_contains($uploadSource, 'new \\finfo(FILEINFO_MIME_TYPE)')) {
         $mediaLibraryIssues[] = $uploadSourceLabel . ' still performs direct upload storage or MIME detection';
     }
 }

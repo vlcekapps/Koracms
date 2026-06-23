@@ -106,6 +106,8 @@ To je důležité hlavně po ručních úpravách nebo importech, kdy se nejčas
 
 Obrazovka **Import / Export** pracuje s JSON soubory v UTF-8.
 
+Samostatné importy z WordPressu a eStránek pracují s XML/WXR soubory. Před parsováním používají sdílenou upload validaci pro stav PHP uploadu, ověření dočasného souboru a odmítnutí prázdného souboru; WordPress náhled si dočasnou kopii ukládá přes stejný bezpečný helper do `uploads/tmp`.
+
 Platí tato pravidla:
 
 - export z Kora CMS zapisuje JSON s českou diakritikou v UTF-8

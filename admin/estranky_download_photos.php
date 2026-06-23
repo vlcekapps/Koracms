@@ -146,18 +146,30 @@ $batchSize = 20;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_name'])) {
     verifyCsrf();
 
-    $xmlPath = $_FILES['xml_file']['tmp_name'];
     $siteUrl = rtrim(trim($_POST['site_url'] ?? ''), '/');
     if ($siteUrl !== '' && !str_starts_with($siteUrl, 'http://') && !str_starts_with($siteUrl, 'https://')) {
         $siteUrl = 'https://' . $siteUrl;
     }
     $parentAlbumId = inputInt('post', 'parent_album_id');
 
-    if (!is_uploaded_file($xmlPath) || $siteUrl === '') {
+    /** @var array<string,mixed> $xmlFile */
+    $xmlFile = $_FILES['xml_file'];
+    $upload = koraInspectUploadedFile($xmlFile, [
+        'invalid_upload_error' => 'Nahraný XML soubor se nepodařilo ověřit.',
+        'empty_file_error' => 'Vybraný XML soubor je prázdný.',
+    ]);
+
+    if ($siteUrl === '') {
         $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Zadejte XML soubor a URL webu.'];
         header('Location: estranky_download_photos.php');
         exit;
     }
+    if (empty($upload['ok'])) {
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($upload['error'] ?? 'Neplatný XML soubor.'))];
+        header('Location: estranky_download_photos.php');
+        exit;
+    }
+    $xmlPath = (string)$upload['tmp_path'];
 
     $xml = @simplexml_load_file($xmlPath);
     if ($xml === false) {

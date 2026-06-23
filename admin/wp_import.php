@@ -342,22 +342,34 @@ $preview = null;
 $cachedPath = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['wxr_file']['tmp_name']) && !isset($_POST['do_import'])) {
     verifyCsrf();
-    $xmlPath = $_FILES['wxr_file']['tmp_name'];
-    if (is_uploaded_file($xmlPath)) {
+    /** @var array<string,mixed> $wxrFile */
+    $wxrFile = $_FILES['wxr_file'];
+    $upload = koraInspectUploadedFile($wxrFile, [
+        'invalid_upload_error' => 'Nahraný WXR soubor se nepodařilo ověřit.',
+        'empty_file_error' => 'Vybraný WXR soubor je prázdný.',
+    ]);
+    if (!empty($upload['ok'])) {
         // Uložíme do uploads/tmp (spolehlivější než sys temp na Windows)
         $tmpDir = dirname(__DIR__) . '/uploads/tmp';
-        if (!is_dir($tmpDir)) {
-            mkdir($tmpDir, 0755, true);
+        $cachedFilename = 'kora_wp_import_' . bin2hex(random_bytes(8)) . '.xml';
+        $storedUpload = koraStoreInspectedUpload($upload, $tmpDir, $cachedFilename, [
+            'move_error' => 'Dočasný soubor importu se nepodařilo uložit.',
+        ]);
+        if (empty($storedUpload['ok'])) {
+            $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($storedUpload['error'] ?? 'Dočasný soubor importu se nepodařilo uložit.'))];
+            header('Location: wp_import.php');
+            exit;
         }
-        $cachedPath = $tmpDir . '/kora_wp_import_' . bin2hex(random_bytes(8)) . '.xml';
-        if (!move_uploaded_file($xmlPath, $cachedPath)) {
-            copy($xmlPath, $cachedPath);
-        }
+        $cachedPath = (string)$storedUpload['path'];
         $preview = wpParseWxr($cachedPath);
         if ($preview === null) {
             @unlink($cachedPath);
             $cachedPath = '';
         }
+    } else {
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($upload['error'] ?? 'Nahraný WXR soubor se nepodařilo ověřit.'))];
+        header('Location: wp_import.php');
+        exit;
     }
 }
 

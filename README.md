@@ -425,6 +425,8 @@ V administraci používají jednoduché potvrzovací formuláře stejný `data-c
 
 Dlouho běžící administrační formuláře, například import z WordPressu nebo eStránek, používají `data-submit-once`. Sdílený nonce skript po odeslání změní text tlačítka a zablokuje opakované kliknutí bez inline `onclick` handleru.
 
+XML/WXR soubory pro import z WordPressu a eStránek používají stejnou sdílenou upload validaci jako ostatní citlivější nahrávání. CMS ověří stav PHP uploadu, dočasný soubor a prázdný soubor dřív, než ho předá parseru; WordPress náhled se navíc ukládá do `uploads/tmp` přes bezpečný upload helper.
+
 Editor anket v administraci používá pro přidávání a odebírání možností odpovědi datové atributy a delegovaný listener v nonce skriptu formuláře, ne inline `onclick` handlery.
 
 Rezervační formuláře v administraci používají stejný princip pro přepínání typu zákazníka, práci se sloty a blokovanými dny. Runtime audit navíc hlídá, aby se do admin PHP souborů nevracely inline `onclick`, `onchange`, `onsubmit` ani `oninput` atributy.

@@ -27,12 +27,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     verifyCsrf();
     set_time_limit(300);
 
-    $xmlPath = $_FILES['xml_file']['tmp_name'];
-    if (!is_uploaded_file($xmlPath)) {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Neplatný soubor.'];
+    /** @var array<string,mixed> $xmlFile */
+    $xmlFile = $_FILES['xml_file'];
+    $upload = koraInspectUploadedFile($xmlFile, [
+        'invalid_upload_error' => 'Nahraný XML soubor se nepodařilo ověřit.',
+        'empty_file_error' => 'Vybraný XML soubor je prázdný.',
+    ]);
+    if (empty($upload['ok'])) {
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($upload['error'] ?? 'Neplatný soubor.'))];
         header('Location: estranky_import.php');
         exit;
     }
+    $xmlPath = (string)$upload['tmp_path'];
+    $xmlOriginalName = (string)$upload['original_name'];
 
     $log = [];
     $xml = @simplexml_load_file($xmlPath);
@@ -284,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     }
     $log[] = '<span aria-hidden="true">✓</span> Fotografie: ' . $insertedPhotos . ' záznamů (soubory stáhněte přes Stažení fotek z eStránek)';
 
-    logAction('estranky_import', 'xml=' . basename((string)($_FILES['xml_file']['name'] ?? 'unknown')));
+    logAction('estranky_import', 'xml=' . basename($xmlOriginalName !== '' ? $xmlOriginalName : 'unknown'));
     @unlink($xmlPath);
 
     $_SESSION['import_log'] = $log;
