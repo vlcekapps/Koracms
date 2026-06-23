@@ -453,15 +453,38 @@ try {
     $zipPayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $zipPath, $tempRoot);
     $entries = normalizedArchiveEntries($zipPayload);
 
-    foreach (['VERSION', 'CHANGELOG.md', 'README.md', 'docs/admin-guide.md', 'uploads/.htaccess'] as $requiredEntry) {
+    foreach ([
+        '.htaccess',
+        'VERSION',
+        'CHANGELOG.md',
+        'README.md',
+        'config.sample.php',
+        'install.php',
+        'migrate.php',
+        'admin/login.php',
+        'assets/error.css',
+        'themes/default/theme.json',
+        'themes/default/assets/public.css',
+        'docs/admin-guide.md',
+        'uploads/.htaccess',
+    ] as $requiredEntry) {
         if (!in_array($requiredEntry, $entries, true)) {
             fail('Release smoke ZIP is missing required file: ' . $requiredEntry);
         }
     }
 
     foreach ($entries as $entry) {
+        if (str_starts_with($entry, '.claude/')) {
+            fail('Release smoke ZIP unexpectedly contains local Claude metadata.');
+        }
         if (str_starts_with($entry, '.github/')) {
             fail('Release smoke ZIP unexpectedly contains .github metadata.');
+        }
+        if (str_starts_with($entry, '.idea/')) {
+            fail('Release smoke ZIP unexpectedly contains IDE metadata: ' . $entry);
+        }
+        if (str_starts_with($entry, '.vscode/')) {
+            fail('Release smoke ZIP unexpectedly contains IDE metadata: ' . $entry);
         }
         if (str_starts_with($entry, 'vendor/')) {
             fail('Release smoke ZIP unexpectedly contains vendor files.');
@@ -469,8 +492,14 @@ try {
         if (str_starts_with($entry, 'build/')) {
             fail('Release smoke ZIP unexpectedly contains build tooling files.');
         }
+        if (str_starts_with($entry, 'dist/')) {
+            fail('Release smoke ZIP unexpectedly contains generated dist files.');
+        }
         if (str_starts_with($entry, 'docs/') && $entry !== 'docs/' && $entry !== 'docs/admin-guide.md') {
             fail('Release smoke ZIP unexpectedly contains extra docs content: ' . $entry);
+        }
+        if (str_starts_with($entry, 'uploads/') && $entry !== 'uploads/' && $entry !== 'uploads/.htaccess') {
+            fail('Release smoke ZIP unexpectedly contains user upload content: ' . $entry);
         }
     }
 
@@ -478,8 +507,11 @@ try {
         '.gitattributes',
         '.gitignore',
         '.php-cs-fixer.dist.php',
+        'AGENTS.md',
+        'aconfig.php',
         'composer.json',
         'composer.lock',
+        'config.php',
         'phpstan.neon.dist',
     ] as $excludedFile) {
         if (in_array($excludedFile, $entries, true)) {
@@ -518,21 +550,53 @@ try {
     $sourcePayload = inspectZipArchive($powerShell, $zipInspectScriptPath, $sourceArchivePath, $tempRoot);
     $sourceEntries = normalizedArchiveEntries($sourcePayload);
 
-    foreach (['VERSION', 'CHANGELOG.md', 'README.md', 'auth.php', 'themes/default/theme.json', 'uploads/.htaccess'] as $requiredEntry) {
+    foreach ([
+        '.htaccess',
+        'VERSION',
+        'CHANGELOG.md',
+        'README.md',
+        'auth.php',
+        'config.sample.php',
+        'install.php',
+        'migrate.php',
+        'admin/login.php',
+        'assets/error.css',
+        'themes/default/theme.json',
+        'themes/default/assets/public.css',
+        'uploads/.htaccess',
+    ] as $requiredEntry) {
         if (!in_array($requiredEntry, $sourceEntries, true)) {
             fail('Source archive is missing required file: ' . $requiredEntry);
         }
     }
 
     foreach ($sourceEntries as $entry) {
+        if (str_starts_with($entry, '.claude/')) {
+            fail('Source archive unexpectedly contains local Claude metadata: ' . $entry);
+        }
         if (str_starts_with($entry, '.github/')) {
             fail('Source archive unexpectedly contains .github metadata.');
+        }
+        if (str_starts_with($entry, '.idea/')) {
+            fail('Source archive unexpectedly contains IDE metadata: ' . $entry);
+        }
+        if (str_starts_with($entry, '.vscode/')) {
+            fail('Source archive unexpectedly contains IDE metadata: ' . $entry);
         }
         if (str_starts_with($entry, 'build/')) {
             fail('Source archive unexpectedly contains build tooling: ' . $entry);
         }
+        if (str_starts_with($entry, 'dist/')) {
+            fail('Source archive unexpectedly contains generated dist files: ' . $entry);
+        }
         if (str_starts_with($entry, 'docs/')) {
             fail('Source archive unexpectedly contains docs content: ' . $entry);
+        }
+        if (str_starts_with($entry, 'uploads/') && $entry !== 'uploads/' && $entry !== 'uploads/.htaccess') {
+            fail('Source archive unexpectedly contains user upload content: ' . $entry);
+        }
+        if (str_starts_with($entry, 'vendor/')) {
+            fail('Source archive unexpectedly contains vendor files: ' . $entry);
         }
     }
 
@@ -541,8 +605,10 @@ try {
         '.gitignore',
         '.php-cs-fixer.dist.php',
         'AGENTS.md',
+        'aconfig.php',
         'composer.json',
         'composer.lock',
+        'config.php',
         'phpstan.neon.dist',
     ] as $excludedFile) {
         if (in_array($excludedFile, $sourceEntries, true)) {

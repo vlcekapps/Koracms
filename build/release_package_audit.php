@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $projectRoot = dirname(__DIR__);
 $releaseScriptPath = $projectRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release.ps1';
+$releaseSmokePath = $projectRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release_smoke.php';
 $gitattributesPath = $projectRoot . DIRECTORY_SEPARATOR . '.gitattributes';
 $gitignorePath = $projectRoot . DIRECTORY_SEPARATOR . '.gitignore';
 
@@ -99,6 +100,31 @@ if (!is_file($releaseScriptPath)) {
     }
 }
 
+if (!is_file($releaseSmokePath)) {
+    $issues[] = 'build/release_smoke.php is missing.';
+} else {
+    $releaseSmokeSource = (string) file_get_contents($releaseSmokePath);
+    $requiredReleaseSmokeSnippets = [
+        "'.htaccess',",
+        "'config.sample.php',",
+        "'install.php',",
+        "'migrate.php',",
+        "'assets/error.css',",
+        "'themes/default/assets/public.css',",
+        "str_starts_with(\$entry, 'uploads/') && \$entry !== 'uploads/' && \$entry !== 'uploads/.htaccess'",
+        "str_starts_with(\$entry, 'vendor/')",
+        "str_starts_with(\$entry, 'dist/')",
+        "Source archive unexpectedly contains user upload content",
+        "Release smoke ZIP unexpectedly contains dev metadata",
+    ];
+
+    foreach ($requiredReleaseSmokeSnippets as $snippet) {
+        if (!str_contains($releaseSmokeSource, $snippet)) {
+            $issues[] = 'build/release_smoke.php is missing release artifact guard: ' . $snippet;
+        }
+    }
+}
+
 if (!is_file($gitattributesPath)) {
     $issues[] = '.gitattributes is missing.';
 } else {
@@ -107,10 +133,17 @@ if (!is_file($gitattributesPath)) {
     $requiredExportIgnores = [
         '.github export-ignore',
         '.github/** export-ignore',
+        '.claude export-ignore',
+        '.claude/** export-ignore',
+        '.idea export-ignore',
+        '.idea/** export-ignore',
+        '.vscode export-ignore',
+        '.vscode/** export-ignore',
         '.gitignore export-ignore',
         '.gitattributes export-ignore',
         '.php-cs-fixer.dist.php export-ignore',
         'AGENTS.md export-ignore',
+        'aconfig.php export-ignore',
         'build export-ignore',
         'build/** export-ignore',
         'build/runtime_audit.php export-ignore',
@@ -118,9 +151,14 @@ if (!is_file($gitattributesPath)) {
         'build/release_smoke.php export-ignore',
         'composer.json export-ignore',
         'composer.lock export-ignore',
+        'config.php export-ignore',
+        'dist export-ignore',
+        'dist/** export-ignore',
         'docs export-ignore',
         'docs/** export-ignore',
         'phpstan.neon.dist export-ignore',
+        'vendor export-ignore',
+        'vendor/** export-ignore',
     ];
 
     foreach ($requiredExportIgnores as $rule) {

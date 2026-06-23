@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Přísnější release smoke pro instalační balíčky** – izolovaný release smoke test nově ověřuje, že instalační ZIP i `git archive` source balík obsahují root `.htaccess`, `config.sample.php`, `install.php`, `migrate.php`, základní admin vstup, default šablonu i kritické CSS assety; zároveň hlídá, aby se do artefaktů nedostaly lokální IDE/Claude metadata, `dist`, `vendor`, citlivé konfigurace ani uživatelské uploady mimo ochranný `uploads/.htaccess`.
 - **Sjednocené přístupné popisky sociálních odkazů** – widget `Sociální sítě` nově používá stejný helper pro odkazy otevírané v novém okně jako ostatní části CMS, takže text pro čtečky obrazovky i bezpečné `_blank` chování zůstávají na jednom místě.
 - **Přísnější canonical URL v SEO metadatech** – helper pro `<link rel="canonical">`, `og:url` a relativní SEO obrázky nově odmítá řídicí znaky, protocol-relative URL i adresy s přihlašovacími údaji, místo aby riskantní vstup částečně opravoval.
 - **Sjednocená URL validace v migraci a eStránky downloaderu** – migrace starých sociálních odkazů do widgetu `Sociální sítě` i zadání základní URL pro stahování fotografií z eStránek nově používají sdílené http/https normalizátory; odmítají protocol-relative adresy, řídicí znaky, přihlašovací údaje v URL a nebezpečná schémata místo vlastního ručního skládání adres.
