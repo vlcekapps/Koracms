@@ -1494,7 +1494,7 @@ function renderWidget_social_links(array $widget, array $settings, string $zone)
     $title = h($widget['title'] ?: 'Sociální sítě');
     $listHtml = '<ul class="widget-list">';
     foreach ($links as $link) {
-        $listHtml .= '<li><a href="' . h($link['url']) . '" aria-label="' . h($link['label'] . ' – otevře se v novém okně') . '" rel="noopener noreferrer" target="_blank">'
+        $listHtml .= '<li><a href="' . h($link['url']) . '" aria-label="' . h(newWindowLinkLabel((string)$link['label'])) . '" rel="noopener noreferrer" target="_blank">'
             . h($link['label'])
             . '</a></li>';
     }

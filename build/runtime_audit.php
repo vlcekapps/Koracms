@@ -13955,6 +13955,9 @@ if (!str_contains($widgetLibSource, 'function normalizeWidgetExternalUrl(string 
 if (!str_contains($widgetLibSource, 'function renderWidget_social_links')) {
     $widgetRenderIssues[] = 'social links widget renderer is missing';
 }
+if (!str_contains($widgetLibSource, 'newWindowLinkLabel((string)$link[\'label\'])')) {
+    $widgetRenderIssues[] = 'social links widget should use shared new-window accessible label helper';
+}
 if (!str_contains($widgetLibSource, 'newsletter_widget_subscribe.php')) {
     $widgetRenderIssues[] = 'newsletter widget renderer is missing inline subscribe form action';
 }
