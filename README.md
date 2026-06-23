@@ -417,6 +417,8 @@ Kora CMS používá:
 
 Přihlášení do administrace, veřejné přihlášení i obnovení hesla používají kombinovaný rate limiting. Systém hlídá počet pokusů podle IP adresy a zároveň podle hashovaného účtu nebo tokenu. Do databáze se neukládá e-mail ani token v čitelné podobě, pouze odvozený SHA-256 klíč.
 
+Návrat po přihlášení do administrace používá bezpečný redirect jen pro interní administrační cíle a potvrzení migrace. Veřejné interní cesty, externí URL, protocol-relative URL i pokusy o smyčku zpět na login nebo 2FA se zahodí a použije se dashboard administrace. Unit testy i runtime audit hlídají, aby se z tohoto helperu nestal otevřený redirect.
+
 Technické recoverable chyby se postupně zapisují přes strukturovaný `koraLog()` formát s `request_id`, metodou a cestou. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Administrační ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů a import fotek z eStránek už nepoužívají surové `error_log()` zprávy bez kontextu nebo s plnými lokálními cestami.
 
 V nastavení webu už nové uploady loga a favicony nepřijímají SVG. Backend současně hlídá i velikost branding souborů a používá sdílenou upload validaci, takže se do veřejně servírovaných assetů nedostane aktivní obsah ani přehnaně velké soubory.

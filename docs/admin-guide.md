@@ -751,6 +751,8 @@ Přihlašování a obnova hesla používají kombinovaný rate limiting:
 
 To chrání nejen proti opakovaným pokusům z jedné adresy, ale i proti útokům rozloženým přes více IP adres na stejný účet.
 
+Návrat po administrátorském přihlášení zachovává původně otevřenou stránku jen tehdy, když jde o bezpečný interní cíl v administraci nebo `migrate.php`. Cíle mimo administraci, externí URL, protocol-relative adresy a návrat zpět na `admin/login.php` nebo `admin/login_2fa.php` se ignorují a uživatel skončí na dashboardu. Tuto ochranu hlídají unit testy i runtime audit, aby se login flow nestal otevřeným redirectem.
+
 Správa `301/302` přesměrování dovoluje jako starou adresu jen interní cestu webu. Nová adresa může být interní cesta nebo úplná `http://` či `https://` URL, ale CMS odmítá nebezpečná schémata, protocol-relative URL, CRLF znaky a adresy s přihlašovacími údaji; stejná validace platí i pro automatické redirecty při změně slugů.
 
 Recoverable chyby v administraci a souborových cleanupech se postupně převádějí na strukturovaný `koraLog()` formát. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů a import fotek z eStránek tak v technickém logu nespoléhají na surové `error_log()` zprávy, ale přidávají `request_id`, metodu, cestu a omezený kontext bez dumpu celé žádosti nebo plných lokálních cest.

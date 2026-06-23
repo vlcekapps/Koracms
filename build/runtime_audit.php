@@ -8628,6 +8628,9 @@ $resetPasswordSource = (string)file_get_contents(dirname(__DIR__) . '/reset_pass
 $adminHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
     : '';
+$unitTestsSource = is_file(dirname(__DIR__) . '/build/unit_tests.php')
+    ? (string)file_get_contents(dirname(__DIR__) . '/build/unit_tests.php')
+    : '';
 foreach ([
     '$requestUri = (string)($_SERVER[\'REQUEST_URI\'] ?? \'\');',
     'adminLoginRedirectTarget($currentTarget, \'\')',
@@ -8703,6 +8706,22 @@ if ($adminHttpIntegrationSource === '') {
     ] as $httpLoginRedirectFragment) {
         if (!str_contains($adminHttpIntegrationSource, $httpLoginRedirectFragment)) {
             $adminLoginRedirectIssues[] = 'http integration is missing admin redirect scenario: ' . $httpLoginRedirectFragment;
+        }
+    }
+}
+if ($unitTestsSource === '') {
+    $adminLoginRedirectIssues[] = 'build/unit_tests.php is missing for admin login redirect helper coverage';
+} else {
+    foreach ([
+        "test_section('adminLoginRedirectTarget()')",
+        "adminLoginRedirectTarget('/admin/widgets.php')",
+        "adminLoginRedirectTarget('/migrate.php')",
+        "adminLoginRedirectTarget('/page.php', '/admin/index.php')",
+        "adminLoginRedirectTarget('https://evil.example/phish', '/admin/index.php')",
+        "adminLoginRedirectTarget('//evil.example/phish', '/admin/index.php')",
+    ] as $unitLoginRedirectFragment) {
+        if (!str_contains($unitTestsSource, $unitLoginRedirectFragment)) {
+            $adminLoginRedirectIssues[] = 'unit tests are missing admin redirect helper scenario: ' . $unitLoginRedirectFragment;
         }
     }
 }

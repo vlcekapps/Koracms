@@ -132,6 +132,18 @@ assert_equals('', storedRedirectTarget('javascript:alert(1)'), 'stored redirect 
 assert_equals('', storedRedirectTarget('https://user:pass@example.com/private'), 'stored redirect rejects URL credentials');
 assert_equals('', storedRedirectTarget("https://example.com\r\nSet-Cookie: evil=1"), 'stored redirect rejects CRLF injection');
 
+test_section('adminLoginRedirectTarget()');
+
+assert_equals('/admin/widgets.php', adminLoginRedirectTarget('/admin/widgets.php'), 'admin login redirect accepts admin path');
+assert_equals('/admin/widgets.php?tab=footer', adminLoginRedirectTarget('/admin/widgets.php?tab=footer'), 'admin login redirect keeps query string');
+assert_equals('/migrate.php', adminLoginRedirectTarget('/migrate.php'), 'admin login redirect accepts migrate confirmation');
+assert_equals('/admin/index.php', adminLoginRedirectTarget('/page.php', '/admin/index.php'), 'admin login redirect rejects public internal path');
+assert_equals('/admin/index.php', adminLoginRedirectTarget('/admin/login.php', '/admin/index.php'), 'admin login redirect rejects login loop');
+assert_equals('/admin/index.php', adminLoginRedirectTarget('/admin/login_2fa.php', '/admin/index.php'), 'admin login redirect rejects 2FA loop');
+assert_equals('/admin/index.php', adminLoginRedirectTarget('https://evil.example/phish', '/admin/index.php'), 'admin login redirect rejects external URL');
+assert_equals('/admin/index.php', adminLoginRedirectTarget('//evil.example/phish', '/admin/index.php'), 'admin login redirect rejects protocol-relative URL');
+assert_equals('/admin/index.php', adminLoginRedirectTarget("/admin/widgets.php\x00evil", '/admin/index.php'), 'admin login redirect rejects control characters');
+
 test_section('navigation links');
 
 assert_equals('/kontakt', navigationLinkUrl('/kontakt'), 'navigation link accepts internal path');

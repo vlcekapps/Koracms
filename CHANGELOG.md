@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Unit guardrail pro návrat po admin loginu** – `build/unit_tests.php` nově přímo ověřuje, že `adminLoginRedirectTarget()` dovolí jen interní administrační cíle a `migrate.php`, zachová query string, odmítne veřejné nebo externí cíle, protocol-relative URL, login/2FA smyčky i řídicí znaky; runtime audit hlídá, aby tyto bezpečnostní scénáře zůstaly v testovací sadě.
 - **Release ZIP odolný vůči dotfiles na Linuxu** – release skript nově vytváří instalační ZIP přes explicitní `.NET ZipArchive` průchod všemi soubory v dočasném balíčku, takže ochranný `uploads/.htaccess` nevypadne z artefaktu jen proto, že `Compress-Archive` na Linux runneru vynechá dotfile; release package audit návrat ke křehkému balení blokuje.
 - **Nosniff hlavička pro discovery endpointy** – `robots.txt`, XML sitemapa a globální RSS feed nově posílají explicitní `X-Content-Type-Options: nosniff`; HTTP integrace i runtime audit hlídají reálné odpovědi, aby prohlížeče neinterpretovaly textové, XML nebo RSS výstupy mimo deklarovaný typ.
 - **Release smoke hlídá README casing** – izolovaný release smoke test nově ověřuje, že instalační ZIP i `git archive` source balík obsahují hlavní dokumentaci jako `README.md`, takže se na Windows checkoutu nerozjede casing dokumentace mezi runtime ZIPem a source archivem.
