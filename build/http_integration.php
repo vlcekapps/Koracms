@@ -543,6 +543,7 @@ try {
         $adminHtmlCacheControl = '';
         $adminHtmlPragmaFound = false;
         $adminHtmlExpiresFound = false;
+        $adminHtmlRobotsFound = false;
         foreach ($adminHtmlCacheHeaderResponse['headers'] as $adminHtmlCacheHeader) {
             if (stripos($adminHtmlCacheHeader, 'Cache-Control:') === 0) {
                 $adminHtmlCacheControl .= ' ' . $adminHtmlCacheHeader;
@@ -554,6 +555,13 @@ try {
             }
             if (stripos($adminHtmlCacheHeader, 'Expires:') === 0 && trim(substr($adminHtmlCacheHeader, 8)) === '0') {
                 $adminHtmlExpiresFound = true;
+                continue;
+            }
+            if (stripos($adminHtmlCacheHeader, 'X-Robots-Tag:') === 0) {
+                $normalizedAdminHtmlRobotsHeader = strtolower($adminHtmlCacheHeader);
+                $adminHtmlRobotsFound = str_contains($normalizedAdminHtmlRobotsHeader, 'noindex')
+                    && str_contains($normalizedAdminHtmlRobotsHeader, 'nofollow')
+                    && str_contains($normalizedAdminHtmlRobotsHeader, 'noarchive');
             }
         }
 
@@ -562,6 +570,9 @@ try {
         }
         if (!$adminHtmlPragmaFound || !$adminHtmlExpiresFound) {
             $adminHtmlCacheHeaderIssues[] = $adminHtmlCacheHeaderLabel . ' neposlalo Pragma: no-cache a Expires: 0';
+        }
+        if (!$adminHtmlRobotsFound) {
+            $adminHtmlCacheHeaderIssues[] = $adminHtmlCacheHeaderLabel . ' neposlalo X-Robots-Tag: noindex, nofollow, noarchive';
         }
     }
     httpIntegrationPrintResult('admin_html_cache_headers_http', $adminHtmlCacheHeaderIssues, $failures);

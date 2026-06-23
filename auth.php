@@ -125,6 +125,7 @@ function sendAdminNoStoreHeaders(): void
     header('Cache-Control: no-store, max-age=0');
     header('Pragma: no-cache');
     header('Expires: 0');
+    header('X-Robots-Tag: noindex, nofollow, noarchive');
 }
 
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {

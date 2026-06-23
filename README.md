@@ -528,7 +528,7 @@ Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy n
 
 Session vrstva používá cookies-only režim, strict mode a vypnuté session ID v URL. Přihlašovací flow zároveň po úspěšném přihlášení regeneruje session ID, cookie má `HttpOnly` a `SameSite=Strict` a odhlášení ji maže se stejným cookie kontextem, aby se snížilo riziko session fixation a úniku session přes odkazy nebo referrery.
 
-Běžné administrační HTML odpovědi včetně loginu, 2FA a potvrzení migrace posílají `Cache-Control: no-store, max-age=0`, `Pragma: no-cache` a `Expires: 0`. Administrace se tak zbytečně neuchovává v prohlížeči nebo mezicache, zatímco veřejné sociální náhledy mají dál vlastní krátce cacheovatelnou výjimku.
+Běžné administrační HTML odpovědi včetně loginu, 2FA a potvrzení migrace posílají `Cache-Control: no-store, max-age=0`, `Pragma: no-cache`, `Expires: 0` a `X-Robots-Tag: noindex, nofollow, noarchive`. Administrace se tak zbytečně neuchovává v prohlížeči nebo mezicache a nemá se indexovat, zatímco veřejné sociální náhledy mají dál vlastní krátce cacheovatelnou výjimku.
 
 Veřejné i administrační odpovědi posílají také bezpečnostní hlavičku `Permissions-Policy`. CMS tím explicitně zakazuje prohlížečové schopnosti, které nepoužívá, například kameru, mikrofon, geolokaci, platební API, USB nebo browsing topics. Záměrně neblokuje clipboard ani fullscreen, aby zůstala funkční kopírovací tlačítka a legitimní embedy.
 
