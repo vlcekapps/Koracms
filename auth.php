@@ -158,6 +158,7 @@ header('X-Frame-Options: DENY');
 header('X-Permitted-Cross-Domain-Policies: none');
 header('Referrer-Policy: same-origin');
 header('Cross-Origin-Opener-Policy: same-origin');
+header('Origin-Agent-Cluster: ?1');
 header('Permissions-Policy: accelerometer=(), browsing-topics=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()');
 if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');

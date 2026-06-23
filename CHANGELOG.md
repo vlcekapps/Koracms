@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Origin isolation hlavička** – veřejné i administrační odpovědi nově posílají `Origin-Agent-Cluster: ?1`, aby prohlížeče izolovaly runtime webu podle originu; audit hlídá zdroj i reálné HTTP odpovědi bez zavádění COEP/CORP, které by mohly rozbíjet externí embedy.
 - **Šetrné čištění cache při odhlášení** – společný logout flow nově posílá `Clear-Site-Data: "cache"`, aby prohlížeč po odhlášení zahodil cache webu; záměrně nemaže cookies mimo session ani `localStorage`, aby se nerozbily cookie preference nebo neuložené autosave koncepty.
 - **Další browser hardening hlavičky** – veřejné i administrační odpovědi nově posílají `Cross-Origin-Opener-Policy: same-origin` a `X-Permitted-Cross-Domain-Policies: none`; runtime audit hlídá zdroj i skutečné HTTP hlavičky.
 - **Noindex hlavička pro administraci a migrace** – administrační cesty včetně loginu, 2FA a `migrate.php` nově vedle necacheovatelných odpovědí posílají také `X-Robots-Tag: noindex, nofollow, noarchive`; HTTP integrace ověřuje reálné hlavičky.

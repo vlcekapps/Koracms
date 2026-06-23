@@ -2394,6 +2394,7 @@ function analyzeHeaders(array $headers): array
         'X-Permitted-Cross-Domain-Policies:',
         'Referrer-Policy:',
         'Cross-Origin-Opener-Policy:',
+        'Origin-Agent-Cluster:',
         'Permissions-Policy:',
         'Content-Security-Policy:',
     ];
@@ -9649,6 +9650,7 @@ if (!str_contains($authSource, "frame-ancestors 'none'")) {
 foreach ([
     'X-Permitted-Cross-Domain-Policies: none',
     'Cross-Origin-Opener-Policy: same-origin',
+    'Origin-Agent-Cluster: ?1',
 ] as $browserIsolationHeaderFragment) {
     if (!str_contains($authSource, $browserIsolationHeaderFragment)) {
         $contentSecurityPolicyIssues[] = 'auth browser isolation header is missing fragment: ' . $browserIsolationHeaderFragment;
@@ -9758,6 +9760,7 @@ $contentSecurityPolicyReportOnlyHeaderFound = false;
 $permissionsPolicyHeaderFound = false;
 $crossDomainPoliciesHeaderFound = false;
 $crossOriginOpenerPolicyHeaderFound = false;
+$originAgentClusterHeaderFound = false;
 if (preg_match('/<style\s+nonce="[^"]+">:root\{--/i', $contentSecurityPolicyProbe['body']) !== 1) {
     $contentSecurityPolicyIssues[] = 'public theme CSS variables are not rendered with a nonce-backed style tag';
 }
@@ -9774,6 +9777,13 @@ foreach ($contentSecurityPolicyProbe['headers'] as $securityHeader) {
         $crossOriginOpenerPolicyHeaderFound = true;
         if (!str_contains($normalizedHeader, 'same-origin')) {
             $contentSecurityPolicyIssues[] = 'public Cross-Origin-Opener-Policy header is not set to same-origin';
+        }
+        continue;
+    }
+    if (str_starts_with($normalizedHeader, 'origin-agent-cluster:')) {
+        $originAgentClusterHeaderFound = true;
+        if (!str_contains($normalizedHeader, '?1')) {
+            $contentSecurityPolicyIssues[] = 'public Origin-Agent-Cluster header is not enabled';
         }
         continue;
     }
@@ -9842,6 +9852,9 @@ if (!$crossDomainPoliciesHeaderFound) {
 }
 if (!$crossOriginOpenerPolicyHeaderFound) {
     $contentSecurityPolicyIssues[] = 'public response is missing Cross-Origin-Opener-Policy header';
+}
+if (!$originAgentClusterHeaderFound) {
+    $contentSecurityPolicyIssues[] = 'public response is missing Origin-Agent-Cluster header';
 }
 
 if ($contentSecurityPolicyIssues === []) {
