@@ -37,6 +37,7 @@ parameters:
         - build/config_sample_audit.php
         - build/config_sample_audit_selftest.php
         - build/version_metadata_audit.php
+        - build/version_metadata_audit_selftest.php
         - build/schema_parity_audit.php
         - build/redirect_guardrails_audit.php
         - build/redirect_guardrails_audit_selftest.php

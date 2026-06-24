@@ -70,6 +70,7 @@ $repositoryGuardrailsAuditSelftestSource = is_file(__DIR__ . '/repository_guardr
 $configSampleAuditSource = is_file(__DIR__ . '/config_sample_audit.php') ? (string) file_get_contents(__DIR__ . '/config_sample_audit.php') : '';
 $configSampleAuditSelftestSource = is_file(__DIR__ . '/config_sample_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/config_sample_audit_selftest.php') : '';
 $versionMetadataAuditSource = is_file(__DIR__ . '/version_metadata_audit.php') ? (string) file_get_contents(__DIR__ . '/version_metadata_audit.php') : '';
+$versionMetadataAuditSelftestSource = is_file(__DIR__ . '/version_metadata_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/version_metadata_audit_selftest.php') : '';
 $schemaParityAuditSource = is_file(__DIR__ . '/schema_parity_audit.php') ? (string) file_get_contents(__DIR__ . '/schema_parity_audit.php') : '';
 $redirectGuardrailsAuditSource = is_file(__DIR__ . '/redirect_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit.php') : '';
 $redirectGuardrailsAuditSelftestSource = is_file(__DIR__ . '/redirect_guardrails_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit_selftest.php') : '';
@@ -7670,13 +7671,25 @@ $foundationChecks = [
     'version metadata audit is wired into local quality gates' => str_contains($composerSource, '"test:version-metadata"')
         && str_contains($composerSource, 'php build/version_metadata_audit.php')
         && str_contains($composerSource, '@test:version-metadata')
+        && str_contains($composerSource, '"test:version-metadata-selftest"')
+        && str_contains($composerSource, 'php build/version_metadata_audit_selftest.php')
+        && str_contains($composerSource, '@test:version-metadata-selftest')
         && str_contains($composerSource, 'build/version_metadata_audit.php')
+        && str_contains($composerSource, 'build/version_metadata_audit_selftest.php')
         && str_contains($phpstanConfigSource, 'build/version_metadata_audit.php')
+        && str_contains($phpstanConfigSource, 'build/version_metadata_audit_selftest.php')
+        && str_contains($versionMetadataAuditSource, 'versionAuditProjectRoot')
         && str_contains($versionMetadataAuditSource, 'versionAuditIsSemver')
         && str_contains($versionMetadataAuditSource, "define('KORA_VERSION'")
         && str_contains($versionMetadataAuditSource, '$packageFileOverrides["VERSION"] = $newVersion')
         && str_contains($versionMetadataAuditSource, 'Release smoke ZIP contains an unexpected VERSION value')
-        && str_contains($versionMetadataAuditSource, 'Source archive contains an unexpected VERSION value'),
+        && str_contains($versionMetadataAuditSource, 'Source archive contains an unexpected VERSION value')
+        && str_contains($versionMetadataAuditSelftestSource, 'assertVersionMetadataAuditPasses')
+        && str_contains($versionMetadataAuditSelftestSource, 'assertVersionMetadataAuditFails')
+        && str_contains($versionMetadataAuditSelftestSource, 'VERSION must use SemVer MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-prerelease')
+        && str_contains($versionMetadataAuditSelftestSource, 'release script overrides VERSION only inside dry-run ZIP')
+        && str_contains($versionMetadataAuditSelftestSource, 'release smoke verifies source archive VERSION')
+        && str_contains($versionMetadataAuditSelftestSource, 'README documents dry-run keeping working VERSION unchanged'),
     'schema parity audit is wired into local quality gates' => str_contains($composerSource, '"test:schema-parity"')
         && str_contains($composerSource, 'php build/schema_parity_audit.php')
         && str_contains($composerSource, '@test:schema-parity')
@@ -7843,11 +7856,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
