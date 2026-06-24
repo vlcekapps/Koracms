@@ -149,7 +149,7 @@ adminHeader('Jídelní a nápojový lístek');
     <caption><?= h($captions[$type]) ?></caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="check-all-<?= h($type) ?>" data-check-all="bulk-form" aria-label="Vybrat vše"></th>
+        <th scope="col"><label for="check-all-<?= h($type) ?>" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all-<?= h($type) ?>" data-check-all="bulk-form"></th>
         <th scope="col">Název</th>
         <th scope="col">Platnost</th>
         <th scope="col">Autor</th>

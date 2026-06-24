@@ -185,7 +185,7 @@ adminHeader('Newsletter');
       <caption class="sr-only">Odběratelé newsletteru</caption>
       <thead>
         <tr>
-          <th scope="col"><input type="checkbox" id="newsletter-check-all" aria-label="Vybrat všechny odběratele newsletteru" form="newsletter-bulk-form"></th>
+          <th scope="col"><label for="newsletter-check-all" class="sr-only">Vybrat všechny odběratele newsletteru</label><input type="checkbox" id="newsletter-check-all" form="newsletter-bulk-form"></th>
           <th scope="col">E-mail</th>
           <th scope="col">Stav</th>
           <th scope="col">Přihlášen</th>

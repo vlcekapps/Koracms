@@ -315,7 +315,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
     <caption>Přehled odpovědí formuláře</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="form-submissions-check-all" aria-label="Vybrat všechny odpovědi formuláře" form="form-submission-bulk-form"></th>
+        <th scope="col"><label for="form-submissions-check-all" class="sr-only">Vybrat všechny odpovědi formuláře</label><input type="checkbox" id="form-submissions-check-all" form="form-submission-bulk-form"></th>
         <th scope="col">Reference</th>
         <th scope="col">Shrnutí</th>
         <th scope="col">Přijato</th>

@@ -182,7 +182,7 @@ adminHeader('Zajímavá místa');
     <caption>Přehled zajímavých míst</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th>
         <th scope="col">Místo</th>
         <th scope="col">Typ a lokalita</th>
         <th scope="col">Stav</th>

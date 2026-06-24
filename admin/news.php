@@ -107,7 +107,7 @@ adminHeader('Novinky');
     <caption>Přehled novinek</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th>
         <th scope="col">Titulek</th>
         <th scope="col">Autor</th>
         <th scope="col">Datum</th>

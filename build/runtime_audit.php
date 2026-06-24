@@ -10324,6 +10324,61 @@ if ($postFormCsrfIssues === []) {
     }
 }
 
+echo "=== admin_bulk_select_label_guardrails ===\n";
+$adminBulkSelectLabelIssues = [];
+$adminBulkSelectLabelExpectations = [
+    'admin/blog.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/blog_cats.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/board.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/chat.php' => ['<label for="chat-check-all" class="sr-only">Vybrat všechny chat zprávy</label><input type="checkbox" id="chat-check-all" form="chat-bulk-form">'],
+    'admin/comments.php' => ['<label for="check-all" class="sr-only">Vybrat všechny komentáře</label><input type="checkbox" id="check-all" form="bulk-form">'],
+    'admin/contact.php' => ['<label for="contact-check-all" class="sr-only">Vybrat všechny kontaktní zprávy</label><input type="checkbox" id="contact-check-all" form="contact-bulk-form">'],
+    'admin/downloads.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/events.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/faq.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/food.php' => ['<label for="check-all-<?= h($type) ?>" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all-<?= h($type) ?>" data-check-all="bulk-form">'],
+    'admin/form_submissions.php' => ['<label for="form-submissions-check-all" class="sr-only">Vybrat všechny odpovědi formuláře</label><input type="checkbox" id="form-submissions-check-all" form="form-submission-bulk-form">'],
+    'admin/gallery_albums.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/gallery_photos.php' => ['<label for="gallery-photos-check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="gallery-photos-check-all" class="bulk-select-all">'],
+    'admin/news.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/newsletter.php' => ['<label for="newsletter-check-all" class="sr-only">Vybrat všechny odběratele newsletteru</label><input type="checkbox" id="newsletter-check-all" form="newsletter-bulk-form">'],
+    'admin/pages.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/places.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+    'admin/polls.php' => ['<label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all">'],
+];
+foreach ($adminBulkSelectLabelExpectations as $adminBulkSelectRelativePath => $adminBulkSelectFragments) {
+    $adminBulkSelectSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminBulkSelectRelativePath);
+    foreach ($adminBulkSelectFragments as $adminBulkSelectFragment) {
+        if (!str_contains($adminBulkSelectSource, $adminBulkSelectFragment)) {
+            $adminBulkSelectLabelIssues[] = $adminBulkSelectRelativePath . ' is missing select-all hidden label fragment: ' . $adminBulkSelectFragment;
+        }
+    }
+}
+foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminBulkSelectPath) {
+    $adminBulkSelectSource = (string)file_get_contents($adminBulkSelectPath);
+    foreach ([
+        'id="check-all" aria-label="Vybrat',
+        'id="chat-check-all" aria-label=',
+        'id="contact-check-all" aria-label=',
+        'id="form-submissions-check-all" aria-label=',
+        'id="newsletter-check-all" aria-label=',
+        'class="bulk-select-all" aria-label=',
+        'data-check-all="bulk-form" aria-label=',
+    ] as $adminBulkSelectForbiddenFragment) {
+        if (str_contains($adminBulkSelectSource, $adminBulkSelectForbiddenFragment)) {
+            $adminBulkSelectLabelIssues[] = basename($adminBulkSelectPath) . ' still names a select-all checkbox with aria-label: ' . $adminBulkSelectForbiddenFragment;
+        }
+    }
+}
+if ($adminBulkSelectLabelIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminBulkSelectLabelIssues as $adminBulkSelectLabelIssue) {
+        echo '- ' . $adminBulkSelectLabelIssue . "\n";
+    }
+}
+
 echo "=== admin_new_window_link_guardrails ===\n";
 $adminNewWindowIssues = [];
 foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {

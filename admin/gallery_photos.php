@@ -115,7 +115,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
     <caption>Fotografie v albu „<?= h($album['name']) ?>”</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" class="bulk-select-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><label for="gallery-photos-check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="gallery-photos-check-all" class="bulk-select-all"></th>
         <th scope="col">Náhled</th>
         <th scope="col">Fotografie</th>
         <th scope="col">Pořadí</th>

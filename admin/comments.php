@@ -185,7 +185,7 @@ adminHeader('Komentáře');
     <caption>Komentáře</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat všechny komentáře" form="bulk-form"></th>
+        <th scope="col"><label for="check-all" class="sr-only">Vybrat všechny komentáře</label><input type="checkbox" id="check-all" form="bulk-form"></th>
         <th scope="col">Autor</th>
         <th scope="col">Článek</th>
         <th scope="col">Komentář</th>

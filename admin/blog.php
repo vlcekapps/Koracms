@@ -240,7 +240,7 @@ adminHeader($blogCaptionTitle);
     <caption>Přehled článků blogu</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th>
         <th scope="col">Titulek</th>
         <?php if ($multiBlog): ?><th scope="col">Blog</th><?php endif; ?>
         <th scope="col">Autor</th>

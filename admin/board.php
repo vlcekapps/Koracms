@@ -88,7 +88,7 @@ adminHeader('Úřední deska');
     <caption>Přehled položek sekce <?= h($publicLabel) ?></caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th>
+        <th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th>
         <th scope="col">Nadpis</th>
         <th scope="col">Typ</th>
         <th scope="col">Kategorie</th>

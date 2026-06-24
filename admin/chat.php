@@ -196,7 +196,7 @@ adminHeader('Chat');
     <caption>Chat zprávy</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="chat-check-all" aria-label="Vybrat všechny chat zprávy" form="chat-bulk-form"></th>
+        <th scope="col"><label for="chat-check-all" class="sr-only">Vybrat všechny chat zprávy</label><input type="checkbox" id="chat-check-all" form="chat-bulk-form"></th>
         <th scope="col">Odesílatel</th>
         <th scope="col">Zpráva</th>
         <th scope="col">Přijato</th>

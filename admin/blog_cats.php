@@ -165,7 +165,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
   <?= bulkActions('blog_categories', BASE_URL . '/admin/blog_cats.php?blog_id=' . $blogId, 'Hromadné akce s kategoriemi', 'kategorie', false) ?>
   <table>
     <caption>Přehled kategorií blogu</caption>
-    <thead><tr><th scope="col"><input type="checkbox" id="check-all" aria-label="Vybrat vše"></th><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
+    <thead><tr><th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th><th scope="col">Název</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($flatCategories as $category): ?>
       <?php $indent = str_repeat('— ', (int)$category['_depth']); ?>

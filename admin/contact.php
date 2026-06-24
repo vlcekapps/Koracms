@@ -159,7 +159,7 @@ adminHeader('Kontakt');
     <caption>Kontaktní zprávy</caption>
     <thead>
       <tr>
-        <th scope="col"><input type="checkbox" id="contact-check-all" aria-label="Vybrat všechny kontaktní zprávy" form="contact-bulk-form"></th>
+        <th scope="col"><label for="contact-check-all" class="sr-only">Vybrat všechny kontaktní zprávy</label><input type="checkbox" id="contact-check-all" form="contact-bulk-form"></th>
         <th scope="col">Od</th>
         <th scope="col">Předmět a zpráva</th>
         <th scope="col">Přijato</th>
