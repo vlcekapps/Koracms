@@ -212,7 +212,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
   <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit formulář</a>
   <a href="forms.php" class="btn">Zpět na formuláře</a>
   <?php if ((int)($form['is_active'] ?? 0) === 1): ?>
-    <a href="<?= h(formPublicPath($form)) ?>" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+    <a href="<?= h(formPublicPath($form)) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
   <?php endif; ?>
   <?php if ($submissionCount > 0): ?>
     <a href="<?= h(appendUrlQuery('form_submissions.php', array_merge($currentParams, ['export' => 'csv']))) ?>" class="btn btn-primary">Exportovat CSV</a>
@@ -378,7 +378,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
           <td><strong><?= h(formSubmissionStatusLabel((string)($submission['status'] ?? 'new'))) ?></strong></td>
           <td>
             <?php if (formSubmissionHasGitHubIssue($submission)): ?>
-              <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel(formSubmissionGitHubIssueLabel($submission))) ?>"><?= h(formSubmissionGitHubIssueLabel($submission)) ?></a>
+              <a href="<?= h((string)$submission['github_issue_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h(formSubmissionGitHubIssueLabel($submission)) ?><?= newWindowLinkSrOnlySuffix() ?></a>
             <?php else: ?>
               –
             <?php endif; ?>

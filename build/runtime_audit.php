@@ -10520,6 +10520,10 @@ foreach ([
     'admin/downloads.php',
     'admin/download_form.php',
     'admin/media.php',
+    'admin/forms.php',
+    'admin/form_form.php',
+    'admin/form_submissions.php',
+    'admin/form_submission.php',
 ] as $adminContentNewWindowRelativePath) {
     $adminContentNewWindowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminContentNewWindowRelativePath);
     $adminContentNewWindowLines = preg_split('/\R/', $adminContentNewWindowSource) ?: [];
