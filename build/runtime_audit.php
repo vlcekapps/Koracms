@@ -14360,6 +14360,29 @@ if (str_contains($widgetsAdminSource, 'id="widget-dialog-close" class="btn" aria
     $widgetRenderIssues[] = 'admin widgets dialog close button still uses aria-label instead of hidden button text';
 }
 foreach ([
+    "\$wTitleId = \$wDomId . '-title';",
+    "\$wDescriptionIds = [];",
+    'aria-labelledby="<?= h($wTitleId) ?>"',
+    'id="<?= h($wTitleId) ?>"',
+    'id="<?= h($wMetaId) ?>"',
+    'id="<?= h($wWarningId) ?>"',
+    'Nastavení<span class="sr-only"> widgetu <?= h($wDisplayTitle) ?></span>',
+    '<span aria-hidden="true">✕</span><span class="sr-only">Odebrat widget <?= h($wDisplayTitle) ?></span>',
+] as $widgetAdminListA11yFragment) {
+    if (!str_contains($widgetsAdminSource, $widgetAdminListA11yFragment)) {
+        $widgetRenderIssues[] = 'admin widgets list is missing accessibility fragment: ' . $widgetAdminListA11yFragment;
+    }
+}
+foreach ([
+    'aria-label="<?= h($wDisplayTitle) ?> (<?= h($wTypeName) ?>)"',
+    'aria-label="Nastavení widgetu',
+    'aria-label="Odebrat widget',
+] as $widgetAdminListForbiddenFragment) {
+    if (str_contains($widgetsAdminSource, $widgetAdminListForbiddenFragment)) {
+        $widgetRenderIssues[] = 'admin widgets list still uses aria-label-only fragment: ' . $widgetAdminListForbiddenFragment;
+    }
+}
+foreach ([
     'function toggleDialogField(fieldName, visible)',
     "field.hidden = !visible;",
     "field.setAttribute('aria-hidden', visible ? 'false' : 'true');",

@@ -100,25 +100,35 @@ adminHeader('Widgety');
             if ($wDisplayWarning) {
                 $wMetaParts[] = 'na webu se teď nezobrazí';
             }
+            $wDomId = 'widget-item-' . (int)$w['id'];
+            $wTitleId = $wDomId . '-title';
+            $wMetaId = $wDomId . '-meta';
+            $wWarningId = $wDomId . '-warning';
+            $wDescriptionIds = [];
+            if ($wMetaParts !== []) {
+                $wDescriptionIds[] = $wMetaId;
+            }
+            if ($wDisplayWarning && $wDisplayReasons !== []) {
+                $wDescriptionIds[] = $wWarningId;
+            }
             ?>
           <li class="widget-sort-item<?= !(int)$w['is_active'] ? ' widget-sort-item--inactive' : '' ?>"
               data-sort-id="<?= (int)$w['id'] ?>" tabindex="0"
-              aria-label="<?= h($wDisplayTitle) ?> (<?= h($wTypeName) ?>)">
+              aria-labelledby="<?= h($wTitleId) ?>"<?= $wDescriptionIds !== [] ? ' aria-describedby="' . h(implode(' ', $wDescriptionIds)) . '"' : '' ?>>
 
             <div class="widget-sort-item__body">
-              <strong><?= h($wDisplayTitle) ?></strong>
+              <strong id="<?= h($wTitleId) ?>"><?= h($wDisplayTitle) ?></strong>
               <?php if ($wMetaParts !== []): ?>
-                <br><small class="widget-sort-item__meta"><?= h(implode(' · ', $wMetaParts)) ?></small>
+                <br><small id="<?= h($wMetaId) ?>" class="widget-sort-item__meta"><?= h(implode(' · ', $wMetaParts)) ?></small>
               <?php endif; ?>
             </div>
 
             <div class="widget-sort-item__tools">
               <?php if ($wDisplayWarning && $wDisplayReasons !== []): ?>
-                <p class="field-help widget-sort-item__warning">Na webu se teď nezobrazí: <?= h(implode('; ', $wDisplayReasons)) ?>.</p>
+                <p id="<?= h($wWarningId) ?>" class="field-help widget-sort-item__warning">Na webu se teď nezobrazí: <?= h(implode('; ', $wDisplayReasons)) ?>.</p>
               <?php endif; ?>
               <div class="widget-sort-item__actions">
                 <button type="button" class="btn widget-button--compact widget-edit-btn"
-                        aria-label="Nastavení widgetu <?= h($wDisplayTitle) ?>"
                         aria-haspopup="dialog"
                         aria-controls="widget-dialog"
                         aria-expanded="false"
@@ -127,13 +137,12 @@ adminHeader('Widgety');
                         data-widget-type="<?= h($w['widget_type']) ?>"
                         data-widget-zone="<?= h($w['zone']) ?>"
                         data-widget-active="<?= (int)$w['is_active'] ?>"
-                        data-widget-settings="<?= h(json_encode($wSettings, JSON_UNESCAPED_UNICODE)) ?>">Nastavení</button>
+                        data-widget-settings="<?= h(json_encode($wSettings, JSON_UNESCAPED_UNICODE)) ?>">Nastavení<span class="sr-only"> widgetu <?= h($wDisplayTitle) ?></span></button>
                 <form method="post" action="widget_delete.php" class="widget-inline-form">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                   <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
                   <button type="submit" class="btn btn-danger widget-button--compact"
-                          data-confirm="<?= h('Odebrat widget „' . $wDisplayTitle . '“?') ?>"
-                          aria-label="Odebrat widget <?= h($wDisplayTitle) ?>">✕</button>
+                          data-confirm="<?= h('Odebrat widget „' . $wDisplayTitle . '“?') ?>"><span aria-hidden="true">✕</span><span class="sr-only">Odebrat widget <?= h($wDisplayTitle) ?></span></button>
                 </form>
               </div>
             </div>
