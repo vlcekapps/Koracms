@@ -10105,6 +10105,10 @@ if (!str_contains($uiSource, 'role="navigation" aria-labelledby="public-admin-ba
     || str_contains($uiSource, 'role="navigation" aria-label="Administrace webu"')) {
     $contentSecurityPolicyIssues[] = 'public admin bar is missing heading-backed navigation semantics';
 }
+if (!str_contains($uiSource, 'public-admin-bar__link--edit"><span aria-hidden="true">&#9998;</span> Upravit')
+    || str_contains($uiSource, 'public-admin-bar__link--edit">&#9998; Upravit')) {
+    $contentSecurityPolicyIssues[] = 'public admin bar edit icon is not marked as decorative';
+}
 foreach ([
     'class="cookie-banner" hidden',
     'b.hidden=false',

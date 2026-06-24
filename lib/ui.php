@@ -293,7 +293,7 @@ function adminBar(string $editUrl = ''): string
          . '<h2 id="public-admin-bar-heading" class="sr-only">Administrace webu</h2>'
          . '<a href="' . $b . '/admin/index.php" class="public-admin-bar__link"><span aria-hidden="true">&#9881;</span> Admin</a>';
     if ($editUrl !== '') {
-        $out .= ' <a href="' . h($editUrl) . '" class="public-admin-bar__link public-admin-bar__link--edit">&#9998; Upravit</a>';
+        $out .= ' <a href="' . h($editUrl) . '" class="public-admin-bar__link public-admin-bar__link--edit"><span aria-hidden="true">&#9998;</span> Upravit</a>';
     }
     $out .= '<span class="public-admin-bar__spacer">'
           . '<a href="' . $b . '/admin/logout.php" class="public-admin-bar__link">Odhlásit se</a>'
