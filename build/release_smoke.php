@@ -326,6 +326,8 @@ $zipInspectScriptPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
 $excludedRootEntries = [
     '.git',
     '.claude',
+    '.codex',
+    '.cursor',
     '.idea',
     '.vscode',
     'aconfig.php',
@@ -333,6 +335,7 @@ $excludedRootEntries = [
     'dist',
     'uploads',
     'vendor',
+    'node_modules',
     '.php-cs-fixer.cache',
     '.DS_Store',
     'Thumbs.db',
@@ -477,6 +480,12 @@ try {
         if (str_starts_with($entry, '.claude/')) {
             fail('Release smoke ZIP unexpectedly contains local Claude metadata.');
         }
+        if (str_starts_with($entry, '.codex/')) {
+            fail('Release smoke ZIP unexpectedly contains local Codex metadata.');
+        }
+        if (str_starts_with($entry, '.cursor/')) {
+            fail('Release smoke ZIP unexpectedly contains local Cursor metadata.');
+        }
         if (str_starts_with($entry, '.github/')) {
             fail('Release smoke ZIP unexpectedly contains .github metadata.');
         }
@@ -488,6 +497,9 @@ try {
         }
         if (str_starts_with($entry, 'vendor/')) {
             fail('Release smoke ZIP unexpectedly contains vendor files.');
+        }
+        if (str_starts_with($entry, 'node_modules/')) {
+            fail('Release smoke ZIP unexpectedly contains Node dependencies.');
         }
         if (str_starts_with($entry, 'build/')) {
             fail('Release smoke ZIP unexpectedly contains build tooling files.');
@@ -507,11 +519,14 @@ try {
         '.gitattributes',
         '.gitignore',
         '.php-cs-fixer.dist.php',
+        '.codex',
+        '.cursor',
         'AGENTS.md',
         'aconfig.php',
         'composer.json',
         'composer.lock',
         'config.php',
+        'node_modules',
         'phpstan.neon.dist',
     ] as $excludedFile) {
         if (in_array($excludedFile, $entries, true)) {
@@ -574,6 +589,12 @@ try {
         if (str_starts_with($entry, '.claude/')) {
             fail('Source archive unexpectedly contains local Claude metadata: ' . $entry);
         }
+        if (str_starts_with($entry, '.codex/')) {
+            fail('Source archive unexpectedly contains local Codex metadata: ' . $entry);
+        }
+        if (str_starts_with($entry, '.cursor/')) {
+            fail('Source archive unexpectedly contains local Cursor metadata: ' . $entry);
+        }
         if (str_starts_with($entry, '.github/')) {
             fail('Source archive unexpectedly contains .github metadata.');
         }
@@ -598,17 +619,23 @@ try {
         if (str_starts_with($entry, 'vendor/')) {
             fail('Source archive unexpectedly contains vendor files: ' . $entry);
         }
+        if (str_starts_with($entry, 'node_modules/')) {
+            fail('Source archive unexpectedly contains Node dependencies: ' . $entry);
+        }
     }
 
     foreach ([
         '.gitattributes',
         '.gitignore',
         '.php-cs-fixer.dist.php',
+        '.codex',
+        '.cursor',
         'AGENTS.md',
         'aconfig.php',
         'composer.json',
         'composer.lock',
         'config.php',
+        'node_modules',
         'phpstan.neon.dist',
     ] as $excludedFile) {
         if (in_array($excludedFile, $sourceEntries, true)) {

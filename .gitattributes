@@ -20,6 +20,10 @@
 .github/** export-ignore
 .claude export-ignore
 .claude/** export-ignore
+.codex export-ignore
+.codex/** export-ignore
+.cursor export-ignore
+.cursor/** export-ignore
 .idea export-ignore
 .idea/** export-ignore
 .vscode export-ignore
@@ -42,5 +46,7 @@ dist/** export-ignore
 docs export-ignore
 docs/** export-ignore
 phpstan.neon.dist export-ignore
+node_modules export-ignore
+node_modules/** export-ignore
 vendor export-ignore
 vendor/** export-ignore

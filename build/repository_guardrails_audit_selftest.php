@@ -211,6 +211,24 @@ assertRepositoryGuardrailsFails(
 );
 
 assertRepositoryGuardrailsFails(
+    'Tracked node dependencies guard',
+    ['node_modules/example/index.js' => "module.exports = {};\n"],
+    'node_modules/example/index.js: Node dependencies must not be tracked'
+);
+
+assertRepositoryGuardrailsFails(
+    'Tracked local Codex metadata guard',
+    ['.codex/settings.json' => "{}\n"],
+    '.codex/settings.json: local Codex metadata must not be tracked'
+);
+
+assertRepositoryGuardrailsFails(
+    'Tracked local Cursor metadata guard',
+    ['.cursor/rules/project.md' => "# Local notes\n"],
+    '.cursor/rules/project.md: local Cursor metadata must not be tracked'
+);
+
+assertRepositoryGuardrailsFails(
     'Tracked upload guard',
     ['uploads/media/file.pdf' => '%PDF-1.4'],
     'uploads/media/file.pdf: user upload content must not be tracked'

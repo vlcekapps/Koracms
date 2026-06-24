@@ -230,6 +230,19 @@ assertReleasePackageAuditFails(
 );
 
 assertReleasePackageAuditFails(
+    'Missing release script Codex exclusion guard',
+    static function (string $tempRoot): void {
+        releasePackageAuditSelfTestReplaceInFile(
+            $tempRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release.ps1',
+            ", '.codex'",
+            '',
+            'missing release script Codex exclusion'
+        );
+    },
+    'build/release.ps1 does not exclude .codex.'
+);
+
+assertReleasePackageAuditFails(
     'Compress-Archive regression guard',
     static function (string $tempRoot): void {
         releasePackageAuditSelfTestAppendToFile(
@@ -264,6 +277,19 @@ assertReleasePackageAuditFails(
         );
     },
     '.gitattributes is missing source archive rule: vendor/** export-ignore'
+);
+
+assertReleasePackageAuditFails(
+    'Missing node modules ignore guard',
+    static function (string $tempRoot): void {
+        releasePackageAuditSelfTestReplaceInFile(
+            $tempRoot . DIRECTORY_SEPARATOR . '.gitignore',
+            "node_modules/\n",
+            '',
+            'missing node_modules ignore rule'
+        );
+    },
+    '.gitignore is missing local/generated file rule: node_modules/'
 );
 
 assertReleasePackageAuditFails(

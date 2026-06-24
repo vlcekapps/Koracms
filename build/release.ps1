@@ -278,7 +278,7 @@ function New-ReleaseZip {
         [hashtable]$FileOverrides = @{}
     )
 
-    $exclude = @('.git', '.github', '.gitignore', '.gitattributes', '.claude', 'uploads', 'build', 'dist', 'docs', 'vendor', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
+    $exclude = @('.git', '.github', '.gitignore', '.gitattributes', '.claude', '.codex', '.cursor', 'uploads', 'build', 'dist', 'docs', 'vendor', 'node_modules', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
     $adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"
     $uploadsHtaccessSource = Join-Path $ProjectRoot "uploads\.htaccess"
 

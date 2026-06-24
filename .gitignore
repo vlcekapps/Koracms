@@ -15,8 +15,9 @@ uploads/backups/*
 # Vygenerované release zipy
 dist/
 
-# Composer dev závislosti
+# Vývojové závislosti a lokální nástroje
 vendor/
+node_modules/
 .php-cs-fixer.cache
 
 # Systémové soubory
@@ -28,8 +29,10 @@ Thumbs.db
 .idea/
 *.swp
 
-# Claude Code
+# Lokální AI/editor metadata
 .claude/
+.codex/
+.cursor/
 
 # Keep admin guide tracked for release assets and README links
 !docs/admin-guide.md

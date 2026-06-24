@@ -66,7 +66,7 @@ function trackedRepositoryGuardrailFiles(string $projectRoot): array
 function isRepositoryGuardrailPhpFile(string $relativePath): bool
 {
     $normalizedPath = str_replace('\\', '/', $relativePath);
-    if (preg_match('#^(?:dist|uploads|vendor)/#', $normalizedPath) === 1) {
+    if (preg_match('#^(?:dist|uploads|vendor|node_modules)/#', $normalizedPath) === 1) {
         return false;
     }
 
@@ -113,8 +113,11 @@ function forbiddenTrackedRepositoryArtifactReason(string $relativePath): ?string
 
     foreach ([
         'vendor/' => 'Composer vendor dependencies must not be tracked',
+        'node_modules/' => 'Node dependencies must not be tracked',
         'dist/' => 'generated release artifacts must not be tracked',
         '.claude/' => 'local Claude metadata must not be tracked',
+        '.codex/' => 'local Codex metadata must not be tracked',
+        '.cursor/' => 'local Cursor metadata must not be tracked',
         '.vscode/' => 'local IDE metadata must not be tracked',
         '.idea/' => 'local IDE metadata must not be tracked',
         'uploads/' => 'user upload content must not be tracked',
