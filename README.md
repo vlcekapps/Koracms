@@ -566,6 +566,7 @@ composer ci:basic
 `composer ci:basic` spustí:
 
 - PHP lint přes `build/lint_php.php` a jeho self-test `build/lint_php_selftest.php`, který ověřuje zachycení syntakticky rozbitého PHP souboru i ignorování `vendor`, `dist` a `uploads`
+- HTTP server router self-test přes `build/http_server_router_selftest.php`, který v dočasné mini-instalaci ověřuje clean URL routování pro Full CI, statické soubory, chráněné cesty, query parametry a 404 fallback
 - HTTP test helpery přes `build/http_test_helpers_selftest.php`, který nad dočasným PHP serverem ověřuje GET/POST/raw/multipart požadavky, redirecty, cookies, parser skrytých polí a refresh testovací CSRF session
 - repository guardrails audit přes `build/repository_guardrails_audit.php` a jeho self-test `build/repository_guardrails_audit_selftest.php`, které hlídají rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php` a zároveň blokují nechtěně verzované lokální konfigurace, `.env` soubory, `vendor`, `dist`, IDE/Claude metadata a uživatelské uploady mimo ochranné `.htaccess` soubory
 - config sample audit přes `build/config_sample_audit.php` a jeho self-test `build/config_sample_audit_selftest.php`, které hlídají, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři

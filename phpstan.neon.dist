@@ -29,6 +29,7 @@ parameters:
         - admin/layout.php
         - admin/settings_shared.php
         - build/http_server_router.php
+        - build/http_server_router_selftest.php
         - build/http_test_helpers.php
         - build/http_test_helpers_selftest.php
         - build/lint_php.php

@@ -65,6 +65,7 @@ $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
 $unitTestsSource = is_file(__DIR__ . '/unit_tests.php') ? (string) file_get_contents(__DIR__ . '/unit_tests.php') : '';
 $httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string) file_get_contents(__DIR__ . '/http_server_router.php') : '';
+$httpServerRouterSelftestSource = is_file(__DIR__ . '/http_server_router_selftest.php') ? (string) file_get_contents(__DIR__ . '/http_server_router_selftest.php') : '';
 $httpTestHelpersSource = is_file(__DIR__ . '/http_test_helpers.php') ? (string) file_get_contents(__DIR__ . '/http_test_helpers.php') : '';
 $httpTestHelpersSelftestSource = is_file(__DIR__ . '/http_test_helpers_selftest.php') ? (string) file_get_contents(__DIR__ . '/http_test_helpers_selftest.php') : '';
 $lintPhpSource = is_file(__DIR__ . '/lint_php.php') ? (string) file_get_contents(__DIR__ . '/lint_php.php') : '';
@@ -7580,13 +7581,39 @@ $foundationChecks = [
         && str_contains($workflowAuditSelftestSource, '${{ secrets.CI_TOKEN }}')
         && str_contains($composerSource, 'build/phpstan_bootstrap.php build/workflow_audit.php')
         && str_contains($composerSource, 'build/http_server_router.php')
+        && str_contains($composerSource, 'build/http_server_router_selftest.php')
         && str_contains($phpstanConfigSource, 'build/workflow_audit_selftest.php')
         && str_contains($phpstanConfigSource, 'build/http_server_router.php')
+        && str_contains($phpstanConfigSource, 'build/http_server_router_selftest.php')
         && str_contains($httpServerRouterSource, "routeToScript('index.php')")
         && str_contains($httpServerRouterSource, '$routeScriptPath = null')
         && str_contains($httpServerRouterSource, 'require $routeScriptPath')
         && !str_contains($httpServerRouterSource, 'require $targetPath')
         && !str_contains($httpServerRouterSource, 'Content-Security-Policy'),
+    'http server router self-test is wired into basic CI' => str_contains($composerSource, '"test:http-router-selftest"')
+        && str_contains($composerSource, 'php build/http_server_router_selftest.php')
+        && str_contains($composerSource, '@test:http-router-selftest')
+        && str_contains($composerSource, 'build/http_server_router_selftest.php')
+        && str_contains($phpstanConfigSource, 'build/http_server_router.php')
+        && str_contains($phpstanConfigSource, 'build/http_server_router_selftest.php')
+        && str_contains($httpServerRouterSource, "routeToScript('index.php')")
+        && str_contains($httpServerRouterSource, "routeToScript('robots.php')")
+        && str_contains($httpServerRouterSource, "routeToScript('sitemap.php')")
+        && str_contains($httpServerRouterSource, "routeToScript('authors/index.php')")
+        && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'page_slug']]")
+        && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'slug']]")
+        && str_contains($httpServerRouterSource, "['podcast/episode.php', ['show', 'slug']]")
+        && str_contains($httpServerRouterSource, 'isProtectedRequest')
+        && str_contains($httpServerRouterSource, 'return false;')
+        && str_contains($httpServerRouterSource, 'http_response_code(404)')
+        && str_contains($httpServerRouterSelftestSource, 'HTTP server router self-test OK')
+        && str_contains($httpServerRouterSelftestSource, "httpServerRouterSelfTestFetchJson(\$baseUrl . '/')")
+        && str_contains($httpServerRouterSelftestSource, "/snd/stranka/o-projektu?preview=1")
+        && str_contains($httpServerRouterSelftestSource, "/podcast/porad/epizoda")
+        && str_contains($httpServerRouterSelftestSource, "/assets/app.css")
+        && str_contains($httpServerRouterSelftestSource, "/uploads/media/logo.svg")
+        && str_contains($httpServerRouterSelftestSource, "/foo/%2e%2e/config.php")
+        && str_contains($httpServerRouterSelftestSource, "/unknown/path/that/does/not/match"),
     'runtime and HTTP tests support configurable base URL' => str_contains($runtimeAuditSelfSource, "getenv('KORA_TEST_BASE_URL')")
         && str_contains($httpIntegrationBuildSource, "getenv('KORA_TEST_BASE_URL')"),
     'external URL normalization uses shared unsafe-target guardrails' => str_contains($authSource, 'function normalizeHttpExternalUrl(string $target, bool $prependScheme = true): string')
@@ -7970,11 +7997,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
@@ -8021,6 +8048,7 @@ $foundationChecks = [
         && str_contains($phpstanConfigSource, 'admin/layout.php')
         && str_contains($phpstanConfigSource, 'admin/settings_shared.php')
         && str_contains($phpstanConfigSource, 'build/http_server_router.php')
+        && str_contains($phpstanConfigSource, 'build/http_server_router_selftest.php')
         && str_contains($phpstanConfigSource, 'build/http_test_helpers.php')
         && str_contains($phpstanConfigSource, 'build/http_test_helpers_selftest.php')
         && str_contains($phpstanConfigSource, 'build/phpstan_bootstrap.php')
