@@ -38,11 +38,11 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/places/index.php'));
             <p><strong>Adresa:</strong> <?= h((string)$place['full_address']) ?></p>
           <?php endif; ?>
           <?php if ((string)($place['url'] ?? '') !== ''): ?>
-            <p><strong>Web:</strong> <a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)$place['url'])) ?>"><?= h((string)$place['url']) ?></a></p>
+            <p><strong>Web:</strong> <a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$place['url']) ?><?= newWindowLinkSrOnlySuffix() ?></a></p>
           <?php endif; ?>
           <?php if (!empty($place['has_coordinates'])): ?>
             <p><strong>GPS:</strong> <?= h((string)$place['latitude']) ?>, <?= h((string)$place['longitude']) ?></p>
-            <p><a class="section-link" href="<?= h((string)$place['map_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Otevřít v mapách')) ?>">Otevřít v mapách <span aria-hidden="true">→</span></a></p>
+            <p><a class="section-link" href="<?= h((string)$place['map_url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít v mapách<?= newWindowLinkSrOnlySuffix() ?> <span aria-hidden="true">→</span></a></p>
           <?php endif; ?>
           <?php if (!empty($place['opening_hours'])): ?>
             <p><strong>Otevírací doba / poznámky:</strong></p>
@@ -77,7 +77,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/places/index.php'));
     <div class="article-actions">
       <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na zajímavá místa</a>
       <?php if ((string)($place['url'] ?? '') !== ''): ?>
-        <a class="button-primary" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Navštívit web')) ?>">Navštívit web</a>
+        <a class="button-primary" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Navštívit web<?= newWindowLinkSrOnlySuffix() ?></a>
       <?php endif; ?>
       <button type="button" class="button-secondary js-copy-link"
               data-url="<?= h(placePublicUrl($place)) ?>">Kopírovat odkaz<span class="sr-only"> na místo</span></button>

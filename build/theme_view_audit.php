@@ -118,6 +118,31 @@ function themeViewAuditHtmlTags(string $source, string $tagName): array
     return $tags;
 }
 
+/**
+ * @return list<array{tag:string,element:string,line:int}>
+ */
+function themeViewAuditHtmlElements(string $source, string $tagName): array
+{
+    $quotedTag = preg_quote($tagName, '/');
+    $pattern = '/(<' . $quotedTag . '\b(?:<\?(?:php|=)?[\s\S]*?\?>|"[^"]*"|\'[^\']*\'|[^>])*>)[\s\S]*?<\/' . $quotedTag . '>/i';
+    $matched = preg_match_all($pattern, $source, $rawMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+    if ($matched === false || $matched === 0) {
+        return [];
+    }
+
+    /** @var list<array<int, array{0:string,1:int}>> $rawMatches */
+    $elements = [];
+    foreach ($rawMatches as $match) {
+        $elements[] = [
+            'tag' => $match[1][0],
+            'element' => $match[0][0],
+            'line' => themeViewAuditLineNumber($source, $match[0][1]),
+        ];
+    }
+
+    return $elements;
+}
+
 function themeViewAuditTagHasAttribute(string $tag, string $attribute): bool
 {
     return preg_match('/(?<![-:\w])' . preg_quote($attribute, '/') . '\s*=/si', $tag) === 1;
@@ -162,6 +187,20 @@ function themeViewAuditTagHasNewWindowAccessibleName(string $tag): bool
     return str_contains($normalizedLabel, 'novém okně')
         || str_contains($normalizedLabel, 'novem okne')
         || str_contains($normalizedLabel, 'new window');
+}
+
+function themeViewAuditElementHasNewWindowText(string $element): bool
+{
+    if (str_contains($element, 'newWindowLinkSrOnlySuffix()')) {
+        return true;
+    }
+
+    $plainText = html_entity_decode(strip_tags($element), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $normalizedText = mb_strtolower(trim($plainText), 'UTF-8');
+
+    return str_contains($normalizedText, 'novém okně')
+        || str_contains($normalizedText, 'novem okne')
+        || str_contains($normalizedText, 'new window');
 }
 
 /**
@@ -243,7 +282,7 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
-    foreach (themeViewAuditHtmlTags($source, 'a') as $match) {
+    foreach (themeViewAuditHtmlElements($source, 'a') as $match) {
         $target = themeViewAuditTagAttributeValue($match['tag'], 'target');
         if (!is_string($target) || strtolower(trim($target)) !== '_blank') {
             continue;
@@ -258,12 +297,16 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         if (
             !themeViewAuditTagHasAttribute($match['tag'], 'aria-label')
             && !themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')
+            && !themeViewAuditElementHasNewWindowText($match['element'])
         ) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without accessible new-window label.';
             continue;
         }
 
-        if (!themeViewAuditTagHasNewWindowAccessibleName($match['tag'])) {
+        if (
+            !themeViewAuditElementHasNewWindowText($match['element'])
+            && !themeViewAuditTagHasNewWindowAccessibleName($match['tag'])
+        ) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link whose accessible label does not mention a new window.';
         }
     }

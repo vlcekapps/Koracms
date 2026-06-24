@@ -52,7 +52,7 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
           <a class="button-secondary" href="<?= h((string)$show['public_path']) ?>"><span aria-hidden="true">&larr;</span> Zpět na pořad</a>
           <a class="button-secondary" href="<?= h($feedUrl) ?>">RSS feed</a>
           <?php if (!empty($show['website_url'])): ?>
-            <a class="button-secondary" href="<?= h((string)$show['website_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Web pořadu')) ?>">Web pořadu</a>
+            <a class="button-secondary" href="<?= h((string)$show['website_url']) ?>" target="_blank" rel="noopener noreferrer">Web pořadu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
         </div>
       </div>

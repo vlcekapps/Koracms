@@ -140,7 +140,7 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
               <div class="card__actions">
                 <a class="section-link" href="<?= h(placePublicPath($place, $listingQuery)) ?>">Zobrazit místo <span aria-hidden="true">→</span></a>
                 <?php if ((string)($place['url'] ?? '') !== ''): ?>
-                  <a class="section-link" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Navštívit web')) ?>">Navštívit web <span aria-hidden="true">→</span></a>
+                  <a class="section-link" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Navštívit web<?= newWindowLinkSrOnlySuffix() ?> <span aria-hidden="true">→</span></a>
                 <?php endif; ?>
               </div>
             </div>

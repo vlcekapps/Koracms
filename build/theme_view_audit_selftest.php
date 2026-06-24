@@ -178,6 +178,13 @@ PHP
 );
 
 assertThemeViewAuditPasses(
+    'Hidden new-window text helper guard',
+    <<<'PHP'
+<a href="https://example.test" target="_blank" rel="noopener noreferrer">Externí odkaz<?= newWindowLinkSrOnlySuffix() ?></a>
+PHP
+);
+
+assertThemeViewAuditPasses(
     'Dynamic form label guard',
     <<<'PHP'
 <?php $fieldId = 'field-' . (int)$id; ?>

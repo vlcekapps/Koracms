@@ -100,7 +100,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
 
           <div class="stack-actions stack-actions--spaced">
             <?php if (!empty($event['has_registration_url'])): ?>
-              <a class="btn" href="<?= h((string)$event['registration_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Registrovat se')) ?>">Registrovat se</a>
+              <a class="btn" href="<?= h((string)$event['registration_url']) ?>" target="_blank" rel="noopener noreferrer">Registrovat se<?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
             <a class="btn btn-secondary" href="<?= h(eventIcsPath($event)) ?>">Přidat do kalendáře</a>
           </div>

@@ -12,6 +12,7 @@ function siteFooter(): string
     $publicRegistrationEnabled = publicRegistrationEnabled();
 
     $version = KORA_VERSION;
+    $versionHtml = h($version);
 
     $footerWidgets = renderZone('footer', 'footer-widgets');
     $accountLinks = '';
@@ -33,7 +34,7 @@ function siteFooter(): string
          . "  <p>&copy; {$year} {$siteName}</p>\n"
          . "  <p><a href=\"{$b}/feed.php\">RSS</a></p>\n"
          . ($accountLinks !== '' ? "  <p>{$accountLinks}</p>\n" : '')
-         . "  <p><small><a href=\"https://github.com/vlcekapps/Koracms\" rel=\"noopener noreferrer\" target=\"_blank\" aria-label=\"" . h(newWindowLinkLabel('Kora CMS ' . $version)) . "\">Kora CMS {$version}</a></small></p>\n"
+         . "  <p><small><a href=\"https://github.com/vlcekapps/Koracms\" rel=\"noopener noreferrer\" target=\"_blank\">Kora CMS {$versionHtml}" . newWindowLinkSrOnlySuffix() . "</a></small></p>\n"
          . "</footer>\n"
          . cookieBanner();
 }
