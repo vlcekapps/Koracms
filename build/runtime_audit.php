@@ -7604,6 +7604,10 @@ $foundationChecks = [
         && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'slug']]")
         && str_contains($httpServerRouterSource, "['podcast/episode.php', ['show', 'slug']]")
         && str_contains($httpServerRouterSource, 'isProtectedRequest')
+        && str_contains($httpServerRouterSource, "str_starts_with(\$lowerPath, '.claude')")
+        && str_contains($httpServerRouterSource, "str_starts_with(\$lowerPath, '.codex')")
+        && str_contains($httpServerRouterSource, "str_starts_with(\$lowerPath, '.cursor')")
+        && str_contains($httpServerRouterSource, "str_starts_with(\$lowerPath, 'node_modules/')")
         && str_contains($httpServerRouterSource, 'return false;')
         && str_contains($httpServerRouterSource, 'http_response_code(404)')
         && str_contains($httpServerRouterSelftestSource, 'HTTP server router self-test OK')
@@ -7611,6 +7615,10 @@ $foundationChecks = [
         && str_contains($httpServerRouterSelftestSource, "/snd/stranka/o-projektu?preview=1")
         && str_contains($httpServerRouterSelftestSource, "/podcast/porad/epizoda")
         && str_contains($httpServerRouterSelftestSource, "/assets/app.css")
+        && str_contains($httpServerRouterSelftestSource, "/.claude/local.json")
+        && str_contains($httpServerRouterSelftestSource, "/.codex/settings.json")
+        && str_contains($httpServerRouterSelftestSource, "/.cursor/rules.md")
+        && str_contains($httpServerRouterSelftestSource, "/node_modules/package/index.js")
         && str_contains($httpServerRouterSelftestSource, "/uploads/media/logo.svg")
         && str_contains($httpServerRouterSelftestSource, "/foo/%2e%2e/config.php")
         && str_contains($httpServerRouterSelftestSource, "/unknown/path/that/does/not/match"),
@@ -8150,7 +8158,11 @@ $foundationChecks = [
         && !str_contains($phpstanBootstrapSource, 'require_once'),
     'dev tooling is protected from direct web access' => str_contains($htaccessSource, 'composer\.(json|lock)')
         && str_contains($htaccessSource, 'RewriteRule ^\.github - [F,L]')
-        && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]'),
+        && str_contains($htaccessSource, 'RewriteRule ^\.claude - [F,L]')
+        && str_contains($htaccessSource, 'RewriteRule ^\.codex - [F,L]')
+        && str_contains($htaccessSource, 'RewriteRule ^\.cursor - [F,L]')
+        && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]')
+        && str_contains($htaccessSource, 'RewriteRule ^node_modules/ - [F,L]'),
     'uploads htaccess blocks executable script extensions' => str_contains($uploadsHtaccessSource, '<FilesMatch "\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp)$">')
         && str_contains($uploadsHtaccessSource, 'Require all denied'),
     'release zip excludes dev tooling and metadata' => str_contains($releaseScriptSource, "'vendor'")

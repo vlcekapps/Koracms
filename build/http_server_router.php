@@ -55,7 +55,11 @@ function isProtectedRequest(string $path): bool
     if (
         str_starts_with($lowerPath, '.git')
         || str_starts_with($lowerPath, '.github')
+        || str_starts_with($lowerPath, '.claude')
+        || str_starts_with($lowerPath, '.codex')
+        || str_starts_with($lowerPath, '.cursor')
         || str_starts_with($lowerPath, 'vendor/')
+        || str_starts_with($lowerPath, 'node_modules/')
         || str_starts_with($lowerPath, 'uploads/forms/')
         || str_starts_with($lowerPath, 'uploads/backups/')
         || str_starts_with($lowerPath, 'uploads/gallery/')

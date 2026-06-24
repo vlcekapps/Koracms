@@ -641,7 +641,11 @@ server {
     location ~ /\.env { deny all; }
     location ~ /\.git { deny all; }
     location ^~ /.github/ { deny all; }
+    location ^~ /.claude/ { deny all; }
+    location ^~ /.codex/ { deny all; }
+    location ^~ /.cursor/ { deny all; }
     location ^~ /vendor/ { deny all; }
+    location ^~ /node_modules/ { deny all; }
 
     # Chráněné adresáře
     location ^~ /uploads/forms/ { deny all; }

@@ -22,7 +22,11 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteRule ^\.git - [F,L]
     RewriteRule ^\.github - [F,L]
+    RewriteRule ^\.claude - [F,L]
+    RewriteRule ^\.codex - [F,L]
+    RewriteRule ^\.cursor - [F,L]
     RewriteRule ^vendor/ - [F,L]
+    RewriteRule ^node_modules/ - [F,L]
 </IfModule>
 
 # Bezpečnostní hlavičky

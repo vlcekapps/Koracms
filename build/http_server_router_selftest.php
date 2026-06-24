@@ -327,7 +327,7 @@ try {
     httpServerRouterSelfTestAssert(str_contains($staticResponse['status'], '200'), 'Static file did not return 200.');
     httpServerRouterSelfTestAssert($staticResponse['body'] === "static ok\n", 'Static file was not served by built-in server.');
 
-    foreach (['/.env', '/composer.json', '/uploads/media/logo.svg', '/uploads/forms/private.txt', '/foo/%2e%2e/config.php'] as $protectedPath) {
+    foreach (['/.env', '/composer.json', '/.claude/local.json', '/.codex/settings.json', '/.cursor/rules.md', '/node_modules/package/index.js', '/uploads/media/logo.svg', '/uploads/forms/private.txt', '/foo/%2e%2e/config.php'] as $protectedPath) {
         $protectedResponse = fetchUrl($baseUrl . $protectedPath, '', 0, 'KoraRouterSelfTest/1.0');
         httpServerRouterSelfTestAssert(
             str_contains($protectedResponse['status'], '403'),
