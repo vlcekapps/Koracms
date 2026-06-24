@@ -11343,8 +11343,14 @@ if (!str_contains($galleryPhotoControllerSource, "galleryPhotoPublicVisibilitySq
 if (!str_contains($galleryPhotoControllerSource, '$relatedPhotos')) {
     $gallerySourceIssues[] = 'gallery photo controller is missing related photos support';
 }
-if (!str_contains($galleryPhotoViewSource, 'data-copy-gallery-link')) {
-    $gallerySourceIssues[] = 'gallery photo view is missing copy-link action';
+if (!str_contains($galleryPhotoViewSource, 'class="button-secondary js-copy-link"')
+    || !str_contains($galleryPhotoViewSource, 'data-url="<?= h($copyUrl) ?>"')
+    || !str_contains($galleryPhotoViewSource, 'Kopírovat odkaz<span class="sr-only"> na fotografii</span>')) {
+    $gallerySourceIssues[] = 'gallery photo view is missing the shared accessible copy-link action';
+}
+if (str_contains($galleryPhotoViewSource, 'data-copy-gallery-link')
+    || str_contains($galleryPhotoViewSource, 'navigator.clipboard.writeText')) {
+    $gallerySourceIssues[] = 'gallery photo view still contains the legacy local clipboard implementation';
 }
 if (!str_contains($galleryImageSource, "currentUserHasCapability('content_manage_shared')")) {
     $gallerySourceIssues[] = 'gallery image endpoint is missing private visibility guard';

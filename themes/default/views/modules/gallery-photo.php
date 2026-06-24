@@ -57,7 +57,7 @@ $photoCount = (int)($photoCount ?? 0);
 
       <a class="button-secondary" href="<?= h($backPath) ?>">Zpět do alba</a>
       <?php if ($copyUrl !== ''): ?>
-        <button type="button" class="button-secondary" data-copy-gallery-link="<?= h($copyUrl) ?>">Kopírovat odkaz</button>
+        <button type="button" class="button-secondary js-copy-link" data-url="<?= h($copyUrl) ?>">Kopírovat odkaz<span class="sr-only"> na fotografii</span></button>
       <?php endif; ?>
     </nav>
   </section>
@@ -85,24 +85,3 @@ $photoCount = (int)($photoCount ?? 0);
     </section>
   <?php endif; ?>
 </div>
-
-<?php if ($copyUrl !== ''): ?>
-  <script nonce="<?= cspNonce() ?>">
-  (function () {
-    var button = document.querySelector('[data-copy-gallery-link]');
-    if (!button || !navigator.clipboard) {
-      return;
-    }
-
-    button.addEventListener('click', function () {
-      navigator.clipboard.writeText(button.getAttribute('data-copy-gallery-link') || '').then(function () {
-        var original = button.textContent;
-        button.textContent = 'Odkaz zkopírován';
-        window.setTimeout(function () {
-          button.textContent = original;
-        }, 1800);
-      });
-    });
-  })();
-  </script>
-<?php endif; ?>
