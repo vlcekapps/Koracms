@@ -10517,6 +10517,9 @@ foreach ([
     'admin/profile.php',
     'admin/review_queue.php',
     'admin/user_form.php',
+    'admin/downloads.php',
+    'admin/download_form.php',
+    'admin/media.php',
 ] as $adminContentNewWindowRelativePath) {
     $adminContentNewWindowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminContentNewWindowRelativePath);
     $adminContentNewWindowLines = preg_split('/\R/', $adminContentNewWindowSource) ?: [];

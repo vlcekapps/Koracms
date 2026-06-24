@@ -247,8 +247,9 @@ adminHeader('Ke stažení');
         <td>
           <?php if ($download['has_file']): ?>
             <a href="<?= moduleFileUrl('downloads', (int)$download['id']) ?>"
-               target="_blank" rel="noopener noreferrer" download="<?= h((string)$download['original_name']) ?>" aria-label="<?= h(newWindowLinkLabel((string)$download['original_name'], 'soubor ke stažení')) ?>">
+               target="_blank" rel="noopener noreferrer" download="<?= h((string)$download['original_name']) ?>">
               <?= h((string)$download['original_name']) ?>
+              <?= newWindowLinkSrOnlySuffix() ?>
             </a>
             <?php if ((int)$download['file_size'] > 0): ?>
               <small>(<?= h(formatFileSize((int)$download['file_size'])) ?>)</small>
@@ -257,10 +258,10 @@ adminHeader('Ke stažení');
             <small class="table-meta">Bez lokálního souboru</small>
           <?php endif; ?>
           <?php if ($download['has_external_url']): ?>
-            <br><a href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Externí odkaz')) ?>">Externí odkaz</a>
+            <br><a href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer">Externí odkaz<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ($download['has_project_url']): ?>
-            <br><a href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Domovská stránka projektu')) ?>">Domovská stránka projektu</a>
+            <br><a href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer">Domovská stránka projektu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <br><small class="table-meta"><?= h((string)$download['download_count_label']) ?></small>
         </td>
@@ -277,7 +278,7 @@ adminHeader('Ke stažení');
         <td class="actions">
           <a href="download_form.php?id=<?= (int)$download['id'] ?>" class="btn">Upravit</a>
           <?php if ((string)$download['status'] === 'published' && (int)$download['is_published'] === 1): ?>
-            <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ($download['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post">

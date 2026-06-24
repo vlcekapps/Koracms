@@ -628,8 +628,9 @@ adminHeader('Knihovna médií');
             </div>
 
             <?php if ($previewUrl !== ''): ?>
-              <a href="<?= h($fileUrl) ?>" target="_blank" rel="noopener noreferrer" class="media-card__link" aria-label="<?= h(newWindowLinkLabel((string)$item['original_name'], 'náhled média')) ?>">
+              <a href="<?= h($fileUrl) ?>" target="_blank" rel="noopener noreferrer" class="media-card__link">
                 <img src="<?= h($previewUrl) ?>" alt="<?= h(trim((string)($item['alt_text'] ?? '')) !== '' ? (string)$item['alt_text'] : (string)$item['original_name']) ?>" loading="lazy" class="media-card__image">
+                <?= newWindowLinkSrOnlySuffix() ?>
               </a>
             <?php else: ?>
               <div class="media-card__placeholder">
@@ -656,7 +657,7 @@ adminHeader('Knihovna médií');
 
               <div class="button-row">
                 <a href="<?= h($editUrl) ?>" class="btn">Upravit</a>
-                <a href="<?= h($fileUrl) ?>" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Otevřít', (string)$item['original_name'])) ?>">Otevřít</a>
+                <a href="<?= h($fileUrl) ?>" class="btn" target="_blank" rel="noopener noreferrer">Otevřít<span class="sr-only"> <?= h((string)$item['original_name']) ?></span><?= newWindowLinkSrOnlySuffix() ?></a>
                 <?php if ($isPublic): ?>
                   <button type="button" class="btn" data-copy="<?= h($fileUrl) ?>" data-label="<?= h((string)$item['original_name']) ?>">Kopírovat URL</button>
                 <?php endif; ?>
@@ -761,7 +762,7 @@ adminHeader('Knihovna médií');
             <dt><strong>Velikost</strong></dt>
             <dd><?= h(number_format(((int)$editItem['file_size']) / 1024, 0, ',', ' ')) ?> KB</dd>
             <dt><strong>URL</strong></dt>
-            <dd class="media-info-list__value--url"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel(mediaFileUrl($editItem), 'URL média')) ?>"><?= h(mediaFileUrl($editItem)) ?></a></dd>
+            <dd class="media-info-list__value--url"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener noreferrer"><?= h(mediaFileUrl($editItem)) ?><?= newWindowLinkSrOnlySuffix() ?></a></dd>
             <dt><strong>Použití</strong></dt>
             <dd><?= $editUsages === [] ? 'Nepoužité' : 'Použité na ' . count($editUsages) . ' místě/místech' ?></dd>
           </dl>
