@@ -565,7 +565,7 @@ composer ci:basic
 
 `composer ci:basic` spustí:
 
-- PHP lint přes `build/lint_php.php`
+- PHP lint přes `build/lint_php.php` a jeho self-test `build/lint_php_selftest.php`, který ověřuje zachycení syntakticky rozbitého PHP souboru i ignorování `vendor`, `dist` a `uploads`
 - repository guardrails audit přes `build/repository_guardrails_audit.php` a jeho self-test `build/repository_guardrails_audit_selftest.php`, které hlídají rezervované DB připojovací proměnné v souborech načítajících `db.php` nebo `config.php` a zároveň blokují nechtěně verzované lokální konfigurace, `.env` soubory, `vendor`, `dist`, IDE/Claude metadata a uživatelské uploady mimo ochranné `.htaccess` soubory
 - config sample audit přes `build/config_sample_audit.php` a jeho self-test `build/config_sample_audit_selftest.php`, které hlídají, že `config.sample.php` zůstává sladěný s hlavní runtime konfigurací a instalačními komentáři
 - version metadata audit přes `build/version_metadata_audit.php` a jeho self-test `build/version_metadata_audit_selftest.php`, které hlídají platný SemVer v `VERSION`, načítání `KORA_VERSION` z tohoto souboru a release dry-run práci s verzí v ZIP/source archive

@@ -65,6 +65,8 @@ $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
 $unitTestsSource = is_file(__DIR__ . '/unit_tests.php') ? (string) file_get_contents(__DIR__ . '/unit_tests.php') : '';
 $httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string) file_get_contents(__DIR__ . '/http_server_router.php') : '';
+$lintPhpSource = is_file(__DIR__ . '/lint_php.php') ? (string) file_get_contents(__DIR__ . '/lint_php.php') : '';
+$lintPhpSelftestSource = is_file(__DIR__ . '/lint_php_selftest.php') ? (string) file_get_contents(__DIR__ . '/lint_php_selftest.php') : '';
 $repositoryGuardrailsAuditSource = is_file(__DIR__ . '/repository_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/repository_guardrails_audit.php') : '';
 $repositoryGuardrailsAuditSelftestSource = is_file(__DIR__ . '/repository_guardrails_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/repository_guardrails_audit_selftest.php') : '';
 $configSampleAuditSource = is_file(__DIR__ . '/config_sample_audit.php') ? (string) file_get_contents(__DIR__ . '/config_sample_audit.php') : '';
@@ -7804,6 +7806,23 @@ $foundationChecks = [
         && str_contains($whitespaceAuditSelftestSource, 'assets/app.js:1: trailing whitespace')
         && str_contains($whitespaceAuditSelftestSource, 'docs/admin-guide.md: missing final newline')
         && str_contains($whitespaceAuditSelftestSource, '.gitignore:2: trailing whitespace'),
+    'php lint self-test is wired into basic CI' => str_contains($composerSource, '"lint": "php build/lint_php.php"')
+        && str_contains($composerSource, '"lint:selftest": "php build/lint_php_selftest.php"')
+        && str_contains($composerSource, '@lint')
+        && str_contains($composerSource, '@lint:selftest')
+        && str_contains($composerSource, 'build/lint_php_selftest.php')
+        && str_contains($phpstanConfigSource, 'build/lint_php.php')
+        && str_contains($phpstanConfigSource, 'build/lint_php_selftest.php')
+        && str_contains($lintPhpSource, 'lintPhpProjectRoot')
+        && str_contains($lintPhpSource, 'KORA_LINT_PHP_ROOT')
+        && str_contains($lintPhpSource, 'PHP lint failed for')
+        && str_contains($lintPhpSelftestSource, 'assertLintPhpPasses')
+        && str_contains($lintPhpSelftestSource, 'assertLintPhpFails')
+        && str_contains($lintPhpSelftestSource, 'vendor/broken.php')
+        && str_contains($lintPhpSelftestSource, 'dist/broken.php')
+        && str_contains($lintPhpSelftestSource, 'uploads/broken.php')
+        && str_contains($lintPhpSelftestSource, 'PHP lint failed for 1 file(s).')
+        && str_contains($lintPhpSelftestSource, 'PHP lint self-test OK'),
     'php cs fixer smoke check exists' => str_contains($composerSource, 'php-cs-fixer fix')
         && str_contains($composerSource, '--dry-run')
         && str_contains($composerSource, '--path-mode=intersection')
@@ -7909,11 +7928,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/lint_php_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/lint_php_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')

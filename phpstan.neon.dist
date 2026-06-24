@@ -31,6 +31,7 @@ parameters:
         - build/http_server_router.php
         - build/http_test_helpers.php
         - build/lint_php.php
+        - build/lint_php_selftest.php
         - build/phpstan_bootstrap.php
         - build/repository_guardrails_audit.php
         - build/repository_guardrails_audit_selftest.php

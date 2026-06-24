@@ -2,7 +2,22 @@
 
 declare(strict_types=1);
 
-$root = dirname(__DIR__);
+function lintPhpProjectRoot(?string $override): string
+{
+    if ($override !== null && trim($override) !== '') {
+        return rtrim($override, DIRECTORY_SEPARATOR . '/');
+    }
+
+    $envRoot = getenv('KORA_LINT_PHP_ROOT');
+    if (is_string($envRoot) && trim($envRoot) !== '') {
+        return rtrim($envRoot, DIRECTORY_SEPARATOR . '/');
+    }
+
+    return dirname(__DIR__);
+}
+
+$rootArgument = $argv[1] ?? null;
+$root = lintPhpProjectRoot(is_string($rootArgument) ? $rootArgument : null);
 $excludedDirectories = [
     $root . DIRECTORY_SEPARATOR . 'dist',
     $root . DIRECTORY_SEPARATOR . 'vendor',
