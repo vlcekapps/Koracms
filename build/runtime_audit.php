@@ -87,6 +87,7 @@ $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) f
 $whitespaceAuditSelftestSource = is_file(__DIR__ . '/whitespace_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit_selftest.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
+$releasePackageAuditSelftestSource = is_file(__DIR__ . '/release_package_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit_selftest.php') : '';
 $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
 $gitattributesSource = is_file(__DIR__ . '/../.gitattributes') ? (string) file_get_contents(__DIR__ . '/../.gitattributes') : '';
 $gitignoreSource = is_file(__DIR__ . '/../.gitignore') ? (string) file_get_contents(__DIR__ . '/../.gitignore') : '';
@@ -7908,11 +7909,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
@@ -8086,8 +8087,14 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, 'Dry run dokončen')
         && str_contains($releaseScriptSource, 'Nebyl vytvořen commit, tag, push ani GitHub release'),
     'release package audit is wired into basic CI' => str_contains($composerSource, '"test:release-package"')
+        && str_contains($composerSource, '"test:release-package-selftest"')
         && str_contains($composerSource, '@test:release-package')
+        && str_contains($composerSource, '@test:release-package-selftest')
+        && str_contains($composerSource, 'php build/release_package_audit_selftest.php')
+        && str_contains($composerSource, 'build/release_package_audit_selftest.php')
+        && str_contains($phpstanConfigSource, 'build/release_package_audit_selftest.php')
         && str_contains($releasePackageAuditSource, 'release.ps1')
+        && str_contains($releasePackageAuditSource, 'releasePackageAuditProjectRoot')
         && str_contains($releasePackageAuditSource, 'Invoke-ReleasePackageAudit')
         && str_contains($releasePackageAuditSource, 'Invoke-ReleaseCi')
         && str_contains($releasePackageAuditSource, '[switch]$FullCi')
@@ -8102,7 +8109,15 @@ $foundationChecks = [
         && str_contains($releasePackageAuditSource, '!uploads/.htaccess')
         && str_contains($releasePackageAuditSource, '!docs/admin-guide.md')
         && str_contains($releasePackageAuditSource, 'build/release_package_audit.php export-ignore')
-        && str_contains($releasePackageAuditSource, 'Release package audit OK'),
+        && str_contains($releasePackageAuditSource, 'Release package audit OK')
+        && str_contains($releasePackageAuditSelftestSource, 'assertReleasePackageAuditPasses')
+        && str_contains($releasePackageAuditSelftestSource, 'assertReleasePackageAuditFails')
+        && str_contains($releasePackageAuditSelftestSource, 'build/release.ps1 does not exclude vendor.')
+        && str_contains($releasePackageAuditSelftestSource, 'build/release.ps1 must not use Compress-Archive')
+        && str_contains($releasePackageAuditSelftestSource, "build/release_smoke.php is missing release artifact guard: 'config.sample.php',")
+        && str_contains($releasePackageAuditSelftestSource, '.gitattributes is missing source archive rule: vendor/** export-ignore')
+        && str_contains($releasePackageAuditSelftestSource, '.gitignore is missing local/generated file rule: dist/')
+        && str_contains($releasePackageAuditSelftestSource, 'Release package audit self-test OK'),
     'release dry run smoke is wired into basic CI' => str_contains($composerSource, '"test:release-smoke"')
         && str_contains($composerSource, 'php build/release_smoke.php')
         && str_contains($composerSource, '@test:release-smoke')

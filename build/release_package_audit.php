@@ -2,7 +2,22 @@
 
 declare(strict_types=1);
 
-$projectRoot = dirname(__DIR__);
+function releasePackageAuditProjectRoot(?string $override): string
+{
+    if ($override !== null && trim($override) !== '') {
+        return rtrim($override, DIRECTORY_SEPARATOR . '/');
+    }
+
+    $envRoot = getenv('KORA_RELEASE_PACKAGE_AUDIT_ROOT');
+    if (is_string($envRoot) && trim($envRoot) !== '') {
+        return rtrim($envRoot, DIRECTORY_SEPARATOR . '/');
+    }
+
+    return dirname(__DIR__);
+}
+
+$projectRootArgument = $argv[1] ?? null;
+$projectRoot = releasePackageAuditProjectRoot(is_string($projectRootArgument) ? $projectRootArgument : null);
 $releaseScriptPath = $projectRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release.ps1';
 $releaseSmokePath = $projectRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release_smoke.php';
 $gitattributesPath = $projectRoot . DIRECTORY_SEPARATOR . '.gitattributes';
