@@ -6872,6 +6872,7 @@ if ($articleId === false) {
 
         $blockedCookie = 'PHPSESSID=runtimeauditcommentblocked';
         $blockedForm = fetchUrl($baseCommentUrl, $blockedCookie, 0);
+        $blockedCookie = responseMergeCookies($blockedForm['headers'], $blockedCookie);
         $blockedCsrf = extractHiddenInputValue($blockedForm['body'], 'csrf_token');
         $blockedCaptcha = extractCaptchaAnswer($blockedForm['body']);
         if ($blockedCsrf === '' || $blockedCaptcha === null) {
@@ -6918,6 +6919,7 @@ if ($articleId === false) {
 
         $phraseCookie = 'PHPSESSID=runtimeauditcommentphrase';
         $phraseForm = fetchUrl($baseCommentUrl, $phraseCookie, 0);
+        $phraseCookie = responseMergeCookies($phraseForm['headers'], $phraseCookie);
         $phraseCsrf = extractHiddenInputValue($phraseForm['body'], 'csrf_token');
         $phraseCaptcha = extractCaptchaAnswer($phraseForm['body']);
         $phraseEmail = 'runtimeaudit-phrase-' . bin2hex(random_bytes(4)) . '@example.test';
@@ -6961,6 +6963,7 @@ if ($articleId === false) {
 
         $pendingCookie = 'PHPSESSID=runtimeauditcommentpending';
         $pendingForm = fetchUrl($baseCommentUrl, $pendingCookie, 0);
+        $pendingCookie = responseMergeCookies($pendingForm['headers'], $pendingCookie);
         $pendingCsrf = extractHiddenInputValue($pendingForm['body'], 'csrf_token');
         $pendingCaptcha = extractCaptchaAnswer($pendingForm['body']);
         $pendingEmail = 'runtimeaudit-pending-' . bin2hex(random_bytes(4)) . '@example.test';
@@ -7040,6 +7043,7 @@ if (!isModuleEnabled('chat')) {
 
     $pendingChatCookie = 'PHPSESSID=runtimeauditchatpending';
     $pendingChatForm = fetchUrl($publicChatUrl, $pendingChatCookie, 0);
+    $pendingChatCookie = responseMergeCookies($pendingChatForm['headers'], $pendingChatCookie);
     $pendingChatCsrf = extractHiddenInputValue($pendingChatForm['body'], 'csrf_token');
     $pendingChatCaptcha = extractCaptchaAnswer($pendingChatForm['body']);
     $pendingChatMessage = 'Runtime audit moderovaná chat zpráva ' . bin2hex(random_bytes(4));
@@ -7112,6 +7116,7 @@ if (!isModuleEnabled('chat')) {
 
     $urlChatCookie = 'PHPSESSID=runtimeauditchaturl';
     $urlChatForm = fetchUrl($publicChatUrl, $urlChatCookie, 0);
+    $urlChatCookie = responseMergeCookies($urlChatForm['headers'], $urlChatCookie);
     $urlChatCsrf = extractHiddenInputValue($urlChatForm['body'], 'csrf_token');
     $urlChatCaptcha = extractCaptchaAnswer($urlChatForm['body']);
     $urlSpamMessage = 'Tato zpráva obsahuje odkaz https://example.test/runtime-audit-chat-spam a má být odmítnuta.';
