@@ -164,6 +164,11 @@ assert_equals(
     newWindowLinkLabel(''),
     'newWindowLinkLabel has a safe fallback label'
 );
+assert_equals(
+    '<span class="sr-only"> – otevře se v novém okně</span>',
+    newWindowLinkSrOnlySuffix(),
+    'newWindowLinkSrOnlySuffix renders hidden DOM text for visible links'
+);
 assert_contains(
     'target="_blank"',
     navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),

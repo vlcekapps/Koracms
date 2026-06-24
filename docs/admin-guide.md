@@ -905,7 +905,7 @@ Widgety lze přidávat do tří zón: `homepage`, `sidebar`, `footer`.
 
 Widgety respektují stav modulů – vypnutý modul se v nabídce widgetů nezobrazuje.
 
-Veřejné widgety v sidebaru a footeru používají skutečné viditelné nadpisy jako název oblasti. Náhled galerie se zároveň styluje přes šablonové CSS třídy, takže se do HTML nevkládají inline layout styly. Widget `Sociální sítě` u odkazů otevíraných v novém okně doplňuje bezpečné `rel="noopener noreferrer"` a přístupný název přes sdílený helper s informací, že se odkaz otevře v novém okně.
+Veřejné widgety v sidebaru a footeru používají skutečné viditelné nadpisy jako název oblasti. Náhled galerie se zároveň styluje přes šablonové CSS třídy, takže se do HTML nevkládají inline layout styly. Widget `Sociální sítě` u odkazů otevíraných v novém okně doplňuje bezpečné `rel="noopener noreferrer"` a informaci „otevře se v novém okně“ vkládá jako skrytý text přímo do odkazu.
 
 Dialog `Nastavení` u widgetu nově používá skutečné `fieldset` a `legend` pro základní i typově specifická nastavení. Skrytá pole se při změně typu widgetu zároveň deaktivují, takže se nedostanou ani do tab orderu, ani do odeslaného formuláře. Prezentační styly přehledu widgetů, dialogu a drag stavu jsou uložené ve sdílené admin CSS vrstvě, ne v lokálním `<style>` bloku ani v lokálních `style` atributech.
 

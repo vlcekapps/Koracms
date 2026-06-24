@@ -4470,6 +4470,11 @@ function newWindowLinkLabel(string $label, string $supplement = ''): string
     return implode(' – ', $parts);
 }
 
+function newWindowLinkSrOnlySuffix(): string
+{
+    return '<span class="sr-only"> – otevře se v novém okně</span>';
+}
+
 /**
  * @param array<string, mixed> $link
  */

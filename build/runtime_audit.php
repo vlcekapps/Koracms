@@ -14269,13 +14269,16 @@ if (!str_contains($widgetSocialOne, '<section class="widget-card" aria-labelledb
 }
 foreach ([
     'href="https://facebook.example/pvlcek"',
-    'aria-label="Facebook – otevře se v novém okně"',
+    'Facebook<span class="sr-only"> – otevře se v novém okně</span>',
     'rel="noopener noreferrer"',
     'target="_blank"',
 ] as $socialWidgetA11yFragment) {
     if (!str_contains($widgetSocialOne, $socialWidgetA11yFragment)) {
         $widgetRenderIssues[] = 'social links widget is missing rendered safe-link fragment: ' . $socialWidgetA11yFragment;
     }
+}
+if (str_contains($widgetSocialOne, 'aria-label=')) {
+    $widgetRenderIssues[] = 'social links widget still puts the new-window announcement only into aria-label';
 }
 if ($widgetSocialUnsafe !== '') {
     $widgetRenderIssues[] = 'social links widget renders unsafe javascript URL';
@@ -14505,8 +14508,12 @@ if (!str_contains($widgetLibSource, 'function normalizeWidgetExternalUrl(string 
 if (!str_contains($widgetLibSource, 'function renderWidget_social_links')) {
     $widgetRenderIssues[] = 'social links widget renderer is missing';
 }
-if (!str_contains($widgetLibSource, 'newWindowLinkLabel((string)$link[\'label\'])')) {
-    $widgetRenderIssues[] = 'social links widget should use shared new-window accessible label helper';
+if (!str_contains($widgetLibSource, 'newWindowLinkSrOnlySuffix()')) {
+    $widgetRenderIssues[] = 'social links widget should use shared new-window hidden text helper';
+}
+if (str_contains($widgetLibSource, 'aria-label="')
+    && str_contains($widgetLibSource, 'newWindowLinkLabel((string)$link[\'label\'])')) {
+    $widgetRenderIssues[] = 'social links widget still uses aria-label-only new-window labels';
 }
 if (!str_contains($widgetLibSource, 'newsletter_widget_subscribe.php')) {
     $widgetRenderIssues[] = 'newsletter widget renderer is missing inline subscribe form action';

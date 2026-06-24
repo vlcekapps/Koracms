@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost sociálních odkazů ve widgetu** – widget `Sociální sítě` už neukládá informaci „otevře se v novém okně“ jen do `aria-label`; viditelný název odkazu doplňuje skutečný skrytý text uvnitř odkazu, takže výstup zůstává čitelnější pro asistivní technologie i audit.
 - **Přístupnost číselných badge v administraci** – odznaky v levé administrátorské navigaci už nemají význam jen v `aria-label`; viditelné číslo je pro čtečku skryté jako dekorativní a úplný popis typu `3 nových chat zpráv` je skutečný skrytý text uvnitř odznaku.
 - **Přístupnost přehrávače podcastové epizody** – veřejný audio přehrávač detailu epizody už nepoužívá samostatný `aria-label`; je pojmenovaný přes skrytý text v DOM a `aria-labelledby`, takže jeho název zůstává auditovatelný stejně jako ostatní heading-backed prvky.
 - **Přístupnost výsledků anket** – veřejné výsledkové proužky `<progress>` už nepoužívají samostatný `aria-label`; jsou pojmenované přes `aria-labelledby` navázané na viditelný text odpovědi a viditelný výsledek hlasování.
