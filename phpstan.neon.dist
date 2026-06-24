@@ -47,6 +47,7 @@ parameters:
         - build/theme_view_audit.php
         - build/theme_view_audit_selftest.php
         - build/source_encoding_audit.php
+        - build/source_encoding_audit_selftest.php
         - build/mojibake_audit.php
         - build/workflow_audit.php
         - build/workflow_audit_selftest.php
