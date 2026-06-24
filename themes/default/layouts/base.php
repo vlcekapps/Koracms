@@ -94,22 +94,32 @@ function copyTextFallback(value) {
   document.execCommand('copy');
   document.body.removeChild(ta);
 }
+function rememberCopyButtonHtml(btn, fallback) {
+  if (!btn.hasAttribute('data-copy-original-html')) {
+    btn.setAttribute('data-copy-original-html', btn.innerHTML || fallback);
+  }
+  return btn.getAttribute('data-copy-original-html') || fallback;
+}
+function showCopySuccess(btn, fallback) {
+  var originalHtml = rememberCopyButtonHtml(btn, fallback);
+  btn.textContent = 'Zkopírováno!';
+  setTimeout(function () { btn.innerHTML = originalHtml; }, 2000);
+}
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('.js-copy-link');
   if (!btn) return;
   var url = btn.getAttribute('data-url') || window.location.href;
   var live = document.getElementById('a11y-live');
+  var defaultLabel = 'Kopírovat odkaz';
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(function () {
-      btn.textContent = 'Zkopírováno!';
+      showCopySuccess(btn, defaultLabel);
       if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
-      setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
     });
   } else {
     copyTextFallback(url);
-    btn.textContent = 'Zkopírováno!';
+    showCopySuccess(btn, defaultLabel);
     if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
-    setTimeout(function () { btn.textContent = 'Kopírovat odkaz'; }, 2000);
   }
 });
 document.addEventListener('click', function (e) {
@@ -123,15 +133,13 @@ document.addEventListener('click', function (e) {
   var defaultLabel = btn.getAttribute('data-copy-label') || 'Kopírovat do schránky';
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(payload).then(function () {
-      btn.textContent = 'Zkopírováno!';
+      showCopySuccess(btn, defaultLabel);
       if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
-      setTimeout(function () { btn.textContent = defaultLabel; }, 2000);
     });
   } else {
     copyTextFallback(payload);
-    btn.textContent = 'Zkopírováno!';
+    showCopySuccess(btn, defaultLabel);
     if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
-    setTimeout(function () { btn.textContent = defaultLabel; }, 2000);
   }
 });
 </script>

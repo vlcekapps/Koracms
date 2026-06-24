@@ -38,8 +38,7 @@ $renderAuthorName = static function (array $item): string {
         type="button"
         class="button-secondary js-copy-link"
         data-url="<?= h(newsPublicUrl($news)) ?>"
-        aria-label="Kopírovat odkaz na novinku"
-      >Kopírovat odkaz</button>
+      >Kopírovat odkaz<span class="sr-only"> na novinku</span></button>
     </div>
   </article>
 </div>

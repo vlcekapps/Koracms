@@ -93,8 +93,7 @@ $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
         <a class="button-primary" href="<?= moduleFileUrl('board', (int)$document['id']) ?>" download="<?= h((string)$document['original_name']) ?>">Stáhnout přílohu</a>
       <?php endif; ?>
       <button type="button" class="button-secondary js-copy-link"
-              data-url="<?= h(boardPublicUrl($document)) ?>"
-              aria-label="Kopírovat odkaz na dokument">Kopírovat odkaz</button>
+              data-url="<?= h(boardPublicUrl($document)) ?>">Kopírovat odkaz<span class="sr-only"> na dokument</span></button>
     </div>
   </article>
 </div>

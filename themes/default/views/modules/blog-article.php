@@ -101,8 +101,7 @@ $showAuthorPanel = !empty($article['author_public_path'])
     <div class="article-actions">
       <a class="button-secondary" href="<?= h(blogIndexPath($blog)) ?>"><span aria-hidden="true">←</span> Zpět na seznam článků</a>
       <button type="button" class="button-secondary js-copy-link"
-              data-url="<?= h(articlePublicUrl($article)) ?>"
-              aria-label="Kopírovat odkaz na článek">Kopírovat odkaz</button>
+              data-url="<?= h(articlePublicUrl($article)) ?>">Kopírovat odkaz<span class="sr-only"> na článek</span></button>
     </div>
   </article>
 

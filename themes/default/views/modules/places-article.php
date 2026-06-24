@@ -80,8 +80,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/places/index.php'));
         <a class="button-primary" href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Navštívit web')) ?>">Navštívit web</a>
       <?php endif; ?>
       <button type="button" class="button-secondary js-copy-link"
-              data-url="<?= h(placePublicUrl($place)) ?>"
-              aria-label="Kopírovat odkaz na místo">Kopírovat odkaz</button>
+              data-url="<?= h(placePublicUrl($place)) ?>">Kopírovat odkaz<span class="sr-only"> na místo</span></button>
     </div>
   </article>
 </div>

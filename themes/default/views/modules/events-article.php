@@ -114,8 +114,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
       <div class="article-actions">
         <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na události</a>
         <button type="button" class="button-secondary js-copy-link"
-                data-url="<?= h(eventPublicUrl($event)) ?>"
-                aria-label="Kopírovat odkaz na událost">Kopírovat odkaz</button>
+                data-url="<?= h(eventPublicUrl($event)) ?>">Kopírovat odkaz<span class="sr-only"> na událost</span></button>
       </div>
     </div>
   </section>

@@ -40,8 +40,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/faq/index.php'));
     <div class="article-actions">
       <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na znalostní bázi</a>
       <button type="button" class="button-secondary js-copy-link"
-              data-url="<?= h(faqPublicUrl($faq)) ?>"
-              aria-label="Kopírovat odkaz na položku">Kopírovat odkaz</button>
+              data-url="<?= h(faqPublicUrl($faq)) ?>">Kopírovat odkaz<span class="sr-only"> na položku</span></button>
     </div>
 
     <?php if ($relatedFaqs !== []): ?>

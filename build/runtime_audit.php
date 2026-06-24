@@ -14783,6 +14783,8 @@ $themeCoreCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/defa
 $themePublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
 $themePageViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/page.php');
 $themeBlogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
+$themeBlogArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-article.php');
+$themeBoardArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-article.php');
 $themeChatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat.php');
 $themeFoodIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-index.php');
 $themeDownloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
@@ -14790,6 +14792,8 @@ $themeDownloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/
 $themeEventsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-article.php');
 $themeFaqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-article.php');
 $themeFormsShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/forms-show.php');
+$themeNewsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/news-article.php');
+$themePlacesArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/places-article.php');
 $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
 $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
 $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
@@ -14824,6 +14828,26 @@ if (!str_contains($themeBaseLayoutSource, 'function copyTextFallback(value)')
     || !str_contains($themeBaseLayoutSource, "ta.className = 'clipboard-fallback-control';")
     || !str_contains($themePublicCssSource, '.clipboard-fallback-control')) {
     $themeLayoutIssues[] = 'default theme clipboard fallback is missing class-based styling';
+}
+if (!str_contains($themeBaseLayoutSource, 'function rememberCopyButtonHtml(btn, fallback)')
+    || !str_contains($themeBaseLayoutSource, "btn.setAttribute('data-copy-original-html', btn.innerHTML || fallback);")
+    || !str_contains($themeBaseLayoutSource, 'setTimeout(function () { btn.innerHTML = originalHtml; }, 2000);')) {
+    $themeLayoutIssues[] = 'default theme copy buttons do not restore original HTML after success feedback';
+}
+foreach ([
+    'blog article copy button' => [$themeBlogArticleViewSource, 'Kopírovat odkaz<span class="sr-only"> na článek</span>', 'aria-label="Kopírovat odkaz na článek"'],
+    'board article copy button' => [$themeBoardArticleViewSource, 'Kopírovat odkaz<span class="sr-only"> na dokument</span>', 'aria-label="Kopírovat odkaz na dokument"'],
+    'event article copy button' => [$themeEventsArticleViewSource, 'Kopírovat odkaz<span class="sr-only"> na událost</span>', 'aria-label="Kopírovat odkaz na událost"'],
+    'faq article copy button' => [$themeFaqArticleViewSource, 'Kopírovat odkaz<span class="sr-only"> na položku</span>', 'aria-label="Kopírovat odkaz na položku"'],
+    'news article copy button' => [$themeNewsArticleViewSource, 'Kopírovat odkaz<span class="sr-only"> na novinku</span>', 'aria-label="Kopírovat odkaz na novinku"'],
+    'place article copy button' => [$themePlacesArticleViewSource, 'Kopírovat odkaz<span class="sr-only"> na místo</span>', 'aria-label="Kopírovat odkaz na místo"'],
+] as $themeCopyButtonLabel => $themeCopyButtonSpec) {
+    if (!str_contains((string)$themeCopyButtonSpec[0], (string)$themeCopyButtonSpec[1])) {
+        $themeLayoutIssues[] = $themeCopyButtonLabel . ' is missing hidden context inside the visible button';
+    }
+    if (str_contains((string)$themeCopyButtonSpec[0], (string)$themeCopyButtonSpec[2])) {
+        $themeLayoutIssues[] = $themeCopyButtonLabel . ' still uses aria-label instead of hidden button text';
+    }
 }
 if (str_contains($themeHeadPartialSource, 'publicA11yStyleTag()') || str_contains($themeRuntimeSource, 'echo publicA11yStyleTag();')) {
     $themeLayoutIssues[] = 'public theme head still renders shared a11y styles inline instead of using public-core.css';
