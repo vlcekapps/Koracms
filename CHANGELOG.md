@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost odkazů do nového okna v galerii a jídelních lístcích** – administrace fotoalb, fotografií a jídelních či nápojových lístků už u akce `Zobrazit na webu` nepoužívá `aria-label`; informaci o novém okně přidává jako skrytý text uvnitř odkazu.
 - **Přístupnost odkazů do nového okna v obsahových administracích** – vývěska, novinky, události a znalostní báze už u akcí `Zobrazit na webu` a `Náhled` nepoužívají `aria-label` pro oznámení nového okna; stejné sdělení je skutečný skrytý text uvnitř odkazu.
 - **Přístupnost odkazů do nového okna ve správě blogů** – blogové administrační obrazovky už u odkazů `Zobrazit na webu`, `RSS feed` a `Náhled` nepřepisují viditelný název přes `aria-label`; informaci o novém okně přidávají jako skrytý text přímo do odkazu.
 - **Přístupnost veřejné administrační lišty** – odkaz `Upravit` na veřejném webu už nenechává ikonku tužky jako součást názvu odkazu pro čtečky obrazovky; ikona je dekorativní a skutečný název odkazu zůstává `Upravit`.

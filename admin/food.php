@@ -190,7 +190,7 @@ adminHeader('Jídelní a nápojový lístek');
           <a href="food_form.php?id=<?= (int)$card['id'] ?>" class="btn">Upravit</a>
           <a href="revisions.php?type=food&amp;id=<?= (int)$card['id'] ?>">Historie revizí</a>
           <?php if ($card['is_publicly_visible']): ?>
-            <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ($card['status'] === 'pending' && $canApprove): ?>
             <form action="approve.php" method="post">

@@ -151,7 +151,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
             <a href="<?= BASE_URL ?>/admin/gallery_photo_form.php?id=<?= (int)$photo['id'] ?>&amp;album_id=<?= (int)$album['id'] ?>" class="btn">Upravit</a>
             <a href="<?= BASE_URL ?>/admin/revisions.php?type=gallery_photo&amp;id=<?= (int)$photo['id'] ?>">Historie revizí</a>
             <?php if ((int)($photo['is_published'] ?? 1) === 1 && ($photo['status'] ?? 'published') === 'published'): ?>
-              <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+              <a href="<?= h((string)$photo['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

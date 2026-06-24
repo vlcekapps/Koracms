@@ -10491,6 +10491,12 @@ foreach ([
     'admin/event_form.php',
     'admin/faq.php',
     'admin/faq_form.php',
+    'admin/gallery_albums.php',
+    'admin/gallery_album_form.php',
+    'admin/gallery_photos.php',
+    'admin/gallery_photo_form.php',
+    'admin/food.php',
+    'admin/food_form.php',
 ] as $adminContentNewWindowRelativePath) {
     $adminContentNewWindowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminContentNewWindowRelativePath);
     foreach (preg_split('/\R/', $adminContentNewWindowSource) ?: [] as $lineNumber => $line) {
