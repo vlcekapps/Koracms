@@ -373,7 +373,7 @@ Kora CMS používá jedno rozhraní pro správu pořadí navigace. V administrac
 - externí a interní odkazy
 - statické stránky
 
-Položky lze libovolně kombinovat – stránka může být mezi moduly, formulář vedle blogu a externí odkaz třeba mezi dvěma stránkami. U odkazu se nastavuje název, cílová adresa, volitelný popis pro čtečky obrazovky, který doplní viditelný název odkazu, a bezpečné otevření v novém okně. Stejný princip platí i pro blogové stránky: každý blog může mít vlastní statické stránky a vlastní odkazy v samostatném pořadí nad výpisem článků.
+Položky lze libovolně kombinovat – stránka může být mezi moduly, formulář vedle blogu a externí odkaz třeba mezi dvěma stránkami. U odkazu se nastavuje název, cílová adresa, volitelný popis pro čtečky obrazovky, který se ve veřejné navigaci přidá jako skrytý text za viditelný název odkazu, a bezpečné otevření v novém okně. Stejný princip platí i pro blogové stránky: každý blog může mít vlastní statické stránky a vlastní odkazy v samostatném pořadí nad výpisem článků.
 
 Správa navigace u veřejných formulářů nově používá stejnou dostupnostní logiku jako samotný veřejný web. Pokud je formulář aktivní, zveřejněný a označený pro navigaci, admin už ho neoznačuje jako skrytý a hlavní navigace ho vykreslí stejným pravidlem jako ve veřejné části.
 

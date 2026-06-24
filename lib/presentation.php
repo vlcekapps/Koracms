@@ -4486,28 +4486,32 @@ function navigationLinkAnchorAttributes(array $link): string
     }
 
     $attributes = ['href="' . h($href) . '"'];
-    $title = trim((string)($link['title'] ?? ''));
-    $altText = trim((string)($link['alt_text'] ?? ''));
     $opensInNewWindow = (int)($link['target_blank'] ?? 0) === 1;
-    $labelParts = [];
-    if ($title !== '') {
-        $labelParts[] = $title;
-    }
-    if ($altText !== '') {
-        $labelParts[] = $altText;
-    }
-    if ($opensInNewWindow) {
-        $attributes[] = 'aria-label="' . h(newWindowLinkLabel($title, $altText)) . '"';
-    } elseif ($altText !== '') {
-        $attributes[] = 'aria-label="' . h(implode(' – ', $labelParts)) . '"';
-    }
-
     if ($opensInNewWindow) {
         $attributes[] = 'target="_blank"';
         $attributes[] = 'rel="noopener noreferrer"';
     }
 
     return implode(' ', $attributes);
+}
+
+/**
+ * @param array<string, mixed> $link
+ */
+function navigationLinkAccessibleSuffix(array $link): string
+{
+    $altText = trim((string)($link['alt_text'] ?? ''));
+    $opensInNewWindow = (int)($link['target_blank'] ?? 0) === 1;
+
+    $suffix = '';
+    if ($altText !== '') {
+        $suffix .= '<span class="sr-only"> – ' . h($altText) . '</span>';
+    }
+    if ($opensInNewWindow) {
+        $suffix .= newWindowLinkSrOnlySuffix();
+    }
+
+    return $suffix;
 }
 
 /**

@@ -432,7 +432,8 @@ function siteNav(string $current = ''): string
                 if ($attributes === '') {
                     return;
                 }
-                $nav .= '<li><a ' . $attributes . '>' . h((string)$visibleLinks[$linkId]['title']) . '</a></li>' . "\n";
+                $nav .= '<li><a ' . $attributes . '>' . h((string)$visibleLinks[$linkId]['title'])
+                    . navigationLinkAccessibleSuffix($visibleLinks[$linkId]) . '</a></li>' . "\n";
                 $renderedEntries[$entry] = true;
             }
         };
@@ -513,7 +514,8 @@ function siteNav(string $current = ''): string
             if ($attributes === '') {
                 continue;
             }
-            $nav .= '<li><a ' . $attributes . '>' . h((string)$linkEntry['title']) . '</a></li>' . "\n";
+            $nav .= '<li><a ' . $attributes . '>' . h((string)$linkEntry['title'])
+                . navigationLinkAccessibleSuffix($linkEntry) . '</a></li>' . "\n";
         }
     }
 

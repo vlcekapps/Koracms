@@ -2903,7 +2903,7 @@ try {
         || !str_contains($blogIndexResponse['body'], $blogExternalLinkUrl)
         || !str_contains($blogIndexResponse['body'], 'target="_blank"')
         || !str_contains($blogIndexResponse['body'], 'rel="noopener noreferrer"')
-        || !str_contains($blogIndexResponse['body'], 'aria-label="HTTP externí odkaz blogu – Externí zdroj blogu pro HTTP test – otevře se v novém okně"')) {
+        || !str_contains($blogIndexResponse['body'], 'HTTP externí odkaz blogu<span class="sr-only"> – Externí zdroj blogu pro HTTP test</span><span class="sr-only"> – otevře se v novém okně</span>')) {
         $blogStaticPagesIssues[] = 'veřejný blogový index nezobrazuje externí odkaz blogu s bezpečnými atributy';
     }
     if (!str_contains($blogIndexResponse['body'], $blogArticleTitle)) {

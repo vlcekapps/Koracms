@@ -85,7 +85,7 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
               <?php if ($linkAttributes === '') {
                   continue;
               } ?>
-              <li><a class="chip-link" <?= $linkAttributes ?>><?= h((string)$blogPage['title']) ?></a></li>
+              <li><a class="chip-link" <?= $linkAttributes ?>><?= h((string)$blogPage['title']) ?><?= navigationLinkAccessibleSuffix($blogPage) ?></a></li>
             <?php else: ?>
               <li><a class="chip-link" href="<?= h(pagePublicPath($blogPage)) ?>"><?= h((string)$blogPage['title']) ?></a></li>
             <?php endif; ?>

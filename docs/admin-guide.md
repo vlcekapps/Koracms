@@ -280,7 +280,7 @@ Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden 
 
 ### Stránky a odkazy blogu
 
-Každý blog může mít vlastní horní navigaci nad výpisem článků. Do stejného pořadí lze přidat statické stránky blogu i externí nebo interní odkazy. Odkaz má název, cílovou adresu, volitelný přístupný popis pro čtečky obrazovky, přepínač zobrazení a volbu otevření v novém okně. Přístupný popis doplňuje viditelný název odkazu, aby čtečka nehlásila jiný název než ten, který je vidět na stránce. Pokud se odkaz otevírá v novém okně, veřejný výstup automaticky přidá bezpečné atributy `target="_blank"` a `rel="noopener noreferrer"` a oznámí nové okno i v přístupném názvu odkazu.
+Každý blog může mít vlastní horní navigaci nad výpisem článků. Do stejného pořadí lze přidat statické stránky blogu i externí nebo interní odkazy. Odkaz má název, cílovou adresu, volitelný přístupný popis pro čtečky obrazovky, přepínač zobrazení a volbu otevření v novém okně. Přístupný popis se ve veřejném výstupu přidává jako skrytý text za viditelný název odkazu, takže čtečka nehlásí jiný název než ten, který je vidět na stránce. Pokud se odkaz otevírá v novém okně, veřejný výstup automaticky přidá bezpečné atributy `target="_blank"` a `rel="noopener noreferrer"` a stejným skrytým textem oznámí otevření v novém okně.
 
 Globální hlavní navigace v **Navigace webu** používá stejný model pro odkazy napříč celým webem. Blogové odkazy jsou ale oddělené od globální navigace a řadí se jen v kontextu konkrétního blogu.
 

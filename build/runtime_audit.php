@@ -14655,6 +14655,12 @@ if (!str_contains($blogStaticMigrateSource, 'cms_nav_links') || !str_contains($b
 if (!str_contains($blogPresentationSource, 'function pageBlogContext') || !str_contains($blogPresentationSource, '/stranka/') || !str_contains($blogPresentationSource, 'function normalizeBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function nextBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function navigationLinkAnchorAttributes')) {
     $blogStaticPageIssues[] = 'presentation helpers are missing blog page routing or ordering support';
 }
+if (!str_contains($blogPresentationSource, 'function navigationLinkAccessibleSuffix')) {
+    $blogStaticPageIssues[] = 'presentation helpers are missing hidden-text suffix support for navigation links';
+}
+if (preg_match('/function navigationLinkAnchorAttributes[\s\S]*?aria-label/s', $blogPresentationSource) === 1) {
+    $blogStaticPageIssues[] = 'navigation link attributes still override visible link text with aria-label';
+}
 if (!str_contains($blogRouterSource, '$pageSlug = pageSlug') || !str_contains($blogRouterSource, "require __DIR__ . '/blog/page.php'")) {
     $blogStaticPageIssues[] = 'blog router is missing dedicated handling for blog static pages';
 }
@@ -14669,6 +14675,9 @@ if (!str_contains($blogIndexControllerSource, 'SELECT id, title, slug, blog_id, 
 }
 if (!str_contains($blogIndexViewSource, 'Stránky blogu') || !str_contains($blogIndexViewSource, 'aria-labelledby="blog-pages-heading"') || !str_contains($blogIndexViewSource, 'navigationLinkAnchorAttributes($blogPage)')) {
     $blogStaticPageIssues[] = 'blog index view is missing the labeled blog page navigation block';
+}
+if (!str_contains($blogIndexViewSource, 'navigationLinkAccessibleSuffix($blogPage)')) {
+    $blogStaticPageIssues[] = 'blog index view is missing hidden accessible suffixes for external blog links';
 }
 if (!str_contains($blogStaticPageControllerSource, "'view' => 'page'") || !str_contains($blogStaticPageControllerSource, 'Zpět na blog') || !str_contains($blogStaticPageControllerSource, "'page-blog-static'")) {
     $blogStaticPageIssues[] = 'blog page controller is missing page rendering or the back-to-blog affordance';
@@ -14799,6 +14808,10 @@ if (!str_contains($publicNavSource, '<h2 id="\' . $navHeadingId . \'" class="sr-
 }
 if (str_contains($publicNavSource, 'aria-label="Hlavní navigace"')) {
     $menuAdminIssues[] = 'public navigation still contains legacy aria-label-only main navigation markup';
+}
+if (!str_contains($publicNavSource, 'navigationLinkAccessibleSuffix($visibleLinks[$linkId])')
+    || !str_contains($publicNavSource, 'navigationLinkAccessibleSuffix($linkEntry)')) {
+    $menuAdminIssues[] = 'public navigation is missing hidden accessible suffixes for external navigation links';
 }
 if (!str_contains($adminMenuSource, 'FROM cms_forms')) {
     $menuAdminIssues[] = 'admin menu no longer includes forms in unified navigation source';

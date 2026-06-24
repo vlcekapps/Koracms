@@ -179,15 +179,31 @@ assert_contains(
     navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),
     'navigation link new window uses noopener noreferrer'
 );
-assert_contains(
-    'aria-label="Externí – Přístupný popis"',
-    navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'alt_text' => 'Přístupný popis']),
-    'navigation link optional screen reader label keeps visible label'
+assert_equals(
+    false,
+    str_contains(
+        navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'alt_text' => 'Přístupný popis']),
+        'aria-label'
+    ),
+    'navigation link attributes do not override visible text with aria-label'
 );
-assert_contains(
-    'aria-label="Externí – otevře se v novém okně"',
-    navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),
-    'navigation link new window is announced accessibly'
+assert_equals(
+    false,
+    str_contains(
+        navigationLinkAnchorAttributes(['url' => 'https://example.com', 'title' => 'Externí', 'target_blank' => 1]),
+        'aria-label'
+    ),
+    'navigation link new window announcement is rendered as hidden text'
+);
+assert_equals(
+    '<span class="sr-only"> – Přístupný popis</span>',
+    navigationLinkAccessibleSuffix(['alt_text' => 'Přístupný popis']),
+    'navigation link optional accessible description is rendered as hidden text'
+);
+assert_equals(
+    '<span class="sr-only"> – Přístupný popis</span><span class="sr-only"> – otevře se v novém okně</span>',
+    navigationLinkAccessibleSuffix(['alt_text' => 'Přístupný popis', 'target_blank' => 1]),
+    'navigation link hidden suffix combines description and new-window announcement'
 );
 
 // ─── 4. Rate-limit keys ─────────────────────────────────────────────────────
