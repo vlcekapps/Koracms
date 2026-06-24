@@ -358,10 +358,16 @@ $fieldErrorMessages = [
     <input type="hidden" name="deleted_blocked_ids" id="deleted_blocked_ids" value="">
     <div id="blocked-list">
       <?php foreach ($blocked as $bi => $bl): ?>
+        <?php
+          $blockedDateFieldId = 'blocked-date-' . (int)$bl['id'] . '-' . (int)$bi;
+          $blockedReasonFieldId = 'blocked-reason-' . (int)$bl['id'] . '-' . (int)$bi;
+          ?>
         <div class="blocked-row res-resource-blocked-row" data-blocked-id="<?= (int)$bl['id'] ?>">
           <input type="hidden" name="blocked_ids[]" value="<?= (int)$bl['id'] ?>">
-          <input type="date" name="blocked_dates[]" value="<?= h($bl['blocked_date']) ?>" class="admin-input-auto" aria-label="Datum blokování">
-          <input type="text" name="blocked_reasons[]" value="<?= h($bl['reason'] ?? '') ?>" maxlength="255" class="admin-input-auto" aria-label="Důvod blokování">
+          <label for="<?= h($blockedDateFieldId) ?>" class="sr-only">Datum blokování</label>
+          <input type="date" id="<?= h($blockedDateFieldId) ?>" name="blocked_dates[]" value="<?= h($bl['blocked_date']) ?>" class="admin-input-auto">
+          <label for="<?= h($blockedReasonFieldId) ?>" class="sr-only">Důvod blokování</label>
+          <input type="text" id="<?= h($blockedReasonFieldId) ?>" name="blocked_reasons[]" value="<?= h($bl['reason'] ?? '') ?>" maxlength="255" class="admin-input-auto">
           <button type="button" class="btn btn-danger"
                   aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>
         </div>
@@ -530,12 +536,16 @@ $fieldErrorMessages = [
     if (!dateVal) { alert('Zadejte datum.'); return; }
 
     var idx = blockedCounter++;
+    var dateFieldId = 'blocked-date-new-' + idx;
+    var reasonFieldId = 'blocked-reason-new-' + idx;
     var div = document.createElement('div');
     div.className = 'blocked-row res-resource-blocked-row';
     div.innerHTML =
       '<input type="hidden" name="blocked_ids[]" value="0">' +
-      '<input type="date" name="blocked_dates[]" value="' + dateVal + '" class="admin-input-auto" aria-label="Datum blokování">' +
-      '<input type="text" name="blocked_reasons[]" value="' + reasonVal.replace(/"/g, '&quot;') + '" maxlength="255" class="admin-input-auto" aria-label="Důvod blokování">' +
+      '<label for="' + dateFieldId + '" class="sr-only">Datum blokování</label>' +
+      '<input type="date" id="' + dateFieldId + '" name="blocked_dates[]" value="' + dateVal + '" class="admin-input-auto">' +
+      '<label for="' + reasonFieldId + '" class="sr-only">Důvod blokování</label>' +
+      '<input type="text" id="' + reasonFieldId + '" name="blocked_reasons[]" value="' + reasonVal.replace(/"/g, '&quot;') + '" maxlength="255" class="admin-input-auto">' +
       '<button type="button" class="btn btn-danger" aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>';
     blockedList.appendChild(div);
 

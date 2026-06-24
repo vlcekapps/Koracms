@@ -102,6 +102,8 @@ U rezervací se navíc celý save workflow zapisuje transakčně. Když selže n
 
 Veřejný booking flow nově používá stejnou přísnější logiku i pro samotný den rezervace. Datum typu `2026-02-31` se už nepřevede na jiný existující den, ale formulář návštěvníka vrátí zpět s validační chybou.
 
+Editor zdrojů rezervací používá i u existujících a dynamicky přidávaných blokovaných dnů skutečné skryté popisky polí (`label` + `id`) pro datum a důvod, takže čtečka obrazovky nepřijde o kontext ani po přidání řádku JavaScriptem.
+
 To je důležité hlavně po ručních úpravách nebo importech, kdy se nejčastěji objeví překlep v datu, obrácený rozsah nebo neplatný čas.
 
 ---

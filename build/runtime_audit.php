@@ -13604,6 +13604,17 @@ foreach ([
         'class="res-resource-inline-grid"',
         'class="slot-row res-resource-slot-row"',
         'class="blocked-row res-resource-blocked-row"',
+        '$blockedDateFieldId = \'blocked-date-\' . (int)$bl[\'id\'] . \'-\' . (int)$bi;',
+        '<label for="<?= h($blockedDateFieldId) ?>" class="sr-only">Datum blokování</label>',
+        '<input type="date" id="<?= h($blockedDateFieldId) ?>" name="blocked_dates[]"',
+        'var dateFieldId = \'blocked-date-new-\' + idx;',
+        '<label for="\' + dateFieldId + \'" class="sr-only">Datum blokování</label>',
+        '<input type="date" id="\' + dateFieldId + \'" name="blocked_dates[]"',
+        '<label for="<?= h($blockedReasonFieldId) ?>" class="sr-only">Důvod blokování</label>',
+        '<input type="text" id="<?= h($blockedReasonFieldId) ?>" name="blocked_reasons[]"',
+        'var reasonFieldId = \'blocked-reason-new-\' + idx;',
+        '<label for="\' + reasonFieldId + \'" class="sr-only">Důvod blokování</label>',
+        '<input type="text" id="\' + reasonFieldId + \'" name="blocked_reasons[]"',
         'durationField.hidden = mode !==',
         'slotsSection.hidden = mode !==',
     ],
@@ -13616,6 +13627,16 @@ foreach ([
         if (!str_contains($reservationAdminSource, (string)$reservationAdminFragment)) {
             $adminFieldErrorIssues[] = $reservationAdminLabel . ' is missing reservation admin style fragment: ' . $reservationAdminFragment;
         }
+    }
+}
+foreach ([
+    'name="blocked_dates[]" value="<?= h($bl[\'blocked_date\']) ?>" class="admin-input-auto" aria-label=',
+    'name="blocked_reasons[]" value="<?= h($bl[\'reason\'] ?? \'\') ?>" maxlength="255" class="admin-input-auto" aria-label=',
+    'name="blocked_dates[]" value="\' + dateVal + \'" class="admin-input-auto" aria-label=',
+    'name="blocked_reasons[]" value="\' + reasonVal.replace(/"/g, \'&quot;\') + \'" maxlength="255" class="admin-input-auto" aria-label=',
+] as $blockedDateAriaLabelFragment) {
+    if (str_contains($reservationFormSource, $blockedDateAriaLabelFragment)) {
+        $adminFieldErrorIssues[] = 'reservation blocked date fields still use aria-label instead of real labels: ' . $blockedDateAriaLabelFragment;
     }
 }
 $adminFieldErrorForms = [
