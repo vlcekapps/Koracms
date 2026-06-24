@@ -82,6 +82,7 @@ $themeViewAuditSelftestSource = is_file(__DIR__ . '/theme_view_audit_selftest.ph
 $sourceEncodingAuditSource = is_file(__DIR__ . '/source_encoding_audit.php') ? (string) file_get_contents(__DIR__ . '/source_encoding_audit.php') : '';
 $sourceEncodingAuditSelftestSource = is_file(__DIR__ . '/source_encoding_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/source_encoding_audit_selftest.php') : '';
 $mojibakeAuditSource = is_file(__DIR__ . '/mojibake_audit.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit.php') : '';
+$mojibakeAuditSelftestSource = is_file(__DIR__ . '/mojibake_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit_selftest.php') : '';
 $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
@@ -7762,13 +7763,25 @@ $foundationChecks = [
     'mojibake audit is wired into local quality gates' => str_contains($composerSource, '"test:mojibake"')
         && str_contains($composerSource, 'php build/mojibake_audit.php')
         && str_contains($composerSource, '@test:mojibake')
+        && str_contains($composerSource, '"test:mojibake-selftest"')
+        && str_contains($composerSource, 'php build/mojibake_audit_selftest.php')
+        && str_contains($composerSource, '@test:mojibake-selftest')
         && str_contains($composerSource, 'build/mojibake_audit.php')
+        && str_contains($composerSource, 'build/mojibake_audit_selftest.php')
         && str_contains($phpstanConfigSource, 'build/mojibake_audit.php')
+        && str_contains($phpstanConfigSource, 'build/mojibake_audit_selftest.php')
+        && str_contains($mojibakeAuditSource, 'mojibakeAuditProjectRoot')
         && str_contains($mojibakeAuditSource, 'suspicious mojibake fragment')
         && str_contains($mojibakeAuditSource, "\$normalizedPath === 'uploads/.htaccess'")
         && str_contains($mojibakeAuditSource, 'isAllowedIntentionalMojibake')
         && str_contains($mojibakeAuditSource, '$legacyBrokenSocialLinksTitle')
-        && str_contains($mojibakeAuditSource, "slugify('Ärger')"),
+        && str_contains($mojibakeAuditSource, "slugify('Ärger')")
+        && str_contains($mojibakeAuditSelftestSource, 'assertMojibakeAuditPasses')
+        && str_contains($mojibakeAuditSelftestSource, 'assertMojibakeAuditFails')
+        && str_contains($mojibakeAuditSelftestSource, 'README.md:1: suspicious mojibake fragment')
+        && str_contains($mojibakeAuditSelftestSource, 'docs/admin-guide.md:2: suspicious mojibake fragment')
+        && str_contains($mojibakeAuditSelftestSource, 'uploads/.htaccess:1: suspicious mojibake fragment')
+        && str_contains($mojibakeAuditSelftestSource, 'vendor/ignored.md'),
     'whitespace audit is wired into local quality gates' => str_contains($composerSource, '"test:whitespace"')
         && str_contains($composerSource, 'php build/whitespace_audit.php')
         && str_contains($composerSource, '@test:whitespace')
@@ -7882,11 +7895,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')

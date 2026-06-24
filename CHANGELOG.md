@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Self-test mojibake auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/mojibake_audit_selftest.php`, který nad dočasným git repozitářem ověřuje zachycení zkomolené české diakritiky, povolené legacy výjimky, kontrolu `uploads/.htaccess` a ignorování `vendor`/`dist`.
 - **Self-test source encoding auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/source_encoding_audit_selftest.php`, který nad dočasným git repozitářem ověřuje platné UTF-8, nečekaný BOM mimo PowerShell, kontrolu `uploads/.htaccess` a ignorování vývojových adresářů typu `vendor` a `dist`.
 - **Self-test schema parity auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/schema_parity_audit_selftest.php`, který nad dočasnou fixture instalací ověřuje čerstvé schéma, migrační guardy a runtime dotazy pro blogové stránky, media picker, galerii, sitemapu a RSS feed.
 - **Self-test version metadata auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/version_metadata_audit_selftest.php`, který nad dočasnou fixture instalací ověřuje SemVer ve `VERSION`, načítání `KORA_VERSION`, dry-run práci release skriptu i kontrolu verzí v ZIP/source archive.
