@@ -13246,6 +13246,13 @@ foreach ([
             'class="admin-input-auto"',
             'class="btn admin-action-row"',
             'class="admin-inline-edit-form"',
+            '$oldPathFieldId = \'redirect-old-path-\' . $redirectId;',
+            '<label for="<?= h($oldPathFieldId) ?>" class="sr-only">Stará cesta</label>',
+            '<input type="text" id="<?= h($oldPathFieldId) ?>" name="old_path"',
+            '<label for="<?= h($newPathFieldId) ?>" class="sr-only">Nová cesta</label>',
+            '<input type="text" id="<?= h($newPathFieldId) ?>" name="new_path"',
+            '<label for="<?= h($statusCodeFieldId) ?>" class="sr-only">Typ přesměrování</label>',
+            '<select id="<?= h($statusCodeFieldId) ?>" name="status_code"',
             'internalRedirectTarget($oldPathInput',
             'storedRedirectTarget($newPathInput',
             'http://</code> či <code>https://</code>',
@@ -13351,6 +13358,15 @@ if (!str_contains($presentationSource, 'internalRedirectTarget($oldPath')
     || !str_contains($presentationSource, 'storedRedirectTarget($newPath')
 ) {
     $adminFieldErrorIssues[] = 'automatic slug redirect helper no longer shares stored redirect validation';
+}
+foreach ([
+    'aria-label="Stará cesta"',
+    'aria-label="Nová cesta"',
+    'aria-label="Typ přesměrování"',
+] as $redirectInlineAriaLabelFragment) {
+    if (str_contains($redirectsAdminSource, $redirectInlineAriaLabelFragment)) {
+        $adminFieldErrorIssues[] = 'admin redirects inline edit still uses aria-label instead of real labels: ' . $redirectInlineAriaLabelFragment;
+    }
 }
 $adminHeadingBackedNavs = [
     'dashboard quick links' => [

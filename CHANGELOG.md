@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Inline editace přesměrování v administraci** – řádkový formulář ve správě `301/302` přesměrování nově používá skutečné skryté `label` prvky napojené přes jedinečné `id` místo samotných `aria-label`, takže je čitelnější pro čtečky obrazovky a runtime audit hlídá návrat starého vzoru.
 - **Runtime audit veřejných formulářů** - komentářové a chatové scénáře nově po načtení formuláře přebírají skutečnou session cookie vrácenou serverem, takže Full CI s přísným session režimem nepošle CSRF/CAPTCHA POST proti jiné session.
 - **Odkazy otevírané v novém okně** – administrační náhledy, RSS odkazy, média a další `_blank` odkazy nově jednotně používají `rel="noopener noreferrer"` místo samotného `noopener`; runtime audit i theme view audit hlídají oba tokeny, aby se nově otevřená stránka nedostala k původnímu oknu ani k referreru.
 - **Dynamické odkazy otevírané v novém okně v administraci** – JavaScriptové otevření návrhu GitHub issue nově používá `noopener,noreferrer` a runtime audit hlídá také `window.open()` a dynamicky vytvořené `_blank` odkazy, aby měly bezpečné oddělení od původní stránky i přístupný popis.

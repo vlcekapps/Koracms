@@ -115,17 +115,26 @@ adminHeader('Přesměrování (301/302)');
     </thead>
     <tbody>
     <?php foreach ($redirects as $r): ?>
+      <?php
+        $redirectId = (int)$r['id'];
+        $oldPathFieldId = 'redirect-old-path-' . $redirectId;
+        $newPathFieldId = 'redirect-new-path-' . $redirectId;
+        $statusCodeFieldId = 'redirect-status-code-' . $redirectId;
+        ?>
       <tr>
         <td>
-          <?php if ($editId === (int)$r['id']): ?>
+          <?php if ($editId === $redirectId): ?>
             <form method="post" class="admin-inline-edit-form">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$r['id'] ?>">
-              <input type="text" name="old_path" required aria-required="true" aria-label="Stará cesta" maxlength="500"
+              <input type="hidden" name="update_id" value="<?= $redirectId ?>">
+              <label for="<?= h($oldPathFieldId) ?>" class="sr-only">Stará cesta</label>
+              <input type="text" id="<?= h($oldPathFieldId) ?>" name="old_path" required aria-required="true" maxlength="500"
                      value="<?= h((string)$r['old_path']) ?>">
-              <input type="text" name="new_path" required aria-required="true" aria-label="Nová cesta" maxlength="500"
+              <label for="<?= h($newPathFieldId) ?>" class="sr-only">Nová cesta</label>
+              <input type="text" id="<?= h($newPathFieldId) ?>" name="new_path" required aria-required="true" maxlength="500"
                      value="<?= h((string)$r['new_path']) ?>">
-              <select name="status_code" aria-label="Typ přesměrování" class="admin-input-auto">
+              <label for="<?= h($statusCodeFieldId) ?>" class="sr-only">Typ přesměrování</label>
+              <select id="<?= h($statusCodeFieldId) ?>" name="status_code" class="admin-input-auto">
                 <option value="301"<?= (int)$r['status_code'] === 301 ? ' selected' : '' ?>>301</option>
                 <option value="302"<?= (int)$r['status_code'] === 302 ? ' selected' : '' ?>>302</option>
               </select>
@@ -142,9 +151,9 @@ adminHeader('Přesměrování (301/302)');
         <td><?= (int)$r['status_code'] ?></td>
         <td><?= (int)$r['hit_count'] ?></td>
         <td class="actions">
-          <?php if ($editId !== (int)$r['id']): ?>
-            <a href="redirects.php?edit=<?= (int)$r['id'] ?>" class="btn">Upravit</a>
-            <a href="redirects.php?delete=<?= (int)$r['id'] ?>&amp;csrf=<?= h(csrfToken()) ?>" class="btn btn-danger"
+          <?php if ($editId !== $redirectId): ?>
+            <a href="redirects.php?edit=<?= $redirectId ?>" class="btn">Upravit</a>
+            <a href="redirects.php?delete=<?= $redirectId ?>&amp;csrf=<?= h(csrfToken()) ?>" class="btn btn-danger"
                data-confirm="Smazat přesměrování?">Smazat</a>
           <?php endif; ?>
         </td>
