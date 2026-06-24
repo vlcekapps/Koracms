@@ -422,7 +422,10 @@ function renderAdminContentReferencePicker(string $textareaId): void
                 previewLink.target = '_blank';
                 previewLink.rel = 'noopener noreferrer';
                 previewLink.textContent = 'Zobrazit na webu';
-                previewLink.setAttribute('aria-label', 'Zobrazit na webu: ' + item.title + ' (otevře se v novém okně)');
+                const previewContext = document.createElement('span');
+                previewContext.className = 'sr-only';
+                previewContext.textContent = ': ' + item.title + ' – otevře se v novém okně';
+                previewLink.appendChild(previewContext);
                 actions.appendChild(previewLink);
 
                 contentRoot.appendChild(actions);

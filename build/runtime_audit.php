@@ -10439,10 +10439,14 @@ foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
     foreach ($adminNewWindowLines as $lineNumber => $line) {
         $adminNewWindowContext = implode("\n", array_slice($adminNewWindowLines, (int)$lineNumber, 6));
         if (str_contains($line, 'target="_blank"')
-            && !str_contains($adminNewWindowContext, 'newWindowLinkLabel(')
             && !str_contains($adminNewWindowContext, 'newWindowLinkSrOnlySuffix()')) {
             $adminNewWindowIssues[] = basename($adminNewWindowPath)
                 . ' contains target="_blank" without accessible new-window text on source line '
+                . ((int)$lineNumber + 1);
+        }
+        if (str_contains($line, 'target="_blank"') && str_contains($adminNewWindowContext, 'aria-label=')) {
+            $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                . ' contains target="_blank" with aria-label instead of hidden DOM text on source line '
                 . ((int)$lineNumber + 1);
         }
         if (str_contains($line, 'target="_blank"') && str_contains($line, 'rel="noopener"') && !str_contains($line, 'rel="noopener noreferrer"')) {
@@ -10463,10 +10467,16 @@ foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
                     . ' contains dynamic target _blank without noopener noreferrer near source line '
                     . ((int)$lineNumber + 1);
             }
-            if (!str_contains($adminDynamicLinkContext, '.setAttribute(\'aria-label\'')
-                && !str_contains($adminDynamicLinkContext, '.setAttribute("aria-label"')) {
+            if (!str_contains($adminDynamicLinkContext, ".className = 'sr-only'")
+                && !str_contains($adminDynamicLinkContext, '.className = "sr-only"')) {
                 $adminNewWindowIssues[] = basename($adminNewWindowPath)
-                    . ' contains dynamic target _blank without accessible label near source line '
+                    . ' contains dynamic target _blank without hidden DOM new-window text near source line '
+                    . ((int)$lineNumber + 1);
+            }
+            if (str_contains($adminDynamicLinkContext, '.setAttribute(\'aria-label\'')
+                || str_contains($adminDynamicLinkContext, '.setAttribute("aria-label"')) {
+                $adminNewWindowIssues[] = basename($adminNewWindowPath)
+                    . ' contains dynamic target _blank using aria-label instead of hidden DOM text near source line '
                     . ((int)$lineNumber + 1);
             }
         }
