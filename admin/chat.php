@@ -218,7 +218,7 @@ adminHeader('Chat');
               <br><a href="mailto:<?= h((string)$message['email']) ?>"><?= h((string)$message['email']) ?></a>
             <?php endif; ?>
             <?php if ((string)$message['web'] !== ''): ?>
-              <br><a href="<?= h((string)$message['web']) ?>" target="_blank" rel="nofollow noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)$message['web'])) ?>"><?= h((string)$message['web']) ?></a>
+              <br><a href="<?= h((string)$message['web']) ?>" target="_blank" rel="nofollow noopener noreferrer"><?= h((string)$message['web']) ?><?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
           </td>
           <td><?= h((string)$message['message_preview']) ?></td>

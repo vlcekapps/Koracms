@@ -455,6 +455,8 @@ Veřejný admin bar a vybrané pomocné navigace v administraci, například fil
 
 Stejný vzor používají i vybrané skupinové prvky mimo navigaci: jídelní taby, rezervační časové sloty, výsledky anket, veřejný chat a souhrny návštěvnosti jsou pojmenované přes `aria-labelledby` napojené na skutečný nadpis nebo legendu.
 
+Stabilizované administrační odkazy otevírané v novém okně nepřepisují viditelný název přes `aria-label`; informaci o novém okně vkládají jako skrytý text přímo do odkazu, aby čtečky obrazovky i vizuální rozhraní pracovaly se stejným názvem.
+
 Živý náhled šablony a veřejný rezervační kalendář také používají skutečný textový název: preview banner je napojený na vlastní text v banneru a kalendářová tabulka má skrytý `<caption>`.
 
 Content/media picker v administraci načítá sdílený statický stylesheet `admin/assets/content-reference-picker.css` pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního i generovaného `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.

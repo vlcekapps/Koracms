@@ -79,7 +79,7 @@ adminHeader('Chat zpráva');
 
 <div class="button-row">
   <a href="<?= h($redirect) ?>" class="btn">Zpět na přehled chat zpráv</a>
-  <a href="<?= BASE_URL ?>/chat/index.php" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit veřejný chat')) ?>">Zobrazit veřejný chat</a>
+  <a href="<?= h(BASE_URL . '/chat/index.php') ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit veřejný chat<?= newWindowLinkSrOnlySuffix() ?></a>
 </div>
 
 <table>
@@ -103,7 +103,7 @@ adminHeader('Chat zpráva');
       <th scope="row">Web</th>
       <td>
         <?php if ((string)$message['web'] !== ''): ?>
-          <a href="<?= h((string)$message['web']) ?>" target="_blank" rel="nofollow noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)$message['web'])) ?>"><?= h((string)$message['web']) ?></a>
+          <a href="<?= h((string)$message['web']) ?>" target="_blank" rel="nofollow noopener noreferrer"><?= h((string)$message['web']) ?><?= newWindowLinkSrOnlySuffix() ?></a>
         <?php else: ?>
           –
         <?php endif; ?>

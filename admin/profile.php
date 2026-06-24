@@ -360,7 +360,7 @@ adminHeader('Můj profil');
     <?php if ((int)($currentRow['author_public_enabled'] ?? 0) === 1 && $authorProfileUrl !== ''): ?>
       <p class="admin-action-row">
         Veřejný profil:
-        <a href="<?= h($authorProfileUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel($authorProfileUrl, 'veřejný profil')) ?>"><?= h($authorProfileUrl) ?></a>
+        <a href="<?= h($authorProfileUrl) ?>" target="_blank" rel="noopener noreferrer"><?= h($authorProfileUrl) ?><?= newWindowLinkSrOnlySuffix() ?></a>
       </p>
     <?php endif; ?>
   </fieldset>

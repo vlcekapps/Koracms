@@ -440,8 +440,9 @@ adminHeader('Ke schválení');
               </td>
               <td>
                 <?php if (!empty($commentRow['article_id'])): ?>
-                  <a href="<?= h(articlePublicPath(['id' => (int)$commentRow['article_id'], 'slug' => (string)($commentRow['article_slug'] ?? '')])) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel((string)($commentRow['article_title'] ?: 'Bez článku'))) ?>">
+                  <a href="<?= h(articlePublicPath(['id' => (int)$commentRow['article_id'], 'slug' => (string)($commentRow['article_slug'] ?? '')])) ?>" target="_blank" rel="noopener noreferrer">
                     <?= h((string)($commentRow['article_title'] ?: 'Bez článku')) ?>
+                    <?= newWindowLinkSrOnlySuffix() ?>
                   </a>
                 <?php else: ?>
                   <?= h((string)($commentRow['article_title'] ?: 'Bez článku')) ?>

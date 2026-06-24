@@ -10437,9 +10437,10 @@ foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
     $adminNewWindowSource = (string)file_get_contents($adminNewWindowPath);
     $adminNewWindowLines = preg_split('/\R/', $adminNewWindowSource) ?: [];
     foreach ($adminNewWindowLines as $lineNumber => $line) {
+        $adminNewWindowContext = implode("\n", array_slice($adminNewWindowLines, (int)$lineNumber, 6));
         if (str_contains($line, 'target="_blank"')
-            && !str_contains($line, 'newWindowLinkLabel(')
-            && !str_contains($line, 'newWindowLinkSrOnlySuffix()')) {
+            && !str_contains($adminNewWindowContext, 'newWindowLinkLabel(')
+            && !str_contains($adminNewWindowContext, 'newWindowLinkSrOnlySuffix()')) {
             $adminNewWindowIssues[] = basename($adminNewWindowPath)
                 . ' contains target="_blank" without accessible new-window text on source line '
                 . ((int)$lineNumber + 1);
@@ -10510,10 +10511,18 @@ foreach ([
     'admin/res_bookings.php',
     'admin/res_booking_detail.php',
     'admin/res_resources.php',
+    'admin/chat.php',
+    'admin/chat_message.php',
+    'admin/index.php',
+    'admin/profile.php',
+    'admin/review_queue.php',
+    'admin/user_form.php',
 ] as $adminContentNewWindowRelativePath) {
     $adminContentNewWindowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminContentNewWindowRelativePath);
-    foreach (preg_split('/\R/', $adminContentNewWindowSource) ?: [] as $lineNumber => $line) {
-        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkSrOnlySuffix()')) {
+    $adminContentNewWindowLines = preg_split('/\R/', $adminContentNewWindowSource) ?: [];
+    foreach ($adminContentNewWindowLines as $lineNumber => $line) {
+        $adminContentNewWindowContext = implode("\n", array_slice($adminContentNewWindowLines, (int)$lineNumber, 6));
+        if (str_contains($line, 'target="_blank"') && !str_contains($adminContentNewWindowContext, 'newWindowLinkSrOnlySuffix()')) {
             $adminContentNewWindowIssues[] = $adminContentNewWindowRelativePath
                 . ' contains target="_blank" without hidden new-window suffix on source line '
                 . ((int)$lineNumber + 1);
