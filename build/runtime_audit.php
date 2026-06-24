@@ -12352,6 +12352,19 @@ if (!str_contains($adminLayoutSource, '<nav aria-labelledby="admin-nav-heading">
     || !str_contains($adminLayoutSource, 'class="admin-nav-site"')) {
     $adminFieldErrorIssues[] = 'admin layout navigation is missing heading-backed landmark semantics';
 }
+if (!str_contains($adminLayoutSource, 'function adminNavBadge(int $count, string $label): string')
+    || !str_contains($adminLayoutSource, '<span class="badge"><span aria-hidden="true">')
+    || !str_contains($adminLayoutSource, '<span class="sr-only">')
+    || !str_contains($adminLayoutSource, 'adminNavBadge($pendingReviewTotal')
+    || !str_contains($adminLayoutSource, 'adminNavBadge($pendingComments')
+    || !str_contains($adminLayoutSource, 'adminNavBadge($unreadContactMessages')
+    || !str_contains($adminLayoutSource, 'adminNavBadge($unreadChatMessages')
+    || !str_contains($adminLayoutSource, 'adminNavBadge($pendingNewsletterSubscribers')) {
+    $adminFieldErrorIssues[] = 'admin layout navigation badges are missing hidden text semantics';
+}
+if (str_contains($adminLayoutSource, 'class="badge" aria-label=')) {
+    $adminFieldErrorIssues[] = 'admin layout navigation badges still use aria-label instead of hidden text';
+}
 if (str_contains($adminLayoutSource, 'removeAttribute("role")')
     || str_contains($adminLayoutSource, "removeAttribute('role')")) {
     $adminFieldErrorIssues[] = 'admin layout still removes role from server-rendered status or alert messages';

@@ -79,6 +79,16 @@ function adminRenderFieldError(
         . '" class="field-help field-error">' . h($message) . '</small>';
 }
 
+function adminNavBadge(int $count, string $label): string
+{
+    if ($count <= 0) {
+        return '';
+    }
+
+    return ' <span class="badge"><span aria-hidden="true">' . $count . '</span><span class="sr-only">'
+        . h($label) . '</span></span>';
+}
+
 function adminHeader(string $pageTitle): void
 {
     $siteName = h(getSetting('site_name', 'Kora CMS'));
@@ -153,9 +163,7 @@ function adminHeader(string $pageTitle): void
         $topItems[] = [
             'url' => $baseUrl . '/admin/review_queue.php',
             'label' => 'Ke schválení'
-                . ($pendingReviewTotal > 0
-                    ? ' <span class="badge" aria-label="' . $pendingReviewTotal . ' čekajících položek">' . $pendingReviewTotal . '</span>'
-                    : ''),
+                . adminNavBadge($pendingReviewTotal, $pendingReviewTotal . ' čekajících položek'),
         ];
     }
 
@@ -251,36 +259,28 @@ function adminHeader(string $pageTitle): void
         $communicationItems[] = [
             'url' => $baseUrl . '/admin/comments.php',
             'label' => 'Komentáře'
-                . ($pendingComments > 0
-                    ? ' <span class="badge" aria-label="' . $pendingComments . ' ' . $pendingCommentsLabel . '">' . $pendingComments . '</span>'
-                    : ''),
+                . adminNavBadge($pendingComments, $pendingComments . ' ' . $pendingCommentsLabel),
         ];
     }
     if ($canManageMessages && isModuleEnabled('contact')) {
         $communicationItems[] = [
             'url' => $baseUrl . '/admin/contact.php',
             'label' => 'Kontakt'
-                . ($unreadContactMessages > 0
-                    ? ' <span class="badge" aria-label="' . $unreadContactMessages . ' nových kontaktních zpráv">' . $unreadContactMessages . '</span>'
-                    : ''),
+                . adminNavBadge($unreadContactMessages, $unreadContactMessages . ' nových kontaktních zpráv'),
         ];
     }
     if ($canManageMessages && isModuleEnabled('chat')) {
         $communicationItems[] = [
             'url' => $baseUrl . '/admin/chat.php',
             'label' => 'Chat'
-                . ($unreadChatMessages > 0
-                    ? ' <span class="badge" aria-label="' . $unreadChatMessages . ' nových chat zpráv">' . $unreadChatMessages . '</span>'
-                    : ''),
+                . adminNavBadge($unreadChatMessages, $unreadChatMessages . ' nových chat zpráv'),
         ];
     }
     if ($canManageNewsletter && isModuleEnabled('newsletter')) {
         $communicationItems[] = [
             'url' => $baseUrl . '/admin/newsletter.php',
             'label' => 'Newsletter'
-                . ($pendingNewsletterSubscribers > 0
-                    ? ' <span class="badge" aria-label="' . $pendingNewsletterSubscribers . ' odběratelů čeká na potvrzení">' . $pendingNewsletterSubscribers . '</span>'
-                    : ''),
+                . adminNavBadge($pendingNewsletterSubscribers, $pendingNewsletterSubscribers . ' odběratelů čeká na potvrzení'),
         ];
     }
 
