@@ -30,6 +30,7 @@ parameters:
         - admin/settings_shared.php
         - build/http_server_router.php
         - build/http_test_helpers.php
+        - build/http_test_helpers_selftest.php
         - build/lint_php.php
         - build/lint_php_selftest.php
         - build/phpstan_bootstrap.php

@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Self-test HTTP test helperů** – `composer ci:basic` nově spouští izolovaný self-test `build/http_test_helpers_selftest.php`, který přes dočasný PHP server ověřuje GET/POST/raw/multipart požadavky, redirecty, cookies, hidden input parser a refresh testovací CSRF session.
 - **Self-test PHPStan bootstrapu** – `composer ci:basic` nově spouští izolovaný self-test `build/phpstan_bootstrap_selftest.php`, který ověřuje bezpečné konstanty a helpery pro statickou analýzu bez načítání databáze, autentizace, session nebo runtime konfigurace.
 - **Self-test PHP lintu** – `composer ci:basic` nově spouští izolovaný self-test `build/lint_php_selftest.php`, který ověřuje průchod čisté fixture instalace, zachycení rozbitého PHP souboru a ignorování vývojových/runtime adresářů `vendor`, `dist` a `uploads`.
 - **Self-test release package auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/release_package_audit_selftest.php`, který nad dočasnou kopií release guardů ověřuje vyloučení `vendor`, zákaz `Compress-Archive`, povinné kontroly v release smoke testu a ochranná pravidla `.gitattributes` i `.gitignore`.
