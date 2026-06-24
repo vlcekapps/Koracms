@@ -13985,6 +13985,7 @@ $podcastShowControllerSource = (string)file_get_contents(dirname(__DIR__) . '/po
 $podcastEpisodeControllerSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/episode.php');
 $podcastIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/podcast-index.php');
 $podcastShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/podcast-show.php');
+$podcastEpisodeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/podcast-episode.php');
 $podcastFeedSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/feed.php');
 $podcastAudioSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/audio.php');
 $podcastCoverSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/cover.php');
@@ -14028,6 +14029,13 @@ if (!str_contains($podcastIndexViewSource, 'pagerHtml')) {
 }
 if (!str_contains($podcastShowViewSource, 'pagerHtml')) {
     $podcastSourceIssues[] = 'podcast show view is missing pager output';
+}
+if (!str_contains($podcastEpisodeViewSource, 'id="podcast-episode-player-label" class="sr-only"')
+    || !str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-labelledby="podcast-episode-player-label">')) {
+    $podcastSourceIssues[] = 'podcast episode audio player is missing heading-backed accessible label';
+}
+if (str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-label=')) {
+    $podcastSourceIssues[] = 'podcast episode audio player still uses aria-label instead of hidden DOM label';
 }
 if (!str_contains($podcastShowControllerSource, 'podcastShowStructuredData(')) {
     $podcastSourceIssues[] = 'podcast show controller is missing structured data';

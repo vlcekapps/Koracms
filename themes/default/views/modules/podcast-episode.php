@@ -40,7 +40,8 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
         </p>
 
         <?php if ((string)$episode['audio_src'] !== ''): ?>
-          <audio controls class="audio-player" aria-label="Přehrát epizodu <?= h((string)$episode['title']) ?>">
+          <p id="podcast-episode-player-label" class="sr-only">Přehrávač epizody <?= h((string)$episode['title']) ?></p>
+          <audio controls class="audio-player" aria-labelledby="podcast-episode-player-label">
             <source src="<?= h((string)$episode['audio_src']) ?>">
             Váš prohlížeč nepodporuje přehrávání audia.
             <a href="<?= h((string)$episode['audio_src']) ?>">Stáhnout nebo otevřít audio</a>

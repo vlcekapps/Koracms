@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost přehrávače podcastové epizody** – veřejný audio přehrávač detailu epizody už nepoužívá samostatný `aria-label`; je pojmenovaný přes skrytý text v DOM a `aria-labelledby`, takže jeho název zůstává auditovatelný stejně jako ostatní heading-backed prvky.
 - **Přístupnost výsledků anket** – veřejné výsledkové proužky `<progress>` už nepoužívají samostatný `aria-label`; jsou pojmenované přes `aria-labelledby` navázané na viditelný text odpovědi a viditelný výsledek hlasování.
 - **Přístupnost akce `Upravit blog` v přehledu blogů** – tlačítko pro otevření dialogu úprav blogu už nepoužívá samostatný `aria-label`; viditelný text `Upravit` doplňuje skrytý kontext s názvem blogu přímo uvnitř tlačítka.
 - **Přístupnost seznamu widgetů v administraci** – položky v `admin/widgets.php` už nespoléhají na samostatný `aria-label`; název položky, metadata a upozornění na nezobrazení jsou svázané přes `aria-labelledby`/`aria-describedby` a tlačítka `Nastavení` i `Odebrat` mají kontext jako skrytý text přímo uvnitř tlačítka.
