@@ -33,6 +33,7 @@ parameters:
         - build/lint_php.php
         - build/lint_php_selftest.php
         - build/phpstan_bootstrap.php
+        - build/phpstan_bootstrap_selftest.php
         - build/repository_guardrails_audit.php
         - build/repository_guardrails_audit_selftest.php
         - build/config_sample_audit.php
