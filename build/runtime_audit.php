@@ -10480,6 +10480,41 @@ if ($adminNewWindowIssues === []) {
     }
 }
 
+echo "=== admin_content_new_window_link_guardrails ===\n";
+$adminContentNewWindowIssues = [];
+foreach ([
+    'admin/board.php',
+    'admin/board_form.php',
+    'admin/news.php',
+    'admin/news_form.php',
+    'admin/events.php',
+    'admin/event_form.php',
+    'admin/faq.php',
+    'admin/faq_form.php',
+] as $adminContentNewWindowRelativePath) {
+    $adminContentNewWindowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminContentNewWindowRelativePath);
+    foreach (preg_split('/\R/', $adminContentNewWindowSource) ?: [] as $lineNumber => $line) {
+        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkSrOnlySuffix()')) {
+            $adminContentNewWindowIssues[] = $adminContentNewWindowRelativePath
+                . ' contains target="_blank" without hidden new-window suffix on source line '
+                . ((int)$lineNumber + 1);
+        }
+        if (str_contains($line, 'target="_blank"') && str_contains($line, 'aria-label=')) {
+            $adminContentNewWindowIssues[] = $adminContentNewWindowRelativePath
+                . ' still announces new windows through aria-label on source line '
+                . ((int)$lineNumber + 1);
+        }
+    }
+}
+if ($adminContentNewWindowIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminContentNewWindowIssues as $adminContentNewWindowIssue) {
+        echo '- ' . $adminContentNewWindowIssue . "\n";
+    }
+}
+
 echo "=== blog_admin_guardrails ===\n";
 $blogAdminIssues = [];
 $blogLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');

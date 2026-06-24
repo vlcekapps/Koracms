@@ -145,7 +145,7 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
       <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat otázku FAQ' ?></button>
       <a href="faq.php">Zrušit</a>
       <?php if (($faq['status'] ?? 'published') === 'published' && (int)($faq['is_published'] ?? 1) === 1 && !empty($faq['slug'])): ?>
-        <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+        <a href="<?= h(faqPublicPath($faq)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
       <?php endif; ?>
     </div>
   </fieldset>

@@ -170,7 +170,7 @@ adminHeader('Události');
         <td class="actions">
           <a href="event_form.php?id=<?= (int)$event['id'] ?>" class="btn">Upravit</a>
           <?php if (($event['status'] ?? 'published') === 'published' && (int)($event['is_published'] ?? 0) === 1): ?>
-            <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h(eventPublicPath($event)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if (($event['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post">
