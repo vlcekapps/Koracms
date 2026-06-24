@@ -10437,9 +10437,11 @@ foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {
     $adminNewWindowSource = (string)file_get_contents($adminNewWindowPath);
     $adminNewWindowLines = preg_split('/\R/', $adminNewWindowSource) ?: [];
     foreach ($adminNewWindowLines as $lineNumber => $line) {
-        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkLabel(')) {
+        if (str_contains($line, 'target="_blank"')
+            && !str_contains($line, 'newWindowLinkLabel(')
+            && !str_contains($line, 'newWindowLinkSrOnlySuffix()')) {
             $adminNewWindowIssues[] = basename($adminNewWindowPath)
-                . ' contains target="_blank" without newWindowLinkLabel() on source line '
+                . ' contains target="_blank" without accessible new-window text on source line '
                 . ((int)$lineNumber + 1);
         }
         if (str_contains($line, 'target="_blank"') && str_contains($line, 'rel="noopener"') && !str_contains($line, 'rel="noopener noreferrer"')) {
@@ -10609,9 +10611,14 @@ foreach ([
     'blog transfer' => $blogTransferSource,
 ] as $blogAdminNewWindowSourceName => $blogAdminNewWindowSource) {
     foreach (preg_split('/\R/', $blogAdminNewWindowSource) ?: [] as $lineNumber => $line) {
-        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkLabel(')) {
+        if (str_contains($line, 'target="_blank"') && !str_contains($line, 'newWindowLinkSrOnlySuffix()')) {
             $blogAdminIssues[] = $blogAdminNewWindowSourceName
-                . ' contains target="_blank" without newWindowLinkLabel() on source line '
+                . ' contains target="_blank" without hidden new-window suffix on source line '
+                . ((int)$lineNumber + 1);
+        }
+        if (str_contains($line, 'target="_blank"') && str_contains($line, 'aria-label=')) {
+            $blogAdminIssues[] = $blogAdminNewWindowSourceName
+                . ' still announces new windows through aria-label on source line '
                 . ((int)$lineNumber + 1);
         }
     }

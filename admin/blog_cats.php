@@ -119,8 +119,8 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
   <a href="blog_members.php?blog_id=<?= (int)$blogId ?>">Tým blogu</a>
   <a href="blog_tags.php?blog_id=<?= (int)$blogId ?>">Štítky blogu</a>
   <?php if ($currentBlog): ?>
-    <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit blog na webu')) ?>">Zobrazit blog na webu</a>
-    <a href="<?= h(blogFeedPath($currentBlog)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed blogu')) ?>">RSS feed blogu</a>
+    <a href="<?= h(blogIndexPath($currentBlog)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit blog na webu<?= newWindowLinkSrOnlySuffix() ?></a>
+    <a href="<?= h(blogFeedPath($currentBlog)) ?>" target="_blank" rel="noopener noreferrer">RSS feed blogu<?= newWindowLinkSrOnlySuffix() ?></a>
   <?php endif; ?>
 </p>
 

@@ -326,7 +326,7 @@ adminHeader('Pořadí stránek blogu');
             <a href="<?= BASE_URL ?>/admin/blog_pages.php?blog_id=<?= (int)$blog['id'] ?>&amp;edit_link=<?= (int)$row['id'] ?>#blog-nav-link-form" class="btn">Upravit odkaz</a>
           <?php endif; ?>
           <?php if ($publicPath !== ''): ?>
-            <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
         </li>
       <?php endforeach; ?>
