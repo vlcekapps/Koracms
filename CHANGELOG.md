@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Self-test schema parity auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/schema_parity_audit_selftest.php`, který nad dočasnou fixture instalací ověřuje čerstvé schéma, migrační guardy a runtime dotazy pro blogové stránky, media picker, galerii, sitemapu a RSS feed.
 - **Self-test version metadata auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/version_metadata_audit_selftest.php`, který nad dočasnou fixture instalací ověřuje SemVer ve `VERSION`, načítání `KORA_VERSION`, dry-run práci release skriptu i kontrolu verzí v ZIP/source archive.
 - **Self-test config sample auditu** – `composer ci:basic` nově spouští izolovaný self-test `build/config_sample_audit_selftest.php`, který ověřuje bezpečné defaulty `config.sample.php`, povinné tokeny a instalační komentáře nad dočasnou fixture instalací.
 - **Self-test redirect guardrails auditu** – `composer ci:basic` nově spouští izolovaný self-test, který v dočasném git repozitáři ověřuje, že návratové cíle z `redirect`, `return_url`, `next`, `filter_input()` i raw `REQUEST_URI` polí bez `internalRedirectTarget()` opravdu selžou.

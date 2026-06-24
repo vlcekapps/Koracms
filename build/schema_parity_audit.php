@@ -2,8 +2,31 @@
 
 declare(strict_types=1);
 
-$projectRoot = dirname(__DIR__);
+$projectRootArgument = $argv[1] ?? null;
+$projectRoot = schemaParityProjectRoot(is_string($projectRootArgument) ? $projectRootArgument : null);
 $issues = [];
+
+function schemaParityProjectRoot(?string $override): string
+{
+    $candidates = [];
+    if ($override !== null && trim($override) !== '') {
+        $candidates[] = $override;
+    }
+
+    $environmentOverride = getenv('KORA_SCHEMA_PARITY_AUDIT_ROOT');
+    if (is_string($environmentOverride) && trim($environmentOverride) !== '') {
+        $candidates[] = $environmentOverride;
+    }
+
+    foreach ($candidates as $candidate) {
+        $resolved = realpath($candidate);
+        if (is_string($resolved) && is_dir($resolved)) {
+            return $resolved;
+        }
+    }
+
+    return dirname(__DIR__);
+}
 
 /**
  * @param list<string> $issues

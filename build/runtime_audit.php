@@ -72,6 +72,7 @@ $configSampleAuditSelftestSource = is_file(__DIR__ . '/config_sample_audit_selft
 $versionMetadataAuditSource = is_file(__DIR__ . '/version_metadata_audit.php') ? (string) file_get_contents(__DIR__ . '/version_metadata_audit.php') : '';
 $versionMetadataAuditSelftestSource = is_file(__DIR__ . '/version_metadata_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/version_metadata_audit_selftest.php') : '';
 $schemaParityAuditSource = is_file(__DIR__ . '/schema_parity_audit.php') ? (string) file_get_contents(__DIR__ . '/schema_parity_audit.php') : '';
+$schemaParityAuditSelftestSource = is_file(__DIR__ . '/schema_parity_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/schema_parity_audit_selftest.php') : '';
 $redirectGuardrailsAuditSource = is_file(__DIR__ . '/redirect_guardrails_audit.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit.php') : '';
 $redirectGuardrailsAuditSelftestSource = is_file(__DIR__ . '/redirect_guardrails_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/redirect_guardrails_audit_selftest.php') : '';
 $workflowAuditSource = is_file(__DIR__ . '/workflow_audit.php') ? (string) file_get_contents(__DIR__ . '/workflow_audit.php') : '';
@@ -7693,14 +7694,26 @@ $foundationChecks = [
     'schema parity audit is wired into local quality gates' => str_contains($composerSource, '"test:schema-parity"')
         && str_contains($composerSource, 'php build/schema_parity_audit.php')
         && str_contains($composerSource, '@test:schema-parity')
+        && str_contains($composerSource, '"test:schema-parity-selftest"')
+        && str_contains($composerSource, 'php build/schema_parity_audit_selftest.php')
+        && str_contains($composerSource, '@test:schema-parity-selftest')
         && str_contains($composerSource, 'build/schema_parity_audit.php')
+        && str_contains($composerSource, 'build/schema_parity_audit_selftest.php')
         && str_contains($phpstanConfigSource, 'build/schema_parity_audit.php')
+        && str_contains($phpstanConfigSource, 'build/schema_parity_audit_selftest.php')
+        && str_contains($schemaParityAuditSource, 'schemaParityProjectRoot')
         && str_contains($schemaParityAuditSource, 'schemaParityTableContains')
         && str_contains($schemaParityAuditSource, 'cms_pages.blog_id')
         && str_contains($schemaParityAuditSource, 'cms_media.caption')
         && str_contains($schemaParityAuditSource, 'cms_gallery_photos.deleted_at')
         && str_contains($schemaParityAuditSource, 'ORDER BY p.created_at DESC, p.id DESC')
-        && str_contains($schemaParityAuditSource, 'articleExcerpt('),
+        && str_contains($schemaParityAuditSource, 'articleExcerpt(')
+        && str_contains($schemaParityAuditSelftestSource, 'assertSchemaParityAuditPasses')
+        && str_contains($schemaParityAuditSelftestSource, 'assertSchemaParityAuditFails')
+        && str_contains($schemaParityAuditSelftestSource, 'install.php fresh schema is missing critical column cms_pages.blog_id.')
+        && str_contains($schemaParityAuditSelftestSource, 'migrate.php upgrade schema is missing critical migration guard cms_media.caption.')
+        && str_contains($schemaParityAuditSelftestSource, 'sitemap.php gallery photos query must keep created_at qualified by alias.')
+        && str_contains($schemaParityAuditSelftestSource, 'feed.php must keep articleExcerpt() available through db.php presentation helpers.'),
     'redirect guardrails audit is wired into local quality gates' => str_contains($composerSource, '"test:redirect-guardrails"')
         && str_contains($composerSource, 'php build/redirect_guardrails_audit.php')
         && str_contains($composerSource, '"test:redirect-guardrails-selftest"')
@@ -7856,11 +7869,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
