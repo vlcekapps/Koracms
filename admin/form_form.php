@@ -549,10 +549,10 @@ adminHeader($pageTitle);
             </div>
           </div>
           <div class="form-builder-check-row">
-            <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?> aria-label="<?= h('Povinné pole: ' . $fieldEditorContext) ?>"> Povinné pole</label>
-            <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?> aria-label="<?= h('Povolit více souborů: ' . $fieldEditorContext) ?>"> Povolit více souborů</label>
-            <label><input type="checkbox" name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field['start_new_row'] ?? 0) === 1 ? ' checked' : '' ?> aria-label="<?= h('Začít na novém řádku: ' . $fieldEditorContext) ?>"> Začít na novém řádku</label>
-            <label><input type="checkbox" name="fields[<?= $i ?>][delete]" value="1" aria-label="<?= h('Odebrat pole po uložení: ' . $fieldEditorContext) ?>"> Odebrat pole po uložení</label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field['is_required'] ? ' checked' : '' ?>> Povinné pole<span class="sr-only">: <?= h($fieldEditorContext) ?></span></label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field['allow_multiple'] ?? 0) === 1 ? ' checked' : '' ?>> Povolit více souborů<span class="sr-only">: <?= h($fieldEditorContext) ?></span></label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field['start_new_row'] ?? 0) === 1 ? ' checked' : '' ?>> Začít na novém řádku<span class="sr-only">: <?= h($fieldEditorContext) ?></span></label>
+            <label><input type="checkbox" name="fields[<?= $i ?>][delete]" value="1"> Odebrat pole po uložení<span class="sr-only">: <?= h($fieldEditorContext) ?></span></label>
           </div>
         </fieldset>
       <?php endforeach; ?>

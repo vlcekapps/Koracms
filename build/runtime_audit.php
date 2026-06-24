@@ -13792,6 +13792,26 @@ foreach ([
         $adminFieldErrorIssues[] = 'form builder is missing shared style fragment: ' . $formBuilderUtilityFragment;
     }
 }
+foreach ([
+    'name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field[\'is_required\'] ? \' checked\' : \'\' ?>> Povinné pole<span class="sr-only">: <?= h($fieldEditorContext) ?></span>',
+    'name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field[\'allow_multiple\'] ?? 0) === 1 ? \' checked\' : \'\' ?>> Povolit více souborů<span class="sr-only">: <?= h($fieldEditorContext) ?></span>',
+    'name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field[\'start_new_row\'] ?? 0) === 1 ? \' checked\' : \'\' ?>> Začít na novém řádku<span class="sr-only">: <?= h($fieldEditorContext) ?></span>',
+    'name="fields[<?= $i ?>][delete]" value="1"> Odebrat pole po uložení<span class="sr-only">: <?= h($fieldEditorContext) ?></span>',
+] as $formBuilderExistingFieldCheckboxFragment) {
+    if (!str_contains($formBuilderSource, $formBuilderExistingFieldCheckboxFragment)) {
+        $adminFieldErrorIssues[] = 'form builder existing field checkbox should keep context inside its visible label: ' . $formBuilderExistingFieldCheckboxFragment;
+    }
+}
+foreach ([
+    'name="fields[<?= $i ?>][is_required]" value="1"<?= (int)$field[\'is_required\'] ? \' checked\' : \'\' ?> aria-label=',
+    'name="fields[<?= $i ?>][allow_multiple]" value="1"<?= (int)($field[\'allow_multiple\'] ?? 0) === 1 ? \' checked\' : \'\' ?> aria-label=',
+    'name="fields[<?= $i ?>][start_new_row]" value="1"<?= (int)($field[\'start_new_row\'] ?? 0) === 1 ? \' checked\' : \'\' ?> aria-label=',
+    'name="fields[<?= $i ?>][delete]" value="1" aria-label=',
+] as $formBuilderExistingFieldAriaLabelFragment) {
+    if (str_contains($formBuilderSource, $formBuilderExistingFieldAriaLabelFragment)) {
+        $adminFieldErrorIssues[] = 'form builder existing field checkbox still overrides its visible label: ' . $formBuilderExistingFieldAriaLabelFragment;
+    }
+}
 if (!str_contains($formBuilderSource, '<legend class="sr-only">Nastavení nového pole formuláře</legend>')) {
     $adminFieldErrorIssues[] = 'form builder new field checkboxes are missing their fieldset legend context';
 }
