@@ -261,9 +261,9 @@ $fieldErrorMessages = [
         <tr>
           <td><?= h($dayNames[$d]) ?></td>
           <td>
+            <label for="closed_<?= $d ?>" class="sr-only"><?= h($dayNames[$d]) ?> zavřeno</label>
             <input type="checkbox" id="closed_<?= $d ?>" name="hours[<?= $d ?>][is_closed]" value="1"
-                   <?= $isClosed ? 'checked' : '' ?>
-                   aria-label="<?= h($dayNames[$d]) ?> zavřeno">
+                   <?= $isClosed ? 'checked' : '' ?>>
           </td>
           <td>
             <label for="open_<?= $d ?>" class="sr-only"><?= h($dayNames[$d]) ?> otevření</label>

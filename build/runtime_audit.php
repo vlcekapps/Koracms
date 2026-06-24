@@ -13704,6 +13704,8 @@ foreach ([
         'class="res-resource-inline-grid"',
         'class="slot-row res-resource-slot-row"',
         'class="blocked-row res-resource-blocked-row"',
+        '<label for="closed_<?= $d ?>" class="sr-only"><?= h($dayNames[$d]) ?> zavřeno</label>',
+        '<input type="checkbox" id="closed_<?= $d ?>" name="hours[<?= $d ?>][is_closed]" value="1"',
         '$blockedDateFieldId = \'blocked-date-\' . (int)$bl[\'id\'] . \'-\' . (int)$bi;',
         '<label for="<?= h($blockedDateFieldId) ?>" class="sr-only">Datum blokování</label>',
         '<input type="date" id="<?= h($blockedDateFieldId) ?>" name="blocked_dates[]"',
@@ -13730,13 +13732,14 @@ foreach ([
     }
 }
 foreach ([
+    'aria-label="<?= h($dayNames[$d]) ?> zavřeno"',
     'name="blocked_dates[]" value="<?= h($bl[\'blocked_date\']) ?>" class="admin-input-auto" aria-label=',
     'name="blocked_reasons[]" value="<?= h($bl[\'reason\'] ?? \'\') ?>" maxlength="255" class="admin-input-auto" aria-label=',
     'name="blocked_dates[]" value="\' + dateVal + \'" class="admin-input-auto" aria-label=',
     'name="blocked_reasons[]" value="\' + reasonVal.replace(/"/g, \'&quot;\') + \'" maxlength="255" class="admin-input-auto" aria-label=',
 ] as $blockedDateAriaLabelFragment) {
     if (str_contains($reservationFormSource, $blockedDateAriaLabelFragment)) {
-        $adminFieldErrorIssues[] = 'reservation blocked date fields still use aria-label instead of real labels: ' . $blockedDateAriaLabelFragment;
+        $adminFieldErrorIssues[] = 'reservation resource fields still use aria-label instead of real labels: ' . $blockedDateAriaLabelFragment;
     }
 }
 $adminFieldErrorForms = [
