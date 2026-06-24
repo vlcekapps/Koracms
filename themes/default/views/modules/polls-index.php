@@ -63,17 +63,21 @@ $q = trim((string)($q ?? ''));
 
           <div class="poll-results" role="list" aria-labelledby="poll-results-title">
             <?php foreach ($options as $option): ?>
-              <?php $percentage = $totalVotes > 0 ? round(((int)$option['vote_count']) / $totalVotes * 100, 1) : 0; ?>
+              <?php
+              $percentage = $totalVotes > 0 ? round(((int)$option['vote_count']) / $totalVotes * 100, 1) : 0;
+              $optionLabelId = 'poll-result-option-' . (int)$option['id'];
+              $optionValueId = 'poll-result-value-' . (int)$option['id'];
+              ?>
               <div class="poll-result" role="listitem">
                 <div class="poll-result__header">
-                  <span><?= h((string)$option['option_text']) ?></span>
-                  <span><?= $percentage ?>&nbsp;% (<?= (int)$option['vote_count'] ?>&nbsp;hlasů)</span>
+                  <span id="<?= h($optionLabelId) ?>"><?= h((string)$option['option_text']) ?></span>
+                  <span id="<?= h($optionValueId) ?>"><?= $percentage ?>&nbsp;% (<?= (int)$option['vote_count'] ?>&nbsp;hlasů)</span>
                 </div>
                 <progress
                   class="poll-result__track"
                   value="<?= h((string)$percentage) ?>"
                   max="100"
-                  aria-label="Podíl hlasů pro možnost <?= h((string)$option['option_text']) ?>"
+                  aria-labelledby="<?= h($optionLabelId . ' ' . $optionValueId) ?>"
                 ><?= $percentage ?> %</progress>
               </div>
             <?php endforeach; ?>

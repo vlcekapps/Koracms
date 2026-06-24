@@ -11524,8 +11524,13 @@ if (str_contains($pollIndexViewSource, 'poll-result__fill') || str_contains($pol
 }
 if (!str_contains($pollIndexViewSource, '<progress')
     || !str_contains($pollIndexViewSource, 'class="poll-result__track"')
-    || !str_contains($pollIndexViewSource, 'aria-label="Podíl hlasů pro možnost')) {
+    || !str_contains($pollIndexViewSource, "\$optionLabelId = 'poll-result-option-' . (int)\$option['id'];")
+    || !str_contains($pollIndexViewSource, "\$optionValueId = 'poll-result-value-' . (int)\$option['id'];")
+    || !str_contains($pollIndexViewSource, 'aria-labelledby="<?= h($optionLabelId . \' \' . $optionValueId) ?>"')) {
     $pollSourceIssues[] = 'poll public results are missing semantic progress bars';
+}
+if (str_contains($pollIndexViewSource, 'aria-label="Podíl hlasů pro možnost')) {
+    $pollSourceIssues[] = 'poll public progress bars still use aria-label instead of visible result text';
 }
 foreach ([
     '.poll-result__track::-webkit-progress-value',
