@@ -212,7 +212,7 @@ adminHeader('Ke stažení');
     <tbody>
     <?php foreach ($items as $download): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$download['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$download['title']) ?>"></td>
+        <td><label for="download-select-<?= (int)$download['id'] ?>" class="sr-only">Vybrat <?= h((string)$download['title']) ?></label><input type="checkbox" id="download-select-<?= (int)$download['id'] ?>" name="ids[]" value="<?= (int)$download['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$download['title']) ?></strong><br>
           <small class="table-meta">/downloads/<?= h((string)$download['slug']) ?></small>

@@ -351,10 +351,11 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
           ?>
         <tr>
           <td>
+            <label for="form-submission-select-<?= (int)$submission['id'] ?>" class="sr-only">Vybrat odpověď <?= h(formSubmissionReference($form, $submission)) ?></label>
             <input type="checkbox"
+                   id="form-submission-select-<?= (int)$submission['id'] ?>"
                    name="ids[]"
                    value="<?= (int)$submission['id'] ?>"
-                   aria-label="Vybrat odpověď <?= h(formSubmissionReference($form, $submission)) ?>"
                    form="form-submission-bulk-form">
           </td>
           <td>

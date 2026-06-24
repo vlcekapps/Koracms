@@ -171,8 +171,8 @@ adminHeader('Kontakt');
       <?php foreach ($messageRows as $message): ?>
         <tr>
           <td>
-            <input type="checkbox" name="ids[]" value="<?= (int)$message['id'] ?>"
-                   aria-label="Vybrat zprávu od <?= h((string)$message['sender_email']) ?>" form="contact-bulk-form">
+            <label for="contact-message-select-<?= (int)$message['id'] ?>" class="sr-only">Vybrat zprávu od <?= h((string)$message['sender_email']) ?></label>
+            <input type="checkbox" id="contact-message-select-<?= (int)$message['id'] ?>" name="ids[]" value="<?= (int)$message['id'] ?>" form="contact-bulk-form">
           </td>
           <td>
             <a href="mailto:<?= h((string)$message['sender_email']) ?>"><?= h((string)$message['sender_email']) ?></a>

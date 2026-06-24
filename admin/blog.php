@@ -253,7 +253,7 @@ adminHeader($blogCaptionTitle);
     <tbody>
     <?php foreach ($articles as $article): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$article['id'] ?>" aria-label="Vybrat článek <?= h($article['title']) ?>"></td>
+        <td><label for="article-select-<?= (int)$article['id'] ?>" class="sr-only">Vybrat článek <?= h($article['title']) ?></label><input type="checkbox" id="article-select-<?= (int)$article['id'] ?>" name="ids[]" value="<?= (int)$article['id'] ?>"></td>
         <td><?= h($article['title']) ?></td>
         <?php if ($multiBlog): ?><td><?= h($article['blog_name'] ?? '–') ?></td><?php endif; ?>
         <td><?= $article['author_name'] ? h($article['author_name']) : '<em>–</em>' ?></td>

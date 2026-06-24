@@ -10379,6 +10379,51 @@ if ($adminBulkSelectLabelIssues === []) {
     }
 }
 
+echo "=== admin_bulk_row_label_guardrails ===\n";
+$adminBulkRowLabelIssues = [];
+$adminBulkRowLabelExpectations = [
+    'admin/blog.php' => ['<label for="article-select-<?= (int)$article[\'id\'] ?>" class="sr-only">Vybrat článek', '<input type="checkbox" id="article-select-<?= (int)$article[\'id\'] ?>" name="ids[]"'],
+    'admin/blog_cats.php' => ['<label for="blog-category-select-<?= (int)$category[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="blog-category-select-<?= (int)$category[\'id\'] ?>" name="ids[]"'],
+    'admin/board.php' => ['<label for="board-document-select-<?= (int)$document[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="board-document-select-<?= (int)$document[\'id\'] ?>" name="ids[]"'],
+    'admin/chat.php' => ['<label for="chat-message-select-<?= (int)$message[\'id\'] ?>" class="sr-only">Vybrat chat zprávu od', '<input type="checkbox" id="chat-message-select-<?= (int)$message[\'id\'] ?>" name="ids[]"'],
+    'admin/comments.php' => ['<label for="comment-select-<?= (int)$comment[\'id\'] ?>" class="sr-only">Vybrat komentář od', '<input type="checkbox" id="comment-select-<?= (int)$comment[\'id\'] ?>" name="ids[]"'],
+    'admin/contact.php' => ['<label for="contact-message-select-<?= (int)$message[\'id\'] ?>" class="sr-only">Vybrat zprávu od', '<input type="checkbox" id="contact-message-select-<?= (int)$message[\'id\'] ?>" name="ids[]"'],
+    'admin/downloads.php' => ['<label for="download-select-<?= (int)$download[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="download-select-<?= (int)$download[\'id\'] ?>" name="ids[]"'],
+    'admin/events.php' => ['<label for="event-select-<?= (int)$event[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="event-select-<?= (int)$event[\'id\'] ?>" name="ids[]"'],
+    'admin/faq.php' => ['<label for="faq-select-<?= (int)$faq[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="faq-select-<?= (int)$faq[\'id\'] ?>" name="ids[]"'],
+    'admin/food.php' => ['<label for="food-card-select-<?= h($type) ?>-<?= (int)$card[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="food-card-select-<?= h($type) ?>-<?= (int)$card[\'id\'] ?>" name="ids[]"'],
+    'admin/form_submissions.php' => ['<label for="form-submission-select-<?= (int)$submission[\'id\'] ?>" class="sr-only">Vybrat odpověď', 'id="form-submission-select-<?= (int)$submission[\'id\'] ?>"'],
+    'admin/gallery_albums.php' => ['<label for="gallery-album-select-<?= (int)$album[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="gallery-album-select-<?= (int)$album[\'id\'] ?>" name="ids[]"'],
+    'admin/gallery_photos.php' => ['<label for="gallery-photo-select-<?= (int)$photo[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="gallery-photo-select-<?= (int)$photo[\'id\'] ?>" name="ids[]"'],
+    'admin/news.php' => ['<label for="news-select-<?= (int)$item[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="news-select-<?= (int)$item[\'id\'] ?>" name="ids[]"'],
+    'admin/newsletter.php' => ['<label for="newsletter-subscriber-select-<?= (int)$subscriber[\'id\'] ?>" class="sr-only">Vybrat odběratele', '<input type="checkbox" id="newsletter-subscriber-select-<?= (int)$subscriber[\'id\'] ?>" name="ids[]"'],
+    'admin/pages.php' => ['<label for="page-select-<?= $pageId ?>" class="sr-only">Vybrat', '<input type="checkbox" id="page-select-<?= $pageId ?>" name="ids[]"'],
+    'admin/places.php' => ['<label for="place-select-<?= (int)$place[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="place-select-<?= (int)$place[\'id\'] ?>" name="ids[]"'],
+    'admin/polls.php' => ['<label for="poll-select-<?= (int)$poll[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="poll-select-<?= (int)$poll[\'id\'] ?>" name="ids[]"'],
+];
+foreach ($adminBulkRowLabelExpectations as $adminBulkRowRelativePath => $adminBulkRowFragments) {
+    $adminBulkRowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminBulkRowRelativePath);
+    foreach ($adminBulkRowFragments as $adminBulkRowFragment) {
+        if (!str_contains($adminBulkRowSource, $adminBulkRowFragment)) {
+            $adminBulkRowLabelIssues[] = $adminBulkRowRelativePath . ' is missing row checkbox label fragment: ' . $adminBulkRowFragment;
+        }
+    }
+}
+foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminBulkRowPath) {
+    $adminBulkRowSource = (string)file_get_contents($adminBulkRowPath);
+    if (preg_match('/<input\b(?=[^>]*\bname="ids\[\]")[^>]*\baria-label="Vybrat[^"]*"/s', $adminBulkRowSource) === 1) {
+        $adminBulkRowLabelIssues[] = basename($adminBulkRowPath) . ' still names an ids[] row checkbox with aria-label';
+    }
+}
+if ($adminBulkRowLabelIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminBulkRowLabelIssues as $adminBulkRowLabelIssue) {
+        echo '- ' . $adminBulkRowLabelIssue . "\n";
+    }
+}
+
 echo "=== admin_new_window_link_guardrails ===\n";
 $adminNewWindowIssues = [];
 foreach (glob(dirname(__DIR__) . '/admin/*.php') ?: [] as $adminNewWindowPath) {

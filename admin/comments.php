@@ -198,8 +198,8 @@ adminHeader('Komentáře');
       <?php foreach ($commentRows as $comment): ?>
         <tr>
           <td>
-            <input type="checkbox" name="ids[]" value="<?= (int)$comment['id'] ?>"
-                   aria-label="Vybrat komentář od <?= h($comment['author_name']) ?>" form="bulk-form">
+            <label for="comment-select-<?= (int)$comment['id'] ?>" class="sr-only">Vybrat komentář od <?= h($comment['author_name']) ?></label>
+            <input type="checkbox" id="comment-select-<?= (int)$comment['id'] ?>" name="ids[]" value="<?= (int)$comment['id'] ?>" form="bulk-form">
           </td>
           <td>
             <strong><?= h($comment['author_name']) ?></strong>

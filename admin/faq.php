@@ -122,7 +122,7 @@ adminHeader('Znalostní báze');
     <tbody>
     <?php foreach ($faqs as $faq): ?>
       <tr<?= $faq['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$faq['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$faq['question']) ?>"></td>
+        <td><label for="faq-select-<?= (int)$faq['id'] ?>" class="sr-only">Vybrat <?= h((string)$faq['question']) ?></label><input type="checkbox" id="faq-select-<?= (int)$faq['id'] ?>" name="ids[]" value="<?= (int)$faq['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$faq['question']) ?></strong><br>
           <small class="table-meta">/faq/<?= h((string)$faq['slug']) ?></small>

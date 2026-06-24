@@ -124,7 +124,7 @@ adminHeader('Ankety');
         };
         ?>
       <tr<?= $state === 'scheduled' ? ' class="table-row--scheduled"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$poll['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$poll['question']) ?>"></td>
+        <td><label for="poll-select-<?= (int)$poll['id'] ?>" class="sr-only">Vybrat <?= h((string)$poll['question']) ?></label><input type="checkbox" id="poll-select-<?= (int)$poll['id'] ?>" name="ids[]" value="<?= (int)$poll['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$poll['question']) ?></strong><br>
           <small class="table-meta">/polls/<?= h((string)$poll['slug']) ?></small>

@@ -126,7 +126,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
     <tbody>
       <?php foreach ($photos as $photo): ?>
         <tr>
-          <td><input type="checkbox" name="ids[]" value="<?= (int)$photo['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$photo['label']) ?>"></td>
+          <td><label for="gallery-photo-select-<?= (int)$photo['id'] ?>" class="sr-only">Vybrat <?= h((string)$photo['label']) ?></label><input type="checkbox" id="gallery-photo-select-<?= (int)$photo['id'] ?>" name="ids[]" value="<?= (int)$photo['id'] ?>" form="bulk-form"></td>
           <td>
             <img src="<?= h((string)$photo['thumb_url']) ?>"
                  alt="<?= h((string)$photo['label']) ?>"

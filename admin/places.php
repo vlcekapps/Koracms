@@ -192,7 +192,7 @@ adminHeader('Zajímavá místa');
     <tbody>
     <?php foreach ($places as $place): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$place['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$place['name']) ?>"></td>
+        <td><label for="place-select-<?= (int)$place['id'] ?>" class="sr-only">Vybrat <?= h((string)$place['name']) ?></label><input type="checkbox" id="place-select-<?= (int)$place['id'] ?>" name="ids[]" value="<?= (int)$place['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$place['name']) ?></strong><br>
           <small class="table-meta">/places/<?= h((string)$place['slug']) ?></small>

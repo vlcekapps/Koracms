@@ -170,7 +170,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
     <?php foreach ($flatCategories as $category): ?>
       <?php $indent = str_repeat('— ', (int)$category['_depth']); ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$category['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$category['name']) ?>"></td>
+        <td><label for="blog-category-select-<?= (int)$category['id'] ?>" class="sr-only">Vybrat <?= h((string)$category['name']) ?></label><input type="checkbox" id="blog-category-select-<?= (int)$category['id'] ?>" name="ids[]" value="<?= (int)$category['id'] ?>" form="bulk-form"></td>
         <td>
           <?php if ($editId === (int)$category['id']): ?>
             <form method="post" class="button-row button-row--baseline" novalidate>

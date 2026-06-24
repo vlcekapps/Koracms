@@ -144,7 +144,7 @@ adminHeader('Události');
     <tbody>
     <?php foreach ($events as $event): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$event['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$event['title']) ?>"></td>
+        <td><label for="event-select-<?= (int)$event['id'] ?>" class="sr-only">Vybrat <?= h((string)$event['title']) ?></label><input type="checkbox" id="event-select-<?= (int)$event['id'] ?>" name="ids[]" value="<?= (int)$event['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$event['title']) ?></strong><br>
           <small class="table-meta">/events/<?= h((string)($event['slug'] ?? '')) ?></small>

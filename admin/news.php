@@ -118,7 +118,7 @@ adminHeader('Novinky');
     <tbody>
     <?php foreach ($items as $item): ?>
       <tr<?= $item['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$item['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$item['title']) ?>"></td>
+        <td><label for="news-select-<?= (int)$item['id'] ?>" class="sr-only">Vybrat <?= h((string)$item['title']) ?></label><input type="checkbox" id="news-select-<?= (int)$item['id'] ?>" name="ids[]" value="<?= (int)$item['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$item['title']) ?></strong><br>
           <small class="table-meta">/news/<?= h((string)$item['slug']) ?></small>

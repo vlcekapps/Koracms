@@ -209,8 +209,8 @@ adminHeader('Chat');
       <?php foreach ($messageRows as $message): ?>
         <tr>
           <td>
-            <input type="checkbox" name="ids[]" value="<?= (int)$message['id'] ?>"
-                   aria-label="Vybrat chat zprávu od <?= h((string)$message['name']) ?>" form="chat-bulk-form">
+            <label for="chat-message-select-<?= (int)$message['id'] ?>" class="sr-only">Vybrat chat zprávu od <?= h((string)$message['name']) ?></label>
+            <input type="checkbox" id="chat-message-select-<?= (int)$message['id'] ?>" name="ids[]" value="<?= (int)$message['id'] ?>" form="chat-bulk-form">
           </td>
           <td>
             <strong><?= h((string)$message['name']) ?></strong>

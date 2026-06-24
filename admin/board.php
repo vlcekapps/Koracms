@@ -102,7 +102,7 @@ adminHeader('Úřední deska');
     <tbody>
     <?php foreach ($items as $document): ?>
       <tr>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$document['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$document['title']) ?>"></td>
+        <td><label for="board-document-select-<?= (int)$document['id'] ?>" class="sr-only">Vybrat <?= h((string)$document['title']) ?></label><input type="checkbox" id="board-document-select-<?= (int)$document['id'] ?>" name="ids[]" value="<?= (int)$document['id'] ?>" form="bulk-form"></td>
         <td>
           <strong><?= h((string)$document['title']) ?></strong>
           <?php if ((int)($document['is_pinned'] ?? 0) === 1): ?>

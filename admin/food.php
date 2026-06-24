@@ -160,7 +160,7 @@ adminHeader('Jídelní a nápojový lístek');
     <tbody>
     <?php foreach ($rows as $card): ?>
       <tr<?= $card['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
-        <td><input type="checkbox" name="ids[]" value="<?= (int)$card['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$card['title']) ?>"></td>
+        <td><label for="food-card-select-<?= h($type) ?>-<?= (int)$card['id'] ?>" class="sr-only">Vybrat <?= h((string)$card['title']) ?></label><input type="checkbox" id="food-card-select-<?= h($type) ?>-<?= (int)$card['id'] ?>" name="ids[]" value="<?= (int)$card['id'] ?>" form="bulk-form"></td>
         <td>
           <?php if ($card['is_current']): ?>
             <strong>★ <?= h((string)$card['title']) ?></strong>

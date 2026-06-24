@@ -121,7 +121,7 @@ adminHeader('Alba galerie');
     <tbody>
       <?php foreach ($albums as $album): ?>
         <tr<?= ($album['status'] ?? 'published') === 'pending' ? ' class="table-row--pending"' : '' ?>>
-          <td><input type="checkbox" name="ids[]" value="<?= (int)$album['id'] ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$album['name']) ?>"></td>
+          <td><label for="gallery-album-select-<?= (int)$album['id'] ?>" class="sr-only">Vybrat <?= h((string)$album['name']) ?></label><input type="checkbox" id="gallery-album-select-<?= (int)$album['id'] ?>" name="ids[]" value="<?= (int)$album['id'] ?>" form="bulk-form"></td>
           <td>
             <?= $album['parent_id'] ? '— ' : '' ?><strong><?= h($album['name']) ?></strong>
             <br><small class="table-meta"><?= h(parse_url((string)$album['public_path'], PHP_URL_PATH) ?: (string)$album['public_path']) ?></small>

@@ -197,8 +197,8 @@ adminHeader('Newsletter');
           <?php $isConfirmed = (int)$subscriber['confirmed'] === 1; ?>
           <tr>
             <td>
-              <input type="checkbox" name="ids[]" value="<?= (int)$subscriber['id'] ?>"
-                     aria-label="Vybrat odběratele <?= h((string)$subscriber['email']) ?>" form="newsletter-bulk-form">
+              <label for="newsletter-subscriber-select-<?= (int)$subscriber['id'] ?>" class="sr-only">Vybrat odběratele <?= h((string)$subscriber['email']) ?></label>
+              <input type="checkbox" id="newsletter-subscriber-select-<?= (int)$subscriber['id'] ?>" name="ids[]" value="<?= (int)$subscriber['id'] ?>" form="newsletter-bulk-form">
             </td>
             <td><a href="mailto:<?= h((string)$subscriber['email']) ?>"><?= h((string)$subscriber['email']) ?></a></td>
             <td>

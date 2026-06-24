@@ -210,7 +210,7 @@ adminHeader('Statické stránky');
           $publicPath = pagePublicPath($page);
           ?>
         <tr>
-          <td><input type="checkbox" name="ids[]" value="<?= $pageId ?>" form="bulk-form" aria-label="Vybrat <?= h((string)$page['title']) ?>"></td>
+          <td><label for="page-select-<?= $pageId ?>" class="sr-only">Vybrat <?= h((string)$page['title']) ?></label><input type="checkbox" id="page-select-<?= $pageId ?>" name="ids[]" value="<?= $pageId ?>" form="bulk-form"></td>
           <td>
             <strong><?= h((string)$page['title']) ?></strong>
             <br><small><?= h((string)$page['slug']) ?></small>
