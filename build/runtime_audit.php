@@ -10527,6 +10527,12 @@ if (!str_contains($blogsAdminSource, '<button type="button" id="blog-dialog-clos
 if (str_contains($blogsAdminSource, 'id="blog-dialog-close" class="btn" aria-label=')) {
     $blogAdminIssues[] = 'blog dialog close button still uses aria-label instead of hidden button text';
 }
+if (!str_contains($blogsAdminSource, 'Upravit<span class="sr-only"> blog <?= h((string)$blog[\'name\']) ?></span></button>')) {
+    $blogAdminIssues[] = 'blog edit button is missing hidden context inside the button text';
+}
+if (str_contains($blogsAdminSource, 'aria-label="Upravit blog')) {
+    $blogAdminIssues[] = 'blog edit button still uses aria-label instead of hidden button text';
+}
 if (!str_contains($blogListSource, 'Přesunout do jiného blogu') || !str_contains($blogListSource, 'value="move"')) {
     $blogAdminIssues[] = 'blog list is missing bulk move action';
 }

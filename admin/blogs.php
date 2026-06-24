@@ -250,7 +250,6 @@ adminHeader('Správa blogů');
           <a href="<?= h(blogIndexPath($blog)) ?>" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
           <a href="<?= h(blogFeedPath($blog)) ?>" class="btn" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed')) ?>">RSS feed</a>
           <button type="button" class="btn blog-button--compact blog-edit-btn"
-                  aria-label="Upravit blog <?= h((string)$blog['name']) ?>"
                   aria-haspopup="dialog"
                   aria-controls="blog-dialog"
                   aria-expanded="false"
@@ -266,7 +265,7 @@ adminHeader('Správa blogů');
                   data-blog-feed-item-limit="<?= (int)($blog['feed_item_limit'] ?? 20) ?>"
                   data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>"
                   data-blog-logo-alt="<?= h((string)($blog['logo_alt_text'] ?? '')) ?>"
-                  data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit</button>
+                  data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit<span class="sr-only"> blog <?= h((string)$blog['name']) ?></span></button>
           <a href="blog.php?blog=<?= (int)$blog['id'] ?>" class="btn">Články blogu</a>
           <a href="blog_cats.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Kategorie blogu</a>
           <a href="blog_tags.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Štítky blogu</a>
