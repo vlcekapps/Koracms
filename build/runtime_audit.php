@@ -84,6 +84,7 @@ $sourceEncodingAuditSelftestSource = is_file(__DIR__ . '/source_encoding_audit_s
 $mojibakeAuditSource = is_file(__DIR__ . '/mojibake_audit.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit.php') : '';
 $mojibakeAuditSelftestSource = is_file(__DIR__ . '/mojibake_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit_selftest.php') : '';
 $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit.php') : '';
+$whitespaceAuditSelftestSource = is_file(__DIR__ . '/whitespace_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit_selftest.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $releaseSmokeSource = is_file(__DIR__ . '/release_smoke.php') ? (string) file_get_contents(__DIR__ . '/release_smoke.php') : '';
@@ -7785,11 +7786,23 @@ $foundationChecks = [
     'whitespace audit is wired into local quality gates' => str_contains($composerSource, '"test:whitespace"')
         && str_contains($composerSource, 'php build/whitespace_audit.php')
         && str_contains($composerSource, '@test:whitespace')
+        && str_contains($composerSource, '"test:whitespace-selftest"')
+        && str_contains($composerSource, 'php build/whitespace_audit_selftest.php')
+        && str_contains($composerSource, '@test:whitespace-selftest')
         && str_contains($composerSource, 'build/whitespace_audit.php')
+        && str_contains($composerSource, 'build/whitespace_audit_selftest.php')
         && str_contains($phpstanConfigSource, 'build/whitespace_audit.php')
+        && str_contains($phpstanConfigSource, 'build/whitespace_audit_selftest.php')
+        && str_contains($whitespaceAuditSource, 'whitespaceAuditProjectRoot')
         && str_contains($whitespaceAuditSource, 'git')
         && str_contains($whitespaceAuditSource, 'trailing whitespace')
-        && str_contains($whitespaceAuditSource, 'missing final newline'),
+        && str_contains($whitespaceAuditSource, 'missing final newline')
+        && str_contains($whitespaceAuditSelftestSource, 'assertWhitespaceAuditPasses')
+        && str_contains($whitespaceAuditSelftestSource, 'assertWhitespaceAuditFails')
+        && str_contains($whitespaceAuditSelftestSource, 'README.md:3: trailing whitespace')
+        && str_contains($whitespaceAuditSelftestSource, 'assets/app.js:1: trailing whitespace')
+        && str_contains($whitespaceAuditSelftestSource, 'docs/admin-guide.md: missing final newline')
+        && str_contains($whitespaceAuditSelftestSource, '.gitignore:2: trailing whitespace'),
     'php cs fixer smoke check exists' => str_contains($composerSource, 'php-cs-fixer fix')
         && str_contains($composerSource, '--dry-run')
         && str_contains($composerSource, '--path-mode=intersection')
@@ -7895,11 +7908,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_test_helpers.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
