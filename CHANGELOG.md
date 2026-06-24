@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Checkboxy nového pole ve form builderu** – volby `Povinné pole`, `Povolit více souborů` a `Začít na novém řádku` už nepřepisují viditelný text vlastním `aria-label`; čtečka obrazovky tak dostane stejný název jako vidící uživatel a kontext nového pole zůstává v legendě skupiny.
 - **Blokované dny v editoru rezervačního zdroje** – existující i dynamicky přidané řádky blokovaných dnů nově používají skutečné skryté `label` prvky napojené přes jedinečné `id` pro datum a důvod, místo samotných `aria-label`; runtime audit hlídá serverový i JavaScriptový render.
 - **Inline editace přesměrování v administraci** – řádkový formulář ve správě `301/302` přesměrování nově používá skutečné skryté `label` prvky napojené přes jedinečné `id` místo samotných `aria-label`, takže je čitelnější pro čtečky obrazovky a runtime audit hlídá návrat starého vzoru.
 - **Runtime audit veřejných formulářů** - komentářové a chatové scénáře nově po načtení formuláře přebírají skutečnou session cookie vrácenou serverem, takže Full CI s přísným session režimem nepošle CSRF/CAPTCHA POST proti jiné session.

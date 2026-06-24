@@ -13692,6 +13692,27 @@ foreach ([
         $adminFieldErrorIssues[] = 'form builder is missing shared style fragment: ' . $formBuilderUtilityFragment;
     }
 }
+if (!str_contains($formBuilderSource, '<legend class="sr-only">Nastavení nového pole formuláře</legend>')) {
+    $adminFieldErrorIssues[] = 'form builder new field checkboxes are missing their fieldset legend context';
+}
+foreach ([
+    '<label><input type="checkbox" name="new_field_required" value="1"> Povinné pole</label>',
+    '<label><input type="checkbox" name="new_field_allow_multiple" value="1"> Povolit více souborů</label>',
+    '<label><input type="checkbox" name="new_field_start_new_row" value="1"> Začít na novém řádku</label>',
+] as $formBuilderNewFieldCheckboxFragment) {
+    if (!str_contains($formBuilderSource, $formBuilderNewFieldCheckboxFragment)) {
+        $adminFieldErrorIssues[] = 'form builder new field checkbox should use its visible label: ' . $formBuilderNewFieldCheckboxFragment;
+    }
+}
+foreach ([
+    'name="new_field_required" value="1" aria-label=',
+    'name="new_field_allow_multiple" value="1" aria-label=',
+    'name="new_field_start_new_row" value="1" aria-label=',
+] as $formBuilderNewFieldAriaLabelFragment) {
+    if (str_contains($formBuilderSource, $formBuilderNewFieldAriaLabelFragment)) {
+        $adminFieldErrorIssues[] = 'form builder new field checkbox still overrides its visible label: ' . $formBuilderNewFieldAriaLabelFragment;
+    }
+}
 foreach ([
     '.form-builder-row',
     '.form-builder-preview',

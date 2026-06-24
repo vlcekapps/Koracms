@@ -649,9 +649,9 @@ adminHeader($pageTitle);
         </div>
       </div>
       <div class="form-builder-check-row">
-        <label><input type="checkbox" name="new_field_required" value="1" aria-label="Povinné nové pole"> Povinné pole</label>
-        <label><input type="checkbox" name="new_field_allow_multiple" value="1" aria-label="Povolit více souborů u nového pole"> Povolit více souborů</label>
-        <label><input type="checkbox" name="new_field_start_new_row" value="1" aria-label="Začít nové pole na novém řádku"> Začít na novém řádku</label>
+        <label><input type="checkbox" name="new_field_required" value="1"> Povinné pole</label>
+        <label><input type="checkbox" name="new_field_allow_multiple" value="1"> Povolit více souborů</label>
+        <label><input type="checkbox" name="new_field_start_new_row" value="1"> Začít na novém řádku</label>
       </div>
     </fieldset>
   </fieldset>
