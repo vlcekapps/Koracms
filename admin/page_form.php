@@ -227,10 +227,10 @@ adminHeader($pageTitle);
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit stránku' ?></button>
     <a href="<?= h($redirect) ?>">Zrušit</a>
     <?php if ($publicPath !== ''): ?>
-      <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu <span aria-hidden="true">↗</span></a>
+      <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
     <?php if ($id !== null && !empty($page['preview_token'])): ?>
-      <a href="<?= h(pagePreviewPath($page)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Náhled')) ?>">Náhled</a>
+      <a href="<?= h(pagePreviewPath($page)) ?>" target="_blank" rel="noopener noreferrer">Náhled<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php elseif ($id !== null): ?>
       <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>

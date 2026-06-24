@@ -10497,6 +10497,19 @@ foreach ([
     'admin/gallery_photo_form.php',
     'admin/food.php',
     'admin/food_form.php',
+    'admin/pages.php',
+    'admin/page_form.php',
+    'admin/podcast.php',
+    'admin/podcast_form.php',
+    'admin/podcast_show_form.php',
+    'admin/podcast_shows.php',
+    'admin/polls.php',
+    'admin/polls_form.php',
+    'admin/places.php',
+    'admin/place_form.php',
+    'admin/res_bookings.php',
+    'admin/res_booking_detail.php',
+    'admin/res_resources.php',
 ] as $adminContentNewWindowRelativePath) {
     $adminContentNewWindowSource = (string)file_get_contents(dirname(__DIR__) . '/' . $adminContentNewWindowRelativePath);
     foreach (preg_split('/\R/', $adminContentNewWindowSource) ?: [] as $lineNumber => $line) {

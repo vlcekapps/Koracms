@@ -287,7 +287,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
   <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Vytvořit anketu' ?></button>
     <?php if ($id !== null && (string)$poll['slug'] !== '' && (string)($poll['state'] ?? '') !== 'scheduled'): ?>
-      <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+      <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
     <a href="<?= h($backUrl) ?>">Zrušit</a>
   </div>

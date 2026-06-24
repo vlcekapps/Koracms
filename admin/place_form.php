@@ -262,7 +262,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
     <a href="<?= h($backUrl) ?>">Zrušit</a>
     <?php if (($place['status'] ?? 'published') === 'published' && (int)($place['is_published'] ?? 1) === 1 && !empty($place['slug'])): ?>
-      <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+      <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
   </div>
 </form>

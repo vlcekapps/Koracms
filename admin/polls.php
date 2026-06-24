@@ -139,7 +139,7 @@ adminHeader('Ankety');
         <td class="actions">
           <a href="polls_form.php?id=<?= (int)$poll['id'] ?>&amp;redirect=<?= urlencode($currentListUrl) ?>" class="btn">Upravit</a>
           <?php if ($state !== 'scheduled'): ?>
-            <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <form action="polls_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

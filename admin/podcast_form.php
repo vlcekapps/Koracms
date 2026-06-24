@@ -277,7 +277,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat epizodu podcastu' ?></button>
     <a href="<?= h($backUrl) ?>">Zrušit</a>
     <?php if ($id !== null && (string)$episode['status'] === 'published' && empty($episode['is_scheduled']) && !empty($show['is_public'])): ?>
-      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+      <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
     <?php if ($id !== null): ?>
       <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_episode&id=' . (int)$episode['id']) ?>">Historie změn</a>

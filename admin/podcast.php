@@ -99,9 +99,9 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
   &nbsp;|&nbsp;
   <a href="podcast_show_form.php?id=<?= (int)$show['id'] ?>">Upravit podcast</a>
   &nbsp;|&nbsp;
-  <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+  <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
   &nbsp;|&nbsp;
-  <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed')) ?>">RSS feed</a>
+  <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed<?= newWindowLinkSrOnlySuffix() ?></a>
 </p>
 
 <p><a href="podcast_form.php?show_id=<?= (int)$showId ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">+ Přidat epizodu</a></p>
@@ -184,7 +184,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
         <td class="actions">
           <a href="podcast_form.php?id=<?= (int)$episode['id'] ?>&amp;show_id=<?= (int)$showId ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">Upravit</a>
           <?php if ((string)$episode['status'] === 'published' && empty($episode['is_scheduled']) && !empty($show['is_public'])): ?>
-            <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h((string)$episode['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ((string)$episode['status'] === 'pending' && $canApprovePodcast): ?>
             <form action="approve.php" method="post">

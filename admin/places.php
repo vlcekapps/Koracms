@@ -212,7 +212,7 @@ adminHeader('Zajímavá místa');
             <br><small class="table-meta"><?= h((string)$place['locality']) ?></small>
           <?php endif; ?>
           <?php if (!empty($place['url'])): ?>
-            <br><a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Externí web')) ?>">Externí web</a>
+            <br><a href="<?= h((string)$place['url']) ?>" target="_blank" rel="noopener noreferrer">Externí web<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
         </td>
         <td>
@@ -227,7 +227,7 @@ adminHeader('Zajímavá místa');
         <td class="actions">
           <a href="place_form.php?id=<?= (int)$place['id'] ?>&amp;redirect=<?= urlencode($currentListUrl) ?>" class="btn">Upravit</a>
           <?php if ($place['status'] === 'published' && (int)$place['is_published'] === 1): ?>
-            <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ($place['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post">

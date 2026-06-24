@@ -67,7 +67,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
       <td>
         <?= h((string)($booking['resource_name'] ?? '–')) ?>
         <?php if ($resourcePublicPath !== ''): ?>
-          <br><small><a href="<?= h($resourcePublicPath) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit zdroj na webu')) ?>">Zobrazit zdroj na webu</a></small>
+          <br><small><a href="<?= h($resourcePublicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit zdroj na webu<?= newWindowLinkSrOnlySuffix() ?></a></small>
         <?php endif; ?>
       </td>
     </tr>

@@ -163,9 +163,9 @@ adminHeader('Podcasty');
           <a href="podcast_show_form.php?id=<?= (int)$show['id'] ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">Upravit</a>
           <a href="podcast.php?show_id=<?= (int)$show['id'] ?>" class="btn">Spravovat epizody</a>
           <?php if (!empty($show['is_public'])): ?>
-            <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Zobrazit na webu')) ?>">Zobrazit na webu</a>
+            <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
-          <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('RSS feed')) ?>">RSS feed</a>
+          <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php if ((string)$show['status'] === 'pending' && $canApprovePodcast): ?>
             <form action="approve.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
