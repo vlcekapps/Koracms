@@ -10521,6 +10521,12 @@ if (!str_contains($blogListSource, "\$message === 'no_blog_access'")) {
 if (!str_contains($blogListSource, 'Tým blogu')) {
     $blogAdminIssues[] = 'blog list is missing blog team quick link';
 }
+if (!str_contains($blogsAdminSource, '<button type="button" id="blog-dialog-close" class="btn"><span aria-hidden="true">✕</span><span class="sr-only">Zavřít dialog</span></button>')) {
+    $blogAdminIssues[] = 'blog dialog close button is missing real hidden text inside the button';
+}
+if (str_contains($blogsAdminSource, 'id="blog-dialog-close" class="btn" aria-label=')) {
+    $blogAdminIssues[] = 'blog dialog close button still uses aria-label instead of hidden button text';
+}
 if (!str_contains($blogListSource, 'Přesunout do jiného blogu') || !str_contains($blogListSource, 'value="move"')) {
     $blogAdminIssues[] = 'blog list is missing bulk move action';
 }
@@ -14309,6 +14315,12 @@ foreach ([
         $widgetRenderIssues[] = 'admin widgets dialog is missing accessibility fragment: ' . $widgetAdminDialogFragment;
     }
 }
+if (!str_contains($widgetsAdminSource, '<button type="button" id="widget-dialog-close" class="btn"><span aria-hidden="true">✕</span><span class="sr-only">Zavřít dialog</span></button>')) {
+    $widgetRenderIssues[] = 'admin widgets dialog close button is missing real hidden text inside the button';
+}
+if (str_contains($widgetsAdminSource, 'id="widget-dialog-close" class="btn" aria-label=')) {
+    $widgetRenderIssues[] = 'admin widgets dialog close button still uses aria-label instead of hidden button text';
+}
 foreach ([
     'function toggleDialogField(fieldName, visible)',
     "field.hidden = !visible;",
@@ -14570,6 +14582,18 @@ if (!str_contains($blogStaticPagesAdminSource, 'blog_nav_order') || !str_contain
 if (str_contains($blogStaticPagesAdminSource, 'style=')) {
     $blogStaticPageIssues[] = 'blog page ordering admin screen still contains inline style attributes';
 }
+if (!str_contains($blogStaticPagesAdminSource, 'Nahoru<span class="sr-only"> v pořadí: <?= h((string)$item[\'title\']) ?></span>')
+    || !str_contains($blogStaticPagesAdminSource, 'Dolů<span class="sr-only"> v pořadí: <?= h((string)$item[\'title\']) ?></span>')) {
+    $blogStaticPageIssues[] = 'blog page ordering buttons are missing hidden item context inside the visible buttons';
+}
+foreach ([
+    'aria-label="Posunout <?= h((string)$item[\'title\']) ?> nahoru"',
+    'aria-label="Posunout <?= h((string)$item[\'title\']) ?> dolů"',
+] as $blogPageMoveAriaLabelFragment) {
+    if (str_contains($blogStaticPagesAdminSource, $blogPageMoveAriaLabelFragment)) {
+        $blogStaticPageIssues[] = 'blog page ordering buttons still use aria-label instead of hidden button text: ' . $blogPageMoveAriaLabelFragment;
+    }
+}
 foreach ([
     'class="admin-description"',
     'field-help field-help--flush',
@@ -14621,6 +14645,30 @@ if (!str_contains($adminMenuSource, 'id="nav-order-status"')) {
 }
 if (!str_contains($adminMenuSource, 'aria-disabled')) {
     $menuAdminIssues[] = 'admin menu does not expose aria-disabled states on move buttons';
+}
+if (!str_contains($adminMenuSource, 'Nahoru<span class="sr-only"> v pořadí: <?= h($item[\'label\']) ?></span>')
+    || !str_contains($adminMenuSource, 'Dolů<span class="sr-only"> v pořadí: <?= h($item[\'label\']) ?></span>')) {
+    $menuAdminIssues[] = 'admin menu reorder buttons are missing hidden item context inside the visible buttons';
+}
+foreach ([
+    'aria-label="Posunout <?= h($item[\'label\']) ?> nahoru"',
+    'aria-label="Posunout <?= h($item[\'label\']) ?> dolů"',
+] as $adminMenuMoveAriaLabelFragment) {
+    if (str_contains($adminMenuSource, $adminMenuMoveAriaLabelFragment)) {
+        $menuAdminIssues[] = 'admin menu reorder buttons still use aria-label instead of hidden button text: ' . $adminMenuMoveAriaLabelFragment;
+    }
+}
+if (!str_contains($settingsDisplaySource, 'Nahoru<span class="sr-only"> v pořadí: <?= h($label) ?></span>')
+    || !str_contains($settingsDisplaySource, 'Dolů<span class="sr-only"> v pořadí: <?= h($label) ?></span>')) {
+    $menuAdminIssues[] = 'settings display reorder buttons are missing hidden item context inside the visible buttons';
+}
+foreach ([
+    'aria-label="Posunout <?= h($label) ?> nahoru"',
+    'aria-label="Posunout <?= h($label) ?> dolů"',
+] as $settingsDisplayMoveAriaLabelFragment) {
+    if (str_contains($settingsDisplaySource, $settingsDisplayMoveAriaLabelFragment)) {
+        $menuAdminIssues[] = 'settings display reorder buttons still use aria-label instead of hidden button text: ' . $settingsDisplayMoveAriaLabelFragment;
+    }
 }
 if (!str_contains($adminMenuSource, '/admin/blogs.php') || !str_contains($adminMenuSource, '/admin/settings_modules.php') || !str_contains($adminMenuSource, '/admin/page_form.php?id=')) {
     $menuAdminIssues[] = 'admin menu is missing quick links for fixing disabled items';

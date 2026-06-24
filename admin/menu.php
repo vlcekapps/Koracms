@@ -340,14 +340,12 @@ adminHeader('Navigace webu');
         </div>
 
         <button type="button" class="btn nav-move-up"
-                <?= $index === 0 ? 'disabled aria-disabled="true"' : 'aria-disabled="false"' ?>
-                aria-label="Posunout <?= h($item['label']) ?> nahoru">
-          <span aria-hidden="true">↑</span> Nahoru
+                <?= $index === 0 ? 'disabled aria-disabled="true"' : 'aria-disabled="false"' ?>>
+          <span aria-hidden="true">↑</span> Nahoru<span class="sr-only"> v pořadí: <?= h($item['label']) ?></span>
         </button>
         <button type="button" class="btn nav-move-down"
-                <?= $index === $total - 1 ? 'disabled aria-disabled="true"' : 'aria-disabled="false"' ?>
-                aria-label="Posunout <?= h($item['label']) ?> dolů">
-          <span aria-hidden="true">↓</span> Dolů
+                <?= $index === $total - 1 ? 'disabled aria-disabled="true"' : 'aria-disabled="false"' ?>>
+          <span aria-hidden="true">↓</span> Dolů<span class="sr-only"> v pořadí: <?= h($item['label']) ?></span>
         </button>
         <a href="<?= h($item['manage_url']) ?>" class="btn"><?= h($item['manage_label']) ?></a>
       </li>

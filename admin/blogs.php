@@ -294,7 +294,7 @@ adminHeader('Správa blogů');
 <section id="blog-dialog" class="blog-dialog" role="dialog" aria-modal="true" aria-labelledby="blog-dialog-title" aria-describedby="blog-dialog-description" hidden>
   <div class="blog-dialog__header">
     <h2 id="blog-dialog-title" class="blog-dialog__title">Upravit blog</h2>
-    <button type="button" id="blog-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
+    <button type="button" id="blog-dialog-close" class="btn"><span aria-hidden="true">✕</span><span class="sr-only">Zavřít dialog</span></button>
   </div>
   <p id="blog-dialog-description" class="field-help blog-dialog__description">Upravte název, adresu, logo a viditelnost blogu v navigaci webu.</p>
   <form method="post" enctype="multipart/form-data" novalidate id="blog-dialog-form">

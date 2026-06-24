@@ -35,9 +35,8 @@ $total     = count($navOrder);
       <input type="hidden" name="module" value="<?= h($key) ?>">
       <input type="hidden" name="dir" value="up">
       <button type="submit" class="btn"
-              <?= $i === 0 ? 'disabled aria-disabled="true"' : '' ?>
-              aria-label="Posunout <?= h($label) ?> nahoru">
-        <span aria-hidden="true">↑</span> Nahoru
+              <?= $i === 0 ? 'disabled aria-disabled="true"' : '' ?>>
+        <span aria-hidden="true">↑</span> Nahoru<span class="sr-only"> v pořadí: <?= h($label) ?></span>
       </button>
     </form>
 
@@ -46,9 +45,8 @@ $total     = count($navOrder);
       <input type="hidden" name="module" value="<?= h($key) ?>">
       <input type="hidden" name="dir" value="down">
       <button type="submit" class="btn"
-              <?= $i === $total - 1 ? 'disabled aria-disabled="true"' : '' ?>
-              aria-label="Posunout <?= h($label) ?> dolů">
-        <span aria-hidden="true">↓</span> Dolů
+              <?= $i === $total - 1 ? 'disabled aria-disabled="true"' : '' ?>>
+        <span aria-hidden="true">↓</span> Dolů<span class="sr-only"> v pořadí: <?= h($label) ?></span>
       </button>
     </form>
   </li>

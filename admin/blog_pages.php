@@ -314,11 +314,11 @@ adminHeader('Pořadí stránek blogu');
               <?php endif; ?>
             <?php endif; ?>
           </div>
-          <button type="button" class="btn blog-page-move-up"<?= $index === 0 ? ' disabled aria-disabled="true"' : ' aria-disabled="false"' ?> aria-label="Posunout <?= h((string)$item['title']) ?> nahoru">
-            <span aria-hidden="true">↑</span> Nahoru
+          <button type="button" class="btn blog-page-move-up"<?= $index === 0 ? ' disabled aria-disabled="true"' : ' aria-disabled="false"' ?>>
+            <span aria-hidden="true">↑</span> Nahoru<span class="sr-only"> v pořadí: <?= h((string)$item['title']) ?></span>
           </button>
-          <button type="button" class="btn blog-page-move-down"<?= $index === $total - 1 ? ' disabled aria-disabled="true"' : ' aria-disabled="false"' ?> aria-label="Posunout <?= h((string)$item['title']) ?> dolů">
-            <span aria-hidden="true">↓</span> Dolů
+          <button type="button" class="btn blog-page-move-down"<?= $index === $total - 1 ? ' disabled aria-disabled="true"' : ' aria-disabled="false"' ?>>
+            <span aria-hidden="true">↓</span> Dolů<span class="sr-only"> v pořadí: <?= h((string)$item['title']) ?></span>
           </button>
           <?php if ($item['type'] === 'page'): ?>
             <a href="<?= BASE_URL ?>/admin/page_form.php?id=<?= (int)$row['id'] ?>&amp;redirect=<?= rawurlencode($returnUrl) ?>" class="btn">Upravit stránku</a>

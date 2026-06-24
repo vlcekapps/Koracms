@@ -149,7 +149,7 @@ adminHeader('Widgety');
 <section id="widget-dialog" class="widget-dialog" role="dialog" aria-modal="true" aria-labelledby="widget-dialog-title" aria-describedby="widget-dialog-description" hidden>
   <div class="widget-dialog__header">
     <h2 id="widget-dialog-title" class="widget-dialog__title">Nastavení widgetu</h2>
-    <button type="button" id="widget-dialog-close" class="btn" aria-label="Zavřít dialog">✕</button>
+    <button type="button" id="widget-dialog-close" class="btn"><span aria-hidden="true">✕</span><span class="sr-only">Zavřít dialog</span></button>
   </div>
   <p id="widget-dialog-description" class="field-help widget-dialog__description">Upravte název, zónu a další nastavení vybraného widgetu.</p>
   <form method="post" action="widget_save.php" novalidate id="widget-dialog-form">
