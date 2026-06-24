@@ -13748,6 +13748,38 @@ foreach ([
         $adminFieldErrorIssues[] = 'reservation resource fields still use aria-label instead of real labels: ' . $blockedDateAriaLabelFragment;
     }
 }
+foreach ([
+    'poll option remove button' => [
+        $pollFormValidationSource,
+        [
+            '>Odebrat<span class="sr-only"> možnost <?= $index + 1 ?></span></button>',
+            '<button type="button" class="btn btn-danger btn-remove-option" data-poll-option-remove>Odebrat<span class="sr-only"> možnost \' + (rows.length + 1) + \'</span></button>',
+        ],
+        ['aria-label="Odebrat možnost'],
+    ],
+    'reservation slot remove button' => [
+        $reservationFormSource,
+        ['data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>'],
+        ['aria-label="Odebrat slot"'],
+    ],
+    'reservation blocked day remove button' => [
+        $reservationFormSource,
+        ['data-remove-blocked>Odebrat<span class="sr-only"> blokovaný den</span></button>'],
+        ['aria-label="Odebrat blokovaný den"'],
+    ],
+] as $adminRemoveButtonLabel => $adminRemoveButtonSpec) {
+    $adminRemoveButtonSource = (string)$adminRemoveButtonSpec[0];
+    foreach ($adminRemoveButtonSpec[1] as $adminRemoveButtonRequiredFragment) {
+        if (!str_contains($adminRemoveButtonSource, (string)$adminRemoveButtonRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminRemoveButtonLabel . ' is missing hidden context inside the visible button';
+        }
+    }
+    foreach ($adminRemoveButtonSpec[2] as $adminRemoveButtonForbiddenFragment) {
+        if (str_contains($adminRemoveButtonSource, (string)$adminRemoveButtonForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminRemoveButtonLabel . ' still uses aria-label instead of hidden button text';
+        }
+    }
+}
 $adminFieldErrorForms = [
     'page form' => [$pageFormSource, "adminFieldAttributes('title'", "adminRenderFieldError('title'", "adminFieldAttributes('unpublish_at'"],
     'blog form' => [$blogFormSource, "adminFieldAttributes('title'", "adminFieldAttributes('content'", "adminFieldAttributes('publish_at'"],

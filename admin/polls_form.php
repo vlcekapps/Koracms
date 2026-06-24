@@ -227,9 +227,8 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
               <button
                 type="button"
                 class="btn btn-danger btn-remove-option"
-                aria-label="Odebrat možnost <?= $index + 1 ?>"
                 data-poll-option-remove
-              >Odebrat</button>
+              >Odebrat<span class="sr-only"> možnost <?= $index + 1 ?></span></button>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -251,9 +250,8 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
             <button
               type="button"
               class="btn btn-danger btn-remove-option"
-              aria-label="Odebrat možnost <?= $index + 1 ?>"
               data-poll-option-remove
-            >Odebrat</button>
+            >Odebrat<span class="sr-only"> možnost <?= $index + 1 ?></span></button>
           </div>
         <?php endfor; ?>
       <?php endif; ?>
@@ -380,7 +378,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
       '<input type="hidden" name="option_ids[]" value="0">' +
       '<label for="option_' + counter + '" class="sr-only">Možnost ' + (rows.length + 1) + '</label>' +
       '<input type="text" id="option_' + counter + '" name="options[]" required aria-required="true" maxlength="500" class="admin-option-row__input">' +
-      '<button type="button" class="btn btn-danger btn-remove-option" data-poll-option-remove aria-label="Odebrat možnost ' + (rows.length + 1) + '">Odebrat</button>';
+      '<button type="button" class="btn btn-danger btn-remove-option" data-poll-option-remove>Odebrat<span class="sr-only"> možnost ' + (rows.length + 1) + '</span></button>';
     counter += 1;
     list.appendChild(div);
     updateState();

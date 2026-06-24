@@ -327,8 +327,7 @@ $fieldErrorMessages = [
               <label for="slot_max_<?= $d ?>_<?= $si ?>" class="sr-only">Max. rezervací</label>
               <input type="number" id="slot_max_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][max_bookings][]" min="1" class="res-resource-input-xxs"
                      value="<?= (int)$sl['max_bookings'] ?>" title="Max. rezervací">
-              <button type="button" class="btn btn-danger btn-remove-slot"
-                      aria-label="Odebrat slot" data-remove-slot>Odebrat</button>
+              <button type="button" class="btn btn-danger btn-remove-slot" data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>
             </div>
           <?php endforeach; ?>
         <?php endif; ?>
@@ -368,8 +367,7 @@ $fieldErrorMessages = [
           <input type="date" id="<?= h($blockedDateFieldId) ?>" name="blocked_dates[]" value="<?= h($bl['blocked_date']) ?>" class="admin-input-auto">
           <label for="<?= h($blockedReasonFieldId) ?>" class="sr-only">Důvod blokování</label>
           <input type="text" id="<?= h($blockedReasonFieldId) ?>" name="blocked_reasons[]" value="<?= h($bl['reason'] ?? '') ?>" maxlength="255" class="admin-input-auto">
-          <button type="button" class="btn btn-danger"
-                  aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>
+          <button type="button" class="btn btn-danger" data-remove-blocked>Odebrat<span class="sr-only"> blokovaný den</span></button>
         </div>
       <?php endforeach; ?>
     </div>
@@ -434,7 +432,7 @@ $fieldErrorMessages = [
       '<input type="time" id="slot_end_' + day + '_' + idx + '" name="slots[' + day + '][end_time][]" class="admin-input-auto" value="10:00">' +
       '<label for="slot_max_' + day + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
       '<input type="number" id="slot_max_' + day + '_' + idx + '" name="slots[' + day + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1" title="Max. rezervací">' +
-      '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" data-remove-slot>Odebrat</button>';
+      '<button type="button" class="btn btn-danger btn-remove-slot" data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>';
     container.appendChild(div);
     div.querySelector('input[type="time"]').focus();
     if (live) live.textContent = 'Slot přidán';
@@ -517,7 +515,7 @@ $fieldErrorMessages = [
           '<input type="time" id="slot_end_' + d + '_' + idx + '" name="slots[' + d + '][end_time][]" class="admin-input-auto" value="' + generated[g].end + '">' +
           '<label for="slot_max_' + d + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
           '<input type="number" id="slot_max_' + d + '_' + idx + '" name="slots[' + d + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1" title="Max. rezervací">' +
-          '<button type="button" class="btn btn-danger btn-remove-slot" aria-label="Odebrat slot" data-remove-slot>Odebrat</button>';
+          '<button type="button" class="btn btn-danger btn-remove-slot" data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>';
         container.appendChild(div);
       }
     }
@@ -546,7 +544,7 @@ $fieldErrorMessages = [
       '<input type="date" id="' + dateFieldId + '" name="blocked_dates[]" value="' + dateVal + '" class="admin-input-auto">' +
       '<label for="' + reasonFieldId + '" class="sr-only">Důvod blokování</label>' +
       '<input type="text" id="' + reasonFieldId + '" name="blocked_reasons[]" value="' + reasonVal.replace(/"/g, '&quot;') + '" maxlength="255" class="admin-input-auto">' +
-      '<button type="button" class="btn btn-danger" aria-label="Odebrat blokovaný den" data-remove-blocked>Odebrat</button>';
+      '<button type="button" class="btn btn-danger" data-remove-blocked>Odebrat<span class="sr-only"> blokovaný den</span></button>';
     blockedList.appendChild(div);
 
     document.getElementById('block_date').value = '';
