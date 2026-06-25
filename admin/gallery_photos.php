@@ -65,6 +65,8 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
     'sort' => $sortFilter !== 'position' ? $sortFilter : null,
 ], static fn ($value): bool => $value !== null && $value !== ''));
+$reorderDisabled = $sortFilter !== 'position';
+$reorderDisabledReason = 'Rychlé přesuny fungují při řazení podle pořadí.';
 ?>
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na seznam alb</a></p>
@@ -159,7 +161,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
               <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
               <input type="hidden" name="direction" value="up">
               <input type="hidden" name="redirect" value="<?= h($currentUrl) ?>">
-              <button type="submit" class="btn"<?= $sortFilter !== 'position' ? ' disabled aria-disabled="true" title="Rychlé přesuny fungují při řazení podle pořadí."' : '' ?>>Nahoru</button>
+              <button type="submit" class="btn"<?= $reorderDisabled ? ' disabled aria-disabled="true"' : '' ?>>Nahoru<?php if ($reorderDisabled): ?><span class="sr-only"> – <?= h($reorderDisabledReason) ?></span><?php endif; ?></button>
             </form>
             <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_reorder.php">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -167,7 +169,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
               <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
               <input type="hidden" name="direction" value="down">
               <input type="hidden" name="redirect" value="<?= h($currentUrl) ?>">
-              <button type="submit" class="btn"<?= $sortFilter !== 'position' ? ' disabled aria-disabled="true" title="Rychlé přesuny fungují při řazení podle pořadí."' : '' ?>>Dolů</button>
+              <button type="submit" class="btn"<?= $reorderDisabled ? ' disabled aria-disabled="true"' : '' ?>>Dolů<?php if ($reorderDisabled): ?><span class="sr-only"> – <?= h($reorderDisabledReason) ?></span><?php endif; ?></button>
             </form>
             <?php if (($photo['status'] ?? 'published') === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
               <form action="<?= BASE_URL ?>/admin/approve.php" method="post">

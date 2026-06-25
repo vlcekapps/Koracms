@@ -13331,6 +13331,8 @@ foreach ([
             'class="admin-search-input"',
             'class="admin-thumb"',
             'class="table-meta"',
+            '$reorderDisabledReason = \'Rychlé přesuny fungují při řazení podle pořadí.\';',
+            '<span class="sr-only"> – <?= h($reorderDisabledReason) ?></span>',
         ],
     ],
     'gallery photo form' => [
@@ -13630,6 +13632,10 @@ foreach ([
             $adminFieldErrorIssues[] = 'admin ' . $adminInboxLabel . ' is missing utility class fragment: ' . $adminInboxUtilityFragment;
         }
     }
+}
+
+if (str_contains($galleryPhotosOverviewSource, 'title="Rychlé přesuny fungují při řazení podle pořadí."')) {
+    $adminFieldErrorIssues[] = 'admin gallery photo reorder buttons still use title instead of hidden button text';
 }
 if (str_contains($formSubmissionDetailSource, '<style') || str_contains($formSubmissionDetailSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin form submission detail still contains local style blocks or inline style attributes';
