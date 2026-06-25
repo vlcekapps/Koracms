@@ -397,6 +397,9 @@ try {
     if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
         $healthIssues[] = 'health.php neposlal no-store cache hlavičky';
     }
+    if (!httpIntegrationHeaderContains($healthResponse, 'X-Content-Type-Options', 'nosniff')) {
+        $healthIssues[] = 'health.php neposlal X-Content-Type-Options: nosniff';
+    }
     $healthPostResponse = postRawUrl($baseUrl . BASE_URL . '/health.php', '{}', 'application/json', '', 0);
     $healthAllowHeaderFound = false;
     foreach ($healthPostResponse['headers'] as $healthPostHeader) {
@@ -777,6 +780,7 @@ try {
     $cspReportGetResponse = fetchUrl($baseUrl . BASE_URL . '/csp-report.php', '', 0);
     $cspReportAllowHeaderFound = false;
     $cspReportCacheHeader = '';
+    $cspReportNosniffFound = false;
     foreach ($cspReportGetResponse['headers'] as $cspReportGetHeader) {
         if (stripos($cspReportGetHeader, 'Allow:') === 0 && str_contains($cspReportGetHeader, 'POST')) {
             $cspReportAllowHeaderFound = true;
@@ -784,12 +788,18 @@ try {
         if (stripos($cspReportGetHeader, 'Cache-Control:') === 0) {
             $cspReportCacheHeader .= ' ' . $cspReportGetHeader;
         }
+        if (stripos($cspReportGetHeader, 'X-Content-Type-Options:') === 0 && str_contains(strtolower($cspReportGetHeader), 'nosniff')) {
+            $cspReportNosniffFound = true;
+        }
     }
     if (httpIntegrationStatusCode($cspReportGetResponse) !== 405 || !$cspReportAllowHeaderFound || !str_contains($cspReportGetResponse['body'], 'request_id')) {
         $cspReportIssues[] = 'CSP report endpoint nepovolil jen POST a neposlal dohledatelnou JSON odpověď';
     }
     if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
         $cspReportIssues[] = 'CSP report endpoint neposlal no-store cache hlavičky';
+    }
+    if (!$cspReportNosniffFound) {
+        $cspReportIssues[] = 'CSP report endpoint neposlal X-Content-Type-Options: nosniff';
     }
     $cspReportRateLimitIds = [];
     foreach (['127.0.0.1', '::1', 'unknown'] as $cspReportIp) {

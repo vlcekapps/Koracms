@@ -529,6 +529,8 @@ V administraci: **Obecná nastavení → Provoz webu**. Zapne stránku údržby 
 
 ### Health check
 
+JSON provozní endpointy pro monitoring a CSP reporty posílají vedle `Content-Type: application/json` také `X-Content-Type-Options: nosniff`, aby prohlížeč ani mezilehlá vrstva nehádaly jiný typ obsahu.
+
 Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
 
 - databázové připojení

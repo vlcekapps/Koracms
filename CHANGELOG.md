@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Nosniff hlavička pro JSON provozní endpointy** – `health.php` a `csp-report.php` nově posílají explicitní `X-Content-Type-Options: nosniff`; HTTP integrace i runtime audit hlídají reálné odpovědi, aby monitoring a CSP reporty zůstaly striktně deklarované jako JSON.
 - **Self-test HTTP test routeru** – `composer ci:basic` nově spouští izolovaný self-test `build/http_server_router_selftest.php`, který nad dočasnou mini-instalací ověřuje clean URL routování, statické soubory, blokované chráněné cesty, query parametry a 404 fallback vestavěného PHP serveru.
 - **Self-test HTTP test helperů** – `composer ci:basic` nově spouští izolovaný self-test `build/http_test_helpers_selftest.php`, který přes dočasný PHP server ověřuje GET/POST/raw/multipart požadavky, redirecty, cookies, hidden input parser a refresh testovací CSRF session.
 - **Self-test PHPStan bootstrapu** – `composer ci:basic` nově spouští izolovaný self-test `build/phpstan_bootstrap_selftest.php`, který ověřuje bezpečné konstanty a helpery pro statickou analýzu bez načítání databáze, autentizace, session nebo runtime konfigurace.

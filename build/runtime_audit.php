@@ -8427,6 +8427,7 @@ $foundationChecks = [
         && str_contains($unitTestsSource, "seoCanonicalUrl('https://user:pass@example.com/clanek')")
         && str_contains($unitTestsSource, "https://example.com/clanek\\nSet-Cookie: evil=1"),
     'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
+        && str_contains($healthSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($healthSource, "header('Cache-Control: no-store, max-age=0')")
         && str_contains($healthSource, "header('Pragma: no-cache')")
         && str_contains($healthSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
@@ -8442,6 +8443,7 @@ $foundationChecks = [
     'health endpoint reports latest backup timestamp' => str_contains($healthSource, "'last_backup' => date(DATE_ATOM, \$latestBackupTimestamp)")
         && str_contains($healthSource, "'backup' => ['status' => 'unknown']"),
     'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, "header('Cache-Control: no-store, max-age=0')")
+        && str_contains($cspReportSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($cspReportSource, "header('Pragma: no-cache')")
         && str_contains($cspReportSource, 'function cspReportJsonResponse')
         && str_contains($cspReportSource, "'request_id' => koraRequestId()")
@@ -8747,6 +8749,9 @@ if (!str_contains($healthProbe['status'], '200')) {
     if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
         $foundationIssues[] = 'health.php did not send no-store monitoring cache headers';
     }
+    if (!runtimeAuditHeaderContains($healthProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
+        $foundationIssues[] = 'health.php did not send X-Content-Type-Options: nosniff';
+    }
     $healthPostProbe = postRawUrl($baseUrl . '/health.php', '{}', 'application/json', '', 0);
     $healthAllowHeaderFound = false;
     foreach ($healthPostProbe['headers'] as $healthPostHeader) {
@@ -8850,6 +8855,9 @@ if (!str_contains($cspReportGetProbe['status'], '405') || !$cspReportAllowHeader
 }
 if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
     $foundationIssues[] = 'csp-report.php did not send no-store cache headers';
+}
+if (!runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
+    $foundationIssues[] = 'csp-report.php did not send X-Content-Type-Options: nosniff';
 }
 
 if ($foundationIssues === []) {
