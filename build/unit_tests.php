@@ -255,6 +255,8 @@ assert_false(
     rateLimitKey('login', '127.0.0.1') === rateLimitKey('login_email', 'subject:admin@example.test'),
     'IP and subject rate-limit keys do not collide'
 );
+assert_equals(300, rateLimitRetryAfter(300), 'rate-limit Retry-After keeps the configured window');
+assert_equals(1, rateLimitRetryAfter(0), 'rate-limit Retry-After never drops below one second');
 
 // ─── 5. Request ID and structured logs ──────────────────────────────────────
 

@@ -601,6 +601,38 @@ try {
     }
     httpIntegrationPrintResult('sensitive_get_endpoints_cache_http', $sensitiveGetCacheIssues, $failures);
 
+    $defaultRateLimitIssues = [];
+    $originalContactModule = httpIntegrationSettingValue($pdo, 'module_contact');
+    saveSetting('module_contact', '1');
+    clearSettingsCache();
+    httpIntegrationClearLocalRateLimits($pdo, ['contact']);
+    $defaultRateLimitResponse = ['status' => '', 'headers' => [], 'body' => ''];
+    for ($rateLimitAttempt = 0; $rateLimitAttempt < 4; $rateLimitAttempt++) {
+        $defaultRateLimitResponse = postRawUrl(
+            $baseUrl . BASE_URL . '/contact/',
+            'from=rate-limit@example.test&subject=Rate&message=Limit',
+            'application/x-www-form-urlencoded',
+            '',
+            0
+        );
+    }
+    if (httpIntegrationStatusCode($defaultRateLimitResponse) !== 429) {
+        $defaultRateLimitIssues[] = 'výchozí rate-limit odpověď nevrátila 429';
+    }
+    if (
+        !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Retry-After', '120')
+        || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Content-Type', 'text/html; charset=UTF-8')
+    ) {
+        $defaultRateLimitIssues[] = 'výchozí rate-limit odpověď neposlala Retry-After/no-store/noindex/no-referrer/html hlavičky';
+    }
+    httpIntegrationClearLocalRateLimits($pdo, ['contact']);
+    saveSetting('module_contact', $originalContactModule);
+    clearSettingsCache();
+    httpIntegrationPrintResult('default_rate_limit_http', $defaultRateLimitIssues, $failures);
+
     $fileEndpointIssues = [];
     $fileEndpointMethodUrls = [
         '/media/file.php?id=0' => 'media/file.php',

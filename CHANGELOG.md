@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Bezpečnější výchozí rate-limit odpověď** – překročený výchozí `rateLimit()` nově vrací `Retry-After`, explicitní HTML typ a necacheovací/noindex/no-referrer hlavičky; HTTP integrace ověřuje skutečnou 429 odpověď a Apache už základní `Referrer-Policy` nepřepisuje přísnější PHP hlavičku.
 - **Přísnější hlavičky provozních JSON endpointů** – `health.php` a `csp-report.php` nově vedle `no-store` a `nosniff` posílají také kompletní `X-Robots-Tag: noindex, nofollow, noarchive` a `Referrer-Policy: no-referrer`; Apache, HTTP integrace i runtime audit hlídají, aby monitoring a CSP reporty nebyly cacheované, indexované ani neposílaly referrer.
 - **Necacheovaný submit newsletter widgetu** – `newsletter_widget_subscribe.php` nově posílá `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow, noarchive` a `Referrer-Policy: no-referrer`, aby se PRG redirect s flash hláškou neukládal v cache a neposílal návratovou URL jako referrer.
 - **Dohledatelnější media picker JSON odpovědi** – `admin/content_reference_search.php` nově přidává `request_id` do krátkých i výsledkových odpovědí, takže hledání obsahu pro media picker lze spárovat s technickým logem bez změny výsledků nebo vložitelných akcí.

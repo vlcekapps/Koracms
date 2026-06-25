@@ -937,6 +937,11 @@ function rateLimitKey(string $action, string $identifier): string
     return hash('sha256', $identifier . '|' . $action);
 }
 
+function rateLimitRetryAfter(int $window): int
+{
+    return max(1, $window);
+}
+
 /**
  * @param null|callable():void $onExceeded
  */
@@ -969,6 +974,9 @@ function rateLimitApply(string $key, int $max, int $window, ?callable $onExceede
                 exit;
             }
 
+            sendNoStoreNoIndexHeaders();
+            header('Content-Type: text/html; charset=UTF-8');
+            header('Retry-After: ' . rateLimitRetryAfter($window));
             http_response_code(429);
             echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>429</title></head>'
                . '<body><p>Příliš mnoho pokusů. Zkuste to prosím za chvíli.</p></body></html>';

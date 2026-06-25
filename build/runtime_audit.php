@@ -8380,6 +8380,7 @@ $foundationChecks = [
         && str_contains($authSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
+        && str_contains($htaccessSource, 'Header always setifempty Referrer-Policy "same-origin"')
         && str_contains($htaccessSource, 'csp-report')
         && str_contains($htaccessSource, 'health')
         && str_contains($htaccessSource, 'newsletter_widget_subscribe')
@@ -9209,11 +9210,15 @@ echo "=== auth_rate_limit_guardrails ===\n";
 $authRateLimitIssues = [];
 foreach ([
     'function rateLimitKey(string $action, string $identifier): string',
+    'function rateLimitRetryAfter(int $window): int',
     'function rateLimitApply(string $key, int $max, int $window, ?callable $onExceeded = null): void',
     'function rateLimit(string $action, int $max = 10, int $window = 60, ?callable $onExceeded = null): void',
     'function rateLimitSubject(string $action, string $subject, int $max = 10, int $window = 60, ?callable $onExceeded = null): void',
     "rateLimitKey(\$action, \$ip)",
     "rateLimitKey(\$action, 'subject:' . \$normalizedSubject)",
+    "sendNoStoreNoIndexHeaders();",
+    "header('Content-Type: text/html; charset=UTF-8')",
+    "header('Retry-After: ' . rateLimitRetryAfter(\$window))",
     '$onExceeded();',
 ] as $authRateLimitFragment) {
     if (!str_contains($adminAuthSource, $authRateLimitFragment)) {
@@ -9233,6 +9238,9 @@ foreach ([
 }
 if (!str_contains($cspReportSource, "rateLimit('csp_report', 120, 60") || !str_contains($cspReportSource, 'function cspReportRateLimitExceeded')) {
     $authRateLimitIssues[] = 'csp-report.php is missing dedicated JSON rate limiting';
+}
+if ($adminHttpIntegrationSource === '' || !str_contains($adminHttpIntegrationSource, "httpIntegrationPrintResult('default_rate_limit_http'")) {
+    $authRateLimitIssues[] = 'build/http_integration.php is missing default rate-limit response coverage';
 }
 if ($authRateLimitIssues === []) {
     echo "OK\n";
