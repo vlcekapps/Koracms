@@ -247,6 +247,13 @@ assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook U
 assert_equals('', normalizeFormWebhookUrl('https://user:pass@example.com/hook'), 'webhook URL rejects credentials');
 assert_equals('', normalizeFormWebhookUrl('https://localhost/hook'), 'webhook URL rejects localhost host');
 
+test_section('normalizeHttpMethods()');
+
+assert_equals(['GET', 'POST'], normalizeHttpMethods(['get', ' POST ', 'GET']), 'method normalizer trims, uppercases and deduplicates');
+assert_equals(['PATCH'], normalizeHttpMethods(['', 'get-post', '123', ' PATCH ']), 'method normalizer ignores invalid tokens');
+assert_equals(['GET'], normalizeHttpMethods([]), 'method normalizer falls back to GET');
+assert_equals(['HEAD', 'OPTIONS'], normalizeHttpMethods(['head', 'options']), 'method normalizer keeps uncommon valid methods');
+
 test_section('rateLimitKey()');
 
 assert_equals(hash('sha256', '127.0.0.1|login'), rateLimitKey('login', '127.0.0.1'), 'IP rate-limit key format preserved');

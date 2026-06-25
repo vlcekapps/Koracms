@@ -44,16 +44,7 @@ function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): vo
 
 function requireReadOnlyHttpMethod(): bool
 {
-    $requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-    if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
-        sendNoStoreNoIndexHeaders();
-        header('Content-Type: text/plain; charset=UTF-8');
-        header('X-Content-Type-Options: nosniff');
-        header('Allow: GET, HEAD');
-        http_response_code(405);
-        echo "Method not allowed\n";
-        exit;
-    }
+    $requestMethod = requireHttpMethods(['GET', 'HEAD']);
 
     return $requestMethod === 'HEAD';
 }

@@ -8431,6 +8431,7 @@ $foundationChecks = [
         && str_contains($eventIcsSource, "if (\$isHeadRequest)")
         && str_contains($eventIcsSource, "header('X-Content-Type-Options: nosniff')"),
     'state-changing GET endpoints reject unsupported methods' => str_contains($authSource, 'function requireHttpMethods(array $allowedMethods): string')
+        && str_contains($authSource, 'function normalizeHttpMethods(array $allowedMethods): array')
         && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($authSource, "header('Content-Type: text/plain; charset=UTF-8')")
         && str_contains($authSource, "header('X-Content-Type-Options: nosniff')")
@@ -8480,11 +8481,9 @@ $foundationChecks = [
         && str_contains($publicLogoutSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($adminLogoutSource, 'sendNoStoreNoIndexHeaders();'),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
-        && str_contains($fileDownloadHelperSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($fileDownloadHelperSource, 'sendNoStoreNoIndexHeaders();')
-        && str_contains($fileDownloadHelperSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')")
-        && str_contains($fileDownloadHelperSource, "if ((\$_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD')"),
+        && str_contains($fileDownloadHelperSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD']);")
+        && str_contains($fileDownloadHelperSource, "return \$requestMethod === 'HEAD';")
+        && !str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')"),
     'public file endpoints enforce HTTP methods' => str_contains($readOnlyMediaFileSource, 'requireReadOnlyHttpMethod();')
         && str_contains($readOnlyMediaPreviewSource, 'requireReadOnlyHttpMethod();')
         && str_contains($readOnlyMediaThumbSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
