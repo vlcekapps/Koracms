@@ -5476,6 +5476,7 @@ foreach ($pages as $page) {
             'Jak rezervace fungují',
             'id="reservation-calendar-nav-heading"',
             'aria-labelledby="reservation-calendar-nav-heading"',
+            '<span class="sr-only">',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'reservations resource page is missing fragment: ' . $expectedFragment;
@@ -5483,6 +5484,9 @@ foreach ($pages as $page) {
         }
         if (str_contains($result['body'], 'class="calendar-nav" aria-label="Navigace v kalendáři"')) {
             $issues[] = 'reservations resource still uses aria-label-only calendar navigation';
+        }
+        if (preg_match('/<a\b(?=[^>]*reservations\/book\.php)[^>]*\baria-label=/s', $result['body']) === 1) {
+            $issues[] = 'reservations resource still uses aria-label-only available day links';
         }
     }
 
@@ -15131,8 +15135,8 @@ $themeHeadingBackedGroups = [
     ],
     'reservation calendar table' => [
         'source' => $themeReservationsResourceViewSource,
-        'required' => ['class="calendar-table" aria-labelledby="reservation-calendar-caption"', '<caption id="reservation-calendar-caption" class="sr-only">Kalendář rezervací na'],
-        'forbidden' => ['class="calendar-table" aria-label="Kalendář rezervací na'],
+        'required' => ['class="calendar-table" aria-labelledby="reservation-calendar-caption"', '<caption id="reservation-calendar-caption" class="sr-only">Kalendář rezervací na', '<span class="sr-only"><?= h($cell[\'aria_label\']) ?></span>'],
+        'forbidden' => ['class="calendar-table" aria-label="Kalendář rezervací na', 'aria-label="<?= h($cell[\'aria_label\']) ?>"'],
     ],
 ];
 foreach ($themeHeadingBackedGroups as $themeGroupLabel => $themeGroupGuardrail) {

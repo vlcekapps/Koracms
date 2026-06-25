@@ -131,9 +131,10 @@
                   <td class="calendar-day calendar-day--empty"></td>
                 <?php elseif ($cell['status'] === 'available'): ?>
                   <td class="calendar-day calendar-day--available">
-                    <a href="<?= h($cell['url']) ?>" aria-label="<?= h($cell['aria_label']) ?>">
-                      <span class="calendar-day__number"><?= $cell['day'] ?></span>
-                      <span class="calendar-day__note"><?= h($cell['note']) ?></span>
+                    <a href="<?= h($cell['url']) ?>">
+                      <span class="calendar-day__number" aria-hidden="true"><?= $cell['day'] ?></span>
+                      <span class="calendar-day__note" aria-hidden="true"><?= h($cell['note']) ?></span>
+                      <span class="sr-only"><?= h($cell['aria_label']) ?></span>
                     </a>
                   </td>
                 <?php else: ?>

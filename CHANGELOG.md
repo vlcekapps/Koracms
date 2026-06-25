@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost rezervačního kalendáře** – dostupné dny ve veřejném rezervačním kalendáři už nemají název odkazu uložený jen v `aria-label`; plný text data a dostupnosti je skrytý text přímo uvnitř odkazu a runtime audit hlídá návrat starého vzoru.
 - **Přístupnost grafů v administraci** – dashboard i podrobné statistiky už u grafových `<progress>` prvků nepoužívají samostatný `aria-label`; hodnoty jsou pojmenované přes `aria-labelledby` navázané na skutečný text dne/měsíce a hodnoty, včetně skrytého kontextu tam, kde je viditelně jen číslo.
 - **Přístupnost odkazu loga v hlavičce** – logo webu v default šabloně už nepoužívá samostatný `aria-label`; název webu je skrytý text přímo uvnitř odkazu a runtime audit hlídá návrat starého vzoru.
 - **Přístupnost dynamických administračních tlačítek** – content/media picker, dynamické volby anket a fallback šipky pro řazení už u ovládacích tlačítek nevytvářejí samostatný `aria-label`; kontext akce je skrytý text přímo uvnitř tlačítka a runtime audit tento vzor hlídá.
