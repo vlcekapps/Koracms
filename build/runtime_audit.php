@@ -8352,6 +8352,29 @@ $foundationChecks = [
         && str_contains($publicLogoutSource, "header('Allow: GET')")
         && str_contains($adminLogoutSource, "\$requestMethod !== 'GET'")
         && str_contains($adminLogoutSource, "header('Allow: GET')"),
+    'sensitive token and logout endpoints send no-store noindex headers' => str_contains($authSource, 'function sendNoStoreNoIndexHeaders')
+        && str_contains($authSource, 'function isSensitiveNoStoreNoIndexRequestPath')
+        && str_contains($authSource, '_KORA_FORCE_NO_STORE_NO_INDEX')
+        && str_contains($authSource, 'KORA_FORCE_NO_STORE_NO_INDEX')
+        && str_contains($authSource, "BASE_URL . '/confirm_email.php'")
+        && str_contains($authSource, "BASE_URL . '/reset_password.php'")
+        && str_contains($authSource, "BASE_URL . '/admin/logout.php'")
+        && str_contains($authSource, 'function sendAdminNoStoreHeaders')
+        && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($authSource, "header('Cache-Control: no-store, max-age=0')")
+        && str_contains($authSource, "header('Pragma: no-cache')")
+        && str_contains($authSource, "header('Expires: 0')")
+        && str_contains($authSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
+        && str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
+        && str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
+        && str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
+        && str_contains($htaccessSource, 'Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX')
+        && str_contains($confirmEmailSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($subscribeConfirmSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($unsubscribeSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($passwordResetSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($publicLogoutSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($adminLogoutSource, 'sendNoStoreNoIndexHeaders();'),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
         && str_contains($fileDownloadHelperSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')")
@@ -8744,6 +8767,39 @@ foreach ([
     if (!str_contains($stateChangingGetProbe['status'], '405') || !$stateChangingGetAllowHeaderFound || $stateChangingGetAllowsHead) {
         $foundationIssues[] = $stateChangingGetLabel . ' did not reject unsupported state-changing methods with Allow: GET';
     }
+}
+
+foreach ([
+    '/confirm_email.php?token=cache-guard' => 'confirm_email.php',
+    '/subscribe_confirm.php?token=cache-guard' => 'subscribe_confirm.php',
+    '/unsubscribe.php?token=cache-guard' => 'unsubscribe.php',
+    '/reset_password.php?token=cache-guard' => 'reset_password.php',
+    '/public_logout.php' => 'public_logout.php',
+    '/admin/logout.php' => 'admin/logout.php',
+] as $sensitiveGetUrl => $sensitiveGetLabel) {
+    $sensitiveGetProbe = fetchUrl($baseUrl . $sensitiveGetUrl, '', 0);
+    if (
+        !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'Cache-Control', 'no-store')
+        || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'Cache-Control', 'max-age=0')
+        || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'X-Robots-Tag', 'noindex')
+        || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'X-Robots-Tag', 'nofollow')
+        || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'X-Robots-Tag', 'noarchive')
+    ) {
+        $foundationIssues[] = $sensitiveGetLabel . ' did not send no-store/noindex headers';
+    }
+}
+
+$socialTokenProbe = fetchUrl(
+    $baseUrl . '/confirm_email.php?token=cache-guard-social',
+    '',
+    0,
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+);
+if (
+    !runtimeAuditHeaderContains($socialTokenProbe['headers'], 'Cache-Control', 'no-store')
+    || !runtimeAuditHeaderContains($socialTokenProbe['headers'], 'X-Robots-Tag', 'noindex')
+) {
+    $foundationIssues[] = 'social preview crawler could override token no-store/noindex headers';
 }
 
 $cspReportGetProbe = fetchUrl($baseUrl . '/csp-report.php', '', 0);
@@ -11267,8 +11323,12 @@ if (
     || !str_contains($htaccessSource, 'Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header always unset Pragma env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header always unset Expires env=KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
+    || !str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
+    || !str_contains($htaccessSource, 'Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX')
 ) {
-    $blogPublicIssues[] = '.htaccess is missing Apache-level social crawler cache override';
+    $blogPublicIssues[] = '.htaccess is missing Apache-level social crawler cache override or sensitive URL exception';
 }
 foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
     if (!str_contains($uiSource, $socialMetaFragment)) {

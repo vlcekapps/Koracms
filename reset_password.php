@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
+sendNoStoreNoIndexHeaders();
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $token    = trim($_GET['token'] ?? $_POST['token'] ?? '');

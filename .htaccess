@@ -33,6 +33,8 @@ Options -Indexes
 <IfModule mod_setenvif.c>
     SetEnvIfNoCase Request_URI "(^|/)media/preview\.php$" KORA_MEDIA_PREVIEW=1
     SetEnvIfNoCase User-Agent "(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|pinterest|vkshare|skypeuripreview|embedly|quora link preview|outbrain|applebot)" KORA_SOCIAL_CRAWLER=1
+    SetEnvIfNoCase Request_URI "(^|/)(confirm_email|subscribe_confirm|unsubscribe|reset_password|public_logout)\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
+    SetEnvIfNoCase Request_URI "(^|/)admin/logout\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
 </IfModule>
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
@@ -50,6 +52,10 @@ Options -Indexes
     Header always unset Pragma env=KORA_SOCIAL_CRAWLER
     Header unset Expires env=KORA_SOCIAL_CRAWLER
     Header always unset Expires env=KORA_SOCIAL_CRAWLER
+    Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX
+    Header always set Pragma "no-cache" env=KORA_NO_STORE_NO_INDEX
+    Header always set Expires "0" env=KORA_NO_STORE_NO_INDEX
+    Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX
 </IfModule>
 
 <IfModule mod_rewrite.c>

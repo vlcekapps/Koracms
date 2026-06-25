@@ -94,6 +94,13 @@ if ($isSocialPreviewCrawler && session_status() === PHP_SESSION_NONE) {
 
 function sendSocialPreviewCacheHeaders(): void
 {
+    if (
+        (defined('KORA_FORCE_NO_STORE_NO_INDEX') && KORA_FORCE_NO_STORE_NO_INDEX === true)
+        || isSensitiveNoStoreNoIndexRequestPath()
+    ) {
+        return;
+    }
+
     if (headers_sent()) {
         return;
     }
@@ -103,6 +110,23 @@ function sendSocialPreviewCacheHeaders(): void
     header_remove('Pragma');
     header_remove('Expires');
     header('Cache-Control: public, max-age=300, s-maxage=300', true);
+}
+
+function isSensitiveNoStoreNoIndexRequestPath(?string $requestUri = null): bool
+{
+    $requestPath = (string)(parse_url($requestUri ?? (string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?? '');
+    if ($requestPath === '') {
+        return false;
+    }
+
+    return in_array($requestPath, [
+        BASE_URL . '/confirm_email.php',
+        BASE_URL . '/subscribe_confirm.php',
+        BASE_URL . '/unsubscribe.php',
+        BASE_URL . '/reset_password.php',
+        BASE_URL . '/public_logout.php',
+        BASE_URL . '/admin/logout.php',
+    ], true);
 }
 
 function isAdminRequestPath(?string $requestUri = null): bool
@@ -116,8 +140,13 @@ function isAdminRequestPath(?string $requestUri = null): bool
         || $requestPath === BASE_URL . '/migrate.php';
 }
 
-function sendAdminNoStoreHeaders(): void
+function sendNoStoreNoIndexHeaders(): void
 {
+    $GLOBALS['_KORA_FORCE_NO_STORE_NO_INDEX'] = true;
+    if (!defined('KORA_FORCE_NO_STORE_NO_INDEX')) {
+        define('KORA_FORCE_NO_STORE_NO_INDEX', true);
+    }
+
     if (headers_sent()) {
         return;
     }
@@ -126,6 +155,11 @@ function sendAdminNoStoreHeaders(): void
     header('Pragma: no-cache');
     header('Expires: 0');
     header('X-Robots-Tag: noindex, nofollow, noarchive');
+}
+
+function sendAdminNoStoreHeaders(): void
+{
+    sendNoStoreNoIndexHeaders();
 }
 
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {

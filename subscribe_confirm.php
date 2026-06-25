@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
+sendNoStoreNoIndexHeaders();
 
 $requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if ($requestMethod !== 'GET') {

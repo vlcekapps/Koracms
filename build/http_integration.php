@@ -536,6 +536,41 @@ try {
     }
     httpIntegrationPrintResult('state_changing_get_endpoints_http', $stateChangingGetEndpointIssues, $failures);
 
+    $sensitiveGetCacheIssues = [];
+    $sensitiveGetCacheUrls = [
+        '/confirm_email.php?token=cache-guard' => 'confirm_email.php',
+        '/subscribe_confirm.php?token=cache-guard' => 'subscribe_confirm.php',
+        '/unsubscribe.php?token=cache-guard' => 'unsubscribe.php',
+        '/reset_password.php?token=cache-guard' => 'reset_password.php',
+        '/public_logout.php' => 'public_logout.php',
+        '/admin/logout.php' => 'admin/logout.php',
+    ];
+    foreach ($sensitiveGetCacheUrls as $sensitiveGetCacheUrl => $sensitiveGetCacheLabel) {
+        $sensitiveGetCacheResponse = fetchUrl($baseUrl . BASE_URL . $sensitiveGetCacheUrl, '', 0);
+        if (
+            !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'Cache-Control', 'no-store')
+            || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'Cache-Control', 'max-age=0')
+            || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'X-Robots-Tag', 'noindex')
+            || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'X-Robots-Tag', 'nofollow')
+            || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'X-Robots-Tag', 'noarchive')
+        ) {
+            $sensitiveGetCacheIssues[] = $sensitiveGetCacheLabel . ' neposlal no-store/noindex hlavičky';
+        }
+    }
+    $socialTokenCacheResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/confirm_email.php?token=cache-guard-social',
+        '',
+        0,
+        'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+    );
+    if (
+        !httpIntegrationHeaderContains($socialTokenCacheResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($socialTokenCacheResponse, 'X-Robots-Tag', 'noindex')
+    ) {
+        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex hlavičky potvrzovacího tokenu';
+    }
+    httpIntegrationPrintResult('sensitive_get_endpoints_cache_http', $sensitiveGetCacheIssues, $failures);
+
     $fileEndpointIssues = [];
     $fileEndpointMethodUrls = [
         '/media/file.php?id=0' => 'media/file.php',
