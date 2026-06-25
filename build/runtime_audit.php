@@ -15070,6 +15070,7 @@ $themeBlogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/theme
 $themeBlogArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-article.php');
 $themeBoardArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-article.php');
 $themeChatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat.php');
+$themeContactViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/contact.php');
 $themeFoodIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-index.php');
 $themeDownloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
 $themeDownloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
@@ -15200,6 +15201,10 @@ foreach ([
         || !str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['text'])) {
         $themeLayoutIssues[] = 'newsletter subscribe ' . $newsletterSubscribeStatusLabel . ' message is missing text-backed status semantics';
     }
+}
+if (!str_contains($themeContactViewSource, 'role="status" aria-atomic="true" aria-labelledby="contact-success-message"')
+    || !str_contains($themeContactViewSource, '<p id="contact-success-message">Zpráva byla odeslána. Děkujeme!</p>')) {
+    $themeLayoutIssues[] = 'contact success message is missing text-backed status semantics';
 }
 foreach ([
     'register resent' => [

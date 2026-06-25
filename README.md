@@ -457,7 +457,7 @@ Stejný vzor používají i vybrané skupinové prvky mimo navigaci: jídelní t
 
 Stabilizované administrační odkazy otevírané v novém okně nepřepisují viditelný název přes `aria-label`; informaci o novém okně vkládají jako skrytý text přímo do odkazu, aby čtečky obrazovky i vizuální rozhraní pracovaly se stejným názvem.
 
-Živý náhled šablony a veřejný rezervační kalendář také používají skutečný textový název: preview banner je napojený na vlastní text v banneru a kalendářová tabulka má skrytý `<caption>`. Stavová potvrzení ve veřejné autentizační, účtové a newsletterové části, například po registraci, obnově hesla, uložení profilu, přihlášení k odběru nebo zrušení rezervace, používají `role="status"` s vlastním textovým uzlem přes `aria-labelledby`.
+Živý náhled šablony a veřejný rezervační kalendář také používají skutečný textový název: preview banner je napojený na vlastní text v banneru a kalendářová tabulka má skrytý `<caption>`. Stavová potvrzení ve veřejné autentizační, účtové, newsletterové a kontaktní části, například po registraci, obnově hesla, uložení profilu, přihlášení k odběru, odeslání zprávy nebo zrušení rezervace, používají `role="status"` s vlastním textovým uzlem přes `aria-labelledby`.
 
 Content/media picker v administraci načítá sdílený statický stylesheet `admin/assets/content-reference-picker.css` pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního i generovaného `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.
 

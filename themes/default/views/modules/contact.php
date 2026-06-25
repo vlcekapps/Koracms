@@ -5,8 +5,8 @@
     <p class="section-subtitle">Pošlete nám zprávu, dotaz nebo zpětnou vazbu. Ozveme se vám na uvedený e-mail.</p>
 
     <?php if ($success): ?>
-      <div class="status-message status-message--success" role="status">
-        <p>Zpráva byla odeslána. Děkujeme!</p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="contact-success-message">
+        <p id="contact-success-message">Zpráva byla odeslána. Děkujeme!</p>
       </div>
     <?php else: ?>
       <?php if (!empty($errors)): ?>
