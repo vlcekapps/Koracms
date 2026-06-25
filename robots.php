@@ -3,14 +3,7 @@
 require_once __DIR__ . '/db.php';
 
 $isHeadRequest = requireReadOnlyHttpMethod();
-
-header('Content-Type: text/plain; charset=UTF-8');
-sendNoSniffHeader();
-header('X-Robots-Tag: noindex');
-
-if ($isHeadRequest) {
-    exit;
-}
+sendReadOnlyContentHeaders('text/plain; charset=UTF-8', $isHeadRequest, '', 'noindex');
 
 echo "User-agent: *\n";
 echo "Disallow: " . BASE_URL . "/admin/\n";

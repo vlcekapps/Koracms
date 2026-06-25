@@ -8417,19 +8417,20 @@ $foundationChecks = [
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')')
         && str_contains($robotsSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($robotsSource, 'sendNoSniffHeader();'),
+        && str_contains($robotsSource, "sendReadOnlyContentHeaders('text/plain; charset=UTF-8', \$isHeadRequest, '', 'noindex');"),
     'read-only discovery endpoints enforce HTTP methods' => str_contains($sitemapSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($sitemapSource, "if (\$isHeadRequest)")
-        && str_contains($sitemapSource, 'sendNoSniffHeader();')
+        && str_contains($authSource, 'function sendContentTypeNoSniffHeaders(')
+        && str_contains($authSource, 'function sendReadOnlyContentHeaders(')
+        && str_contains($sitemapSource, "sendReadOnlyContentHeaders('application/xml; charset=UTF-8', \$isHeadRequest);")
         && str_contains($feedSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($feedSource, "sendContentTypeNoSniffHeaders('application/rss+xml; charset=UTF-8');")
         && str_contains($feedSource, "if (\$isHeadRequest)")
-        && str_contains($feedSource, 'sendNoSniffHeader();')
         && str_contains($podcastFeedSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($podcastFeedSource, "if (\$isHeadRequest)")
-        && str_contains($podcastFeedSource, 'sendNoSniffHeader();')
+        && str_contains($podcastFeedSource, "sendReadOnlyContentHeaders('application/rss+xml; charset=utf-8', \$isHeadRequest);")
         && str_contains($eventIcsSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($eventIcsSource, "if (\$isHeadRequest)")
-        && str_contains($eventIcsSource, 'sendNoSniffHeader();'),
+        && str_contains($eventIcsSource, 'sendReadOnlyContentHeaders(')
+        && str_contains($eventIcsSource, "'text/calendar; charset=utf-8'")
+        && str_contains($eventIcsSource, "'attachment; filename=\"' . eventIcsFilename(\$event) . '\"'"),
     'state-changing GET endpoints reject unsupported methods' => str_contains($authSource, 'function requireHttpMethods(array $allowedMethods): string')
         && str_contains($authSource, 'function normalizeHttpMethods(array $allowedMethods): array')
         && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')

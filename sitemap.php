@@ -2,13 +2,7 @@
 require_once __DIR__ . '/db.php';
 
 $isHeadRequest = requireReadOnlyHttpMethod();
-
-header('Content-Type: application/xml; charset=UTF-8');
-sendNoSniffHeader();
-
-if ($isHeadRequest) {
-    exit;
-}
+sendReadOnlyContentHeaders('application/xml; charset=UTF-8', $isHeadRequest);
 
 $pdo = db_connect();
 

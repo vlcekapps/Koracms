@@ -55,12 +55,7 @@ $showSummary = (string)($show['feed_summary'] ?? '');
 $buildDateSource = $episodes[0]['display_date'] ?? ($show['updated_at'] ?? $show['created_at'] ?? 'now');
 $buildDate = date(DATE_RSS, strtotime((string)$buildDateSource));
 
-header('Content-Type: application/rss+xml; charset=utf-8');
-sendNoSniffHeader();
-
-if ($isHeadRequest) {
-    exit;
-}
+sendReadOnlyContentHeaders('application/rss+xml; charset=utf-8', $isHeadRequest);
 
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 ?>

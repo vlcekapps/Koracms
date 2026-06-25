@@ -46,10 +46,9 @@ if (!$event) {
 
 $event = hydrateEventPresentation($event);
 
-header('Content-Type: text/calendar; charset=utf-8');
-header('Content-Disposition: attachment; filename="' . eventIcsFilename($event) . '"');
-sendNoSniffHeader();
-if ($isHeadRequest) {
-    exit;
-}
+sendReadOnlyContentHeaders(
+    'text/calendar; charset=utf-8',
+    $isHeadRequest,
+    'attachment; filename="' . eventIcsFilename($event) . '"'
+);
 echo eventIcsContent($event);

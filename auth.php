@@ -177,6 +177,35 @@ function sendNoSniffHeader(): void
     header('X-Content-Type-Options: nosniff');
 }
 
+function sendContentTypeNoSniffHeaders(string $contentType, string $contentDisposition = '', string $robotsTag = ''): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    header('Content-Type: ' . $contentType);
+    if ($contentDisposition !== '') {
+        header('Content-Disposition: ' . $contentDisposition);
+    }
+    sendNoSniffHeader();
+    if ($robotsTag !== '') {
+        header('X-Robots-Tag: ' . $robotsTag);
+    }
+}
+
+function sendReadOnlyContentHeaders(
+    string $contentType,
+    bool $isHeadRequest,
+    string $contentDisposition = '',
+    string $robotsTag = ''
+): void {
+    sendContentTypeNoSniffHeaders($contentType, $contentDisposition, $robotsTag);
+
+    if ($isHeadRequest) {
+        exit;
+    }
+}
+
 function sendOperationalJsonHeaders(): void
 {
     if (headers_sent()) {
