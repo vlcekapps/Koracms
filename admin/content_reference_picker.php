@@ -408,7 +408,10 @@ function renderAdminContentReferencePicker(string $textareaId): void
                     button.type = 'button';
                     button.className = 'btn';
                     button.textContent = action.label || 'Vložit';
-                    button.setAttribute('aria-label', (action.label || 'Vložit') + ': ' + item.title);
+                    const buttonContext = document.createElement('span');
+                    buttonContext.className = 'sr-only';
+                    buttonContext.textContent = ': ' + item.title;
+                    button.appendChild(buttonContext);
                     button.addEventListener('click', () => {
                         insertSnippet(snippet, !!action.block);
                         closeDialog(false);

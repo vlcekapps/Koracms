@@ -361,7 +361,10 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
         label.textContent = 'Možnost ' + (index + 1);
       }
       if (button) {
-        button.setAttribute('aria-label', 'Odebrat možnost ' + (index + 1));
+        const hiddenContext = button.querySelector('.sr-only');
+        if (hiddenContext) {
+          hiddenContext.textContent = ' možnost ' + (index + 1);
+        }
       }
     });
   }

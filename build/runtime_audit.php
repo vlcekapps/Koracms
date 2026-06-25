@@ -6595,6 +6595,8 @@ foreach ([
     'content-reference-picker-status',
     "document.body.classList.add('admin-modal-open')",
     "document.body.classList.remove('admin-modal-open')",
+    "buttonContext.className = 'sr-only';",
+    'button.appendChild(buttonContext);',
 ] as $pickerFragment) {
     if (!str_contains($contentPickerSource, $pickerFragment)) {
         $contentSnippetIssues[] = 'content picker is missing snippet helper fragment: ' . $pickerFragment;
@@ -6610,6 +6612,7 @@ foreach ([
     '.style.display',
     'document.body.style.overflow',
     '<style nonce=',
+    "button.setAttribute('aria-label'",
 ] as $pickerForbiddenFragment) {
     if (str_contains($contentPickerSource, $pickerForbiddenFragment)) {
         $contentSnippetIssues[] = 'content picker still uses forbidden focus/style fragment: ' . $pickerForbiddenFragment;
@@ -10115,12 +10118,18 @@ foreach ([
     'public-admin-bar__link--edit',
     'admin-sort-controls',
     'admin-sort-control',
+    'up.innerHTML="<span aria-hidden=\"true\">↑</span><span class=\"sr-only\">Posunout nahoru</span>";',
+    'dn.innerHTML="<span aria-hidden=\"true\">↓</span><span class=\"sr-only\">Posunout dolů</span>";',
     'classList.add("admin-sort-item--dragging")',
     'classList.remove("admin-sort-item--dragging")',
 ] as $sharedUiClassFragment) {
     if (!str_contains($uiSource, $sharedUiClassFragment)) {
         $contentSecurityPolicyIssues[] = 'shared UI helper is missing class-based CSP-safe fragment: ' . $sharedUiClassFragment;
     }
+}
+if (str_contains($uiSource, 'setAttribute("aria-label","Posunout')
+    || str_contains($uiSource, "setAttribute('aria-label','Posunout")) {
+    $contentSecurityPolicyIssues[] = 'shared UI sort buttons still use aria-label instead of hidden button text';
 }
 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/admin')) as $cspAdminFile) {
     if (!$cspAdminFile instanceof SplFileInfo || !$cspAdminFile->isFile() || $cspAdminFile->getExtension() !== 'php') {
@@ -13876,8 +13885,9 @@ foreach ([
         [
             '>Odebrat<span class="sr-only"> možnost <?= $index + 1 ?></span></button>',
             '<button type="button" class="btn btn-danger btn-remove-option" data-poll-option-remove>Odebrat<span class="sr-only"> možnost \' + (rows.length + 1) + \'</span></button>',
+            "hiddenContext.textContent = ' možnost ' + (index + 1);",
         ],
-        ['aria-label="Odebrat možnost'],
+        ['aria-label="Odebrat možnost', "setAttribute('aria-label', 'Odebrat možnost"],
     ],
     'reservation slot remove button' => [
         $reservationFormSource,
