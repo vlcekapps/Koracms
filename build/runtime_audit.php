@@ -13870,6 +13870,9 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__
     if (preg_match('/\son(?:click|change|submit|input)\s*=/i', $adminPhpSource) === 1) {
         $adminFieldErrorIssues[] = 'admin PHP file still contains inline event handler: ' . $adminPhpFile->getFilename();
     }
+    if (preg_match('/<[^>]+\stitle\s*=/i', $adminPhpSource) === 1) {
+        $adminFieldErrorIssues[] = 'admin PHP file still contains tooltip title attribute: ' . $adminPhpFile->getFilename();
+    }
 }
 foreach ([
     'reservation booking add form' => [$reservationBookingAddFormSource, 'data-booking-mode-toggle', "radio.addEventListener('change', toggleMode)", 'userFields.hidden = isGuest;', 'guestFields.hidden = !isGuest;'],
