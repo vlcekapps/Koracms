@@ -59,39 +59,4 @@ if (!is_file($filePath)) {
     exit;
 }
 
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$mimeType = (string)$finfo->file($filePath);
-if ($mimeType === '') {
-    $mimeType = 'application/octet-stream';
-}
-
-header('Content-Type: ' . $mimeType);
-header('Content-Length: ' . (string)filesize($filePath));
-header('Content-Disposition: inline; filename="' . rawurlencode(basename($filePath)) . '"');
-header('Cache-Control: ' . ($isPublic ? 'public, max-age=86400' : 'private, max-age=0, no-store'));
-sendNoSniffHeader();
-
-$lastModified = filemtime($filePath);
-if ($lastModified !== false) {
-    header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
-}
-
-if ($isHeadRequest) {
-    exit;
-}
-
-$handle = fopen($filePath, 'rb');
-if ($handle === false) {
-    http_response_code(404);
-    exit;
-}
-
-while (!feof($handle)) {
-    $chunk = fread($handle, 8192);
-    if ($chunk === false) {
-        break;
-    }
-    echo $chunk;
-}
-fclose($handle);
-exit;
+sendInlineStoredFileResponse($filePath, basename($filePath), $isPublic, $isHeadRequest);

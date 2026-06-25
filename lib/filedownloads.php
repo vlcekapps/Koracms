@@ -62,6 +62,90 @@ function storedFileLogFailure(string $reason, string $path, array $context = [])
     ], $context));
 }
 
+function storedFileMimeType(string $path, string $mimeTypeOverride = ''): string
+{
+    $normalizedOverride = trim($mimeTypeOverride);
+    if ($normalizedOverride !== '') {
+        return $normalizedOverride;
+    }
+
+    try {
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $detectedType = $finfo->file($path);
+        if (is_string($detectedType) && $detectedType !== '') {
+            return $detectedType;
+        }
+    } catch (\Throwable $e) {
+        storedFileLogFailure('mime_detection', $path, ['exception' => $e]);
+    }
+
+    return 'application/octet-stream';
+}
+
+function streamStoredFile(string $path, int $chunkSize = 8192): void
+{
+    $handle = fopen($path, 'rb');
+    if ($handle === false) {
+        storedFileLogFailure('fopen', $path);
+        http_response_code(404);
+        exit;
+    }
+
+    while (!feof($handle)) {
+        $chunk = fread($handle, $chunkSize);
+        if ($chunk === false) {
+            storedFileLogFailure('fread', $path);
+            break;
+        }
+        echo $chunk;
+    }
+
+    fclose($handle);
+}
+
+function sendInlineStoredFileResponse(
+    string $path,
+    string $downloadName,
+    bool $isPublic,
+    bool $isHeadRequest,
+    int $publicMaxAge = 86400,
+    string $mimeTypeOverride = ''
+): void {
+    if (!is_file($path) || !is_readable($path)) {
+        sendFileDownloadNotFound();
+    }
+
+    $fileSize = filesize($path);
+    if (!is_int($fileSize)) {
+        storedFileLogFailure('filesize', $path);
+        sendFileDownloadNotFound();
+    }
+
+    $downloadName = safeDownloadName($downloadName, basename($path));
+    $mimeType = storedFileMimeType($path, $mimeTypeOverride);
+    $cacheHeader = $isPublic
+        ? 'public, max-age=' . max(0, $publicMaxAge)
+        : 'private, max-age=0, no-store';
+
+    header('Content-Type: ' . $mimeType);
+    header('Content-Length: ' . (string)$fileSize);
+    header('Content-Disposition: inline; filename="' . rawurlencode($downloadName) . '"');
+    header('Cache-Control: ' . $cacheHeader);
+    sendNoSniffHeader();
+
+    $lastModified = filemtime($path);
+    if ($lastModified !== false) {
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+    }
+
+    if ($isHeadRequest) {
+        exit;
+    }
+
+    streamStoredFile($path);
+    exit;
+}
+
 function sendStoredFileResponse(string $path, string $downloadName, string $disposition = 'attachment', string $mimeTypeOverride = ''): void
 {
     if (!is_file($path) || !is_readable($path)) {
@@ -70,22 +154,7 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
 
     $downloadName = safeDownloadName($downloadName, basename($path));
     $asciiFallback = safeDownloadAsciiFallback($downloadName);
-    $mimeType = 'application/octet-stream';
-
-    try {
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $detectedType = $finfo->file($path);
-        if (is_string($detectedType) && $detectedType !== '') {
-            $mimeType = $detectedType;
-        }
-    } catch (\Throwable $e) {
-        storedFileLogFailure('mime_detection', $path, ['exception' => $e]);
-    }
-
-    $normalizedOverride = trim($mimeTypeOverride);
-    if ($normalizedOverride !== '') {
-        $mimeType = $normalizedOverride;
-    }
+    $mimeType = storedFileMimeType($path, $mimeTypeOverride);
 
     while (ob_get_level() > 0) {
         ob_end_clean();
