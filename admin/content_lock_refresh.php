@@ -2,9 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
+sendAdminJsonHeaders();
 
 /**
  * @param array<string,mixed> $payload

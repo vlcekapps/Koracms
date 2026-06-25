@@ -688,6 +688,17 @@ try {
             $adminReadOnlyEndpointIssues[] = $adminReadOnlyEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
         }
     }
+    $adminContentReferenceSearchResponse = fetchUrl($baseUrl . BASE_URL . '/admin/content_reference_search.php?q=test&type=all', $adminSession['cookie'], 0);
+    if (
+        httpIntegrationStatusCode($adminContentReferenceSearchResponse) !== 200
+        || !httpIntegrationHeaderContains($adminContentReferenceSearchResponse, 'Content-Type', 'application/json')
+        || !httpIntegrationHeaderContains($adminContentReferenceSearchResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($adminContentReferenceSearchResponse, 'X-Content-Type-Options', 'nosniff')
+        || !httpIntegrationHeaderContains($adminContentReferenceSearchResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($adminContentReferenceSearchResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $adminReadOnlyEndpointIssues[] = 'admin/content_reference_search.php neposlal bezpečné sdílené JSON hlavičky';
+    }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
 
     $adminHtmlCacheHeaderIssues = [];
@@ -762,8 +773,13 @@ try {
         if (httpIntegrationStatusCode($adminJsonPostOnlyEndpointResponse) !== 405 || !$adminJsonPostOnlyEndpointAllowHeaderFound) {
             $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neodmítl GET pomocí 405 a Allow: POST';
         }
-        if (!$adminJsonPostOnlyEndpointNoStoreFound || !$adminJsonPostOnlyEndpointNosniffFound) {
-            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal bezpečné JSON hlavičky no-store a nosniff';
+        if (
+            !$adminJsonPostOnlyEndpointNoStoreFound
+            || !$adminJsonPostOnlyEndpointNosniffFound
+            || !httpIntegrationHeaderContains($adminJsonPostOnlyEndpointResponse, 'X-Robots-Tag', 'noindex')
+            || !httpIntegrationHeaderContains($adminJsonPostOnlyEndpointResponse, 'Referrer-Policy', 'no-referrer')
+        ) {
+            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal bezpečné sdílené JSON hlavičky';
         }
         $adminJsonPostOnlyEndpointPayload = json_decode($adminJsonPostOnlyEndpointResponse['body'], true);
         if (!is_array($adminJsonPostOnlyEndpointPayload) || ($adminJsonPostOnlyEndpointPayload['ok'] ?? null) !== false || trim((string)($adminJsonPostOnlyEndpointPayload['request_id'] ?? '')) === '') {

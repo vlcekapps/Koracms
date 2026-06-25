@@ -7,9 +7,7 @@
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
+sendAdminJsonHeaders();
 
 /**
  * @param array<string,mixed> $payload

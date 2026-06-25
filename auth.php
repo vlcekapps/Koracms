@@ -179,6 +179,17 @@ function sendOperationalJsonHeaders(): void
     sendNoStoreNoIndexHeaders();
 }
 
+function sendAdminJsonHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    header('Content-Type: application/json; charset=UTF-8');
+    header('X-Content-Type-Options: nosniff');
+    sendAdminNoStoreHeaders();
+}
+
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {
     header_register_callback('sendSocialPreviewCacheHeaders');
 } elseif ($isSocialPreviewCrawler) {
