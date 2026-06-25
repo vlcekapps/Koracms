@@ -554,8 +554,9 @@ try {
             || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'X-Robots-Tag', 'noindex')
             || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'X-Robots-Tag', 'nofollow')
             || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'X-Robots-Tag', 'noarchive')
+            || !httpIntegrationHeaderContains($sensitiveGetCacheResponse, 'Referrer-Policy', 'no-referrer')
         ) {
-            $sensitiveGetCacheIssues[] = $sensitiveGetCacheLabel . ' neposlal no-store/noindex hlavičky';
+            $sensitiveGetCacheIssues[] = $sensitiveGetCacheLabel . ' neposlal no-store/noindex/no-referrer hlavičky';
         }
     }
     $socialTokenCacheResponse = fetchUrl(
@@ -567,8 +568,9 @@ try {
     if (
         !httpIntegrationHeaderContains($socialTokenCacheResponse, 'Cache-Control', 'no-store')
         || !httpIntegrationHeaderContains($socialTokenCacheResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($socialTokenCacheResponse, 'Referrer-Policy', 'no-referrer')
     ) {
-        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex hlavičky potvrzovacího tokenu';
+        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex/no-referrer hlavičky potvrzovacího tokenu';
     }
     $socialReservationCancelResponse = fetchUrl(
         $baseUrl . BASE_URL . '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef',
@@ -579,8 +581,9 @@ try {
     if (
         !httpIntegrationHeaderContains($socialReservationCancelResponse, 'Cache-Control', 'no-store')
         || !httpIntegrationHeaderContains($socialReservationCancelResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($socialReservationCancelResponse, 'Referrer-Policy', 'no-referrer')
     ) {
-        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex hlavičky tokenu pro zrušení rezervace';
+        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex/no-referrer hlavičky tokenu pro zrušení rezervace';
     }
     if (str_contains($socialReservationCancelResponse['body'], 'cancel_booking.php?token=')) {
         $sensitiveGetCacheIssues[] = 'stránka zrušení rezervace propisuje token do HTML návratové URL';

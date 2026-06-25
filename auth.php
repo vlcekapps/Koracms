@@ -156,6 +156,7 @@ function sendNoStoreNoIndexHeaders(): void
     header('Pragma: no-cache');
     header('Expires: 0');
     header('X-Robots-Tag: noindex, nofollow, noarchive');
+    header('Referrer-Policy: no-referrer');
 }
 
 function sendAdminNoStoreHeaders(): void

@@ -8369,11 +8369,13 @@ $foundationChecks = [
         && str_contains($authSource, "header('Pragma: no-cache')")
         && str_contains($authSource, "header('Expires: 0')")
         && str_contains($authSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
+        && str_contains($authSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
         && str_contains($htaccessSource, 'reservations/cancel_booking\.php')
         && str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, 'Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX')
+        && str_contains($htaccessSource, 'Header always set Referrer-Policy "no-referrer" env=KORA_NO_STORE_NO_INDEX')
         && str_contains($confirmEmailSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($subscribeConfirmSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($unsubscribeSource, 'sendNoStoreNoIndexHeaders();')
@@ -8415,6 +8417,7 @@ $foundationChecks = [
         && str_contains($authSource, "header('Pragma: no-cache')")
         && str_contains($authSource, "header('Expires: 0')")
         && str_contains($authSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
+        && str_contains($authSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($authSource, 'if (!$isSocialPreviewCrawler && isAdminRequestPath())'),
     'seoMeta renders canonical' => str_contains($uiSource, 'function seoCanonicalUrl(string $target): string')
         && str_contains($uiSource, '<link rel="canonical" href="')
@@ -8795,8 +8798,9 @@ foreach ([
         || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'X-Robots-Tag', 'noindex')
         || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'X-Robots-Tag', 'nofollow')
         || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'X-Robots-Tag', 'noarchive')
+        || !runtimeAuditHeaderContains($sensitiveGetProbe['headers'], 'Referrer-Policy', 'no-referrer')
     ) {
-        $foundationIssues[] = $sensitiveGetLabel . ' did not send no-store/noindex headers';
+        $foundationIssues[] = $sensitiveGetLabel . ' did not send no-store/noindex/no-referrer headers';
     }
 }
 
@@ -8809,8 +8813,9 @@ $socialTokenProbe = fetchUrl(
 if (
     !runtimeAuditHeaderContains($socialTokenProbe['headers'], 'Cache-Control', 'no-store')
     || !runtimeAuditHeaderContains($socialTokenProbe['headers'], 'X-Robots-Tag', 'noindex')
+    || !runtimeAuditHeaderContains($socialTokenProbe['headers'], 'Referrer-Policy', 'no-referrer')
 ) {
-    $foundationIssues[] = 'social preview crawler could override token no-store/noindex headers';
+    $foundationIssues[] = 'social preview crawler could override token no-store/noindex/no-referrer headers';
 }
 $socialReservationCancelProbe = fetchUrl(
     $baseUrl . '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef',
@@ -8821,8 +8826,9 @@ $socialReservationCancelProbe = fetchUrl(
 if (
     !runtimeAuditHeaderContains($socialReservationCancelProbe['headers'], 'Cache-Control', 'no-store')
     || !runtimeAuditHeaderContains($socialReservationCancelProbe['headers'], 'X-Robots-Tag', 'noindex')
+    || !runtimeAuditHeaderContains($socialReservationCancelProbe['headers'], 'Referrer-Policy', 'no-referrer')
 ) {
-    $foundationIssues[] = 'social preview crawler could override reservation cancellation no-store/noindex headers';
+    $foundationIssues[] = 'social preview crawler could override reservation cancellation no-store/noindex/no-referrer headers';
 }
 if (str_contains($socialReservationCancelProbe['body'], 'cancel_booking.php?token=')) {
     $foundationIssues[] = 'reservation cancellation page leaks token in HTML return URL';

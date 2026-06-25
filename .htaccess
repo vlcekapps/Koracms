@@ -57,6 +57,7 @@ Options -Indexes
     Header always set Pragma "no-cache" env=KORA_NO_STORE_NO_INDEX
     Header always set Expires "0" env=KORA_NO_STORE_NO_INDEX
     Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX
+    Header always set Referrer-Policy "no-referrer" env=KORA_NO_STORE_NO_INDEX
 </IfModule>
 
 <IfModule mod_rewrite.c>
