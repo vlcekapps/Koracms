@@ -17,11 +17,7 @@ if ($isHeadRequest) {
  */
 function contentReferenceJsonResponse(array $payload): void
 {
-    echo json_encode(
-        $payload + ['request_id' => koraRequestId()],
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-    );
-    exit;
+    sendJsonResponse($payload);
 }
 
 /**

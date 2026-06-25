@@ -129,11 +129,7 @@ function cspReportIsNoisyAllowedInlineStyle(array $entry): bool
  */
 function cspReportJsonResponse(int $statusCode, string $status, array $extra = []): void
 {
-    http_response_code($statusCode);
-    echo json_encode(
-        ['status' => $status, 'request_id' => koraRequestId()] + $extra,
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-    );
+    sendJsonResponse(['status' => $status] + $extra, $statusCode);
 }
 
 function cspReportRateLimitExceeded(): void

@@ -9,12 +9,7 @@ sendAdminJsonHeaders();
  */
 function contentLockJsonResponse(array $payload, int $statusCode = 200): void
 {
-    http_response_code($statusCode);
-    echo json_encode(
-        $payload + ['request_id' => koraRequestId()],
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-    );
-    exit;
+    sendJsonResponse($payload, $statusCode);
 }
 
 requireJsonHttpMethods(['POST'], ['ok' => false]);

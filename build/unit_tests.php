@@ -282,6 +282,15 @@ assert_true(preg_match('/\A[a-f0-9]{24}\z/', $generatedRequestId) === 1, 'invali
 assert_equals('[array:2]', koraLogValue(['a' => 1, 'b' => 2]), 'array log context summarized');
 assert_contains('RuntimeException: Testovací chyba', (string)koraLogValue(new RuntimeException('Testovací chyba')), 'throwable log context summarized');
 
+$GLOBALS['_KORA_REQUEST_ID'] = 'json-test-id';
+$jsonResponsePayload = json_decode(jsonResponsePayload(['status' => 'ok', 'message' => 'Příliš žluťoučký kůň']), true);
+assert_equals('ok', $jsonResponsePayload['status'] ?? null, 'JSON response payload keeps status');
+assert_equals('Příliš žluťoučký kůň', $jsonResponsePayload['message'] ?? null, 'JSON response payload preserves UTF-8 text');
+assert_equals('json-test-id', $jsonResponsePayload['request_id'] ?? null, 'JSON response payload adds request ID');
+
+$jsonResponsePayloadWithoutRequestId = json_decode(jsonResponsePayload(['status' => 'ok'], false), true);
+assert_false(array_key_exists('request_id', is_array($jsonResponsePayloadWithoutRequestId) ? $jsonResponsePayloadWithoutRequestId : []), 'JSON response payload can omit request ID');
+
 unset($_SERVER['HTTP_X_REQUEST_ID']);
 $GLOBALS['_KORA_REQUEST_ID'] = null;
 

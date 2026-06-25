@@ -239,6 +239,29 @@ function sendAdminDownloadHeaders(): void
 }
 
 /**
+ * @param array<string,mixed> $payload
+ */
+function jsonResponsePayload(array $payload, bool $withRequestId = true): string
+{
+    if ($withRequestId) {
+        $payload += ['request_id' => koraRequestId()];
+    }
+
+    $encodedPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return $encodedPayload !== false ? $encodedPayload : '{}';
+}
+
+/**
+ * @param array<string,mixed> $payload
+ */
+function sendJsonResponse(array $payload, int $statusCode = 200, bool $withRequestId = true): void
+{
+    http_response_code($statusCode);
+    echo jsonResponsePayload($payload, $withRequestId);
+    exit;
+}
+
+/**
  * @param list<string> $allowedMethods
  * @return list<string>
  */
@@ -294,12 +317,7 @@ function requireJsonHttpMethods(array $allowedMethods, array $payload = ['status
             sendNoStoreNoIndexHeaders();
             header('Allow: ' . implode(', ', $normalizedAllowedMethods));
         }
-        http_response_code(405);
-        echo json_encode(
-            $payload + ['request_id' => koraRequestId()],
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
-        exit;
+        sendJsonResponse($payload, 405);
     }
 
     return $requestMethod;

@@ -6754,7 +6754,7 @@ foreach ([
 if (!str_contains($contentSearchSource, 'Vložit fotogalerii')) {
     $contentSnippetIssues[] = 'content reference search is missing gallery album insert action fragment';
 }
-if (!str_contains($contentSearchSource, 'function contentReferenceJsonResponse') || !str_contains($contentSearchSource, "'request_id' => koraRequestId()")) {
+if (!str_contains($contentSearchSource, 'function contentReferenceJsonResponse') || !str_contains($contentSearchSource, 'sendJsonResponse($payload);')) {
     $contentSnippetIssues[] = 'content reference search JSON responses are missing request_id diagnostics';
 }
 if (!str_contains($contentSearchSource, 'function contentReferencePdfShortcode(string $url, string $title = \'\', string $mimeType = \'\', int $mediaId = 0): string')) {
@@ -8535,13 +8535,17 @@ $foundationChecks = [
         && str_contains($authSource, 'sendNoSniffHeader();')
         && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($authSource, 'function requireJsonHttpMethods(array $allowedMethods')
+        && str_contains($authSource, 'function jsonResponsePayload(array $payload, bool $withRequestId = true): string')
+        && str_contains($authSource, 'function sendJsonResponse(array $payload, int $statusCode = 200, bool $withRequestId = true): void')
+        && str_contains($authSource, '$payload += [\'request_id\' => koraRequestId()];')
+        && str_contains($authSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
         && str_contains($healthSource, 'sendOperationalJsonHeaders();')
         && str_contains($cspReportSource, 'sendOperationalJsonHeaders();'),
     'health endpoint is minimal JSON' => str_contains($healthSource, 'sendOperationalJsonHeaders();')
         && str_contains($healthSource, "\$requestMethod = requireJsonHttpMethods(['GET', 'HEAD']);")
         && str_contains($healthSource, "if (\$isHeadRequest)")
         && str_contains($healthSource, "db_connect()->query('SELECT 1')")
-        && str_contains($healthSource, "'request_id' => koraRequestId()")
+        && str_contains($healthSource, 'sendJsonResponse(')
         && str_contains($healthSource, "'database' => ['status' => 'fail']")
         && str_contains($healthSource, "'storage' => ['status' => 'fail']"),
     'health endpoint reports cron freshness' => str_contains($healthSource, "'cron' => ['status' => 'unknown']")
@@ -8551,7 +8555,7 @@ $foundationChecks = [
         && str_contains($healthSource, "'backup' => ['status' => 'unknown']"),
     'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, 'sendOperationalJsonHeaders();')
         && str_contains($cspReportSource, 'function cspReportJsonResponse')
-        && str_contains($cspReportSource, "'request_id' => koraRequestId()")
+        && str_contains($cspReportSource, "sendJsonResponse(['status' => \$status] + \$extra, \$statusCode);")
         && str_contains($cspReportSource, "requireJsonHttpMethods(['POST']);"),
     'admin JSON endpoints use shared no-store headers' => str_contains($authSource, 'function sendAdminJsonHeaders')
         && str_contains($authSource, "header('Content-Type: application/json; charset=UTF-8')")
@@ -8563,13 +8567,11 @@ $foundationChecks = [
     'admin POST-only JSON endpoints send safe headers' => str_contains($adminContentLockRefreshSource, 'sendAdminJsonHeaders();')
         && str_contains($adminContentLockRefreshSource, "requireJsonHttpMethods(['POST'], ['ok' => false]);")
         && str_contains($adminContentLockRefreshSource, 'function contentLockJsonResponse')
-        && str_contains($adminContentLockRefreshSource, "'request_id' => koraRequestId()")
-        && str_contains($adminContentLockRefreshSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
+        && str_contains($adminContentLockRefreshSource, 'sendJsonResponse($payload, $statusCode);')
         && str_contains($adminReorderAjaxSource, 'sendAdminJsonHeaders();')
         && str_contains($adminReorderAjaxSource, "requireJsonHttpMethods(['POST'], ['ok' => false]);")
         && str_contains($adminReorderAjaxSource, 'function reorderJsonResponse')
-        && str_contains($adminReorderAjaxSource, "'request_id' => koraRequestId()")
-        && str_contains($adminReorderAjaxSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES'),
+        && str_contains($adminReorderAjaxSource, 'sendJsonResponse($payload, $statusCode);'),
     'admin downloadable exports send safe headers' => str_contains($authSource, 'function sendAdminDownloadHeaders')
         && str_contains($authSource, 'sendAdminNoStoreHeaders();')
         && str_contains($authSource, 'sendNoSniffHeader();')

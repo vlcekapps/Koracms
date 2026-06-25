@@ -64,17 +64,17 @@ foreach (['database', 'storage'] as $requiredCheck) {
     }
 }
 
-http_response_code($overallStatus === 'ok' ? 200 : 503);
+$statusCode = $overallStatus === 'ok' ? 200 : 503;
+http_response_code($statusCode);
 if ($isHeadRequest) {
     exit;
 }
-echo json_encode(
+sendJsonResponse(
     [
         'status' => $overallStatus,
         'version' => KORA_VERSION,
-        'request_id' => koraRequestId(),
         'time' => date(DATE_ATOM),
         'checks' => $checks,
     ],
-    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    $statusCode
 );
