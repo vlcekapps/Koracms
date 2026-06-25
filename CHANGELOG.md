@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost sdílených stavových stránek** – potvrzení e-mailu, vypnutá registrace a newsletterové potvrzovací/odhlašovací stránky používají ve sdílené `utility/status` šabloně `role="status"` nebo `role="alert"` s `aria-atomic="true"` a textovým cílem přes `aria-labelledby`.
 - **Přístupnost veřejných formulářových chyb** – login, registrace, reset hesla, veřejný profil, komentáře, chat, kontakt a veřejné formuláře mají u chybových alertů skrytý textový název přes `aria-labelledby`; Form Builder používá dynamické ID podle formuláře, aby se alerty neduplikovaly ani u embedů.
 - **Přístupnost veřejných modulových hlášek** – chat, veřejné formuláře, ankety, komentáře článků a rezervace mají u potvrzení, chyb a informačních stavů stabilní textové cíle přes `aria-labelledby` a `aria-atomic="true"` tam, kde se hláška oznamuje čtečkám obrazovky.
 - **Přístupnost kontaktního potvrzení** – úspěšná hláška po odeslání veřejného kontaktního formuláře má nově `aria-atomic="true"` a vlastní textový uzel přes `aria-labelledby`, takže není pro čtečky obrazovky anonymní.

@@ -461,6 +461,8 @@ Stabilizované administrační odkazy otevírané v novém okně nepřepisují v
 
 Veřejné chybové alerty u přihlášení, registrace, obnovy hesla, profilu, komentářů, chatu, kontaktu a Form Builderu mají skrytý textový nadpis přímo uvnitř hlášky. U vložitelných formulářů se ID hlášky odvozuje od konkrétního formuláře, aby se při více embedech na jedné stránce neduplikovalo.
 
+Sdílené veřejné stavové stránky, například potvrzení e-mailu nebo newsletterové potvrzení a odhlášení, používají stejný princip: pokud mají být oznámeny čtečce obrazovky, stavová zpráva má `aria-atomic="true"` a `aria-labelledby` napojené na první textový odstavec zprávy.
+
 Content/media picker v administraci načítá sdílený statický stylesheet `admin/assets/content-reference-picker.css` pro styly dialogu, překryvu, toolbaru a výsledků. Samotný picker tak zůstává bez lokálního i generovaného `<style>` bloku a runtime audit hlídá, aby se do něj nevracely prezentační inline styly ani JS mutace `element.style`.
 
 Editor článku blogu používá sdílené admin CSS třídy pro zámek obsahu, taxonomie při změně blogu, plánování publikace, SEO, interní poznámku, stav článku, akční řádek i WYSIWYG wrapper. Díky tomu už samotný formulář článku nepotřebuje lokální `style` atributy ani JS mutace `element.style`.

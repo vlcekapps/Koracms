@@ -15083,6 +15083,7 @@ $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/them
 $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
 $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
 $themeNewsletterSubscribeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php');
+$themeUtilityStatusViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/utility/status.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
 $themeAccountProfileViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/profile.php');
 $themeLoginViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/login.php');
@@ -15201,6 +15202,15 @@ foreach ([
     if (!str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['status'])
         || !str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['text'])) {
         $themeLayoutIssues[] = 'newsletter subscribe ' . $newsletterSubscribeStatusLabel . ' message is missing text-backed status semantics';
+    }
+}
+foreach ([
+    "\$statusMessageId = isset(\$statusMessageId) && \$statusMessageId !== '' ? (string)\$statusMessageId : 'status-message';",
+    "' role=\"' . h(\$announceRole) . '\" aria-atomic=\"true\" aria-labelledby=\"' . h(\$statusMessageId) . '\"'",
+    "\$statusMessageAttributes !== '' && \$statusMessageIndex === 0",
+] as $utilityStatusFragment) {
+    if (!str_contains($themeUtilityStatusViewSource, $utilityStatusFragment)) {
+        $themeLayoutIssues[] = 'utility status view is missing text-backed announcement fragment: ' . $utilityStatusFragment;
     }
 }
 if (!str_contains($themeContactViewSource, 'role="status" aria-atomic="true" aria-labelledby="contact-success-message"')

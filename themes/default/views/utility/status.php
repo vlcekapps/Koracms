@@ -5,9 +5,17 @@
     <?php endif; ?>
     <h1 id="status-title" class="section-title section-title--hero"><?= h($title) ?></h1>
 
-    <div class="status-message status-message--<?= h($variant) ?>"<?= $announceRole !== '' ? ' role="' . h($announceRole) . '"' : '' ?>>
+    <?php
+    $statusMessageId = isset($statusMessageId) && $statusMessageId !== '' ? (string)$statusMessageId : 'status-message';
+    $statusMessageAttributes = $announceRole !== ''
+        ? ' role="' . h($announceRole) . '" aria-atomic="true" aria-labelledby="' . h($statusMessageId) . '"'
+        : '';
+    $statusMessageIndex = 0;
+    ?>
+    <div class="status-message status-message--<?= h($variant) ?>"<?= $statusMessageAttributes ?>>
       <?php foreach ($messages as $message): ?>
-        <p><?= h($message) ?></p>
+        <p<?= $statusMessageAttributes !== '' && $statusMessageIndex === 0 ? ' id="' . h($statusMessageId) . '"' : '' ?>><?= h($message) ?></p>
+        <?php $statusMessageIndex++; ?>
       <?php endforeach; ?>
     </div>
 
