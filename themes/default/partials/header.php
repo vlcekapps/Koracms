@@ -10,8 +10,9 @@ if ($headerLayout === '') {
     <div class="site-header__panel">
       <div class="brand">
         <?php if ($logo !== ''): ?>
-          <a class="brand__mark" href="<?= BASE_URL ?>/index.php" aria-label="<?= h($siteName) ?>">
+          <a class="brand__mark" href="<?= BASE_URL ?>/index.php">
             <img src="<?= BASE_URL ?>/uploads/site/<?= h($logo) ?>" alt="" class="brand__logo" loading="lazy">
+            <span class="sr-only"><?= h($siteName) ?></span>
           </a>
         <?php endif; ?>
         <div class="brand__copy">

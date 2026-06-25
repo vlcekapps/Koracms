@@ -25,6 +25,7 @@ $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
 $paginationSource = (string) file_get_contents(__DIR__ . '/../lib/pagination.php');
 $presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation.php');
 $themeSource = (string) file_get_contents(__DIR__ . '/../lib/theme.php');
+$publicHeaderSource = (string) file_get_contents(__DIR__ . '/../themes/default/partials/header.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
@@ -14907,6 +14908,13 @@ if (!str_contains($publicNavSource, '<h2 id="\' . $navHeadingId . \'" class="sr-
 }
 if (str_contains($publicNavSource, 'aria-label="Hlavní navigace"')) {
     $menuAdminIssues[] = 'public navigation still contains legacy aria-label-only main navigation markup';
+}
+if (!str_contains($publicHeaderSource, '<a class="brand__mark" href="<?= BASE_URL ?>/index.php">')
+    || !str_contains($publicHeaderSource, '<span class="sr-only"><?= h($siteName) ?></span>')) {
+    $menuAdminIssues[] = 'public header logo link is missing hidden text inside the link';
+}
+if (str_contains($publicHeaderSource, 'class="brand__mark" href="<?= BASE_URL ?>/index.php" aria-label=')) {
+    $menuAdminIssues[] = 'public header logo link still uses aria-label instead of hidden DOM text';
 }
 if (!str_contains($publicNavSource, 'navigationLinkAccessibleSuffix($visibleLinks[$linkId])')
     || !str_contains($publicNavSource, 'navigationLinkAccessibleSuffix($linkEntry)')) {
