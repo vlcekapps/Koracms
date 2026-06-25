@@ -326,7 +326,7 @@ $fieldErrorMessages = [
                      value="<?= h(substr($sl['end_time'], 0, 5)) ?>">
               <label for="slot_max_<?= $d ?>_<?= $si ?>" class="sr-only">Max. rezervací</label>
               <input type="number" id="slot_max_<?= $d ?>_<?= $si ?>" name="slots[<?= $d ?>][max_bookings][]" min="1" class="res-resource-input-xxs"
-                     value="<?= (int)$sl['max_bookings'] ?>" title="Max. rezervací">
+                     value="<?= (int)$sl['max_bookings'] ?>">
               <button type="button" class="btn btn-danger btn-remove-slot" data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>
             </div>
           <?php endforeach; ?>
@@ -431,7 +431,7 @@ $fieldErrorMessages = [
       '<label for="slot_end_' + day + '_' + idx + '" class="sr-only">Konec</label>' +
       '<input type="time" id="slot_end_' + day + '_' + idx + '" name="slots[' + day + '][end_time][]" class="admin-input-auto" value="10:00">' +
       '<label for="slot_max_' + day + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
-      '<input type="number" id="slot_max_' + day + '_' + idx + '" name="slots[' + day + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1" title="Max. rezervací">' +
+      '<input type="number" id="slot_max_' + day + '_' + idx + '" name="slots[' + day + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1">' +
       '<button type="button" class="btn btn-danger btn-remove-slot" data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>';
     container.appendChild(div);
     div.querySelector('input[type="time"]').focus();
@@ -514,7 +514,7 @@ $fieldErrorMessages = [
           '<label for="slot_end_' + d + '_' + idx + '" class="sr-only">Konec</label>' +
           '<input type="time" id="slot_end_' + d + '_' + idx + '" name="slots[' + d + '][end_time][]" class="admin-input-auto" value="' + generated[g].end + '">' +
           '<label for="slot_max_' + d + '_' + idx + '" class="sr-only">Max. rezervací</label>' +
-          '<input type="number" id="slot_max_' + d + '_' + idx + '" name="slots[' + d + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1" title="Max. rezervací">' +
+          '<input type="number" id="slot_max_' + d + '_' + idx + '" name="slots[' + d + '][max_bookings][]" min="1" class="res-resource-input-xxs" value="1">' +
           '<button type="button" class="btn btn-danger btn-remove-slot" data-remove-slot>Odebrat<span class="sr-only"> slot</span></button>';
         container.appendChild(div);
       }

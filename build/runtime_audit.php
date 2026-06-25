@@ -13899,6 +13899,9 @@ foreach ([
         'var reasonFieldId = \'blocked-reason-new-\' + idx;',
         '<label for="\' + reasonFieldId + \'" class="sr-only">Důvod blokování</label>',
         '<input type="text" id="\' + reasonFieldId + \'" name="blocked_reasons[]"',
+        '<label for="slot_max_<?= $d ?>_<?= $si ?>" class="sr-only">Max. rezervací</label>',
+        '<label for="slot_max_\' + day + \'_\' + idx + \'" class="sr-only">Max. rezervací</label>',
+        '<label for="slot_max_\' + d + \'_\' + idx + \'" class="sr-only">Max. rezervací</label>',
         'durationField.hidden = mode !==',
         'slotsSection.hidden = mode !==',
     ],
@@ -13923,6 +13926,9 @@ foreach ([
     if (str_contains($reservationFormSource, $blockedDateAriaLabelFragment)) {
         $adminFieldErrorIssues[] = 'reservation resource fields still use aria-label instead of real labels: ' . $blockedDateAriaLabelFragment;
     }
+}
+if (str_contains($reservationFormSource, 'title="Max. rezervací"')) {
+    $adminFieldErrorIssues[] = 'reservation resource slot max field still uses title instead of a real label';
 }
 foreach ([
     'poll option remove button' => [
