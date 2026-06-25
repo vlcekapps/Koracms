@@ -756,7 +756,7 @@ Přihlašování a obnova hesla používají kombinovaný rate limiting:
 - bez ukládání e-mailu nebo tokenu v čitelné podobě do tabulky `cms_rate_limit`
 
 To chrání nejen proti opakovaným pokusům z jedné adresy, ale i proti útokům rozloženým přes více IP adres na stejný účet.
-Výchozí 429 odpověď při překročení limitu posílá `Retry-After`, explicitní HTML typ a necacheovací/noindex/no-referrer hlavičky, takže se odpověď neukládá v cache ani indexu a klient dostane srozumitelný čas pro opakování požadavku.
+Výchozí 429 odpověď při překročení limitu posílá `Retry-After`, explicitní HTML typ a necacheovací/noindex/no-referrer hlavičky, takže se odpověď neukládá v cache ani indexu a klient dostane srozumitelný čas pro opakování požadavku. HTML odpověď má skutečný nadpis a kód požadavku pro podporu, stejně jako globální chybová stránka.
 
 Návrat po administrátorském přihlášení zachovává původně otevřenou stránku jen tehdy, když jde o bezpečný interní cíl v administraci nebo `migrate.php`. Cíle mimo administraci, externí URL, protocol-relative adresy a návrat zpět na `admin/login.php` nebo `admin/login_2fa.php` se ignorují a uživatel skončí na dashboardu. Tuto ochranu hlídají unit testy i runtime audit, aby se login flow nestal otevřeným redirectem.
 

@@ -978,8 +978,13 @@ function rateLimitApply(string $key, int $max, int $window, ?callable $onExceede
             header('Content-Type: text/html; charset=UTF-8');
             header('Retry-After: ' . rateLimitRetryAfter($window));
             http_response_code(429);
-            echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>429</title></head>'
-               . '<body><p>Příliš mnoho pokusů. Zkuste to prosím za chvíli.</p></body></html>';
+            $requestId = koraRequestId();
+            echo '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>Příliš mnoho pokusů</title>'
+               . '<link rel="stylesheet" href="' . h(BASE_URL . '/assets/error.css') . '"></head>'
+               . '<body class="error-page"><h1>Příliš mnoho pokusů</h1>'
+               . '<p>Zkuste to prosím za chvíli.</p>'
+               . '<p class="error-page__request">Kód požadavku pro podporu: <code>' . h($requestId) . '</code></p>'
+               . '</body></html>';
             exit;
         }
     } catch (\PDOException $e) {

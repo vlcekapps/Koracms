@@ -9219,6 +9219,9 @@ foreach ([
     "sendNoStoreNoIndexHeaders();",
     "header('Content-Type: text/html; charset=UTF-8')",
     "header('Retry-After: ' . rateLimitRetryAfter(\$window))",
+    '/assets/error.css',
+    'class="error-page"',
+    'Kód požadavku pro podporu',
     '$onExceeded();',
 ] as $authRateLimitFragment) {
     if (!str_contains($adminAuthSource, $authRateLimitFragment)) {

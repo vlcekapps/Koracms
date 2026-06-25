@@ -628,6 +628,13 @@ try {
     ) {
         $defaultRateLimitIssues[] = 'výchozí rate-limit odpověď neposlala Retry-After/no-store/noindex/no-referrer/html hlavičky';
     }
+    if (
+        !str_contains($defaultRateLimitResponse['body'], '<body class="error-page">')
+        || !str_contains($defaultRateLimitResponse['body'], '<h1>Příliš mnoho pokusů</h1>')
+        || !str_contains($defaultRateLimitResponse['body'], 'Kód požadavku pro podporu')
+    ) {
+        $defaultRateLimitIssues[] = 'výchozí rate-limit odpověď nemá přístupnou chybovou stránku s kódem požadavku';
+    }
     httpIntegrationClearLocalRateLimits($pdo, ['contact']);
     saveSetting('module_contact', $originalContactModule);
     clearSettingsCache();
