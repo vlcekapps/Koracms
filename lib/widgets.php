@@ -1238,7 +1238,7 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
         $flashRole = $flash['type'] === 'success' ? 'status' : 'alert';
         $flashHtml = '<div id="' . h($flashId) . '"><div class="' . h($flashClass) . '" role="' . h($flashRole) . '" aria-labelledby="' . h($flashTextId) . '"><p id="' . h($flashTextId) . '">' . h($flash['message']) . '</p></div></div>';
     }
-    $returnUrl = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/subscribe.php');
+    $returnUrl = safePublicReturnTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/subscribe.php');
     $formHtml = '<form action="' . BASE_URL . '/newsletter_widget_subscribe.php" method="post" class="widget-form-stack" novalidate>'
         . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
         . '<input type="hidden" name="return_url" value="' . h($returnUrl) . '">'

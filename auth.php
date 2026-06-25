@@ -124,6 +124,7 @@ function isSensitiveNoStoreNoIndexRequestPath(?string $requestUri = null): bool
         BASE_URL . '/subscribe_confirm.php',
         BASE_URL . '/unsubscribe.php',
         BASE_URL . '/reset_password.php',
+        BASE_URL . '/reservations/cancel_booking.php',
         BASE_URL . '/public_logout.php',
         BASE_URL . '/admin/logout.php',
     ], true);
@@ -621,6 +622,21 @@ function internalRedirectTarget(string $target, string $default = ''): string
     $query    = isset($parts['query']) ? '?' . $parts['query'] : '';
     $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
     return $path . $query . $fragment;
+}
+
+function safePublicReturnTarget(string $target, string $default = ''): string
+{
+    $safeDefault = internalRedirectTarget($default, BASE_URL . '/index.php');
+    $safeTarget = internalRedirectTarget($target, '');
+    if ($safeTarget === '') {
+        return $safeDefault;
+    }
+
+    if (isSensitiveNoStoreNoIndexRequestPath($safeTarget)) {
+        return $safeDefault;
+    }
+
+    return $safeTarget;
 }
 
 /**

@@ -181,6 +181,11 @@ PHP,
 $target = adminLoginRedirectTarget((string)($_GET['redirect'] ?? ''), '/admin/index.php');
 header('Location: ' . $target);
 PHP,
+        'public/safe_public_return.php' => <<<'PHP'
+<?php
+$target = safePublicReturnTarget((string)($_POST['return_url'] ?? ''), '/subscribe.php');
+header('Location: ' . $target);
+PHP,
         'build/ignored_fixture.php' => <<<'PHP'
 <?php
 $target = (string)($_GET['redirect'] ?? '/admin/index.php');

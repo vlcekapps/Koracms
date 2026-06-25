@@ -2,6 +2,16 @@
 
 require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
+sendNoStoreNoIndexHeaders();
+
+$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+if (!in_array($requestMethod, ['GET', 'POST'], true)) {
+    header('Content-Type: text/plain; charset=UTF-8');
+    header('Allow: GET, POST');
+    http_response_code(405);
+    echo "Method not allowed\n";
+    exit;
+}
 
 if (!isModuleEnabled('reservations')) {
     header('Location: ' . BASE_URL . '/index.php');
@@ -90,7 +100,7 @@ renderPublicPage([
     'title' => 'Zrušení rezervace – ' . $siteName,
     'meta' => [
         'title' => 'Zrušení rezervace – ' . $siteName,
-        'url' => BASE_URL . '/reservations/cancel_booking.php?token=' . urlencode($token),
+        'url' => BASE_URL . '/reservations/cancel_booking.php',
     ],
     'view' => 'modules/reservations-cancel-booking',
     'view_data' => [

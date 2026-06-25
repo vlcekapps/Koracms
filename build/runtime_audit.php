@@ -7794,11 +7794,13 @@ $foundationChecks = [
         && str_contains($redirectGuardrailsAuditSource, 'redirectGuardrailsReadsRequestRedirectTarget')
         && str_contains($redirectGuardrailsAuditSource, 'redirectGuardrailsOutputsRawRequestUriReturnField')
         && str_contains($redirectGuardrailsAuditSource, 'internalRedirectTarget(')
+        && str_contains($redirectGuardrailsAuditSource, 'safePublicReturnTarget(')
         && str_contains($redirectGuardrailsAuditSource, 'adminLoginRedirectTarget(')
         && str_contains($redirectGuardrailsAuditSource, 'request-derived redirect target must use internalRedirectTarget()')
         && str_contains($redirectGuardrailsAuditSelftestSource, 'assertRedirectGuardrailsPasses')
         && str_contains($redirectGuardrailsAuditSelftestSource, 'assertRedirectGuardrailsFails')
         && str_contains($redirectGuardrailsAuditSelftestSource, 'Raw GET redirect target guard')
+        && str_contains($redirectGuardrailsAuditSelftestSource, 'safePublicReturnTarget')
         && str_contains($redirectGuardrailsAuditSelftestSource, 'Raw POST return URL guard')
         && str_contains($redirectGuardrailsAuditSelftestSource, 'filter_input redirect target guard')
         && str_contains($redirectGuardrailsAuditSelftestSource, 'Raw REQUEST_URI return field guard'),
@@ -8354,10 +8356,12 @@ $foundationChecks = [
         && str_contains($adminLogoutSource, "header('Allow: GET')"),
     'sensitive token and logout endpoints send no-store noindex headers' => str_contains($authSource, 'function sendNoStoreNoIndexHeaders')
         && str_contains($authSource, 'function isSensitiveNoStoreNoIndexRequestPath')
+        && str_contains($authSource, 'function safePublicReturnTarget')
         && str_contains($authSource, '_KORA_FORCE_NO_STORE_NO_INDEX')
         && str_contains($authSource, 'KORA_FORCE_NO_STORE_NO_INDEX')
         && str_contains($authSource, "BASE_URL . '/confirm_email.php'")
         && str_contains($authSource, "BASE_URL . '/reset_password.php'")
+        && str_contains($authSource, "BASE_URL . '/reservations/cancel_booking.php'")
         && str_contains($authSource, "BASE_URL . '/admin/logout.php'")
         && str_contains($authSource, 'function sendAdminNoStoreHeaders')
         && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
@@ -8367,12 +8371,18 @@ $foundationChecks = [
         && str_contains($authSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
         && str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
+        && str_contains($htaccessSource, 'reservations/cancel_booking\.php')
         && str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, 'Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX')
         && str_contains($confirmEmailSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($subscribeConfirmSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($unsubscribeSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($passwordResetSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($reservationsCancelBookingSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($reservationsCancelBookingSource, "in_array(\$requestMethod, ['GET', 'POST'], true)")
+        && str_contains($reservationsCancelBookingSource, "header('Allow: GET, POST')")
+        && str_contains($reservationsCancelBookingSource, "'url' => BASE_URL . '/reservations/cancel_booking.php'")
+        && !str_contains($reservationsCancelBookingSource, "'url' => BASE_URL . '/reservations/cancel_booking.php?token='")
         && str_contains($publicLogoutSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($adminLogoutSource, 'sendNoStoreNoIndexHeaders();'),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
@@ -8774,6 +8784,7 @@ foreach ([
     '/subscribe_confirm.php?token=cache-guard' => 'subscribe_confirm.php',
     '/unsubscribe.php?token=cache-guard' => 'unsubscribe.php',
     '/reset_password.php?token=cache-guard' => 'reset_password.php',
+    '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef' => 'reservations/cancel_booking.php',
     '/public_logout.php' => 'public_logout.php',
     '/admin/logout.php' => 'admin/logout.php',
 ] as $sensitiveGetUrl => $sensitiveGetLabel) {
@@ -8800,6 +8811,21 @@ if (
     || !runtimeAuditHeaderContains($socialTokenProbe['headers'], 'X-Robots-Tag', 'noindex')
 ) {
     $foundationIssues[] = 'social preview crawler could override token no-store/noindex headers';
+}
+$socialReservationCancelProbe = fetchUrl(
+    $baseUrl . '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef',
+    '',
+    0,
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+);
+if (
+    !runtimeAuditHeaderContains($socialReservationCancelProbe['headers'], 'Cache-Control', 'no-store')
+    || !runtimeAuditHeaderContains($socialReservationCancelProbe['headers'], 'X-Robots-Tag', 'noindex')
+) {
+    $foundationIssues[] = 'social preview crawler could override reservation cancellation no-store/noindex headers';
+}
+if (str_contains($socialReservationCancelProbe['body'], 'cancel_booking.php?token=')) {
+    $foundationIssues[] = 'reservation cancellation page leaks token in HTML return URL';
 }
 
 $cspReportGetProbe = fetchUrl($baseUrl . '/csp-report.php', '', 0);
@@ -14809,6 +14835,9 @@ if (str_contains($widgetLibSource, 'aria-label="')
 if (!str_contains($widgetLibSource, 'newsletter_widget_subscribe.php')) {
     $widgetRenderIssues[] = 'newsletter widget renderer is missing inline subscribe form action';
 }
+if (!str_contains($widgetLibSource, 'safePublicReturnTarget((string)($_SERVER[\'REQUEST_URI\'] ?? \'\'), BASE_URL . \'/subscribe.php\')')) {
+    $widgetRenderIssues[] = 'newsletter widget renderer is missing token-safe return_url sanitization';
+}
 if (!str_contains($widgetLibSource, 'Najděte články, novinky, stránky a další obsah napříč celým webem.')) {
     $widgetRenderIssues[] = 'search widget is missing the default cross-site discovery helper text';
 }
@@ -14889,7 +14918,7 @@ if (!str_contains($widgetsMigrateSource, "widget_type = 'newsletter' AND zone = 
 if (!str_contains($newsletterWidgetSubscribeSource, "rateLimit('subscribe_widget', 3, 300)")) {
     $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing dedicated rate limiting';
 }
-if (!str_contains($newsletterWidgetSubscribeSource, 'internalRedirectTarget')) {
+if (!str_contains($newsletterWidgetSubscribeSource, 'safePublicReturnTarget')) {
     $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing safe return_url validation';
 }
 if (!str_contains($newsletterWidgetSubscribeSource, "'email' => \$email")) {

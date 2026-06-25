@@ -544,7 +544,7 @@ Session vrstva používá cookies-only režim, strict mode a vypnuté session ID
 
 Běžné administrační HTML odpovědi včetně loginu, 2FA a potvrzení migrace posílají `Cache-Control: no-store, max-age=0`, `Pragma: no-cache`, `Expires: 0` a `X-Robots-Tag: noindex, nofollow, noarchive`. Administrace se tak zbytečně neuchovává v prohlížeči nebo mezicache a nemá se indexovat, zatímco veřejné sociální náhledy mají dál vlastní krátce cacheovatelnou výjimku.
 
-Citlivé veřejné tokenové a odhlašovací endpointy, například potvrzení e-mailu, potvrzení nebo odhlášení newsletteru, reset hesla a veřejné odhlášení, používají stejné `no-store` a `noindex` hlavičky. Pokud na ně omylem přijde sociální crawler, cache výjimka pro sdílené články se nepoužije.
+Citlivé veřejné tokenové a odhlašovací endpointy, například potvrzení e-mailu, potvrzení nebo odhlášení newsletteru, reset hesla, zrušení rezervace přes e-mailový token a veřejné odhlášení, používají stejné `no-store` a `noindex` hlavičky. Pokud na ně omylem přijde sociální crawler, cache výjimka pro sdílené články se nepoužije. Rezervační token se zároveň nepropíše do SEO metadat ani skryté návratové URL newsletter widgetu.
 
 Odhlášení navíc posílá `Clear-Site-Data: "cache"`, aby prohlížeč zahodil cache webu po ukončení session. CMS záměrně nepoužívá agresivnější varianty pro cookies nebo storage, protože session cookie se maže cíleně a lokální autosave koncepty v administraci ani cookie preference nemají mizet překvapivě.
 

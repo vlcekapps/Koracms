@@ -4,7 +4,7 @@ require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 
 $defaultRedirect = BASE_URL . '/subscribe.php';
-$returnUrl = internalRedirectTarget(trim((string)($_POST['return_url'] ?? '')), $defaultRedirect);
+$returnUrl = safePublicReturnTarget(trim((string)($_POST['return_url'] ?? '')), $defaultRedirect);
 
 if (!isModuleEnabled('newsletter')) {
     header('Location: ' . $returnUrl);

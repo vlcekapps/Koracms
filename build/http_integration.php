@@ -542,6 +542,7 @@ try {
         '/subscribe_confirm.php?token=cache-guard' => 'subscribe_confirm.php',
         '/unsubscribe.php?token=cache-guard' => 'unsubscribe.php',
         '/reset_password.php?token=cache-guard' => 'reset_password.php',
+        '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef' => 'reservations/cancel_booking.php',
         '/public_logout.php' => 'public_logout.php',
         '/admin/logout.php' => 'admin/logout.php',
     ];
@@ -568,6 +569,21 @@ try {
         || !httpIntegrationHeaderContains($socialTokenCacheResponse, 'X-Robots-Tag', 'noindex')
     ) {
         $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex hlavičky potvrzovacího tokenu';
+    }
+    $socialReservationCancelResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef',
+        '',
+        0,
+        'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+    );
+    if (
+        !httpIntegrationHeaderContains($socialReservationCancelResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($socialReservationCancelResponse, 'X-Robots-Tag', 'noindex')
+    ) {
+        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex hlavičky tokenu pro zrušení rezervace';
+    }
+    if (str_contains($socialReservationCancelResponse['body'], 'cancel_booking.php?token=')) {
+        $sensitiveGetCacheIssues[] = 'stránka zrušení rezervace propisuje token do HTML návratové URL';
     }
     httpIntegrationPrintResult('sensitive_get_endpoints_cache_http', $sensitiveGetCacheIssues, $failures);
 

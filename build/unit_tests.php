@@ -122,6 +122,13 @@ assert_equals('', internalRedirectTarget("/admin\x00evil"), 'null byte rejected'
 assert_equals('/page.php?id=5#section', internalRedirectTarget('/page.php?id=5#section'), 'query and fragment preserved');
 assert_equals('', internalRedirectTarget('admin/index.php'), 'relative path (no leading /) rejected');
 
+test_section('safePublicReturnTarget()');
+
+assert_equals('/clanek?foo=1', safePublicReturnTarget('/clanek?foo=1', '/subscribe.php'), 'safe public return keeps ordinary internal URL');
+assert_equals('/subscribe.php', safePublicReturnTarget('https://evil.example/phish', '/subscribe.php'), 'safe public return rejects external URL');
+assert_equals('/subscribe.php', safePublicReturnTarget('/reset_password.php?token=secret', '/subscribe.php'), 'safe public return rejects password reset token URL');
+assert_equals('/subscribe.php', safePublicReturnTarget('/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef', '/subscribe.php'), 'safe public return rejects reservation cancellation token URL');
+
 test_section('storedRedirectTarget()');
 
 assert_equals('/nova-stranka', storedRedirectTarget('/nova-stranka'), 'stored redirect accepts internal path');

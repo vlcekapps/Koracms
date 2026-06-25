@@ -76,6 +76,7 @@ function shouldAuditRedirectGuardrailFile(string $relativePath): bool
 function redirectGuardrailsHasSafeTargetHelper(string $source): bool
 {
     return str_contains($source, 'internalRedirectTarget(')
+        || str_contains($source, 'safePublicReturnTarget(')
         || str_contains($source, 'adminLoginRedirectTarget(');
 }
 
