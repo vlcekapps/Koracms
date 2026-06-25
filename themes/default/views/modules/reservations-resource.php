@@ -8,8 +8,8 @@
     <h1 id="reservation-resource-title" class="section-title section-title--hero"><?= h($resource['name']) ?></h1>
 
     <?php if ($successMessage): ?>
-      <div class="status-message status-message--success" role="status">
-        <p>Rezervace byla úspěšně odeslána. Potvrzení jsme zaslali na váš e-mail.</p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="reservation-resource-success-message">
+        <p id="reservation-resource-success-message">Rezervace byla úspěšně odeslána. Potvrzení jsme zaslali na váš e-mail.</p>
       </div>
     <?php endif; ?>
 

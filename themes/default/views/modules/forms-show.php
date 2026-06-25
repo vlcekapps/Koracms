@@ -8,8 +8,9 @@
     <?php endif; ?>
 
     <?php if ($success): ?>
-      <div class="status-message status-message--success" role="status" aria-atomic="true">
-        <p><strong><?= h(trim((string)($form['success_message'] ?? '')) !== '' ? (string)$form['success_message'] : 'Formulář byl úspěšně odeslán. Děkujeme!') ?></strong></p>
+      <?php $formSuccessMessageId = 'form-success-message-' . (int)($form['id'] ?? 0); ?>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="<?= h($formSuccessMessageId) ?>">
+        <p id="<?= h($formSuccessMessageId) ?>"><strong><?= h(trim((string)($form['success_message'] ?? '')) !== '' ? (string)$form['success_message'] : 'Formulář byl úspěšně odeslán. Děkujeme!') ?></strong></p>
         <?php if (!empty($successActions)): ?>
           <div class="status-actions">
             <?php foreach ($successActions as $action): ?>

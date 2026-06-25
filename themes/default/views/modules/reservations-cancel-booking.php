@@ -4,16 +4,16 @@
     <h1 id="cancel-booking-title" class="section-title section-title--hero"><?= h($pageTitle) ?></h1>
 
     <?php if ($success): ?>
-      <div class="status-message status-message--success" role="status">
-        <p><strong>Rezervace byla úspěšně zrušena.</strong></p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="reservation-cancel-success-message">
+        <p id="reservation-cancel-success-message"><strong>Rezervace byla úspěšně zrušena.</strong></p>
         <p>Potvrzení jsme zaslali na váš e-mail.</p>
       </div>
       <div class="button-row button-row--start">
         <a class="button-secondary" href="<?= BASE_URL ?>/reservations/index.php">Zpět na přehled zdrojů</a>
       </div>
     <?php elseif ($error !== null): ?>
-      <div class="status-message status-message--error" role="alert">
-        <p><?= h($error) ?></p>
+      <div class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="reservation-cancel-error-message">
+        <p id="reservation-cancel-error-message"><?= h($error) ?></p>
       </div>
       <div class="button-row button-row--start">
         <a class="button-secondary" href="<?= BASE_URL ?>/reservations/index.php">Zpět na přehled zdrojů</a>

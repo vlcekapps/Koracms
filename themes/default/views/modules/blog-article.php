@@ -142,12 +142,12 @@ $showAuthorPanel = !empty($article['author_public_path'])
     </div>
 
     <?php if ($commentResult === 'pending'): ?>
-      <div class="status-message status-message--success" role="status">
-        <p>Komentář byl přijat a čeká na schválení. Děkujeme!</p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="comment-pending-message">
+        <p id="comment-pending-message">Komentář byl přijat a čeká na schválení. Děkujeme!</p>
       </div>
     <?php elseif ($commentResult === 'approved'): ?>
-      <div class="status-message status-message--success" role="status">
-        <p>Komentář byl zveřejněn. Děkujeme!</p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="comment-approved-message">
+        <p id="comment-approved-message">Komentář byl zveřejněn. Děkujeme!</p>
       </div>
     <?php endif; ?>
 
@@ -184,8 +184,8 @@ $showAuthorPanel = !empty($article['author_public_path'])
     <?php endif; ?>
 
     <?php if (!$commentsState['enabled']): ?>
-      <div class="status-message status-message--info" role="status">
-        <p><?= h($commentsState['message']) ?></p>
+      <div class="status-message status-message--info" role="status" aria-atomic="true" aria-labelledby="comments-unavailable-message">
+        <p id="comments-unavailable-message"><?= h($commentsState['message']) ?></p>
       </div>
     <?php else: ?>
     <form method="post" novalidate class="form-stack"<?php if (!empty($commentErrors)): ?> aria-describedby="comment-errors"<?php endif; ?>>

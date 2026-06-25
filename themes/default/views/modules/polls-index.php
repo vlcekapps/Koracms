@@ -16,15 +16,16 @@ $q = trim((string)($q ?? ''));
         <p class="section-subtitle"><?= h((string)$poll['excerpt']) ?></p>
       <?php endif; ?>
 
+      <?php $pollFeedbackIdSuffix = (int)($poll['id'] ?? 0); ?>
       <?php if ($voted): ?>
-        <div class="status-message status-message--success" role="status">
-          <p>Váš hlas byl zaznamenán. Děkujeme!</p>
+        <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="poll-vote-success-message-<?= $pollFeedbackIdSuffix ?>">
+          <p id="poll-vote-success-message-<?= $pollFeedbackIdSuffix ?>">Váš hlas byl zaznamenán. Děkujeme!</p>
         </div>
       <?php endif; ?>
 
       <?php if ($voteErrorMessage !== ''): ?>
-        <div class="status-message status-message--error" role="alert">
-          <p><?= h($voteErrorMessage) ?></p>
+        <div class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="poll-vote-error-message-<?= $pollFeedbackIdSuffix ?>">
+          <p id="poll-vote-error-message-<?= $pollFeedbackIdSuffix ?>"><?= h($voteErrorMessage) ?></p>
         </div>
       <?php endif; ?>
 

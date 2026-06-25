@@ -15207,6 +15207,100 @@ if (!str_contains($themeContactViewSource, 'role="status" aria-atomic="true" ari
     $themeLayoutIssues[] = 'contact success message is missing text-backed status semantics';
 }
 foreach ([
+    'chat pending message' => [
+        'source' => $themeChatViewSource,
+        'fragments' => [
+            'role="status" aria-atomic="true" aria-labelledby="chat-pending-message"',
+            '<p id="chat-pending-message">Zpráva byla přijata a po schválení se objeví ve veřejném chatu.</p>',
+        ],
+    ],
+    'public form success message' => [
+        'source' => $themeFormsShowViewSource,
+        'fragments' => [
+            "\$formSuccessMessageId = 'form-success-message-' . (int)(\$form['id'] ?? 0);",
+            'role="status" aria-atomic="true" aria-labelledby="<?= h($formSuccessMessageId) ?>"',
+            '<p id="<?= h($formSuccessMessageId) ?>"><strong><?= h(trim((string)($form[\'success_message\'] ?? \'\')) !== \'\'',
+        ],
+    ],
+    'poll vote success message' => [
+        'source' => $themePollsIndexViewSource,
+        'fragments' => [
+            '$pollFeedbackIdSuffix = (int)($poll[\'id\'] ?? 0);',
+            'role="status" aria-atomic="true" aria-labelledby="poll-vote-success-message-<?= $pollFeedbackIdSuffix ?>"',
+            '<p id="poll-vote-success-message-<?= $pollFeedbackIdSuffix ?>">Váš hlas byl zaznamenán. Děkujeme!</p>',
+        ],
+    ],
+    'poll vote error message' => [
+        'source' => $themePollsIndexViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="poll-vote-error-message-<?= $pollFeedbackIdSuffix ?>"',
+            '<p id="poll-vote-error-message-<?= $pollFeedbackIdSuffix ?>"><?= h($voteErrorMessage) ?></p>',
+        ],
+    ],
+    'reservation resource success message' => [
+        'source' => $themeReservationsResourceViewSource,
+        'fragments' => [
+            'role="status" aria-atomic="true" aria-labelledby="reservation-resource-success-message"',
+            '<p id="reservation-resource-success-message">Rezervace byla úspěšně odeslána. Potvrzení jsme zaslali na váš e-mail.</p>',
+        ],
+    ],
+    'reservation booking errors message' => [
+        'source' => $themeReservationsBookViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="reservation-book-errors-heading"',
+            '<p id="reservation-book-errors-heading" class="sr-only">Rezervaci se nepodařilo odeslat</p>',
+        ],
+    ],
+    'reservation empty slots message' => [
+        'source' => $themeReservationsBookViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="reservation-book-empty-slots-message"',
+            '<p id="reservation-book-empty-slots-message"><strong>Na tento den nejsou k dispozici žádné volné časy.</strong></p>',
+        ],
+    ],
+    'reservation cancel success message' => [
+        'source' => $themeReservationCancelBookingViewSource,
+        'fragments' => [
+            'role="status" aria-atomic="true" aria-labelledby="reservation-cancel-success-message"',
+            '<p id="reservation-cancel-success-message"><strong>Rezervace byla úspěšně zrušena.</strong></p>',
+        ],
+    ],
+    'reservation cancel error message' => [
+        'source' => $themeReservationCancelBookingViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="reservation-cancel-error-message"',
+            '<p id="reservation-cancel-error-message"><?= h($error) ?></p>',
+        ],
+    ],
+    'comment pending message' => [
+        'source' => $themeBlogArticleViewSource,
+        'fragments' => [
+            'role="status" aria-atomic="true" aria-labelledby="comment-pending-message"',
+            '<p id="comment-pending-message">Komentář byl přijat a čeká na schválení. Děkujeme!</p>',
+        ],
+    ],
+    'comment approved message' => [
+        'source' => $themeBlogArticleViewSource,
+        'fragments' => [
+            'role="status" aria-atomic="true" aria-labelledby="comment-approved-message"',
+            '<p id="comment-approved-message">Komentář byl zveřejněn. Děkujeme!</p>',
+        ],
+    ],
+    'comments unavailable message' => [
+        'source' => $themeBlogArticleViewSource,
+        'fragments' => [
+            'role="status" aria-atomic="true" aria-labelledby="comments-unavailable-message"',
+            '<p id="comments-unavailable-message"><?= h($commentsState[\'message\']) ?></p>',
+        ],
+    ],
+] as $publicModuleStatusLabel => $publicModuleStatusSpec) {
+    foreach ($publicModuleStatusSpec['fragments'] as $publicModuleStatusFragment) {
+        if (!str_contains($publicModuleStatusSpec['source'], $publicModuleStatusFragment)) {
+            $themeLayoutIssues[] = 'public module ' . $publicModuleStatusLabel . ' is missing text-backed status fragment: ' . $publicModuleStatusFragment;
+        }
+    }
+}
+foreach ([
     'register resent' => [
         'source' => $themeRegisterViewSource,
         'status' => 'role="status" aria-atomic="true" aria-labelledby="register-resent-message"',

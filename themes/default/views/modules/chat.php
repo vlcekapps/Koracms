@@ -8,9 +8,9 @@
     </div>
 
     <?php if ($successState === 'pending'): ?>
-      <p class="status-message status-message--success" role="status">
-        Zpráva byla přijata a po schválení se objeví ve veřejném chatu.
-      </p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="chat-pending-message">
+        <p id="chat-pending-message">Zpráva byla přijata a po schválení se objeví ve veřejném chatu.</p>
+      </div>
     <?php endif; ?>
 
     <p class="section-summary">
