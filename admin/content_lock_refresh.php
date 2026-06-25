@@ -6,17 +6,26 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Allow: POST');
-    http_response_code(405);
-    echo json_encode(['ok' => false]);
+/**
+ * @param array<string,mixed> $payload
+ */
+function contentLockJsonResponse(array $payload, int $statusCode = 200): void
+{
+    http_response_code($statusCode);
+    echo json_encode(
+        $payload + ['request_id' => koraRequestId()],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Allow: POST');
+    contentLockJsonResponse(['ok' => false], 405);
+}
+
 if (!isLoggedIn()) {
-    http_response_code(401);
-    echo json_encode(['ok' => false]);
-    exit;
+    contentLockJsonResponse(['ok' => false], 401);
 }
 
 verifyCsrf();
@@ -25,10 +34,8 @@ $entityType = trim((string)($_POST['entity_type'] ?? ''));
 $entityId = inputInt('post', 'entity_id');
 
 if ($entityType === '' || $entityId === null || $entityId <= 0) {
-    http_response_code(400);
-    echo json_encode(['ok' => false]);
-    exit;
+    contentLockJsonResponse(['ok' => false], 400);
 }
 
 $result = refreshContentLock($entityType, $entityId);
-echo json_encode(['ok' => $result]);
+contentLockJsonResponse(['ok' => $result]);

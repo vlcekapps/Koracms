@@ -718,6 +718,10 @@ try {
         if (!$adminJsonPostOnlyEndpointNoStoreFound || !$adminJsonPostOnlyEndpointNosniffFound) {
             $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal bezpečné JSON hlavičky no-store a nosniff';
         }
+        $adminJsonPostOnlyEndpointPayload = json_decode($adminJsonPostOnlyEndpointResponse['body'], true);
+        if (!is_array($adminJsonPostOnlyEndpointPayload) || ($adminJsonPostOnlyEndpointPayload['ok'] ?? null) !== false || trim((string)($adminJsonPostOnlyEndpointPayload['request_id'] ?? '')) === '') {
+            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal dohledatelnou JSON odpověď s request_id';
+        }
     }
     httpIntegrationPrintResult('admin_json_post_only_endpoints_http', $adminJsonPostOnlyEndpointIssues, $failures);
 

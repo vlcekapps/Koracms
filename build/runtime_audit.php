@@ -8451,9 +8451,15 @@ $foundationChecks = [
     'admin POST-only JSON endpoints send safe headers' => str_contains($adminContentLockRefreshSource, "header('Cache-Control: no-store')")
         && str_contains($adminContentLockRefreshSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($adminContentLockRefreshSource, "header('Allow: POST')")
+        && str_contains($adminContentLockRefreshSource, 'function contentLockJsonResponse')
+        && str_contains($adminContentLockRefreshSource, "'request_id' => koraRequestId()")
+        && str_contains($adminContentLockRefreshSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
         && str_contains($adminReorderAjaxSource, "header('Cache-Control: no-store')")
         && str_contains($adminReorderAjaxSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($adminReorderAjaxSource, "header('Allow: POST')"),
+        && str_contains($adminReorderAjaxSource, "header('Allow: POST')")
+        && str_contains($adminReorderAjaxSource, 'function reorderJsonResponse')
+        && str_contains($adminReorderAjaxSource, "'request_id' => koraRequestId()")
+        && str_contains($adminReorderAjaxSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES'),
     'admin downloadable exports send safe headers' => str_contains($adminExportSource, "header('Cache-Control: no-store')")
         && str_contains($adminExportSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($adminFormSubmissionFileSource, "header('Cache-Control: no-store')")

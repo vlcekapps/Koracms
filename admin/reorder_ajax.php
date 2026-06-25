@@ -11,26 +11,34 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 
+/**
+ * @param array<string,mixed> $payload
+ */
+function reorderJsonResponse(array $payload, int $statusCode = 200): void
+{
+    http_response_code($statusCode);
+    echo json_encode(
+        $payload + ['request_id' => koraRequestId()],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Allow: POST');
-    http_response_code(405);
-    echo json_encode(['ok' => false]);
-    exit;
+    reorderJsonResponse(['ok' => false], 405);
 }
 
 $csrfToken = trim($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
 if ($csrfToken === '' || !hash_equals(csrfToken(), $csrfToken)) {
-    http_response_code(403);
-    echo json_encode(['ok' => false]);
-    exit;
+    reorderJsonResponse(['ok' => false], 403);
 }
 
 $module = trim($_POST['module'] ?? '');
 $order  = array_values(array_filter(array_map('intval', (array)($_POST['order'] ?? []))));
 
 if ($order === [] || $module === '') {
-    echo json_encode(['ok' => false]);
-    exit;
+    reorderJsonResponse(['ok' => false]);
 }
 
 $pdo = db_connect();
@@ -39,17 +47,14 @@ $pdo = db_connect();
 $zone = trim($_POST['zone'] ?? '');
 if ($module === 'widgets' && $zone !== '') {
     if (!currentUserHasCapability('settings_manage')) {
-        http_response_code(403);
-        echo json_encode(['ok' => false]);
-        exit;
+        reorderJsonResponse(['ok' => false], 403);
     }
     $stmt = $pdo->prepare("UPDATE cms_widgets SET sort_order = ?, zone = ? WHERE id = ?");
     foreach ($order as $position => $id) {
         $stmt->execute([$position + 1, $zone, $id]);
     }
     logAction('reorder', "module=widgets zone={$zone} order=" . implode(',', $order));
-    echo json_encode(['ok' => true]);
-    exit;
+    reorderJsonResponse(['ok' => true]);
 }
 
 $config = match ($module) {
@@ -61,9 +66,7 @@ $config = match ($module) {
 };
 
 if (!$config || !currentUserHasCapability($config['capability'])) {
-    http_response_code(403);
-    echo json_encode(['ok' => false]);
-    exit;
+    reorderJsonResponse(['ok' => false], 403);
 }
 
 $stmt = $pdo->prepare("UPDATE {$config['table']} SET {$config['column']} = ? WHERE id = ?");
@@ -72,4 +75,4 @@ foreach ($order as $position => $id) {
 }
 
 logAction('reorder', "module={$module} order=" . implode(',', $order));
-echo json_encode(['ok' => true]);
+reorderJsonResponse(['ok' => true]);
