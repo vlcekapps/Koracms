@@ -76,6 +76,22 @@ function httpIntegrationHeaderContains(array $response, string $name, string $ne
     return false;
 }
 
+/**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
+ */
+function httpIntegrationReadOnlyMethodGuardOk(array $response): bool
+{
+    return httpIntegrationStatusCode($response) === 405
+        && httpIntegrationHeaderContains($response, 'Allow', 'GET')
+        && httpIntegrationHeaderContains($response, 'Allow', 'HEAD')
+        && httpIntegrationHeaderContains($response, 'Cache-Control', 'no-store')
+        && httpIntegrationHeaderContains($response, 'Cache-Control', 'max-age=0')
+        && httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noindex')
+        && httpIntegrationHeaderContains($response, 'Referrer-Policy', 'no-referrer')
+        && httpIntegrationHeaderContains($response, 'X-Content-Type-Options', 'nosniff')
+        && httpIntegrationHeaderContains($response, 'Content-Type', 'text/plain; charset=UTF-8');
+}
+
 function httpIntegrationSettingValue(PDO $pdo, string $key): string
 {
     $stmt = $pdo->prepare("SELECT value FROM cms_settings WHERE `key` = ?");
@@ -433,15 +449,8 @@ try {
         $robotsIssues[] = 'robots.txt neposílá X-Content-Type-Options: nosniff';
     }
     $robotsPostResponse = postRawUrl($baseUrl . BASE_URL . '/robots.txt', '', 'text/plain', '', 0);
-    $robotsAllowHeaderFound = false;
-    foreach ($robotsPostResponse['headers'] as $robotsPostHeader) {
-        if (stripos($robotsPostHeader, 'Allow:') === 0 && str_contains($robotsPostHeader, 'GET') && str_contains($robotsPostHeader, 'HEAD')) {
-            $robotsAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (httpIntegrationStatusCode($robotsPostResponse) !== 405 || !$robotsAllowHeaderFound) {
-        $robotsIssues[] = 'robots.txt neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    if (!httpIntegrationReadOnlyMethodGuardOk($robotsPostResponse)) {
+        $robotsIssues[] = 'robots.txt neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
     httpIntegrationPrintResult('robots_http', $robotsIssues, $failures);
 
@@ -467,15 +476,8 @@ try {
         $discoveryEndpointIssues[] = 'sitemap.xml neposílá X-Content-Type-Options: nosniff';
     }
     $sitemapPostResponse = postRawUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 'text/plain', '', 0);
-    $sitemapAllowHeaderFound = false;
-    foreach ($sitemapPostResponse['headers'] as $sitemapPostHeader) {
-        if (stripos($sitemapPostHeader, 'Allow:') === 0 && str_contains($sitemapPostHeader, 'GET') && str_contains($sitemapPostHeader, 'HEAD')) {
-            $sitemapAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (httpIntegrationStatusCode($sitemapPostResponse) !== 405 || !$sitemapAllowHeaderFound) {
-        $discoveryEndpointIssues[] = 'sitemap.xml neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    if (!httpIntegrationReadOnlyMethodGuardOk($sitemapPostResponse)) {
+        $discoveryEndpointIssues[] = 'sitemap.xml neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
     $feedResponse = fetchUrl($baseUrl . BASE_URL . '/feed.php', '', 0);
     if (httpIntegrationStatusCode($feedResponse) !== 200) {
@@ -488,37 +490,16 @@ try {
         $discoveryEndpointIssues[] = 'feed.php neposílá X-Content-Type-Options: nosniff';
     }
     $feedPostResponse = postRawUrl($baseUrl . BASE_URL . '/feed.php', '', 'text/plain', '', 0);
-    $feedAllowHeaderFound = false;
-    foreach ($feedPostResponse['headers'] as $feedPostHeader) {
-        if (stripos($feedPostHeader, 'Allow:') === 0 && str_contains($feedPostHeader, 'GET') && str_contains($feedPostHeader, 'HEAD')) {
-            $feedAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (httpIntegrationStatusCode($feedPostResponse) !== 405 || !$feedAllowHeaderFound) {
-        $discoveryEndpointIssues[] = 'feed.php neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    if (!httpIntegrationReadOnlyMethodGuardOk($feedPostResponse)) {
+        $discoveryEndpointIssues[] = 'feed.php neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
     $podcastFeedPostResponse = postRawUrl($baseUrl . BASE_URL . '/podcast/feed.php?slug=__missing__', '', 'text/plain', '', 0);
-    $podcastFeedAllowHeaderFound = false;
-    foreach ($podcastFeedPostResponse['headers'] as $podcastFeedPostHeader) {
-        if (stripos($podcastFeedPostHeader, 'Allow:') === 0 && str_contains($podcastFeedPostHeader, 'GET') && str_contains($podcastFeedPostHeader, 'HEAD')) {
-            $podcastFeedAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (httpIntegrationStatusCode($podcastFeedPostResponse) !== 405 || !$podcastFeedAllowHeaderFound) {
-        $discoveryEndpointIssues[] = 'podcast RSS feed neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    if (!httpIntegrationReadOnlyMethodGuardOk($podcastFeedPostResponse)) {
+        $discoveryEndpointIssues[] = 'podcast RSS feed neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
     $eventIcsPostResponse = postRawUrl($baseUrl . BASE_URL . '/events/ics.php?slug=__missing__', '', 'text/plain', '', 0);
-    $eventIcsAllowHeaderFound = false;
-    foreach ($eventIcsPostResponse['headers'] as $eventIcsPostHeader) {
-        if (stripos($eventIcsPostHeader, 'Allow:') === 0 && str_contains($eventIcsPostHeader, 'GET') && str_contains($eventIcsPostHeader, 'HEAD')) {
-            $eventIcsAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (httpIntegrationStatusCode($eventIcsPostResponse) !== 405 || !$eventIcsAllowHeaderFound) {
-        $discoveryEndpointIssues[] = 'ICS export události neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    if (!httpIntegrationReadOnlyMethodGuardOk($eventIcsPostResponse)) {
+        $discoveryEndpointIssues[] = 'ICS export události neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 
@@ -655,15 +636,8 @@ try {
     ];
     foreach ($fileEndpointMethodUrls as $fileEndpointUrl => $fileEndpointLabel) {
         $fileEndpointResponse = postRawUrl($baseUrl . BASE_URL . $fileEndpointUrl, '', 'text/plain', '', 0);
-        $fileEndpointAllowHeaderFound = false;
-        foreach ($fileEndpointResponse['headers'] as $fileEndpointHeader) {
-            if (stripos($fileEndpointHeader, 'Allow:') === 0 && str_contains($fileEndpointHeader, 'GET') && str_contains($fileEndpointHeader, 'HEAD')) {
-                $fileEndpointAllowHeaderFound = true;
-                break;
-            }
-        }
-        if (httpIntegrationStatusCode($fileEndpointResponse) !== 405 || !$fileEndpointAllowHeaderFound) {
-            $fileEndpointIssues[] = $fileEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+        if (!httpIntegrationReadOnlyMethodGuardOk($fileEndpointResponse)) {
+            $fileEndpointIssues[] = $fileEndpointLabel . ' neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
         }
     }
     httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
@@ -677,15 +651,8 @@ try {
     ];
     foreach ($adminReadOnlyEndpointUrls as $adminReadOnlyEndpointUrl => $adminReadOnlyEndpointLabel) {
         $adminReadOnlyEndpointResponse = postRawUrl($baseUrl . BASE_URL . $adminReadOnlyEndpointUrl, '', 'text/plain', $adminSession['cookie'], 0);
-        $adminReadOnlyEndpointAllowHeaderFound = false;
-        foreach ($adminReadOnlyEndpointResponse['headers'] as $adminReadOnlyEndpointHeader) {
-            if (stripos($adminReadOnlyEndpointHeader, 'Allow:') === 0 && str_contains($adminReadOnlyEndpointHeader, 'GET') && str_contains($adminReadOnlyEndpointHeader, 'HEAD')) {
-                $adminReadOnlyEndpointAllowHeaderFound = true;
-                break;
-            }
-        }
-        if (httpIntegrationStatusCode($adminReadOnlyEndpointResponse) !== 405 || !$adminReadOnlyEndpointAllowHeaderFound) {
-            $adminReadOnlyEndpointIssues[] = $adminReadOnlyEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+        if (!httpIntegrationReadOnlyMethodGuardOk($adminReadOnlyEndpointResponse)) {
+            $adminReadOnlyEndpointIssues[] = $adminReadOnlyEndpointLabel . ' neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
         }
     }
     $adminContentReferenceSearchResponse = fetchUrl($baseUrl . BASE_URL . '/admin/content_reference_search.php?q=test&type=all', $adminSession['cookie'], 0);

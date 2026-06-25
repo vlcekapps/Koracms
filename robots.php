@@ -2,18 +2,13 @@
 
 require_once __DIR__ . '/db.php';
 
+$isHeadRequest = requireReadOnlyHttpMethod();
+
 header('Content-Type: text/plain; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Robots-Tag: noindex');
 
-$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
-    header('Allow: GET, HEAD');
-    http_response_code(405);
-    echo "Method not allowed\n";
-    exit;
-}
-if ($requestMethod === 'HEAD') {
+if ($isHeadRequest) {
     exit;
 }
 

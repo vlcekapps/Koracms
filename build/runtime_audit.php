@@ -2497,6 +2497,22 @@ function runtimeAuditHeaderContains(array $headers, string $name, string $needle
 }
 
 /**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
+ */
+function runtimeAuditReadOnlyMethodGuardOk(array $response): bool
+{
+    return str_contains($response['status'], '405')
+        && runtimeAuditHeaderContains($response['headers'], 'Allow', 'GET')
+        && runtimeAuditHeaderContains($response['headers'], 'Allow', 'HEAD')
+        && runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'no-store')
+        && runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'max-age=0')
+        && runtimeAuditHeaderContains($response['headers'], 'X-Robots-Tag', 'noindex')
+        && runtimeAuditHeaderContains($response['headers'], 'Referrer-Policy', 'no-referrer')
+        && runtimeAuditHeaderContains($response['headers'], 'X-Content-Type-Options', 'nosniff')
+        && runtimeAuditHeaderContains($response['headers'], 'Content-Type', 'text/plain; charset=UTF-8');
+}
+
+/**
  * @return list<string>
  */
 function analyzeUxHeuristics(string $html, string $label): array
@@ -8331,23 +8347,18 @@ $foundationChecks = [
     'robots route exists' => str_contains($htaccessSource, 'RewriteRule ^robots\.txt$ robots.php')
         && str_contains($robotsSource, 'Disallow: " . BASE_URL . "/admin/')
         && str_contains($robotsSource, 'Sitemap: " . siteUrl(\'/sitemap.xml\')')
-        && str_contains($robotsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($robotsSource, "header('Allow: GET, HEAD')")
+        && str_contains($robotsSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($robotsSource, "header('X-Content-Type-Options: nosniff')"),
-    'read-only discovery endpoints enforce HTTP methods' => str_contains($sitemapSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($sitemapSource, "header('Allow: GET, HEAD')")
-        && str_contains($sitemapSource, "if (\$requestMethod === 'HEAD')")
+    'read-only discovery endpoints enforce HTTP methods' => str_contains($sitemapSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($sitemapSource, "if (\$isHeadRequest)")
         && str_contains($sitemapSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($feedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($feedSource, "header('Allow: GET, HEAD')")
+        && str_contains($feedSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($feedSource, "if (\$isHeadRequest)")
         && str_contains($feedSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($podcastFeedSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($podcastFeedSource, "header('Allow: GET, HEAD')")
+        && str_contains($podcastFeedSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($podcastFeedSource, "if (\$isHeadRequest)")
         && str_contains($podcastFeedSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($eventIcsSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($eventIcsSource, "header('Allow: GET, HEAD')")
+        && str_contains($eventIcsSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($eventIcsSource, "if (\$isHeadRequest)")
         && str_contains($eventIcsSource, "header('X-Content-Type-Options: nosniff')"),
     'state-changing GET endpoints reject unsupported methods' => str_contains($confirmEmailSource, "\$requestMethod !== 'GET'")
@@ -8402,6 +8413,8 @@ $foundationChecks = [
         && str_contains($adminLogoutSource, 'sendNoStoreNoIndexHeaders();'),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
         && str_contains($fileDownloadHelperSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
+        && str_contains($fileDownloadHelperSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($fileDownloadHelperSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')")
         && str_contains($fileDownloadHelperSource, "if ((\$_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD')"),
     'public file endpoints enforce HTTP methods' => str_contains($readOnlyMediaFileSource, 'requireReadOnlyHttpMethod();')
@@ -8631,15 +8644,8 @@ if (!runtimeAuditHeaderContains($robotsProbe['headers'], 'X-Content-Type-Options
     $foundationIssues[] = 'robots.txt did not send X-Content-Type-Options: nosniff';
 }
 $robotsPostProbe = postRawUrl($baseUrl . '/robots.txt', '', 'text/plain', '', 0);
-$robotsAllowHeaderFound = false;
-foreach ($robotsPostProbe['headers'] as $robotsPostHeader) {
-    if (stripos($robotsPostHeader, 'Allow:') === 0 && str_contains($robotsPostHeader, 'GET') && str_contains($robotsPostHeader, 'HEAD')) {
-        $robotsAllowHeaderFound = true;
-        break;
-    }
-}
-if (!str_contains($robotsPostProbe['status'], '405') || !$robotsAllowHeaderFound) {
-    $foundationIssues[] = 'robots.txt did not reject unsupported methods with Allow: GET, HEAD';
+if (!runtimeAuditReadOnlyMethodGuardOk($robotsPostProbe)) {
+    $foundationIssues[] = 'robots.txt did not reject unsupported methods with safe 405 headers';
 }
 
 $sitemapProbe = fetchUrl($baseUrl . '/sitemap.xml', '', 0);
@@ -8649,15 +8655,8 @@ if (!str_contains($sitemapProbe['status'], '200')) {
     $foundationIssues[] = 'sitemap.xml did not send X-Content-Type-Options: nosniff';
 }
 $sitemapPostProbe = postRawUrl($baseUrl . '/sitemap.xml', '', 'text/plain', '', 0);
-$sitemapAllowHeaderFound = false;
-foreach ($sitemapPostProbe['headers'] as $sitemapPostHeader) {
-    if (stripos($sitemapPostHeader, 'Allow:') === 0 && str_contains($sitemapPostHeader, 'GET') && str_contains($sitemapPostHeader, 'HEAD')) {
-        $sitemapAllowHeaderFound = true;
-        break;
-    }
-}
-if (!str_contains($sitemapPostProbe['status'], '405') || !$sitemapAllowHeaderFound) {
-    $foundationIssues[] = 'sitemap.xml did not reject unsupported methods with Allow: GET, HEAD';
+if (!runtimeAuditReadOnlyMethodGuardOk($sitemapPostProbe)) {
+    $foundationIssues[] = 'sitemap.xml did not reject unsupported methods with safe 405 headers';
 }
 
 $feedProbe = fetchUrl($baseUrl . '/feed.php', '', 0);
@@ -8667,39 +8666,18 @@ if (!str_contains($feedProbe['status'], '200')) {
     $foundationIssues[] = 'feed.php did not send X-Content-Type-Options: nosniff';
 }
 $feedPostProbe = postRawUrl($baseUrl . '/feed.php', '', 'text/plain', '', 0);
-$feedAllowHeaderFound = false;
-foreach ($feedPostProbe['headers'] as $feedPostHeader) {
-    if (stripos($feedPostHeader, 'Allow:') === 0 && str_contains($feedPostHeader, 'GET') && str_contains($feedPostHeader, 'HEAD')) {
-        $feedAllowHeaderFound = true;
-        break;
-    }
-}
-if (!str_contains($feedPostProbe['status'], '405') || !$feedAllowHeaderFound) {
-    $foundationIssues[] = 'feed.php did not reject unsupported methods with Allow: GET, HEAD';
+if (!runtimeAuditReadOnlyMethodGuardOk($feedPostProbe)) {
+    $foundationIssues[] = 'feed.php did not reject unsupported methods with safe 405 headers';
 }
 
 $podcastFeedPostProbe = postRawUrl($baseUrl . '/podcast/feed.php?slug=__missing__', '', 'text/plain', '', 0);
-$podcastFeedAllowHeaderFound = false;
-foreach ($podcastFeedPostProbe['headers'] as $podcastFeedPostHeader) {
-    if (stripos($podcastFeedPostHeader, 'Allow:') === 0 && str_contains($podcastFeedPostHeader, 'GET') && str_contains($podcastFeedPostHeader, 'HEAD')) {
-        $podcastFeedAllowHeaderFound = true;
-        break;
-    }
-}
-if (!str_contains($podcastFeedPostProbe['status'], '405') || !$podcastFeedAllowHeaderFound) {
-    $foundationIssues[] = 'podcast/feed.php did not reject unsupported methods with Allow: GET, HEAD';
+if (!runtimeAuditReadOnlyMethodGuardOk($podcastFeedPostProbe)) {
+    $foundationIssues[] = 'podcast/feed.php did not reject unsupported methods with safe 405 headers';
 }
 
 $eventIcsPostProbe = postRawUrl($baseUrl . '/events/ics.php?slug=__missing__', '', 'text/plain', '', 0);
-$eventIcsAllowHeaderFound = false;
-foreach ($eventIcsPostProbe['headers'] as $eventIcsPostHeader) {
-    if (stripos($eventIcsPostHeader, 'Allow:') === 0 && str_contains($eventIcsPostHeader, 'GET') && str_contains($eventIcsPostHeader, 'HEAD')) {
-        $eventIcsAllowHeaderFound = true;
-        break;
-    }
-}
-if (!str_contains($eventIcsPostProbe['status'], '405') || !$eventIcsAllowHeaderFound) {
-    $foundationIssues[] = 'events/ics.php did not reject unsupported methods with Allow: GET, HEAD';
+if (!runtimeAuditReadOnlyMethodGuardOk($eventIcsPostProbe)) {
+    $foundationIssues[] = 'events/ics.php did not reject unsupported methods with safe 405 headers';
 }
 
 $fileMethodGuardUrls = [
@@ -8716,15 +8694,8 @@ $fileMethodGuardUrls = [
 ];
 foreach ($fileMethodGuardUrls as $fileMethodGuardUrl => $fileMethodGuardLabel) {
     $fileMethodGuardProbe = postRawUrl($baseUrl . $fileMethodGuardUrl, '', 'text/plain', '', 0);
-    $fileMethodGuardAllowHeaderFound = false;
-    foreach ($fileMethodGuardProbe['headers'] as $fileMethodGuardHeader) {
-        if (stripos($fileMethodGuardHeader, 'Allow:') === 0 && str_contains($fileMethodGuardHeader, 'GET') && str_contains($fileMethodGuardHeader, 'HEAD')) {
-            $fileMethodGuardAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (!str_contains($fileMethodGuardProbe['status'], '405') || !$fileMethodGuardAllowHeaderFound) {
-        $foundationIssues[] = $fileMethodGuardLabel . ' did not reject unsupported methods with Allow: GET, HEAD';
+    if (!runtimeAuditReadOnlyMethodGuardOk($fileMethodGuardProbe)) {
+        $foundationIssues[] = $fileMethodGuardLabel . ' did not reject unsupported methods with safe 405 headers';
     }
 }
 
@@ -8736,15 +8707,8 @@ $adminReadOnlyMethodGuardUrls = [
 ];
 foreach ($adminReadOnlyMethodGuardUrls as $adminReadOnlyMethodGuardUrl => $adminReadOnlyMethodGuardLabel) {
     $adminReadOnlyMethodGuardProbe = postRawUrl($baseUrl . $adminReadOnlyMethodGuardUrl, '', 'text/plain', 'PHPSESSID=' . $auditSessionId, 0);
-    $adminReadOnlyMethodGuardAllowHeaderFound = false;
-    foreach ($adminReadOnlyMethodGuardProbe['headers'] as $adminReadOnlyMethodGuardHeader) {
-        if (stripos($adminReadOnlyMethodGuardHeader, 'Allow:') === 0 && str_contains($adminReadOnlyMethodGuardHeader, 'GET') && str_contains($adminReadOnlyMethodGuardHeader, 'HEAD')) {
-            $adminReadOnlyMethodGuardAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (!str_contains($adminReadOnlyMethodGuardProbe['status'], '405') || !$adminReadOnlyMethodGuardAllowHeaderFound) {
-        $foundationIssues[] = $adminReadOnlyMethodGuardLabel . ' did not reject unsupported methods with Allow: GET, HEAD';
+    if (!runtimeAuditReadOnlyMethodGuardOk($adminReadOnlyMethodGuardProbe)) {
+        $foundationIssues[] = $adminReadOnlyMethodGuardLabel . ' did not reject unsupported methods with safe 405 headers';
     }
 }
 

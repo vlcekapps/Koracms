@@ -1,15 +1,7 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
-$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
-    header('Content-Type: text/plain; charset=UTF-8');
-    header('Allow: GET, HEAD');
-    http_response_code(405);
-    echo "Method not allowed\n";
-    exit;
-}
-$isHeadRequest = $requestMethod === 'HEAD';
+$isHeadRequest = requireReadOnlyHttpMethod();
 
 if (!isModuleEnabled('podcast')) {
     http_response_code(404);
