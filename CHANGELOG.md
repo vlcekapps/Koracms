@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost mazání použitých médií** – vypnuté tlačítko `Smazat` v knihovně médií už důvod blokace nesděluje jen tooltipovým `title`; důvod je skrytý text přímo uvnitř tlačítka a runtime audit hlídá návrat starého vzoru.
 - **Přístupnost rychlých přesunů fotografií** – vypnutá tlačítka `Nahoru` / `Dolů` v přehledu fotografií galerie už nesdělují důvod jen tooltipovým `title`; důvod je skrytý text přímo uvnitř tlačítka a runtime audit hlídá návrat starého vzoru.
 - **Přístupnost fallback tlačítek řazení** – sdílená tlačítka `Nahoru` / `Dolů` pro klávesnicové řazení už nepoužívají tooltipový `title`; název ovládání zůstává skrytý text přímo uvnitř tlačítka a runtime audit hlídá návrat starého vzoru.
 - **Přístupnost polí rezervačních slotů** – pole `Max. rezervací` v editoru rezervačních zdrojů už nespoléhá na tooltipový `title`; existující i dynamicky přidané sloty používají skutečný skrytý `label` a runtime audit hlídá návrat starého vzoru.

@@ -4,6 +4,7 @@ requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 $pdo = db_connect();
 $perPage = 24;
+$mediaDeleteDisabledReason = 'Použité médium nelze smazat.';
 
 /**
  * @return array<string, string>
@@ -667,8 +668,8 @@ adminHeader('Knihovna médií');
                 <button type="submit"
                         form="delete-media-<?= $mediaId ?>"
                         class="btn btn-danger"
-                        <?= $isUsed ? ' disabled aria-disabled="true" title="Použité médium nelze smazat."' : '' ?>
-                        data-confirm="Smazat soubor <?= h((string)$item['original_name']) ?>?">Smazat</button>
+                        <?= $isUsed ? ' disabled aria-disabled="true"' : '' ?>
+                        data-confirm="Smazat soubor <?= h((string)$item['original_name']) ?>?">Smazat<?php if ($isUsed): ?><span class="sr-only"> – <?= h($mediaDeleteDisabledReason) ?></span><?php endif; ?></button>
               </div>
             </div>
           </article>

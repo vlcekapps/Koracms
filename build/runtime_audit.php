@@ -11787,6 +11787,13 @@ foreach ([
         $mediaLibraryIssues[] = 'media admin is missing shared CSS class fragment: ' . $mediaAdminClassFragment;
     }
 }
+if (!str_contains($mediaAdminSource, '$mediaDeleteDisabledReason = \'Použité médium nelze smazat.\';')
+    || !str_contains($mediaAdminSource, '<span class="sr-only"> – <?= h($mediaDeleteDisabledReason) ?></span>')) {
+    $mediaLibraryIssues[] = 'media admin delete disabled button is missing hidden disabled reason text';
+}
+if (str_contains($mediaAdminSource, 'title="Použité médium nelze smazat."')) {
+    $mediaLibraryIssues[] = 'media admin delete disabled button still uses title instead of hidden button text';
+}
 if (!str_contains($mediaHelperSource, 'SVG soubory už knihovna médií nepřijímá')) {
     $mediaLibraryIssues[] = 'media helper is missing explicit SVG upload rejection';
 }
