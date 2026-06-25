@@ -92,6 +92,8 @@ function httpIntegrationMethodGuardOk(array $response, array $allowedMethods): b
         || !httpIntegrationHeaderContains($response, 'Cache-Control', 'no-store')
         || !httpIntegrationHeaderContains($response, 'Cache-Control', 'max-age=0')
         || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'nofollow')
+        || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noarchive')
         || !httpIntegrationHeaderContains($response, 'Referrer-Policy', 'no-referrer')
         || !httpIntegrationHeaderContains($response, 'X-Content-Type-Options', 'nosniff')
         || !httpIntegrationHeaderContains($response, 'Content-Type', 'text/plain; charset=UTF-8')
@@ -119,6 +121,46 @@ function httpIntegrationMethodGuardOk(array $response, array $allowedMethods): b
 function httpIntegrationReadOnlyMethodGuardOk(array $response): bool
 {
     return httpIntegrationMethodGuardOk($response, ['GET', 'HEAD']);
+}
+
+/**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
+ * @param list<string> $allowedMethods
+ */
+function httpIntegrationJsonMethodGuardOk(array $response, array $allowedMethods): bool
+{
+    $normalizedAllowedMethods = array_values(array_unique(array_map(
+        static fn (string $method): string => strtoupper($method),
+        $allowedMethods
+    )));
+    $knownMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
+    if (
+        httpIntegrationStatusCode($response) !== 405
+        || !httpIntegrationHeaderContains($response, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($response, 'Cache-Control', 'max-age=0')
+        || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'nofollow')
+        || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noarchive')
+        || !httpIntegrationHeaderContains($response, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($response, 'X-Content-Type-Options', 'nosniff')
+        || !httpIntegrationHeaderContains($response, 'Content-Type', 'application/json; charset=UTF-8')
+    ) {
+        return false;
+    }
+
+    foreach ($normalizedAllowedMethods as $allowedMethod) {
+        if (!httpIntegrationHeaderContains($response, 'Allow', $allowedMethod)) {
+            return false;
+        }
+    }
+    foreach ($knownMethods as $knownMethod) {
+        if (!in_array($knownMethod, $normalizedAllowedMethods, true) && httpIntegrationHeaderContains($response, 'Allow', $knownMethod)) {
+            return false;
+        }
+    }
+
+    $decodedPayload = json_decode($response['body'], true);
+    return is_array($decodedPayload) && trim((string)($decodedPayload['request_id'] ?? '')) !== '';
 }
 
 function httpIntegrationSettingValue(PDO $pdo, string $key): string
@@ -454,15 +496,8 @@ try {
         $healthIssues[] = 'health.php neposlal X-Content-Type-Options: nosniff';
     }
     $healthPostResponse = postRawUrl($baseUrl . BASE_URL . '/health.php', '{}', 'application/json', '', 0);
-    $healthAllowHeaderFound = false;
-    foreach ($healthPostResponse['headers'] as $healthPostHeader) {
-        if (stripos($healthPostHeader, 'Allow:') === 0 && str_contains($healthPostHeader, 'GET') && str_contains($healthPostHeader, 'HEAD')) {
-            $healthAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (httpIntegrationStatusCode($healthPostResponse) !== 405 || !$healthAllowHeaderFound || !str_contains($healthPostResponse['body'], 'method_not_allowed')) {
-        $healthIssues[] = 'health.php neodmítl nepodporovanou metodu pomocí 405 a Allow: GET, HEAD';
+    if (!httpIntegrationJsonMethodGuardOk($healthPostResponse, ['GET', 'HEAD']) || !str_contains($healthPostResponse['body'], 'method_not_allowed')) {
+        $healthIssues[] = 'health.php neodmítl nepodporovanou metodu bezpečnou JSON 405 odpovědí';
     }
     httpIntegrationPrintResult('health_http', $healthIssues, $failures);
 
@@ -769,30 +804,8 @@ try {
     ];
     foreach ($adminJsonPostOnlyEndpointUrls as $adminJsonPostOnlyEndpointUrl => $adminJsonPostOnlyEndpointLabel) {
         $adminJsonPostOnlyEndpointResponse = fetchUrl($baseUrl . BASE_URL . $adminJsonPostOnlyEndpointUrl, $adminSession['cookie'], 0);
-        $adminJsonPostOnlyEndpointAllowHeaderFound = false;
-        $adminJsonPostOnlyEndpointNoStoreFound = false;
-        $adminJsonPostOnlyEndpointNosniffFound = false;
-        foreach ($adminJsonPostOnlyEndpointResponse['headers'] as $adminJsonPostOnlyEndpointHeader) {
-            if (stripos($adminJsonPostOnlyEndpointHeader, 'Allow:') === 0 && str_contains($adminJsonPostOnlyEndpointHeader, 'POST')) {
-                $adminJsonPostOnlyEndpointAllowHeaderFound = true;
-            }
-            if (stripos($adminJsonPostOnlyEndpointHeader, 'Cache-Control:') === 0 && str_contains($adminJsonPostOnlyEndpointHeader, 'no-store')) {
-                $adminJsonPostOnlyEndpointNoStoreFound = true;
-            }
-            if (stripos($adminJsonPostOnlyEndpointHeader, 'X-Content-Type-Options:') === 0 && str_contains(strtolower($adminJsonPostOnlyEndpointHeader), 'nosniff')) {
-                $adminJsonPostOnlyEndpointNosniffFound = true;
-            }
-        }
-        if (httpIntegrationStatusCode($adminJsonPostOnlyEndpointResponse) !== 405 || !$adminJsonPostOnlyEndpointAllowHeaderFound) {
-            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neodmítl GET pomocí 405 a Allow: POST';
-        }
-        if (
-            !$adminJsonPostOnlyEndpointNoStoreFound
-            || !$adminJsonPostOnlyEndpointNosniffFound
-            || !httpIntegrationHeaderContains($adminJsonPostOnlyEndpointResponse, 'X-Robots-Tag', 'noindex')
-            || !httpIntegrationHeaderContains($adminJsonPostOnlyEndpointResponse, 'Referrer-Policy', 'no-referrer')
-        ) {
-            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal bezpečné sdílené JSON hlavičky';
+        if (!httpIntegrationJsonMethodGuardOk($adminJsonPostOnlyEndpointResponse, ['POST'])) {
+            $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neodmítl GET bezpečnou JSON 405 odpovědí s Allow: POST';
         }
         $adminJsonPostOnlyEndpointPayload = json_decode($adminJsonPostOnlyEndpointResponse['body'], true);
         if (!is_array($adminJsonPostOnlyEndpointPayload) || ($adminJsonPostOnlyEndpointPayload['ok'] ?? null) !== false || trim((string)($adminJsonPostOnlyEndpointPayload['request_id'] ?? '')) === '') {
@@ -858,36 +871,8 @@ try {
         }
     }
     $cspReportGetResponse = fetchUrl($baseUrl . BASE_URL . '/csp-report.php', '', 0);
-    $cspReportAllowHeaderFound = false;
-    $cspReportCacheHeader = '';
-    $cspReportNosniffFound = false;
-    foreach ($cspReportGetResponse['headers'] as $cspReportGetHeader) {
-        if (stripos($cspReportGetHeader, 'Allow:') === 0 && str_contains($cspReportGetHeader, 'POST')) {
-            $cspReportAllowHeaderFound = true;
-        }
-        if (stripos($cspReportGetHeader, 'Cache-Control:') === 0) {
-            $cspReportCacheHeader .= ' ' . $cspReportGetHeader;
-        }
-        if (stripos($cspReportGetHeader, 'X-Content-Type-Options:') === 0 && str_contains(strtolower($cspReportGetHeader), 'nosniff')) {
-            $cspReportNosniffFound = true;
-        }
-    }
-    if (httpIntegrationStatusCode($cspReportGetResponse) !== 405 || !$cspReportAllowHeaderFound || !str_contains($cspReportGetResponse['body'], 'request_id')) {
+    if (!httpIntegrationJsonMethodGuardOk($cspReportGetResponse, ['POST'])) {
         $cspReportIssues[] = 'CSP report endpoint nepovolil jen POST a neposlal dohledatelnou JSON odpověď';
-    }
-    if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
-        $cspReportIssues[] = 'CSP report endpoint neposlal no-store cache hlavičky';
-    }
-    if (
-        !httpIntegrationHeaderContains($cspReportGetResponse, 'X-Robots-Tag', 'noindex')
-        || !httpIntegrationHeaderContains($cspReportGetResponse, 'X-Robots-Tag', 'nofollow')
-        || !httpIntegrationHeaderContains($cspReportGetResponse, 'X-Robots-Tag', 'noarchive')
-        || !httpIntegrationHeaderContains($cspReportGetResponse, 'Referrer-Policy', 'no-referrer')
-    ) {
-        $cspReportIssues[] = 'CSP report endpoint neposlal kompletní noindex/no-referrer provozní hlavičky';
-    }
-    if (!$cspReportNosniffFound) {
-        $cspReportIssues[] = 'CSP report endpoint neposlal X-Content-Type-Options: nosniff';
     }
     $cspReportRateLimitIds = [];
     foreach (['127.0.0.1', '::1', 'unknown'] as $cspReportIp) {

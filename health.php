@@ -4,19 +4,7 @@ require_once __DIR__ . '/db.php';
 
 sendOperationalJsonHeaders();
 
-$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
-    header('Allow: GET, HEAD');
-    http_response_code(405);
-    echo json_encode(
-        [
-            'status' => 'method_not_allowed',
-            'request_id' => koraRequestId(),
-        ],
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-    );
-    exit;
-}
+$requestMethod = requireJsonHttpMethods(['GET', 'HEAD']);
 $isHeadRequest = $requestMethod === 'HEAD';
 
 $checks = [

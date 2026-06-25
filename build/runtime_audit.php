@@ -2542,6 +2542,46 @@ function runtimeAuditReadOnlyMethodGuardOk(array $response): bool
 }
 
 /**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
+ * @param list<string> $allowedMethods
+ */
+function runtimeAuditJsonMethodGuardOk(array $response, array $allowedMethods): bool
+{
+    $normalizedAllowedMethods = array_values(array_unique(array_map(
+        static fn (string $method): string => strtoupper($method),
+        $allowedMethods
+    )));
+    $knownMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
+    if (
+        !str_contains($response['status'], '405')
+        || !runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'no-store')
+        || !runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'max-age=0')
+        || !runtimeAuditHeaderContains($response['headers'], 'X-Robots-Tag', 'noindex')
+        || !runtimeAuditHeaderContains($response['headers'], 'X-Robots-Tag', 'nofollow')
+        || !runtimeAuditHeaderContains($response['headers'], 'X-Robots-Tag', 'noarchive')
+        || !runtimeAuditHeaderContains($response['headers'], 'Referrer-Policy', 'no-referrer')
+        || !runtimeAuditHeaderContains($response['headers'], 'X-Content-Type-Options', 'nosniff')
+        || !runtimeAuditHeaderContains($response['headers'], 'Content-Type', 'application/json; charset=UTF-8')
+    ) {
+        return false;
+    }
+
+    foreach ($normalizedAllowedMethods as $allowedMethod) {
+        if (!runtimeAuditHeaderContains($response['headers'], 'Allow', $allowedMethod)) {
+            return false;
+        }
+    }
+    foreach ($knownMethods as $knownMethod) {
+        if (!in_array($knownMethod, $normalizedAllowedMethods, true) && runtimeAuditHeaderContains($response['headers'], 'Allow', $knownMethod)) {
+            return false;
+        }
+    }
+
+    $decodedPayload = json_decode($response['body'], true);
+    return is_array($decodedPayload) && trim((string)($decodedPayload['request_id'] ?? '')) !== '';
+}
+
+/**
  * @return list<string>
  */
 function analyzeUxHeuristics(string $html, string $label): array
@@ -8484,11 +8524,11 @@ $foundationChecks = [
         && str_contains($authSource, "header('Content-Type: application/json; charset=UTF-8')")
         && str_contains($authSource, "header('X-Content-Type-Options: nosniff')")
         && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($authSource, 'function requireJsonHttpMethods(array $allowedMethods')
         && str_contains($healthSource, 'sendOperationalJsonHeaders();')
         && str_contains($cspReportSource, 'sendOperationalJsonHeaders();'),
     'health endpoint is minimal JSON' => str_contains($healthSource, 'sendOperationalJsonHeaders();')
-        && str_contains($healthSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
-        && str_contains($healthSource, "header('Allow: GET, HEAD')")
+        && str_contains($healthSource, "\$requestMethod = requireJsonHttpMethods(['GET', 'HEAD']);")
         && str_contains($healthSource, "if (\$isHeadRequest)")
         && str_contains($healthSource, "db_connect()->query('SELECT 1')")
         && str_contains($healthSource, "'request_id' => koraRequestId()")
@@ -8502,7 +8542,7 @@ $foundationChecks = [
     'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, 'sendOperationalJsonHeaders();')
         && str_contains($cspReportSource, 'function cspReportJsonResponse')
         && str_contains($cspReportSource, "'request_id' => koraRequestId()")
-        && str_contains($cspReportSource, "header('Allow: POST')"),
+        && str_contains($cspReportSource, "requireJsonHttpMethods(['POST']);"),
     'admin JSON endpoints use shared no-store headers' => str_contains($authSource, 'function sendAdminJsonHeaders')
         && str_contains($authSource, "header('Content-Type: application/json; charset=UTF-8')")
         && str_contains($authSource, "header('X-Content-Type-Options: nosniff')")
@@ -8511,12 +8551,12 @@ $foundationChecks = [
         && str_contains($adminReorderAjaxSource, 'sendAdminJsonHeaders();')
         && str_contains($adminContentReferenceSearchSource, 'sendAdminJsonHeaders();'),
     'admin POST-only JSON endpoints send safe headers' => str_contains($adminContentLockRefreshSource, 'sendAdminJsonHeaders();')
-        && str_contains($adminContentLockRefreshSource, "header('Allow: POST')")
+        && str_contains($adminContentLockRefreshSource, "requireJsonHttpMethods(['POST'], ['ok' => false]);")
         && str_contains($adminContentLockRefreshSource, 'function contentLockJsonResponse')
         && str_contains($adminContentLockRefreshSource, "'request_id' => koraRequestId()")
         && str_contains($adminContentLockRefreshSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES')
         && str_contains($adminReorderAjaxSource, 'sendAdminJsonHeaders();')
-        && str_contains($adminReorderAjaxSource, "header('Allow: POST')")
+        && str_contains($adminReorderAjaxSource, "requireJsonHttpMethods(['POST'], ['ok' => false]);")
         && str_contains($adminReorderAjaxSource, 'function reorderJsonResponse')
         && str_contains($adminReorderAjaxSource, "'request_id' => koraRequestId()")
         && str_contains($adminReorderAjaxSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES'),
@@ -8775,15 +8815,8 @@ if (!str_contains($healthProbe['status'], '200')) {
         $foundationIssues[] = 'health.php did not send X-Content-Type-Options: nosniff';
     }
     $healthPostProbe = postRawUrl($baseUrl . '/health.php', '{}', 'application/json', '', 0);
-    $healthAllowHeaderFound = false;
-    foreach ($healthPostProbe['headers'] as $healthPostHeader) {
-        if (stripos($healthPostHeader, 'Allow:') === 0 && str_contains($healthPostHeader, 'GET') && str_contains($healthPostHeader, 'HEAD')) {
-            $healthAllowHeaderFound = true;
-            break;
-        }
-    }
-    if (!str_contains($healthPostProbe['status'], '405') || !$healthAllowHeaderFound) {
-        $foundationIssues[] = 'health.php did not reject unsupported methods with Allow: GET, HEAD';
+    if (!runtimeAuditJsonMethodGuardOk($healthPostProbe, ['GET', 'HEAD'])) {
+        $foundationIssues[] = 'health.php did not reject unsupported methods with safe JSON 405 headers';
     }
 }
 
@@ -8865,32 +8898,8 @@ if (str_contains($socialReservationCancelProbe['body'], 'cancel_booking.php?toke
 }
 
 $cspReportGetProbe = fetchUrl($baseUrl . '/csp-report.php', '', 0);
-$cspReportAllowHeaderFound = false;
-$cspReportCacheHeader = '';
-foreach ($cspReportGetProbe['headers'] as $cspReportGetHeader) {
-    if (stripos($cspReportGetHeader, 'Allow:') === 0 && str_contains($cspReportGetHeader, 'POST')) {
-        $cspReportAllowHeaderFound = true;
-    }
-    if (stripos($cspReportGetHeader, 'Cache-Control:') === 0) {
-        $cspReportCacheHeader .= ' ' . $cspReportGetHeader;
-    }
-}
-if (!str_contains($cspReportGetProbe['status'], '405') || !$cspReportAllowHeaderFound || !str_contains($cspReportGetProbe['body'], 'request_id')) {
+if (!runtimeAuditJsonMethodGuardOk($cspReportGetProbe, ['POST'])) {
     $foundationIssues[] = 'csp-report.php did not reject unsupported methods with a traceable JSON response';
-}
-if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
-    $foundationIssues[] = 'csp-report.php did not send no-store cache headers';
-}
-if (
-    !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Robots-Tag', 'noindex')
-    || !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Robots-Tag', 'nofollow')
-    || !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Robots-Tag', 'noarchive')
-    || !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'Referrer-Policy', 'no-referrer')
-) {
-    $foundationIssues[] = 'csp-report.php did not send full noindex/no-referrer monitoring headers';
-}
-if (!runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
-    $foundationIssues[] = 'csp-report.php did not send X-Content-Type-Options: nosniff';
 }
 
 if ($foundationIssues === []) {

@@ -202,8 +202,9 @@ function sendAdminDownloadHeaders(): void
 
 /**
  * @param list<string> $allowedMethods
+ * @return list<string>
  */
-function requireHttpMethods(array $allowedMethods): string
+function normalizeHttpMethods(array $allowedMethods): array
 {
     $normalizedAllowedMethods = [];
     foreach ($allowedMethods as $allowedMethod) {
@@ -217,6 +218,15 @@ function requireHttpMethods(array $allowedMethods): string
         $normalizedAllowedMethods = ['GET'];
     }
 
+    return $normalizedAllowedMethods;
+}
+
+/**
+ * @param list<string> $allowedMethods
+ */
+function requireHttpMethods(array $allowedMethods): string
+{
+    $normalizedAllowedMethods = normalizeHttpMethods($allowedMethods);
     $requestMethod = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     if (!in_array($requestMethod, $normalizedAllowedMethods, true)) {
         sendNoStoreNoIndexHeaders();
@@ -225,6 +235,32 @@ function requireHttpMethods(array $allowedMethods): string
         header('Allow: ' . implode(', ', $normalizedAllowedMethods));
         http_response_code(405);
         echo "Method not allowed\n";
+        exit;
+    }
+
+    return $requestMethod;
+}
+
+/**
+ * @param list<string> $allowedMethods
+ * @param array<string,mixed> $payload
+ */
+function requireJsonHttpMethods(array $allowedMethods, array $payload = ['status' => 'method_not_allowed']): string
+{
+    $normalizedAllowedMethods = normalizeHttpMethods($allowedMethods);
+    $requestMethod = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if (!in_array($requestMethod, $normalizedAllowedMethods, true)) {
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=UTF-8');
+            header('X-Content-Type-Options: nosniff');
+            sendNoStoreNoIndexHeaders();
+            header('Allow: ' . implode(', ', $normalizedAllowedMethods));
+        }
+        http_response_code(405);
+        echo json_encode(
+            $payload + ['request_id' => koraRequestId()],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
         exit;
     }
 

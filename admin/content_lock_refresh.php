@@ -17,10 +17,7 @@ function contentLockJsonResponse(array $payload, int $statusCode = 200): void
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Allow: POST');
-    contentLockJsonResponse(['ok' => false], 405);
-}
+requireJsonHttpMethods(['POST'], ['ok' => false]);
 
 if (!isLoggedIn()) {
     contentLockJsonResponse(['ok' => false], 401);

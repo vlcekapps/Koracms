@@ -142,12 +142,7 @@ function cspReportRateLimitExceeded(): void
     cspReportJsonResponse(429, 'rate_limited');
 }
 
-$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if ($requestMethod !== 'POST') {
-    header('Allow: POST');
-    cspReportJsonResponse(405, 'method_not_allowed');
-    exit;
-}
+requireJsonHttpMethods(['POST']);
 
 rateLimit('csp_report', 120, 60, 'cspReportRateLimitExceeded');
 

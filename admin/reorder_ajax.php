@@ -22,10 +22,7 @@ function reorderJsonResponse(array $payload, int $statusCode = 200): void
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Allow: POST');
-    reorderJsonResponse(['ok' => false], 405);
-}
+requireJsonHttpMethods(['POST'], ['ok' => false]);
 
 $csrfToken = trim($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
 if ($csrfToken === '' || !hash_equals(csrfToken(), $csrfToken)) {
