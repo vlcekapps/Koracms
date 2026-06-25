@@ -15082,6 +15082,7 @@ $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/them
 $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
 $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
+$themeAccountProfileViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/profile.php');
 $themeReservationCancelBookingViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-cancel-booking.php');
 $themeFoodCardViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-card.php');
 if (!str_contains($themeBaseLayoutSource, 'aria-labelledby="page-sidebar-heading"')
@@ -15158,6 +15159,21 @@ if (!str_contains($themeAccountReservationsViewSource, 'data-confirm="Opravdu ch
 if (!str_contains($themeAccountReservationsViewSource, 'role="status" aria-atomic="true" aria-labelledby="my-reservations-flash-message"')
     || !str_contains($themeAccountReservationsViewSource, '<p id="my-reservations-flash-message"><?= h($flashMessage) ?></p>')) {
     $themeLayoutIssues[] = 'account reservations flash message is missing heading-backed status semantics';
+}
+foreach ([
+    'profile success' => [
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="profile-success-message"',
+        'text' => '<p id="profile-success-message"><strong>Profil byl uložen.</strong></p>',
+    ],
+    'password success' => [
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="password-success-message"',
+        'text' => '<p id="password-success-message"><strong>Heslo bylo změněno.</strong></p>',
+    ],
+] as $accountProfileStatusLabel => $accountProfileStatusSpec) {
+    if (!str_contains($themeAccountProfileViewSource, $accountProfileStatusSpec['status'])
+        || !str_contains($themeAccountProfileViewSource, $accountProfileStatusSpec['text'])) {
+        $themeLayoutIssues[] = 'account profile ' . $accountProfileStatusLabel . ' message is missing heading-backed status semantics';
+    }
 }
 if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Opravdu zrušit rezervaci?"')) {
     $themeLayoutIssues[] = 'reservation cancellation view is missing data-confirm submit guard';

@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost potvrzení v „Můj profil“** – hlášky po uložení profilu nebo změně hesla na veřejné stránce účtu mají nově vlastní textový uzel napojený přes `aria-labelledby` a `aria-atomic="true"`, takže status region není pro čtečky obrazovky anonymní.
 - **Přístupnost hlášky v „Moje rezervace“** – potvrzení po zrušení rezervace na veřejné stránce účtu má nově vlastní textový uzel napojený přes `aria-labelledby` a `aria-atomic="true"`, takže status region není pro čtečky obrazovky anonymní.
 - **Přístupnost newsletter widgetu** – success/error hláška inline formuláře pro odběr novinek má nově vlastní textový uzel napojený přes `aria-labelledby`; e-mailové pole při chybě dál odkazuje na stejnou hlášku přes `aria-describedby` a runtime audit hlídá vykreslení formuláře i zdrojové vazby stavové hlášky.
 - **Guardrail proti tooltipům v administraci** – runtime audit nově plošně hlídá administrační PHP výstupy proti návratu HTML atributů `title` používaných jako tooltipová nápověda; instrukce a kontext mají zůstat ve viditelném nebo skrytém textu přímo v DOM.

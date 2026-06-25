@@ -15,14 +15,14 @@
     </nav>
 
     <?php if ($profileSuccess): ?>
-      <div class="status-message status-message--success" role="status" aria-atomic="true">
-        <p><strong>Profil byl uložen.</strong></p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="profile-success-message">
+        <p id="profile-success-message"><strong>Profil byl uložen.</strong></p>
       </div>
     <?php endif; ?>
 
     <?php if ($passwordSuccess): ?>
-      <div class="status-message status-message--success" role="status" aria-atomic="true">
-        <p><strong>Heslo bylo změněno.</strong></p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="password-success-message">
+        <p id="password-success-message"><strong>Heslo bylo změněno.</strong></p>
       </div>
     <?php endif; ?>
 
