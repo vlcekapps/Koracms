@@ -15,6 +15,18 @@ if ($isHeadRequest) {
 }
 
 /**
+ * @param array<string,mixed> $payload
+ */
+function contentReferenceJsonResponse(array $payload): void
+{
+    echo json_encode(
+        $payload + ['request_id' => koraRequestId()],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+    exit;
+}
+
+/**
  * @return list<string>
  */
 function contentReferenceAllowedTypes(): array
@@ -738,13 +750,12 @@ if (!in_array($requestedType, contentReferenceAllowedTypes(), true)) {
 }
 
 if (mb_strlen($query) < 2) {
-    echo json_encode([
+    contentReferenceJsonResponse([
         'ok' => true,
         'count' => 0,
         'message' => 'Zadejte alespoň 2 znaky.',
         'results' => [],
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
+    ]);
 }
 
 $pdo = db_connect();
@@ -1049,9 +1060,9 @@ usort(
 
 $results = array_slice($results, 0, 20);
 
-echo json_encode([
+contentReferenceJsonResponse([
     'ok' => true,
     'count' => count($results),
     'message' => $results === [] ? 'Žádný veřejný obsah neodpovídá hledání.' : '',
     'results' => $results,
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+]);

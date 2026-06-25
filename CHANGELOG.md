@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Dohledatelnější media picker JSON odpovědi** – `admin/content_reference_search.php` nově přidává `request_id` do krátkých i výsledkových odpovědí, takže hledání obsahu pro media picker lze spárovat s technickým logem bez změny výsledků nebo vložitelných akcí.
 - **Dohledatelnější administrační AJAX odpovědi** – POST-only JSON endpointy pro obnovu zámku obsahu a řazení obsahu nově vrací `request_id` i v krátkých `ok=false` odpovědích; HTTP integrace i runtime audit hlídají bezpečné hlavičky, `405` odpovědi a diagnostické ID.
 - **Nosniff hlavička pro JSON provozní endpointy** – `health.php` a `csp-report.php` nově posílají explicitní `X-Content-Type-Options: nosniff`; HTTP integrace i runtime audit hlídají reálné odpovědi, aby monitoring a CSP reporty zůstaly striktně deklarované jako JSON.
 - **Self-test HTTP test routeru** – `composer ci:basic` nově spouští izolovaný self-test `build/http_server_router_selftest.php`, který nad dočasnou mini-instalací ověřuje clean URL routování, statické soubory, blokované chráněné cesty, query parametry a 404 fallback vestavěného PHP serveru.

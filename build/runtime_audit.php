@@ -6669,6 +6669,9 @@ foreach ([
 if (!str_contains($contentSearchSource, 'Vložit fotogalerii')) {
     $contentSnippetIssues[] = 'content reference search is missing gallery album insert action fragment';
 }
+if (!str_contains($contentSearchSource, 'function contentReferenceJsonResponse') || !str_contains($contentSearchSource, "'request_id' => koraRequestId()")) {
+    $contentSnippetIssues[] = 'content reference search JSON responses are missing request_id diagnostics';
+}
 if (!str_contains($contentSearchSource, 'function contentReferencePdfShortcode(string $url, string $title = \'\', string $mimeType = \'\', int $mediaId = 0): string')) {
     $contentSnippetIssues[] = 'content reference search is missing pdf shortcode helper';
 }
@@ -6747,6 +6750,9 @@ if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('co
 }
 if (!str_contains($contentHttpIntegrationSource, "httpIntegrationPrintResult('content_reference_pdf_http'")) {
     $contentSnippetIssues[] = 'build/http_integration.php is missing pdf content picker coverage';
+}
+if (!str_contains($contentHttpIntegrationSource, 'content picker search nevrátil request_id pro dohledání v logu')) {
+    $contentSnippetIssues[] = 'build/http_integration.php is missing content picker request_id coverage';
 }
 if (!str_contains($contentHttpIntegrationSource, '/media/preview.php?id=')) {
     $contentSnippetIssues[] = 'build/http_integration.php is missing media preview endpoint coverage for PDF';

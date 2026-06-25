@@ -1946,6 +1946,9 @@ try {
         if (!is_array($galleryPickerPayload) || ($galleryPickerPayload['ok'] ?? false) !== true) {
             $galleryPickerIssues[] = 'gallery content picker search nevrátil čitelné JSON s ok=true';
         } else {
+            if (trim((string)($galleryPickerPayload['request_id'] ?? '')) === '') {
+                $galleryPickerIssues[] = 'gallery content picker search nevrátil request_id pro dohledání v logu';
+            }
             $galleryAlbumFound = false;
             foreach (($galleryPickerPayload['results'] ?? []) as $pickerResult) {
                 if (!is_array($pickerResult)) {
@@ -2028,6 +2031,9 @@ try {
             if (!is_array($pdfPickerPayload) || ($pdfPickerPayload['ok'] ?? false) !== true) {
                 $pdfPickerIssues[] = 'pdf content picker search nevrátil čitelné JSON s ok=true';
             } else {
+                if (trim((string)($pdfPickerPayload['request_id'] ?? '')) === '') {
+                    $pdfPickerIssues[] = 'pdf content picker search nevrátil request_id pro dohledání v logu';
+                }
                 $pdfMediaFound = false;
                 foreach (($pdfPickerPayload['results'] ?? []) as $pickerResult) {
                     if (!is_array($pickerResult)) {
