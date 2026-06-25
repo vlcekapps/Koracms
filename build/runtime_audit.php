@@ -8479,18 +8479,15 @@ $foundationChecks = [
         && str_contains($adminReorderAjaxSource, 'function reorderJsonResponse')
         && str_contains($adminReorderAjaxSource, "'request_id' => koraRequestId()")
         && str_contains($adminReorderAjaxSource, 'JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES'),
-    'admin downloadable exports send safe headers' => str_contains($adminExportSource, "header('Cache-Control: no-store')")
-        && str_contains($adminExportSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($adminFormSubmissionFileSource, "header('Cache-Control: no-store')")
-        && str_contains($adminFormSubmissionFileSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($adminFormSubmissionsSource, "header('Cache-Control: no-store')")
-        && str_contains($adminFormSubmissionsSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($adminBackupSource, "header('Cache-Control: no-store')")
-        && str_contains($adminBackupSource, "header('X-Content-Type-Options: nosniff')")
-        && substr_count($adminGalleryExportZipSource, "header('Cache-Control: no-store')") >= 2
-        && substr_count($adminGalleryExportZipSource, "header('X-Content-Type-Options: nosniff')") >= 2
-        && str_contains($adminThemesSource, "header('Cache-Control: no-store')")
-        && str_contains($adminThemesSource, "header('X-Content-Type-Options: nosniff')"),
+    'admin downloadable exports send safe headers' => str_contains($authSource, 'function sendAdminDownloadHeaders')
+        && str_contains($authSource, 'sendAdminNoStoreHeaders();')
+        && str_contains($authSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($adminExportSource, 'sendAdminDownloadHeaders();')
+        && str_contains($adminFormSubmissionFileSource, 'sendAdminDownloadHeaders();')
+        && str_contains($adminFormSubmissionsSource, 'sendAdminDownloadHeaders();')
+        && str_contains($adminBackupSource, 'sendAdminDownloadHeaders();')
+        && substr_count($adminGalleryExportZipSource, 'sendAdminDownloadHeaders();') >= 2
+        && str_contains($adminThemesSource, 'sendAdminDownloadHeaders();'),
     'request id and structured error logging exist' => str_contains($authSource, 'function koraRequestId')
         && str_contains($authSource, "header('X-Request-ID: ' . \$requestId)")
         && str_contains($authSource, 'function koraLog(')

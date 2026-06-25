@@ -749,6 +749,21 @@ try {
     }
     httpIntegrationPrintResult('admin_html_cache_headers_http', $adminHtmlCacheHeaderIssues, $failures);
 
+    $adminDownloadHeaderIssues = [];
+    $adminExportDownloadResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    if (
+        httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Cache-Control', 'max-age=0')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $adminDownloadHeaderIssues[] = 'admin/export.php neposlal bezpečné sdílené download hlavičky';
+    }
+    httpIntegrationPrintResult('admin_download_headers_http', $adminDownloadHeaderIssues, $failures);
+
     $adminJsonPostOnlyEndpointIssues = [];
     $adminJsonPostOnlyEndpointUrls = [
         '/admin/content_lock_refresh.php' => 'admin/content_lock_refresh.php',

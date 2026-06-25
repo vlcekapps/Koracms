@@ -36,8 +36,7 @@ $filename = 'kora_backup_' . date('Y-m-d_His') . '.sql';
 
 header('Content-Type: application/sql; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
+sendAdminDownloadHeaders();
 
 echo "-- Kora CMS database backup\n";
 echo "-- Generated: " . date('Y-m-d H:i:s') . "\n";

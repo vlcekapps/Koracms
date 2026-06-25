@@ -190,6 +190,16 @@ function sendAdminJsonHeaders(): void
     sendAdminNoStoreHeaders();
 }
 
+function sendAdminDownloadHeaders(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    sendAdminNoStoreHeaders();
+    header('X-Content-Type-Options: nosniff');
+}
+
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {
     header_register_callback('sendSocialPreviewCacheHeaders');
 } elseif ($isSocialPreviewCrawler) {

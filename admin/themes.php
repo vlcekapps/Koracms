@@ -158,8 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 logAction('theme_export', 'theme=' . $exportThemeKey);
                 header('Content-Type: application/zip');
-                header('Cache-Control: no-store');
-                header('X-Content-Type-Options: nosniff');
+                sendAdminDownloadHeaders();
                 header('Content-Disposition: attachment; filename="' . basename((string)$exportResult['filename']) . '"');
                 header('Content-Length: ' . (string)filesize((string)$exportResult['path']));
                 readfile((string)$exportResult['path']);
