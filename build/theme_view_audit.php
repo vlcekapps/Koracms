@@ -168,27 +168,6 @@ function themeViewAuditControlType(string $tagName, string $tag): string
     return is_string($type) ? strtolower(trim($type)) : 'text';
 }
 
-function themeViewAuditTagHasNewWindowAccessibleName(string $tag): bool
-{
-    if (themeViewAuditTagHasAttribute($tag, 'aria-labelledby')) {
-        return true;
-    }
-
-    $ariaLabel = themeViewAuditTagAttributeValue($tag, 'aria-label');
-    if (!is_string($ariaLabel) || trim($ariaLabel) === '') {
-        return false;
-    }
-
-    if (themeViewAuditIsDynamicAttributeValue($ariaLabel)) {
-        return str_contains($ariaLabel, 'newWindowLinkLabel(');
-    }
-
-    $normalizedLabel = mb_strtolower(trim($ariaLabel), 'UTF-8');
-    return str_contains($normalizedLabel, 'novém okně')
-        || str_contains($normalizedLabel, 'novem okne')
-        || str_contains($normalizedLabel, 'new window');
-}
-
 function themeViewAuditElementHasNewWindowText(string $element): bool
 {
     if (str_contains($element, 'newWindowLinkSrOnlySuffix()')) {
@@ -294,20 +273,13 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
             $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without rel="noopener noreferrer".';
         }
 
-        if (
-            !themeViewAuditTagHasAttribute($match['tag'], 'aria-label')
-            && !themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')
-            && !themeViewAuditElementHasNewWindowText($match['element'])
-        ) {
-            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without accessible new-window label.';
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link using aria-label instead of hidden DOM new-window text.';
             continue;
         }
 
-        if (
-            !themeViewAuditElementHasNewWindowText($match['element'])
-            && !themeViewAuditTagHasNewWindowAccessibleName($match['tag'])
-        ) {
-            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link whose accessible label does not mention a new window.';
+        if (!themeViewAuditElementHasNewWindowText($match['element'])) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains target="_blank" link without hidden DOM new-window text.';
         }
     }
 

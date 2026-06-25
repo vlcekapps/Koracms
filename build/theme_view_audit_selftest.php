@@ -154,7 +154,7 @@ assertThemeViewAuditPasses(
     <input id="fixture-input" name="fixture_input">
     <img src="/uploads/example.jpg" alt="">
     <iframe src="/media/preview.php?id=1" title="Náhled PDF"></iframe>
-    <a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="Externí odkaz – otevře se v novém okně">Externí odkaz</a>
+    <a href="https://example.test" target="_blank" rel="noopener noreferrer">Externí odkaz<?= newWindowLinkSrOnlySuffix() ?></a>
   </div>
   <script nonce="<?= cspNonce() ?>">document.documentElement.dataset.fixture='ok';</script>
 </section>
@@ -167,13 +167,6 @@ assertThemeViewAuditPasses(
 <section aria-labelledby="fixture-heading-<?= (int)$id ?>">
   <h2 id="fixture-heading-<?= (int)$id ?>">Dynamická sekce</h2>
 </section>
-PHP
-);
-
-assertThemeViewAuditPasses(
-    'Dynamic new-window label helper guard',
-    <<<'PHP'
-<a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="<?= h(newWindowLinkLabel('Externí odkaz')) ?>">Externí odkaz</a>
 PHP
 );
 
@@ -337,19 +330,19 @@ PHP,
 );
 
 assertThemeViewAuditFails(
-    'Blank target label guard',
+    'Blank target hidden text guard',
     <<<'PHP'
 <a href="https://example.test" target="_blank" rel="noopener noreferrer">Externí odkaz</a>
 PHP,
-    'target="_blank" link without accessible new-window label'
+    'target="_blank" link without hidden DOM new-window text'
 );
 
 assertThemeViewAuditFails(
-    'Blank target label copy guard',
+    'Blank target aria-label guard',
     <<<'PHP'
-<a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="Externí odkaz">Externí odkaz</a>
+<a href="https://example.test" target="_blank" rel="noopener noreferrer" aria-label="Externí odkaz – otevře se v novém okně">Externí odkaz</a>
 PHP,
-    'target="_blank" link whose accessible label does not mention a new window'
+    'target="_blank" link using aria-label instead of hidden DOM new-window text'
 );
 
 echo "Theme view audit self-test OK\n";

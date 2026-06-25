@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přísnější theme audit odkazů do nového okna** – veřejné šablony už v `build/theme_view_audit.php` nesmí spoléhat na `aria-label` pro oznámení nového okna; audit vyžaduje skrytý text přímo uvnitř odkazu a self-test hlídá, aby se starý vzor nevrátil.
 - **Přísnější guardrail pro administrační odkazy do nového okna** – content/media picker i statické administrační odkazy nově hlídá jednotný vzor se skrytým textem přímo v odkazu; runtime audit už v administraci netoleruje návrat k `aria-label` nebo `newWindowLinkLabel()`.
 - **Přístupnost odkazů do nového okna ve formulářích** – přehled formulářů, editor formuláře, seznam odpovědí i detail odpovědi už u veřejných odkazů, příloh a GitHub issue odkazů nepoužívají `aria-label` pro oznámení nového okna; informace je součástí odkazu jako skrytý text.
 - **Přístupnost odkazů do nového okna ve stažení a knihovně médií** – administrační přehled souborů ke stažení, editor stažení a knihovna médií už u náhledů, URL souborů a veřejných odkazů nepřepisují viditelný text přes `aria-label`; skrytý kontext je součástí odkazu.
