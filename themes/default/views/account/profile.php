@@ -27,7 +27,8 @@
     <?php endif; ?>
 
     <?php if (!empty($profileErrors)): ?>
-      <div id="profile-errors" class="status-message status-message--error" role="alert" aria-atomic="true">
+      <div id="profile-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="profile-errors-heading">
+        <p id="profile-errors-heading" class="sr-only">Profil se nepodařilo uložit</p>
         <ul>
           <?php foreach ($profileErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>
@@ -73,7 +74,8 @@
     </form>
 
     <?php if (!empty($passwordErrors)): ?>
-      <div id="password-errors" class="status-message status-message--error" role="alert" aria-atomic="true">
+      <div id="password-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="password-errors-heading">
+        <p id="password-errors-heading" class="sr-only">Heslo se nepodařilo změnit</p>
         <ul>
           <?php foreach ($passwordErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>

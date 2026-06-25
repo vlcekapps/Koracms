@@ -10,7 +10,8 @@
       </div>
     <?php else: ?>
       <?php if (!empty($errors)): ?>
-        <div id="form-errors" class="status-message status-message--error" role="alert">
+        <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="contact-errors-heading">
+          <p id="contact-errors-heading" class="sr-only">Kontaktní zprávu se nepodařilo odeslat</p>
           <ul>
             <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
           </ul>

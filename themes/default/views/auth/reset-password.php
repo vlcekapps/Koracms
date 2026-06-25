@@ -11,7 +11,8 @@
     </p>
 
     <?php if (!empty($errors)): ?>
-      <div id="form-errors" class="status-message status-message--error" role="alert">
+      <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="reset-errors-heading">
+        <p id="reset-errors-heading" class="sr-only">Obnovení hesla se nepodařilo odeslat</p>
         <ul>
           <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>

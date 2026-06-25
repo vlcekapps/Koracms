@@ -5,8 +5,8 @@
     <p class="section-subtitle">Přihlaste se ke svému veřejnému účtu a pokračujte k rezervacím nebo správě profilu.</p>
 
     <?php if ($notConfirmed): ?>
-      <div id="login-not-confirmed-message" class="status-message status-message--warning" role="alert" aria-atomic="true">
-        <p><strong>Váš účet dosud nebyl aktivován.</strong></p>
+      <div id="login-not-confirmed-message" class="status-message status-message--warning" role="alert" aria-atomic="true" aria-labelledby="login-not-confirmed-heading">
+        <p id="login-not-confirmed-heading"><strong>Váš účet dosud nebyl aktivován.</strong></p>
         <?php if ($publicRegistrationEnabled): ?>
           <p>Zkontrolujte e-mail s potvrzovacím odkazem, nebo se <a href="<?= h(BASE_URL) ?>/register.php">zaregistrujte znovu</a> pro odeslání nového odkazu.</p>
         <?php else: ?>
@@ -14,7 +14,8 @@
         <?php endif; ?>
       </div>
     <?php elseif (!empty($errors)): ?>
-      <div id="login-errors" class="status-message status-message--error" role="alert" aria-atomic="true">
+      <div id="login-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="login-errors-heading">
+        <p id="login-errors-heading" class="sr-only">Přihlášení se nepodařilo</p>
         <ul>
           <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>

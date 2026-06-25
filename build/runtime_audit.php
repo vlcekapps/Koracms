@@ -12161,7 +12161,7 @@ if (!str_contains($formsHelperSource, 'function formDeleteUploadedFilesFromSubmi
     $publicFormsHttpIssues[] = 'forms helper is missing uploaded-file cleanup helper';
 }
 foreach ([
-    'id="form-errors"',
+    "\$formErrorsId = 'form-errors-' . \$formFeedbackIdSuffix;",
     'role="alert"',
     'type="file"',
     'name="captcha"',
@@ -15085,6 +15085,7 @@ $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__
 $themeNewsletterSubscribeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
 $themeAccountProfileViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/profile.php');
+$themeLoginViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/login.php');
 $themeRegisterViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/register.php');
 $themeResetPasswordViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/reset-password.php');
 $themeReservationCancelBookingViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-cancel-booking.php');
@@ -15217,7 +15218,7 @@ foreach ([
     'public form success message' => [
         'source' => $themeFormsShowViewSource,
         'fragments' => [
-            "\$formSuccessMessageId = 'form-success-message-' . (int)(\$form['id'] ?? 0);",
+            "\$formSuccessMessageId = 'form-success-message-' . \$formFeedbackIdSuffix;",
             'role="status" aria-atomic="true" aria-labelledby="<?= h($formSuccessMessageId) ?>"',
             '<p id="<?= h($formSuccessMessageId) ?>"><strong><?= h(trim((string)($form[\'success_message\'] ?? \'\')) !== \'\'',
         ],
@@ -15325,6 +15326,87 @@ foreach ([
     if (!str_contains($authStatusSpec['source'], $authStatusSpec['status'])
         || !str_contains($authStatusSpec['source'], $authStatusSpec['text'])) {
         $themeLayoutIssues[] = 'auth ' . $authStatusLabel . ' message is missing text-backed status semantics';
+    }
+}
+foreach ([
+    'login not confirmed alert' => [
+        'source' => $themeLoginViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="login-not-confirmed-heading"',
+            '<p id="login-not-confirmed-heading"><strong>Váš účet dosud nebyl aktivován.</strong></p>',
+        ],
+    ],
+    'login errors alert' => [
+        'source' => $themeLoginViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="login-errors-heading"',
+            '<p id="login-errors-heading" class="sr-only">Přihlášení se nepodařilo</p>',
+        ],
+    ],
+    'register errors alert' => [
+        'source' => $themeRegisterViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="register-errors-heading"',
+            '<p id="register-errors-heading" class="sr-only">Registraci se nepodařilo odeslat</p>',
+        ],
+    ],
+    'reset errors alert' => [
+        'source' => $themeResetPasswordViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="reset-errors-heading"',
+            '<p id="reset-errors-heading" class="sr-only">Obnovení hesla se nepodařilo odeslat</p>',
+        ],
+    ],
+    'profile errors alert' => [
+        'source' => $themeAccountProfileViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="profile-errors-heading"',
+            '<p id="profile-errors-heading" class="sr-only">Profil se nepodařilo uložit</p>',
+        ],
+    ],
+    'password errors alert' => [
+        'source' => $themeAccountProfileViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="password-errors-heading"',
+            '<p id="password-errors-heading" class="sr-only">Heslo se nepodařilo změnit</p>',
+        ],
+    ],
+    'comment errors alert' => [
+        'source' => $themeBlogArticleViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="comment-errors-heading"',
+            '<p id="comment-errors-heading" class="sr-only">Komentář se nepodařilo odeslat</p>',
+        ],
+    ],
+    'chat errors alert' => [
+        'source' => $themeChatViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="chat-errors-heading"',
+            '<p id="chat-errors-heading" class="sr-only">Zprávu do chatu se nepodařilo odeslat</p>',
+        ],
+    ],
+    'contact errors alert' => [
+        'source' => $themeContactViewSource,
+        'fragments' => [
+            'role="alert" aria-atomic="true" aria-labelledby="contact-errors-heading"',
+            '<p id="contact-errors-heading" class="sr-only">Kontaktní zprávu se nepodařilo odeslat</p>',
+        ],
+    ],
+    'public form errors alert' => [
+        'source' => $themeFormsShowViewSource,
+        'fragments' => [
+            "\$formErrorsId = 'form-errors-' . \$formFeedbackIdSuffix;",
+            "\$formErrorsHeadingId = 'form-errors-heading-' . \$formFeedbackIdSuffix;",
+            'role="alert" aria-atomic="true" aria-labelledby="<?= h($formErrorsHeadingId) ?>"',
+            '<p id="<?= h($formErrorsHeadingId) ?>" class="sr-only">Formulář se nepodařilo odeslat</p>',
+            'aria-describedby="<?= h($formErrorsId) ?>"',
+        ],
+    ],
+] as $publicFormAlertLabel => $publicFormAlertSpec) {
+    foreach ($publicFormAlertSpec['fragments'] as $publicFormAlertFragment) {
+        if (!str_contains($publicFormAlertSpec['source'], $publicFormAlertFragment)) {
+            $themeLayoutIssues[] = 'public form ' . $publicFormAlertLabel . ' is missing text-backed alert fragment: ' . $publicFormAlertFragment;
+        }
     }
 }
 if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Opravdu zrušit rezervaci?"')) {

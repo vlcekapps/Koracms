@@ -1,4 +1,10 @@
-<?php $isEmbedded = !empty($isEmbedded); ?>
+<?php
+$isEmbedded = !empty($isEmbedded);
+$formFeedbackIdSuffix = (int)($form['id'] ?? 0);
+$formSuccessMessageId = 'form-success-message-' . $formFeedbackIdSuffix;
+$formErrorsId = 'form-errors-' . $formFeedbackIdSuffix;
+$formErrorsHeadingId = 'form-errors-heading-' . $formFeedbackIdSuffix;
+?>
 <div class="<?= $isEmbedded ? 'auth-shell auth-shell--embed' : 'auth-shell' ?>">
   <section class="surface surface--narrow<?= $isEmbedded ? ' surface--embed' : '' ?>" aria-labelledby="form-title">
     <h1 id="form-title" class="section-title <?= $isEmbedded ? 'section-title--compact' : 'section-title--hero' ?>"><?= h((string)$form['title']) ?></h1>
@@ -8,7 +14,6 @@
     <?php endif; ?>
 
     <?php if ($success): ?>
-      <?php $formSuccessMessageId = 'form-success-message-' . (int)($form['id'] ?? 0); ?>
       <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="<?= h($formSuccessMessageId) ?>">
         <p id="<?= h($formSuccessMessageId) ?>"><strong><?= h(trim((string)($form['success_message'] ?? '')) !== '' ? (string)$form['success_message'] : 'Formulář byl úspěšně odeslán. Děkujeme!') ?></strong></p>
         <?php if (!empty($successActions)): ?>
@@ -21,7 +26,8 @@
       </div>
     <?php else: ?>
       <?php if (!empty($errors)): ?>
-        <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true">
+        <div id="<?= h($formErrorsId) ?>" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="<?= h($formErrorsHeadingId) ?>">
+          <p id="<?= h($formErrorsHeadingId) ?>" class="sr-only">Formulář se nepodařilo odeslat</p>
           <ul>
             <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
           </ul>
@@ -56,7 +62,7 @@
       }
       ?>
 
-      <form method="post" action="<?= h(formPublicPath($form, $isEmbedded ? ['embed' => '1'] : [])) ?>" enctype="multipart/form-data" novalidate class="form-stack" data-conditional-form<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
+      <form method="post" action="<?= h(formPublicPath($form, $isEmbedded ? ['embed' => '1'] : [])) ?>" enctype="multipart/form-data" novalidate class="form-stack" data-conditional-form<?php if (!empty($errors)): ?> aria-describedby="<?= h($formErrorsId) ?>"<?php endif; ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <?php if ((int)($form['use_honeypot'] ?? 1) === 1): ?>
           <?= honeypotField() ?>

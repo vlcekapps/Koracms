@@ -176,7 +176,8 @@ $showAuthorPanel = !empty($article['author_public_path'])
     <h2 id="pridat-komentar-nadpis" class="section-title">Přidat komentář</h2>
 
     <?php if (!empty($commentErrors)): ?>
-      <div id="comment-errors" class="status-message status-message--error" role="alert">
+      <div id="comment-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="comment-errors-heading">
+        <p id="comment-errors-heading" class="sr-only">Komentář se nepodařilo odeslat</p>
         <ul>
           <?php foreach ($commentErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>

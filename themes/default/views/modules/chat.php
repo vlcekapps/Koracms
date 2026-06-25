@@ -77,7 +77,8 @@
     <p class="field-help">Do textu nevkládejte odkazy. Každá nová zpráva před zveřejněním projde schválením.</p>
 
     <?php if (!empty($errors)): ?>
-      <div id="form-errors" class="status-message status-message--error" role="alert">
+      <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="chat-errors-heading">
+        <p id="chat-errors-heading" class="sr-only">Zprávu do chatu se nepodařilo odeslat</p>
         <ul>
           <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>

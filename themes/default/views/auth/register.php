@@ -16,7 +16,8 @@
       </div>
     <?php else: ?>
       <?php if (!empty($errors)): ?>
-        <div id="form-errors" class="status-message status-message--error" role="alert">
+        <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="register-errors-heading">
+          <p id="register-errors-heading" class="sr-only">Registraci se nepodařilo odeslat</p>
           <ul>
             <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
           </ul>
