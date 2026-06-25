@@ -801,9 +801,9 @@ if ($showOperationalOverview && $canManageSettings):
       <?php foreach ($recentActivity as $actEntry): ?>
         <tr>
           <td>
-            <time datetime="<?= h(str_replace(' ', 'T', (string)$actEntry['created_at'])) ?>"
-                  title="<?= h((string)$actEntry['created_at']) ?>">
+            <time datetime="<?= h(str_replace(' ', 'T', (string)$actEntry['created_at'])) ?>">
               <?= h(relativeTime((string)$actEntry['created_at'])) ?>
+              <span class="sr-only">, přesně <?= h((string)$actEntry['created_at']) ?></span>
             </time>
           </td>
           <td><?= h((string)$actEntry['user_name']) ?></td>

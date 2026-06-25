@@ -12894,6 +12894,7 @@ foreach ([
     '<progress',
     'class="admin-stat-progress"',
     'class="table-cell--detail"',
+    '<span class="sr-only">, přesně <?= h((string)$actEntry[\'created_at\']) ?></span>',
 ] as $adminIndexUtilityFragment) {
     if (!str_contains($adminIndexSource, $adminIndexUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin dashboard is missing utility fragment: ' . $adminIndexUtilityFragment;
@@ -12911,6 +12912,9 @@ foreach ([
     if (str_contains($adminIndexSource, $adminIndexLegacyStyleFragment)) {
         $adminFieldErrorIssues[] = 'admin dashboard still contains legacy inline style fragment: ' . $adminIndexLegacyStyleFragment;
     }
+}
+if (str_contains($adminIndexSource, 'title="<?= h((string)$actEntry[\'created_at\']) ?>"')) {
+    $adminFieldErrorIssues[] = 'admin dashboard activity timestamps still use title tooltip instead of hidden text';
 }
 if (!str_contains($adminIndexSource, 'role="list" aria-labelledby="stats-heading-new"')
     || str_contains($adminIndexSource, 'role="list" aria-label="Souhrn návštěvnosti"')) {
