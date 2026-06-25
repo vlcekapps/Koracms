@@ -8488,6 +8488,8 @@ $foundationChecks = [
         && str_contains($fileDownloadHelperSource, 'function storedFileMimeType(')
         && str_contains($fileDownloadHelperSource, 'function streamStoredFile(')
         && str_contains($fileDownloadHelperSource, 'function sendInlineStoredFileResponse(')
+        && str_contains($fileDownloadHelperSource, "header('Content-Disposition: ' . \$disposition")
+        && str_contains($fileDownloadHelperSource, 'sendNoSniffHeader();')
         && !str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')"),
     'public file endpoints enforce HTTP methods' => str_contains($readOnlyMediaFileSource, 'requireReadOnlyHttpMethod();')
         && str_contains($readOnlyMediaPreviewSource, 'requireReadOnlyHttpMethod();')

@@ -166,6 +166,7 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
     header('Content-Disposition: ' . $disposition . '; filename="' . addcslashes($asciiFallback, "\\\"") . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
+    sendNoSniffHeader();
 
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') {
         exit;

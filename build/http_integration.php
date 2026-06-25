@@ -2171,6 +2171,7 @@ try {
                             $hasSameOriginFrameHeader = false;
                             $hasSelfFrameAncestors = false;
                             $hasDenyFrameHeader = false;
+                            $hasNoSniffHeader = false;
 
                             foreach ($pdfPreviewResponse['headers'] as $previewHeader) {
                                 $normalizedHeader = strtolower((string)$previewHeader);
@@ -2189,6 +2190,9 @@ try {
                                 if ($normalizedHeader === 'x-frame-options: deny') {
                                     $hasDenyFrameHeader = true;
                                 }
+                                if ($normalizedHeader === 'x-content-type-options: nosniff') {
+                                    $hasNoSniffHeader = true;
+                                }
                             }
 
                             if (!$hasPdfContentType) {
@@ -2205,6 +2209,9 @@ try {
                             }
                             if ($hasDenyFrameHeader) {
                                 $pdfPickerIssues[] = 'media preview endpoint pro public PDF stále vrací X-Frame-Options DENY';
+                            }
+                            if (!$hasNoSniffHeader) {
+                                $pdfPickerIssues[] = 'media preview endpoint pro public PDF neposílá X-Content-Type-Options nosniff';
                             }
                             if (!str_starts_with((string)($pdfPreviewResponse['body'] ?? ''), '%PDF-')) {
                                 $pdfPickerIssues[] = 'media preview endpoint pro public PDF nevrátil PDF payload';
