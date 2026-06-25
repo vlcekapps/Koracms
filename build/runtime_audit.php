@@ -8378,6 +8378,7 @@ $foundationChecks = [
         && str_contains($authSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
+        && str_contains($htaccessSource, 'newsletter_widget_subscribe')
         && str_contains($htaccessSource, 'reservations/cancel_booking\.php')
         && str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, 'Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX')
@@ -8385,6 +8386,7 @@ $foundationChecks = [
         && str_contains($confirmEmailSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($subscribeConfirmSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($unsubscribeSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($authSource, "BASE_URL . '/newsletter_widget_subscribe.php'")
         && str_contains($passwordResetSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($reservationsCancelBookingSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($reservationsCancelBookingSource, "in_array(\$requestMethod, ['GET', 'POST'], true)")
@@ -14951,6 +14953,9 @@ if (!str_contains($newsletterWidgetSubscribeSource, "rateLimit('subscribe_widget
 }
 if (!str_contains($newsletterWidgetSubscribeSource, 'safePublicReturnTarget')) {
     $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing safe return_url validation';
+}
+if (!str_contains($newsletterWidgetSubscribeSource, 'sendNoStoreNoIndexHeaders();')) {
+    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing no-store/noindex/no-referrer headers';
 }
 if (!str_contains($newsletterWidgetSubscribeSource, "'email' => \$email")) {
     $widgetRenderIssues[] = 'newsletter widget subscribe endpoint does not preserve invalid e-mail value for PRG retry';

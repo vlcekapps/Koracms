@@ -2,18 +2,24 @@
 
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
+sendNoStoreNoIndexHeaders();
+
+function newsletterWidgetRedirect(string $target): void
+{
+    sendNoStoreNoIndexHeaders();
+    header('Location: ' . $target);
+    exit;
+}
 
 $defaultRedirect = BASE_URL . '/subscribe.php';
 $returnUrl = safePublicReturnTarget(trim((string)($_POST['return_url'] ?? '')), $defaultRedirect);
 
 if (!isModuleEnabled('newsletter')) {
-    header('Location: ' . $returnUrl);
-    exit;
+    newsletterWidgetRedirect($returnUrl);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . $defaultRedirect);
-    exit;
+    newsletterWidgetRedirect($defaultRedirect);
 }
 
 rateLimit('subscribe_widget', 3, 300);
@@ -24,8 +30,7 @@ if (honeypotTriggered()) {
         'message' => 'Na vaši adresu jsme odeslali potvrzovací e-mail. Klikněte prosím na odkaz v e-mailu.',
         'email' => '',
     ];
-    header('Location: ' . $returnUrl);
-    exit;
+    newsletterWidgetRedirect($returnUrl);
 }
 
 verifyCsrf();
@@ -37,8 +42,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         'message' => 'Zadejte platnou e-mailovou adresu.',
         'email' => $email,
     ];
-    header('Location: ' . $returnUrl);
-    exit;
+    newsletterWidgetRedirect($returnUrl);
 }
 
 $pdo = db_connect();
@@ -70,5 +74,4 @@ try {
     ];
 }
 
-header('Location: ' . $returnUrl);
-exit;
+newsletterWidgetRedirect($returnUrl);

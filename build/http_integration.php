@@ -1658,6 +1658,16 @@ try {
     if (!responseHasLocationHeader($widgetSubscribeResponse['headers'], BASE_URL . '/', $baseUrl)) {
         $footerDiscoveryWidgetIssues[] = 'newsletter widget submit s neplatným e-mailem nemíří zpět na homepage';
     }
+    if (
+        !httpIntegrationHeaderContains($widgetSubscribeResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'Cache-Control', 'max-age=0')
+        || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'X-Robots-Tag', 'nofollow')
+        || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'X-Robots-Tag', 'noarchive')
+        || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $footerDiscoveryWidgetIssues[] = 'newsletter widget submit neposlal no-store/noindex/no-referrer hlavičky';
+    }
 
     $homeWithNewsletterWidgetError = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);
     if (!str_contains($homeWithNewsletterWidgetError['body'], 'Zadejte platnou e-mailovou adresu.')) {

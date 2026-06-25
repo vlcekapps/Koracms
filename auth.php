@@ -124,6 +124,7 @@ function isSensitiveNoStoreNoIndexRequestPath(?string $requestUri = null): bool
         BASE_URL . '/confirm_email.php',
         BASE_URL . '/subscribe_confirm.php',
         BASE_URL . '/unsubscribe.php',
+        BASE_URL . '/newsletter_widget_subscribe.php',
         BASE_URL . '/reset_password.php',
         BASE_URL . '/reservations/cancel_booking.php',
         BASE_URL . '/public_logout.php',
