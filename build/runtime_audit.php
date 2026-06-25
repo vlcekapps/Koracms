@@ -15155,6 +15155,10 @@ foreach ([
 if (!str_contains($themeAccountReservationsViewSource, 'data-confirm="Opravdu chcete zrušit tuto rezervaci?"')) {
     $themeLayoutIssues[] = 'account reservations view is missing data-confirm reservation cancellation';
 }
+if (!str_contains($themeAccountReservationsViewSource, 'role="status" aria-atomic="true" aria-labelledby="my-reservations-flash-message"')
+    || !str_contains($themeAccountReservationsViewSource, '<p id="my-reservations-flash-message"><?= h($flashMessage) ?></p>')) {
+    $themeLayoutIssues[] = 'account reservations flash message is missing heading-backed status semantics';
+}
 if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Opravdu zrušit rezervaci?"')) {
     $themeLayoutIssues[] = 'reservation cancellation view is missing data-confirm submit guard';
 }

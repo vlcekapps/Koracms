@@ -8,8 +8,8 @@
     </div>
 
     <?php if ($flashMessage !== null): ?>
-      <div class="status-message status-message--success" role="status">
-        <p><?= h($flashMessage) ?></p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="my-reservations-flash-message">
+        <p id="my-reservations-flash-message"><?= h($flashMessage) ?></p>
       </div>
     <?php endif; ?>
 
