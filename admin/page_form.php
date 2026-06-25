@@ -158,7 +158,7 @@ adminHeader($pageTitle);
     <label for="slug">Slug (URL) <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true"
            <?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['page-slug-help']) ?>
-           pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky"
+           pattern="[a-z0-9\-]+"
            value="<?= h((string)$page['slug']) ?>">
     <small id="page-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
     <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>

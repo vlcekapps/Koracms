@@ -10910,6 +10910,7 @@ foreach ([
     '<legend>Základní údaje blogu</legend>',
     '<legend>Obsah a metadata blogu</legend>',
     '<legend>Logo a zobrazení blogu</legend>',
+    'Slug se použije jako adresa blogu, např. <code>/recepty/</code>. Vyplní se automaticky z názvu. Použijte malá písmena, číslice a pomlčky.',
     'aria-describedby="blog-description-help"',
     'aria-describedby="bd-slug-help"',
     'aria-describedby="bd-description-help"',
@@ -10941,6 +10942,9 @@ if (str_contains($blogsAdminSource, 'style=')) {
 }
 if (str_contains($blogsAdminSource, '.style')) {
     $blogAdminIssues[] = 'blog admin overview still mutates inline styles via JavaScript';
+}
+if (str_contains($blogsAdminSource, 'title="Pouze malá písmena, číslice a pomlčky"')) {
+    $blogAdminIssues[] = 'blog slug fields still rely on title tooltip for pattern help';
 }
 if (!str_contains($blogListSource, 'value="article_to_page"') || !str_contains($blogListSource, 'aria-hidden="true"')) {
     $blogAdminIssues[] = 'blog list still exposes the article-to-page arrow to screen readers';
@@ -14007,6 +14011,9 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
             $adminFieldErrorIssues[] = $formLabel . ' is missing field-level error fragment: ' . $requiredFragment;
         }
     }
+}
+if (str_contains($pageFormSource, 'title="Pouze malá písmena, číslice a pomlčky"')) {
+    $adminFieldErrorIssues[] = 'page slug field still relies on title tooltip for pattern help';
 }
 if (!str_contains($formBuilderSource, '$submitterEmailFieldValue') || !str_contains($formBuilderSource, 'count($emailFieldOptions) === 1')) {
     $adminFieldErrorIssues[] = 'form builder is missing resilient fallback selection for submitter confirmation email field';

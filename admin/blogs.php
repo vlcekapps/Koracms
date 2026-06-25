@@ -139,9 +139,9 @@ adminHeader('Správa blogů');
 
     <label for="slug">Slug (URL) <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100"
-           pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky"
+           pattern="[a-z0-9\-]+"
            aria-describedby="blog-slug-help">
-    <small id="blog-slug-help" class="field-help">Slug se použije jako adresa blogu, např. <code>/recepty/</code>. Vyplní se automaticky z názvu.</small>
+    <small id="blog-slug-help" class="field-help">Slug se použije jako adresa blogu, např. <code>/recepty/</code>. Vyplní se automaticky z názvu. Použijte malá písmena, číslice a pomlčky.</small>
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="2" aria-describedby="blog-description-help"></textarea>
@@ -308,7 +308,7 @@ adminHeader('Správa blogů');
 
       <label for="bd-slug">Slug (URL) <span aria-hidden="true">*</span></label>
       <input type="text" id="bd-slug" name="slug" required aria-required="true" maxlength="100"
-             pattern="[a-z0-9\-]+" title="Pouze malá písmena, číslice a pomlčky" aria-describedby="bd-slug-help">
+             pattern="[a-z0-9\-]+" aria-describedby="bd-slug-help">
       <small id="bd-slug-help" class="field-help">Slug se použije jako veřejná adresa blogu. Použijte malá písmena, číslice a pomlčky.</small>
 
       <label for="bd-desc">Popis</label>
