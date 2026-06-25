@@ -200,6 +200,37 @@ function sendAdminDownloadHeaders(): void
     header('X-Content-Type-Options: nosniff');
 }
 
+/**
+ * @param list<string> $allowedMethods
+ */
+function requireHttpMethods(array $allowedMethods): string
+{
+    $normalizedAllowedMethods = [];
+    foreach ($allowedMethods as $allowedMethod) {
+        $normalizedAllowedMethod = strtoupper(trim($allowedMethod));
+        if ($normalizedAllowedMethod !== '' && preg_match('/\A[A-Z]+\z/', $normalizedAllowedMethod) === 1) {
+            $normalizedAllowedMethods[] = $normalizedAllowedMethod;
+        }
+    }
+    $normalizedAllowedMethods = array_values(array_unique($normalizedAllowedMethods));
+    if ($normalizedAllowedMethods === []) {
+        $normalizedAllowedMethods = ['GET'];
+    }
+
+    $requestMethod = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if (!in_array($requestMethod, $normalizedAllowedMethods, true)) {
+        sendNoStoreNoIndexHeaders();
+        header('Content-Type: text/plain; charset=UTF-8');
+        header('X-Content-Type-Options: nosniff');
+        header('Allow: ' . implode(', ', $normalizedAllowedMethods));
+        http_response_code(405);
+        echo "Method not allowed\n";
+        exit;
+    }
+
+    return $requestMethod;
+}
+
 if ($isSocialPreviewCrawler && function_exists('header_register_callback')) {
     header_register_callback('sendSocialPreviewCacheHeaders');
 } elseif ($isSocialPreviewCrawler) {

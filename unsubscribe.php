@@ -4,14 +4,7 @@ require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 sendNoStoreNoIndexHeaders();
 
-$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if ($requestMethod !== 'GET') {
-    header('Content-Type: text/plain; charset=UTF-8');
-    header('Allow: GET');
-    http_response_code(405);
-    echo "Method not allowed\n";
-    exit;
-}
+requireHttpMethods(['GET']);
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $token    = trim($_GET['token'] ?? '');

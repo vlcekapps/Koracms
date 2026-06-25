@@ -113,11 +113,11 @@ if (!function_exists('postUrl')) {
     }
 }
 
-if (!function_exists('postRawUrl')) {
+if (!function_exists('requestRawUrl')) {
     /**
      * @return array{status:string,headers:array<int,string>,body:string}
      */
-    function postRawUrl(string $url, string $body, string $contentType = 'application/json', string $cookie = '', int $maxRedirects = 20): array
+    function requestRawUrl(string $method, string $url, string $body = '', string $contentType = 'application/json', string $cookie = '', int $maxRedirects = 20): array
     {
         $headers = [
             'User-Agent: KoraHttpIntegration/1.0',
@@ -129,7 +129,7 @@ if (!function_exists('postRawUrl')) {
 
         $context = stream_context_create([
             'http' => [
-                'method' => 'POST',
+                'method' => strtoupper($method),
                 'header' => implode("\r\n", $headers) . "\r\n",
                 'content' => $body,
                 'ignore_errors' => true,
@@ -148,6 +148,16 @@ if (!function_exists('postRawUrl')) {
             'headers' => $responseHeaders,
             'body' => is_string($responseBody) ? $responseBody : '',
         ];
+    }
+}
+
+if (!function_exists('postRawUrl')) {
+    /**
+     * @return array{status:string,headers:array<int,string>,body:string}
+     */
+    function postRawUrl(string $url, string $body, string $contentType = 'application/json', string $cookie = '', int $maxRedirects = 20): array
+    {
+        return requestRawUrl('POST', $url, $body, $contentType, $cookie, $maxRedirects);
     }
 }
 

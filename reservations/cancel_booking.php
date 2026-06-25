@@ -4,14 +4,7 @@ require_once __DIR__ . '/../db.php';
 checkMaintenanceMode();
 sendNoStoreNoIndexHeaders();
 
-$requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
-if (!in_array($requestMethod, ['GET', 'POST'], true)) {
-    header('Content-Type: text/plain; charset=UTF-8');
-    header('Allow: GET, POST');
-    http_response_code(405);
-    echo "Method not allowed\n";
-    exit;
-}
+$requestMethod = requireHttpMethods(['GET', 'POST']);
 
 if (!isModuleEnabled('reservations')) {
     header('Location: ' . BASE_URL . '/index.php');

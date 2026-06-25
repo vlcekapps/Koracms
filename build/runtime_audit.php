@@ -2498,18 +2498,47 @@ function runtimeAuditHeaderContains(array $headers, string $name, string $needle
 
 /**
  * @param array{status:string,headers:array<int,string>,body:string} $response
+ * @param list<string> $allowedMethods
+ */
+function runtimeAuditMethodGuardOk(array $response, array $allowedMethods): bool
+{
+    $normalizedAllowedMethods = array_values(array_unique(array_map(
+        static fn (string $method): string => strtoupper($method),
+        $allowedMethods
+    )));
+    $knownMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
+    if (
+        !str_contains($response['status'], '405')
+        || !runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'no-store')
+        || !runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'max-age=0')
+        || !runtimeAuditHeaderContains($response['headers'], 'X-Robots-Tag', 'noindex')
+        || !runtimeAuditHeaderContains($response['headers'], 'Referrer-Policy', 'no-referrer')
+        || !runtimeAuditHeaderContains($response['headers'], 'X-Content-Type-Options', 'nosniff')
+        || !runtimeAuditHeaderContains($response['headers'], 'Content-Type', 'text/plain; charset=UTF-8')
+    ) {
+        return false;
+    }
+
+    foreach ($normalizedAllowedMethods as $allowedMethod) {
+        if (!runtimeAuditHeaderContains($response['headers'], 'Allow', $allowedMethod)) {
+            return false;
+        }
+    }
+    foreach ($knownMethods as $knownMethod) {
+        if (!in_array($knownMethod, $normalizedAllowedMethods, true) && runtimeAuditHeaderContains($response['headers'], 'Allow', $knownMethod)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
  */
 function runtimeAuditReadOnlyMethodGuardOk(array $response): bool
 {
-    return str_contains($response['status'], '405')
-        && runtimeAuditHeaderContains($response['headers'], 'Allow', 'GET')
-        && runtimeAuditHeaderContains($response['headers'], 'Allow', 'HEAD')
-        && runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'no-store')
-        && runtimeAuditHeaderContains($response['headers'], 'Cache-Control', 'max-age=0')
-        && runtimeAuditHeaderContains($response['headers'], 'X-Robots-Tag', 'noindex')
-        && runtimeAuditHeaderContains($response['headers'], 'Referrer-Policy', 'no-referrer')
-        && runtimeAuditHeaderContains($response['headers'], 'X-Content-Type-Options', 'nosniff')
-        && runtimeAuditHeaderContains($response['headers'], 'Content-Type', 'text/plain; charset=UTF-8');
+    return runtimeAuditMethodGuardOk($response, ['GET', 'HEAD']);
 }
 
 /**
@@ -8361,16 +8390,16 @@ $foundationChecks = [
         && str_contains($eventIcsSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($eventIcsSource, "if (\$isHeadRequest)")
         && str_contains($eventIcsSource, "header('X-Content-Type-Options: nosniff')"),
-    'state-changing GET endpoints reject unsupported methods' => str_contains($confirmEmailSource, "\$requestMethod !== 'GET'")
-        && str_contains($confirmEmailSource, "header('Allow: GET')")
-        && str_contains($subscribeConfirmSource, "\$requestMethod !== 'GET'")
-        && str_contains($subscribeConfirmSource, "header('Allow: GET')")
-        && str_contains($unsubscribeSource, "\$requestMethod !== 'GET'")
-        && str_contains($unsubscribeSource, "header('Allow: GET')")
-        && str_contains($publicLogoutSource, "\$requestMethod !== 'GET'")
-        && str_contains($publicLogoutSource, "header('Allow: GET')")
-        && str_contains($adminLogoutSource, "\$requestMethod !== 'GET'")
-        && str_contains($adminLogoutSource, "header('Allow: GET')"),
+    'state-changing GET endpoints reject unsupported methods' => str_contains($authSource, 'function requireHttpMethods(array $allowedMethods): string')
+        && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($authSource, "header('Content-Type: text/plain; charset=UTF-8')")
+        && str_contains($authSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($authSource, "header('Allow: ' . implode(', ', \$normalizedAllowedMethods))")
+        && str_contains($confirmEmailSource, "requireHttpMethods(['GET']);")
+        && str_contains($subscribeConfirmSource, "requireHttpMethods(['GET']);")
+        && str_contains($unsubscribeSource, "requireHttpMethods(['GET']);")
+        && str_contains($publicLogoutSource, "requireHttpMethods(['GET']);")
+        && str_contains($adminLogoutSource, "requireHttpMethods(['GET']);"),
     'sensitive token and logout endpoints send no-store noindex headers' => str_contains($authSource, 'function sendNoStoreNoIndexHeaders')
         && str_contains($authSource, 'function isSensitiveNoStoreNoIndexRequestPath')
         && str_contains($authSource, 'function safePublicReturnTarget')
@@ -8405,8 +8434,7 @@ $foundationChecks = [
         && str_contains($authSource, "BASE_URL . '/newsletter_widget_subscribe.php'")
         && str_contains($passwordResetSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($reservationsCancelBookingSource, 'sendNoStoreNoIndexHeaders();')
-        && str_contains($reservationsCancelBookingSource, "in_array(\$requestMethod, ['GET', 'POST'], true)")
-        && str_contains($reservationsCancelBookingSource, "header('Allow: GET, POST')")
+        && str_contains($reservationsCancelBookingSource, "\$requestMethod = requireHttpMethods(['GET', 'POST']);")
         && str_contains($reservationsCancelBookingSource, "'url' => BASE_URL . '/reservations/cancel_booking.php'")
         && !str_contains($reservationsCancelBookingSource, "'url' => BASE_URL . '/reservations/cancel_booking.php?token='")
         && str_contains($publicLogoutSource, 'sendNoStoreNoIndexHeaders();')
@@ -8767,18 +8795,21 @@ foreach ([
     '/admin/logout.php' => 'admin/logout.php',
 ] as $stateChangingGetUrl => $stateChangingGetLabel) {
     $stateChangingGetProbe = postRawUrl($baseUrl . $stateChangingGetUrl, '', 'text/plain', '', 0);
-    $stateChangingGetAllowHeaderFound = false;
-    $stateChangingGetAllowsHead = false;
-    foreach ($stateChangingGetProbe['headers'] as $stateChangingGetHeader) {
-        if (stripos($stateChangingGetHeader, 'Allow:') === 0 && str_contains($stateChangingGetHeader, 'GET')) {
-            $stateChangingGetAllowHeaderFound = true;
-            $stateChangingGetAllowsHead = str_contains($stateChangingGetHeader, 'HEAD');
-            break;
-        }
+    if (!runtimeAuditMethodGuardOk($stateChangingGetProbe, ['GET'])) {
+        $foundationIssues[] = $stateChangingGetLabel . ' did not reject unsupported state-changing methods with safe Allow: GET headers';
     }
-    if (!str_contains($stateChangingGetProbe['status'], '405') || !$stateChangingGetAllowHeaderFound || $stateChangingGetAllowsHead) {
-        $foundationIssues[] = $stateChangingGetLabel . ' did not reject unsupported state-changing methods with Allow: GET';
-    }
+}
+
+$reservationCancelMethodGuardProbe = requestRawUrl(
+    'PUT',
+    $baseUrl . '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef',
+    '',
+    'text/plain',
+    '',
+    0
+);
+if (!runtimeAuditMethodGuardOk($reservationCancelMethodGuardProbe, ['GET', 'POST'])) {
+    $foundationIssues[] = 'reservations/cancel_booking.php did not reject unsupported methods with safe Allow: GET, POST headers';
 }
 
 foreach ([

@@ -226,6 +226,13 @@ if ($path === '/raw') {
     return true;
 }
 
+if ($path === '/raw-method') {
+    $length = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $input = $length > 0 ? (string) file_get_contents('php://input', false, null, 0, $length) : '';
+    echo 'RAW-METHOD|' . (string) ($_SERVER['REQUEST_METHOD'] ?? '') . '|' . (string) ($_SERVER['CONTENT_TYPE'] ?? '') . '|' . $input;
+    return true;
+}
+
 if ($path === '/multipart') {
     $upload = $_FILES['upload'] ?? null;
     $filename = is_array($upload) && isset($upload['name']) && is_string($upload['name']) ? $upload['name'] : '';
@@ -338,6 +345,20 @@ try {
     httpTestHelpersSelfTestAssert(
         $rawResponse['body'] === 'RAW|application/json; charset=UTF-8|{"ok":true}',
         'postRawUrl did not send raw body and content type. Body: ' . $rawResponse['body']
+    );
+
+    $customMethodResponse = requestRawUrl(
+        'PUT',
+        $baseUrl . '/raw-method',
+        'custom-body',
+        'text/plain; charset=UTF-8',
+        '',
+        0
+    );
+    assertHttpHelperStatus($customMethodResponse, '200', 'Custom raw method helper fixture');
+    httpTestHelpersSelfTestAssert(
+        $customMethodResponse['body'] === 'RAW-METHOD|PUT|text/plain; charset=UTF-8|custom-body',
+        'requestRawUrl did not send custom method, raw body and content type. Body: ' . $customMethodResponse['body']
     );
 
     $multipartResponse = postMultipartUrl(

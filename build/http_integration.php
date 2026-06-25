@@ -78,18 +78,47 @@ function httpIntegrationHeaderContains(array $response, string $name, string $ne
 
 /**
  * @param array{status:string,headers:array<int,string>,body:string} $response
+ * @param list<string> $allowedMethods
+ */
+function httpIntegrationMethodGuardOk(array $response, array $allowedMethods): bool
+{
+    $normalizedAllowedMethods = array_values(array_unique(array_map(
+        static fn (string $method): string => strtoupper($method),
+        $allowedMethods
+    )));
+    $knownMethods = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
+    if (
+        httpIntegrationStatusCode($response) !== 405
+        || !httpIntegrationHeaderContains($response, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($response, 'Cache-Control', 'max-age=0')
+        || !httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($response, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($response, 'X-Content-Type-Options', 'nosniff')
+        || !httpIntegrationHeaderContains($response, 'Content-Type', 'text/plain; charset=UTF-8')
+    ) {
+        return false;
+    }
+
+    foreach ($normalizedAllowedMethods as $allowedMethod) {
+        if (!httpIntegrationHeaderContains($response, 'Allow', $allowedMethod)) {
+            return false;
+        }
+    }
+    foreach ($knownMethods as $knownMethod) {
+        if (!in_array($knownMethod, $normalizedAllowedMethods, true) && httpIntegrationHeaderContains($response, 'Allow', $knownMethod)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
  */
 function httpIntegrationReadOnlyMethodGuardOk(array $response): bool
 {
-    return httpIntegrationStatusCode($response) === 405
-        && httpIntegrationHeaderContains($response, 'Allow', 'GET')
-        && httpIntegrationHeaderContains($response, 'Allow', 'HEAD')
-        && httpIntegrationHeaderContains($response, 'Cache-Control', 'no-store')
-        && httpIntegrationHeaderContains($response, 'Cache-Control', 'max-age=0')
-        && httpIntegrationHeaderContains($response, 'X-Robots-Tag', 'noindex')
-        && httpIntegrationHeaderContains($response, 'Referrer-Policy', 'no-referrer')
-        && httpIntegrationHeaderContains($response, 'X-Content-Type-Options', 'nosniff')
-        && httpIntegrationHeaderContains($response, 'Content-Type', 'text/plain; charset=UTF-8');
+    return httpIntegrationMethodGuardOk($response, ['GET', 'HEAD']);
 }
 
 function httpIntegrationSettingValue(PDO $pdo, string $key): string
@@ -513,18 +542,20 @@ try {
     ];
     foreach ($stateChangingGetEndpointUrls as $stateChangingGetEndpointUrl => $stateChangingGetEndpointLabel) {
         $stateChangingGetEndpointResponse = postRawUrl($baseUrl . BASE_URL . $stateChangingGetEndpointUrl, '', 'text/plain', '', 0);
-        $stateChangingGetEndpointAllowsGet = false;
-        $stateChangingGetEndpointAllowsHead = false;
-        foreach ($stateChangingGetEndpointResponse['headers'] as $stateChangingGetEndpointHeader) {
-            if (stripos($stateChangingGetEndpointHeader, 'Allow:') === 0 && str_contains($stateChangingGetEndpointHeader, 'GET')) {
-                $stateChangingGetEndpointAllowsGet = true;
-                $stateChangingGetEndpointAllowsHead = str_contains($stateChangingGetEndpointHeader, 'HEAD');
-                break;
-            }
+        if (!httpIntegrationMethodGuardOk($stateChangingGetEndpointResponse, ['GET'])) {
+            $stateChangingGetEndpointIssues[] = $stateChangingGetEndpointLabel . ' neodmítl nepodporovanou metodu bezpečnou 405 odpovědí s Allow: GET';
         }
-        if (httpIntegrationStatusCode($stateChangingGetEndpointResponse) !== 405 || !$stateChangingGetEndpointAllowsGet || $stateChangingGetEndpointAllowsHead) {
-            $stateChangingGetEndpointIssues[] = $stateChangingGetEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET';
-        }
+    }
+    $reservationCancelMethodGuardResponse = requestRawUrl(
+        'PUT',
+        $baseUrl . BASE_URL . '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef',
+        '',
+        'text/plain',
+        '',
+        0
+    );
+    if (!httpIntegrationMethodGuardOk($reservationCancelMethodGuardResponse, ['GET', 'POST'])) {
+        $stateChangingGetEndpointIssues[] = 'reservations/cancel_booking.php neodmítl nepodporovanou metodu bezpečnou 405 odpovědí s Allow: GET, POST';
     }
     httpIntegrationPrintResult('state_changing_get_endpoints_http', $stateChangingGetEndpointIssues, $failures);
 
