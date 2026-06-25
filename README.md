@@ -529,7 +529,7 @@ V administraci: **Obecná nastavení → Provoz webu**. Zapne stránku údržby 
 
 ### Health check
 
-JSON provozní endpointy pro monitoring a CSP reporty posílají vedle `Content-Type: application/json` také `X-Content-Type-Options: nosniff`, aby prohlížeč ani mezilehlá vrstva nehádaly jiný typ obsahu. Stejně jako citlivé veřejné tokenové akce jsou necacheované, neindexované přes `X-Robots-Tag: noindex, nofollow, noarchive` a posílají `Referrer-Policy: no-referrer`, aby monitoring a CSP sběr zbytečně neputovaly přes cache, index nebo referrer.
+JSON provozní endpointy pro monitoring a CSP reporty posílají vedle `Content-Type: application/json` také `X-Content-Type-Options: nosniff`, aby prohlížeč ani mezilehlá vrstva nehádaly jiný typ obsahu. Stejně jako citlivé veřejné tokenové akce jsou necacheované, neindexované přes `X-Robots-Tag: noindex, nofollow, noarchive` a posílají `Referrer-Policy: no-referrer`, aby monitoring a CSP sběr zbytečně neputovaly přes cache, index nebo referrer. Tyto provozní JSON hlavičky skládá sdílený helper, aby se `health.php` a `csp-report.php` nerozjely do dvou mírně odlišných variant.
 
 Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
 

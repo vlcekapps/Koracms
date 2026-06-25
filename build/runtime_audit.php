@@ -8439,12 +8439,13 @@ $foundationChecks = [
         && str_contains($unitTestsSource, "seoCanonicalUrl('//example.com/clanek')")
         && str_contains($unitTestsSource, "seoCanonicalUrl('https://user:pass@example.com/clanek')")
         && str_contains($unitTestsSource, "https://example.com/clanek\\nSet-Cookie: evil=1"),
-    'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
-        && str_contains($healthSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($healthSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
-        && str_contains($healthSource, "header('Cache-Control: no-store, max-age=0')")
-        && str_contains($healthSource, "header('Pragma: no-cache')")
-        && str_contains($healthSource, "header('Referrer-Policy: no-referrer')")
+    'operational JSON endpoints use shared no-store headers' => str_contains($authSource, 'function sendOperationalJsonHeaders')
+        && str_contains($authSource, "header('Content-Type: application/json; charset=UTF-8')")
+        && str_contains($authSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($authSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($healthSource, 'sendOperationalJsonHeaders();')
+        && str_contains($cspReportSource, 'sendOperationalJsonHeaders();'),
+    'health endpoint is minimal JSON' => str_contains($healthSource, 'sendOperationalJsonHeaders();')
         && str_contains($healthSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($healthSource, "header('Allow: GET, HEAD')")
         && str_contains($healthSource, "if (\$isHeadRequest)")
@@ -8457,11 +8458,7 @@ $foundationChecks = [
         && str_contains($healthSource, "'last_run' => date(DATE_ATOM, \$cronLastRunTimestamp)"),
     'health endpoint reports latest backup timestamp' => str_contains($healthSource, "'last_backup' => date(DATE_ATOM, \$latestBackupTimestamp)")
         && str_contains($healthSource, "'backup' => ['status' => 'unknown']"),
-    'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, "header('Cache-Control: no-store, max-age=0')")
-        && str_contains($cspReportSource, "header('X-Content-Type-Options: nosniff')")
-        && str_contains($cspReportSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
-        && str_contains($cspReportSource, "header('Pragma: no-cache')")
-        && str_contains($cspReportSource, "header('Referrer-Policy: no-referrer')")
+    'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, 'sendOperationalJsonHeaders();')
         && str_contains($cspReportSource, 'function cspReportJsonResponse')
         && str_contains($cspReportSource, "'request_id' => koraRequestId()")
         && str_contains($cspReportSource, "header('Allow: POST')"),
