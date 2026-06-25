@@ -437,6 +437,8 @@ Dlouho běžící administrační formuláře, například import z WordPressu n
 
 XML/WXR soubory pro import z WordPressu a eStránek používají stejnou sdílenou upload validaci jako ostatní citlivější nahrávání. CMS ověří stav PHP uploadu, dočasný soubor a prázdný soubor dřív, než ho předá parseru; WordPress náhled se navíc ukládá do `uploads/tmp` přes bezpečný upload helper. Základní URL pro stahování fotografií z eStránek prochází stejným http/https normalizátorem jako ostatní externí adresy, takže nepřijme protocol-relative URL, přihlašovací údaje ani nebezpečná schémata.
 
+Tokenové odkazy, které mění stav přes tajný `GET` odkaz, jsou metodově omezené. Potvrzení e-mailu, potvrzení nebo odhlášení newsletteru a veřejné i administrační odhlášení odmítají `POST`, `HEAD` a další nečekané metody pomocí `405` a `Allow: GET`, takže kontrolní nebo chybné HTTP požadavky nemají měnit účet, odběr ani session.
+
 Editor anket v administraci používá pro přidávání a odebírání možností odpovědi datové atributy a delegovaný listener v nonce skriptu formuláře, ne inline `onclick` handlery.
 
 Rezervační formuláře v administraci používají stejný princip pro přepínání typu zákazníka, práci se sloty a blokovanými dny. Runtime audit navíc hlídá, aby se do admin PHP souborů nevracely inline `onclick`, `onchange`, `onsubmit` ani `oninput` atributy.

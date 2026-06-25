@@ -511,6 +511,31 @@ try {
     }
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 
+    $stateChangingGetEndpointIssues = [];
+    $stateChangingGetEndpointUrls = [
+        '/confirm_email.php?token=method-guard' => 'confirm_email.php',
+        '/subscribe_confirm.php?token=method-guard' => 'subscribe_confirm.php',
+        '/unsubscribe.php?token=method-guard' => 'unsubscribe.php',
+        '/public_logout.php' => 'public_logout.php',
+        '/admin/logout.php' => 'admin/logout.php',
+    ];
+    foreach ($stateChangingGetEndpointUrls as $stateChangingGetEndpointUrl => $stateChangingGetEndpointLabel) {
+        $stateChangingGetEndpointResponse = postRawUrl($baseUrl . BASE_URL . $stateChangingGetEndpointUrl, '', 'text/plain', '', 0);
+        $stateChangingGetEndpointAllowsGet = false;
+        $stateChangingGetEndpointAllowsHead = false;
+        foreach ($stateChangingGetEndpointResponse['headers'] as $stateChangingGetEndpointHeader) {
+            if (stripos($stateChangingGetEndpointHeader, 'Allow:') === 0 && str_contains($stateChangingGetEndpointHeader, 'GET')) {
+                $stateChangingGetEndpointAllowsGet = true;
+                $stateChangingGetEndpointAllowsHead = str_contains($stateChangingGetEndpointHeader, 'HEAD');
+                break;
+            }
+        }
+        if (httpIntegrationStatusCode($stateChangingGetEndpointResponse) !== 405 || !$stateChangingGetEndpointAllowsGet || $stateChangingGetEndpointAllowsHead) {
+            $stateChangingGetEndpointIssues[] = $stateChangingGetEndpointLabel . ' neodmítl nepodporovanou metodu pomocí 405 a Allow: GET';
+        }
+    }
+    httpIntegrationPrintResult('state_changing_get_endpoints_http', $stateChangingGetEndpointIssues, $failures);
+
     $fileEndpointIssues = [];
     $fileEndpointMethodUrls = [
         '/media/file.php?id=0' => 'media/file.php',

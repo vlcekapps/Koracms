@@ -48,9 +48,12 @@ $boardIndexSource = (string) file_get_contents(__DIR__ . '/../board/index.php');
 $contactIndexSource = (string) file_get_contents(__DIR__ . '/../contact/index.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
 $formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
+$confirmEmailSource = (string) file_get_contents(__DIR__ . '/../confirm_email.php');
 $subscribeConfirmSource = (string) file_get_contents(__DIR__ . '/../subscribe_confirm.php');
 $unsubscribeSource = (string) file_get_contents(__DIR__ . '/../unsubscribe.php');
 $passwordResetSource = (string) file_get_contents(__DIR__ . '/../reset_password.php');
+$publicLogoutSource = (string) file_get_contents(__DIR__ . '/../public_logout.php');
+$adminLogoutSource = (string) file_get_contents(__DIR__ . '/../admin/logout.php');
 $reservationsBookSource = (string) file_get_contents(__DIR__ . '/../reservations/book.php');
 $reservationsCancelSource = (string) file_get_contents(__DIR__ . '/../reservations/cancel.php');
 $reservationsCancelBookingSource = (string) file_get_contents(__DIR__ . '/../reservations/cancel_booking.php');
@@ -8339,6 +8342,16 @@ $foundationChecks = [
         && str_contains($eventIcsSource, "header('Allow: GET, HEAD')")
         && str_contains($eventIcsSource, "if (\$isHeadRequest)")
         && str_contains($eventIcsSource, "header('X-Content-Type-Options: nosniff')"),
+    'state-changing GET endpoints reject unsupported methods' => str_contains($confirmEmailSource, "\$requestMethod !== 'GET'")
+        && str_contains($confirmEmailSource, "header('Allow: GET')")
+        && str_contains($subscribeConfirmSource, "\$requestMethod !== 'GET'")
+        && str_contains($subscribeConfirmSource, "header('Allow: GET')")
+        && str_contains($unsubscribeSource, "\$requestMethod !== 'GET'")
+        && str_contains($unsubscribeSource, "header('Allow: GET')")
+        && str_contains($publicLogoutSource, "\$requestMethod !== 'GET'")
+        && str_contains($publicLogoutSource, "header('Allow: GET')")
+        && str_contains($adminLogoutSource, "\$requestMethod !== 'GET'")
+        && str_contains($adminLogoutSource, "header('Allow: GET')"),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
         && str_contains($fileDownloadHelperSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($fileDownloadHelperSource, "header('Allow: GET, HEAD')")
@@ -8708,6 +8721,28 @@ if (!str_contains($healthProbe['status'], '200')) {
     }
     if (!str_contains($healthPostProbe['status'], '405') || !$healthAllowHeaderFound) {
         $foundationIssues[] = 'health.php did not reject unsupported methods with Allow: GET, HEAD';
+    }
+}
+
+foreach ([
+    '/confirm_email.php?token=method-guard' => 'confirm_email.php',
+    '/subscribe_confirm.php?token=method-guard' => 'subscribe_confirm.php',
+    '/unsubscribe.php?token=method-guard' => 'unsubscribe.php',
+    '/public_logout.php' => 'public_logout.php',
+    '/admin/logout.php' => 'admin/logout.php',
+] as $stateChangingGetUrl => $stateChangingGetLabel) {
+    $stateChangingGetProbe = postRawUrl($baseUrl . $stateChangingGetUrl, '', 'text/plain', '', 0);
+    $stateChangingGetAllowHeaderFound = false;
+    $stateChangingGetAllowsHead = false;
+    foreach ($stateChangingGetProbe['headers'] as $stateChangingGetHeader) {
+        if (stripos($stateChangingGetHeader, 'Allow:') === 0 && str_contains($stateChangingGetHeader, 'GET')) {
+            $stateChangingGetAllowHeaderFound = true;
+            $stateChangingGetAllowsHead = str_contains($stateChangingGetHeader, 'HEAD');
+            break;
+        }
+    }
+    if (!str_contains($stateChangingGetProbe['status'], '405') || !$stateChangingGetAllowHeaderFound || $stateChangingGetAllowsHead) {
+        $foundationIssues[] = $stateChangingGetLabel . ' did not reject unsupported state-changing methods with Allow: GET';
     }
 }
 

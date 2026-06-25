@@ -73,6 +73,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **HTTP guardrails pro administrační read-only endpointy** – JSON export obsahu, CSV export formulářových odpovědí, stažení příloh z formulářových odpovědí i vyhledávání obsahu pro media picker nově používají stejné `GET/HEAD` omezení jako ostatní read-only výstupy; nepodporované metody končí `405` s `Allow: GET, HEAD`.
 - **HTTP guardrails pro administrační JSON akce** – POST-only AJAX endpointy pro obnovu content locku a řazení obsahu nově odmítají jiné metody přes `405` s `Allow: POST` a posílají `no-store` i `nosniff` hlavičky.
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
+- **HTTP guardrails pro stav měnící GET odkazy** – potvrzení e-mailu, potvrzení/odhlášení newsletteru a veřejné i administrační odhlášení nově odmítají jiné metody než `GET` pomocí `405` a `Allow: GET`, aby `HEAD` nebo `POST` omylem neprovedly tokenovou akci nebo změnu session.
 
 ### Opraveno
 - **Přístupnost sdílených stavových stránek** – potvrzení e-mailu, vypnutá registrace a newsletterové potvrzovací/odhlašovací stránky používají ve sdílené `utility/status` šabloně `role="status"` nebo `role="alert"` s `aria-atomic="true"` a textovým cílem přes `aria-labelledby`.
