@@ -8365,6 +8365,8 @@ $foundationChecks = [
         && str_contains($authSource, 'function safePublicReturnTarget')
         && str_contains($authSource, '_KORA_FORCE_NO_STORE_NO_INDEX')
         && str_contains($authSource, 'KORA_FORCE_NO_STORE_NO_INDEX')
+        && str_contains($authSource, "BASE_URL . '/csp-report.php'")
+        && str_contains($authSource, "BASE_URL . '/health.php'")
         && str_contains($authSource, "BASE_URL . '/confirm_email.php'")
         && str_contains($authSource, "BASE_URL . '/reset_password.php'")
         && str_contains($authSource, "BASE_URL . '/reservations/cancel_booking.php'")
@@ -8378,6 +8380,8 @@ $foundationChecks = [
         && str_contains($authSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
         && str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
+        && str_contains($htaccessSource, 'csp-report')
+        && str_contains($htaccessSource, 'health')
         && str_contains($htaccessSource, 'newsletter_widget_subscribe')
         && str_contains($htaccessSource, 'reservations/cancel_booking\.php')
         && str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
@@ -8436,8 +8440,10 @@ $foundationChecks = [
         && str_contains($unitTestsSource, "https://example.com/clanek\\nSet-Cookie: evil=1"),
     'health endpoint is minimal JSON' => str_contains($healthSource, "header('Content-Type: application/json; charset=UTF-8')")
         && str_contains($healthSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($healthSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
         && str_contains($healthSource, "header('Cache-Control: no-store, max-age=0')")
         && str_contains($healthSource, "header('Pragma: no-cache')")
+        && str_contains($healthSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($healthSource, "in_array(\$requestMethod, ['GET', 'HEAD'], true)")
         && str_contains($healthSource, "header('Allow: GET, HEAD')")
         && str_contains($healthSource, "if (\$isHeadRequest)")
@@ -8452,7 +8458,9 @@ $foundationChecks = [
         && str_contains($healthSource, "'backup' => ['status' => 'unknown']"),
     'csp report endpoint is a non-cacheable JSON receiver' => str_contains($cspReportSource, "header('Cache-Control: no-store, max-age=0')")
         && str_contains($cspReportSource, "header('X-Content-Type-Options: nosniff')")
+        && str_contains($cspReportSource, "header('X-Robots-Tag: noindex, nofollow, noarchive')")
         && str_contains($cspReportSource, "header('Pragma: no-cache')")
+        && str_contains($cspReportSource, "header('Referrer-Policy: no-referrer')")
         && str_contains($cspReportSource, 'function cspReportJsonResponse')
         && str_contains($cspReportSource, "'request_id' => koraRequestId()")
         && str_contains($cspReportSource, "header('Allow: POST')"),
@@ -8763,6 +8771,14 @@ if (!str_contains($healthProbe['status'], '200')) {
     if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
         $foundationIssues[] = 'health.php did not send no-store monitoring cache headers';
     }
+    if (
+        !runtimeAuditHeaderContains($healthProbe['headers'], 'X-Robots-Tag', 'noindex')
+        || !runtimeAuditHeaderContains($healthProbe['headers'], 'X-Robots-Tag', 'nofollow')
+        || !runtimeAuditHeaderContains($healthProbe['headers'], 'X-Robots-Tag', 'noarchive')
+        || !runtimeAuditHeaderContains($healthProbe['headers'], 'Referrer-Policy', 'no-referrer')
+    ) {
+        $foundationIssues[] = 'health.php did not send full noindex/no-referrer monitoring headers';
+    }
     if (!runtimeAuditHeaderContains($healthProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
         $foundationIssues[] = 'health.php did not send X-Content-Type-Options: nosniff';
     }
@@ -8869,6 +8885,14 @@ if (!str_contains($cspReportGetProbe['status'], '405') || !$cspReportAllowHeader
 }
 if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
     $foundationIssues[] = 'csp-report.php did not send no-store cache headers';
+}
+if (
+    !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Robots-Tag', 'noindex')
+    || !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Robots-Tag', 'nofollow')
+    || !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Robots-Tag', 'noarchive')
+    || !runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'Referrer-Policy', 'no-referrer')
+) {
+    $foundationIssues[] = 'csp-report.php did not send full noindex/no-referrer monitoring headers';
 }
 if (!runtimeAuditHeaderContains($cspReportGetProbe['headers'], 'X-Content-Type-Options', 'nosniff')) {
     $foundationIssues[] = 'csp-report.php did not send X-Content-Type-Options: nosniff';

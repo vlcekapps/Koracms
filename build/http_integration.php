@@ -397,6 +397,14 @@ try {
     if (stripos($healthCacheHeader, 'no-store') === false || stripos($healthCacheHeader, 'max-age=0') === false) {
         $healthIssues[] = 'health.php neposlal no-store cache hlavičky';
     }
+    if (
+        !httpIntegrationHeaderContains($healthResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($healthResponse, 'X-Robots-Tag', 'nofollow')
+        || !httpIntegrationHeaderContains($healthResponse, 'X-Robots-Tag', 'noarchive')
+        || !httpIntegrationHeaderContains($healthResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $healthIssues[] = 'health.php neposlal kompletní noindex/no-referrer provozní hlavičky';
+    }
     if (!httpIntegrationHeaderContains($healthResponse, 'X-Content-Type-Options', 'nosniff')) {
         $healthIssues[] = 'health.php neposlal X-Content-Type-Options: nosniff';
     }
@@ -801,6 +809,14 @@ try {
     }
     if (stripos($cspReportCacheHeader, 'no-store') === false || stripos($cspReportCacheHeader, 'max-age=0') === false) {
         $cspReportIssues[] = 'CSP report endpoint neposlal no-store cache hlavičky';
+    }
+    if (
+        !httpIntegrationHeaderContains($cspReportGetResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($cspReportGetResponse, 'X-Robots-Tag', 'nofollow')
+        || !httpIntegrationHeaderContains($cspReportGetResponse, 'X-Robots-Tag', 'noarchive')
+        || !httpIntegrationHeaderContains($cspReportGetResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $cspReportIssues[] = 'CSP report endpoint neposlal kompletní noindex/no-referrer provozní hlavičky';
     }
     if (!$cspReportNosniffFound) {
         $cspReportIssues[] = 'CSP report endpoint neposlal X-Content-Type-Options: nosniff';

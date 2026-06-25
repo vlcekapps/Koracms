@@ -121,6 +121,8 @@ function isSensitiveNoStoreNoIndexRequestPath(?string $requestUri = null): bool
     }
 
     return in_array($requestPath, [
+        BASE_URL . '/csp-report.php',
+        BASE_URL . '/health.php',
         BASE_URL . '/confirm_email.php',
         BASE_URL . '/subscribe_confirm.php',
         BASE_URL . '/unsubscribe.php',

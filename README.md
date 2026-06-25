@@ -529,7 +529,7 @@ V administraci: **Obecná nastavení → Provoz webu**. Zapne stránku údržby 
 
 ### Health check
 
-JSON provozní endpointy pro monitoring a CSP reporty posílají vedle `Content-Type: application/json` také `X-Content-Type-Options: nosniff`, aby prohlížeč ani mezilehlá vrstva nehádaly jiný typ obsahu.
+JSON provozní endpointy pro monitoring a CSP reporty posílají vedle `Content-Type: application/json` také `X-Content-Type-Options: nosniff`, aby prohlížeč ani mezilehlá vrstva nehádaly jiný typ obsahu. Stejně jako citlivé veřejné tokenové akce jsou necacheované, neindexované přes `X-Robots-Tag: noindex, nofollow, noarchive` a posílají `Referrer-Policy: no-referrer`, aby monitoring a CSP sběr zbytečně neputovaly přes cache, index nebo referrer.
 
 Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
 
@@ -538,7 +538,7 @@ Endpoint `health.php` vrací minimální JSON stav instalace pro monitoring:
 - orientační stav a čas poslední SQL zálohy
 - orientační čerstvost posledního běhu cronu
 
-Endpoint podporuje metody `GET` a `HEAD`, nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vrací HTTP 200, při selhání kritické kontroly HTTP 503. Stav cronu je informační: čerstvá instalace bez prvního běhu cronu zůstane `unknown`, pozdější běh uloží `cron_last_run_at` a health check ho označí jako `ok` nebo `stale`. Odpověď se posílá s `Cache-Control: no-store`, aby monitoring nedostal zastaralý stav z cache.
+Endpoint podporuje metody `GET` a `HEAD`, nezobrazuje cesty, hesla ani detailní chyby. Při zdravé instalaci vrací HTTP 200, při selhání kritické kontroly HTTP 503. Stav cronu je informační: čerstvá instalace bez prvního běhu cronu zůstane `unknown`, pozdější běh uloží `cron_last_run_at` a health check ho označí jako `ok` nebo `stale`. Odpověď se posílá s `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow, noarchive` a `Referrer-Policy: no-referrer`, aby monitoring nedostal zastaralý stav z cache a provozní URL se neposílala dál.
 
 Každý HTTP request zároveň dostává hlavičku `X-Request-ID`. Pokud proxy nebo hosting pošle vlastní bezpečné `X-Request-ID`, Kora CMS ho převezme; jinak vytvoří nové náhodné ID. Stejné ID se zapisuje i do strukturovaných JSON záznamů technických chyb, takže lze konkrétní problém spárovat mezi odpovědí, PHP logem a monitoringem. U neošetřené chyby se stejný kód zobrazí i na chybové stránce. Strukturovaně se logují i dílčí obnovitelné chyby veřejného blogu, detailu článku, vyhledávání, sitemapy, veřejných formulářů, chatu, kontaktu, stažení souboru a newsletterových potvrzovacích akcí, kde má stránka pokračovat ve vykreslení, ale provozní log musí jasně ukázat selhaný zdroj. Stejný zápis používají i vybrané administrační přehledy, například vyhledávání obsahu pro media picker, formuláře a statistiky, bez ukládání hledaného textu nebo obsahu zpráv do kontextu logu. Strukturované logování mají i sdílené helpery pro zámky obsahu, revize, widgety, použití médií, formulářové webhooky, e-mailové notifikace a souborové operace; do logu ukládají jen technický kontext typu operace, entity, zóny, interní tabulky, webhook eventu, hostu endpointu, HTTP stavu, domény příjemce, SMTP fáze nebo přípony souboru, ne celé webhook URL, tělo odpovědi protistrany, celou e-mailovou adresu, surovou SMTP odpověď ani fyzickou cestu k souboru.
 

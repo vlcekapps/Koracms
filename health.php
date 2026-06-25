@@ -4,10 +4,11 @@ require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
-header('X-Robots-Tag: noindex');
+header('X-Robots-Tag: noindex, nofollow, noarchive');
 header('Cache-Control: no-store, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
+header('Referrer-Policy: no-referrer');
 
 $requestMethod = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
