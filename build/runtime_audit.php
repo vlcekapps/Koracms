@@ -12901,6 +12901,46 @@ if (!str_contains($adminStatisticsSource, 'role="list" aria-labelledby="sec-visi
     || str_contains($adminStatisticsSource, 'role="list" aria-label="Souhrn návštěvnosti"')) {
     $adminFieldErrorIssues[] = 'admin statistics visitor summary is missing heading-backed list semantics';
 }
+foreach ([
+    'admin dashboard statistics chart' => [
+        'source' => $adminIndexSource,
+        'required' => [
+            'dashboard-stat-label-',
+            'dashboard-stat-value-',
+            'aria-labelledby="<?= h($chartLabelId . \' \' . $chartValueId) ?>"',
+        ],
+    ],
+    'admin statistics detail charts' => [
+        'source' => $adminStatisticsSource,
+        'required' => [
+            'statistics-day-label-',
+            'statistics-day-value-',
+            'statistics-reservation-label-',
+            'statistics-reservation-value-',
+            'statistics-newsletter-label-',
+            'statistics-newsletter-value-',
+            'statistics-comment-label-',
+            'statistics-comment-value-',
+            'statistics-contact-label-',
+            'statistics-contact-value-',
+            'aria-labelledby="<?= h($dayLabelId . \' \' . $dayValueId) ?>"',
+            'aria-labelledby="<?= h($reservationLabelId . \' \' . $reservationValueId) ?>"',
+            'aria-labelledby="<?= h($newsletterLabelId . \' \' . $newsletterValueId) ?>"',
+            'aria-labelledby="<?= h($commentLabelId . \' \' . $commentValueId) ?>"',
+            'aria-labelledby="<?= h($contactLabelId . \' \' . $contactValueId) ?>"',
+        ],
+    ],
+] as $chartName => $chartGuardrail) {
+    $chartSource = $chartGuardrail['source'];
+    if (preg_match('/<progress\b(?=[^>]*class="admin-stat-progress")[^>]*\baria-label=/s', $chartSource) === 1) {
+        $adminFieldErrorIssues[] = $chartName . ' still labels progress bars with aria-label';
+    }
+    foreach ($chartGuardrail['required'] as $chartFragment) {
+        if (!str_contains($chartSource, $chartFragment)) {
+            $adminFieldErrorIssues[] = $chartName . ' is missing progress labelling fragment: ' . $chartFragment;
+        }
+    }
+}
 if (!str_contains($pollFormValidationSource, '<h2 id="poll-results-heading"')
     || !str_contains($pollFormValidationSource, 'class="admin-result-list" aria-labelledby="poll-results-heading"')
     || str_contains($pollFormValidationSource, 'class="admin-result-list" aria-label="Výsledky ankety"')) {

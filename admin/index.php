@@ -743,16 +743,19 @@ if (isSuperAdmin()) {
   <figure class="admin-stat-chart admin-stat-chart--compact">
     <figcaption>Návštěvnost za posledních 7 dnů</figcaption>
     <ol class="admin-stat-bars">
-      <?php foreach ($chartData as $chartItem): ?>
+      <?php foreach ($chartData as $chartIndex => $chartItem):
+          $chartLabelId = 'dashboard-stat-label-' . $chartIndex;
+          $chartValueId = 'dashboard-stat-value-' . $chartIndex;
+          ?>
         <li class="admin-stat-bar">
-          <span class="admin-stat-bar__label"><?= h($chartItem['label']) ?></span>
+          <span id="<?= h($chartLabelId) ?>" class="admin-stat-bar__label"><?= h($chartItem['label']) ?></span>
           <progress
             class="admin-stat-progress"
             value="<?= (int)$chartItem['views'] ?>"
             max="<?= (int)$maxViews ?>"
-            aria-label="<?= h($chartItem['label']) ?>: zobrazení"
+            aria-labelledby="<?= h($chartLabelId . ' ' . $chartValueId) ?>"
           ><?= (int)$chartItem['views'] ?></progress>
-          <span class="admin-stat-bar__value"><?= number_format((int)$chartItem['views'], 0, ',', ' ') ?> zobrazení</span>
+          <span id="<?= h($chartValueId) ?>" class="admin-stat-bar__value"><?= number_format((int)$chartItem['views'], 0, ',', ' ') ?> zobrazení</span>
         </li>
       <?php endforeach; ?>
     </ol>

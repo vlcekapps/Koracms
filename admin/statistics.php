@@ -270,16 +270,19 @@ adminHeader('Statistiky');
   <figure class="admin-stat-chart">
     <figcaption>Denní návštěvnost</figcaption>
     <ol class="admin-stat-bars">
-      <?php foreach ($chartDays as $d): ?>
+      <?php foreach ($chartDays as $dayIndex => $d):
+          $dayLabelId = 'statistics-day-label-' . $dayIndex;
+          $dayValueId = 'statistics-day-value-' . $dayIndex;
+          ?>
         <li class="admin-stat-bar">
-          <span class="admin-stat-bar__label"><?= h($d['label']) ?></span>
+          <span id="<?= h($dayLabelId) ?>" class="admin-stat-bar__label"><?= h($d['label']) ?></span>
           <progress
             class="admin-stat-progress"
             value="<?= (int)$d['views'] ?>"
             max="<?= (int)$maxViews ?>"
-            aria-label="<?= h($d['label']) ?>: zobrazení"
+            aria-labelledby="<?= h($dayLabelId . ' ' . $dayValueId) ?>"
           ><?= (int)$d['views'] ?></progress>
-          <span class="admin-stat-bar__value">
+          <span id="<?= h($dayValueId) ?>" class="admin-stat-bar__value">
             <?= $fmt((int)$d['views']) ?> zobrazení, <?= $fmt((int)$d['uv']) ?> unikátních
           </span>
         </li>
@@ -346,16 +349,19 @@ adminHeader('Statistiky');
   <figure class="admin-stat-chart admin-stat-chart--compact">
     <figcaption>Měsíční rezervace</figcaption>
     <ol class="admin-stat-bars">
-      <?php foreach ($resMonthly as $r): ?>
+      <?php foreach ($resMonthly as $reservationIndex => $r):
+          $reservationLabelId = 'statistics-reservation-label-' . $reservationIndex;
+          $reservationValueId = 'statistics-reservation-value-' . $reservationIndex;
+          ?>
         <li class="admin-stat-bar">
-          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <span id="<?= h($reservationLabelId) ?>" class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
           <progress
             class="admin-stat-progress"
             value="<?= (int)$r['cnt'] ?>"
             max="<?= (int)$resMax ?>"
-            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: rezervace"
+            aria-labelledby="<?= h($reservationLabelId . ' ' . $reservationValueId) ?>"
           ><?= (int)$r['cnt'] ?></progress>
-          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+          <span id="<?= h($reservationValueId) ?>" class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?><span class="sr-only"> rezervací</span></span>
         </li>
       <?php endforeach; ?>
     </ol>
@@ -402,16 +408,19 @@ adminHeader('Statistiky');
   <figure class="admin-stat-chart admin-stat-chart--compact">
     <figcaption>Noví odběratelé newsletteru</figcaption>
     <ol class="admin-stat-bars">
-      <?php foreach ($nlMonthly as $r): ?>
+      <?php foreach ($nlMonthly as $newsletterIndex => $r):
+          $newsletterLabelId = 'statistics-newsletter-label-' . $newsletterIndex;
+          $newsletterValueId = 'statistics-newsletter-value-' . $newsletterIndex;
+          ?>
         <li class="admin-stat-bar">
-          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <span id="<?= h($newsletterLabelId) ?>" class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
           <progress
             class="admin-stat-progress"
             value="<?= (int)$r['cnt'] ?>"
             max="<?= (int)$nlMax ?>"
-            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: noví odběratelé"
+            aria-labelledby="<?= h($newsletterLabelId . ' ' . $newsletterValueId) ?>"
           ><?= (int)$r['cnt'] ?></progress>
-          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+          <span id="<?= h($newsletterValueId) ?>" class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?><span class="sr-only"> nových odběratelů</span></span>
         </li>
       <?php endforeach; ?>
     </ol>
@@ -446,16 +455,19 @@ adminHeader('Statistiky');
   <figure class="admin-stat-chart admin-stat-chart--compact">
     <figcaption>Aktivita komentářů</figcaption>
     <ol class="admin-stat-bars">
-      <?php foreach ($commentStats as $r): ?>
+      <?php foreach ($commentStats as $commentIndex => $r):
+          $commentLabelId = 'statistics-comment-label-' . $commentIndex;
+          $commentValueId = 'statistics-comment-value-' . $commentIndex;
+          ?>
         <li class="admin-stat-bar">
-          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <span id="<?= h($commentLabelId) ?>" class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
           <progress
             class="admin-stat-progress"
             value="<?= (int)$r['cnt'] ?>"
             max="<?= (int)$cmMax ?>"
-            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: komentáře"
+            aria-labelledby="<?= h($commentLabelId . ' ' . $commentValueId) ?>"
           ><?= (int)$r['cnt'] ?></progress>
-          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+          <span id="<?= h($commentValueId) ?>" class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?><span class="sr-only"> komentářů</span></span>
         </li>
       <?php endforeach; ?>
     </ol>
@@ -486,16 +498,19 @@ adminHeader('Statistiky');
   <figure class="admin-stat-chart admin-stat-chart--compact">
     <figcaption>Kontaktní zprávy</figcaption>
     <ol class="admin-stat-bars">
-      <?php foreach ($contactStats as $r): ?>
+      <?php foreach ($contactStats as $contactIndex => $r):
+          $contactLabelId = 'statistics-contact-label-' . $contactIndex;
+          $contactValueId = 'statistics-contact-value-' . $contactIndex;
+          ?>
         <li class="admin-stat-bar">
-          <span class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
+          <span id="<?= h($contactLabelId) ?>" class="admin-stat-bar__label"><?= h($fmtMonth((string)$r['m'])) ?></span>
           <progress
             class="admin-stat-progress"
             value="<?= (int)$r['cnt'] ?>"
             max="<?= (int)$ctMax ?>"
-            aria-label="<?= h($fmtMonth((string)$r['m'])) ?>: kontaktní zprávy"
+            aria-labelledby="<?= h($contactLabelId . ' ' . $contactValueId) ?>"
           ><?= (int)$r['cnt'] ?></progress>
-          <span class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?></span>
+          <span id="<?= h($contactValueId) ?>" class="admin-stat-bar__value"><?= $fmt((int)$r['cnt']) ?><span class="sr-only"> kontaktních zpráv</span></span>
         </li>
       <?php endforeach; ?>
     </ol>
