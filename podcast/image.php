@@ -60,7 +60,7 @@ header('Content-Type: ' . $mimeType);
 header('Content-Length: ' . (string)filesize($filePath));
 header('Content-Disposition: inline; filename="' . rawurlencode(basename($filePath)) . '"');
 header('Cache-Control: ' . ($isPublic ? 'public, max-age=86400' : 'private, max-age=0, no-store'));
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 
 $lastModified = filemtime($filePath);
 if ($lastModified !== false) {

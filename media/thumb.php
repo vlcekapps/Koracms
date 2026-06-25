@@ -42,7 +42,7 @@ header('Content-Type: ' . $mimeType);
 header('Content-Length: ' . (string)filesize($thumbPath));
 header('Content-Disposition: inline; filename="' . rawurlencode(basename($thumbPath)) . '"');
 header('Cache-Control: ' . ($isPublic ? 'public, max-age=86400' : 'private, max-age=0, no-store'));
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 
 $lastModified = filemtime($thumbPath);
 if ($lastModified !== false) {

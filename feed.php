@@ -4,7 +4,7 @@ require_once __DIR__ . '/db.php';
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 header('Content-Type: application/rss+xml; charset=UTF-8');
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $siteDesc = getSetting('site_description', '');

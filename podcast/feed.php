@@ -56,7 +56,7 @@ $buildDateSource = $episodes[0]['display_date'] ?? ($show['updated_at'] ?? $show
 $buildDate = date(DATE_RSS, strtotime((string)$buildDateSource));
 
 header('Content-Type: application/rss+xml; charset=utf-8');
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 
 if ($isHeadRequest) {
     exit;

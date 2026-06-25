@@ -4,7 +4,7 @@ require_once __DIR__ . '/db.php';
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 header('Content-Type: application/xml; charset=UTF-8');
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 
 if ($isHeadRequest) {
     exit;

@@ -65,7 +65,7 @@ header('Accept-Ranges: bytes');
 header('Content-Type: ' . $mimeType);
 header('Content-Disposition: inline; filename="' . rawurlencode(basename($filePath)) . '"');
 header('Cache-Control: ' . ($isPublic ? 'public, max-age=3600' : 'private, max-age=0, no-store'));
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 
 $rangeHeader = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
 if ($rangeHeader !== '' && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $matches) === 1) {

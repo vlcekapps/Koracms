@@ -168,6 +168,15 @@ function sendAdminNoStoreHeaders(): void
     sendNoStoreNoIndexHeaders();
 }
 
+function sendNoSniffHeader(): void
+{
+    if (headers_sent()) {
+        return;
+    }
+
+    header('X-Content-Type-Options: nosniff');
+}
+
 function sendOperationalJsonHeaders(): void
 {
     if (headers_sent()) {
@@ -175,7 +184,7 @@ function sendOperationalJsonHeaders(): void
     }
 
     header('Content-Type: application/json; charset=UTF-8');
-    header('X-Content-Type-Options: nosniff');
+    sendNoSniffHeader();
     sendNoStoreNoIndexHeaders();
 }
 
@@ -186,7 +195,7 @@ function sendAdminJsonHeaders(): void
     }
 
     header('Content-Type: application/json; charset=UTF-8');
-    header('X-Content-Type-Options: nosniff');
+    sendNoSniffHeader();
     sendAdminNoStoreHeaders();
 }
 
@@ -197,7 +206,7 @@ function sendAdminDownloadHeaders(): void
     }
 
     sendAdminNoStoreHeaders();
-    header('X-Content-Type-Options: nosniff');
+    sendNoSniffHeader();
 }
 
 /**
@@ -231,7 +240,7 @@ function requireHttpMethods(array $allowedMethods): string
     if (!in_array($requestMethod, $normalizedAllowedMethods, true)) {
         sendNoStoreNoIndexHeaders();
         header('Content-Type: text/plain; charset=UTF-8');
-        header('X-Content-Type-Options: nosniff');
+        sendNoSniffHeader();
         header('Allow: ' . implode(', ', $normalizedAllowedMethods));
         http_response_code(405);
         echo "Method not allowed\n";
@@ -252,7 +261,7 @@ function requireJsonHttpMethods(array $allowedMethods, array $payload = ['status
     if (!in_array($requestMethod, $normalizedAllowedMethods, true)) {
         if (!headers_sent()) {
             header('Content-Type: application/json; charset=UTF-8');
-            header('X-Content-Type-Options: nosniff');
+            sendNoSniffHeader();
             sendNoStoreNoIndexHeaders();
             header('Allow: ' . implode(', ', $normalizedAllowedMethods));
         }
@@ -292,7 +301,7 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 }
 
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 0');
 header('X-Download-Options: noopen');

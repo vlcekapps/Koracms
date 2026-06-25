@@ -48,7 +48,7 @@ $event = hydrateEventPresentation($event);
 
 header('Content-Type: text/calendar; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . eventIcsFilename($event) . '"');
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 if ($isHeadRequest) {
     exit;
 }

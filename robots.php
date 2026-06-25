@@ -5,7 +5,7 @@ require_once __DIR__ . '/db.php';
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 header('Content-Type: text/plain; charset=UTF-8');
-header('X-Content-Type-Options: nosniff');
+sendNoSniffHeader();
 header('X-Robots-Tag: noindex');
 
 if ($isHeadRequest) {
