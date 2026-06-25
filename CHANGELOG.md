@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost samostatné stránky newsletteru** – potvrzení a chybové hlášky na stránce přihlášení k odběru novinek mají nově `aria-atomic="true"` a vlastní textový uzel přes `aria-labelledby`, stejně jako newsletter widget.
 - **Přístupnost registračních a resetovacích potvrzení** – veřejná registrace a obnovení hesla používají u úspěšných stavových hlášek `aria-atomic="true"` a vlastní textový uzel přes `aria-labelledby`, takže potvrzení nejsou pro čtečky obrazovky anonymní.
 - **Přístupnost potvrzení v „Můj profil“** – hlášky po uložení profilu nebo změně hesla na veřejné stránce účtu mají nově vlastní textový uzel napojený přes `aria-labelledby` a `aria-atomic="true"`, takže status region není pro čtečky obrazovky anonymní.
 - **Přístupnost hlášky v „Moje rezervace“** – potvrzení po zrušení rezervace na veřejné stránce účtu má nově vlastní textový uzel napojený přes `aria-labelledby` a `aria-atomic="true"`, takže status region není pro čtečky obrazovky anonymní.

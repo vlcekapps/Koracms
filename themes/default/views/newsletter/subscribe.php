@@ -5,21 +5,21 @@
     <p class="section-subtitle">Získejte novinky z webu přímo do e-mailu. Odběr potvrdíte kliknutím na odkaz v potvrzovacím e-mailu.</p>
 
     <?php if ($state === 'ok'): ?>
-      <div class="status-message status-message--success" role="status">
-        <p><strong>Téměř hotovo!</strong></p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="newsletter-subscribe-success-message">
+        <p id="newsletter-subscribe-success-message"><strong>Téměř hotovo!</strong></p>
         <p>Na vaši adresu jsme odeslali potvrzovací e-mail. Klikněte prosím na odkaz v e-mailu.</p>
       </div>
     <?php elseif ($state === 'exists'): ?>
-      <div class="status-message status-message--success" role="status">
-        <p>Tato adresa je již přihlášena k odběru.</p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="newsletter-subscribe-exists-message">
+        <p id="newsletter-subscribe-exists-message">Tato adresa je již přihlášena k odběru.</p>
       </div>
     <?php elseif ($state === 'mail_error'): ?>
-      <div id="newsletter-mail-error" class="status-message status-message--error" role="alert">
-        <p>Adresa byla zaregistrována, ale potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.</p>
+      <div id="newsletter-mail-error" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="newsletter-mail-error-message">
+        <p id="newsletter-mail-error-message">Adresa byla zaregistrována, ale potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.</p>
       </div>
     <?php elseif ($state === 'error'): ?>
-      <div id="newsletter-form-errors" class="status-message status-message--error" role="alert">
-        <p>Zadejte platnou e-mailovou adresu.</p>
+      <div id="newsletter-form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="newsletter-form-error-message">
+        <p id="newsletter-form-error-message">Zadejte platnou e-mailovou adresu.</p>
       </div>
     <?php endif; ?>
 

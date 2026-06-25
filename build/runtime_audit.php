@@ -15081,6 +15081,7 @@ $themePlacesArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/t
 $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
 $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
 $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
+$themeNewsletterSubscribeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
 $themeAccountProfileViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/profile.php');
 $themeRegisterViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/register.php');
@@ -15175,6 +15176,29 @@ foreach ([
     if (!str_contains($themeAccountProfileViewSource, $accountProfileStatusSpec['status'])
         || !str_contains($themeAccountProfileViewSource, $accountProfileStatusSpec['text'])) {
         $themeLayoutIssues[] = 'account profile ' . $accountProfileStatusLabel . ' message is missing heading-backed status semantics';
+    }
+}
+foreach ([
+    'newsletter subscribe success' => [
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="newsletter-subscribe-success-message"',
+        'text' => '<p id="newsletter-subscribe-success-message"><strong>Téměř hotovo!</strong></p>',
+    ],
+    'newsletter subscribe exists' => [
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="newsletter-subscribe-exists-message"',
+        'text' => '<p id="newsletter-subscribe-exists-message">Tato adresa je již přihlášena k odběru.</p>',
+    ],
+    'newsletter mail error' => [
+        'status' => 'role="alert" aria-atomic="true" aria-labelledby="newsletter-mail-error-message"',
+        'text' => '<p id="newsletter-mail-error-message">Adresa byla zaregistrována, ale potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.</p>',
+    ],
+    'newsletter form error' => [
+        'status' => 'role="alert" aria-atomic="true" aria-labelledby="newsletter-form-error-message"',
+        'text' => '<p id="newsletter-form-error-message">Zadejte platnou e-mailovou adresu.</p>',
+    ],
+] as $newsletterSubscribeStatusLabel => $newsletterSubscribeStatusSpec) {
+    if (!str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['status'])
+        || !str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['text'])) {
+        $themeLayoutIssues[] = 'newsletter subscribe ' . $newsletterSubscribeStatusLabel . ' message is missing text-backed status semantics';
     }
 }
 foreach ([
