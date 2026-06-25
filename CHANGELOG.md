@@ -75,6 +75,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Bezpečnější hlavičky administračních stažení** – JSON export CMS, CSV export formulářových odpovědí, stažení příloh formulářů, SQL záloha databáze, ZIP export galerie a ZIP export šablony nově posílají `Cache-Control: no-store` a `X-Content-Type-Options: nosniff`, aby se stažené exporty zbytečně necachovaly a prohlížeč je neinterpretoval mimo deklarovaný typ.
 
 ### Opraveno
+- **Přístupnost newsletter widgetu** – success/error hláška inline formuláře pro odběr novinek má nově vlastní textový uzel napojený přes `aria-labelledby`; e-mailové pole při chybě dál odkazuje na stejnou hlášku přes `aria-describedby` a runtime audit hlídá vykreslení formuláře i zdrojové vazby stavové hlášky.
 - **Guardrail proti tooltipům v administraci** – runtime audit nově plošně hlídá administrační PHP výstupy proti návratu HTML atributů `title` používaných jako tooltipová nápověda; instrukce a kontext mají zůstat ve viditelném nebo skrytém textu přímo v DOM.
 - **Přístupnost časů na dashboardu** – poslední aktivita v administraci už neschovává přesný čas jen do tooltipového `title`; relativní čas zůstává viditelný a přesný čas je doplněný skrytým textem přímo uvnitř prvku `<time>`.
 - **Přístupnost nápovědy u slug polí** – slug pole ve správě blogů a v editoru statických stránek už neschovávají pravidla povolených znaků do tooltipového `title`; stejná informace je dostupná ve viditelné nápovědě napojené přes `aria-describedby` a runtime audit hlídá návrat starého vzoru.

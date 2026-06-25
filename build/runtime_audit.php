@@ -14447,6 +14447,18 @@ foreach ([
         $widgetRenderIssues[] = 'newsletter widget is missing rendered accessibility fragment: ' . $newsletterWidgetA11yFragment;
     }
 }
+foreach ([
+    '$flashTextId = $flashId . \'-message\';',
+    '$emailDescribedBy = $descriptionId . ($isError ? \' \' . $flashId : \'\');',
+    'aria-labelledby="\' . h($flashTextId) . \'"',
+    '<p id="\' . h($flashTextId) . \'">',
+    'h($flash[\'message\'])',
+    'aria-invalid="true"',
+] as $newsletterWidgetFlashFragment) {
+    if (!str_contains($blogWidgetLibSource, $newsletterWidgetFlashFragment)) {
+        $widgetRenderIssues[] = 'newsletter widget flash feedback is missing source accessibility fragment: ' . $newsletterWidgetFlashFragment;
+    }
+}
 if (!str_contains($widgetSocialOne, '<section class="widget-card" aria-labelledby="w-404-title">')
     || !str_contains($widgetSocialOne, '<h3 id="w-404-title" class="widget-card__title">')) {
     $widgetRenderIssues[] = 'social links widget card is missing heading-backed aria-labelledby semantics';

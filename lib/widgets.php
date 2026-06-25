@@ -1224,19 +1224,20 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
     $title = h($widget['title'] ?: 'Zůstaňte v kontaktu');
     $ctaText = h($settings['cta_text'] ?? 'Přihlaste se k odběru a dostávejte nové články přímo e-mailem.');
     $flash = newsletterWidgetFlash();
-    $flashHtml = '';
-    if ($flash['type'] !== '' && $flash['message'] !== '') {
-        $flashClass = $flash['type'] === 'success' ? 'status-message status-message--success' : 'status-message status-message--error';
-        $flashRole = $flash['type'] === 'success' ? 'status' : 'alert';
-        $flashHtml = '<div class="' . h($flashClass) . '" role="' . h($flashRole) . '"><p>' . h($flash['message']) . '</p></div>';
-    }
     $widgetId = (int)($widget['id'] ?? 0);
     $emailFieldId = 'newsletter-widget-email-' . $widgetId;
     $legendId = 'newsletter-widget-legend-' . $widgetId;
     $descriptionId = 'newsletter-widget-description-' . $widgetId;
     $flashId = 'newsletter-widget-feedback-' . $widgetId;
+    $flashTextId = $flashId . '-message';
     $isError = $flash['type'] === 'error' && $flash['message'] !== '';
     $emailDescribedBy = $descriptionId . ($isError ? ' ' . $flashId : '');
+    $flashHtml = '';
+    if ($flash['type'] !== '' && $flash['message'] !== '') {
+        $flashClass = $flash['type'] === 'success' ? 'status-message status-message--success' : 'status-message status-message--error';
+        $flashRole = $flash['type'] === 'success' ? 'status' : 'alert';
+        $flashHtml = '<div id="' . h($flashId) . '"><div class="' . h($flashClass) . '" role="' . h($flashRole) . '" aria-labelledby="' . h($flashTextId) . '"><p id="' . h($flashTextId) . '">' . h($flash['message']) . '</p></div></div>';
+    }
     $returnUrl = internalRedirectTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/subscribe.php');
     $formHtml = '<form action="' . BASE_URL . '/newsletter_widget_subscribe.php" method="post" class="widget-form-stack" novalidate>'
         . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
@@ -1252,9 +1253,6 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
         . '<div class="button-row button-row--start"><button type="submit" class="button-primary">Přihlásit k odběru</button></div>'
         . '</fieldset>'
         . '</form>';
-    if ($flashHtml !== '') {
-        $flashHtml = '<div id="' . h($flashId) . '">' . $flashHtml . '</div>';
-    }
 
     if ($zone === 'sidebar' || $zone === 'footer') {
         return widgetCardStart($widget)
