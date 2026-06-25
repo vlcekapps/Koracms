@@ -5,13 +5,13 @@
     <p class="section-subtitle">Vytvořte si veřejný účet pro rezervace, správu profilu a další služby webu.</p>
 
     <?php if ($resent): ?>
-      <div class="status-message status-message--warning" role="status" aria-atomic="true">
-        <p><strong>Váš účet dosud nebyl aktivován.</strong></p>
+      <div class="status-message status-message--warning" role="status" aria-atomic="true" aria-labelledby="register-resent-message">
+        <p id="register-resent-message"><strong>Váš účet dosud nebyl aktivován.</strong></p>
         <p>Odeslali jsme nový potvrzovací odkaz na váš e-mail.</p>
       </div>
     <?php elseif ($success): ?>
-      <div class="status-message status-message--success" role="status" aria-atomic="true">
-        <p><strong>Na váš e-mail jsme odeslali potvrzovací odkaz.</strong></p>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="register-success-message">
+        <p id="register-success-message"><strong>Na váš e-mail jsme odeslali potvrzovací odkaz.</strong></p>
         <p>Klikněte prosím na odkaz v e-mailu pro dokončení registrace.</p>
       </div>
     <?php else: ?>

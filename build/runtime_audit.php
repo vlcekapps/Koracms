@@ -15083,6 +15083,8 @@ $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . 
 $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
 $themeAccountProfileViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/profile.php');
+$themeRegisterViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/register.php');
+$themeResetPasswordViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/auth/reset-password.php');
 $themeReservationCancelBookingViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-cancel-booking.php');
 $themeFoodCardViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-card.php');
 if (!str_contains($themeBaseLayoutSource, 'aria-labelledby="page-sidebar-heading"')
@@ -15173,6 +15175,33 @@ foreach ([
     if (!str_contains($themeAccountProfileViewSource, $accountProfileStatusSpec['status'])
         || !str_contains($themeAccountProfileViewSource, $accountProfileStatusSpec['text'])) {
         $themeLayoutIssues[] = 'account profile ' . $accountProfileStatusLabel . ' message is missing heading-backed status semantics';
+    }
+}
+foreach ([
+    'register resent' => [
+        'source' => $themeRegisterViewSource,
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="register-resent-message"',
+        'text' => '<p id="register-resent-message"><strong>Váš účet dosud nebyl aktivován.</strong></p>',
+    ],
+    'register success' => [
+        'source' => $themeRegisterViewSource,
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="register-success-message"',
+        'text' => '<p id="register-success-message"><strong>Na váš e-mail jsme odeslali potvrzovací odkaz.</strong></p>',
+    ],
+    'reset request success' => [
+        'source' => $themeResetPasswordViewSource,
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="reset-request-success-message"',
+        'text' => '<p id="reset-request-success-message"><strong>Pokud účet s tímto e-mailem existuje, odeslali jsme odkaz pro obnovení hesla.</strong></p>',
+    ],
+    'reset password success' => [
+        'source' => $themeResetPasswordViewSource,
+        'status' => 'role="status" aria-atomic="true" aria-labelledby="reset-password-success-message"',
+        'text' => '<p id="reset-password-success-message"><strong>Heslo bylo úspěšně změněno.</strong></p>',
+    ],
+] as $authStatusLabel => $authStatusSpec) {
+    if (!str_contains($authStatusSpec['source'], $authStatusSpec['status'])
+        || !str_contains($authStatusSpec['source'], $authStatusSpec['text'])) {
+        $themeLayoutIssues[] = 'auth ' . $authStatusLabel . ' message is missing text-backed status semantics';
     }
 }
 if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Opravdu zrušit rezervaci?"')) {

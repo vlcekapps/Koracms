@@ -20,8 +20,8 @@
 
     <?php if ($mode === 'request'): ?>
       <?php if ($success): ?>
-        <div class="status-message status-message--success" role="status">
-          <p><strong>Pokud účet s tímto e-mailem existuje, odeslali jsme odkaz pro obnovení hesla.</strong></p>
+        <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="reset-request-success-message">
+          <p id="reset-request-success-message"><strong>Pokud účet s tímto e-mailem existuje, odeslali jsme odkaz pro obnovení hesla.</strong></p>
           <p>Zkontrolujte svou e-mailovou schránku.</p>
         </div>
       <?php else: ?>
@@ -51,8 +51,8 @@
       <?php endif; ?>
     <?php else: ?>
       <?php if ($success): ?>
-        <div class="status-message status-message--success" role="status">
-          <p><strong>Heslo bylo úspěšně změněno.</strong></p>
+        <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="reset-password-success-message">
+          <p id="reset-password-success-message"><strong>Heslo bylo úspěšně změněno.</strong></p>
           <p>Nyní se můžete <a href="<?= BASE_URL ?>/public_login.php">přihlásit</a>.</p>
         </div>
       <?php else: ?>
