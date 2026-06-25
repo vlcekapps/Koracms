@@ -10136,6 +10136,10 @@ if (str_contains($uiSource, 'setAttribute("aria-label","Posunout')
     || str_contains($uiSource, "setAttribute('aria-label','Posunout")) {
     $contentSecurityPolicyIssues[] = 'shared UI sort buttons still use aria-label instead of hidden button text';
 }
+if (str_contains($uiSource, 'up.title="Posunout nahoru";')
+    || str_contains($uiSource, 'dn.title="Posunout dolů";')) {
+    $contentSecurityPolicyIssues[] = 'shared UI sort buttons still use title instead of hidden button text';
+}
 foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(dirname(__DIR__) . '/admin')) as $cspAdminFile) {
     if (!$cspAdminFile instanceof SplFileInfo || !$cspAdminFile->isFile() || $cspAdminFile->getExtension() !== 'php') {
         continue;
