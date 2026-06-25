@@ -110,6 +110,7 @@ function sendSocialPreviewCacheHeaders(): void
     header_remove('Pragma');
     header_remove('Expires');
     header('Cache-Control: public, max-age=300, s-maxage=300', true);
+    header('Vary: User-Agent', false);
 }
 
 function isSensitiveNoStoreNoIndexRequestPath(?string $requestUri = null): bool

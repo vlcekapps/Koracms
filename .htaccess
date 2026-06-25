@@ -54,6 +54,7 @@ Options -Indexes
     Header unset Expires env=KORA_SOCIAL_CRAWLER
     Header always unset Expires env=KORA_SOCIAL_CRAWLER
     Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX
+    Header merge Vary "User-Agent" env=KORA_SOCIAL_CRAWLER
     Header always set Pragma "no-cache" env=KORA_NO_STORE_NO_INDEX
     Header always set Expires "0" env=KORA_NO_STORE_NO_INDEX
     Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX

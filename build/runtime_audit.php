@@ -11335,6 +11335,7 @@ if (
     || !str_contains($authSource, 'header_register_callback')
     || !str_contains($authSource, "header_remove('Set-Cookie')")
     || !str_contains($authSource, 'public, max-age=300, s-maxage=300')
+    || !str_contains($authSource, "header('Vary: User-Agent', false)")
 ) {
     $blogPublicIssues[] = 'auth bootstrap is missing crawler-friendly cache headers';
 }
@@ -11353,6 +11354,7 @@ if (
     || !str_contains($htaccessSource, 'SetEnvIfNoCase User-Agent')
     || !str_contains($htaccessSource, 'Header always unset Cache-Control env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER')
+    || !str_contains($htaccessSource, 'Header merge Vary "User-Agent" env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header always unset Pragma env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header always unset Expires env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
@@ -11383,6 +11385,9 @@ foreach ($socialPreviewProbe['headers'] as $socialPreviewHeader) {
         $blogPublicIssues[] = 'social preview crawler receives no-store cache headers';
         break;
     }
+}
+if (!runtimeAuditHeaderContains($socialPreviewProbe['headers'], 'Vary', 'User-Agent')) {
+    $blogPublicIssues[] = 'social preview crawler response is missing Vary: User-Agent';
 }
 if (str_contains($socialPreviewProbe['body'], '<meta property="og:url" content="/')) {
     $blogPublicIssues[] = 'social preview response contains a relative og:url';
