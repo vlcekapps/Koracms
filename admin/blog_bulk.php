@@ -15,6 +15,31 @@ $setFlash = static function (string $type, string $message): void {
     ];
 };
 
+/**
+ * @param array<string,mixed> $context
+ */
+function adminBlogBulkLogFailure(string $operation, array $context = []): void
+{
+    koraLog('warning', 'admin blog bulk operation failed', array_merge([
+        'operation' => $operation,
+    ], $context));
+}
+
+function adminBlogBulkDeleteFile(string $filePath, int $articleId, string $fileRole): void
+{
+    if (!is_file($filePath)) {
+        return;
+    }
+
+    if (!unlink($filePath)) {
+        adminBlogBulkLogFailure('file_delete', [
+            'article_id' => $articleId,
+            'file_role' => $fileRole,
+            'file_extension' => strtolower((string)pathinfo($filePath, PATHINFO_EXTENSION)),
+        ]);
+    }
+}
+
 if ($action === 'delete' && $ids !== []) {
     $pdo = db_connect();
     $dir = __DIR__ . '/../uploads/articles/';
@@ -45,11 +70,13 @@ if ($action === 'delete' && $ids !== []) {
 
     $deleteIds = [];
     foreach ($articles as $article) {
-        if (!empty($article['image_file'])) {
-            @unlink($dir . $article['image_file']);
-            @unlink($dir . 'thumbs/' . $article['image_file']);
+        $imageFile = trim((string)($article['image_file'] ?? ''));
+        $articleId = (int)$article['id'];
+        if ($imageFile !== '') {
+            adminBlogBulkDeleteFile($dir . $imageFile, $articleId, 'image_file');
+            adminBlogBulkDeleteFile($dir . 'thumbs/' . $imageFile, $articleId, 'thumb');
         }
-        $deleteIds[] = (int)$article['id'];
+        $deleteIds[] = $articleId;
     }
 
     foreach ($deleteIds as $deleteId) {

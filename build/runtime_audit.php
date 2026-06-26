@@ -116,6 +116,7 @@ $readOnlyPodcastImageSource = (string) file_get_contents(__DIR__ . '/../podcast/
 $readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/cover.php');
 $adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php');
 $adminBulkSource = (string) file_get_contents(__DIR__ . '/../admin/bulk.php');
+$blogBulkSource = (string) file_get_contents(__DIR__ . '/../admin/blog_bulk.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
 $adminFormsSource = (string) file_get_contents(__DIR__ . '/../admin/forms.php');
@@ -8845,6 +8846,8 @@ $foundationChecks = [
     'file operation logs avoid raw filesystem paths' => !str_contains($fileDownloadHelperSource, 'error_log(')
         && !str_contains($adminGalleryExportZipSource, 'error_log(')
         && !str_contains($adminBulkSource, 'error_log(')
+        && !str_contains($adminBulkSource, '@unlink(')
+        && !str_contains($blogBulkSource, '@unlink(')
         && !str_contains($themeSource, 'error_log(')
         && !str_contains($presentationSource, 'error_log(')
         && str_contains($fileDownloadHelperSource, 'function storedFileLogFailure')
@@ -8853,6 +8856,10 @@ $foundationChecks = [
         && str_contains($adminGalleryExportZipSource, "koraLog('warning', 'gallery export source file missing'")
         && str_contains($adminBulkSource, 'function adminBulkLogFileDeleteFailure')
         && str_contains($adminBulkSource, "koraLog('warning', 'admin bulk operation failed'")
+        && str_contains($adminBulkSource, "adminBulkLogFileDeleteFailure('gallery_photos'")
+        && str_contains($adminBulkSource, "adminBulkLogFileDeleteFailure('gallery_albums'")
+        && str_contains($blogBulkSource, 'function adminBlogBulkDeleteFile')
+        && str_contains($blogBulkSource, "koraLog('warning', 'admin blog bulk operation failed'")
         && str_contains($themeSource, 'path_hash')
         && str_contains($themeSource, "themeLogFilesystemCleanupFailure('delete_file'")
         && str_contains($presentationSource, 'path_hash')
@@ -10947,7 +10954,6 @@ $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form
 $blogCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php');
 $blogTagsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php');
 $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_blog_delete.php');
-$blogBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bulk.php');
 $blogTransferSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
 $blogPagesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_pages.php');

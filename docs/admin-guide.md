@@ -275,6 +275,7 @@ Editor článku respektuje vybraný blog:
 - nové články mohou převzít výchozí komentáře z blogu
 - jeden článek v blogu lze označit jako `Doporučený článek blogu`
 - náhledový obrázek používá sdílenou upload validaci a při výměně nebo odebrání uklízí i staré miniatury, WebP a responsive varianty
+- při hromadném mazání se případné selhání odstranění náhledového obrázku nebo miniatury zapíše do strukturovaného logu bez plné cesty k souboru
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
 

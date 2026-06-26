@@ -186,10 +186,14 @@ $moduleConfig = match ($module) {
                 }
                 $f = (string)$photo['filename'];
                 if ($f !== '' && is_file($dir . $f)) {
-                    @unlink($dir . $f);
+                    if (!unlink($dir . $f)) {
+                        adminBulkLogFileDeleteFailure('gallery_photos', (int)$photo['id'], 'filename', $dir . $f);
+                    }
                 }
                 if ($f !== '' && is_file($thumbDir . $f)) {
-                    @unlink($thumbDir . $f);
+                    if (!unlink($thumbDir . $f)) {
+                        adminBulkLogFileDeleteFailure('gallery_photos', (int)$photo['id'], 'thumb', $thumbDir . $f);
+                    }
                 }
                 $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
@@ -230,10 +234,14 @@ $moduleConfig = match ($module) {
                 foreach ($photos->fetchAll() as $photo) {
                     $f = (string)$photo['filename'];
                     if ($f !== '' && is_file($dir . $f)) {
-                        @unlink($dir . $f);
+                        if (!unlink($dir . $f)) {
+                            adminBulkLogFileDeleteFailure('gallery_albums', (int)$photo['id'], 'filename', $dir . $f);
+                        }
                     }
                     if ($f !== '' && is_file($thumbDir . $f)) {
-                        @unlink($thumbDir . $f);
+                        if (!unlink($thumbDir . $f)) {
+                            adminBulkLogFileDeleteFailure('gallery_albums', (int)$photo['id'], 'thumb', $thumbDir . $f);
+                        }
                     }
                     $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);

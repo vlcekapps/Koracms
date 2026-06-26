@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Strukturované logy administračního dashboardu** – dílčí selhání počítadel, přehledů stránek, událostí, návštěvnosti, naplánovaného obsahu a poslední aktivity v administraci se nově zapisují přes `koraLog()` s omezeným kontextem, krátkým hashem dotazu a deduplikací v rámci requestu místo tichého spolknutí bez dohledatelnosti.
+- **Dohledatelné chyby při hromadném mazání souborů** – hromadné mazání blogových článků a galerie už nepoužívá tiché `@unlink`; pokud hosting odmítne odstranit náhledový obrázek, fotografii nebo miniaturu, CMS zapíše strukturovaný log s modulem, ID a rolí souboru bez plné lokální cesty.
 - **Přísnější theme view audit pro veřejné tabulky** – `build/theme_view_audit.php` nově hlídá, aby tabulky v default šabloně měly skutečný `<caption>` nebo vazbu přes `aria-labelledby`, a odmítá návrat k samotnému `aria-label`; self-test ověřuje průchozí i chybové scénáře.
 
 ## [4.0.1] – 2026-06-26
