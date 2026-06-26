@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Bezpečné 404 odpovědi administračních příloh formulářů** – chybějící nebo nečitelná příloha formulářové odpovědi nově používá sdílený souborový fallback s `no-store`, `noindex`, `no-referrer`, `nosniff` a korektním `HEAD` chováním; endpoint zároveň sdílí UTF-8 `Content-Disposition` logiku s ostatními downloady.
 - **Jednotná bezpečná 405 odpověď read-only endpointů** – `robots.txt`, XML sitemapa, globální a podcastové RSS feedy, ICS exporty, veřejné souborové/media endpointy a read-only administrační endpointy nově používají sdílený `requireReadOnlyHttpMethod()`; nepodporované metody vrací `Allow: GET, HEAD`, necacheovací/noindex/no-referrer hlavičky, `nosniff` a textový typ odpovědi.
 - **Sdílený metodový guard i pro read-only helper** – `requireReadOnlyHttpMethod()` nově používá stejný `requireHttpMethods()` jako citlivé tokenové endpointy; unit testy hlídají normalizaci metod a runtime audit brání návratu ručně opsané `GET/HEAD` větve ve file helperu.
 - **Jednotná bezpečná 405 odpověď citlivých tokenových endpointů** – potvrzení e-mailu, potvrzení/odhlášení newsletteru, veřejné i administrační odhlášení a zrušení rezervace přes token nově používají sdílený `requireHttpMethods()`; nepovolené metody dostávají stejné `no-store`, `noindex`, `no-referrer`, `nosniff` a přesné `Allow` hlavičky bez ručně opsaných bloků v jednotlivých souborech.

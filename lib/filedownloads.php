@@ -100,13 +100,17 @@ function storedFileHttpDate(int $timestamp): string
     return gmdate('D, d M Y H:i:s', $timestamp) . ' GMT';
 }
 
-function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): void
+function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.', bool $isHeadRequest = false): void
 {
     http_response_code(404);
     sendNoStoreNoIndexHeaders();
     header('Content-Type: text/plain; charset=UTF-8');
     sendNoSniffHeader();
-    echo $message;
+
+    if (!$isHeadRequest) {
+        echo $message;
+    }
+
     exit;
 }
 

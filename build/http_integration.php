@@ -805,6 +805,17 @@ try {
             $adminReadOnlyEndpointIssues[] = $adminReadOnlyEndpointLabel . ' neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
         }
     }
+    $adminMissingFormSubmissionFileResponse = fetchUrl($baseUrl . BASE_URL . '/admin/form_submission_file.php?id=0&field=missing', $adminSession['cookie'], 0);
+    if (
+        httpIntegrationStatusCode($adminMissingFormSubmissionFileResponse) !== 404
+        || !httpIntegrationHeaderContains($adminMissingFormSubmissionFileResponse, 'Content-Type', 'text/plain; charset=UTF-8')
+        || !httpIntegrationHeaderContains($adminMissingFormSubmissionFileResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($adminMissingFormSubmissionFileResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($adminMissingFormSubmissionFileResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($adminMissingFormSubmissionFileResponse, 'X-Content-Type-Options', 'nosniff')
+    ) {
+        $adminReadOnlyEndpointIssues[] = 'admin/form_submission_file.php neposlal bezpečnou textovou 404 odpověď pro chybějící přílohu';
+    }
     $adminContentReferenceSearchResponse = fetchUrl($baseUrl . BASE_URL . '/admin/content_reference_search.php?q=test&type=all', $adminSession['cookie'], 0);
     if (
         httpIntegrationStatusCode($adminContentReferenceSearchResponse) !== 200

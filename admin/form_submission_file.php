@@ -9,8 +9,7 @@ $fieldName = trim((string)($_GET['field'] ?? ''));
 $fileIndex = max(0, (int)($_GET['index'] ?? 0));
 
 if ($submissionId === null || $fieldName === '') {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
 }
 
 $pdo = db_connect();
@@ -19,8 +18,7 @@ $submissionStmt->execute([$submissionId]);
 $submission = $submissionStmt->fetch() ?: null;
 
 if (!$submission) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
 }
 
 $submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
@@ -28,51 +26,38 @@ $fileItems = formSubmissionFileItems($submissionData[$fieldName] ?? null);
 $fileItem = $fileItems[$fileIndex] ?? null;
 
 if (!is_array($fileItem)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
 }
 
 $storedName = formSubmissionStoredFileName($fileItem);
 $filePath = formUploadFilePath($storedName);
-if ($filePath === '' || !is_file($filePath)) {
-    http_response_code(404);
-    exit;
+if ($filePath === '' || !is_file($filePath) || !is_readable($filePath)) {
+    sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
 }
 
-$originalName = trim((string)($fileItem['original_name'] ?? ''));
-if ($originalName === '') {
-    $originalName = basename($storedName);
-}
+$originalName = safeDownloadName((string)($fileItem['original_name'] ?? ''), basename($storedName));
 
-$mimeType = trim((string)($fileItem['mime_type'] ?? ''));
-if ($mimeType === '') {
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mimeType = (string)$finfo->file($filePath);
-}
-if ($mimeType === '') {
-    $mimeType = 'application/octet-stream';
-}
+$mimeType = storedFileMimeType($filePath, (string)($fileItem['mime_type'] ?? ''));
 
 $fileSize = filesize($filePath);
-$asciiName = preg_replace('/[^A-Za-z0-9._-]+/', '_', $originalName);
-if (!is_string($asciiName) || $asciiName === '') {
-    $asciiName = 'priloha';
-}
-
-header('Content-Type: ' . $mimeType);
-if ($fileSize !== false) {
-    header('Content-Length: ' . (string)$fileSize);
-}
-header('Content-Disposition: attachment; filename="' . $asciiName . '"; filename*=UTF-8\'\'' . rawurlencode($originalName));
-sendAdminDownloadHeaders();
-
-if ($isHeadRequest) {
-    exit;
+if (!is_int($fileSize)) {
+    storedFileLogFailure('filesize', $filePath, ['endpoint' => 'admin/form_submission_file.php']);
+    sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
 }
 
 $handle = fopen($filePath, 'rb');
 if ($handle === false) {
-    http_response_code(404);
+    storedFileLogFailure('fopen', $filePath, ['endpoint' => 'admin/form_submission_file.php']);
+    sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
+}
+
+header('Content-Type: ' . $mimeType);
+header('Content-Length: ' . (string)$fileSize);
+header('Content-Disposition: ' . storedFileContentDisposition('attachment', $originalName));
+sendAdminDownloadHeaders();
+
+if ($isHeadRequest) {
+    fclose($handle);
     exit;
 }
 

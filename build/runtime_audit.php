@@ -8587,6 +8587,8 @@ $foundationChecks = [
         && str_contains($adminLogoutSource, 'sendNoStoreNoIndexHeaders();'),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
         && str_contains($fileDownloadHelperSource, 'function sendFileDownloadNotFound(string $message')
+        && str_contains($fileDownloadHelperSource, 'bool $isHeadRequest = false')
+        && str_contains($fileDownloadHelperSource, 'if (!$isHeadRequest)')
         && str_contains($fileDownloadHelperSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($fileDownloadHelperSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD']);")
         && str_contains($fileDownloadHelperSource, "return \$requestMethod === 'HEAD';")
@@ -8644,6 +8646,9 @@ $foundationChecks = [
     'admin read-only endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminExportSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($adminFormSubmissionFileSource, "sendFileDownloadNotFound('Příloha nebyla nalezena.', \$isHeadRequest);")
+        && str_contains($adminFormSubmissionFileSource, "storedFileContentDisposition('attachment', \$originalName)")
+        && !str_contains($adminFormSubmissionFileSource, 'http_response_code(404)')
         && str_contains($adminFormSubmissionFileSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionsSource, '$isCsvExportHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminFormSubmissionsSource, 'if ($isCsvExportHeadRequest)')
