@@ -67,7 +67,7 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
         <?php endif; ?>
       </div>
 
-      <aside class="article-shell__aside">
+      <aside class="article-shell__aside" aria-labelledby="event-info-title">
         <section class="info-card" aria-labelledby="event-info-title">
           <h2 id="event-info-title" class="section-title section-title--compact">Praktické informace</h2>
           <dl class="info-list">

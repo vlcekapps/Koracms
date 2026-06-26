@@ -267,6 +267,44 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlTags($source, 'nav') as $match) {
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a nav using aria-label instead of aria-labelledby.';
+            continue;
+        }
+
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a nav without aria-labelledby.';
+        }
+    }
+
+    foreach (themeViewAuditHtmlTags($source, 'aside') as $match) {
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains an aside using aria-label instead of aria-labelledby.';
+            continue;
+        }
+
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains an aside without aria-labelledby.';
+        }
+    }
+
+    foreach (themeViewAuditHtmlTags($source, 'form') as $match) {
+        $role = themeViewAuditTagAttributeValue($match['tag'], 'role');
+        if (!is_string($role) || strtolower(trim($role)) !== 'search') {
+            continue;
+        }
+
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a search form using aria-label instead of aria-labelledby.';
+            continue;
+        }
+
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a search form without aria-labelledby.';
+        }
+    }
+
     foreach (themeViewAuditHtmlElements($source, 'table') as $match) {
         if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains a table using aria-label instead of a caption or aria-labelledby.';

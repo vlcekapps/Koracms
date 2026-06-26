@@ -89,7 +89,7 @@ $otherVersions = $otherVersions ?? [];
         <?php endif; ?>
       </div>
 
-      <aside class="article-shell__aside">
+      <aside class="article-shell__aside" aria-labelledby="download-info-title">
         <section class="info-card" aria-labelledby="download-info-title">
           <h2 id="download-info-title" class="section-title section-title--compact">Praktické informace</h2>
           <dl class="info-list">

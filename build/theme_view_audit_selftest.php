@@ -233,6 +233,39 @@ PHP,
 );
 
 assertThemeViewAuditFails(
+    'Nav heading guard',
+    <<<'PHP'
+<nav aria-label="Pomocná navigace">
+  <a href="/">Domů</a>
+</nav>
+PHP,
+    'nav using aria-label instead of aria-labelledby'
+);
+
+assertThemeViewAuditFails(
+    'Aside heading guard',
+    <<<'PHP'
+<aside class="article-shell__aside">
+  <section aria-labelledby="aside-title">
+    <h2 id="aside-title">Souvislosti</h2>
+  </section>
+</aside>
+PHP,
+    'aside without aria-labelledby'
+);
+
+assertThemeViewAuditFails(
+    'Search landmark heading guard',
+    <<<'PHP'
+<form method="get" role="search" aria-label="Hledání">
+  <label for="q">Hledat</label>
+  <input id="q" name="q">
+</form>
+PHP,
+    'search form using aria-label instead of aria-labelledby'
+);
+
+assertThemeViewAuditFails(
     'Runtime clock guard',
     <<<'PHP'
 <time datetime="<?= h(date('Y-m-d')) ?>">Dnes</time>
