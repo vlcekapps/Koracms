@@ -2,11 +2,11 @@
 $otherVersions = $otherVersions ?? [];
 ?>
 <div class="page-stack page-stack--detail">
-  <article class="surface surface--hero">
+  <article class="surface surface--hero" aria-labelledby="download-title">
     <div class="article-shell">
       <div class="article-shell__content">
         <p class="section-kicker"><?= h((string)$download['download_type_label']) ?></p>
-        <h1 class="section-title section-title--hero"><?= h((string)$download['title']) ?></h1>
+        <h1 id="download-title" class="section-title section-title--hero"><?= h((string)$download['title']) ?></h1>
 
         <p class="meta-row">
           <?php if ((int)$download['is_featured'] === 1): ?>

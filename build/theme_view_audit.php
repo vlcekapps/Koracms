@@ -267,6 +267,18 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlTags($source, 'article') as $match) {
+        $class = themeViewAuditTagAttributeValue($match['tag'], 'class');
+        $classTokens = is_string($class) ? preg_split('/\s+/', trim($class)) : [];
+        if (!in_array('surface', $classTokens ?: [], true)) {
+            continue;
+        }
+
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a surface article without aria-labelledby.';
+        }
+    }
+
     foreach (themeViewAuditHtmlTags($source, 'nav') as $match) {
         if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains a nav using aria-label instead of aria-labelledby.';

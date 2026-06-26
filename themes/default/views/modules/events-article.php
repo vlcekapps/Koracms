@@ -6,11 +6,11 @@ $eventExcerpt = trim((string)($event['excerpt_plain'] ?? ''));
 $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
 ?>
 <div class="page-stack page-stack--detail">
-  <article class="surface surface--hero">
+  <article class="surface surface--hero" aria-labelledby="event-title">
     <div class="article-shell">
       <div class="article-shell__content">
         <p class="section-kicker"><?= h((string)($event['event_kind_label'] ?? 'Akce')) ?></p>
-        <h1 class="section-title section-title--hero"><?= h((string)($event['title'] ?? '')) ?></h1>
+        <h1 id="event-title" class="section-title section-title--hero"><?= h((string)($event['title'] ?? '')) ?></h1>
 
         <p class="meta-row">
           <span class="pill"><?= h((string)($event['event_status_label'] ?? 'Připravujeme')) ?></span>

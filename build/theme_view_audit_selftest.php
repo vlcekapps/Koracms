@@ -199,6 +199,15 @@ assertThemeViewAuditPasses(
 PHP
 );
 
+assertThemeViewAuditPasses(
+    'Surface article heading guard',
+    <<<'PHP'
+<article class="surface surface--hero" aria-labelledby="fixture-article-title">
+  <h1 id="fixture-article-title">Detail článku</h1>
+</article>
+PHP
+);
+
 assertThemeViewAuditFails(
     'Request input guard',
     <<<'PHP'
@@ -243,6 +252,16 @@ assertThemeViewAuditFails(
 </section>
 PHP,
     'section without aria-labelledby'
+);
+
+assertThemeViewAuditFails(
+    'Surface article missing heading guard',
+    <<<'PHP'
+<article class="surface surface--hero">
+  <h1>Detail článku</h1>
+</article>
+PHP,
+    'surface article without aria-labelledby'
 );
 
 assertThemeViewAuditFails(

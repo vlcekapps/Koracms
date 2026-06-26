@@ -3,9 +3,9 @@ $pageKicker = trim((string)($pageKicker ?? 'Stránka'));
 $backLinkHref = trim((string)($backLinkHref ?? ''));
 $backLinkLabel = trim((string)($backLinkLabel ?? ''));
 ?>
-<article class="surface article-shell">
+<article class="surface article-shell" aria-labelledby="page-title">
   <p class="section-kicker"><?= h($pageKicker) ?></p>
-  <h1 class="section-title section-title--hero"><?= h((string)$page['title']) ?></h1>
+  <h1 id="page-title" class="section-title section-title--hero"><?= h((string)$page['title']) ?></h1>
   <div class="prose article-shell__content">
     <?= renderContent((string)$page['content']) ?>
   </div>
