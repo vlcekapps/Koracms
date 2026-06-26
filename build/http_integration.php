@@ -882,6 +882,7 @@ try {
     if (
         httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'filename*=')
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Cache-Control', 'no-store')
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Cache-Control', 'max-age=0')
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'X-Content-Type-Options', 'nosniff')

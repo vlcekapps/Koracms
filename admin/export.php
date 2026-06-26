@@ -95,12 +95,12 @@ foreach ($tables as $key => $sql) {
 }
 
 $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if (!is_string($json)) {
+    $json = '{}';
+}
 $filename = 'cms-export-' . date('Y-m-d') . '.json';
 
-header('Content-Type: application/json; charset=utf-8');
-header('Content-Disposition: attachment; filename="' . $filename . '"');
-header('Content-Length: ' . strlen($json));
-sendAdminDownloadHeaders();
+sendAdminAttachmentHeaders('application/json; charset=utf-8', $filename, strlen($json));
 if ($isHeadRequest) {
     exit;
 }

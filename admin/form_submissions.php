@@ -133,9 +133,10 @@ if ($query !== '') {
 $currentRedirect = BASE_URL . appendUrlQuery('/admin/form_submissions.php', $currentParams);
 
 if ($isCsvExport) {
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="formular-' . rawurlencode((string)$form['slug']) . '-' . date('Y-m-d') . '.csv"');
-    sendAdminDownloadHeaders();
+    sendAdminAttachmentHeaders(
+        'text/csv; charset=utf-8',
+        'formular-' . (string)$form['slug'] . '-' . date('Y-m-d') . '.csv'
+    );
     if ($isCsvExportHeadRequest) {
         exit;
     }

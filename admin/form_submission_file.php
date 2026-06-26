@@ -51,10 +51,7 @@ if ($handle === false) {
     sendFileDownloadNotFound('Příloha nebyla nalezena.', $isHeadRequest);
 }
 
-header('Content-Type: ' . $mimeType);
-header('Content-Length: ' . (string)$fileSize);
-header('Content-Disposition: ' . storedFileContentDisposition('attachment', $originalName));
-sendAdminDownloadHeaders();
+sendAdminAttachmentHeaders($mimeType, $originalName, $fileSize);
 
 if ($isHeadRequest) {
     fclose($handle);

@@ -114,6 +114,24 @@ function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.', boo
     exit;
 }
 
+function sendAdminAttachmentHeaders(string $contentType, string $downloadName, ?int $contentLength = null): void
+{
+    $normalizedContentType = trim(str_replace(["\r", "\n"], '', $contentType));
+    if ($normalizedContentType === '') {
+        $normalizedContentType = 'application/octet-stream';
+    }
+
+    header('Content-Type: ' . $normalizedContentType);
+    if ($contentLength !== null && $contentLength >= 0) {
+        header('Content-Length: ' . (string)$contentLength);
+    }
+    header('Content-Disposition: ' . storedFileContentDisposition(
+        'attachment',
+        safeDownloadName($downloadName, 'download')
+    ));
+    sendAdminDownloadHeaders();
+}
+
 function requireReadOnlyHttpMethod(): bool
 {
     $requestMethod = requireHttpMethods(['GET', 'HEAD']);

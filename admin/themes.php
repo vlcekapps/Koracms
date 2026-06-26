@@ -157,12 +157,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors = array_merge($errors, $exportResult['errors']);
             } else {
                 logAction('theme_export', 'theme=' . $exportThemeKey);
-                header('Content-Type: application/zip');
-                sendAdminDownloadHeaders();
-                header('Content-Disposition: attachment; filename="' . basename((string)$exportResult['filename']) . '"');
-                header('Content-Length: ' . (string)filesize((string)$exportResult['path']));
-                readfile((string)$exportResult['path']);
-                @unlink((string)$exportResult['path']);
+                $exportPath = (string)$exportResult['path'];
+                $exportSize = filesize($exportPath);
+                sendAdminAttachmentHeaders(
+                    'application/zip',
+                    basename((string)$exportResult['filename']),
+                    is_int($exportSize) ? $exportSize : null
+                );
+                readfile($exportPath);
+                @unlink($exportPath);
                 exit;
             }
         }

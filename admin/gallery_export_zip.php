@@ -116,10 +116,7 @@ if (class_exists('ZipArchive')) {
 
     // Odešleme
     $fileSize = filesize($tmpFile);
-    header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="' . $zipFilename . '"');
-    header('Content-Length: ' . $fileSize);
-    sendAdminDownloadHeaders();
+    sendAdminAttachmentHeaders('application/zip', $zipFilename, is_int($fileSize) ? $fileSize : null);
 
     readfile($tmpFile);
     @unlink($tmpFile);
@@ -129,9 +126,7 @@ if (class_exists('ZipArchive')) {
 }
 
 // ── Fallback: streaming ZIP bez ZipArchive ──
-header('Content-Type: application/zip');
-header('Content-Disposition: attachment; filename="' . $zipFilename . '"');
-sendAdminDownloadHeaders();
+sendAdminAttachmentHeaders('application/zip', $zipFilename);
 
 $out = fopen('php://output', 'wb');
 $centralDir = '';
