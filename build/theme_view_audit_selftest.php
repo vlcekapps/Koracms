@@ -186,6 +186,19 @@ assertThemeViewAuditPasses(
 PHP
 );
 
+assertThemeViewAuditPasses(
+    'Fieldset legend guard',
+    <<<'PHP'
+<form method="get">
+  <fieldset>
+    <legend>Hledání</legend>
+    <label for="fixture-search">Dotaz</label>
+    <input id="fixture-search" name="q">
+  </fieldset>
+</form>
+PHP
+);
+
 assertThemeViewAuditFails(
     'Request input guard',
     <<<'PHP'
@@ -263,6 +276,32 @@ assertThemeViewAuditFails(
 </form>
 PHP,
     'search form using aria-label instead of aria-labelledby'
+);
+
+assertThemeViewAuditFails(
+    'Fieldset legend missing guard',
+    <<<'PHP'
+<form method="get">
+  <fieldset>
+    <label for="fixture-q">Dotaz</label>
+    <input id="fixture-q" name="q">
+  </fieldset>
+</form>
+PHP,
+    'fieldset without legend'
+);
+
+assertThemeViewAuditFails(
+    'Fieldset aria-label guard',
+    <<<'PHP'
+<form method="get">
+  <fieldset aria-label="Hledání">
+    <label for="fixture-q">Dotaz</label>
+    <input id="fixture-q" name="q">
+  </fieldset>
+</form>
+PHP,
+    'fieldset using aria-label instead of a legend'
 );
 
 assertThemeViewAuditFails(

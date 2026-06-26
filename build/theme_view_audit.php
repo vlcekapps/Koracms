@@ -319,6 +319,17 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlElements($source, 'fieldset') as $match) {
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a fieldset using aria-label instead of a legend.';
+            continue;
+        }
+
+        if (preg_match('/<legend\b/i', $match['element']) !== 1) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a fieldset without legend.';
+        }
+    }
+
     foreach (themeViewAuditHtmlElements($source, 'a') as $match) {
         $target = themeViewAuditTagAttributeValue($match['tag'], 'target');
         if (!is_string($target) || strtolower(trim($target)) !== '_blank') {

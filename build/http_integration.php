@@ -1620,20 +1620,23 @@ try {
     $visitorReferrerToken = bin2hex(random_bytes(4));
     $visitorRawReferrer = 'https://obchod.example.test/produkt/' . $visitorReferrerToken . '?token=secret#detail';
     $visitorReferrerPath = 'obchod.example.test/produkt/' . $visitorReferrerToken;
+    $visitorReferrerDate = date('Y-m-d');
+    $visitorReferrerCreatedAt = $visitorReferrerDate . ' 12:00:00';
     $visitorReferrerInsert = $pdo->prepare(
         "INSERT INTO cms_page_views (page_url, page_type, page_ref_id, ip_hash, user_agent, referrer, created_at)
-         VALUES (?, 'other', NULL, ?, 'HTTP integration referrer test', ?, NOW())"
+         VALUES (?, 'other', NULL, ?, 'HTTP integration referrer test', ?, ?)"
     );
     for ($referrerVisit = 1; $referrerVisit <= 2; $referrerVisit++) {
         $visitorReferrerInsert->execute([
             '/http-referrer-test-' . $visitorReferrerToken . '-' . $referrerVisit,
             hash('sha256', 'http-referrer-test-' . $visitorReferrerToken . '-' . $referrerVisit),
             $visitorRawReferrer,
+            $visitorReferrerCreatedAt,
         ]);
         $createdPageViewIds[] = (int)$pdo->lastInsertId();
     }
 
-    $statisticsReferrerUrl = $baseUrl . BASE_URL . '/admin/statistics.php?from=' . date('Y-m-d') . '&to=' . date('Y-m-d');
+    $statisticsReferrerUrl = $baseUrl . BASE_URL . '/admin/statistics.php?from=' . $visitorReferrerDate . '&to=' . $visitorReferrerDate;
     $statisticsReferrerResponse = fetchUrl($statisticsReferrerUrl, $adminSession['cookie'], 0);
     if (httpIntegrationStatusCode($statisticsReferrerResponse) !== 200) {
         $visitorReferrerIssues[] = 'admin statistiky s referrer testem nevrátily 200';
