@@ -470,6 +470,26 @@ assert_equals('2 kB', formatFileSize(2048), '2 kilobytes');
 assert_equals('1 MB', formatFileSize(1048576), '1 megabyte');
 assert_equals('0 B', formatFileSize(0), 'zero bytes');
 
+// ─── 10. storedFileContentDisposition() ─────────────────────────────────────
+
+test_section('storedFileContentDisposition()');
+
+assert_equals(
+    'inline; filename="soubor_s_mezerou.pdf"; filename*=UTF-8\'\'soubor%20s%20mezerou.pdf',
+    storedFileContentDisposition('inline', 'soubor s mezerou.pdf'),
+    'inline disposition keeps ASCII fallback and UTF-8 filename'
+);
+assert_contains(
+    "filename*=UTF-8''%C5%BElu%C5%A5ou%C4%8Dk%C3%BD%20k%C5%AF%C5%88.pdf",
+    storedFileContentDisposition('attachment', 'žluťoučký kůň.pdf'),
+    'Czech filename preserved through RFC 5987 filename*'
+);
+assert_equals(
+    'attachment; filename="soubor.pdf"; filename*=UTF-8\'\'soubor.pdf',
+    storedFileContentDisposition('bad disposition', 'soubor.pdf'),
+    'unknown disposition falls back to attachment'
+);
+
 // ─── 10. mailSanitizeHeaderValue() ─────────────────────────────────────────
 
 test_section('mailSanitizeHeaderValue()');

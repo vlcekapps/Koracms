@@ -34,6 +34,20 @@ function safeDownloadAsciiFallback(string $downloadName): string
     return 'download' . ($extension !== '' ? '.' . $extension : '');
 }
 
+function storedFileContentDisposition(string $disposition, string $downloadName): string
+{
+    $normalizedDisposition = strtolower(trim($disposition));
+    if (!in_array($normalizedDisposition, ['attachment', 'inline'], true)) {
+        $normalizedDisposition = 'attachment';
+    }
+
+    $asciiFallback = safeDownloadAsciiFallback($downloadName);
+
+    return $normalizedDisposition
+        . '; filename="' . addcslashes($asciiFallback, "\\\"") . '"'
+        . '; filename*=UTF-8\'\'' . rawurlencode($downloadName);
+}
+
 function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): void
 {
     http_response_code(404);
@@ -131,7 +145,7 @@ function sendInlineStoredFileResponse(
 
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string)$fileSize);
-    header('Content-Disposition: inline; filename="' . rawurlencode($downloadName) . '"');
+    header('Content-Disposition: ' . storedFileContentDisposition('inline', $downloadName));
     header('Cache-Control: ' . $cacheHeader);
     sendNoSniffHeader();
 
@@ -155,7 +169,6 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
     }
 
     $downloadName = safeDownloadName($downloadName, basename($path));
-    $asciiFallback = safeDownloadAsciiFallback($downloadName);
     $mimeType = storedFileMimeType($path, $mimeTypeOverride);
 
     while (ob_get_level() > 0) {
@@ -165,7 +178,7 @@ function sendStoredFileResponse(string $path, string $downloadName, string $disp
     header('Content-Description: File Transfer');
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string)filesize($path));
-    header('Content-Disposition: ' . $disposition . '; filename="' . addcslashes($asciiFallback, "\\\"") . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
+    header('Content-Disposition: ' . storedFileContentDisposition($disposition, $downloadName));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
     sendNoSniffHeader();
