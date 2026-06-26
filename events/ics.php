@@ -7,8 +7,7 @@ $isHeadRequest = requireReadOnlyHttpMethod();
 checkMaintenanceMode();
 
 if (!isModuleEnabled('events')) {
-    http_response_code(404);
-    exit;
+    sendReadOnlyNotFoundResponse('Události nejsou dostupné.', $isHeadRequest);
 }
 
 $id = inputInt('get', 'id');
@@ -40,8 +39,7 @@ if ($slug !== '') {
 
 $event = $stmt->fetch() ?: null;
 if (!$event) {
-    http_response_code(404);
-    exit('Událost nebyla nalezena.');
+    sendReadOnlyNotFoundResponse('Událost nebyla nalezena.', $isHeadRequest);
 }
 
 $event = hydrateEventPresentation($event);

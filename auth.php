@@ -206,6 +206,19 @@ function sendReadOnlyContentHeaders(
     }
 }
 
+function sendReadOnlyNotFoundResponse(string $message = 'Obsah nebyl nalezen.', bool $isHeadRequest = false): void
+{
+    http_response_code(404);
+    sendNoStoreNoIndexHeaders();
+    sendContentTypeNoSniffHeaders('text/plain; charset=UTF-8');
+
+    if (!$isHeadRequest) {
+        echo $message;
+    }
+
+    exit;
+}
+
 function sendOperationalJsonHeaders(): void
 {
     if (headers_sent()) {

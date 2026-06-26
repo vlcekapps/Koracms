@@ -2,7 +2,6 @@
 require_once __DIR__ . '/db.php';
 
 $isHeadRequest = requireReadOnlyHttpMethod();
-sendContentTypeNoSniffHeaders('application/rss+xml; charset=UTF-8');
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $siteDesc = getSetting('site_description', '');
@@ -21,8 +20,7 @@ if ($feedBlogSlug !== '') {
             exit;
         }
 
-        http_response_code(404);
-        exit;
+        sendReadOnlyNotFoundResponse('Blog nebyl nalezen.', $isHeadRequest);
     }
 
     $feedBlogId = (int)$feedBlog['id'];
@@ -53,6 +51,7 @@ if ($channelDescription === '') {
     $channelDescription = $channelTitle;
 }
 $selfUrl = $isBlogFeed ? blogFeedUrl($feedBlog) : siteUrl('/feed.php');
+sendContentTypeNoSniffHeaders('application/rss+xml; charset=UTF-8');
 if ($isHeadRequest) {
     exit;
 }

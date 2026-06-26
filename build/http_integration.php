@@ -573,13 +573,46 @@ try {
     if (!httpIntegrationReadOnlyMethodGuardOk($feedPostResponse)) {
         $discoveryEndpointIssues[] = 'feed.php neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
+    $missingBlogFeedResponse = fetchUrl($baseUrl . BASE_URL . '/feed.php?blog=__missing__', '', 0);
+    if (
+        httpIntegrationStatusCode($missingBlogFeedResponse) !== 404
+        || !httpIntegrationHeaderContains($missingBlogFeedResponse, 'Content-Type', 'text/plain; charset=UTF-8')
+        || !httpIntegrationHeaderContains($missingBlogFeedResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($missingBlogFeedResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($missingBlogFeedResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($missingBlogFeedResponse, 'X-Content-Type-Options', 'nosniff')
+    ) {
+        $discoveryEndpointIssues[] = 'feed.php neposlal bezpečnou textovou 404 odpověď pro chybějící blog feed';
+    }
     $podcastFeedPostResponse = postRawUrl($baseUrl . BASE_URL . '/podcast/feed.php?slug=__missing__', '', 'text/plain', '', 0);
     if (!httpIntegrationReadOnlyMethodGuardOk($podcastFeedPostResponse)) {
         $discoveryEndpointIssues[] = 'podcast RSS feed neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
+    $missingPodcastFeedResponse = fetchUrl($baseUrl . BASE_URL . '/podcast/feed.php?slug=__missing__', '', 0);
+    if (
+        httpIntegrationStatusCode($missingPodcastFeedResponse) !== 404
+        || !httpIntegrationHeaderContains($missingPodcastFeedResponse, 'Content-Type', 'text/plain; charset=UTF-8')
+        || !httpIntegrationHeaderContains($missingPodcastFeedResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($missingPodcastFeedResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($missingPodcastFeedResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($missingPodcastFeedResponse, 'X-Content-Type-Options', 'nosniff')
+    ) {
+        $discoveryEndpointIssues[] = 'podcast/feed.php neposlal bezpečnou textovou 404 odpověď pro chybějící podcast feed';
+    }
     $eventIcsPostResponse = postRawUrl($baseUrl . BASE_URL . '/events/ics.php?slug=__missing__', '', 'text/plain', '', 0);
     if (!httpIntegrationReadOnlyMethodGuardOk($eventIcsPostResponse)) {
         $discoveryEndpointIssues[] = 'ICS export události neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
+    }
+    $missingEventIcsResponse = fetchUrl($baseUrl . BASE_URL . '/events/ics.php?slug=__missing__', '', 0);
+    if (
+        httpIntegrationStatusCode($missingEventIcsResponse) !== 404
+        || !httpIntegrationHeaderContains($missingEventIcsResponse, 'Content-Type', 'text/plain; charset=UTF-8')
+        || !httpIntegrationHeaderContains($missingEventIcsResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($missingEventIcsResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($missingEventIcsResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($missingEventIcsResponse, 'X-Content-Type-Options', 'nosniff')
+    ) {
+        $discoveryEndpointIssues[] = 'events/ics.php neposlal bezpečnou textovou 404 odpověď pro chybějící ICS export';
     }
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 

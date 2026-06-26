@@ -4,8 +4,7 @@ require_once __DIR__ . '/../db.php';
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 if (!isModuleEnabled('podcast')) {
-    http_response_code(404);
-    exit;
+    sendReadOnlyNotFoundResponse('Podcast není dostupný.', $isHeadRequest);
 }
 
 $pdo = db_connect();
@@ -19,13 +18,11 @@ $showStmt = $pdo->prepare("SELECT * FROM cms_podcast_shows WHERE slug = ? LIMIT 
 $showStmt->execute([$slug]);
 $show = $showStmt->fetch() ?: null;
 if (!$show) {
-    http_response_code(404);
-    exit;
+    sendReadOnlyNotFoundResponse('Podcast nebyl nalezen.', $isHeadRequest);
 }
 $show = hydratePodcastShowPresentation($show);
 if (empty($show['is_public']) && !currentUserHasCapability('content_manage_shared')) {
-    http_response_code(404);
-    exit;
+    sendReadOnlyNotFoundResponse('Podcast nebyl nalezen.', $isHeadRequest);
 }
 $feedEpisodeLimit = (int)$show['feed_episode_limit'];
 
