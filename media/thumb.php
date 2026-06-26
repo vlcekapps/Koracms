@@ -6,31 +6,26 @@ $isHeadRequest = requireReadOnlyHttpMethod();
 
 $mediaId = inputInt('get', 'id');
 if ($mediaId === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $media = mediaGetById($mediaId);
 if ($media === null || !mediaCanPreviewImage($media)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $isPublic = mediaIsPublic($media);
 if (!$isPublic && !mediaStaffCanAccessPrivate()) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $thumbPath = mediaThumbPath($media);
 if (($thumbPath === '' || !is_file($thumbPath)) && !mediaRebuildDerivedFiles($media)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 if ($thumbPath === '' || !is_file($thumbPath)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 sendInlineStoredFileResponse($thumbPath, basename($thumbPath), $isPublic, $isHeadRequest);

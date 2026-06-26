@@ -717,16 +717,30 @@ try {
             $fileEndpointIssues[] = $fileEndpointLabel . ' neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
         }
     }
-    $missingFileEndpointResponse = fetchUrl($baseUrl . BASE_URL . '/media/file.php?id=0', '', 0);
-    if (
-        httpIntegrationStatusCode($missingFileEndpointResponse) !== 404
-        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Content-Type', 'text/plain; charset=UTF-8')
-        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Cache-Control', 'no-store')
-        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'X-Robots-Tag', 'noindex')
-        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Referrer-Policy', 'no-referrer')
-        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'X-Content-Type-Options', 'nosniff')
-    ) {
-        $fileEndpointIssues[] = 'chybějící souborová odpověď neposlala bezpečnou textovou 404 odpověď';
+    $missingFileEndpointUrls = [
+        '/media/file.php?id=0' => 'media/file.php',
+        '/media/preview.php?id=0' => 'media/preview.php',
+        '/media/thumb.php?id=0' => 'media/thumb.php',
+        '/downloads/file.php?id=0' => 'downloads/file.php',
+        '/board/file.php?id=0' => 'board/file.php',
+        '/gallery/image.php?id=0' => 'gallery/image.php',
+        '/places/image.php?id=0' => 'places/image.php',
+        '/podcast/audio.php?id=0' => 'podcast/audio.php',
+        '/podcast/image.php?id=0' => 'podcast/image.php',
+        '/podcast/cover.php?id=0' => 'podcast/cover.php',
+    ];
+    foreach ($missingFileEndpointUrls as $missingFileEndpointUrl => $missingFileEndpointLabel) {
+        $missingFileEndpointResponse = fetchUrl($baseUrl . BASE_URL . $missingFileEndpointUrl, '', 0);
+        if (
+            httpIntegrationStatusCode($missingFileEndpointResponse) !== 404
+            || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Content-Type', 'text/plain; charset=UTF-8')
+            || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Cache-Control', 'no-store')
+            || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'X-Robots-Tag', 'noindex')
+            || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Referrer-Policy', 'no-referrer')
+            || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'X-Content-Type-Options', 'nosniff')
+        ) {
+            $fileEndpointIssues[] = $missingFileEndpointLabel . ' neposlal bezpečnou textovou 404 odpověď pro chybějící soubor';
+        }
     }
     httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
 

@@ -5,14 +5,12 @@ checkMaintenanceMode();
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 if (!isModuleEnabled('podcast')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $episodeId = inputInt('get', 'id');
 if ($episodeId === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $pdo = db_connect();
@@ -27,33 +25,29 @@ $stmt->execute([$episodeId]);
 $episode = $stmt->fetch() ?: null;
 
 if ($episode === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $filename = trim((string)($episode['audio_file'] ?? ''));
 if ($filename === '') {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $isPublic = podcastEpisodeIsPublic($episode);
 
 if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $filePath = podcastAudioFilePath($filename);
-if (!is_file($filePath)) {
-    http_response_code(404);
-    exit;
+if (!is_file($filePath) || !is_readable($filePath)) {
+    sendFileDownloadNotFound();
 }
 
 $fileSize = filesize($filePath);
 if ($fileSize === false) {
-    http_response_code(404);
-    exit;
+    storedFileLogFailure('filesize', $filePath);
+    sendFileDownloadNotFound();
 }
 
 $mimeType = podcastAudioMimeType($filename);
@@ -122,7 +116,7 @@ if ($isHeadRequest) {
 
 $handle = fopen($filePath, 'rb');
 if ($handle === false) {
-    http_response_code(404);
+    storedFileLogFailure('fopen', $filePath);
     exit;
 }
 

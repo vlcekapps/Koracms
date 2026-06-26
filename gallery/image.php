@@ -5,8 +5,7 @@ checkMaintenanceMode();
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 if (!isModuleEnabled('gallery')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $photoId = inputInt('get', 'id');
@@ -14,8 +13,7 @@ $size = (string)($_GET['size'] ?? 'full');
 $size = $size === 'thumb' ? 'thumb' : 'full';
 
 if ($photoId === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $pdo = db_connect();
@@ -34,8 +32,7 @@ $stmt->execute([$photoId]);
 $photo = $stmt->fetch() ?: null;
 
 if ($photo === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $isPublic = (string)$photo['photo_status'] === 'published'
@@ -44,8 +41,7 @@ $isPublic = (string)$photo['photo_status'] === 'published'
     && (int)$photo['album_published'] === 1;
 
 if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $baseDir = dirname(__DIR__) . '/uploads/gallery/';
@@ -55,8 +51,7 @@ if (!is_file($filePath) && $size === 'thumb') {
 }
 
 if (!is_file($filePath)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 sendInlineStoredFileResponse($filePath, basename($filePath), $isPublic, $isHeadRequest);

@@ -5,14 +5,12 @@ checkMaintenanceMode();
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 if (!isModuleEnabled('podcast')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $showId = inputInt('get', 'id');
 if ($showId === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $pdo = db_connect();
@@ -26,28 +24,24 @@ $stmt->execute([$showId]);
 $show = $stmt->fetch() ?: null;
 
 if ($show === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $show = hydratePodcastShowPresentation($show);
 $filename = trim((string)($show['cover_image'] ?? ''));
 if ($filename === '') {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $isPublic = podcastShowIsPublic($show);
 
 if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $filePath = podcastCoverFilePath($filename);
 if (!is_file($filePath)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 sendInlineStoredFileResponse($filePath, basename($filePath), $isPublic, $isHeadRequest);

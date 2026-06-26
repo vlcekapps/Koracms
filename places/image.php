@@ -5,14 +5,12 @@ checkMaintenanceMode();
 $isHeadRequest = requireReadOnlyHttpMethod();
 
 if (!isModuleEnabled('places')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $placeId = inputInt('get', 'id');
 if ($placeId === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $pdo = db_connect();
@@ -26,28 +24,24 @@ $stmt->execute([$placeId]);
 $place = $stmt->fetch() ?: null;
 
 if ($place === null) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $filename = trim((string)($place['image_file'] ?? ''));
 if ($filename === '') {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $isPublic = (string)($place['status'] ?? 'published') === 'published'
     && (int)($place['is_published'] ?? 1) === 1;
 
 if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 $filePath = dirname(__DIR__) . '/uploads/places/' . basename($filename);
 if (!is_file($filePath)) {
-    http_response_code(404);
-    exit;
+    sendFileDownloadNotFound();
 }
 
 sendInlineStoredFileResponse($filePath, basename($filePath), $isPublic, $isHeadRequest);
