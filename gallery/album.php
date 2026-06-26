@@ -47,21 +47,17 @@ if ($albumSlug !== '') {
 $album = $stmt->fetch() ?: null;
 
 if ($album === null) {
-    http_response_code(404);
     $missingPath = $albumSlug !== ''
         ? BASE_URL . '/gallery/album/' . rawurlencode($albumSlug)
         : BASE_URL . '/gallery/album.php?id=' . urlencode((string)$albumId);
 
-    renderPublicPage([
-        'title' => 'Album nenalezeno – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Album nenalezeno',
         'meta' => [
-            'title' => 'Album nenalezeno – ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-gallery-not-found',
     ]);
-    exit;
 }
 
 $album = hydrateGalleryAlbumPresentation($album);

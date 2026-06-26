@@ -127,21 +127,17 @@ $pageUrl = siteUrl(appendUrlQuery('/polls/index.php', array_filter([
 if ($detailRequested) {
     $poll = $poll ?? $fetchPoll('all');
     if ($poll === null) {
-        http_response_code(404);
         $missingUrl = $pollSlugValue !== ''
             ? siteUrl('/polls/' . rawurlencode($pollSlugValue))
             : siteUrl('/polls/index.php?id=' . urlencode((string)$pollId));
 
-        renderPublicPage([
-            'title' => 'Anketa nenalezena – ' . $siteName,
+        renderPublicNotFoundPage([
+            'title' => 'Anketa nenalezena',
             'meta' => [
-                'title' => 'Anketa nenalezena – ' . $siteName,
                 'url' => $missingUrl,
             ],
-            'view' => 'not-found',
             'body_class' => 'page-poll-not-found',
         ]);
-        exit;
     }
 
     $poll = hydratePollPresentation($poll);

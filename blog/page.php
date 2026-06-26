@@ -12,15 +12,9 @@ $blog = $GLOBALS['current_blog'] ?? null;
 $pageSlug = pageSlug(trim((string)($_GET['page_slug'] ?? '')));
 
 if (!$blog || $pageSlug === '') {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Stránka nenalezena – ' . $siteName,
-        'meta' => ['title' => 'Stránka nenalezena – ' . $siteName],
-        'view' => 'not-found',
+    renderPublicNotFoundPage([
         'body_class' => 'page-not-found',
     ]);
-    exit;
 }
 
 $pdo = db_connect();
@@ -39,18 +33,12 @@ $stmt->execute([$pageSlug, (int)$blog['id']]);
 $page = $stmt->fetch() ?: null;
 
 if (!$page) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Stránka nenalezena – ' . $siteName,
+    renderPublicNotFoundPage([
         'meta' => [
-            'title' => 'Stránka nenalezena – ' . $siteName,
             'url' => blogIndexPath($blog),
         ],
-        'view' => 'not-found',
         'body_class' => 'page-not-found',
     ]);
-    exit;
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');

@@ -35,18 +35,12 @@ if ($previewToken !== '') {
 $page = $stmt->fetch();
 
 if (!$page) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Stránka nenalezena – ' . $siteName,
+    renderPublicNotFoundPage([
         'meta' => [
-            'title' => 'Stránka nenalezena – ' . $siteName,
             'url' => pagePublicPath(['slug' => $slug]),
         ],
-        'view' => 'not-found',
         'body_class' => 'page-not-found',
     ]);
-    exit;
 }
 
 $siteName = getSetting('site_name', 'Kora CMS');

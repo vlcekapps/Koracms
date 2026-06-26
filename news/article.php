@@ -70,20 +70,15 @@ if ($previewToken !== '') {
 
 $news = $stmt->fetch() ?: null;
 if (!$news) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Novinka nenalezena – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Novinka nenalezena',
         'meta' => [
-            'title' => 'Novinka nenalezena – ' . $siteName,
             'url' => $slug !== ''
                 ? siteUrl('/news/' . rawurlencode($slug))
                 : siteUrl('/news/article.php?id=' . urlencode((string)$id)),
         ],
-        'view' => 'not-found',
         'body_class' => 'page-news-not-found',
     ]);
-    exit;
 }
 
 $news = hydrateNewsPresentation($news);

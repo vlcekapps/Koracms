@@ -187,14 +187,10 @@ if ($slug !== '') {
 
 $form = $stmt->fetch() ?: null;
 if (!$form) {
-    http_response_code(404);
-    renderPublicPage([
-        'title' => 'Formulář nenalezen – ' . $siteName,
-        'meta' => ['title' => 'Formulář nenalezen – ' . $siteName],
-        'view' => 'not-found',
+    renderPublicNotFoundPage([
+        'title' => 'Formulář nenalezen',
         'body_class' => 'page-form-not-found',
     ]);
-    exit;
 }
 
 // Přesměrování na slug URL

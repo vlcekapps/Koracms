@@ -744,6 +744,21 @@ try {
     }
     httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
 
+    $publicNotFoundIssues = [];
+    $missingPublicPageResponse = fetchUrl($baseUrl . BASE_URL . '/page.php?slug=http-integration-missing-page', '', 0);
+    if (
+        httpIntegrationStatusCode($missingPublicPageResponse) !== 404
+        || !httpIntegrationHeaderContains($missingPublicPageResponse, 'Content-Type', 'text/html; charset=UTF-8')
+        || !httpIntegrationHeaderContains($missingPublicPageResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($missingPublicPageResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($missingPublicPageResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($missingPublicPageResponse, 'X-Content-Type-Options', 'nosniff')
+        || !str_contains($missingPublicPageResponse['body'], 'page-not-found')
+    ) {
+        $publicNotFoundIssues[] = 'veřejná HTML 404 stránka neposlala jednotné bezpečné hlavičky nebo not-found layout';
+    }
+    httpIntegrationPrintResult('public_not_found_http', $publicNotFoundIssues, $failures);
+
     $adminReadOnlyEndpointIssues = [];
     $adminReadOnlyEndpointUrls = [
         '/admin/export.php' => 'admin/export.php',

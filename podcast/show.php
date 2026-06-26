@@ -34,17 +34,13 @@ $showStmt->execute([$slug]);
 $show = $showStmt->fetch() ?: null;
 
 if (!$show) {
-    http_response_code(404);
-    renderPublicPage([
-        'title' => 'Podcast nenalezen – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Podcast nenalezen',
         'meta' => [
-            'title' => 'Podcast nenalezen – ' . $siteName,
             'url' => siteUrl('/podcast/' . rawurlencode($slug)),
         ],
-        'view' => 'not-found',
         'body_class' => 'page-podcast-not-found',
     ]);
-    exit;
 }
 
 $show = hydratePodcastShowPresentation($show);

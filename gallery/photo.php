@@ -53,21 +53,17 @@ if ($photoSlug !== '') {
 $photo = $stmt->fetch() ?: null;
 
 if ($photo === null) {
-    http_response_code(404);
     $missingPath = $photoSlug !== ''
         ? BASE_URL . '/gallery/photo/' . rawurlencode($photoSlug)
         : BASE_URL . '/gallery/photo.php?id=' . urlencode((string)$photoId);
 
-    renderPublicPage([
-        'title' => 'Fotografie nenalezena – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Fotografie nenalezena',
         'meta' => [
-            'title' => 'Fotografie nenalezena – ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-gallery-not-found',
     ]);
-    exit;
 }
 
 $album = hydrateGalleryAlbumPresentation([

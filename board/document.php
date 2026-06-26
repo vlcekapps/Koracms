@@ -62,22 +62,17 @@ if ($previewToken !== '') {
 
 $document = $stmt->fetch() ?: null;
 if (!$document) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/board/' . rawurlencode($slug)
         : BASE_URL . '/board/document.php?id=' . urlencode((string)$id);
 
-    renderPublicPage([
-        'title' => 'Položka nenalezena - ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Položka nenalezena',
         'meta' => [
-            'title' => 'Položka nenalezena - ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-board-not-found',
     ]);
-    exit;
 }
 
 $document = hydrateBoardPresentation($document);

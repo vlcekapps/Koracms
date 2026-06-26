@@ -59,21 +59,17 @@ if ($showSlug !== '' && $episodeSlug !== '') {
 
 $episode = $stmt->fetch() ?: null;
 if (!$episode) {
-    http_response_code(404);
     $missingUrl = $showSlug !== '' && $episodeSlug !== ''
         ? siteUrl('/podcast/' . rawurlencode($showSlug) . '/' . rawurlencode($episodeSlug))
         : siteUrl('/podcast/episode.php' . ($id !== null ? '?id=' . urlencode((string)$id) : ''));
 
-    renderPublicPage([
-        'title' => 'Epizoda nenalezena – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Epizoda nenalezena',
         'meta' => [
-            'title' => 'Epizoda nenalezena – ' . $siteName,
             'url' => $missingUrl,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-podcast-episode-not-found',
     ]);
-    exit;
 }
 
 $episode = hydratePodcastEpisodePresentation($episode);

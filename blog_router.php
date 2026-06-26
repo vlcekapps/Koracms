@@ -8,15 +8,9 @@ require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 
 if (!isModuleEnabled('blog')) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Stránka nenalezena – ' . $siteName,
-        'meta' => ['title' => 'Stránka nenalezena – ' . $siteName],
-        'view' => 'not-found',
+    renderPublicNotFoundPage([
         'body_class' => 'page-not-found',
     ]);
-    exit;
 }
 
 $blogSlug = slugify(trim((string)($_GET['blog_slug'] ?? '')));
@@ -24,15 +18,9 @@ $articleSlug = articleSlug(trim((string)($_GET['slug'] ?? '')));
 $pageSlug = pageSlug(trim((string)($_GET['page_slug'] ?? '')));
 
 if ($blogSlug === '') {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Stránka nenalezena – ' . $siteName,
-        'meta' => ['title' => 'Stránka nenalezena – ' . $siteName],
-        'view' => 'not-found',
+    renderPublicNotFoundPage([
         'body_class' => 'page-not-found',
     ]);
-    exit;
 }
 
 $blog = getBlogBySlug($blogSlug);
@@ -80,15 +68,9 @@ if (!$blog) {
         exit;
     }
 
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Stránka nenalezena – ' . $siteName,
-        'meta' => ['title' => 'Stránka nenalezena – ' . $siteName],
-        'view' => 'not-found',
+    renderPublicNotFoundPage([
         'body_class' => 'page-not-found',
     ]);
-    exit;
 }
 
 $GLOBALS['current_blog'] = $blog;

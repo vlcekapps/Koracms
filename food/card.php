@@ -43,18 +43,15 @@ if ($slug !== '') {
 
 $cardRow = $stmt->fetch() ?: null;
 if (!$cardRow) {
-    http_response_code(404);
     $missingPath = $slug !== ''
         ? BASE_URL . '/food/card/' . rawurlencode($slug)
         : BASE_URL . '/food/card.php?id=' . urlencode((string)$cardId);
 
-    renderPublicPage([
-        'title' => 'Lístek nebyl nalezen - ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Lístek nebyl nalezen',
         'meta' => [
-            'title' => 'Lístek nebyl nalezen - ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'view_data' => [
             'title' => 'Lístek nebyl nalezen',
             'message' => 'Požadovaný jídelní nebo nápojový lístek už není dostupný.',
@@ -63,7 +60,6 @@ if (!$cardRow) {
         'body_class' => 'page-food-card page-not-found',
         'page_kind' => 'utility',
     ]);
-    exit;
 }
 
 $card = hydrateFoodCardPresentation($cardRow);

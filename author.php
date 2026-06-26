@@ -13,18 +13,13 @@ $pdo = db_connect();
 $author = fetchPublicAuthorBySlug($pdo, $slug);
 
 if (!$author) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
-    renderPublicPage([
-        'title' => 'Autor nenalezen – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Autor nenalezen',
         'meta' => [
-            'title' => 'Autor nenalezen – ' . $siteName,
             'url' => BASE_URL . '/author/' . rawurlencode($slug),
         ],
-        'view' => 'not-found',
         'body_class' => 'page-author-not-found',
     ]);
-    exit;
 }
 
 $articles = [];

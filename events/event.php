@@ -66,22 +66,17 @@ if ($previewToken !== '') {
 
 $event = $stmt->fetch() ?: null;
 if (!$event) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/events/' . rawurlencode($slug)
         : BASE_URL . '/events/event.php?id=' . urlencode((string)$id);
 
-    renderPublicPage([
-        'title' => 'Událost nenalezena - ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Událost nenalezena',
         'meta' => [
-            'title' => 'Událost nenalezena - ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-event-not-found',
     ]);
-    exit;
 }
 
 $event = hydrateEventPresentation($event);

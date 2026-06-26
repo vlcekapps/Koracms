@@ -1908,6 +1908,42 @@ function renderPublicPage(array $pageData): void
 }
 
 /**
+ * @param array<string,mixed> $options
+ */
+function renderPublicNotFoundPage(array $options = []): void
+{
+    http_response_code(404);
+    sendNoStoreNoIndexHeaders();
+    header('Content-Type: text/html; charset=UTF-8');
+    sendNoSniffHeader();
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $titleBase = trim((string)($options['title'] ?? 'Stránka nenalezena'));
+    if ($titleBase === '') {
+        $titleBase = 'Stránka nenalezena';
+    }
+    $pageTitle = $titleBase . ' – ' . $siteName;
+
+    $meta = is_array($options['meta'] ?? null) ? $options['meta'] : [];
+    $meta['title'] = (string)($meta['title'] ?? $pageTitle);
+
+    $viewData = is_array($options['view_data'] ?? null) ? $options['view_data'] : [];
+    $viewData['title'] = (string)($viewData['title'] ?? $titleBase);
+    $viewData['message'] = (string)($viewData['message'] ?? 'Požadovaný obsah se nepodařilo najít nebo už není veřejně dostupný.');
+
+    renderPublicPage([
+        'title' => $pageTitle,
+        'meta' => $meta,
+        'view' => 'not-found',
+        'view_data' => $viewData,
+        'current_nav' => (string)($options['current_nav'] ?? ''),
+        'body_class' => (string)($options['body_class'] ?? 'page-not-found'),
+        'page_kind' => (string)($options['page_kind'] ?? 'utility'),
+    ]);
+    exit;
+}
+
+/**
  * @param array<string,mixed> $pageData
  */
 function renderPublicEmbedPage(array $pageData): void

@@ -39,22 +39,17 @@ if ($slug !== '') {
 
 $download = $stmt->fetch() ?: null;
 if (!$download) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/downloads/' . rawurlencode($slug)
         : BASE_URL . '/downloads/item.php?id=' . urlencode((string)$id);
 
-    renderPublicPage([
-        'title' => 'Položka nenalezena - ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Položka nenalezena',
         'meta' => [
-            'title' => 'Položka nenalezena - ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-download-not-found',
     ]);
-    exit;
 }
 
 $download = hydrateDownloadPresentation($download);

@@ -559,6 +559,8 @@ Soubor `robots.txt` je generovaný přes `robots.php`, podporuje jen `GET` a `HE
 
 Chybějící nebo nepřístupné soubory z veřejných souborových a media endpointů vrací textovou `404` odpověď se stejnými `no-store`, `noindex`, `no-referrer` a `nosniff` hlavičkami, takže se podvržené nebo soukromé souborové URL nemají ukládat v cache ani indexovat.
 
+Běžné veřejné HTML 404 stránky pro chybějící obsah používají sdílený `renderPublicNotFoundPage()`. Díky tomu mají detailové moduly jednotné `Content-Type: text/html; charset=UTF-8`, `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow, noarchive`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff` a přístupný nadpis z veřejné `not-found` šablony.
+
 Interní administrační JSON akce, které mění stav přes AJAX, jsou POST-only. Při jiné metodě procházejí sdíleným `requireJsonHttpMethods()` a vrací `405` s `Allow: POST`, JSON tělem, `request_id` a stejnými `no-store`, `noindex`, `no-referrer` a `nosniff` hlavičkami jako běžné administrační JSON odpovědi. Vlastní JSON odpovědi provozních a administračních endpointů používají sdílený `sendJsonResponse()`, takže status code, `request_id`, UTF-8 bezpečné kódování a ukončení odpovědi zůstávají konzistentní. Prohlížeč ani mezilehlá cache tak nepracují se zastaralým stavem, administrační JSON odpovědi nejsou indexované nebo referrerem propisované dál a chyba v administraci jde spárovat s technickým logem.
 Read-only JSON endpoint pro vyhledávání obsahu v media pickeru používá stejný administrační JSON helper a vrací stejné diagnostické `request_id` i u prázdných výsledků, takže lze dohledat konkrétní hledání bez ukládání hledaného textu do logového kontextu.
 

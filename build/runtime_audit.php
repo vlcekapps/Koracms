@@ -26,6 +26,7 @@ $paginationSource = (string) file_get_contents(__DIR__ . '/../lib/pagination.php
 $presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation.php');
 $themeSource = (string) file_get_contents(__DIR__ . '/../lib/theme.php');
 $publicHeaderSource = (string) file_get_contents(__DIR__ . '/../themes/default/partials/header.php');
+$defaultNotFoundViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/not-found.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
@@ -7686,6 +7687,39 @@ sort($phpstanStrictAdminFiles);
 $missingAdminPhpstanFiles = array_values(array_diff($adminPhpFiles, $phpstanStrictAdminFiles));
 $migrateSourceForUrlGuard = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
 $estrankyPhotoSourceForUrlGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_download_photos.php');
+$publicNotFoundEndpointSources = [];
+foreach ([
+    'author.php',
+    'page.php',
+    'blog_router.php',
+    'blog/page.php',
+    'forms/index.php',
+    'news/article.php',
+    'faq/item.php',
+    'gallery/album.php',
+    'gallery/photo.php',
+    'downloads/item.php',
+    'events/event.php',
+    'places/place.php',
+    'podcast/show.php',
+    'podcast/episode.php',
+    'board/document.php',
+    'food/card.php',
+    'polls/index.php',
+] as $publicNotFoundPath) {
+    $publicNotFoundEndpointSources[$publicNotFoundPath] = (string)file_get_contents(dirname(__DIR__) . '/' . $publicNotFoundPath);
+}
+$publicNotFoundEndpointHelperUsageOk = true;
+foreach ($publicNotFoundEndpointSources as $publicNotFoundSource) {
+    if (
+        !str_contains($publicNotFoundSource, 'renderPublicNotFoundPage([')
+        || str_contains($publicNotFoundSource, "'view' => 'not-found'")
+        || str_contains($publicNotFoundSource, 'http_response_code(404)')
+    ) {
+        $publicNotFoundEndpointHelperUsageOk = false;
+        break;
+    }
+}
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -8589,6 +8623,15 @@ $foundationChecks = [
         && str_contains($readOnlyPodcastCoverSource, 'sendInlineStoredFileResponse(')
         && str_contains($readOnlyPodcastCoverSource, 'sendFileDownloadNotFound();')
         && !str_contains($readOnlyPodcastCoverSource, 'http_response_code(404)'),
+    'public HTML not-found pages use shared helper' => str_contains($themeSource, 'function renderPublicNotFoundPage(array $options = []): void')
+        && str_contains($themeSource, 'sendNoStoreNoIndexHeaders();')
+        && str_contains($themeSource, "header('Content-Type: text/html; charset=UTF-8');")
+        && str_contains($themeSource, 'sendNoSniffHeader();')
+        && str_contains($themeSource, "'view' => 'not-found'")
+        && str_contains($themeSource, "'page_kind' => (string)(\$options['page_kind'] ?? 'utility')")
+        && str_contains($defaultNotFoundViewSource, '<?= h((string)($title ??')
+        && str_contains($defaultNotFoundViewSource, '<?= h((string)($message ??')
+        && $publicNotFoundEndpointHelperUsageOk,
     'admin read-only endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminExportSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')

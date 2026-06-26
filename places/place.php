@@ -45,22 +45,17 @@ if ($slug !== '') {
 
 $place = $stmt->fetch() ?: null;
 if (!$place) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/places/' . rawurlencode($slug)
         : BASE_URL . '/places/place.php?id=' . urlencode((string)$id);
 
-    renderPublicPage([
-        'title' => 'Místo nenalezeno - ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Místo nenalezeno',
         'meta' => [
-            'title' => 'Místo nenalezeno - ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-place-not-found',
     ]);
-    exit;
 }
 
 $place = hydratePlacePresentation($place);

@@ -47,22 +47,17 @@ if ($slug !== '') {
 
 $faq = $stmt->fetch() ?: null;
 if (!$faq) {
-    http_response_code(404);
-    $siteName = getSetting('site_name', 'Kora CMS');
     $missingPath = $slug !== ''
         ? BASE_URL . '/faq/' . rawurlencode($slug)
         : BASE_URL . '/faq/item.php?id=' . urlencode((string)$id);
 
-    renderPublicPage([
-        'title' => 'Položka nenalezena – ' . $siteName,
+    renderPublicNotFoundPage([
+        'title' => 'Položka nenalezena',
         'meta' => [
-            'title' => 'Položka nenalezena – ' . $siteName,
             'url' => $missingPath,
         ],
-        'view' => 'not-found',
         'body_class' => 'page-faq-not-found',
     ]);
-    exit;
 }
 
 $faq = hydrateFaqPresentation($faq);
