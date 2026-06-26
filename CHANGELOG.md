@@ -6,6 +6,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+## [4.0.1] – 2026-06-26
+
 ### Přidáno
 - **Bezpečná HTML expirace pro hostingové cache** – root `.htaccess` nově nastavuje `ExpiresByType text/html M0` uvnitř `IfModule mod_expires.c`, takže hostingové cache dostanou explicitní nulovou expiraci HTML bez tvrdé závislosti na modulu a bez oslabení no-store pravidel pro citlivé endpointy.
 - **Sdílené attachment hlavičky administračních exportů** – SQL záloha, JSON export, CSV export formulářových odpovědí, ZIP export galerie, ZIP export šablony a přílohy formulářů nově používají společný helper pro `Content-Type`, volitelný `Content-Length`, bezpečné administrační no-store/noindex/no-referrer/nosniff hlavičky a jednotný UTF-8 `Content-Disposition`.
