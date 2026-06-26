@@ -37,7 +37,9 @@ function safeDownloadAsciiFallback(string $downloadName): string
 function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): void
 {
     http_response_code(404);
+    sendNoStoreNoIndexHeaders();
     header('Content-Type: text/plain; charset=UTF-8');
+    sendNoSniffHeader();
     echo $message;
     exit;
 }

@@ -701,6 +701,17 @@ try {
             $fileEndpointIssues[] = $fileEndpointLabel . ' neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
         }
     }
+    $missingFileEndpointResponse = fetchUrl($baseUrl . BASE_URL . '/media/file.php?id=0', '', 0);
+    if (
+        httpIntegrationStatusCode($missingFileEndpointResponse) !== 404
+        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Content-Type', 'text/plain; charset=UTF-8')
+        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'Referrer-Policy', 'no-referrer')
+        || !httpIntegrationHeaderContains($missingFileEndpointResponse, 'X-Content-Type-Options', 'nosniff')
+    ) {
+        $fileEndpointIssues[] = 'chybějící souborová odpověď neposlala bezpečnou textovou 404 odpověď';
+    }
     httpIntegrationPrintResult('file_endpoints_http', $fileEndpointIssues, $failures);
 
     $adminReadOnlyEndpointIssues = [];

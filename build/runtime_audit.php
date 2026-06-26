@@ -8483,6 +8483,8 @@ $foundationChecks = [
         && str_contains($publicLogoutSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($adminLogoutSource, 'sendNoStoreNoIndexHeaders();'),
     'file response helper enforces read-only methods' => str_contains($fileDownloadHelperSource, 'function requireReadOnlyHttpMethod(): bool')
+        && str_contains($fileDownloadHelperSource, 'function sendFileDownloadNotFound(string $message')
+        && str_contains($fileDownloadHelperSource, 'sendNoStoreNoIndexHeaders();')
         && str_contains($fileDownloadHelperSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD']);")
         && str_contains($fileDownloadHelperSource, "return \$requestMethod === 'HEAD';")
         && str_contains($fileDownloadHelperSource, 'function storedFileMimeType(')
