@@ -22,6 +22,7 @@ $backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php')
 $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
 $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php');
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
+$statsSource = (string) file_get_contents(__DIR__ . '/../lib/stats.php');
 $paginationSource = (string) file_get_contents(__DIR__ . '/../lib/pagination.php');
 $presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation.php');
 $themeSource = (string) file_get_contents(__DIR__ . '/../lib/theme.php');
@@ -13328,6 +13329,27 @@ if (!str_contains($adminIndexSource, 'role="list" aria-labelledby="stats-heading
 if (!str_contains($adminStatisticsSource, 'role="list" aria-labelledby="sec-visitors"')
     || str_contains($adminStatisticsSource, 'role="list" aria-label="Souhrn návštěvnosti"')) {
     $adminFieldErrorIssues[] = 'admin statistics visitor summary is missing heading-backed list semantics';
+}
+if (!str_contains($adminIndexSource, "'label' => 'Měsíc'")
+    || !str_contains($adminIndexSource, '<div class="admin-summary-card__heading"><?= h($statItem[\'label\']) ?>:</div>')
+    || !str_contains($adminIndexSource, '<div class="admin-summary-card__value"><?= number_format($statItem[\'value\'], 0, \',\', "\u{00a0}") ?></div>')) {
+    $adminFieldErrorIssues[] = 'admin dashboard visitor summary should render labels before values using public counter labels';
+}
+if (!str_contains($adminStatisticsSource, '<div class="admin-summary-card__heading">Měsíc:</div>')
+    || !str_contains($adminStatisticsSource, '<div class="admin-summary-card__heading">Online:</div>')
+    || strpos($adminStatisticsSource, '<div class="admin-summary-card__heading">Online:</div>') > strpos($adminStatisticsSource, '<div class="admin-summary-card__value"><?= $fmt($vs[\'online\']) ?></div>')) {
+    $adminFieldErrorIssues[] = 'admin statistics visitor summary should render labels before values using public counter labels';
+}
+if (!str_contains($statsSource, 'function statsNormalizeReferrer(')
+    || !str_contains($statsSource, 'function statsReferrerDisplayLabel(')
+    || !str_contains($statsSource, "statsNormalizeReferrer(is_string(\$_SERVER['HTTP_REFERER'] ?? null)")) {
+    $adminFieldErrorIssues[] = 'visitor stats should normalize HTTP referer before storing it';
+}
+if (!str_contains($adminStatisticsSource, 'Odkud návštěvníci přišli')
+    || !str_contains($adminStatisticsSource, 'statsNormalizeReferrer((string)($referrerRow[\'referrer\'] ?? \'\'))')
+    || !str_contains($adminStatisticsSource, 'newWindowLinkSrOnlySuffix()')
+    || !str_contains($adminStatisticsSource, 'Query string a fragment URL')) {
+    $adminFieldErrorIssues[] = 'admin statistics detail is missing sanitized referrer report';
 }
 foreach ([
     'admin dashboard statistics chart' => [

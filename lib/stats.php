@@ -8,6 +8,109 @@
  * Zaznamená zobrazení stránky (jedno volání za request).
  * Přeskočí adminy a známé boty. Kontroluje visitor_tracking_enabled.
  */
+function statsNormalizeReferrerHost(string $host): string
+{
+    $host = strtolower(trim($host));
+    if (str_contains($host, ':') && !str_starts_with($host, '[')) {
+        $host = (string)preg_replace('/:\d+\z/', '', $host);
+    }
+
+    return trim($host, ". \t\n\r\0\x0B");
+}
+
+/**
+ * @return list<string>
+ */
+function statsOwnReferrerHosts(): array
+{
+    $hosts = [];
+
+    $baseHost = parse_url(defined('BASE_URL') ? BASE_URL : '', PHP_URL_HOST);
+    if (is_string($baseHost)) {
+        $hosts[] = $baseHost;
+    }
+
+    $requestHost = $_SERVER['HTTP_HOST'] ?? '';
+    if (is_string($requestHost) && $requestHost !== '') {
+        $hosts[] = $requestHost;
+    }
+
+    $normalizedHosts = [];
+    foreach ($hosts as $host) {
+        $host = statsNormalizeReferrerHost($host);
+        if ($host === '') {
+            continue;
+        }
+
+        $normalizedHosts[] = $host;
+        if (str_starts_with($host, 'www.')) {
+            $normalizedHosts[] = substr($host, 4);
+        } elseif (!str_contains($host, ':')) {
+            $normalizedHosts[] = 'www.' . $host;
+        }
+    }
+
+    return array_values(array_unique($normalizedHosts));
+}
+
+function statsNormalizeReferrer(string $referrer): string
+{
+    $referrer = trim($referrer);
+    if ($referrer === '' || preg_match('/[\x00-\x1F\x7F]/', $referrer) === 1) {
+        return '';
+    }
+
+    $parts = parse_url($referrer);
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        return '';
+    }
+
+    if (isset($parts['user']) || isset($parts['pass'])) {
+        return '';
+    }
+
+    $host = isset($parts['host'])
+        ? statsNormalizeReferrerHost($parts['host'])
+        : '';
+    if ($host === '' || in_array($host, statsOwnReferrerHosts(), true)) {
+        return '';
+    }
+
+    $path = isset($parts['path']) && $parts['path'] !== ''
+        ? $parts['path']
+        : '/';
+    if (!str_starts_with($path, '/')) {
+        $path = '/' . $path;
+    }
+
+    $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+    return mb_substr($scheme . '://' . $host . $port . $path, 0, 500);
+}
+
+function statsReferrerDisplayLabel(string $referrer): string
+{
+    $normalized = statsNormalizeReferrer($referrer);
+    if ($normalized === '') {
+        return '';
+    }
+
+    $parts = parse_url($normalized);
+    if (!is_array($parts) || !isset($parts['host'])) {
+        return '';
+    }
+
+    $host = statsNormalizeReferrerHost($parts['host']);
+    $path = $parts['path'] ?? '';
+
+    return $host . ($path === '' || $path === '/' ? '' : $path);
+}
+
 function trackPageView(string $pageType = 'other', ?int $refId = null): void
 {
     static $done = false;
@@ -31,7 +134,7 @@ function trackPageView(string $pageType = 'other', ?int $refId = null): void
     $ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $ipHash  = hash('sha256', $ip . '|' . date('Y-m-d'));
     $pageUrl = mb_substr(($_SERVER['REQUEST_URI'] ?? '/'), 0, 500);
-    $ref     = mb_substr(($_SERVER['HTTP_REFERER'] ?? ''), 0, 500);
+    $ref     = statsNormalizeReferrer(is_string($_SERVER['HTTP_REFERER'] ?? null) ? $_SERVER['HTTP_REFERER'] : '');
 
     try {
         db_connect()->prepare(

@@ -247,6 +247,25 @@ assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook U
 assert_equals('', normalizeFormWebhookUrl('https://user:pass@example.com/hook'), 'webhook URL rejects credentials');
 assert_equals('', normalizeFormWebhookUrl('https://localhost/hook'), 'webhook URL rejects localhost host');
 
+test_section('stats referrer normalizer');
+
+$_SERVER['HTTP_HOST'] = 'pvlcek.cz';
+assert_equals(
+    'https://obchod.pvlcek.cz/produkt/testovaciprodukt',
+    statsNormalizeReferrer('https://obchod.pvlcek.cz/produkt/testovaciprodukt?token=secret#detail'),
+    'stats referrer keeps external host and path but drops query and fragment'
+);
+assert_equals(
+    'obchod.pvlcek.cz/produkt/testovaciprodukt',
+    statsReferrerDisplayLabel('https://obchod.pvlcek.cz/produkt/testovaciprodukt?token=secret#detail'),
+    'stats referrer display label omits scheme'
+);
+assert_equals('', statsNormalizeReferrer('https://pvlcek.cz/snd'), 'stats referrer rejects exact own host');
+assert_equals('', statsNormalizeReferrer('https://www.pvlcek.cz/snd'), 'stats referrer rejects www variant of own host');
+assert_equals('', statsNormalizeReferrer('javascript:alert(1)'), 'stats referrer rejects unsafe scheme');
+assert_equals('', statsNormalizeReferrer('https://user:pass@example.com/private'), 'stats referrer rejects URL credentials');
+unset($_SERVER['HTTP_HOST']);
+
 test_section('normalizeHttpMethods()');
 
 assert_equals(['GET', 'POST'], normalizeHttpMethods(['get', ' POST ', 'GET']), 'method normalizer trims, uppercases and deduplicates');

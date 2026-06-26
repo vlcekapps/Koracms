@@ -387,6 +387,8 @@ Homepage, sidebar i footer se skládají přes widgetový systém. V administrac
 
 Widgety pokrývají typické potřeby: úvodní text, nejnovější články, novinky, události, anketa, newsletter, ke stažení, FAQ, místa, podcasty, galerie, vybraný formulář, vyhledávání, kontaktní údaje, sociální sítě, statistiky návštěvnosti a vlastní HTML.
 
+Administrace i veřejný widget používají u základních statistik stejné pořadí a popisky `Online / Dnes / Měsíc / Celkem`. Detailní administrace statistik navíc ukazuje externí odkazující stránky za zvolené období, například produktovou stránku nebo partnerský web, ze kterého návštěvníci přišli. Kvůli soukromí se u referrerů ukládá jen schéma, host a cesta bez query stringu a fragmentu; interní přechody v rámci vlastního webu se do referrer přehledu nepočítají.
+
 Widget `Náhled galerie` vykresluje poslední veřejné fotografie jako responzivní náhledový grid. Na homepage, v sidebaru i ve footeru používá stejné šablonové CSS třídy, takže výstup zůstává konzistentní a bez inline layout stylů.
 
 Widget `Nejnovější články` zobrazuje u každého článku odkaz a pod ním metadata článku: datum a čas publikace, přibližnou dobu čtení a počet přečtení. Metadata se počítají ze stejného obsahu článku jako běžné veřejné výpisy, takže sidebar, footer i homepage widget dávají návštěvníkům konzistentní informaci.

@@ -759,12 +759,12 @@ if (isSuperAdmin()) {
     <?php foreach ([
         ['label' => 'Online', 'value' => (int)$visitorStats['online']],
         ['label' => 'Dnes', 'value' => (int)$visitorStats['today']],
-        ['label' => 'Tento měsíc', 'value' => (int)$visitorStats['month']],
+        ['label' => 'Měsíc', 'value' => (int)$visitorStats['month']],
         ['label' => 'Celkem', 'value' => (int)$visitorStats['total']],
     ] as $statItem): ?>
       <div class="admin-summary-card" role="listitem">
-        <div class="admin-summary-card__value"><?= number_format($statItem['value'], 0, ',', ' ') ?></div>
-        <div class="admin-summary-card__heading"><?= h($statItem['label']) ?></div>
+        <div class="admin-summary-card__heading"><?= h($statItem['label']) ?>:</div>
+        <div class="admin-summary-card__value"><?= number_format($statItem['value'], 0, ',', "\u{00a0}") ?></div>
       </div>
     <?php endforeach; ?>
   </div>

@@ -86,6 +86,45 @@ while ($current <= $end) {
 }
 $avgPerDay = count($chartDays) > 0 ? round($totalViews / count($chartDays), 1) : 0;
 
+$topReferrers = [];
+try {
+    $referrerStmt = $pdo->prepare(
+        "SELECT referrer, COUNT(*) AS visits
+         FROM cms_page_views
+         WHERE created_at >= ?
+           AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
+           AND referrer <> ''
+         GROUP BY referrer
+         ORDER BY visits DESC
+         LIMIT 200"
+    );
+    $referrerStmt->execute([$dateFrom, $dateTo]);
+    /** @var array<string, array{url:string,label:string,visits:int}> $referrerTotals */
+    $referrerTotals = [];
+    foreach ($referrerStmt->fetchAll() as $referrerRow) {
+        $referrerUrl = statsNormalizeReferrer((string)($referrerRow['referrer'] ?? ''));
+        if ($referrerUrl === '') {
+            continue;
+        }
+
+        if (!isset($referrerTotals[$referrerUrl])) {
+            $referrerTotals[$referrerUrl] = [
+                'url' => $referrerUrl,
+                'label' => statsReferrerDisplayLabel($referrerUrl),
+                'visits' => 0,
+            ];
+        }
+        $referrerTotals[$referrerUrl]['visits'] += (int)($referrerRow['visits'] ?? 0);
+    }
+    uasort(
+        $referrerTotals,
+        static fn (array $a, array $b): int => $b['visits'] <=> $a['visits']
+    );
+    $topReferrers = array_slice(array_values($referrerTotals), 0, 20);
+} catch (\PDOException $e) {
+    statisticsLogSectionError('referrers', $e);
+}
+
 // ── Nejčtenější články ──────────────────────────────────────────────────────
 $topArticles = [];
 if (isModuleEnabled('blog')) {
@@ -243,20 +282,20 @@ adminHeader('Statistiky');
 
   <div class="admin-summary-grid admin-stack-sm" role="list" aria-labelledby="sec-visitors">
     <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__heading">Online:</div>
       <div class="admin-summary-card__value"><?= $fmt($vs['online']) ?></div>
-      <div class="admin-summary-card__heading">Online</div>
     </div>
     <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__heading">Dnes:</div>
       <div class="admin-summary-card__value"><?= $fmt($vs['today']) ?></div>
-      <div class="admin-summary-card__heading">Dnes</div>
     </div>
     <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__heading">Měsíc:</div>
       <div class="admin-summary-card__value"><?= $fmt($vs['month']) ?></div>
-      <div class="admin-summary-card__heading">Tento měsíc</div>
     </div>
     <div class="admin-summary-card" role="listitem">
+      <div class="admin-summary-card__heading">Celkem:</div>
       <div class="admin-summary-card__value"><?= $fmt($vs['total']) ?></div>
-      <div class="admin-summary-card__heading">Celkem</div>
     </div>
   </div>
 
@@ -298,6 +337,36 @@ adminHeader('Statistiky');
       </tbody>
     </table>
   </figure>
+  <?php endif; ?>
+
+  <h3 id="sec-referrers">Odkud návštěvníci přišli</h3>
+  <p class="admin-description admin-description--flush admin-description--muted">
+    Přehled ukazuje externí odkazující stránky za zvolené období. Query string a fragment URL se kvůli soukromí neukládají.
+  </p>
+  <?php if ($topReferrers === []): ?>
+    <p>Za zvolené období nejsou k dispozici žádné externí odkazující stránky.</p>
+  <?php else: ?>
+    <table aria-labelledby="sec-referrers">
+      <caption class="sr-only">Externí odkazující stránky za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+      <thead>
+        <tr>
+          <th scope="col">Odkazující stránka</th>
+          <th scope="col">Návštěvy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($topReferrers as $referrer): ?>
+          <tr>
+            <td>
+              <a href="<?= h($referrer['url']) ?>" target="_blank" rel="noopener noreferrer">
+                <?= h($referrer['label']) ?><?= newWindowLinkSrOnlySuffix() ?>
+              </a>
+            </td>
+            <td><?= $fmt((int)$referrer['visits']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
   <?php endif; ?>
 </section>
 

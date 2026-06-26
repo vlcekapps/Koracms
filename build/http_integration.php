@@ -32,6 +32,7 @@ $createdResourceIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
 $createdNavLinkIds = [];
+$createdPageViewIds = [];
 $createdTempFiles = [];
 
 /**
@@ -1614,6 +1615,43 @@ try {
     }
 
     httpIntegrationPrintResult('visitor_stats_widget_http', $visitorStatsWidgetIssues, $failures);
+
+    $visitorReferrerIssues = [];
+    $visitorReferrerToken = bin2hex(random_bytes(4));
+    $visitorRawReferrer = 'https://obchod.example.test/produkt/' . $visitorReferrerToken . '?token=secret#detail';
+    $visitorReferrerPath = 'obchod.example.test/produkt/' . $visitorReferrerToken;
+    $visitorReferrerInsert = $pdo->prepare(
+        "INSERT INTO cms_page_views (page_url, page_type, page_ref_id, ip_hash, user_agent, referrer, created_at)
+         VALUES (?, 'other', NULL, ?, 'HTTP integration referrer test', ?, NOW())"
+    );
+    for ($referrerVisit = 1; $referrerVisit <= 2; $referrerVisit++) {
+        $visitorReferrerInsert->execute([
+            '/http-referrer-test-' . $visitorReferrerToken . '-' . $referrerVisit,
+            hash('sha256', 'http-referrer-test-' . $visitorReferrerToken . '-' . $referrerVisit),
+            $visitorRawReferrer,
+        ]);
+        $createdPageViewIds[] = (int)$pdo->lastInsertId();
+    }
+
+    $statisticsReferrerUrl = $baseUrl . BASE_URL . '/admin/statistics.php?from=' . date('Y-m-d') . '&to=' . date('Y-m-d');
+    $statisticsReferrerResponse = fetchUrl($statisticsReferrerUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($statisticsReferrerResponse) !== 200) {
+        $visitorReferrerIssues[] = 'admin statistiky s referrer testem nevrátily 200';
+    }
+    if (!str_contains($statisticsReferrerResponse['body'], 'Odkud návštěvníci přišli')) {
+        $visitorReferrerIssues[] = 'admin statistiky nezobrazily blok odkazujících stránek';
+    }
+    if (!str_contains($statisticsReferrerResponse['body'], $visitorReferrerPath)) {
+        $visitorReferrerIssues[] = 'admin statistiky nezobrazily externí odkazující stránku';
+    }
+    if (str_contains($statisticsReferrerResponse['body'], 'token=secret') || str_contains($statisticsReferrerResponse['body'], '#detail')) {
+        $visitorReferrerIssues[] = 'admin statistiky zobrazily query string nebo fragment referreru';
+    }
+    if (!str_contains($statisticsReferrerResponse['body'], 'rel="noopener noreferrer"')) {
+        $visitorReferrerIssues[] = 'odkazující stránky v admin statistikách nemají bezpečný rel atribut';
+    }
+
+    httpIntegrationPrintResult('visitor_referrers_http', $visitorReferrerIssues, $failures);
 
     $socialLinksWidgetIssues = [];
     $socialLinksWidgetTitle = 'HTTP social links ' . bin2hex(random_bytes(4));
@@ -4195,6 +4233,10 @@ try {
 
     foreach ($createdNewsletterIds as $newsletterIdToDelete) {
         $pdo->prepare("DELETE FROM cms_newsletters WHERE id = ?")->execute([$newsletterIdToDelete]);
+    }
+
+    foreach ($createdPageViewIds as $pageViewIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_page_views WHERE id = ?")->execute([$pageViewIdToDelete]);
     }
 
     foreach ($createdResourceIds as $resourceId) {
