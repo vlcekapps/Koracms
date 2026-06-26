@@ -57,17 +57,36 @@ if ($fileSize === false) {
 }
 
 $mimeType = podcastAudioMimeType($filename);
+$rangeHeader = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
+$lastModified = filemtime($filePath);
+$lastModifiedTimestamp = is_int($lastModified) ? $lastModified : null;
+$etag = $isPublic && $lastModifiedTimestamp !== null
+    ? storedFileEtag($filePath, $fileSize, $lastModifiedTimestamp)
+    : '';
+
+if ($rangeHeader === '' && $isPublic && $etag !== '' && $lastModifiedTimestamp !== null && storedFileRequestValidatorsMatch($etag, $lastModifiedTimestamp)) {
+    http_response_code(304);
+    header('Accept-Ranges: bytes');
+    header('Cache-Control: public, max-age=3600');
+    header('ETag: ' . $etag);
+    header('Last-Modified: ' . storedFileHttpDate($lastModifiedTimestamp));
+    sendNoSniffHeader();
+    exit;
+}
+
 $start = 0;
 $end = $fileSize - 1;
 $statusCode = 200;
 
 header('Accept-Ranges: bytes');
 header('Content-Type: ' . $mimeType);
-header('Content-Disposition: inline; filename="' . rawurlencode(basename($filePath)) . '"');
+header('Content-Disposition: ' . storedFileContentDisposition('inline', basename($filePath)));
 header('Cache-Control: ' . ($isPublic ? 'public, max-age=3600' : 'private, max-age=0, no-store'));
+if ($etag !== '') {
+    header('ETag: ' . $etag);
+}
 sendNoSniffHeader();
 
-$rangeHeader = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
 if ($rangeHeader !== '' && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $matches) === 1) {
     $rangeStart = $matches[1] !== '' ? (int)$matches[1] : null;
     $rangeEnd = $matches[2] !== '' ? (int)$matches[2] : null;
@@ -93,9 +112,8 @@ if ($rangeHeader !== '' && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $mat
 $contentLength = ($end - $start) + 1;
 header('Content-Length: ' . $contentLength, true, $statusCode);
 
-$lastModified = filemtime($filePath);
-if ($lastModified !== false) {
-    header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+if ($lastModifiedTimestamp !== null) {
+    header('Last-Modified: ' . storedFileHttpDate($lastModifiedTimestamp));
 }
 
 if ($isHeadRequest) {

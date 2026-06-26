@@ -2497,6 +2497,21 @@ function runtimeAuditHeaderContains(array $headers, string $name, string $needle
 }
 
 /**
+ * @param array<int,string> $headers
+ */
+function runtimeAuditHeaderValue(array $headers, string $name): string
+{
+    $headerPrefix = strtolower($name) . ':';
+    foreach ($headers as $headerLine) {
+        if (str_starts_with(strtolower($headerLine), $headerPrefix)) {
+            return trim(substr($headerLine, strlen($name) + 1));
+        }
+    }
+
+    return '';
+}
+
+/**
  * @param array{status:string,headers:array<int,string>,body:string} $response
  * @param list<string> $allowedMethods
  */
@@ -6018,9 +6033,54 @@ if ($podcastVisibleEpisodeImageUrl !== '') {
     }
 }
 if ($podcastVisibleEpisodeAudioUrl !== '') {
-    $podcastVisibleAudioProbe = fetchUrl(str_starts_with($podcastVisibleEpisodeAudioUrl, 'http') ? $podcastVisibleEpisodeAudioUrl : $baseUrl . $podcastVisibleEpisodeAudioUrl, '', 0);
+    $podcastVisibleAudioUrl = str_starts_with($podcastVisibleEpisodeAudioUrl, 'http') ? $podcastVisibleEpisodeAudioUrl : $baseUrl . $podcastVisibleEpisodeAudioUrl;
+    $podcastVisibleAudioProbe = fetchUrl($podcastVisibleAudioUrl, '', 0);
     if (!str_contains($podcastVisibleAudioProbe['status'], '200')) {
         $podcastVisibilityIssues[] = 'podcast audio endpoint does not serve public episode audio';
+    } else {
+        $podcastVisibleAudioEtag = runtimeAuditHeaderValue($podcastVisibleAudioProbe['headers'], 'ETag');
+        if (
+            !runtimeAuditHeaderContains($podcastVisibleAudioProbe['headers'], 'Content-Disposition', 'inline')
+            || !runtimeAuditHeaderContains($podcastVisibleAudioProbe['headers'], 'Content-Disposition', 'filename*=')
+            || !runtimeAuditHeaderContains($podcastVisibleAudioProbe['headers'], 'Cache-Control', 'public')
+            || !runtimeAuditHeaderContains($podcastVisibleAudioProbe['headers'], 'Accept-Ranges', 'bytes')
+            || !runtimeAuditHeaderContains($podcastVisibleAudioProbe['headers'], 'Last-Modified', 'GMT')
+            || $podcastVisibleAudioEtag === ''
+            || !str_starts_with($podcastVisibleAudioEtag, 'W/"')
+        ) {
+            $podcastVisibilityIssues[] = 'podcast audio endpoint is missing shared inline/cache headers';
+        } else {
+            $podcastAudioNotModifiedProbe = fetchUrlWithHeaders(
+                $podcastVisibleAudioUrl,
+                ['If-None-Match: ' . $podcastVisibleAudioEtag],
+                '',
+                0
+            );
+            if (
+                !str_contains($podcastAudioNotModifiedProbe['status'], '304')
+                || !runtimeAuditHeaderContains($podcastAudioNotModifiedProbe['headers'], 'ETag', $podcastVisibleAudioEtag)
+                || $podcastAudioNotModifiedProbe['body'] !== ''
+            ) {
+                $podcastVisibilityIssues[] = 'podcast audio endpoint does not return 304 for matching If-None-Match';
+            }
+
+            $podcastAudioRangeProbe = fetchUrlWithHeaders(
+                $podcastVisibleAudioUrl,
+                [
+                    'If-None-Match: ' . $podcastVisibleAudioEtag,
+                    'Range: bytes=0-2',
+                ],
+                '',
+                0
+            );
+            if (
+                !str_contains($podcastAudioRangeProbe['status'], '206')
+                || !runtimeAuditHeaderContains($podcastAudioRangeProbe['headers'], 'Content-Range', 'bytes 0-2/')
+                || $podcastAudioRangeProbe['body'] === ''
+            ) {
+                $podcastVisibilityIssues[] = 'podcast audio Range request was incorrectly converted to 304 or lost partial content';
+            }
+        }
     }
 }
 if ($podcastHiddenShowUrl !== '') {
@@ -14469,6 +14529,14 @@ if (!str_contains($podcastFeedSource, 'podcastEpisodeEnclosureLength(')) {
 }
 if (!str_contains($podcastAudioSource, "currentUserHasCapability('content_manage_shared')")) {
     $podcastSourceIssues[] = 'podcast audio endpoint is missing private visibility guard';
+}
+if (!str_contains($podcastAudioSource, 'storedFileContentDisposition(')
+    || !str_contains($podcastAudioSource, 'storedFileEtag(')
+    || !str_contains($podcastAudioSource, 'storedFileRequestValidatorsMatch(')
+    || !str_contains($podcastAudioSource, '$rangeHeader ===')
+    || !str_contains($podcastAudioSource, 'http_response_code(304)')
+    || str_contains($podcastAudioSource, 'rawurlencode(basename($filePath))')) {
+    $podcastSourceIssues[] = 'podcast audio endpoint is missing shared file cache/disposition helpers';
 }
 if (!str_contains($podcastCoverSource, "currentUserHasCapability('content_manage_shared')")) {
     $podcastSourceIssues[] = 'podcast cover endpoint is missing private visibility guard';
