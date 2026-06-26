@@ -12100,12 +12100,20 @@ if (!str_contains($mediaAdminSource, 'internalRedirectTarget(')) {
 foreach ([
     'function koraInspectUploadedFile(array $file, array $options = []): array',
     'function koraStoreInspectedUpload(array $upload, string $directory, string $filename, array $options = []): array',
+    'function koraUploadLogFilesystemFailure',
+    "koraLog('warning', 'upload filesystem operation failed'",
+    'function koraUploadRunFilesystemOperation',
+    'function koraUploadDeleteExistingTarget',
     'is_uploaded_file($tmpPath)',
+    'koraEnsureDirectory($targetDirectory, $permissions)',
     'move_uploaded_file(',
 ] as $uploadHelperFragment) {
     if (!str_contains($uploadHelperSource, $uploadHelperFragment)) {
         $mediaLibraryIssues[] = 'shared upload helper is missing fragment: ' . $uploadHelperFragment;
     }
+}
+if (str_contains($uploadHelperSource, '@mkdir(') || str_contains($uploadHelperSource, '@unlink(')) {
+    $mediaLibraryIssues[] = 'shared upload helper uses suppressed filesystem operations instead of structured logging';
 }
 if (!str_contains($mediaHelperSource, 'koraInspectUploadedFile(') || !str_contains($mediaHelperSource, 'koraStoreInspectedUpload(')) {
     $mediaLibraryIssues[] = 'media library upload path is not using shared upload helpers';

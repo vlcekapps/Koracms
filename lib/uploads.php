@@ -55,6 +55,44 @@ function koraUploadMimeIsSvg(string $mimeType): bool
 }
 
 /**
+ * @param array<string,mixed> $context
+ */
+function koraUploadLogFilesystemFailure(string $operation, string $path, array $context = []): void
+{
+    koraLog('warning', 'upload filesystem operation failed', array_merge([
+        'operation' => $operation,
+        'path_hash' => hash('sha256', str_replace('\\', '/', $path)),
+        'file_extension' => strtolower((string)pathinfo($path, PATHINFO_EXTENSION)),
+    ], $context));
+}
+
+/**
+ * @param callable(): bool $operation
+ */
+function koraUploadRunFilesystemOperation(callable $operation): bool
+{
+    set_error_handler(static fn (): bool => true);
+    try {
+        return (bool)$operation();
+    } finally {
+        restore_error_handler();
+    }
+}
+
+function koraUploadDeleteExistingTarget(string $targetPath): void
+{
+    if ($targetPath === '' || !is_file($targetPath)) {
+        return;
+    }
+
+    if (koraUploadRunFilesystemOperation(static fn (): bool => unlink($targetPath))) {
+        return;
+    }
+
+    koraUploadLogFilesystemFailure('replace_existing', $targetPath);
+}
+
+/**
  * @param array<string,mixed> $file
  * @param array<string,mixed> $options
  * @return array<string,mixed>
@@ -162,7 +200,11 @@ function koraStoreInspectedUpload(array $upload, string $directory, string $file
 
     $targetDirectory = rtrim($directory, "\\/") . DIRECTORY_SEPARATOR;
     $permissions = (int)($options['permissions'] ?? 0755);
-    if (!is_dir($targetDirectory) && !@mkdir($targetDirectory, $permissions, true) && !is_dir($targetDirectory)) {
+    if (!koraEnsureDirectory($targetDirectory, $permissions)) {
+        koraUploadLogFilesystemFailure('prepare_directory', $targetDirectory, [
+            'permissions' => decoct($permissions),
+        ]);
+
         return [
             'ok' => false,
             'error' => (string)($options['mkdir_error'] ?? 'Adresář pro uložení souboru se nepodařilo připravit.'),
@@ -170,11 +212,16 @@ function koraStoreInspectedUpload(array $upload, string $directory, string $file
     }
 
     $targetPath = $targetDirectory . $safeFilename;
-    if (!empty($options['replace_existing']) && is_file($targetPath)) {
-        @unlink($targetPath);
+    if (!empty($options['replace_existing'])) {
+        koraUploadDeleteExistingTarget($targetPath);
     }
 
-    if (!move_uploaded_file((string)($upload['tmp_path'] ?? ''), $targetPath)) {
+    $tmpPath = (string)($upload['tmp_path'] ?? '');
+    if (!koraUploadRunFilesystemOperation(static fn (): bool => move_uploaded_file($tmpPath, $targetPath))) {
+        koraUploadLogFilesystemFailure('move_uploaded_file', $targetPath, [
+            'tmp_path_hash' => hash('sha256', str_replace('\\', '/', $tmpPath)),
+        ]);
+
         return [
             'ok' => false,
             'error' => (string)($options['move_error'] ?? 'Soubor se nepodařilo uložit na server.'),
