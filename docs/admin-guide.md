@@ -1105,6 +1105,7 @@ Pokud je médium použité, smazání je zablokované a administrace ukáže nal
 - po uploadu, úpravě, náhradě souboru i mazání se používá PRG návrat, takže refresh neopakuje POST
 - médium lze nahradit novým souborem ve stejné MIME rodině bez rozbití existujících referencí
 - bulk akce umí přepnout na `Veřejné`, `Soukromé` a smazat nepoužitá média
+- pokud při přesunu, náhradě nebo úklidu originálu, miniatury či WebP varianty selže souborová operace, CMS ji zapíše do strukturovaného logu s hashem cesty a příponou souboru, ne s plnou fyzickou cestou
 
 ### Co patří do README a co sem
 

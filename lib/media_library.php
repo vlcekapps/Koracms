@@ -254,6 +254,48 @@ function mediaWebpPath(string $path): string
     return preg_replace('/\.[a-z0-9]+$/i', '.webp', $path) ?: ($path . '.webp');
 }
 
+/**
+ * @param array<string,mixed> $context
+ */
+function mediaLogFilesystemFailure(string $operation, string $path, array $context = []): void
+{
+    koraLog('warning', 'media filesystem operation failed', array_merge([
+        'operation' => $operation,
+        'path_hash' => hash('sha256', str_replace('\\', '/', $path)),
+        'file_extension' => strtolower((string)pathinfo($path, PATHINFO_EXTENSION)),
+    ], $context));
+}
+
+/**
+ * @param callable(): bool $operation
+ */
+function mediaRunFilesystemOperation(callable $operation): bool
+{
+    set_error_handler(static fn (): bool => true);
+    try {
+        return (bool)$operation();
+    } finally {
+        restore_error_handler();
+    }
+}
+
+/**
+ * @param array<string,mixed> $context
+ */
+function mediaDeleteFile(string $path, string $operation = 'delete', array $context = []): bool
+{
+    if ($path === '' || !is_file($path)) {
+        return true;
+    }
+
+    if (mediaRunFilesystemOperation(static fn (): bool => unlink($path))) {
+        return true;
+    }
+
+    mediaLogFilesystemFailure($operation, $path, $context);
+    return false;
+}
+
 function mediaMoveFile(string $sourcePath, string $targetPath): bool
 {
     if ($sourcePath === '' || $targetPath === '' || !is_file($sourcePath)) {
@@ -269,14 +311,22 @@ function mediaMoveFile(string $sourcePath, string $targetPath): bool
         return false;
     }
 
-    if (@rename($sourcePath, $targetPath)) {
+    if (mediaRunFilesystemOperation(static fn (): bool => rename($sourcePath, $targetPath))) {
         return true;
     }
 
-    if (@copy($sourcePath, $targetPath)) {
-        @unlink($sourcePath);
+    if (mediaRunFilesystemOperation(static fn (): bool => copy($sourcePath, $targetPath))) {
+        mediaDeleteFile($sourcePath, 'move_source_cleanup', [
+            'target_path_hash' => hash('sha256', str_replace('\\', '/', $targetPath)),
+            'target_file_extension' => strtolower((string)pathinfo($targetPath, PATHINFO_EXTENSION)),
+        ]);
         return true;
     }
+
+    mediaLogFilesystemFailure('move', $targetPath, [
+        'source_path_hash' => hash('sha256', str_replace('\\', '/', $sourcePath)),
+        'source_file_extension' => strtolower((string)pathinfo($sourcePath, PATHINFO_EXTENSION)),
+    ]);
 
     return false;
 }
@@ -288,13 +338,13 @@ function mediaDeleteDerivedFiles(array $media, ?string $visibilityOverride = nul
 {
     $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
     if ($originalPath !== '') {
-        @unlink(mediaWebpPath($originalPath));
+        mediaDeleteFile(mediaWebpPath($originalPath), 'delete_derived_webp');
     }
 
     $thumbPath = mediaThumbPath($media, $visibilityOverride, $filenameOverride);
     if ($thumbPath !== '') {
-        @unlink($thumbPath);
-        @unlink(mediaWebpPath($thumbPath));
+        mediaDeleteFile($thumbPath, 'delete_thumb');
+        mediaDeleteFile(mediaWebpPath($thumbPath), 'delete_thumb_webp');
     }
 }
 
@@ -307,7 +357,7 @@ function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = nu
 
     $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
     if ($originalPath !== '') {
-        @unlink($originalPath);
+        mediaDeleteFile($originalPath, 'delete_original');
     }
 }
 
@@ -447,9 +497,7 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         ];
     }
 
-    if (is_file($targetPath)) {
-        @unlink($targetPath);
-    }
+    mediaDeleteFile($targetPath, 'replace_existing');
 
     $storedUpload = koraStoreInspectedUpload($upload, dirname($targetPath), basename($targetPath), [
         'move_error' => 'Soubor se nepodařilo uložit.',
