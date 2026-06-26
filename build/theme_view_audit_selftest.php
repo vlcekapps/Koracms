@@ -222,6 +222,17 @@ PHP,
 );
 
 assertThemeViewAuditFails(
+    'Section naming guard',
+    <<<'PHP'
+<section class="surface">
+  <h2>Nepojmenovaná sekce</h2>
+  <p>Obsah.</p>
+</section>
+PHP,
+    'section without aria-labelledby'
+);
+
+assertThemeViewAuditFails(
     'Runtime clock guard',
     <<<'PHP'
 <time datetime="<?= h(date('Y-m-d')) ?>">Dnes</time>

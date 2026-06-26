@@ -16,9 +16,9 @@
   </section>
 
   <?php if (!empty($errors)): ?>
-    <section class="surface surface--narrow">
+    <section class="surface surface--narrow" aria-labelledby="reservation-book-errors-heading">
       <div id="form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="reservation-book-errors-heading">
-        <p id="reservation-book-errors-heading" class="sr-only">Rezervaci se nepodařilo odeslat</p>
+        <h2 id="reservation-book-errors-heading" class="sr-only">Rezervaci se nepodařilo odeslat</h2>
         <ul>
           <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
         </ul>
@@ -27,9 +27,9 @@
   <?php endif; ?>
 
   <?php if ($slotsEmpty): ?>
-    <section class="surface surface--narrow">
+    <section class="surface surface--narrow" aria-labelledby="reservation-book-empty-slots-message">
       <div class="status-message status-message--warning" role="alert" aria-atomic="true" aria-labelledby="reservation-book-empty-slots-message">
-        <p id="reservation-book-empty-slots-message"><strong>Na tento den nejsou k dispozici žádné volné časy.</strong></p>
+        <h2 id="reservation-book-empty-slots-message" class="section-title section-title--compact">Na tento den nejsou k dispozici žádné volné časy.</h2>
         <p>Zkuste prosím jiný termín v kalendáři rezervací.</p>
       </div>
       <div class="button-row button-row--start">

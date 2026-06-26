@@ -12,6 +12,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Dohledatelnější souborové operace knihovny médií** – přesuny, náhrady a úklid originálů, miniatur a WebP variant v knihovně médií už nepoužívají potlačené `@rename`, `@copy` ani `@unlink`; selhání se zapisují přes `koraLog()` s hashem cesty a příponou souboru bez úniku lokální fyzické cesty.
 - **Dohledatelnější sdílené uploady** – společný upload helper už při přípravě cílového adresáře, nahrazení existujícího souboru a finálním `move_uploaded_file()` nepoužívá potlačené souborové operace; selhání zapisuje přes strukturovaný log s hashem cesty a příponou bez fyzických cest.
 - **Přísnější theme view audit pro veřejné tabulky** – `build/theme_view_audit.php` nově hlídá, aby tabulky v default šabloně měly skutečný `<caption>` nebo vazbu přes `aria-labelledby`, a odmítá návrat k samotnému `aria-label`; self-test ověřuje průchozí i chybové scénáře.
+- **Přísnější theme view audit pro veřejné sekce** – default šablona už nemá anonymní `<section>` bloky v akcích detailů, empty state galerie ani rezervačních stavech; `build/theme_view_audit.php` nově vyžaduje, aby každá veřejná sekce měla název přes `aria-labelledby`.
 - **Referrer statistiky v administraci** – podrobné statistiky návštěvnosti nově ukazují externí odkazující stránky za zvolené období; ukládání refereru se normalizuje bez query stringu a fragmentu a interní přechody vlastního hostu se do přehledu nepočítají.
 
 ### Změněno

@@ -132,8 +132,9 @@ $otherVersions = $otherVersions ?? [];
     </div>
   </section>
 
-  <section class="surface">
+  <section class="surface" aria-labelledby="download-actions-title">
     <div class="article-shell">
+      <h2 id="download-actions-title" class="sr-only">Další akce ke stažení</h2>
       <p><a href="<?= h(BASE_URL . '/downloads/index.php') ?>"><span aria-hidden="true">←</span> Zpět na přehled ke stažení</a></p>
     </div>
   </section>

@@ -142,7 +142,8 @@ $clearUrl = (string)($clearUrl ?? galleryAlbumPublicPath($album));
   <?php endif; ?>
 
   <?php if (empty($subAlbums) && empty($photos)): ?>
-    <section class="surface">
+    <section class="surface" aria-labelledby="gallery-empty-title">
+      <h2 id="gallery-empty-title" class="sr-only">Prázdné album</h2>
       <p class="empty-state"><?= h($hasActiveFilters ? 'Pro zadaný filtr se v tomto albu nic nenašlo.' : 'Toto album je zatím prázdné.') ?></p>
     </section>
   <?php endif; ?>

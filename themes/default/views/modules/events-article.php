@@ -109,8 +109,9 @@ $backUrl = (string)($backUrl ?? (BASE_URL . '/events/index.php'));
     </div>
   </section>
 
-  <section class="surface">
+  <section class="surface" aria-labelledby="event-actions-title">
     <div class="article-shell">
+      <h2 id="event-actions-title" class="sr-only">Další akce k události</h2>
       <div class="article-actions">
         <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na události</a>
         <button type="button" class="button-secondary js-copy-link"

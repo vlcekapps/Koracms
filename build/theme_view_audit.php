@@ -261,6 +261,12 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlTags($source, 'section') as $match) {
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a section without aria-labelledby.';
+        }
+    }
+
     foreach (themeViewAuditHtmlElements($source, 'table') as $match) {
         if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains a table using aria-label instead of a caption or aria-labelledby.';
