@@ -8788,10 +8788,14 @@ $foundationChecks = [
         && str_contains($unsubscribeSource, "koraLog('warning', 'newsletter unsubscribe failed'"),
     'admin composite pages use structured recoverable error logs' => !str_contains($adminContentReferenceSearchSource, 'error_log(')
         && !str_contains($adminFormsSource, 'error_log(')
+        && !str_contains($adminIndexSource, 'error_log(')
         && !str_contains($adminStatisticsSource, 'error_log(')
         && str_contains($adminContentReferenceSearchSource, 'function contentReferenceLogSourceError')
         && str_contains($adminContentReferenceSearchSource, "koraLog('warning', 'content reference search source failed'")
         && str_contains($adminFormsSource, "koraLog('warning', 'admin forms overview query failed'")
+        && str_contains($adminIndexSource, 'function adminDashboardLogSectionError')
+        && str_contains($adminIndexSource, "koraLog('warning', 'admin dashboard section failed'")
+        && str_contains($adminIndexSource, "'sql_hash' => substr(hash('sha256', \$sql), 0, 16)")
         && str_contains($adminStatisticsSource, 'function statisticsLogSectionError')
         && str_contains($adminStatisticsSource, "koraLog('warning', 'admin statistics section query failed'"),
     'shared helper recoverable failures use structured logs' => !str_contains($uiSource, 'error_log(')

@@ -8,12 +8,38 @@ autoCompleteBookings();
 $accountLabel = isSuperAdmin() ? 'Superadmin' : userRoleLabel(currentUserRole());
 $accountName = trim(currentUserDisplayName()) !== '' ? currentUserDisplayName() : $accountLabel;
 
+/**
+ * @param array<string,mixed> $context
+ */
+function adminDashboardLogSectionError(string $section, \Throwable $e, array $context = []): void
+{
+    static $loggedKeys = [];
+
+    $logKey = $section . ':' . (string)($context['sql_hash'] ?? '');
+    if (isset($loggedKeys[$logKey])) {
+        return;
+    }
+    $loggedKeys[$logKey] = true;
+
+    koraLog('warning', 'admin dashboard section failed', [
+        'section' => $section,
+        'exception' => $e,
+    ] + $context);
+}
+
+/**
+ * @param array<int,mixed> $params
+ */
 $safeCount = static function (PDO $pdo, string $sql, array $params = []): ?int {
     try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     } catch (\PDOException $e) {
+        adminDashboardLogSectionError('count', $e, [
+            'sql_hash' => substr(hash('sha256', $sql), 0, 16),
+            'params_count' => count($params),
+        ]);
         return null;
     }
 };
@@ -261,6 +287,7 @@ if ($canManageSharedContent) {
              ORDER BY nav_order, title"
         )->fetchAll();
     } catch (\PDOException $e) {
+        adminDashboardLogSectionError('pages_overview', $e);
         $pages = [];
     }
 }
@@ -279,6 +306,7 @@ if ($canManageSharedContent && isModuleEnabled('events')) {
              LIMIT 5"
         )->fetchAll();
     } catch (\PDOException $e) {
+        adminDashboardLogSectionError('upcoming_events', $e);
         $upcomingEvents = [];
     }
 }
@@ -454,6 +482,7 @@ if ($showOperationalOverview && $canViewStatistics && isModuleEnabled('statistic
             $maxViews = max($maxViews, $views);
         }
     } catch (\PDOException $e) {
+        adminDashboardLogSectionError('visitor_chart', $e);
         $chartData = [];
     }
 }
@@ -473,6 +502,7 @@ if ($showContentSecondaryBlocks && $canManageBlog && isModuleEnabled('blog')) {
             $scheduledContent[] = $row;
         }
     } catch (\PDOException $e) {
+        adminDashboardLogSectionError('scheduled_content', $e);
         // publish_at může chybět ve starší instalaci
     }
 }
@@ -781,6 +811,7 @@ if ($showOperationalOverview && $canManageSettings):
         $actStmt->execute();
         $recentActivity = $actStmt->fetchAll();
     } catch (\PDOException $e) {
+        adminDashboardLogSectionError('recent_activity', $e);
         $recentActivity = [];
     }
     ?>
