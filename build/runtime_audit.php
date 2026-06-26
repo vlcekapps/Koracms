@@ -9259,7 +9259,12 @@ foreach ([
 if (!str_contains($cspReportSource, "rateLimit('csp_report', 120, 60") || !str_contains($cspReportSource, 'function cspReportRateLimitExceeded')) {
     $authRateLimitIssues[] = 'csp-report.php is missing dedicated JSON rate limiting';
 }
-if ($adminHttpIntegrationSource === '' || !str_contains($adminHttpIntegrationSource, "httpIntegrationPrintResult('default_rate_limit_http'")) {
+if (
+    $adminHttpIntegrationSource === ''
+    || !str_contains($adminHttpIntegrationSource, "httpIntegrationPrintResult('default_rate_limit_http'")
+    || !str_contains($adminHttpIntegrationSource, "/admin/login.php")
+    || !str_contains($adminHttpIntegrationSource, "httpIntegrationClearLocalRateLimits(\$pdo, ['login'])")
+) {
     $authRateLimitIssues[] = 'build/http_integration.php is missing default rate-limit response coverage';
 }
 if ($authRateLimitIssues === []) {

@@ -649,15 +649,12 @@ try {
     httpIntegrationPrintResult('sensitive_get_endpoints_cache_http', $sensitiveGetCacheIssues, $failures);
 
     $defaultRateLimitIssues = [];
-    $originalContactModule = httpIntegrationSettingValue($pdo, 'module_contact');
-    saveSetting('module_contact', '1');
-    clearSettingsCache();
-    httpIntegrationClearLocalRateLimits($pdo, ['contact']);
+    httpIntegrationClearLocalRateLimits($pdo, ['login']);
     $defaultRateLimitResponse = ['status' => '', 'headers' => [], 'body' => ''];
-    for ($rateLimitAttempt = 0; $rateLimitAttempt < 4; $rateLimitAttempt++) {
+    for ($rateLimitAttempt = 0; $rateLimitAttempt < 6; $rateLimitAttempt++) {
         $defaultRateLimitResponse = postRawUrl(
-            $baseUrl . BASE_URL . '/contact/',
-            'from=rate-limit@example.test&subject=Rate&message=Limit',
+            $baseUrl . BASE_URL . '/admin/login.php',
+            'email=rate-limit@example.test&heslo=invalid',
             'application/x-www-form-urlencoded',
             '',
             0
@@ -667,7 +664,7 @@ try {
         $defaultRateLimitIssues[] = 'výchozí rate-limit odpověď nevrátila 429';
     }
     if (
-        !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Retry-After', '120')
+        !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Retry-After', '300')
         || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Cache-Control', 'no-store')
         || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'X-Robots-Tag', 'noindex')
         || !httpIntegrationHeaderContains($defaultRateLimitResponse, 'Referrer-Policy', 'no-referrer')
@@ -682,9 +679,7 @@ try {
     ) {
         $defaultRateLimitIssues[] = 'výchozí rate-limit odpověď nemá přístupnou chybovou stránku s kódem požadavku';
     }
-    httpIntegrationClearLocalRateLimits($pdo, ['contact']);
-    saveSetting('module_contact', $originalContactModule);
-    clearSettingsCache();
+    httpIntegrationClearLocalRateLimits($pdo, ['login']);
     httpIntegrationPrintResult('default_rate_limit_http', $defaultRateLimitIssues, $failures);
 
     $fileEndpointIssues = [];
