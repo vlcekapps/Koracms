@@ -334,6 +334,8 @@ Každý blog může mít na svém indexu:
 - archiv po měsících
 - filtr podle autora, kategorie a štítků
 
+Pokud je nastavený doporučený článek blogu a návštěvník nemá aktivní filtr, default šablona ho zobrazí nad výpisem článků jako samostatný blok. Nejprve je vidět nadpis `Doporučený článek`, pod ním název článku jako hlavní odkaz a až potom metadata článku: datum, přibližná doba čtení, počet přečtení a autor.
+
 ### Per-blog RSS
 
 Každý blog má vlastní feed:

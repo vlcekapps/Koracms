@@ -13,6 +13,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Dohledatelnější sdílené uploady** – společný upload helper už při přípravě cílového adresáře, nahrazení existujícího souboru a finálním `move_uploaded_file()` nepoužívá potlačené souborové operace; selhání zapisuje přes strukturovaný log s hashem cesty a příponou bez fyzických cest.
 - **Přísnější theme view audit pro veřejné tabulky** – `build/theme_view_audit.php` nově hlídá, aby tabulky v default šabloně měly skutečný `<caption>` nebo vazbu přes `aria-labelledby`, a odmítá návrat k samotnému `aria-label`; self-test ověřuje průchozí i chybové scénáře.
 
+### Změněno
+- **Doporučený článek na veřejném indexu blogu** – default šablona nově zobrazuje nejdřív nadpis bloku `Doporučený článek`, hned pod ním název článku jako hlavní odkaz a až poté datum, dobu čtení, počet přečtení a autora; duplicitní spodní odkaz `Číst článek` byl odstraněn.
+
 ## [4.0.1] – 2026-06-26
 
 ### Přidáno

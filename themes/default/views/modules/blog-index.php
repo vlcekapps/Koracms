@@ -95,7 +95,7 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
     <?php endif; ?>
 
     <?php if (!empty($featuredArticle)): ?>
-      <article class="card card--feature blog-featured-article" aria-labelledby="featured-article-title">
+      <article class="card card--feature blog-featured-article" aria-labelledby="featured-article-heading featured-article-title">
         <?php if (!empty($featuredArticle['image_file'])): ?>
           <a class="card__media" href="<?= h($articleLink($featuredArticle)) ?>">
             <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode((string)$featuredArticle['image_file']) ?>"
@@ -103,21 +103,20 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
           </a>
         <?php endif; ?>
         <div class="card__body">
+          <h2 id="featured-article-heading" class="section-title section-title--compact blog-featured-article__heading">Doporučený článek</h2>
+          <h3 id="featured-article-title" class="card__title card__title--feature">
+            <a href="<?= h($articleLink($featuredArticle)) ?>"><?= h((string)$featuredArticle['title']) ?></a>
+          </h3>
           <p class="meta-row meta-row--tight">
-            <span class="pill">Doporučený článek</span>
             <time datetime="<?= h(str_replace(' ', 'T', (string)$featuredArticle['created_at'])) ?>"><?= formatCzechDate((string)$featuredArticle['created_at']) ?></time>
             <span><?= h(articleReadingMeta(((string)($featuredArticle['perex'] ?? '')) . ((string)($featuredArticle['content'] ?? '')), (int)($featuredArticle['view_count'] ?? 0))) ?></span>
             <?php if (!empty($featuredArticle['author_name'])): ?>
               <?= $renderAuthorName($featuredArticle) ?>
             <?php endif; ?>
           </p>
-          <h2 id="featured-article-title" class="card__title card__title--feature">
-            <a href="<?= h($articleLink($featuredArticle)) ?>"><?= h((string)$featuredArticle['title']) ?></a>
-          </h2>
           <?php if (!empty($featuredArticle['perex'])): ?>
             <p><?= h((string)$featuredArticle['perex']) ?></p>
           <?php endif; ?>
-          <p><a class="section-link" href="<?= h($articleLink($featuredArticle)) ?>">Číst článek <span aria-hidden="true">→</span></a></p>
         </div>
       </article>
     <?php endif; ?>

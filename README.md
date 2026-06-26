@@ -279,6 +279,8 @@ V multiblog administraci nově umí přesun článků mezi blogy vedle automatic
 
 Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce vyplní, použije se na veřejném indexu blogu pro čtečky obrazovky; pokud zůstane prázdný, logo se dál bere jako dekorativní a asistivní technologie ho přeskočí.
 
+Veřejný index blogu zobrazuje doporučený článek v přirozenějším pořadí: nejdřív nadpis bloku, potom název článku jako hlavní odkaz a až pod ním datum, přibližnou dobu čtení, počet přečtení a autora.
+
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
 Ruční i automaticky ukládané `301/302` redirecty ověřují starou adresu jako interní cestu webu a novou adresu jako interní cestu nebo čistou `http/https` URL bez přihlašovacích údajů. Nejednoznačné cíle, nebezpečná schémata a CRLF znaky se odmítnou ještě před odesláním hlavičky `Location`.

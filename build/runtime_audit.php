@@ -11443,6 +11443,18 @@ foreach ([
 if (!str_contains($blogIndexViewSource, 'Doporučený článek')) {
     $blogAdminIssues[] = 'blog index view is missing featured article hero';
 }
+if (!str_contains($blogIndexViewSource, 'aria-labelledby="featured-article-heading featured-article-title"')) {
+    $blogAdminIssues[] = 'blog index featured article is not labelled by both the section heading and article title';
+}
+$featuredHeadingPos = strpos($blogIndexViewSource, '<h2 id="featured-article-heading"');
+$featuredTitlePos = strpos($blogIndexViewSource, '<h3 id="featured-article-title"');
+$featuredMetaPos = strpos($blogIndexViewSource, 'articleReadingMeta(');
+if ($featuredHeadingPos === false || $featuredTitlePos === false || $featuredMetaPos === false || !($featuredHeadingPos < $featuredTitlePos && $featuredTitlePos < $featuredMetaPos)) {
+    $blogAdminIssues[] = 'blog index featured article should render heading, linked title and metadata in that order';
+}
+if (str_contains($blogIndexViewSource, '<span class="pill">Doporu')) {
+    $blogAdminIssues[] = 'blog index featured article should not render the section label as a metadata pill before the title';
+}
 if (!str_contains($blogIndexViewSource, '$blogLogoAlt = blogLogoAltText($blog);') || !str_contains($blogIndexViewSource, 'alt="<?= h($blogLogoAlt) ?>"')) {
     $blogAdminIssues[] = 'blog index view is missing configurable blog logo alt text support';
 }
