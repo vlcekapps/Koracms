@@ -313,6 +313,46 @@ PHP,
     'button without explicit type attribute'
 );
 
+assertThemeViewAuditPasses(
+    'Table caption guard',
+    <<<'PHP'
+<table>
+  <caption class="sr-only">Přehled položek</caption>
+  <tr><th scope="col">Název</th><td>Položka</td></tr>
+</table>
+PHP
+);
+
+assertThemeViewAuditPasses(
+    'Table aria-labelledby guard',
+    <<<'PHP'
+<h2 id="items-heading">Přehled položek</h2>
+<table aria-labelledby="items-heading">
+  <tr><th scope="col">Název</th><td>Položka</td></tr>
+</table>
+PHP
+);
+
+assertThemeViewAuditFails(
+    'Table accessible name guard',
+    <<<'PHP'
+<table>
+  <tr><th scope="col">Název</th><td>Položka</td></tr>
+</table>
+PHP,
+    'table without caption or aria-labelledby'
+);
+
+assertThemeViewAuditFails(
+    'Table aria-label guard',
+    <<<'PHP'
+<table aria-label="Přehled položek">
+  <tr><th scope="col">Název</th><td>Položka</td></tr>
+</table>
+PHP,
+    'table using aria-label instead of a caption or aria-labelledby'
+);
+
 assertThemeViewAuditFails(
     'Blank target rel guard',
     <<<'PHP'

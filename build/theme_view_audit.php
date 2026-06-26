@@ -261,6 +261,20 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlElements($source, 'table') as $match) {
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a table using aria-label instead of a caption or aria-labelledby.';
+            continue;
+        }
+
+        if (
+            !themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')
+            && preg_match('/<caption\b/i', $match['element']) !== 1
+        ) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a table without caption or aria-labelledby.';
+        }
+    }
+
     foreach (themeViewAuditHtmlElements($source, 'a') as $match) {
         $target = themeViewAuditTagAttributeValue($match['tag'], 'target');
         if (!is_string($target) || strtolower(trim($target)) !== '_blank') {
