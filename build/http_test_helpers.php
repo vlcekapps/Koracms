@@ -8,11 +8,28 @@ if (!function_exists('fetchUrl')) {
      */
     function fetchUrl(string $url, string $cookie = '', int $maxRedirects = 20, string $userAgent = 'KoraHttpIntegration/1.0'): array
     {
+        return fetchUrlWithHeaders($url, [], $cookie, $maxRedirects, $userAgent);
+    }
+}
+
+if (!function_exists('fetchUrlWithHeaders')) {
+    /**
+     * @param list<string> $extraHeaders
+     * @return array{status:string,headers:array<int,string>,body:string}
+     */
+    function fetchUrlWithHeaders(string $url, array $extraHeaders = [], string $cookie = '', int $maxRedirects = 20, string $userAgent = 'KoraHttpIntegration/1.0'): array
+    {
         $headers = [
             'User-Agent: ' . $userAgent,
         ];
         if ($cookie !== '') {
             $headers[] = 'Cookie: ' . $cookie;
+        }
+        foreach ($extraHeaders as $extraHeader) {
+            $extraHeader = trim($extraHeader);
+            if ($extraHeader !== '') {
+                $headers[] = $extraHeader;
+            }
         }
 
         $context = stream_context_create([

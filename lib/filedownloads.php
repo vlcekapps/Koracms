@@ -48,6 +48,58 @@ function storedFileContentDisposition(string $disposition, string $downloadName)
         . '; filename*=UTF-8\'\'' . rawurlencode($downloadName);
 }
 
+function storedFileEtag(string $path, int $fileSize, int $lastModified): string
+{
+    return 'W/"' . dechex($lastModified) . '-' . dechex($fileSize) . '-' . substr(sha1(basename($path)), 0, 12) . '"';
+}
+
+function storedFileNormalizeEtagForComparison(string $etag): string
+{
+    $etag = trim($etag);
+    if (stripos($etag, 'W/') === 0) {
+        $etag = trim(substr($etag, 2));
+    }
+
+    return $etag;
+}
+
+function storedFileIfNoneMatchMatches(string $etag, string $ifNoneMatchHeader): bool
+{
+    foreach (explode(',', $ifNoneMatchHeader) as $candidate) {
+        $candidate = trim($candidate);
+        if ($candidate === '*') {
+            return true;
+        }
+
+        if (storedFileNormalizeEtagForComparison($candidate) === storedFileNormalizeEtagForComparison($etag)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function storedFileRequestValidatorsMatch(string $etag, ?int $lastModified): bool
+{
+    $ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+    if (is_string($ifNoneMatch) && trim($ifNoneMatch) !== '') {
+        return storedFileIfNoneMatchMatches($etag, $ifNoneMatch);
+    }
+
+    $ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '';
+    if (!is_string($ifModifiedSince) || trim($ifModifiedSince) === '' || $lastModified === null) {
+        return false;
+    }
+
+    $clientTimestamp = strtotime($ifModifiedSince);
+    return is_int($clientTimestamp) && $clientTimestamp >= $lastModified;
+}
+
+function storedFileHttpDate(int $timestamp): string
+{
+    return gmdate('D, d M Y H:i:s', $timestamp) . ' GMT';
+}
+
 function sendFileDownloadNotFound(string $message = 'Soubor nebyl nalezen.'): void
 {
     http_response_code(404);
@@ -142,16 +194,34 @@ function sendInlineStoredFileResponse(
     $cacheHeader = $isPublic
         ? 'public, max-age=' . max(0, $publicMaxAge)
         : 'private, max-age=0, no-store';
+    $lastModified = filemtime($path);
+    $lastModifiedTimestamp = is_int($lastModified) ? $lastModified : null;
+    $etag = $isPublic && $lastModifiedTimestamp !== null
+        ? storedFileEtag($path, $fileSize, $lastModifiedTimestamp)
+        : '';
+
+    if ($isPublic && $etag !== '' && storedFileRequestValidatorsMatch($etag, $lastModifiedTimestamp)) {
+        http_response_code(304);
+        header('Cache-Control: ' . $cacheHeader);
+        header('ETag: ' . $etag);
+        if ($lastModifiedTimestamp !== null) {
+            header('Last-Modified: ' . storedFileHttpDate($lastModifiedTimestamp));
+        }
+        sendNoSniffHeader();
+        exit;
+    }
 
     header('Content-Type: ' . $mimeType);
     header('Content-Length: ' . (string)$fileSize);
     header('Content-Disposition: ' . storedFileContentDisposition('inline', $downloadName));
     header('Cache-Control: ' . $cacheHeader);
+    if ($etag !== '') {
+        header('ETag: ' . $etag);
+    }
     sendNoSniffHeader();
 
-    $lastModified = filemtime($path);
-    if ($lastModified !== false) {
-        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+    if ($lastModifiedTimestamp !== null) {
+        header('Last-Modified: ' . storedFileHttpDate($lastModifiedTimestamp));
     }
 
     if ($isHeadRequest) {

@@ -78,6 +78,22 @@ function httpIntegrationHeaderContains(array $response, string $name, string $ne
 
 /**
  * @param array{status:string,headers:array<int,string>,body:string} $response
+ */
+function httpIntegrationHeaderValue(array $response, string $name): string
+{
+    $headerPrefix = strtolower($name) . ':';
+    foreach ($response['headers'] as $headerLine) {
+        $headerLine = (string)$headerLine;
+        if (str_starts_with(strtolower($headerLine), $headerPrefix)) {
+            return trim(substr($headerLine, strlen($name) + 1));
+        }
+    }
+
+    return '';
+}
+
+/**
+ * @param array{status:string,headers:array<int,string>,body:string} $response
  * @param list<string> $allowedMethods
  */
 function httpIntegrationMethodGuardOk(array $response, array $allowedMethods): bool
@@ -3378,6 +3394,38 @@ try {
         }
         if (!str_starts_with(mediaFileUrl($uploadedMedia), BASE_URL . '/uploads/media/')) {
             $mediaIssues[] = 'validní upload média nepoužívá canonical public URL';
+        }
+
+        $uploadedMediaThumbUrl = $baseUrl . BASE_URL . '/media/thumb.php?id=' . (int)$uploadedMedia['id'];
+        $uploadedMediaThumbResponse = fetchUrl($uploadedMediaThumbUrl, '', 0);
+        $uploadedMediaThumbEtag = httpIntegrationHeaderValue($uploadedMediaThumbResponse, 'ETag');
+        $uploadedMediaThumbLastModified = httpIntegrationHeaderValue($uploadedMediaThumbResponse, 'Last-Modified');
+        if (
+            httpIntegrationStatusCode($uploadedMediaThumbResponse) !== 200
+            || !httpIntegrationHeaderContains($uploadedMediaThumbResponse, 'Cache-Control', 'public')
+            || !httpIntegrationHeaderContains($uploadedMediaThumbResponse, 'Content-Disposition', 'inline')
+            || !httpIntegrationHeaderContains($uploadedMediaThumbResponse, 'X-Content-Type-Options', 'nosniff')
+            || $uploadedMediaThumbEtag === ''
+            || !str_starts_with($uploadedMediaThumbEtag, 'W/"')
+            || $uploadedMediaThumbLastModified === ''
+            || $uploadedMediaThumbResponse['body'] === ''
+        ) {
+            $mediaIssues[] = 'veřejný thumbnail média neposlal cacheovatelné inline hlavičky s ETag/Last-Modified';
+        } else {
+            $uploadedMediaThumbNotModifiedResponse = fetchUrlWithHeaders(
+                $uploadedMediaThumbUrl,
+                ['If-None-Match: ' . $uploadedMediaThumbEtag],
+                '',
+                0
+            );
+            if (
+                httpIntegrationStatusCode($uploadedMediaThumbNotModifiedResponse) !== 304
+                || !httpIntegrationHeaderContains($uploadedMediaThumbNotModifiedResponse, 'ETag', $uploadedMediaThumbEtag)
+                || !httpIntegrationHeaderContains($uploadedMediaThumbNotModifiedResponse, 'Cache-Control', 'public')
+                || $uploadedMediaThumbNotModifiedResponse['body'] !== ''
+            ) {
+                $mediaIssues[] = 'veřejný thumbnail média nevrátil 304 při shodném If-None-Match';
+            }
         }
     }
 

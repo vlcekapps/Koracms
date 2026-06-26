@@ -203,6 +203,16 @@ if ($path === '/get') {
     return true;
 }
 
+if ($path === '/headers') {
+    echo 'HEADERS|'
+        . (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')
+        . '|'
+        . (string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')
+        . '|'
+        . (string) ($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '');
+    return true;
+}
+
 if ($path === '/redirect') {
     header('Location: /get', true, 302);
     echo 'redirect';
@@ -293,6 +303,22 @@ try {
     httpTestHelpersSelfTestAssert(
         $getResponse['body'] === 'GET|KoraHelperSelfTest/1.0|first=1',
         'GET helper did not send expected user agent and cookie.'
+    );
+
+    $headersResponse = fetchUrlWithHeaders(
+        $baseUrl . '/headers',
+        [
+            'If-None-Match: W/"abc"',
+            'If-Modified-Since: Tue, 01 Jan 2030 00:00:00 GMT',
+        ],
+        '',
+        0,
+        'KoraHeaderSelfTest/1.0'
+    );
+    assertHttpHelperStatus($headersResponse, '200', 'Custom headers helper fixture');
+    httpTestHelpersSelfTestAssert(
+        $headersResponse['body'] === 'HEADERS|KoraHeaderSelfTest/1.0|W/"abc"|Tue, 01 Jan 2030 00:00:00 GMT',
+        'fetchUrlWithHeaders did not send expected conditional request headers. Body: ' . $headersResponse['body']
     );
 
     $redirectResponse = fetchUrl($baseUrl . '/redirect', '', 0);

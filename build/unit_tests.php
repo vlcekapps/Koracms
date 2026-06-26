@@ -490,6 +490,79 @@ assert_equals(
     'unknown disposition falls back to attachment'
 );
 
+test_section('stored file conditional validators');
+
+$testStoredFileEtag = storedFileEtag(__FILE__, 1234, 1700000000);
+assert_true(
+    str_starts_with($testStoredFileEtag, 'W/"')
+        && str_ends_with($testStoredFileEtag, '"')
+        && str_contains($testStoredFileEtag, dechex(1700000000) . '-' . dechex(1234)),
+    'stored file ETag is weak and includes stable file metadata'
+);
+assert_equals(
+    'Tue, 14 Nov 2023 22:13:20 GMT',
+    storedFileHttpDate(1700000000),
+    'stored file HTTP date is GMT formatted'
+);
+assert_true(
+    storedFileIfNoneMatchMatches('W/"abc"', '"abc"'),
+    'weak and strong ETag validators compare by opaque value'
+);
+assert_true(
+    storedFileIfNoneMatchMatches('W/"abc"', 'W/"other", W/"abc"'),
+    'If-None-Match list matches any candidate'
+);
+assert_true(
+    storedFileIfNoneMatchMatches('W/"abc"', '*'),
+    'If-None-Match wildcard matches stored file ETag'
+);
+assert_false(
+    storedFileIfNoneMatchMatches('W/"abc"', 'W/"other"'),
+    'different If-None-Match value does not match'
+);
+
+$previousIfNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? null;
+$previousIfModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? null;
+try {
+    $_SERVER['HTTP_IF_NONE_MATCH'] = 'W/"abc"';
+    unset($_SERVER['HTTP_IF_MODIFIED_SINCE']);
+    assert_true(
+        storedFileRequestValidatorsMatch('W/"abc"', 1700000000),
+        'request validators match If-None-Match'
+    );
+
+    $_SERVER['HTTP_IF_NONE_MATCH'] = 'W/"other"';
+    $_SERVER['HTTP_IF_MODIFIED_SINCE'] = storedFileHttpDate(1800000000);
+    assert_false(
+        storedFileRequestValidatorsMatch('W/"abc"', 1700000000),
+        'non-matching If-None-Match takes precedence over If-Modified-Since'
+    );
+
+    unset($_SERVER['HTTP_IF_NONE_MATCH']);
+    $_SERVER['HTTP_IF_MODIFIED_SINCE'] = storedFileHttpDate(1700000000);
+    assert_true(
+        storedFileRequestValidatorsMatch('W/"abc"', 1700000000),
+        'request validators match current If-Modified-Since'
+    );
+
+    $_SERVER['HTTP_IF_MODIFIED_SINCE'] = storedFileHttpDate(1600000000);
+    assert_false(
+        storedFileRequestValidatorsMatch('W/"abc"', 1700000000),
+        'stale If-Modified-Since does not match'
+    );
+} finally {
+    if ($previousIfNoneMatch === null) {
+        unset($_SERVER['HTTP_IF_NONE_MATCH']);
+    } else {
+        $_SERVER['HTTP_IF_NONE_MATCH'] = $previousIfNoneMatch;
+    }
+    if ($previousIfModifiedSince === null) {
+        unset($_SERVER['HTTP_IF_MODIFIED_SINCE']);
+    } else {
+        $_SERVER['HTTP_IF_MODIFIED_SINCE'] = $previousIfModifiedSince;
+    }
+}
+
 // ─── 10. mailSanitizeHeaderValue() ─────────────────────────────────────────
 
 test_section('mailSanitizeHeaderValue()');
