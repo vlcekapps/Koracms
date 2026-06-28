@@ -6,6 +6,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ob_start();
 
+require_once __DIR__ . '/test_run_lock.php';
+
+koraAcquireDatabaseTestLock('http_integration');
+
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../admin/settings_shared.php';
 require_once __DIR__ . '/http_test_helpers.php';
