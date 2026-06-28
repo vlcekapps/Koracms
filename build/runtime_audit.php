@@ -82,6 +82,7 @@ $httpServerRouterSource = is_file(__DIR__ . '/http_server_router.php') ? (string
 $httpServerRouterSelftestSource = is_file(__DIR__ . '/http_server_router_selftest.php') ? (string) file_get_contents(__DIR__ . '/http_server_router_selftest.php') : '';
 $httpTestHelpersSource = is_file(__DIR__ . '/http_test_helpers.php') ? (string) file_get_contents(__DIR__ . '/http_test_helpers.php') : '';
 $httpTestHelpersSelftestSource = is_file(__DIR__ . '/http_test_helpers_selftest.php') ? (string) file_get_contents(__DIR__ . '/http_test_helpers_selftest.php') : '';
+$testRunLockSelftestSource = is_file(__DIR__ . '/test_run_lock_selftest.php') ? (string) file_get_contents(__DIR__ . '/test_run_lock_selftest.php') : '';
 $lintPhpSource = is_file(__DIR__ . '/lint_php.php') ? (string) file_get_contents(__DIR__ . '/lint_php.php') : '';
 $lintPhpSelftestSource = is_file(__DIR__ . '/lint_php_selftest.php') ? (string) file_get_contents(__DIR__ . '/lint_php_selftest.php') : '';
 $phpstanBootstrapSelftestSource = is_file(__DIR__ . '/phpstan_bootstrap_selftest.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap_selftest.php') : '';
@@ -8339,18 +8340,24 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'database-backed audits use shared run lock' => is_file(__DIR__ . '/test_run_lock.php')
+        && is_file(__DIR__ . '/test_run_lock_selftest.php')
         && str_contains($runtimeAuditSelfSource, "require_once __DIR__ . '/test_run_lock.php';")
         && str_contains($runtimeAuditSelfSource, "koraAcquireDatabaseTestLock('runtime_audit');")
         && str_contains($httpIntegrationBuildSource, "require_once __DIR__ . '/test_run_lock.php';")
         && str_contains($httpIntegrationBuildSource, "koraAcquireDatabaseTestLock('http_integration');")
+        && str_contains($testRunLockSelftestSource, "koraAcquireDatabaseTestLock('holder');")
+        && str_contains($testRunLockSelftestSource, 'Waiter acquired the lock before the holder released it.')
+        && str_contains($composerSource, '"test:test-run-lock-selftest"')
+        && str_contains($composerSource, '@test:test-run-lock-selftest')
         && str_contains($composerSource, 'build/test_run_lock.php')
+        && str_contains($composerSource, 'build/test_run_lock_selftest.php')
         && str_contains($readmeSource, 'build/test_run_lock.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')
