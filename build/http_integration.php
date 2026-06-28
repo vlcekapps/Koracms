@@ -460,6 +460,11 @@ try {
         'visitor_tracking_enabled' => getSetting('visitor_tracking_enabled', '0'),
         'stats_retention_days' => getSetting('stats_retention_days', '90'),
     ];
+    foreach (array_keys(moduleDefaultSettings()) as $moduleSettingKey) {
+        if (!array_key_exists($moduleSettingKey, $originalSettings)) {
+            $originalSettings[$moduleSettingKey] = getSetting($moduleSettingKey, '0');
+        }
+    }
 
     saveSetting('module_blog', '1');
     saveSetting('module_gallery', '1');
@@ -534,6 +539,34 @@ try {
         $robotsIssues[] = 'robots.txt neodmítl nepodporovanou metodu bezpečnou 405 odpovědí';
     }
     httpIntegrationPrintResult('robots_http', $robotsIssues, $failures);
+
+    $publicModuleNavigationIssues = [];
+    foreach (array_keys(moduleNavigationDefaults()) as $moduleKey) {
+        saveSetting('module_' . $moduleKey, '1');
+    }
+    clearSettingsCache();
+    foreach (moduleNavigationDefaults() as $moduleKey => $moduleNavigation) {
+        /** @var array{0:string, 1:string} $moduleNavigation */
+        [$publicModulePath, $publicModuleLabel] = $moduleNavigation;
+        $publicModuleResponse = fetchUrl($baseUrl . BASE_URL . $publicModulePath, '', 0);
+        if (httpIntegrationStatusCode($publicModuleResponse) !== 200) {
+            $publicModuleNavigationIssues[] = 'veřejný modul ' . $moduleKey . ' (' . $publicModulePath . ') nevrátil 200';
+            continue;
+        }
+        if (!httpIntegrationHeaderContains($publicModuleResponse, 'Content-Type', 'text/html')) {
+            $publicModuleNavigationIssues[] = 'veřejný modul ' . $moduleKey . ' neposlal HTML Content-Type';
+        }
+        if (str_contains($publicModuleResponse['body'], 'Tento modul není povolen')) {
+            $publicModuleNavigationIssues[] = 'veřejný modul ' . $moduleKey . ' je v navigačním smoke testu stále vypnutý';
+        }
+        if (stripos($publicModuleResponse['body'], 'Fatal error') !== false || stripos($publicModuleResponse['body'], 'Uncaught') !== false) {
+            $publicModuleNavigationIssues[] = 'veřejný modul ' . $moduleKey . ' vykreslil PHP chybu místo veřejné stránky';
+        }
+        if (!str_contains($publicModuleResponse['body'], htmlspecialchars($publicModuleLabel, ENT_QUOTES, 'UTF-8'))) {
+            $publicModuleNavigationIssues[] = 'veřejný modul ' . $moduleKey . ' nevykreslil očekávaný navigační nebo stránkový kontext';
+        }
+    }
+    httpIntegrationPrintResult('public_module_navigation_http', $publicModuleNavigationIssues, $failures);
 
     $discoveryEndpointIssues = [];
     saveSetting('module_events', '1');

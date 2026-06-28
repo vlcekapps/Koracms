@@ -158,6 +158,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'themes/default/theme.json' => '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["blog"],"default":"#000000"}}}',
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
+        'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures);\n",
         'docs/developer-modules.md' => "Použijte coreModuleDefinitions() a build/module_contract_audit.php.\n",
         'README.md' => "Spusťte composer ci:module-ready.\n",
     ];
@@ -321,6 +322,14 @@ assertModuleContractAuditFails(
     'Missing public navigation target',
     $missingPublicNavTargetFiles,
     'public_nav module blog must point to an existing PHP entrypoint.'
+);
+
+$missingPublicNavHttpFiles = $validFiles;
+$missingPublicNavHttpFiles['build/http_integration.php'] = "<?php\n";
+assertModuleContractAuditFails(
+    'Missing public navigation HTTP scenario',
+    $missingPublicNavHttpFiles,
+    'public_nav modules must be covered by dynamic public_module_navigation_http integration.'
 );
 
 $missingComposerFiles = $validFiles;

@@ -7733,6 +7733,9 @@ foreach ($publicNotFoundEndpointSources as $publicNotFoundSource) {
         break;
     }
 }
+$httpIntegrationFoundationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
+    ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
+    : '';
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -7772,9 +7775,13 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'moduleContractAuditCollectThemeRequiredModules')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateManifestValues')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditPublicNavTargetExists')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditValidatePublicNavHttpIntegration')
+        && str_contains($moduleContractAuditSource, 'public_module_navigation_http')
         && str_contains($moduleContractAuditSource, 'settings_default must be 0 or 1')
         && str_contains($moduleContractAuditSource, 'must define a rooted public_nav_path')
         && str_contains($moduleContractAuditSource, 'must point to an existing PHP entrypoint')
+        && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
+        && str_contains($httpIntegrationFoundationSource, 'moduleNavigationDefaults()')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateModuleGateReferences')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditApplicationPhpFiles')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateApplicationModuleGateReferences')
@@ -7788,6 +7795,7 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSelftestSource, 'Invalid module manifest default')
         && str_contains($moduleContractAuditSelftestSource, 'Invalid public navigation module path')
         && str_contains($moduleContractAuditSelftestSource, 'Missing public navigation target')
+        && str_contains($moduleContractAuditSelftestSource, 'Missing public navigation HTTP scenario')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditRequireKnownModule')
         && str_contains($moduleContractAuditSource, 'moduleWidgetLabel($moduleKey)')
         && str_contains($moduleContractAuditSelftestSource, 'Module contract audit self-test OK'),

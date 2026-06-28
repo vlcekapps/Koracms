@@ -303,6 +303,35 @@ function moduleContractAuditPublicNavTargetExists(string $projectRoot, string $p
 /**
  * @param list<string> $issues
  */
+function moduleContractAuditValidatePublicNavHttpIntegration(string $definitionsSource, string $httpIntegrationSource, array &$issues): void
+{
+    $hasPublicNavigationModule = false;
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        $publicNav = moduleContractAuditManifestBoolField($block, $moduleKey, 'public_nav', $issues);
+        if ($publicNav === true) {
+            $hasPublicNavigationModule = true;
+            break;
+        }
+    }
+
+    if (!$hasPublicNavigationModule) {
+        return;
+    }
+
+    moduleContractAuditRequire(
+        str_contains($httpIntegrationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
+        && str_contains($httpIntegrationSource, 'moduleNavigationDefaults()')
+        && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '1')")
+        && str_contains($httpIntegrationSource, 'veřejný modul ')
+        && str_contains($httpIntegrationSource, 'Tento modul není povolen'),
+        'public_nav modules must be covered by dynamic public_module_navigation_http integration.',
+        $issues
+    );
+}
+
+/**
+ * @param list<string> $issues
+ */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
     $knownModuleKeys = moduleContractAuditExpectedKeys();
@@ -461,6 +490,7 @@ $developerModulesDocSource = moduleContractAuditReadFile($projectRoot, 'docs/dev
 $readmeSource = moduleContractAuditReadFile($projectRoot, 'README.md', $issues);
 $contentReferencePickerSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_picker.php', $issues);
 $contentReferenceSearchSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_search.php', $issues);
+$httpIntegrationSource = moduleContractAuditReadFile($projectRoot, 'build/http_integration.php', $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, 'function coreModuleDefinitions()')
@@ -500,6 +530,7 @@ foreach ([
 }
 
 moduleContractAuditValidateManifestValues($projectRoot, $definitionsSource, $issues);
+moduleContractAuditValidatePublicNavHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),
