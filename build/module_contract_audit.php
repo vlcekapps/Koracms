@@ -358,6 +358,77 @@ function moduleContractAuditManifestStringListField(string $block, string $modul
     return array_map('strval', $itemMatches[1]);
 }
 
+/**
+ * @param list<string> $issues
+ * @return array<string,string>
+ */
+function moduleContractAuditExtractAdminRouteRequirementBlocks(string $authSource, array &$issues): array
+{
+    $functionStart = strpos($authSource, 'function adminRouteModuleRequirement(');
+    $requirementsStart = $functionStart === false ? false : strpos($authSource, '$requirements = [', $functionStart);
+    $openPosition = $requirementsStart === false ? false : strpos($authSource, '[', $requirementsStart);
+    $closePosition = is_int($openPosition) ? moduleContractAuditFindMatchingBracket($authSource, $openPosition) : null;
+
+    if ($functionStart === false || $requirementsStart === false || !is_int($openPosition) || $closePosition === null) {
+        $issues[] = 'auth.php adminRouteModuleRequirement requirements cannot be parsed.';
+        return [];
+    }
+
+    $requirementsSource = substr($authSource, $openPosition + 1, $closePosition - $openPosition - 1);
+    $blocks = [];
+    $offset = 0;
+    while (preg_match('/\'([a-z][a-z0-9_]*)\'\s*=>\s*\[/', $requirementsSource, $matches, PREG_OFFSET_CAPTURE, $offset) === 1) {
+        $moduleKey = (string)$matches[1][0];
+        $matchText = (string)$matches[0][0];
+        $entryOpenPosition = (int)$matches[0][1] + strlen($matchText) - 1;
+        $entryClosePosition = moduleContractAuditFindMatchingBracket($requirementsSource, $entryOpenPosition);
+        if ($entryClosePosition === null) {
+            $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' cannot be parsed.';
+            break;
+        }
+
+        if (isset($blocks[$moduleKey])) {
+            $issues[] = 'adminRouteModuleRequirement contains duplicate module key ' . $moduleKey . '.';
+            $offset = $entryClosePosition + 1;
+            continue;
+        }
+
+        $blocks[$moduleKey] = substr($requirementsSource, $entryOpenPosition + 1, $entryClosePosition - $entryOpenPosition - 1);
+        $offset = $entryClosePosition + 1;
+    }
+
+    if ($blocks === []) {
+        $issues[] = 'adminRouteModuleRequirement contains no parseable module entries.';
+    }
+
+    return $blocks;
+}
+
+/**
+ * @param list<string> $issues
+ * @return list<string>
+ */
+function moduleContractAuditAdminRouteFilesField(string $block, string $moduleKey, array &$issues): array
+{
+    if (preg_match('/\'files\'\\s*=>\\s*\\[(.*?)\\]/s', $block, $matches) !== 1) {
+        $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' is missing files list.';
+        return [];
+    }
+
+    $itemsSource = (string)$matches[1];
+    if (preg_match_all('/\'([^\']*)\'/', $itemsSource, $itemMatches) === false) {
+        $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' files list cannot be parsed.';
+        return [];
+    }
+
+    $files = array_map('strval', $itemMatches[1]);
+    if ($files === []) {
+        $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' must define at least one file.';
+    }
+
+    return $files;
+}
+
 function moduleContractAuditRootedPhpTargetExists(string $projectRoot, string $path): bool
 {
     if (!str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\0") || !str_ends_with($path, '.php')) {
@@ -506,6 +577,51 @@ function moduleContractAuditValidateAdminEntryPointGates(string $projectRoot, st
                 'admin_paths entrypoint ' . ltrim($adminPath, '/') . ' must guard access with requireModuleEnabled(\'' . $moduleKey . '\').',
                 $issues
             );
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateAdminRouteModuleRequirements(
+    string $projectRoot,
+    string $definitionsSource,
+    string $authSource,
+    array &$issues
+): void {
+    $knownModuleKeys = moduleContractAuditExpectedKeys();
+    $routeBlocks = moduleContractAuditExtractAdminRouteRequirementBlocks($authSource, $issues);
+    $routeFileModules = [];
+
+    foreach ($routeBlocks as $moduleKey => $block) {
+        moduleContractAuditRequireKnownModule($moduleKey, 'adminRouteModuleRequirement', $knownModuleKeys, $issues);
+
+        foreach (moduleContractAuditAdminRouteFilesField($block, $moduleKey, $issues) as $file) {
+            if ($file === '' || str_contains($file, '/') || str_contains($file, '\\') || str_contains($file, '..') || str_contains($file, "\0") || !str_ends_with($file, '.php')) {
+                $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' contains invalid admin file name: ' . $file . '.';
+                continue;
+            }
+
+            if (isset($routeFileModules[$file]) && $routeFileModules[$file] !== $moduleKey) {
+                $issues[] = 'adminRouteModuleRequirement file ' . $file . ' is duplicated by modules ' . $routeFileModules[$file] . ' and ' . $moduleKey . '.';
+                continue;
+            }
+            $routeFileModules[$file] = $moduleKey;
+
+            $adminPath = '/admin/' . $file;
+            if (!moduleContractAuditRootedPhpTargetExists($projectRoot, $adminPath)) {
+                $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' references missing admin PHP file: ' . $adminPath . '.';
+            }
+        }
+    }
+
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringListField($block, $moduleKey, 'admin_paths', $issues) as $adminPath) {
+            $file = basename($adminPath);
+            if (($routeFileModules[$file] ?? null) !== $moduleKey) {
+                $issues[] = 'admin_paths entry ' . $adminPath . ' must be listed in adminRouteModuleRequirement() for ' . $moduleKey . '.';
+            }
         }
     }
 }
@@ -671,6 +787,7 @@ $composerSource = moduleContractAuditReadFile($projectRoot, 'composer.json', $is
 $runtimeAuditSource = moduleContractAuditReadFile($projectRoot, 'build/runtime_audit.php', $issues);
 $developerModulesDocSource = moduleContractAuditReadFile($projectRoot, 'docs/developer-modules.md', $issues);
 $readmeSource = moduleContractAuditReadFile($projectRoot, 'README.md', $issues);
+$authSource = moduleContractAuditReadFile($projectRoot, 'auth.php', $issues);
 $contentReferencePickerSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_picker.php', $issues);
 $contentReferenceSearchSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_search.php', $issues);
 $httpIntegrationSource = moduleContractAuditReadFile($projectRoot, 'build/http_integration.php', $issues);
@@ -719,6 +836,7 @@ moduleContractAuditValidatePublicNavHttpIntegration($definitionsSource, $httpInt
 moduleContractAuditValidatePublicNavEntryPointGates($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidateAdminHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
 moduleContractAuditValidateAdminEntryPointGates($projectRoot, $definitionsSource, $issues);
+moduleContractAuditValidateAdminRouteModuleRequirements($projectRoot, $definitionsSource, $authSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

@@ -141,6 +141,22 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
 
+function moduleContractAuditSelfTestAuthFixture(): string
+{
+    $entries = [];
+    foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
+        $entries[] = "        '{$moduleKey}' => ['message' => 'Disabled', 'files' => ['{$moduleKey}.php']],\n";
+    }
+
+    return "<?php\n"
+        . "function adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n"
+        . "    \$requirements = [\n"
+        . implode('', $entries)
+        . "    ];\n"
+        . "    return null;\n"
+        . "}\n";
+}
+
 /**
  * @return array<string,string>
  */
@@ -148,6 +164,7 @@ function moduleContractAuditSelfTestValidFiles(): array
 {
     $files = [
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
+        'auth.php' => moduleContractAuditSelfTestAuthFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
@@ -362,6 +379,43 @@ assertModuleContractAuditFails(
     'Missing admin entrypoint module gate',
     $missingAdminGateFiles,
     "admin_paths entrypoint admin/blog.php must guard access with requireModuleEnabled('blog')."
+);
+
+$missingAdminRouteTargetFiles = $validFiles;
+$missingAdminRouteTargetFiles['auth.php'] = str_replace(
+    "['blog.php']",
+    "['blog.php', 'blog_missing.php']",
+    $missingAdminRouteTargetFiles['auth.php']
+);
+assertModuleContractAuditFails(
+    'Missing admin route module requirement target',
+    $missingAdminRouteTargetFiles,
+    'adminRouteModuleRequirement entry blog references missing admin PHP file: /admin/blog_missing.php.'
+);
+
+$unknownAdminRouteModuleFiles = $validFiles;
+$unknownAdminRouteModuleFiles['auth.php'] = str_replace(
+    "        'statistics' => ",
+    "        'stats_missing' => ",
+    $unknownAdminRouteModuleFiles['auth.php']
+);
+assertModuleContractAuditFails(
+    'Unknown admin route module requirement key',
+    $unknownAdminRouteModuleFiles,
+    'adminRouteModuleRequirement references unknown module key stats_missing.'
+);
+
+$missingManifestAdminRouteFiles = $validFiles;
+$missingManifestAdminRouteFiles['auth.php'] = str_replace(
+    "['blog.php']",
+    "['blog_save.php']",
+    $missingManifestAdminRouteFiles['auth.php']
+);
+$missingManifestAdminRouteFiles['admin/blog_save.php'] = "<?php\n";
+assertModuleContractAuditFails(
+    'Missing manifest admin path in route requirement map',
+    $missingManifestAdminRouteFiles,
+    'admin_paths entry /admin/blog.php must be listed in adminRouteModuleRequirement() for blog.'
 );
 
 $missingAdminHttpFiles = $validFiles;
