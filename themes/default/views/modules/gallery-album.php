@@ -122,13 +122,16 @@ $clearUrl = (string)($clearUrl ?? galleryAlbumPublicPath($album));
       </div>
 
       <div class="gallery-grid gallery-grid--photos">
-        <?php foreach ($photos as $photo): ?>
-          <figure class="card gallery-photo-card">
+        <?php foreach ($photos as $photoIndex => $photo): ?>
+          <?php $photoCaptionId = 'gallery-photo-caption-' . (int)($photo['id'] ?? $photoIndex); ?>
+          <figure class="card gallery-photo-card" aria-labelledby="<?= h($photoCaptionId) ?>">
             <a class="gallery-card__link" href="<?= h((string)$photo['public_path']) ?>">
               <img class="gallery-card__image" src="<?= h((string)$photo['thumb_url']) ?>" alt="<?= h((string)$photo['label']) ?>">
             </a>
             <?php if ($photo['title'] !== ''): ?>
-              <figcaption class="gallery-photo-card__caption"><?= h((string)$photo['title']) ?></figcaption>
+              <figcaption id="<?= h($photoCaptionId) ?>" class="gallery-photo-card__caption"><?= h((string)$photo['title']) ?></figcaption>
+            <?php else: ?>
+              <figcaption id="<?= h($photoCaptionId) ?>" class="sr-only"><?= h((string)$photo['label']) ?></figcaption>
             <?php endif; ?>
           </figure>
         <?php endforeach; ?>

@@ -208,6 +208,16 @@ assertThemeViewAuditPasses(
 PHP
 );
 
+assertThemeViewAuditPasses(
+    'Figure caption guard',
+    <<<'PHP'
+<figure aria-labelledby="fixture-caption">
+  <img src="/uploads/example.jpg" alt="Ukázkový obrázek">
+  <figcaption id="fixture-caption">Ukázkový obrázek</figcaption>
+</figure>
+PHP
+);
+
 assertThemeViewAuditFails(
     'Request input guard',
     <<<'PHP'
@@ -262,6 +272,26 @@ assertThemeViewAuditFails(
 </article>
 PHP,
     'article without aria-labelledby'
+);
+
+assertThemeViewAuditFails(
+    'Figure heading guard',
+    <<<'PHP'
+<figure aria-label="Ukázková fotografie">
+  <img src="/uploads/example.jpg" alt="Ukázková fotografie">
+</figure>
+PHP,
+    'figure using aria-label instead of aria-labelledby and figcaption'
+);
+
+assertThemeViewAuditFails(
+    'Figure caption missing guard',
+    <<<'PHP'
+<figure aria-labelledby="fixture-caption">
+  <img src="/uploads/example.jpg" alt="Ukázková fotografie">
+</figure>
+PHP,
+    'figure without figcaption'
 );
 
 assertThemeViewAuditFails(

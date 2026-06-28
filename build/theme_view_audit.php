@@ -273,6 +273,22 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
         }
     }
 
+    foreach (themeViewAuditHtmlElements($source, 'figure') as $match) {
+        if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a figure using aria-label instead of aria-labelledby and figcaption.';
+            continue;
+        }
+
+        if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a figure without aria-labelledby.';
+            continue;
+        }
+
+        if (preg_match('/<figcaption\b/i', $match['element']) !== 1) {
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains a figure without figcaption.';
+        }
+    }
+
     foreach (themeViewAuditHtmlTags($source, 'nav') as $match) {
         if (themeViewAuditTagHasAttribute($match['tag'], 'aria-label')) {
             $issues[] = $relativePath . ':' . $match['line'] . ' contains a nav using aria-label instead of aria-labelledby.';

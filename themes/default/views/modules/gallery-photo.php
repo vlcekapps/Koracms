@@ -34,11 +34,11 @@ $photoCount = (int)($photoCount ?? 0);
       <?php endif; ?>
     </p>
 
-    <figure class="photo-figure">
+    <figure class="photo-figure" aria-labelledby="gallery-photo-caption">
       <img class="photo-figure__image" src="<?= h((string)$photo['image_url']) ?>" alt="<?= h($photoTitle) ?>">
-      <?php if ($photo['title'] !== ''): ?>
-        <figcaption class="photo-figure__caption"><?= h((string)$photo['title']) ?></figcaption>
-      <?php endif; ?>
+      <figcaption id="gallery-photo-caption" class="<?= $photo['title'] !== '' ? 'photo-figure__caption' : 'sr-only' ?>">
+        <?= h($photo['title'] !== '' ? (string)$photo['title'] : $photoTitle) ?>
+      </figcaption>
     </figure>
 
     <h2 id="gallery-photo-nav-heading" class="sr-only">Navigace mezi fotografiemi</h2>
@@ -71,13 +71,16 @@ $photoCount = (int)($photoCount ?? 0);
       </div>
 
       <div class="gallery-grid gallery-grid--photos">
-        <?php foreach ($relatedPhotos as $relatedPhoto): ?>
-          <figure class="card gallery-photo-card">
+        <?php foreach ($relatedPhotos as $relatedIndex => $relatedPhoto): ?>
+          <?php $relatedCaptionId = 'gallery-related-photo-caption-' . (int)($relatedPhoto['id'] ?? $relatedIndex); ?>
+          <figure class="card gallery-photo-card" aria-labelledby="<?= h($relatedCaptionId) ?>">
             <a class="gallery-card__link" href="<?= h((string)$relatedPhoto['public_path']) ?>">
               <img class="gallery-card__image" src="<?= h((string)$relatedPhoto['thumb_url']) ?>" alt="<?= h((string)$relatedPhoto['label']) ?>">
             </a>
             <?php if ($relatedPhoto['title'] !== ''): ?>
-              <figcaption class="gallery-photo-card__caption"><?= h((string)$relatedPhoto['title']) ?></figcaption>
+              <figcaption id="<?= h($relatedCaptionId) ?>" class="gallery-photo-card__caption"><?= h((string)$relatedPhoto['title']) ?></figcaption>
+            <?php else: ?>
+              <figcaption id="<?= h($relatedCaptionId) ?>" class="sr-only"><?= h((string)$relatedPhoto['label']) ?></figcaption>
             <?php endif; ?>
           </figure>
         <?php endforeach; ?>
