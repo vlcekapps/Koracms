@@ -20,6 +20,7 @@ $cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
 $adminBackupSource = (string) file_get_contents(__DIR__ . '/../admin/backup.php');
 $backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php');
 $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
+$definitionsSource = (string) file_get_contents(__DIR__ . '/../lib/definitions.php');
 $revisionsSource = (string) file_get_contents(__DIR__ . '/../lib/revisions.php');
 $widgetsSource = (string) file_get_contents(__DIR__ . '/../lib/widgets.php');
 $statsSource = (string) file_get_contents(__DIR__ . '/../lib/stats.php');
@@ -100,6 +101,8 @@ $mojibakeAuditSource = is_file(__DIR__ . '/mojibake_audit.php') ? (string) file_
 $mojibakeAuditSelftestSource = is_file(__DIR__ . '/mojibake_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/mojibake_audit_selftest.php') : '';
 $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit.php') : '';
 $whitespaceAuditSelftestSource = is_file(__DIR__ . '/whitespace_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit_selftest.php') : '';
+$moduleContractAuditSource = is_file(__DIR__ . '/module_contract_audit.php') ? (string) file_get_contents(__DIR__ . '/module_contract_audit.php') : '';
+$moduleContractAuditSelftestSource = is_file(__DIR__ . '/module_contract_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/module_contract_audit_selftest.php') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $releasePackageAuditSelftestSource = is_file(__DIR__ . '/release_package_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit_selftest.php') : '';
@@ -7749,10 +7752,31 @@ $foundationChecks = [
         && str_contains($developerModulesDocSource, 'migrate.php')
         && str_contains($developerModulesDocSource, 'admin/settings_modules.php')
         && str_contains($developerModulesDocSource, 'composer ci:module-ready')
+        && str_contains($developerModulesDocSource, 'coreModuleDefinitions()')
+        && str_contains($developerModulesDocSource, 'build/module_contract_audit.php')
         && str_contains($readmeSource, 'docs/developer-modules.md')
         && str_contains($readmeSource, 'composer ci:module-ready')
+        && str_contains($readmeSource, 'coreModuleDefinitions()')
         && str_contains($adminGuideSource, 'composer ci:module-ready')
         && str_contains($adminGuideSource, 'developer-modules.md'),
+    'module contract audit is wired into module-ready CI' => str_contains($composerSource, '"test:module-contract"')
+        && str_contains($composerSource, '"test:module-contract-selftest"')
+        && str_contains($composerSource, '@test:module-contract')
+        && str_contains($composerSource, '@test:module-contract-selftest')
+        && str_contains($composerSource, 'build/module_contract_audit.php')
+        && str_contains($composerSource, 'build/module_contract_audit_selftest.php')
+        && str_contains($moduleContractAuditSource, 'Module contract audit OK')
+        && str_contains($moduleContractAuditSource, 'coreModuleDefinitions()')
+        && str_contains($moduleContractAuditSource, 'moduleWidgetLabel($moduleKey)')
+        && str_contains($moduleContractAuditSelftestSource, 'Module contract audit self-test OK'),
+    'core module metadata is centralized' => str_contains($definitionsSource, 'function coreModuleDefinitions()')
+        && str_contains($definitionsSource, 'function moduleKeysForSettings()')
+        && str_contains($definitionsSource, 'function moduleSettingsLabels()')
+        && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
+        && str_contains($definitionsSource, 'function moduleWidgetLabel(')
+        && str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');")
+        && str_contains($statsSource, 'return moduleNavigationDefaults();')
+        && str_contains($widgetsSource, 'return moduleWidgetLabel($moduleKey);'),
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
@@ -8239,11 +8263,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'theme view audit is wired into basic CI' => str_contains($composerSource, '"test:theme-views"')
         && str_contains($composerSource, 'php build/theme_view_audit.php')

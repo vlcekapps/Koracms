@@ -1,6 +1,287 @@
 <?php
 
-// Definice typů, profilů webu a popisků modulů – extrahováno z db.php
+// Definice typů, profilů webu, modulů a jejich popisků – extrahováno z db.php
+
+/**
+ * @return array<string, array{
+ *     label:string,
+ *     settings_label:string,
+ *     nav_label:string,
+ *     widget_label:string,
+ *     public_nav_path:string,
+ *     public_nav_order:int,
+ *     profile_managed:bool,
+ *     settings_configurable:bool,
+ *     public_nav:bool
+ * }>
+ */
+function coreModuleDefinitions(): array
+{
+    return [
+        'blog' => [
+            'label' => 'Blog',
+            'settings_label' => 'Blog',
+            'nav_label' => 'Blog',
+            'widget_label' => 'Blog',
+            'public_nav_path' => '/blog/index.php',
+            'public_nav_order' => 10,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'news' => [
+            'label' => 'Novinky',
+            'settings_label' => 'Novinky',
+            'nav_label' => 'Novinky',
+            'widget_label' => 'Novinky',
+            'public_nav_path' => '/news/index.php',
+            'public_nav_order' => 20,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'chat' => [
+            'label' => 'Chat',
+            'settings_label' => 'Chat',
+            'nav_label' => 'Chat',
+            'widget_label' => 'Chat',
+            'public_nav_path' => '/chat/index.php',
+            'public_nav_order' => 90,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'contact' => [
+            'label' => 'Kontakt',
+            'settings_label' => 'Kontakt',
+            'nav_label' => 'Kontakt',
+            'widget_label' => 'Kontakt',
+            'public_nav_path' => '/contact/index.php',
+            'public_nav_order' => 140,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'gallery' => [
+            'label' => 'Galerie',
+            'settings_label' => 'Galerie',
+            'nav_label' => 'Galerie',
+            'widget_label' => 'Fotogalerie',
+            'public_nav_path' => '/gallery/index.php',
+            'public_nav_order' => 50,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'events' => [
+            'label' => 'Události',
+            'settings_label' => 'Události',
+            'nav_label' => 'Akce',
+            'widget_label' => 'Události',
+            'public_nav_path' => '/events/index.php',
+            'public_nav_order' => 30,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'podcast' => [
+            'label' => 'Podcast',
+            'settings_label' => 'Podcast',
+            'nav_label' => 'Podcasty',
+            'widget_label' => 'Podcast',
+            'public_nav_path' => '/podcast/index.php',
+            'public_nav_order' => 40,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'places' => [
+            'label' => 'Zajímavá místa',
+            'settings_label' => 'Zajímavá místa',
+            'nav_label' => 'Zajímavá místa',
+            'widget_label' => 'Místa',
+            'public_nav_path' => '/places/index.php',
+            'public_nav_order' => 60,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'newsletter' => [
+            'label' => 'Newsletter',
+            'settings_label' => 'Newsletter',
+            'nav_label' => '',
+            'widget_label' => 'Newsletter',
+            'public_nav_path' => '',
+            'public_nav_order' => 0,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => false,
+        ],
+        'downloads' => [
+            'label' => 'Ke stažení',
+            'settings_label' => 'Ke stažení',
+            'nav_label' => 'Ke stažení',
+            'widget_label' => 'Ke stažení',
+            'public_nav_path' => '/downloads/index.php',
+            'public_nav_order' => 70,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'food' => [
+            'label' => 'Jídelní lístek',
+            'settings_label' => 'Jídelní lístek',
+            'nav_label' => 'Jídelní lístek',
+            'widget_label' => 'Jídelní lístek',
+            'public_nav_path' => '/food/index.php',
+            'public_nav_order' => 80,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'polls' => [
+            'label' => 'Ankety',
+            'settings_label' => 'Ankety',
+            'nav_label' => 'Ankety',
+            'widget_label' => 'Ankety',
+            'public_nav_path' => '/polls/index.php',
+            'public_nav_order' => 100,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'faq' => [
+            'label' => 'FAQ',
+            'settings_label' => 'FAQ',
+            'nav_label' => 'FAQ',
+            'widget_label' => 'FAQ',
+            'public_nav_path' => '/faq/index.php',
+            'public_nav_order' => 110,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'board' => [
+            'label' => 'Úřední deska',
+            'settings_label' => 'Úřední deska',
+            'nav_label' => '',
+            'widget_label' => '',
+            'public_nav_path' => '/board/index.php',
+            'public_nav_order' => 120,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'reservations' => [
+            'label' => 'Rezervace',
+            'settings_label' => 'Rezervace',
+            'nav_label' => 'Rezervace',
+            'widget_label' => 'Rezervace',
+            'public_nav_path' => '/reservations/index.php',
+            'public_nav_order' => 130,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => true,
+        ],
+        'forms' => [
+            'label' => 'Formuláře',
+            'settings_label' => 'Formuláře',
+            'nav_label' => '',
+            'widget_label' => 'Formuláře',
+            'public_nav_path' => '',
+            'public_nav_order' => 0,
+            'profile_managed' => true,
+            'settings_configurable' => true,
+            'public_nav' => false,
+        ],
+        'statistics' => [
+            'label' => 'Statistiky',
+            'settings_label' => 'Statistiky (admin dashboard)',
+            'nav_label' => '',
+            'widget_label' => 'Statistiky',
+            'public_nav_path' => '',
+            'public_nav_order' => 0,
+            'profile_managed' => false,
+            'settings_configurable' => true,
+            'public_nav' => false,
+        ],
+    ];
+}
+
+/**
+ * @return list<string>
+ */
+function coreModuleKeysByFlag(string $flag): array
+{
+    $keys = [];
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        if (array_key_exists($flag, $definition) && $definition[$flag] === true) {
+            $keys[] = $moduleKey;
+        }
+    }
+
+    return $keys;
+}
+
+/**
+ * @return list<string>
+ */
+function moduleKeysForSettings(): array
+{
+    return coreModuleKeysByFlag('settings_configurable');
+}
+
+/**
+ * @return array<string,string>
+ */
+function moduleSettingsLabels(): array
+{
+    $labels = [];
+    foreach (moduleKeysForSettings() as $moduleKey) {
+        $definition = coreModuleDefinitions()[$moduleKey];
+        $labels[$moduleKey] = $definition['settings_label'];
+    }
+
+    return $labels;
+}
+
+/**
+ * @return array<string, array{0:string, 1:string}>
+ */
+function moduleNavigationDefaults(): array
+{
+    $defaults = [];
+    $definitions = coreModuleDefinitions();
+    uasort($definitions, static function (array $left, array $right): int {
+        return $left['public_nav_order'] <=> $right['public_nav_order'];
+    });
+
+    foreach ($definitions as $moduleKey => $definition) {
+        if ($definition['public_nav'] !== true || $definition['public_nav_path'] === '') {
+            continue;
+        }
+
+        $label = $moduleKey === 'board' ? boardModulePublicLabel() : $definition['nav_label'];
+        $defaults[$moduleKey] = [$definition['public_nav_path'], $label];
+    }
+
+    return $defaults;
+}
+
+function moduleWidgetLabel(string $moduleKey): string
+{
+    if ($moduleKey === 'board') {
+        return boardModulePublicLabel();
+    }
+
+    $definition = coreModuleDefinitions()[$moduleKey] ?? null;
+    if ($definition === null) {
+        return $moduleKey;
+    }
+
+    $label = trim($definition['widget_label']);
+    return $label !== '' ? $label : $definition['label'];
+}
 
 /**
  * @return array<string, array{label:string, public_label:string, help:string}>
@@ -537,7 +818,7 @@ function siteProfileShouldDetachForTheme(string $profileKey, string $themeKey): 
  */
 function siteProfileModuleKeys(): array
 {
-    return ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms'];
+    return coreModuleKeysByFlag('profile_managed');
 }
 
 function applySiteProfilePreset(string $profileKey): void

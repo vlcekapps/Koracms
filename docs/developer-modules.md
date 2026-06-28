@@ -12,7 +12,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 ## Povinné integrační body
 
 - Databáze: nové tabulky a sloupce přidejte do `install.php` i `migrate.php`; pokud veřejný kód očekává nový sloupec, doplňte i schema parity guardrail.
-- Definice: doplňte module key, labely a profilové defaulty do `lib/definitions.php`; pokud jde modul zapínat, zapojte ho do `admin/settings_modules.php`.
+- Definice: doplňte module key do centrálního manifestu `coreModuleDefinitions()` v `lib/definitions.php`. Manifest drží labely a kontextové příznaky `profile_managed`, `settings_configurable`, `public_nav`, `public_nav_path`, `public_nav_order`, `settings_label`, `nav_label` a `widget_label`; `admin/settings_modules.php`, veřejná navigace a widgetové popisky se z něj odvozují automaticky.
 - Administrace: používejte `requireLogin()` nebo přesnější capability helper, CSRF tokeny pro stav měnící akce, PRG po POSTu, jasné flash hlášky, audit log a validaci všech ID proti správnému kontextu.
 - Veřejná část: veřejné entrypointy musí respektovat `isModuleEnabled()`, sdílené 404 helpery, SEO metadata, canonical URL, bezpečné HTTP metody a noindex/no-store u neveřejných nebo tokenových stavů.
 - Navigace a discoverability: zvažte zapojení do navigace webu, sitemapu, vyhledávání, widgetů, RSS/ICS/exportu a administrativních rychlých odkazů.
@@ -41,7 +41,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 ## Testy a guardrails
 
 - Minimální lokální sada před commitem: `php -l` nad změněnými PHP soubory, `php build/unit_tests.php`, `php build/runtime_audit.php`, `php build/http_integration.php` a `git diff --check`.
-- Před větší modulovou změnou spusťte `composer ci:module-ready`; jde o pojmenovaný průchod přes základní CI, runtime audit a HTTP integraci.
+- Před větší modulovou změnou spusťte `composer ci:module-ready`; jde o pojmenovaný průchod přes základní CI, `build/module_contract_audit.php`, runtime audit a HTTP integraci.
 - Nové schéma kryjte v `install.php`, `migrate.php` a schema parity auditu.
 - Nový veřejný endpoint zahrňte do HTTP integrace, pokud má routu, hlavičky, redirect, souborovou odpověď nebo stav měnící workflow.
 - Novou veřejnou šablonu zahrňte do theme view auditu, pokud obsahuje `section`, `article`, `nav`, `aside`, `table`, `fieldset`, `figure`, `role="search"` nebo odkazy do nového okna.

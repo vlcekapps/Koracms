@@ -177,27 +177,7 @@ function widgetTypeAvailability(string $type, array $definition): array
 
 function widgetModuleDisplayName(string $moduleKey): string
 {
-    static $labels = [
-        'blog' => 'Blog',
-        'news' => 'Novinky',
-        'downloads' => 'Ke stažení',
-        'faq' => 'FAQ',
-        'places' => 'Místa',
-        'podcast' => 'Podcast',
-        'board' => '',
-        'events' => 'Události',
-        'polls' => 'Ankety',
-        'newsletter' => 'Newsletter',
-        'gallery' => 'Fotogalerie',
-        'forms' => 'Formuláře',
-        'statistics' => 'Statistiky',
-    ];
-
-    if ($moduleKey === 'board') {
-        return boardModulePublicLabel();
-    }
-
-    return $labels[$moduleKey] ?? $moduleKey;
+    return moduleWidgetLabel($moduleKey);
 }
 
 function widgetSettingAvailabilityReason(string $type, string $settingKey): string

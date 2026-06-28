@@ -291,22 +291,7 @@ function autoCompleteBookings(): void
  */
 function navModuleDefaults(): array
 {
-    return [
-        'blog'      => ['/blog/index.php',       'Blog'],
-        'news'      => ['/news/index.php',        'Novinky'],
-        'events'    => ['/events/index.php',      'Akce'],
-        'podcast'   => ['/podcast/index.php',     'Podcasty'],
-        'gallery'   => ['/gallery/index.php',     'Galerie'],
-        'places'    => ['/places/index.php',      'Zajímavá místa'],
-        'downloads' => ['/downloads/index.php',   'Ke stažení'],
-        'food'      => ['/food/index.php',        'Jídelní lístek'],
-        'chat'      => ['/chat/index.php',        'Chat'],
-        'polls'     => ['/polls/index.php',       'Ankety'],
-        'faq'       => ['/faq/index.php',         'FAQ'],
-        'board'     => ['/board/index.php',       boardModulePublicLabel()],
-        'reservations' => ['/reservations/index.php', 'Rezervace'],
-        'contact'   => ['/contact/index.php',     'Kontakt'],
-    ];
+    return moduleNavigationDefaults();
 }
 
 /**

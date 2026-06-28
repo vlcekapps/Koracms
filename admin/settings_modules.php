@@ -2,7 +2,8 @@
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
-$moduleKeys = ['blog', 'news', 'chat', 'contact', 'gallery', 'events', 'podcast', 'places', 'newsletter', 'downloads', 'food', 'polls', 'faq', 'board', 'reservations', 'forms', 'statistics'];
+$moduleKeys = moduleKeysForSettings();
+$moduleLabels = moduleSettingsLabels();
 $flash = is_array($_SESSION['settings_modules_flash'] ?? null) ? $_SESSION['settings_modules_flash'] : [];
 unset($_SESSION['settings_modules_flash']);
 $successMessage = trim((string)($flash['success'] ?? ''));
@@ -38,25 +39,7 @@ adminHeader('Správa modulů');
 
   <fieldset>
     <legend>Aktivní moduly</legend>
-    <?php foreach ([
-      'blog'      => 'Blog',
-      'news'      => 'Novinky',
-      'chat'      => 'Chat',
-      'contact'   => 'Kontakt',
-      'gallery'   => 'Galerie',
-      'events'    => 'Události',
-      'podcast'   => 'Podcast',
-      'places'    => 'Zajímavá místa',
-      'newsletter' => 'Newsletter',
-      'downloads' => 'Ke stažení',
-      'food'      => 'Jídelní lístek',
-      'polls'     => 'Ankety',
-      'faq'       => 'FAQ',
-      'board'     => 'Úřední deska',
-      'reservations' => 'Rezervace',
-      'forms'        => 'Formuláře',
-      'statistics'   => 'Statistiky (admin dashboard)',
-    ] as $k => $label): ?>
+    <?php foreach ($moduleLabels as $k => $label): ?>
       <div>
         <input type="checkbox" id="module_<?= $k ?>" name="module_<?= $k ?>" value="1"
                <?= isModuleEnabled($k) ? 'checked' : '' ?>>
