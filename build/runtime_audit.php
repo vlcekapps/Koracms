@@ -7767,10 +7767,12 @@ $foundationChecks = [
         && str_contains($composerSource, 'build/module_contract_audit_selftest.php')
         && str_contains($moduleContractAuditSource, 'Module contract audit OK')
         && str_contains($moduleContractAuditSource, 'coreModuleDefinitions()')
+        && str_contains($moduleContractAuditSource, 'install.php and migrate.php must derive module_* defaults')
         && str_contains($moduleContractAuditSource, 'moduleWidgetLabel($moduleKey)')
         && str_contains($moduleContractAuditSelftestSource, 'Module contract audit self-test OK'),
     'core module metadata is centralized' => str_contains($definitionsSource, 'function coreModuleDefinitions()')
         && str_contains($definitionsSource, 'function moduleKeysForSettings()')
+        && str_contains($definitionsSource, 'function moduleDefaultSettings()')
         && str_contains($definitionsSource, 'function moduleSettingsLabels()')
         && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
         && str_contains($definitionsSource, 'function moduleWidgetLabel(')

@@ -87,6 +87,8 @@ function moduleContractAuditExpectedKeys(): array
 $definitionsSource = moduleContractAuditReadFile($projectRoot, 'lib/definitions.php', $issues);
 $statsSource = moduleContractAuditReadFile($projectRoot, 'lib/stats.php', $issues);
 $settingsModulesSource = moduleContractAuditReadFile($projectRoot, 'admin/settings_modules.php', $issues);
+$installSource = moduleContractAuditReadFile($projectRoot, 'install.php', $issues);
+$migrateSource = moduleContractAuditReadFile($projectRoot, 'migrate.php', $issues);
 $composerSource = moduleContractAuditReadFile($projectRoot, 'composer.json', $issues);
 $runtimeAuditSource = moduleContractAuditReadFile($projectRoot, 'build/runtime_audit.php', $issues);
 $developerModulesDocSource = moduleContractAuditReadFile($projectRoot, 'docs/developer-modules.md', $issues);
@@ -96,6 +98,7 @@ moduleContractAuditRequire(
     str_contains($definitionsSource, 'function coreModuleDefinitions()')
     && str_contains($definitionsSource, 'function coreModuleKeysByFlag(')
     && str_contains($definitionsSource, 'function moduleKeysForSettings()')
+    && str_contains($definitionsSource, 'function moduleDefaultSettings()')
     && str_contains($definitionsSource, 'function moduleSettingsLabels()')
     && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
     && str_contains($definitionsSource, 'function moduleWidgetLabel('),
@@ -114,6 +117,7 @@ foreach (moduleContractAuditExpectedKeys() as $moduleKey) {
 foreach ([
     "'profile_managed'",
     "'settings_configurable'",
+    "'settings_default'",
     "'public_nav'",
     "'public_nav_path'",
     "'public_nav_order'",
@@ -138,6 +142,23 @@ moduleContractAuditRequire(
     && str_contains($settingsModulesSource, '$moduleLabels = moduleSettingsLabels();')
     && !str_contains($settingsModulesSource, '$moduleKeys = ['),
     'admin/settings_modules.php must derive configurable modules and labels from the central manifest.',
+    $issues
+);
+
+moduleContractAuditRequire(
+    str_contains($installSource, 'moduleDefaultSettings()')
+    && str_contains($migrateSource, 'moduleDefaultSettings()'),
+    'install.php and migrate.php must derive module_* defaults from the central manifest.',
+    $issues
+);
+
+$legacyModuleDefaultPattern = '/[\'"]module_(?:'
+    . implode('|', array_map(static fn (string $moduleKey): string => preg_quote($moduleKey, '/'), moduleContractAuditExpectedKeys()))
+    . ')[\'"]\\s*=>/';
+moduleContractAuditRequire(
+    preg_match($legacyModuleDefaultPattern, $installSource) !== 1
+    && preg_match($legacyModuleDefaultPattern, $migrateSource) !== 1,
+    'install.php and migrate.php must not keep hard-coded module_* default lists.',
     $issues
 );
 

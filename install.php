@@ -869,18 +869,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         // ── Výchozí nastavení ────────────────────────────────────────────────
-        $defaults = [
+        $defaults = array_merge([
             'site_name'       => $siteName,
             'site_description'=> $siteDesc,
             'site_profile'    => $siteProfile,
             'admin_email'     => $adminEmail,
             'contact_email'   => $adminEmail,
             'admin_password'  => password_hash($adminPass, PASSWORD_BCRYPT),
-            'module_blog'     => '1',
-            'module_news'     => '1',
-            'module_chat'     => '1',
-            'module_contact'  => '1',
-            'module_gallery'  => '1',
+        ], moduleDefaultSettings(), [
             'home_blog_count' => '5',
             'home_news_count' => '5',
             'home_board_count' => '5',
@@ -906,18 +902,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'comment_spam_words' => '',
             'home_author_user_id' => '',
             'content_editor'  => 'html',
-            'module_events'   => '1',
-            'module_podcast'  => '1',
-            'module_places'   => '1',
-            'module_newsletter' => '1',
-            'module_downloads'  => '1',
-            'module_food'       => '1',
-            'module_polls'      => '0',
-            'module_faq'        => '0',
-            'module_board'      => '0',
-            'module_reservations' => '0',
-            'module_forms'        => '0',
-            'module_statistics'   => '0',
             'visitor_tracking_enabled' => '0',
             'visitor_counter_enabled'  => '0',
             'stats_retention_days'     => '90',
@@ -935,7 +919,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'active_theme'             => defaultThemeName(),
             'home_intro'               => '',
             'nav_module_order'         => '',
-        ];
+        ]);
         $stmt = $pdo->prepare("INSERT INTO cms_settings (`key`, value) VALUES (?, ?)
                                ON DUPLICATE KEY UPDATE value = VALUES(value)");
         foreach ($defaults as $k => $v) {

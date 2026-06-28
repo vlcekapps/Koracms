@@ -8,6 +8,7 @@
  *     settings_label:string,
  *     nav_label:string,
  *     widget_label:string,
+ *     settings_default:string,
  *     public_nav_path:string,
  *     public_nav_order:int,
  *     profile_managed:bool,
@@ -23,6 +24,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Blog',
             'nav_label' => 'Blog',
             'widget_label' => 'Blog',
+            'settings_default' => '1',
             'public_nav_path' => '/blog/index.php',
             'public_nav_order' => 10,
             'profile_managed' => true,
@@ -34,6 +36,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Novinky',
             'nav_label' => 'Novinky',
             'widget_label' => 'Novinky',
+            'settings_default' => '1',
             'public_nav_path' => '/news/index.php',
             'public_nav_order' => 20,
             'profile_managed' => true,
@@ -45,6 +48,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Chat',
             'nav_label' => 'Chat',
             'widget_label' => 'Chat',
+            'settings_default' => '1',
             'public_nav_path' => '/chat/index.php',
             'public_nav_order' => 90,
             'profile_managed' => true,
@@ -56,6 +60,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Kontakt',
             'nav_label' => 'Kontakt',
             'widget_label' => 'Kontakt',
+            'settings_default' => '1',
             'public_nav_path' => '/contact/index.php',
             'public_nav_order' => 140,
             'profile_managed' => true,
@@ -67,6 +72,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Galerie',
             'nav_label' => 'Galerie',
             'widget_label' => 'Fotogalerie',
+            'settings_default' => '1',
             'public_nav_path' => '/gallery/index.php',
             'public_nav_order' => 50,
             'profile_managed' => true,
@@ -78,6 +84,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Události',
             'nav_label' => 'Akce',
             'widget_label' => 'Události',
+            'settings_default' => '1',
             'public_nav_path' => '/events/index.php',
             'public_nav_order' => 30,
             'profile_managed' => true,
@@ -89,6 +96,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Podcast',
             'nav_label' => 'Podcasty',
             'widget_label' => 'Podcast',
+            'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
             'public_nav_order' => 40,
             'profile_managed' => true,
@@ -100,6 +108,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Zajímavá místa',
             'nav_label' => 'Zajímavá místa',
             'widget_label' => 'Místa',
+            'settings_default' => '1',
             'public_nav_path' => '/places/index.php',
             'public_nav_order' => 60,
             'profile_managed' => true,
@@ -111,6 +120,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Newsletter',
             'nav_label' => '',
             'widget_label' => 'Newsletter',
+            'settings_default' => '1',
             'public_nav_path' => '',
             'public_nav_order' => 0,
             'profile_managed' => true,
@@ -122,6 +132,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Ke stažení',
             'nav_label' => 'Ke stažení',
             'widget_label' => 'Ke stažení',
+            'settings_default' => '1',
             'public_nav_path' => '/downloads/index.php',
             'public_nav_order' => 70,
             'profile_managed' => true,
@@ -133,6 +144,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Jídelní lístek',
             'nav_label' => 'Jídelní lístek',
             'widget_label' => 'Jídelní lístek',
+            'settings_default' => '1',
             'public_nav_path' => '/food/index.php',
             'public_nav_order' => 80,
             'profile_managed' => true,
@@ -144,6 +156,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Ankety',
             'nav_label' => 'Ankety',
             'widget_label' => 'Ankety',
+            'settings_default' => '0',
             'public_nav_path' => '/polls/index.php',
             'public_nav_order' => 100,
             'profile_managed' => true,
@@ -155,6 +168,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'FAQ',
             'nav_label' => 'FAQ',
             'widget_label' => 'FAQ',
+            'settings_default' => '0',
             'public_nav_path' => '/faq/index.php',
             'public_nav_order' => 110,
             'profile_managed' => true,
@@ -166,6 +180,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Úřední deska',
             'nav_label' => '',
             'widget_label' => '',
+            'settings_default' => '0',
             'public_nav_path' => '/board/index.php',
             'public_nav_order' => 120,
             'profile_managed' => true,
@@ -177,6 +192,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Rezervace',
             'nav_label' => 'Rezervace',
             'widget_label' => 'Rezervace',
+            'settings_default' => '0',
             'public_nav_path' => '/reservations/index.php',
             'public_nav_order' => 130,
             'profile_managed' => true,
@@ -188,6 +204,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Formuláře',
             'nav_label' => '',
             'widget_label' => 'Formuláře',
+            'settings_default' => '0',
             'public_nav_path' => '',
             'public_nav_order' => 0,
             'profile_managed' => true,
@@ -199,6 +216,7 @@ function coreModuleDefinitions(): array
             'settings_label' => 'Statistiky (admin dashboard)',
             'nav_label' => '',
             'widget_label' => 'Statistiky',
+            'settings_default' => '0',
             'public_nav_path' => '',
             'public_nav_order' => 0,
             'profile_managed' => false,
@@ -229,6 +247,20 @@ function coreModuleKeysByFlag(string $flag): array
 function moduleKeysForSettings(): array
 {
     return coreModuleKeysByFlag('settings_configurable');
+}
+
+/**
+ * @return array<string,string>
+ */
+function moduleDefaultSettings(): array
+{
+    $settings = [];
+    foreach (moduleKeysForSettings() as $moduleKey) {
+        $definition = coreModuleDefinitions()[$moduleKey];
+        $settings['module_' . $moduleKey] = $definition['settings_default'];
+    }
+
+    return $settings;
 }
 
 /**

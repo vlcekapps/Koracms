@@ -119,7 +119,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
 {
     $entries = [];
     foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false],\n";
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false],\n";
     }
 
     return "<?php\n"
@@ -128,6 +128,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "    ];\n}\n"
         . "function coreModuleKeysByFlag(string \$flag): array { return []; }\n"
         . "function moduleKeysForSettings(): array { return coreModuleKeysByFlag('settings_configurable'); }\n"
+        . "function moduleDefaultSettings(): array { return []; }\n"
         . "function moduleSettingsLabels(): array { return []; }\n"
         . "function moduleNavigationDefaults(): array { return []; }\n"
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
@@ -144,6 +145,8 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
+        'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
+        'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
         'docs/developer-modules.md' => "Použijte coreModuleDefinitions() a build/module_contract_audit.php.\n",
@@ -237,6 +240,14 @@ assertModuleContractAuditFails(
     'Legacy settings module list',
     $legacySettingsFiles,
     'admin/settings_modules.php must derive configurable modules and labels from the central manifest.'
+);
+
+$legacyInstallFiles = $validFiles;
+$legacyInstallFiles['install.php'] = "<?php\n\$defaults = ['module_blog' => '1'];\n";
+assertModuleContractAuditFails(
+    'Legacy install module defaults',
+    $legacyInstallFiles,
+    'install.php and migrate.php must derive module_* defaults from the central manifest.'
 );
 
 $missingComposerFiles = $validFiles;

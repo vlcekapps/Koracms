@@ -2051,25 +2051,7 @@ try {
     $log[] = "✗ Slugy úřední desky – CHYBA: " . h($e->getMessage());
 }
 
-$newSettings = [
-    // Moduly
-    'module_blog'             => '1',
-    'module_news'             => '1',
-    'module_chat'             => '1',
-    'module_contact'          => '1',
-    'module_gallery'          => '1',
-    'module_events'           => '1',
-    'module_podcast'          => '1',
-    'module_places'           => '1',
-    'module_newsletter'       => '1',
-    'module_downloads'        => '1',
-    'module_food'             => '1',
-    'module_polls'            => '0',
-    'module_faq'              => '0',
-    'module_board'            => '0',
-    'module_reservations'     => '0',
-    'module_forms'            => '0',
-    'module_statistics'       => '0',
+$newSettings = array_merge(moduleDefaultSettings(), [
     'visitor_tracking_enabled' => '0',
     'visitor_counter_enabled'  => '0',
     'stats_retention_days'     => '90',
@@ -2121,7 +2103,7 @@ $newSettings = [
     'home_intro'              => '',
     // Pořadí modulů v navigaci
     'nav_module_order'        => '',
-];
+]);
 
 $stmt = $pdo->prepare(
     "INSERT INTO cms_settings (`key`, value) VALUES (?, ?)
