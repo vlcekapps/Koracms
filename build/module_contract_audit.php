@@ -85,6 +85,22 @@ function moduleContractAuditValidateModuleGateReferences(string $source, string 
     }
 }
 
+/**
+ * @param list<string> $knownModuleKeys
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateModuleSettingReferences(string $source, string $relativePath, array $knownModuleKeys, array &$issues): void
+{
+    if (preg_match_all('/\b(?:getSetting|saveSetting)\(\s*[\'"]module_([a-z][a-z0-9_]*)[\'"]/', $source, $matches) === false) {
+        $issues[] = $relativePath . ' module_* setting references cannot be parsed.';
+        return;
+    }
+
+    foreach ($matches[1] as $moduleKey) {
+        moduleContractAuditRequireKnownModule($moduleKey, $relativePath . ' module_* setting', $knownModuleKeys, $issues);
+    }
+}
+
 function moduleContractAuditRelativePath(string $projectRoot, string $path): string
 {
     $prefix = rtrim($projectRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
@@ -174,6 +190,24 @@ function moduleContractAuditValidateApplicationModuleGateReferences(string $proj
         }
 
         moduleContractAuditValidateModuleGateReferences($source, $relativePath, $knownModuleKeys, $issues);
+    }
+}
+
+/**
+ * @param list<string> $knownModuleKeys
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateApplicationModuleSettingReferences(string $projectRoot, array $knownModuleKeys, array &$issues): void
+{
+    foreach (moduleContractAuditApplicationPhpFiles($projectRoot) as $path) {
+        $source = file_get_contents($path);
+        $relativePath = moduleContractAuditRelativePath($projectRoot, $path);
+        if (!is_string($source)) {
+            $issues[] = $relativePath . ' cannot be read for module_* setting audit.';
+            continue;
+        }
+
+        moduleContractAuditValidateModuleSettingReferences($source, $relativePath, $knownModuleKeys, $issues);
     }
 }
 
@@ -511,6 +545,7 @@ moduleContractAuditCollectThemeRequiredModules($projectRoot, $issues);
 moduleContractAuditValidateModuleGateReferences($contentReferencePickerSource, 'admin/content_reference_picker.php', $knownModuleKeys, $issues);
 moduleContractAuditValidateModuleGateReferences($contentReferenceSearchSource, 'admin/content_reference_search.php', $knownModuleKeys, $issues);
 moduleContractAuditValidateApplicationModuleGateReferences($projectRoot, $knownModuleKeys, $issues);
+moduleContractAuditValidateApplicationModuleSettingReferences($projectRoot, $knownModuleKeys, $issues);
 
 foreach ([
     '"test:module-contract"',

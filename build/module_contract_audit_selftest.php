@@ -150,6 +150,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
         'admin/content_reference_picker.php' => "<?php\nif (isModuleEnabled('blog')) {}\n",
         'admin/content_reference_search.php' => "<?php\nif (isModuleEnabled('news')) {}\n",
+        'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
@@ -287,6 +288,14 @@ assertModuleContractAuditFails(
     'Unknown application module gate',
     $unknownApplicationModuleFiles,
     'forms/show.php isModuleEnabled references unknown module key unknown_application_module.'
+);
+
+$unknownApplicationModuleSettingFiles = $validFiles;
+$unknownApplicationModuleSettingFiles['forms/show.php'] = "<?php\ngetSetting('module_unknown_setting_module', '0');\n";
+assertModuleContractAuditFails(
+    'Unknown application module setting',
+    $unknownApplicationModuleSettingFiles,
+    'forms/show.php module_* setting references unknown module key unknown_setting_module.'
 );
 
 $invalidManifestDefaultFiles = $validFiles;

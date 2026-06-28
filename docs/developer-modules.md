@@ -19,6 +19,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 - Widgety a šablony: pokud widget používá `requires_module` nebo theme manifest `requires_modules`, hodnota musí být existující module key z `coreModuleDefinitions()`; `build/module_contract_audit.php` hlídá překlepy i neexistující modulové závislosti.
 - Content picker: pokud nový modul přidává zdroje do `admin/content_reference_picker.php` nebo `admin/content_reference_search.php`, používejte v `isModuleEnabled()` stejný module key jako v `coreModuleDefinitions()`; modulový audit tuto vazbu hlídá spolu s widgety a šablonami.
 - Modulové brány: literálové `isModuleEnabled('...')` odkazy v aplikačních PHP souborech mimo `build/` a `vendor/` musí používat existující module key z `coreModuleDefinitions()`; překlepy zachytí `build/module_contract_audit.php`.
+- Modulová nastavení: pokud musíte použít literálové `getSetting('module_...')` nebo `saveSetting('module_...')`, suffix za `module_` musí odpovídat existujícímu module key; audit hlídá překlepy v aplikačním kódu stejně jako u `isModuleEnabled()`.
 - Revize a redirecty: u editovatelného obsahu s veřejnou URL preferujte historii revizí a redirect při změně slugu, aby se nerozbily staré odkazy.
 - Dokumentace: doplňte `README.md`, `docs/admin-guide.md` a `CHANGELOG.md`; u většího modulu přidejte krátký workflow popis pro správce.
 
