@@ -7784,6 +7784,8 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'must guard access with isModuleEnabled')
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleNavigationDefaults()')
+        && str_contains($httpIntegrationFoundationSource, "saveSetting('module_' . \$moduleKey, '0')")
+        && str_contains($httpIntegrationFoundationSource, "responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl)")
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateModuleGateReferences')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditApplicationPhpFiles')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateApplicationModuleGateReferences')

@@ -542,6 +542,23 @@ try {
 
     $publicModuleNavigationIssues = [];
     foreach (array_keys(moduleNavigationDefaults()) as $moduleKey) {
+        saveSetting('module_' . $moduleKey, '0');
+    }
+    clearSettingsCache();
+    foreach (moduleNavigationDefaults() as $moduleKey => $moduleNavigation) {
+        /** @var array{0:string, 1:string} $moduleNavigation */
+        [$publicModulePath] = $moduleNavigation;
+        $disabledModuleResponse = fetchUrl($baseUrl . BASE_URL . $publicModulePath, '', 0);
+        if (httpIntegrationStatusCode($disabledModuleResponse) !== 302) {
+            $publicModuleNavigationIssues[] = 'vypnutý veřejný modul ' . $moduleKey . ' (' . $publicModulePath . ') nevrátil redirect';
+            continue;
+        }
+        if (!responseHasLocationHeader($disabledModuleResponse['headers'], BASE_URL . '/index.php', $baseUrl)) {
+            $publicModuleNavigationIssues[] = 'vypnutý veřejný modul ' . $moduleKey . ' nepřesměroval na homepage';
+        }
+    }
+
+    foreach (array_keys(moduleNavigationDefaults()) as $moduleKey) {
         saveSetting('module_' . $moduleKey, '1');
     }
     clearSettingsCache();

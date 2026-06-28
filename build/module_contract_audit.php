@@ -321,7 +321,9 @@ function moduleContractAuditValidatePublicNavHttpIntegration(string $definitions
     moduleContractAuditRequire(
         str_contains($httpIntegrationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
         && str_contains($httpIntegrationSource, 'moduleNavigationDefaults()')
+        && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '0')")
         && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '1')")
+        && str_contains($httpIntegrationSource, "responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl)")
         && str_contains($httpIntegrationSource, 'veřejný modul ')
         && str_contains($httpIntegrationSource, 'Tento modul není povolen'),
         'public_nav modules must be covered by dynamic public_module_navigation_http integration.',
