@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
+requireModuleEnabled('blog', 'Přístup odepřen. Modul Blog není povolen.');
 verifyCsrf();
 
 $pdo = db_connect();

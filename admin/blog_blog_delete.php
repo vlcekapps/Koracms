@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('blog_taxonomies_manage', 'Přístup odepřen.');
+requireModuleEnabled('blog', 'Přístup odepřen. Modul Blog není povolen.');
 verifyCsrf();
 
 $id = inputInt('post', 'id');

@@ -757,6 +757,124 @@ function adminRouteCapability(?string $scriptPath = null): ?string
     return 'admin_access';
 }
 
+/**
+ * @return array{module:string,message:string}|null
+ */
+function adminRouteModuleRequirement(?string $scriptPath = null): ?array
+{
+    $path = strtolower(str_replace('\\', '/', $scriptPath ?? ($_SERVER['SCRIPT_NAME'] ?? '')));
+    if ($path === '' || !str_contains($path, '/admin/')) {
+        return null;
+    }
+
+    $file = basename($path);
+    $requirements = [
+        'blog' => [
+            'message' => 'Přístup odepřen. Modul Blog není povolen.',
+            'files' => [
+                'blog.php', 'blogs.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php',
+                'blog_clone.php', 'blog_bulk.php', 'blog_transfer.php', 'blog_content_reference_search.php',
+                'blog_members.php', 'blog_pages.php', 'blog_blog_delete.php',
+                'blog_cats.php', 'blog_cat_delete.php', 'blog_tags.php', 'blog_tag_delete.php',
+                'comments.php', 'comment_action.php', 'comment_approve.php', 'comment_bulk.php', 'comment_delete.php',
+            ],
+        ],
+        'news' => [
+            'message' => 'Přístup odepřen. Modul Novinky není povolen.',
+            'files' => ['news.php', 'news_form.php', 'news_save.php', 'news_delete.php', 'news_clone.php'],
+        ],
+        'chat' => [
+            'message' => 'Přístup odepřen. Modul Chat není povolen.',
+            'files' => ['chat.php', 'chat_action.php', 'chat_bulk.php', 'chat_delete.php', 'chat_message.php', 'chat_reply.php', 'chat_update.php'],
+        ],
+        'contact' => [
+            'message' => 'Přístup odepřen. Modul Kontakt není povolen.',
+            'files' => ['contact.php', 'contact_action.php', 'contact_bulk.php', 'contact_delete.php', 'contact_message.php'],
+        ],
+        'gallery' => [
+            'message' => 'Přístup odepřen. Modul Galerie není povolen.',
+            'files' => [
+                'gallery_albums.php', 'gallery_album_form.php', 'gallery_album_save.php', 'gallery_album_delete.php',
+                'gallery_photos.php', 'gallery_photo_form.php', 'gallery_photo_save.php', 'gallery_photo_delete.php',
+                'gallery_photo_reorder.php', 'gallery_export_zip.php',
+            ],
+        ],
+        'events' => [
+            'message' => 'Přístup odepřen. Modul Události není povolen.',
+            'files' => ['events.php', 'event_form.php', 'event_save.php', 'event_delete.php', 'event_clone.php'],
+        ],
+        'podcast' => [
+            'message' => 'Přístup odepřen. Modul Podcasty není povolen.',
+            'files' => [
+                'podcast_shows.php', 'podcast_show_form.php', 'podcast_show_save.php', 'podcast_show_delete.php',
+                'podcast.php', 'podcast_form.php', 'podcast_save.php', 'podcast_delete.php',
+            ],
+        ],
+        'places' => [
+            'message' => 'Přístup odepřen. Modul Zajímavá místa není povolen.',
+            'files' => ['places.php', 'place_form.php', 'place_save.php', 'place_delete.php'],
+        ],
+        'newsletter' => [
+            'message' => 'Přístup odepřen. Modul Newsletter není povolen.',
+            'files' => [
+                'newsletter.php', 'newsletter_form.php', 'newsletter_send.php', 'newsletter_bulk.php',
+                'newsletter_history.php', 'newsletter_subscriber.php', 'newsletter_subscriber_action.php', 'newsletter_subscriber_delete.php',
+            ],
+        ],
+        'downloads' => [
+            'message' => 'Přístup odepřen. Modul Ke stažení není povolen.',
+            'files' => ['downloads.php', 'download_form.php', 'download_save.php', 'download_delete.php', 'dl_cats.php', 'dl_cat_delete.php'],
+        ],
+        'food' => [
+            'message' => 'Přístup odepřen. Modul Jídelní lístek není povolen.',
+            'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php'],
+        ],
+        'polls' => [
+            'message' => 'Přístup odepřen. Modul Ankety není povolen.',
+            'files' => ['polls.php', 'polls_form.php', 'polls_save.php', 'polls_delete.php'],
+        ],
+        'faq' => [
+            'message' => 'Přístup odepřen. Modul FAQ není povolen.',
+            'files' => ['faq.php', 'faq_form.php', 'faq_save.php', 'faq_delete.php', 'faq_cats.php', 'faq_cat_delete.php'],
+        ],
+        'board' => [
+            'message' => 'Přístup odepřen. Modul Vývěska není povolen.',
+            'files' => ['board.php', 'board_form.php', 'board_save.php', 'board_delete.php', 'board_clone.php', 'board_cats.php', 'board_cat_delete.php'],
+        ],
+        'forms' => [
+            'message' => 'Přístup odepřen. Modul Formuláře není povolen.',
+            'files' => [
+                'forms.php', 'form_form.php', 'form_save.php', 'form_delete.php',
+                'form_submissions.php', 'form_submission.php', 'form_submission_action.php', 'form_submission_bulk.php',
+                'form_submission_delete.php', 'form_submission_file.php', 'form_submission_issue.php', 'form_submission_reply.php',
+            ],
+        ],
+        'reservations' => [
+            'message' => 'Přístup odepřen. Modul Rezervace není povolen.',
+            'files' => [
+                'res_bookings.php', 'res_booking_add.php', 'res_booking_detail.php', 'res_booking_save.php',
+                'res_resources.php', 'res_resource_form.php', 'res_resource_save.php', 'res_resource_delete.php',
+                'res_categories.php', 'res_cat_delete.php', 'res_locations.php', 'res_location_delete.php',
+            ],
+        ],
+        'statistics' => [
+            'message' => 'Přístup odepřen. Modul Statistiky není povolen.',
+            'files' => ['statistics.php'],
+        ],
+    ];
+
+    foreach ($requirements as $moduleKey => $requirement) {
+        if (in_array($file, $requirement['files'], true)) {
+            return [
+                'module' => $moduleKey,
+                'message' => $requirement['message'],
+            ];
+        }
+    }
+
+    return null;
+}
+
 function currentUserId(): ?int
 {
     return isset($_SESSION['cms_user_id']) ? (int)$_SESSION['cms_user_id'] : null;
@@ -979,6 +1097,11 @@ function requireLogin(string $loginUrl = '/admin/login.php'): void
         $requiredCapability = adminRouteCapability();
         if ($requiredCapability !== null && !currentUserHasCapability($requiredCapability)) {
             adminForbidden('Přístup odepřen. Pro tuto část administrace nemáte potřebné oprávnění.');
+        }
+
+        $requiredModule = adminRouteModuleRequirement();
+        if ($requiredModule !== null && !isModuleEnabled($requiredModule['module'])) {
+            adminForbidden($requiredModule['message']);
         }
     }
 }

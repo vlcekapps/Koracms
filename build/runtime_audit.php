@@ -7757,6 +7757,38 @@ foreach ($adminModuleGateExpectations as $adminModuleGatePath => $moduleKey) {
         break;
     }
 }
+$adminRouteModuleExpectations = [
+    '/admin/blog_save.php' => 'blog',
+    '/admin/blog_bulk.php' => 'blog',
+    '/admin/comment_bulk.php' => 'blog',
+    '/admin/news_save.php' => 'news',
+    '/admin/chat_action.php' => 'chat',
+    '/admin/contact_bulk.php' => 'contact',
+    '/admin/gallery_photo_reorder.php' => 'gallery',
+    '/admin/event_clone.php' => 'events',
+    '/admin/podcast_show_save.php' => 'podcast',
+    '/admin/place_delete.php' => 'places',
+    '/admin/newsletter_send.php' => 'newsletter',
+    '/admin/download_save.php' => 'downloads',
+    '/admin/food_delete.php' => 'food',
+    '/admin/polls_save.php' => 'polls',
+    '/admin/faq_cat_delete.php' => 'faq',
+    '/admin/board_clone.php' => 'board',
+    '/admin/form_save.php' => 'forms',
+    '/admin/form_submission_action.php' => 'forms',
+    '/admin/res_booking_save.php' => 'reservations',
+    '/admin/res_resource_delete.php' => 'reservations',
+];
+$adminRouteModuleGuardsOk = function_exists('adminRouteModuleRequirement');
+foreach ($adminRouteModuleExpectations as $adminRoutePath => $expectedModuleKey) {
+    $routeRequirement = function_exists('adminRouteModuleRequirement')
+        ? adminRouteModuleRequirement($adminRoutePath)
+        : null;
+    if (($routeRequirement['module'] ?? null) !== $expectedModuleKey) {
+        $adminRouteModuleGuardsOk = false;
+        break;
+    }
+}
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -7848,12 +7880,17 @@ $foundationChecks = [
         && str_contains($statsSource, 'return moduleNavigationDefaults();')
         && str_contains($widgetsSource, 'return moduleWidgetLabel($moduleKey);'),
     'admin module entrypoints enforce module state' => str_contains($authSource, 'function requireModuleEnabled(')
+        && str_contains($authSource, 'function adminRouteModuleRequirement(')
         && str_contains($definitionsSource, "'admin_paths'")
         && str_contains($runtimeAuditSelfSource, 'moduleAdminEntryPoints()')
         && $adminModuleEntryPointGatesOk
+        && $adminRouteModuleGuardsOk
+        && str_contains($authSource, 'adminRouteModuleRequirement()')
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('admin_disabled_modules_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleAdminEntryPoints()')
-        && str_contains($httpIntegrationFoundationSource, 'admin stránka vypnutého modulu'),
+        && str_contains($httpIntegrationFoundationSource, 'admin stránka vypnutého modulu')
+        && str_contains($httpIntegrationFoundationSource, '/admin/form_save.php')
+        && str_contains($httpIntegrationFoundationSource, 'stav měnící endpoint vypnutého modulu forms'),
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),

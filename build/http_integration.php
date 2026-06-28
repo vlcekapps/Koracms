@@ -607,6 +607,36 @@ try {
         saveSetting('module_' . $moduleKey, '1');
         clearSettingsCache();
     }
+
+    $disabledFormTitle = 'HTTP Disabled Module Form Save ' . bin2hex(random_bytes(4));
+    saveSetting('module_forms', '0');
+    clearSettingsCache();
+    $disabledFormSaveResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_save.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'title' => $disabledFormTitle,
+            'slug' => 'http-disabled-module-form-save-' . bin2hex(random_bytes(4)),
+            'fields_json' => '[]',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($disabledFormSaveResponse) !== 403) {
+        $adminDisabledModuleIssues[] = 'stav měnící endpoint vypnutého modulu forms (/admin/form_save.php) nevrátil 403';
+    }
+    if (!str_contains($disabledFormSaveResponse['body'], 'není povolen')) {
+        $adminDisabledModuleIssues[] = 'stav měnící endpoint vypnutého modulu forms neobsahuje srozumitelnou zprávu';
+    }
+    $disabledFormExists = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_forms WHERE title = " . $pdo->quote($disabledFormTitle))
+        ->fetchColumn();
+    if ($disabledFormExists > 0) {
+        $adminDisabledModuleIssues[] = 'stav měnící endpoint vypnutého modulu forms uložil formulář navzdory vypnutému modulu';
+    }
+    saveSetting('module_forms', '1');
+    clearSettingsCache();
+
     httpIntegrationPrintResult('admin_disabled_modules_http', $adminDisabledModuleIssues, $failures);
 
     $disabledContentReferenceIssues = [];

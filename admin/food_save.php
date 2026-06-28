@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jídelních lístků nemáte potřebné oprávnění.');
+requireModuleEnabled('food', 'Přístup odepřen. Modul Jídelní lístek není povolen.');
 verifyCsrf();
 
 $pdo = db_connect();

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu souborů ke stažení nemáte potřebné oprávnění.');
+requireModuleEnabled('downloads', 'Přístup odepřen. Modul Ke stažení není povolen.');
 verifyCsrf();
 
 $pdo = db_connect();

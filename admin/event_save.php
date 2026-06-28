@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu událostí nemáte potřebné oprávnění.');
+requireModuleEnabled('events', 'Přístup odepřen. Modul Události není povolen.');
 verifyCsrf();
 
 $pdo = db_connect();

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
+requireModuleEnabled('forms', 'Přístup odepřen. Modul Formuláře není povolen.');
 verifyCsrf();
 
 $id = inputInt('post', 'id');
