@@ -60,6 +60,19 @@ function assert_contains(string $needle, string $haystack, string $label): void
     }
 }
 
+function assert_admin_route_module_requirement(
+    string $scriptPath,
+    string $expectedModule,
+    string $expectedMessageFragment,
+    string $label
+): void {
+    $requirement = adminRouteModuleRequirement($scriptPath);
+
+    assert_true($requirement !== null, $label . ' requirement exists');
+    assert_equals($expectedModule, $requirement['module'] ?? null, $label . ' module key');
+    assert_contains($expectedMessageFragment, (string)($requirement['message'] ?? ''), $label . ' message');
+}
+
 function test_session_string(string $key): string
 {
     return isset($_SESSION[$key]) && is_string($_SESSION[$key]) ? $_SESSION[$key] : '';
@@ -150,6 +163,19 @@ assert_equals('/admin/index.php', adminLoginRedirectTarget('/admin/login_2fa.php
 assert_equals('/admin/index.php', adminLoginRedirectTarget('https://evil.example/phish', '/admin/index.php'), 'admin login redirect rejects external URL');
 assert_equals('/admin/index.php', adminLoginRedirectTarget('//evil.example/phish', '/admin/index.php'), 'admin login redirect rejects protocol-relative URL');
 assert_equals('/admin/index.php', adminLoginRedirectTarget("/admin/widgets.php\x00evil", '/admin/index.php'), 'admin login redirect rejects control characters');
+
+test_section('adminRouteModuleRequirement()');
+
+assert_admin_route_module_requirement('/admin/form_save.php', 'forms', 'Formuláře', 'forms save route is guarded');
+assert_admin_route_module_requirement('/admin/form_submission_action.php', 'forms', 'Formuláře', 'forms submission action route is guarded');
+assert_admin_route_module_requirement('/admin/blog_save.php', 'blog', 'Blog', 'blog save route is guarded');
+assert_admin_route_module_requirement('/admin/comment_bulk.php', 'blog', 'Blog', 'blog comment bulk route is guarded');
+assert_admin_route_module_requirement('/ADMIN/NEWS_SAVE.PHP', 'news', 'Novinky', 'news route matching is case-insensitive');
+assert_admin_route_module_requirement('C:\\laragon\\www\\admin\\gallery_photo_reorder.php', 'gallery', 'Galerie', 'windows path separators are normalized');
+assert_admin_route_module_requirement('/admin/newsletter_send.php', 'newsletter', 'Newsletter', 'newsletter send route is guarded');
+assert_admin_route_module_requirement('/admin/res_booking_save.php', 'reservations', 'Rezervace', 'reservation save route is guarded');
+assert_equals(null, adminRouteModuleRequirement('/admin/index.php'), 'admin dashboard is not tied to a module');
+assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public module path is ignored');
 
 test_section('navigation links');
 

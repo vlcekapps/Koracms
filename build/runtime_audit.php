@@ -7886,6 +7886,11 @@ $foundationChecks = [
         && $adminModuleEntryPointGatesOk
         && $adminRouteModuleGuardsOk
         && str_contains($authSource, 'adminRouteModuleRequirement()')
+        && str_contains($unitTestsSource, "test_section('adminRouteModuleRequirement()')")
+        && str_contains($unitTestsSource, "assert_admin_route_module_requirement('/admin/form_save.php'")
+        && str_contains($unitTestsSource, "assert_admin_route_module_requirement('/admin/comment_bulk.php'")
+        && str_contains($unitTestsSource, "assert_admin_route_module_requirement('/admin/newsletter_send.php'")
+        && str_contains($unitTestsSource, "adminRouteModuleRequirement('/admin/index.php')")
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('admin_disabled_modules_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleAdminEntryPoints()')
         && str_contains($httpIntegrationFoundationSource, 'admin stránka vypnutého modulu')
