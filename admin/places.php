@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu míst nemáte potřebné oprávnění.');
+requireModuleEnabled('places', 'Přístup odepřen. Modul Zajímavá místa není povolen.');
 
 $pdo = db_connect();
 $q = trim((string)($_GET['q'] ?? ''));

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
+requireModuleEnabled('blog', 'Přístup odepřen. Modul Blog není povolen.');
 
 if (!hasAnyBlogs()) {
     header('Location: ' . BASE_URL . '/admin/blogs.php?msg=no_blog');

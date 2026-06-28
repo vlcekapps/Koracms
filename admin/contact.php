@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('messages_manage', 'Přístup odepřen. Pro správu kontaktních zpráv nemáte potřebné oprávnění.');
+requireModuleEnabled('contact', 'Přístup odepřen. Modul Kontakt není povolen.');
 
 $pdo = db_connect();
 $statusDefinitions = messageStatusDefinitions();

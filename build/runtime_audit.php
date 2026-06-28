@@ -7736,6 +7736,46 @@ foreach ($publicNotFoundEndpointSources as $publicNotFoundSource) {
 $httpIntegrationFoundationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
     : '';
+$adminModuleGateExpectations = [
+    'admin/blog.php' => 'blog',
+    'admin/blogs.php' => 'blog',
+    'admin/blog_members.php' => 'blog',
+    'admin/blog_cats.php' => 'blog',
+    'admin/blog_tags.php' => 'blog',
+    'admin/comments.php' => 'blog',
+    'admin/news.php' => 'news',
+    'admin/events.php' => 'events',
+    'admin/gallery_albums.php' => 'gallery',
+    'admin/podcast_shows.php' => 'podcast',
+    'admin/places.php' => 'places',
+    'admin/downloads.php' => 'downloads',
+    'admin/dl_cats.php' => 'downloads',
+    'admin/faq.php' => 'faq',
+    'admin/faq_cats.php' => 'faq',
+    'admin/forms.php' => 'forms',
+    'admin/board.php' => 'board',
+    'admin/board_cats.php' => 'board',
+    'admin/food.php' => 'food',
+    'admin/polls.php' => 'polls',
+    'admin/contact.php' => 'contact',
+    'admin/chat.php' => 'chat',
+    'admin/newsletter.php' => 'newsletter',
+    'admin/res_bookings.php' => 'reservations',
+    'admin/res_resources.php' => 'reservations',
+    'admin/res_categories.php' => 'reservations',
+    'admin/res_locations.php' => 'reservations',
+    'admin/statistics.php' => 'statistics',
+];
+$adminModuleEntryPointGatesOk = true;
+foreach ($adminModuleGateExpectations as $adminModuleGatePath => $moduleKey) {
+    $adminModuleGateSource = is_file(dirname(__DIR__) . '/' . $adminModuleGatePath)
+        ? (string)file_get_contents(dirname(__DIR__) . '/' . $adminModuleGatePath)
+        : '';
+    if (!str_contains($adminModuleGateSource, "requireModuleEnabled('{$moduleKey}'")) {
+        $adminModuleEntryPointGatesOk = false;
+        break;
+    }
+}
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -7813,6 +7853,11 @@ $foundationChecks = [
         && str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');")
         && str_contains($statsSource, 'return moduleNavigationDefaults();')
         && str_contains($widgetsSource, 'return moduleWidgetLabel($moduleKey);'),
+    'admin module entrypoints enforce module state' => str_contains($authSource, 'function requireModuleEnabled(')
+        && $adminModuleEntryPointGatesOk
+        && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('admin_disabled_modules_http'")
+        && str_contains($httpIntegrationFoundationSource, "'/admin/statistics.php'")
+        && str_contains($httpIntegrationFoundationSource, 'admin stránka vypnutého modulu'),
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),

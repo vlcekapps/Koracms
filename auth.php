@@ -626,6 +626,14 @@ function requireCapability(string $capability, string $message = ''): void
     }
 }
 
+function requireModuleEnabled(string $moduleKey, string $message = ''): void
+{
+    requireLogin(BASE_URL . '/admin/login.php');
+    if (!isModuleEnabled($moduleKey)) {
+        adminForbidden($message !== '' ? $message : 'Přístup odepřen. Tento modul není povolen.');
+    }
+}
+
 function canManageOwnBlogOnly(): bool
 {
     return currentUserHasCapability('blog_manage_own') && !currentUserHasCapability('blog_manage_all');

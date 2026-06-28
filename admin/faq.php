@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ nemáte potřebné oprávnění.');
+requireModuleEnabled('faq', 'Přístup odepřen. Modul FAQ není povolen.');
 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');

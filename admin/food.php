@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jídelních lístků nemáte potřebné oprávnění.');
+requireModuleEnabled('food', 'Přístup odepřen. Modul Jídelní lístek není povolen.');
 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');

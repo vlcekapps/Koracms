@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu událostí nemáte potřebné oprávnění.');
+requireModuleEnabled('events', 'Přístup odepřen. Modul Události není povolen.');
 
 $pdo = db_connect();
 $q = trim((string)($_GET['q'] ?? ''));
