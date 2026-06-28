@@ -17,6 +17,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Přísnější theme view audit pro skupiny polí** – veřejné `<fieldset>` bloky v default šabloně musí mít skutečný `<legend>` a audit odmítá nahrazení legendy samotným `aria-label`.
 - **Přísnější theme view audit pro obsahové články a karty** – veřejné `<article>` prvky v default šabloně a homepage widgetech jsou nově pojmenované přes `aria-labelledby` napojené na jejich hlavní nadpis nebo autora zprávy; audit hlídá, aby se detailové články, výpisové karty, výsledky hledání, komentáře ani chatové zprávy nevrátily k anonymnímu kontejneru.
 - **Přístupnější figury ve veřejné galerii** – detail fotografie, další fotografie v albu a výpis fotografií v albu mají vždy skutečný `figcaption` napojený přes `aria-labelledby`; fotografie bez titulku dostanou skrytý popisek pro čtečky obrazovky bez viditelné změny stránky.
+- **Přístupnější vyhledávací widget** – veřejný widget `Vyhledávání` nově pojmenovává svůj `role="search"` formulář přes existující skrytý `legend`, takže landmark není anonymní ani mimo okolní widgetovou sekci.
 - **Referrer statistiky v administraci** – podrobné statistiky návštěvnosti nově ukazují externí odkazující stránky za zvolené období; ukládání refereru se normalizuje bez query stringu a fragmentu a interní přechody vlastního hostu se do přehledu nepočítají.
 
 ### Změněno

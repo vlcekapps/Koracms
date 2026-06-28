@@ -15158,6 +15158,10 @@ if (!str_contains($widgetLibSource, 'Najděte články, novinky, stránky a dal�
 if (!str_contains($widgetLibSource, '<fieldset class="widget-form-fieldset">') || !str_contains($widgetLibSource, 'widget-search-legend-')) {
     $widgetRenderIssues[] = 'search widget renderer is missing fieldset/legend semantics';
 }
+if (!str_contains($widgetLibSource, "role=\"search\" aria-labelledby=\"' . h(\$legendId) . '\"")
+    || !str_contains($widgetLibSource, "<legend id=\"' . h(\$legendId) . '\" class=\"sr-only\">Vyhledávání na webu</legend>")) {
+    $widgetRenderIssues[] = 'search widget renderer is missing aria-labelledby binding to its legend';
+}
 if (!str_contains($widgetLibSource, 'name="return_url"') || !str_contains($widgetLibSource, 'name="email"')) {
     $widgetRenderIssues[] = 'newsletter widget is missing required subscribe form fields';
 }

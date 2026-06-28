@@ -1402,7 +1402,7 @@ function renderWidget_search(array $widget, array $settings, string $zone): stri
     $inputId = 'widget-search-q-' . $widgetId;
     $legendId = 'widget-search-legend-' . $widgetId;
     $descriptionId = 'widget-search-description-' . $widgetId;
-    $formHtml = '<form action="' . BASE_URL . '/search.php" method="get" class="widget-form-stack" role="search">'
+    $formHtml = '<form action="' . BASE_URL . '/search.php" method="get" class="widget-form-stack" role="search" aria-labelledby="' . h($legendId) . '">'
          . '<fieldset class="widget-form-fieldset">'
          . '<legend id="' . h($legendId) . '" class="sr-only">Vyhledávání na webu</legend>'
          . '<p id="' . h($descriptionId) . '">' . $ctaText . '</p>'
