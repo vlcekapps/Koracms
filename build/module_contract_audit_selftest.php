@@ -148,7 +148,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
-        'blog/index.php' => "<?php\n",
+        'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
         'admin/content_reference_picker.php' => "<?php\nif (isModuleEnabled('blog')) {}\n",
         'admin/content_reference_search.php' => "<?php\nif (isModuleEnabled('news')) {}\n",
         'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
@@ -322,6 +322,14 @@ assertModuleContractAuditFails(
     'Missing public navigation target',
     $missingPublicNavTargetFiles,
     'public_nav module blog must point to an existing PHP entrypoint.'
+);
+
+$missingPublicNavGateFiles = $validFiles;
+$missingPublicNavGateFiles['blog/index.php'] = "<?php\n";
+assertModuleContractAuditFails(
+    'Missing public navigation module gate',
+    $missingPublicNavGateFiles,
+    "public_nav entrypoint blog/index.php must guard access with isModuleEnabled('blog')."
 );
 
 $missingPublicNavHttpFiles = $validFiles;

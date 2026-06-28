@@ -332,6 +332,36 @@ function moduleContractAuditValidatePublicNavHttpIntegration(string $definitions
 /**
  * @param list<string> $issues
  */
+function moduleContractAuditValidatePublicNavEntryPointGates(string $projectRoot, string $definitionsSource, array &$issues): void
+{
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        $publicNav = moduleContractAuditManifestBoolField($block, $moduleKey, 'public_nav', $issues);
+        if ($publicNav !== true) {
+            continue;
+        }
+
+        $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
+        if (!str_starts_with($publicNavPath, '/') || str_contains($publicNavPath, '..') || str_contains($publicNavPath, "\0")) {
+            continue;
+        }
+
+        $relativePath = ltrim($publicNavPath, '/');
+        $source = moduleContractAuditReadFile($projectRoot, $relativePath, $issues);
+        if ($source === '') {
+            continue;
+        }
+
+        moduleContractAuditRequire(
+            preg_match('/\bisModuleEnabled\(\s*[\'"]' . preg_quote($moduleKey, '/') . '[\'"]\s*\)/', $source) === 1,
+            'public_nav entrypoint ' . $relativePath . ' must guard access with isModuleEnabled(\'' . $moduleKey . '\').',
+            $issues
+        );
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
     $knownModuleKeys = moduleContractAuditExpectedKeys();
@@ -531,6 +561,7 @@ foreach ([
 
 moduleContractAuditValidateManifestValues($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidatePublicNavHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
+moduleContractAuditValidatePublicNavEntryPointGates($projectRoot, $definitionsSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),
