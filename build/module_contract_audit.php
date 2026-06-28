@@ -85,6 +85,98 @@ function moduleContractAuditValidateModuleGateReferences(string $source, string 
     }
 }
 
+function moduleContractAuditRelativePath(string $projectRoot, string $path): string
+{
+    $prefix = rtrim($projectRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    if (str_starts_with($path, $prefix)) {
+        return str_replace('\\', '/', substr($path, strlen($prefix)));
+    }
+
+    return str_replace('\\', '/', $path);
+}
+
+/**
+ * @return list<string>
+ */
+function moduleContractAuditApplicationPhpFiles(string $projectRoot): array
+{
+    $files = [];
+    $rootMatches = glob($projectRoot . DIRECTORY_SEPARATOR . '*.php');
+    if (is_array($rootMatches)) {
+        foreach ($rootMatches as $path) {
+            if (is_file($path)) {
+                $files[] = $path;
+            }
+        }
+    }
+
+    foreach ([
+        'admin',
+        'authors',
+        'blog',
+        'board',
+        'chat',
+        'contact',
+        'downloads',
+        'events',
+        'faq',
+        'food',
+        'forms',
+        'gallery',
+        'lib',
+        'media',
+        'news',
+        'places',
+        'podcast',
+        'polls',
+        'reservations',
+        'themes',
+    ] as $directoryName) {
+        $directory = $projectRoot . DIRECTORY_SEPARATOR . $directoryName;
+        if (!is_dir($directory)) {
+            continue;
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $fileInfo) {
+            if (!$fileInfo instanceof SplFileInfo || !$fileInfo->isFile()) {
+                continue;
+            }
+
+            if (strtolower($fileInfo->getExtension()) !== 'php') {
+                continue;
+            }
+
+            $files[] = $fileInfo->getPathname();
+        }
+    }
+
+    $files = array_values(array_unique($files));
+    sort($files);
+
+    return $files;
+}
+
+/**
+ * @param list<string> $knownModuleKeys
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateApplicationModuleGateReferences(string $projectRoot, array $knownModuleKeys, array &$issues): void
+{
+    foreach (moduleContractAuditApplicationPhpFiles($projectRoot) as $path) {
+        $source = file_get_contents($path);
+        $relativePath = moduleContractAuditRelativePath($projectRoot, $path);
+        if (!is_string($source)) {
+            $issues[] = $relativePath . ' cannot be read for isModuleEnabled audit.';
+            continue;
+        }
+
+        moduleContractAuditValidateModuleGateReferences($source, $relativePath, $knownModuleKeys, $issues);
+    }
+}
+
 /**
  * @param list<string> $issues
  * @return array<string,string>
@@ -418,6 +510,7 @@ if (preg_match_all('/[\'"]requires_module[\'"]\\s*=>\\s*[\'"]([a-z][a-z0-9_]*)[\
 moduleContractAuditCollectThemeRequiredModules($projectRoot, $issues);
 moduleContractAuditValidateModuleGateReferences($contentReferencePickerSource, 'admin/content_reference_picker.php', $knownModuleKeys, $issues);
 moduleContractAuditValidateModuleGateReferences($contentReferenceSearchSource, 'admin/content_reference_search.php', $knownModuleKeys, $issues);
+moduleContractAuditValidateApplicationModuleGateReferences($projectRoot, $knownModuleKeys, $issues);
 
 foreach ([
     '"test:module-contract"',

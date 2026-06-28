@@ -281,6 +281,14 @@ assertModuleContractAuditFails(
     'admin/content_reference_picker.php isModuleEnabled references unknown module key unknown_picker_module.'
 );
 
+$unknownApplicationModuleFiles = $validFiles;
+$unknownApplicationModuleFiles['forms/show.php'] = "<?php\nif (isModuleEnabled('unknown_application_module')) {}\n";
+assertModuleContractAuditFails(
+    'Unknown application module gate',
+    $unknownApplicationModuleFiles,
+    'forms/show.php isModuleEnabled references unknown module key unknown_application_module.'
+);
+
 $invalidManifestDefaultFiles = $validFiles;
 $invalidManifestDefaultFiles['lib/definitions.php'] = str_replace("'settings_default' => '0'", "'settings_default' => 'maybe'", $invalidManifestDefaultFiles['lib/definitions.php']);
 assertModuleContractAuditFails(
