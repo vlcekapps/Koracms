@@ -28,6 +28,7 @@ $createdPageIds = [];
 $createdGalleryAlbumIds = [];
 $createdMediaIds = [];
 $createdBoardIds = [];
+$createdPollIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
@@ -603,6 +604,128 @@ try {
         clearSettingsCache();
     }
     httpIntegrationPrintResult('admin_disabled_modules_http', $adminDisabledModuleIssues, $failures);
+
+    $disabledContentReferenceIssues = [];
+    $disabledPickerGalleryTitle = 'HTTP Disabled Picker Gallery ' . bin2hex(random_bytes(3));
+    $disabledPickerGallerySlug = 'http-disabled-picker-gallery-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_albums (name, slug, description, status, is_published)
+         VALUES (?, ?, 'Dočasné album pro ověření vypnutého content picker zdroje.', 'published', 1)"
+    )->execute([
+        $disabledPickerGalleryTitle,
+        $disabledPickerGallerySlug,
+    ]);
+    $createdGalleryAlbumIds[] = (int)$pdo->lastInsertId();
+
+    $disabledPickerFormTitle = 'HTTP Disabled Picker Form ' . bin2hex(random_bytes(3));
+    $disabledPickerFormSlug = uniqueFormSlug($pdo, 'http-disabled-picker-form-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_forms (
+            title, slug, description, success_message, submit_label, notification_email, notification_subject,
+            redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label,
+            success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events, use_honeypot,
+            submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject,
+            submitter_confirmation_message, show_in_nav, is_active
+        )
+         VALUES (?, ?, 'Dočasný formulář pro ověření vypnutého content picker zdroje.', '', 'Odeslat formulář', '', '', '', 'message', '', '', '', '', 0, '', '', '', 1, 0, '', '', '', 0, 1)"
+    )->execute([
+        $disabledPickerFormTitle,
+        $disabledPickerFormSlug,
+    ]);
+    $createdFormIds[] = (int)$pdo->lastInsertId();
+
+    $disabledPickerPollTitle = 'HTTP Disabled Picker Poll ' . bin2hex(random_bytes(3));
+    $disabledPickerPollSlug = 'http-disabled-picker-poll-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_polls (question, slug, description, status, start_date, end_date)
+         VALUES (?, ?, 'Dočasná anketa pro ověření vypnutého content picker zdroje.', 'active', NULL, NULL)"
+    )->execute([
+        $disabledPickerPollTitle,
+        $disabledPickerPollSlug,
+    ]);
+    $createdPollIds[] = (int)$pdo->lastInsertId();
+
+    foreach (['gallery', 'forms', 'polls'] as $disabledPickerModuleKey) {
+        saveSetting('module_' . $disabledPickerModuleKey, '0');
+    }
+    saveSetting('module_news', '1');
+    clearSettingsCache();
+
+    $disabledPickerFormResponse = fetchUrl($baseUrl . BASE_URL . '/admin/news_form.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($disabledPickerFormResponse) !== 200) {
+        $disabledContentReferenceIssues[] = 'news form pro kontrolu vypnutých picker zdrojů nevrátil 200';
+    } else {
+        foreach ([
+            'gallery' => 'Fotogalerie',
+            'forms' => 'Formuláře',
+            'poll' => 'Ankety',
+        ] as $disabledPickerType => $disabledPickerLabel) {
+            if (preg_match('/<option[^>]+value="' . preg_quote($disabledPickerType, '/') . '"/', $disabledPickerFormResponse['body']) === 1) {
+                $disabledContentReferenceIssues[] = 'picker nabízí vypnutý typ obsahu ' . $disabledPickerLabel;
+            }
+        }
+        foreach (['[gallery]', '[form]', '[poll]'] as $disabledSnippetFragment) {
+            if (str_contains($disabledPickerFormResponse['body'], $disabledSnippetFragment)) {
+                $disabledContentReferenceIssues[] = 'nápověda snippetů obsahuje vypnutý snippet ' . $disabledSnippetFragment;
+            }
+        }
+    }
+
+    foreach ([
+        ['module' => 'gallery', 'type' => 'gallery', 'query' => $disabledPickerGalleryTitle, 'title' => $disabledPickerGalleryTitle],
+        ['module' => 'forms', 'type' => 'forms', 'query' => $disabledPickerFormTitle, 'title' => $disabledPickerFormTitle],
+        ['module' => 'polls', 'type' => 'poll', 'query' => $disabledPickerPollTitle, 'title' => $disabledPickerPollTitle],
+    ] as $disabledPickerSearchCase) {
+        $disabledPickerResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/content_reference_search.php?q=' . rawurlencode($disabledPickerSearchCase['query']) . '&type=' . rawurlencode($disabledPickerSearchCase['type']),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($disabledPickerResponse) !== 200) {
+            $disabledContentReferenceIssues[] = 'content picker pro vypnutý modul ' . $disabledPickerSearchCase['module'] . ' nevrátil 200';
+            continue;
+        }
+        $disabledPickerPayload = json_decode((string)($disabledPickerResponse['body'] ?? ''), true);
+        if (!is_array($disabledPickerPayload) || ($disabledPickerPayload['ok'] ?? false) !== true) {
+            $disabledContentReferenceIssues[] = 'content picker pro vypnutý modul ' . $disabledPickerSearchCase['module'] . ' nevrátil čitelné JSON s ok=true';
+            continue;
+        }
+        foreach (($disabledPickerPayload['results'] ?? []) as $disabledPickerResult) {
+            if (is_array($disabledPickerResult) && (string)($disabledPickerResult['title'] ?? '') === $disabledPickerSearchCase['title']) {
+                $disabledContentReferenceIssues[] = 'content picker vrátil položku vypnutého modulu ' . $disabledPickerSearchCase['module'];
+                break;
+            }
+        }
+    }
+
+    $disabledPickerAllResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/content_reference_search.php?q=' . rawurlencode('HTTP Disabled Picker') . '&type=all',
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($disabledPickerAllResponse) !== 200) {
+        $disabledContentReferenceIssues[] = 'content picker all dotaz pro vypnuté moduly nevrátil 200';
+    } else {
+        $disabledPickerAllPayload = json_decode((string)($disabledPickerAllResponse['body'] ?? ''), true);
+        if (!is_array($disabledPickerAllPayload) || ($disabledPickerAllPayload['ok'] ?? false) !== true) {
+            $disabledContentReferenceIssues[] = 'content picker all dotaz pro vypnuté moduly nevrátil čitelné JSON s ok=true';
+        } else {
+            foreach (($disabledPickerAllPayload['results'] ?? []) as $disabledPickerAllResult) {
+                $disabledTitle = is_array($disabledPickerAllResult) ? (string)($disabledPickerAllResult['title'] ?? '') : '';
+                if (in_array($disabledTitle, [$disabledPickerGalleryTitle, $disabledPickerFormTitle, $disabledPickerPollTitle], true)) {
+                    $disabledContentReferenceIssues[] = 'content picker all dotaz vrátil položku vypnutého modulu';
+                    break;
+                }
+            }
+        }
+    }
+
+    foreach (['gallery', 'forms', 'polls'] as $disabledPickerModuleKey) {
+        saveSetting('module_' . $disabledPickerModuleKey, '1');
+    }
+    clearSettingsCache();
+
+    httpIntegrationPrintResult('content_reference_disabled_modules_http', $disabledContentReferenceIssues, $failures);
 
     $discoveryEndpointIssues = [];
     saveSetting('module_events', '1');
@@ -4368,6 +4491,11 @@ try {
     foreach ($createdBoardIds as $boardIdToDelete) {
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$boardIdToDelete]);
         $pdo->prepare("DELETE FROM cms_board WHERE id = ?")->execute([$boardIdToDelete]);
+    }
+    foreach ($createdPollIds as $pollIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$pollIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id = ?")->execute([$pollIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_polls WHERE id = ?")->execute([$pollIdToDelete]);
     }
     foreach ($createdTags as $tagIdToDelete) {
         $pdo->prepare("DELETE FROM cms_tags WHERE id = ?")->execute([$tagIdToDelete]);
