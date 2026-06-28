@@ -29,6 +29,62 @@ function cronLogDirectory(): string
 }
 
 /**
+ * @param array<string,mixed> $context
+ */
+function cronLogFilesystemFailure(string $operation, string $path, array $context = []): void
+{
+    koraLog('warning', 'cron filesystem operation failed', array_merge([
+        'operation' => $operation,
+        'path_hash' => hash('sha256', str_replace('\\', '/', $path)),
+        'file_extension' => strtolower((string)pathinfo($path, PATHINFO_EXTENSION)),
+    ], $context));
+}
+
+/**
+ * @param callable(): bool $operation
+ */
+function cronRunFilesystemOperation(callable $operation): bool
+{
+    set_error_handler(static fn (): bool => true);
+    try {
+        return (bool)$operation();
+    } finally {
+        restore_error_handler();
+    }
+}
+
+function cronFileMtime(string $path, string $operation): ?int
+{
+    set_error_handler(static fn (): bool => true);
+    try {
+        $mtime = filemtime($path);
+    } finally {
+        restore_error_handler();
+    }
+
+    if ($mtime === false) {
+        cronLogFilesystemFailure($operation, $path);
+        return null;
+    }
+
+    return (int)$mtime;
+}
+
+function cronDeleteFile(string $path, string $operation): bool
+{
+    if ($path === '' || !is_file($path)) {
+        return true;
+    }
+
+    if (cronRunFilesystemOperation(static fn (): bool => unlink($path))) {
+        return true;
+    }
+
+    cronLogFilesystemFailure($operation, $path);
+    return false;
+}
+
+/**
  * @param list<string> $patterns
  */
 function cronDeleteOldFiles(string $directory, array $patterns, int $maxAgeSeconds): int
@@ -44,10 +100,11 @@ function cronDeleteOldFiles(string $directory, array $patterns, int $maxAgeSecon
             if (!is_file($filePath)) {
                 continue;
             }
-            if ((int)@filemtime($filePath) >= $cutoff) {
+            $mtime = cronFileMtime($filePath, 'retention_mtime');
+            if ($mtime === null || $mtime >= $cutoff) {
                 continue;
             }
-            if (@unlink($filePath)) {
+            if (cronDeleteFile($filePath, 'retention_delete')) {
                 $deletedFiles++;
             }
         }
@@ -237,10 +294,11 @@ function runKoraCron(PDO $pdo): array
             if (!is_file($tempFile)) {
                 continue;
             }
-            if ((int)@filemtime($tempFile) >= (time() - 86400)) {
+            $tempFileMtime = cronFileMtime($tempFile, 'temp_mtime');
+            if ($tempFileMtime === null || $tempFileMtime >= (time() - 86400)) {
                 continue;
             }
-            if (@unlink($tempFile)) {
+            if (cronDeleteFile($tempFile, 'temp_delete')) {
                 $cleanedFiles++;
             }
         }
@@ -348,8 +406,9 @@ function runKoraCron(PDO $pdo): array
             if (!is_file($oldBackup)) {
                 continue;
             }
-            if ((int)@filemtime($oldBackup) < (time() - (7 * 86400))) {
-                @unlink($oldBackup);
+            $backupMtime = cronFileMtime($oldBackup, 'backup_retention_mtime');
+            if ($backupMtime !== null && $backupMtime < (time() - (7 * 86400))) {
+                cronDeleteFile($oldBackup, 'backup_retention_delete');
             }
         }
     } else {

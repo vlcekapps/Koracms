@@ -7628,6 +7628,11 @@ $cronGuardChecks = [
     'backup helper centralizes table dump' => str_contains($backupHelperSource, 'function koraSqlWriteTableDump') && str_contains($backupHelperSource, 'PDO::FETCH_ASSOC') && str_contains($backupHelperSource, 'function koraSqlCreateTableStatement'),
     'CSP report log retention' => str_contains($cronSource, 'function cronLogDirectory(): string')
         && str_contains($cronSource, "cronDeleteOldFiles(cronLogDirectory(), ['csp_reports-*.jsonl'], 30 * 86400)"),
+    'cron filesystem cleanup logs failures' => str_contains($cronSource, 'function cronLogFilesystemFailure(string $operation, string $path, array $context = []): void')
+        && str_contains($cronSource, 'function cronDeleteFile(string $path, string $operation): bool')
+        && str_contains($cronSource, 'function cronFileMtime(string $path, string $operation): ?int')
+        && !str_contains($cronSource, '@unlink(')
+        && !str_contains($cronSource, '@filemtime('),
 ];
 foreach ($cronGuardChecks as $label => $ok) {
     if (!$ok) {
