@@ -104,7 +104,13 @@ function testRunLockSelfTestWaitForExit($process, int $timeoutMs, string $label)
     while (microtime(true) < $deadline) {
         $status = proc_get_status($process);
         if ($status['running'] === false) {
-            return (int) proc_close($process);
+            $statusExitCode = $status['exitcode'];
+            $closeExitCode = proc_close($process);
+            if ($statusExitCode !== -1) {
+                return $statusExitCode;
+            }
+
+            return (int) $closeExitCode;
         }
 
         usleep(20_000);

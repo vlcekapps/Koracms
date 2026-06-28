@@ -8403,6 +8403,8 @@ $foundationChecks = [
         && str_contains($httpIntegrationBuildSource, "koraAcquireDatabaseTestLock('http_integration');")
         && str_contains($testRunLockSelftestSource, "koraAcquireDatabaseTestLock('holder');")
         && str_contains($testRunLockSelftestSource, 'Waiter acquired the lock before the holder released it.')
+        && str_contains($testRunLockSelftestSource, '$statusExitCode')
+        && str_contains($testRunLockSelftestSource, '$closeExitCode')
         && str_contains($composerSource, '"test:test-run-lock-selftest"')
         && str_contains($composerSource, '@test:test-run-lock-selftest')
         && str_contains($composerSource, 'build/test_run_lock.php')
