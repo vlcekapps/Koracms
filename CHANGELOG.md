@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Vývojářský checklist pro nové moduly** – nový dokument `docs/developer-modules.md` shrnuje povinné kroky pro návrh modulu v jádře CMS: schéma, migrace, registraci modulu, administraci, veřejné routy, bezpečnost, WCAG 2.2, testy a dokumentaci. Pro větší modulové změny přibyl kontrolní alias `composer ci:module-ready`.
 - **Strukturované logy administračního dashboardu** – dílčí selhání počítadel, přehledů stránek, událostí, návštěvnosti, naplánovaného obsahu a poslední aktivity v administraci se nově zapisují přes `koraLog()` s omezeným kontextem, krátkým hashem dotazu a deduplikací v rámci requestu místo tichého spolknutí bez dohledatelnosti.
 - **Dohledatelné chyby při hromadném mazání souborů** – hromadné mazání blogových článků a galerie už nepoužívá tiché `@unlink`; pokud hosting odmítne odstranit náhledový obrázek, fotografii nebo miniaturu, CMS zapíše strukturovaný log s modulem, ID a rolí souboru bez plné lokální cesty.
 - **Dohledatelnější souborové operace knihovny médií** – přesuny, náhrady a úklid originálů, miniatur a WebP variant v knihovně médií už nepoužívají potlačené `@rename`, `@copy` ani `@unlink`; selhání se zapisují přes `koraLog()` s hashem cesty a příponou souboru bez úniku lokální fyzické cesty.

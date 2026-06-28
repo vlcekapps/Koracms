@@ -163,6 +163,11 @@
       "@test:release-smoke",
       "@test:unit"
     ],
+    "ci:module-ready": [
+      "@ci:basic",
+      "@test:runtime",
+      "@test:http"
+    ],
     "ci:full": [
       "@ci:basic",
       "@test:runtime",

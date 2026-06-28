@@ -22,6 +22,7 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 - [Přístupnost](#přístupnost)
 - [Zálohování a údržba](#zálohování-a-údržba)
 - [Vývoj a CI](#vývoj-a-ci)
+- [Vývoj nových modulů](#vývoj-nových-modulů)
 - [Řešení problémů](#řešení-problémů)
 - [Nginx](#nginx)
 - [Ověření po změnách](#ověření-po-změnách)
@@ -748,8 +749,15 @@ php build/lint_php.php
 
 ---
 
+## Vývoj nových modulů
+
+Nový modul v Kora CMS je zatím součást jádra, ne samostatný balíček. Před návrhem modulu proto používejte checklist [docs/developer-modules.md](docs/developer-modules.md), který shrnuje povinné integrační body pro databázi, migrace, administraci, veřejné routy, navigaci, bezpečnost, WCAG 2.2, testy a release dokumentaci. Před větší modulovou změnou spusťte `composer ci:module-ready`.
+
+---
+
 ## Další dokumentace
 
 - [CHANGELOG.md](CHANGELOG.md) – historie verzí
 - [docs/admin-guide.md](docs/admin-guide.md) – detailní práce v administraci: Form Builder, podcasty, multiblog, widgety a content picker
+- [docs/developer-modules.md](docs/developer-modules.md) – checklist pro návrh a implementaci nového modulu
 - [docs/ux-audit-framework.md](docs/ux-audit-framework.md) – framework pro UX a přístupnostní audit

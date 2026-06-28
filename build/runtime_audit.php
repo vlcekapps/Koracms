@@ -64,9 +64,12 @@ $podcastFeedSource = (string) file_get_contents(__DIR__ . '/../podcast/feed.php'
 $eventIcsSource = (string) file_get_contents(__DIR__ . '/../events/ics.php');
 $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
 $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) file_get_contents(__DIR__ . '/../phpstan.neon.dist') : '';
+$readmeSource = is_file(__DIR__ . '/../README.md') ? (string) file_get_contents(__DIR__ . '/../README.md') : '';
+$adminGuideSource = is_file(__DIR__ . '/../docs/admin-guide.md') ? (string) file_get_contents(__DIR__ . '/../docs/admin-guide.md') : '';
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
+$developerModulesDocSource = is_file(__DIR__ . '/../docs/developer-modules.md') ? (string) file_get_contents(__DIR__ . '/../docs/developer-modules.md') : '';
 $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
 $unitTestsSource = is_file(__DIR__ . '/unit_tests.php') ? (string) file_get_contents(__DIR__ . '/unit_tests.php') : '';
@@ -7732,9 +7735,24 @@ $foundationChecks = [
         && str_contains($composerSource, 'phpstan/phpstan')
         && str_contains($composerSource, 'friendsofphp/php-cs-fixer')
         && str_contains($composerSource, '"ci:basic"')
+        && str_contains($composerSource, '"ci:module-ready"')
         && str_contains($composerSource, '"ci:full"')
         && str_contains($composerSource, '"format:check"')
         && str_contains($composerSource, '"format:fix"'),
+    'developer module guide exists' => str_contains($developerModulesDocSource, '# Vývoj nového modulu v Kora CMS')
+        && str_contains($developerModulesDocSource, 'Povinné integrační body')
+        && str_contains($developerModulesDocSource, 'Bezpečnostní pravidla')
+        && str_contains($developerModulesDocSource, 'WCAG 2.2 checklist')
+        && str_contains($developerModulesDocSource, 'Testy a guardrails')
+        && str_contains($developerModulesDocSource, 'Definition of done')
+        && str_contains($developerModulesDocSource, 'install.php')
+        && str_contains($developerModulesDocSource, 'migrate.php')
+        && str_contains($developerModulesDocSource, 'admin/settings_modules.php')
+        && str_contains($developerModulesDocSource, 'composer ci:module-ready')
+        && str_contains($readmeSource, 'docs/developer-modules.md')
+        && str_contains($readmeSource, 'composer ci:module-ready')
+        && str_contains($adminGuideSource, 'composer ci:module-ready')
+        && str_contains($adminGuideSource, 'developer-modules.md'),
     'github actions basic CI exists' => str_contains($ciWorkflowSource, 'composer ci:basic')
         && str_contains($ciWorkflowSource, 'shivammathur/setup-php')
         && str_contains($ciWorkflowSource, 'actions/checkout@v6'),
