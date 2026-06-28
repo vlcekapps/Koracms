@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $projectRootArgument = $argv[1] ?? null;
 $projectRoot = moduleContractAuditProjectRoot(is_string($projectRootArgument) ? $projectRootArgument : null);
+/** @var list<string> $issues */
 $issues = [];
 
 function moduleContractAuditProjectRoot(?string $override): string
@@ -211,6 +212,46 @@ function moduleContractAuditValidateApplicationModuleSettingReferences(string $p
     }
 }
 
+function moduleContractAuditFindMatchingBracket(string $source, int $openPosition): ?int
+{
+    $depth = 0;
+    $quote = null;
+    $length = strlen($source);
+
+    for ($position = $openPosition; $position < $length; $position++) {
+        $character = $source[$position];
+        if ($quote !== null) {
+            if ($character === '\\') {
+                $position++;
+                continue;
+            }
+            if ($character === $quote) {
+                $quote = null;
+            }
+            continue;
+        }
+
+        if ($character === '\'' || $character === '"') {
+            $quote = $character;
+            continue;
+        }
+
+        if ($character === '[') {
+            $depth++;
+            continue;
+        }
+
+        if ($character === ']') {
+            $depth--;
+            if ($depth === 0) {
+                return $position;
+            }
+        }
+    }
+
+    return null;
+}
+
 /**
  * @param list<string> $issues
  * @return array<string,string>
@@ -225,20 +266,26 @@ function moduleContractAuditExtractManifestBlocks(string $definitionsSource, arr
     }
 
     $manifestSource = substr($definitionsSource, $start, $end - $start);
-    if (preg_match_all('/\'([a-z][a-z0-9_]*)\'\s*=>\s*\[(.*?)\],/s', $manifestSource, $matches) === false) {
-        $issues[] = 'core module manifest blocks cannot be parsed.';
-        return [];
-    }
-
     $blocks = [];
-    foreach ($matches[1] as $index => $moduleKey) {
-        $block = (string)($matches[2][$index] ?? '');
+    $offset = 0;
+    while (preg_match('/\'([a-z][a-z0-9_]*)\'\s*=>\s*\[/', $manifestSource, $matches, PREG_OFFSET_CAPTURE, $offset) === 1) {
+        $moduleKey = (string)$matches[1][0];
+        $matchText = (string)$matches[0][0];
+        $openPosition = (int)$matches[0][1] + strlen($matchText) - 1;
+        $closePosition = moduleContractAuditFindMatchingBracket($manifestSource, $openPosition);
+        if ($closePosition === null) {
+            $issues[] = 'core module manifest entry ' . $moduleKey . ' cannot be parsed.';
+            break;
+        }
+        $block = substr($manifestSource, $openPosition + 1, $closePosition - $openPosition - 1);
         if (isset($blocks[$moduleKey])) {
             $issues[] = 'core module manifest contains duplicate module key ' . $moduleKey . '.';
+            $offset = $closePosition + 1;
             continue;
         }
 
         $blocks[$moduleKey] = $block;
+        $offset = $closePosition + 1;
     }
 
     if ($blocks === []) {
@@ -290,14 +337,40 @@ function moduleContractAuditManifestIntField(string $block, string $moduleKey, s
     return (int)$matches[1];
 }
 
-function moduleContractAuditPublicNavTargetExists(string $projectRoot, string $publicNavPath): bool
+/**
+ * @param list<string> $issues
+ * @return list<string>
+ */
+function moduleContractAuditManifestStringListField(string $block, string $moduleKey, string $field, array &$issues): array
 {
-    if (!str_starts_with($publicNavPath, '/') || str_contains($publicNavPath, '..') || str_contains($publicNavPath, "\0")) {
+    $pattern = '/\'' . preg_quote($field, '/') . '\'\\s*=>\\s*\\[(.*?)\\]/s';
+    if (preg_match($pattern, $block, $matches) !== 1) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' is missing list field ' . $field . '.';
+        return [];
+    }
+
+    $itemsSource = (string)$matches[1];
+    if (preg_match_all('/\'([^\']*)\'/', $itemsSource, $itemMatches) === false) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' list field ' . $field . ' cannot be parsed.';
+        return [];
+    }
+
+    return array_map('strval', $itemMatches[1]);
+}
+
+function moduleContractAuditRootedPhpTargetExists(string $projectRoot, string $path): bool
+{
+    if (!str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\0") || !str_ends_with($path, '.php')) {
         return false;
     }
 
-    $relativePath = str_replace('/', DIRECTORY_SEPARATOR, ltrim($publicNavPath, '/'));
+    $relativePath = str_replace('/', DIRECTORY_SEPARATOR, ltrim($path, '/'));
     return is_file($projectRoot . DIRECTORY_SEPARATOR . $relativePath);
+}
+
+function moduleContractAuditPublicNavTargetExists(string $projectRoot, string $publicNavPath): bool
+{
+    return moduleContractAuditRootedPhpTargetExists($projectRoot, $publicNavPath);
 }
 
 /**
@@ -327,6 +400,35 @@ function moduleContractAuditValidatePublicNavHttpIntegration(string $definitions
         && str_contains($httpIntegrationSource, 'veřejný modul ')
         && str_contains($httpIntegrationSource, 'Tento modul není povolen'),
         'public_nav modules must be covered by dynamic public_module_navigation_http integration.',
+        $issues
+    );
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateAdminHttpIntegration(string $definitionsSource, string $httpIntegrationSource, array &$issues): void
+{
+    $hasAdminEntryPoint = false;
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        $adminPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'admin_paths', $issues);
+        if ($adminPaths !== []) {
+            $hasAdminEntryPoint = true;
+            break;
+        }
+    }
+
+    if (!$hasAdminEntryPoint) {
+        return;
+    }
+
+    moduleContractAuditRequire(
+        str_contains($httpIntegrationSource, "httpIntegrationPrintResult('admin_disabled_modules_http'")
+        && str_contains($httpIntegrationSource, 'moduleAdminEntryPoints()')
+        && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '0')")
+        && str_contains($httpIntegrationSource, 'admin stránka vypnutého modulu')
+        && str_contains($httpIntegrationSource, 'není povolen'),
+        'admin_paths modules must be covered by dynamic admin_disabled_modules_http integration.',
         $issues
     );
 }
@@ -364,6 +466,53 @@ function moduleContractAuditValidatePublicNavEntryPointGates(string $projectRoot
 /**
  * @param list<string> $issues
  */
+function moduleContractAuditValidateAdminEntryPointGates(string $projectRoot, string $definitionsSource, array &$issues): void
+{
+    $seenAdminPaths = [];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        $adminPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'admin_paths', $issues);
+        if ($adminPaths === []) {
+            $issues[] = 'core module manifest entry ' . $moduleKey . ' must define at least one admin_paths entry.';
+            continue;
+        }
+
+        foreach ($adminPaths as $adminPath) {
+            if (!str_starts_with($adminPath, '/admin/')) {
+                $issues[] = 'admin_paths entry ' . $moduleKey . ' must start with /admin/: ' . $adminPath . '.';
+                continue;
+            }
+            if (str_contains($adminPath, '..') || str_contains($adminPath, "\0")) {
+                $issues[] = 'admin_paths entry ' . $moduleKey . ' must not contain traversal segments: ' . $adminPath . '.';
+                continue;
+            }
+            if (isset($seenAdminPaths[$adminPath])) {
+                $issues[] = 'admin_paths entry ' . $adminPath . ' is duplicated by modules ' . $seenAdminPaths[$adminPath] . ' and ' . $moduleKey . '.';
+                continue;
+            }
+            $seenAdminPaths[$adminPath] = $moduleKey;
+
+            if (!moduleContractAuditRootedPhpTargetExists($projectRoot, $adminPath)) {
+                $issues[] = 'admin_paths entry ' . $moduleKey . ' must point to an existing PHP entrypoint: ' . $adminPath . '.';
+                continue;
+            }
+
+            $source = moduleContractAuditReadFile($projectRoot, ltrim($adminPath, '/'), $issues);
+            if ($source === '') {
+                continue;
+            }
+
+            moduleContractAuditRequire(
+                preg_match('/\brequireModuleEnabled\(\s*[\'"]' . preg_quote($moduleKey, '/') . '[\'"]/', $source) === 1,
+                'admin_paths entrypoint ' . ltrim($adminPath, '/') . ' must guard access with requireModuleEnabled(\'' . $moduleKey . '\').',
+                $issues
+            );
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
     $knownModuleKeys = moduleContractAuditExpectedKeys();
@@ -386,12 +535,14 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicNavOrder = moduleContractAuditManifestIntField($block, $moduleKey, 'public_nav_order', $issues);
+        $adminPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'admin_paths', $issues);
         $profileManaged = moduleContractAuditManifestBoolField($block, $moduleKey, 'profile_managed', $issues);
         $settingsConfigurable = moduleContractAuditManifestBoolField($block, $moduleKey, 'settings_configurable', $issues);
         $publicNav = moduleContractAuditManifestBoolField($block, $moduleKey, 'public_nav', $issues);
 
         moduleContractAuditRequire($label !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty label.', $issues);
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
+        moduleContractAuditRequire($adminPaths !== [], 'core module manifest entry ' . $moduleKey . ' must define at least one admin_paths entry.', $issues);
 
         if ($settingsConfigurable === true) {
             moduleContractAuditRequire($settingsLabel !== '', 'settings-configurable module ' . $moduleKey . ' must define a non-empty settings_label.', $issues);
@@ -531,6 +682,7 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleDefaultSettings()')
     && str_contains($definitionsSource, 'function moduleSettingsLabels()')
     && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
+    && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')
     && str_contains($definitionsSource, 'function moduleWidgetLabel('),
     'lib/definitions.php must keep the central module manifest helper set.',
     $issues
@@ -553,6 +705,7 @@ foreach ([
     "'public_nav_order'",
     "'settings_label'",
     "'widget_label'",
+    "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(
         str_contains($definitionsSource, $manifestFragment),
@@ -564,6 +717,8 @@ foreach ([
 moduleContractAuditValidateManifestValues($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidatePublicNavHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
 moduleContractAuditValidatePublicNavEntryPointGates($projectRoot, $definitionsSource, $issues);
+moduleContractAuditValidateAdminHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
+moduleContractAuditValidateAdminEntryPointGates($projectRoot, $definitionsSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

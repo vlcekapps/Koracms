@@ -123,7 +123,8 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $publicNavPath = $publicNav ? '/blog/index.php' : '';
         $publicNavOrder = $publicNav ? 10 : 0;
         $publicNavValue = $publicNav ? 'true' : 'false';
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}],\n";
+        $adminPath = '/admin/' . $moduleKey . '.php';
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -135,6 +136,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleDefaultSettings(): array { return []; }\n"
         . "function moduleSettingsLabels(): array { return []; }\n"
         . "function moduleNavigationDefaults(): array { return []; }\n"
+        . "function moduleAdminEntryPoints(): array { return []; }\n"
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
@@ -144,7 +146,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
  */
 function moduleContractAuditSelfTestValidFiles(): array
 {
-    return [
+    $files = [
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
@@ -158,10 +160,16 @@ function moduleContractAuditSelfTestValidFiles(): array
         'themes/default/theme.json' => '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["blog"],"default":"#000000"}}}',
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
-        'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures);\n",
+        'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures); foreach (moduleAdminEntryPoints() as \$moduleKey => \$adminPaths) { saveSetting('module_' . \$moduleKey, '0'); } httpIntegrationPrintResult('admin_disabled_modules_http', ['admin stránka vypnutého modulu ', 'není povolen'], \$failures);\n",
         'docs/developer-modules.md' => "Použijte coreModuleDefinitions() a build/module_contract_audit.php.\n",
         'README.md' => "Spusťte composer ci:module-ready.\n",
     ];
+
+    foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
+        $files['admin/' . $moduleKey . '.php'] = "<?php\nrequireModuleEnabled('{$moduleKey}');\n";
+    }
+
+    return $files;
 }
 
 /**
@@ -338,6 +346,30 @@ assertModuleContractAuditFails(
     'Missing public navigation HTTP scenario',
     $missingPublicNavHttpFiles,
     'public_nav modules must be covered by dynamic public_module_navigation_http integration.'
+);
+
+$missingAdminTargetFiles = $validFiles;
+unset($missingAdminTargetFiles['admin/blog.php']);
+assertModuleContractAuditFails(
+    'Missing admin entrypoint target',
+    $missingAdminTargetFiles,
+    'admin_paths entry blog must point to an existing PHP entrypoint: /admin/blog.php.'
+);
+
+$missingAdminGateFiles = $validFiles;
+$missingAdminGateFiles['admin/blog.php'] = "<?php\n";
+assertModuleContractAuditFails(
+    'Missing admin entrypoint module gate',
+    $missingAdminGateFiles,
+    "admin_paths entrypoint admin/blog.php must guard access with requireModuleEnabled('blog')."
+);
+
+$missingAdminHttpFiles = $validFiles;
+$missingAdminHttpFiles['build/http_integration.php'] = "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures);\n";
+assertModuleContractAuditFails(
+    'Missing admin module HTTP scenario',
+    $missingAdminHttpFiles,
+    'admin_paths modules must be covered by dynamic admin_disabled_modules_http integration.'
 );
 
 $missingComposerFiles = $validFiles;

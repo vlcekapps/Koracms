@@ -586,38 +586,7 @@ try {
     httpIntegrationPrintResult('public_module_navigation_http', $publicModuleNavigationIssues, $failures);
 
     $adminDisabledModuleIssues = [];
-    $adminModuleEntryPoints = [
-        'blog' => [
-            '/admin/blog.php',
-            '/admin/blogs.php',
-            '/admin/blog_members.php',
-            '/admin/blog_cats.php',
-            '/admin/blog_tags.php',
-            '/admin/comments.php',
-        ],
-        'news' => ['/admin/news.php'],
-        'events' => ['/admin/events.php'],
-        'gallery' => ['/admin/gallery_albums.php'],
-        'podcast' => ['/admin/podcast_shows.php'],
-        'places' => ['/admin/places.php'],
-        'downloads' => ['/admin/downloads.php', '/admin/dl_cats.php'],
-        'faq' => ['/admin/faq.php', '/admin/faq_cats.php'],
-        'forms' => ['/admin/forms.php'],
-        'board' => ['/admin/board.php', '/admin/board_cats.php'],
-        'food' => ['/admin/food.php'],
-        'polls' => ['/admin/polls.php'],
-        'contact' => ['/admin/contact.php'],
-        'chat' => ['/admin/chat.php'],
-        'newsletter' => ['/admin/newsletter.php'],
-        'reservations' => [
-            '/admin/res_bookings.php',
-            '/admin/res_resources.php',
-            '/admin/res_categories.php',
-            '/admin/res_locations.php',
-        ],
-        'statistics' => ['/admin/statistics.php'],
-    ];
-    foreach ($adminModuleEntryPoints as $moduleKey => $adminPaths) {
+    foreach (moduleAdminEntryPoints() as $moduleKey => $adminPaths) {
         saveSetting('module_' . $moduleKey, '0');
         clearSettingsCache();
         foreach ($adminPaths as $adminPath) {
