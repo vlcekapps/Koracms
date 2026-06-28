@@ -2,7 +2,7 @@
 
 Tento dokument doplňuje [README.md](../README.md) o podrobnější informace k jednotlivým modulům a funkcím. README obsahuje vše potřebné pro instalaci, konfiguraci a provoz. Tento soubor je určený pro administrátory, kteří chtějí detailnější přehled o možnostech CMS.
 
-Vývoj nových modulů má vlastní checklist v [docs/developer-modules.md](developer-modules.md). Ten shrnuje povinné kroky pro schéma, migrace, administraci, veřejné routy, bezpečnost, WCAG 2.2, testy a dokumentaci před tím, než se začne psát nový modul. Modulová metadata se nově zapisují do centrálního manifestu `coreModuleDefinitions()`, ze kterého se odvozuje instalace, migrace, administrace modulů, veřejná navigace i widgetové popisky. Pro větší modulové změny slouží kontrolní příkaz `composer ci:module-ready`.
+Vývoj nových modulů má vlastní checklist v [docs/developer-modules.md](developer-modules.md). Ten shrnuje povinné kroky pro schéma, migrace, administraci, veřejné routy, bezpečnost, WCAG 2.2, testy a dokumentaci před tím, než se začne psát nový modul. Modulová metadata se zapisují do centrálního manifestu `coreModuleDefinitions()`, ze kterého se odvozuje instalace, migrace, administrace modulů, veřejná navigace i widgetové popisky; modulový audit zároveň hlídá platné defaulty, veřejné cesty a pořadí navigace. Pro větší modulové změny slouží kontrolní příkaz `composer ci:module-ready`.
 
 ---
 

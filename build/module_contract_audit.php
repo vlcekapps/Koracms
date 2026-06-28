@@ -86,6 +86,144 @@ function moduleContractAuditValidateModuleGateReferences(string $source, string 
 }
 
 /**
+ * @param list<string> $issues
+ * @return array<string,string>
+ */
+function moduleContractAuditExtractManifestBlocks(string $definitionsSource, array &$issues): array
+{
+    $start = strpos($definitionsSource, 'function coreModuleDefinitions()');
+    $end = $start === false ? false : strpos($definitionsSource, 'function coreModuleKeysByFlag', $start);
+    if ($start === false || $end === false) {
+        $issues[] = 'core module manifest function boundaries cannot be parsed.';
+        return [];
+    }
+
+    $manifestSource = substr($definitionsSource, $start, $end - $start);
+    if (preg_match_all('/\'([a-z][a-z0-9_]*)\'\s*=>\s*\[(.*?)\],/s', $manifestSource, $matches) === false) {
+        $issues[] = 'core module manifest blocks cannot be parsed.';
+        return [];
+    }
+
+    $blocks = [];
+    foreach ($matches[1] as $index => $moduleKey) {
+        $block = (string)($matches[2][$index] ?? '');
+        if (isset($blocks[$moduleKey])) {
+            $issues[] = 'core module manifest contains duplicate module key ' . $moduleKey . '.';
+            continue;
+        }
+
+        $blocks[$moduleKey] = $block;
+    }
+
+    if ($blocks === []) {
+        $issues[] = 'core module manifest contains no parseable module entries.';
+    }
+
+    return $blocks;
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditManifestStringField(string $block, string $moduleKey, string $field, array &$issues): string
+{
+    $pattern = '/\'' . preg_quote($field, '/') . '\'\\s*=>\\s*\'([^\']*)\'/';
+    if (preg_match($pattern, $block, $matches) !== 1) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' is missing string field ' . $field . '.';
+        return '';
+    }
+
+    return (string)$matches[1];
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditManifestBoolField(string $block, string $moduleKey, string $field, array &$issues): ?bool
+{
+    $pattern = '/\'' . preg_quote($field, '/') . '\'\\s*=>\\s*(true|false)\\b/';
+    if (preg_match($pattern, $block, $matches) !== 1) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' is missing boolean field ' . $field . '.';
+        return null;
+    }
+
+    return $matches[1] === 'true';
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditManifestIntField(string $block, string $moduleKey, string $field, array &$issues): ?int
+{
+    $pattern = '/\'' . preg_quote($field, '/') . '\'\\s*=>\\s*(-?\\d+)/';
+    if (preg_match($pattern, $block, $matches) !== 1) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' is missing integer field ' . $field . '.';
+        return null;
+    }
+
+    return (int)$matches[1];
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateManifestValues(string $definitionsSource, array &$issues): void
+{
+    $knownModuleKeys = moduleContractAuditExpectedKeys();
+    $blocks = moduleContractAuditExtractManifestBlocks($definitionsSource, $issues);
+    $publicNavOrders = [];
+
+    foreach (array_keys($blocks) as $moduleKey) {
+        moduleContractAuditRequireKnownModule($moduleKey, 'core module manifest', $knownModuleKeys, $issues);
+    }
+
+    foreach ($knownModuleKeys as $moduleKey) {
+        if (!isset($blocks[$moduleKey])) {
+            continue;
+        }
+
+        $block = $blocks[$moduleKey];
+        $label = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'label', $issues));
+        $settingsLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'settings_label', $issues));
+        $navLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'nav_label', $issues));
+        $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
+        $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
+        $publicNavOrder = moduleContractAuditManifestIntField($block, $moduleKey, 'public_nav_order', $issues);
+        $profileManaged = moduleContractAuditManifestBoolField($block, $moduleKey, 'profile_managed', $issues);
+        $settingsConfigurable = moduleContractAuditManifestBoolField($block, $moduleKey, 'settings_configurable', $issues);
+        $publicNav = moduleContractAuditManifestBoolField($block, $moduleKey, 'public_nav', $issues);
+
+        moduleContractAuditRequire($label !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty label.', $issues);
+        moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
+
+        if ($settingsConfigurable === true) {
+            moduleContractAuditRequire($settingsLabel !== '', 'settings-configurable module ' . $moduleKey . ' must define a non-empty settings_label.', $issues);
+        }
+
+        if ($profileManaged === false && $moduleKey !== 'statistics') {
+            $issues[] = 'only statistics is expected to be unmanaged by site profiles; check profile_managed for ' . $moduleKey . '.';
+        }
+
+        if ($publicNav === true) {
+            moduleContractAuditRequire(str_starts_with($publicNavPath, '/'), 'public_nav module ' . $moduleKey . ' must define a rooted public_nav_path.', $issues);
+            moduleContractAuditRequire($publicNavOrder !== null && $publicNavOrder > 0, 'public_nav module ' . $moduleKey . ' must define a positive public_nav_order.', $issues);
+            moduleContractAuditRequire($navLabel !== '' || $moduleKey === 'board', 'public_nav module ' . $moduleKey . ' must define a non-empty nav_label.', $issues);
+
+            if ($publicNavOrder !== null && $publicNavOrder > 0) {
+                if (isset($publicNavOrders[$publicNavOrder])) {
+                    $issues[] = 'public_nav_order ' . $publicNavOrder . ' is duplicated by modules ' . $publicNavOrders[$publicNavOrder] . ' and ' . $moduleKey . '.';
+                } else {
+                    $publicNavOrders[$publicNavOrder] = $moduleKey;
+                }
+            }
+        } elseif ($publicNav === false) {
+            moduleContractAuditRequire($publicNavPath === '', 'non-public module ' . $moduleKey . ' must keep public_nav_path empty.', $issues);
+            moduleContractAuditRequire($publicNavOrder === 0, 'non-public module ' . $moduleKey . ' must keep public_nav_order at 0.', $issues);
+        }
+    }
+}
+
+/**
  * @return list<string>
  */
 function moduleContractAuditExpectedKeys(): array
@@ -222,6 +360,8 @@ foreach ([
         $issues
     );
 }
+
+moduleContractAuditValidateManifestValues($definitionsSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

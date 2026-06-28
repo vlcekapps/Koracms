@@ -119,7 +119,11 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
 {
     $entries = [];
     foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false],\n";
+        $publicNav = $moduleKey === 'blog';
+        $publicNavPath = $publicNav ? '/blog/index.php' : '';
+        $publicNavOrder = $publicNav ? 10 : 0;
+        $publicNavValue = $publicNav ? 'true' : 'false';
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}],\n";
     }
 
     return "<?php\n"
@@ -275,6 +279,22 @@ assertModuleContractAuditFails(
     'Unknown content picker module gate',
     $unknownPickerModuleFiles,
     'admin/content_reference_picker.php isModuleEnabled references unknown module key unknown_picker_module.'
+);
+
+$invalidManifestDefaultFiles = $validFiles;
+$invalidManifestDefaultFiles['lib/definitions.php'] = str_replace("'settings_default' => '0'", "'settings_default' => 'maybe'", $invalidManifestDefaultFiles['lib/definitions.php']);
+assertModuleContractAuditFails(
+    'Invalid module manifest default',
+    $invalidManifestDefaultFiles,
+    'core module manifest entry blog settings_default must be 0 or 1.'
+);
+
+$invalidManifestPublicPathFiles = $validFiles;
+$invalidManifestPublicPathFiles['lib/definitions.php'] = str_replace("'public_nav_path' => '/blog/index.php'", "'public_nav_path' => 'blog/index.php'", $invalidManifestPublicPathFiles['lib/definitions.php']);
+assertModuleContractAuditFails(
+    'Invalid public navigation module path',
+    $invalidManifestPublicPathFiles,
+    'public_nav module blog must define a rooted public_nav_path.'
 );
 
 $missingComposerFiles = $validFiles;
