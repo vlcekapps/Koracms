@@ -751,7 +751,7 @@ php build/lint_php.php
 
 ## Vývoj nových modulů
 
-Nový modul v Kora CMS je zatím součást jádra, ne samostatný balíček. Před návrhem modulu proto používejte checklist [docs/developer-modules.md](docs/developer-modules.md), který shrnuje povinné integrační body pro databázi, migrace, administraci, veřejné routy, navigaci, bezpečnost, WCAG 2.2, testy a release dokumentaci. Module key, labely, výchozí `module_*` hodnota a příznaky pro nastavení, profily, veřejnou navigaci a widgety patří do centrálního manifestu `coreModuleDefinitions()` v `lib/definitions.php`; `install.php` i `migrate.php` z něj doplňují modulové defaulty. Guardrail `build/module_contract_audit.php` hlídá, aby se nové moduly nerozjely mezi instalací, migrací, nastavením, navigací, widgety a theme závislostmi. Před větší modulovou změnou spusťte `composer ci:module-ready`.
+Nový modul v Kora CMS je zatím součást jádra, ne samostatný balíček. Před návrhem modulu proto používejte checklist [docs/developer-modules.md](docs/developer-modules.md), který shrnuje povinné integrační body pro databázi, migrace, administraci, veřejné routy, navigaci, bezpečnost, WCAG 2.2, testy a release dokumentaci. Module key, labely, výchozí `module_*` hodnota a příznaky pro nastavení, profily, veřejnou navigaci a widgety patří do centrálního manifestu `coreModuleDefinitions()` v `lib/definitions.php`; `install.php` i `migrate.php` z něj doplňují modulové defaulty. Guardrail `build/module_contract_audit.php` hlídá, aby se nové moduly nerozjely mezi instalací, migrací, nastavením, navigací, widgety, content pickerem a theme závislostmi. Před větší modulovou změnou spusťte `composer ci:module-ready`.
 
 ---
 

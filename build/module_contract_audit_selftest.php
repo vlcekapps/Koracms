@@ -144,6 +144,8 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
+        'admin/content_reference_picker.php' => "<?php\nif (isModuleEnabled('blog')) {}\n",
+        'admin/content_reference_search.php' => "<?php\nif (isModuleEnabled('news')) {}\n",
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
@@ -265,6 +267,14 @@ assertModuleContractAuditFails(
     'Unknown theme required module',
     $unknownThemeModuleFiles,
     'themes/default/theme.json requires_modules references unknown module key unknown_theme_module.'
+);
+
+$unknownPickerModuleFiles = $validFiles;
+$unknownPickerModuleFiles['admin/content_reference_picker.php'] = "<?php\nif (isModuleEnabled('unknown_picker_module')) {}\n";
+assertModuleContractAuditFails(
+    'Unknown content picker module gate',
+    $unknownPickerModuleFiles,
+    'admin/content_reference_picker.php isModuleEnabled references unknown module key unknown_picker_module.'
 );
 
 $missingComposerFiles = $validFiles;

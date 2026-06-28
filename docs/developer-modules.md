@@ -15,8 +15,9 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 - Definice: doplňte module key do centrálního manifestu `coreModuleDefinitions()` v `lib/definitions.php`. Manifest drží labely, výchozí `module_*` hodnotu a kontextové příznaky `profile_managed`, `settings_configurable`, `settings_default`, `public_nav`, `public_nav_path`, `public_nav_order`, `settings_label`, `nav_label` a `widget_label`; `install.php`, `migrate.php`, `admin/settings_modules.php`, veřejná navigace a widgetové popisky se z něj odvozují automaticky.
 - Administrace: používejte `requireLogin()` nebo přesnější capability helper, CSRF tokeny pro stav měnící akce, PRG po POSTu, jasné flash hlášky, audit log a validaci všech ID proti správnému kontextu.
 - Veřejná část: veřejné entrypointy musí respektovat `isModuleEnabled()`, sdílené 404 helpery, SEO metadata, canonical URL, bezpečné HTTP metody a noindex/no-store u neveřejných nebo tokenových stavů.
-- Navigace a discoverability: zvažte zapojení do navigace webu, sitemapu, vyhledávání, widgetů, RSS/ICS/exportu a administrativních rychlých odkazů.
+- Navigace a discoverability: zvažte zapojení do navigace webu, sitemapu, vyhledávání, widgetů, content pickeru, RSS/ICS/exportu a administrativních rychlých odkazů.
 - Widgety a šablony: pokud widget používá `requires_module` nebo theme manifest `requires_modules`, hodnota musí být existující module key z `coreModuleDefinitions()`; `build/module_contract_audit.php` hlídá překlepy i neexistující modulové závislosti.
+- Content picker: pokud nový modul přidává zdroje do `admin/content_reference_picker.php` nebo `admin/content_reference_search.php`, používejte v `isModuleEnabled()` stejný module key jako v `coreModuleDefinitions()`; modulový audit tuto vazbu hlídá spolu s widgety a šablonami.
 - Revize a redirecty: u editovatelného obsahu s veřejnou URL preferujte historii revizí a redirect při změně slugu, aby se nerozbily staré odkazy.
 - Dokumentace: doplňte `README.md`, `docs/admin-guide.md` a `CHANGELOG.md`; u většího modulu přidejte krátký workflow popis pro správce.
 

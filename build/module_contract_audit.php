@@ -70,6 +70,22 @@ function moduleContractAuditRequireKnownModule(string $moduleKey, string $contex
 }
 
 /**
+ * @param list<string> $knownModuleKeys
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateModuleGateReferences(string $source, string $relativePath, array $knownModuleKeys, array &$issues): void
+{
+    if (preg_match_all('/\bisModuleEnabled\(\s*[\'"]([a-z][a-z0-9_]*)[\'"]\s*\)/', $source, $matches) === false) {
+        $issues[] = $relativePath . ' isModuleEnabled references cannot be parsed.';
+        return;
+    }
+
+    foreach ($matches[1] as $moduleKey) {
+        moduleContractAuditRequireKnownModule($moduleKey, $relativePath . ' isModuleEnabled', $knownModuleKeys, $issues);
+    }
+}
+
+/**
  * @return list<string>
  */
 function moduleContractAuditExpectedKeys(): array
@@ -167,6 +183,8 @@ $composerSource = moduleContractAuditReadFile($projectRoot, 'composer.json', $is
 $runtimeAuditSource = moduleContractAuditReadFile($projectRoot, 'build/runtime_audit.php', $issues);
 $developerModulesDocSource = moduleContractAuditReadFile($projectRoot, 'docs/developer-modules.md', $issues);
 $readmeSource = moduleContractAuditReadFile($projectRoot, 'README.md', $issues);
+$contentReferencePickerSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_picker.php', $issues);
+$contentReferenceSearchSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_search.php', $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, 'function coreModuleDefinitions()')
@@ -258,6 +276,8 @@ if (preg_match_all('/[\'"]requires_module[\'"]\\s*=>\\s*[\'"]([a-z][a-z0-9_]*)[\
     }
 }
 moduleContractAuditCollectThemeRequiredModules($projectRoot, $issues);
+moduleContractAuditValidateModuleGateReferences($contentReferencePickerSource, 'admin/content_reference_picker.php', $knownModuleKeys, $issues);
+moduleContractAuditValidateModuleGateReferences($contentReferenceSearchSource, 'admin/content_reference_search.php', $knownModuleKeys, $issues);
 
 foreach ([
     '"test:module-contract"',

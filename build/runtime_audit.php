@@ -7770,6 +7770,10 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'install.php and migrate.php must derive module_* defaults')
         && str_contains($moduleContractAuditSource, 'lib/widgets.php requires_module')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditCollectThemeRequiredModules')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateModuleGateReferences')
+        && str_contains($moduleContractAuditSource, 'admin/content_reference_picker.php')
+        && str_contains($moduleContractAuditSource, 'admin/content_reference_search.php')
+        && str_contains($moduleContractAuditSelftestSource, 'Unknown content picker module gate')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditRequireKnownModule')
         && str_contains($moduleContractAuditSource, 'moduleWidgetLabel($moduleKey)')
         && str_contains($moduleContractAuditSelftestSource, 'Module contract audit self-test OK'),
