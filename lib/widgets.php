@@ -830,13 +830,14 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
     $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
     $out .= '<div class="card-grid">';
     foreach ($articles as $a) {
-        $out .= '<article class="card">';
+        $articleTitleId = 'w-' . (int)$widget['id'] . '-article-' . (int)$a['id'] . '-title';
+        $out .= '<article class="card" aria-labelledby="' . h($articleTitleId) . '">';
         if (!empty($a['image_file'])) {
             $out .= '<a class="card__media" href="' . h(articlePublicPath($a)) . '">'
                    . '<img src="' . BASE_URL . '/uploads/articles/thumbs/' . rawurlencode($a['image_file']) . '" alt="' . h($a['title']) . '" loading="lazy">'
                    . '</a>';
         }
-        $out .= '<div class="card__body"><h3 class="card__title"><a href="' . h(articlePublicPath($a)) . '">' . h($a['title']) . '</a></h3>';
+        $out .= '<div class="card__body"><h3 id="' . h($articleTitleId) . '" class="card__title"><a href="' . h(articlePublicPath($a)) . '">' . h($a['title']) . '</a></h3>';
         $createdAt = (string)($a['created_at'] ?? '');
         $articleText = (string)($a['perex'] ?? '') . ' ' . (string)($a['content'] ?? '');
         $out .= '<p class="meta-row meta-row--tight"><time datetime="' . h(str_replace(' ', 'T', $createdAt)) . '">'
@@ -951,14 +952,15 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
     $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
     $out .= '<div class="card-grid card-grid--compact">';
     foreach ($items as $download) {
-        $out .= '<article class="card">';
+        $downloadTitleId = 'w-' . (int)$widget['id'] . '-download-' . (int)$download['id'] . '-title';
+        $out .= '<article class="card" aria-labelledby="' . h($downloadTitleId) . '">';
         if (!empty($download['image_url'])) {
             $out .= '<a class="card__media" href="' . h(downloadPublicPath($download)) . '">'
                   . '<img src="' . h((string)$download['image_url']) . '" alt="' . h((string)$download['title']) . '" loading="lazy">'
                   . '</a>';
         }
         $out .= '<div class="card__body">';
-        $out .= '<h3 class="card__title"><a href="' . h(downloadPublicPath($download)) . '">' . h($download['title']) . '</a></h3>';
+        $out .= '<h3 id="' . h($downloadTitleId) . '" class="card__title"><a href="' . h(downloadPublicPath($download)) . '">' . h($download['title']) . '</a></h3>';
         $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$download['download_type_label']) . '</span>';
         if ((int)$download['is_featured'] === 1) {
             $out .= '<span>Doporučené</span>';
@@ -1085,14 +1087,15 @@ function renderWidget_latest_places(array $widget, array $settings, string $zone
     $out .= '<div class="section-heading"><div><h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2></div></div>';
     $out .= '<div class="card-grid card-grid--compact">';
     foreach ($places as $place) {
-        $out .= '<article class="card">';
+        $placeTitleId = 'w-' . (int)$widget['id'] . '-place-' . (int)$place['id'] . '-title';
+        $out .= '<article class="card" aria-labelledby="' . h($placeTitleId) . '">';
         if (!empty($place['image_url'])) {
             $out .= '<a class="card__media" href="' . h(placePublicPath($place)) . '">'
                   . '<img src="' . h((string)$place['image_url']) . '" alt="' . h((string)$place['name']) . '" loading="lazy">'
                   . '</a>';
         }
         $out .= '<div class="card__body">';
-        $out .= '<h3 class="card__title"><a href="' . h(placePublicPath($place)) . '">' . h($place['name']) . '</a></h3>';
+        $out .= '<h3 id="' . h($placeTitleId) . '" class="card__title"><a href="' . h(placePublicPath($place)) . '">' . h($place['name']) . '</a></h3>';
         $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$place['place_kind_label']) . '</span>';
         if ($place['locality'] !== '') {
             $out .= '<span>' . h($place['locality']) . '</span>';

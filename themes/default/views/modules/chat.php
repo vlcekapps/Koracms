@@ -45,11 +45,12 @@
     <?php else: ?>
       <h2 id="chat-messages-heading" class="sr-only">Zprávy z chatu</h2>
       <div class="chat-stream" role="list" aria-labelledby="chat-messages-heading">
-        <?php foreach ($messages as $message): ?>
-          <article class="chat-message" role="listitem">
+        <?php foreach ($messages as $messageIndex => $message): ?>
+          <?php $chatMessageTitleId = 'chat-message-author-' . (int)$messageIndex; ?>
+          <article class="chat-message" role="listitem" aria-labelledby="<?= h($chatMessageTitleId) ?>">
             <header class="chat-message__header">
               <p class="meta-row">
-                <strong><?= h((string)$message['name']) ?></strong>
+                <strong id="<?= h($chatMessageTitleId) ?>"><?= h((string)$message['name']) ?></strong>
                 <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
                   <?= formatCzechDate((string)$message['created_at']) ?>
                 </time>

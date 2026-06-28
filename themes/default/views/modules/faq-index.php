@@ -188,12 +188,13 @@ $renderCatNav = static function (array $tree, int $parentId, int $depth, ?int $a
             <?php else: ?>
               <div class="card-grid card-grid--compact">
                 <?php foreach ($items as $faq): ?>
-                  <article class="card card--rich">
+                  <?php $faqTitleId = 'faq-card-title-' . (int)$faq['id']; ?>
+                  <article class="card card--rich" aria-labelledby="<?= h($faqTitleId) ?>">
                     <div class="card__body">
                       <?php if ($multipleCategories): ?>
                         <p class="card__eyebrow"><?= h($categoryName) ?></p>
                       <?php endif; ?>
-                      <h3 class="card__title">
+                      <h3 id="<?= h($faqTitleId) ?>" class="card__title">
                         <a href="<?= h(faqPublicPath($faq, $detailQuery)) ?>"><?= h((string)$faq['question']) ?></a>
                       </h3>
 

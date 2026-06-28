@@ -136,7 +136,8 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
     <?php elseif (!empty($articles)): ?>
       <div class="card-grid">
         <?php foreach ($articles as $article): ?>
-          <article class="card">
+          <?php $articleTitleId = 'blog-card-title-' . (int)$article['id']; ?>
+          <article class="card" aria-labelledby="<?= h($articleTitleId) ?>">
             <?php if (!empty($article['image_file'])): ?>
               <a class="card__media" href="<?= h($articleLink($article)) ?>">
                 <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode((string)$article['image_file']) ?>"
@@ -144,7 +145,7 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
               </a>
             <?php endif; ?>
             <div class="card__body">
-              <h2 class="card__title">
+              <h2 id="<?= h($articleTitleId) ?>" class="card__title">
                 <a href="<?= h($articleLink($article)) ?>"><?= h((string)$article['title']) ?></a>
               </h2>
               <p class="meta-row meta-row--tight">

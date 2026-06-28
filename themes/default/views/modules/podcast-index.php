@@ -15,7 +15,8 @@
       <?php endif; ?>
       <div class="card-grid">
         <?php foreach ($shows as $show): ?>
-          <article class="card podcast-card">
+          <?php $podcastTitleId = 'podcast-card-title-' . (int)$show['id']; ?>
+          <article class="card podcast-card" aria-labelledby="<?= h($podcastTitleId) ?>">
             <div class="card__body podcast-card__body">
               <?php if (!empty($show['cover_url'])): ?>
                 <a class="podcast-cover" href="<?= h((string)$show['public_path']) ?>">
@@ -24,7 +25,7 @@
               <?php endif; ?>
 
               <div class="podcast-card__content">
-                <h2 class="card__title">
+                <h2 id="<?= h($podcastTitleId) ?>" class="card__title">
                   <a href="<?= h((string)$show['public_path']) ?>"><?= h((string)$show['title']) ?></a>
                 </h2>
 

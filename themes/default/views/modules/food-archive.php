@@ -96,15 +96,16 @@ $pageHeading = (string)($pageHeading ?? 'Archiv lístků');
       </p>
     <?php else: ?>
       <div class="card-grid card-grid--compact">
-        <?php foreach ($cards as $card): ?>
-          <article class="card<?= (string)($card['state_key'] ?? '') === 'current' ? ' card--highlighted' : '' ?>">
+        <?php foreach ($cards as $cardIndex => $card): ?>
+          <?php $foodCardTitleId = 'food-card-title-' . (int)$cardIndex; ?>
+          <article class="card<?= (string)($card['state_key'] ?? '') === 'current' ? ' card--highlighted' : '' ?>" aria-labelledby="<?= h($foodCardTitleId) ?>">
             <div class="card__body">
               <p class="meta-row meta-row--tight">
                 <span class="pill"><?= h((string)($card['type_label'] ?? 'Lístek')) ?></span>
                 <span><?= h((string)($card['state_label'] ?? 'Platí nyní')) ?></span>
               </p>
 
-              <h2 class="card__title">
+              <h2 id="<?= h($foodCardTitleId) ?>" class="card__title">
                 <a href="<?= h((string)($card['listing_path'] ?? $card['public_path'])) ?>"><?= h((string)$card['title']) ?></a>
               </h2>
 

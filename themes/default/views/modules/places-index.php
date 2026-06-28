@@ -107,7 +107,8 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
     <?php else: ?>
       <div class="card-grid">
         <?php foreach ($places as $place): ?>
-          <article class="card card--rich place-card">
+          <?php $placeTitleId = 'place-card-title-' . (int)$place['id']; ?>
+          <article class="card card--rich place-card" aria-labelledby="<?= h($placeTitleId) ?>">
             <?php if ((string)($place['image_url'] ?? '') !== ''): ?>
               <a class="card__media" href="<?= h(placePublicPath($place, $listingQuery)) ?>">
                 <img src="<?= h((string)$place['image_url']) ?>" alt="<?= h((string)($place['name'] ?? '')) ?>" loading="lazy">
@@ -125,7 +126,7 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
                 <?php endif; ?>
               </p>
 
-              <h2 class="card__title">
+              <h2 id="<?= h($placeTitleId) ?>" class="card__title">
                 <a href="<?= h(placePublicPath($place, $listingQuery)) ?>"><?= h((string)$place['name']) ?></a>
               </h2>
 

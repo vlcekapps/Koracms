@@ -268,14 +268,8 @@ function themeViewAuditCheckHtmlElementContracts(string $relativePath, string $s
     }
 
     foreach (themeViewAuditHtmlTags($source, 'article') as $match) {
-        $class = themeViewAuditTagAttributeValue($match['tag'], 'class');
-        $classTokens = is_string($class) ? preg_split('/\s+/', trim($class)) : [];
-        if (!in_array('surface', $classTokens ?: [], true)) {
-            continue;
-        }
-
         if (!themeViewAuditTagHasAttribute($match['tag'], 'aria-labelledby')) {
-            $issues[] = $relativePath . ':' . $match['line'] . ' contains a surface article without aria-labelledby.';
+            $issues[] = $relativePath . ':' . $match['line'] . ' contains an article without aria-labelledby.';
         }
     }
 

@@ -54,7 +54,8 @@
     <?php else: ?>
       <div class="episode-list">
         <?php foreach ($episodes as $episode): ?>
-          <article class="episode-card<?= (string)($episode['image_url'] ?? '') !== '' ? ' episode-card--with-image' : '' ?>">
+          <?php $episodeTitleId = 'podcast-episode-title-' . (int)$episode['id']; ?>
+          <article class="episode-card<?= (string)($episode['image_url'] ?? '') !== '' ? ' episode-card--with-image' : '' ?>" aria-labelledby="<?= h($episodeTitleId) ?>">
             <?php if ((string)($episode['image_url'] ?? '') !== ''): ?>
               <a class="episode-card__media podcast-cover" href="<?= h((string)$episode['public_path']) ?>">
                 <img src="<?= h((string)$episode['image_url']) ?>" alt="<?= h((string)$episode['title']) ?>" loading="lazy">
@@ -66,7 +67,7 @@
                 <?php if (!empty($episode['episode_num'])): ?>
                   <p class="section-kicker">Epizoda <?= (int)$episode['episode_num'] ?></p>
                 <?php endif; ?>
-                <h3 class="card__title">
+                <h3 id="<?= h($episodeTitleId) ?>" class="card__title">
                   <a href="<?= h((string)$episode['public_path']) ?>"><?= h((string)$episode['title']) ?></a>
                 </h3>
                 <p class="meta-row meta-row--tight">

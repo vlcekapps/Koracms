@@ -135,7 +135,8 @@ $hasItems = !empty($items);
 
             <div class="card-grid card-grid--compact">
               <?php foreach ($files as $download): ?>
-                <article class="card card--rich">
+                <?php $downloadTitleId = 'download-card-title-' . (int)$download['id']; ?>
+                <article class="card card--rich" aria-labelledby="<?= h($downloadTitleId) ?>">
                   <?php if ($download['image_url'] !== ''): ?>
                     <a class="card__media" href="<?= h(downloadPublicPath($download)) ?>">
                       <img src="<?= h((string)$download['image_url']) ?>" alt="<?= h((string)$download['title']) ?>">
@@ -144,7 +145,7 @@ $hasItems = !empty($items);
 
                   <div class="card__body">
                     <p class="card__eyebrow"><?= h((string)$download['download_type_label']) ?></p>
-                    <h3 class="card__title">
+                    <h3 id="<?= h($downloadTitleId) ?>" class="card__title">
                       <a href="<?= h(downloadPublicPath($download)) ?>"><?= h((string)$download['title']) ?></a>
                     </h3>
 

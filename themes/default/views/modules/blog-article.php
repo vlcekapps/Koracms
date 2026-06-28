@@ -115,12 +115,13 @@ $showAuthorPanel = !empty($article['author_public_path'])
     </div>
     <div class="card-grid">
       <?php foreach ($related as $relatedArticle): ?>
-        <article class="card">
+        <?php $relatedTitleId = 'related-article-title-' . (int)$relatedArticle['id']; ?>
+        <article class="card" aria-labelledby="<?= h($relatedTitleId) ?>">
           <?php if (!empty($relatedArticle['image_file'])): ?>
             <img src="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode($relatedArticle['image_file']) ?>"
                  alt="<?= h($relatedArticle['title']) ?>" class="card__image" loading="lazy">
           <?php endif; ?>
-          <h3 class="card__title">
+          <h3 id="<?= h($relatedTitleId) ?>" class="card__title">
             <a href="<?= h(articlePublicPath($relatedArticle)) ?>"><?= h($relatedArticle['title']) ?></a>
           </h3>
           <?php if (!empty($relatedArticle['perex'])): ?>
@@ -155,10 +156,11 @@ $showAuthorPanel = !empty($article['author_public_path'])
       <p class="empty-state">Zatím tu nejsou žádné komentáře.</p>
     <?php else: ?>
       <div class="comments-list">
-        <?php foreach ($comments as $comment): ?>
-          <article class="comment-card">
+        <?php foreach ($comments as $commentIndex => $comment): ?>
+          <?php $commentTitleId = 'comment-author-' . (int)$commentIndex; ?>
+          <article class="comment-card" aria-labelledby="<?= h($commentTitleId) ?>">
             <p class="meta-row meta-row--tight">
-              <strong><?= h($comment['author_name']) ?></strong>
+              <strong id="<?= h($commentTitleId) ?>"><?= h($comment['author_name']) ?></strong>
               <?php if ($comment['author_email'] !== ''): ?>
                 <a href="mailto:<?= h($comment['author_email']) ?>"><?= h($comment['author_email']) ?></a>
               <?php endif; ?>

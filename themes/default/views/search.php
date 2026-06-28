@@ -29,12 +29,13 @@
       <?php else: ?>
         <p class="section-subtitle">Nalezeno <?= $resultCountLabel ?> pro hledaný výraz <strong><?= h($q) ?></strong>.</p>
         <div class="result-list">
-          <?php foreach ($results as $result): ?>
-            <article class="result-item">
+          <?php foreach ($results as $resultIndex => $result): ?>
+            <?php $resultTitleId = 'search-result-title-' . (int)$resultIndex; ?>
+            <article class="result-item" aria-labelledby="<?= h($resultTitleId) ?>">
               <p class="meta-row meta-row--tight">
                 <span class="pill"><?= h(typeLabel($result['type'])) ?></span>
               </p>
-              <h3 class="result-item__title">
+              <h3 id="<?= h($resultTitleId) ?>" class="result-item__title">
                 <a href="<?= h(resultUrl($result)) ?>"><?= h(mb_substr($result['title'], 0, 120)) ?></a>
               </h3>
               <?php if (!empty($result['perex'])): ?>

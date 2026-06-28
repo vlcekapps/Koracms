@@ -15,7 +15,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Přísnější theme view audit pro veřejné sekce** – default šablona už nemá anonymní `<section>` bloky v akcích detailů, empty state galerie ani rezervačních stavech; `build/theme_view_audit.php` nově vyžaduje, aby každá veřejná sekce měla název přes `aria-labelledby`.
 - **Heading-backed landmarky ve veřejné šabloně** – postranní panely detailu stažení a události jsou nově pojmenované přes `aria-labelledby` a theme view audit hlídá, aby `nav`, `aside` ani `role="search"` nepoužívaly samotný `aria-label` místo skutečného nadpisu.
 - **Přísnější theme view audit pro skupiny polí** – veřejné `<fieldset>` bloky v default šabloně musí mít skutečný `<legend>` a audit odmítá nahrazení legendy samotným `aria-label`.
-- **Přísnější theme view audit pro detailové články** – detail stránky, detail stažení a detail události jsou nově pojmenované přes `aria-labelledby` napojené na jejich hlavní nadpis; audit hlídá, aby se detailové `<article class="surface...">` bloky nevrátily k anonymnímu kontejneru.
+- **Přísnější theme view audit pro obsahové články a karty** – veřejné `<article>` prvky v default šabloně a homepage widgetech jsou nově pojmenované přes `aria-labelledby` napojené na jejich hlavní nadpis nebo autora zprávy; audit hlídá, aby se detailové články, výpisové karty, výsledky hledání, komentáře ani chatové zprávy nevrátily k anonymnímu kontejneru.
 - **Referrer statistiky v administraci** – podrobné statistiky návštěvnosti nově ukazují externí odkazující stránky za zvolené období; ukládání refereru se normalizuje bez query stringu a fragmentu a interní přechody vlastního hostu se do přehledu nepočítají.
 
 ### Změněno

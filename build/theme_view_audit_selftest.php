@@ -200,9 +200,9 @@ PHP
 );
 
 assertThemeViewAuditPasses(
-    'Surface article heading guard',
+    'Article heading guard',
     <<<'PHP'
-<article class="surface surface--hero" aria-labelledby="fixture-article-title">
+<article class="card" aria-labelledby="fixture-article-title">
   <h1 id="fixture-article-title">Detail článku</h1>
 </article>
 PHP
@@ -255,13 +255,13 @@ PHP,
 );
 
 assertThemeViewAuditFails(
-    'Surface article missing heading guard',
+    'Article missing heading guard',
     <<<'PHP'
-<article class="surface surface--hero">
-  <h1>Detail článku</h1>
+<article class="card">
+  <h2>Nepojmenovaná karta</h2>
 </article>
 PHP,
-    'surface article without aria-labelledby'
+    'article without aria-labelledby'
 );
 
 assertThemeViewAuditFails(

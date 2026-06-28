@@ -51,14 +51,15 @@ $renderAuthorName = static function (array $item): string {
     <?php else: ?>
       <div class="news-stream">
         <?php foreach ($items as $item): ?>
-          <article class="news-item">
+          <?php $newsTitleId = 'news-card-title-' . (int)$item['id']; ?>
+          <article class="news-item" aria-labelledby="<?= h($newsTitleId) ?>">
             <p class="meta-row meta-row--tight">
               <time datetime="<?= h(str_replace(' ', 'T', (string)$item['created_at'])) ?>"><?= formatCzechDate((string)$item['created_at']) ?></time>
               <?php if (!empty($item['author_name'])): ?>
                 <?= $renderAuthorName($item) ?>
               <?php endif; ?>
             </p>
-            <h2 class="card__title">
+            <h2 id="<?= h($newsTitleId) ?>" class="card__title">
               <a href="<?= h($newsLink($item)) ?>"><?= h((string)$item['title']) ?></a>
             </h2>
             <?php if (!empty($item['excerpt'])): ?>

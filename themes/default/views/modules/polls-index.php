@@ -170,9 +170,10 @@ $q = trim((string)($q ?? ''));
       <?php else: ?>
         <div class="stack-list">
           <?php foreach ($polls as $listPoll): ?>
-            <article class="card poll-card">
+            <?php $pollTitleId = 'poll-card-title-' . (int)$listPoll['id']; ?>
+            <article class="card poll-card" aria-labelledby="<?= h($pollTitleId) ?>">
               <div class="card__body">
-                <h2 class="card__title">
+                <h2 id="<?= h($pollTitleId) ?>" class="card__title">
                   <a href="<?= h((string)$listPoll['public_path']) ?>"><?= h((string)$listPoll['question']) ?></a>
                 </h2>
 

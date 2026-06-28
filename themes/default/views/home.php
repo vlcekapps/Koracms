@@ -206,7 +206,8 @@ $renderNewsSection = static function (array $items, bool $compactCards = false) 
       </div>
       <div class="<?= h($gridClass) ?>">
         <?php foreach ($items as $item): ?>
-          <article class="card">
+          <?php $newsTitleId = 'home-news-title-' . (int)$item['id']; ?>
+          <article class="card" aria-labelledby="<?= h($newsTitleId) ?>">
             <div class="card__body">
               <p class="meta-row meta-row--tight">
                 <time datetime="<?= h(str_replace(' ', 'T', (string)$item['created_at'])) ?>"><?= formatCzechDate((string)$item['created_at']) ?></time>
@@ -214,7 +215,7 @@ $renderNewsSection = static function (array $items, bool $compactCards = false) 
                   <?= $renderAuthorName($item) ?>
                 <?php endif; ?>
               </p>
-              <h3 class="card__title">
+              <h3 id="<?= h($newsTitleId) ?>" class="card__title">
                 <a href="<?= h($newsLink($item)) ?>"><?= h((string)$item['title']) ?></a>
               </h3>
               <?php if (!empty($item['excerpt'])): ?>
@@ -262,7 +263,8 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
           $secondaryArticles = array_slice($items, 1);
         ?>
         <div class="home-featured">
-          <article class="card card--feature home-featured__lead" data-home-blog-item>
+          <?php $leadTitleId = 'home-blog-lead-title-' . (int)$leadArticle['id']; ?>
+          <article class="card card--feature home-featured__lead" data-home-blog-item aria-labelledby="<?= h($leadTitleId) ?>">
             <?php if (!empty($leadArticle['image_file'])): ?>
               <a class="card__media" href="<?= h($articleLink($leadArticle)) ?>">
                 <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($leadArticle['image_file']) ?>"
@@ -270,7 +272,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
               </a>
             <?php endif; ?>
             <div class="card__body">
-              <h3 class="card__title card__title--feature">
+              <h3 id="<?= h($leadTitleId) ?>" class="card__title card__title--feature">
                 <a href="<?= h($articleLink($leadArticle)) ?>"><?= h($leadArticle['title']) ?></a>
               </h3>
               <p class="meta-row meta-row--tight">
@@ -294,7 +296,8 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
 
           <div class="home-featured__side <?= h($gridClass) ?>">
             <?php foreach ($secondaryArticles as $article): ?>
-              <article class="card" data-home-blog-item>
+              <?php $articleTitleId = 'home-blog-side-title-' . (int)$article['id']; ?>
+              <article class="card" data-home-blog-item aria-labelledby="<?= h($articleTitleId) ?>">
                 <?php if (!empty($article['image_file'])): ?>
                   <a class="card__media" href="<?= h($articleLink($article)) ?>">
                     <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
@@ -302,7 +305,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                   </a>
                 <?php endif; ?>
                 <div class="card__body">
-                  <h3 class="card__title">
+                  <h3 id="<?= h($articleTitleId) ?>" class="card__title">
                     <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
                   </h3>
                   <p class="meta-row meta-row--tight">
@@ -329,7 +332,8 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
       <?php else: ?>
         <div class="<?= h($gridClass) ?>">
           <?php foreach ($items as $article): ?>
-            <article class="card" data-home-blog-item>
+            <?php $articleTitleId = 'home-blog-title-' . (int)$article['id']; ?>
+            <article class="card" data-home-blog-item aria-labelledby="<?= h($articleTitleId) ?>">
               <?php if (!empty($article['image_file'])): ?>
                 <a class="card__media" href="<?= h($articleLink($article)) ?>">
                   <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
@@ -337,7 +341,7 @@ $renderBlogSection = static function (array $items, bool $featureLead = false, b
                 </a>
                 <?php endif; ?>
               <div class="card__body">
-                <h3 class="card__title">
+                <h3 id="<?= h($articleTitleId) ?>" class="card__title">
                   <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
                 </h3>
                 <p class="meta-row meta-row--tight">
@@ -539,7 +543,8 @@ $renderFeaturedSection = static function () use (
                   <h2 id="featured-nadpis-blog" class="section-title">Doporučený článek</h2>
                 </div>
               </div>
-              <article class="card card--feature">
+              <?php $featuredArticleTitleId = 'home-featured-blog-title-' . (int)$featuredArticle['id']; ?>
+              <article class="card card--feature" aria-labelledby="<?= h($featuredArticleTitleId) ?>">
                 <?php if (!empty($featuredArticle['image_file'])): ?>
                   <a class="card__media" href="<?= h($articleLink($featuredArticle)) ?>">
                     <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($featuredArticle['image_file']) ?>"
@@ -547,7 +552,7 @@ $renderFeaturedSection = static function () use (
                   </a>
                 <?php endif; ?>
                 <div class="card__body">
-                  <h3 class="card__title card__title--feature">
+                  <h3 id="<?= h($featuredArticleTitleId) ?>" class="card__title card__title--feature">
                     <a href="<?= h($articleLink($featuredArticle)) ?>"><?= h($featuredArticle['title']) ?></a>
                   </h3>
                   <p class="meta-row meta-row--tight">
@@ -578,7 +583,8 @@ $renderFeaturedSection = static function () use (
                 </div>
                 <a class="section-link" href="<?= BASE_URL ?>/board/index.php"><?= h(boardModuleAllItemsLabel()) ?> <span aria-hidden="true">→</span></a>
               </div>
-              <article class="card card--highlighted">
+              <?php $featuredBoardTitleId = 'home-featured-board-title-' . (int)$featuredBoardItem['id']; ?>
+              <article class="card card--highlighted" aria-labelledby="<?= h($featuredBoardTitleId) ?>">
                 <?php if (!empty($featuredBoardItem['image_url'])): ?>
                   <a class="card__media" href="<?= h($featuredBoardPath) ?>">
                     <img src="<?= h((string)$featuredBoardItem['image_url']) ?>" alt="<?= h((string)$featuredBoardItem['title']) ?>" loading="lazy">
@@ -598,7 +604,7 @@ $renderFeaturedSection = static function () use (
                       <span><?= h(formatFileSize((int)$featuredBoardItem['file_size'])) ?></span>
                     <?php endif; ?>
                   </p>
-                  <h3 class="card__title">
+                  <h3 id="<?= h($featuredBoardTitleId) ?>" class="card__title">
                     <a href="<?= h($featuredBoardPath) ?>"><?= h($featuredBoardItem['title']) ?></a>
                   </h3>
                   <?php if ($featuredBoardSummary !== ''): ?>

@@ -55,7 +55,8 @@ $backBlogLabel = trim((string)($backBlogLabel ?? ''));
       <?php else: ?>
         <div class="card-grid">
           <?php foreach ($articles as $article): ?>
-            <article class="card">
+            <?php $articleTitleId = 'author-article-title-' . (int)$article['id']; ?>
+            <article class="card" aria-labelledby="<?= h($articleTitleId) ?>">
               <?php if (!empty($article['image_file'])): ?>
                 <a class="card__media" href="<?= h($articleLink($article)) ?>">
                   <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
@@ -69,7 +70,7 @@ $backBlogLabel = trim((string)($backBlogLabel ?? ''));
                     <a class="pill" href="<?= h(blogIndexPath($artBlog ?? getDefaultBlog())) ?>?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
                   </p>
                 <?php endif; ?>
-                <h3 class="card__title">
+                <h3 id="<?= h($articleTitleId) ?>" class="card__title">
                   <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
                 </h3>
                 <p class="meta-row meta-row--tight">

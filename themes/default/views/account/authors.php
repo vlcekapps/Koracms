@@ -17,7 +17,8 @@
     <?php else: ?>
       <div class="card-grid">
         <?php foreach ($authors as $author): ?>
-          <article class="card">
+          <?php $authorTitleId = 'author-card-title-' . (string)$author['author_slug']; ?>
+          <article class="card" aria-labelledby="<?= h($authorTitleId) ?>">
             <div class="card__body">
               <div class="author-panel">
                 <div class="author-panel__media">
@@ -34,7 +35,7 @@
                   <?php endif; ?>
                 </div>
                 <div class="author-panel__content">
-                  <h2 class="card__title">
+                  <h2 id="<?= h($authorTitleId) ?>" class="card__title">
                     <a href="<?= h($author['author_public_path']) ?>"><?= h($author['author_display_name']) ?></a>
                   </h2>
                   <p class="meta-row meta-row--tight">

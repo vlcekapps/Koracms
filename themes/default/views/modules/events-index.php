@@ -123,7 +123,8 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
     <?php else: ?>
       <div class="card-grid">
         <?php foreach ($items as $event): ?>
-          <article class="card card--rich">
+          <?php $eventTitleId = 'event-card-title-' . (int)$event['id']; ?>
+          <article class="card card--rich" aria-labelledby="<?= h($eventTitleId) ?>">
             <?php if ((string)($event['image_url'] ?? '') !== ''): ?>
               <a class="card__media" href="<?= h(eventPublicPath($event, $listingQuery)) ?>">
                 <img src="<?= h((string)$event['image_url']) ?>" alt="<?= h((string)($event['title'] ?? '')) ?>">
@@ -132,7 +133,7 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
 
             <div class="card__body">
               <p class="card__eyebrow"><?= h((string)($event['event_kind_label'] ?? 'Akce')) ?></p>
-              <h2 class="card__title">
+              <h2 id="<?= h($eventTitleId) ?>" class="card__title">
                 <a href="<?= h(eventPublicPath($event, $listingQuery)) ?>"><?= h((string)($event['title'] ?? '')) ?></a>
               </h2>
 

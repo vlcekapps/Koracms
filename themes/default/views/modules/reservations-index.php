@@ -21,9 +21,10 @@
 
             <div class="card-grid card-grid--compact">
               <?php foreach ($section['items'] as $resource): ?>
-                <article class="card reservation-card">
+                <?php $resourceTitleId = 'reservation-card-title-' . (string)$resource['slug']; ?>
+                <article class="card reservation-card" aria-labelledby="<?= h($resourceTitleId) ?>">
                   <div class="card__body">
-                    <h3 class="card__title">
+                    <h3 id="<?= h($resourceTitleId) ?>" class="card__title">
                       <a href="<?= BASE_URL ?>/reservations/resource.php?slug=<?= rawurlencode($resource['slug']) ?>"><?= h($resource['name']) ?></a>
                     </h3>
 

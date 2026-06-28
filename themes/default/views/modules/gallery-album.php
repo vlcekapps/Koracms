@@ -86,7 +86,8 @@ $clearUrl = (string)($clearUrl ?? galleryAlbumPublicPath($album));
 
       <div class="gallery-grid">
         <?php foreach ($subAlbums as $subAlbum): ?>
-          <article class="card gallery-card">
+          <?php $subAlbumTitleId = 'gallery-subalbum-title-' . (int)$subAlbum['id']; ?>
+          <article class="card gallery-card" aria-labelledby="<?= h($subAlbumTitleId) ?>">
             <a class="gallery-card__link" href="<?= h((string)$subAlbum['public_path']) ?>">
               <?php if ($subAlbum['cover_url'] !== ''): ?>
                 <img class="gallery-card__image" src="<?= h((string)$subAlbum['cover_url']) ?>" alt="<?= h((string)$subAlbum['name']) ?>">
@@ -94,7 +95,7 @@ $clearUrl = (string)($clearUrl ?? galleryAlbumPublicPath($album));
                 <div class="gallery-card__placeholder" aria-hidden="true">Bez náhledu</div>
               <?php endif; ?>
               <div class="card__body">
-                <h3 class="card__title"><?= h((string)$subAlbum['name']) ?></h3>
+                <h3 id="<?= h($subAlbumTitleId) ?>" class="card__title"><?= h((string)$subAlbum['name']) ?></h3>
                 <p class="meta-row meta-row--tight">
                   <span><?= h((string)$subAlbum['photo_count_label']) ?></span>
                   <?php if ((int)$subAlbum['sub_count'] > 0): ?>
