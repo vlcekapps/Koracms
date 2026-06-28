@@ -290,10 +290,20 @@ function moduleContractAuditManifestIntField(string $block, string $moduleKey, s
     return (int)$matches[1];
 }
 
+function moduleContractAuditPublicNavTargetExists(string $projectRoot, string $publicNavPath): bool
+{
+    if (!str_starts_with($publicNavPath, '/') || str_contains($publicNavPath, '..') || str_contains($publicNavPath, "\0")) {
+        return false;
+    }
+
+    $relativePath = str_replace('/', DIRECTORY_SEPARATOR, ltrim($publicNavPath, '/'));
+    return is_file($projectRoot . DIRECTORY_SEPARATOR . $relativePath);
+}
+
 /**
  * @param list<string> $issues
  */
-function moduleContractAuditValidateManifestValues(string $definitionsSource, array &$issues): void
+function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
     $knownModuleKeys = moduleContractAuditExpectedKeys();
     $blocks = moduleContractAuditExtractManifestBlocks($definitionsSource, $issues);
@@ -332,8 +342,10 @@ function moduleContractAuditValidateManifestValues(string $definitionsSource, ar
 
         if ($publicNav === true) {
             moduleContractAuditRequire(str_starts_with($publicNavPath, '/'), 'public_nav module ' . $moduleKey . ' must define a rooted public_nav_path.', $issues);
+            moduleContractAuditRequire(!str_contains($publicNavPath, '..'), 'public_nav module ' . $moduleKey . ' public_nav_path must not contain traversal segments.', $issues);
             moduleContractAuditRequire($publicNavOrder !== null && $publicNavOrder > 0, 'public_nav module ' . $moduleKey . ' must define a positive public_nav_order.', $issues);
             moduleContractAuditRequire($navLabel !== '' || $moduleKey === 'board', 'public_nav module ' . $moduleKey . ' must define a non-empty nav_label.', $issues);
+            moduleContractAuditRequire(moduleContractAuditPublicNavTargetExists($projectRoot, $publicNavPath), 'public_nav module ' . $moduleKey . ' must point to an existing PHP entrypoint.', $issues);
 
             if ($publicNavOrder !== null && $publicNavOrder > 0) {
                 if (isset($publicNavOrders[$publicNavOrder])) {
@@ -487,7 +499,7 @@ foreach ([
     );
 }
 
-moduleContractAuditValidateManifestValues($definitionsSource, $issues);
+moduleContractAuditValidateManifestValues($projectRoot, $definitionsSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

@@ -148,6 +148,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
+        'blog/index.php' => "<?php\n",
         'admin/content_reference_picker.php' => "<?php\nif (isModuleEnabled('blog')) {}\n",
         'admin/content_reference_search.php' => "<?php\nif (isModuleEnabled('news')) {}\n",
         'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
@@ -312,6 +313,14 @@ assertModuleContractAuditFails(
     'Invalid public navigation module path',
     $invalidManifestPublicPathFiles,
     'public_nav module blog must define a rooted public_nav_path.'
+);
+
+$missingPublicNavTargetFiles = $validFiles;
+unset($missingPublicNavTargetFiles['blog/index.php']);
+assertModuleContractAuditFails(
+    'Missing public navigation target',
+    $missingPublicNavTargetFiles,
+    'public_nav module blog must point to an existing PHP entrypoint.'
 );
 
 $missingComposerFiles = $validFiles;
