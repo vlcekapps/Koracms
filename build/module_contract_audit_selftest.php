@@ -147,6 +147,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
+        'themes/default/theme.json' => '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["blog"],"default":"#000000"}}}',
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
         'docs/developer-modules.md' => "Použijte coreModuleDefinitions() a build/module_contract_audit.php.\n",
@@ -248,6 +249,22 @@ assertModuleContractAuditFails(
     'Legacy install module defaults',
     $legacyInstallFiles,
     'install.php and migrate.php must derive module_* defaults from the central manifest.'
+);
+
+$unknownWidgetModuleFiles = $validFiles;
+$unknownWidgetModuleFiles['lib/widgets.php'] = "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n\$definition = ['requires_module' => 'unknown_widget_module'];\n";
+assertModuleContractAuditFails(
+    'Unknown widget required module',
+    $unknownWidgetModuleFiles,
+    'lib/widgets.php requires_module references unknown module key unknown_widget_module.'
+);
+
+$unknownThemeModuleFiles = $validFiles;
+$unknownThemeModuleFiles['themes/default/theme.json'] = '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["unknown_theme_module"],"default":"#000000"}}}';
+assertModuleContractAuditFails(
+    'Unknown theme required module',
+    $unknownThemeModuleFiles,
+    'themes/default/theme.json requires_modules references unknown module key unknown_theme_module.'
 );
 
 $missingComposerFiles = $validFiles;

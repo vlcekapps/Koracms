@@ -7768,6 +7768,9 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'Module contract audit OK')
         && str_contains($moduleContractAuditSource, 'coreModuleDefinitions()')
         && str_contains($moduleContractAuditSource, 'install.php and migrate.php must derive module_* defaults')
+        && str_contains($moduleContractAuditSource, 'lib/widgets.php requires_module')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditCollectThemeRequiredModules')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditRequireKnownModule')
         && str_contains($moduleContractAuditSource, 'moduleWidgetLabel($moduleKey)')
         && str_contains($moduleContractAuditSelftestSource, 'Module contract audit self-test OK'),
     'core module metadata is centralized' => str_contains($definitionsSource, 'function coreModuleDefinitions()')

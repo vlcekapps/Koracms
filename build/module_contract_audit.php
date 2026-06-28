@@ -59,6 +59,17 @@ function moduleContractAuditRequire(bool $condition, string $message, array &$is
 }
 
 /**
+ * @param list<string> $knownModuleKeys
+ * @param list<string> $issues
+ */
+function moduleContractAuditRequireKnownModule(string $moduleKey, string $context, array $knownModuleKeys, array &$issues): void
+{
+    if (!in_array($moduleKey, $knownModuleKeys, true)) {
+        $issues[] = $context . ' references unknown module key ' . $moduleKey . '.';
+    }
+}
+
+/**
  * @return list<string>
  */
 function moduleContractAuditExpectedKeys(): array
@@ -82,6 +93,69 @@ function moduleContractAuditExpectedKeys(): array
         'forms',
         'statistics',
     ];
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditCollectThemeRequiredModules(string $projectRoot, array &$issues): void
+{
+    $knownModuleKeys = moduleContractAuditExpectedKeys();
+    $themePattern = $projectRoot . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'theme.json';
+    $themePaths = glob($themePattern);
+    if ($themePaths === false || $themePaths === []) {
+        $issues[] = 'themes/*/theme.json manifests are missing.';
+        return;
+    }
+
+    foreach ($themePaths as $themePath) {
+        $relativePath = str_replace('\\', '/', str_replace($projectRoot . DIRECTORY_SEPARATOR, '', $themePath));
+        $source = file_get_contents($themePath);
+        if (!is_string($source) || $source === '') {
+            $issues[] = $relativePath . ' cannot be read.';
+            continue;
+        }
+
+        $manifest = json_decode($source, true);
+        if (!is_array($manifest)) {
+            $issues[] = $relativePath . ' is not valid JSON.';
+            continue;
+        }
+
+        moduleContractAuditCollectRequiredModulesFromValue($manifest, $relativePath, $knownModuleKeys, $issues);
+    }
+}
+
+/**
+ * @param list<string> $knownModuleKeys
+ * @param list<string> $issues
+ */
+function moduleContractAuditCollectRequiredModulesFromValue(mixed $value, string $context, array $knownModuleKeys, array &$issues): void
+{
+    if (!is_array($value)) {
+        return;
+    }
+
+    foreach ($value as $key => $nestedValue) {
+        if ($key === 'requires_modules') {
+            if (!is_array($nestedValue)) {
+                $issues[] = $context . ' contains non-list requires_modules.';
+                continue;
+            }
+
+            foreach ($nestedValue as $moduleKey) {
+                if (!is_string($moduleKey) || trim($moduleKey) === '') {
+                    $issues[] = $context . ' contains invalid requires_modules item.';
+                    continue;
+                }
+
+                moduleContractAuditRequireKnownModule(trim($moduleKey), $context . ' requires_modules', $knownModuleKeys, $issues);
+            }
+            continue;
+        }
+
+        moduleContractAuditCollectRequiredModulesFromValue($nestedValue, $context, $knownModuleKeys, $issues);
+    }
 }
 
 $definitionsSource = moduleContractAuditReadFile($projectRoot, 'lib/definitions.php', $issues);
@@ -174,6 +248,16 @@ moduleContractAuditRequire(
     'lib/widgets.php widgetModuleDisplayName() must derive module labels from the central manifest.',
     $issues
 );
+
+$knownModuleKeys = moduleContractAuditExpectedKeys();
+if (preg_match_all('/[\'"]requires_module[\'"]\\s*=>\\s*[\'"]([a-z][a-z0-9_]*)[\'"]/', $widgetsSource, $widgetRequiresMatches) === false) {
+    $issues[] = 'lib/widgets.php requires_module references cannot be parsed.';
+} else {
+    foreach ($widgetRequiresMatches[1] as $moduleKey) {
+        moduleContractAuditRequireKnownModule($moduleKey, 'lib/widgets.php requires_module', $knownModuleKeys, $issues);
+    }
+}
+moduleContractAuditCollectThemeRequiredModules($projectRoot, $issues);
 
 foreach ([
     '"test:module-contract"',
