@@ -73,6 +73,19 @@ function assert_admin_route_module_requirement(
     assert_contains($expectedMessageFragment, (string)($requirement['message'] ?? ''), $label . ' message');
 }
 
+function assert_admin_route_module_requirement_map_entry(
+    string $file,
+    string $expectedModule,
+    string $expectedMessage
+): void {
+    $requirement = adminRouteModuleRequirement('/admin/' . $file);
+    $label = 'admin route map ' . $expectedModule . '/' . $file;
+
+    assert_true($requirement !== null, $label . ' requirement exists');
+    assert_equals($expectedModule, $requirement['module'] ?? null, $label . ' module key');
+    assert_equals($expectedMessage, $requirement['message'] ?? null, $label . ' message');
+}
+
 function test_session_string(string $key): string
 {
     return isset($_SESSION[$key]) && is_string($_SESSION[$key]) ? $_SESSION[$key] : '';
@@ -165,6 +178,12 @@ assert_equals('/admin/index.php', adminLoginRedirectTarget('//evil.example/phish
 assert_equals('/admin/index.php', adminLoginRedirectTarget("/admin/widgets.php\x00evil", '/admin/index.php'), 'admin login redirect rejects control characters');
 
 test_section('adminRouteModuleRequirement()');
+
+foreach (adminRouteModuleRequirements() as $moduleKey => $requirement) {
+    foreach ($requirement['files'] as $file) {
+        assert_admin_route_module_requirement_map_entry($file, $moduleKey, $requirement['message']);
+    }
+}
 
 assert_admin_route_module_requirement('/admin/form_save.php', 'forms', 'Formuláře', 'forms save route is guarded');
 assert_admin_route_module_requirement('/admin/form_submission_action.php', 'forms', 'Formuláře', 'forms submission action route is guarded');

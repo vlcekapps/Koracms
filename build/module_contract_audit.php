@@ -364,13 +364,13 @@ function moduleContractAuditManifestStringListField(string $block, string $modul
  */
 function moduleContractAuditExtractAdminRouteRequirementBlocks(string $authSource, array &$issues): array
 {
-    $functionStart = strpos($authSource, 'function adminRouteModuleRequirement(');
-    $requirementsStart = $functionStart === false ? false : strpos($authSource, '$requirements = [', $functionStart);
+    $functionStart = strpos($authSource, 'function adminRouteModuleRequirements(');
+    $requirementsStart = $functionStart === false ? false : strpos($authSource, 'return [', $functionStart);
     $openPosition = $requirementsStart === false ? false : strpos($authSource, '[', $requirementsStart);
     $closePosition = is_int($openPosition) ? moduleContractAuditFindMatchingBracket($authSource, $openPosition) : null;
 
     if ($functionStart === false || $requirementsStart === false || !is_int($openPosition) || $closePosition === null) {
-        $issues[] = 'auth.php adminRouteModuleRequirement requirements cannot be parsed.';
+        $issues[] = 'auth.php adminRouteModuleRequirements return map cannot be parsed.';
         return [];
     }
 
@@ -593,6 +593,13 @@ function moduleContractAuditValidateAdminRouteModuleRequirements(
     $knownModuleKeys = moduleContractAuditExpectedKeys();
     $routeBlocks = moduleContractAuditExtractAdminRouteRequirementBlocks($authSource, $issues);
     $routeFileModules = [];
+
+    moduleContractAuditRequire(
+        str_contains($authSource, 'function adminRouteModuleRequirements(')
+        && str_contains($authSource, 'foreach (adminRouteModuleRequirements() as $moduleKey => $requirement)'),
+        'adminRouteModuleRequirement() must use the shared adminRouteModuleRequirements() map.',
+        $issues
+    );
 
     foreach ($routeBlocks as $moduleKey => $block) {
         moduleContractAuditRequireKnownModule($moduleKey, 'adminRouteModuleRequirement', $knownModuleKeys, $issues);

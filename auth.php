@@ -758,17 +758,11 @@ function adminRouteCapability(?string $scriptPath = null): ?string
 }
 
 /**
- * @return array{module:string,message:string}|null
+ * @return array<string,array{message:string,files:list<string>}>
  */
-function adminRouteModuleRequirement(?string $scriptPath = null): ?array
+function adminRouteModuleRequirements(): array
 {
-    $path = strtolower(str_replace('\\', '/', $scriptPath ?? ($_SERVER['SCRIPT_NAME'] ?? '')));
-    if ($path === '' || !str_contains($path, '/admin/')) {
-        return null;
-    }
-
-    $file = basename($path);
-    $requirements = [
+    return [
         'blog' => [
             'message' => 'Přístup odepřen. Modul Blog není povolen.',
             'files' => [
@@ -862,8 +856,21 @@ function adminRouteModuleRequirement(?string $scriptPath = null): ?array
             'files' => ['statistics.php'],
         ],
     ];
+}
 
-    foreach ($requirements as $moduleKey => $requirement) {
+/**
+ * @return array{module:string,message:string}|null
+ */
+function adminRouteModuleRequirement(?string $scriptPath = null): ?array
+{
+    $path = strtolower(str_replace('\\', '/', $scriptPath ?? ($_SERVER['SCRIPT_NAME'] ?? '')));
+    if ($path === '' || !str_contains($path, '/admin/')) {
+        return null;
+    }
+
+    $file = basename($path);
+
+    foreach (adminRouteModuleRequirements() as $moduleKey => $requirement) {
         if (in_array($file, $requirement['files'], true)) {
             return [
                 'module' => $moduleKey,

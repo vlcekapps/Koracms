@@ -149,10 +149,13 @@ function moduleContractAuditSelfTestAuthFixture(): string
     }
 
     return "<?php\n"
-        . "function adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n"
-        . "    \$requirements = [\n"
+        . "function adminRouteModuleRequirements(): array\n{\n"
+        . "    return [\n"
         . implode('', $entries)
         . "    ];\n"
+        . "}\n"
+        . "function adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n"
+        . "    foreach (adminRouteModuleRequirements() as \$moduleKey => \$requirement) { return null; }\n"
         . "    return null;\n"
         . "}\n";
 }
@@ -260,6 +263,14 @@ if (!is_file($moduleContractAuditPath)) {
 
 $validFiles = moduleContractAuditSelfTestValidFiles();
 assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
+
+$missingSharedAdminRouteMapFiles = $validFiles;
+$missingSharedAdminRouteMapFiles['auth.php'] = "<?php\nfunction adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n    \$requirements = ['blog' => ['message' => 'Disabled', 'files' => ['blog.php']]];\n    return null;\n}\n";
+assertModuleContractAuditFails(
+    'Missing shared admin route requirement map',
+    $missingSharedAdminRouteMapFiles,
+    'auth.php adminRouteModuleRequirements return map cannot be parsed.'
+);
 
 $missingModuleFiles = $validFiles;
 $missingModuleFiles['lib/definitions.php'] = str_replace("        'statistics' => ", "        'stats_missing' => ", $missingModuleFiles['lib/definitions.php']);
