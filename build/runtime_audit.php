@@ -12890,6 +12890,10 @@ foreach (["'posted_date' =>", "'removal_date' =>", "'posted_date_invalid' =>", "
         $editorialValidationIssues[] = 'board form is missing validation message branch: ' . $boardFormFragment;
     }
 }
+if (!str_contains($httpIntegrationBuildSource, "saveSetting('module_board', '1');")
+    || !str_contains($httpIntegrationBuildSource, "httpIntegrationPrintResult('board_save_http'")) {
+    $editorialValidationIssues[] = 'board save HTTP validation coverage must enable the board module explicitly';
+}
 if (!str_contains($reservationSaveSource, '$pdo->beginTransaction()') || !str_contains($reservationSaveSource, '$pdo->rollBack()')) {
     $editorialValidationIssues[] = 'reservation resource save is missing transactional protection';
 }

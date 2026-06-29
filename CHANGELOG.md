@@ -47,6 +47,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Doporučený článek na veřejném indexu blogu** – default šablona nově zobrazuje nejdřív nadpis bloku `Doporučený článek`, hned pod ním název článku jako hlavní odkaz a až poté datum, dobu čtení, počet přečtení a autora; duplicitní spodní odkaz `Číst článek` byl odstraněn.
 - **Souhrn návštěvnosti v administraci** – dashboard i podrobné statistiky používají stejné pořadí a popisky jako veřejný widget statistik: `Online`, `Dnes`, `Měsíc`, `Celkem`, vždy s popiskem před hodnotou.
 - **Stabilnější 405 u administračních read-only exportů** – stažení přílohy formulářové odpovědi a CSV export odpovědí odmítají nepodporované HTTP metody dřív než capability/modulový guard, takže i vypnutý modul vrátí očekávané bezpečné 405 hlavičky ve full CI.
+- **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ## [4.0.1] – 2026-06-26
 

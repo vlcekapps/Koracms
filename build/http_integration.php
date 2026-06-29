@@ -2685,6 +2685,9 @@ try {
     httpIntegrationPrintResult('reservations_http', $reservationIssues, $failures);
 
     $boardIssues = [];
+    saveSetting('module_board', '1');
+    clearSettingsCache();
+
     $invalidBoardTitle = 'HTTP Invalid Board ' . date('His');
     $invalidBoardResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/board_save.php',
