@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
-requireCapability('content_manage_shared', 'Přístup odepřen.');
 $isHeadRequest = requireReadOnlyHttpMethod();
+requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 $submissionId = inputInt('get', 'id');
 $fieldName = trim((string)($_GET['field'] ?? ''));

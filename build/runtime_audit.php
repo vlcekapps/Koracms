@@ -7789,6 +7789,16 @@ foreach ($adminRouteModuleExpectations as $adminRoutePath => $expectedModuleKey)
         break;
     }
 }
+$adminFormSubmissionFileMethodGuardPosition = strpos($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();');
+$adminFormSubmissionFileCapabilityPosition = strpos($adminFormSubmissionFileSource, "requireCapability('content_manage_shared'");
+$adminFormSubmissionFileMethodGuardBeforeCapability = is_int($adminFormSubmissionFileMethodGuardPosition)
+    && is_int($adminFormSubmissionFileCapabilityPosition)
+    && $adminFormSubmissionFileMethodGuardPosition < $adminFormSubmissionFileCapabilityPosition;
+$adminFormSubmissionsMethodGuardPosition = strpos($adminFormSubmissionsSource, '$isCsvExportHeadRequest = requireReadOnlyHttpMethod();');
+$adminFormSubmissionsCapabilityPosition = strpos($adminFormSubmissionsSource, "requireCapability('content_manage_shared'");
+$adminFormSubmissionsMethodGuardBeforeCapability = is_int($adminFormSubmissionsMethodGuardPosition)
+    && is_int($adminFormSubmissionsCapabilityPosition)
+    && $adminFormSubmissionsMethodGuardPosition < $adminFormSubmissionsCapabilityPosition;
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -8859,6 +8869,8 @@ $foundationChecks = [
         && str_contains($adminFormSubmissionFileSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionsSource, '$isCsvExportHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminFormSubmissionsSource, 'if ($isCsvExportHeadRequest)')
+        && $adminFormSubmissionFileMethodGuardBeforeCapability
+        && $adminFormSubmissionsMethodGuardBeforeCapability
         && str_contains($adminContentReferenceSearchSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)'),
     'admin HTML responses send no-store headers' => str_contains($authSource, 'function isAdminRequestPath')

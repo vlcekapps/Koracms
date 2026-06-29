@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 $pdo = db_connect();
 $formId = inputInt('get', 'id');
@@ -9,6 +8,7 @@ $isCsvExportHeadRequest = false;
 if ($isCsvExport) {
     $isCsvExportHeadRequest = requireReadOnlyHttpMethod();
 }
+requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 if ($formId === null) {
     header('Location: ' . BASE_URL . '/admin/forms.php');
