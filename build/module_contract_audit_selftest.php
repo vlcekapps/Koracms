@@ -418,6 +418,19 @@ assertModuleContractAuditFails(
     'admin_paths entry /admin/blog.php must be listed in adminRouteModuleRequirement() for blog.'
 );
 
+$missingAdminRouteLoginGuardFiles = $validFiles;
+$missingAdminRouteLoginGuardFiles['auth.php'] = str_replace(
+    "['blog.php']",
+    "['blog.php', 'blog_save.php']",
+    $missingAdminRouteLoginGuardFiles['auth.php']
+);
+$missingAdminRouteLoginGuardFiles['admin/blog_save.php'] = "<?php\n";
+assertModuleContractAuditFails(
+    'Missing admin route login guard',
+    $missingAdminRouteLoginGuardFiles,
+    'adminRouteModuleRequirement file /admin/blog_save.php must call requireLogin(), requireSuperAdmin(), requireModuleEnabled() or requireCapability().'
+);
+
 $missingAdminHttpFiles = $validFiles;
 $missingAdminHttpFiles['build/http_integration.php'] = "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures);\n";
 assertModuleContractAuditFails(

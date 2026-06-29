@@ -612,7 +612,19 @@ function moduleContractAuditValidateAdminRouteModuleRequirements(
             $adminPath = '/admin/' . $file;
             if (!moduleContractAuditRootedPhpTargetExists($projectRoot, $adminPath)) {
                 $issues[] = 'adminRouteModuleRequirement entry ' . $moduleKey . ' references missing admin PHP file: ' . $adminPath . '.';
+                continue;
             }
+
+            $source = moduleContractAuditReadFile($projectRoot, ltrim($adminPath, '/'), $issues);
+            if ($source === '') {
+                continue;
+            }
+
+            moduleContractAuditRequire(
+                preg_match('/\b(?:requireLogin|requireSuperAdmin|requireModuleEnabled|requireCapability)\s*\(/', $source) === 1,
+                'adminRouteModuleRequirement file ' . $adminPath . ' must call requireLogin(), requireSuperAdmin(), requireModuleEnabled() or requireCapability().',
+                $issues
+            );
         }
     }
 
