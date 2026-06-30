@@ -549,6 +549,11 @@ function moduleContractAuditPublicNavTargetExists(string $projectRoot, string $p
     return moduleContractAuditRootedPhpTargetExists($projectRoot, $publicNavPath);
 }
 
+function moduleContractAuditPublicEntryPointExists(string $projectRoot, string $publicPath): bool
+{
+    return moduleContractAuditRootedPhpTargetExists($projectRoot, $publicPath);
+}
+
 /**
  * @param list<string> $issues
  * @return list<string>
@@ -876,6 +881,55 @@ function moduleContractAuditValidatePublicNavStaticCoverage(string $definitionsS
 
 /**
  * @param list<string> $issues
+ */
+function moduleContractAuditValidatePublicEntryPointStaticCoverage(string $definitionsSource, string $composerSource, array &$issues): void
+{
+    $scripts = moduleContractAuditComposerScripts($composerSource, $issues);
+    if ($scripts === []) {
+        return;
+    }
+
+    $strictAnalysisText = moduleContractAuditComposerScriptGroupText($scripts, 'analyse:strict');
+    $formatCheckText = moduleContractAuditComposerScriptGroupText($scripts, 'format:check');
+
+    moduleContractAuditRequire(
+        $strictAnalysisText !== '',
+        'composer.json must define analyse:strict scripts for module public entrypoint coverage.',
+        $issues
+    );
+    moduleContractAuditRequire(
+        $formatCheckText !== '',
+        'composer.json must define format:check scripts for module public entrypoint coverage.',
+        $issues
+    );
+
+    if ($strictAnalysisText === '' || $formatCheckText === '') {
+        return;
+    }
+
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues) as $publicPath) {
+            if (!str_starts_with($publicPath, '/') || str_contains($publicPath, '..') || str_contains($publicPath, "\0") || !str_ends_with($publicPath, '.php')) {
+                continue;
+            }
+
+            $relativePath = ltrim($publicPath, '/');
+            moduleContractAuditRequire(
+                moduleContractAuditCommandTextContainsPath($strictAnalysisText, $relativePath),
+                'public module entrypoint ' . $relativePath . ' must be covered by an analyse:strict composer script.',
+                $issues
+            );
+            moduleContractAuditRequire(
+                moduleContractAuditCommandTextContainsPath($formatCheckText, $relativePath),
+                'public module entrypoint ' . $relativePath . ' must be covered by a format:check composer script.',
+                $issues
+            );
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
  * @return array<string,string>
  */
 function moduleContractAuditContentReferenceTypeModuleMap(string $definitionsSource, array &$issues): array
@@ -967,6 +1021,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
     $requiredCoreModuleKeys = moduleContractAuditRequiredCoreModuleKeys();
     $blocks = moduleContractAuditExtractManifestBlocks($definitionsSource, $issues);
     $publicNavOrders = [];
+    $publicPathModules = [];
 
     foreach ($requiredCoreModuleKeys as $moduleKey) {
         if (!isset($blocks[$moduleKey])) {
@@ -983,6 +1038,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $contentReferenceTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues);
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
+        $publicPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues);
         $publicNavOrder = moduleContractAuditManifestIntField($block, $moduleKey, 'public_nav_order', $issues);
         $adminPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'admin_paths', $issues);
         $profileManaged = moduleContractAuditManifestBoolField($block, $moduleKey, 'profile_managed', $issues);
@@ -1001,6 +1057,38 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
         moduleContractAuditRequire($adminPaths !== [], 'core module manifest entry ' . $moduleKey . ' must define at least one admin_paths entry.', $issues);
 
+        foreach ($publicPaths as $publicPath) {
+            if (!str_starts_with($publicPath, '/')) {
+                $issues[] = 'public_paths entry ' . $moduleKey . ' must start with /: ' . $publicPath . '.';
+                continue;
+            }
+            if (str_contains($publicPath, '..') || str_contains($publicPath, "\0")) {
+                $issues[] = 'public_paths entry ' . $moduleKey . ' must not contain traversal segments: ' . $publicPath . '.';
+                continue;
+            }
+            if (isset($publicPathModules[$publicPath])) {
+                $issues[] = 'public_paths entry ' . $publicPath . ' is duplicated by modules ' . $publicPathModules[$publicPath] . ' and ' . $moduleKey . '.';
+                continue;
+            }
+            $publicPathModules[$publicPath] = $moduleKey;
+
+            if (!moduleContractAuditPublicEntryPointExists($projectRoot, $publicPath)) {
+                $issues[] = 'public_paths entry ' . $moduleKey . ' must point to an existing PHP entrypoint: ' . $publicPath . '.';
+                continue;
+            }
+
+            $source = moduleContractAuditReadFile($projectRoot, ltrim($publicPath, '/'), $issues);
+            if ($source === '') {
+                continue;
+            }
+
+            moduleContractAuditRequire(
+                preg_match('/\bisModuleEnabled\(\s*[\'"]' . preg_quote($moduleKey, '/') . '[\'"]\s*\)/', $source) === 1,
+                'public module entrypoint ' . ltrim($publicPath, '/') . ' must guard access with isModuleEnabled(\'' . $moduleKey . '\').',
+                $issues
+            );
+        }
+
         if ($settingsConfigurable === true) {
             moduleContractAuditRequire($settingsLabel !== '', 'settings-configurable module ' . $moduleKey . ' must define a non-empty settings_label.', $issues);
         }
@@ -1015,6 +1103,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
             moduleContractAuditRequire($publicNavOrder !== null && $publicNavOrder > 0, 'public_nav module ' . $moduleKey . ' must define a positive public_nav_order.', $issues);
             moduleContractAuditRequire($navLabel !== '' || $moduleKey === 'board', 'public_nav module ' . $moduleKey . ' must define a non-empty nav_label.', $issues);
             moduleContractAuditRequire(moduleContractAuditPublicNavTargetExists($projectRoot, $publicNavPath), 'public_nav module ' . $moduleKey . ' must point to an existing PHP entrypoint.', $issues);
+            moduleContractAuditRequire(in_array($publicNavPath, $publicPaths, true), 'public_nav module ' . $moduleKey . ' public_nav_path must also be listed in public_paths.', $issues);
 
             if ($publicNavOrder !== null && $publicNavOrder > 0) {
                 if (isset($publicNavOrders[$publicNavOrder])) {
@@ -1159,6 +1248,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'coreModuleDefinitions()',
             'settings_default',
             'public_nav_path',
+            'public_paths',
             'admin_paths',
             'adminRouteModuleRequirements()',
             'requireModuleEnabled()',
@@ -1187,6 +1277,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'coreModuleDefinitions()',
             'install.php',
             'migrate.php',
+            'public_paths',
             'adminRouteModuleRequirements()',
             'content_reference_types',
             'public_module_navigation_http',
@@ -1233,6 +1324,7 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleDefaultSettings()')
     && str_contains($definitionsSource, 'function moduleSettingsLabels()')
     && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
+    && str_contains($definitionsSource, 'function modulePublicEntryPoints()')
     && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')
     && str_contains($definitionsSource, 'function moduleWidgetLabel(')
     && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels(')
@@ -1265,6 +1357,7 @@ foreach ([
     "'settings_default'",
     "'public_nav'",
     "'public_nav_path'",
+    "'public_paths'",
     "'public_nav_order'",
     "'settings_label'",
     "'widget_label'",
@@ -1287,6 +1380,7 @@ moduleContractAuditValidateAdminEntryPointGates($projectRoot, $definitionsSource
 moduleContractAuditValidateAdminRouteModuleRequirements($projectRoot, $definitionsSource, $authSource, $issues);
 moduleContractAuditValidateAdminRouteStaticCoverage($authSource, $composerSource, $issues);
 moduleContractAuditValidatePublicNavStaticCoverage($definitionsSource, $composerSource, $issues);
+moduleContractAuditValidatePublicEntryPointStaticCoverage($definitionsSource, $composerSource, $issues);
 moduleContractAuditValidateContentReferenceTypeCoverage($definitionsSource, $contentReferencePickerSource, $contentReferenceSearchSource, $issues);
 
 moduleContractAuditRequire(

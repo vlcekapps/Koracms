@@ -12,6 +12,7 @@
  *     content_reference_types:array<string,string>,
  *     settings_default:string,
  *     public_nav_path:string,
+ *     public_paths:list<string>,
  *     public_nav_order:int,
  *     profile_managed:bool,
  *     settings_configurable:bool,
@@ -31,6 +32,11 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['blog' => 'Články blogu'],
             'settings_default' => '1',
             'public_nav_path' => '/blog/index.php',
+            'public_paths' => [
+                '/blog/index.php',
+                '/blog/article.php',
+                '/blog/page.php',
+            ],
             'public_nav_order' => 10,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -53,6 +59,10 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['news' => 'Novinky'],
             'settings_default' => '1',
             'public_nav_path' => '/news/index.php',
+            'public_paths' => [
+                '/news/index.php',
+                '/news/article.php',
+            ],
             'public_nav_order' => 20,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -70,6 +80,9 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/chat/index.php',
+            'public_paths' => [
+                '/chat/index.php',
+            ],
             'public_nav_order' => 90,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -87,6 +100,9 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/contact/index.php',
+            'public_paths' => [
+                '/contact/index.php',
+            ],
             'public_nav_order' => 140,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -104,6 +120,12 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['gallery' => 'Fotogalerie'],
             'settings_default' => '1',
             'public_nav_path' => '/gallery/index.php',
+            'public_paths' => [
+                '/gallery/index.php',
+                '/gallery/album.php',
+                '/gallery/photo.php',
+                '/gallery/image.php',
+            ],
             'public_nav_order' => 50,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -121,6 +143,11 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['event' => 'Události'],
             'settings_default' => '1',
             'public_nav_path' => '/events/index.php',
+            'public_paths' => [
+                '/events/index.php',
+                '/events/event.php',
+                '/events/ics.php',
+            ],
             'public_nav_order' => 30,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -138,6 +165,15 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['podcast' => 'Podcasty'],
             'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
+            'public_paths' => [
+                '/podcast/index.php',
+                '/podcast/show.php',
+                '/podcast/episode.php',
+                '/podcast/feed.php',
+                '/podcast/image.php',
+                '/podcast/cover.php',
+                '/podcast/audio.php',
+            ],
             'public_nav_order' => 40,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -155,6 +191,11 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['place' => 'Zajímavá místa'],
             'settings_default' => '1',
             'public_nav_path' => '/places/index.php',
+            'public_paths' => [
+                '/places/index.php',
+                '/places/place.php',
+                '/places/image.php',
+            ],
             'public_nav_order' => 60,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -172,6 +213,10 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '',
+            'public_paths' => [
+                '/subscribe.php',
+                '/newsletter_widget_subscribe.php',
+            ],
             'public_nav_order' => 0,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -189,6 +234,11 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['download' => 'Ke stažení'],
             'settings_default' => '1',
             'public_nav_path' => '/downloads/index.php',
+            'public_paths' => [
+                '/downloads/index.php',
+                '/downloads/item.php',
+                '/downloads/file.php',
+            ],
             'public_nav_order' => 70,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -207,6 +257,11 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/food/index.php',
+            'public_paths' => [
+                '/food/index.php',
+                '/food/archive.php',
+                '/food/card.php',
+            ],
             'public_nav_order' => 80,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -224,6 +279,9 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['poll' => 'Ankety'],
             'settings_default' => '0',
             'public_nav_path' => '/polls/index.php',
+            'public_paths' => [
+                '/polls/index.php',
+            ],
             'public_nav_order' => 100,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -241,6 +299,10 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['faq' => 'FAQ'],
             'settings_default' => '0',
             'public_nav_path' => '/faq/index.php',
+            'public_paths' => [
+                '/faq/index.php',
+                '/faq/item.php',
+            ],
             'public_nav_order' => 110,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -259,6 +321,11 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['board' => ''],
             'settings_default' => '0',
             'public_nav_path' => '/board/index.php',
+            'public_paths' => [
+                '/board/index.php',
+                '/board/document.php',
+                '/board/file.php',
+            ],
             'public_nav_order' => 120,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -277,6 +344,14 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '/reservations/index.php',
+            'public_paths' => [
+                '/reservations/index.php',
+                '/reservations/resource.php',
+                '/reservations/book.php',
+                '/reservations/my.php',
+                '/reservations/cancel.php',
+                '/reservations/cancel_booking.php',
+            ],
             'public_nav_order' => 130,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -297,6 +372,9 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['forms' => 'Formuláře'],
             'settings_default' => '0',
             'public_nav_path' => '',
+            'public_paths' => [
+                '/forms/index.php',
+            ],
             'public_nav_order' => 0,
             'profile_managed' => true,
             'settings_configurable' => true,
@@ -314,6 +392,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '',
+            'public_paths' => [],
             'public_nav_order' => 0,
             'profile_managed' => false,
             'settings_configurable' => true,
@@ -397,6 +476,19 @@ function moduleNavigationDefaults(): array
     }
 
     return $defaults;
+}
+
+/**
+ * @return array<string, list<string>>
+ */
+function modulePublicEntryPoints(): array
+{
+    $entryPoints = [];
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        $entryPoints[$moduleKey] = $definition['public_paths'];
+    }
+
+    return $entryPoints;
 }
 
 /**

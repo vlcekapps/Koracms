@@ -208,6 +208,15 @@ assert_admin_route_module_requirement('/admin/res_booking_save.php', 'reservatio
 assert_equals(null, adminRouteModuleRequirement('/admin/index.php'), 'admin dashboard is not tied to a module');
 assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public module path is ignored');
 
+test_section('module public entrypoints');
+
+$modulePublicEntryPoints = modulePublicEntryPoints();
+assert_true(in_array('/blog/article.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog article route is declared as a public module entrypoint');
+assert_true(in_array('/podcast/audio.php', $modulePublicEntryPoints['podcast'] ?? [], true), 'podcast audio endpoint is declared as a public module entrypoint');
+assert_true(in_array('/subscribe.php', $modulePublicEntryPoints['newsletter'] ?? [], true), 'newsletter subscribe route is declared as a public module entrypoint');
+assert_true(in_array('/forms/index.php', $modulePublicEntryPoints['forms'] ?? [], true), 'forms public route is declared even without main navigation');
+assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics has no standalone public entrypoint');
+
 test_section('module content reference types');
 
 $contentReferenceTypes = moduleContentReferenceTypeLabels();

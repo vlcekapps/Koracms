@@ -143,7 +143,8 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $contentReferenceTypes = $moduleKey === 'blog'
             ? "['blog' => 'Blog']"
             : ($moduleKey === 'news' ? "['news' => 'News']" : '[]');
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'content_reference_types' => {$contentReferenceTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
+        $publicPaths = $publicNav ? "['{$publicNavPath}']" : '[]';
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'content_reference_types' => {$contentReferenceTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -155,6 +156,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleDefaultSettings(): array { return []; }\n"
         . "function moduleSettingsLabels(): array { return []; }\n"
         . "function moduleNavigationDefaults(): array { return []; }\n"
+        . "function modulePublicEntryPoints(): array { return []; }\n"
         . "function moduleAdminEntryPoints(): array { return []; }\n"
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function moduleContentReferenceTypeLabels(): array { return []; }\n"
@@ -193,7 +195,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Testy a guardrails\n"
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
-        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path a admin_paths.\n"
+        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths a admin_paths.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
         . "Content picker používá content_reference_types.\n"
@@ -207,7 +209,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
 function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
-        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php.\n"
+        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths.\n"
         . "Admin routy chrání adminRouteModuleRequirements().\n"
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
@@ -332,7 +334,7 @@ assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 $additionalModuleFiles = $validFiles;
 $additionalModuleFiles['lib/definitions.php'] = str_replace(
     "    ];\n}\nfunction coreModuleKeysByFlag",
-    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'content_reference_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'content_reference_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
     $additionalModuleFiles['lib/definitions.php']
 );
 $additionalModuleFiles['auth.php'] = str_replace(
@@ -474,6 +476,30 @@ assertModuleContractAuditFails(
     'public_nav module blog must define a rooted public_nav_path.'
 );
 
+$missingPublicPathsFieldFiles = $validFiles;
+$missingPublicPathsFieldFiles['lib/definitions.php'] = str_replace(
+    "'public_paths' => ['/blog/index.php'], ",
+    '',
+    $missingPublicPathsFieldFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Missing public paths manifest field',
+    $missingPublicPathsFieldFiles,
+    'core module manifest entry blog is missing list field public_paths.'
+);
+
+$missingPublicNavInPublicPathsFiles = $validFiles;
+$missingPublicNavInPublicPathsFiles['lib/definitions.php'] = str_replace(
+    "'public_paths' => ['/blog/index.php']",
+    "'public_paths' => []",
+    $missingPublicNavInPublicPathsFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Missing public navigation path in public paths',
+    $missingPublicNavInPublicPathsFiles,
+    'public_nav module blog public_nav_path must also be listed in public_paths.'
+);
+
 $missingPublicNavTargetFiles = $validFiles;
 unset($missingPublicNavTargetFiles['blog/index.php']);
 assertModuleContractAuditFails(
@@ -482,12 +508,37 @@ assertModuleContractAuditFails(
     'public_nav module blog must point to an existing PHP entrypoint.'
 );
 
+$missingPublicEntryPointTargetFiles = $validFiles;
+$missingPublicEntryPointTargetFiles['lib/definitions.php'] = str_replace(
+    "'public_paths' => ['/blog/index.php']",
+    "'public_paths' => ['/blog/index.php', '/blog/missing.php']",
+    $missingPublicEntryPointTargetFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Missing public module entrypoint target',
+    $missingPublicEntryPointTargetFiles,
+    'public_paths entry blog must point to an existing PHP entrypoint: /blog/missing.php.'
+);
+
 $missingPublicNavGateFiles = $validFiles;
 $missingPublicNavGateFiles['blog/index.php'] = "<?php\n";
 assertModuleContractAuditFails(
     'Missing public navigation module gate',
     $missingPublicNavGateFiles,
     "public_nav entrypoint blog/index.php must guard access with isModuleEnabled('blog')."
+);
+
+$missingPublicEntryPointGateFiles = $validFiles;
+$missingPublicEntryPointGateFiles['lib/definitions.php'] = str_replace(
+    "'public_paths' => ['/blog/index.php']",
+    "'public_paths' => ['/blog/index.php', '/blog/detail.php']",
+    $missingPublicEntryPointGateFiles['lib/definitions.php']
+);
+$missingPublicEntryPointGateFiles['blog/detail.php'] = "<?php\n";
+assertModuleContractAuditFails(
+    'Missing public module entrypoint gate',
+    $missingPublicEntryPointGateFiles,
+    "public module entrypoint blog/detail.php must guard access with isModuleEnabled('blog')."
 );
 
 $missingPublicNavHttpFiles = $validFiles;
@@ -615,6 +666,31 @@ assertModuleContractAuditFails(
     'Missing public navigation format coverage',
     $missingPublicNavFormatFiles,
     'public_nav entrypoint blog/index.php must be covered by a format:check composer script.'
+);
+
+$missingPublicEntryPointAnalysisFiles = $validFiles;
+$missingPublicEntryPointAnalysisFiles['lib/definitions.php'] = str_replace(
+    "'public_paths' => ['/blog/index.php']",
+    "'public_paths' => ['/blog/index.php', '/blog/detail.php']",
+    $missingPublicEntryPointAnalysisFiles['lib/definitions.php']
+);
+$missingPublicEntryPointAnalysisFiles['blog/detail.php'] = "<?php\nif (!isModuleEnabled('blog')) { exit; }\n";
+assertModuleContractAuditFails(
+    'Missing public module entrypoint PHPStan coverage',
+    $missingPublicEntryPointAnalysisFiles,
+    'public module entrypoint blog/detail.php must be covered by an analyse:strict composer script.'
+);
+
+$missingPublicEntryPointFormatFiles = $missingPublicEntryPointAnalysisFiles;
+$missingPublicEntryPointFormatFiles['composer.json'] = str_replace(
+    '"analyse:strict":"' . $staticScriptTargets . '"',
+    '"analyse:strict":"' . $staticScriptTargets . ' blog/detail.php"',
+    $missingPublicEntryPointFormatFiles['composer.json']
+);
+assertModuleContractAuditFails(
+    'Missing public module entrypoint format coverage',
+    $missingPublicEntryPointFormatFiles,
+    'public module entrypoint blog/detail.php must be covered by a format:check composer script.'
 );
 
 $missingAdminHttpFiles = $validFiles;
