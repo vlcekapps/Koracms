@@ -6749,7 +6749,7 @@ foreach ([
 }
 
 foreach ([
-    "\$types['forms'] = 'Formuláře';",
+    'moduleContentReferenceTypeLabels()',
     '[form]slug-formulare[/form]',
     '[podcast_episode]slug-poradu/slug-epizody[/podcast_episode]',
     'let isSearching = false;',
@@ -7869,6 +7869,8 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'auth.php must derive admin disabled module messages from moduleAdminLabel().')
         && str_contains($moduleContractAuditSource, 'adminRouteModuleDisabledMessage($moduleKey)')
         && str_contains($moduleContractAuditSource, 'manifest-derived requireModuleEnabled() disabled message')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateContentReferenceTypeCoverage')
+        && str_contains($moduleContractAuditSource, 'content_reference_types')
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleNavigationDefaults()')
         && str_contains($httpIntegrationFoundationSource, "saveSetting('module_' . \$moduleKey, '0')")
@@ -7898,6 +7900,7 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSelftestSource, 'Missing module admin label')
         && str_contains($moduleContractAuditSelftestSource, 'Hard-coded admin disabled module message')
         && str_contains($moduleContractAuditSelftestSource, 'Duplicate requireModuleEnabled disabled message')
+        && str_contains($moduleContractAuditSelftestSource, 'Missing content reference manifest type')
         && str_contains($moduleContractAuditSelftestSource, 'Unknown application module gate')
         && str_contains($moduleContractAuditSelftestSource, 'Unknown application module setting')
         && str_contains($moduleContractAuditSelftestSource, 'Invalid module manifest default')
@@ -7918,6 +7921,8 @@ $foundationChecks = [
     'core module metadata is centralized' => str_contains($definitionsSource, 'function coreModuleDefinitions()')
         && str_contains($definitionsSource, 'function moduleKeysForSettings()')
         && str_contains($definitionsSource, 'function moduleDefaultSettings()')
+        && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels()')
+        && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap()')
         && str_contains($definitionsSource, 'function moduleSettingsLabels()')
         && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
         && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')

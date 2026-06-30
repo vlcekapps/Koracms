@@ -362,6 +362,37 @@ function moduleContractAuditManifestStringListField(string $block, string $modul
  * @param list<string> $issues
  * @return array<string,string>
  */
+function moduleContractAuditManifestStringMapField(string $block, string $moduleKey, string $field, array &$issues): array
+{
+    $pattern = '/\'' . preg_quote($field, '/') . '\'\\s*=>\\s*\\[(.*?)\\]/s';
+    if (preg_match($pattern, $block, $matches) !== 1) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' is missing map field ' . $field . '.';
+        return [];
+    }
+
+    $itemsSource = trim((string)$matches[1]);
+    if ($itemsSource === '') {
+        return [];
+    }
+
+    $matchCount = preg_match_all('/\'([^\']*)\'\\s*=>\\s*\'([^\']*)\'/', $itemsSource, $itemMatches, PREG_SET_ORDER);
+    if ($matchCount === false || $matchCount === 0) {
+        $issues[] = 'core module manifest entry ' . $moduleKey . ' map field ' . $field . ' cannot be parsed.';
+        return [];
+    }
+
+    $items = [];
+    foreach ($itemMatches as $itemMatch) {
+        $items[(string)$itemMatch[1]] = (string)$itemMatch[2];
+    }
+
+    return $items;
+}
+
+/**
+ * @param list<string> $issues
+ * @return array<string,string>
+ */
 function moduleContractAuditExtractAdminRouteRequirementBlocks(string $authSource, array &$issues): array
 {
     $functionStart = strpos($authSource, 'function adminRouteModuleRequirements(');
@@ -845,6 +876,91 @@ function moduleContractAuditValidatePublicNavStaticCoverage(string $definitionsS
 
 /**
  * @param list<string> $issues
+ * @return array<string,string>
+ */
+function moduleContractAuditContentReferenceTypeModuleMap(string $definitionsSource, array &$issues): array
+{
+    $map = [];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues) as $type => $label) {
+            if ($type === '') {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' content_reference_types contains empty type.';
+                continue;
+            }
+            if (isset($map[$type])) {
+                $issues[] = 'content_reference_types entry ' . $type . ' is duplicated by modules ' . $map[$type] . ' and ' . $moduleKey . '.';
+                continue;
+            }
+            if ($label === '' && !($moduleKey === 'board' && $type === 'board')) {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' content_reference_types label for ' . $type . ' must not be empty.';
+            }
+
+            $map[$type] = $moduleKey;
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateContentReferenceTypeCoverage(
+    string $definitionsSource,
+    string $pickerSource,
+    string $searchSource,
+    array &$issues
+): void {
+    $typeModuleMap = moduleContractAuditContentReferenceTypeModuleMap($definitionsSource, $issues);
+    $modulesWithContentReferences = array_values(array_unique(array_values($typeModuleMap)));
+
+    moduleContractAuditRequire(
+        str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels(')
+        && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap('),
+        'lib/definitions.php must expose manifest-derived content reference type helpers.',
+        $issues
+    );
+    moduleContractAuditRequire(
+        str_contains($pickerSource, 'moduleContentReferenceTypeLabels()'),
+        'admin/content_reference_picker.php must derive module picker types from the central manifest.',
+        $issues
+    );
+    moduleContractAuditRequire(
+        str_contains($searchSource, 'contentReferenceTypeModuleMap()'),
+        'admin/content_reference_search.php must derive allowed module picker types from the central manifest.',
+        $issues
+    );
+
+    if (preg_match_all('/\bisModuleEnabled\(\s*[\'"]([a-z][a-z0-9_]*)[\'"]\s*\)/', $searchSource, $gateMatches) === false) {
+        $issues[] = 'admin/content_reference_search.php isModuleEnabled references cannot be parsed for content reference coverage.';
+    } else {
+        foreach (array_unique($gateMatches[1]) as $moduleKey) {
+            moduleContractAuditRequire(
+                in_array($moduleKey, $modulesWithContentReferences, true),
+                'content reference search gates module ' . $moduleKey . ' but the module manifest has no content_reference_types entry for it.',
+                $issues
+            );
+        }
+    }
+
+    if (preg_match_all('/\$requestedType\s*===\s*[\'"]([a-z][a-z0-9_]*)[\'"]/', $searchSource, $typeMatches) === false) {
+        $issues[] = 'admin/content_reference_search.php requestedType checks cannot be parsed.';
+    } else {
+        foreach (array_unique($typeMatches[1]) as $type) {
+            if (in_array($type, ['all', 'page', 'media'], true)) {
+                continue;
+            }
+            moduleContractAuditRequire(
+                isset($typeModuleMap[$type]),
+                'content reference search checks request type ' . $type . ' but no module manifest content_reference_types entry defines it.',
+                $issues
+            );
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
  */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
@@ -864,6 +980,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $settingsLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'settings_label', $issues));
         $navLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'nav_label', $issues));
         $adminLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'admin_label', $issues));
+        $contentReferenceTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues);
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicNavOrder = moduleContractAuditManifestIntField($block, $moduleKey, 'public_nav_order', $issues);
@@ -874,6 +991,13 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
 
         moduleContractAuditRequire($label !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty label.', $issues);
         moduleContractAuditRequire($adminLabel !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty admin_label.', $issues);
+        foreach (array_keys($contentReferenceTypes) as $contentReferenceType) {
+            moduleContractAuditRequire(
+                preg_match('/^[a-z][a-z0-9_]*$/', $contentReferenceType) === 1,
+                'core module manifest entry ' . $moduleKey . ' contains invalid content_reference_types key ' . $contentReferenceType . '.',
+                $issues
+            );
+        }
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
         moduleContractAuditRequire($adminPaths !== [], 'core module manifest entry ' . $moduleKey . ' must define at least one admin_paths entry.', $issues);
 
@@ -1018,6 +1142,8 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
     && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')
     && str_contains($definitionsSource, 'function moduleWidgetLabel(')
+    && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels(')
+    && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap(')
     && str_contains($definitionsSource, 'function moduleAdminLabel('),
     'lib/definitions.php must keep the central module manifest helper set.',
     $issues
@@ -1050,6 +1176,7 @@ foreach ([
     "'settings_label'",
     "'widget_label'",
     "'admin_label'",
+    "'content_reference_types'",
     "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(
@@ -1067,6 +1194,7 @@ moduleContractAuditValidateAdminEntryPointGates($projectRoot, $definitionsSource
 moduleContractAuditValidateAdminRouteModuleRequirements($projectRoot, $definitionsSource, $authSource, $issues);
 moduleContractAuditValidateAdminRouteStaticCoverage($authSource, $composerSource, $issues);
 moduleContractAuditValidatePublicNavStaticCoverage($definitionsSource, $composerSource, $issues);
+moduleContractAuditValidateContentReferenceTypeCoverage($definitionsSource, $contentReferencePickerSource, $contentReferenceSearchSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

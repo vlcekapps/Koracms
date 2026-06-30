@@ -208,6 +208,17 @@ assert_admin_route_module_requirement('/admin/res_booking_save.php', 'reservatio
 assert_equals(null, adminRouteModuleRequirement('/admin/index.php'), 'admin dashboard is not tied to a module');
 assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public module path is ignored');
 
+test_section('module content reference types');
+
+$contentReferenceTypes = moduleContentReferenceTypeLabels();
+$contentReferenceTypeMap = contentReferenceTypeModuleMap();
+assert_equals('Články blogu', $contentReferenceTypes['blog']['blog'] ?? null, 'blog picker label comes from manifest');
+assert_equals('blog', $contentReferenceTypeMap['blog'] ?? null, 'blog picker type maps to blog module');
+assert_equals('events', $contentReferenceTypeMap['event'] ?? null, 'event picker type maps to events module');
+assert_equals('downloads', $contentReferenceTypeMap['download'] ?? null, 'download picker type maps to downloads module');
+assert_equals('forms', $contentReferenceTypeMap['forms'] ?? null, 'forms picker type maps to forms module');
+assert_false(isset($contentReferenceTypes['statistics']), 'statistics module has no content picker source');
+
 test_section('navigation links');
 
 assert_equals('/kontakt', navigationLinkUrl('/kontakt'), 'navigation link accepts internal path');

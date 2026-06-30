@@ -9,6 +9,7 @@
  *     nav_label:string,
  *     widget_label:string,
  *     admin_label:string,
+ *     content_reference_types:array<string,string>,
  *     settings_default:string,
  *     public_nav_path:string,
  *     public_nav_order:int,
@@ -27,6 +28,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Blog',
             'widget_label' => 'Blog',
             'admin_label' => 'Blog',
+            'content_reference_types' => ['blog' => 'Články blogu'],
             'settings_default' => '1',
             'public_nav_path' => '/blog/index.php',
             'public_nav_order' => 10,
@@ -48,6 +50,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Novinky',
             'widget_label' => 'Novinky',
             'admin_label' => 'Novinky',
+            'content_reference_types' => ['news' => 'Novinky'],
             'settings_default' => '1',
             'public_nav_path' => '/news/index.php',
             'public_nav_order' => 20,
@@ -64,6 +67,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Chat',
             'widget_label' => 'Chat',
             'admin_label' => 'Chat',
+            'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/chat/index.php',
             'public_nav_order' => 90,
@@ -80,6 +84,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Kontakt',
             'widget_label' => 'Kontakt',
             'admin_label' => 'Kontakt',
+            'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/contact/index.php',
             'public_nav_order' => 140,
@@ -96,6 +101,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Galerie',
             'widget_label' => 'Fotogalerie',
             'admin_label' => 'Galerie',
+            'content_reference_types' => ['gallery' => 'Fotogalerie'],
             'settings_default' => '1',
             'public_nav_path' => '/gallery/index.php',
             'public_nav_order' => 50,
@@ -112,6 +118,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Akce',
             'widget_label' => 'Události',
             'admin_label' => 'Události',
+            'content_reference_types' => ['event' => 'Události'],
             'settings_default' => '1',
             'public_nav_path' => '/events/index.php',
             'public_nav_order' => 30,
@@ -128,6 +135,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Podcasty',
             'widget_label' => 'Podcast',
             'admin_label' => 'Podcasty',
+            'content_reference_types' => ['podcast' => 'Podcasty'],
             'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
             'public_nav_order' => 40,
@@ -144,6 +152,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Zajímavá místa',
             'widget_label' => 'Místa',
             'admin_label' => 'Zajímavá místa',
+            'content_reference_types' => ['place' => 'Zajímavá místa'],
             'settings_default' => '1',
             'public_nav_path' => '/places/index.php',
             'public_nav_order' => 60,
@@ -160,6 +169,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => 'Newsletter',
             'admin_label' => 'Newsletter',
+            'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '',
             'public_nav_order' => 0,
@@ -176,6 +186,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Ke stažení',
             'widget_label' => 'Ke stažení',
             'admin_label' => 'Ke stažení',
+            'content_reference_types' => ['download' => 'Ke stažení'],
             'settings_default' => '1',
             'public_nav_path' => '/downloads/index.php',
             'public_nav_order' => 70,
@@ -193,6 +204,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Jídelní lístek',
             'widget_label' => 'Jídelní lístek',
             'admin_label' => 'Jídelní lístek',
+            'content_reference_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/food/index.php',
             'public_nav_order' => 80,
@@ -209,6 +221,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Ankety',
             'widget_label' => 'Ankety',
             'admin_label' => 'Ankety',
+            'content_reference_types' => ['poll' => 'Ankety'],
             'settings_default' => '0',
             'public_nav_path' => '/polls/index.php',
             'public_nav_order' => 100,
@@ -225,6 +238,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'FAQ',
             'widget_label' => 'FAQ',
             'admin_label' => 'FAQ',
+            'content_reference_types' => ['faq' => 'FAQ'],
             'settings_default' => '0',
             'public_nav_path' => '/faq/index.php',
             'public_nav_order' => 110,
@@ -242,6 +256,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => '',
             'admin_label' => 'Vývěska',
+            'content_reference_types' => ['board' => ''],
             'settings_default' => '0',
             'public_nav_path' => '/board/index.php',
             'public_nav_order' => 120,
@@ -259,6 +274,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Rezervace',
             'widget_label' => 'Rezervace',
             'admin_label' => 'Rezervace',
+            'content_reference_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '/reservations/index.php',
             'public_nav_order' => 130,
@@ -278,6 +294,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => 'Formuláře',
             'admin_label' => 'Formuláře',
+            'content_reference_types' => ['forms' => 'Formuláře'],
             'settings_default' => '0',
             'public_nav_path' => '',
             'public_nav_order' => 0,
@@ -294,6 +311,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => 'Statistiky',
             'admin_label' => 'Statistiky',
+            'content_reference_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '',
             'public_nav_order' => 0,
@@ -407,6 +425,58 @@ function moduleWidgetLabel(string $moduleKey): string
 
     $label = trim($definition['widget_label']);
     return $label !== '' ? $label : $definition['label'];
+}
+
+/**
+ * @return array<string, array<string,string>>
+ */
+function moduleContentReferenceTypeLabels(): array
+{
+    $labels = [];
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        $typeLabels = $definition['content_reference_types'];
+        if ($typeLabels === []) {
+            continue;
+        }
+
+        $normalizedTypeLabels = [];
+        foreach ($typeLabels as $type => $label) {
+            $type = trim((string)$type);
+            if ($type === '') {
+                continue;
+            }
+
+            $label = trim($label);
+            if ($label === '') {
+                $label = $moduleKey === 'board'
+                    ? (function_exists('resolveThemeName') ? boardModulePublicLabel() : 'Vývěska')
+                    : moduleWidgetLabel($moduleKey);
+            }
+
+            $normalizedTypeLabels[$type] = $label;
+        }
+
+        if ($normalizedTypeLabels !== []) {
+            $labels[$moduleKey] = $normalizedTypeLabels;
+        }
+    }
+
+    return $labels;
+}
+
+/**
+ * @return array<string,string>
+ */
+function contentReferenceTypeModuleMap(): array
+{
+    $map = [];
+    foreach (moduleContentReferenceTypeLabels() as $moduleKey => $typeLabels) {
+        foreach (array_keys($typeLabels) as $type) {
+            $map[$type] = $moduleKey;
+        }
+    }
+
+    return $map;
 }
 
 function moduleAdminLabel(string $moduleKey): string

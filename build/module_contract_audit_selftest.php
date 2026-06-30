@@ -140,7 +140,10 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $publicNavOrder = $publicNav ? 10 : 0;
         $publicNavValue = $publicNav ? 'true' : 'false';
         $adminPath = '/admin/' . $moduleKey . '.php';
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
+        $contentReferenceTypes = $moduleKey === 'blog'
+            ? "['blog' => 'Blog']"
+            : ($moduleKey === 'news' ? "['news' => 'News']" : '[]');
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'content_reference_types' => {$contentReferenceTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -154,6 +157,8 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleNavigationDefaults(): array { return []; }\n"
         . "function moduleAdminEntryPoints(): array { return []; }\n"
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
+        . "function moduleContentReferenceTypeLabels(): array { return []; }\n"
+        . "function contentReferenceTypeModuleMap(): array { return ['blog' => 'blog', 'news' => 'news']; }\n"
         . "function moduleAdminLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
@@ -191,8 +196,8 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
-        'admin/content_reference_picker.php' => "<?php\nif (isModuleEnabled('blog')) {}\n",
-        'admin/content_reference_search.php' => "<?php\nif (isModuleEnabled('news')) {}\n",
+        'admin/content_reference_picker.php' => "<?php\nmoduleContentReferenceTypeLabels();\n",
+        'admin/content_reference_search.php' => "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'news') && isModuleEnabled('news')) {}\n",
         'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
@@ -287,7 +292,7 @@ assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 $additionalModuleFiles = $validFiles;
 $additionalModuleFiles['lib/definitions.php'] = str_replace(
     "    ];\n}\nfunction coreModuleKeysByFlag",
-    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'content_reference_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
     $additionalModuleFiles['lib/definitions.php']
 );
 $additionalModuleFiles['auth.php'] = str_replace(
@@ -387,6 +392,14 @@ assertModuleContractAuditFails(
     'Unknown content picker module gate',
     $unknownPickerModuleFiles,
     'admin/content_reference_picker.php isModuleEnabled references unknown module key unknown_picker_module.'
+);
+
+$missingContentReferenceManifestFiles = $validFiles;
+$missingContentReferenceManifestFiles['admin/content_reference_search.php'] = "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'event') && isModuleEnabled('events')) {}\n";
+assertModuleContractAuditFails(
+    'Missing content reference manifest type',
+    $missingContentReferenceManifestFiles,
+    'content reference search gates module events but the module manifest has no content_reference_types entry for it.'
 );
 
 $unknownApplicationModuleFiles = $validFiles;

@@ -27,19 +27,9 @@ function contentReferenceAllowedTypes(): array
 {
     return [
         'all',
-        'blog',
         'page',
-        'news',
-        'event',
-        'faq',
-        'gallery',
-        'podcast',
-        'download',
         'media',
-        'forms',
-        'place',
-        'board',
-        'poll',
+        ...array_keys(contentReferenceTypeModuleMap()),
     ];
 }
 

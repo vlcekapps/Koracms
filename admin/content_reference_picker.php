@@ -8,40 +8,45 @@ function adminContentReferencePickerTypes(): array
 {
     $types = [
         'all' => 'Všechen obsah',
-        'blog' => 'Články blogu',
-        'page' => 'Statické stránky',
+    ];
+    $moduleTypeLabels = moduleContentReferenceTypeLabels();
+    $orderedModuleKeys = [
+        'blog',
+        'news',
+        'events',
+        'faq',
+        'gallery',
+        'podcast',
+        'downloads',
+        'forms',
+        'places',
+        'board',
+        'polls',
     ];
 
-    if (isModuleEnabled('news')) {
-        $types['news'] = 'Novinky';
-    }
-    if (isModuleEnabled('events')) {
-        $types['event'] = 'Události';
-    }
-    if (isModuleEnabled('faq')) {
-        $types['faq'] = 'FAQ';
-    }
-    if (isModuleEnabled('gallery')) {
-        $types['gallery'] = 'Fotogalerie';
-    }
-    if (isModuleEnabled('podcast')) {
-        $types['podcast'] = 'Podcasty';
-    }
-    if (isModuleEnabled('downloads')) {
-        $types['download'] = 'Ke stažení';
+    $appendModuleTypes = static function (string $moduleKey) use (&$types, $moduleTypeLabels): void {
+        if (!isset($moduleTypeLabels[$moduleKey]) || !isModuleEnabled($moduleKey)) {
+            return;
+        }
+
+        foreach ($moduleTypeLabels[$moduleKey] as $type => $label) {
+            $types[$type] = $label;
+        }
+    };
+
+    $appendModuleTypes('blog');
+    $types['page'] = 'Statické stránky';
+    foreach (['news', 'events', 'faq', 'gallery', 'podcast', 'downloads'] as $moduleKey) {
+        $appendModuleTypes($moduleKey);
     }
     $types['media'] = 'Knihovna médií';
-    if (isModuleEnabled('forms')) {
-        $types['forms'] = 'Formuláře';
+    foreach (['forms', 'places', 'board', 'polls'] as $moduleKey) {
+        $appendModuleTypes($moduleKey);
     }
-    if (isModuleEnabled('places')) {
-        $types['place'] = 'Zajímavá místa';
-    }
-    if (isModuleEnabled('board')) {
-        $types['board'] = boardModulePublicLabel();
-    }
-    if (isModuleEnabled('polls')) {
-        $types['poll'] = 'Ankety';
+    foreach (array_keys($moduleTypeLabels) as $moduleKey) {
+        if (!in_array($moduleKey, $orderedModuleKeys, true)) {
+            $appendModuleTypes($moduleKey);
+        }
     }
 
     return $types;
