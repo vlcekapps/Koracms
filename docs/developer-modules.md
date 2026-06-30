@@ -53,7 +53,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 - Modulový zdroj v content pickeru musí projít scénářem `content_reference_disabled_modules_http`, který ověřuje skrytí vypnutého typu v UI i prázdný výsledek přímého search endpointu.
 - Modulové HTTP scénáře, které testují pozitivní uložení, validaci nebo veřejné zobrazení konkrétního modulu, si musí před akcí explicitně nastavit svůj `module_*` přepínač. Test nesmí spoléhat na aktuální profil webu nebo lokální databázi, jinak může projít na localhostu a spadnout v čistém Full CI prostředí.
 - Novou veřejnou šablonu zahrňte do theme view auditu, pokud obsahuje `section`, `article`, `nav`, `aside`, `table`, `fieldset`, `figure`, `role="search"` nebo odkazy do nového okna.
-- Nový admin soubor musí být zahrnutý do `composer analyse:strict` a `composer format:check`; runtime audit hlídá nepokryté admin soubory.
+- Nový admin soubor musí být zahrnutý do některého `composer analyse:strict*` a `composer format:check*` skriptu; modulový audit to u souborů z `adminRouteModuleRequirements()` hlídá automaticky, takže nový formulářový, detailový nebo stav měnící endpoint nemůže zůstat mimo PHPStan a PSR-12 smoke check.
 - Pokud modul přidá nový helper se samostatnými pravidly, přidejte unit test a runtime guardrail proti návratu k ruční duplicitní logice.
 
 ## Definition of done

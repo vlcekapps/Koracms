@@ -429,6 +429,80 @@ function moduleContractAuditAdminRouteFilesField(string $block, string $moduleKe
     return $files;
 }
 
+/**
+ * @param list<string> $issues
+ * @return array<string,mixed>
+ */
+function moduleContractAuditComposerScripts(string $composerSource, array &$issues): array
+{
+    $composer = json_decode($composerSource, true);
+    if (!is_array($composer)) {
+        $issues[] = 'composer.json cannot be parsed as JSON.';
+        return [];
+    }
+
+    $scripts = $composer['scripts'] ?? null;
+    if (!is_array($scripts)) {
+        $issues[] = 'composer.json is missing scripts object.';
+        return [];
+    }
+
+    /** @var array<string,mixed> $normalizedScripts */
+    $normalizedScripts = [];
+    foreach ($scripts as $scriptName => $script) {
+        if (is_string($scriptName)) {
+            $normalizedScripts[$scriptName] = $script;
+        }
+    }
+
+    return $normalizedScripts;
+}
+
+function moduleContractAuditComposerScriptText(mixed $script): string
+{
+    if (is_string($script)) {
+        return $script;
+    }
+
+    if (!is_array($script)) {
+        return '';
+    }
+
+    $parts = [];
+    foreach ($script as $scriptLine) {
+        if (is_string($scriptLine)) {
+            $parts[] = $scriptLine;
+        }
+    }
+
+    return implode(' ', $parts);
+}
+
+/**
+ * @param array<string,mixed> $scripts
+ */
+function moduleContractAuditComposerScriptGroupText(array $scripts, string $scriptPrefix): string
+{
+    $parts = [];
+    foreach ($scripts as $scriptName => $script) {
+        if ($scriptName !== $scriptPrefix && !str_starts_with($scriptName, $scriptPrefix . ':')) {
+            continue;
+        }
+
+        $scriptText = moduleContractAuditComposerScriptText($script);
+        if ($scriptText !== '') {
+            $parts[] = $scriptText;
+        }
+    }
+
+    return implode(' ', $parts);
+}
+
+function moduleContractAuditCommandTextContainsPath(string $commandText, string $relativePath): bool
+{
+    return preg_match('/(?:^|\s)' . preg_quote($relativePath, '/') . '(?:\s|$)/', $commandText) === 1;
+}
+
 function moduleContractAuditRootedPhpTargetExists(string $projectRoot, string $path): bool
 {
     if (!str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\0") || !str_ends_with($path, '.php')) {
@@ -648,6 +722,55 @@ function moduleContractAuditValidateAdminRouteModuleRequirements(
 /**
  * @param list<string> $issues
  */
+function moduleContractAuditValidateAdminRouteStaticCoverage(string $authSource, string $composerSource, array &$issues): void
+{
+    $scripts = moduleContractAuditComposerScripts($composerSource, $issues);
+    if ($scripts === []) {
+        return;
+    }
+
+    $strictAnalysisText = moduleContractAuditComposerScriptGroupText($scripts, 'analyse:strict');
+    $formatCheckText = moduleContractAuditComposerScriptGroupText($scripts, 'format:check');
+
+    moduleContractAuditRequire(
+        $strictAnalysisText !== '',
+        'composer.json must define analyse:strict scripts for module admin route coverage.',
+        $issues
+    );
+    moduleContractAuditRequire(
+        $formatCheckText !== '',
+        'composer.json must define format:check scripts for module admin route coverage.',
+        $issues
+    );
+
+    if ($strictAnalysisText === '' || $formatCheckText === '') {
+        return;
+    }
+
+    foreach (moduleContractAuditExtractAdminRouteRequirementBlocks($authSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditAdminRouteFilesField($block, $moduleKey, $issues) as $file) {
+            if ($file === '' || str_contains($file, '/') || str_contains($file, '\\') || str_contains($file, '..') || str_contains($file, "\0") || !str_ends_with($file, '.php')) {
+                continue;
+            }
+
+            $relativePath = 'admin/' . $file;
+            moduleContractAuditRequire(
+                moduleContractAuditCommandTextContainsPath($strictAnalysisText, $relativePath),
+                'adminRouteModuleRequirement file ' . $relativePath . ' must be covered by an analyse:strict composer script.',
+                $issues
+            );
+            moduleContractAuditRequire(
+                moduleContractAuditCommandTextContainsPath($formatCheckText, $relativePath),
+                'adminRouteModuleRequirement file ' . $relativePath . ' must be covered by a format:check composer script.',
+                $issues
+            );
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
     $knownModuleKeys = moduleContractAuditExpectedKeys();
@@ -856,6 +979,7 @@ moduleContractAuditValidatePublicNavEntryPointGates($projectRoot, $definitionsSo
 moduleContractAuditValidateAdminHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
 moduleContractAuditValidateAdminEntryPointGates($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidateAdminRouteModuleRequirements($projectRoot, $definitionsSource, $authSource, $issues);
+moduleContractAuditValidateAdminRouteStaticCoverage($authSource, $composerSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

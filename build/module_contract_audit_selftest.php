@@ -115,6 +115,17 @@ function moduleContractAuditSelfTestModuleKeys(): array
     ];
 }
 
+function moduleContractAuditSelfTestAdminScriptTargets(): string
+{
+    return implode(
+        ' ',
+        array_map(
+            static fn (string $moduleKey): string => 'admin/' . $moduleKey . '.php',
+            moduleContractAuditSelfTestModuleKeys()
+        )
+    );
+}
+
 function moduleContractAuditSelfTestDefinitionsFixture(): string
 {
     $entries = [];
@@ -165,6 +176,7 @@ function moduleContractAuditSelfTestAuthFixture(): string
  */
 function moduleContractAuditSelfTestValidFiles(): array
 {
+    $adminScriptTargets = moduleContractAuditSelfTestAdminScriptTargets();
     $files = [
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
         'auth.php' => moduleContractAuditSelfTestAuthFixture(),
@@ -178,7 +190,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'themes/default/theme.json' => '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["blog"],"default":"#000000"}}}',
-        'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
+        'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict":"' . $adminScriptTargets . '","analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check":"' . $adminScriptTargets . '","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
         'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures); foreach (moduleAdminEntryPoints() as \$moduleKey => \$adminPaths) { saveSetting('module_' . \$moduleKey, '0'); } httpIntegrationPrintResult('admin_disabled_modules_http', ['admin stránka vypnutého modulu ', 'není povolen'], \$failures);\n",
         'docs/developer-modules.md' => "Použijte coreModuleDefinitions() a build/module_contract_audit.php.\n",
@@ -440,6 +452,33 @@ assertModuleContractAuditFails(
     'Missing admin route login guard',
     $missingAdminRouteLoginGuardFiles,
     'adminRouteModuleRequirement file /admin/blog_save.php must call requireLogin(), requireSuperAdmin(), requireModuleEnabled() or requireCapability().'
+);
+
+$adminScriptTargets = moduleContractAuditSelfTestAdminScriptTargets();
+$adminScriptTargetsWithoutBlog = str_replace('admin/blog.php ', '', $adminScriptTargets);
+
+$missingAdminRouteAnalysisFiles = $validFiles;
+$missingAdminRouteAnalysisFiles['composer.json'] = str_replace(
+    '"analyse:strict":"' . $adminScriptTargets . '"',
+    '"analyse:strict":"' . $adminScriptTargetsWithoutBlog . '"',
+    $missingAdminRouteAnalysisFiles['composer.json']
+);
+assertModuleContractAuditFails(
+    'Missing admin route PHPStan coverage',
+    $missingAdminRouteAnalysisFiles,
+    'adminRouteModuleRequirement file admin/blog.php must be covered by an analyse:strict composer script.'
+);
+
+$missingAdminRouteFormatFiles = $validFiles;
+$missingAdminRouteFormatFiles['composer.json'] = str_replace(
+    '"format:check":"' . $adminScriptTargets . '"',
+    '"format:check":"' . $adminScriptTargetsWithoutBlog . '"',
+    $missingAdminRouteFormatFiles['composer.json']
+);
+assertModuleContractAuditFails(
+    'Missing admin route format coverage',
+    $missingAdminRouteFormatFiles,
+    'adminRouteModuleRequirement file admin/blog.php must be covered by a format:check composer script.'
 );
 
 $missingAdminHttpFiles = $validFiles;
