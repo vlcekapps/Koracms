@@ -79,6 +79,44 @@ function adminRenderFieldError(
         . '" class="field-help field-error">' . h($message) . '</small>';
 }
 
+function adminRenderContentLockRefreshScript(string $entityType, ?int $entityId): void
+{
+    if ($entityId === null || $entityId <= 0) {
+        return;
+    }
+
+    $nonce = cspNonce();
+    $csrfTokenJson = json_encode(csrfToken(), JSON_UNESCAPED_SLASHES);
+    $entityTypeJson = json_encode($entityType, JSON_UNESCAPED_SLASHES);
+    $entityIdJson = json_encode((string)$entityId, JSON_UNESCAPED_SLASHES);
+    $endpointJson = json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES);
+    if (!is_string($csrfTokenJson) || !is_string($entityTypeJson) || !is_string($entityIdJson) || !is_string($endpointJson)) {
+        return;
+    }
+
+    echo '<script nonce="' . h($nonce) . '">'
+       . '(function(){'
+       . 'var csrfToken=' . $csrfTokenJson . ';'
+       . 'function syncCsrfToken(token){'
+       . 'if(typeof token!=="string"||token==="")return;'
+       . 'csrfToken=token;'
+       . 'document.querySelectorAll(\'input[name="csrf_token"]\').forEach(function(input){input.value=token;});'
+       . '}'
+       . 'var lockInterval=setInterval(function(){'
+       . 'var fd=new FormData();'
+       . 'fd.append("csrf_token",csrfToken);'
+       . 'fd.append("entity_type",' . $entityTypeJson . ');'
+       . 'fd.append("entity_id",' . $entityIdJson . ');'
+       . 'fetch(' . $endpointJson . ',{method:"POST",body:fd,credentials:"same-origin"})'
+       . '.then(function(response){return response.ok?response.json():null;})'
+       . '.then(function(payload){if(payload&&payload.csrf_token)syncCsrfToken(payload.csrf_token);})'
+       . '.catch(function(){});'
+       . '},60000);'
+       . 'window.addEventListener("beforeunload",function(){clearInterval(lockInterval);});'
+       . '})();'
+       . '</script>';
+}
+
 function adminNavBadge(int $count, string $label): string
 {
     if ($count <= 0) {

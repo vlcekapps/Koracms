@@ -9664,6 +9664,12 @@ if ($authRateLimitIssues === []) {
 
 echo "=== session_security_guardrails ===\n";
 $sessionSecurityIssues = [];
+$adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
+$blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
+$pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
+$newsFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news_form.php');
+$eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
+$boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
 foreach ([
     "ini_set('session.use_strict_mode', '1')",
     "ini_set('session.use_only_cookies', '1')",
@@ -9679,6 +9685,27 @@ foreach ([
     if (!str_contains($adminAuthSource, $sessionSecurityFragment)) {
         $sessionSecurityIssues[] = 'auth.php is missing session hardening fragment: ' . $sessionSecurityFragment;
     }
+}
+foreach ([
+    'auth.php' => [$adminAuthSource, 'function verifyCsrf(bool $rotate = true): void', 'if ($rotate)'],
+    'content_lock_refresh.php' => [$adminContentLockRefreshSource, 'verifyCsrf(false);', "'csrf_token' => csrfToken()"],
+    'admin/layout.php' => [$adminLayoutSource, 'function adminRenderContentLockRefreshScript', 'syncCsrfToken', 'input[name="csrf_token"]'],
+    'admin/blog_form.php' => [$blogFormSource, "adminRenderContentLockRefreshScript('article', \$id)"],
+    'admin/page_form.php' => [$pageFormSource, "adminRenderContentLockRefreshScript('page', \$id)"],
+    'admin/news_form.php' => [$newsFormSource, "adminRenderContentLockRefreshScript('news', \$id)"],
+    'admin/event_form.php' => [$eventFormSource, "adminRenderContentLockRefreshScript('event', \$id)"],
+    'admin/board_form.php' => [$boardFormSource, "adminRenderContentLockRefreshScript('board', \$id)"],
+] as $contentLockCsrfLabel => $contentLockCsrfFragments) {
+    $contentLockCsrfSource = array_shift($contentLockCsrfFragments);
+    foreach ($contentLockCsrfFragments as $contentLockCsrfFragment) {
+        if (!str_contains($contentLockCsrfSource, $contentLockCsrfFragment)) {
+            $sessionSecurityIssues[] = $contentLockCsrfLabel . ' is missing content-lock CSRF refresh fragment: ' . $contentLockCsrfFragment;
+        }
+    }
+}
+if (!str_contains($httpIntegrationBuildSource, 'contentLockHeartbeatAttempt <= 3')
+    || !str_contains($httpIntegrationBuildSource, 'opakovaný content lock heartbeat se stejným CSRF tokenem')) {
+    $sessionSecurityIssues[] = 'build/http_integration.php is missing repeated content-lock CSRF heartbeat coverage';
 }
 if ($sessionSecurityIssues === []) {
     echo "OK\n";

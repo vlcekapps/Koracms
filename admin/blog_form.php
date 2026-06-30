@@ -983,24 +983,7 @@ adminHeader($pageTitle);
 <?php endif; ?>
 
 <?php if ($article && $id !== null): ?>
-<script nonce="<?= cspNonce() ?>">
-(function () {
-    var lockInterval = setInterval(function () {
-        var fd = new FormData();
-        fd.append('csrf_token', <?= json_encode(csrfToken(), JSON_UNESCAPED_SLASHES) ?>);
-        fd.append('entity_type', 'article');
-        fd.append('entity_id', '<?= (int)$id ?>');
-        fetch(<?= json_encode(BASE_URL . '/admin/content_lock_refresh.php', JSON_UNESCAPED_SLASHES) ?>, {
-            method: 'POST',
-            body: fd,
-            credentials: 'same-origin'
-        }).catch(function () {});
-    }, 60000);
-    window.addEventListener('beforeunload', function () {
-        clearInterval(lockInterval);
-    });
-})();
-</script>
+<?php adminRenderContentLockRefreshScript('article', $id); ?>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

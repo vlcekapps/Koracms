@@ -1344,9 +1344,12 @@ function honeypotTriggered(): bool
     return ($_POST['hp_website'] ?? '') !== '';
 }
 
-function verifyCsrf(): void
+function verifyCsrf(bool $rotate = true): void
 {
     $token = $_POST['csrf_token'] ?? '';
+    if (!is_string($token)) {
+        $token = '';
+    }
 
     // Aktuální token
     $current  = $_SESSION['csrf_token'] ?? '';
@@ -1356,7 +1359,9 @@ function verifyCsrf(): void
     if (($current !== '' && hash_equals($current, $token))
         || ($previous !== '' && hash_equals($previous, $token))
     ) {
-        csrfRotate();
+        if ($rotate) {
+            csrfRotate();
+        }
         return;
     }
 

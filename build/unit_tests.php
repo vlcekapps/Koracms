@@ -829,6 +829,16 @@ verifyCsrf(); // stary token = previous, musi projit
 $token3 = csrfToken();
 assert_true($token2 !== $token3, 'CSRF token rotated after prev-token verify');
 
+// Content-lock heartbeat smí token ověřit opakovaně bez rotace.
+$_SESSION = [];
+$heartbeatToken = csrfToken();
+$_POST['csrf_token'] = $heartbeatToken;
+verifyCsrf(false);
+assert_equals($heartbeatToken, csrfToken(), 'CSRF token preserved after non-rotating verify');
+assert_equals('', test_session_string('csrf_token_prev'), 'non-rotating verify does not rewrite previous token');
+verifyCsrf(false);
+assert_equals($heartbeatToken, csrfToken(), 'CSRF token can be reused for non-rotating heartbeat');
+
 // --- 15. relativeTime() ------------------------------------------------------
 
 test_section('relativeTime()');

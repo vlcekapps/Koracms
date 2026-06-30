@@ -1135,6 +1135,28 @@ try {
             $adminJsonPostOnlyEndpointIssues[] = $adminJsonPostOnlyEndpointLabel . ' neposlal dohledatelnou JSON odpověď s request_id';
         }
     }
+    $contentLockHeartbeatCsrf = $adminSession['csrf'];
+    for ($contentLockHeartbeatAttempt = 1; $contentLockHeartbeatAttempt <= 3; $contentLockHeartbeatAttempt++) {
+        $contentLockHeartbeatResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/content_lock_refresh.php',
+            [
+                'csrf_token' => $contentLockHeartbeatCsrf,
+                'entity_type' => 'article',
+                'entity_id' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $contentLockHeartbeatPayload = json_decode($contentLockHeartbeatResponse['body'], true);
+        if (httpIntegrationStatusCode($contentLockHeartbeatResponse) !== 200) {
+            $adminJsonPostOnlyEndpointIssues[] = 'opakovaný content lock heartbeat se stejným CSRF tokenem selhal při pokusu ' . $contentLockHeartbeatAttempt;
+            break;
+        }
+        if (!is_array($contentLockHeartbeatPayload) || ($contentLockHeartbeatPayload['csrf_token'] ?? '') !== $contentLockHeartbeatCsrf) {
+            $adminJsonPostOnlyEndpointIssues[] = 'content lock heartbeat nevrátil aktuální stabilní CSRF token při pokusu ' . $contentLockHeartbeatAttempt;
+            break;
+        }
+    }
     httpIntegrationPrintResult('admin_json_post_only_endpoints_http', $adminJsonPostOnlyEndpointIssues, $failures);
 
     $cspReportIssues = [];

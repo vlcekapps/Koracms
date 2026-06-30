@@ -18,14 +18,14 @@ if (!isLoggedIn()) {
     contentLockJsonResponse(['ok' => false], 401);
 }
 
-verifyCsrf();
+verifyCsrf(false);
 
 $entityType = trim((string)($_POST['entity_type'] ?? ''));
 $entityId = inputInt('post', 'entity_id');
 
 if ($entityType === '' || $entityId === null || $entityId <= 0) {
-    contentLockJsonResponse(['ok' => false], 400);
+    contentLockJsonResponse(['ok' => false, 'csrf_token' => csrfToken()], 400);
 }
 
 $result = refreshContentLock($entityType, $entityId);
-contentLockJsonResponse(['ok' => $result]);
+contentLockJsonResponse(['ok' => $result, 'csrf_token' => csrfToken()]);

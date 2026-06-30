@@ -49,6 +49,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější 405 u administračních read-only exportů** – stažení přílohy formulářové odpovědi a CSV export odpovědí odmítají nepodporované HTTP metody dřív než capability/modulový guard, takže i vypnutý modul vrátí očekávané bezpečné 405 hlavičky ve full CI.
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
+### Opraveno
+- **Neplatný bezpečnostní token při delší editaci obsahu** – obnova zámku obsahu v editorech článků, statických/blogových stránek, novinek, událostí a Vývěsky už CSRF token sama nerotuje a po úspěšném heartbeat požadavku synchronizuje aktuální token ve formulářích na stránce.
+
 ## [4.0.1] – 2026-06-26
 
 ### Přidáno
