@@ -185,6 +185,18 @@ foreach (adminRouteModuleRequirements() as $moduleKey => $requirement) {
     }
 }
 
+assert_equals('Podcasty', moduleAdminLabel('podcast'), 'module admin label keeps admin wording');
+assert_equals(
+    'Přístup odepřen. Modul Podcasty není povolen.',
+    adminRouteModuleDisabledMessage('podcast'),
+    'admin disabled module message uses admin label'
+);
+assert_equals(
+    'Přístup odepřen. Modul neznamy není povolen.',
+    adminRouteModuleDisabledMessage('neznamy'),
+    'admin disabled module message falls back to module key'
+);
+
 assert_admin_route_module_requirement('/admin/form_save.php', 'forms', 'Formuláře', 'forms save route is guarded');
 assert_admin_route_module_requirement('/admin/form_submission_action.php', 'forms', 'Formuláře', 'forms submission action route is guarded');
 assert_admin_route_module_requirement('/admin/blog_save.php', 'blog', 'Blog', 'blog save route is guarded');

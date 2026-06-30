@@ -630,7 +630,7 @@ function requireModuleEnabled(string $moduleKey, string $message = ''): void
 {
     requireLogin(BASE_URL . '/admin/login.php');
     if (!isModuleEnabled($moduleKey)) {
-        adminForbidden($message !== '' ? $message : 'Přístup odepřen. Tento modul není povolen.');
+        adminForbidden($message !== '' ? $message : adminRouteModuleDisabledMessage($moduleKey));
     }
 }
 
@@ -757,6 +757,27 @@ function adminRouteCapability(?string $scriptPath = null): ?string
     return 'admin_access';
 }
 
+function adminRouteModuleDisabledMessage(string $moduleKey): string
+{
+    $label = $moduleKey;
+    if (function_exists('moduleAdminLabel')) {
+        $label = moduleAdminLabel($moduleKey);
+    } elseif (function_exists('coreModuleDefinitions')) {
+        $definition = coreModuleDefinitions()[$moduleKey] ?? null;
+        if ($definition !== null) {
+            $adminLabel = trim($definition['admin_label']);
+            $label = $adminLabel !== '' ? $adminLabel : $definition['label'];
+        }
+    }
+
+    $label = trim($label);
+    if ($label === '') {
+        $label = $moduleKey;
+    }
+
+    return 'Přístup odepřen. Modul ' . $label . ' není povolen.';
+}
+
 /**
  * @return array<string,array{message:string,files:list<string>}>
  */
@@ -764,7 +785,7 @@ function adminRouteModuleRequirements(): array
 {
     return [
         'blog' => [
-            'message' => 'Přístup odepřen. Modul Blog není povolen.',
+            'message' => adminRouteModuleDisabledMessage('blog'),
             'files' => [
                 'blog.php', 'blogs.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php',
                 'blog_clone.php', 'blog_bulk.php', 'blog_transfer.php', 'blog_content_reference_search.php',
@@ -774,19 +795,19 @@ function adminRouteModuleRequirements(): array
             ],
         ],
         'news' => [
-            'message' => 'Přístup odepřen. Modul Novinky není povolen.',
+            'message' => adminRouteModuleDisabledMessage('news'),
             'files' => ['news.php', 'news_form.php', 'news_save.php', 'news_delete.php', 'news_clone.php'],
         ],
         'chat' => [
-            'message' => 'Přístup odepřen. Modul Chat není povolen.',
+            'message' => adminRouteModuleDisabledMessage('chat'),
             'files' => ['chat.php', 'chat_action.php', 'chat_bulk.php', 'chat_delete.php', 'chat_message.php', 'chat_reply.php', 'chat_update.php'],
         ],
         'contact' => [
-            'message' => 'Přístup odepřen. Modul Kontakt není povolen.',
+            'message' => adminRouteModuleDisabledMessage('contact'),
             'files' => ['contact.php', 'contact_action.php', 'contact_bulk.php', 'contact_delete.php', 'contact_message.php'],
         ],
         'gallery' => [
-            'message' => 'Přístup odepřen. Modul Galerie není povolen.',
+            'message' => adminRouteModuleDisabledMessage('gallery'),
             'files' => [
                 'gallery_albums.php', 'gallery_album_form.php', 'gallery_album_save.php', 'gallery_album_delete.php',
                 'gallery_photos.php', 'gallery_photo_form.php', 'gallery_photo_save.php', 'gallery_photo_delete.php',
@@ -794,49 +815,49 @@ function adminRouteModuleRequirements(): array
             ],
         ],
         'events' => [
-            'message' => 'Přístup odepřen. Modul Události není povolen.',
+            'message' => adminRouteModuleDisabledMessage('events'),
             'files' => ['events.php', 'event_form.php', 'event_save.php', 'event_delete.php', 'event_clone.php'],
         ],
         'podcast' => [
-            'message' => 'Přístup odepřen. Modul Podcasty není povolen.',
+            'message' => adminRouteModuleDisabledMessage('podcast'),
             'files' => [
                 'podcast_shows.php', 'podcast_show_form.php', 'podcast_show_save.php', 'podcast_show_delete.php',
                 'podcast.php', 'podcast_form.php', 'podcast_save.php', 'podcast_delete.php',
             ],
         ],
         'places' => [
-            'message' => 'Přístup odepřen. Modul Zajímavá místa není povolen.',
+            'message' => adminRouteModuleDisabledMessage('places'),
             'files' => ['places.php', 'place_form.php', 'place_save.php', 'place_delete.php'],
         ],
         'newsletter' => [
-            'message' => 'Přístup odepřen. Modul Newsletter není povolen.',
+            'message' => adminRouteModuleDisabledMessage('newsletter'),
             'files' => [
                 'newsletter.php', 'newsletter_form.php', 'newsletter_send.php', 'newsletter_bulk.php',
                 'newsletter_history.php', 'newsletter_subscriber.php', 'newsletter_subscriber_action.php', 'newsletter_subscriber_delete.php',
             ],
         ],
         'downloads' => [
-            'message' => 'Přístup odepřen. Modul Ke stažení není povolen.',
+            'message' => adminRouteModuleDisabledMessage('downloads'),
             'files' => ['downloads.php', 'download_form.php', 'download_save.php', 'download_delete.php', 'dl_cats.php', 'dl_cat_delete.php'],
         ],
         'food' => [
-            'message' => 'Přístup odepřen. Modul Jídelní lístek není povolen.',
+            'message' => adminRouteModuleDisabledMessage('food'),
             'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php'],
         ],
         'polls' => [
-            'message' => 'Přístup odepřen. Modul Ankety není povolen.',
+            'message' => adminRouteModuleDisabledMessage('polls'),
             'files' => ['polls.php', 'polls_form.php', 'polls_save.php', 'polls_delete.php'],
         ],
         'faq' => [
-            'message' => 'Přístup odepřen. Modul FAQ není povolen.',
+            'message' => adminRouteModuleDisabledMessage('faq'),
             'files' => ['faq.php', 'faq_form.php', 'faq_save.php', 'faq_delete.php', 'faq_cats.php', 'faq_cat_delete.php'],
         ],
         'board' => [
-            'message' => 'Přístup odepřen. Modul Vývěska není povolen.',
+            'message' => adminRouteModuleDisabledMessage('board'),
             'files' => ['board.php', 'board_form.php', 'board_save.php', 'board_delete.php', 'board_clone.php', 'board_cats.php', 'board_cat_delete.php'],
         ],
         'forms' => [
-            'message' => 'Přístup odepřen. Modul Formuláře není povolen.',
+            'message' => adminRouteModuleDisabledMessage('forms'),
             'files' => [
                 'forms.php', 'form_form.php', 'form_save.php', 'form_delete.php',
                 'form_submissions.php', 'form_submission.php', 'form_submission_action.php', 'form_submission_bulk.php',
@@ -844,7 +865,7 @@ function adminRouteModuleRequirements(): array
             ],
         ],
         'reservations' => [
-            'message' => 'Přístup odepřen. Modul Rezervace není povolen.',
+            'message' => adminRouteModuleDisabledMessage('reservations'),
             'files' => [
                 'res_bookings.php', 'res_booking_add.php', 'res_booking_detail.php', 'res_booking_save.php',
                 'res_resources.php', 'res_resource_form.php', 'res_resource_save.php', 'res_resource_delete.php',
@@ -852,7 +873,7 @@ function adminRouteModuleRequirements(): array
             ],
         ],
         'statistics' => [
-            'message' => 'Přístup odepřen. Modul Statistiky není povolen.',
+            'message' => adminRouteModuleDisabledMessage('statistics'),
             'files' => ['statistics.php'],
         ],
     ];

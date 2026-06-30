@@ -853,6 +853,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $label = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'label', $issues));
         $settingsLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'settings_label', $issues));
         $navLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'nav_label', $issues));
+        $adminLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'admin_label', $issues));
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicNavOrder = moduleContractAuditManifestIntField($block, $moduleKey, 'public_nav_order', $issues);
@@ -862,6 +863,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $publicNav = moduleContractAuditManifestBoolField($block, $moduleKey, 'public_nav', $issues);
 
         moduleContractAuditRequire($label !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty label.', $issues);
+        moduleContractAuditRequire($adminLabel !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty admin_label.', $issues);
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
         moduleContractAuditRequire($adminPaths !== [], 'core module manifest entry ' . $moduleKey . ' must define at least one admin_paths entry.', $issues);
 
@@ -1005,8 +1007,18 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleSettingsLabels()')
     && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
     && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')
-    && str_contains($definitionsSource, 'function moduleWidgetLabel('),
+    && str_contains($definitionsSource, 'function moduleWidgetLabel(')
+    && str_contains($definitionsSource, 'function moduleAdminLabel('),
     'lib/definitions.php must keep the central module manifest helper set.',
+    $issues
+);
+
+moduleContractAuditRequire(
+    str_contains($authSource, 'function adminRouteModuleDisabledMessage(')
+    && str_contains($authSource, 'adminRouteModuleDisabledMessage($moduleKey)')
+    && str_contains($authSource, 'moduleAdminLabel($moduleKey)')
+    && str_contains($authSource, "'message' => adminRouteModuleDisabledMessage('"),
+    'auth.php must derive admin disabled module messages from moduleAdminLabel().',
     $issues
 );
 
@@ -1027,6 +1039,7 @@ foreach ([
     "'public_nav_order'",
     "'settings_label'",
     "'widget_label'",
+    "'admin_label'",
     "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(

@@ -140,7 +140,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $publicNavOrder = $publicNav ? 10 : 0;
         $publicNavValue = $publicNav ? 'true' : 'false';
         $adminPath = '/admin/' . $moduleKey . '.php';
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -154,6 +154,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleNavigationDefaults(): array { return []; }\n"
         . "function moduleAdminEntryPoints(): array { return []; }\n"
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
+        . "function moduleAdminLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
 
@@ -161,10 +162,12 @@ function moduleContractAuditSelfTestAuthFixture(): string
 {
     $entries = [];
     foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
-        $entries[] = "        '{$moduleKey}' => ['message' => 'Disabled', 'files' => ['{$moduleKey}.php']],\n";
+        $entries[] = "        '{$moduleKey}' => ['message' => adminRouteModuleDisabledMessage('{$moduleKey}'), 'files' => ['{$moduleKey}.php']],\n";
     }
 
     return "<?php\n"
+        . "function requireModuleEnabled(string \$moduleKey): void { adminRouteModuleDisabledMessage(\$moduleKey); }\n"
+        . "function adminRouteModuleDisabledMessage(string \$moduleKey): string { return 'Přístup odepřen. Modul ' . moduleAdminLabel(\$moduleKey) . ' není povolen.'; }\n"
         . "function adminRouteModuleRequirements(): array\n{\n"
         . "    return [\n"
         . implode('', $entries)
@@ -284,17 +287,43 @@ assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 $additionalModuleFiles = $validFiles;
 $additionalModuleFiles['lib/definitions.php'] = str_replace(
     "    ];\n}\nfunction coreModuleKeysByFlag",
-    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
     $additionalModuleFiles['lib/definitions.php']
 );
 $additionalModuleFiles['auth.php'] = str_replace(
     "    ];\n}\nfunction adminRouteModuleRequirement",
-    "        'jobs' => ['message' => 'Disabled', 'files' => ['jobs.php']],\n    ];\n}\nfunction adminRouteModuleRequirement",
+    "        'jobs' => ['message' => adminRouteModuleDisabledMessage('jobs'), 'files' => ['jobs.php']],\n    ];\n}\nfunction adminRouteModuleRequirement",
     $additionalModuleFiles['auth.php']
 );
 $additionalModuleFiles['composer.json'] = str_replace(' admin/statistics.php blog/index.php', ' admin/statistics.php admin/jobs.php blog/index.php', $additionalModuleFiles['composer.json']);
 $additionalModuleFiles['admin/jobs.php'] = "<?php\nrequireModuleEnabled('jobs');\n";
 assertModuleContractAuditPasses('Additional manifest module fixture', $additionalModuleFiles);
+
+$missingAdminLabelFiles = $validFiles;
+$missingAdminLabelFiles['lib/definitions.php'] = str_replace(
+    "'admin_label' => 'Label', ",
+    '',
+    $missingAdminLabelFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Missing module admin label',
+    $missingAdminLabelFiles,
+    'core module manifest entry blog is missing string field admin_label.'
+);
+
+$hardCodedAdminMessageFiles = $validFiles;
+foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
+    $hardCodedAdminMessageFiles['auth.php'] = str_replace(
+        "adminRouteModuleDisabledMessage('{$moduleKey}')",
+        "'Disabled'",
+        $hardCodedAdminMessageFiles['auth.php']
+    );
+}
+assertModuleContractAuditFails(
+    'Hard-coded admin disabled module message',
+    $hardCodedAdminMessageFiles,
+    'auth.php must derive admin disabled module messages from moduleAdminLabel().'
+);
 
 $missingSharedAdminRouteMapFiles = $validFiles;
 $missingSharedAdminRouteMapFiles['auth.php'] = "<?php\nfunction adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n    \$requirements = ['blog' => ['message' => 'Disabled', 'files' => ['blog.php']]];\n    return null;\n}\n";
