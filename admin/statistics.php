@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
-requireModuleEnabled('statistics', 'Přístup odepřen. Modul Statistiky není povolen.');
+requireModuleEnabled('statistics');
 
 $pdo = db_connect();
 statsCleanup();

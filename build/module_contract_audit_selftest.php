@@ -325,6 +325,14 @@ assertModuleContractAuditFails(
     'auth.php must derive admin disabled module messages from moduleAdminLabel().'
 );
 
+$duplicateRequireModuleMessageFiles = $validFiles;
+$duplicateRequireModuleMessageFiles['admin/blog.php'] = "<?php\nrequireModuleEnabled('blog', 'Disabled');\n";
+assertModuleContractAuditFails(
+    'Duplicate requireModuleEnabled disabled message',
+    $duplicateRequireModuleMessageFiles,
+    'admin_paths entrypoint admin/blog.php must rely on the manifest-derived requireModuleEnabled() disabled message.'
+);
+
 $missingSharedAdminRouteMapFiles = $validFiles;
 $missingSharedAdminRouteMapFiles['auth.php'] = "<?php\nfunction adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n    \$requirements = ['blog' => ['message' => 'Disabled', 'files' => ['blog.php']]];\n    return null;\n}\n";
 assertModuleContractAuditFails(

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu anket nemáte potřebné oprávnění.');
-requireModuleEnabled('polls', 'Přístup odepřen. Modul Ankety není povolen.');
+requireModuleEnabled('polls');
 
 $pdo = db_connect();
 $q = trim((string)($_GET['q'] ?? ''));

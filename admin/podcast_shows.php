@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
-requireModuleEnabled('podcast', 'Přístup odepřen. Modul Podcasty není povolen.');
+requireModuleEnabled('podcast');
 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');

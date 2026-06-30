@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
-requireModuleEnabled('news', 'Přístup odepřen. Modul Novinky není povolen.');
+requireModuleEnabled('news');
 verifyCsrf();
 
 $pdo = db_connect();

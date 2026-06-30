@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
-requireModuleEnabled('podcast', 'Přístup odepřen. Modul Podcasty není povolen.');
+requireModuleEnabled('podcast');
 verifyCsrf();
 
 $id     = inputInt('post', 'id');

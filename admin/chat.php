@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('messages_manage', 'Přístup odepřen. Pro správu chat zpráv nemáte potřebné oprávnění.');
-requireModuleEnabled('chat', 'Přístup odepřen. Modul Chat není povolen.');
+requireModuleEnabled('chat');
 
 $pdo = db_connect();
 $statusDefinitions = messageStatusDefinitions();

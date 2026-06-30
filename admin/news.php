@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
-requireModuleEnabled('news', 'Přístup odepřen. Modul Novinky není povolen.');
+requireModuleEnabled('news');
 
 $pdo = db_connect();
 $q = trim((string)($_GET['q'] ?? ''));

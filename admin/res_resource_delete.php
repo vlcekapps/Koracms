@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu zdrojů rezervací nemáte potřebné oprávnění.');
-requireModuleEnabled('reservations', 'Přístup odepřen. Modul Rezervace není povolen.');
+requireModuleEnabled('reservations');
 verifyCsrf();
 
 $pdo = db_connect();

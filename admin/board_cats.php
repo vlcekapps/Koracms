@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií úřední desky nemáte potřebné oprávnění.');
-requireModuleEnabled('board', 'Přístup odepřen. Modul Vývěska není povolen.');
+requireModuleEnabled('board');
 
 $pdo = db_connect();
 $success = false;

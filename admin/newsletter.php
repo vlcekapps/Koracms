@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('newsletter_manage', 'Přístup odepřen. Pro správu newsletteru nemáte potřebné oprávnění.');
-requireModuleEnabled('newsletter', 'Přístup odepřen. Modul Newsletter není povolen.');
+requireModuleEnabled('newsletter');
 
 $pdo = db_connect();
 $statusFilter = trim($_GET['status'] ?? 'all');

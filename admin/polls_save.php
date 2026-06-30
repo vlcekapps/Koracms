@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu anket nemáte potřebné oprávnění.');
-requireModuleEnabled('polls', 'Přístup odepřen. Modul Ankety není povolen.');
+requireModuleEnabled('polls');
 verifyCsrf();
 
 $pdo = db_connect();

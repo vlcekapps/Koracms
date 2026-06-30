@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
-requireModuleEnabled('gallery', 'Přístup odepřen. Modul Galerie není povolen.');
+requireModuleEnabled('gallery');
 
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');

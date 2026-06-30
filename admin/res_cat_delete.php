@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu kategorií rezervací nemáte potřebné oprávnění.');
-requireModuleEnabled('reservations', 'Přístup odepřen. Modul Rezervace není povolen.');
+requireModuleEnabled('reservations');
 verifyCsrf();
 
 $id = inputInt('post', 'id');

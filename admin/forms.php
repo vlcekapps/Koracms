@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu formulářů nemáte potřebné oprávnění.');
-requireModuleEnabled('forms', 'Přístup odepřen. Modul Formuláře není povolen.');
+requireModuleEnabled('forms');
 
 $pdo = db_connect();
 $query = trim((string)($_GET['q'] ?? ''));

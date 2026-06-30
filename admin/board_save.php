@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu úřední desky nemáte potřebné oprávnění.');
-requireModuleEnabled('board', 'Přístup odepřen. Modul Vývěska není povolen.');
+requireModuleEnabled('board');
 verifyCsrf();
 
 $pdo = db_connect();

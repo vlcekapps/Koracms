@@ -663,6 +663,11 @@ function moduleContractAuditValidateAdminEntryPointGates(string $projectRoot, st
                 'admin_paths entrypoint ' . ltrim($adminPath, '/') . ' must guard access with requireModuleEnabled(\'' . $moduleKey . '\').',
                 $issues
             );
+            moduleContractAuditRequire(
+                preg_match('/\brequireModuleEnabled\(\s*[\'"]' . preg_quote($moduleKey, '/') . '[\'"]\s*,/', $source) !== 1,
+                'admin_paths entrypoint ' . ltrim($adminPath, '/') . ' must rely on the manifest-derived requireModuleEnabled() disabled message.',
+                $issues
+            );
         }
     }
 }
@@ -716,6 +721,11 @@ function moduleContractAuditValidateAdminRouteModuleRequirements(
             moduleContractAuditRequire(
                 preg_match('/\b(?:requireLogin|requireSuperAdmin|requireModuleEnabled|requireCapability)\s*\(/', $source) === 1,
                 'adminRouteModuleRequirement file ' . $adminPath . ' must call requireLogin(), requireSuperAdmin(), requireModuleEnabled() or requireCapability().',
+                $issues
+            );
+            moduleContractAuditRequire(
+                preg_match('/\brequireModuleEnabled\(\s*[\'"]' . preg_quote($moduleKey, '/') . '[\'"]\s*,/', $source) !== 1,
+                'adminRouteModuleRequirement file ' . $adminPath . ' must rely on the manifest-derived requireModuleEnabled() disabled message.',
                 $issues
             );
         }

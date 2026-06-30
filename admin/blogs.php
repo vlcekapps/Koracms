@@ -2,7 +2,7 @@
 require_once __DIR__ . '/layout.php';
 require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('blog_taxonomies_manage', 'Přístup odepřen. Pro správu blogů nemáte potřebné oprávnění.');
-requireModuleEnabled('blog', 'Přístup odepřen. Modul Blog není povolen.');
+requireModuleEnabled('blog');
 
 $pdo = db_connect();
 $success = '';

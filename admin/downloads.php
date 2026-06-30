@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu souborů ke stažení nemáte potřebné oprávnění.');
-requireModuleEnabled('downloads', 'Přístup odepřen. Modul Ke stažení není povolen.');
+requireModuleEnabled('downloads');
 
 $pdo = db_connect();
 $q = trim((string)($_GET['q'] ?? ''));

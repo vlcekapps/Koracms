@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií úřední desky nemáte potřebné oprávnění.');
-requireModuleEnabled('board', 'Přístup odepřen. Modul Vývěska není povolen.');
+requireModuleEnabled('board');
 verifyCsrf();
 
 $id = inputInt('post', 'id');
