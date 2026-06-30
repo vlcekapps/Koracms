@@ -771,6 +771,59 @@ function moduleContractAuditValidateAdminRouteStaticCoverage(string $authSource,
 /**
  * @param list<string> $issues
  */
+function moduleContractAuditValidatePublicNavStaticCoverage(string $definitionsSource, string $composerSource, array &$issues): void
+{
+    $scripts = moduleContractAuditComposerScripts($composerSource, $issues);
+    if ($scripts === []) {
+        return;
+    }
+
+    $strictAnalysisText = moduleContractAuditComposerScriptGroupText($scripts, 'analyse:strict');
+    $formatCheckText = moduleContractAuditComposerScriptGroupText($scripts, 'format:check');
+
+    moduleContractAuditRequire(
+        $strictAnalysisText !== '',
+        'composer.json must define analyse:strict scripts for module public navigation coverage.',
+        $issues
+    );
+    moduleContractAuditRequire(
+        $formatCheckText !== '',
+        'composer.json must define format:check scripts for module public navigation coverage.',
+        $issues
+    );
+
+    if ($strictAnalysisText === '' || $formatCheckText === '') {
+        return;
+    }
+
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        $publicNav = moduleContractAuditManifestBoolField($block, $moduleKey, 'public_nav', $issues);
+        if ($publicNav !== true) {
+            continue;
+        }
+
+        $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
+        if (!str_starts_with($publicNavPath, '/') || str_contains($publicNavPath, '..') || str_contains($publicNavPath, "\0") || !str_ends_with($publicNavPath, '.php')) {
+            continue;
+        }
+
+        $relativePath = ltrim($publicNavPath, '/');
+        moduleContractAuditRequire(
+            moduleContractAuditCommandTextContainsPath($strictAnalysisText, $relativePath),
+            'public_nav entrypoint ' . $relativePath . ' must be covered by an analyse:strict composer script.',
+            $issues
+        );
+        moduleContractAuditRequire(
+            moduleContractAuditCommandTextContainsPath($formatCheckText, $relativePath),
+            'public_nav entrypoint ' . $relativePath . ' must be covered by a format:check composer script.',
+            $issues
+        );
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
     $knownModuleKeys = moduleContractAuditExpectedKeys();
@@ -980,6 +1033,7 @@ moduleContractAuditValidateAdminHttpIntegration($definitionsSource, $httpIntegra
 moduleContractAuditValidateAdminEntryPointGates($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidateAdminRouteModuleRequirements($projectRoot, $definitionsSource, $authSource, $issues);
 moduleContractAuditValidateAdminRouteStaticCoverage($authSource, $composerSource, $issues);
+moduleContractAuditValidatePublicNavStaticCoverage($definitionsSource, $composerSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),
