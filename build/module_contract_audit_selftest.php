@@ -281,6 +281,21 @@ if (!is_file($moduleContractAuditPath)) {
 $validFiles = moduleContractAuditSelfTestValidFiles();
 assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 
+$additionalModuleFiles = $validFiles;
+$additionalModuleFiles['lib/definitions.php'] = str_replace(
+    "    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'settings_default' => '0', 'public_nav_path' => '', 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    $additionalModuleFiles['lib/definitions.php']
+);
+$additionalModuleFiles['auth.php'] = str_replace(
+    "    ];\n}\nfunction adminRouteModuleRequirement",
+    "        'jobs' => ['message' => 'Disabled', 'files' => ['jobs.php']],\n    ];\n}\nfunction adminRouteModuleRequirement",
+    $additionalModuleFiles['auth.php']
+);
+$additionalModuleFiles['composer.json'] = str_replace(' admin/statistics.php blog/index.php', ' admin/statistics.php admin/jobs.php blog/index.php', $additionalModuleFiles['composer.json']);
+$additionalModuleFiles['admin/jobs.php'] = "<?php\nrequireModuleEnabled('jobs');\n";
+assertModuleContractAuditPasses('Additional manifest module fixture', $additionalModuleFiles);
+
 $missingSharedAdminRouteMapFiles = $validFiles;
 $missingSharedAdminRouteMapFiles['auth.php'] = "<?php\nfunction adminRouteModuleRequirement(?string \$scriptPath = null): ?array\n{\n    \$requirements = ['blog' => ['message' => 'Disabled', 'files' => ['blog.php']]];\n    return null;\n}\n";
 assertModuleContractAuditFails(
@@ -294,7 +309,7 @@ $missingModuleFiles['lib/definitions.php'] = str_replace("        'statistics' =
 assertModuleContractAuditFails(
     'Missing manifest module key',
     $missingModuleFiles,
-    'core module manifest is missing module key statistics.'
+    'core module manifest is missing required built-in module key statistics.'
 );
 
 $legacySettingsFiles = $validFiles;

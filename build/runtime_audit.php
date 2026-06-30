@@ -7837,6 +7837,9 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'lib/widgets.php requires_module')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditCollectThemeRequiredModules')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateManifestValues')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditKnownModuleKeys')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditRequiredCoreModuleKeys')
+        && str_contains($moduleContractAuditSource, 'core module manifest is missing required built-in module key')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditPublicNavTargetExists')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidatePublicNavHttpIntegration')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidatePublicNavEntryPointGates')
@@ -7901,6 +7904,10 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'moduleContractAuditRequireKnownModule')
         && str_contains($moduleContractAuditSource, 'moduleWidgetLabel($moduleKey)')
         && str_contains($moduleContractAuditSelftestSource, 'Module contract audit self-test OK'),
+    'module contract audit accepts new manifest module keys' => str_contains($moduleContractAuditSelftestSource, 'Additional manifest module fixture')
+        && str_contains($moduleContractAuditSelftestSource, "'jobs'")
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditKnownModuleKeys($definitionsSource')
+        && !str_contains($moduleContractAuditSource, 'moduleContractAuditExpectedKeys'),
     'core module metadata is centralized' => str_contains($definitionsSource, 'function coreModuleDefinitions()')
         && str_contains($definitionsSource, 'function moduleKeysForSettings()')
         && str_contains($definitionsSource, 'function moduleDefaultSettings()')

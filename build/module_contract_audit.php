@@ -520,6 +520,18 @@ function moduleContractAuditPublicNavTargetExists(string $projectRoot, string $p
 
 /**
  * @param list<string> $issues
+ * @return list<string>
+ */
+function moduleContractAuditKnownModuleKeys(string $definitionsSource, array &$issues): array
+{
+    $moduleKeys = array_keys(moduleContractAuditExtractManifestBlocks($definitionsSource, $issues));
+    sort($moduleKeys);
+
+    return $moduleKeys;
+}
+
+/**
+ * @param list<string> $issues
  */
 function moduleContractAuditValidatePublicNavHttpIntegration(string $definitionsSource, string $httpIntegrationSource, array &$issues): void
 {
@@ -664,7 +676,7 @@ function moduleContractAuditValidateAdminRouteModuleRequirements(
     string $authSource,
     array &$issues
 ): void {
-    $knownModuleKeys = moduleContractAuditExpectedKeys();
+    $knownModuleKeys = moduleContractAuditKnownModuleKeys($definitionsSource, $issues);
     $routeBlocks = moduleContractAuditExtractAdminRouteRequirementBlocks($authSource, $issues);
     $routeFileModules = [];
 
@@ -826,20 +838,18 @@ function moduleContractAuditValidatePublicNavStaticCoverage(string $definitionsS
  */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
-    $knownModuleKeys = moduleContractAuditExpectedKeys();
+    $requiredCoreModuleKeys = moduleContractAuditRequiredCoreModuleKeys();
     $blocks = moduleContractAuditExtractManifestBlocks($definitionsSource, $issues);
     $publicNavOrders = [];
 
-    foreach (array_keys($blocks) as $moduleKey) {
-        moduleContractAuditRequireKnownModule($moduleKey, 'core module manifest', $knownModuleKeys, $issues);
-    }
-
-    foreach ($knownModuleKeys as $moduleKey) {
+    foreach ($requiredCoreModuleKeys as $moduleKey) {
         if (!isset($blocks[$moduleKey])) {
+            $issues[] = 'core module manifest is missing required built-in module key ' . $moduleKey . '.';
             continue;
         }
+    }
 
-        $block = $blocks[$moduleKey];
+    foreach ($blocks as $moduleKey => $block) {
         $label = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'label', $issues));
         $settingsLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'settings_label', $issues));
         $navLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'nav_label', $issues));
@@ -887,7 +897,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
 /**
  * @return list<string>
  */
-function moduleContractAuditExpectedKeys(): array
+function moduleContractAuditRequiredCoreModuleKeys(): array
 {
     return [
         'blog',
@@ -913,9 +923,9 @@ function moduleContractAuditExpectedKeys(): array
 /**
  * @param list<string> $issues
  */
-function moduleContractAuditCollectThemeRequiredModules(string $projectRoot, array &$issues): void
+function moduleContractAuditCollectThemeRequiredModules(string $projectRoot, string $definitionsSource, array &$issues): void
 {
-    $knownModuleKeys = moduleContractAuditExpectedKeys();
+    $knownModuleKeys = moduleContractAuditKnownModuleKeys($definitionsSource, $issues);
     $themePattern = $projectRoot . DIRECTORY_SEPARATOR . 'themes' . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'theme.json';
     $themePaths = glob($themePattern);
     if ($themePaths === false || $themePaths === []) {
@@ -1000,10 +1010,10 @@ moduleContractAuditRequire(
     $issues
 );
 
-foreach (moduleContractAuditExpectedKeys() as $moduleKey) {
+foreach (moduleContractAuditRequiredCoreModuleKeys() as $moduleKey) {
     moduleContractAuditRequire(
         preg_match('/\'' . preg_quote($moduleKey, '/') . '\'\\s*=>\\s*\\[/', $definitionsSource) === 1,
-        'core module manifest is missing module key ' . $moduleKey . '.',
+        'core module manifest is missing required built-in module key ' . $moduleKey . '.',
         $issues
     );
 }
@@ -1057,7 +1067,7 @@ moduleContractAuditRequire(
 );
 
 $legacyModuleDefaultPattern = '/[\'"]module_(?:'
-    . implode('|', array_map(static fn (string $moduleKey): string => preg_quote($moduleKey, '/'), moduleContractAuditExpectedKeys()))
+    . implode('|', array_map(static fn (string $moduleKey): string => preg_quote($moduleKey, '/'), moduleContractAuditKnownModuleKeys($definitionsSource, $issues)))
     . ')[\'"]\\s*=>/';
 moduleContractAuditRequire(
     preg_match($legacyModuleDefaultPattern, $installSource) !== 1
@@ -1079,7 +1089,7 @@ moduleContractAuditRequire(
     $issues
 );
 
-$knownModuleKeys = moduleContractAuditExpectedKeys();
+$knownModuleKeys = moduleContractAuditKnownModuleKeys($definitionsSource, $issues);
 if (preg_match_all('/[\'"]requires_module[\'"]\\s*=>\\s*[\'"]([a-z][a-z0-9_]*)[\'"]/', $widgetsSource, $widgetRequiresMatches) === false) {
     $issues[] = 'lib/widgets.php requires_module references cannot be parsed.';
 } else {
@@ -1087,7 +1097,7 @@ if (preg_match_all('/[\'"]requires_module[\'"]\\s*=>\\s*[\'"]([a-z][a-z0-9_]*)[\
         moduleContractAuditRequireKnownModule($moduleKey, 'lib/widgets.php requires_module', $knownModuleKeys, $issues);
     }
 }
-moduleContractAuditCollectThemeRequiredModules($projectRoot, $issues);
+moduleContractAuditCollectThemeRequiredModules($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidateModuleGateReferences($contentReferencePickerSource, 'admin/content_reference_picker.php', $knownModuleKeys, $issues);
 moduleContractAuditValidateModuleGateReferences($contentReferenceSearchSource, 'admin/content_reference_search.php', $knownModuleKeys, $issues);
 moduleContractAuditValidateApplicationModuleGateReferences($projectRoot, $knownModuleKeys, $issues);
