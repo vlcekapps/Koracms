@@ -15145,29 +15145,19 @@ if (!str_contains($widgetNewsletterOne, '<section class="widget-card" aria-label
     $widgetRenderIssues[] = 'newsletter widget card is missing heading-backed aria-labelledby semantics';
 }
 foreach ([
-    '<fieldset class="widget-form-fieldset">',
-    'newsletter-widget-legend-111',
-    'for="newsletter-widget-email-111"',
-    'id="newsletter-widget-email-111"',
+    'id="newsletter-widget-description-111"',
     'aria-describedby="newsletter-widget-description-111"',
-    'name="return_url"',
-    '<button type="submit" class="button-primary">',
+    'href="' . BASE_URL . '/subscribe.php"',
+    'Přihlásit k odběru',
 ] as $newsletterWidgetA11yFragment) {
     if (!str_contains($widgetNewsletterOne, $newsletterWidgetA11yFragment)) {
         $widgetRenderIssues[] = 'newsletter widget is missing rendered accessibility fragment: ' . $newsletterWidgetA11yFragment;
     }
 }
-foreach ([
-    '$flashTextId = $flashId . \'-message\';',
-    '$emailDescribedBy = $descriptionId . ($isError ? \' \' . $flashId : \'\');',
-    'aria-labelledby="\' . h($flashTextId) . \'"',
-    '<p id="\' . h($flashTextId) . \'">',
-    'h($flash[\'message\'])',
-    'aria-invalid="true"',
-] as $newsletterWidgetFlashFragment) {
-    if (!str_contains($blogWidgetLibSource, $newsletterWidgetFlashFragment)) {
-        $widgetRenderIssues[] = 'newsletter widget flash feedback is missing source accessibility fragment: ' . $newsletterWidgetFlashFragment;
-    }
+if (str_contains($widgetNewsletterOne, 'newsletter_widget_subscribe.php')
+    || str_contains($widgetNewsletterOne, 'name="email"')
+    || str_contains($widgetNewsletterOne, '<form')) {
+    $widgetRenderIssues[] = 'newsletter widget still renders an inline subscribe form instead of a safe CTA link';
 }
 if (!str_contains($widgetSocialOne, '<section class="widget-card" aria-labelledby="w-404-title">')
     || !str_contains($widgetSocialOne, '<h3 id="w-404-title" class="widget-card__title">')) {
@@ -15421,11 +15411,11 @@ if (str_contains($widgetLibSource, 'aria-label="')
     && str_contains($widgetLibSource, 'newWindowLinkLabel((string)$link[\'label\'])')) {
     $widgetRenderIssues[] = 'social links widget still uses aria-label-only new-window labels';
 }
-if (!str_contains($widgetLibSource, 'newsletter_widget_subscribe.php')) {
-    $widgetRenderIssues[] = 'newsletter widget renderer is missing inline subscribe form action';
+if (str_contains($widgetLibSource, 'newsletter_widget_subscribe.php')) {
+    $widgetRenderIssues[] = 'newsletter widget renderer still points to the legacy inline subscribe endpoint';
 }
-if (!str_contains($widgetLibSource, 'safePublicReturnTarget((string)($_SERVER[\'REQUEST_URI\'] ?? \'\'), BASE_URL . \'/subscribe.php\')')) {
-    $widgetRenderIssues[] = 'newsletter widget renderer is missing token-safe return_url sanitization';
+if (!str_contains($widgetLibSource, "BASE_URL . '/subscribe.php\"")) {
+    $widgetRenderIssues[] = 'newsletter widget renderer is missing the canonical subscribe.php CTA link';
 }
 if (!str_contains($widgetLibSource, 'Najděte články, novinky, stránky a další obsah napříč celým webem.')) {
     $widgetRenderIssues[] = 'search widget is missing the default cross-site discovery helper text';
@@ -15437,14 +15427,10 @@ if (!str_contains($widgetLibSource, "role=\"search\" aria-labelledby=\"' . h(\$l
     || !str_contains($widgetLibSource, "<legend id=\"' . h(\$legendId) . '\" class=\"sr-only\">Vyhledávání na webu</legend>")) {
     $widgetRenderIssues[] = 'search widget renderer is missing aria-labelledby binding to its legend';
 }
-if (!str_contains($widgetLibSource, 'name="return_url"') || !str_contains($widgetLibSource, 'name="email"')) {
-    $widgetRenderIssues[] = 'newsletter widget is missing required subscribe form fields';
-}
-if (!str_contains($widgetLibSource, 'honeypotField()')) {
-    $widgetRenderIssues[] = 'newsletter widget is missing honeypot protection';
-}
-if (!str_contains($widgetLibSource, 'newsletter-widget-legend-') || !str_contains($widgetLibSource, 'aria-invalid="true"')) {
-    $widgetRenderIssues[] = 'newsletter widget renderer is missing accessible fieldset or invalid-state handling';
+if (str_contains($widgetLibSource, 'name="return_url"')
+    || str_contains($widgetLibSource, 'name="email"')
+    || str_contains($widgetLibSource, 'honeypotField()')) {
+    $widgetRenderIssues[] = 'newsletter widget renderer still contains inline subscription form plumbing';
 }
 if (!str_contains($widgetLibSource, 'function widgetInstanceAvailability(array $widget): array')) {
     $widgetRenderIssues[] = 'widget library is missing shared per-widget availability evaluation';
@@ -15511,14 +15497,16 @@ if (!str_contains($widgetsMigrateSource, "widget_type = 'newsletter' AND zone = 
 if (!str_contains($newsletterWidgetSubscribeSource, "rateLimit('subscribe_widget', 3, 300)")) {
     $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing dedicated rate limiting';
 }
-if (!str_contains($newsletterWidgetSubscribeSource, 'safePublicReturnTarget')) {
-    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing safe return_url validation';
-}
 if (!str_contains($newsletterWidgetSubscribeSource, 'sendNoStoreNoIndexHeaders();')) {
     $widgetRenderIssues[] = 'newsletter widget subscribe endpoint is missing no-store/noindex/no-referrer headers';
 }
-if (!str_contains($newsletterWidgetSubscribeSource, "'email' => \$email")) {
-    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint does not preserve invalid e-mail value for PRG retry';
+if (!str_contains($newsletterWidgetSubscribeSource, 'newsletterWidgetRedirect($defaultRedirect);')) {
+    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint no longer redirects to the canonical subscribe page';
+}
+if (str_contains($newsletterWidgetSubscribeSource, 'INSERT INTO cms_subscribers')
+    || str_contains($newsletterWidgetSubscribeSource, 'sendNewsletterSubscriptionConfirmation(')
+    || str_contains($newsletterWidgetSubscribeSource, 'verifyCsrf()')) {
+    $widgetRenderIssues[] = 'newsletter widget subscribe endpoint still performs legacy inline subscription work';
 }
 if ($widgetRenderIssues === []) {
     echo "OK\n";
@@ -15802,6 +15790,7 @@ $themePlacesArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/t
 $themePollsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
 $themeReservationsBookViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-book.php');
 $themeReservationsResourceViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/reservations-resource.php');
+$themeNewsletterSubscribeControllerSource = (string)file_get_contents(dirname(__DIR__) . '/subscribe.php');
 $themeNewsletterSubscribeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php');
 $themeUtilityStatusViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/utility/status.php');
 $themeAccountReservationsViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/account/reservations.php');
@@ -15916,12 +15905,31 @@ foreach ([
     ],
     'newsletter form error' => [
         'status' => 'role="alert" aria-atomic="true" aria-labelledby="newsletter-form-error-message"',
-        'text' => '<p id="newsletter-form-error-message">Zadejte platnou e-mailovou adresu.</p>',
+        'text' => '<p id="newsletter-form-error-message"><strong>Přihlášení k odběru se nepodařilo.</strong></p>',
     ],
 ] as $newsletterSubscribeStatusLabel => $newsletterSubscribeStatusSpec) {
     if (!str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['status'])
         || !str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeStatusSpec['text'])) {
         $themeLayoutIssues[] = 'newsletter subscribe ' . $newsletterSubscribeStatusLabel . ' message is missing text-backed status semantics';
+    }
+}
+foreach ([
+    "captchaVerify((string)(\$_POST['captcha'] ?? ''))",
+    "\$errorFields[] = 'email';",
+    "\$errorFields[] = 'captcha';",
+] as $newsletterSubscribeControllerFragment) {
+    if (!str_contains($themeNewsletterSubscribeControllerSource, $newsletterSubscribeControllerFragment)) {
+        $themeLayoutIssues[] = 'newsletter subscribe controller is missing captcha or field-level validation fragment: ' . $newsletterSubscribeControllerFragment;
+    }
+}
+foreach ([
+    'id="newsletter-email-error"',
+    'id="newsletter-captcha-error"',
+    'aria-invalid="true"',
+    'Chybná odpověď na ověřovací otázku.',
+] as $newsletterSubscribeFieldErrorFragment) {
+    if (!str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeFieldErrorFragment)) {
+        $themeLayoutIssues[] = 'newsletter subscribe view is missing field-level error fragment: ' . $newsletterSubscribeFieldErrorFragment;
     }
 }
 foreach ([

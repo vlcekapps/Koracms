@@ -17,9 +17,12 @@
       <div id="newsletter-mail-error" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="newsletter-mail-error-message">
         <p id="newsletter-mail-error-message">Adresa byla zaregistrována, ale potvrzovací e-mail se nepodařilo odeslat. Zkuste to prosím později.</p>
       </div>
-    <?php elseif ($state === 'error'): ?>
+    <?php elseif ($state === 'error' && !empty($errors)): ?>
       <div id="newsletter-form-errors" class="status-message status-message--error" role="alert" aria-atomic="true" aria-labelledby="newsletter-form-error-message">
-        <p id="newsletter-form-error-message">Zadejte platnou e-mailovou adresu.</p>
+        <p id="newsletter-form-error-message"><strong>Přihlášení k odběru se nepodařilo.</strong></p>
+        <ul>
+          <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
+        </ul>
       </div>
     <?php endif; ?>
 
@@ -33,14 +36,24 @@
 
           <div class="field">
             <label for="email">Váš e-mail <span aria-hidden="true">*</span></label>
+            <?php $emailHasError = in_array('email', $errorFields ?? [], true); ?>
             <input type="email" id="email" name="email" class="form-control" required aria-required="true"
-                   maxlength="255" value="<?= h($postedEmail) ?>" autocomplete="email">
+                   maxlength="255" value="<?= h($postedEmail) ?>" autocomplete="email"
+                   <?php if ($emailHasError): ?>aria-invalid="true" aria-describedby="newsletter-email-error"<?php endif; ?>>
+            <?php if ($emailHasError): ?>
+              <small id="newsletter-email-error" class="field-error">Zadejte platnou e-mailovou adresu.</small>
+            <?php endif; ?>
           </div>
 
           <div class="field">
             <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
+            <?php $captchaHasError = in_array('captcha', $errorFields ?? [], true); ?>
             <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required aria-required="true"
-                   inputmode="numeric" autocomplete="off">
+                   inputmode="numeric" autocomplete="off"
+                   <?php if ($captchaHasError): ?>aria-invalid="true" aria-describedby="newsletter-captcha-error"<?php endif; ?>>
+            <?php if ($captchaHasError): ?>
+              <small id="newsletter-captcha-error" class="field-error">Chybná odpověď na ověřovací otázku.</small>
+            <?php endif; ?>
           </div>
 
           <div class="button-row button-row--start">

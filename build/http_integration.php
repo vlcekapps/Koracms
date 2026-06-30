@@ -36,6 +36,7 @@ $createdPollIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
+$createdSubscriberEmails = [];
 $createdNavLinkIds = [];
 $createdPageViewIds = [];
 $createdTempFiles = [];
@@ -2026,6 +2027,11 @@ try {
     httpIntegrationPrintResult('widgets_admin_availability_http', $widgetsAdminAvailabilityIssues, $failures);
 
     $footerDiscoveryWidgetIssues = [];
+    $footerOriginalModuleNewsletter = getSetting('module_newsletter', '0');
+    saveSetting('module_newsletter', '1');
+    clearSettingsCache();
+    httpIntegrationClearLocalRateLimits($pdo, ['subscribe', 'subscribe_widget']);
+
     $publicWidgetSession = koraPrimeTestSession([], 'kora-http-footer-widgets');
     $searchWidgetTitle = 'HTTP footer search ' . bin2hex(random_bytes(4));
     $newsletterWidgetTitle = 'HTTP footer newsletter ' . bin2hex(random_bytes(4));
@@ -2075,7 +2081,7 @@ try {
         $footerDiscoveryWidgetIssues[] = 'footer search widget nevykreslil formulář směrovaný na search.php';
     }
     if (!str_contains($homeWithFooterDiscoveryWidgets['body'], '<fieldset class="widget-form-fieldset">')) {
-        $footerDiscoveryWidgetIssues[] = 'footer search/newsletter widgety nevykreslily fieldset pro formulářovou semantiku';
+        $footerDiscoveryWidgetIssues[] = 'footer search widget nevykreslil fieldset pro formulářovou semantiku';
     }
     if (!str_contains($homeWithFooterDiscoveryWidgets['body'], '<legend id="widget-search-legend-')) {
         $footerDiscoveryWidgetIssues[] = 'footer search widget postrádá legend pro čtečky obrazovky';
@@ -2086,31 +2092,32 @@ try {
     if (!str_contains($homeWithFooterDiscoveryWidgets['body'], $newsletterWidgetSettings['cta_text'])) {
         $footerDiscoveryWidgetIssues[] = 'footer newsletter widget nevykreslil svůj úvodní text';
     }
-    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'action="' . BASE_URL . '/newsletter_widget_subscribe.php"')) {
-        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget nevykreslil subscribe formulář';
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'href="' . BASE_URL . '/subscribe.php"')) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget nevykreslil odkaz na zabezpečenou stránku odběru';
     }
-    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'name="hp_website"')) {
-        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget postrádá honeypot ochranu';
+    if (str_contains($homeWithFooterDiscoveryWidgets['body'], 'action="' . BASE_URL . '/newsletter_widget_subscribe.php"')
+        || str_contains($homeWithFooterDiscoveryWidgets['body'], 'name="email"')) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget stále obsahuje inline subscribe formulář';
     }
-    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], '<legend id="newsletter-widget-legend-')) {
-        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget postrádá legend pro čtečky obrazovky';
+    if (!str_contains($homeWithFooterDiscoveryWidgets['body'], 'Přihlásit k odběru')) {
+        $footerDiscoveryWidgetIssues[] = 'footer newsletter widget postrádá CTA odkaz pro přihlášení';
     }
 
+    $widgetDirectEmail = 'http-widget-direct-' . bin2hex(random_bytes(4)) . '@example.test';
     $widgetSubscribeResponse = postUrl(
         $baseUrl . BASE_URL . '/newsletter_widget_subscribe.php',
         [
-            'csrf_token' => $publicWidgetSession['csrf'],
             'return_url' => BASE_URL . '/',
-            'email' => 'not-an-email',
+            'email' => $widgetDirectEmail,
         ],
         $publicWidgetSession['cookie'],
         0
     );
     if (httpIntegrationStatusCode($widgetSubscribeResponse) !== 302) {
-        $footerDiscoveryWidgetIssues[] = 'newsletter widget submit s neplatným e-mailem nevrátil 302 redirect';
+        $footerDiscoveryWidgetIssues[] = 'přímý POST na starý newsletter widget endpoint nevrátil 302 redirect';
     }
-    if (!responseHasLocationHeader($widgetSubscribeResponse['headers'], BASE_URL . '/', $baseUrl)) {
-        $footerDiscoveryWidgetIssues[] = 'newsletter widget submit s neplatným e-mailem nemíří zpět na homepage';
+    if (!responseHasLocationHeader($widgetSubscribeResponse['headers'], BASE_URL . '/subscribe.php', $baseUrl)) {
+        $footerDiscoveryWidgetIssues[] = 'přímý POST na starý newsletter widget endpoint nemíří na zabezpečenou stránku odběru';
     }
     if (
         !httpIntegrationHeaderContains($widgetSubscribeResponse, 'Cache-Control', 'no-store')
@@ -2120,18 +2127,88 @@ try {
         || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'X-Robots-Tag', 'noarchive')
         || !httpIntegrationHeaderContains($widgetSubscribeResponse, 'Referrer-Policy', 'no-referrer')
     ) {
-        $footerDiscoveryWidgetIssues[] = 'newsletter widget submit neposlal no-store/noindex/no-referrer hlavičky';
+        $footerDiscoveryWidgetIssues[] = 'starý newsletter widget endpoint neposlal no-store/noindex/no-referrer hlavičky';
+    }
+    $widgetDirectCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_subscribers WHERE email = ?");
+    $widgetDirectCountStmt->execute([$widgetDirectEmail]);
+    if ((int)$widgetDirectCountStmt->fetchColumn() !== 0) {
+        $footerDiscoveryWidgetIssues[] = 'přímý POST na starý newsletter widget endpoint uložil odběratele';
     }
 
-    $homeWithNewsletterWidgetError = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);
-    if (!str_contains($homeWithNewsletterWidgetError['body'], 'Zadejte platnou e-mailovou adresu.')) {
-        $footerDiscoveryWidgetIssues[] = 'newsletter widget po invalid submitu nezobrazil chybovou zprávu';
+    $subscribeInvalidEmailSession = koraPrimeTestSession([], 'kora-http-newsletter-invalid-email');
+    $subscribeInvalidEmailPage = fetchUrl($baseUrl . BASE_URL . '/subscribe.php', $subscribeInvalidEmailSession['cookie'], 0);
+    $subscribeInvalidEmailCsrf = extractHiddenInputValue($subscribeInvalidEmailPage['body'], 'csrf_token');
+    $subscribeInvalidEmailCaptcha = httpIntegrationExtractCaptchaAnswer($subscribeInvalidEmailPage['body']);
+    $subscribeInvalidEmailResponse = postUrl(
+        $baseUrl . BASE_URL . '/subscribe.php',
+        [
+            'csrf_token' => $subscribeInvalidEmailCsrf,
+            'email' => 'not-an-email',
+            'captcha' => $subscribeInvalidEmailCaptcha,
+        ],
+        $subscribeInvalidEmailSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($subscribeInvalidEmailResponse) !== 200
+        || !str_contains($subscribeInvalidEmailResponse['body'], 'Zadejte platnou e-mailovou adresu.')
+        || !httpIntegrationFieldHasAriaInvalid($subscribeInvalidEmailResponse['body'], 'email')) {
+        $footerDiscoveryWidgetIssues[] = 'subscribe.php nezobrazil přístupnou chybu pro neplatný e-mail';
     }
-    if (!str_contains($homeWithNewsletterWidgetError['body'], 'aria-invalid="true"')) {
-        $footerDiscoveryWidgetIssues[] = 'newsletter widget po invalid submitu neoznačil e-mailové pole aria-invalid';
+
+    $invalidCaptchaEmail = 'http-newsletter-invalid-captcha-' . bin2hex(random_bytes(4)) . '@example.test';
+    $subscribeInvalidCaptchaSession = koraPrimeTestSession([], 'kora-http-newsletter-invalid-captcha');
+    $subscribeInvalidCaptchaPage = fetchUrl($baseUrl . BASE_URL . '/subscribe.php', $subscribeInvalidCaptchaSession['cookie'], 0);
+    $subscribeInvalidCaptchaCsrf = extractHiddenInputValue($subscribeInvalidCaptchaPage['body'], 'csrf_token');
+    $subscribeInvalidCaptchaResponse = postUrl(
+        $baseUrl . BASE_URL . '/subscribe.php',
+        [
+            'csrf_token' => $subscribeInvalidCaptchaCsrf,
+            'email' => $invalidCaptchaEmail,
+            'captcha' => '0',
+        ],
+        $subscribeInvalidCaptchaSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($subscribeInvalidCaptchaResponse) !== 200
+        || !str_contains($subscribeInvalidCaptchaResponse['body'], 'Chybná odpověď na ověřovací otázku.')
+        || !httpIntegrationFieldHasAriaInvalid($subscribeInvalidCaptchaResponse['body'], 'captcha')) {
+        $footerDiscoveryWidgetIssues[] = 'subscribe.php nezobrazil přístupnou chybu pro chybnou captchu';
     }
-    if (!str_contains($homeWithNewsletterWidgetError['body'], 'value="not-an-email"')) {
-        $footerDiscoveryWidgetIssues[] = 'newsletter widget po invalid submitu nezachoval zadanou hodnotu';
+    $invalidCaptchaCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_subscribers WHERE email = ?");
+    $invalidCaptchaCountStmt->execute([$invalidCaptchaEmail]);
+    if ((int)$invalidCaptchaCountStmt->fetchColumn() !== 0) {
+        $footerDiscoveryWidgetIssues[] = 'subscribe.php uložil odběratele i po chybné captche';
+    }
+
+    $validSubscribeEmail = 'http-newsletter-valid-' . bin2hex(random_bytes(4)) . '@example.test';
+    $createdSubscriberEmails[] = $validSubscribeEmail;
+    $subscribeValidSession = koraPrimeTestSession([], 'kora-http-newsletter-valid');
+    $subscribeValidPage = fetchUrl($baseUrl . BASE_URL . '/subscribe.php', $subscribeValidSession['cookie'], 0);
+    $subscribeValidCsrf = extractHiddenInputValue($subscribeValidPage['body'], 'csrf_token');
+    $subscribeValidCaptcha = httpIntegrationExtractCaptchaAnswer($subscribeValidPage['body']);
+    $contactEmailBeforeSubscribe = getSetting('contact_email', '');
+    saveSetting('contact_email', 'invalid-from-address');
+    clearSettingsCache();
+    $subscribeValidResponse = postUrl(
+        $baseUrl . BASE_URL . '/subscribe.php',
+        [
+            'csrf_token' => $subscribeValidCsrf,
+            'email' => $validSubscribeEmail,
+            'captcha' => $subscribeValidCaptcha,
+        ],
+        $subscribeValidSession['cookie'],
+        0
+    );
+    saveSetting('contact_email', $contactEmailBeforeSubscribe);
+    clearSettingsCache();
+    if (httpIntegrationStatusCode($subscribeValidResponse) !== 200) {
+        $footerDiscoveryWidgetIssues[] = 'validní subscribe.php submit nevrátil 200';
+    }
+    $validSubscriberStmt = $pdo->prepare("SELECT confirmed, token FROM cms_subscribers WHERE email = ? LIMIT 1");
+    $validSubscriberStmt->execute([$validSubscribeEmail]);
+    $validSubscriber = $validSubscriberStmt->fetch();
+    if (!is_array($validSubscriber) || (int)($validSubscriber['confirmed'] ?? 1) !== 0 || trim((string)($validSubscriber['token'] ?? '')) === '') {
+        $footerDiscoveryWidgetIssues[] = 'validní subscribe.php submit nevytvořil čekající odběr s tokenem';
     }
 
     $pdo->prepare("DELETE FROM cms_widgets WHERE id IN (?, ?)")->execute([$searchWidgetId, $newsletterWidgetId]);
@@ -2144,6 +2221,9 @@ try {
     if (str_contains($homeWithoutFooterDiscoveryWidgets['body'], $searchWidgetTitle) || str_contains($homeWithoutFooterDiscoveryWidgets['body'], $newsletterWidgetTitle)) {
         $footerDiscoveryWidgetIssues[] = 'footer search/newsletter widget zůstal po odebrání na homepage viditelný';
     }
+
+    saveSetting('module_newsletter', $footerOriginalModuleNewsletter);
+    clearSettingsCache();
 
     httpIntegrationPrintResult('footer_discovery_widgets_http', $footerDiscoveryWidgetIssues, $failures);
 
@@ -4487,6 +4567,10 @@ try {
 
     foreach ($createdNewsletterIds as $newsletterIdToDelete) {
         $pdo->prepare("DELETE FROM cms_newsletters WHERE id = ?")->execute([$newsletterIdToDelete]);
+    }
+
+    foreach ($createdSubscriberEmails as $subscriberEmailToDelete) {
+        $pdo->prepare("DELETE FROM cms_subscribers WHERE email = ?")->execute([$subscriberEmailToDelete]);
     }
 
     foreach ($createdPageViewIds as $pageViewIdToDelete) {

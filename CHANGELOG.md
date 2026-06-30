@@ -56,6 +56,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ### Opraveno
+- **Spamové odběry newsletteru přes widget** – veřejný newsletter widget už neobsahuje inline e-mailový formulář bez captchy a vede na zabezpečenou stránku `/subscribe.php`; starý widgetový POST endpoint jen přesměruje na tuto stránku, neukládá odběratele a neposílá tokenové e-maily. Samostatná stránka odběru navíc nově serverově ověřuje captchu a zobrazuje přístupné field-level chyby pro e-mail i ověřovací otázku.
 - **Neplatný bezpečnostní token při delší editaci obsahu** – obnova zámku obsahu v editorech článků, statických/blogových stránek, novinek, událostí a Vývěsky už CSRF token sama nerotuje a po úspěšném heartbeat požadavku synchronizuje aktuální token ve formulářích na stránce.
 
 ## [4.0.1] – 2026-06-26

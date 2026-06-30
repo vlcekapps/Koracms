@@ -507,35 +507,6 @@ function normalizeWidgetExternalUrl(string $value): string
 }
 
 /**
- * @return array{type:string,message:string,email:string}
- */
-function newsletterWidgetFlash(): array
-{
-    static $flash = null;
-    if (is_array($flash)) {
-        return $flash;
-    }
-
-    $raw = $_SESSION['newsletter_widget_flash'] ?? null;
-    unset($_SESSION['newsletter_widget_flash']);
-
-    if (!is_array($raw)) {
-        $flash = ['type' => '', 'message' => '', 'email' => ''];
-        return $flash;
-    }
-
-    $type = trim((string)($raw['type'] ?? ''));
-    $message = trim((string)($raw['message'] ?? ''));
-    $email = trim((string)($raw['email'] ?? ''));
-    $flash = [
-        'type' => in_array($type, ['success', 'error'], true) ? $type : '',
-        'message' => $message,
-        'email' => $email,
-    ];
-    return $flash;
-}
-
-/**
  * Vrátí widget typy dostupné k přidání (respektuje stav modulů a nastavení).
  *
  * @return array<string, array{name:string, default_title:string, requires_module:?string, requires_setting:?string}>
@@ -1206,49 +1177,20 @@ function renderWidget_newsletter(array $widget, array $settings, string $zone): 
 {
     $title = h($widget['title'] ?: 'Zůstaňte v kontaktu');
     $ctaText = h($settings['cta_text'] ?? 'Přihlaste se k odběru a dostávejte nové články přímo e-mailem.');
-    $flash = newsletterWidgetFlash();
-    $widgetId = (int)($widget['id'] ?? 0);
-    $emailFieldId = 'newsletter-widget-email-' . $widgetId;
-    $legendId = 'newsletter-widget-legend-' . $widgetId;
-    $descriptionId = 'newsletter-widget-description-' . $widgetId;
-    $flashId = 'newsletter-widget-feedback-' . $widgetId;
-    $flashTextId = $flashId . '-message';
-    $isError = $flash['type'] === 'error' && $flash['message'] !== '';
-    $emailDescribedBy = $descriptionId . ($isError ? ' ' . $flashId : '');
-    $flashHtml = '';
-    if ($flash['type'] !== '' && $flash['message'] !== '') {
-        $flashClass = $flash['type'] === 'success' ? 'status-message status-message--success' : 'status-message status-message--error';
-        $flashRole = $flash['type'] === 'success' ? 'status' : 'alert';
-        $flashHtml = '<div id="' . h($flashId) . '"><div class="' . h($flashClass) . '" role="' . h($flashRole) . '" aria-labelledby="' . h($flashTextId) . '"><p id="' . h($flashTextId) . '">' . h($flash['message']) . '</p></div></div>';
-    }
-    $returnUrl = safePublicReturnTarget((string)($_SERVER['REQUEST_URI'] ?? ''), BASE_URL . '/subscribe.php');
-    $formHtml = '<form action="' . BASE_URL . '/newsletter_widget_subscribe.php" method="post" class="widget-form-stack" novalidate>'
-        . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
-        . '<input type="hidden" name="return_url" value="' . h($returnUrl) . '">'
-        . honeypotField()
-        . '<fieldset class="widget-form-fieldset">'
-        . '<legend id="' . h($legendId) . '" class="sr-only">Přihlášení k odběru novinek</legend>'
-        . '<p id="' . h($descriptionId) . '">' . $ctaText . '</p>'
-        . '<div class="field">'
-        . '<label for="' . h($emailFieldId) . '">Váš e-mail</label>'
-        . '<input type="email" id="' . h($emailFieldId) . '" name="email" class="form-control" maxlength="255" autocomplete="email" required aria-required="true" aria-describedby="' . h($emailDescribedBy) . '"' . ($isError ? ' aria-invalid="true"' : '') . ' value="' . h($flash['email']) . '">'
-        . '</div>'
-        . '<div class="button-row button-row--start"><button type="submit" class="button-primary">Přihlásit k odběru</button></div>'
-        . '</fieldset>'
-        . '</form>';
+    $ctaId = 'newsletter-widget-description-' . (int)($widget['id'] ?? 0);
+    $ctaHtml = '<p id="' . h($ctaId) . '">' . $ctaText . '</p>'
+        . '<div class="button-row button-row--start"><a class="button-primary" href="' . BASE_URL . '/subscribe.php" aria-describedby="' . h($ctaId) . '">Přihlásit k odběru</a></div>';
 
     if ($zone === 'sidebar' || $zone === 'footer') {
         return widgetCardStart($widget)
              . widgetCardTitle($widget, $title)
-             . $flashHtml
-             . $formHtml
+             . $ctaHtml
              . '</section>';
     }
 
     return '<section class="surface surface--accent home-section" aria-labelledby="w-' . (int)$widget['id'] . '-title">'
          . '<h2 id="w-' . (int)$widget['id'] . '-title" class="section-title">' . $title . '</h2>'
-         . $flashHtml
-         . $formHtml
+         . $ctaHtml
          . '</section>';
 }
 

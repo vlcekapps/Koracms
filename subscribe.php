@@ -10,6 +10,8 @@ if (!isModuleEnabled('newsletter')) {
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $state    = 'form';
+$errors = [];
+$errorFields = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('subscribe', 3, 300);
@@ -18,11 +20,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $state = 'ok';
     } else {
         verifyCsrf();
-        $email = trim($_POST['email'] ?? '');
+        $email = trim((string)($_POST['email'] ?? ''));
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $state = 'error';
-        } else {
+            $errors[] = 'Zadejte platnou e-mailovou adresu.';
+            $errorFields[] = 'email';
+        }
+        if (!captchaVerify((string)($_POST['captcha'] ?? ''))) {
+            $errors[] = 'Chybná odpověď na ověřovací otázku.';
+            $errorFields[] = 'captcha';
+        }
+
+        if ($errors === []) {
             $pdo   = db_connect();
             $token = bin2hex(random_bytes(32));
 
@@ -38,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (\PDOException $e) {
                 $state = 'ok';
             }
+        } else {
+            $state = 'error';
         }
     }
 }
@@ -52,8 +63,10 @@ renderPublicPage([
     'view' => 'newsletter/subscribe',
     'view_data' => [
         'state' => $state,
+        'errors' => $errors,
+        'errorFields' => $errorFields,
         'captchaExpr' => $captchaExpr,
-        'postedEmail' => trim($_POST['email'] ?? ''),
+        'postedEmail' => trim((string)($_POST['email'] ?? '')),
     ],
     'body_class' => 'page-newsletter page-subscribe',
     'page_kind' => 'utility',
