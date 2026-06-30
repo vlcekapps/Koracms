@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Vývojářský checklist pro nové moduly** – nový dokument `docs/developer-modules.md` shrnuje povinné kroky pro návrh modulu v jádře CMS: schéma, migrace, registraci modulu, administraci, veřejné routy, bezpečnost, WCAG 2.2, testy a dokumentaci. Pro větší modulové změny přibyl kontrolní alias `composer ci:module-ready`.
+- **Auditovaný checklist pro nové moduly** – modulový kontrakt nově hlídá, aby `docs/developer-modules.md`, README a administrátorská příručka neztratily klíčové integrační body pro nový modul, včetně migrací, manifestu, admin rout, content pickeru, bezpečných redirectů, uploadů, WCAG vazeb a `composer ci:module-ready`.
 - **Centrální smlouva modulů** – module key, labely a příznaky pro nastavení, profily, veřejnou navigaci a widgetové popisky se nově odvozují z jednoho manifestu `coreModuleDefinitions()`. Nový audit `build/module_contract_audit.php` hlídá, aby se moduly nerozjely mezi administrací, navigací, widgety a dokumentací.
 - **Manifest jako jediný seznam známých modulů** – modulový audit nově odvozuje známé module keys přímo z `coreModuleDefinitions()` a samostatně hlídá jen povinné vestavěné moduly, takže přidání nového modulu nevyžaduje úpravu dalšího hardcoded seznamu v auditu.
 - **Jednotné modulové defaulty pro instalaci a migraci** – výchozí `module_*` nastavení se nově doplňuje z centrálního manifestu i v `install.php` a `migrate.php`, takže nový modul nebude mít rozdílný stav na čisté instalaci a při aktualizaci starší databáze.

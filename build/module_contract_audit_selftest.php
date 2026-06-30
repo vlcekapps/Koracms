@@ -184,6 +184,45 @@ function moduleContractAuditSelfTestAuthFixture(): string
         . "}\n";
 }
 
+function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
+{
+    return "# Vývoj nového modulu v Kora CMS\n"
+        . "Povinné integrační body\n"
+        . "Bezpečnostní pravidla\n"
+        . "WCAG 2.2 checklist\n"
+        . "Testy a guardrails\n"
+        . "Definition of done\n"
+        . "Použijte install.php, migrate.php a schema parity guardrail.\n"
+        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path a admin_paths.\n"
+        . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
+        . "Veřejné routy hlídá isModuleEnabled().\n"
+        . "Content picker používá content_reference_types.\n"
+        . "Widgety a šablony hlídají requires_module i requires_modules.\n"
+        . "Redirecty validujte přes internalRedirectTarget() a uploady přes lib/uploads.php.\n"
+        . "WCAG vazby používejte přes aria-labelledby a veřejné šablony kontroluje build/theme_view_audit.php.\n"
+        . "Modulový kontrakt hlídá build/module_contract_audit.php a větší změny composer ci:module-ready.\n"
+        . "Dokumentujte README.md, docs/admin-guide.md a CHANGELOG.md.\n";
+}
+
+function moduleContractAuditSelfTestReadmeFixture(): string
+{
+    return "Nové moduly popisuje docs/developer-modules.md.\n"
+        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php.\n"
+        . "Admin routy chrání adminRouteModuleRequirements().\n"
+        . "Content picker používá content_reference_types.\n"
+        . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
+        . "Spusťte composer ci:module-ready.\n";
+}
+
+function moduleContractAuditSelfTestAdminGuideFixture(): string
+{
+    return "Admin guide odkazuje na developer-modules.md.\n"
+        . "Modulová metadata jsou v coreModuleDefinitions().\n"
+        . "Admin endpointy kryje adminRouteModuleRequirements().\n"
+        . "Content picker typy definuje content_reference_types.\n"
+        . "Pro větší změny spusťte composer ci:module-ready.\n";
+}
+
 /**
  * @return array<string,string>
  */
@@ -206,8 +245,9 @@ function moduleContractAuditSelfTestValidFiles(): array
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict":"' . $staticScriptTargets . '","analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check":"' . $staticScriptTargets . '","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
         'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures); foreach (moduleAdminEntryPoints() as \$moduleKey => \$adminPaths) { saveSetting('module_' . \$moduleKey, '0'); } httpIntegrationPrintResult('admin_disabled_modules_http', ['admin stránka vypnutého modulu ', 'není povolen'], \$failures);\n",
-        'docs/developer-modules.md' => "Použijte coreModuleDefinitions() a build/module_contract_audit.php.\n",
-        'README.md' => "Spusťte composer ci:module-ready.\n",
+        'docs/developer-modules.md' => moduleContractAuditSelfTestDeveloperModulesDocFixture(),
+        'README.md' => moduleContractAuditSelfTestReadmeFixture(),
+        'docs/admin-guide.md' => moduleContractAuditSelfTestAdminGuideFixture(),
     ];
 
     foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
@@ -583,6 +623,42 @@ assertModuleContractAuditFails(
     'Missing admin module HTTP scenario',
     $missingAdminHttpFiles,
     'admin_paths modules must be covered by dynamic admin_disabled_modules_http integration.'
+);
+
+$missingDeveloperDocFragmentFiles = $validFiles;
+$missingDeveloperDocFragmentFiles['docs/developer-modules.md'] = str_replace(
+    'internalRedirectTarget()',
+    'redirect helper',
+    $missingDeveloperDocFragmentFiles['docs/developer-modules.md']
+);
+assertModuleContractAuditFails(
+    'Missing developer module documentation fragment',
+    $missingDeveloperDocFragmentFiles,
+    'docs/developer-modules.md must document module development fragment: internalRedirectTarget().'
+);
+
+$missingReadmeDocFragmentFiles = $validFiles;
+$missingReadmeDocFragmentFiles['README.md'] = str_replace(
+    'content_reference_disabled_modules_http',
+    'content picker HTTP scenario',
+    $missingReadmeDocFragmentFiles['README.md']
+);
+assertModuleContractAuditFails(
+    'Missing README module documentation fragment',
+    $missingReadmeDocFragmentFiles,
+    'README.md must document module development fragment: content_reference_disabled_modules_http.'
+);
+
+$missingAdminGuideDocFragmentFiles = $validFiles;
+$missingAdminGuideDocFragmentFiles['docs/admin-guide.md'] = str_replace(
+    'adminRouteModuleRequirements()',
+    'admin route map',
+    $missingAdminGuideDocFragmentFiles['docs/admin-guide.md']
+);
+assertModuleContractAuditFails(
+    'Missing admin guide module documentation fragment',
+    $missingAdminGuideDocFragmentFiles,
+    'docs/admin-guide.md must document module development fragment: adminRouteModuleRequirements().'
 );
 
 $missingComposerFiles = $validFiles;

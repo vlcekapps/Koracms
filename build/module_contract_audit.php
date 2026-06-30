@@ -1119,6 +1119,98 @@ function moduleContractAuditCollectRequiredModulesFromValue(mixed $value, string
     }
 }
 
+/**
+ * @param list<string> $fragments
+ * @param list<string> $issues
+ */
+function moduleContractAuditRequireDocumentationFragments(string $source, string $relativePath, array $fragments, array &$issues): void
+{
+    foreach ($fragments as $fragment) {
+        moduleContractAuditRequire(
+            str_contains($source, $fragment),
+            $relativePath . ' must document module development fragment: ' . $fragment . '.',
+            $issues
+        );
+    }
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateDeveloperDocumentation(
+    string $developerModulesDocSource,
+    string $readmeSource,
+    string $adminGuideSource,
+    array &$issues
+): void {
+    moduleContractAuditRequireDocumentationFragments(
+        $developerModulesDocSource,
+        'docs/developer-modules.md',
+        [
+            '# Vývoj nového modulu v Kora CMS',
+            'Povinné integrační body',
+            'Bezpečnostní pravidla',
+            'WCAG 2.2 checklist',
+            'Testy a guardrails',
+            'Definition of done',
+            'install.php',
+            'migrate.php',
+            'schema parity',
+            'coreModuleDefinitions()',
+            'settings_default',
+            'public_nav_path',
+            'admin_paths',
+            'adminRouteModuleRequirements()',
+            'requireModuleEnabled()',
+            'isModuleEnabled()',
+            'content_reference_types',
+            'requires_module',
+            'requires_modules',
+            'internalRedirectTarget()',
+            'lib/uploads.php',
+            'aria-labelledby',
+            'build/theme_view_audit.php',
+            'build/module_contract_audit.php',
+            'composer ci:module-ready',
+            'README.md',
+            'docs/admin-guide.md',
+            'CHANGELOG.md',
+        ],
+        $issues
+    );
+
+    moduleContractAuditRequireDocumentationFragments(
+        $readmeSource,
+        'README.md',
+        [
+            'docs/developer-modules.md',
+            'coreModuleDefinitions()',
+            'install.php',
+            'migrate.php',
+            'adminRouteModuleRequirements()',
+            'content_reference_types',
+            'public_module_navigation_http',
+            'admin_disabled_modules_http',
+            'content_reference_disabled_modules_http',
+            'composer ci:module-ready',
+        ],
+        $issues
+    );
+
+    moduleContractAuditRequireDocumentationFragments(
+        $adminGuideSource,
+        'docs/admin-guide.md',
+        [
+            'developer-modules.md',
+            'coreModuleDefinitions()',
+            'adminRouteModuleRequirements()',
+            'content_reference_types',
+            'composer ci:module-ready',
+        ],
+        $issues
+    );
+}
+
 $definitionsSource = moduleContractAuditReadFile($projectRoot, 'lib/definitions.php', $issues);
 $statsSource = moduleContractAuditReadFile($projectRoot, 'lib/stats.php', $issues);
 $settingsModulesSource = moduleContractAuditReadFile($projectRoot, 'admin/settings_modules.php', $issues);
@@ -1127,6 +1219,7 @@ $migrateSource = moduleContractAuditReadFile($projectRoot, 'migrate.php', $issue
 $composerSource = moduleContractAuditReadFile($projectRoot, 'composer.json', $issues);
 $runtimeAuditSource = moduleContractAuditReadFile($projectRoot, 'build/runtime_audit.php', $issues);
 $developerModulesDocSource = moduleContractAuditReadFile($projectRoot, 'docs/developer-modules.md', $issues);
+$adminGuideSource = moduleContractAuditReadFile($projectRoot, 'docs/admin-guide.md', $issues);
 $readmeSource = moduleContractAuditReadFile($projectRoot, 'README.md', $issues);
 $authSource = moduleContractAuditReadFile($projectRoot, 'auth.php', $issues);
 $contentReferencePickerSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_picker.php', $issues);
@@ -1286,13 +1379,7 @@ moduleContractAuditRequire(
     $issues
 );
 
-moduleContractAuditRequire(
-    str_contains($developerModulesDocSource, 'coreModuleDefinitions()')
-    && str_contains($developerModulesDocSource, 'build/module_contract_audit.php')
-    && str_contains($readmeSource, 'composer ci:module-ready'),
-    'module development documentation must describe the manifest and module contract audit.',
-    $issues
-);
+moduleContractAuditValidateDeveloperDocumentation($developerModulesDocSource, $readmeSource, $adminGuideSource, $issues);
 
 if ($issues !== []) {
     fwrite(STDERR, "Module contract audit failed:\n");
