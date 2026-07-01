@@ -13,9 +13,20 @@ $siteName = getSetting('site_name', 'Kora CMS');
 $perPage = max(1, (int)getSetting('news_per_page', '10'));
 $q = trim((string)($_GET['q'] ?? ''));
 $like = '%' . $q . '%';
+$authorSlug = authorSlug(trim((string)($_GET['autor'] ?? '')));
+$activeAuthor = $authorSlug !== '' ? fetchPublicAuthorBySlug($pdo, $authorSlug) : null;
 
 $whereParts = [newsPublicVisibilitySql('n')];
 $countParams = [];
+
+if ($authorSlug !== '') {
+    if ($activeAuthor) {
+        $whereParts[] = 'n.author_id = ?';
+        $countParams[] = (int)$activeAuthor['id'];
+    } else {
+        $whereParts[] = '1 = 0';
+    }
+}
 
 if ($q !== '') {
     $whereParts[] = '(n.title LIKE ? OR n.content LIKE ?)';
@@ -49,12 +60,25 @@ $items = array_map(
 );
 
 $pageTitleBase = $q !== '' ? 'Hledání v novinkách' : 'Novinky';
+if ($activeAuthor) {
+    $pageTitleBase = $q !== '' ? 'Hledání v novinkách autora' : 'Novinky autora';
+}
 $fullTitle = $pageTitleBase . ' – ' . $siteName;
-$metaDescription = $q !== ''
-    ? 'Výsledky hledání v novinkách pro dotaz „' . $q . '“.'
+$metaDescription = $activeAuthor
+    ? 'Veřejné novinky autora ' . $activeAuthor['author_display_name'] . '.'
     : 'Přehled nejnovějších aktualit a krátkých zpráv.';
-$metaUrl = siteUrl(appendUrlQuery('/news/', $q !== '' ? ['q' => $q] : []));
-$pagerBaseUrl = '?' . ($q !== '' ? http_build_query(['q' => $q]) . '&' : '');
+if ($q !== '') {
+    $metaDescription = 'Výsledky hledání v novinkách pro dotaz „' . $q . '“.';
+}
+$queryBase = [];
+if ($authorSlug !== '') {
+    $queryBase['autor'] = $authorSlug;
+}
+if ($q !== '') {
+    $queryBase['q'] = $q;
+}
+$metaUrl = siteUrl(appendUrlQuery('/news/', $queryBase));
+$pagerBaseUrl = '?' . ($queryBase !== [] ? http_build_query($queryBase) . '&' : '');
 
 renderPublicPage([
     'title' => $fullTitle,
@@ -69,6 +93,9 @@ renderPublicPage([
         'pages' => $pages,
         'page' => $page,
         'q' => $q,
+        'activeAuthor' => $activeAuthor,
+        'authorSlug' => $authorSlug,
+        'pageHeading' => $activeAuthor ? 'Novinky autora ' . $activeAuthor['author_display_name'] : 'Novinky',
         'pager_base_url' => $pagerBaseUrl,
     ],
     'current_nav' => 'news',

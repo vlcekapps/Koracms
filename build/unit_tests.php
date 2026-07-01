@@ -581,6 +581,34 @@ assert_equals(
     articleReadingMeta('krátký článek', 3),
     'articleReadingMeta uses descriptive public copy'
 );
+assert_equals('1 novinka', newsCountLabel(1), 'news count singular');
+assert_equals('3 novinky', newsCountLabel(3), 'news count plural 2-4');
+assert_equals('12 novinek', newsCountLabel(12), 'news count plural teen');
+assert_equals('25 novinek', newsCountLabel(25), 'news count plural many');
+assert_equals('vse', normalizeAuthorContentType(''), 'empty author content filter falls back to all');
+assert_equals('clanky', normalizeAuthorContentType('Články'), 'author content filter accepts Czech label');
+assert_equals('novinky', normalizeAuthorContentType('novinky'), 'author content filter accepts news');
+assert_equals('vse', normalizeAuthorContentType('externi'), 'invalid author content filter falls back to all');
+assert_equals(
+    '3 články, 2 novinky',
+    authorContentSummaryLabel([
+        'article_count' => 3,
+        'news_count' => 2,
+        'articles_enabled' => true,
+        'news_enabled' => true,
+    ]),
+    'author content summary combines enabled content types'
+);
+assert_equals(
+    '4 články',
+    authorContentSummaryLabel([
+        'article_count' => 4,
+        'news_count' => 2,
+        'articles_enabled' => true,
+        'news_enabled' => false,
+    ]),
+    'author content summary hides disabled modules'
+);
 
 // ─── 8. paginateArray() ────────────────────────────────────────────────────
 

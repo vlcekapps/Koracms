@@ -5287,26 +5287,61 @@ function fetchPublicAuthorById(PDO $pdo, int $userId): ?array
  */
 function fetchPublicAuthors(PDO $pdo): array
 {
+    $articleCountSelect = isModuleEnabled('blog')
+        ? "(SELECT COUNT(*)
+             FROM cms_articles a
+             WHERE a.author_id = u.id
+               AND a.status = 'published'
+               AND a.deleted_at IS NULL
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()))"
+        : '0';
+    $latestArticleSelect = isModuleEnabled('blog')
+        ? "(SELECT MAX(COALESCE(a.publish_at, a.created_at))
+             FROM cms_articles a
+             WHERE a.author_id = u.id
+               AND a.status = 'published'
+               AND a.deleted_at IS NULL
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()))"
+        : 'NULL';
+    $newsCountSelect = isModuleEnabled('news')
+        ? "(SELECT COUNT(*)
+             FROM cms_news n
+             WHERE n.author_id = u.id
+               AND " . newsPublicVisibilitySql('n') . ")"
+        : '0';
+    $latestNewsSelect = isModuleEnabled('news')
+        ? "(SELECT MAX(n.created_at)
+             FROM cms_news n
+             WHERE n.author_id = u.id
+               AND " . newsPublicVisibilitySql('n') . ")"
+        : 'NULL';
+
     $authors = $pdo->query(
         "SELECT u.id, u.email, u.first_name, u.last_name, u.nickname, u.role, u.is_superadmin,
                 u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website,
-                COUNT(a.id) AS article_count,
-                MAX(COALESCE(a.publish_at, a.created_at)) AS latest_article_at
+                {$articleCountSelect} AS article_count,
+                {$newsCountSelect} AS news_count,
+                ({$articleCountSelect} + {$newsCountSelect}) AS content_count,
+                {$latestArticleSelect} AS latest_article_at,
+                {$latestNewsSelect} AS latest_news_at,
+                GREATEST(
+                    COALESCE({$latestArticleSelect}, '1000-01-01 00:00:00'),
+                    COALESCE({$latestNewsSelect}, '1000-01-01 00:00:00')
+                ) AS latest_content_at
          FROM cms_users u
-         LEFT JOIN cms_articles a
-           ON a.author_id = u.id
-          AND a.status = 'published'
-          AND (a.publish_at IS NULL OR a.publish_at <= NOW())
          WHERE u.author_public_enabled = 1
            AND u.role != 'public'
-         GROUP BY u.id, u.email, u.first_name, u.last_name, u.nickname, u.role, u.is_superadmin,
-                  u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website
-         ORDER BY COUNT(a.id) DESC, latest_article_at DESC, u.is_superadmin DESC, u.id ASC"
+         ORDER BY content_count DESC, latest_content_at DESC, u.is_superadmin DESC, u.id ASC"
     )->fetchAll();
 
     return array_map(
         static function (array $author): array {
             $author['article_count'] = (int)($author['article_count'] ?? 0);
+            $author['news_count'] = (int)($author['news_count'] ?? 0);
+            $author['content_count'] = (int)($author['content_count'] ?? 0);
+            $author['articles_enabled'] = isModuleEnabled('blog');
+            $author['news_enabled'] = isModuleEnabled('news');
+            $author['content_summary'] = authorContentSummaryLabel($author);
             return hydrateAuthorPresentation($author);
         },
         $authors
@@ -5353,6 +5388,216 @@ function articleCountLabel(int $count): string
     }
 
     return $count . ' článků';
+}
+
+function newsCountLabel(int $count): string
+{
+    $count = max(0, $count);
+    if ($count === 1) {
+        return '1 novinka';
+    }
+
+    $mod100 = $count % 100;
+    $mod10 = $count % 10;
+    if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+        return $count . ' novinky';
+    }
+
+    return $count . ' novinek';
+}
+
+function normalizeAuthorContentType(string $value): string
+{
+    $type = slugify(trim($value));
+    if ($type === '') {
+        return 'vse';
+    }
+
+    return in_array($type, ['vse', 'clanky', 'novinky'], true) ? $type : 'vse';
+}
+
+/**
+ * @param array<string, mixed> $counts
+ */
+function authorContentSummaryLabel(array $counts): string
+{
+    $parts = [];
+    if ((bool)($counts['articles_enabled'] ?? true)) {
+        $parts[] = articleCountLabel((int)($counts['article_count'] ?? $counts['articles'] ?? 0));
+    }
+    if ((bool)($counts['news_enabled'] ?? true)) {
+        $parts[] = newsCountLabel((int)($counts['news_count'] ?? $counts['news'] ?? 0));
+    }
+
+    return $parts !== [] ? implode(', ', $parts) : 'Žádný veřejný obsah';
+}
+
+/**
+ * @return array{article_count:int, news_count:int, content_count:int, articles_enabled:bool, news_enabled:bool}
+ */
+function fetchPublicAuthorContentCounts(PDO $pdo, int $authorId): array
+{
+    $counts = [
+        'article_count' => 0,
+        'news_count' => 0,
+        'content_count' => 0,
+        'articles_enabled' => isModuleEnabled('blog'),
+        'news_enabled' => isModuleEnabled('news'),
+    ];
+
+    if ($authorId < 1) {
+        return $counts;
+    }
+
+    if ($counts['articles_enabled']) {
+        $articleCountStmt = $pdo->prepare(
+            "SELECT COUNT(*)
+             FROM cms_articles a
+             WHERE a.author_id = ?
+               AND a.status = 'published'
+               AND a.deleted_at IS NULL
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
+        );
+        $articleCountStmt->execute([$authorId]);
+        $counts['article_count'] = (int)$articleCountStmt->fetchColumn();
+    }
+
+    if ($counts['news_enabled']) {
+        $newsCountStmt = $pdo->prepare(
+            "SELECT COUNT(*)
+             FROM cms_news n
+             WHERE n.author_id = ?
+               AND " . newsPublicVisibilitySql('n')
+        );
+        $newsCountStmt->execute([$authorId]);
+        $counts['news_count'] = (int)$newsCountStmt->fetchColumn();
+    }
+
+    $counts['content_count'] = $counts['article_count'] + $counts['news_count'];
+    return $counts;
+}
+
+/**
+ * @param array<string, mixed> $counts
+ */
+function authorContentCountForType(array $counts, string $contentType): int
+{
+    $contentType = normalizeAuthorContentType($contentType);
+    if ($contentType === 'clanky') {
+        return (bool)($counts['articles_enabled'] ?? true) ? (int)($counts['article_count'] ?? 0) : 0;
+    }
+    if ($contentType === 'novinky') {
+        return (bool)($counts['news_enabled'] ?? true) ? (int)($counts['news_count'] ?? 0) : 0;
+    }
+
+    return (int)($counts['content_count'] ?? 0);
+}
+
+/**
+ * @param array<string, mixed> $counts
+ * @return list<array{type:string, label:string, count:int}>
+ */
+function authorContentFilterOptions(array $counts): array
+{
+    $options = [
+        [
+            'type' => 'vse',
+            'label' => 'Vše',
+            'count' => (int)($counts['content_count'] ?? 0),
+        ],
+    ];
+
+    if ((bool)($counts['articles_enabled'] ?? true)) {
+        $options[] = [
+            'type' => 'clanky',
+            'label' => 'Články',
+            'count' => (int)($counts['article_count'] ?? 0),
+        ];
+    }
+
+    if ((bool)($counts['news_enabled'] ?? true)) {
+        $options[] = [
+            'type' => 'novinky',
+            'label' => 'Novinky',
+            'count' => (int)($counts['news_count'] ?? 0),
+        ];
+    }
+
+    return $options;
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function fetchPublicAuthorContent(PDO $pdo, int $authorId, string $contentType, int $limit, int $offset): array
+{
+    $contentType = normalizeAuthorContentType($contentType);
+    $limit = max(1, $limit);
+    $offset = max(0, $offset);
+    $queries = [];
+    $params = [];
+
+    if (($contentType === 'vse' || $contentType === 'clanky') && isModuleEnabled('blog')) {
+        $queries[] = "SELECT 'article' AS content_type, a.id, a.title, a.slug, a.perex, a.content,
+                             a.image_file, a.created_at, COALESCE(a.publish_at, a.created_at) AS sort_date,
+                             a.view_count, a.category_id, c.name AS category, a.blog_id, b.slug AS blog_slug,
+                             '' AS meta_description
+                      FROM cms_articles a
+                      LEFT JOIN cms_categories c ON c.id = a.category_id
+                      LEFT JOIN cms_blogs b ON b.id = a.blog_id
+                      WHERE a.author_id = ?
+                        AND a.status = 'published'
+                        AND a.deleted_at IS NULL
+                        AND (a.publish_at IS NULL OR a.publish_at <= NOW())";
+        $params[] = $authorId;
+    }
+
+    if (($contentType === 'vse' || $contentType === 'novinky') && isModuleEnabled('news')) {
+        $queries[] = "SELECT 'news' AS content_type, n.id, n.title, n.slug, '' AS perex, n.content,
+                             '' AS image_file, n.created_at, n.created_at AS sort_date,
+                             0 AS view_count, NULL AS category_id, '' AS category, NULL AS blog_id, '' AS blog_slug,
+                             n.meta_description
+                      FROM cms_news n
+                      WHERE n.author_id = ?
+                        AND " . newsPublicVisibilitySql('n');
+        $params[] = $authorId;
+    }
+
+    if ($queries === [] || $authorId < 1) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare(
+        implode(' UNION ALL ', $queries)
+        . ' ORDER BY sort_date DESC, id DESC LIMIT ? OFFSET ?'
+    );
+    $stmt->execute(array_merge($params, [$limit, $offset]));
+
+    return array_map(
+        static function (array $item): array {
+            $item['content_type'] = (string)($item['content_type'] ?? '');
+            $item['type_label'] = $item['content_type'] === 'news' ? 'Novinka' : 'Článek';
+            $item['display_date'] = (string)($item['sort_date'] ?? $item['created_at'] ?? '');
+
+            if ($item['content_type'] === 'news') {
+                $item['public_path'] = newsPublicPath($item);
+                $item['excerpt'] = newsExcerpt((string)($item['content'] ?? ''));
+                $item['reading_meta'] = '';
+            } else {
+                $item['public_path'] = articlePublicPath($item);
+                $item['excerpt'] = trim((string)($item['perex'] ?? '')) !== ''
+                    ? (string)$item['perex']
+                    : articleExcerpt((string)($item['content'] ?? ''));
+                $item['reading_meta'] = articleReadingMeta(
+                    ((string)($item['perex'] ?? '')) . ((string)($item['content'] ?? '')),
+                    (int)($item['view_count'] ?? 0)
+                );
+            }
+
+            return $item;
+        },
+        $stmt->fetchAll()
+    );
 }
 
 function deleteAuthorAvatarFile(string $filename): void

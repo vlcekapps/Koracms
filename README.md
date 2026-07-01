@@ -240,8 +240,8 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, author archive, globální i per-blog RSS feed |
-| **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, plánovaným skrytím a SEO fallbacky |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
+| **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s datem, místem, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
 | **Podcasty** | Více pořadů, epizody, artwork, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
@@ -265,6 +265,8 @@ Modul **Ke stažení** nově pokrývá i praktičtější katalogový scénář:
 Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle kategorie, stránkování, přepínání `karty / rozbalené odpovědi`, per-FAQ SEO metadata, redirecty při změně slugu a `FAQPage` strukturovaná data pro vyhledávače.
 
 Modul **Novinky** nově drží stejný publikační model jako ostatní obsahové moduly: respektuje `unpublish_at`, podporuje veřejné fulltextové hledání, admin stránkování, redirecty po změně slugu, širší revize a volitelná SEO pole `meta title` a `meta description`.
+
+Veřejné profily autorů fungují jako obsahové huby. Na `/author/slug-autora` se zobrazuje medailonek autora a publikovaný obsah napříč zapnutými moduly Blogy a Novinky; návštěvník může přepínat `Vše`, `Články` a `Novinky`. Přehled `/authors/` ukazuje souhrn obsahu autora podle zapnutých modulů a novinky podporují filtr `news/index.php?autor=slug`.
 
 Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / archivní` lístky podle `Platí od / do`, podporuje veřejné hledání, scope filtry, stránkování archivu, redirecty při změně slugu, historii revizí a structured data pro detail lístku.
 

@@ -1,8 +1,19 @@
 <?php
-$articleLink = static fn(array $article): string => articlePublicPath($article);
 $profileTitle = currentSiteProfileKey() === 'personal' ? 'O mně' : 'O autorovi';
 $backBlogPath = trim((string)($backBlogPath ?? ''));
 $backBlogLabel = trim((string)($backBlogLabel ?? ''));
+$contentItems = is_array($contentItems ?? null) ? $contentItems : [];
+$contentCounts = is_array($contentCounts ?? null) ? $contentCounts : [];
+$contentType = normalizeAuthorContentType((string)($contentType ?? 'vse'));
+$contentFilterOptions = is_array($contentFilterOptions ?? null) ? $contentFilterOptions : authorContentFilterOptions($contentCounts);
+$page = (int)($page ?? 1);
+$pages = (int)($pages ?? 1);
+$pagerBaseUrl = (string)($pagerBaseUrl ?? (authorPublicPath($author) . '?'));
+$contentEmptyMessage = match ($contentType) {
+    'clanky' => 'Autor zatím nemá žádné veřejně publikované články.',
+    'novinky' => 'Autor zatím nemá žádné veřejně publikované novinky.',
+    default => 'Autor zatím nemá žádný veřejně publikovaný obsah.',
+};
 ?>
 <div class="page-stack">
   <section class="surface author-panel" aria-labelledby="author-title">
@@ -42,52 +53,79 @@ $backBlogLabel = trim((string)($backBlogLabel ?? ''));
     </div>
   </section>
 
-  <?php if ($blogEnabled): ?>
-    <section class="surface" aria-labelledby="author-articles-title">
-      <div class="section-heading">
-        <div>
-          <h2 id="author-articles-title" class="section-title">Články autora</h2>
-        </div>
+  <section class="surface" aria-labelledby="author-content-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="author-content-title" class="section-title">Obsah autora</h2>
+        <p class="section-subtitle"><?= h(authorContentSummaryLabel($contentCounts)) ?></p>
+      </div>
+    </div>
+
+    <nav class="form-stack" aria-labelledby="author-content-filter-heading">
+      <h3 id="author-content-filter-heading" class="sr-only">Filtr obsahu autora</h3>
+      <ul class="chip-list">
+        <?php foreach ($contentFilterOptions as $filterOption): ?>
+          <?php
+          $filterType = normalizeAuthorContentType((string)($filterOption['type'] ?? 'vse'));
+          $filterUrl = authorPublicPath($author);
+          if ($filterType !== 'vse') {
+              $filterUrl .= '?typ=' . rawurlencode($filterType);
+          }
+          ?>
+          <li>
+            <a class="chip-link" href="<?= h($filterUrl) ?>"<?= $filterType === $contentType ? ' aria-current="page"' : '' ?>>
+              <?= h((string)($filterOption['label'] ?? 'Vše')) ?>
+              <span class="pill"><?= (int)($filterOption['count'] ?? 0) ?></span>
+            </a>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    </nav>
+
+    <?php if ($contentItems === []): ?>
+      <p class="empty-state"><?= h($contentEmptyMessage) ?></p>
+    <?php else: ?>
+      <div class="card-grid">
+        <?php foreach ($contentItems as $contentItem): ?>
+          <?php
+          $contentTypeIdPart = preg_replace('/[^a-z0-9_-]+/i', '', (string)($contentItem['content_type'] ?? 'item')) ?: 'item';
+          $contentTitleId = 'author-content-title-' . $contentTypeIdPart . '-' . (int)$contentItem['id'];
+          ?>
+          <article class="card" aria-labelledby="<?= h($contentTitleId) ?>">
+            <?php if (($contentItem['content_type'] ?? '') === 'article' && !empty($contentItem['image_file'])): ?>
+              <a class="card__media" href="<?= h((string)$contentItem['public_path']) ?>">
+                <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode((string)$contentItem['image_file']) ?>"
+                     alt="<?= h((string)$contentItem['title']) ?>" loading="lazy">
+              </a>
+            <?php endif; ?>
+            <div class="card__body">
+              <p class="meta-row meta-row--tight">
+                <span class="pill"><?= h((string)($contentItem['type_label'] ?? 'Obsah')) ?></span>
+                <time datetime="<?= h(str_replace(' ', 'T', (string)$contentItem['display_date'])) ?>">
+                  <?= formatCzechDate((string)$contentItem['display_date']) ?>
+                </time>
+                <?php if (!empty($contentItem['reading_meta'])): ?>
+                  <span><?= h((string)$contentItem['reading_meta']) ?></span>
+                <?php endif; ?>
+              </p>
+              <h3 id="<?= h($contentTitleId) ?>" class="card__title">
+                <a href="<?= h((string)$contentItem['public_path']) ?>"><?= h((string)$contentItem['title']) ?></a>
+              </h3>
+              <?php if (!empty($contentItem['excerpt'])): ?>
+                <p><?= h((string)$contentItem['excerpt']) ?></p>
+              <?php endif; ?>
+              <p>
+                <a class="section-link" href="<?= h((string)$contentItem['public_path']) ?>">
+                  <?= (($contentItem['content_type'] ?? '') === 'news') ? 'Zobrazit novinku' : 'Číst článek' ?>
+                  <span aria-hidden="true">→</span>
+                </a>
+              </p>
+            </div>
+          </article>
+        <?php endforeach; ?>
       </div>
 
-      <?php if ($articles === []): ?>
-        <p class="empty-state">Autor zatím nemá žádné veřejně publikované články.</p>
-      <?php else: ?>
-        <div class="card-grid">
-          <?php foreach ($articles as $article): ?>
-            <?php $articleTitleId = 'author-article-title-' . (int)$article['id']; ?>
-            <article class="card" aria-labelledby="<?= h($articleTitleId) ?>">
-              <?php if (!empty($article['image_file'])): ?>
-                <a class="card__media" href="<?= h($articleLink($article)) ?>">
-                  <img src="<?= BASE_URL ?>/uploads/articles/thumbs/<?= rawurlencode($article['image_file']) ?>"
-                       alt="<?= h($article['title']) ?>" loading="lazy">
-                </a>
-              <?php endif; ?>
-              <div class="card__body">
-                <?php if (!empty($article['category'])): ?>
-                  <p class="meta-row meta-row--tight">
-                    <?php $artBlog = getBlogById((int)($article['blog_id'] ?? 1)); ?>
-                    <a class="pill" href="<?= h(blogIndexPath($artBlog ?? getDefaultBlog())) ?>?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
-                  </p>
-                <?php endif; ?>
-                <h3 id="<?= h($articleTitleId) ?>" class="card__title">
-                  <a href="<?= h($articleLink($article)) ?>"><?= h($article['title']) ?></a>
-                </h3>
-                <p class="meta-row meta-row--tight">
-                  <time datetime="<?= h(str_replace(' ', 'T', $article['publish_at'] ?: $article['created_at'])) ?>">
-                    <?= formatCzechDate($article['publish_at'] ?: $article['created_at']) ?>
-                  </time>
-                  <span><?= h(articleReadingMeta(($article['perex'] ?? '') . ($article['content'] ?? ''), (int)($article['view_count'] ?? 0))) ?></span>
-                </p>
-                <?php if (!empty($article['perex'])): ?>
-                  <p><?= h($article['perex']) ?></p>
-                <?php endif; ?>
-                <p><a class="section-link" href="<?= h($articleLink($article)) ?>">Číst článek <span aria-hidden="true">→</span></a></p>
-              </div>
-            </article>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
-    </section>
-  <?php endif; ?>
+      <?= renderPager($page, $pages, $pagerBaseUrl, 'Stránkování obsahu autora') ?>
+    <?php endif; ?>
+  </section>
 </div>

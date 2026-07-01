@@ -348,6 +348,12 @@ Každý blog může mít na svém indexu:
 
 Pokud je nastavený doporučený článek blogu a návštěvník nemá aktivní filtr, default šablona ho zobrazí nad výpisem článků jako samostatný blok. Nejprve je vidět nadpis `Doporučený článek`, pod ním název článku jako hlavní odkaz a až potom metadata článku: datum, přibližná doba čtení, počet přečtení a autor.
 
+### Veřejní autoři
+
+Veřejný profil autora na `/author/slug-autora` zobrazuje medailonek autora a sekci `Obsah autora`. Ta sdružuje veřejně publikované články a novinky autora podle toho, které moduly jsou zapnuté. Návštěvník může použít filtry `Vše`, `Články` a `Novinky`; neplatný parametr `typ` se bezpečně chová jako `Vše`.
+
+Přehled `/authors/` u každého autora ukazuje souhrn dostupného obsahu, například `3 články, 2 novinky`. Pokud je modul Novinky vypnutý, novinky se nezapočítávají ani nezobrazují. Stránka novinek podporuje filtr `news/index.php?autor=slug-autora`, takže z autorského profilu lze přejít rovnou na novinky konkrétního autora.
+
 ### Per-blog RSS
 
 Každý blog má vlastní feed:

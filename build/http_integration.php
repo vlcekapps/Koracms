@@ -26,6 +26,7 @@ $createdBlogs = [];
 $createdCategories = [];
 $createdTags = [];
 $createdArticles = [];
+$createdNewsIds = [];
 $createdFormIds = [];
 $createdFormSubmissionIds = [];
 $createdPageIds = [];
@@ -2977,6 +2978,145 @@ try {
 
     httpIntegrationPrintResult('public_feed_http', $publicFeedIssues, $failures);
 
+    $authorHubIssues = [];
+    saveSetting('module_blog', '1');
+    saveSetting('module_news', '1');
+    clearSettingsCache();
+
+    $authorHubBlog = getDefaultBlog();
+    if (!$authorHubBlog) {
+        $authorHubSlug = 'http-author-hub-blog-' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)"
+        )->execute([
+            'HTTP Author Hub Blog',
+            $authorHubSlug,
+            $adminUserId,
+        ]);
+        $authorHubBlogId = (int)$pdo->lastInsertId();
+        $createdBlogs[] = $authorHubBlogId;
+        $authorHubBlog = getBlogById($authorHubBlogId);
+    }
+
+    $authorHubSlug = uniqueAuthorSlug($pdo, 'http-author-hub-' . bin2hex(random_bytes(4)));
+    $authorHubEmail = $authorHubSlug . '@example.test';
+    $pdo->prepare(
+        "INSERT INTO cms_users (
+            email, password, first_name, last_name, nickname, role, is_superadmin, is_confirmed,
+            author_public_enabled, author_slug, author_bio, created_at
+         ) VALUES (?, ?, 'HTTP', 'Author Hub', 'HTTP Hub Autor', 'author', 0, 1, 1, ?, ?, NOW())"
+    )->execute([
+        $authorHubEmail,
+        password_hash('AuthorHub123!', PASSWORD_DEFAULT),
+        $authorHubSlug,
+        'Autor vytvořený pro HTTP integrační test obsahového hubu.',
+    ]);
+    $authorHubUserId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $authorHubUserId;
+
+    $authorHubArticleTitle = 'HTTP Author Hub Article ' . bin2hex(random_bytes(3));
+    $authorHubArticleSlug = 'http-author-hub-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status)
+         VALUES (?, ?, ?, ?, ?, 1, ?, 'published')"
+    )->execute([
+        $authorHubArticleTitle,
+        $authorHubArticleSlug,
+        (int)($authorHubBlog['id'] ?? 1),
+        'Perex autorského článku pro hub.',
+        '<p>Obsah autorského článku pro kontrolu hubu.</p>',
+        $authorHubUserId,
+    ]);
+    $createdArticles[] = (int)$pdo->lastInsertId();
+
+    $authorHubNewsTitle = 'HTTP Author Hub News ' . bin2hex(random_bytes(3));
+    $authorHubNewsSlug = 'http-author-hub-news-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_news (title, slug, content, author_id, status, created_at)
+         VALUES (?, ?, ?, ?, 'published', NOW())"
+    )->execute([
+        $authorHubNewsTitle,
+        $authorHubNewsSlug,
+        '<p>Obsah autorské novinky pro kontrolu hubu.</p>',
+        $authorHubUserId,
+    ]);
+    $createdNewsIds[] = (int)$pdo->lastInsertId();
+
+    $otherNewsTitle = 'HTTP Other Author News ' . bin2hex(random_bytes(3));
+    $pdo->prepare(
+        "INSERT INTO cms_news (title, slug, content, author_id, status, created_at)
+         VALUES (?, ?, '<p>Novinka jiného autora.</p>', ?, 'published', NOW())"
+    )->execute([
+        $otherNewsTitle,
+        'http-other-author-news-' . bin2hex(random_bytes(4)),
+        $adminUserId,
+    ]);
+    $createdNewsIds[] = (int)$pdo->lastInsertId();
+
+    $authorHubPath = '/author/' . rawurlencode($authorHubSlug);
+    $authorHubResponse = fetchUrl($baseUrl . $authorHubPath, '', 0);
+    if (httpIntegrationStatusCode($authorHubResponse) !== 200) {
+        $authorHubIssues[] = 'profil autora s obsahovým hubem nevrátil 200';
+    } else {
+        foreach (['Obsah autora', $authorHubArticleTitle, $authorHubNewsTitle, '1 článek, 1 novinka', 'typ=clanky', 'typ=novinky'] as $expectedAuthorHubFragment) {
+            if (!str_contains($authorHubResponse['body'], $expectedAuthorHubFragment)) {
+                $authorHubIssues[] = 'profil autora neobsahuje očekávaný fragment: ' . $expectedAuthorHubFragment;
+            }
+        }
+    }
+
+    $authorHubArticlesResponse = fetchUrl($baseUrl . $authorHubPath . '?typ=clanky', '', 0);
+    if (!str_contains($authorHubArticlesResponse['body'], $authorHubArticleTitle) || str_contains($authorHubArticlesResponse['body'], $authorHubNewsTitle)) {
+        $authorHubIssues[] = 'filtr typ=clanky nezobrazil jen autorovy články';
+    }
+
+    $authorHubNewsResponse = fetchUrl($baseUrl . $authorHubPath . '?typ=novinky', '', 0);
+    if (!str_contains($authorHubNewsResponse['body'], $authorHubNewsTitle) || str_contains($authorHubNewsResponse['body'], $authorHubArticleTitle)) {
+        $authorHubIssues[] = 'filtr typ=novinky nezobrazil jen autorovy novinky';
+    }
+
+    $authorHubInvalidTypeResponse = fetchUrl($baseUrl . $authorHubPath . '?typ=externi', '', 0);
+    if (!str_contains($authorHubInvalidTypeResponse['body'], $authorHubArticleTitle) || !str_contains($authorHubInvalidTypeResponse['body'], $authorHubNewsTitle)) {
+        $authorHubIssues[] = 'neplatný typ autorského obsahu nespadl na výpis všeho obsahu';
+    }
+
+    $authorNewsResponse = fetchUrl($baseUrl . BASE_URL . '/news/index.php?autor=' . rawurlencode($authorHubSlug), '', 0);
+    if (!str_contains($authorNewsResponse['body'], $authorHubNewsTitle)) {
+        $authorHubIssues[] = 'news/index.php?autor=slug nezobrazil novinku daného autora';
+    }
+    if (str_contains($authorNewsResponse['body'], $otherNewsTitle)) {
+        $authorHubIssues[] = 'news/index.php?autor=slug zobrazil novinku jiného autora';
+    }
+
+    saveSetting('module_news', '0');
+    clearSettingsCache();
+    $authorHubWithoutNewsResponse = fetchUrl($baseUrl . $authorHubPath, '', 0);
+    if (str_contains($authorHubWithoutNewsResponse['body'], $authorHubNewsTitle) || str_contains($authorHubWithoutNewsResponse['body'], 'Novinky</a>')) {
+        $authorHubIssues[] = 'vypnutý modul news zůstal viditelný na profilu autora';
+    }
+    saveSetting('module_news', '1');
+    clearSettingsCache();
+
+    $privateAuthorSlug = uniqueAuthorSlug($pdo, 'http-private-author-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_users (
+            email, password, first_name, last_name, role, is_superadmin, is_confirmed,
+            author_public_enabled, author_slug, created_at
+         ) VALUES (?, ?, 'HTTP', 'Private', 'public', 0, 1, 1, ?, NOW())"
+    )->execute([
+        $privateAuthorSlug . '@example.test',
+        password_hash('AuthorHub123!', PASSWORD_DEFAULT),
+        $privateAuthorSlug,
+    ]);
+    $privateAuthorUserId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $privateAuthorUserId;
+    $privateAuthorResponse = fetchUrl($baseUrl . '/author/' . rawurlencode($privateAuthorSlug), '', 0);
+    if (httpIntegrationStatusCode($privateAuthorResponse) !== 404) {
+        $authorHubIssues[] = 'uživatel s rolí public a autorským slugem zůstal veřejně dostupný';
+    }
+
+    httpIntegrationPrintResult('author_content_hub_http', $authorHubIssues, $failures);
+
     $reservationIssues = [];
     saveSetting('module_reservations', '1');
     clearSettingsCache();
@@ -4847,6 +4987,10 @@ try {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$articleIdToDelete]);
+    }
+    foreach ($createdNewsIds as $newsIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'news' AND entity_id = ?")->execute([$newsIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_news WHERE id = ?")->execute([$newsIdToDelete]);
     }
     foreach ($createdMediaIds as $mediaIdToDelete) {
         $mediaToDelete = httpIntegrationFetchMediaById($pdo, $mediaIdToDelete);

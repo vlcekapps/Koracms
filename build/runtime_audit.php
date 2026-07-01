@@ -33,6 +33,8 @@ $presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation
 $themeSource = (string) file_get_contents(__DIR__ . '/../lib/theme.php');
 $publicHeaderSource = (string) file_get_contents(__DIR__ . '/../themes/default/partials/header.php');
 $defaultNotFoundViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/not-found.php');
+$authorViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/account/author.php');
+$authorsViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/account/authors.php');
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
@@ -56,9 +58,12 @@ $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
 $searchSource = (string) file_get_contents(__DIR__ . '/../search.php');
 $pageSource = (string) file_get_contents(__DIR__ . '/../page.php');
+$authorSource = (string) file_get_contents(__DIR__ . '/../author.php');
+$authorsIndexSource = (string) file_get_contents(__DIR__ . '/../authors/index.php');
 $blogIndexSource = (string) file_get_contents(__DIR__ . '/../blog/index.php');
 $blogArticleSource = (string) file_get_contents(__DIR__ . '/../blog/article.php');
 $blogPageSource = (string) file_get_contents(__DIR__ . '/../blog/page.php');
+$newsIndexSource = (string) file_get_contents(__DIR__ . '/../news/index.php');
 $boardIndexSource = (string) file_get_contents(__DIR__ . '/../board/index.php');
 $contactIndexSource = (string) file_get_contents(__DIR__ . '/../contact/index.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
@@ -6180,6 +6185,53 @@ if ($runtimeAuditAuthorUrl === '') {
         foreach ($authorGuardIssues as $issue) {
             echo '- ' . $issue . "\n";
         }
+    }
+}
+
+echo "=== author_content_hub_guardrails ===\n";
+$authorHubGuardIssues = [];
+if (!str_contains($presentationSource, 'function normalizeAuthorContentType(string $value): string')
+    || !str_contains($presentationSource, "return in_array(\$type, ['vse', 'clanky', 'novinky'], true) ? \$type : 'vse';")) {
+    $authorHubGuardIssues[] = 'presentation helpers do not normalize author content type safely';
+}
+if (!str_contains($presentationSource, 'function fetchPublicAuthorContentCounts(PDO $pdo, int $authorId): array')
+    || !str_contains($presentationSource, 'function fetchPublicAuthorContent(PDO $pdo, int $authorId, string $contentType, int $limit, int $offset): array')) {
+    $authorHubGuardIssues[] = 'public author content helper functions are missing';
+}
+if (!str_contains($presentationSource, "AND a.status = 'published'")
+    || !str_contains($presentationSource, 'AND a.deleted_at IS NULL')
+    || !str_contains($presentationSource, 'AND (a.publish_at IS NULL OR a.publish_at <= NOW())')
+    || !str_contains($presentationSource, 'newsPublicVisibilitySql(\'n\')')
+    || !str_contains($presentationSource, 'a.blog_id, b.slug AS blog_slug')) {
+    $authorHubGuardIssues[] = 'public author content helper is missing article/news visibility or blog_id data';
+}
+if (!str_contains($authorSource, 'normalizeAuthorContentType((string)($_GET[\'typ\'] ?? \'\'))')
+    || !str_contains($authorSource, 'fetchPublicAuthorContentCounts($pdo, (int)$author[\'id\'])')
+    || !str_contains($authorSource, 'fetchPublicAuthorContent($pdo, (int)$author[\'id\'], $contentType, $perPage, $offset)')) {
+    $authorHubGuardIssues[] = 'author.php is not using the shared content hub helpers';
+}
+if (!str_contains($authorViewSource, 'aria-labelledby="author-content-title"')
+    || !str_contains($authorViewSource, 'Obsah autora')
+    || !str_contains($authorViewSource, 'aria-current="page"')
+    || !str_contains($authorViewSource, 'Stránkování obsahu autora')) {
+    $authorHubGuardIssues[] = 'public author view is missing accessible content hub markup';
+}
+if (!str_contains($authorsViewSource, 'content_summary')
+    || !str_contains($authorsViewSource, '/news/index.php?autor=')) {
+    $authorHubGuardIssues[] = 'authors index does not expose content summaries and news author links';
+}
+if (!str_contains($newsIndexSource, '$authorSlug = authorSlug')
+    || !str_contains($newsIndexSource, '$activeAuthor = $authorSlug !== \'\' ? fetchPublicAuthorBySlug')
+    || !str_contains($newsIndexSource, 'n.author_id = ?')
+    || !str_contains($newsIndexSource, '$queryBase[\'autor\'] = $authorSlug')) {
+    $authorHubGuardIssues[] = 'news index does not support public author filtering';
+}
+if ($authorHubGuardIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($authorHubGuardIssues as $authorHubGuardIssue) {
+        echo '- ' . $authorHubGuardIssue . "\n";
     }
 }
 

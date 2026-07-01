@@ -1,5 +1,8 @@
 <?php
 $newsLink = static fn(array $item): string => newsPublicPath($item);
+$activeAuthor = is_array($activeAuthor ?? null) ? $activeAuthor : null;
+$authorSlug = authorSlug((string)($authorSlug ?? ''));
+$pageHeading = trim((string)($pageHeading ?? 'Novinky'));
 $renderAuthorName = static function (array $item): string {
     if (empty($item['author_name'])) {
         return '';
@@ -17,13 +20,25 @@ $renderAuthorName = static function (array $item): string {
   <section class="surface" aria-labelledby="news-title">
     <div class="section-heading">
       <div>
-        <h1 id="news-title" class="section-title section-title--hero">Novinky</h1>
-        <p class="section-subtitle">Krátké zprávy a aktuality z webu.</p>
+        <h1 id="news-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
+        <p class="section-subtitle">
+          <?php if ($activeAuthor): ?>
+            Krátké zprávy a aktuality autora <?= h((string)$activeAuthor['author_display_name']) ?>.
+          <?php else: ?>
+            Krátké zprávy a aktuality z webu.
+          <?php endif; ?>
+        </p>
       </div>
+      <?php if ($activeAuthor): ?>
+        <a class="section-link" href="<?= h((string)$activeAuthor['author_public_path']) ?>">Profil autora <span aria-hidden="true">→</span></a>
+      <?php endif; ?>
     </div>
 
     <h2 id="news-search-heading" class="sr-only">Hledání v novinkách</h2>
     <form method="get" class="stack stack--tight" role="search" aria-labelledby="news-search-heading">
+      <?php if ($authorSlug !== ''): ?>
+        <input type="hidden" name="autor" value="<?= h($authorSlug) ?>">
+      <?php endif; ?>
       <label for="news-search">Hledat v novinkách</label>
       <div class="form-inline">
         <input
@@ -35,7 +50,7 @@ $renderAuthorName = static function (array $item): string {
         >
         <button type="submit" class="button-secondary">Hledat</button>
         <?php if ($q !== ''): ?>
-          <a class="button-secondary" href="<?= BASE_URL ?>/news/index.php">Zrušit filtr</a>
+          <a class="button-secondary" href="<?= BASE_URL ?>/news/index.php<?= $authorSlug !== '' ? '?autor=' . rawurlencode($authorSlug) : '' ?>">Zrušit hledání</a>
         <?php endif; ?>
       </div>
     </form>
@@ -44,6 +59,8 @@ $renderAuthorName = static function (array $item): string {
       <p class="empty-state">
         <?php if ($q !== ''): ?>
           Pro zadaný dotaz jsme nenašli žádné novinky.
+        <?php elseif ($activeAuthor): ?>
+          Autor zatím nemá žádné veřejně publikované novinky.
         <?php else: ?>
           Zatím tu nejsou žádné novinky.
         <?php endif; ?>

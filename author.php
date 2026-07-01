@@ -22,29 +22,26 @@ if (!$author) {
     ]);
 }
 
-$articles = [];
+$contentType = normalizeAuthorContentType((string)($_GET['typ'] ?? ''));
+$contentCounts = fetchPublicAuthorContentCounts($pdo, (int)$author['id']);
+$contentFilterOptions = authorContentFilterOptions($contentCounts);
+$perPage = max(1, (int)getSetting('blog_per_page', '10'));
+$contentTotal = authorContentCountForType($contentCounts, $contentType);
+$pagination = paginateArray($contentTotal, $perPage);
+['totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $pagination;
+$authorContentItems = fetchPublicAuthorContent($pdo, (int)$author['id'], $contentType, $perPage, $offset);
+
 $backBlog = null;
 if (isModuleEnabled('blog')) {
-    $stmt = $pdo->prepare(
-        "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.publish_at, a.view_count,
-                a.category_id, c.name AS category, b.slug AS blog_slug
-         FROM cms_articles a
-         LEFT JOIN cms_categories c ON c.id = a.category_id
-         LEFT JOIN cms_blogs b ON b.id = a.blog_id
-         WHERE a.author_id = ?
-           AND a.deleted_at IS NULL
-           AND a.status = 'published'
-           AND (a.publish_at IS NULL OR a.publish_at <= NOW())
-         ORDER BY COALESCE(a.publish_at, a.created_at) DESC, a.id DESC"
-    );
-    $stmt->execute([(int)$author['id']]);
-    $articles = $stmt->fetchAll();
-
-    if ($articles !== []) {
-        $backBlogId = (int)($articles[0]['blog_id'] ?? 0);
+    foreach ($authorContentItems as $contentItem) {
+        if (($contentItem['content_type'] ?? '') !== 'article') {
+            continue;
+        }
+        $backBlogId = (int)($contentItem['blog_id'] ?? 0);
         if ($backBlogId > 0) {
             $backBlog = getBlogById($backBlogId);
         }
+        break;
     }
 
     if (!$backBlog) {
@@ -70,7 +67,13 @@ renderPublicPage([
     'view' => 'account/author',
     'view_data' => [
         'author' => $author,
-        'articles' => $articles,
+        'contentItems' => $authorContentItems,
+        'contentCounts' => $contentCounts,
+        'contentType' => $contentType,
+        'contentFilterOptions' => $contentFilterOptions,
+        'pages' => $pages,
+        'page' => $page,
+        'pagerBaseUrl' => authorPublicPath($author) . '?' . ($contentType !== 'vse' ? http_build_query(['typ' => $contentType]) . '&' : ''),
         'blogEnabled' => isModuleEnabled('blog'),
         'backBlogPath' => $backBlog ? blogIndexPath($backBlog) : '',
         'backBlogLabel' => $backBlog ? 'Zpět na blog' : '',

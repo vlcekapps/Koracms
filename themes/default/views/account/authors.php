@@ -39,7 +39,7 @@
                     <a href="<?= h($author['author_public_path']) ?>"><?= h($author['author_display_name']) ?></a>
                   </h2>
                   <p class="meta-row meta-row--tight">
-                    <span><?= h(articleCountLabel((int)($author['article_count'] ?? 0))) ?></span>
+                    <span><?= h((string)($author['content_summary'] ?? authorContentSummaryLabel($author))) ?></span>
                   </p>
                   <?php if (!empty($author['author_bio'])): ?>
                     <p><?= h(mb_strimwidth(normalizePlainText((string)$author['author_bio']), 0, 220, '...', 'UTF-8')) ?></p>
@@ -49,6 +49,9 @@
                     <?php if ($blogEnabled && (int)($author['article_count'] ?? 0) > 0): ?>
                       <?php $aBlog = getDefaultBlog(); ?>
                       <a class="button-secondary" href="<?= h(blogIndexPath($aBlog ?? [])) ?>?autor=<?= rawurlencode((string)$author['author_slug']) ?>">Články autora</a>
+                    <?php endif; ?>
+                    <?php if (isModuleEnabled('news') && (int)($author['news_count'] ?? 0) > 0): ?>
+                      <a class="button-secondary" href="<?= BASE_URL ?>/news/index.php?autor=<?= rawurlencode((string)$author['author_slug']) ?>">Novinky autora</a>
                     <?php endif; ?>
                   </div>
                 </div>
