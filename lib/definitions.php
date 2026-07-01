@@ -453,6 +453,20 @@ function coreModuleDefinitions(): array
 }
 
 /**
+ * @return array<string,mixed>|null
+ */
+function moduleDefinition(string $moduleKey): ?array
+{
+    $definition = coreModuleDefinitions()[$moduleKey] ?? null;
+    return is_array($definition) ? $definition : null;
+}
+
+function knownModuleKey(string $moduleKey): bool
+{
+    return moduleDefinition($moduleKey) !== null;
+}
+
+/**
  * @return list<string>
  */
 function coreModuleKeysByFlag(string $flag): array
@@ -540,6 +554,21 @@ function modulePublicEntryPoints(): array
 }
 
 /**
+ * @return array<string,string>
+ */
+function modulePublicPathModuleMap(): array
+{
+    $map = [];
+    foreach (modulePublicEntryPoints() as $moduleKey => $publicPaths) {
+        foreach ($publicPaths as $publicPath) {
+            $map[$publicPath] = $moduleKey;
+        }
+    }
+
+    return $map;
+}
+
+/**
  * @return array<string, list<string>>
  */
 function moduleAdminEntryPoints(): array
@@ -550,6 +579,21 @@ function moduleAdminEntryPoints(): array
     }
 
     return $entryPoints;
+}
+
+/**
+ * @return array<string,string>
+ */
+function moduleAdminPathModuleMap(): array
+{
+    $map = [];
+    foreach (moduleAdminEntryPoints() as $moduleKey => $adminPaths) {
+        foreach ($adminPaths as $adminPath) {
+            $map[$adminPath] = $moduleKey;
+        }
+    }
+
+    return $map;
 }
 
 function moduleWidgetLabel(string $moduleKey): string

@@ -41,6 +41,8 @@ if (!$page) {
     ]);
 }
 
+trackPageView('page', (int)$page['id']);
+
 $siteName = getSetting('site_name', 'Kora CMS');
 $metaTitle = trim((string)($page['title'] ?? ''));
 $metaDescription = trim((string)($blog['description'] ?? ''));

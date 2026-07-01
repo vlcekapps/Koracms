@@ -206,6 +206,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
         . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections a admin_paths.\n"
+        . "Sdílené lookup helpery modulePublicPathModuleMap() a moduleAdminPathModuleMap() drží mapy cest bez ručních seznamů.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
         . "Content picker používá content_reference_types, veřejné vyhledávání search_result_types a sitemap používá sitemap_sections.\n"
@@ -220,6 +221,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
         . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types a sitemap_sections.\n"
+        . "Cesty modulů mapují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
         . "Admin routy chrání adminRouteModuleRequirements().\n"
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
@@ -230,6 +232,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
 {
     return "Admin guide odkazuje na developer-modules.md.\n"
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
+        . "Sdílené lookupy cest poskytují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
         . "Admin endpointy kryje adminRouteModuleRequirements().\n"
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n";
@@ -494,6 +497,78 @@ assertModuleContractAuditFails(
     'Invalid module manifest default',
     $invalidManifestDefaultFiles,
     'core module manifest entry blog settings_default must be 0 or 1.'
+);
+
+$duplicateContentReferenceTypeFiles = $validFiles;
+$duplicateContentReferenceTypeFiles['lib/definitions.php'] = str_replace(
+    "'content_reference_types' => ['news' => 'News']",
+    "'content_reference_types' => ['blog' => 'News']",
+    $duplicateContentReferenceTypeFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Duplicate content reference type',
+    $duplicateContentReferenceTypeFiles,
+    'content_reference_types key blog is duplicated by modules blog and news.'
+);
+
+$emptyContentReferenceLabelFiles = $validFiles;
+$emptyContentReferenceLabelFiles['lib/definitions.php'] = str_replace(
+    "'content_reference_types' => ['news' => 'News']",
+    "'content_reference_types' => ['news' => '']",
+    $emptyContentReferenceLabelFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Empty content reference label',
+    $emptyContentReferenceLabelFiles,
+    'core module manifest entry news must define a non-empty content_reference_types label for news.'
+);
+
+$duplicateSearchResultTypeFiles = $validFiles;
+$duplicateSearchResultTypeFiles['lib/definitions.php'] = str_replace(
+    "'search_result_types' => ['news' => 'Novinka']",
+    "'search_result_types' => ['blog' => 'Novinka']",
+    $duplicateSearchResultTypeFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Duplicate search result type',
+    $duplicateSearchResultTypeFiles,
+    'search_result_types key blog is duplicated by modules blog and news.'
+);
+
+$emptySearchResultLabelFiles = $validFiles;
+$emptySearchResultLabelFiles['lib/definitions.php'] = str_replace(
+    "'search_result_types' => ['news' => 'Novinka']",
+    "'search_result_types' => ['news' => '']",
+    $emptySearchResultLabelFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Empty search result label',
+    $emptySearchResultLabelFiles,
+    'core module manifest entry news must define a non-empty search_result_types label for news.'
+);
+
+$duplicateSitemapSectionFiles = $validFiles;
+$duplicateSitemapSectionFiles['lib/definitions.php'] = str_replace(
+    "'sitemap_sections' => ['news' => 'Novinky']",
+    "'sitemap_sections' => ['blog' => 'Novinky']",
+    $duplicateSitemapSectionFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Duplicate sitemap section',
+    $duplicateSitemapSectionFiles,
+    'sitemap_sections key blog is duplicated by modules blog and news.'
+);
+
+$emptySitemapSectionLabelFiles = $validFiles;
+$emptySitemapSectionLabelFiles['lib/definitions.php'] = str_replace(
+    "'sitemap_sections' => ['news' => 'Novinky']",
+    "'sitemap_sections' => ['news' => '']",
+    $emptySitemapSectionLabelFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Empty sitemap section label',
+    $emptySitemapSectionLabelFiles,
+    'core module manifest entry news must define a non-empty sitemap_sections label for news.'
 );
 
 $invalidManifestPublicPathFiles = $validFiles;

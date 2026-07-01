@@ -211,11 +211,27 @@ assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public mod
 test_section('module public entrypoints');
 
 $modulePublicEntryPoints = modulePublicEntryPoints();
+$modulePublicPathMap = modulePublicPathModuleMap();
+assert_true(knownModuleKey('blog'), 'known module key recognizes blog');
+assert_false(knownModuleKey('unknown_module'), 'known module key rejects unknown module');
+assert_equals('Blog', moduleDefinition('blog')['label'] ?? null, 'module definition returns blog metadata');
+assert_equals(null, moduleDefinition('unknown_module'), 'module definition returns null for unknown module');
 assert_true(in_array('/blog/article.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog article route is declared as a public module entrypoint');
 assert_true(in_array('/podcast/audio.php', $modulePublicEntryPoints['podcast'] ?? [], true), 'podcast audio endpoint is declared as a public module entrypoint');
 assert_true(in_array('/subscribe.php', $modulePublicEntryPoints['newsletter'] ?? [], true), 'newsletter subscribe route is declared as a public module entrypoint');
 assert_true(in_array('/forms/index.php', $modulePublicEntryPoints['forms'] ?? [], true), 'forms public route is declared even without main navigation');
 assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics has no standalone public entrypoint');
+assert_equals('blog', $modulePublicPathMap['/blog/page.php'] ?? null, 'blog static page public path maps to blog module');
+assert_equals('newsletter', $modulePublicPathMap['/subscribe.php'] ?? null, 'newsletter subscribe public path maps to newsletter module');
+
+test_section('module admin entrypoints');
+
+$moduleAdminEntryPoints = moduleAdminEntryPoints();
+$moduleAdminPathMap = moduleAdminPathModuleMap();
+assert_true(in_array('/admin/blogs.php', $moduleAdminEntryPoints['blog'] ?? [], true), 'blog overview is declared as an admin module entrypoint');
+assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reservations'] ?? [], true), 'reservation resources are declared as admin module entrypoints');
+assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
+assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
 
 test_section('module content reference types');
 

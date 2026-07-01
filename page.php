@@ -43,6 +43,10 @@ if (!$page) {
     ]);
 }
 
+if ($previewToken === '') {
+    trackPageView('page', (int)$page['id']);
+}
+
 $siteName = getSetting('site_name', 'Kora CMS');
 
 renderPublicPage([

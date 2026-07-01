@@ -1227,6 +1227,9 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
     $blocks = moduleContractAuditExtractManifestBlocks($definitionsSource, $issues);
     $publicNavOrders = [];
     $publicPathModules = [];
+    $contentReferenceTypeModules = [];
+    $searchResultTypeModules = [];
+    $sitemapSectionModules = [];
 
     foreach ($requiredCoreModuleKeys as $moduleKey) {
         if (!isset($blocks[$moduleKey])) {
@@ -1254,26 +1257,56 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
 
         moduleContractAuditRequire($label !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty label.', $issues);
         moduleContractAuditRequire($adminLabel !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty admin_label.', $issues);
-        foreach (array_keys($contentReferenceTypes) as $contentReferenceType) {
+        foreach ($contentReferenceTypes as $contentReferenceType => $contentReferenceLabel) {
             moduleContractAuditRequire(
                 preg_match('/^[a-z][a-z0-9_]*$/', $contentReferenceType) === 1,
                 'core module manifest entry ' . $moduleKey . ' contains invalid content_reference_types key ' . $contentReferenceType . '.',
                 $issues
             );
+            moduleContractAuditRequire(
+                trim($contentReferenceLabel) !== '' || $moduleKey === 'board',
+                'core module manifest entry ' . $moduleKey . ' must define a non-empty content_reference_types label for ' . $contentReferenceType . '.',
+                $issues
+            );
+            if (isset($contentReferenceTypeModules[$contentReferenceType]) && $contentReferenceTypeModules[$contentReferenceType] !== $moduleKey) {
+                $issues[] = 'content_reference_types key ' . $contentReferenceType . ' is duplicated by modules ' . $contentReferenceTypeModules[$contentReferenceType] . ' and ' . $moduleKey . '.';
+            } else {
+                $contentReferenceTypeModules[$contentReferenceType] = $moduleKey;
+            }
         }
-        foreach (array_keys($searchResultTypes) as $searchResultType) {
+        foreach ($searchResultTypes as $searchResultType => $searchResultLabel) {
             moduleContractAuditRequire(
                 preg_match('/^[a-z][a-z0-9_]*$/', $searchResultType) === 1,
                 'core module manifest entry ' . $moduleKey . ' contains invalid search_result_types key ' . $searchResultType . '.',
                 $issues
             );
+            moduleContractAuditRequire(
+                trim($searchResultLabel) !== '' || $moduleKey === 'board',
+                'core module manifest entry ' . $moduleKey . ' must define a non-empty search_result_types label for ' . $searchResultType . '.',
+                $issues
+            );
+            if (isset($searchResultTypeModules[$searchResultType]) && $searchResultTypeModules[$searchResultType] !== $moduleKey) {
+                $issues[] = 'search_result_types key ' . $searchResultType . ' is duplicated by modules ' . $searchResultTypeModules[$searchResultType] . ' and ' . $moduleKey . '.';
+            } else {
+                $searchResultTypeModules[$searchResultType] = $moduleKey;
+            }
         }
-        foreach (array_keys($sitemapSections) as $sitemapSection) {
+        foreach ($sitemapSections as $sitemapSection => $sitemapSectionLabel) {
             moduleContractAuditRequire(
                 preg_match('/^[a-z][a-z0-9_]*$/', $sitemapSection) === 1,
                 'core module manifest entry ' . $moduleKey . ' contains invalid sitemap_sections key ' . $sitemapSection . '.',
                 $issues
             );
+            moduleContractAuditRequire(
+                trim($sitemapSectionLabel) !== '' || $moduleKey === 'board',
+                'core module manifest entry ' . $moduleKey . ' must define a non-empty sitemap_sections label for ' . $sitemapSection . '.',
+                $issues
+            );
+            if (isset($sitemapSectionModules[$sitemapSection]) && $sitemapSectionModules[$sitemapSection] !== $moduleKey) {
+                $issues[] = 'sitemap_sections key ' . $sitemapSection . ' is duplicated by modules ' . $sitemapSectionModules[$sitemapSection] . ' and ' . $moduleKey . '.';
+            } else {
+                $sitemapSectionModules[$sitemapSection] = $moduleKey;
+            }
         }
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
         moduleContractAuditRequire($adminPaths !== [], 'core module manifest entry ' . $moduleKey . ' must define at least one admin_paths entry.', $issues);
@@ -1467,6 +1500,8 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'migrate.php',
             'schema parity',
             'coreModuleDefinitions()',
+            'modulePublicPathModuleMap()',
+            'moduleAdminPathModuleMap()',
             'settings_default',
             'public_nav_path',
             'public_paths',
@@ -1498,6 +1533,8 @@ function moduleContractAuditValidateDeveloperDocumentation(
         [
             'docs/developer-modules.md',
             'coreModuleDefinitions()',
+            'modulePublicPathModuleMap()',
+            'moduleAdminPathModuleMap()',
             'install.php',
             'migrate.php',
             'public_paths',
@@ -1519,6 +1556,8 @@ function moduleContractAuditValidateDeveloperDocumentation(
         [
             'developer-modules.md',
             'coreModuleDefinitions()',
+            'modulePublicPathModuleMap()',
+            'moduleAdminPathModuleMap()',
             'adminRouteModuleRequirements()',
             'content_reference_types',
             'search_result_types',

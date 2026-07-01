@@ -52,6 +52,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Přístupnější figury ve veřejné galerii** – detail fotografie, další fotografie v albu a výpis fotografií v albu mají vždy skutečný `figcaption` napojený přes `aria-labelledby`; fotografie bez titulku dostanou skrytý popisek pro čtečky obrazovky bez viditelné změny stránky.
 - **Přístupnější vyhledávací widget** – veřejný widget `Vyhledávání` nově pojmenovává svůj `role="search"` formulář přes existující skrytý `legend`, takže landmark není anonymní ani mimo okolní widgetovou sekci.
 - **Referrer statistiky v administraci** – podrobné statistiky návštěvnosti nově ukazují externí odkazující stránky za zvolené období; ukládání refereru se normalizuje bez query stringu a fragmentu a interní přechody vlastního hostu se do přehledu nepočítají.
+- **Nejčtenější statické stránky ve statistikách** – administrace statistik nově za zvolené období ukazuje nejčtenější globální statické stránky i statické stránky blogů; veřejné page endpointy ukládají návštěvy s vazbou na `cms_pages.id`.
+- **Sdílené lookup helpery pro nové moduly** – definice modulů mají nové helpery `moduleDefinition()`, `knownModuleKey()`, `modulePublicPathModuleMap()` a `moduleAdminPathModuleMap()`, aby další modulové integrace nemusely vytvářet vlastní lokální mapy cest.
+- **Přísnější manifestové typy modulů** – modulový audit nově hlídá jedinečnost a neprázdné popisky `content_reference_types`, `search_result_types` a `sitemap_sections`, včetně self-testů pro duplicitní nebo nepojmenované typy.
 
 ### Změněno
 - **Doporučený článek na veřejném indexu blogu** – default šablona nově zobrazuje nejdřív nadpis bloku `Doporučený článek`, hned pod ním název článku jako hlavní odkaz a až poté datum, dobu čtení, počet přečtení a autora; duplicitní spodní odkaz `Číst článek` byl odstraněn.

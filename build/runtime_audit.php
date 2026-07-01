@@ -49,8 +49,10 @@ $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
 $searchSource = (string) file_get_contents(__DIR__ . '/../search.php');
+$pageSource = (string) file_get_contents(__DIR__ . '/../page.php');
 $blogIndexSource = (string) file_get_contents(__DIR__ . '/../blog/index.php');
 $blogArticleSource = (string) file_get_contents(__DIR__ . '/../blog/article.php');
+$blogPageSource = (string) file_get_contents(__DIR__ . '/../blog/page.php');
 $boardIndexSource = (string) file_get_contents(__DIR__ . '/../board/index.php');
 $contactIndexSource = (string) file_get_contents(__DIR__ . '/../contact/index.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
@@ -13676,6 +13678,17 @@ if (!str_contains($adminStatisticsSource, 'Odkud návštěvníci přišli')
     || !str_contains($adminStatisticsSource, 'newWindowLinkSrOnlySuffix()')
     || !str_contains($adminStatisticsSource, 'Query string a fragment URL')) {
     $adminFieldErrorIssues[] = 'admin statistics detail is missing sanitized referrer report';
+}
+if (!str_contains($pageSource, "trackPageView('page', (int)\$page['id']);")
+    || !str_contains($blogPageSource, "trackPageView('page', (int)\$page['id']);")) {
+    $adminFieldErrorIssues[] = 'static page views should be tracked with page_type page and cms_pages id';
+}
+if (!str_contains($adminStatisticsSource, 'Nejčtenější statické stránky')
+    || !str_contains($adminStatisticsSource, "v.page_type = 'page'")
+    || !str_contains($adminStatisticsSource, 'pagePublicPath($pageRow)')
+    || !str_contains($adminStatisticsSource, 'Stránka blogu: ')
+    || !str_contains($adminStatisticsSource, 'statisticsLogSectionError(\'top_pages\'')) {
+    $adminFieldErrorIssues[] = 'admin statistics detail is missing top static pages report';
 }
 foreach ([
     'admin dashboard statistics chart' => [

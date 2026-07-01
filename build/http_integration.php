@@ -1905,6 +1905,88 @@ try {
 
     httpIntegrationPrintResult('visitor_referrers_http', $visitorReferrerIssues, $failures);
 
+    $topStaticPagesIssues = [];
+    $topStaticPagesToken = bin2hex(random_bytes(4));
+    $topStaticGlobalTitle = 'HTTP top static page ' . $topStaticPagesToken;
+    $topStaticBlogTitle = 'HTTP top blog page ' . $topStaticPagesToken;
+    $topStaticBlogName = 'HTTP top pages blog ' . $topStaticPagesToken;
+    $topStaticDate = date('Y-m-d');
+    $topStaticCreatedAt = $topStaticDate . ' 13:00:00';
+
+    $pdo->prepare(
+        "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, status, created_at)
+         VALUES (?, ?, 'HTTP statistics page', 1, 0, 'published', ?)"
+    )->execute([
+        $topStaticGlobalTitle,
+        'http-top-static-page-' . $topStaticPagesToken,
+        $topStaticCreatedAt,
+    ]);
+    $topStaticGlobalPageId = (int)$pdo->lastInsertId();
+    $createdPageIds[] = $topStaticGlobalPageId;
+
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")->execute([
+        $topStaticBlogName,
+        'http-top-static-blog-' . $topStaticPagesToken,
+        $adminUserId,
+    ]);
+    $topStaticBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $topStaticBlogId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_pages (title, slug, content, blog_id, is_published, show_in_nav, blog_nav_order, status, created_at)
+         VALUES (?, ?, 'HTTP statistics blog page', ?, 1, 0, 1, 'published', ?)"
+    )->execute([
+        $topStaticBlogTitle,
+        'http-top-blog-page-' . $topStaticPagesToken,
+        $topStaticBlogId,
+        $topStaticCreatedAt,
+    ]);
+    $topStaticBlogPageId = (int)$pdo->lastInsertId();
+    $createdPageIds[] = $topStaticBlogPageId;
+
+    $topStaticViewInsert = $pdo->prepare(
+        "INSERT INTO cms_page_views (page_url, page_type, page_ref_id, ip_hash, user_agent, created_at)
+         VALUES (?, 'page', ?, ?, 'HTTP integration top pages test', ?)"
+    );
+    foreach ([
+        [$topStaticGlobalPageId, '/page.php?slug=http-top-static-page-' . $topStaticPagesToken, 3],
+        [$topStaticBlogPageId, '/http-top-static-blog-' . $topStaticPagesToken . '/stranka/http-top-blog-page-' . $topStaticPagesToken, 2],
+    ] as $topStaticPageSeed) {
+        [$topStaticPageId, $topStaticPageUrl, $topStaticPageViews] = $topStaticPageSeed;
+        for ($topStaticView = 1; $topStaticView <= $topStaticPageViews; $topStaticView++) {
+            $topStaticViewInsert->execute([
+                $topStaticPageUrl,
+                $topStaticPageId,
+                hash('sha256', 'http-top-page-' . $topStaticPagesToken . '-' . $topStaticPageId . '-' . $topStaticView),
+                $topStaticCreatedAt,
+            ]);
+            $createdPageViewIds[] = (int)$pdo->lastInsertId();
+        }
+    }
+
+    $statisticsTopPagesUrl = $baseUrl . BASE_URL . '/admin/statistics.php?from=' . $topStaticDate . '&to=' . $topStaticDate;
+    $statisticsTopPagesResponse = fetchUrl($statisticsTopPagesUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($statisticsTopPagesResponse) !== 200) {
+        $topStaticPagesIssues[] = 'admin statistiky s testem statických stránek nevrátily 200';
+    }
+    if (!str_contains($statisticsTopPagesResponse['body'], 'Nejčtenější statické stránky')) {
+        $topStaticPagesIssues[] = 'admin statistiky nezobrazily sekci nejčtenějších statických stránek';
+    }
+    if (!str_contains($statisticsTopPagesResponse['body'], $topStaticGlobalTitle)) {
+        $topStaticPagesIssues[] = 'admin statistiky nezobrazily globální statickou stránku';
+    }
+    if (!str_contains($statisticsTopPagesResponse['body'], $topStaticBlogTitle)
+        || !str_contains($statisticsTopPagesResponse['body'], $topStaticBlogName)
+        || !str_contains($statisticsTopPagesResponse['body'], 'Stránka blogu:')) {
+        $topStaticPagesIssues[] = 'admin statistiky nezobrazily blogovou statickou stránku s kontextem blogu';
+    }
+    if (!str_contains($statisticsTopPagesResponse['body'], 'page_form.php?id=' . $topStaticGlobalPageId)
+        || !str_contains($statisticsTopPagesResponse['body'], 'page_form.php?id=' . $topStaticBlogPageId)) {
+        $topStaticPagesIssues[] = 'admin statistiky neodkazují z nejčtenějších stránek na editaci stránky';
+    }
+
+    httpIntegrationPrintResult('visitor_top_static_pages_http', $topStaticPagesIssues, $failures);
+
     $socialLinksWidgetIssues = [];
     $socialLinksWidgetTitle = 'HTTP social links ' . bin2hex(random_bytes(4));
     $socialLinksWidgetSortOrder = (int)$pdo->query(

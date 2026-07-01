@@ -135,6 +135,37 @@ if (isModuleEnabled('blog')) {
     }
 }
 
+// ── Nejčtenější statické stránky ────────────────────────────────────────────
+$topPages = [];
+try {
+    $topPagesStmt = $pdo->prepare(
+        "SELECT p.id,
+                p.title,
+                p.slug,
+                p.blog_id,
+                b.name AS blog_name,
+                b.slug AS blog_slug,
+                COUNT(v.id) AS views
+         FROM cms_page_views v
+         INNER JOIN cms_pages p ON p.id = v.page_ref_id
+         LEFT JOIN cms_blogs b ON b.id = p.blog_id
+         WHERE v.page_type = 'page'
+           AND v.page_ref_id IS NOT NULL
+           AND v.created_at >= ?
+           AND v.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+           AND p.deleted_at IS NULL
+           AND p.status = 'published'
+           AND p.is_published = 1
+         GROUP BY p.id, p.title, p.slug, p.blog_id, b.name, b.slug
+         ORDER BY views DESC, p.title ASC
+         LIMIT 20"
+    );
+    $topPagesStmt->execute([$dateFrom, $dateTo]);
+    $topPages = $topPagesStmt->fetchAll();
+} catch (\PDOException $e) {
+    statisticsLogSectionError('top_pages', $e);
+}
+
 // ── Rezervace ───────────────────────────────────────────────────────────────
 $resMonthly   = [];
 $resStatus    = [];
@@ -387,7 +418,45 @@ adminHeader('Statistiky');
 </section>
 <?php endif; ?>
 
-<!-- ── 3. Rezervace ────────────────────────────────────────────────────────── -->
+<!-- ── 3. Nejčtenější statické stránky ─────────────────────────────────────── -->
+<?php if (!empty($topPages)): ?>
+<section aria-labelledby="sec-pages">
+  <h2 id="sec-pages">Nejčtenější statické stránky</h2>
+  <p class="field-help">Součet vychází ze zobrazení za zvolené období. Zahrnuje globální statické stránky i statické stránky přiřazené ke konkrétním blogům.</p>
+  <table>
+    <caption class="sr-only">Nejčtenější statické stránky za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Stránka</th>
+        <th scope="col">Zařazení</th>
+        <th scope="col">Zobrazení</th>
+      </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($topPages as $pageIndex => $pageRow):
+        $isBlogPage = !empty($pageRow['blog_id']);
+        $pageContext = $isBlogPage
+            ? 'Stránka blogu: ' . (string)($pageRow['blog_name'] ?? '')
+            : 'Globální stránka';
+        $publicPath = pagePublicPath($pageRow);
+        ?>
+      <tr>
+        <td><?= $pageIndex + 1 ?></td>
+        <td>
+          <a href="page_form.php?id=<?= (int)$pageRow['id'] ?>"><?= h((string)$pageRow['title']) ?></a>
+          <br><small><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejně<?= newWindowLinkSrOnlySuffix() ?></a></small>
+        </td>
+        <td><?= h($pageContext) ?></td>
+        <td><?= $fmt((int)$pageRow['views']) ?></td>
+      </tr>
+    <?php endforeach; ?>
+    </tbody>
+  </table>
+</section>
+<?php endif; ?>
+
+<!-- ── 4. Rezervace ────────────────────────────────────────────────────────── -->
 <?php if (isModuleEnabled('reservations') && (!empty($resMonthly) || !empty($resStatus) || !empty($resTopRes))): ?>
 <section aria-labelledby="sec-reservations">
   <h2 id="sec-reservations">Rezervace</h2>
@@ -456,7 +525,7 @@ adminHeader('Statistiky');
 </section>
 <?php endif; ?>
 
-<!-- ── 4. Newsletter ───────────────────────────────────────────────────────── -->
+<!-- ── 5. Newsletter ───────────────────────────────────────────────────────── -->
 <?php if (isModuleEnabled('newsletter') && ($nlConfirmed > 0 || $nlUnconfirmed > 0)): ?>
 <section aria-labelledby="sec-newsletter">
   <h2 id="sec-newsletter">Newsletter</h2>
@@ -503,7 +572,7 @@ adminHeader('Statistiky');
 </section>
 <?php endif; ?>
 
-<!-- ── 5. Komentáře ────────────────────────────────────────────────────────── -->
+<!-- ── 6. Komentáře ────────────────────────────────────────────────────────── -->
 <?php if (isModuleEnabled('blog') && ($commentApproved > 0 || $commentPending > 0)): ?>
 <section aria-labelledby="sec-comments">
   <h2 id="sec-comments">Komentáře</h2>
@@ -550,7 +619,7 @@ adminHeader('Statistiky');
 </section>
 <?php endif; ?>
 
-<!-- ── 6. Kontaktní zprávy ─────────────────────────────────────────────────── -->
+<!-- ── 7. Kontaktní zprávy ─────────────────────────────────────────────────── -->
 <?php if (isModuleEnabled('contact') && !empty($contactStats)):
     $ctMax = max(array_column($contactStats, 'cnt'));
     if ($ctMax < 1) {
