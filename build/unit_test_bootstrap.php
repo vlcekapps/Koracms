@@ -152,5 +152,6 @@ require_once dirname(__DIR__) . '/lib/ui.php';
 require_once dirname(__DIR__) . '/lib/webhooks.php';
 require_once dirname(__DIR__) . '/lib/stats.php';
 require_once dirname(__DIR__) . '/lib/widgets.php';
+require_once dirname(__DIR__) . '/lib/admin_command.php';
 
 ob_end_clean();

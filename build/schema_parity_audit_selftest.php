@@ -129,6 +129,13 @@ CREATE TABLE IF NOT EXISTS cms_events (
   id INT,
   excerpt TEXT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
+  id INT,
+  user_id INT,
+  item_type VARCHAR(50),
+  item_key VARCHAR(120),
+  url VARCHAR(500)
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -147,6 +154,9 @@ PHP,
 // cms_gallery_photos.is_published
 // cms_gallery_photos.deleted_at
 // cms_events.excerpt
+// cms_admin_shortcuts
+// uq_admin_shortcut_user_item
+// idx_admin_shortcut_user_order
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

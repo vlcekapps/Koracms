@@ -521,7 +521,31 @@ nav a:focus-visible { outline-color: var(--admin-focus-nav); }
 .skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:var(--admin-focus);color:#fff;font-size:1rem;text-decoration:none;z-index:9999; }
 .admin-nav-site { margin:0 0 .75rem; color:var(--admin-nav-summary); font-size:.95rem; font-weight:700; }
 .admin-nav-user { font-size:.8rem; color:var(--admin-nav-summary); margin:0 0 .75rem; }
+.admin-command-nav-search { margin:0 0 1rem; padding:.75rem; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(255,255,255,.06); }
+.admin-command-nav-search h3 { margin:0 0 .45rem; color:#fff; font-size:.92rem; }
+.admin-command-nav-search input[type=search] { width:100%; margin:.2rem 0 .55rem; padding:.45rem; border-radius:6px; border:1px solid var(--admin-input-border); }
+.admin-command-nav-actions { display:flex; gap:.4rem; flex-wrap:wrap; }
+.admin-command-shortcut { font-size:.78rem; opacity:.8; }
 .admin-nav-bottom { margin-top:.8rem; }
+.admin-command-overlay { position:fixed; inset:0; z-index:8000; background:rgba(10,18,30,.55); }
+.admin-command-dialog { position:fixed; top:8vh; left:50%; z-index:8001; width:min(760px, calc(100vw - 2rem)); max-height:84vh; transform:translateX(-50%); overflow:auto; padding:1rem; border:1px solid var(--admin-border); border-radius:16px; background:var(--admin-bg); color:var(--admin-text); box-shadow:0 24px 70px rgba(0,0,0,.35); }
+.admin-command-overlay[hidden], .admin-command-dialog[hidden] { display:none; }
+.admin-command-open { overflow:hidden; }
+.admin-command-dialog__header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.admin-command-dialog__title { margin:0; font-size:1.35rem; }
+.admin-command-dialog__description { margin:.25rem 0 0; color:var(--admin-text-muted); }
+.admin-command-dialog__search { display:grid; grid-template-columns:1fr auto; gap:.6rem; align-items:end; margin:0 0 1rem; }
+.admin-command-dialog__search label { grid-column:1 / -1; margin:0; }
+.admin-command-dialog__search input[type=search] { margin:0; min-height:2.45rem; }
+.admin-command-dialog__results, .admin-command-results { list-style:none; margin:0; padding:0; display:grid; gap:.65rem; }
+.admin-command-result { display:flex; justify-content:space-between; gap:.85rem; padding:.75rem; border:1px solid var(--admin-border); border-radius:10px; background:var(--admin-surface); }
+.admin-command-result__body { min-width:0; }
+.admin-command-result__link { font-weight:700; }
+.admin-command-result__meta { margin:.25rem 0 0; color:var(--admin-text-muted); font-size:.92rem; line-height:1.45; }
+.admin-command-result__badge { display:inline-block; margin-top:.35rem; padding:.1rem .45rem; border-radius:999px; background:var(--admin-neutral-bg); color:var(--admin-neutral-text); font-size:.78rem; font-weight:700; }
+.admin-command-result__pin { align-self:center; white-space:nowrap; }
+.admin-command-empty { padding:.8rem; border:1px dashed var(--admin-border); border-radius:10px; color:var(--admin-text-muted); background:var(--admin-surface); }
+.admin-command-results--dashboard { margin-top:.75rem; }
 .autosave-banner { background:var(--admin-pending-bg); border:1px solid var(--admin-pending-border); color:var(--admin-pending-text); padding:.7rem 1rem; border-radius:6px; margin-bottom:1rem; display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; }
 .autosave-banner__button { padding:.3rem .8rem; cursor:pointer; }
 .editor-count { display:block; margin-top:.3rem; color:var(--admin-text-muted); font-size:.8rem; }
@@ -534,4 +558,5 @@ nav a:focus-visible { outline-color: var(--admin-focus-nav); }
 .seo-preview__counts { color:var(--admin-text-muted); margin-top:.4rem; display:block; }
 .admin-footer { text-align:center; padding:.5rem; font-size:.75rem; color:var(--admin-footer-text); }
 @media (max-width: 720px) { .admin-stat-bar { grid-template-columns:1fr; gap:.25rem; } .admin-stat-bar__value { text-align:left; } }
+@media (max-width: 720px) { .admin-command-dialog { top:1rem; max-height:calc(100vh - 2rem); } .admin-command-dialog__header, .admin-command-result { flex-direction:column; } .admin-command-dialog__search { grid-template-columns:1fr; } .admin-command-result__pin { align-self:flex-start; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important; } }

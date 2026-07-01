@@ -330,6 +330,12 @@ Administrace používá capability model – uživatelé vidí jen to, co potře
 
 Fronta **Ke schválení** sjednocuje čekající obsah, komentáře a rezervace na jednom místě.
 
+### Command centrum a osobní zkratky
+
+Administrace má globální hledání dostupné v hlavním admin layoutu. Pole **Hledat v administraci** funguje i bez JavaScriptu jako běžná stránka výsledků, klávesová zkratka `Ctrl+K` otevře přístupnou command paletu. Výsledky zahrnují administrační obrazovky, bezpečné navigační rychlé akce a editovatelný obsah napříč zapnutými moduly. Každý výsledek respektuje roli, capability a stav modulu, takže uživatel vidí jen položky, ke kterým má přístup.
+
+Vybrané položky lze připnout jako osobní zkratky. Zobrazí se na dashboardu v bloku **Moje zkratky** a ukládají se podle `item_type + item_key`, nikoli podle URL poslané z formuláře. CMS při připnutí položku znovu dohledá v interním registru a uloží jen platný interní admin cíl.
+
 Rezervační administrace pro přehled, ruční vytvoření, detail rezervace i editor zdrojů používá sdílenou admin CSS vrstvu bez lokálních `<style>` bloků, `style` atributů nebo JS mutací `element.style`, takže drží stejnou CSP a údržbovou hygienu jako ostatní stabilizované administrační obrazovky.
 
 ---

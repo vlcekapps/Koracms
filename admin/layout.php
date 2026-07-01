@@ -384,6 +384,16 @@ function adminHeader(string $pageTitle): void
         echo '  <p class="admin-nav-user"><span aria-hidden="true">&#9786;</span> ' . $userName . '</p>' . "\n";
     }
 
+    echo '  <form action="' . h(BASE_URL . '/admin/command.php') . '" method="get" class="admin-command-nav-search" role="search" aria-labelledby="admin-command-nav-heading">' . "\n"
+       . '    <h3 id="admin-command-nav-heading">Hledání v administraci</h3>' . "\n"
+       . '    <label for="admin-command-nav-q" class="sr-only">Hledat v administraci</label>' . "\n"
+       . '    <input type="search" id="admin-command-nav-q" name="q" placeholder="Hledat v administraci" autocomplete="off">' . "\n"
+       . '    <div class="admin-command-nav-actions">' . "\n"
+       . '      <button type="submit" class="btn btn-muted">Hledat</button>' . "\n"
+       . '      <button type="button" class="btn btn-muted" id="admin-command-open" aria-haspopup="dialog" aria-controls="admin-command-dialog">Paleta <span class="admin-command-shortcut" aria-hidden="true">Ctrl+K</span></button>' . "\n"
+       . '    </div>' . "\n"
+       . '  </form>' . "\n";
+
     echo '  <ul>' . "\n";
     foreach ($topItems as $item) {
         echo $renderItem($item);
@@ -401,6 +411,24 @@ function adminHeader(string $pageTitle): void
     }
     echo '  </ul>' . "\n"
        . '</nav>' . "\n"
+       . '<div id="admin-command-overlay" class="admin-command-overlay" hidden></div>' . "\n"
+       . '<section id="admin-command-dialog" class="admin-command-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-command-dialog-title" aria-describedby="admin-command-dialog-description" data-search-url="' . h(BASE_URL . '/admin/command_search.php') . '" data-shortcut-url="' . h(BASE_URL . '/admin/shortcut.php') . '" data-csrf-token="' . h(csrfToken()) . '" hidden>' . "\n"
+       . '  <div class="admin-command-dialog__header">' . "\n"
+       . '    <div>' . "\n"
+       . '      <h2 id="admin-command-dialog-title" class="admin-command-dialog__title">Command centrum</h2>' . "\n"
+       . '      <p id="admin-command-dialog-description" class="admin-command-dialog__description">Hledejte obrazovky administrace, rychlé akce a obsah k úpravě.</p>' . "\n"
+       . '    </div>' . "\n"
+       . '    <button type="button" class="btn btn-muted" id="admin-command-close">Zavřít<span class="sr-only"> command centrum</span></button>' . "\n"
+       . '  </div>' . "\n"
+       . '  <form action="' . h(BASE_URL . '/admin/command.php') . '" method="get" class="admin-command-dialog__search" role="search" aria-labelledby="admin-command-dialog-search-heading">' . "\n"
+       . '    <h3 id="admin-command-dialog-search-heading" class="sr-only">Hledat v command centru</h3>' . "\n"
+       . '    <label for="admin-command-dialog-q">Hledaný výraz</label>' . "\n"
+       . '    <input type="search" id="admin-command-dialog-q" name="q" autocomplete="off" placeholder="Například článek, média nebo nastavení">' . "\n"
+       . '    <button type="submit" class="btn">Otevřít výsledky</button>' . "\n"
+       . '  </form>' . "\n"
+       . '  <p id="admin-command-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>' . "\n"
+       . '  <ul id="admin-command-results" class="admin-command-dialog__results" aria-labelledby="admin-command-dialog-title"></ul>' . "\n"
+       . '</section>' . "\n"
        . '<main id="obsah">' . "\n"
        . '  <div id="a11y-live" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>' . "\n"
        . '  <h1>' . $pageTitle . '</h1>' . "\n";
@@ -410,7 +438,8 @@ function adminFooter(): void
 {
     $version = KORA_VERSION;
     $nonce = cspNonce();
-    echo '<script nonce="' . $nonce . '">document.addEventListener("click",function(e){'
+    echo '<script src="' . h(BASE_URL . '/admin/assets/command.js?v=' . rawurlencode(KORA_VERSION)) . '" nonce="' . $nonce . '"></script>'
+       . '<script nonce="' . $nonce . '">document.addEventListener("click",function(e){'
        . 'var b=e.target.closest("[data-confirm]");'
        . 'if(b&&b.tagName!=="FORM"&&!confirm(b.dataset.confirm)){e.preventDefault();e.stopPropagation();return;}'
        . 'var once=e.target.closest("[data-submit-once]");'

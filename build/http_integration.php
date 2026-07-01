@@ -477,6 +477,20 @@ try {
     saveSetting('module_reservations', '1');
     saveSetting('module_forms', '1');
     clearSettingsCache();
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            item_type VARCHAR(50) NOT NULL,
+            item_key VARCHAR(120) NOT NULL,
+            label VARCHAR(255) NOT NULL DEFAULT '',
+            url VARCHAR(500) NOT NULL DEFAULT '',
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_admin_shortcut_user_item (user_id, item_type, item_key),
+            INDEX idx_admin_shortcut_user_order (user_id, sort_order, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
 
     $settingsIssues = [];
     $adminUserId = (int)($pdo->query("SELECT id FROM cms_users ORDER BY is_superadmin DESC, id ASC LIMIT 1")->fetchColumn() ?: 1);
@@ -1056,6 +1070,134 @@ try {
         $adminReadOnlyEndpointIssues[] = 'admin/content_reference_search.php neposlal bezpečné sdílené JSON hlavičky';
     }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
+
+    $adminCommandIssues = [];
+    $adminCommandUserId = 900000 + random_int(1, 99999);
+    $adminCommandSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminCommandUserId,
+        'cms_user_name' => 'HTTP Command Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-admin-command-' . bin2hex(random_bytes(4)));
+    $adminCommandPage = fetchUrl($baseUrl . BASE_URL . '/admin/command.php?q=blog', $adminCommandSession['cookie'], 0);
+    if (httpIntegrationStatusCode($adminCommandPage) !== 200) {
+        $adminCommandIssues[] = 'fallback stránka command centra nevrátila 200';
+    }
+    foreach ([
+        'role="search" aria-labelledby="admin-command-page-heading"',
+        'Články blogu',
+        'Připnout',
+    ] as $adminCommandPageNeedle) {
+        if (!str_contains($adminCommandPage['body'], $adminCommandPageNeedle)) {
+            $adminCommandIssues[] = 'fallback stránka command centra neobsahuje očekávaný fragment: ' . $adminCommandPageNeedle;
+        }
+    }
+
+    $adminCommandJson = fetchUrlWithHeaders(
+        $baseUrl . BASE_URL . '/admin/command_search.php?q=blog&limit=10',
+        ['Accept: application/json'],
+        $adminCommandSession['cookie'],
+        0
+    );
+    $adminCommandPayload = json_decode($adminCommandJson['body'], true);
+    if (httpIntegrationStatusCode($adminCommandJson) !== 200 || !is_array($adminCommandPayload)) {
+        $adminCommandIssues[] = 'JSON endpoint command centra nevrátil čitelný payload';
+    }
+    $adminCommandFirstBlogResult = null;
+    if (is_array($adminCommandPayload)) {
+        foreach (($adminCommandPayload['results'] ?? []) as $adminCommandResult) {
+            if (is_array($adminCommandResult) && ($adminCommandResult['type'] ?? '') === 'screen' && ($adminCommandResult['key'] ?? '') === 'blog.articles') {
+                $adminCommandFirstBlogResult = $adminCommandResult;
+                break;
+            }
+        }
+    }
+    if ($adminCommandFirstBlogResult === null) {
+        $adminCommandIssues[] = 'JSON endpoint command centra nenašel položku Články blogu';
+    } else {
+        foreach (['type', 'key', 'label', 'description', 'url', 'module', 'badge', 'pinned', 'pin_available'] as $jsonField) {
+            if (!array_key_exists($jsonField, $adminCommandFirstBlogResult)) {
+                $adminCommandIssues[] = 'JSON výsledek command centra nemá pole ' . $jsonField;
+            }
+        }
+    }
+    $adminCommandCsrf = is_array($adminCommandPayload) ? (string)($adminCommandPayload['csrf_token'] ?? '') : '';
+    if ($adminCommandCsrf === '') {
+        $adminCommandIssues[] = 'JSON endpoint command centra nevrátil csrf_token';
+    }
+
+    if ($adminCommandCsrf !== '') {
+        $adminCommandPinResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/shortcut.php',
+            [
+                'csrf_token' => $adminCommandCsrf,
+                'json' => '1',
+                'action' => 'pin',
+                'item_type' => 'screen',
+                'item_key' => 'blog.articles',
+                'url' => 'https://evil.example/ignored',
+            ],
+            $adminCommandSession['cookie'],
+            0
+        );
+        $adminCommandPinPayload = json_decode($adminCommandPinResponse['body'], true);
+        if (httpIntegrationStatusCode($adminCommandPinResponse) !== 200 || !is_array($adminCommandPinPayload) || empty($adminCommandPinPayload['success'])) {
+            $adminCommandIssues[] = 'pin endpoint command centra nepřipnul validní položku';
+        }
+        $storedShortcutUrl = $pdo->prepare("SELECT url FROM cms_admin_shortcuts WHERE user_id = ? AND item_type = 'screen' AND item_key = 'blog.articles' LIMIT 1");
+        $storedShortcutUrl->execute([$adminCommandUserId]);
+        if ((string)($storedShortcutUrl->fetchColumn() ?: '') !== BASE_URL . '/admin/blog.php') {
+            $adminCommandIssues[] = 'pin endpoint uložil jinou než registry URL nebo přijal podstrčenou URL';
+        }
+
+        $adminDashboardWithShortcut = fetchUrl($baseUrl . BASE_URL . '/admin/index.php', $adminCommandSession['cookie'], 0);
+        if (!str_contains($adminDashboardWithShortcut['body'], 'Moje zkratky') || !str_contains($adminDashboardWithShortcut['body'], 'Články blogu')) {
+            $adminCommandIssues[] = 'dashboard po připnutí nezobrazuje osobní zkratku';
+        }
+
+        $adminCommandUnpinCsrf = is_array($adminCommandPinPayload) ? (string)($adminCommandPinPayload['csrf_token'] ?? $adminCommandCsrf) : $adminCommandCsrf;
+        $adminCommandUnpinResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/shortcut.php',
+            [
+                'csrf_token' => $adminCommandUnpinCsrf,
+                'json' => '1',
+                'action' => 'unpin',
+                'item_type' => 'screen',
+                'item_key' => 'blog.articles',
+            ],
+            $adminCommandSession['cookie'],
+            0
+        );
+        $adminCommandUnpinPayload = json_decode($adminCommandUnpinResponse['body'], true);
+        if (httpIntegrationStatusCode($adminCommandUnpinResponse) !== 200 || !is_array($adminCommandUnpinPayload) || empty($adminCommandUnpinPayload['success'])) {
+            $adminCommandIssues[] = 'unpin endpoint command centra neodepnul validní položku';
+        }
+    }
+
+    $originalBlogModuleForCommand = getSetting('module_blog', '0');
+    saveSetting('module_blog', '0');
+    clearSettingsCache();
+    $adminCommandDisabledBlogJson = fetchUrlWithHeaders(
+        $baseUrl . BASE_URL . '/admin/command_search.php?q=blog&limit=10',
+        ['Accept: application/json'],
+        $adminCommandSession['cookie'],
+        0
+    );
+    $adminCommandDisabledBlogPayload = json_decode($adminCommandDisabledBlogJson['body'], true);
+    if (is_array($adminCommandDisabledBlogPayload)) {
+        foreach (($adminCommandDisabledBlogPayload['results'] ?? []) as $disabledBlogResult) {
+            if (is_array($disabledBlogResult) && ($disabledBlogResult['module'] ?? '') === 'blog') {
+                $adminCommandIssues[] = 'command centrum vrací položku vypnutého modulu blog';
+                break;
+            }
+        }
+    }
+    saveSetting('module_blog', $originalBlogModuleForCommand);
+    clearSettingsCache();
+    $pdo->prepare('DELETE FROM cms_admin_shortcuts WHERE user_id = ?')->execute([$adminCommandUserId]);
+
+    httpIntegrationPrintResult('admin_command_center_http', $adminCommandIssues, $failures);
 
     $adminHtmlCacheHeaderIssues = [];
     $adminHtmlCacheHeaderResponses = [

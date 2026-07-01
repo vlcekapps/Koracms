@@ -447,6 +447,8 @@ if (count($quickLinks) > 5) {
     $quickLinks = array_slice($quickLinks, 0, 5);
 }
 
+$adminShortcutItems = adminCommandPinnedItems($pdo, adminCommandCurrentUserId());
+
 $showOperationalOverview = $dashboardMode === 'general';
 $showContentSecondaryBlocks = in_array($dashboardMode, ['general', 'content'], true);
 $showReservationSecondaryBlocks = in_array($dashboardMode, ['general', 'bookings'], true);
@@ -600,6 +602,36 @@ if (isSuperAdmin()) {
   <p><a href="review_queue.php">Otevřít frontu <span aria-hidden="true">→</span></a></p>
 </section>
 <?php endif; ?>
+
+<section class="admin-section-spaced" aria-labelledby="admin-shortcuts-heading">
+  <h2 id="admin-shortcuts-heading">Moje zkratky</h2>
+  <?php if ($adminShortcutItems !== []): ?>
+    <ul class="admin-command-results admin-command-results--dashboard">
+      <?php foreach ($adminShortcutItems as $shortcut): ?>
+        <li class="admin-command-result">
+          <div class="admin-command-result__body">
+            <a class="admin-command-result__link" href="<?= h((string)$shortcut['url']) ?>"><?= h((string)$shortcut['label']) ?></a>
+            <p class="admin-command-result__meta"><?= h((string)$shortcut['description']) ?></p>
+            <?php if ((string)($shortcut['badge'] ?? '') !== ''): ?>
+              <span class="admin-command-result__badge"><?= h((string)$shortcut['badge']) ?></span>
+            <?php endif; ?>
+          </div>
+          <form method="post" action="<?= h(BASE_URL . '/admin/shortcut.php') ?>" class="admin-command-pin-form">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="action" value="unpin">
+            <input type="hidden" name="item_type" value="<?= h((string)$shortcut['type']) ?>">
+            <input type="hidden" name="item_key" value="<?= h((string)$shortcut['key']) ?>">
+            <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/index.php') ?>">
+            <button type="submit" class="btn btn-muted">Odepnout<span class="sr-only"> zkratku <?= h((string)$shortcut['label']) ?></span></button>
+          </form>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php else: ?>
+    <p class="admin-description admin-description--flush admin-description--muted">Připněte si nejčastější obrazovky, akce nebo obsah z command centra. Zkratky jsou osobní a uvidíte je jen vy.</p>
+    <p><a href="<?= h(BASE_URL . '/admin/command.php') ?>" class="btn">Otevřít command centrum</a></p>
+  <?php endif; ?>
+</section>
 
 <?php if (!empty($quickLinks)): ?>
 <section class="admin-stack-md" aria-labelledby="task-links-heading">

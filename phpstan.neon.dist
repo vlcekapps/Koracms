@@ -9,6 +9,7 @@ parameters:
         - auth.php
         - db.php
         - lib/Parsedown.php
+        - lib/admin_command.php
         - lib/comments.php
         - lib/content.php
         - lib/definitions.php
@@ -59,6 +60,7 @@ parameters:
         - build/workflow_audit.php
         - build/workflow_audit_selftest.php
         - build/whitespace_audit.php
+        - lib/admin_command.php
         - lib/backup.php
         - lib/comments.php
         - lib/content.php

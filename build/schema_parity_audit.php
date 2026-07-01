@@ -102,6 +102,10 @@ $criticalInstallColumns = [
     'cms_gallery_photos.is_published' => ['cms_gallery_photos', 'is_published'],
     'cms_gallery_photos.deleted_at' => ['cms_gallery_photos', 'deleted_at'],
     'cms_events.excerpt' => ['cms_events', 'excerpt'],
+    'cms_admin_shortcuts.user_id' => ['cms_admin_shortcuts', 'user_id'],
+    'cms_admin_shortcuts.item_type' => ['cms_admin_shortcuts', 'item_type'],
+    'cms_admin_shortcuts.item_key' => ['cms_admin_shortcuts', 'item_key'],
+    'cms_admin_shortcuts.url' => ['cms_admin_shortcuts', 'url'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -128,6 +132,9 @@ $criticalMigrationSnippets = [
     'cms_gallery_photos.is_published',
     'cms_gallery_photos.deleted_at',
     'cms_events.excerpt',
+    'cms_admin_shortcuts',
+    'uq_admin_shortcut_user_item',
+    'idx_admin_shortcut_user_order',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

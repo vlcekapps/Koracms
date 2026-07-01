@@ -233,6 +233,32 @@ assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reserv
 assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
 assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
 
+test_section('admin command helpers');
+
+$commandArticleItem = adminCommandItem(
+    'screen',
+    'blog.articles',
+    'Články blogu',
+    'Správa článků, konceptů a publikace.',
+    '/admin/blog.php',
+    'blog',
+    ''
+);
+$commandMediaItem = adminCommandItem(
+    'screen',
+    'media',
+    'Knihovna médií',
+    'Nahrávání a správa obrázků.',
+    '/admin/media.php',
+    '',
+    ''
+);
+assert_true(adminCommandItemMatches($commandArticleItem, 'clanky publikace'), 'command search normalizes diacritics and multiple tokens');
+assert_false(adminCommandItemMatches($commandArticleItem, 'rezervace'), 'command search rejects unrelated token');
+assert_equals([$commandMediaItem], adminCommandFilterItems([$commandArticleItem, $commandMediaItem], 'knihovna', 5), 'command filter returns matching item');
+assert_equals([$commandArticleItem], adminCommandFilterItems([$commandArticleItem, $commandMediaItem], '', 1), 'command filter respects limit');
+assert_equals([$commandArticleItem, $commandMediaItem], adminCommandDedupeItems([$commandArticleItem, $commandArticleItem, $commandMediaItem]), 'command dedupe keeps first item per type/key');
+
 test_section('module content reference types');
 
 $contentReferenceTypes = moduleContentReferenceTypeLabels();

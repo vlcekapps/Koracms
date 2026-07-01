@@ -6,6 +6,16 @@ Vývoj nových modulů má vlastní checklist v [docs/developer-modules.md](deve
 
 ---
 
+## Command centrum administrace
+
+Na každé administrační stránce je v hlavní navigaci pole **Hledat v administraci**. Po odeslání otevře běžnou stránku výsledků, takže funguje i bez JavaScriptu. Klávesová zkratka `Ctrl+K` otevře command paletu jako přístupný dialog s vlastním nadpisem, focus trapem, klávesou `Esc` pro zavření a nerušivým live regionem, který oznamuje až stav výsledků, ne každý napsaný znak.
+
+Command centrum hledá v administračních obrazovkách, bezpečných rychlých akcích typu `Nový článek`, `Nová stránka`, `Nahrát média` nebo `Nastavení webu` a ve vybraném editovatelném obsahu. Výsledky se vždy filtrují podle role, capability a zapnutých modulů. Vypnutý modul ani obsah mimo oprávnění uživatele se v paletě ani ve fallback výsledcích nezobrazí.
+
+Užitečné položky si administrátor může připnout. Připnuté položky jsou osobní a zobrazují se na dashboardu v bloku **Moje zkratky**. Pin endpoint nepřijímá libovolnou URL z formuláře; bere jen typ a klíč položky, znovu ji dohledá v interním registru a uloží pouze validní interní administrační cíl.
+
+---
+
 ## Form Builder – typy polí a workflow
 
 ### Podporované typy polí

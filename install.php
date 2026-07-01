@@ -868,6 +868,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_widgets_zone (zone, sort_order)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            user_id     INT          NOT NULL,
+            item_type   VARCHAR(50)  NOT NULL,
+            item_key    VARCHAR(120) NOT NULL,
+            label       VARCHAR(255) NOT NULL DEFAULT '',
+            url         VARCHAR(500) NOT NULL DEFAULT '',
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_admin_shortcut_user_item (user_id, item_type, item_key),
+            INDEX idx_admin_shortcut_user_order (user_id, sort_order, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Výchozí nastavení ────────────────────────────────────────────────
         $defaults = array_merge([
             'site_name'       => $siteName,
