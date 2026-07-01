@@ -5,6 +5,7 @@
  * Volán z .htaccess catch-all pravidel pro URL jako /cooking/ nebo /cooking/recipe-slug.
  */
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/lib/theme.php';
 checkMaintenanceMode();
 
 if (!isModuleEnabled('blog')) {

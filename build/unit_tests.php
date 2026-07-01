@@ -228,6 +228,17 @@ assert_equals('downloads', $contentReferenceTypeMap['download'] ?? null, 'downlo
 assert_equals('forms', $contentReferenceTypeMap['forms'] ?? null, 'forms picker type maps to forms module');
 assert_false(isset($contentReferenceTypes['statistics']), 'statistics module has no content picker source');
 
+test_section('module search result types');
+
+$searchResultTypes = moduleSearchResultTypeLabels();
+$searchResultTypeMap = searchResultTypeModuleMap();
+assert_equals('Článek', $searchResultTypes['blog']['blog'] ?? null, 'blog search label comes from manifest');
+assert_equals('blog', $searchResultTypeMap['blog'] ?? null, 'blog search result type maps to blog module');
+assert_equals('gallery', $searchResultTypeMap['gallery_album'] ?? null, 'gallery album search result type maps to gallery module');
+assert_equals('podcast', $searchResultTypeMap['podcast_episode'] ?? null, 'podcast episode search result type maps to podcast module');
+assert_equals('reservations', $searchResultTypeMap['reservation_resource'] ?? null, 'reservation resource search result type maps to reservations module');
+assert_false(isset($searchResultTypes['statistics']), 'statistics module has no public search result type');
+
 test_section('navigation links');
 
 assert_equals('/kontakt', navigationLinkUrl('/kontakt'), 'navigation link accepts internal path');

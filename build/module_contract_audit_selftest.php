@@ -143,8 +143,11 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $contentReferenceTypes = $moduleKey === 'blog'
             ? "['blog' => 'Blog']"
             : ($moduleKey === 'news' ? "['news' => 'News']" : '[]');
+        $searchResultTypes = $moduleKey === 'blog'
+            ? "['blog' => 'Článek']"
+            : ($moduleKey === 'news' ? "['news' => 'Novinka']" : '[]');
         $publicPaths = $publicNav ? "['{$publicNavPath}']" : '[]';
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'content_reference_types' => {$contentReferenceTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'content_reference_types' => {$contentReferenceTypes}, 'search_result_types' => {$searchResultTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -161,6 +164,8 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function moduleContentReferenceTypeLabels(): array { return []; }\n"
         . "function contentReferenceTypeModuleMap(): array { return ['blog' => 'blog', 'news' => 'news']; }\n"
+        . "function moduleSearchResultTypeLabels(): array { return ['blog' => ['blog' => 'Článek'], 'news' => ['news' => 'Novinka']]; }\n"
+        . "function searchResultTypeModuleMap(): array { return ['blog' => 'blog', 'news' => 'news']; }\n"
         . "function moduleAdminLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
@@ -198,7 +203,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths a admin_paths.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
-        . "Content picker používá content_reference_types.\n"
+        . "Content picker používá content_reference_types a veřejné vyhledávání search_result_types.\n"
         . "Widgety a šablony hlídají requires_module i requires_modules.\n"
         . "Redirecty validujte přes internalRedirectTarget() a uploady přes lib/uploads.php.\n"
         . "WCAG vazby používejte přes aria-labelledby a veřejné šablony kontroluje build/theme_view_audit.php.\n"
@@ -209,7 +214,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
 function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
-        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths.\n"
+        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths a search_result_types.\n"
         . "Admin routy chrání adminRouteModuleRequirements().\n"
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
@@ -221,7 +226,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
     return "Admin guide odkazuje na developer-modules.md.\n"
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
         . "Admin endpointy kryje adminRouteModuleRequirements().\n"
-        . "Content picker typy definuje content_reference_types.\n"
+        . "Content picker typy definuje content_reference_types a vyhledávání search_result_types.\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n";
 }
 
@@ -239,6 +244,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
         'admin/content_reference_picker.php' => "<?php\nmoduleContentReferenceTypeLabels();\n",
         'admin/content_reference_search.php' => "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'news') && isModuleEnabled('news')) {}\n",
+        'search.php' => "<?php\nmoduleSearchResultTypeLabels(); if (isModuleEnabled('blog')) { 'blog' AS type; } if (isModuleEnabled('news')) { 'news' AS type; } function resultUrl(array \$result): string { return match(\$result['type']) { 'blog' => '/', 'news' => '/', 'page' => '/', default => '/', }; } function typeLabel(string \$type): string { moduleSearchResultTypeLabels(); return ''; }\n",
         'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
@@ -334,7 +340,7 @@ assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 $additionalModuleFiles = $validFiles;
 $additionalModuleFiles['lib/definitions.php'] = str_replace(
     "    ];\n}\nfunction coreModuleKeysByFlag",
-    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'content_reference_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'content_reference_types' => [], 'search_result_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
     $additionalModuleFiles['lib/definitions.php']
 );
 $additionalModuleFiles['auth.php'] = str_replace(
@@ -442,6 +448,14 @@ assertModuleContractAuditFails(
     'Missing content reference manifest type',
     $missingContentReferenceManifestFiles,
     'content reference search gates module events but the module manifest has no content_reference_types entry for it.'
+);
+
+$missingSearchResultManifestFiles = $validFiles;
+$missingSearchResultManifestFiles['search.php'] = "<?php\nmoduleSearchResultTypeLabels(); if (isModuleEnabled('events')) { 'event' AS type; } function resultUrl(array \$result): string { return match(\$result['type']) { 'event' => '/', 'page' => '/', default => '/', }; } function typeLabel(string \$type): string { moduleSearchResultTypeLabels(); return ''; }\n";
+assertModuleContractAuditFails(
+    'Missing search result manifest type',
+    $missingSearchResultManifestFiles,
+    'search.php gates module events but the module manifest has no search_result_types entry for it.'
 );
 
 $unknownApplicationModuleFiles = $validFiles;

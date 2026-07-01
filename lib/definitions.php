@@ -10,6 +10,7 @@
  *     widget_label:string,
  *     admin_label:string,
  *     content_reference_types:array<string,string>,
+ *     search_result_types:array<string,string>,
  *     settings_default:string,
  *     public_nav_path:string,
  *     public_paths:list<string>,
@@ -30,6 +31,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Blog',
             'admin_label' => 'Blog',
             'content_reference_types' => ['blog' => 'Články blogu'],
+            'search_result_types' => ['blog' => 'Článek'],
             'settings_default' => '1',
             'public_nav_path' => '/blog/index.php',
             'public_paths' => [
@@ -57,6 +59,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Novinky',
             'admin_label' => 'Novinky',
             'content_reference_types' => ['news' => 'Novinky'],
+            'search_result_types' => ['news' => 'Novinka'],
             'settings_default' => '1',
             'public_nav_path' => '/news/index.php',
             'public_paths' => [
@@ -78,6 +81,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Chat',
             'admin_label' => 'Chat',
             'content_reference_types' => [],
+            'search_result_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/chat/index.php',
             'public_paths' => [
@@ -98,6 +102,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Kontakt',
             'admin_label' => 'Kontakt',
             'content_reference_types' => [],
+            'search_result_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/contact/index.php',
             'public_paths' => [
@@ -118,6 +123,10 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Fotogalerie',
             'admin_label' => 'Galerie',
             'content_reference_types' => ['gallery' => 'Fotogalerie'],
+            'search_result_types' => [
+                'gallery_album' => 'Album galerie',
+                'gallery_photo' => 'Fotografie',
+            ],
             'settings_default' => '1',
             'public_nav_path' => '/gallery/index.php',
             'public_paths' => [
@@ -141,6 +150,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Události',
             'admin_label' => 'Události',
             'content_reference_types' => ['event' => 'Události'],
+            'search_result_types' => ['event' => 'Akce'],
             'settings_default' => '1',
             'public_nav_path' => '/events/index.php',
             'public_paths' => [
@@ -163,6 +173,10 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Podcast',
             'admin_label' => 'Podcasty',
             'content_reference_types' => ['podcast' => 'Podcasty'],
+            'search_result_types' => [
+                'podcast_show' => 'Podcast',
+                'podcast_episode' => 'Epizoda podcastu',
+            ],
             'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
             'public_paths' => [
@@ -189,6 +203,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Místa',
             'admin_label' => 'Zajímavá místa',
             'content_reference_types' => ['place' => 'Zajímavá místa'],
+            'search_result_types' => ['place' => 'Místo'],
             'settings_default' => '1',
             'public_nav_path' => '/places/index.php',
             'public_paths' => [
@@ -211,6 +226,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Newsletter',
             'admin_label' => 'Newsletter',
             'content_reference_types' => [],
+            'search_result_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '',
             'public_paths' => [
@@ -232,6 +248,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Ke stažení',
             'admin_label' => 'Ke stažení',
             'content_reference_types' => ['download' => 'Ke stažení'],
+            'search_result_types' => ['download' => 'Ke stažení'],
             'settings_default' => '1',
             'public_nav_path' => '/downloads/index.php',
             'public_paths' => [
@@ -255,6 +272,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Jídelní lístek',
             'admin_label' => 'Jídelní lístek',
             'content_reference_types' => [],
+            'search_result_types' => ['food_card' => 'Lístek'],
             'settings_default' => '1',
             'public_nav_path' => '/food/index.php',
             'public_paths' => [
@@ -277,6 +295,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Ankety',
             'admin_label' => 'Ankety',
             'content_reference_types' => ['poll' => 'Ankety'],
+            'search_result_types' => ['poll' => 'Anketa'],
             'settings_default' => '0',
             'public_nav_path' => '/polls/index.php',
             'public_paths' => [
@@ -297,6 +316,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'FAQ',
             'admin_label' => 'FAQ',
             'content_reference_types' => ['faq' => 'FAQ'],
+            'search_result_types' => ['faq' => 'FAQ'],
             'settings_default' => '0',
             'public_nav_path' => '/faq/index.php',
             'public_paths' => [
@@ -319,6 +339,7 @@ function coreModuleDefinitions(): array
             'widget_label' => '',
             'admin_label' => 'Vývěska',
             'content_reference_types' => ['board' => ''],
+            'search_result_types' => ['board' => ''],
             'settings_default' => '0',
             'public_nav_path' => '/board/index.php',
             'public_paths' => [
@@ -342,6 +363,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Rezervace',
             'admin_label' => 'Rezervace',
             'content_reference_types' => [],
+            'search_result_types' => ['reservation_resource' => 'Rezervace'],
             'settings_default' => '0',
             'public_nav_path' => '/reservations/index.php',
             'public_paths' => [
@@ -370,6 +392,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Formuláře',
             'admin_label' => 'Formuláře',
             'content_reference_types' => ['forms' => 'Formuláře'],
+            'search_result_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '',
             'public_paths' => [
@@ -390,6 +413,7 @@ function coreModuleDefinitions(): array
             'widget_label' => 'Statistiky',
             'admin_label' => 'Statistiky',
             'content_reference_types' => [],
+            'search_result_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '',
             'public_paths' => [],
@@ -563,6 +587,58 @@ function contentReferenceTypeModuleMap(): array
 {
     $map = [];
     foreach (moduleContentReferenceTypeLabels() as $moduleKey => $typeLabels) {
+        foreach (array_keys($typeLabels) as $type) {
+            $map[$type] = $moduleKey;
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * @return array<string, array<string,string>>
+ */
+function moduleSearchResultTypeLabels(): array
+{
+    $labels = [];
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        $typeLabels = $definition['search_result_types'];
+        if ($typeLabels === []) {
+            continue;
+        }
+
+        $normalizedTypeLabels = [];
+        foreach ($typeLabels as $type => $label) {
+            $type = trim((string)$type);
+            if ($type === '') {
+                continue;
+            }
+
+            $label = trim($label);
+            if ($label === '') {
+                $label = $moduleKey === 'board'
+                    ? (function_exists('resolveThemeName') ? boardModulePublicLabel() : 'Vývěska')
+                    : moduleWidgetLabel($moduleKey);
+            }
+
+            $normalizedTypeLabels[$type] = $label;
+        }
+
+        if ($normalizedTypeLabels !== []) {
+            $labels[$moduleKey] = $normalizedTypeLabels;
+        }
+    }
+
+    return $labels;
+}
+
+/**
+ * @return array<string,string>
+ */
+function searchResultTypeModuleMap(): array
+{
+    $map = [];
+    foreach (moduleSearchResultTypeLabels() as $moduleKey => $typeLabels) {
         foreach (array_keys($typeLabels) as $type) {
             $map[$type] = $moduleKey;
         }

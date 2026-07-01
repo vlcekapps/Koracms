@@ -1015,6 +1015,124 @@ function moduleContractAuditValidateContentReferenceTypeCoverage(
 
 /**
  * @param list<string> $issues
+ * @return array<string,string>
+ */
+function moduleContractAuditSearchResultTypeModuleMap(string $definitionsSource, array &$issues): array
+{
+    $map = [];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringMapField($block, $moduleKey, 'search_result_types', $issues) as $type => $label) {
+            if ($type === '') {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' search_result_types contains empty type.';
+                continue;
+            }
+            if (preg_match('/^[a-z][a-z0-9_]*$/', $type) !== 1) {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' contains invalid search_result_types key ' . $type . '.';
+                continue;
+            }
+            if (isset($map[$type])) {
+                $issues[] = 'search_result_types entry ' . $type . ' is duplicated by modules ' . $map[$type] . ' and ' . $moduleKey . '.';
+                continue;
+            }
+            if ($label === '' && !($moduleKey === 'board' && $type === 'board')) {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' search_result_types label for ' . $type . ' must not be empty.';
+            }
+
+            $map[$type] = $moduleKey;
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateSearchResultTypeCoverage(
+    string $definitionsSource,
+    string $searchSource,
+    array &$issues
+): void {
+    $typeModuleMap = moduleContractAuditSearchResultTypeModuleMap($definitionsSource, $issues);
+    $modulesWithSearchResults = array_values(array_unique(array_values($typeModuleMap)));
+
+    moduleContractAuditRequire(
+        str_contains($definitionsSource, 'function moduleSearchResultTypeLabels(')
+        && str_contains($definitionsSource, 'function searchResultTypeModuleMap('),
+        'lib/definitions.php must expose manifest-derived search result type helpers.',
+        $issues
+    );
+    moduleContractAuditRequire(
+        str_contains($searchSource, 'moduleSearchResultTypeLabels()'),
+        'search.php must derive search result labels from the central module manifest.',
+        $issues
+    );
+
+    if (preg_match_all('/\bisModuleEnabled\(\s*[\'"]([a-z][a-z0-9_]*)[\'"]\s*\)/', $searchSource, $gateMatches) === false) {
+        $issues[] = 'search.php isModuleEnabled references cannot be parsed for search result coverage.';
+    } else {
+        foreach (array_unique($gateMatches[1]) as $moduleKey) {
+            moduleContractAuditRequire(
+                in_array($moduleKey, $modulesWithSearchResults, true),
+                'search.php gates module ' . $moduleKey . ' but the module manifest has no search_result_types entry for it.',
+                $issues
+            );
+        }
+    }
+
+    if (preg_match_all('/[\'"]([a-z][a-z0-9_]*)[\'"]\s+AS\s+type\b/i', $searchSource, $typeMatches) === false) {
+        $issues[] = 'search.php result type literals cannot be parsed.';
+    } else {
+        $searchTypeLiterals = array_values(array_unique($typeMatches[1]));
+        foreach ($searchTypeLiterals as $type) {
+            if ($type === 'page') {
+                continue;
+            }
+            moduleContractAuditRequire(
+                isset($typeModuleMap[$type]),
+                'search.php returns result type ' . $type . ' but no module manifest search_result_types entry defines it.',
+                $issues
+            );
+        }
+        foreach (array_keys($typeModuleMap) as $type) {
+            moduleContractAuditRequire(
+                in_array($type, $searchTypeLiterals, true),
+                'module manifest search_result_types entry ' . $type . ' is not returned by search.php.',
+                $issues
+            );
+        }
+    }
+
+    $resultUrlPosition = strpos($searchSource, 'function resultUrl(');
+    $typeLabelPosition = strpos($searchSource, 'function typeLabel(');
+    if (!is_int($resultUrlPosition) || !is_int($typeLabelPosition) || $typeLabelPosition <= $resultUrlPosition) {
+        $issues[] = 'search.php resultUrl() block cannot be parsed for search result URL coverage.';
+        return;
+    }
+
+    $resultUrlBlock = substr($searchSource, $resultUrlPosition, $typeLabelPosition - $resultUrlPosition);
+    if (preg_match_all('/[\'"]([a-z][a-z0-9_]*)[\'"]\s*=>/', $resultUrlBlock, $urlMatches) === false) {
+        $issues[] = 'search.php resultUrl() result types cannot be parsed.';
+        return;
+    }
+
+    $urlTypes = array_values(array_unique($urlMatches[1]));
+    foreach (array_keys($typeModuleMap) as $type) {
+        moduleContractAuditRequire(
+            in_array($type, $urlTypes, true),
+            'search result type ' . $type . ' must be handled by search.php resultUrl().',
+            $issues
+        );
+    }
+    moduleContractAuditRequire(
+        in_array('page', $urlTypes, true),
+        'search.php resultUrl() must keep the non-module page result type.',
+        $issues
+    );
+}
+
+/**
+ * @param list<string> $issues
  */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
@@ -1036,6 +1154,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $navLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'nav_label', $issues));
         $adminLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'admin_label', $issues));
         $contentReferenceTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues);
+        $searchResultTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'search_result_types', $issues);
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues);
@@ -1051,6 +1170,13 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
             moduleContractAuditRequire(
                 preg_match('/^[a-z][a-z0-9_]*$/', $contentReferenceType) === 1,
                 'core module manifest entry ' . $moduleKey . ' contains invalid content_reference_types key ' . $contentReferenceType . '.',
+                $issues
+            );
+        }
+        foreach (array_keys($searchResultTypes) as $searchResultType) {
+            moduleContractAuditRequire(
+                preg_match('/^[a-z][a-z0-9_]*$/', $searchResultType) === 1,
+                'core module manifest entry ' . $moduleKey . ' contains invalid search_result_types key ' . $searchResultType . '.',
                 $issues
             );
         }
@@ -1254,6 +1380,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'requireModuleEnabled()',
             'isModuleEnabled()',
             'content_reference_types',
+            'search_result_types',
             'requires_module',
             'requires_modules',
             'internalRedirectTarget()',
@@ -1280,6 +1407,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'public_paths',
             'adminRouteModuleRequirements()',
             'content_reference_types',
+            'search_result_types',
             'public_module_navigation_http',
             'admin_disabled_modules_http',
             'content_reference_disabled_modules_http',
@@ -1296,6 +1424,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'coreModuleDefinitions()',
             'adminRouteModuleRequirements()',
             'content_reference_types',
+            'search_result_types',
             'composer ci:module-ready',
         ],
         $issues
@@ -1315,6 +1444,7 @@ $readmeSource = moduleContractAuditReadFile($projectRoot, 'README.md', $issues);
 $authSource = moduleContractAuditReadFile($projectRoot, 'auth.php', $issues);
 $contentReferencePickerSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_picker.php', $issues);
 $contentReferenceSearchSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_search.php', $issues);
+$publicSearchSource = moduleContractAuditReadFile($projectRoot, 'search.php', $issues);
 $httpIntegrationSource = moduleContractAuditReadFile($projectRoot, 'build/http_integration.php', $issues);
 
 moduleContractAuditRequire(
@@ -1329,6 +1459,8 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleWidgetLabel(')
     && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels(')
     && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap(')
+    && str_contains($definitionsSource, 'function moduleSearchResultTypeLabels(')
+    && str_contains($definitionsSource, 'function searchResultTypeModuleMap(')
     && str_contains($definitionsSource, 'function moduleAdminLabel('),
     'lib/definitions.php must keep the central module manifest helper set.',
     $issues
@@ -1363,6 +1495,7 @@ foreach ([
     "'widget_label'",
     "'admin_label'",
     "'content_reference_types'",
+    "'search_result_types'",
     "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(
@@ -1382,6 +1515,7 @@ moduleContractAuditValidateAdminRouteStaticCoverage($authSource, $composerSource
 moduleContractAuditValidatePublicNavStaticCoverage($definitionsSource, $composerSource, $issues);
 moduleContractAuditValidatePublicEntryPointStaticCoverage($definitionsSource, $composerSource, $issues);
 moduleContractAuditValidateContentReferenceTypeCoverage($definitionsSource, $contentReferencePickerSource, $contentReferenceSearchSource, $issues);
+moduleContractAuditValidateSearchResultTypeCoverage($definitionsSource, $publicSearchSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

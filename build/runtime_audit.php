@@ -7738,6 +7738,10 @@ foreach ($publicNotFoundEndpointSources as $publicNotFoundSource) {
         break;
     }
 }
+$blogRouterNotFoundHelperDependencyOk = str_contains(
+    $publicNotFoundEndpointSources['blog_router.php'] ?? '',
+    "require_once __DIR__ . '/lib/theme.php';"
+);
 $httpIntegrationFoundationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
     : '';
@@ -7822,6 +7826,7 @@ $foundationChecks = [
         && str_contains($developerModulesDocSource, 'public_paths')
         && str_contains($developerModulesDocSource, 'adminRouteModuleRequirements()')
         && str_contains($developerModulesDocSource, 'content_reference_types')
+        && str_contains($developerModulesDocSource, 'search_result_types')
         && str_contains($developerModulesDocSource, 'internalRedirectTarget()')
         && str_contains($developerModulesDocSource, 'lib/uploads.php')
         && str_contains($developerModulesDocSource, 'aria-labelledby')
@@ -7832,9 +7837,11 @@ $foundationChecks = [
         && str_contains($readmeSource, 'public_paths')
         && str_contains($readmeSource, 'adminRouteModuleRequirements()')
         && str_contains($readmeSource, 'content_reference_disabled_modules_http')
+        && str_contains($readmeSource, 'search_result_types')
         && str_contains($adminGuideSource, 'composer ci:module-ready')
         && str_contains($adminGuideSource, 'public_paths')
         && str_contains($adminGuideSource, 'content_reference_types')
+        && str_contains($adminGuideSource, 'search_result_types')
         && str_contains($adminGuideSource, 'developer-modules.md'),
     'module contract audit is wired into module-ready CI' => str_contains($composerSource, '"test:module-contract"')
         && str_contains($composerSource, '"test:module-contract-selftest"')
@@ -7885,7 +7892,9 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'adminRouteModuleDisabledMessage($moduleKey)')
         && str_contains($moduleContractAuditSource, 'manifest-derived requireModuleEnabled() disabled message')
         && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateContentReferenceTypeCoverage')
+        && str_contains($moduleContractAuditSource, 'moduleContractAuditValidateSearchResultTypeCoverage')
         && str_contains($moduleContractAuditSource, 'content_reference_types')
+        && str_contains($moduleContractAuditSource, 'search_result_types')
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleNavigationDefaults()')
         && str_contains($httpIntegrationFoundationSource, "saveSetting('module_' . \$moduleKey, '0')")
@@ -7918,6 +7927,7 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSelftestSource, 'Hard-coded admin disabled module message')
         && str_contains($moduleContractAuditSelftestSource, 'Duplicate requireModuleEnabled disabled message')
         && str_contains($moduleContractAuditSelftestSource, 'Missing content reference manifest type')
+        && str_contains($moduleContractAuditSelftestSource, 'Missing search result manifest type')
         && str_contains($moduleContractAuditSelftestSource, 'Unknown application module gate')
         && str_contains($moduleContractAuditSelftestSource, 'Unknown application module setting')
         && str_contains($moduleContractAuditSelftestSource, 'Invalid module manifest default')
@@ -7949,6 +7959,8 @@ $foundationChecks = [
         && str_contains($definitionsSource, 'function moduleDefaultSettings()')
         && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels()')
         && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap()')
+        && str_contains($definitionsSource, 'function moduleSearchResultTypeLabels()')
+        && str_contains($definitionsSource, 'function searchResultTypeModuleMap()')
         && str_contains($definitionsSource, 'function moduleSettingsLabels()')
         && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
         && str_contains($definitionsSource, 'function modulePublicEntryPoints()')
@@ -7957,6 +7969,7 @@ $foundationChecks = [
         && str_contains($definitionsSource, 'function moduleAdminLabel(')
         && str_contains($definitionsSource, "'admin_label'")
         && str_contains($definitionsSource, "'public_paths'")
+        && str_contains($definitionsSource, "'search_result_types'")
         && str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');")
         && str_contains($statsSource, 'return moduleNavigationDefaults();')
         && str_contains($widgetsSource, 'return moduleWidgetLabel($moduleKey);'),
@@ -8921,7 +8934,8 @@ $foundationChecks = [
         && str_contains($themeSource, "'page_kind' => (string)(\$options['page_kind'] ?? 'utility')")
         && str_contains($defaultNotFoundViewSource, '<?= h((string)($title ??')
         && str_contains($defaultNotFoundViewSource, '<?= h((string)($message ??')
-        && $publicNotFoundEndpointHelperUsageOk,
+        && $publicNotFoundEndpointHelperUsageOk
+        && $blogRouterNotFoundHelperDependencyOk,
     'admin read-only endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminExportSource, 'if ($isHeadRequest)')
         && str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')

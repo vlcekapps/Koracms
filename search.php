@@ -390,24 +390,15 @@ function resultUrl(array $result): string
 
 function typeLabel(string $type): string
 {
-    return match($type) {
-        'blog' => 'Článek',
-        'news' => 'Novinka',
-        'page' => 'Stránka',
-        'event' => 'Akce',
-        'podcast_show' => 'Podcast',
-        'podcast_episode' => 'Epizoda podcastu',
-        'faq' => 'FAQ',
-        'food_card' => 'Lístek',
-        'gallery_album' => 'Album galerie',
-        'gallery_photo' => 'Fotografie',
-        'download' => 'Ke stažení',
-        'place' => 'Místo',
-        'board' => boardModulePublicLabel(),
-        'poll' => 'Anketa',
-        'reservation_resource' => 'Rezervace',
-        default => '',
-    };
+    static $labels = null;
+    if ($labels === null) {
+        $labels = ['page' => 'Stránka'];
+        foreach (moduleSearchResultTypeLabels() as $typeLabels) {
+            $labels += $typeLabels;
+        }
+    }
+
+    return $labels[$type] ?? '';
 }
 
 $resultCount = count($results);
