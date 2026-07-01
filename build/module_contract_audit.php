@@ -1133,6 +1133,93 @@ function moduleContractAuditValidateSearchResultTypeCoverage(
 
 /**
  * @param list<string> $issues
+ * @return array<string,string>
+ */
+function moduleContractAuditSitemapSectionModuleMap(string $definitionsSource, array &$issues): array
+{
+    $map = [];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringMapField($block, $moduleKey, 'sitemap_sections', $issues) as $section => $label) {
+            if ($section === '') {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' sitemap_sections contains empty section.';
+                continue;
+            }
+            if (preg_match('/^[a-z][a-z0-9_]*$/', $section) !== 1) {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' contains invalid sitemap_sections key ' . $section . '.';
+                continue;
+            }
+            if (isset($map[$section])) {
+                $issues[] = 'sitemap_sections entry ' . $section . ' is duplicated by modules ' . $map[$section] . ' and ' . $moduleKey . '.';
+                continue;
+            }
+            if ($label === '' && !($moduleKey === 'board' && $section === 'board')) {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' sitemap_sections label for ' . $section . ' must not be empty.';
+            }
+
+            $map[$section] = $moduleKey;
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateSitemapSectionCoverage(
+    string $definitionsSource,
+    string $sitemapSource,
+    array &$issues
+): void {
+    $sectionModuleMap = moduleContractAuditSitemapSectionModuleMap($definitionsSource, $issues);
+    $modulesWithSitemapSections = array_values(array_unique(array_values($sectionModuleMap)));
+
+    moduleContractAuditRequire(
+        str_contains($definitionsSource, 'function moduleSitemapSections(')
+        && str_contains($definitionsSource, 'function sitemapSectionModuleMap('),
+        'lib/definitions.php must expose manifest-derived sitemap section helpers.',
+        $issues
+    );
+
+    if (preg_match_all('/\bisModuleEnabled\(\s*[\'"]([a-z][a-z0-9_]*)[\'"]\s*\)/', $sitemapSource, $gateMatches) === false) {
+        $issues[] = 'sitemap.php isModuleEnabled references cannot be parsed for sitemap section coverage.';
+    } else {
+        foreach (array_unique($gateMatches[1]) as $moduleKey) {
+            moduleContractAuditRequire(
+                in_array($moduleKey, $modulesWithSitemapSections, true),
+                'sitemap.php gates module ' . $moduleKey . ' but the module manifest has no sitemap_sections entry for it.',
+                $issues
+            );
+        }
+    }
+
+    if (preg_match_all('/\bsitemapLogSectionError\(\s*[\'"]([a-z][a-z0-9_]*)[\'"]/', $sitemapSource, $sectionMatches) === false) {
+        $issues[] = 'sitemap.php section labels cannot be parsed.';
+        return;
+    }
+
+    $loggedSections = array_values(array_unique($sectionMatches[1]));
+    foreach ($loggedSections as $section) {
+        if (in_array($section, ['pages', 'authors'], true)) {
+            continue;
+        }
+        moduleContractAuditRequire(
+            isset($sectionModuleMap[$section]),
+            'sitemap.php logs section ' . $section . ' but no module manifest sitemap_sections entry defines it.',
+            $issues
+        );
+    }
+    foreach (array_keys($sectionModuleMap) as $section) {
+        moduleContractAuditRequire(
+            in_array($section, $loggedSections, true),
+            'module manifest sitemap_sections entry ' . $section . ' is not logged by sitemap.php.',
+            $issues
+        );
+    }
+}
+
+/**
+ * @param list<string> $issues
  */
 function moduleContractAuditValidateManifestValues(string $projectRoot, string $definitionsSource, array &$issues): void
 {
@@ -1155,6 +1242,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $adminLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'admin_label', $issues));
         $contentReferenceTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues);
         $searchResultTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'search_result_types', $issues);
+        $sitemapSections = moduleContractAuditManifestStringMapField($block, $moduleKey, 'sitemap_sections', $issues);
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues);
@@ -1177,6 +1265,13 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
             moduleContractAuditRequire(
                 preg_match('/^[a-z][a-z0-9_]*$/', $searchResultType) === 1,
                 'core module manifest entry ' . $moduleKey . ' contains invalid search_result_types key ' . $searchResultType . '.',
+                $issues
+            );
+        }
+        foreach (array_keys($sitemapSections) as $sitemapSection) {
+            moduleContractAuditRequire(
+                preg_match('/^[a-z][a-z0-9_]*$/', $sitemapSection) === 1,
+                'core module manifest entry ' . $moduleKey . ' contains invalid sitemap_sections key ' . $sitemapSection . '.',
                 $issues
             );
         }
@@ -1381,6 +1476,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'isModuleEnabled()',
             'content_reference_types',
             'search_result_types',
+            'sitemap_sections',
             'requires_module',
             'requires_modules',
             'internalRedirectTarget()',
@@ -1408,6 +1504,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'adminRouteModuleRequirements()',
             'content_reference_types',
             'search_result_types',
+            'sitemap_sections',
             'public_module_navigation_http',
             'admin_disabled_modules_http',
             'content_reference_disabled_modules_http',
@@ -1425,6 +1522,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'adminRouteModuleRequirements()',
             'content_reference_types',
             'search_result_types',
+            'sitemap_sections',
             'composer ci:module-ready',
         ],
         $issues
@@ -1445,6 +1543,7 @@ $authSource = moduleContractAuditReadFile($projectRoot, 'auth.php', $issues);
 $contentReferencePickerSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_picker.php', $issues);
 $contentReferenceSearchSource = moduleContractAuditReadFile($projectRoot, 'admin/content_reference_search.php', $issues);
 $publicSearchSource = moduleContractAuditReadFile($projectRoot, 'search.php', $issues);
+$sitemapSource = moduleContractAuditReadFile($projectRoot, 'sitemap.php', $issues);
 $httpIntegrationSource = moduleContractAuditReadFile($projectRoot, 'build/http_integration.php', $issues);
 
 moduleContractAuditRequire(
@@ -1461,6 +1560,8 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap(')
     && str_contains($definitionsSource, 'function moduleSearchResultTypeLabels(')
     && str_contains($definitionsSource, 'function searchResultTypeModuleMap(')
+    && str_contains($definitionsSource, 'function moduleSitemapSections(')
+    && str_contains($definitionsSource, 'function sitemapSectionModuleMap(')
     && str_contains($definitionsSource, 'function moduleAdminLabel('),
     'lib/definitions.php must keep the central module manifest helper set.',
     $issues
@@ -1496,6 +1597,7 @@ foreach ([
     "'admin_label'",
     "'content_reference_types'",
     "'search_result_types'",
+    "'sitemap_sections'",
     "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(
@@ -1516,6 +1618,7 @@ moduleContractAuditValidatePublicNavStaticCoverage($definitionsSource, $composer
 moduleContractAuditValidatePublicEntryPointStaticCoverage($definitionsSource, $composerSource, $issues);
 moduleContractAuditValidateContentReferenceTypeCoverage($definitionsSource, $contentReferencePickerSource, $contentReferenceSearchSource, $issues);
 moduleContractAuditValidateSearchResultTypeCoverage($definitionsSource, $publicSearchSource, $issues);
+moduleContractAuditValidateSitemapSectionCoverage($definitionsSource, $sitemapSource, $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),

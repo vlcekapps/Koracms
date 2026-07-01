@@ -239,6 +239,17 @@ assert_equals('podcast', $searchResultTypeMap['podcast_episode'] ?? null, 'podca
 assert_equals('reservations', $searchResultTypeMap['reservation_resource'] ?? null, 'reservation resource search result type maps to reservations module');
 assert_false(isset($searchResultTypes['statistics']), 'statistics module has no public search result type');
 
+test_section('module sitemap sections');
+
+$sitemapSections = moduleSitemapSections();
+$sitemapSectionMap = sitemapSectionModuleMap();
+assert_equals('Blogy a články', $sitemapSections['blog']['blog'] ?? null, 'blog sitemap section label comes from manifest');
+assert_equals('blog', $sitemapSectionMap['blog'] ?? null, 'blog sitemap section maps to blog module');
+assert_equals('gallery', $sitemapSectionMap['gallery_photos'] ?? null, 'gallery photos sitemap section maps to gallery module');
+assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcast episodes sitemap section maps to podcast module');
+assert_equals('forms', $sitemapSectionMap['forms'] ?? null, 'forms sitemap section maps to forms module');
+assert_false(isset($sitemapSections['statistics']), 'statistics module has no sitemap section');
+
 test_section('navigation links');
 
 assert_equals('/kontakt', navigationLinkUrl('/kontakt'), 'navigation link accepts internal path');
