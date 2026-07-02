@@ -120,6 +120,7 @@ if ($routePath === '') {
         '#^events/([a-z0-9-]+)\.ics$#i' => ['events/ics.php', ['slug']],
         '#^events/typ/([a-z0-9-]+)/?$#i' => ['events/index.php', ['type_slug']],
         '#^events/([a-z0-9-]+)/?$#i' => ['events/event.php', ['slug']],
+        '#^faq/kategorie/([a-z0-9-]+)/?$#i' => ['faq/index.php', ['category_slug']],
         '#^faq/([a-z0-9-]+)/?$#i' => ['faq/item.php', ['slug']],
         '#^forms/([a-z0-9-]+)/?$#i' => ['forms/index.php', ['slug']],
         '#^food/card/([a-z0-9-]+)/?$#i' => ['food/card.php', ['slug']],

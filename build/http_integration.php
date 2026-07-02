@@ -43,6 +43,8 @@ $createdDownloadIds = [];
 $createdDownloadCategoryIds = [];
 $createdDownloadSeriesIds = [];
 $createdDownloadStoredFiles = [];
+$createdFaqIds = [];
+$createdFaqCategoryIds = [];
 $createdPollIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
@@ -4928,6 +4930,214 @@ try {
 
     httpIntegrationPrintResult('downloads_catalog_versions_http', $downloadIssues, $failures);
 
+    $faqIssues = [];
+    saveSetting('module_faq', '1');
+    clearSettingsCache();
+
+    $faqCategorySlug = 'http-faq-category-' . bin2hex(random_bytes(4));
+    $faqCategoryNewSlug = $faqCategorySlug . '-upraveno';
+    $faqQuestionSlug = 'http-faq-question-' . bin2hex(random_bytes(4));
+    $faqCategoryName = 'HTTP FAQ kategorie';
+    $faqQuestion = 'Jak funguje HTTP test FAQ kategorií?';
+
+    $faqCategoryCreateResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/faq_cats.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'name' => $faqCategoryName,
+            'slug' => $faqCategorySlug,
+            'description' => 'Popis veřejné FAQ kategorie.',
+            'meta_title' => 'SEO FAQ kategorie',
+            'meta_description' => 'Meta popis veřejné FAQ kategorie.',
+            'sort_order' => '3',
+            'parent_id' => '',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($faqCategoryCreateResponse) !== 200
+        || !str_contains($faqCategoryCreateResponse['body'], 'Kategorie uložena.')) {
+        $faqIssues[] = 'uložení FAQ kategorie nevrátilo úspěšnou stránku';
+    }
+    $faqCategoryStmt = $pdo->prepare("SELECT * FROM cms_faq_categories WHERE slug = ?");
+    $faqCategoryStmt->execute([$faqCategorySlug]);
+    $faqCategory = $faqCategoryStmt->fetch() ?: null;
+    $faqCategoryId = $faqCategory ? (int)$faqCategory['id'] : 0;
+    if ($faqCategoryId <= 0) {
+        $faqIssues[] = 'FAQ kategorie se neuložila do databáze';
+    } else {
+        $createdFaqCategoryIds[] = $faqCategoryId;
+    }
+
+    if ($faqCategoryId > 0) {
+        $duplicateFaqCategoryResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/faq_cats.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'name' => 'Duplicitní FAQ kategorie',
+                'slug' => $faqCategorySlug,
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '4',
+                'parent_id' => '',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (!str_contains($duplicateFaqCategoryResponse['body'], 'Tento slug už používá jiná kategorie FAQ.')) {
+            $faqIssues[] = 'duplicitní slug FAQ kategorie nebyl odmítnut';
+        }
+
+        $oldFaqCategoryPath = faqCategoryPath($faqCategory);
+        $createdRedirectPaths[] = $oldFaqCategoryPath;
+        $createdRedirectPaths[] = BASE_URL . '/faq/kategorie/' . $faqCategoryNewSlug;
+        $faqCategoryEditResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/faq_cats.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'update_id' => (string)$faqCategoryId,
+                'name' => $faqCategoryName,
+                'slug' => $faqCategoryNewSlug,
+                'description' => 'Popis veřejné FAQ kategorie.',
+                'meta_title' => 'SEO FAQ kategorie',
+                'meta_description' => 'Meta popis veřejné FAQ kategorie.',
+                'sort_order' => '3',
+                'parent_id' => '',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($faqCategoryEditResponse) !== 200
+            || !str_contains($faqCategoryEditResponse['body'], 'Kategorie uložena.')) {
+            $faqIssues[] = 'editace FAQ kategorie nevrátila úspěšnou stránku';
+        }
+        $faqCategoryStmt->execute([$faqCategoryNewSlug]);
+        $faqCategory = $faqCategoryStmt->fetch() ?: $faqCategory;
+        $oldFaqCategoryResponse = fetchUrl($baseUrl . $oldFaqCategoryPath, '', 0);
+        $newFaqCategoryPath = faqCategoryPath(is_array($faqCategory) ? $faqCategory : ['slug' => $faqCategoryNewSlug]);
+        if (httpIntegrationStatusCode($oldFaqCategoryResponse) !== 301
+            || !responseHasLocationHeader($oldFaqCategoryResponse['headers'], $newFaqCategoryPath, $baseUrl)) {
+            $faqIssues[] = 'změna slugu FAQ kategorie nevytvořila 301 redirect na novou URL';
+        }
+
+        $pdo->prepare(
+            "INSERT INTO cms_faqs
+             (category_id, question, slug, excerpt, answer, meta_title, meta_description,
+              sort_order, is_published, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, 'published', NOW(), NOW())"
+        )->execute([
+            $faqCategoryId,
+            $faqQuestion,
+            $faqQuestionSlug,
+            'Krátká odpověď pro HTTP test FAQ kategorií.',
+            '<p>Odpověď ve veřejné znalostní bázi.</p>',
+            'SEO otázka FAQ',
+            'Meta popis otázky FAQ.',
+        ]);
+        $faqId = (int)$pdo->lastInsertId();
+        $createdFaqIds[] = $faqId;
+        $faqRow = [
+            'id' => $faqId,
+            'slug' => $faqQuestionSlug,
+            'question' => $faqQuestion,
+        ];
+
+        $faqAdminCategoriesResponse = fetchUrl($baseUrl . BASE_URL . '/admin/faq_cats.php', $adminSession['cookie'], 0);
+        if (!str_contains($faqAdminCategoriesResponse['body'], 'Veřejná stránka')
+            || !str_contains($faqAdminCategoriesResponse['body'], '/faq/kategorie/' . $faqCategoryNewSlug)) {
+            $faqIssues[] = 'správa FAQ kategorií nezobrazuje veřejný odkaz na čistou URL';
+        }
+
+        $faqCategoryResponse = fetchUrl($baseUrl . $newFaqCategoryPath, '', 0);
+        if (httpIntegrationStatusCode($faqCategoryResponse) !== 200
+            || !str_contains($faqCategoryResponse['body'], $faqCategoryName)
+            || !str_contains($faqCategoryResponse['body'], 'Popis veřejné FAQ kategorie.')
+            || !str_contains($faqCategoryResponse['body'], $faqQuestion)
+            || !str_contains($faqCategoryResponse['body'], 'SEO FAQ kategorie')) {
+            $faqIssues[] = 'čistá landing URL FAQ kategorie nezobrazuje obsah, popis nebo SEO metadata';
+        }
+        $legacyFaqCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/faq/index.php?kat=' . $faqCategoryId, '', 0);
+        if (httpIntegrationStatusCode($legacyFaqCategoryResponse) !== 200
+            || !str_contains($legacyFaqCategoryResponse['body'], $faqQuestion)) {
+            $faqIssues[] = 'kompatibilní filtr FAQ ?kat= nezobrazuje očekávanou otázku';
+        }
+        $missingFaqCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/faq/kategorie/neexistujici-kategorie-http', '', 0);
+        if (httpIntegrationStatusCode($missingFaqCategoryResponse) !== 404) {
+            $faqIssues[] = 'neexistující čistý slug FAQ kategorie nevrací 404';
+        }
+        $faqSitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+        if (!str_contains($faqSitemapResponse['body'], '/faq/kategorie/' . $faqCategoryNewSlug)) {
+            $faqIssues[] = 'sitemap neobsahuje veřejnou FAQ kategorii s publikovanou otázkou';
+        }
+
+        httpIntegrationClearLocalRateLimits($pdo, ['faq_feedback']);
+        $faqFeedbackSession = koraPrimeTestSession([], 'kora-http-faq-feedback-' . bin2hex(random_bytes(4)));
+        $faqDetailPath = faqPublicPath($faqRow);
+        $faqDetailResponse = fetchUrl($baseUrl . $faqDetailPath, $faqFeedbackSession['cookie'], 0);
+        $faqFeedbackCsrf = extractHiddenInputValue($faqDetailResponse['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($faqDetailResponse) !== 200
+            || !str_contains($faqDetailResponse['body'], 'Pomohla vám tato odpověď?')
+            || $faqFeedbackCsrf === '') {
+            $faqIssues[] = 'detail FAQ nezobrazuje přístupný feedback formulář s CSRF tokenem';
+        }
+
+        $faqFeedbackResponse = postUrl(
+            $baseUrl . $faqDetailPath,
+            [
+                'csrf_token' => $faqFeedbackCsrf,
+                'vote' => 'not_helpful',
+                'note' => 'Chybí mi jeden praktický příklad.',
+                'hp_website' => '',
+            ],
+            $faqFeedbackSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($faqFeedbackResponse) !== 302
+            || !responseHasLocationHeader($faqFeedbackResponse['headers'], $faqDetailPath . '?feedback=thanks', $baseUrl)) {
+            $faqIssues[] = 'odeslání FAQ feedbacku nevrátilo bezpečný redirect na detail';
+        }
+        $faqFeedbackCountStmt = $pdo->prepare("SELECT COUNT(*), MAX(vote) FROM cms_faq_feedback WHERE faq_id = ?");
+        $faqFeedbackCountStmt->execute([$faqId]);
+        $faqFeedbackStored = $faqFeedbackCountStmt->fetch(PDO::FETCH_NUM) ?: [0, ''];
+        if ((int)$faqFeedbackStored[0] !== 1 || (string)$faqFeedbackStored[1] !== 'not_helpful') {
+            $faqIssues[] = 'první FAQ feedback se neuložil jako jeden negativní hlas';
+        }
+
+        $faqAdminNeedsResponse = fetchUrl($baseUrl . BASE_URL . '/admin/faq.php?feedback=needs', $adminSession['cookie'], 0);
+        if (!str_contains($faqAdminNeedsResponse['body'], $faqQuestion)
+            || !str_contains($faqAdminNeedsResponse['body'], 'Potřebuje doplnit')) {
+            $faqIssues[] = 'admin přehled FAQ nezobrazuje filtr odpovědí vyžadujících doplnění';
+        }
+        $faqAdminFormResponse = fetchUrl($baseUrl . BASE_URL . '/admin/faq_form.php?id=' . $faqId, $adminSession['cookie'], 0);
+        if (!str_contains($faqAdminFormResponse['body'], 'Zpětná vazba k odpovědi')
+            || !str_contains($faqAdminFormResponse['body'], 'Chybí mi jeden praktický příklad.')) {
+            $faqIssues[] = 'admin detail FAQ nezobrazuje poslední negativní poznámky';
+        }
+
+        $faqFeedbackSecondResponse = postUrl(
+            $baseUrl . $faqDetailPath,
+            [
+                'csrf_token' => $faqFeedbackCsrf,
+                'vote' => 'helpful',
+                'note' => '',
+                'hp_website' => '',
+            ],
+            $faqFeedbackSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($faqFeedbackSecondResponse) !== 302) {
+            $faqIssues[] = 'opakovaný FAQ feedback nevrátil redirect';
+        }
+        $faqFeedbackCountStmt->execute([$faqId]);
+        $faqFeedbackUpdated = $faqFeedbackCountStmt->fetch(PDO::FETCH_NUM) ?: [0, ''];
+        if ((int)$faqFeedbackUpdated[0] !== 1 || (string)$faqFeedbackUpdated[1] !== 'helpful') {
+            $faqIssues[] = 'opakovaný FAQ feedback nevytvořil aktualizaci jednoho hlasu';
+        }
+    }
+
+    httpIntegrationPrintResult('faq_categories_feedback_http', $faqIssues, $failures);
+
     $blogTransferIssues = [];
     $passwordHash = password_hash('HttpIntegration123!', PASSWORD_BCRYPT);
 
@@ -6790,6 +7000,15 @@ try {
     foreach ($createdDownloadCategoryIds as $downloadCategoryIdToDelete) {
         $pdo->prepare("UPDATE cms_downloads SET dl_category_id = NULL WHERE dl_category_id = ?")->execute([$downloadCategoryIdToDelete]);
         $pdo->prepare("DELETE FROM cms_dl_categories WHERE id = ?")->execute([$downloadCategoryIdToDelete]);
+    }
+    foreach ($createdFaqIds as $faqIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_faq_feedback WHERE faq_id = ?")->execute([$faqIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'faq' AND entity_id = ?")->execute([$faqIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_faqs WHERE id = ?")->execute([$faqIdToDelete]);
+    }
+    foreach ($createdFaqCategoryIds as $faqCategoryIdToDelete) {
+        $pdo->prepare("UPDATE cms_faqs SET category_id = NULL WHERE category_id = ?")->execute([$faqCategoryIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_faq_categories WHERE id = ?")->execute([$faqCategoryIdToDelete]);
     }
     foreach ($createdPollIds as $pollIdToDelete) {
         $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$pollIdToDelete]);

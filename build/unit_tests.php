@@ -406,6 +406,48 @@ assert_false(
 assert_equals('dulezita-oznameni', boardCategorySlug('Důležitá oznámení'), 'board category slug normalizes Czech diacritics');
 assert_equals('/board/kategorie/dulezita-oznameni', boardCategoryRequestPath(['id' => 4, 'slug' => 'dulezita-oznameni']), 'board category clean request path uses slug');
 assert_equals('/board/index.php?kat=4', boardCategoryRequestPath(['id' => 4, 'slug' => '']), 'board category request path falls back to legacy filter');
+assert_equals('casto-kladene-dotazy', faqCategorySlug('Často kladené dotazy'), 'FAQ category slug normalizes Czech diacritics');
+assert_equals('/faq/kategorie/instalace', faqCategoryRequestPath(['id' => 9, 'slug' => 'instalace']), 'FAQ category clean request path uses slug');
+assert_equals('/faq/index.php?kat=9', faqCategoryRequestPath(['id' => 9, 'slug' => '']), 'FAQ category request path falls back to legacy filter');
+assert_equals(
+    [
+        ['id' => 1, 'name' => 'Rodič', 'parent_id' => null],
+        ['id' => 2, 'name' => 'Potomek', 'parent_id' => 1],
+    ],
+    faqCategoryBreadcrumbs([
+        1 => ['id' => 1, 'name' => 'Rodič', 'parent_id' => null],
+        2 => ['id' => 2, 'name' => 'Potomek', 'parent_id' => 1],
+    ], 2),
+    'FAQ category breadcrumbs walk parent chain'
+);
+assert_equals(
+    [1, 2, 3],
+    faqCategoryDescendantIds([
+        1 => [['id' => 2], ['id' => 3]],
+        2 => [['id' => 0]],
+    ], 1),
+    'FAQ category descendant helper returns selected category and valid children'
+);
+assert_equals('1 otázka', faqCountLabel(1), 'FAQ count label handles singular');
+assert_equals('3 otázky', faqCountLabel(3), 'FAQ count label handles Czech plural 2-4');
+assert_equals('12 otázek', faqCountLabel(12), 'FAQ count label handles Czech plural exception');
+$previousRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
+$previousUserAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+$_SERVER['HTTP_USER_AGENT'] = 'KoraUnitTest/1.0';
+$faqFeedbackHash = faqFeedbackVisitorHash(11);
+assert_equals($faqFeedbackHash, faqFeedbackVisitorHash(11), 'FAQ feedback visitor hash is stable for same visitor and FAQ');
+assert_false($faqFeedbackHash === faqFeedbackVisitorHash(12), 'FAQ feedback visitor hash changes per FAQ');
+if ($previousRemoteAddr === null) {
+    unset($_SERVER['REMOTE_ADDR']);
+} else {
+    $_SERVER['REMOTE_ADDR'] = $previousRemoteAddr;
+}
+if ($previousUserAgent === null) {
+    unset($_SERVER['HTTP_USER_AGENT']);
+} else {
+    $_SERVER['HTTP_USER_AGENT'] = $previousUserAgent;
+}
 assert_equals('ceske-navody', downloadCategorySlug('České návody'), 'download category slug normalizes Czech diacritics');
 assert_equals('kora-cms-4-x', downloadSeriesSlug('Kora CMS 4.x'), 'download series slug normalizes version-like titles');
 assert_equals(

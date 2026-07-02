@@ -9538,9 +9538,16 @@ $installSchemaChecks = [
     'cms_media contains credit' => $installTableContains('cms_media', 'credit'),
     'cms_media contains visibility' => $installTableContains('cms_media', 'visibility'),
     'cms_faq_categories contains parent_id' => $installTableContains('cms_faq_categories', 'parent_id'),
+    'cms_faq_categories contains slug' => $installTableContains('cms_faq_categories', 'slug'),
+    'cms_faq_categories contains description' => $installTableContains('cms_faq_categories', 'description'),
+    'cms_faq_categories contains meta_title' => $installTableContains('cms_faq_categories', 'meta_title'),
+    'cms_faq_categories contains meta_description' => $installTableContains('cms_faq_categories', 'meta_description'),
+    'cms_faq_categories contains updated_at' => $installTableContains('cms_faq_categories', 'updated_at'),
     'cms_faqs contains meta_title' => $installTableContains('cms_faqs', 'meta_title'),
     'cms_faqs contains meta_description' => $installTableContains('cms_faqs', 'meta_description'),
     'cms_faqs contains deleted_at' => $installTableContains('cms_faqs', 'deleted_at'),
+    'cms_faq_feedback contains faq_id' => $installTableContains('cms_faq_feedback', 'faq_id'),
+    'cms_faq_feedback contains visitor_hash' => $installTableContains('cms_faq_feedback', 'visitor_hash'),
     'cms_users contains totp_secret' => $installTableContains('cms_users', 'totp_secret'),
     'cms_users contains passkey_credentials' => $installTableContains('cms_users', 'passkey_credentials'),
     'cms_contact_topics contains recipient_email' => $installTableContains('cms_contact_topics', 'recipient_email'),
@@ -9583,8 +9590,16 @@ $migrateSchemaChecks = [
     'cms_media.visibility' => str_contains($migrateSource, 'cms_media.visibility'),
     'idx_media_visibility' => str_contains($migrateSource, 'idx_media_visibility'),
     'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
+    'cms_faq_categories.slug' => str_contains($migrateSource, 'cms_faq_categories.slug'),
+    'uq_cms_faq_categories_slug' => str_contains($migrateSource, 'uq_cms_faq_categories_slug'),
+    'cms_faq_categories.description' => str_contains($migrateSource, 'cms_faq_categories.description'),
+    'cms_faq_categories.meta_title' => str_contains($migrateSource, 'cms_faq_categories.meta_title'),
+    'cms_faq_categories.meta_description' => str_contains($migrateSource, 'cms_faq_categories.meta_description'),
+    'cms_faq_categories.updated_at' => str_contains($migrateSource, 'cms_faq_categories.updated_at'),
     'cms_faqs.meta_title' => str_contains($migrateSource, 'cms_faqs.meta_title'),
     'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),
+    'cms_faq_feedback' => str_contains($migrateSource, 'cms_faq_feedback'),
+    'uq_cms_faq_feedback_visitor' => str_contains($migrateSource, 'uq_cms_faq_feedback_visitor'),
     'cms_event_types' => str_contains($migrateSource, 'cms_event_types'),
     'cms_events.event_type_id' => str_contains($migrateSource, 'cms_events.event_type_id'),
     'cms_events.place_id' => str_contains($migrateSource, 'cms_events.place_id'),
@@ -12352,6 +12367,8 @@ $faqIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/faq/i
 $faqIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-index.php');
 $faqArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/faq-article.php');
 $faqItemSource = (string)file_get_contents(dirname(__DIR__) . '/faq/item.php');
+$faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
+$faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 if (!str_contains($faqSaveSource, 'upsertPathRedirect')) {
     $faqSourceIssues[] = 'faq save is missing slug redirect persistence';
 }
@@ -12369,6 +12386,18 @@ if (!str_contains($faqIndexControllerSource, 'paginateArray(')) {
 }
 if (!str_contains($faqIndexControllerSource, 'faqStructuredData(')) {
     $faqSourceIssues[] = 'public faq index is missing FAQPage structured data';
+}
+if (!str_contains($faqIndexControllerSource, "(\$_GET['category_slug'] ?? '')")
+    || !str_contains($faqIndexControllerSource, 'faqCategoryPath(')
+    || !str_contains($faqIndexControllerSource, 'meta_description')) {
+    $faqSourceIssues[] = 'public faq index is missing clean category URL or category SEO support';
+}
+if (!str_contains($presentationSource, 'function faqCategoryPath(')
+    || !str_contains($presentationSource, 'function uniqueFaqCategorySlug(')
+    || !str_contains($presentationSource, 'function faqFeedbackVisitorHash(')
+    || !str_contains($presentationSource, 'hash_hmac(')
+    || !str_contains($presentationSource, 'function faqCategoryDescendantIds(')) {
+    $faqSourceIssues[] = 'FAQ presentation helpers are missing category URL, slug or feedback helpers';
 }
 if (!str_contains($faqIndexViewSource, '$displayModeLinks') || !str_contains($faqIndexViewSource, 'tab-nav')) {
     $faqSourceIssues[] = 'public faq template is missing inline display toggle';
@@ -12412,6 +12441,46 @@ if (!str_contains($faqItemSource, 'faqStructuredData(')) {
 }
 if (!str_contains($faqItemSource, '$relatedFaqs')) {
     $faqSourceIssues[] = 'faq detail is missing related questions support';
+}
+if (!str_contains($faqItemSource, 'cms_faq_feedback')
+    || !str_contains($faqItemSource, 'verifyCsrf()')
+    || !str_contains($faqItemSource, "rateLimit('faq_feedback'")
+    || !str_contains($faqItemSource, 'faqFeedbackVisitorHash(')) {
+    $faqSourceIssues[] = 'faq detail is missing protected answer feedback handling';
+}
+if (!str_contains($faqArticleViewSource, 'id="faq-feedback-title"')
+    || !str_contains($faqArticleViewSource, 'aria-labelledby="faq-feedback-title"')
+    || !str_contains($faqArticleViewSource, 'honeypotField()')
+    || !str_contains($faqArticleViewSource, 'Odeslat zpětnou vazbu')) {
+    $faqSourceIssues[] = 'faq detail template is missing accessible answer feedback form';
+}
+if (!str_contains($faqCatsSource, 'uniqueFaqCategorySlug(')
+    || !str_contains($faqCatsSource, 'faqCategoryPath(')
+    || !str_contains($faqCatsSource, 'upsertPathRedirect(')
+    || !str_contains($faqCatsSource, "adminFieldAttributes('slug'")
+    || !str_contains($faqCatsSource, "adminRenderFieldError('slug'")
+    || !str_contains($faqCatsSource, "name=\"meta_title\"")
+    || !str_contains($faqCatsSource, "name=\"meta_description\"")) {
+    $faqSourceIssues[] = 'faq categories admin is missing slug, SEO, public link or redirect support';
+}
+if (!str_contains($faqOverviewSource, "'feedback'")
+    || !str_contains($faqOverviewSource, 'not_helpful_count')
+    || !str_contains($faqFormSource, 'Zpětná vazba k odpovědi')) {
+    $faqSourceIssues[] = 'faq admin is missing feedback summary or needs-attention filter';
+}
+if (!str_contains($sitemapSource, 'faqCategoryUrl(')
+    || !str_contains($sitemapSource, "sitemapLogSectionError('faq_categories'")) {
+    $faqSourceIssues[] = 'sitemap is missing public FAQ category URLs';
+}
+$faqHtaccessCategoryRoute = strpos($htaccessSource, 'RewriteRule ^faq/kategorie/');
+$faqHtaccessDetailRoute = strpos($htaccessSource, 'RewriteRule ^faq/([a-z0-9\\-]+)/?$');
+if ($faqHtaccessCategoryRoute === false || $faqHtaccessDetailRoute === false || $faqHtaccessCategoryRoute > $faqHtaccessDetailRoute) {
+    $faqSourceIssues[] = '.htaccess FAQ category route must be before FAQ detail route';
+}
+$faqRouterCategoryRoute = strpos($httpServerRouterSource, '#^faq/kategorie/');
+$faqRouterDetailRoute = strpos($httpServerRouterSource, '#^faq/([a-z0-9-]+)/?$#i');
+if ($faqRouterCategoryRoute === false || $faqRouterDetailRoute === false || $faqRouterCategoryRoute > $faqRouterDetailRoute) {
+    $faqSourceIssues[] = 'HTTP router FAQ category route must be before FAQ detail route';
 }
 if ($faqSourceIssues === []) {
     echo "OK\n";

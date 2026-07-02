@@ -269,6 +269,7 @@ try {
         'blog/article.php' => 'blog-article',
         'events/index.php' => 'events-index',
         'events/ics.php' => 'event-ics',
+        'faq/index.php' => 'faq-index',
         'forms/index.php' => 'form',
         'podcast/episode.php' => 'podcast-episode',
         'blog_router.php' => 'blog-router',
@@ -341,6 +342,11 @@ try {
     httpServerRouterSelfTestAssertRoute($eventTypeRoute, 'events-index', '/events/index.php');
     httpServerRouterSelfTestAssert(($eventTypeRoute['get']['type_slug'] ?? '') === 'prednasky', 'Event type slug was not routed.');
     httpServerRouterSelfTestAssert(($eventTypeRoute['get']['scope'] ?? '') === 'all', 'Event type query string was not preserved.');
+
+    $faqCategoryRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/faq/kategorie/instalace?zobrazeni=inline');
+    httpServerRouterSelfTestAssertRoute($faqCategoryRoute, 'faq-index', '/faq/index.php');
+    httpServerRouterSelfTestAssert(($faqCategoryRoute['get']['category_slug'] ?? '') === 'instalace', 'FAQ category slug was not routed.');
+    httpServerRouterSelfTestAssert(($faqCategoryRoute['get']['zobrazeni'] ?? '') === 'inline', 'FAQ category query string was not preserved.');
 
     $podcastEpisodeRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/podcast/porad/epizoda');
     httpServerRouterSelfTestAssertRoute($podcastEpisodeRoute, 'podcast-episode', '/podcast/episode.php');

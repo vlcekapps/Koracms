@@ -657,11 +657,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faq_categories (
-            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            parent_id  INT          NULL DEFAULT NULL,
-            name       VARCHAR(255) NOT NULL,
-            sort_order INT          NOT NULL DEFAULT 0,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            parent_id        INT          NULL DEFAULT NULL,
+            name             VARCHAR(255) NOT NULL,
+            slug             VARCHAR(150) NOT NULL DEFAULT '',
+            description      TEXT,
+            meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            sort_order       INT          NOT NULL DEFAULT 0,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_faq_categories_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faqs (
@@ -681,6 +687,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_faqs_slug (slug),
             FULLTEXT INDEX ft_faqs_search (question, excerpt, answer)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faq_feedback (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            faq_id       INT          NOT NULL,
+            vote         ENUM('helpful','not_helpful') NOT NULL,
+            note         TEXT,
+            visitor_hash VARCHAR(64)  NOT NULL,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_faq_feedback_visitor (faq_id, visitor_hash),
+            INDEX idx_cms_faq_feedback_faq_vote (faq_id, vote, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_categories (

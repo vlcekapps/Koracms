@@ -8,78 +8,18 @@ if (!isModuleEnabled('faq')) {
     exit;
 }
 
-/**
- * Sestaví breadcrumbs pro FAQ kategorii.
- *
- * @param array<int, array<string, mixed>> $catById
- * @return array<int, array<string, mixed>>
- */
-function faqCategoryBreadcrumbs(array $catById, int $categoryId): array
-{
-    $crumbs = [];
-    $current = $categoryId;
-    $safety = 0;
-    while ($current > 0 && isset($catById[$current]) && $safety < 20) {
-        $crumbs[] = $catById[$current];
-        $current = (int)($catById[$current]['parent_id'] ?? 0);
-        $safety++;
-    }
-    return array_reverse($crumbs);
-}
-
-/**
- * Vrátí seznam kategorií i s potomky pro filtrování.
- *
- * @param array<int, list<array<string, mixed>>> $catTree
- * @return array<int>
- */
-function faqCategoryDescendantIds(array $catTree, int $categoryId): array
-{
-    $allowedCatIds = [$categoryId];
-    $queue = [$categoryId];
-
-    while ($queue !== []) {
-        $parentId = array_shift($queue);
-        foreach ($catTree[$parentId] ?? [] as $child) {
-            $childId = (int)$child['id'];
-            $allowedCatIds[] = $childId;
-            $queue[] = $childId;
-        }
-    }
-
-    return array_values(array_unique($allowedCatIds));
-}
-
-/**
- * Vygeneruje label s počtem otázek.
- */
-function faqCountLabel(int $count): string
-{
-    $count = max(0, $count);
-    if ($count === 1) {
-        return '1 otázka';
-    }
-
-    $mod100 = $count % 100;
-    $mod10 = $count % 10;
-    if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
-        return $count . ' otázky';
-    }
-
-    return $count . ' otázek';
-}
-
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 $q = trim((string)($_GET['q'] ?? ''));
 $filterCatId = inputInt('get', 'kat');
+$categorySlug = faqCategorySlug(trim((string)($_GET['category_slug'] ?? '')));
 $viewMode = trim((string)($_GET['zobrazeni'] ?? 'cards'));
 if (!in_array($viewMode, ['cards', 'inline'], true)) {
     $viewMode = 'cards';
 }
 
 $allCategories = $pdo->query(
-    "SELECT id, name, parent_id, sort_order
+    "SELECT id, name, slug, description, meta_title, meta_description, parent_id, sort_order
      FROM cms_faq_categories
      ORDER BY sort_order, name"
 )->fetchAll();
@@ -92,6 +32,26 @@ foreach ($allCategories as $cat) {
     $catTree[$parentId][] = $cat;
 }
 
+if ($categorySlug !== '') {
+    $filterCatId = null;
+    foreach ($allCategories as $categoryRow) {
+        if (faqCategorySlug((string)($categoryRow['slug'] ?? '')) === $categorySlug) {
+            $filterCatId = (int)$categoryRow['id'];
+            break;
+        }
+    }
+
+    if ($filterCatId === null) {
+        renderPublicNotFoundPage([
+            'title' => 'Kategorie nenalezena',
+            'meta' => [
+                'url' => BASE_URL . '/faq/kategorie/' . rawurlencode($categorySlug),
+            ],
+            'body_class' => 'page-faq-category-not-found',
+        ]);
+    }
+}
+
 if ($filterCatId !== null && !isset($catById[$filterCatId])) {
     $filterCatId = null;
 }
@@ -101,6 +61,7 @@ $faqSelect = "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.category_i
                      f.meta_title, f.meta_description, f.updated_at,
                      COALESCE(f.status,'published') AS status,
                      COALESCE(c.name, '') AS category_name,
+                     COALESCE(c.slug, '') AS category_slug,
                      c.sort_order AS cat_sort
               FROM cms_faqs f
               LEFT JOIN cms_faq_categories c ON c.id = f.category_id";
@@ -162,7 +123,7 @@ if ($filterCatId !== null && isset($catById[$filterCatId])) {
     ));
 }
 
-$buildFaqIndexUrl = static function (array $overrides = []) use ($q, $filterCatId, $viewMode): string {
+$buildFaqIndexUrl = static function (array $overrides = []) use ($q, $filterCatId, $viewMode, $catById): string {
     $params = [
         'q' => $q !== '' ? $q : null,
         'kat' => $filterCatId !== null ? (string)$filterCatId : null,
@@ -172,6 +133,19 @@ $buildFaqIndexUrl = static function (array $overrides = []) use ($q, $filterCatI
 
     foreach ($overrides as $key => $value) {
         $params[$key] = $value;
+    }
+
+    $targetCategoryId = isset($params['kat']) && $params['kat'] !== ''
+        ? (int)$params['kat']
+        : null;
+    if ($targetCategoryId !== null && isset($catById[$targetCategoryId])) {
+        $categoryQuery = [
+            'q' => $params['q'],
+            'zobrazeni' => $params['zobrazeni'],
+            'strana' => $params['strana'],
+        ];
+
+        return faqCategoryPath($catById[$targetCategoryId], $categoryQuery);
     }
 
     return BASE_URL . appendUrlQuery('/faq/index.php', $params);
@@ -208,16 +182,25 @@ if ($totalItems > 0 && $pages > 1) {
 }
 
 $pageTitle = 'Znalostní báze';
+$pageHeading = 'Znalostní báze';
+$pageIntro = '';
 if ($filterCategory !== null) {
-    $pageTitle = (string)$filterCategory['name'] . ' – Znalostní báze';
+    $categoryMetaTitle = trim((string)($filterCategory['meta_title'] ?? ''));
+    $pageTitle = $categoryMetaTitle !== '' ? $categoryMetaTitle : (string)$filterCategory['name'] . ' – Znalostní báze';
+    $pageHeading = (string)$filterCategory['name'];
+    $pageIntro = trim((string)($filterCategory['description'] ?? ''));
 }
 if ($q !== '') {
     $pageTitle = 'Hledání „' . $q . '“ – ' . $pageTitle;
 }
 
-$metaDescription = $filterCategory !== null
-    ? 'Otázky a odpovědi z kategorie ' . (string)$filterCategory['name'] . '.'
-    : 'Přehled častých dotazů a odpovědí.';
+$metaDescription = 'Přehled častých dotazů a odpovědí.';
+if ($filterCategory !== null) {
+    $categoryMetaDescription = trim((string)($filterCategory['meta_description'] ?? ''));
+    $metaDescription = $categoryMetaDescription !== ''
+        ? $categoryMetaDescription
+        : ($pageIntro !== '' ? normalizePlainText($pageIntro) : 'Otázky a odpovědi z kategorie ' . (string)$filterCategory['name'] . '.');
+}
 if ($q !== '') {
     $metaDescription = 'Výsledky hledání „' . $q . '“ ve znalostní bázi.';
 }
@@ -270,6 +253,8 @@ renderPublicPage([
         'resultCountLabel' => $resultCountLabel,
         'filterSummary' => $filterSummary,
         'hasActiveFilters' => $hasActiveFilters,
+        'pageHeading' => $pageHeading,
+        'pageIntro' => $pageIntro,
         'clearUrl' => BASE_URL . '/faq/index.php',
         'pagerHtml' => renderPager($page, $pages, $pagerBase, 'Stránkování znalostní báze', 'Předchozí stránka', 'Další stránka'),
         'categories' => $allCategories,

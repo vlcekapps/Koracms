@@ -167,6 +167,14 @@ $criticalInstallColumns = [
     'cms_download_series.sort_order' => ['cms_download_series', 'sort_order'],
     'cms_downloads.download_series_id' => ['cms_downloads', 'download_series_id'],
     'cms_downloads.is_current_version' => ['cms_downloads', 'is_current_version'],
+    'cms_faq_categories.slug' => ['cms_faq_categories', 'slug'],
+    'cms_faq_categories.description' => ['cms_faq_categories', 'description'],
+    'cms_faq_categories.meta_title' => ['cms_faq_categories', 'meta_title'],
+    'cms_faq_categories.meta_description' => ['cms_faq_categories', 'meta_description'],
+    'cms_faq_categories.updated_at' => ['cms_faq_categories', 'updated_at'],
+    'cms_faq_feedback.faq_id' => ['cms_faq_feedback', 'faq_id'],
+    'cms_faq_feedback.vote' => ['cms_faq_feedback', 'vote'],
+    'cms_faq_feedback.visitor_hash' => ['cms_faq_feedback', 'visitor_hash'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -261,6 +269,15 @@ $criticalMigrationSnippets = [
     'cms_downloads.download_series_id',
     'cms_downloads.is_current_version',
     'idx_cms_downloads_series_current',
+    'cms_faq_categories.slug',
+    'uq_cms_faq_categories_slug',
+    'cms_faq_categories.description',
+    'cms_faq_categories.meta_title',
+    'cms_faq_categories.meta_description',
+    'cms_faq_categories.updated_at',
+    'cms_faq_feedback',
+    'uq_cms_faq_feedback_visitor',
+    'idx_cms_faq_feedback_faq_vote',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {
@@ -332,6 +349,13 @@ schemaParityRequire(
     && str_contains($sitemapSource, 'cms_dl_categories c')
     && str_contains($sitemapSource, 'cms_download_series s'),
     'sitemap.php must keep public downloads category and series landing URLs.',
+    $issues
+);
+schemaParityRequire(
+    str_contains($sitemapSource, 'faqCategoryUrl(')
+    && str_contains($sitemapSource, 'cms_faq_categories c')
+    && str_contains($sitemapSource, "sitemapLogSectionError('faq_categories'"),
+    'sitemap.php must keep public FAQ category landing URLs.',
     $issues
 );
 

@@ -27,7 +27,7 @@ $pdo = db_connect();
 
 if ($slug !== '') {
     $stmt = $pdo->prepare(
-        "SELECT f.*, c.name AS category_name
+        "SELECT f.*, c.name AS category_name, c.slug AS category_slug
          FROM cms_faqs f
          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
          WHERE f.slug = ? AND " . faqPublicVisibilitySql('f') . "
@@ -36,7 +36,7 @@ if ($slug !== '') {
     $stmt->execute([$slug]);
 } else {
     $stmt = $pdo->prepare(
-        "SELECT f.*, c.name AS category_name
+        "SELECT f.*, c.name AS category_name, c.slug AS category_slug
          FROM cms_faqs f
          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
          WHERE f.id = ? AND " . faqPublicVisibilitySql('f') . "
@@ -61,12 +61,16 @@ if (!$faq) {
 }
 
 $faq = hydrateFaqPresentation($faq);
+$feedbackSuccess = (string)($_GET['feedback'] ?? '') === 'thanks';
+$feedbackError = '';
+$feedbackVote = '';
+$feedbackNote = '';
 
 // Breadcrumbs pro kategorii
 $faqBreadcrumbs = [];
 $faqCatId = (int)($faq['category_id'] ?? 0);
 if ($faqCatId > 0) {
-    $allCats = $pdo->query("SELECT id, name, parent_id FROM cms_faq_categories")->fetchAll();
+    $allCats = $pdo->query("SELECT id, name, slug, parent_id FROM cms_faq_categories")->fetchAll();
     $catsById = [];
     foreach ($allCats as $c) {
         $catsById[(int)$c['id']] = $c;
@@ -84,6 +88,38 @@ if ($faqCatId > 0) {
 if ($slug === '' && !empty($faq['slug'])) {
     header('Location: ' . faqPublicPath($faq, $listingQuery));
     exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    rateLimit('faq_feedback', 10, 60);
+
+    if (honeypotTriggered()) {
+        header('Location: ' . faqPublicPath($faq, $listingQuery + ['feedback' => 'thanks']));
+        exit;
+    }
+
+    verifyCsrf();
+    $feedbackVote = trim((string)($_POST['vote'] ?? ''));
+    $feedbackNote = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 1000);
+
+    if (!in_array($feedbackVote, ['helpful', 'not_helpful'], true)) {
+        $feedbackError = 'Vyberte prosím, zda vám odpověď pomohla.';
+    } else {
+        $visitorHash = faqFeedbackVisitorHash((int)$faq['id']);
+        $pdo->prepare(
+            "INSERT INTO cms_faq_feedback (faq_id, vote, note, visitor_hash, created_at)
+             VALUES (?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE vote = VALUES(vote), note = VALUES(note), created_at = NOW()"
+        )->execute([
+            (int)$faq['id'],
+            $feedbackVote,
+            $feedbackNote,
+            $visitorHash,
+        ]);
+
+        header('Location: ' . faqPublicPath($faq, $listingQuery + ['feedback' => 'thanks']));
+        exit;
+    }
 }
 
 if (!isset($_SESSION['cms_user_id'])) {
@@ -112,7 +148,7 @@ if (!empty($faq['category_id'])) {
 
 $relatedStmt = $pdo->prepare(
     "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.category_id, f.updated_at,
-            f.meta_title, f.meta_description, COALESCE(c.name, '') AS category_name
+            f.meta_title, f.meta_description, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
      WHERE " . implode(' AND ', $relatedWhere) . "
@@ -127,7 +163,10 @@ $relatedFaqs = array_map(
 
 $backUrl = BASE_URL . appendUrlQuery('/faq/index.php', $listingQuery);
 if ($listingQuery === [] && !empty($faq['category_id'])) {
-    $backUrl = BASE_URL . '/faq/index.php?kat=' . (int)$faq['category_id'];
+    $backUrl = faqCategoryPath([
+        'id' => (int)$faq['category_id'],
+        'slug' => (string)($faq['category_slug'] ?? ''),
+    ]);
 }
 $extraHeadHtml = faqStructuredData([$faq], faqPublicUrl($faq));
 
@@ -145,6 +184,11 @@ renderPublicPage([
         'breadcrumbs' => $faqBreadcrumbs,
         'relatedFaqs' => $relatedFaqs,
         'backUrl' => $backUrl,
+        'listingQuery' => $listingQuery,
+        'feedbackSuccess' => $feedbackSuccess,
+        'feedbackError' => $feedbackError,
+        'feedbackVote' => $feedbackVote,
+        'feedbackNote' => $feedbackNote,
     ],
     'current_nav' => 'faq',
     'body_class' => 'page-faq-article',

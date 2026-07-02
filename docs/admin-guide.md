@@ -809,6 +809,8 @@ Při změně slugu se automaticky uloží redirect ze staré adresy na novou, ta
 - Přehled FAQ nově umí hledání, workflow stav a filtr podle kategorie.
 - Revize ukládají nejen text otázky a odpovědi, ale i kategorii, SEO metadata a publikační stav.
 - FAQ export a import drží stejná pole jako aktuální editor, takže se metadata neztratí při migraci obsahu.
+- Kategorie FAQ se spravují samostatně: mají editovatelný slug, popis, `meta title`, `meta description` a veřejný odkaz `/faq/kategorie/{slug}`. Při změně slugu CMS uloží redirect ze staré URL.
+- Přehled FAQ umí filtr `Potřebuje doplnit`, který vychází ze zpětné vazby návštěvníků na detailu odpovědi.
 
 ### Veřejný výpis a detail
 
@@ -820,9 +822,13 @@ Veřejná znalostní báze nově podporuje:
 - přepínání `Přehled karet / Rozbalené odpovědi`
 - zachování kontextu při návratu z detailu otázky
 - související otázky na detailu
+- veřejné landing stránky kategorií `/faq/kategorie/{slug}` s popisem a SEO poli
+- přístupnou zpětnou vazbu `Pomohla vám tato odpověď?` na detailu otázky
 - `FAQPage` strukturovaná data pro vyhledávače
 
 Detail otázky umí použít vlastní `meta title` a `meta description`. Pokud nejsou vyplněné, použije se otázka a shrnutí FAQ.
+
+Zpětná vazba na odpověď je neveřejná redakční pomůcka. CMS ukládá hlas `pomohlo / nepomohlo`, volitelnou poznámku a anonymní hash návštěvníka pro deduplikaci opakovaného hlasu u stejné otázky; neukládá IP adresu ani e-mail.
 
 ### Co patří do README a co sem
 

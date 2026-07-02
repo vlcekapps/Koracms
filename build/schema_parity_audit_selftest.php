@@ -244,6 +244,21 @@ CREATE TABLE IF NOT EXISTS cms_downloads (
   download_series_id INT,
   is_current_version TINYINT(1)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_faq_categories (
+  id INT,
+  name VARCHAR(255),
+  slug VARCHAR(150),
+  description TEXT,
+  meta_title VARCHAR(160),
+  meta_description TEXT,
+  updated_at DATETIME
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_faq_feedback (
+  id INT,
+  faq_id INT,
+  vote VARCHAR(20),
+  visitor_hash VARCHAR(64)
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -330,6 +345,15 @@ PHP,
 // cms_downloads.download_series_id
 // cms_downloads.is_current_version
 // idx_cms_downloads_series_current
+// cms_faq_categories.slug
+// uq_cms_faq_categories_slug
+// cms_faq_categories.description
+// cms_faq_categories.meta_title
+// cms_faq_categories.meta_description
+// cms_faq_categories.updated_at
+// cms_faq_feedback
+// uq_cms_faq_feedback_visitor
+// idx_cms_faq_feedback_faq_vote
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php
@@ -360,6 +384,9 @@ sitemapLogSectionError('board_categories', $e);
 $downloadCategory = downloadCategoryUrl($category);
 $downloadSeries = downloadSeriesUrl($series);
 $downloadsTaxonomySql = 'FROM cms_dl_categories c INNER JOIN cms_download_series s ON s.id = 1';
+$faqCategory = faqCategoryUrl($category);
+$faqCategorySql = 'FROM cms_faq_categories c';
+sitemapLogSectionError('faq_categories', $e);
 PHP,
         'feed.php' => <<<'PHP'
 <?php

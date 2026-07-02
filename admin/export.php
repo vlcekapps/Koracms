@@ -82,7 +82,7 @@ $tables = [
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
     'polls'         => "SELECT id, question, slug, description, meta_title, meta_description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
     'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",
-    'faq_categories' => "SELECT id, name, parent_id, sort_order, created_at FROM cms_faq_categories",
+    'faq_categories' => "SELECT id, name, slug, description, meta_title, meta_description, parent_id, sort_order, created_at, updated_at FROM cms_faq_categories",
     'faqs'          => "SELECT id, question, slug, excerpt, answer, category_id, meta_title, meta_description,
                                is_published, status, created_at, updated_at FROM cms_faqs",
     'board_categories' => "SELECT id, name, slug, description, meta_title, meta_description, sort_order, created_at, updated_at

@@ -654,11 +654,17 @@ $tables = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_faq_categories' => "CREATE TABLE IF NOT EXISTS cms_faq_categories (
-        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        parent_id  INT          NULL DEFAULT NULL,
-        name       VARCHAR(255) NOT NULL,
-        sort_order INT          NOT NULL DEFAULT 0,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        parent_id        INT          NULL DEFAULT NULL,
+        name             VARCHAR(255) NOT NULL,
+        slug             VARCHAR(150) NOT NULL DEFAULT '',
+        description      TEXT,
+        meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
+        sort_order       INT          NOT NULL DEFAULT 0,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_faq_categories_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_faqs' => "CREATE TABLE IF NOT EXISTS cms_faqs (
@@ -678,6 +684,17 @@ $tables = [
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_faqs_slug (slug),
         FULLTEXT INDEX ft_faqs_search (question, excerpt, answer)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_faq_feedback' => "CREATE TABLE IF NOT EXISTS cms_faq_feedback (
+        id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        faq_id       INT          NOT NULL,
+        vote         ENUM('helpful','not_helpful') NOT NULL,
+        note         TEXT,
+        visitor_hash VARCHAR(64)  NOT NULL,
+        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_faq_feedback_visitor (faq_id, visitor_hash),
+        INDEX idx_cms_faq_feedback_faq_vote (faq_id, vote, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_board_categories' => "CREATE TABLE IF NOT EXISTS cms_board_categories (
@@ -1119,6 +1136,11 @@ $addColumns = [
     'cms_contact.updated_at'         => "ALTER TABLE cms_contact ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_faq_categories
     'cms_faq_categories.parent_id'   => "ALTER TABLE cms_faq_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
+    'cms_faq_categories.slug'        => "ALTER TABLE cms_faq_categories ADD COLUMN slug VARCHAR(150) NOT NULL DEFAULT ''",
+    'cms_faq_categories.description' => "ALTER TABLE cms_faq_categories ADD COLUMN description TEXT",
+    'cms_faq_categories.meta_title'  => "ALTER TABLE cms_faq_categories ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
+    'cms_faq_categories.meta_description' => "ALTER TABLE cms_faq_categories ADD COLUMN meta_description TEXT",
+    'cms_faq_categories.updated_at'  => "ALTER TABLE cms_faq_categories ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_faqs
     'cms_faqs.slug'                  => "ALTER TABLE cms_faqs ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_faqs.excerpt'               => "ALTER TABLE cms_faqs ADD COLUMN excerpt TEXT",
@@ -1775,6 +1797,48 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy novinek – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $faqCategorySlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_faq_categories' AND COLUMN_NAME = 'slug'"
+    );
+    $faqCategorySlugColumnCheck->execute();
+
+    if ((int)$faqCategorySlugColumnCheck->fetchColumn() > 0) {
+        $faqCategoryRows = $pdo->query("SELECT id, name, slug FROM cms_faq_categories ORDER BY id")->fetchAll();
+        $updateFaqCategorySlugStmt = $pdo->prepare("UPDATE cms_faq_categories SET slug = ? WHERE id = ?");
+
+        foreach ($faqCategoryRows as $faqCategoryRow) {
+            $existingSlug = trim((string)($faqCategoryRow['slug'] ?? ''));
+            $resolvedSlug = uniqueFaqCategorySlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$faqCategoryRow['name'],
+                (int)$faqCategoryRow['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateFaqCategorySlugStmt->execute([$resolvedSlug, (int)$faqCategoryRow['id']]);
+            }
+        }
+
+        $faqCategorySlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_faq_categories'
+               AND INDEX_NAME = 'uq_cms_faq_categories_slug'"
+        );
+        $faqCategorySlugIndexCheck->execute();
+        if ((int)$faqCategorySlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_faq_categories ADD UNIQUE KEY uq_cms_faq_categories_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_faq_categories_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_faq_categories.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy kategorií FAQ – sloupec <code>cms_faq_categories.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy kategorií FAQ – CHYBA: " . h($e->getMessage());
 }
 
 try {

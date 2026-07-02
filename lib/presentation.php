@@ -1221,6 +1221,71 @@ function faqSlug(string $value): string
     return slugify(trim($value));
 }
 
+function faqCategorySlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
+/**
+ * @param array<int, array<string, mixed>> $catById
+ * @return list<array<string, mixed>>
+ */
+function faqCategoryBreadcrumbs(array $catById, int $categoryId): array
+{
+    $crumbs = [];
+    $current = $categoryId;
+    $safety = 0;
+
+    while ($current > 0 && isset($catById[$current]) && $safety < 20) {
+        $crumbs[] = $catById[$current];
+        $current = (int)($catById[$current]['parent_id'] ?? 0);
+        $safety++;
+    }
+
+    return array_reverse($crumbs);
+}
+
+/**
+ * @param array<int, list<array<string, mixed>>> $catTree
+ * @return list<int>
+ */
+function faqCategoryDescendantIds(array $catTree, int $categoryId): array
+{
+    $allowedCatIds = [$categoryId];
+    $queue = [$categoryId];
+
+    while ($queue !== []) {
+        $parentId = array_shift($queue);
+        foreach ($catTree[$parentId] ?? [] as $child) {
+            $childId = (int)($child['id'] ?? 0);
+            if ($childId <= 0) {
+                continue;
+            }
+
+            $allowedCatIds[] = $childId;
+            $queue[] = $childId;
+        }
+    }
+
+    return array_values(array_unique($allowedCatIds));
+}
+
+function faqCountLabel(int $count): string
+{
+    $count = max(0, $count);
+    if ($count === 1) {
+        return '1 otázka';
+    }
+
+    $mod100 = $count % 100;
+    $mod10 = $count % 10;
+    if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+        return $count . ' otázky';
+    }
+
+    return $count . ' otázek';
+}
+
 function podcastShowSlug(string $value): string
 {
     return slugify(trim($value));
@@ -3571,6 +3636,37 @@ function podcastEpisodePublicUrl(array $episode, array $query = []): string
 }
 
 /**
+ * @param array<string, mixed> $category
+ */
+function faqCategoryRequestPath(array $category): string
+{
+    $slug = faqCategorySlug((string)($category['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/faq/kategorie/' . rawurlencode($slug);
+    }
+
+    return '/faq/index.php?kat=' . (int)($category['id'] ?? 0);
+}
+
+/**
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function faqCategoryPath(array $category, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(faqCategoryRequestPath($category), $query);
+}
+
+/**
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function faqCategoryUrl(array $category, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(faqCategoryRequestPath($category), $query));
+}
+
+/**
  * @param array<string, mixed> $faq
  */
 function faqPublicRequestPath(array $faq): string
@@ -5071,6 +5167,17 @@ function faqStructuredData(array $faqs, string $pageUrl = ''): string
     return structuredDataScript($data);
 }
 
+function faqFeedbackVisitorHash(int $faqId): string
+{
+    $ip = is_string($_SERVER['REMOTE_ADDR'] ?? null) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+    $userAgent = is_string($_SERVER['HTTP_USER_AGENT'] ?? null) ? $_SERVER['HTTP_USER_AGENT'] : '';
+    $pepper = defined('CRON_TOKEN') && trim((string)CRON_TOKEN) !== ''
+        ? (string)CRON_TOKEN
+        : 'kora-faq-feedback';
+
+    return hash_hmac('sha256', $faqId . '|' . $ip . '|' . $userAgent, $pepper);
+}
+
 /**
  * @param array<string, mixed> $event
  */
@@ -5596,6 +5703,27 @@ function uniqueDownloadCategorySlug(PDO $pdo, string $candidate, ?int $excludeId
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_dl_categories WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueFaqCategorySlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = faqCategorySlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'kategorie';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_faq_categories WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);

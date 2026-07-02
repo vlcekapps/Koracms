@@ -946,7 +946,7 @@ function renderWidget_latest_faq(array $widget, array $settings, string $zone): 
     $pdo = db_connect();
     $stmt = $pdo->prepare(
         "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.updated_at,
-                COALESCE(c.name, '') AS category_name
+                f.category_id, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
          FROM cms_faqs f
          LEFT JOIN cms_faq_categories c ON c.id = f.category_id
          WHERE " . faqPublicVisibilitySql('f') . "
@@ -982,7 +982,9 @@ function renderWidget_latest_faq(array $widget, array $settings, string $zone): 
         $out .= '<li class="link-list__item">';
         $out .= '<a class="link-list__title" href="' . h(faqPublicPath($faq)) . '">' . h($faq['question']) . '</a>';
         if (!empty($faq['category_name'])) {
-            $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$faq['category_name']) . '</span></p>';
+            $out .= '<p class="meta-row meta-row--tight"><a href="'
+                . h(faqCategoryPath(['id' => (int)($faq['category_id'] ?? 0), 'slug' => (string)($faq['category_slug'] ?? '')]))
+                . '">' . h((string)$faq['category_name']) . '</a></p>';
         }
         if (!empty($faq['excerpt'])) {
             $out .= '<p>' . h(mb_substr((string)$faq['excerpt'], 0, 170)) . '</p>';

@@ -354,7 +354,10 @@ function coreModuleDefinitions(): array
             'admin_label' => 'FAQ',
             'content_reference_types' => ['faq' => 'FAQ'],
             'search_result_types' => ['faq' => 'FAQ'],
-            'sitemap_sections' => ['faq' => 'FAQ'],
+            'sitemap_sections' => [
+                'faq' => 'FAQ',
+                'faq_categories' => 'Kategorie FAQ',
+            ],
             'settings_default' => '0',
             'public_nav_path' => '/faq/index.php',
             'public_paths' => [

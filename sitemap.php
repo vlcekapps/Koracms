@@ -321,6 +321,32 @@ if (isModuleEnabled('faq')) {
     sitemapWriteUrl(siteUrl('/faq/'), 'weekly', '0.6');
 
     try {
+        $faqCategories = $pdo->query(
+            "SELECT c.id, c.slug,
+                    GREATEST(
+                        COALESCE(c.updated_at, c.created_at),
+                        COALESCE(MAX(f.updated_at), MAX(f.created_at), COALESCE(c.updated_at, c.created_at))
+                    ) AS sitemap_lastmod
+             FROM cms_faq_categories c
+             INNER JOIN cms_faqs f ON f.category_id = c.id
+                AND " . faqPublicVisibilitySql('f') . "
+             WHERE c.slug <> ''
+             GROUP BY c.id, c.slug, c.created_at, c.updated_at
+             ORDER BY c.sort_order ASC, c.name ASC"
+        )->fetchAll();
+        foreach ($faqCategories as $category) {
+            sitemapWriteUrl(
+                faqCategoryUrl($category),
+                'weekly',
+                '0.5',
+                sitemapLastmod((string)($category['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('faq_categories', $e);
+    }
+
+    try {
         $faqs = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_faqs

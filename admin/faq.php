@@ -7,9 +7,13 @@ $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
 $categoryFilter = inputInt('get', 'kat');
+$feedbackFilter = trim((string)($_GET['feedback'] ?? 'all'));
 $allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
+}
+if (!in_array($feedbackFilter, ['all', 'needs'], true)) {
+    $feedbackFilter = 'all';
 }
 
 $faqCategories = $pdo->query(
@@ -41,14 +45,27 @@ if ($categoryFilter !== null && $categoryFilter > 0) {
     $params[] = $categoryFilter;
 }
 
+if ($feedbackFilter === 'needs') {
+    $whereParts[] = '(COALESCE(ff.not_helpful_count, 0) > 0 AND COALESCE(ff.not_helpful_count, 0) >= COALESCE(ff.helpful_count, 0))';
+}
+
 $whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 
 $stmt = $pdo->prepare(
     "SELECT f.id, f.question, f.slug, f.excerpt, f.answer, f.is_published,
             COALESCE(f.status,'published') AS status, f.created_at, f.updated_at,
-            c.name AS category_name
+            c.name AS category_name,
+            COALESCE(ff.helpful_count, 0) AS helpful_count,
+            COALESCE(ff.not_helpful_count, 0) AS not_helpful_count
      FROM cms_faqs f
      LEFT JOIN cms_faq_categories c ON c.id = f.category_id
+     LEFT JOIN (
+        SELECT faq_id,
+               SUM(vote = 'helpful') AS helpful_count,
+               SUM(vote = 'not_helpful') AS not_helpful_count
+        FROM cms_faq_feedback
+        GROUP BY faq_id
+     ) ff ON ff.faq_id = f.id
      {$whereSql}
      ORDER BY c.sort_order, c.name, COALESCE(f.updated_at, f.created_at) DESC, f.id DESC"
 );
@@ -93,15 +110,22 @@ adminHeader('Znalostní báze');
       <?php endforeach; ?>
     </select>
   </div>
+  <div>
+    <label for="feedback">Zpětná vazba</label>
+    <select id="feedback" name="feedback">
+      <option value="all"<?= $feedbackFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <option value="needs"<?= $feedbackFilter === 'needs' ? ' selected' : '' ?>>Potřebuje doplnit</option>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all' || $categoryFilter !== null): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $categoryFilter !== null || $feedbackFilter !== 'all'): ?>
     <a href="faq.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($faqs)): ?>
   <p>
-    <?php if ($q !== '' || $statusFilter !== 'all' || $categoryFilter !== null): ?>
+    <?php if ($q !== '' || $statusFilter !== 'all' || $categoryFilter !== null || $feedbackFilter !== 'all'): ?>
       Pro zvolený filtr tu teď nejsou žádné otázky.
     <?php else: ?>
       Zatím tu nejsou žádné otázky. <a href="faq_form.php">Přidat první otázku</a>.
@@ -116,6 +140,7 @@ adminHeader('Znalostní báze');
         <th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th>
         <th scope="col">Otázka</th>
         <th scope="col">Kategorie</th>
+        <th scope="col">Užitečnost</th>
         <th scope="col">Stav</th>
         <th scope="col">Akce</th>
       </tr>
@@ -132,6 +157,14 @@ adminHeader('Znalostní báze');
           <?php endif; ?>
         </td>
         <td><?= h((string)($faq['category_name'] ?: '–')) ?></td>
+        <td>
+          <?php
+            $helpfulCount = (int)($faq['helpful_count'] ?? 0);
+        $notHelpfulCount = (int)($faq['not_helpful_count'] ?? 0);
+        ?>
+          <span class="table-meta">Pomohlo: <?= $helpfulCount ?></span><br>
+          <span class="table-meta">Potřebuje doplnit: <?= $notHelpfulCount ?></span>
+        </td>
         <td>
           <?php if ($faq['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">Čeká na schválení</strong>

@@ -4,6 +4,8 @@ $displayMode = (string)($displayMode ?? 'cards');
 $displayModeLinks = is_array($displayModeLinks ?? null) ? $displayModeLinks : [];
 $filterSummary = is_array($filterSummary ?? null) ? $filterSummary : [];
 $resultCountLabel = (string)($resultCountLabel ?? '');
+$pageHeading = (string)($pageHeading ?? 'Znalostní báze');
+$pageIntro = trim((string)($pageIntro ?? ''));
 $pagerHtml = (string)($pagerHtml ?? '');
 $hasActiveFilters = !empty($hasActiveFilters);
 $clearUrl = (string)($clearUrl ?? (BASE_URL . '/faq/index.php'));
@@ -40,7 +42,10 @@ $renderCatNav = static function (array $tree, int $parentId, int $depth, ?int $a
     <div class="section-heading">
       <div>
         <p class="section-kicker">Podpora a informace</p>
-        <h1 id="faq-title" class="section-title section-title--hero">Znalostní báze</h1>
+        <h1 id="faq-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
+        <?php if ($pageIntro !== ''): ?>
+          <p class="section-lead"><?= h(normalizePlainText($pageIntro)) ?></p>
+        <?php endif; ?>
       </div>
     </div>
 

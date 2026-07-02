@@ -6,6 +6,8 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ 
 $pdo = db_connect();
 $id = inputInt('get', 'id');
 $faq = null;
+$feedbackSummary = ['helpful' => 0, 'not_helpful' => 0];
+$negativeFeedbackNotes = [];
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_faqs WHERE id = ?");
@@ -15,6 +17,30 @@ if ($id !== null) {
         header('Location: faq.php');
         exit;
     }
+
+    $feedbackStmt = $pdo->prepare(
+        "SELECT
+            SUM(vote = 'helpful') AS helpful_count,
+            SUM(vote = 'not_helpful') AS not_helpful_count
+         FROM cms_faq_feedback
+         WHERE faq_id = ?"
+    );
+    $feedbackStmt->execute([$id]);
+    $feedbackRow = $feedbackStmt->fetch() ?: [];
+    $feedbackSummary = [
+        'helpful' => (int)($feedbackRow['helpful_count'] ?? 0),
+        'not_helpful' => (int)($feedbackRow['not_helpful_count'] ?? 0),
+    ];
+
+    $negativeFeedbackStmt = $pdo->prepare(
+        "SELECT note, created_at
+         FROM cms_faq_feedback
+         WHERE faq_id = ? AND vote = 'not_helpful' AND TRIM(COALESCE(note, '')) <> ''
+         ORDER BY created_at DESC, id DESC
+         LIMIT 5"
+    );
+    $negativeFeedbackStmt->execute([$id]);
+    $negativeFeedbackNotes = $negativeFeedbackStmt->fetchAll();
 }
 
 $faq = $faq ?: [
@@ -52,6 +78,29 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
 
 <?php if ($id): ?>
   <p><a href="revisions.php?type=faq&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+<?php endif; ?>
+
+<?php if ($id): ?>
+  <section class="admin-card" aria-labelledby="faq-feedback-admin-heading">
+    <h2 id="faq-feedback-admin-heading">Zpětná vazba k odpovědi</h2>
+    <p class="admin-description">
+      Pomohlo: <?= (int)$feedbackSummary['helpful'] ?>,
+      potřebuje doplnit: <?= (int)$feedbackSummary['not_helpful'] ?>.
+    </p>
+    <?php if ($negativeFeedbackNotes !== []): ?>
+      <h3>Poslední poznámky</h3>
+      <ul>
+        <?php foreach ($negativeFeedbackNotes as $feedbackNote): ?>
+          <li>
+            <time datetime="<?= h((string)$feedbackNote['created_at']) ?>"><?= h(formatCzechDate((string)$feedbackNote['created_at'])) ?></time>:
+            <?= h((string)$feedbackNote['note']) ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php else: ?>
+      <p class="admin-description">Zatím tu nejsou žádné negativní poznámky.</p>
+    <?php endif; ?>
+  </section>
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>

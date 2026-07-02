@@ -1070,14 +1070,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // FAQ kategorie
                 if (!empty($data['faq_categories']) && is_array($data['faq_categories'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_faq_categories (id, name, parent_id, sort_order) VALUES (?,?,?,?)"
+                        "INSERT IGNORE INTO cms_faq_categories
+                         (id, name, slug, description, meta_title, meta_description, parent_id, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['faq_categories'] as $row) {
+                        $categoryName = trim((string)($row['name'] ?? ''));
+                        if ($categoryName === '') {
+                            $categoryName = 'Kategorie FAQ';
+                        }
+                        $categorySlug = uniqueFaqCategorySlug(
+                            $pdo,
+                            (string)($row['slug'] ?? $categoryName),
+                            isset($row['id']) ? (int)$row['id'] : null
+                        );
                         $ins->execute([
                             (int)$row['id'],
-                            $row['name'],
+                            $categoryName,
+                            $categorySlug,
+                            (string)($row['description'] ?? ''),
+                            trim((string)($row['meta_title'] ?? '')),
+                            trim((string)($row['meta_description'] ?? '')),
                             !empty($row['parent_id']) ? (int)$row['parent_id'] : null,
                             (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);
                     }
                     $summary[] = 'FAQ kategorie importovány.';
