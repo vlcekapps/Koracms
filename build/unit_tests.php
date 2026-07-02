@@ -327,6 +327,36 @@ assert_equals(
     blogCategoryRequestPath(['slug' => 'blog'], ['id' => 5, 'name' => 'Starší kategorie', 'slug' => '']),
     'category landing path falls back to legacy query filter without slug'
 );
+assert_equals(
+    '/snd/jak-cist-web',
+    articlePublicRequestPath(['id' => 7, 'slug' => 'jak-cist-web', 'blog_id' => 3, 'blog_slug' => 'snd']),
+    'article canonical request path uses blog slug and article slug'
+);
+assert_equals(
+    '/snd/serie/prvni-serie',
+    str_replace(BASE_URL, '', blogSeriesPath(['slug' => 'snd'], ['id' => 4, 'slug' => 'prvni-serie'])),
+    'series canonical path uses clean blog route'
+);
+assert_true(
+    blogArticleIsPubliclyReachable(['slug' => 'verejny-clanek', 'status' => 'published', 'deleted_at' => null, 'publish_at' => null, 'unpublish_at' => null]),
+    'published article with slug is publicly reachable'
+);
+assert_false(
+    blogArticleIsPubliclyReachable(['slug' => 'koncept', 'status' => 'draft', 'deleted_at' => null, 'publish_at' => null, 'unpublish_at' => null]),
+    'draft article is not publicly reachable'
+);
+assert_false(
+    blogArticleIsPubliclyReachable(['slug' => 'budouci-clanek', 'status' => 'published', 'deleted_at' => null, 'publish_at' => date('Y-m-d H:i:s', time() + 3600), 'unpublish_at' => null]),
+    'future article is not publicly reachable yet'
+);
+assert_false(
+    blogArticleIsPubliclyReachable(['slug' => 'stazeny-clanek', 'status' => 'published', 'deleted_at' => null, 'publish_at' => null, 'unpublish_at' => date('Y-m-d H:i:s', time() - 3600)]),
+    'unpublished article is no longer publicly reachable'
+);
+assert_false(
+    blogArticleIsPubliclyReachable(['slug' => '', 'status' => 'published', 'deleted_at' => null, 'publish_at' => null, 'unpublish_at' => null]),
+    'article without slug is not a canonical public redirect target'
+);
 
 test_section('navigation links');
 

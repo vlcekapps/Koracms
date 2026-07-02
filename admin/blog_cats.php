@@ -78,6 +78,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($error === '' && $fieldErrors === [] && $updateId !== null) {
+        $existingCategoryForRedirect = null;
+        $existingCategoryStmt = $pdo->prepare(
+            "SELECT id, name, slug, blog_id
+             FROM cms_categories
+             WHERE id = ? AND blog_id = ?
+             LIMIT 1"
+        );
+        $existingCategoryStmt->execute([$updateId, $blogId]);
+        $existingCategoryForRedirect = $existingCategoryStmt->fetch() ?: null;
+
         if ($parentId === $updateId) {
             $parentId = null;
         }
@@ -95,6 +105,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              SET name = ?, slug = ?, parent_id = ?, description = ?, meta_title = ?, meta_description = ?
              WHERE id = ? AND blog_id = ?"
         )->execute([$name, $normalizedSlug, $parentId, $description, $metaTitle, $metaDescription, $updateId, $blogId]);
+        if ($existingCategoryForRedirect && $currentBlog) {
+            $updatedCategoryForRedirect = $existingCategoryForRedirect;
+            $updatedCategoryForRedirect['name'] = $name;
+            $updatedCategoryForRedirect['slug'] = $normalizedSlug;
+            upsertPathRedirect(
+                $pdo,
+                blogCategoryPath($currentBlog, $existingCategoryForRedirect),
+                blogCategoryPath($currentBlog, $updatedCategoryForRedirect),
+                301
+            );
+        }
         $success = true;
         $editId = null;
     } elseif ($error === '' && $fieldErrors === []) {

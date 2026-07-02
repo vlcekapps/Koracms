@@ -292,6 +292,8 @@ Delší blogové články dostanou na veřejném detailu automatickou osnovu `V 
 
 Kategorie a štítky blogu nejsou jen interní filtry. Správce k nim může vyplnit veřejný slug, popis, meta title a meta description. Veřejné stránky mají čisté adresy `/{blog-slug}/kategorie/{category-slug}` a `/{blog-slug}/stitky/{tag-slug}`, zobrazují popis nad výpisem článků a používají vlastní canonical/SEO metadata. Staré query odkazy `?kat=` a `?tag=` zůstávají kompatibilní.
 
+Blog zároveň automaticky chrání staré veřejné adresy. Když se změní slug nebo blog publikovaného článku, slug kategorie, slug štítku nebo slug aktivní série, CMS uloží trvalé `301` přesměrování ze staré URL na nový canonical tvar přes běžnou správu přesměrování. Při smazání nebo převodu článku se redirecty mířící na zaniklou článkovou URL uklidí, aby nevznikaly slepé odkazy.
+
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
 Ruční i automaticky ukládané `301/302` redirecty ověřují starou adresu jako interní cestu webu a novou adresu jako interní cestu nebo čistou `http/https` URL bez přihlašovacích údajů. Nejednoznačné cíle, nebezpečná schémata a CRLF znaky se odmítnou ještě před odesláním hlavičky `Location`.

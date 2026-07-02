@@ -3340,6 +3340,38 @@ function articlePublicUrl(array $article, array $query = []): string
 }
 
 /**
+ * @param array<string, mixed> $article
+ */
+function blogArticleIsPubliclyReachable(array $article): bool
+{
+    if (trim((string)($article['deleted_at'] ?? '')) !== '') {
+        return false;
+    }
+    if ((string)($article['status'] ?? '') !== 'published') {
+        return false;
+    }
+
+    $now = time();
+    $publishAt = trim((string)($article['publish_at'] ?? ''));
+    if ($publishAt !== '') {
+        $publishTimestamp = strtotime($publishAt);
+        if ($publishTimestamp !== false && $publishTimestamp > $now) {
+            return false;
+        }
+    }
+
+    $unpublishAt = trim((string)($article['unpublish_at'] ?? ''));
+    if ($unpublishAt !== '') {
+        $unpublishTimestamp = strtotime($unpublishAt);
+        if ($unpublishTimestamp !== false && $unpublishTimestamp <= $now) {
+            return false;
+        }
+    }
+
+    return articleSlug((string)($article['slug'] ?? '')) !== '';
+}
+
+/**
  * @param array<string, mixed> $page
  * @return array<string, mixed>|null
  */
@@ -4156,6 +4188,23 @@ function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $sta
             'old_path_hash' => hash('sha256', $oldPath),
             'new_path_hash' => hash('sha256', $newPath),
             'status_code' => in_array($statusCode, [301, 302], true) ? $statusCode : 301,
+            'exception' => $e,
+        ]);
+    }
+}
+
+function deleteRedirectsTargetingPath(PDO $pdo, string $targetPath): void
+{
+    $targetPath = storedRedirectTarget($targetPath, '');
+    if ($targetPath === '') {
+        return;
+    }
+
+    try {
+        $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([$targetPath]);
+    } catch (\PDOException $e) {
+        koraLog('warning', 'path redirect cleanup failed', [
+            'target_path_hash' => hash('sha256', $targetPath),
             'exception' => $e,
         ]);
     }

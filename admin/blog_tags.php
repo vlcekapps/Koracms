@@ -76,11 +76,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($error === '' && $fieldErrors === []) {
         if ($updateId !== null) {
+            $existingTagForRedirect = null;
+            $existingTagStmt = $pdo->prepare(
+                "SELECT id, name, slug, blog_id
+                 FROM cms_tags
+                 WHERE id = ? AND blog_id = ?
+                 LIMIT 1"
+            );
+            $existingTagStmt->execute([$updateId, $blogId]);
+            $existingTagForRedirect = $existingTagStmt->fetch() ?: null;
+
             $pdo->prepare(
                 "UPDATE cms_tags
                  SET name = ?, slug = ?, description = ?, meta_title = ?, meta_description = ?
                  WHERE id = ? AND blog_id = ?"
             )->execute([$name, $normalizedSlug, $description, $metaTitle, $metaDescription, $updateId, $blogId]);
+            if ($existingTagForRedirect && $currentBlog && blogTagSlug((string)($existingTagForRedirect['slug'] ?? '')) !== '') {
+                $updatedTagForRedirect = $existingTagForRedirect;
+                $updatedTagForRedirect['name'] = $name;
+                $updatedTagForRedirect['slug'] = $normalizedSlug;
+                upsertPathRedirect(
+                    $pdo,
+                    blogTagPath($currentBlog, $existingTagForRedirect),
+                    blogTagPath($currentBlog, $updatedTagForRedirect),
+                    301
+                );
+            }
             logAction('tag_edit', 'id=' . $updateId . ' name=' . $name);
             $editId = null;
         } else {

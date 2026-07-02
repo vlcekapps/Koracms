@@ -39,6 +39,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logAction('trash_restore', "module={$module} id={$itemId}");
         } elseif ($action === 'purge') {
             if ($module === 'articles') {
+                $articleRedirectStmt = $pdo->prepare(
+                    "SELECT id, slug, blog_id
+                     FROM cms_articles
+                     WHERE id = ?
+                     LIMIT 1"
+                );
+                $articleRedirectStmt->execute([$itemId]);
+                $articleForRedirectCleanup = $articleRedirectStmt->fetch() ?: null;
+                if ($articleForRedirectCleanup) {
+                    deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup));
+                }
                 $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$itemId, $itemId]);
                 $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$itemId]);

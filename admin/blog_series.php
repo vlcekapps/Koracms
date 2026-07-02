@@ -127,10 +127,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             $pdo->beginTransaction();
+            $existingSeriesForRedirect = null;
             if ($seriesId > 0) {
-                $existingStmt = $pdo->prepare("SELECT id FROM cms_blog_series WHERE id = ? AND blog_id = ?");
+                $existingStmt = $pdo->prepare(
+                    "SELECT id, title, slug, blog_id, is_active
+                     FROM cms_blog_series
+                     WHERE id = ? AND blog_id = ?
+                     LIMIT 1"
+                );
                 $existingStmt->execute([$seriesId, $blogId]);
-                if (!$existingStmt->fetch()) {
+                $existingSeriesForRedirect = $existingStmt->fetch() ?: null;
+                if (!$existingSeriesForRedirect) {
                     throw new RuntimeException('Series not found');
                 }
                 $pdo->prepare(
@@ -173,6 +180,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach ($validArticleIds as $position => $articleId) {
                     $insertItem->execute([$seriesId, $articleId, $position + 1]);
                 }
+            }
+            if ($existingSeriesForRedirect && (int)$seriesForm['is_active'] === 1 && blogSeriesSlug((string)($existingSeriesForRedirect['slug'] ?? '')) !== '') {
+                $updatedSeriesForRedirect = $existingSeriesForRedirect;
+                $updatedSeriesForRedirect['title'] = (string)$seriesForm['title'];
+                $updatedSeriesForRedirect['slug'] = (string)$seriesForm['slug'];
+                $updatedSeriesForRedirect['is_active'] = (int)$seriesForm['is_active'];
+                upsertPathRedirect(
+                    $pdo,
+                    blogSeriesPath($blog, $existingSeriesForRedirect),
+                    blogSeriesPath($blog, $updatedSeriesForRedirect),
+                    301
+                );
             }
             $pdo->commit();
             logAction('blog_series_save', 'blog_id=' . $blogId . ', id=' . $seriesId);

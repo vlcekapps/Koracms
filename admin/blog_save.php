@@ -60,10 +60,10 @@ if ($title === '' || $content === '') {
 $existingArticle = null;
 if ($id !== null) {
     if (canManageOwnBlogOnly()) {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL");
+        $existingStmt = $pdo->prepare("SELECT id, title, slug, image_file, preview_token, author_id, blog_id, category_id, status, publish_at, unpublish_at, deleted_at FROM cms_articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL");
         $existingStmt->execute([$id, currentUserId()]);
     } else {
-        $existingStmt = $pdo->prepare("SELECT id, image_file, preview_token, author_id, blog_id, category_id, status FROM cms_articles WHERE id = ? AND deleted_at IS NULL");
+        $existingStmt = $pdo->prepare("SELECT id, title, slug, image_file, preview_token, author_id, blog_id, category_id, status, publish_at, unpublish_at, deleted_at FROM cms_articles WHERE id = ? AND deleted_at IS NULL");
         $existingStmt->execute([$id]);
     }
     $existingArticle = $existingStmt->fetch() ?: null;
@@ -377,6 +377,17 @@ try {
                  SET is_featured_in_blog = 0
                  WHERE blog_id = ? AND id <> ?"
             )->execute([$blogId, $id]);
+        }
+        $updatedArticleForRedirect = $existingArticle;
+        $updatedArticleForRedirect['title'] = $title;
+        $updatedArticleForRedirect['slug'] = $slug;
+        $updatedArticleForRedirect['blog_id'] = $blogId;
+        $updatedArticleForRedirect['status'] = $status;
+        $updatedArticleForRedirect['publish_at'] = $publishAtSql;
+        $updatedArticleForRedirect['unpublish_at'] = $unpublishAtSql;
+        $updatedArticleForRedirect['deleted_at'] = null;
+        if (blogArticleIsPubliclyReachable($existingArticle) && blogArticleIsPubliclyReachable($updatedArticleForRedirect)) {
+            upsertPathRedirect($pdo, articlePublicPath($existingArticle), articlePublicPath($updatedArticleForRedirect), 301);
         }
         logAction('article_edit', "id={$id} title={$title} slug={$slug} status={$status}");
         if ($status === 'pending' && ($existingArticle['status'] ?? '') !== 'pending') {

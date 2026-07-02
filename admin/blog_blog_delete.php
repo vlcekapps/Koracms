@@ -29,16 +29,38 @@ if ($id !== null) {
         $pdo->prepare("DELETE FROM cms_blog_series WHERE blog_id = ?")->execute([$id]);
 
         if ($fallbackId) {
+            $articleRedirectStmt = $pdo->prepare(
+                "SELECT id, slug, blog_id, status, publish_at, unpublish_at, deleted_at
+                 FROM cms_articles
+                 WHERE blog_id = ?"
+            );
+            $articleRedirectStmt->execute([$id]);
+            $articlesForRedirects = $articleRedirectStmt->fetchAll() ?: [];
+
             // Přesunout články, kategorie a tagy do zbývajícího blogu
             $pdo->prepare("UPDATE cms_articles SET blog_id = ? WHERE blog_id = ?")->execute([(int)$fallbackId, $id]);
+            foreach ($articlesForRedirects as $articleForRedirect) {
+                $updatedArticleForRedirect = $articleForRedirect;
+                $updatedArticleForRedirect['blog_id'] = (int)$fallbackId;
+                if (blogArticleIsPubliclyReachable($articleForRedirect) && blogArticleIsPubliclyReachable($updatedArticleForRedirect)) {
+                    upsertPathRedirect(
+                        $pdo,
+                        articlePublicPath($articleForRedirect),
+                        articlePublicPath($updatedArticleForRedirect),
+                        301
+                    );
+                }
+            }
             $pdo->prepare("UPDATE cms_categories SET blog_id = ? WHERE blog_id = ?")->execute([(int)$fallbackId, $id]);
             $pdo->prepare("UPDATE cms_tags SET blog_id = ? WHERE blog_id = ?")->execute([(int)$fallbackId, $id]);
             logAction('blog_delete', "id={$id} content_moved_to={$fallbackId}");
         } else {
             // Poslední blog – smazat veškerý obsah nenávratně
-            $articleIds = $pdo->prepare("SELECT id FROM cms_articles WHERE blog_id = ?");
-            $articleIds->execute([$id]);
-            foreach ($articleIds->fetchAll(PDO::FETCH_COLUMN) as $artId) {
+            $articleRows = $pdo->prepare("SELECT id, slug, blog_id FROM cms_articles WHERE blog_id = ?");
+            $articleRows->execute([$id]);
+            foreach ($articleRows->fetchAll() as $articleRow) {
+                $artId = (int)$articleRow['id'];
+                deleteRedirectsTargetingPath($pdo, articlePublicPath($articleRow));
                 $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$artId]);
                 $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$artId, $artId]);
                 $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$artId]);

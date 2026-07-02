@@ -42,6 +42,7 @@ $createdSubscriberEmails = [];
 $createdNavLinkIds = [];
 $createdPageViewIds = [];
 $createdTempFiles = [];
+$createdRedirectPaths = [];
 
 /**
  * @param array<int, string> $issues
@@ -3584,6 +3585,194 @@ try {
 
     httpIntegrationPrintResult('blog_taxonomy_landing_http', $blogTaxonomyIssues, $failures);
 
+    $blogUrlRedirectIssues = [];
+    $redirectSourceBlogSlug = 'http-redirect-source-' . bin2hex(random_bytes(4));
+    $redirectTargetBlogSlug = 'http-redirect-target-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP Redirect Source Blog', $redirectSourceBlogSlug, $adminUserId]);
+    $redirectSourceBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $redirectSourceBlogId;
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP Redirect Target Blog', $redirectTargetBlogSlug, $adminUserId]);
+    $redirectTargetBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $redirectTargetBlogId;
+    $redirectSourceBlog = getBlogById($redirectSourceBlogId) ?: ['id' => $redirectSourceBlogId, 'slug' => $redirectSourceBlogSlug];
+    $redirectTargetBlog = getBlogById($redirectTargetBlogId) ?: ['id' => $redirectTargetBlogId, 'slug' => $redirectTargetBlogSlug];
+
+    $redirectOldArticleSlug = 'http-redirect-article-old-' . bin2hex(random_bytes(4));
+    $redirectNewArticleSlug = 'http-redirect-article-new-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Článek pro automatický redirect.</p>', 1, ?, 'published', NOW())"
+    )->execute(['HTTP Redirect Article', $redirectOldArticleSlug, $redirectSourceBlogId, $adminUserId]);
+    $redirectArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $redirectArticleId;
+    $oldArticlePath = articlePublicPath(['id' => $redirectArticleId, 'slug' => $redirectOldArticleSlug, 'blog_id' => $redirectSourceBlogId]);
+    $newArticlePath = articlePublicPath(['id' => $redirectArticleId, 'slug' => $redirectNewArticleSlug, 'blog_id' => $redirectTargetBlogId]);
+    $createdRedirectPaths[] = $oldArticlePath;
+    $createdRedirectPaths[] = $newArticlePath;
+
+    $articleRedirectSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$redirectArticleId,
+        'blog_id' => (string)$redirectTargetBlogId,
+        'title' => 'HTTP Redirect Article',
+        'slug' => $redirectNewArticleSlug,
+        'perex' => '',
+        'content' => '<p>Článek pro automatický redirect.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'article_status' => 'published',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $redirectTargetBlogId,
+        'comments_enabled' => '1',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleRedirectSaveResponse) !== 302) {
+        $blogUrlRedirectIssues[] = 'uložení článku se změnou slugu/blogu nevrátilo redirect v administraci';
+    }
+    $oldArticleRedirectResponse = fetchUrl($baseUrl . $oldArticlePath, '', 0);
+    if (httpIntegrationStatusCode($oldArticleRedirectResponse) !== 301
+        || !responseHasLocationHeader($oldArticleRedirectResponse['headers'], $newArticlePath, $baseUrl)) {
+        $blogUrlRedirectIssues[] = 'stará URL článku nepřesměrovala 301 na novou canonical URL';
+    }
+
+    $draftOldSlug = 'http-redirect-draft-old-' . bin2hex(random_bytes(4));
+    $draftNewSlug = 'http-redirect-draft-new-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Koncept bez veřejného redirectu.</p>', 1, ?, 'draft', NOW())"
+    )->execute(['HTTP Redirect Draft', $draftOldSlug, $redirectSourceBlogId, $adminUserId]);
+    $draftArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $draftArticleId;
+    $draftOldPath = articlePublicPath(['id' => $draftArticleId, 'slug' => $draftOldSlug, 'blog_id' => $redirectSourceBlogId]);
+    $createdRedirectPaths[] = $draftOldPath;
+    $draftRedirectSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$draftArticleId,
+        'blog_id' => (string)$redirectSourceBlogId,
+        'title' => 'HTTP Redirect Draft',
+        'slug' => $draftNewSlug,
+        'perex' => '',
+        'content' => '<p>Koncept bez veřejného redirectu.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'article_status' => 'draft',
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $redirectSourceBlogId,
+        'comments_enabled' => '1',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($draftRedirectSaveResponse) !== 302) {
+        $blogUrlRedirectIssues[] = 'uložení konceptu při změně slugu nevrátilo administrativní redirect';
+    }
+    $draftRedirectCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_redirects WHERE old_path = ?");
+    $draftRedirectCountStmt->execute([$draftOldPath]);
+    if ((int)$draftRedirectCountStmt->fetchColumn() !== 0) {
+        $blogUrlRedirectIssues[] = 'změna slugu konceptu vytvořila veřejný redirect';
+    }
+
+    $redirectCategoryOldSlug = 'http-redirect-kategorie-old-' . bin2hex(random_bytes(4));
+    $redirectCategoryNewSlug = 'http-redirect-kategorie-new-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id, description) VALUES (?, ?, ?, ?)")
+        ->execute(['HTTP Redirect Kategorie', $redirectCategoryOldSlug, $redirectSourceBlogId, 'Popis kategorie pro redirect.']);
+    $redirectCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $redirectCategoryId;
+    $oldCategoryPath = blogCategoryPath($redirectSourceBlog, ['id' => $redirectCategoryId, 'name' => 'HTTP Redirect Kategorie', 'slug' => $redirectCategoryOldSlug]);
+    $newCategoryPath = blogCategoryPath($redirectSourceBlog, ['id' => $redirectCategoryId, 'name' => 'HTTP Redirect Kategorie', 'slug' => $redirectCategoryNewSlug]);
+    $createdRedirectPaths[] = $oldCategoryPath;
+    $createdRedirectPaths[] = $newCategoryPath;
+    $categoryRedirectSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $redirectSourceBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$redirectSourceBlogId,
+        'update_id' => (string)$redirectCategoryId,
+        'name' => 'HTTP Redirect Kategorie',
+        'slug' => $redirectCategoryNewSlug,
+        'parent_id' => '',
+        'description' => 'Popis kategorie pro redirect.',
+        'meta_title' => '',
+        'meta_description' => '',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($categoryRedirectSaveResponse) !== 200) {
+        $blogUrlRedirectIssues[] = 'uložení kategorie se změnou slugu nevrátilo stránku administrace';
+    }
+    $oldCategoryRedirectResponse = fetchUrl($baseUrl . $oldCategoryPath, '', 0);
+    if (httpIntegrationStatusCode($oldCategoryRedirectResponse) !== 301
+        || !responseHasLocationHeader($oldCategoryRedirectResponse['headers'], $newCategoryPath, $baseUrl)) {
+        $blogUrlRedirectIssues[] = 'stará URL kategorie nepřesměrovala 301 na novou landing stránku';
+    }
+
+    $redirectTagOldSlug = 'http-redirect-stitek-old-' . bin2hex(random_bytes(4));
+    $redirectTagNewSlug = 'http-redirect-stitek-new-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id, description) VALUES (?, ?, ?, ?)")
+        ->execute(['HTTP Redirect Štítek', $redirectTagOldSlug, $redirectSourceBlogId, 'Popis štítku pro redirect.']);
+    $redirectTagId = (int)$pdo->lastInsertId();
+    $createdTags[] = $redirectTagId;
+    $oldTagPath = blogTagPath($redirectSourceBlog, ['id' => $redirectTagId, 'name' => 'HTTP Redirect Štítek', 'slug' => $redirectTagOldSlug]);
+    $newTagPath = blogTagPath($redirectSourceBlog, ['id' => $redirectTagId, 'name' => 'HTTP Redirect Štítek', 'slug' => $redirectTagNewSlug]);
+    $createdRedirectPaths[] = $oldTagPath;
+    $createdRedirectPaths[] = $newTagPath;
+    $tagRedirectSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_tags.php?blog_id=' . $redirectSourceBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$redirectSourceBlogId,
+        'update_id' => (string)$redirectTagId,
+        'name' => 'HTTP Redirect Štítek',
+        'slug' => $redirectTagNewSlug,
+        'description' => 'Popis štítku pro redirect.',
+        'meta_title' => '',
+        'meta_description' => '',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($tagRedirectSaveResponse) !== 200) {
+        $blogUrlRedirectIssues[] = 'uložení štítku se změnou slugu nevrátilo stránku administrace';
+    }
+    $oldTagRedirectResponse = fetchUrl($baseUrl . $oldTagPath, '', 0);
+    if (httpIntegrationStatusCode($oldTagRedirectResponse) !== 301
+        || !responseHasLocationHeader($oldTagRedirectResponse['headers'], $newTagPath, $baseUrl)) {
+        $blogUrlRedirectIssues[] = 'stará URL štítku nepřesměrovala 301 na novou landing stránku';
+    }
+
+    $redirectSeriesOldSlug = 'http-redirect-serie-old-' . bin2hex(random_bytes(4));
+    $redirectSeriesNewSlug = 'http-redirect-serie-new-' . bin2hex(random_bytes(4));
+    $redirectSeriesArticleSlug = 'http-redirect-serie-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Článek série pro automatický redirect.</p>', 1, ?, 'published', NOW())"
+    )->execute(['HTTP Redirect Série Článek', $redirectSeriesArticleSlug, $redirectSourceBlogId, $adminUserId]);
+    $redirectSeriesArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $redirectSeriesArticleId;
+    $pdo->prepare(
+        "INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order)
+         VALUES (?, ?, ?, ?, 1, 1)"
+    )->execute([$redirectSourceBlogId, 'HTTP Redirect Série', $redirectSeriesOldSlug, 'Popis série pro redirect.']);
+    $redirectSeriesId = (int)$pdo->lastInsertId();
+    $createdBlogSeriesIds[] = $redirectSeriesId;
+    $pdo->prepare("INSERT IGNORE INTO cms_blog_series_items (series_id, article_id, sort_order) VALUES (?, ?, 1)")
+        ->execute([$redirectSeriesId, $redirectSeriesArticleId]);
+    $oldSeriesPath = blogSeriesPath($redirectSourceBlog, ['id' => $redirectSeriesId, 'title' => 'HTTP Redirect Série', 'slug' => $redirectSeriesOldSlug]);
+    $newSeriesPath = blogSeriesPath($redirectSourceBlog, ['id' => $redirectSeriesId, 'title' => 'HTTP Redirect Série', 'slug' => $redirectSeriesNewSlug]);
+    $createdRedirectPaths[] = $oldSeriesPath;
+    $createdRedirectPaths[] = $newSeriesPath;
+    $seriesRedirectSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $redirectSourceBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$redirectSourceBlogId,
+        'action' => 'save_series',
+        'series_id' => (string)$redirectSeriesId,
+        'title' => 'HTTP Redirect Série',
+        'slug' => $redirectSeriesNewSlug,
+        'description' => 'Popis série pro redirect.',
+        'is_active' => '1',
+        'article_ids' => [(string)$redirectSeriesArticleId],
+        'article_order' => [(string)$redirectSeriesArticleId => '1'],
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($seriesRedirectSaveResponse) !== 302) {
+        $blogUrlRedirectIssues[] = 'uložení série se změnou slugu nevrátilo administrativní redirect';
+    }
+    $oldSeriesRedirectResponse = fetchUrl($baseUrl . $oldSeriesPath, '', 0);
+    if (httpIntegrationStatusCode($oldSeriesRedirectResponse) !== 301
+        || !responseHasLocationHeader($oldSeriesRedirectResponse['headers'], $newSeriesPath, $baseUrl)) {
+        $blogUrlRedirectIssues[] = 'stará URL série nepřesměrovala 301 na novou stránku série';
+    }
+
+    httpIntegrationPrintResult('blog_url_redirects_http', $blogUrlRedirectIssues, $failures);
+
     $authorHubIssues = [];
     saveSetting('module_blog', '1');
     saveSetting('module_news', '1');
@@ -5545,6 +5734,10 @@ try {
 
     foreach ($createdPageViewIds as $pageViewIdToDelete) {
         $pdo->prepare("DELETE FROM cms_page_views WHERE id = ?")->execute([$pageViewIdToDelete]);
+    }
+
+    foreach (array_values(array_unique($createdRedirectPaths)) as $redirectPathToDelete) {
+        $pdo->prepare("DELETE FROM cms_redirects WHERE old_path = ? OR new_path = ?")->execute([$redirectPathToDelete, $redirectPathToDelete]);
     }
 
     foreach ($createdResourceIds as $resourceId) {

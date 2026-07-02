@@ -12053,6 +12053,31 @@ if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 'blogTagUrl(')) {
     $blogAdminIssues[] = 'sitemap is missing public category or tag landing URLs';
 }
+if (!str_contains($blogPresentationSource, 'function blogArticleIsPubliclyReachable(')
+    || !str_contains($blogPresentationSource, 'function deleteRedirectsTargetingPath(')
+    || !str_contains($blogPresentationSource, 'storedRedirectTarget($targetPath')) {
+    $blogAdminIssues[] = 'blog redirect helpers are missing public article visibility checks or safe redirect cleanup';
+}
+if (!str_contains($blogSaveSource, 'blogArticleIsPubliclyReachable($existingArticle)')
+    || !str_contains($blogSaveSource, 'articlePublicPath($existingArticle)')
+    || !str_contains($blogSaveSource, 'upsertPathRedirect(')) {
+    $blogAdminIssues[] = 'article save no longer creates safe redirects when a public article URL changes';
+}
+if (!str_contains($blogCatsSource, 'upsertPathRedirect(')
+    || !str_contains($blogCatsSource, 'blogCategoryPath($currentBlog, $existingCategoryForRedirect)')
+    || !str_contains($blogTagsSource, 'upsertPathRedirect(')
+    || !str_contains($blogTagsSource, 'blogTagPath($currentBlog, $existingTagForRedirect)')
+    || !str_contains($blogSeriesAdminSource, 'upsertPathRedirect(')
+    || !str_contains($blogSeriesAdminSource, 'blogSeriesPath($blog, $existingSeriesForRedirect)')) {
+    $blogAdminIssues[] = 'blog category, tag or series admin no longer creates canonical redirects after slug changes';
+}
+if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
+    || !str_contains($blogBulkSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($article))')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($article))')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
+    || !str_contains($blogDeleteSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleRow))')) {
+    $blogAdminIssues[] = 'destructive article workflows no longer clean redirects pointing to removed article URLs';
+}
 if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExportSource, "'blog_slug_redirects'")) {
     $blogAdminIssues[] = 'export is missing blog membership and slug redirect datasets';
 }

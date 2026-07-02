@@ -48,7 +48,7 @@ if ($action === 'delete' && $ids !== []) {
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $params = array_merge($ids, [currentUserId()]);
         $stmt = $pdo->prepare(
-            "SELECT id, image_file, blog_id FROM cms_articles
+            "SELECT id, slug, image_file, blog_id FROM cms_articles
              WHERE id IN ({$placeholders}) AND author_id = ?"
         );
         $stmt->execute($params);
@@ -59,7 +59,7 @@ if ($action === 'delete' && $ids !== []) {
     } else {
         $articles = [];
         foreach ($ids as $id) {
-            $stmt = $pdo->prepare("SELECT id, image_file, blog_id FROM cms_articles WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, slug, image_file, blog_id FROM cms_articles WHERE id = ?");
             $stmt->execute([$id]);
             $article = $stmt->fetch();
             if ($article) {
@@ -80,6 +80,12 @@ if ($action === 'delete' && $ids !== []) {
     }
 
     foreach ($deleteIds as $deleteId) {
+        foreach ($articles as $article) {
+            if ((int)$article['id'] === $deleteId) {
+                deleteRedirectsTargetingPath($pdo, articlePublicPath($article));
+                break;
+            }
+        }
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$deleteId]);
         $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$deleteId, $deleteId]);
         $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$deleteId]);
