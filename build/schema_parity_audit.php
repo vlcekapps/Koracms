@@ -146,6 +146,17 @@ $criticalInstallColumns = [
     'cms_contact.replied_by_user_id' => ['cms_contact', 'replied_by_user_id'],
     'cms_contact.reply_subject' => ['cms_contact', 'reply_subject'],
     'cms_contact.reply_body' => ['cms_contact', 'reply_body'],
+    'cms_dl_categories.slug' => ['cms_dl_categories', 'slug'],
+    'cms_dl_categories.description' => ['cms_dl_categories', 'description'],
+    'cms_dl_categories.meta_title' => ['cms_dl_categories', 'meta_title'],
+    'cms_dl_categories.meta_description' => ['cms_dl_categories', 'meta_description'],
+    'cms_dl_categories.updated_at' => ['cms_dl_categories', 'updated_at'],
+    'cms_download_series.title' => ['cms_download_series', 'title'],
+    'cms_download_series.slug' => ['cms_download_series', 'slug'],
+    'cms_download_series.is_active' => ['cms_download_series', 'is_active'],
+    'cms_download_series.sort_order' => ['cms_download_series', 'sort_order'],
+    'cms_downloads.download_series_id' => ['cms_downloads', 'download_series_id'],
+    'cms_downloads.is_current_version' => ['cms_downloads', 'is_current_version'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -218,6 +229,18 @@ $criticalMigrationSnippets = [
     'cms_contact.reply_body',
     'idx_cms_contact_reference_code',
     'idx_cms_contact_topic_status',
+    'cms_dl_categories.slug',
+    'uq_cms_dl_categories_slug',
+    'cms_dl_categories.description',
+    'cms_dl_categories.meta_title',
+    'cms_dl_categories.meta_description',
+    'cms_dl_categories.updated_at',
+    'cms_download_series',
+    'uq_cms_download_series_slug',
+    'idx_cms_download_series_active_order',
+    'cms_downloads.download_series_id',
+    'cms_downloads.is_current_version',
+    'idx_cms_downloads_series_current',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {
@@ -281,6 +304,14 @@ schemaParityRequire(
     && str_contains($sitemapSource, 'cms_board_categories c')
     && str_contains($sitemapSource, "sitemapLogSectionError('board_categories'"),
     'sitemap.php must keep public board category landing URLs.',
+    $issues
+);
+schemaParityRequire(
+    str_contains($sitemapSource, 'downloadCategoryUrl(')
+    && str_contains($sitemapSource, 'downloadSeriesUrl(')
+    && str_contains($sitemapSource, 'cms_dl_categories c')
+    && str_contains($sitemapSource, 'cms_download_series s'),
+    'sitemap.php must keep public downloads category and series landing URLs.',
     $issues
 );
 

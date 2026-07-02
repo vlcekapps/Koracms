@@ -483,9 +483,28 @@ $tables = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_dl_categories' => "CREATE TABLE IF NOT EXISTS cms_dl_categories (
-        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        name       VARCHAR(255) NOT NULL,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name             VARCHAR(255) NOT NULL,
+        slug             VARCHAR(150) NOT NULL DEFAULT '',
+        description      TEXT,
+        meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_dl_categories_slug (slug)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_download_series' => "CREATE TABLE IF NOT EXISTS cms_download_series (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title       VARCHAR(255) NOT NULL,
+        slug        VARCHAR(150) NOT NULL,
+        description TEXT,
+        is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_download_series_slug (slug),
+        KEY idx_cms_download_series_active_order (is_active, sort_order, title)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_downloads' => "CREATE TABLE IF NOT EXISTS cms_downloads (
@@ -505,6 +524,8 @@ $tables = [
         requirements   TEXT,
         checksum_sha256 CHAR(64)    NOT NULL DEFAULT '',
         series_key     VARCHAR(150) NOT NULL DEFAULT '',
+        download_series_id INT      NULL DEFAULT NULL,
+        is_current_version TINYINT(1) NOT NULL DEFAULT 0,
         external_url   VARCHAR(255) NOT NULL DEFAULT '',
         filename       VARCHAR(255) NOT NULL DEFAULT '',
         original_name  VARCHAR(255) NOT NULL DEFAULT '',
@@ -1157,6 +1178,12 @@ $addColumns = [
     'cms_board_categories.meta_title' => "ALTER TABLE cms_board_categories ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER description",
     'cms_board_categories.meta_description' => "ALTER TABLE cms_board_categories ADD COLUMN meta_description TEXT AFTER meta_title",
     'cms_board_categories.updated_at' => "ALTER TABLE cms_board_categories ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+    // cms_dl_categories
+    'cms_dl_categories.slug'          => "ALTER TABLE cms_dl_categories ADD COLUMN slug VARCHAR(150) NOT NULL DEFAULT '' AFTER name",
+    'cms_dl_categories.description'   => "ALTER TABLE cms_dl_categories ADD COLUMN description TEXT AFTER slug",
+    'cms_dl_categories.meta_title'    => "ALTER TABLE cms_dl_categories ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER description",
+    'cms_dl_categories.meta_description' => "ALTER TABLE cms_dl_categories ADD COLUMN meta_description TEXT AFTER meta_title",
+    'cms_dl_categories.updated_at'    => "ALTER TABLE cms_dl_categories ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_downloads
     'cms_downloads.slug'             => "ALTER TABLE cms_downloads ADD COLUMN slug VARCHAR(255) NOT NULL DEFAULT '' AFTER title",
     'cms_downloads.download_type'    => "ALTER TABLE cms_downloads ADD COLUMN download_type VARCHAR(50) NOT NULL DEFAULT 'document' AFTER slug",
@@ -1171,6 +1198,8 @@ $addColumns = [
     'cms_downloads.requirements'     => "ALTER TABLE cms_downloads ADD COLUMN requirements TEXT NULL AFTER release_date",
     'cms_downloads.checksum_sha256'  => "ALTER TABLE cms_downloads ADD COLUMN checksum_sha256 CHAR(64) NOT NULL DEFAULT '' AFTER requirements",
     'cms_downloads.series_key'       => "ALTER TABLE cms_downloads ADD COLUMN series_key VARCHAR(150) NOT NULL DEFAULT '' AFTER checksum_sha256",
+    'cms_downloads.download_series_id' => "ALTER TABLE cms_downloads ADD COLUMN download_series_id INT NULL DEFAULT NULL AFTER series_key",
+    'cms_downloads.is_current_version' => "ALTER TABLE cms_downloads ADD COLUMN is_current_version TINYINT(1) NOT NULL DEFAULT 0 AFTER download_series_id",
     'cms_downloads.external_url'     => "ALTER TABLE cms_downloads ADD COLUMN external_url VARCHAR(255) NOT NULL DEFAULT '' AFTER series_key",
     'cms_downloads.download_count'   => "ALTER TABLE cms_downloads ADD COLUMN download_count INT NOT NULL DEFAULT 0 AFTER file_size",
     'cms_downloads.is_featured'      => "ALTER TABLE cms_downloads ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER download_count",
@@ -2256,6 +2285,149 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy kategorií vývěsky – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $downloadCategorySlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_dl_categories' AND COLUMN_NAME = 'slug'"
+    );
+    $downloadCategorySlugColumnCheck->execute();
+
+    if ((int)$downloadCategorySlugColumnCheck->fetchColumn() > 0) {
+        $downloadCategories = $pdo->query("SELECT id, name, slug FROM cms_dl_categories ORDER BY id")->fetchAll();
+        $updateDownloadCategorySlugStmt = $pdo->prepare("UPDATE cms_dl_categories SET slug = ? WHERE id = ?");
+
+        foreach ($downloadCategories as $downloadCategory) {
+            $existingSlug = trim((string)($downloadCategory['slug'] ?? ''));
+            $resolvedSlug = uniqueDownloadCategorySlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$downloadCategory['name'],
+                (int)$downloadCategory['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateDownloadCategorySlugStmt->execute([$resolvedSlug, (int)$downloadCategory['id']]);
+            }
+        }
+
+        $downloadCategorySlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'cms_dl_categories'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $downloadCategorySlugIndexCheck->execute();
+        if ((int)$downloadCategorySlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_dl_categories ADD UNIQUE KEY uq_cms_dl_categories_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_dl_categories_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_dl_categories.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy kategorií ke stažení – sloupec <code>cms_dl_categories.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy kategorií ke stažení – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $downloadSeriesColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_downloads' AND COLUMN_NAME = 'download_series_id'"
+    );
+    $downloadSeriesColumnCheck->execute();
+
+    if ((int)$downloadSeriesColumnCheck->fetchColumn() > 0) {
+        $seriesKeys = $pdo->query(
+            "SELECT DISTINCT series_key
+             FROM cms_downloads
+             WHERE TRIM(COALESCE(series_key, '')) <> ''
+             ORDER BY series_key"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $findSeriesStmt = $pdo->prepare("SELECT id FROM cms_download_series WHERE slug = ? LIMIT 1");
+        $insertSeriesStmt = $pdo->prepare(
+            "INSERT INTO cms_download_series (title, slug, is_active, sort_order)
+             VALUES (?, ?, 1, ?)"
+        );
+        $attachSeriesStmt = $pdo->prepare(
+            "UPDATE cms_downloads
+             SET download_series_id = ?
+             WHERE TRIM(COALESCE(series_key, '')) = ?
+               AND download_series_id IS NULL"
+        );
+        $nextOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_download_series")->fetchColumn();
+
+        foreach ($seriesKeys as $seriesKeyValue) {
+            $seriesKey = normalizeDownloadSeriesKey((string)$seriesKeyValue);
+            if ($seriesKey === '') {
+                continue;
+            }
+            $findSeriesStmt->execute([$seriesKey]);
+            $seriesId = $findSeriesStmt->fetchColumn();
+            if ($seriesId === false) {
+                $title = ucwords(str_replace('-', ' ', $seriesKey));
+                $insertSeriesStmt->execute([$title, $seriesKey, $nextOrder]);
+                $seriesId = $pdo->lastInsertId();
+                $nextOrder++;
+            }
+            $attachSeriesStmt->execute([(int)$seriesId, (string)$seriesKeyValue]);
+        }
+
+        $currentSeriesRows = $pdo->query(
+            "SELECT id FROM cms_download_series
+             WHERE id IN (
+                 SELECT DISTINCT download_series_id
+                 FROM cms_downloads
+                 WHERE download_series_id IS NOT NULL
+             )
+             ORDER BY id"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $hasCurrentStmt = $pdo->prepare(
+            "SELECT COUNT(*)
+             FROM cms_downloads
+             WHERE download_series_id = ?
+               AND is_current_version = 1
+               AND deleted_at IS NULL"
+        );
+        $latestDownloadStmt = $pdo->prepare(
+            "SELECT id
+             FROM cms_downloads
+             WHERE download_series_id = ?
+               AND deleted_at IS NULL
+             ORDER BY is_published DESC, COALESCE(release_date, DATE(created_at)) DESC, created_at DESC, id DESC
+             LIMIT 1"
+        );
+        $markCurrentStmt = $pdo->prepare("UPDATE cms_downloads SET is_current_version = 1 WHERE id = ?");
+        foreach ($currentSeriesRows as $downloadSeriesId) {
+            $hasCurrentStmt->execute([(int)$downloadSeriesId]);
+            if ((int)$hasCurrentStmt->fetchColumn() > 0) {
+                continue;
+            }
+            $latestDownloadStmt->execute([(int)$downloadSeriesId]);
+            $latestDownloadId = $latestDownloadStmt->fetchColumn();
+            if ($latestDownloadId !== false) {
+                $markCurrentStmt->execute([(int)$latestDownloadId]);
+            }
+        }
+
+        $downloadSeriesIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'cms_downloads'
+               AND INDEX_NAME = 'idx_cms_downloads_series_current'"
+        );
+        $downloadSeriesIndexCheck->execute();
+        if ((int)$downloadSeriesIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_downloads ADD KEY idx_cms_downloads_series_current (download_series_id, is_current_version)");
+            $log[] = "✓ Index <code>idx_cms_downloads_series_current</code> přidán – OK";
+        } else {
+            $log[] = "· Index <code>idx_cms_downloads_series_current</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Série položek ke stažení – sloupec <code>download_series_id</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Série položek ke stažení – CHYBA: " . h($e->getMessage());
 }
 
 try {

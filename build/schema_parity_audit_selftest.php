@@ -210,6 +210,27 @@ CREATE TABLE IF NOT EXISTS cms_contact (
   reply_subject VARCHAR(255),
   reply_body TEXT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_dl_categories (
+  id INT,
+  name VARCHAR(255),
+  slug VARCHAR(150),
+  description TEXT,
+  meta_title VARCHAR(160),
+  meta_description TEXT,
+  updated_at DATETIME
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_download_series (
+  id INT,
+  title VARCHAR(255),
+  slug VARCHAR(150),
+  is_active TINYINT(1),
+  sort_order INT
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_downloads (
+  id INT,
+  download_series_id INT,
+  is_current_version TINYINT(1)
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -274,6 +295,18 @@ PHP,
 // cms_contact.reply_body
 // idx_cms_contact_reference_code
 // idx_cms_contact_topic_status
+// cms_dl_categories.slug
+// uq_cms_dl_categories_slug
+// cms_dl_categories.description
+// cms_dl_categories.meta_title
+// cms_dl_categories.meta_description
+// cms_dl_categories.updated_at
+// cms_download_series
+// uq_cms_download_series_slug
+// idx_cms_download_series_active_order
+// cms_downloads.download_series_id
+// cms_downloads.is_current_version
+// idx_cms_downloads_series_current
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php
@@ -301,6 +334,9 @@ $taxonomySql = 'FROM cms_categories c INNER JOIN cms_tags t ON t.blog_id = c.blo
 $boardCategory = boardCategoryUrl($category);
 $boardTaxonomySql = 'FROM cms_board_categories c';
 sitemapLogSectionError('board_categories', $e);
+$downloadCategory = downloadCategoryUrl($category);
+$downloadSeries = downloadSeriesUrl($series);
+$downloadsTaxonomySql = 'FROM cms_dl_categories c INNER JOIN cms_download_series s ON s.id = 1';
 PHP,
         'feed.php' => <<<'PHP'
 <?php

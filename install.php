@@ -474,9 +474,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_dl_categories (
-            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            name       VARCHAR(255) NOT NULL,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name             VARCHAR(255) NOT NULL,
+            slug             VARCHAR(150) NOT NULL DEFAULT '',
+            description      TEXT,
+            meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_dl_categories_slug (slug)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_download_series (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            title       VARCHAR(255) NOT NULL,
+            slug        VARCHAR(150) NOT NULL,
+            description TEXT,
+            is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_download_series_slug (slug),
+            KEY idx_cms_download_series_active_order (is_active, sort_order, title)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_downloads (
@@ -496,6 +515,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             requirements    TEXT,
             checksum_sha256 CHAR(64)     NOT NULL DEFAULT '',
             series_key      VARCHAR(150) NOT NULL DEFAULT '',
+            download_series_id INT        NULL DEFAULT NULL,
+            is_current_version TINYINT(1) NOT NULL DEFAULT 0,
             external_url    VARCHAR(255) NOT NULL DEFAULT '',
             filename        VARCHAR(255) NOT NULL DEFAULT '',
             original_name   VARCHAR(255) NOT NULL DEFAULT '',
@@ -510,6 +531,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_downloads_slug (slug),
+            KEY idx_cms_downloads_series_current (download_series_id, is_current_version),
             FULLTEXT INDEX ft_downloads_search (title, excerpt, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 

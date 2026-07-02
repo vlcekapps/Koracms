@@ -380,6 +380,28 @@ assert_false(
 assert_equals('dulezita-oznameni', boardCategorySlug('Důležitá oznámení'), 'board category slug normalizes Czech diacritics');
 assert_equals('/board/kategorie/dulezita-oznameni', boardCategoryRequestPath(['id' => 4, 'slug' => 'dulezita-oznameni']), 'board category clean request path uses slug');
 assert_equals('/board/index.php?kat=4', boardCategoryRequestPath(['id' => 4, 'slug' => '']), 'board category request path falls back to legacy filter');
+assert_equals('ceske-navody', downloadCategorySlug('České návody'), 'download category slug normalizes Czech diacritics');
+assert_equals('kora-cms-4-x', downloadSeriesSlug('Kora CMS 4.x'), 'download series slug normalizes version-like titles');
+assert_equals(
+    '/downloads/kategorie/ceske-navody',
+    str_replace(BASE_URL, '', downloadCategoryPath(['id' => 7, 'name' => 'České návody', 'slug' => 'ceske-navody'])),
+    'download category canonical path uses clean URL'
+);
+assert_equals(
+    '/downloads/index.php?kat=7',
+    str_replace(BASE_URL, '', downloadCategoryPath(['id' => 7, 'name' => 'Starší kategorie', 'slug' => ''])),
+    'download category path falls back to legacy query filter without slug'
+);
+assert_equals(
+    '/downloads/serie/kora-cms-4-x',
+    str_replace(BASE_URL, '', downloadSeriesPath(['id' => 3, 'title' => 'Kora CMS 4.x', 'slug' => 'kora-cms-4-x'])),
+    'download series canonical path uses clean URL'
+);
+assert_equals(
+    '/downloads/index.php',
+    str_replace(BASE_URL, '', downloadSeriesPath(['id' => 3, 'title' => 'Bez slugu', 'slug' => ''])),
+    'download series path falls back to downloads index without slug'
+);
 assert_equals([2, 5], normalizeBoardSubscriberCategoryIds(['5', 2, 2, 99, 0, -1], [2, 5, 8]), 'board subscriber category IDs are valid, positive and deduplicated');
 assert_true(
     boardIsPubliclyReachable([

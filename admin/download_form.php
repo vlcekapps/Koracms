@@ -22,6 +22,8 @@ $download = [
     'requirements' => '',
     'checksum_sha256' => '',
     'series_key' => '',
+    'download_series_id' => null,
+    'is_current_version' => 0,
     'external_url' => '',
     'filename' => '',
     'original_name' => '',
@@ -45,6 +47,11 @@ if ($id !== null) {
 
 $download = hydrateDownloadPresentation($download);
 $categories = $pdo->query("SELECT id, name FROM cms_dl_categories ORDER BY name")->fetchAll();
+$downloadSeriesOptions = $pdo->query(
+    "SELECT id, title, slug, is_active
+     FROM cms_download_series
+     ORDER BY sort_order, title"
+)->fetchAll();
 $downloadTypes = downloadTypeDefinitions();
 $editorMode = getSetting('content_editor', 'html');
 $err = trim((string)($_GET['err'] ?? ''));
@@ -56,7 +63,7 @@ $errorMessage = match ($err) {
     'url' => 'Externí odkaz musí být platná adresa začínající na http:// nebo https://.',
     'project_url' => 'Domovská stránka projektu musí být platná adresa začínající na http:// nebo https://.',
     'release_date' => 'Datum vydání nemá platný formát.',
-    'series' => 'Skupina verzí může obsahovat jen malá písmena, číslice a pomlčky.',
+    'series' => 'Vybraná série ke stažení neexistuje.',
     'checksum' => 'SHA-256 checksum musí obsahovat 64 hexadecimálních znaků.',
     'image' => 'Náhledový obrázek se nepodařilo uložit.',
     'file' => 'Soubor se nepodařilo uložit nebo má nepovolený formát.',
@@ -194,11 +201,24 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
            value="<?= h((string)$download['checksum_sha256']) ?>">
     <small id="download-checksum-help" class="field-help">Pro lokální soubor se vyplní automaticky při nahrání. U externího odkazu ho můžete doplnit ručně.</small>
 
-    <label for="series_key">Skupina verzí</label>
-    <input type="text" id="series_key" name="series_key" maxlength="150" aria-describedby="download-series-help"
-           placeholder="např. moje-aplikace"
-           value="<?= h((string)$download['series_key']) ?>">
-    <small id="download-series-help" class="field-help">Pokud více položek patří do jedné řady verzí, použijte stejný klíč. Na detailu se pak zobrazí i další verze.</small>
+    <label for="download_series_id">Série / řada verzí</label>
+    <select id="download_series_id" name="download_series_id" aria-describedby="download-series-help">
+      <option value="">– bez série –</option>
+      <?php foreach ($downloadSeriesOptions as $seriesOption): ?>
+        <option value="<?= (int)$seriesOption['id'] ?>"<?= (int)($download['download_series_id'] ?? 0) === (int)$seriesOption['id'] ? ' selected' : '' ?>>
+          <?= h((string)$seriesOption['title']) ?><?= (int)$seriesOption['is_active'] === 1 ? '' : ' (skrytá)' ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+    <small id="download-series-help" class="field-help">Série propojí více vydání stejného dokumentu, aplikace nebo balíčku. Spravovat je můžete v části <a href="download_series.php">Série a verze</a>.</small>
+
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="is_current_version" value="1"<?= (int)($download['is_current_version'] ?? 0) === 1 ? ' checked' : '' ?>>
+        Označit jako aktuální verzi vybrané série
+      </label>
+    </div>
+    <small class="field-help">V jedné sérii může být aktuální nejvýše jedna položka. Při uložení se ostatní položky stejné série automaticky odznačí.</small>
 
     <label for="requirements">Požadavky a kompatibilita</label>
     <textarea id="requirements" name="requirements" rows="4" aria-describedby="download-requirements-help"><?= h((string)$download['requirements']) ?></textarea>

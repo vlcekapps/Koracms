@@ -1,5 +1,6 @@
 <?php
 $otherVersions = $otherVersions ?? [];
+$currentVersion = $currentVersion ?? null;
 ?>
 <div class="page-stack page-stack--detail">
   <article class="surface surface--hero" aria-labelledby="download-title">
@@ -13,7 +14,16 @@ $otherVersions = $otherVersions ?? [];
             <span>Doporučená položka</span>
           <?php endif; ?>
           <?php if ($download['category_name'] !== ''): ?>
-            <span><?= h((string)$download['category_name']) ?></span>
+            <span>
+              <?php if (downloadCategorySlug((string)($download['category_slug'] ?? '')) !== ''): ?>
+                <a href="<?= h(downloadCategoryPath(['id' => $download['dl_category_id'] ?? 0, 'slug' => $download['category_slug']])) ?>"><?= h((string)$download['category_name']) ?></a>
+              <?php else: ?>
+                <?= h((string)$download['category_name']) ?>
+              <?php endif; ?>
+            </span>
+          <?php endif; ?>
+          <?php if ($download['series_title'] !== '' && $download['series_slug'] !== ''): ?>
+            <span><a href="<?= h(downloadSeriesPath(['id' => $download['download_series_id'] ?? 0, 'slug' => $download['series_slug']])) ?>"><?= h((string)$download['series_title']) ?></a></span>
           <?php endif; ?>
           <?php if ($download['version_label'] !== ''): ?>
             <span>Verze <?= h((string)$download['version_label']) ?></span>
@@ -32,6 +42,13 @@ $otherVersions = $otherVersions ?? [];
 
         <?php if ($download['excerpt_plain'] !== ''): ?>
           <p class="section-subtitle"><?= h((string)$download['excerpt_plain']) ?></p>
+        <?php endif; ?>
+
+        <?php if (is_array($currentVersion)): ?>
+          <p class="status-message status-message--info" role="status">
+            Tato položka není označená jako aktuální verze.
+            <a href="<?= h(downloadPublicPath($currentVersion)) ?>">Přejít na aktuální verzi <?= h((string)$currentVersion['title']) ?></a>.
+          </p>
         <?php endif; ?>
       </div>
     </div>
@@ -72,6 +89,9 @@ $otherVersions = $otherVersions ?? [];
                 <li class="link-list__item">
                   <a class="link-list__title" href="<?= h(downloadPublicPath($version)) ?>"><?= h((string)$version['title']) ?></a>
                   <p class="meta-row meta-row--tight">
+                    <?php if ((int)$version['is_current_version'] === 1): ?>
+                      <span>Aktuální verze</span>
+                    <?php endif; ?>
                     <?php if ($version['version_label'] !== ''): ?>
                       <span>Verze <?= h((string)$version['version_label']) ?></span>
                     <?php endif; ?>
@@ -104,6 +124,9 @@ $otherVersions = $otherVersions ?? [];
             <?php endif; ?>
             <?php if ($download['license_label'] !== ''): ?>
               <div><dt>Licence</dt><dd><?= h((string)$download['license_label']) ?></dd></div>
+            <?php endif; ?>
+            <?php if ($download['series_title'] !== '' && $download['series_slug'] !== ''): ?>
+              <div><dt>Série</dt><dd><a href="<?= h(downloadSeriesPath(['id' => $download['download_series_id'] ?? 0, 'slug' => $download['series_slug']])) ?>"><?= h((string)$download['series_title']) ?></a></dd></div>
             <?php endif; ?>
             <?php if ((int)$download['file_size'] > 0): ?>
               <div><dt>Velikost</dt><dd><?= h(formatFileSize((int)$download['file_size'])) ?></dd></div>

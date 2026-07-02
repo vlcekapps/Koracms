@@ -20,7 +20,8 @@ $projectUrlInput = trim((string)($_POST['project_url'] ?? ''));
 $releaseDateInput = trim((string)($_POST['release_date'] ?? ''));
 $requirements = trim((string)($_POST['requirements'] ?? ''));
 $checksumInput = trim((string)($_POST['checksum_sha256'] ?? ''));
-$seriesKeyInput = trim((string)($_POST['series_key'] ?? ''));
+$downloadSeriesId = inputInt('post', 'download_series_id');
+$isCurrentVersion = isset($_POST['is_current_version']) ? 1 : 0;
 $externalUrlInput = trim((string)($_POST['external_url'] ?? ''));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $isFeatured = isset($_POST['is_featured']) ? 1 : 0;
@@ -43,11 +44,6 @@ if ($title === '') {
 $resolvedSlug = downloadSlug($slugInput !== '' ? $slugInput : $title);
 if ($resolvedSlug === '') {
     $redirectWithError('slug');
-}
-
-$seriesKey = normalizeDownloadSeriesKey($seriesKeyInput);
-if ($seriesKeyInput !== '' && $seriesKey === '') {
-    $redirectWithError('series');
 }
 
 $checksumSha256 = normalizeDownloadChecksum($checksumInput);
@@ -91,6 +87,19 @@ if ($id !== null) {
 $uniqueSlug = uniqueDownloadSlug($pdo, $resolvedSlug, $id);
 if ($uniqueSlug !== $resolvedSlug) {
     $redirectWithError('slug_taken');
+}
+
+$seriesKey = '';
+if ($downloadSeriesId !== null) {
+    $seriesStmt = $pdo->prepare("SELECT id, slug FROM cms_download_series WHERE id = ?");
+    $seriesStmt->execute([$downloadSeriesId]);
+    $downloadSeries = $seriesStmt->fetch() ?: null;
+    if (!$downloadSeries) {
+        $redirectWithError('series');
+    }
+    $seriesKey = downloadSeriesSlug((string)$downloadSeries['slug']);
+} else {
+    $isCurrentVersion = 0;
 }
 
 $externalUrl = normalizeDownloadExternalUrl($externalUrlInput);
@@ -172,7 +181,7 @@ if ($id !== null) {
          SET title = ?, slug = ?, download_type = ?, dl_category_id = ?, excerpt = ?, description = ?,
              image_file = ?, version_label = ?, platform_label = ?, license_label = ?, project_url = ?,
              release_date = ?, requirements = ?, checksum_sha256 = ?, series_key = ?, external_url = ?,
-             filename = ?, original_name = ?, file_size = ?, is_featured = ?, is_published = ?,
+             download_series_id = ?, is_current_version = ?, filename = ?, original_name = ?, file_size = ?, is_featured = ?, is_published = ?,
              status = ?, author_id = COALESCE(author_id, ?), updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
     );
@@ -193,6 +202,8 @@ if ($id !== null) {
         $checksumSha256,
         $seriesKey,
         $externalUrl,
+        $downloadSeriesId,
+        $isCurrentVersion,
         $storedFilename,
         $originalName,
         $fileSize,
@@ -218,10 +229,15 @@ if ($id !== null) {
         'requirements' => $requirements,
         'checksum_sha256' => $checksumSha256,
         'series_key' => $seriesKey,
+        'download_series_id' => $downloadSeriesId,
+        'is_current_version' => $isCurrentVersion,
         'external_url' => $externalUrl,
         'is_featured' => $isFeatured,
         'is_published' => $isPublished,
     ]));
+    if ($downloadSeriesId !== null && $isCurrentVersion === 1) {
+        $pdo->prepare("UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?")->execute([$downloadSeriesId, $id]);
+    }
     upsertPathRedirect($pdo, $oldPath, downloadPublicPath(['id' => $id, 'slug' => $uniqueSlug]));
     logAction('download_edit', "id={$id} title={$title} slug={$uniqueSlug} featured={$isFeatured}");
 } else {
@@ -238,9 +254,9 @@ if ($id !== null) {
         "INSERT INTO cms_downloads
          (title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
           platform_label, license_label, project_url, release_date, requirements, checksum_sha256,
-          series_key, external_url, filename, original_name, file_size, is_featured,
+          series_key, download_series_id, is_current_version, external_url, filename, original_name, file_size, is_featured,
           is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
         $title,
@@ -258,6 +274,8 @@ if ($id !== null) {
         $requirements,
         $checksumSha256,
         $seriesKey,
+        $downloadSeriesId,
+        $isCurrentVersion,
         $externalUrl,
         $storedFilename,
         $originalName,
@@ -267,6 +285,10 @@ if ($id !== null) {
         $status,
         $authorId,
     ]);
+    $newDownloadId = (int)$pdo->lastInsertId();
+    if ($downloadSeriesId !== null && $isCurrentVersion === 1) {
+        $pdo->prepare("UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?")->execute([$downloadSeriesId, $newDownloadId]);
+    }
     logAction('download_add', "title={$title} status={$status} featured={$isFeatured}");
     if ($status === 'pending') {
         notifyPendingContent('Soubor ke stažení', $title, '/admin/downloads.php');

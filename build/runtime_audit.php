@@ -71,6 +71,9 @@ $contactTopicsAdminSource = (string) file_get_contents(__DIR__ . '/../admin/cont
 $contactReplyAdminSource = (string) file_get_contents(__DIR__ . '/../admin/contact_reply.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
 $formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
+$downloadsIndexSource = (string) file_get_contents(__DIR__ . '/../downloads/index.php');
+$downloadsItemSource = (string) file_get_contents(__DIR__ . '/../downloads/item.php');
+$downloadsSeriesSource = (string) file_get_contents(__DIR__ . '/../downloads/series.php');
 $confirmEmailSource = (string) file_get_contents(__DIR__ . '/../confirm_email.php');
 $subscribeConfirmSource = (string) file_get_contents(__DIR__ . '/../subscribe_confirm.php');
 $unsubscribeSource = (string) file_get_contents(__DIR__ . '/../unsubscribe.php');
@@ -136,6 +139,7 @@ $readOnlyMediaFileSource = (string) file_get_contents(__DIR__ . '/../media/file.
 $readOnlyMediaPreviewSource = (string) file_get_contents(__DIR__ . '/../media/preview.php');
 $readOnlyMediaThumbSource = (string) file_get_contents(__DIR__ . '/../media/thumb.php');
 $readOnlyDownloadsFileSource = (string) file_get_contents(__DIR__ . '/../downloads/file.php');
+$adminDownloadSeriesSource = (string) file_get_contents(__DIR__ . '/../admin/download_series.php');
 $readOnlyBoardFileSource = (string) file_get_contents(__DIR__ . '/../board/file.php');
 $readOnlyGalleryImageSource = (string) file_get_contents(__DIR__ . '/../gallery/image.php');
 $readOnlyPlacesImageSource = (string) file_get_contents(__DIR__ . '/../places/image.php');
@@ -4406,7 +4410,8 @@ foreach ($pages as $page) {
             'name="release_date"',
             'name="requirements"',
             'name="checksum_sha256"',
-            'name="series_key"',
+            'name="download_series_id"',
+            'name="is_current_version"',
             'name="is_featured"',
             'revisions.php?type=download&amp;id=',
         ] as $expectedField) {
@@ -7781,6 +7786,7 @@ foreach ([
     'gallery/album.php',
     'gallery/photo.php',
     'downloads/item.php',
+    'downloads/series.php',
     'events/event.php',
     'places/place.php',
     'podcast/show.php',
@@ -8474,7 +8480,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'authors/index.php blog/index.php blog/article.php blog/page.php')
         && str_contains($composerSource, 'board/index.php board/document.php board/file.php')
         && str_contains($composerSource, 'chat/index.php contact/index.php')
-        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/file.php')
+        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php')
         && str_contains($composerSource, 'events/index.php events/event.php events/ics.php')
         && str_contains($composerSource, 'faq/index.php faq/item.php')
         && str_contains($composerSource, 'food/index.php food/archive.php food/card.php')
@@ -8530,7 +8536,7 @@ $foundationChecks = [
         && str_contains($composerSource, '"format:fix:admin-taxonomy"')
         && str_contains($composerSource, '@format:check:admin-taxonomy')
         && str_contains($composerSource, 'admin/blog_cats.php admin/blog_tags.php admin/blog_members.php admin/blog_pages.php')
-        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/dl_cats.php admin/faq_cats.php')
+        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/dl_cats.php admin/download_series.php admin/faq_cats.php')
         && str_contains($composerSource, 'admin/res_categories.php admin/res_locations.php')
         && str_contains($composerSource, 'admin/page_reorder.php admin/gallery_photo_reorder.php admin/gallery_album_delete.php admin/gallery_photo_delete.php'),
     'php cs fixer admin overview smoke check exists' => str_contains($composerSource, '"format:check:admin-overview"')
@@ -8681,7 +8687,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'contact/index.php')
         && str_contains($composerSource, '"@analyse:strict:public-contact"')
         && str_contains($composerSource, '"analyse:strict:public-downloads"')
-        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/file.php')
+        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php')
         && str_contains($composerSource, '"@analyse:strict:public-downloads"')
         && str_contains($composerSource, '"analyse:strict:public-events"')
         && str_contains($composerSource, 'events/index.php events/event.php events/ics.php')
@@ -8717,7 +8723,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/admin_command.php lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -9533,6 +9539,13 @@ $installSchemaChecks = [
     'cms_contact contains topic_id' => $installTableContains('cms_contact', 'topic_id'),
     'cms_contact contains reference_code' => $installTableContains('cms_contact', 'reference_code'),
     'cms_contact contains reply_body' => $installTableContains('cms_contact', 'reply_body'),
+    'cms_dl_categories contains slug' => $installTableContains('cms_dl_categories', 'slug'),
+    'cms_dl_categories contains meta_title' => $installTableContains('cms_dl_categories', 'meta_title'),
+    'cms_dl_categories contains meta_description' => $installTableContains('cms_dl_categories', 'meta_description'),
+    'cms_download_series contains slug' => $installTableContains('cms_download_series', 'slug'),
+    'cms_download_series contains is_active' => $installTableContains('cms_download_series', 'is_active'),
+    'cms_downloads contains download_series_id' => $installTableContains('cms_downloads', 'download_series_id'),
+    'cms_downloads contains is_current_version' => $installTableContains('cms_downloads', 'is_current_version'),
 ];
 $installSchemaIssues = [];
 foreach ($installSchemaChecks as $label => $present) {
@@ -9571,6 +9584,13 @@ $migrateSchemaChecks = [
     'cms_contact.reference_code' => str_contains($migrateSource, 'cms_contact.reference_code'),
     'cms_contact.reply_body' => str_contains($migrateSource, 'cms_contact.reply_body'),
     'idx_cms_contact_topic_status' => str_contains($migrateSource, 'idx_cms_contact_topic_status'),
+    'cms_dl_categories.slug' => str_contains($migrateSource, 'cms_dl_categories.slug'),
+    'uq_cms_dl_categories_slug' => str_contains($migrateSource, 'uq_cms_dl_categories_slug'),
+    'cms_download_series' => str_contains($migrateSource, 'cms_download_series'),
+    'uq_cms_download_series_slug' => str_contains($migrateSource, 'uq_cms_download_series_slug'),
+    'cms_downloads.download_series_id' => str_contains($migrateSource, 'cms_downloads.download_series_id'),
+    'cms_downloads.is_current_version' => str_contains($migrateSource, 'cms_downloads.is_current_version'),
+    'idx_cms_downloads_series_current' => str_contains($migrateSource, 'idx_cms_downloads_series_current'),
     'migrate reruns schema consistency checks even on matching version' => str_contains($migrateSource, 'kontrola konzistence schématu a chybějících sloupců'),
 ];
 $migrateSchemaIssues = [];
@@ -12486,6 +12506,113 @@ if ($boardSourceIssues === []) {
     $failures++;
     foreach ($boardSourceIssues as $boardSourceIssue) {
         echo '- ' . $boardSourceIssue . "\n";
+    }
+}
+
+echo "=== downloads_source_guardrails ===\n";
+$downloadsSourceIssues = [];
+$downloadSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/download_save.php');
+$downloadFormSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/download_form.php');
+$downloadCatsSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
+$downloadSeriesAdminSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/download_series.php');
+$downloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
+$downloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
+$downloadsSeriesViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-series.php');
+$downloadsRouteCategoryPosition = strpos($htaccessSource, 'RewriteRule ^downloads/kategorie/');
+$downloadsRouteSeriesPosition = strpos($htaccessSource, 'RewriteRule ^downloads/serie/');
+$downloadsRouteItemPosition = strpos($htaccessSource, 'RewriteRule ^downloads/([a-z0-9\\-]+)/?$ downloads/item.php');
+$downloadsRouterCategoryPosition = strpos($httpRouterSource, '#^downloads/kategorie/');
+$downloadsRouterSeriesPosition = strpos($httpRouterSource, '#^downloads/serie/');
+$downloadsRouterItemPosition = strpos($httpRouterSource, '#^downloads/([a-z0-9-]+)/?$#i');
+if (!str_contains($presentationSource, 'function downloadCategoryPath(')
+    || !str_contains($presentationSource, 'function downloadSeriesPath(')
+    || !str_contains($presentationSource, 'function uniqueDownloadCategorySlug(')
+    || !str_contains($presentationSource, 'function uniqueDownloadSeriesSlug(')) {
+    $downloadsSourceIssues[] = 'downloads helpers are missing category or series canonical URL/slug helpers';
+}
+if (!str_contains($downloadCatsSourceForGuard, 'uniqueDownloadCategorySlug(')
+    || !str_contains($downloadCatsSourceForGuard, 'meta_description')
+    || !str_contains($downloadCatsSourceForGuard, 'downloadCategoryPath(')
+    || !str_contains($downloadCatsSourceForGuard, 'upsertPathRedirect(')) {
+    $downloadsSourceIssues[] = 'download category admin is missing landing metadata or redirect support';
+}
+if (!str_contains($downloadSeriesAdminSourceForGuard, 'uniqueDownloadSeriesSlug(')
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'downloadSeriesPath(')
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'upsertPathRedirect(')
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'UPDATE cms_downloads SET download_series_id = NULL, is_current_version = 0')) {
+    $downloadsSourceIssues[] = 'download series admin is missing slug validation, redirects, or cleanup';
+}
+if (!str_contains($downloadFormSourceForGuard, 'name="download_series_id"')
+    || !str_contains($downloadFormSourceForGuard, 'name="is_current_version"')
+    || str_contains($downloadFormSourceForGuard, 'name="series_key"')) {
+    $downloadsSourceIssues[] = 'download form must use managed series selection instead of free series_key input';
+}
+if (!str_contains($downloadSaveSource, 'download_series_id')
+    || !str_contains($downloadSaveSource, 'is_current_version')
+    || !str_contains($downloadSaveSource, 'UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?')
+    || !str_contains($downloadSaveSource, 'SELECT id, slug FROM cms_download_series WHERE id = ?')) {
+    $downloadsSourceIssues[] = 'download save is missing managed series validation or single-current-version enforcement';
+}
+if (!str_contains($downloadsIndexSource, "\$_GET['category_slug']")
+    || !str_contains($downloadsIndexSource, 'downloadCategoryPath($activeCategory)')
+    || !str_contains($downloadsIndexSource, 'renderPublicNotFoundPage')) {
+    $downloadsSourceIssues[] = 'public downloads index is missing clean category landing support';
+}
+if (!str_contains($downloadsIndexViewSource, 'downloadCategoryPath($categoryRow)')
+    || !str_contains($downloadsIndexViewSource, 'renderContent((string)$activeCategory[\'description\'])')) {
+    $downloadsSourceIssues[] = 'public downloads index view is missing clean category links or category description rendering';
+}
+if (!str_contains($downloadsItemSource, 'download_series_id')
+    || !str_contains($downloadsItemSource, '$currentVersion')
+    || !str_contains($downloadsItemSource, 'ORDER BY d.is_current_version DESC')) {
+    $downloadsSourceIssues[] = 'download detail is missing managed version series lookup or current-version ordering';
+}
+if (!str_contains($downloadsArticleViewSource, 'downloadCategoryPath(')
+    || !str_contains($downloadsArticleViewSource, 'downloadSeriesPath(')
+    || !str_contains($downloadsArticleViewSource, 'Přejít na aktuální verzi')) {
+    $downloadsSourceIssues[] = 'download detail view is missing clean taxonomy/series links or newer-version warning';
+}
+if (!str_contains($downloadsSeriesSource, 'cms_download_series')
+    || !str_contains($downloadsSeriesSource, 'downloadSeriesUrl($series)')
+    || !str_contains($downloadsSeriesSource, 'renderPublicNotFoundPage')) {
+    $downloadsSourceIssues[] = 'public download series endpoint is missing active series lookup, canonical URL or 404 handling';
+}
+if (!str_contains($downloadsSeriesViewSource, 'Série ke stažení')
+    || !str_contains($downloadsSeriesViewSource, 'aria-labelledby="download-series-heading"')
+    || !str_contains($downloadsSeriesViewSource, 'Aktuální verze')) {
+    $downloadsSourceIssues[] = 'public download series view is missing accessible heading or current-version marker';
+}
+if (!str_contains($adminExportSource, "'download_series'")
+    || !str_contains($adminExportSource, 'download_series_id, is_current_version')) {
+    $downloadsSourceIssues[] = 'export is missing download series or current-version metadata';
+}
+if (!str_contains($adminImportSource, '$data[\'download_series\']')
+    || !str_contains($adminImportSource, 'uniqueDownloadSeriesSlug(')
+    || !str_contains($adminImportSource, 'is_current_version')) {
+    $downloadsSourceIssues[] = 'import is missing download series migration or current-version metadata';
+}
+if (!str_contains($sitemapSource, 'downloadCategoryUrl(')
+    || !str_contains($sitemapSource, 'downloadSeriesUrl(')
+    || !str_contains($sitemapSource, "sitemapLogSectionError('download_series'")) {
+    $downloadsSourceIssues[] = 'sitemap is missing download category or series landing URLs';
+}
+if ($downloadsRouteCategoryPosition === false || $downloadsRouteSeriesPosition === false || $downloadsRouteItemPosition === false
+    || $downloadsRouteCategoryPosition > $downloadsRouteItemPosition
+    || $downloadsRouteSeriesPosition > $downloadsRouteItemPosition) {
+    $downloadsSourceIssues[] = 'downloads category and series rewrites must be before downloads item catch-all route';
+}
+if ($downloadsRouterCategoryPosition === false || $downloadsRouterSeriesPosition === false || $downloadsRouterItemPosition === false
+    || $downloadsRouterCategoryPosition > $downloadsRouterItemPosition
+    || $downloadsRouterSeriesPosition > $downloadsRouterItemPosition) {
+    $downloadsSourceIssues[] = 'HTTP integration router must route downloads categories and series before download items';
+}
+
+if ($downloadsSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($downloadsSourceIssues as $downloadsSourceIssue) {
+        echo '- ' . $downloadsSourceIssue . "\n";
     }
 }
 

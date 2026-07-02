@@ -720,12 +720,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Kategorie ke stažení
                 if (!empty($data['dl_categories']) && is_array($data['dl_categories'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_dl_categories (id, name) VALUES (?,?)"
+                        "INSERT IGNORE INTO cms_dl_categories
+                         (id, name, slug, description, meta_title, meta_description, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['dl_categories'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name']]);
+                        $name = trim((string)($row['name'] ?? 'Kategorie ke stažení'));
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $slug = uniqueDownloadCategorySlug(
+                            $pdo,
+                            (string)($row['slug'] ?? '') !== '' ? (string)$row['slug'] : $name,
+                            (int)$row['id']
+                        );
+                        $ins->execute([
+                            (int)$row['id'],
+                            $name,
+                            $slug,
+                            $row['description'] ?? '',
+                            mb_substr(trim((string)($row['meta_title'] ?? '')), 0, 160, 'UTF-8'),
+                            $row['meta_description'] ?? '',
+                            $createdAt,
+                            $updatedAt,
+                        ]);
                     }
                     $summary[] = 'Kategorie ke stažení importovány.';
+                }
+
+                // Série ke stažení
+                if (!empty($data['download_series']) && is_array($data['download_series'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_download_series
+                         (id, title, slug, description, is_active, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['download_series'] as $row) {
+                        $title = trim((string)($row['title'] ?? 'Série ke stažení'));
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $slug = uniqueDownloadSeriesSlug(
+                            $pdo,
+                            (string)($row['slug'] ?? '') !== '' ? (string)$row['slug'] : $title,
+                            (int)$row['id']
+                        );
+                        $ins->execute([
+                            (int)$row['id'],
+                            $title,
+                            $slug,
+                            $row['description'] ?? '',
+                            (int)($row['is_active'] ?? 1),
+                            (int)($row['sort_order'] ?? 0),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Série ke stažení importovány.';
                 }
 
                 // Soubory ke stažení
@@ -734,11 +783,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT IGNORE INTO cms_downloads
                          (id, title, slug, download_type, dl_category_id, excerpt, description,
                           image_file, version_label, platform_label, license_label, project_url,
-                          release_date, requirements, checksum_sha256, series_key, external_url,
+                          release_date, requirements, checksum_sha256, series_key, download_series_id, is_current_version, external_url,
                           filename, original_name, file_size, download_count, is_featured, sort_order, is_published, status,
                           created_at, updated_at)
-                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
+                    $findDownloadSeriesStmt = $pdo->prepare("SELECT id FROM cms_download_series WHERE slug = ? LIMIT 1");
                     foreach ($data['downloads'] as $row) {
                         $catId = $row['dl_category_id'] ?? null;
                         $title = (string)($row['title'] ?? 'Soubor ke stažení');
@@ -749,6 +799,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (string)($row['slug'] ?? '') !== '' ? (string)$row['slug'] : $title,
                             (int)$row['id']
                         );
+                        $seriesKey = normalizeDownloadSeriesKey((string)($row['series_key'] ?? ''));
+                        $downloadSeriesId = !empty($row['download_series_id']) ? (int)$row['download_series_id'] : null;
+                        if ($downloadSeriesId === null && $seriesKey !== '') {
+                            $findDownloadSeriesStmt->execute([$seriesKey]);
+                            $foundSeriesId = $findDownloadSeriesStmt->fetchColumn();
+                            $downloadSeriesId = $foundSeriesId !== false ? (int)$foundSeriesId : null;
+                        }
                         $ins->execute([
                             (int)$row['id'],
                             $title,
@@ -765,7 +822,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             !empty($row['release_date']) ? (string)$row['release_date'] : null,
                             $row['requirements'] ?? '',
                             normalizeDownloadChecksum((string)($row['checksum_sha256'] ?? '')),
-                            normalizeDownloadSeriesKey((string)($row['series_key'] ?? '')),
+                            $seriesKey,
+                            $downloadSeriesId,
+                            (int)($row['is_current_version'] ?? 0),
                             normalizeDownloadExternalUrl((string)($row['external_url'] ?? '')),
                             $row['filename'] ?? '',
                             $row['original_name'] ?? '',

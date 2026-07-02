@@ -273,13 +273,18 @@ function coreModuleDefinitions(): array
             'admin_label' => 'Ke stažení',
             'content_reference_types' => ['download' => 'Ke stažení'],
             'search_result_types' => ['download' => 'Ke stažení'],
-            'sitemap_sections' => ['downloads' => 'Ke stažení'],
+            'sitemap_sections' => [
+                'downloads' => 'Ke stažení',
+                'download_categories' => 'Kategorie ke stažení',
+                'download_series' => 'Série ke stažení',
+            ],
             'settings_default' => '1',
             'public_nav_path' => '/downloads/index.php',
             'public_paths' => [
                 '/downloads/index.php',
                 '/downloads/item.php',
                 '/downloads/file.php',
+                '/downloads/series.php',
             ],
             'public_nav_order' => 70,
             'profile_managed' => true,
@@ -288,6 +293,7 @@ function coreModuleDefinitions(): array
             'admin_paths' => [
                 '/admin/downloads.php',
                 '/admin/dl_cats.php',
+                '/admin/download_series.php',
             ],
         ],
         'food' => [

@@ -1158,6 +1158,16 @@ function downloadSlug(string $value): string
     return slugify(trim($value));
 }
 
+function downloadCategorySlug(string $value): string
+{
+    return downloadSlug($value);
+}
+
+function downloadSeriesSlug(string $value): string
+{
+    return downloadSlug($value);
+}
+
 function normalizeDownloadSeriesKey(string $value): string
 {
     return downloadSlug(trim($value));
@@ -2603,6 +2613,8 @@ function downloadRevisionSnapshot(array $download): array
         'requirements' => trim((string)($download['requirements'] ?? '')),
         'checksum_sha256' => normalizeDownloadChecksum((string)($download['checksum_sha256'] ?? '')),
         'series_key' => normalizeDownloadSeriesKey((string)($download['series_key'] ?? '')),
+        'download_series_id' => (string)((int)($download['download_series_id'] ?? 0)),
+        'is_current_version' => (string)((int)($download['is_current_version'] ?? 0)),
         'external_url' => normalizeDownloadExternalUrl((string)($download['external_url'] ?? '')),
         'is_featured' => (string)((int)($download['is_featured'] ?? 0)),
         'is_published' => (string)((int)($download['is_published'] ?? 1)),
@@ -2629,6 +2641,14 @@ function hydrateDownloadPresentation(array $download): array
     $download['requirements'] = trim((string)($download['requirements'] ?? ''));
     $download['checksum_sha256'] = normalizeDownloadChecksum((string)($download['checksum_sha256'] ?? ''));
     $download['series_key'] = normalizeDownloadSeriesKey((string)($download['series_key'] ?? ''));
+    $download['download_series_id'] = isset($download['download_series_id']) ? (int)$download['download_series_id'] : null;
+    if ((int)$download['download_series_id'] <= 0) {
+        $download['download_series_id'] = null;
+    }
+    $download['is_current_version'] = (int)($download['is_current_version'] ?? 0) === 1 ? 1 : 0;
+    $download['series_title'] = trim((string)($download['series_title'] ?? ''));
+    $download['series_slug'] = downloadSeriesSlug((string)($download['series_slug'] ?? ''));
+    $download['series_description'] = trim((string)($download['series_description'] ?? ''));
     $download['is_featured'] = (int)($download['is_featured'] ?? 0) === 1 ? 1 : 0;
     $download['download_count'] = max(0, (int)($download['download_count'] ?? 0));
     $download['release_date_label'] = $download['release_date'] !== ''
@@ -4092,6 +4112,68 @@ function newsStructuredData(array $news): string
 }
 
 /**
+ * @param array<string, mixed> $category
+ */
+function downloadCategoryRequestPath(array $category): string
+{
+    $slug = downloadCategorySlug((string)($category['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/downloads/kategorie/' . rawurlencode($slug);
+    }
+
+    return '/downloads/index.php?kat=' . (int)($category['id'] ?? 0);
+}
+
+/**
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function downloadCategoryPath(array $category, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(downloadCategoryRequestPath($category), $query);
+}
+
+/**
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function downloadCategoryUrl(array $category, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(downloadCategoryRequestPath($category), $query));
+}
+
+/**
+ * @param array<string, mixed> $series
+ */
+function downloadSeriesRequestPath(array $series): string
+{
+    $slug = downloadSeriesSlug((string)($series['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/downloads/serie/' . rawurlencode($slug);
+    }
+
+    return '/downloads/index.php';
+}
+
+/**
+ * @param array<string, mixed> $series
+ * @param array<string, mixed> $query
+ */
+function downloadSeriesPath(array $series, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(downloadSeriesRequestPath($series), $query);
+}
+
+/**
+ * @param array<string, mixed> $series
+ * @param array<string, mixed> $query
+ */
+function downloadSeriesUrl(array $series, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(downloadSeriesRequestPath($series), $query));
+}
+
+/**
  * @param array<string, mixed> $download
  */
 function downloadPublicRequestPath(array $download): string
@@ -5289,6 +5371,48 @@ function uniqueDownloadSlug(PDO $pdo, string $candidate, ?int $excludeId = null)
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_downloads WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueDownloadCategorySlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = downloadCategorySlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'kategorie';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_dl_categories WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueDownloadSeriesSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = downloadSeriesSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'serie';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_download_series WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);

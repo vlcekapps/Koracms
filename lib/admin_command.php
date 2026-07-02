@@ -72,6 +72,7 @@ function adminCommandBaseRegistry(): array
         ['screen', 'events', 'Události', 'Akce, kalendář a ICS export.', $base . 'events.php', 'events', '', 'content_manage_shared'],
         ['screen', 'gallery', 'Galerie', 'Alba a fotografie.', $base . 'gallery_albums.php', 'gallery', '', 'content_manage_shared'],
         ['screen', 'downloads', 'Ke stažení', 'Soubory, verze a kategorie ke stažení.', $base . 'downloads.php', 'downloads', '', 'content_manage_shared'],
+        ['screen', 'downloads.series', 'Série ke stažení', 'Správa verzovacích řad a aktuálních vydání.', $base . 'download_series.php', 'downloads', '', 'content_manage_shared'],
         ['screen', 'reservations', 'Rezervace', 'Rezervace, zdroje a lokality.', $base . 'res_bookings.php', 'reservations', '', 'bookings_manage'],
         ['screen', 'newsletter', 'Newsletter', 'Odběratelé, rozesílky a historie newsletteru.', $base . 'newsletter.php', 'newsletter', '', 'newsletter_manage'],
         ['screen', 'contact.messages', 'Kontaktní zprávy', 'Zprávy z kontaktního formuláře, stav a odpovědi.', $base . 'contact.php', 'contact', '', 'messages_manage'],

@@ -4,6 +4,7 @@ $grouped = $grouped ?? [];
 $showCategoryHeadings = !empty($showCategoryHeadings);
 $searchQuery = (string)($searchQuery ?? '');
 $categories = $categories ?? [];
+$activeCategory = $activeCategory ?? null;
 $selectedCategoryId = $selectedCategoryId ?? null;
 $selectedType = (string)($selectedType ?? 'all');
 $selectedPlatform = (string)($selectedPlatform ?? '');
@@ -17,15 +18,23 @@ $pagerHtml = (string)($pagerHtml ?? '');
 $hasActiveFilters = !empty($hasActiveFilters);
 $clearUrl = (string)($clearUrl ?? (BASE_URL . '/downloads/index.php'));
 $hasItems = !empty($items);
+$pageHeading = (string)($pageHeading ?? 'Ke stažení');
+$pageKicker = (string)($pageKicker ?? 'Dokumenty, software a materiály');
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="downloads-title">
     <div class="section-heading">
       <div>
-        <p class="section-kicker">Dokumenty, software a materiály</p>
-        <h1 id="downloads-title" class="section-title section-title--hero">Ke stažení</h1>
+        <p class="section-kicker"><?= h($pageKicker) ?></p>
+        <h1 id="downloads-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
       </div>
     </div>
+
+    <?php if (is_array($activeCategory) && trim((string)($activeCategory['description'] ?? '')) !== ''): ?>
+      <div class="prose prose--lead">
+        <?= renderContent((string)$activeCategory['description']) ?>
+      </div>
+    <?php endif; ?>
 
     <form class="filter-bar filter-bar--stack" action="<?= BASE_URL ?>/downloads/index.php" method="get">
       <fieldset class="filter-bar__fieldset">
@@ -128,7 +137,22 @@ $hasItems = !empty($items);
         <?php $groupIndex = 0; foreach ($grouped as $category => $files): ?>
           <section aria-labelledby="downloads-group-<?= $groupIndex ?>">
             <?php if ($showCategoryHeadings): ?>
-              <h2 id="downloads-group-<?= $groupIndex ?>" class="section-title section-title--compact"><?= h($category) ?></h2>
+              <?php
+                $categoryLink = '';
+                foreach ($categories as $categoryRow) {
+                    if ((string)($categoryRow['name'] ?? '') === (string)$category && downloadCategorySlug((string)($categoryRow['slug'] ?? '')) !== '') {
+                        $categoryLink = downloadCategoryPath($categoryRow);
+                        break;
+                    }
+                }
+                ?>
+              <h2 id="downloads-group-<?= $groupIndex ?>" class="section-title section-title--compact">
+                <?php if ($categoryLink !== ''): ?>
+                  <a href="<?= h($categoryLink) ?>"><?= h($category) ?></a>
+                <?php else: ?>
+                  <?= h($category) ?>
+                <?php endif; ?>
+              </h2>
             <?php else: ?>
               <h2 id="downloads-group-<?= $groupIndex ?>" class="sr-only">Položky ke stažení</h2>
             <?php endif; ?>

@@ -840,7 +840,7 @@ function adminRouteModuleRequirements(): array
         ],
         'downloads' => [
             'message' => adminRouteModuleDisabledMessage('downloads'),
-            'files' => ['downloads.php', 'download_form.php', 'download_save.php', 'download_delete.php', 'dl_cats.php', 'dl_cat_delete.php'],
+            'files' => ['downloads.php', 'download_form.php', 'download_save.php', 'download_delete.php', 'dl_cats.php', 'dl_cat_delete.php', 'download_series.php'],
         ],
         'food' => [
             'message' => adminRouteModuleDisabledMessage('food'),

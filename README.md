@@ -246,7 +246,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
 | **Podcasty** | Více pořadů, epizody, artwork, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
-| **Ke stažení** | Katalog dokumentů a software s verzemi, kompatibilitou, historií změn a veřejnými filtry |
+| **Ke stažení** | Katalog dokumentů a software s kategoriemi, landing stránkami, sériemi verzí, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů s platností, archivem, hledáním a revizemi |
 | **Ankety** | Hlasování s plánováním, fulltextovým hledáním, slug URL, SEO fallbacky a revizemi |
 | **Znalostní báze** | FAQ s kategoriemi, hledáním, stránkováním, SEO a FAQPage strukturovanými daty |
@@ -260,7 +260,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
 
-Modul **Ke stažení** nově pokrývá i praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje.
+Modul **Ke stažení** pokrývá praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje. Kategorie mají čisté landing URL `/downloads/kategorie/{slug}`, volitelný popis a SEO metadata. Sériová vydání se spravují přes samostatné série/verze s URL `/downloads/serie/{slug}`; detail starší položky umí upozornit na aktuální verzi a starý `series_key` zůstává kompatibilní pro importy i starší data.
 
 Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle kategorie, stránkování, přepínání `karty / rozbalené odpovědi`, per-FAQ SEO metadata, redirecty při změně slugu a `FAQPage` strukturovaná data pro vyhledávače.
 
@@ -710,6 +710,8 @@ server {
     location ~ ^/blog/([a-z0-9\-]+)/?$ { rewrite ^/blog/(.+?)/?$ /blog/article.php?slug=$1 last; }
     location ~ ^/board/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/board/kategorie/(.+?)/?$ /board/index.php?category_slug=$1 last; }
     location ~ ^/board/([a-z0-9\-]+)/?$ { rewrite ^/board/(.+?)/?$ /board/document.php?slug=$1 last; }
+    location ~ ^/downloads/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/downloads/kategorie/(.+?)/?$ /downloads/index.php?category_slug=$1 last; }
+    location ~ ^/downloads/serie/([a-z0-9\-]+)/?$ { rewrite ^/downloads/serie/(.+?)/?$ /downloads/series.php?slug=$1 last; }
     location ~ ^/downloads/([a-z0-9\-]+)/?$ { rewrite ^/downloads/(.+?)/?$ /downloads/item.php?slug=$1 last; }
     location ~ ^/events/([a-z0-9\-]+)/?$ { rewrite ^/events/(.+?)/?$ /events/event.php?slug=$1 last; }
     location ~ ^/faq/([a-z0-9\-]+)/?$ { rewrite ^/faq/(.+?)/?$ /faq/item.php?slug=$1 last; }

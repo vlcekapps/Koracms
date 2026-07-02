@@ -19,18 +19,22 @@ $pdo = db_connect();
 
 if ($slug !== '') {
     $stmt = $pdo->prepare(
-        "SELECT d.*, COALESCE(c.name, '') AS category_name
+        "SELECT d.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug,
+                s.title AS series_title, s.slug AS series_slug, s.description AS series_description, s.is_active AS series_is_active
          FROM cms_downloads d
          LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+         LEFT JOIN cms_download_series s ON s.id = d.download_series_id AND s.is_active = 1
          WHERE d.slug = ? AND d.deleted_at IS NULL AND d.status = 'published' AND d.is_published = 1
          LIMIT 1"
     );
     $stmt->execute([$slug]);
 } else {
     $stmt = $pdo->prepare(
-        "SELECT d.*, COALESCE(c.name, '') AS category_name
+        "SELECT d.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug,
+                s.title AS series_title, s.slug AS series_slug, s.description AS series_description, s.is_active AS series_is_active
          FROM cms_downloads d
          LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+         LEFT JOIN cms_download_series s ON s.id = d.download_series_id AND s.is_active = 1
          WHERE d.id = ? AND d.deleted_at IS NULL AND d.status = 'published' AND d.is_published = 1
          LIMIT 1"
     );
@@ -60,15 +64,56 @@ if ($slug === '' && (string)$download['slug'] !== '') {
 }
 
 $otherVersions = [];
-if ((string)$download['series_key'] !== '') {
+$currentVersion = null;
+if ((int)($download['download_series_id'] ?? 0) > 0) {
     $versionsStmt = $pdo->prepare(
-        "SELECT d.*, COALESCE(c.name, '') AS category_name
+        "SELECT d.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug,
+                s.title AS series_title, s.slug AS series_slug, s.description AS series_description
+         FROM cms_downloads d
+         LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+         INNER JOIN cms_download_series s ON s.id = d.download_series_id AND s.is_active = 1
+         WHERE d.download_series_id = ?
+           AND d.id <> ?
+           AND d.status = 'published'
+           AND d.is_published = 1
+           AND d.deleted_at IS NULL
+         ORDER BY d.is_current_version DESC, COALESCE(d.release_date, DATE(d.created_at)) DESC, d.created_at DESC, d.id DESC
+         LIMIT 8"
+    );
+    $versionsStmt->execute([(int)$download['download_series_id'], (int)$download['id']]);
+    $otherVersions = array_map(
+        static fn (array $version): array => hydrateDownloadPresentation($version),
+        $versionsStmt->fetchAll()
+    );
+    if ((int)$download['is_current_version'] !== 1) {
+        $currentVersionStmt = $pdo->prepare(
+            "SELECT d.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug,
+                    s.title AS series_title, s.slug AS series_slug, s.description AS series_description
+             FROM cms_downloads d
+             LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+             INNER JOIN cms_download_series s ON s.id = d.download_series_id AND s.is_active = 1
+             WHERE d.download_series_id = ?
+               AND d.id <> ?
+               AND d.is_current_version = 1
+               AND d.status = 'published'
+               AND d.is_published = 1
+               AND d.deleted_at IS NULL
+             LIMIT 1"
+        );
+        $currentVersionStmt->execute([(int)$download['download_series_id'], (int)$download['id']]);
+        $currentVersionRow = $currentVersionStmt->fetch() ?: null;
+        $currentVersion = $currentVersionRow ? hydrateDownloadPresentation($currentVersionRow) : null;
+    }
+} elseif ((string)$download['series_key'] !== '') {
+    $versionsStmt = $pdo->prepare(
+        "SELECT d.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
          FROM cms_downloads d
          LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
          WHERE d.series_key = ?
            AND d.id <> ?
            AND d.status = 'published'
            AND d.is_published = 1
+           AND d.deleted_at IS NULL
          ORDER BY d.is_featured DESC, COALESCE(d.release_date, DATE(d.created_at)) DESC, d.created_at DESC, d.id DESC
          LIMIT 8"
     );
@@ -101,6 +146,7 @@ renderPublicPage([
     'view_data' => [
         'download' => $download,
         'otherVersions' => $otherVersions,
+        'currentVersion' => $currentVersion,
     ],
     'current_nav' => 'downloads',
     'body_class' => 'page-downloads-article',

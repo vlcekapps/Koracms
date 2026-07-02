@@ -40,6 +40,7 @@ $perPage = 12;
 
 $q = trim((string)($_GET['q'] ?? ''));
 $categoryId = inputInt('get', 'kat');
+$categorySlug = downloadCategorySlug(trim((string)($_GET['category_slug'] ?? '')));
 $typeFilter = trim((string)($_GET['typ'] ?? 'all'));
 $platformFilter = trim((string)($_GET['platform'] ?? ''));
 $sourceFilter = trim((string)($_GET['source'] ?? 'all'));
@@ -54,18 +55,46 @@ if ($typeFilter !== 'all' && !isset(downloadTypeDefinitions()[$typeFilter])) {
 }
 
 $categories = $pdo->query(
-    "SELECT c.id, c.name, COUNT(d.id) AS item_count
+    "SELECT c.id, c.name, c.slug, c.description, c.meta_title, c.meta_description, c.updated_at, COUNT(d.id) AS item_count
      FROM cms_dl_categories c
      LEFT JOIN cms_downloads d
        ON d.dl_category_id = c.id
+      AND d.deleted_at IS NULL
       AND d.status = 'published'
       AND d.is_published = 1
-     GROUP BY c.id, c.name
+     GROUP BY c.id, c.name, c.slug, c.description, c.meta_title, c.meta_description, c.updated_at
      ORDER BY c.name"
 )->fetchAll();
+$activeCategory = null;
+if ($categorySlug !== '') {
+    foreach ($categories as $category) {
+        if (downloadCategorySlug((string)($category['slug'] ?? '')) === $categorySlug) {
+            $activeCategory = $category;
+            $categoryId = (int)$category['id'];
+            break;
+        }
+    }
+    if ($activeCategory === null) {
+        renderPublicNotFoundPage([
+            'title' => 'Kategorie nenalezena',
+            'meta' => [
+                'url' => BASE_URL . '/downloads/kategorie/' . rawurlencode($categorySlug),
+            ],
+            'body_class' => 'page-download-category-not-found',
+        ]);
+    }
+}
 $validCategoryIds = array_map(static fn (array $category): int => (int)$category['id'], $categories);
 if ($categoryId !== null && !in_array($categoryId, $validCategoryIds, true)) {
     $categoryId = null;
+}
+if ($categoryId !== null && $activeCategory === null) {
+    foreach ($categories as $category) {
+        if ((int)$category['id'] === $categoryId) {
+            $activeCategory = $category;
+            break;
+        }
+    }
 }
 
 $platformOptions = $pdo->query(
@@ -154,11 +183,11 @@ $items = array_map(
 $grouped = groupDownloadsByCategory($items);
 $showCategoryHeadings = count($grouped) > 1;
 
-$buildDownloadsIndexUrl = static function (array $overrides = []) use ($q, $categoryId, $typeFilter, $platformFilter, $sourceFilter, $featuredOnly): string {
+$buildDownloadsIndexUrl = static function (array $overrides = []) use ($q, $categoryId, $activeCategory, $typeFilter, $platformFilter, $sourceFilter, $featuredOnly): string {
     $query = [];
     $merged = array_merge([
         'q' => $q,
-        'kat' => $categoryId,
+        'kat' => $activeCategory !== null && downloadCategorySlug((string)($activeCategory['slug'] ?? '')) !== '' ? null : $categoryId,
         'typ' => $typeFilter,
         'platform' => $platformFilter,
         'source' => $sourceFilter,
@@ -172,7 +201,11 @@ $buildDownloadsIndexUrl = static function (array $overrides = []) use ($q, $cate
         $query[$key] = $value;
     }
 
-    return BASE_URL . '/downloads/index.php' . ($query !== [] ? '?' . http_build_query($query) : '');
+    $basePath = $activeCategory !== null && downloadCategorySlug((string)($activeCategory['slug'] ?? '')) !== ''
+        ? downloadCategoryPath($activeCategory)
+        : BASE_URL . '/downloads/index.php';
+
+    return $basePath . ($query !== [] ? (str_contains($basePath, '?') ? '&' : '?') . http_build_query($query) : '');
 };
 
 $filterSummary = [];
@@ -205,17 +238,32 @@ if ($featuredOnly) {
 }
 
 $metaTitle = 'Ke stažení - ' . $siteName;
-if ($filterSummary !== []) {
+if ($activeCategory !== null) {
+    $categoryTitle = trim((string)($activeCategory['meta_title'] ?? ''));
+    $metaTitle = ($categoryTitle !== '' ? $categoryTitle : (string)$activeCategory['name'] . ' - Ke stažení') . ' - ' . $siteName;
+}
+if ($filterSummary !== [] && $activeCategory === null) {
     $metaTitle = 'Ke stažení - ' . implode(', ', $filterSummary) . ' - ' . $siteName;
+}
+$metaDescription = '';
+if ($activeCategory !== null) {
+    $metaDescription = trim((string)($activeCategory['meta_description'] ?? ''));
+    if ($metaDescription === '') {
+        $metaDescription = downloadExcerpt(['excerpt' => (string)($activeCategory['description'] ?? '')], 180);
+    }
 }
 
 $paginBase = $buildDownloadsIndexUrl(['strana' => null]);
 $paginBase .= str_contains($paginBase, '?') ? '&' : '?';
 
+$pageHeading = $activeCategory !== null ? (string)$activeCategory['name'] : 'Ke stažení';
+$pageKicker = $activeCategory !== null ? 'Kategorie ke stažení' : 'Dokumenty, software a materiály';
+
 renderPublicPage([
     'title' => $metaTitle,
     'meta' => [
         'title' => $metaTitle,
+        'description' => $metaDescription,
         'url' => siteUrl(str_replace(BASE_URL, '', $buildDownloadsIndexUrl(['strana' => null]))),
     ],
     'view' => 'modules/downloads-index',
@@ -225,6 +273,7 @@ renderPublicPage([
         'showCategoryHeadings' => $showCategoryHeadings,
         'searchQuery' => $q,
         'categories' => $categories,
+        'activeCategory' => $activeCategory,
         'selectedCategoryId' => $categoryId,
         'selectedType' => $typeFilter,
         'selectedPlatform' => $platformFilter,
@@ -236,6 +285,8 @@ renderPublicPage([
         'pagerHtml' => renderPager($page, $pages, $paginBase, 'Stránkování sekce ke stažení', 'Předchozí stránka', 'Další stránka'),
         'hasActiveFilters' => $q !== '' || $categoryId !== null || $typeFilter !== 'all' || $platformFilter !== '' || $sourceFilter !== 'all' || $featuredOnly,
         'clearUrl' => BASE_URL . '/downloads/index.php',
+        'pageHeading' => $pageHeading,
+        'pageKicker' => $pageKicker,
     ],
     'current_nav' => 'downloads',
     'body_class' => 'page-downloads-index',

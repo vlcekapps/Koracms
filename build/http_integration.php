@@ -36,6 +36,10 @@ $createdMediaIds = [];
 $createdBoardIds = [];
 $createdBoardCategoryIds = [];
 $createdBoardSubscriberIds = [];
+$createdDownloadIds = [];
+$createdDownloadCategoryIds = [];
+$createdDownloadSeriesIds = [];
+$createdDownloadStoredFiles = [];
 $createdPollIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
@@ -4408,6 +4412,185 @@ try {
 
     httpIntegrationPrintResult('board_save_http', $boardIssues, $failures);
 
+    $downloadIssues = [];
+    $downloadCategorySlug = 'http-download-kategorie-' . bin2hex(random_bytes(4));
+    $downloadSeriesSlug = 'http-download-serie-' . bin2hex(random_bytes(4));
+    $downloadCurrentSlug = 'http-download-current-' . bin2hex(random_bytes(4));
+    $downloadOldSlug = 'http-download-old-' . bin2hex(random_bytes(4));
+    $downloadStoredName = 'http-download-' . bin2hex(random_bytes(6)) . '.txt';
+    $downloadStoredPath = dirname(__DIR__) . '/uploads/downloads/' . $downloadStoredName;
+    if (!is_dir(dirname($downloadStoredPath))) {
+        mkdir(dirname($downloadStoredPath), 0775, true);
+    }
+    file_put_contents($downloadStoredPath, "HTTP integration download fixture\n");
+    $createdDownloadStoredFiles[] = $downloadStoredName;
+
+    saveSetting('module_downloads', '1');
+    clearSettingsCache();
+
+    $pdo->prepare(
+        "INSERT INTO cms_dl_categories (name, slug, description, meta_title, meta_description, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, NOW(), NOW())"
+    )->execute([
+        'HTTP Kategorie ke stažení',
+        $downloadCategorySlug,
+        '<p>Popis veřejné kategorie ke stažení.</p>',
+        'SEO kategorie ke stažení',
+        'Meta popis veřejné kategorie ke stažení.',
+    ]);
+    $downloadCategoryId = (int)$pdo->lastInsertId();
+    $createdDownloadCategoryIds[] = $downloadCategoryId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_download_series (title, slug, description, is_active, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, 1, 10, NOW(), NOW())"
+    )->execute([
+        'HTTP Série ke stažení',
+        $downloadSeriesSlug,
+        '<p>Popis veřejné série ke stažení.</p>',
+    ]);
+    $downloadSeriesId = (int)$pdo->lastInsertId();
+    $createdDownloadSeriesIds[] = $downloadSeriesId;
+
+    $insertDownloadStmt = $pdo->prepare(
+        "INSERT INTO cms_downloads
+         (title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
+          platform_label, license_label, project_url, release_date, requirements, checksum_sha256,
+          series_key, download_series_id, is_current_version, external_url, filename, original_name, file_size,
+          download_count, is_featured, sort_order, is_published, status, author_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, '', ?, ?, ?, '', CURDATE(), '', ?, ?, ?, ?, '', ?, ?, ?, 0, ?, ?, 1, 'published', ?, NOW(), NOW())"
+    );
+    $downloadChecksum = hash_file('sha256', $downloadStoredPath);
+    $insertDownloadStmt->execute([
+        'HTTP Aktuální download',
+        $downloadCurrentSlug,
+        'software',
+        $downloadCategoryId,
+        'Krátký popis aktuální verze.',
+        '<p>Detail aktuální verze ke stažení.</p>',
+        '2.0.0',
+        'Windows',
+        'MIT',
+        is_string($downloadChecksum) ? $downloadChecksum : '',
+        $downloadSeriesSlug,
+        $downloadSeriesId,
+        1,
+        $downloadStoredName,
+        'http-download.txt',
+        filesize($downloadStoredPath) ?: 0,
+        1,
+        10,
+        $adminUserId,
+    ]);
+    $downloadCurrentId = (int)$pdo->lastInsertId();
+    $createdDownloadIds[] = $downloadCurrentId;
+
+    $insertDownloadStmt->execute([
+        'HTTP Starší download',
+        $downloadOldSlug,
+        'software',
+        $downloadCategoryId,
+        'Krátký popis starší verze.',
+        '<p>Detail starší verze ke stažení.</p>',
+        '1.0.0',
+        'Windows',
+        'MIT',
+        '',
+        $downloadSeriesSlug,
+        $downloadSeriesId,
+        0,
+        '',
+        '',
+        0,
+        0,
+        20,
+        $adminUserId,
+    ]);
+    $downloadOldId = (int)$pdo->lastInsertId();
+    $createdDownloadIds[] = $downloadOldId;
+
+    $downloadCategoryAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/dl_cats.php', $adminSession['cookie'], 0);
+    if (!str_contains($downloadCategoryAdmin['body'], 'name="slug"')
+        || !str_contains($downloadCategoryAdmin['body'], 'name="description"')
+        || !str_contains($downloadCategoryAdmin['body'], 'HTTP Kategorie ke stažení')
+        || !str_contains($downloadCategoryAdmin['body'], '/downloads/kategorie/' . $downloadCategorySlug)
+    ) {
+        $downloadIssues[] = 'správa kategorií ke stažení nezobrazuje slug, popis nebo veřejný odkaz';
+    }
+
+    $downloadSeriesAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/download_series.php', $adminSession['cookie'], 0);
+    if (!str_contains($downloadSeriesAdmin['body'], 'name="slug"')
+        || !str_contains($downloadSeriesAdmin['body'], 'name="description"')
+        || !str_contains($downloadSeriesAdmin['body'], 'HTTP Série ke stažení')
+        || !str_contains($downloadSeriesAdmin['body'], '/downloads/serie/' . $downloadSeriesSlug)
+    ) {
+        $downloadIssues[] = 'správa sérií ke stažení nezobrazuje slug, popis nebo veřejný odkaz';
+    }
+
+    $downloadCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/downloads/kategorie/' . $downloadCategorySlug, '', 0);
+    if (httpIntegrationStatusCode($downloadCategoryResponse) !== 200
+        || !str_contains($downloadCategoryResponse['body'], 'HTTP Kategorie ke stažení')
+        || !str_contains($downloadCategoryResponse['body'], 'Popis veřejné kategorie ke stažení')
+        || !str_contains($downloadCategoryResponse['body'], 'HTTP Aktuální download')
+        || !str_contains($downloadCategoryResponse['body'], '/downloads/' . $downloadCurrentSlug)
+    ) {
+        $downloadIssues[] = 'čistá landing URL kategorie ke stažení nezobrazuje očekávaný obsah';
+    }
+    if (!str_contains($downloadCategoryResponse['body'], '<link rel="canonical" href="')
+        || !str_contains($downloadCategoryResponse['body'], '/downloads/kategorie/' . $downloadCategorySlug)
+        || !str_contains($downloadCategoryResponse['body'], 'SEO kategorie ke stažení')
+    ) {
+        $downloadIssues[] = 'landing URL kategorie ke stažení nemá očekávané SEO/canonical metadata';
+    }
+
+    $downloadLegacyCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/downloads/index.php?kat=' . $downloadCategoryId, '', 0);
+    if (httpIntegrationStatusCode($downloadLegacyCategoryResponse) !== 200
+        || !str_contains($downloadLegacyCategoryResponse['body'], 'HTTP Aktuální download')) {
+        $downloadIssues[] = 'kompatibilní filtr ?kat= pro ke stažení nezobrazuje očekávanou položku';
+    }
+
+    $downloadSeriesResponse = fetchUrl($baseUrl . BASE_URL . '/downloads/serie/' . $downloadSeriesSlug, '', 0);
+    if (httpIntegrationStatusCode($downloadSeriesResponse) !== 200
+        || !str_contains($downloadSeriesResponse['body'], 'HTTP Série ke stažení')
+        || !str_contains($downloadSeriesResponse['body'], 'Popis veřejné série ke stažení')
+        || !str_contains($downloadSeriesResponse['body'], 'HTTP Aktuální download')
+        || !str_contains($downloadSeriesResponse['body'], 'HTTP Starší download')
+        || !str_contains($downloadSeriesResponse['body'], 'Aktuální verze')) {
+        $downloadIssues[] = 'veřejná stránka série ke stažení nezobrazuje očekávané verze';
+    }
+
+    $downloadCurrentResponse = fetchUrl($baseUrl . BASE_URL . '/downloads/' . $downloadCurrentSlug, '', 0);
+    if (httpIntegrationStatusCode($downloadCurrentResponse) !== 200
+        || !str_contains($downloadCurrentResponse['body'], 'HTTP Série ke stažení')
+        || !str_contains($downloadCurrentResponse['body'], '/downloads/serie/' . $downloadSeriesSlug)
+        || !str_contains($downloadCurrentResponse['body'], '/downloads/kategorie/' . $downloadCategorySlug)) {
+        $downloadIssues[] = 'detail aktuální položky ke stažení nezobrazuje odkazy na kategorii a sérii';
+    }
+
+    $downloadOldResponse = fetchUrl($baseUrl . BASE_URL . '/downloads/' . $downloadOldSlug, '', 0);
+    if (httpIntegrationStatusCode($downloadOldResponse) !== 200
+        || !str_contains($downloadOldResponse['body'], 'Přejít na aktuální verzi')
+        || !str_contains($downloadOldResponse['body'], '/downloads/' . $downloadCurrentSlug)) {
+        $downloadIssues[] = 'detail starší verze ke stažení nezobrazuje upozornění na aktuální verzi';
+    }
+
+    $missingDownloadCategory = fetchUrl($baseUrl . BASE_URL . '/downloads/kategorie/neexistujici-kategorie-http', '', 0);
+    if (httpIntegrationStatusCode($missingDownloadCategory) !== 404) {
+        $downloadIssues[] = 'neexistující čistý slug kategorie ke stažení nevrátil 404';
+    }
+    $missingDownloadSeries = fetchUrl($baseUrl . BASE_URL . '/downloads/serie/neexistujici-serie-http', '', 0);
+    if (httpIntegrationStatusCode($missingDownloadSeries) !== 404) {
+        $downloadIssues[] = 'neexistující čistý slug série ke stažení nevrátil 404';
+    }
+
+    $downloadSitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+    if (!str_contains($downloadSitemapResponse['body'], '/downloads/kategorie/' . $downloadCategorySlug)
+        || !str_contains($downloadSitemapResponse['body'], '/downloads/serie/' . $downloadSeriesSlug)) {
+        $downloadIssues[] = 'sitemap neobsahuje veřejnou kategorii nebo sérii ke stažení s publikovanou položkou';
+    }
+
+    httpIntegrationPrintResult('downloads_catalog_versions_http', $downloadIssues, $failures);
+
     $blogTransferIssues = [];
     $passwordHash = password_hash('HttpIntegration123!', PASSWORD_BCRYPT);
 
@@ -6243,6 +6426,21 @@ try {
         $pdo->prepare("DELETE FROM cms_board_subscriber_categories WHERE category_id = ?")->execute([$boardCategoryIdToDelete]);
         $pdo->prepare("UPDATE cms_board SET category_id = NULL WHERE category_id = ?")->execute([$boardCategoryIdToDelete]);
         $pdo->prepare("DELETE FROM cms_board_categories WHERE id = ?")->execute([$boardCategoryIdToDelete]);
+    }
+    foreach ($createdDownloadIds as $downloadIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$downloadIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_downloads WHERE id = ?")->execute([$downloadIdToDelete]);
+    }
+    foreach ($createdDownloadStoredFiles as $downloadStoredFileToDelete) {
+        deleteDownloadStoredFile((string)$downloadStoredFileToDelete);
+    }
+    foreach ($createdDownloadSeriesIds as $downloadSeriesIdToDelete) {
+        $pdo->prepare("UPDATE cms_downloads SET download_series_id = NULL, is_current_version = 0 WHERE download_series_id = ?")->execute([$downloadSeriesIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_download_series WHERE id = ?")->execute([$downloadSeriesIdToDelete]);
+    }
+    foreach ($createdDownloadCategoryIds as $downloadCategoryIdToDelete) {
+        $pdo->prepare("UPDATE cms_downloads SET dl_category_id = NULL WHERE dl_category_id = ?")->execute([$downloadCategoryIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_dl_categories WHERE id = ?")->execute([$downloadCategoryIdToDelete]);
     }
     foreach ($createdPollIds as $pollIdToDelete) {
         $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$pollIdToDelete]);

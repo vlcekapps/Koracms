@@ -698,6 +698,12 @@ Upozornění se posílá jen při první veřejné publikaci položky nebo při 
 
 Modul **Ke stažení** už neslouží jen jako jednoduchý seznam souborů. Je připravený i pro katalog dokumentů, aplikací a instalačních balíčků, kde je potřeba držet verze, kompatibilitu a bezpečnější download workflow.
 
+### Kategorie a série
+
+Kategorie ke stažení mají vlastní správu metadat. Kromě názvu lze nastavit slug, popis, `meta title` a `meta description`; veřejná adresa má tvar `/downloads/kategorie/slug-kategorie`. Při změně slugu CMS uloží redirect ze staré adresy na novou a starý filtr `downloads/index.php?kat=ID` zůstává funkční kvůli kompatibilitě.
+
+Série ke stažení slouží pro vydání jedné aplikace, dokumentu nebo balíčku. Správce vytvoří sérii s názvem, slugem, popisem, aktivním stavem a pořadím. Položka se pak v editoru zařadí do série výběrem ze seznamu a může být označená jako `Aktuální verze`; pokud se jako aktuální označí jiná položka stejné série, ostatní se automaticky odznačí. Veřejná stránka série má tvar `/downloads/serie/slug-serie` a zobrazuje jen publikované položky. Starší importy a data se starým textovým `series_key` zůstávají podporované jako fallback, ale nové UI používá primárně spravované série.
+
 ### Co se nastavuje u položky
 
 Každá položka může mít:
@@ -711,7 +717,8 @@ Každá položka může mít:
 - platformu a licenci
 - požadavky a kompatibilitu
 - SHA-256 checksum
-- skupinu verzí pro propojení více vydání stejné aplikace nebo dokumentu
+- spravovanou sérii/verzi pro propojení více vydání stejné aplikace nebo dokumentu
+- příznak `Aktuální verze` v rámci vybrané série
 - volitelný náhledový obrázek
 - příznak `Doporučená položka`
 - zveřejnění na webu
@@ -719,6 +726,8 @@ Každá položka může mít:
 ### Co je nové v admin workflow
 
 - Přehled `Ke stažení` umí hledání i filtry podle stavu, kategorie, typu, zdroje, platformy a doporučených položek.
+- Správa kategorií nabízí veřejný odkaz, popis a SEO pole.
+- Správa sérií/verzí nabízí veřejný odkaz na sérii a základní přehled počtu položek i aktuální verze.
 - U detailnějších položek lze otevřít historii revizí stejně jako u dalších obsahových modulů.
 - Při změně slugu se stará veřejná adresa uloží jako redirect na nový canonical tvar.
 - Přehled ukazuje i základní statistiku stažení a praktická metadata, takže správce nemusí otevírat každou položku zvlášť.
@@ -726,9 +735,11 @@ Každá položka může mít:
 ### Veřejný katalog
 
 - Veřejný výpis podporuje hledání a filtry podle kategorie, typu, platformy, zdroje a doporučených položek.
+- Odkazy na kategorie vedou primárně na čisté URL `/downloads/kategorie/{slug}`; staré query filtry zůstávají kompatibilní.
+- Veřejná stránka série `/downloads/serie/{slug}` zobrazuje vydání v pořadí aktuální verze, datum vydání a novost.
 - Výsledky jsou stránkované a řadí se přirozeně: doporučené položky výš, pak novější vydání.
 - Detail položky zobrazuje i praktické informace jako verzi, datum vydání, velikost souboru, checksum, požadavky a kompatibilitu.
-- Pokud více položek sdílí stejnou `Skupinu verzí`, detail ukáže i další dostupné verze ke stažení.
+- Pokud je položka součástí série, detail ukáže další dostupné verze. U starší položky navíc nabídne odkaz na aktuální verzi.
 
 ### Přílohy a přístupová práva
 

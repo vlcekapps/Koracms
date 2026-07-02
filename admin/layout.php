@@ -256,6 +256,7 @@ function adminHeader(string $pageTitle): void
                 'items' => [
                     ['url' => $baseUrl . '/admin/downloads.php', 'label' => 'Soubory a položky'],
                     ['url' => $baseUrl . '/admin/dl_cats.php', 'label' => 'Kategorie'],
+                    ['url' => $baseUrl . '/admin/download_series.php', 'label' => 'Série a verze'],
                 ],
             ];
         }

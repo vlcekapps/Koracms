@@ -101,11 +101,13 @@ $stmt = $pdo->prepare(
     "SELECT d.id, d.title, d.slug, d.download_type, d.dl_category_id, COALESCE(c.name, '') AS category_name,
             d.excerpt, d.description, d.image_file, d.version_label, d.platform_label, d.license_label,
             d.project_url, d.release_date, d.requirements, d.checksum_sha256, d.series_key,
+            d.download_series_id, d.is_current_version, COALESCE(s.title, '') AS series_title, COALESCE(s.slug, '') AS series_slug,
             d.external_url, d.filename, d.original_name, d.file_size, d.download_count, d.is_featured, d.is_published,
             d.created_at, d.updated_at, COALESCE(d.status,'published') AS status,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_downloads d
      LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id
+     LEFT JOIN cms_download_series s ON s.id = d.download_series_id
      LEFT JOIN cms_users u ON u.id = d.author_id
      {$whereSql}
      ORDER BY d.is_featured DESC, COALESCE(d.release_date, DATE(d.created_at)) DESC, d.created_at DESC, d.id DESC"
@@ -241,8 +243,10 @@ adminHeader('Ke stažení');
           <?php if ($download['license_label'] !== ''): ?>
             <br><small class="table-meta">Licence: <?= h((string)$download['license_label']) ?></small>
           <?php endif; ?>
-          <?php if ($download['series_key'] !== ''): ?>
-            <br><small class="table-meta">Skupina verzí: <?= h((string)$download['series_key']) ?></small>
+          <?php if ($download['series_title'] !== ''): ?>
+            <br><small class="table-meta">Série: <?= h((string)$download['series_title']) ?><?= (int)$download['is_current_version'] === 1 ? ' · aktuální verze' : '' ?></small>
+          <?php elseif ($download['series_key'] !== ''): ?>
+            <br><small class="table-meta">Starší skupina verzí: <?= h((string)$download['series_key']) ?></small>
           <?php endif; ?>
         </td>
         <td>

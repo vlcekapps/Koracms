@@ -261,7 +261,7 @@ if (isModuleEnabled('downloads')) {
         $downloads = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
              FROM cms_downloads
-             WHERE status = 'published' AND is_published = 1
+             WHERE status = 'published' AND is_published = 1 AND deleted_at IS NULL
              ORDER BY created_at DESC, id DESC"
         )->fetchAll();
         foreach ($downloads as $download) {
@@ -269,6 +269,51 @@ if (isModuleEnabled('downloads')) {
         }
     } catch (\PDOException $e) {
         sitemapLogSectionError('downloads', $e);
+    }
+
+    try {
+        $downloadCategories = $pdo->query(
+            "SELECT c.id, c.slug, COALESCE(c.updated_at, c.created_at) AS sitemap_lastmod
+             FROM cms_dl_categories c
+             WHERE c.slug <> ''
+               AND EXISTS (
+                   SELECT 1
+                   FROM cms_downloads d
+                   WHERE d.dl_category_id = c.id
+                     AND d.deleted_at IS NULL
+                     AND d.status = 'published'
+                     AND d.is_published = 1
+               )
+             ORDER BY c.name"
+        )->fetchAll();
+        foreach ($downloadCategories as $category) {
+            sitemapWriteUrl(downloadCategoryUrl($category), 'weekly', '0.5', sitemapLastmod((string)($category['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('download_categories', $e);
+    }
+
+    try {
+        $downloadSeries = $pdo->query(
+            "SELECT s.id, s.slug, COALESCE(s.updated_at, s.created_at) AS sitemap_lastmod
+             FROM cms_download_series s
+             WHERE s.is_active = 1
+               AND s.slug <> ''
+               AND EXISTS (
+                   SELECT 1
+                   FROM cms_downloads d
+                   WHERE d.download_series_id = s.id
+                     AND d.deleted_at IS NULL
+                     AND d.status = 'published'
+                     AND d.is_published = 1
+               )
+             ORDER BY s.sort_order, s.title"
+        )->fetchAll();
+        foreach ($downloadSeries as $series) {
+            sitemapWriteUrl(downloadSeriesUrl($series), 'weekly', '0.5', sitemapLastmod((string)($series['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('download_series', $e);
     }
 }
 
