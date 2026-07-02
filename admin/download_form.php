@@ -59,7 +59,7 @@ $errorMessage = match ($err) {
     'required' => 'Název položky je povinný.',
     'slug' => 'Slug položky musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už používá jiná položka ke stažení.',
-    'source' => 'Položka musí mít alespoň nahraný soubor nebo externí odkaz.',
+    'source' => 'Nahrajte soubor, vyplňte externí odkaz, nebo použijte obojí.',
     'url' => 'Externí odkaz musí být platná adresa začínající na http:// nebo https://.',
     'project_url' => 'Domovská stránka projektu musí být platná adresa začínající na http:// nebo https://.',
     'release_date' => 'Datum vydání nemá platný formát.',
@@ -83,7 +83,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
 <p><a href="downloads.php"><span aria-hidden="true">←</span> Zpět na přehled ke stažení</a></p>
 <p class="admin-description admin-description--flush admin-description--muted">
-  Vytvořte přehlednou kartu ke stažení. Může odkazovat na lokální soubor, externí stránku projektu, nebo na obojí zároveň.
+  Vytvořte přehlednou kartu ke stažení. Položka může mít lokální soubor, externí odkaz třeba na GitHub Releases, nebo obojí zároveň.
 </p>
 
 <form method="post" action="download_save.php" enctype="multipart/form-data" novalidate>
@@ -143,11 +143,11 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   <fieldset>
     <legend>Zdroje a odkazy</legend>
 
-    <label for="file">Soubor</label>
+    <label for="file">Soubor ke stažení, volitelné</label>
     <input type="file" id="file" name="file"
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.7z,.tar,.gz,.bz2,.txt,.exe,.msi,.apk,.jar,.dmg,.pkg,.deb,.rpm,.appimage"
            aria-describedby="download-file-help<?= (string)$download['original_name'] !== '' ? ' download-file-current' : '' ?>">
-    <small id="download-file-help" class="field-help">Můžete nahrát dokument, archiv nebo instalační balíček. U lokálního souboru se SHA-256 checksum dopočítá automaticky.</small>
+    <small id="download-file-help" class="field-help">Můžete nahrát dokument, archiv nebo instalační balíček. Pokud software hostujete jinde, stačí místo uploadu vyplnit externí odkaz. U lokálního souboru se SHA-256 checksum dopočítá automaticky.</small>
     <?php if ((string)$download['original_name'] !== ''): ?>
       <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
@@ -164,7 +164,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <input type="url" id="external_url" name="external_url" maxlength="255" aria-describedby="download-external-url-help"
            placeholder="https://example.com/download"
            value="<?= h((string)$download['external_url']) ?>">
-    <small id="download-external-url-help" class="field-help">Hodí se třeba pro GitHub Releases, App Store nebo veřejnou stránku balíčku.</small>
+    <small id="download-external-url-help" class="field-help">Externí odkaz může být použit místo uploadu souboru, například pro GitHub Releases, App Store nebo veřejnou stránku balíčku.</small>
 
     <label for="project_url">Domovská stránka projektu</label>
     <input type="url" id="project_url" name="project_url" maxlength="255" aria-describedby="download-project-url-help"

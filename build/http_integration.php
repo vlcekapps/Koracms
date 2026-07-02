@@ -4417,6 +4417,8 @@ try {
     $downloadSeriesSlug = 'http-download-serie-' . bin2hex(random_bytes(4));
     $downloadCurrentSlug = 'http-download-current-' . bin2hex(random_bytes(4));
     $downloadOldSlug = 'http-download-old-' . bin2hex(random_bytes(4));
+    $downloadExternalOnlySlug = 'http-download-external-' . bin2hex(random_bytes(4));
+    $downloadExternalOnlyUrl = 'https://github.com/vlcekapps/Koracms/releases/download/http-test/' . $downloadExternalOnlySlug . '.zip';
     $downloadStoredName = 'http-download-' . bin2hex(random_bytes(6)) . '.txt';
     $downloadStoredPath = dirname(__DIR__) . '/uploads/downloads/' . $downloadStoredName;
     if (!is_dir(dirname($downloadStoredPath))) {
@@ -4508,6 +4510,77 @@ try {
     ]);
     $downloadOldId = (int)$pdo->lastInsertId();
     $createdDownloadIds[] = $downloadOldId;
+
+    $downloadExternalOnlyResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/download_save.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'title' => 'HTTP Externí download',
+            'slug' => $downloadExternalOnlySlug,
+            'download_type' => 'software',
+            'dl_category_id' => (string)$downloadCategoryId,
+            'excerpt' => 'Krátký popis externí položky.',
+            'description' => '<p>Externí položka bez lokálního souboru.</p>',
+            'version_label' => '3.0.0',
+            'platform_label' => 'GitHub',
+            'license_label' => 'MIT',
+            'project_url' => 'https://github.com/vlcekapps/Koracms',
+            'release_date' => date('Y-m-d'),
+            'requirements' => '',
+            'checksum_sha256' => '',
+            'download_series_id' => '',
+            'external_url' => $downloadExternalOnlyUrl,
+            'article_status' => 'published',
+            'is_published' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($downloadExternalOnlyResponse) !== 302) {
+        $downloadIssues[] = 'uložení externí-only položky ke stažení bez uploadu nevrátilo redirect';
+    }
+    $downloadExternalOnlyStmt = $pdo->prepare(
+        "SELECT id, filename, external_url, status, is_published
+         FROM cms_downloads
+         WHERE slug = ? AND deleted_at IS NULL
+         LIMIT 1"
+    );
+    $downloadExternalOnlyStmt->execute([$downloadExternalOnlySlug]);
+    $downloadExternalOnlyRow = $downloadExternalOnlyStmt->fetch();
+    if (!$downloadExternalOnlyRow) {
+        $downloadIssues[] = 'externí-only položka ke stažení se neuložila bez uploadu souboru';
+    } else {
+        $createdDownloadIds[] = (int)$downloadExternalOnlyRow['id'];
+        if ((string)$downloadExternalOnlyRow['filename'] !== ''
+            || (string)$downloadExternalOnlyRow['external_url'] !== $downloadExternalOnlyUrl
+            || (string)$downloadExternalOnlyRow['status'] !== 'published'
+            || (int)$downloadExternalOnlyRow['is_published'] !== 1) {
+            $downloadIssues[] = 'externí-only položka ke stažení nemá po uložení očekávaný zdroj nebo publikovaný stav';
+        }
+    }
+
+    $downloadExternalAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/downloads.php?source=external', $adminSession['cookie'], 0);
+    if (!str_contains($downloadExternalAdmin['body'], 'HTTP Externí download')
+        || !str_contains($downloadExternalAdmin['body'], 'Externí zdroj bez lokálního souboru')
+        || !str_contains($downloadExternalAdmin['body'], 'Externí odkaz')) {
+        $downloadIssues[] = 'admin přehled ke stažení nepopisuje externí-only položku jako externí zdroj';
+    }
+
+    $downloadExternalCatalog = fetchUrl($baseUrl . BASE_URL . '/downloads/index.php?source=external', '', 0);
+    if (httpIntegrationStatusCode($downloadExternalCatalog) !== 200
+        || !str_contains($downloadExternalCatalog['body'], 'HTTP Externí download')
+        || !str_contains($downloadExternalCatalog['body'], 'Otevřít externí odkaz')
+        || !str_contains($downloadExternalCatalog['body'], $downloadExternalOnlyUrl)) {
+        $downloadIssues[] = 'veřejný katalog nezobrazuje externí-only položku a její externí akci';
+    }
+
+    $downloadExternalDetail = fetchUrl($baseUrl . BASE_URL . '/downloads/' . $downloadExternalOnlySlug, '', 0);
+    if (httpIntegrationStatusCode($downloadExternalDetail) !== 200
+        || !str_contains($downloadExternalDetail['body'], 'HTTP Externí download')
+        || !str_contains($downloadExternalDetail['body'], 'Otevřít externí odkaz')
+        || str_contains($downloadExternalDetail['body'], 'Stáhnout soubor')) {
+        $downloadIssues[] = 'detail externí-only položky nemá správnou externí akci nebo nabízí lokální stažení';
+    }
 
     $downloadCategoryAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/dl_cats.php', $adminSession['cookie'], 0);
     if (!str_contains($downloadCategoryAdmin['body'], 'name="slug"')

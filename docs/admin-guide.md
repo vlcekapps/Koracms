@@ -723,9 +723,12 @@ Každá položka může mít:
 - příznak `Doporučená položka`
 - zveřejnění na webu
 
+Upload souboru není povinný, pokud je vyplněný bezpečný externí odkaz začínající na `http://` nebo `https://`. Hodí se to pro software a dokumenty hostované mimo CMS, například na GitHub Releases nebo jiné oficiální stránce projektu. Pokud vyplníte lokální soubor i externí odkaz, veřejný výpis i detail nabídnou obě akce.
+
 ### Co je nové v admin workflow
 
 - Přehled `Ke stažení` umí hledání i filtry podle stavu, kategorie, typu, zdroje, platformy a doporučených položek.
+- Položky bez lokálního souboru se v přehledu označují jako externí zdroj, aby bylo jasné, že nejde o chybu uploadu.
 - Správa kategorií nabízí veřejný odkaz, popis a SEO pole.
 - Správa sérií/verzí nabízí veřejný odkaz na sérii a základní přehled počtu položek i aktuální verze.
 - U detailnějších položek lze otevřít historii revizí stejně jako u dalších obsahových modulů.

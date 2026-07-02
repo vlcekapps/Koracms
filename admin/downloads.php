@@ -259,6 +259,8 @@ adminHeader('Ke stažení');
             <?php if ((int)$download['file_size'] > 0): ?>
               <small>(<?= h(formatFileSize((int)$download['file_size'])) ?>)</small>
             <?php endif; ?>
+          <?php elseif ($download['has_external_url']): ?>
+            <small class="table-meta">Externí zdroj bez lokálního souboru</small>
           <?php else: ?>
             <small class="table-meta">Bez lokálního souboru</small>
           <?php endif; ?>

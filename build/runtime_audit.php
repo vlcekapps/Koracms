@@ -12513,6 +12513,7 @@ echo "=== downloads_source_guardrails ===\n";
 $downloadsSourceIssues = [];
 $downloadSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/download_save.php');
 $downloadFormSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/download_form.php');
+$downloadAdminListSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $downloadCatsSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
 $downloadSeriesAdminSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/download_series.php');
 $downloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
@@ -12547,11 +12548,23 @@ if (!str_contains($downloadFormSourceForGuard, 'name="download_series_id"')
     || str_contains($downloadFormSourceForGuard, 'name="series_key"')) {
     $downloadsSourceIssues[] = 'download form must use managed series selection instead of free series_key input';
 }
+if (!str_contains($downloadFormSourceForGuard, 'Soubor ke stažení, volitelné')
+    || !str_contains($downloadFormSourceForGuard, 'Externí odkaz může být použit místo uploadu souboru')
+    || !str_contains($downloadFormSourceForGuard, 'Nahrajte soubor, vyplňte externí odkaz, nebo použijte obojí.')) {
+    $downloadsSourceIssues[] = 'download form must clearly communicate that a local file or an external URL can be used as the source';
+}
 if (!str_contains($downloadSaveSource, 'download_series_id')
     || !str_contains($downloadSaveSource, 'is_current_version')
     || !str_contains($downloadSaveSource, 'UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?')
     || !str_contains($downloadSaveSource, 'SELECT id, slug FROM cms_download_series WHERE id = ?')) {
     $downloadsSourceIssues[] = 'download save is missing managed series validation or single-current-version enforcement';
+}
+if (!str_contains($downloadSaveSource, "\$storedFilename === '' && \$externalUrl === ''")
+    || !str_contains($downloadSaveSource, "\$redirectWithError('source')")) {
+    $downloadsSourceIssues[] = 'download save must reject only items missing both local file and external URL';
+}
+if (!str_contains($downloadAdminListSourceForGuard, 'Externí zdroj bez lokálního souboru')) {
+    $downloadsSourceIssues[] = 'download admin list must clearly label external-only download items';
 }
 if (!str_contains($downloadsIndexSource, "\$_GET['category_slug']")
     || !str_contains($downloadsIndexSource, 'downloadCategoryPath($activeCategory)')
@@ -12561,6 +12574,11 @@ if (!str_contains($downloadsIndexSource, "\$_GET['category_slug']")
 if (!str_contains($downloadsIndexViewSource, 'downloadCategoryPath($categoryRow)')
     || !str_contains($downloadsIndexViewSource, 'renderContent((string)$activeCategory[\'description\'])')) {
     $downloadsSourceIssues[] = 'public downloads index view is missing clean category links or category description rendering';
+}
+if (!str_contains($downloadsIndexViewSource, 'Stáhnout soubor')
+    || !str_contains($downloadsIndexViewSource, 'Otevřít externí odkaz')
+    || str_contains($downloadsIndexViewSource, 'elseif ($download[\'has_external_url\'])')) {
+    $downloadsSourceIssues[] = 'public downloads index must show both local and external actions for hybrid items';
 }
 if (!str_contains($downloadsItemSource, 'download_series_id')
     || !str_contains($downloadsItemSource, '$currentVersion')
