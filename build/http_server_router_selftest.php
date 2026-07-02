@@ -309,6 +309,12 @@ try {
     httpServerRouterSelfTestAssert(($blogPageRoute['get']['page_slug'] ?? '') === 'o-projektu', 'Blog page page_slug was not routed.');
     httpServerRouterSelfTestAssert(($blogPageRoute['get']['preview'] ?? '') === '1', 'Blog page query string was not preserved.');
 
+    $blogSeriesRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/serie/vikend-s-veterany?preview=1');
+    httpServerRouterSelfTestAssertRoute($blogSeriesRoute, 'blog-router', '/blog_router.php');
+    httpServerRouterSelfTestAssert(($blogSeriesRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog series blog_slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogSeriesRoute['get']['series_slug'] ?? '') === 'vikend-s-veterany', 'Blog series series_slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogSeriesRoute['get']['preview'] ?? '') === '1', 'Blog series query string was not preserved.');
+
     $blogRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/vikend-s-veterany');
     httpServerRouterSelfTestAssertRoute($blogRoute, 'blog-router', '/blog_router.php');
     httpServerRouterSelfTestAssert(($blogRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog route blog_slug was not routed.');
