@@ -82,6 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($module === 'downloads') {
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
             } elseif ($module === 'food_cards') {
+                $orderIds = $pdo->prepare("SELECT id FROM cms_food_orders WHERE card_id = ?");
+                $orderIds->execute([$itemId]);
+                $foodOrderIds = array_map('intval', array_column($orderIds->fetchAll(), 'id'));
+                if ($foodOrderIds !== []) {
+                    $foodOrderPlaceholders = implode(',', array_fill(0, count($foodOrderIds), '?'));
+                    $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$foodOrderPlaceholders})")->execute($foodOrderIds);
+                }
+                $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);

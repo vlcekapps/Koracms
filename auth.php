@@ -844,7 +844,7 @@ function adminRouteModuleRequirements(): array
         ],
         'food' => [
             'message' => adminRouteModuleDisabledMessage('food'),
-            'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php', 'food_items.php'],
+            'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php', 'food_items.php', 'food_orders.php', 'food_order.php'],
         ],
         'polls' => [
             'message' => adminRouteModuleDisabledMessage('polls'),

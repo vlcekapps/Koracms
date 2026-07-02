@@ -12,7 +12,8 @@
     $foodFilterClearUrl = BASE_URL . '/food/index.php';
     $foodFilterTitleId = 'food-index-structured-filter-title';
     $foodFilters = is_array($foodFilters ?? null) ? $foodFilters : normalizeFoodStructuredFilters([]);
-    $foodFilterHiddenFields = [];
+    $servingDateFilter = normalizeFoodServingDate((string)($servingDateFilter ?? ''));
+    $foodFilterHiddenFields = foodServingDateQueryParams($servingDateFilter);
     require __DIR__ . '/food-filters.php';
     ?>
 
@@ -26,6 +27,7 @@
 
     <section id="food-panel-food" class="tab-panel" role="tabpanel" aria-labelledby="food-tab-food" data-panel="food">
       <?php if ($foodCard): ?>
+        <?php $foodCardActiveStructuredFilter = !empty($foodCard['structured_filter_active']) || !empty($foodCard['serving_date_filter_active']); ?>
         <h2 class="section-title section-title--compact">
           <a href="<?= h((string)$foodCard['public_path']) ?>"><?= h((string)$foodCard['title']) ?></a>
         </h2>
@@ -40,7 +42,7 @@
           $foodStructuredEmptyMessage = '';
           require __DIR__ . '/food-structured-menu.php';
           ?>
-        <?php elseif (!empty($foodCard['structured_filter_active']) && !empty($foodCard['has_structured_source_items'])): ?>
+        <?php elseif ($foodCardActiveStructuredFilter && !empty($foodCard['has_structured_source_items'])): ?>
           <?php
           $foodStructuredSections = $foodCard['sections'];
           $foodStructuredMenuId = 'food-panel-food-menu';
@@ -48,7 +50,7 @@
           $foodStructuredEmptyMessage = 'Aktuální jídelní lístek nemá žádnou položku odpovídající filtru.';
           require __DIR__ . '/food-structured-menu.php';
           ?>
-        <?php elseif (!empty($foodCard['structured_filter_active'])): ?>
+        <?php elseif ($foodCardActiveStructuredFilter): ?>
           <p class="empty-state">Aktuální jídelní lístek nemá strukturované položky, které by šlo filtrovat.</p>
         <?php endif; ?>
         <?php if (!empty($foodCard['has_structured_items'])): ?>
@@ -58,11 +60,14 @@
               <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
             </section>
           <?php endif; ?>
-        <?php elseif (empty($foodCard['structured_filter_active'])): ?>
+        <?php elseif (!$foodCardActiveStructuredFilter): ?>
           <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
         <?php endif; ?>
         <div class="button-row button-row--start">
           <a class="button-secondary" href="<?= h((string)$foodCard['public_path']) ?>">Detail lístku</a>
+          <?php if (foodCardCanAcceptOrders($foodCard)): ?>
+            <a class="button-primary" href="<?= BASE_URL ?>/food/order.php?slug=<?= rawurlencode((string)$foodCard['slug']) ?>">Poptat objednávku</a>
+          <?php endif; ?>
         </div>
       <?php else: ?>
         <p class="empty-state">Aktuální jídelní lístek zatím není k dispozici.</p>
@@ -71,6 +76,7 @@
 
     <section id="food-panel-beverage" class="tab-panel" role="tabpanel" aria-labelledby="food-tab-beverage" data-panel="beverage" hidden>
       <?php if ($beverageCard): ?>
+        <?php $beverageCardActiveStructuredFilter = !empty($beverageCard['structured_filter_active']) || !empty($beverageCard['serving_date_filter_active']); ?>
         <h2 class="section-title section-title--compact">
           <a href="<?= h((string)$beverageCard['public_path']) ?>"><?= h((string)$beverageCard['title']) ?></a>
         </h2>
@@ -85,7 +91,7 @@
           $foodStructuredEmptyMessage = '';
           require __DIR__ . '/food-structured-menu.php';
           ?>
-        <?php elseif (!empty($beverageCard['structured_filter_active']) && !empty($beverageCard['has_structured_source_items'])): ?>
+        <?php elseif ($beverageCardActiveStructuredFilter && !empty($beverageCard['has_structured_source_items'])): ?>
           <?php
           $foodStructuredSections = $beverageCard['sections'];
           $foodStructuredMenuId = 'food-panel-beverage-menu';
@@ -93,7 +99,7 @@
           $foodStructuredEmptyMessage = 'Aktuální nápojový lístek nemá žádnou položku odpovídající filtru.';
           require __DIR__ . '/food-structured-menu.php';
           ?>
-        <?php elseif (!empty($beverageCard['structured_filter_active'])): ?>
+        <?php elseif ($beverageCardActiveStructuredFilter): ?>
           <p class="empty-state">Aktuální nápojový lístek nemá strukturované položky, které by šlo filtrovat.</p>
         <?php endif; ?>
         <?php if (!empty($beverageCard['has_structured_items'])): ?>
@@ -103,11 +109,14 @@
               <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
             </section>
           <?php endif; ?>
-        <?php elseif (empty($beverageCard['structured_filter_active'])): ?>
+        <?php elseif (!$beverageCardActiveStructuredFilter): ?>
           <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
         <?php endif; ?>
         <div class="button-row button-row--start">
           <a class="button-secondary" href="<?= h((string)$beverageCard['public_path']) ?>">Detail lístku</a>
+          <?php if (foodCardCanAcceptOrders($beverageCard)): ?>
+            <a class="button-primary" href="<?= BASE_URL ?>/food/order.php?slug=<?= rawurlencode((string)$beverageCard['slug']) ?>">Poptat objednávku</a>
+          <?php endif; ?>
         </div>
       <?php else: ?>
         <p class="empty-state">Aktuální nápojový lístek zatím není k dispozici.</p>

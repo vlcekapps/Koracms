@@ -19,6 +19,12 @@ $foodStructuredAllergenLegend = foodStructuredAllergenLegend($foodStructuredSect
         <?php $foodSectionTitleId = $foodStructuredMenuId . '-section-' . (int)$sectionIndex; ?>
         <section class="food-menu-section" aria-labelledby="<?= h($foodSectionTitleId) ?>">
           <h3 id="<?= h($foodSectionTitleId) ?>" class="food-menu-section__title"><?= h((string)$section['title']) ?></h3>
+          <?php if (!empty($section['is_today'])): ?>
+            <p class="food-menu-section__badge"><strong>Dnešní nabídka</strong></p>
+          <?php endif; ?>
+          <?php if (trim((string)($section['serving_label'] ?? '')) !== ''): ?>
+            <p class="food-menu-section__serving"><?= h((string)$section['serving_label']) ?></p>
+          <?php endif; ?>
           <?php if (trim((string)($section['description'] ?? '')) !== ''): ?>
             <p class="food-menu-section__description"><?= h((string)$section['description']) ?></p>
           <?php endif; ?>
@@ -45,6 +51,16 @@ $foodStructuredAllergenLegend = foodStructuredAllergenLegend($foodStructuredSect
                         <span>Alergeny: <?= h(implode(', ', $item['allergen_labels'])) ?></span>
                       <?php endif; ?>
                     </p>
+                  <?php endif; ?>
+                  <?php if (!empty($item['nutrition_labels'])): ?>
+                    <dl class="food-menu-item__nutrition">
+                      <?php foreach ($item['nutrition_labels'] as $nutritionLabel): ?>
+                        <div>
+                          <dt><?= h((string)$nutritionLabel['label']) ?></dt>
+                          <dd><?= h((string)$nutritionLabel['value']) ?></dd>
+                        </div>
+                      <?php endforeach; ?>
+                    </dl>
                   <?php endif; ?>
                 </div>
                 <?php if ((string)($item['price_label'] ?? '') !== ''): ?>

@@ -1040,10 +1040,30 @@ assert_equals(['vegetarian', 'spicy'], normalizeFoodDietaryFlags(['vegetarian', 
 assert_equals('129 Kč', foodPriceLabel('129.00', 'CZK'), 'food price renders Czech currency label');
 assert_equals('129,90 Kč (za porci)', foodPriceLabel('129.90', 'CZK', 'za porci'), 'food price renders decimal and note');
 assert_equals('Dle domluvy', foodPriceLabel(null, 'CZK', 'Dle domluvy'), 'food price can be empty with note');
+assert_equals('2026-07-02', normalizeFoodServingDate('2026-07-02'), 'food serving date accepts valid ISO date');
+assert_equals('', normalizeFoodServingDate('2026-02-31'), 'food serving date rejects impossible date');
+assert_equals('11:30', normalizeFoodServingTime('11:30'), 'food serving time accepts HH:MM');
+assert_equals('', normalizeFoodServingTime('24:00'), 'food serving time rejects invalid hour');
+assert_contains('2. července 2026', foodSectionServingLabel([
+    'serving_date' => '2026-07-02',
+    'serving_time_from' => '11:00',
+    'serving_time_to' => '14:00',
+    'serving_note' => 'Denní menu',
+]), 'food serving label contains Czech date');
+assert_contains('11:00–14:00', foodSectionServingLabel([
+    'serving_date' => '2026-07-02',
+    'serving_time_from' => '11:00',
+    'serving_time_to' => '14:00',
+]), 'food serving label contains time range');
+assert_equals(2100, normalizeFoodNutritionIntegerInput('2100'), 'food nutrition integer accepts whole number');
+assert_equals('12.50', normalizeFoodNutritionDecimalInput('12,5'), 'food nutrition decimal normalizes Czech comma');
+assert_equals(false, normalizeFoodNutritionDecimalInput('-1'), 'food nutrition decimal rejects negative values');
+assert_equals('12,50 g', foodNutritionDecimalLabel('12.50', 'g'), 'food nutrition decimal renders Czech label');
 
 $foodSectionsFixture = [
     [
         'title' => 'Polévky',
+        'serving_date' => '2026-07-02',
         'items' => [
             ['title' => 'Česnečka'],
             ['title' => 'Rajská polévka'],
@@ -1059,6 +1079,32 @@ $foodSectionsFixture = [
 assert_true(foodCardHasStructuredItems($foodSectionsFixture), 'food structured menu detects existing items');
 assert_equals(3, foodCardStructuredItemCount($foodSectionsFixture), 'food structured menu counts items across sections');
 assert_equals(['Česnečka', 'Rajská polévka'], foodCardItemPreviewLabels($foodSectionsFixture, 2), 'food structured menu preview keeps order and limit');
+assert_equals([
+    [
+        'title' => 'Polévky',
+        'serving_date' => '2026-07-02',
+        'items' => [
+            ['title' => 'Česnečka'],
+            ['title' => 'Rajská polévka'],
+        ],
+    ],
+], foodFilterSectionsByServingDate([
+    [
+        'title' => 'Polévky',
+        'serving_date' => '2026-07-02',
+        'items' => [
+            ['title' => 'Česnečka'],
+            ['title' => 'Rajská polévka'],
+        ],
+    ],
+    [
+        'title' => 'Hlavní jídla',
+        'serving_date' => '2026-07-03',
+        'items' => [
+            ['title' => 'Smažený sýr'],
+        ],
+    ],
+], '2026-07-02'), 'food serving date filter keeps only matching sections');
 
 $foodFilterState = normalizeFoodStructuredFilters([
     'dieta' => ['vegetarian', 'gluten_free', 'unknown'],
@@ -1108,6 +1154,46 @@ assert_equals([
 $foodFilterSql = foodStructuredFilterExistsSql($foodFilterState);
 assert_contains('EXISTS (SELECT 1 FROM cms_food_items fi', $foodFilterSql['sql'], 'food filter SQL uses structured items EXISTS');
 assert_equals(['vegetarian', 'gluten_free', 1, 7], $foodFilterSql['params'], 'food filter SQL keeps stable parameter order');
+assert_equals([
+    ['label' => 'Porce', 'value' => '1 porce'],
+    ['label' => 'Energie', 'value' => '2100 kJ'],
+    ['label' => 'Energie', 'value' => '500 kcal'],
+    ['label' => 'Bílkoviny', 'value' => '21,50 g'],
+    ['label' => 'Sacharidy', 'value' => '30 g'],
+    ['label' => 'Tuky', 'value' => '18,25 g'],
+    ['label' => 'Sůl', 'value' => '2 g'],
+], foodItemNutritionLabels([
+    'portion_label' => '1 porce',
+    'energy_kcal' => 500,
+    'energy_kj' => 2100,
+    'protein_g' => '21.50',
+    'carbs_g' => '30.00',
+    'fat_g' => '18.25',
+    'salt_g' => '2.00',
+]), 'food nutrition labels render filled values');
+assert_equals('new', normalizeFoodOrderStatus('bad-status'), 'food order status falls back to new');
+$foodOrderSnapshot = foodBuildOrderSnapshot([
+    10 => [
+        'id' => 10,
+        'title' => 'Smažený sýr',
+        'price_amount' => '129.90',
+        'price_currency' => 'CZK',
+        'price_note' => 'za porci',
+    ],
+    11 => [
+        'id' => 11,
+        'title' => 'Polévka',
+        'price_amount' => null,
+        'price_currency' => 'CZK',
+        'price_note' => '',
+    ],
+], [
+    10 => 2,
+    11 => 1,
+]);
+assert_equals(2, count($foodOrderSnapshot['items']), 'food order snapshot keeps selected items');
+assert_equals('259.80', $foodOrderSnapshot['total'], 'food order snapshot totals priced items');
+assert_equals('Smažený sýr', $foodOrderSnapshot['items'][0]['item_title'], 'food order snapshot stores item title');
 
 $foodStructuredData = foodCardStructuredData([
     'title' => 'Testovací lístek',
@@ -1124,6 +1210,9 @@ $foodStructuredData = foodCardStructuredData([
                     'price_amount' => '129.00',
                     'price_currency' => 'CZK',
                     'is_available' => 1,
+                    'has_nutrition' => true,
+                    'energy_kcal' => 500,
+                    'protein_g' => '21.50',
                     'image_url' => BASE_URL . '/uploads/media/syr.jpg',
                 ],
             ],
@@ -1135,6 +1224,7 @@ assert_contains('"@type":"MenuItem"', $foodStructuredData, 'food structured data
 assert_contains('"price":"129.00"', $foodStructuredData, 'food structured data contains price');
 assert_contains('"priceCurrency":"CZK"', $foodStructuredData, 'food structured data keeps ISO currency');
 assert_contains('"image":"', $foodStructuredData, 'food structured data contains item image');
+assert_contains('"@type":"NutritionInformation"', $foodStructuredData, 'food structured data contains nutrition information');
 
 $_SERVER['HTTP_USER_AGENT'] = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 assert_equals(true, isSocialPreviewCrawler(), 'Facebook crawler is detected as social preview crawler');

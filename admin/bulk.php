@@ -175,6 +175,14 @@ $moduleConfig = match ($module) {
         'log_prefix' => 'food',
         'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
             $ph = implode(',', array_fill(0, count($deleteIds), '?'));
+            $orderStmt = $pdo->prepare("SELECT id FROM cms_food_orders WHERE card_id IN ({$ph})");
+            $orderStmt->execute($deleteIds);
+            $orderIds = array_map('intval', array_column($orderStmt->fetchAll(), 'id'));
+            if ($orderIds !== []) {
+                $orderPh = implode(',', array_fill(0, count($orderIds), '?'));
+                $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$orderPh})")->execute($orderIds);
+            }
+            $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id IN ({$ph})")->execute($deleteIds);
             $pdo->prepare("DELETE FROM cms_food_items WHERE card_id IN ({$ph})")->execute($deleteIds);
             $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id IN ({$ph})")->execute($deleteIds);
             $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id IN ({$ph})")->execute($deleteIds);

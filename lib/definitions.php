@@ -315,6 +315,7 @@ function coreModuleDefinitions(): array
                 '/food/index.php',
                 '/food/archive.php',
                 '/food/card.php',
+                '/food/order.php',
             ],
             'public_nav_order' => 80,
             'profile_managed' => true,
@@ -323,6 +324,7 @@ function coreModuleDefinitions(): array
             'admin_paths' => [
                 '/admin/food.php',
                 '/admin/food_items.php',
+                '/admin/food_orders.php',
             ],
         ],
         'polls' => [

@@ -11,6 +11,7 @@ if (!isModuleEnabled('food')) {
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 $foodFilters = normalizeFoodStructuredFilters($_GET);
+$servingDateFilter = normalizeFoodServingDate((string)($_GET['den'] ?? ''));
 
 $foodCardRow = $pdo->query(
     "SELECT * FROM cms_food_cards
@@ -34,12 +35,14 @@ if ($foodCard !== null) {
     $foodCard['sections'] = foodLoadCardSections($pdo, (int)$foodCard['id']);
     $foodCard = hydrateFoodCardPresentation($foodCard);
     $foodCard = foodApplyStructuredFiltersToCard($foodCard, $foodFilters);
+    $foodCard = foodApplyServingDateToCard($foodCard, $servingDateFilter);
 }
 $beverageCard = $beverageCardRow ? hydrateFoodCardPresentation($beverageCardRow) : null;
 if ($beverageCard !== null) {
     $beverageCard['sections'] = foodLoadCardSections($pdo, (int)$beverageCard['id']);
     $beverageCard = hydrateFoodCardPresentation($beverageCard);
     $beverageCard = foodApplyStructuredFiltersToCard($beverageCard, $foodFilters);
+    $beverageCard = foodApplyServingDateToCard($beverageCard, $servingDateFilter);
 }
 
 renderPublicPage([
@@ -53,6 +56,7 @@ renderPublicPage([
         'foodCard' => $foodCard,
         'beverageCard' => $beverageCard,
         'foodFilters' => $foodFilters,
+        'servingDateFilter' => $servingDateFilter,
     ],
     'current_nav' => 'food',
     'body_class' => 'page-food-index',

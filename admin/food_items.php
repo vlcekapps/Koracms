@@ -28,6 +28,10 @@ $sectionState = [
     'id' => 0,
     'title' => '',
     'description' => '',
+    'serving_date' => '',
+    'serving_time_from' => '',
+    'serving_time_to' => '',
+    'serving_note' => '',
     'sort_order' => '0',
 ];
 $itemState = [
@@ -38,6 +42,13 @@ $itemState = [
     'price_amount' => '',
     'price_currency' => 'CZK',
     'price_note' => '',
+    'portion_label' => '',
+    'energy_kj' => '',
+    'energy_kcal' => '',
+    'protein_g' => '',
+    'carbs_g' => '',
+    'fat_g' => '',
+    'salt_g' => '',
     'media_id' => '',
     'image_alt_text' => '',
     'allergens' => [],
@@ -206,8 +217,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 "INSERT INTO cms_food_items
                  (card_id, section_id, title, description, price_amount, price_currency, price_note,
+                  portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
                   media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )->execute([
                 $cardId,
                 (int)$item['section_id'],
@@ -216,6 +228,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $item['price_amount'],
                 (string)$item['price_currency'],
                 (string)$item['price_note'],
+                (string)($item['portion_label'] ?? ''),
+                $item['energy_kj'] !== null ? (int)$item['energy_kj'] : null,
+                $item['energy_kcal'] !== null ? (int)$item['energy_kcal'] : null,
+                $item['protein_g'],
+                $item['carbs_g'],
+                $item['fat_g'],
+                $item['salt_g'],
                 $item['media_id'] !== null ? (int)$item['media_id'] : null,
                 (string)($item['image_alt_text'] ?? ''),
                 (string)$item['allergens'],
@@ -247,10 +266,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_section') {
         $sectionId = inputInt('post', 'section_id');
+        $servingDateInput = trim((string)($_POST['serving_date'] ?? ''));
+        $servingTimeFromInput = trim((string)($_POST['serving_time_from'] ?? ''));
+        $servingTimeToInput = trim((string)($_POST['serving_time_to'] ?? ''));
+        $servingDate = normalizeFoodServingDate($servingDateInput);
+        $servingTimeFrom = normalizeFoodServingTime($servingTimeFromInput);
+        $servingTimeTo = normalizeFoodServingTime($servingTimeToInput);
         $sectionState = [
             'id' => $sectionId ?? 0,
             'title' => trim((string)($_POST['title'] ?? '')),
             'description' => trim((string)($_POST['description'] ?? '')),
+            'serving_date' => $servingDateInput,
+            'serving_time_from' => $servingTimeFromInput,
+            'serving_time_to' => $servingTimeToInput,
+            'serving_note' => mb_substr(trim((string)($_POST['serving_note'] ?? '')), 0, 255),
             'sort_order' => (string)max(0, (int)($_POST['sort_order'] ?? 0)),
         ];
         $editSectionId = $sectionId;
@@ -258,16 +287,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($sectionState['title'] === '') {
             $error = 'Název sekce je povinný.';
             $fieldErrors[] = 'section_title';
+        } elseif ($servingDateInput !== '' && $servingDate === '') {
+            $error = 'Datum podávání musí být skutečné datum ve formátu RRRR-MM-DD.';
+            $fieldErrors[] = 'section_serving_date';
+        } elseif ($servingTimeFromInput !== '' && $servingTimeFrom === '') {
+            $error = 'Čas začátku podávání musí být ve formátu HH:MM.';
+            $fieldErrors[] = 'section_serving_time_from';
+        } elseif ($servingTimeToInput !== '' && $servingTimeTo === '') {
+            $error = 'Čas konce podávání musí být ve formátu HH:MM.';
+            $fieldErrors[] = 'section_serving_time_to';
+        } elseif ($servingTimeFrom !== '' && $servingTimeTo !== '' && $servingTimeTo < $servingTimeFrom) {
+            $error = 'Čas konce podávání nesmí být dříve než čas začátku.';
+            $fieldErrors[] = 'section_serving_time_from';
+            $fieldErrors[] = 'section_serving_time_to';
         } elseif ($sectionId !== null && !$sectionBelongsToCard($sectionId)) {
             $error = 'Upravovaná sekce nepatří k tomuto lístku.';
         } elseif ($sectionId !== null) {
             $pdo->prepare(
                 "UPDATE cms_food_sections
-                 SET title = ?, description = ?, sort_order = ?, updated_at = NOW()
+                 SET title = ?, description = ?, serving_date = ?, serving_time_from = ?, serving_time_to = ?,
+                     serving_note = ?, sort_order = ?, updated_at = NOW()
                  WHERE id = ? AND card_id = ?"
             )->execute([
                 $sectionState['title'],
                 $sectionState['description'],
+                $servingDate !== '' ? $servingDate : null,
+                $servingTimeFrom !== '' ? $servingTimeFrom : null,
+                $servingTimeTo !== '' ? $servingTimeTo : null,
+                $sectionState['serving_note'],
                 (int)$sectionState['sort_order'],
                 $sectionId,
                 $cardId,
@@ -282,9 +329,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sortOrder = (int)$maxStmt->fetchColumn();
             }
             $pdo->prepare(
-                "INSERT INTO cms_food_sections (card_id, title, description, sort_order)
-                 VALUES (?, ?, ?, ?)"
-            )->execute([$cardId, $sectionState['title'], $sectionState['description'], $sortOrder]);
+                "INSERT INTO cms_food_sections
+                 (card_id, title, description, serving_date, serving_time_from, serving_time_to, serving_note, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            )->execute([
+                $cardId,
+                $sectionState['title'],
+                $sectionState['description'],
+                $servingDate !== '' ? $servingDate : null,
+                $servingTimeFrom !== '' ? $servingTimeFrom : null,
+                $servingTimeTo !== '' ? $servingTimeTo : null,
+                $sectionState['serving_note'],
+                $sortOrder,
+            ]);
             logAction('food_section_add', "card={$cardId}");
             $redirectToItems('saved');
         }
@@ -294,6 +351,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $itemId = inputInt('post', 'item_id');
         $sectionId = inputInt('post', 'section_id');
         $priceAmount = normalizeFoodPriceInput((string)($_POST['price_amount'] ?? ''));
+        $energyKj = normalizeFoodNutritionIntegerInput((string)($_POST['energy_kj'] ?? ''));
+        $energyKcal = normalizeFoodNutritionIntegerInput((string)($_POST['energy_kcal'] ?? ''));
+        $proteinG = normalizeFoodNutritionDecimalInput((string)($_POST['protein_g'] ?? ''));
+        $carbsG = normalizeFoodNutritionDecimalInput((string)($_POST['carbs_g'] ?? ''));
+        $fatG = normalizeFoodNutritionDecimalInput((string)($_POST['fat_g'] ?? ''));
+        $saltG = normalizeFoodNutritionDecimalInput((string)($_POST['salt_g'] ?? ''));
         $mediaId = inputInt('post', 'media_id') ?? 0;
         $media = $mediaId > 0 ? mediaGetById($mediaId) : null;
         $mediaIsValid = $mediaId <= 0 || (is_array($media) && mediaIsPublic($media) && mediaCanPreviewImage($media));
@@ -307,6 +370,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'price_amount' => $priceAmount !== false && $priceAmount !== null ? $priceAmount : trim((string)($_POST['price_amount'] ?? '')),
             'price_currency' => normalizeFoodCurrency((string)($_POST['price_currency'] ?? 'CZK')),
             'price_note' => trim((string)($_POST['price_note'] ?? '')),
+            'portion_label' => mb_substr(trim((string)($_POST['portion_label'] ?? '')), 0, 80),
+            'energy_kj' => $energyKj !== false && $energyKj !== null ? (string)$energyKj : trim((string)($_POST['energy_kj'] ?? '')),
+            'energy_kcal' => $energyKcal !== false && $energyKcal !== null ? (string)$energyKcal : trim((string)($_POST['energy_kcal'] ?? '')),
+            'protein_g' => $proteinG !== false && $proteinG !== null ? $proteinG : trim((string)($_POST['protein_g'] ?? '')),
+            'carbs_g' => $carbsG !== false && $carbsG !== null ? $carbsG : trim((string)($_POST['carbs_g'] ?? '')),
+            'fat_g' => $fatG !== false && $fatG !== null ? $fatG : trim((string)($_POST['fat_g'] ?? '')),
+            'salt_g' => $saltG !== false && $saltG !== null ? $saltG : trim((string)($_POST['salt_g'] ?? '')),
             'media_id' => $mediaId > 0 ? (string)$mediaId : '',
             'image_alt_text' => mb_substr(trim((string)($_POST['image_alt_text'] ?? '')), 0, 255),
             'allergens' => $allergens,
@@ -325,6 +395,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($priceAmount === false) {
             $error = 'Cena musí být číslo s nejvýše dvěma desetinnými místy.';
             $fieldErrors[] = 'item_price_amount';
+        } elseif ($energyKj === false) {
+            $error = 'Energie v kJ musí být celé nezáporné číslo.';
+            $fieldErrors[] = 'item_energy_kj';
+        } elseif ($energyKcal === false) {
+            $error = 'Energie v kcal musí být celé nezáporné číslo.';
+            $fieldErrors[] = 'item_energy_kcal';
+        } elseif ($proteinG === false) {
+            $error = 'Bílkoviny musí být číslo s nejvýše dvěma desetinnými místy.';
+            $fieldErrors[] = 'item_protein_g';
+        } elseif ($carbsG === false) {
+            $error = 'Sacharidy musí být číslo s nejvýše dvěma desetinnými místy.';
+            $fieldErrors[] = 'item_carbs_g';
+        } elseif ($fatG === false) {
+            $error = 'Tuky musí být číslo s nejvýše dvěma desetinnými místy.';
+            $fieldErrors[] = 'item_fat_g';
+        } elseif ($saltG === false) {
+            $error = 'Sůl musí být číslo s nejvýše dvěma desetinnými místy.';
+            $fieldErrors[] = 'item_salt_g';
         } elseif (!$mediaIsValid) {
             $error = 'Vyberte platný veřejný obrázek z knihovny médií, nebo ponechte obrázek prázdný.';
             $fieldErrors[] = 'item_media_id';
@@ -334,7 +422,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 "UPDATE cms_food_items
                  SET section_id = ?, title = ?, description = ?, price_amount = ?, price_currency = ?,
-                     price_note = ?, media_id = ?, image_alt_text = ?, allergens = ?, dietary_flags = ?, is_available = ?, sort_order = ?, updated_at = NOW()
+                     price_note = ?, portion_label = ?, energy_kj = ?, energy_kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, salt_g = ?,
+                     media_id = ?, image_alt_text = ?, allergens = ?, dietary_flags = ?, is_available = ?, sort_order = ?, updated_at = NOW()
                  WHERE id = ? AND card_id = ?"
             )->execute([
                 $sectionId,
@@ -343,6 +432,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $priceAmount,
                 $itemState['price_currency'],
                 $itemState['price_note'],
+                $itemState['portion_label'],
+                $energyKj,
+                $energyKcal,
+                $proteinG,
+                $carbsG,
+                $fatG,
+                $saltG,
                 $mediaId > 0 ? $mediaId : null,
                 $itemState['image_alt_text'],
                 implode(',', $allergens),
@@ -364,8 +460,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 "INSERT INTO cms_food_items
                  (card_id, section_id, title, description, price_amount, price_currency, price_note,
+                  portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
                   media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )->execute([
                 $cardId,
                 $sectionId,
@@ -374,6 +471,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $priceAmount,
                 $itemState['price_currency'],
                 $itemState['price_note'],
+                $itemState['portion_label'],
+                $energyKj,
+                $energyKcal,
+                $proteinG,
+                $carbsG,
+                $fatG,
+                $saltG,
                 $mediaId > 0 ? $mediaId : null,
                 $itemState['image_alt_text'],
                 implode(',', $allergens),
@@ -388,7 +492,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($editSectionId !== null && $error === '') {
-    $editSectionStmt = $pdo->prepare("SELECT id, title, description, sort_order FROM cms_food_sections WHERE id = ? AND card_id = ?");
+    $editSectionStmt = $pdo->prepare(
+        "SELECT id, title, description, serving_date, serving_time_from, serving_time_to, serving_note, sort_order
+         FROM cms_food_sections
+         WHERE id = ? AND card_id = ?"
+    );
     $editSectionStmt->execute([$editSectionId, $cardId]);
     $editSection = $editSectionStmt->fetch() ?: null;
     if ($editSection) {
@@ -396,6 +504,10 @@ if ($editSectionId !== null && $error === '') {
             'id' => (int)$editSection['id'],
             'title' => (string)$editSection['title'],
             'description' => (string)($editSection['description'] ?? ''),
+            'serving_date' => normalizeFoodServingDate((string)($editSection['serving_date'] ?? '')),
+            'serving_time_from' => normalizeFoodServingTime(substr((string)($editSection['serving_time_from'] ?? ''), 0, 5)),
+            'serving_time_to' => normalizeFoodServingTime(substr((string)($editSection['serving_time_to'] ?? ''), 0, 5)),
+            'serving_note' => (string)($editSection['serving_note'] ?? ''),
             'sort_order' => (string)(int)$editSection['sort_order'],
         ];
     } else {
@@ -419,6 +531,13 @@ if ($editItemId !== null && $error === '') {
             'price_amount' => $editItem['price_amount'] !== null ? (string)$editItem['price_amount'] : '',
             'price_currency' => (string)$editItem['price_currency'],
             'price_note' => (string)$editItem['price_note'],
+            'portion_label' => (string)$editItem['portion_label'],
+            'energy_kj' => $editItem['energy_kj'] !== null ? (string)$editItem['energy_kj'] : '',
+            'energy_kcal' => $editItem['energy_kcal'] !== null ? (string)$editItem['energy_kcal'] : '',
+            'protein_g' => $editItem['protein_g'] !== null ? (string)$editItem['protein_g'] : '',
+            'carbs_g' => $editItem['carbs_g'] !== null ? (string)$editItem['carbs_g'] : '',
+            'fat_g' => $editItem['fat_g'] !== null ? (string)$editItem['fat_g'] : '',
+            'salt_g' => $editItem['salt_g'] !== null ? (string)$editItem['salt_g'] : '',
             'media_id' => (int)$editItem['media_id'] > 0 ? (string)(int)$editItem['media_id'] : '',
             'image_alt_text' => (string)$editItem['image_alt_text'],
             'allergens' => $editItem['allergen_values'],
@@ -468,7 +587,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
 
 <section class="form-card" aria-labelledby="food-section-form-title">
   <h2 id="food-section-form-title"><?= (int)$sectionState['id'] > 0 ? 'Upravit sekci' : 'Přidat sekci' ?></h2>
-  <form method="post" novalidate<?= $error !== '' && in_array('section_title', $fieldErrors, true) ? ' aria-describedby="food-items-error"' : '' ?>>
+  <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['section_title', 'section_serving_date', 'section_serving_time_from', 'section_serving_time_to']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="action" value="save_section">
     <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
@@ -484,6 +603,38 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
 
       <label for="section-description">Popis sekce</label>
       <textarea id="section-description" name="description" rows="3"><?= h((string)$sectionState['description']) ?></textarea>
+
+      <fieldset class="admin-fieldset-card">
+        <legend>Denní nabídka</legend>
+        <p id="section-serving-help" class="field-help field-help--flush">Volitelné. Pokud sekce platí jen pro konkrétní den nebo čas, vyplňte datum podávání a případně časové rozmezí.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="section-serving-date">Datum podávání</label>
+            <input type="date" id="section-serving-date" name="serving_date"
+                   value="<?= h((string)$sectionState['serving_date']) ?>"
+                   <?= adminFieldAttributes('section_serving_date', $fieldErrors, [], ['section-serving-help']) ?>>
+            <?php adminRenderFieldError('section_serving_date', $fieldErrors, [], $error); ?>
+          </div>
+          <div class="form-group">
+            <label for="section-serving-time-from">Podávání od</label>
+            <input type="time" id="section-serving-time-from" name="serving_time_from"
+                   value="<?= h((string)$sectionState['serving_time_from']) ?>"
+                   <?= adminFieldAttributes('section_serving_time_from', $fieldErrors, [], ['section-serving-help']) ?>>
+            <?php adminRenderFieldError('section_serving_time_from', $fieldErrors, [], $error); ?>
+          </div>
+          <div class="form-group">
+            <label for="section-serving-time-to">Podávání do</label>
+            <input type="time" id="section-serving-time-to" name="serving_time_to"
+                   value="<?= h((string)$sectionState['serving_time_to']) ?>"
+                   <?= adminFieldAttributes('section_serving_time_to', $fieldErrors, [], ['section-serving-help']) ?>>
+            <?php adminRenderFieldError('section_serving_time_to', $fieldErrors, [], $error); ?>
+          </div>
+        </div>
+        <label for="section-serving-note">Poznámka k podávání</label>
+        <input type="text" id="section-serving-note" name="serving_note" maxlength="255"
+               value="<?= h((string)$sectionState['serving_note']) ?>"
+               aria-describedby="section-serving-help">
+      </fieldset>
 
       <label for="section-sort">Pořadí</label>
       <input type="number" id="section-sort" name="sort_order" min="0" class="admin-input-auto" value="<?= h((string)$sectionState['sort_order']) ?>" aria-describedby="section-sort-help">
@@ -502,7 +653,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
   <?php if ($sections === []): ?>
     <p class="field-help field-help--flush">Nejprve přidejte alespoň jednu sekci lístku.</p>
   <?php else: ?>
-    <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['item_title', 'item_section_id', 'item_price_amount', 'item_media_id']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
+    <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['item_title', 'item_section_id', 'item_price_amount', 'item_energy_kj', 'item_energy_kcal', 'item_protein_g', 'item_carbs_g', 'item_fat_g', 'item_salt_g', 'item_media_id']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="action" value="save_item">
       <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
@@ -576,6 +727,59 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
         </div>
 
         <fieldset class="admin-fieldset-card">
+          <legend>Výživové údaje</legend>
+          <p id="item-nutrition-help" class="field-help field-help--flush">Volitelné hodnoty pro návštěvníky. Nevyplněná pole se na veřejném webu nezobrazí.</p>
+          <label for="item-portion-label">Porce</label>
+          <input type="text" id="item-portion-label" name="portion_label" maxlength="80"
+                 value="<?= h((string)$itemState['portion_label']) ?>"
+                 aria-describedby="item-nutrition-help">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="item-energy-kj">Energie v kJ</label>
+              <input type="number" id="item-energy-kj" name="energy_kj" min="0" step="1"
+                     value="<?= h((string)$itemState['energy_kj']) ?>"
+                     <?= adminFieldAttributes('item_energy_kj', $fieldErrors, [], ['item-nutrition-help']) ?>>
+              <?php adminRenderFieldError('item_energy_kj', $fieldErrors, [], $error); ?>
+            </div>
+            <div class="form-group">
+              <label for="item-energy-kcal">Energie v kcal</label>
+              <input type="number" id="item-energy-kcal" name="energy_kcal" min="0" step="1"
+                     value="<?= h((string)$itemState['energy_kcal']) ?>"
+                     <?= adminFieldAttributes('item_energy_kcal', $fieldErrors, [], ['item-nutrition-help']) ?>>
+              <?php adminRenderFieldError('item_energy_kcal', $fieldErrors, [], $error); ?>
+            </div>
+            <div class="form-group">
+              <label for="item-protein-g">Bílkoviny v g</label>
+              <input type="text" id="item-protein-g" name="protein_g" inputmode="decimal"
+                     value="<?= h((string)$itemState['protein_g']) ?>"
+                     <?= adminFieldAttributes('item_protein_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
+              <?php adminRenderFieldError('item_protein_g', $fieldErrors, [], $error); ?>
+            </div>
+            <div class="form-group">
+              <label for="item-carbs-g">Sacharidy v g</label>
+              <input type="text" id="item-carbs-g" name="carbs_g" inputmode="decimal"
+                     value="<?= h((string)$itemState['carbs_g']) ?>"
+                     <?= adminFieldAttributes('item_carbs_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
+              <?php adminRenderFieldError('item_carbs_g', $fieldErrors, [], $error); ?>
+            </div>
+            <div class="form-group">
+              <label for="item-fat-g">Tuky v g</label>
+              <input type="text" id="item-fat-g" name="fat_g" inputmode="decimal"
+                     value="<?= h((string)$itemState['fat_g']) ?>"
+                     <?= adminFieldAttributes('item_fat_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
+              <?php adminRenderFieldError('item_fat_g', $fieldErrors, [], $error); ?>
+            </div>
+            <div class="form-group">
+              <label for="item-salt-g">Sůl v g</label>
+              <input type="text" id="item-salt-g" name="salt_g" inputmode="decimal"
+                     value="<?= h((string)$itemState['salt_g']) ?>"
+                     <?= adminFieldAttributes('item_salt_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
+              <?php adminRenderFieldError('item_salt_g', $fieldErrors, [], $error); ?>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="admin-fieldset-card">
           <legend>Alergeny</legend>
           <p class="field-help field-help--flush">Vyberte čísla alergenů, která se u položky zobrazí čtenářům textově.</p>
           <div class="checkbox-grid">
@@ -628,6 +832,11 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
           <h3 id="food-section-<?= (int)$section['id'] ?>"><?= h((string)$section['title']) ?></h3>
           <?php if (trim((string)($section['description'] ?? '')) !== ''): ?>
             <p class="field-help field-help--flush"><?= h((string)$section['description']) ?></p>
+          <?php endif; ?>
+          <?php if (trim((string)($section['serving_label'] ?? '')) !== ''): ?>
+            <p class="field-help field-help--flush">
+              <strong><?= !empty($section['is_today']) ? 'Dnešní nabídka: ' : 'Podávání: ' ?></strong><?= h((string)$section['serving_label']) ?>
+            </p>
           <?php endif; ?>
         </div>
         <div class="actions">
@@ -697,6 +906,14 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                   <strong><?= h((string)$item['title']) ?></strong>
                   <?php if (trim((string)($item['description'] ?? '')) !== ''): ?>
                     <br><small class="table-meta"><?= h((string)$item['description']) ?></small>
+                  <?php endif; ?>
+                  <?php if (!empty($item['nutrition_labels'])): ?>
+                    <br><small class="table-meta">Výživové údaje:
+                      <?= h(implode(', ', array_map(
+                          static fn (array $label): string => (string)$label['label'] . ': ' . (string)$label['value'],
+                          $item['nutrition_labels']
+                      ))) ?>
+                    </small>
                   <?php endif; ?>
                 </td>
                 <td>

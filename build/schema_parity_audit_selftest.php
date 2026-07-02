@@ -259,10 +259,20 @@ CREATE TABLE IF NOT EXISTS cms_faq_feedback (
   vote VARCHAR(20),
   visitor_hash VARCHAR(64)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_food_cards (
+  id INT,
+  orders_enabled TINYINT(1),
+  order_email VARCHAR(255),
+  order_instructions TEXT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_food_sections (
   id INT,
   card_id INT,
   title VARCHAR(255),
+  serving_date DATE,
+  serving_time_from TIME,
+  serving_time_to TIME,
+  serving_note VARCHAR(255),
   sort_order INT
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_food_items (
@@ -271,11 +281,31 @@ CREATE TABLE IF NOT EXISTS cms_food_items (
   section_id INT,
   title VARCHAR(255),
   price_amount DECIMAL(10,2),
+  portion_label VARCHAR(80),
+  energy_kj INT,
+  energy_kcal INT,
+  protein_g DECIMAL(8,2),
+  carbs_g DECIMAL(8,2),
+  fat_g DECIMAL(8,2),
+  salt_g DECIMAL(8,2),
   media_id INT,
   image_alt_text VARCHAR(255),
   allergens VARCHAR(100),
   dietary_flags VARCHAR(255),
   is_available TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_food_orders (
+  id INT,
+  card_id INT,
+  reference_code VARCHAR(32),
+  customer_email VARCHAR(255),
+  status VARCHAR(20)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_food_order_items (
+  id INT,
+  order_id INT,
+  item_title VARCHAR(255),
+  quantity INT
 ) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
@@ -372,15 +402,35 @@ PHP,
 // cms_faq_feedback
 // uq_cms_faq_feedback_visitor
 // idx_cms_faq_feedback_faq_vote
+// cms_food_cards.orders_enabled
+// cms_food_cards.order_email
+// cms_food_cards.order_instructions
 // cms_food_sections
+// cms_food_sections.serving_date
+// cms_food_sections.serving_time_from
+// cms_food_sections.serving_time_to
+// cms_food_sections.serving_note
 // idx_food_sections_card_order
 // cms_food_items
+// cms_food_items.portion_label
+// cms_food_items.energy_kj
+// cms_food_items.energy_kcal
+// cms_food_items.protein_g
+// cms_food_items.carbs_g
+// cms_food_items.fat_g
+// cms_food_items.salt_g
 // cms_food_items.media_id
 // cms_food_items.image_alt_text
 // idx_food_items_card_order
 // idx_food_items_section_order
 // idx_food_items_media
 // ft_food_items_search
+// cms_food_orders
+// uq_food_orders_reference
+// idx_food_orders_card_status
+// cms_food_order_items
+// idx_food_order_items_order
+// idx_food_order_items_item
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

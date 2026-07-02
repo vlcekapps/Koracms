@@ -611,6 +611,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             content      MEDIUMTEXT,
             valid_from   DATE         NULL DEFAULT NULL,
             valid_to     DATE         NULL DEFAULT NULL,
+            orders_enabled TINYINT(1) NOT NULL DEFAULT 0,
+            order_email  VARCHAR(255) NOT NULL DEFAULT '',
+            order_instructions TEXT,
             is_current   TINYINT(1)   NOT NULL DEFAULT 0,
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
@@ -627,6 +630,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             card_id     INT          NOT NULL,
             title       VARCHAR(255) NOT NULL,
             description TEXT,
+            serving_date DATE         NULL DEFAULT NULL,
+            serving_time_from TIME    NULL DEFAULT NULL,
+            serving_time_to TIME      NULL DEFAULT NULL,
+            serving_note VARCHAR(255) NOT NULL DEFAULT '',
             sort_order  INT          NOT NULL DEFAULT 0,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -642,6 +649,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             price_amount   DECIMAL(10,2) NULL DEFAULT NULL,
             price_currency VARCHAR(3)    NOT NULL DEFAULT 'CZK',
             price_note     VARCHAR(255)  NOT NULL DEFAULT '',
+            portion_label   VARCHAR(80)   NOT NULL DEFAULT '',
+            energy_kj       INT           NULL DEFAULT NULL,
+            energy_kcal     INT           NULL DEFAULT NULL,
+            protein_g       DECIMAL(8,2)  NULL DEFAULT NULL,
+            carbs_g         DECIMAL(8,2)  NULL DEFAULT NULL,
+            fat_g           DECIMAL(8,2)  NULL DEFAULT NULL,
+            salt_g          DECIMAL(8,2)  NULL DEFAULT NULL,
             media_id       INT           NULL DEFAULT NULL,
             image_alt_text VARCHAR(255)  NOT NULL DEFAULT '',
             allergens      VARCHAR(100)  NOT NULL DEFAULT '',
@@ -654,6 +668,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_food_items_section_order (section_id, sort_order, id),
             INDEX idx_food_items_media (media_id),
             FULLTEXT INDEX ft_food_items_search (title, description)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_food_orders (
+            id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            card_id         INT          NOT NULL,
+            card_title      VARCHAR(255) NOT NULL,
+            reference_code  VARCHAR(32)  NOT NULL,
+            customer_name   VARCHAR(255) NOT NULL,
+            customer_email  VARCHAR(255) NOT NULL,
+            customer_phone  VARCHAR(80)  NOT NULL DEFAULT '',
+            customer_note   TEXT,
+            status          ENUM('new','confirmed','rejected','completed','cancelled') NOT NULL DEFAULT 'new',
+            total_amount    DECIMAL(10,2) NULL DEFAULT NULL,
+            price_currency  VARCHAR(3)   NOT NULL DEFAULT 'CZK',
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_food_orders_reference (reference_code),
+            INDEX idx_food_orders_card_status (card_id, status, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_food_order_items (
+            id                INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            order_id          INT          NOT NULL,
+            item_id           INT          NULL DEFAULT NULL,
+            item_title        VARCHAR(255) NOT NULL,
+            quantity          INT          NOT NULL DEFAULT 1,
+            unit_price_amount DECIMAL(10,2) NULL DEFAULT NULL,
+            price_currency    VARCHAR(3)   NOT NULL DEFAULT 'CZK',
+            price_note        VARCHAR(255) NOT NULL DEFAULT '',
+            sort_order        INT          NOT NULL DEFAULT 0,
+            INDEX idx_food_order_items_order (order_id, sort_order, id),
+            INDEX idx_food_order_items_item (item_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_polls (

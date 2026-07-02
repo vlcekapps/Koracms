@@ -14,6 +14,7 @@ $pageHeading = (string)($pageHeading ?? 'Archiv lístků');
 $foodFilters = is_array($foodFilters ?? null) ? $foodFilters : normalizeFoodStructuredFilters([]);
 $foodFilterHiddenFields = is_array($foodFilterHiddenFields ?? null) ? $foodFilterHiddenFields : [];
 $foodFilterClearUrl = (string)($foodFilterClearUrl ?? $clearUrl);
+$servingDateFilter = normalizeFoodServingDate((string)($servingDateFilter ?? ''));
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="food-archive-title">
@@ -66,6 +67,11 @@ $foodFilterClearUrl = (string)($foodFilterClearUrl ?? $clearUrl);
               <option value="food"<?= $filterType === 'food' ? ' selected' : '' ?>>Jídelní lístky</option>
               <option value="beverage"<?= $filterType === 'beverage' ? ' selected' : '' ?>>Nápojové lístky</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label for="food-archive-day">Den podávání</label>
+            <input id="food-archive-day" class="form-control" type="date" name="den" value="<?= h($servingDateFilter) ?>">
           </div>
         </div>
 

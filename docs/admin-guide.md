@@ -426,6 +426,7 @@ Každý lístek může mít:
 - datum `Platí od` a `Platí do`
 - příznak `Použít jako aktuální lístek`
 - zveřejnění na webu
+- volitelné nezávazné objednávkové poptávky, cílový e-mail a instrukce pro zákazníka
 
 Pokud je u typu označený nový aktuální lístek, předchozí aktuální lístek stejného typu se při uložení automaticky odznačí.
 
@@ -434,16 +435,24 @@ Pokud je u typu označený nový aktuální lístek, předchozí aktuální lís
 Z přehledu lístků i z editoru konkrétního lístku vede odkaz `Položky lístku`. Tam lze spravovat:
 
 - sekce lístku, například polévky, hlavní jídla nebo nápoje
+- den podávání sekce, čas od/do a poznámku k podávání pro denní nabídky
 - položky v sekcích
 - cenu, měnu a volitelnou poznámku k ceně
 - alergeny podle číselníku 1-14
 - dietní štítky, například vegetariánské, veganské, bez lepku, bez laktózy, pikantní nebo alkohol
+- volitelné výživové údaje položky: porce, energie v kJ/kcal, bílkoviny, sacharidy, tuky a sůl
 - volitelný obrázek z veřejných obrázků knihovny médií a vlastní alt text obrázku
 - dostupnost položky a pořadí v sekci
 
 Správa položek nabízí i rychlé bezpečné akce: sekce a položky lze posouvat nahoru/dolů, položku lze duplikovat a vybrané položky lze hromadně označit jako dostupné nebo nedostupné.
 
 Pokud lístek žádné strukturované položky nemá, veřejný web dál použije původní HTML obsah lístku. Pokud má lístek strukturované položky i HTML obsah, položky se zobrazí jako hlavní menu a HTML obsah jako doplňkové poznámky k lístku. Alergeny, dietní štítky a nedostupnost se zobrazují textově, ne jen barvou. U zobrazených strukturovaných položek se doplní také alergenová legenda, aby návštěvník nemusel význam čísel hádat.
+
+### Denní nabídky a nutriční údaje
+
+Denní nabídka se nastavuje u sekce lístku, ne u každé položky zvlášť. Pokud má sekce vyplněné datum podávání, veřejný detail lístku nabídne přepínání dnů přes filtr `den=YYYY-MM-DD`; dnešní sekce se zvýrazní jako `Dnešní nabídka`. Archiv při aktivním denním filtru zobrazí jen lístky, které mají odpovídající datovanou strukturovanou sekci.
+
+Výživové údaje jsou volitelné. Nevyplněná pole se veřejně nezobrazí. Pokud jsou u položky zadané, zobrazí se textově v přehledu položky a JSON-LD data detailu lístku doplní `NutritionInformation`, aby informace nebyly závislé jen na vizuálním stylu.
 
 ### Veřejné filtry strukturovaných položek
 
@@ -454,6 +463,12 @@ Veřejný index, archiv i detail konkrétního lístku podporují položkové fi
 - volbu `Pouze dostupné položky`
 
 Více dietních štítků se vyhodnocuje současně, takže položka musí splnit všechny vybrané štítky. Filtr `Bez alergenu` znamená, že se zobrazí jen položky, které vybrané alergeny neobsahují. Pokud je aktivní položkový filtr, starší HTML-only lístky se v archivu nezobrazují, protože jejich položky nejde bezpečně filtrovat.
+
+### Nezávazné objednávkové poptávky
+
+Objednávkové poptávky jsou volitelné a slouží jako nezávazný kontakt zákazníka, ne jako platební nebo skladový systém. Pokud je u lístku zapnete a lístek je veřejně viditelný, návštěvník se dostane na formulář `food/order.php?slug=...`, vybere dostupné položky, množství a vyplní kontaktní údaje.
+
+Formulář je chráněný CSRF tokenem, honeypotem, captchou a rate-limitem. Uložená poptávka drží snapshot názvu položky, ceny a měny, takže pozdější změna lístku nepřepíše historický požadavek. Notifikace se posílá na e-mail objednávek vyplněný u lístku, případně na kontaktní nebo administrační e-mail webu. V administraci je samostatný přehled `Objednávkové poptávky` s filtrem podle stavu a detail s bezpečnou změnou stavu `Nová / Potvrzená / Odmítnutá / Vyřízená / Zrušená`.
 
 ### Jak funguje platnost na webu
 
@@ -470,6 +485,7 @@ Více dietních štítků se vyhodnocuje současně, takže položka musí splni
 
 - Přehled lístků nově umí hledání, workflow stav, filtr podle typu i filtr podle časové platnosti.
 - Odkaz `Položky lístku` otevře samostatnou správu strukturovaných sekcí, cen, alergenů a dietních štítků.
+- Odkaz `Objednávkové poptávky` otevře administraci nezávazných objednávek Food modulu.
 - Z detailu i ze seznamu vede odkaz na historii revizí.
 - Revize zachycují změny typu, názvu, slugu, popisu, obsahu, platnosti, stavu aktuálnosti i zveřejnění.
 - Při změně slugu se automaticky uloží redirect ze staré adresy na novou.
@@ -483,16 +499,19 @@ Veřejný archiv nově podporuje:
 - filtrování podle typu
 - přepínání scope `Platí nyní / Připravujeme / Archivní / Všechny lístky`
 - filtrování strukturovaných položek podle dietních štítků, alergenů a dostupnosti
+- filtrování podle dne podávání strukturovaných sekcí
 - stránkování
 
 Detail lístku nově:
 
 - ukazuje jasný stav `Platí nyní / Připravujeme / Archivní`
 - zobrazuje strukturované sekce a položky, pokud jsou vyplněné
+- zvýrazňuje dnešní nabídku, zobrazuje čas podávání a volitelné nutriční údaje položek
 - zachovává aktivní položkové filtry i při návratu zpět do archivu
 - zachovává návrat do původního archivního kontextu
+- nabízí odkaz na nezávaznou objednávkovou poptávku, pokud je u lístku povolená
 - nabízí akci `Vytisknout`
-- vkládá structured data typu `Menu`; u strukturovaných položek doplňuje i `MenuSection`, `MenuItem`, cenu a obrázek, pokud je vybraný z veřejné knihovny médií
+- vkládá structured data typu `Menu`; u strukturovaných položek doplňuje i `MenuSection`, `MenuItem`, cenu, obrázek z veřejné knihovny médií a nutriční údaje, pokud jsou vyplněné
 
 ### Co patří do README a co sem
 

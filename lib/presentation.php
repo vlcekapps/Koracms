@@ -956,6 +956,11 @@ function formatCzechDate(string $datetime): string
          . ' ' . $dt->format('Y, H:i');
 }
 
+function formatCzechDateTime(string $datetime): string
+{
+    return formatCzechDate($datetime);
+}
+
 function formatCzechMonthYear(\DateTimeInterface $date): string
 {
     static $months = [
@@ -3048,6 +3053,196 @@ function foodStructuredFilterSummary(array $filters): array
     return $summary;
 }
 
+function normalizeFoodServingDate(string $value): string
+{
+    $value = trim($value);
+    if ($value === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return '';
+    }
+
+    $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    $errors = \DateTimeImmutable::getLastErrors();
+    if (!$date instanceof \DateTimeImmutable || (is_array($errors) && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+        return '';
+    }
+
+    return $date->format('Y-m-d');
+}
+
+function foodServingDateLabel(string $date): string
+{
+    $date = normalizeFoodServingDate($date);
+    if ($date === '') {
+        return '';
+    }
+
+    return formatCzechDate($date);
+}
+
+function normalizeFoodServingTime(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+    if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $value, $match) !== 1) {
+        return '';
+    }
+
+    return $match[1] . ':' . $match[2];
+}
+
+/**
+ * @param array<string,mixed> $section
+ */
+function foodSectionServingLabel(array $section): string
+{
+    $parts = [];
+    $date = normalizeFoodServingDate((string)($section['serving_date'] ?? ''));
+    if ($date !== '') {
+        $parts[] = foodServingDateLabel($date);
+    }
+
+    $timeFrom = normalizeFoodServingTime(substr((string)($section['serving_time_from'] ?? ''), 0, 5));
+    $timeTo = normalizeFoodServingTime(substr((string)($section['serving_time_to'] ?? ''), 0, 5));
+    if ($timeFrom !== '' && $timeTo !== '') {
+        $parts[] = $timeFrom . '–' . $timeTo;
+    } elseif ($timeFrom !== '') {
+        $parts[] = 'od ' . $timeFrom;
+    } elseif ($timeTo !== '') {
+        $parts[] = 'do ' . $timeTo;
+    }
+
+    $note = trim((string)($section['serving_note'] ?? ''));
+    if ($note !== '') {
+        $parts[] = $note;
+    }
+
+    return implode(', ', $parts);
+}
+
+/**
+ * @param list<array<string,mixed>> $sections
+ * @return list<array<string,mixed>>
+ */
+function foodFilterSectionsByServingDate(array $sections, string $servingDate): array
+{
+    $servingDate = normalizeFoodServingDate($servingDate);
+    if ($servingDate === '') {
+        return $sections;
+    }
+
+    return array_values(array_filter(
+        $sections,
+        static fn (array $section): bool => normalizeFoodServingDate((string)($section['serving_date'] ?? '')) === $servingDate
+    ));
+}
+
+/**
+ * @return array{sql:string,params:list<string>}
+ */
+function foodServingDateExistsSql(string $servingDate, string $cardAlias = 'cms_food_cards'): array
+{
+    $servingDate = normalizeFoodServingDate($servingDate);
+    if ($servingDate === '') {
+        return ['sql' => '', 'params' => []];
+    }
+
+    return [
+        'sql' => "EXISTS (SELECT 1 FROM cms_food_sections fs WHERE fs.card_id = {$cardAlias}.id AND fs.serving_date = ?)",
+        'params' => [$servingDate],
+    ];
+}
+
+/**
+ * @return array<string,string>
+ */
+function foodServingDateQueryParams(string $servingDate): array
+{
+    $servingDate = normalizeFoodServingDate($servingDate);
+
+    return $servingDate !== '' ? ['den' => $servingDate] : [];
+}
+
+/**
+ * @return string|null|false
+ */
+function normalizeFoodNutritionDecimalInput(string $value)
+{
+    $normalized = str_replace(',', '.', trim($value));
+    if ($normalized === '') {
+        return null;
+    }
+    if (!preg_match('/^\d{1,5}(?:\.\d{1,2})?$/', $normalized)) {
+        return false;
+    }
+
+    return number_format((float)$normalized, 2, '.', '');
+}
+
+/**
+ * @return int|null|false
+ */
+function normalizeFoodNutritionIntegerInput(string $value)
+{
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+    if (!preg_match('/^\d{1,6}$/', $value)) {
+        return false;
+    }
+
+    return (int)$value;
+}
+
+function foodNutritionDecimalLabel(?string $value, string $unit): string
+{
+    $value = $value !== null ? trim($value) : '';
+    if ($value === '') {
+        return '';
+    }
+    $number = (float)$value;
+    $formatted = number_format($number, (floor($number) === $number ? 0 : 2), ',', ' ');
+
+    return $formatted . ' ' . $unit;
+}
+
+/**
+ * @param array<string,mixed> $item
+ * @return list<array{label:string,value:string}>
+ */
+function foodItemNutritionLabels(array $item): array
+{
+    $labels = [];
+    $portion = trim((string)($item['portion_label'] ?? ''));
+    if ($portion !== '') {
+        $labels[] = ['label' => 'Porce', 'value' => $portion];
+    }
+    foreach ([
+        'energy_kj' => ['Energie', 'kJ'],
+        'energy_kcal' => ['Energie', 'kcal'],
+    ] as $key => [$label, $unit]) {
+        $value = $item[$key] ?? null;
+        if ($value !== null && $value !== '') {
+            $labels[] = ['label' => $label, 'value' => (int)$value . ' ' . $unit];
+        }
+    }
+    foreach ([
+        'protein_g' => 'Bílkoviny',
+        'carbs_g' => 'Sacharidy',
+        'fat_g' => 'Tuky',
+        'salt_g' => 'Sůl',
+    ] as $key => $label) {
+        $value = foodNutritionDecimalLabel(isset($item[$key]) ? (string)$item[$key] : null, 'g');
+        if ($value !== '') {
+            $labels[] = ['label' => $label, 'value' => $value];
+        }
+    }
+
+    return $labels;
+}
+
 /**
  * @param array<string,mixed> $item
  * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
@@ -3234,6 +3429,16 @@ function hydrateFoodItemPresentation(array $item): array
     $item['price_currency'] = normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK'));
     $item['price_note'] = trim((string)($item['price_note'] ?? ''));
     $item['price_label'] = foodPriceLabel($priceAmount, (string)$item['price_currency'], (string)$item['price_note']);
+    $item['portion_label'] = mb_substr(trim((string)($item['portion_label'] ?? '')), 0, 80);
+    $item['energy_kj'] = isset($item['energy_kj']) && $item['energy_kj'] !== '' ? max(0, (int)$item['energy_kj']) : null;
+    $item['energy_kcal'] = isset($item['energy_kcal']) && $item['energy_kcal'] !== '' ? max(0, (int)$item['energy_kcal']) : null;
+    foreach (['protein_g', 'carbs_g', 'fat_g', 'salt_g'] as $nutritionKey) {
+        $item[$nutritionKey] = isset($item[$nutritionKey]) && $item[$nutritionKey] !== ''
+            ? number_format(max(0.0, (float)$item[$nutritionKey]), 2, '.', '')
+            : null;
+    }
+    $item['nutrition_labels'] = foodItemNutritionLabels($item);
+    $item['has_nutrition'] = $item['nutrition_labels'] !== [];
     $item['is_available'] = (int)($item['is_available'] ?? 1) === 1 ? 1 : 0;
     $item['media_id'] = (int)($item['media_id'] ?? 0);
     $item['image_alt_text'] = mb_substr(trim((string)($item['image_alt_text'] ?? '')), 0, 255);
@@ -3280,7 +3485,7 @@ function hydrateFoodItemPresentation(array $item): array
 function foodLoadCardSections(PDO $pdo, int $cardId): array
 {
     $sectionStmt = $pdo->prepare(
-        "SELECT id, card_id, title, description, sort_order
+        "SELECT id, card_id, title, description, serving_date, serving_time_from, serving_time_to, serving_note, sort_order
          FROM cms_food_sections
          WHERE card_id = ?
          ORDER BY sort_order, id"
@@ -3293,7 +3498,8 @@ function foodLoadCardSections(PDO $pdo, int $cardId): array
 
     $itemStmt = $pdo->prepare(
         "SELECT fi.id, fi.card_id, fi.section_id, fi.title, fi.description, fi.price_amount, fi.price_currency,
-                fi.price_note, fi.media_id, fi.image_alt_text, fi.allergens, fi.dietary_flags, fi.is_available, fi.sort_order,
+                fi.price_note, fi.portion_label, fi.energy_kj, fi.energy_kcal, fi.protein_g, fi.carbs_g, fi.fat_g, fi.salt_g,
+                fi.media_id, fi.image_alt_text, fi.allergens, fi.dietary_flags, fi.is_available, fi.sort_order,
                 m.filename AS media_filename, m.original_name AS media_original_name, m.mime_type AS media_mime_type,
                 m.visibility AS media_visibility, m.alt_text AS media_alt_text
          FROM cms_food_items fi
@@ -3308,8 +3514,15 @@ function foodLoadCardSections(PDO $pdo, int $cardId): array
     }
 
     $result = [];
+    $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
     foreach ($sections as $section) {
         $sectionId = (int)$section['id'];
+        $section['serving_date'] = normalizeFoodServingDate((string)($section['serving_date'] ?? ''));
+        $section['serving_time_from'] = normalizeFoodServingTime(substr((string)($section['serving_time_from'] ?? ''), 0, 5));
+        $section['serving_time_to'] = normalizeFoodServingTime(substr((string)($section['serving_time_to'] ?? ''), 0, 5));
+        $section['serving_note'] = mb_substr(trim((string)($section['serving_note'] ?? '')), 0, 255);
+        $section['serving_label'] = foodSectionServingLabel($section);
+        $section['is_today'] = $section['serving_date'] !== '' && $section['serving_date'] === $today;
         $section['items'] = $itemsBySection[$sectionId] ?? [];
         $section['item_count'] = count($section['items']);
         $result[] = $section;
@@ -3354,6 +3567,42 @@ function foodApplyStructuredFiltersToCard(array $card, array $filters): array
     $card['structured_item_count'] = foodCardStructuredItemCount($card['sections']);
 
     return $card;
+}
+
+/**
+ * @param array<string,mixed> $card
+ * @return array<string,mixed>
+ */
+function foodApplyServingDateToCard(array $card, string $servingDate): array
+{
+    $servingDate = normalizeFoodServingDate($servingDate);
+    $sourceSections = is_array($card['sections'] ?? null) ? $card['sections'] : [];
+    $card['serving_date_filter'] = $servingDate;
+    $card['serving_date_filter_active'] = $servingDate !== '';
+    $card['has_structured_source_items'] = $card['has_structured_source_items'] ?? foodCardHasStructuredItems($sourceSections);
+    if ($servingDate === '') {
+        return $card;
+    }
+    $card['source_sections'] = $card['source_sections'] ?? $sourceSections;
+    $card['sections'] = foodFilterSectionsByServingDate($sourceSections, $servingDate);
+    $card['has_structured_items'] = foodCardHasStructuredItems($card['sections']);
+    $card['structured_item_count'] = foodCardStructuredItemCount($card['sections']);
+
+    return $card;
+}
+
+/**
+ * @param array<string,mixed> $card
+ */
+function foodCardHasTodaySection(array $card): bool
+{
+    foreach (($card['sections'] ?? []) as $section) {
+        if (!empty($section['is_today'])) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -3416,6 +3665,9 @@ function foodRevisionSnapshot(array $card): array
         'content' => (string)($card['content'] ?? ''),
         'valid_from' => (string)($card['valid_from'] ?? ''),
         'valid_to' => (string)($card['valid_to'] ?? ''),
+        'orders_enabled' => (string)(int)($card['orders_enabled'] ?? 0),
+        'order_email' => (string)($card['order_email'] ?? ''),
+        'order_instructions' => (string)($card['order_instructions'] ?? ''),
         'is_current' => (string)(int)($card['is_current'] ?? 0),
         'is_published' => (string)(int)($card['is_published'] ?? 0),
         'status' => (string)($card['status'] ?? 'published'),
@@ -3501,6 +3753,27 @@ function foodCardStructuredData(array $card): string
             if ($itemImageUrl !== '') {
                 $menuItem['image'] = siteUrl(str_starts_with($itemImageUrl, BASE_URL) ? substr($itemImageUrl, strlen(BASE_URL)) : $itemImageUrl);
             }
+            if (!empty($item['has_nutrition'])) {
+                $nutrition = ['@type' => 'NutritionInformation'];
+                if (!empty($item['energy_kcal'])) {
+                    $nutrition['calories'] = (int)$item['energy_kcal'] . ' kcal';
+                }
+                if (!empty($item['protein_g'])) {
+                    $nutrition['proteinContent'] = foodNutritionDecimalLabel((string)$item['protein_g'], 'g');
+                }
+                if (!empty($item['carbs_g'])) {
+                    $nutrition['carbohydrateContent'] = foodNutritionDecimalLabel((string)$item['carbs_g'], 'g');
+                }
+                if (!empty($item['fat_g'])) {
+                    $nutrition['fatContent'] = foodNutritionDecimalLabel((string)$item['fat_g'], 'g');
+                }
+                if (!empty($item['salt_g'])) {
+                    $nutrition['sodiumContent'] = foodNutritionDecimalLabel((string)$item['salt_g'], 'g soli');
+                }
+                if (count($nutrition) > 1) {
+                    $menuItem['nutrition'] = $nutrition;
+                }
+            }
             $priceAmount = trim((string)($item['price_amount'] ?? ''));
             if ($priceAmount !== '') {
                 $menuItem['offers'] = [
@@ -3553,6 +3826,9 @@ function hydrateFoodCardPresentation(array $card): array
     $card['state_key'] = foodCardCurrentState($card);
     $card['state_label'] = foodCardStateLabel((string)$card['state_key']);
     $card['public_path'] = foodCardPublicPath($card);
+    $card['orders_enabled'] = (int)($card['orders_enabled'] ?? 0) === 1 ? 1 : 0;
+    $card['order_email'] = trim((string)($card['order_email'] ?? ''));
+    $card['order_instructions'] = trim((string)($card['order_instructions'] ?? ''));
     $card['is_publicly_visible'] = ((string)($card['status'] ?? 'published') === 'published')
         && (int)($card['is_published'] ?? 1) === 1;
     $card['is_temporally_active'] = (string)$card['state_key'] === 'current';
@@ -3561,6 +3837,137 @@ function hydrateFoodCardPresentation(array $card): array
     $card['structured_item_count'] = foodCardStructuredItemCount($card['sections']);
 
     return $card;
+}
+
+/**
+ * @return array<string,string>
+ */
+function foodOrderStatusLabels(): array
+{
+    return [
+        'new' => 'Nová',
+        'confirmed' => 'Potvrzená',
+        'rejected' => 'Odmítnutá',
+        'completed' => 'Vyřízená',
+        'cancelled' => 'Zrušená',
+    ];
+}
+
+function normalizeFoodOrderStatus(string $status): string
+{
+    return array_key_exists($status, foodOrderStatusLabels()) ? $status : 'new';
+}
+
+function foodOrderStatusLabel(string $status): string
+{
+    $status = normalizeFoodOrderStatus($status);
+
+    return foodOrderStatusLabels()[$status];
+}
+
+/**
+ * @param array<string,mixed> $card
+ */
+function foodCardOrderRecipient(array $card): string
+{
+    $email = trim((string)($card['order_email'] ?? ''));
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return $email;
+    }
+    foreach ([getSetting('contact_email', ''), getSetting('admin_email', '')] as $fallback) {
+        $fallback = trim((string)$fallback);
+        if ($fallback !== '' && filter_var($fallback, FILTER_VALIDATE_EMAIL)) {
+            return $fallback;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * @param list<array<string,mixed>> $sections
+ * @return list<array<string,mixed>>
+ */
+function foodOrderSelectableItems(array $sections): array
+{
+    $items = [];
+    foreach ($sections as $section) {
+        foreach (($section['items'] ?? []) as $item) {
+            if (is_array($item) && (int)($item['is_available'] ?? 1) === 1) {
+                $items[] = $item;
+            }
+        }
+    }
+
+    return $items;
+}
+
+/**
+ * @param array<string,mixed> $card
+ */
+function foodCardCanAcceptOrders(array $card): bool
+{
+    return !empty($card['orders_enabled'])
+        && !empty($card['is_publicly_visible'])
+        && foodOrderSelectableItems(is_array($card['sections'] ?? null) ? $card['sections'] : []) !== [];
+}
+
+function uniqueFoodOrderReferenceCode(PDO $pdo): string
+{
+    $date = date('Ymd');
+    for ($attempt = 0; $attempt < 10; $attempt++) {
+        $code = 'JDL-' . $date . '-' . strtoupper(bin2hex(random_bytes(2)));
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_orders WHERE reference_code = ?");
+        $stmt->execute([$code]);
+        if ((int)$stmt->fetchColumn() === 0) {
+            return $code;
+        }
+    }
+
+    return 'JDL-' . $date . '-' . strtoupper(bin2hex(random_bytes(4)));
+}
+
+/**
+ * @param array<int,array<string,mixed>> $itemsById
+ * @param array<int,int> $quantities
+ * @return array{items:list<array<string,mixed>>,total:string|null,currency:string}
+ */
+function foodBuildOrderSnapshot(array $itemsById, array $quantities): array
+{
+    $items = [];
+    $total = 0.0;
+    $hasPricedItem = false;
+    $currency = 'CZK';
+    $sortOrder = 10;
+    foreach ($quantities as $itemId => $quantity) {
+        if ($quantity <= 0 || !isset($itemsById[$itemId])) {
+            continue;
+        }
+        $item = $itemsById[$itemId];
+        $unitPrice = $item['price_amount'] !== null && $item['price_amount'] !== '' ? (string)$item['price_amount'] : null;
+        $itemCurrency = normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK'));
+        if ($unitPrice !== null) {
+            $hasPricedItem = true;
+            $total += ((float)$unitPrice) * $quantity;
+            $currency = $itemCurrency;
+        }
+        $items[] = [
+            'item_id' => $itemId,
+            'item_title' => (string)($item['title'] ?? ''),
+            'quantity' => $quantity,
+            'unit_price_amount' => $unitPrice,
+            'price_currency' => $itemCurrency,
+            'price_note' => (string)($item['price_note'] ?? ''),
+            'sort_order' => $sortOrder,
+        ];
+        $sortOrder += 10;
+    }
+
+    return [
+        'items' => $items,
+        'total' => $hasPricedItem ? number_format($total, 2, '.', '') : null,
+        'currency' => $currency,
+    ];
 }
 
 /**

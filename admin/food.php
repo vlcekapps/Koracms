@@ -81,6 +81,7 @@ adminHeader('Jídelní a nápojový lístek');
 <p class="button-row button-row--start admin-stack-sm">
   <a href="food_form.php?type=food" class="btn">+ Nový jídelní lístek</a>
   <a href="food_form.php?type=beverage" class="btn">+ Nový nápojový lístek</a>
+  <a href="food_orders.php" class="btn">Objednávkové poptávky</a>
 </p>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">

@@ -26,6 +26,9 @@ $card = $card ?: [
     'content' => '',
     'valid_from' => '',
     'valid_to' => '',
+    'orders_enabled' => 0,
+    'order_email' => '',
+    'order_instructions' => '',
     'is_current' => 0,
     'is_published' => 1,
     'status' => 'published',
@@ -39,6 +42,7 @@ $formError = match ($err) {
     'valid_from' => 'Datum „Platí od“ má neplatný formát.',
     'valid_to' => 'Datum „Platí do“ má neplatný formát.',
     'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
+    'order_email' => 'E-mail pro objednávky musí být platná e-mailová adresa.',
     default => '',
 };
 $fieldErrorMap = [
@@ -47,6 +51,7 @@ $fieldErrorMap = [
     'valid_from' => ['valid_from'],
     'valid_to' => ['valid_to'],
     'valid_range' => ['valid_from', 'valid_to'],
+    'order_email' => ['order_email'],
 ];
 $fieldErrorMessages = [
     'title' => 'Název lístku je povinný.',
@@ -54,6 +59,7 @@ $fieldErrorMessages = [
     'valid_from' => 'Datum „Platí od“ má neplatný formát.',
     'valid_to' => 'Datum „Platí do“ má neplatný formát.',
     'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
+    'order_email' => 'Zadejte platnou e-mailovou adresu pro objednávkové poptávky, nebo pole nechte prázdné.',
 ];
 
 $card = hydrateFoodCardPresentation($card);
@@ -144,6 +150,28 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
         <?php endif; ?>
       </div>
     </div>
+  </fieldset>
+
+  <fieldset class="admin-fieldset-card admin-fieldset-spaced">
+    <legend>Objednávkové poptávky</legend>
+    <p id="food-orders-help" class="field-help field-help--flush">Volitelné. Poptávky jsou nezávazné: návštěvník vybere položky, vyplní kontakt a administrace je pak ručně potvrdí nebo odmítne.</p>
+
+    <div class="admin-field-row">
+      <label class="admin-checkbox-label">
+        <input type="checkbox" name="orders_enabled" value="1" aria-describedby="food-orders-help"
+               <?= (int)($card['orders_enabled'] ?? 0) === 1 ? 'checked' : '' ?>>
+        Povolit objednávkové poptávky u tohoto lístku
+      </label>
+    </div>
+
+    <label for="order-email">E-mail pro objednávky</label>
+    <input type="email" id="order-email" name="order_email" maxlength="255"
+           value="<?= h((string)($card['order_email'] ?? '')) ?>"
+           <?= adminFieldAttributes('order_email', $err, $fieldErrorMap, ['food-orders-help']) ?>>
+    <?php adminRenderFieldError('order_email', $err, $fieldErrorMap, $fieldErrorMessages['order_email']); ?>
+
+    <label for="order-instructions">Instrukce pro objednávku</label>
+    <textarea id="order-instructions" name="order_instructions" rows="3" aria-describedby="food-orders-help"><?= h((string)($card['order_instructions'] ?? '')) ?></textarea>
   </fieldset>
 
   <?php if (currentUserHasCapability('content_approve_shared')): ?>

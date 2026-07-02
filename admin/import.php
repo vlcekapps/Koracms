@@ -900,8 +900,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_food_cards
                          (id, type, title, slug, description, content, valid_from, valid_to,
-                          is_current, is_published, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          orders_enabled, order_email, order_instructions, is_current, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['food_cards'] as $row) {
                         $title = trim((string)($row['title'] ?? ''));
@@ -916,6 +916,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
                         $updatedAt = $row['updated_at'] ?? $createdAt;
+                        $orderEmail = trim((string)($row['order_email'] ?? ''));
+                        if ($orderEmail !== '' && !filter_var($orderEmail, FILTER_VALIDATE_EMAIL)) {
+                            $orderEmail = '';
+                        }
                         $ins->execute([
                             (int)$row['id'],
                             $row['type'] ?? 'food',
@@ -925,6 +929,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['content'] ?? '',
                             $row['valid_from'] ?: null,
                             $row['valid_to'] ?: null,
+                            (int)($row['orders_enabled'] ?? 0) === 1 ? 1 : 0,
+                            $orderEmail,
+                            trim((string)($row['order_instructions'] ?? '')),
                             (int)($row['is_current'] ?? 0),
                             (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
@@ -939,8 +946,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sectionExistsStmt = $pdo->prepare("SELECT id FROM cms_food_cards WHERE id = ?");
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_food_sections
-                         (id, card_id, title, description, sort_order, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?)"
+                         (id, card_id, title, description, serving_date, serving_time_from, serving_time_to, serving_note, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['food_sections'] as $row) {
                         $cardId = (int)($row['card_id'] ?? 0);
@@ -959,6 +966,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $cardId,
                             $title,
                             $row['description'] ?? '',
+                            normalizeFoodServingDate((string)($row['serving_date'] ?? '')) ?: null,
+                            normalizeFoodServingTime(substr((string)($row['serving_time_from'] ?? ''), 0, 5)) ?: null,
+                            normalizeFoodServingTime(substr((string)($row['serving_time_to'] ?? ''), 0, 5)) ?: null,
+                            mb_substr(trim((string)($row['serving_note'] ?? '')), 0, 255),
                             max(0, (int)($row['sort_order'] ?? 0)),
                             $createdAt,
                             $updatedAt,
@@ -972,8 +983,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_food_items
                          (id, card_id, section_id, title, description, price_amount, price_currency, price_note,
+                          portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
                           media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     $mediaExistsStmt = $pdo->prepare(
                         "SELECT id FROM cms_media
@@ -1000,6 +1012,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
                         $updatedAt = $row['updated_at'] ?? $createdAt;
+                        $energyKj = normalizeFoodNutritionIntegerInput((string)($row['energy_kj'] ?? ''));
+                        $energyKcal = normalizeFoodNutritionIntegerInput((string)($row['energy_kcal'] ?? ''));
+                        $protein = normalizeFoodNutritionDecimalInput((string)($row['protein_g'] ?? ''));
+                        $carbs = normalizeFoodNutritionDecimalInput((string)($row['carbs_g'] ?? ''));
+                        $fat = normalizeFoodNutritionDecimalInput((string)($row['fat_g'] ?? ''));
+                        $salt = normalizeFoodNutritionDecimalInput((string)($row['salt_g'] ?? ''));
                         $ins->execute([
                             (int)($row['id'] ?? 0),
                             (int)$section['card_id'],
@@ -1009,6 +1027,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $priceAmount === false ? null : $priceAmount,
                             normalizeFoodCurrency((string)($row['price_currency'] ?? 'CZK')),
                             trim((string)($row['price_note'] ?? '')),
+                            mb_substr(trim((string)($row['portion_label'] ?? '')), 0, 80),
+                            $energyKj === false ? null : $energyKj,
+                            $energyKcal === false ? null : $energyKcal,
+                            $protein === false ? null : $protein,
+                            $carbs === false ? null : $carbs,
+                            $fat === false ? null : $fat,
+                            $salt === false ? null : $salt,
                             $mediaId > 0 ? $mediaId : null,
                             mb_substr(trim((string)($row['image_alt_text'] ?? '')), 0, 255),
                             implode(',', normalizeFoodAllergenList($row['allergens'] ?? '')),

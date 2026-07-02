@@ -28,6 +28,7 @@ $q = trim((string)($_GET['q'] ?? ''));
 $filterType = trim((string)($_GET['typ'] ?? 'vse'));
 $scope = trim((string)($_GET['scope'] ?? 'all'));
 $foodFilters = normalizeFoodStructuredFilters($_GET);
+$servingDateFilter = normalizeFoodServingDate((string)($_GET['den'] ?? ''));
 
 if (!in_array($filterType, ['food', 'beverage', 'vse'], true)) {
     $filterType = 'vse';
@@ -60,6 +61,11 @@ $structuredFilterSql = foodStructuredFilterExistsSql($foodFilters);
 if ($structuredFilterSql['sql'] !== '') {
     $whereParts[] = $structuredFilterSql['sql'];
     $params = array_merge($params, $structuredFilterSql['params']);
+}
+$servingDateSql = foodServingDateExistsSql($servingDateFilter);
+if ($servingDateSql['sql'] !== '') {
+    $whereParts[] = $servingDateSql['sql'];
+    $params = array_merge($params, $servingDateSql['params']);
 }
 
 $countCardsForScope = static function (string $scopeKey) use ($pdo, $whereParts, $params): int {
@@ -128,17 +134,17 @@ $cards = array_map(
     $cardsStmt->fetchAll()
 );
 $cards = array_map(
-    static fn (array $card): array => foodApplyStructuredFiltersToCard($card, $foodFilters),
+    static fn (array $card): array => foodApplyServingDateToCard(foodApplyStructuredFiltersToCard($card, $foodFilters), $servingDateFilter),
     foodAttachSectionsToCards($pdo, $cards)
 );
 
-$buildFoodArchiveUrl = static function (array $overrides = []) use ($q, $filterType, $scope, $foodFilters): string {
+$buildFoodArchiveUrl = static function (array $overrides = []) use ($q, $filterType, $scope, $foodFilters, $servingDateFilter): string {
     $query = [];
     $merged = array_merge([
         'q' => $q,
         'typ' => $filterType,
         'scope' => $scope,
-    ], foodStructuredFilterQueryParams($foodFilters), $overrides);
+    ], foodStructuredFilterQueryParams($foodFilters), foodServingDateQueryParams($servingDateFilter), $overrides);
 
     foreach ($merged as $key => $value) {
         if ($value === null || $value === '' || ($key === 'typ' && $value === 'vse') || ($key === 'scope' && $value === 'all')) {
@@ -191,6 +197,9 @@ if ($filterType !== 'vse') {
 foreach (foodStructuredFilterSummary($foodFilters) as $structuredFilterLabel) {
     $filterSummary[] = $structuredFilterLabel;
 }
+if ($servingDateFilter !== '') {
+    $filterSummary[] = 'den: ' . foodServingDateLabel($servingDateFilter);
+}
 
 $pageHeading = match ($scope) {
     'current' => 'Právě platné lístky',
@@ -213,6 +222,9 @@ if ($q !== '') {
 }
 if ($filterType !== 'vse') {
     $listingQuery['typ'] = $filterType;
+}
+if ($servingDateFilter !== '') {
+    $listingQuery['den'] = $servingDateFilter;
 }
 if ($page > 1) {
     $listingQuery['strana'] = (string)$page;
@@ -243,20 +255,23 @@ renderPublicPage([
             'q' => $q,
             'typ' => $filterType !== 'vse' ? $filterType : '',
             'scope' => $scope !== 'all' ? $scope : '',
+            'den' => $servingDateFilter,
         ],
         'foodFilterClearUrl' => $buildFoodArchiveUrl([
             'dieta' => null,
             'bez_alergenu' => null,
             'pouze_dostupne' => null,
+            'den' => null,
             'strana' => null,
         ]),
         'scopeLinks' => $scopeLinks,
         'filterSummary' => $filterSummary,
         'resultCountLabel' => foodCardsCountLabel($totalItems),
         'pagerHtml' => renderPager($page, $pages, $pagerBase, 'Stránkování archivu lístků', 'Předchozí stránka', 'Další stránka'),
-        'hasActiveFilters' => $q !== '' || $filterType !== 'vse' || $scope !== 'all' || foodStructuredFiltersAreActive($foodFilters),
+        'hasActiveFilters' => $q !== '' || $filterType !== 'vse' || $scope !== 'all' || $servingDateFilter !== '' || foodStructuredFiltersAreActive($foodFilters),
         'clearUrl' => BASE_URL . '/food/archive.php',
         'pageHeading' => $pageHeading,
+        'servingDateFilter' => $servingDateFilter,
     ],
     'current_nav' => 'food',
     'body_class' => 'page-food-archive',

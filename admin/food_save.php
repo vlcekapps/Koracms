@@ -14,6 +14,9 @@ $description = trim($_POST['description'] ?? '');
 $content = trim($_POST['content'] ?? '');
 $validFrom = trim($_POST['valid_from'] ?? '') ?: null;
 $validTo = trim($_POST['valid_to'] ?? '') ?: null;
+$ordersEnabled = isset($_POST['orders_enabled']) ? 1 : 0;
+$orderEmail = trim((string)($_POST['order_email'] ?? ''));
+$orderInstructions = trim((string)($_POST['order_instructions'] ?? ''));
 $fallback = BASE_URL . '/admin/food_form.php' . ($id ? '?id=' . $id : '');
 $isValidDate = static function (string $value): bool {
     $dateTime = DateTime::createFromFormat('Y-m-d', $value);
@@ -34,6 +37,10 @@ if ($validTo !== null && !$isValidDate($validTo)) {
 }
 if ($validFrom !== null && $validTo !== null && $validTo < $validFrom) {
     header('Location: ' . appendUrlQuery($fallback, ['err' => 'valid_range']));
+    exit;
+}
+if ($orderEmail !== '' && !filter_var($orderEmail, FILTER_VALIDATE_EMAIL)) {
+    header('Location: ' . appendUrlQuery($fallback, ['err' => 'order_email']));
     exit;
 }
 
@@ -85,7 +92,8 @@ if ($existingCard) {
         $pdo->prepare(
             "UPDATE cms_food_cards
              SET type = ?, title = ?, slug = ?, description = ?, content = ?,
-                 valid_from = ?, valid_to = ?, is_current = ?, is_published = ?, updated_at = NOW()
+                 valid_from = ?, valid_to = ?, orders_enabled = ?, order_email = ?, order_instructions = ?,
+                 is_current = ?, is_published = ?, updated_at = NOW()
              WHERE id = ?"
         )->execute([
             $type,
@@ -95,6 +103,9 @@ if ($existingCard) {
             $content,
             $validFrom,
             $validTo,
+            $ordersEnabled,
+            $orderEmail,
+            $orderInstructions,
             $isCurrent,
             $isPublished,
             $id,
@@ -103,7 +114,8 @@ if ($existingCard) {
         $pdo->prepare(
             "UPDATE cms_food_cards
              SET type = ?, title = ?, slug = ?, description = ?, content = ?,
-                 valid_from = ?, valid_to = ?, updated_at = NOW()
+                 valid_from = ?, valid_to = ?, orders_enabled = ?, order_email = ?, order_instructions = ?,
+                 updated_at = NOW()
              WHERE id = ?"
         )->execute([
             $type,
@@ -113,7 +125,10 @@ if ($existingCard) {
             $content,
             $validFrom,
             $validTo,
-                $id,
+            $ordersEnabled,
+            $orderEmail,
+            $orderInstructions,
+            $id,
         ]);
     }
 
@@ -125,6 +140,9 @@ if ($existingCard) {
         'content' => $content,
         'valid_from' => $validFrom,
         'valid_to' => $validTo,
+        'orders_enabled' => $ordersEnabled,
+        'order_email' => $orderEmail,
+        'order_instructions' => $orderInstructions,
         'is_current' => $canApproveContent ? $isCurrent : (int)($existingCard['is_current'] ?? 0),
         'is_published' => $canApproveContent ? $isPublished : (int)($existingCard['is_published'] ?? 0),
         'status' => (string)($existingCard['status'] ?? 'published'),
@@ -137,8 +155,9 @@ if ($existingCard) {
     $current = $canApproveContent ? $isCurrent : 0;
     $pdo->prepare(
         "INSERT INTO cms_food_cards
-         (type, title, slug, description, content, valid_from, valid_to, is_current, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+         (type, title, slug, description, content, valid_from, valid_to, orders_enabled, order_email, order_instructions,
+          is_current, is_published, status, author_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $type,
         $title,
@@ -147,6 +166,9 @@ if ($existingCard) {
         $content,
         $validFrom,
         $validTo,
+        $ordersEnabled,
+        $orderEmail,
+        $orderInstructions,
         $current,
         $visible,
         $status,
