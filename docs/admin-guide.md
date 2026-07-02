@@ -364,6 +364,8 @@ Na detailu článku může být blok `Související články`. Pokud autor v edi
 
 Pokud má blog aktivní série s publikovanými články, veřejný index nad výpisem článků nabídne blok `Série článků`. Detail článku potom vedle souvisejících článků ukáže i kontext série, pořadí dílů a odkazy na předchozí nebo další díl.
 
+U delších blogových článků default šablona automaticky vytvoří osnovu `V tomto článku`, pokud veřejně vyrenderovaný obsah obsahuje alespoň dva viditelné nadpisy `h2` nebo `h3`. Nadpisy dostanou stabilní kotvy, ručně zadaná `id` se zachovají a osnova se zobrazí nad samotným obsahem článku jako rychlá navigace pro čtenáře i čtečky obrazovky.
+
 ### Veřejní autoři
 
 Veřejný profil autora na `/author/slug-autora` zobrazuje medailonek autora a sekci `Obsah autora`. Ta sdružuje veřejně publikované články a novinky autora podle toho, které moduly jsou zapnuté. Návštěvník může použít filtry `Vše`, `Články` a `Novinky`; neplatný parametr `typ` se bezpečně chová jako `Vše`.

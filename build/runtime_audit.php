@@ -11363,6 +11363,7 @@ $blogSeriesControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blo
 $blogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
 $blogArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-article.php');
 $blogSeriesViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-series.php');
+$blogPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
 $blogFeedSource = (string)file_get_contents(dirname(__DIR__) . '/feed.php');
 $blogRouterSource = (string)file_get_contents(dirname(__DIR__) . '/blog_router.php');
 $blogHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
@@ -11910,6 +11911,19 @@ if (!str_contains($blogArticleControllerSource, 'articleSeriesNavigation($pdo, $
     || !str_contains($blogArticleViewSource, 'Předchozí díl')
     || !str_contains($blogArticleViewSource, 'Další díl')) {
     $blogAdminIssues[] = 'blog article detail is missing accessible article series navigation';
+}
+if (!str_contains($blogPresentationSource, 'function buildBlogArticleTableOfContents')
+    || !str_contains($blogPresentationSource, 'blogArticleHeadingIsVisibleForToc')
+    || !str_contains($blogPresentationSource, 'slugify($title)')
+    || !str_contains($blogPresentationSource, 'sr-only')
+    || !str_contains($blogArticleControllerSource, 'buildBlogArticleTableOfContents(renderContent')
+    || !str_contains($blogArticleViewSource, 'id="article-toc-heading"')
+    || !str_contains($blogArticleViewSource, 'aria-labelledby="article-toc-heading"')
+    || !str_contains($blogArticleViewSource, 'count($articleToc) >= 2')
+    || !str_contains($blogArticleViewSource, 'href="#<?= h($tocId) ?>"')
+    || !str_contains($blogPublicCssSource, '.article-toc')
+    || !str_contains($blogPublicCssSource, 'scroll-margin-top')) {
+    $blogAdminIssues[] = 'blog article detail is missing automatic table of contents guardrails';
 }
 if (!str_contains($blogSeriesControllerSource, 'publicBlogSeriesDetail($pdo, $blogId, $seriesSlug)')
     || !str_contains($blogSeriesControllerSource, 'renderPublicNotFoundPage')

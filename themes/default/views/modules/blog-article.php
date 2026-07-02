@@ -18,6 +18,8 @@ $showAuthorPanel = !empty($article['author_public_path'])
         || !empty($article['author_website_url'])
         || !empty($article['author_avatar_url'])
     );
+$articleContentHtml = isset($articleContentHtml) ? (string)$articleContentHtml : renderContent((string)($article['content'] ?? ''));
+$articleToc = isset($articleToc) && is_array($articleToc) ? $articleToc : [];
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="clanek-nadpis">
@@ -47,8 +49,29 @@ $showAuthorPanel = !empty($article['author_public_path'])
       <p class="article-summary"><strong><?= h($article['perex']) ?></strong></p>
     <?php endif; ?>
 
+    <?php if (count($articleToc) >= 2): ?>
+      <nav class="article-toc" aria-labelledby="article-toc-heading">
+        <h2 id="article-toc-heading" class="section-title section-title--compact">V tomto článku</h2>
+        <ol class="article-toc__list">
+          <?php foreach ($articleToc as $tocItem): ?>
+            <?php
+              $tocLevel = max(2, min(3, (int)($tocItem['level'] ?? 2)));
+              $tocId = trim((string)($tocItem['id'] ?? ''));
+              $tocTitle = trim((string)($tocItem['title'] ?? ''));
+              if ($tocId === '' || $tocTitle === '') {
+                  continue;
+              }
+              ?>
+            <li class="article-toc__item article-toc__item--level-<?= $tocLevel ?>">
+              <a href="#<?= h($tocId) ?>"><?= h($tocTitle) ?></a>
+            </li>
+          <?php endforeach; ?>
+        </ol>
+      </nav>
+    <?php endif; ?>
+
     <div class="prose article-shell__content">
-      <?= renderContent($article['content']) ?>
+      <?= $articleContentHtml ?>
     </div>
 
     <?php if (!empty($tags)): ?>

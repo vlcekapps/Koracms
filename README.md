@@ -288,6 +288,8 @@ Editor článku umožňuje ručně vybrat související články ze stejného bl
 
 Blogy mají také tematické série článků. Správa série patří ke konkrétnímu blogu, umožňuje název, slug, popis, aktivní stav a ruční pořadí článků. Editor článku pak nabídne zařazení jen do sérií cílového blogu. Čtenář na detailu článku uvidí blok `Tento článek je součástí série`, aktuální díl je označený pro asistivní technologie a veřejná stránka série má URL `/{blog-slug}/serie/{series-slug}`.
 
+Delší blogové články dostanou na veřejném detailu automatickou osnovu `V tomto článku`, pokud obsah obsahuje alespoň dva viditelné nadpisy `h2` nebo `h3`. Kora CMS doplní stabilní kotvy k nadpisům, ručně zadaná `id` zachová a odkazy v osnově pomáhají čtenářům i čtečkám obrazovky rychle přeskakovat mezi částmi článku.
+
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
 Ruční i automaticky ukládané `301/302` redirecty ověřují starou adresu jako interní cestu webu a novou adresu jako interní cestu nebo čistou `http/https` URL bez přihlašovacích údajů. Nejednoznačné cíle, nebezpečná schémata a CRLF znaky se odmítnou ještě před odesláním hlavičky `Location`.

@@ -595,6 +595,23 @@ assert_equals([12, 9, 7], normalizeRelatedArticleIds(['12', 9, 9, 0, -1, '7'], 0
 assert_equals([5, 8], normalizeRelatedArticleIds([5, 10, '8', 10], 10), 'related article IDs exclude the current article');
 assert_equals('serie-o-zpivajicich-hodinach', blogSeriesSlug('Série o zpívajících hodinách'), 'blog series slug normalizes Czech titles');
 assert_equals([12, 9, 7], normalizeBlogSeriesIds(['12', 9, 9, 0, -1, '7']), 'blog series IDs are positive and deduplicated');
+
+$emptyToc = buildBlogArticleTableOfContents('<p>Krátký článek bez nadpisu.</p>');
+assert_equals([], $emptyToc['items'], 'article TOC stays empty without headings');
+assert_equals('<p>Krátký článek bez nadpisu.</p>', $emptyToc['html'], 'article TOC keeps content without headings unchanged');
+
+$singleToc = buildBlogArticleTableOfContents('<h2>První část</h2><p>Text.</p>');
+assert_equals([['level' => 2, 'id' => 'prvni-cast', 'title' => 'První část']], $singleToc['items'], 'article TOC extracts a single h2 heading');
+assert_contains('<h2 id="prvni-cast">První část</h2>', $singleToc['html'], 'article TOC adds an id to h2');
+
+$duplicateToc = buildBlogArticleTableOfContents('<h2>První část</h2><h3>První část</h3>');
+assert_equals('prvni-cast-2', $duplicateToc['items'][1]['id'] ?? '', 'article TOC deduplicates generated heading ids');
+assert_contains('<h3 id="prvni-cast-2">První část</h3>', $duplicateToc['html'], 'article TOC writes deduplicated h3 id');
+
+$manualIdToc = buildBlogArticleTableOfContents('<h2 id="vlastni-kotva">Ruční nadpis</h2><h3 class="sr-only">Skrytý nadpis</h3><h2> </h2>');
+assert_equals([['level' => 2, 'id' => 'vlastni-kotva', 'title' => 'Ruční nadpis']], $manualIdToc['items'], 'article TOC preserves manual ids and ignores hidden or empty headings');
+assert_contains('<h2 id="vlastni-kotva">Ruční nadpis</h2>', $manualIdToc['html'], 'article TOC keeps manual heading id unchanged');
+
 assert_equals(
     '3 články, 2 novinky',
     authorContentSummaryLabel([

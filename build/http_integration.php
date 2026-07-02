@@ -3218,6 +3218,7 @@ try {
     $blogSeriesIssues = [];
     $seriesTitle = 'HTTP Série článků ' . bin2hex(random_bytes(3));
     $seriesSlug = 'http-serie-clanku-' . bin2hex(random_bytes(4));
+    $seriesArticleContent = '<h2>První část</h2><p>HTTP související články s osnovou.</p><h3>Druhá část</h3><p>Pokračování textu.</p><h2>První část</h2><p>Duplicitní nadpis.</p>';
     $seriesAdminPage = fetchUrl(
         $baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId,
         $adminSession['cookie'],
@@ -3277,7 +3278,7 @@ try {
             'title' => 'HTTP Hlavní článek se souvisejícími',
             'slug' => $mainRelatedSlug,
             'perex' => '',
-            'content' => '<p>HTTP související články.</p>',
+            'content' => $seriesArticleContent,
             'category_id' => '',
             'category_selection_mode' => 'manual',
             'tag_selection_mode' => 'manual',
@@ -3323,6 +3324,14 @@ try {
             || !str_contains($publicSeriesArticleResponse['body'], 'aria-current="page"')) {
             $blogSeriesIssues[] = 'veřejný detail článku nezobrazil přístupnou navigaci série';
         }
+        if (!str_contains($publicSeriesArticleResponse['body'], 'id="article-toc-heading"')
+            || !str_contains($publicSeriesArticleResponse['body'], 'V tomto článku')
+            || !str_contains($publicSeriesArticleResponse['body'], 'href="#prvni-cast"')
+            || !str_contains($publicSeriesArticleResponse['body'], '<h2 id="prvni-cast">První část</h2>')
+            || !str_contains($publicSeriesArticleResponse['body'], '<h3 id="druha-cast">Druhá část</h3>')
+            || !str_contains($publicSeriesArticleResponse['body'], '<h2 id="prvni-cast-2">První část</h2>')) {
+            $blogSeriesIssues[] = 'veřejný detail článku nezobrazil automatickou osnovu a kotvy nadpisů';
+        }
 
         $blogIndexSeriesResponse = fetchUrl(
             $baseUrl . BASE_URL . '/' . rawurlencode($relatedBlogSlug) . '/',
@@ -3354,7 +3363,7 @@ try {
         'title' => 'HTTP Hlavní článek se souvisejícími',
         'slug' => $mainRelatedSlug,
         'perex' => '',
-        'content' => '<p>HTTP související články.</p>',
+        'content' => $seriesArticleContent,
         'category_id' => '',
         'category_selection_mode' => 'manual',
         'tag_selection_mode' => 'manual',

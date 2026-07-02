@@ -1468,6 +1468,31 @@ body.theme-public textarea.form-control {
   color: var(--text-muted);
 }
 
+.article-toc {
+  margin: 1rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--warm-rgb), 0.06));
+}
+
+.article-toc__list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.article-toc__item {
+  margin-block: 0.35rem;
+}
+
+.article-toc__item--level-3 {
+  margin-left: 1rem;
+}
+
+.article-toc a {
+  font-weight: 700;
+}
+
 .content-reference {
   display: grid;
   gap: 0.5rem;
@@ -2239,6 +2264,10 @@ body.theme-public textarea.form-control {
 
 .article-shell__content {
   max-width: none;
+}
+
+.article-shell__content :where(h2, h3) {
+  scroll-margin-top: 6rem;
 }
 
 .article-shell__content img {

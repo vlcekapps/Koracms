@@ -801,6 +801,117 @@ function articleReadingMeta(string $text, int $viewCount): string
     return 'přibližná doba čtení ' . readingTime($text) . ' min, přečteno ' . max(0, $viewCount) . ' krát';
 }
 
+function blogArticleHeadingAttribute(string $attributes, string $name): ?string
+{
+    $pattern = '/\s' . preg_quote($name, '/') . '\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i';
+    if (preg_match($pattern, $attributes, $matches) !== 1) {
+        return null;
+    }
+
+    return html_entity_decode((string)($matches[1] ?? $matches[2] ?? $matches[3] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+function blogArticleHeadingIsVisibleForToc(string $attributes): bool
+{
+    $class = blogArticleHeadingAttribute($attributes, 'class') ?? '';
+    if (preg_match('/(?:^|\s)sr-only(?:\s|$)/i', $class) === 1) {
+        return false;
+    }
+
+    if (preg_match('/\shidden(?:\s|=|$)/i', $attributes) === 1) {
+        return false;
+    }
+
+    return strtolower(blogArticleHeadingAttribute($attributes, 'aria-hidden') ?? '') !== 'true';
+}
+
+function blogArticleHeadingSetId(string $attributes, string $id): string
+{
+    $idAttribute = ' id="' . h($id) . '"';
+    if (preg_match('/\sid\s*=/i', $attributes) !== 1) {
+        return rtrim($attributes) . $idAttribute;
+    }
+
+    return preg_replace(
+        '/\sid\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i',
+        $idAttribute,
+        $attributes,
+        1
+    ) ?? $attributes;
+}
+
+/**
+ * @return array{html:string,items:list<array{level:int,id:string,title:string}>}
+ */
+function buildBlogArticleTableOfContents(string $html): array
+{
+    if ($html === '' || preg_match('/<h[23]\b/i', $html) !== 1) {
+        return [
+            'html' => $html,
+            'items' => [],
+        ];
+    }
+
+    /** @var array<string,true> $reservedIds */
+    $reservedIds = [];
+    if (preg_match_all('/\sid\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', $html, $idMatches, PREG_SET_ORDER) >= 1) {
+        foreach ($idMatches as $idMatch) {
+            $reservedId = trim(html_entity_decode((string)($idMatch[1] ?? $idMatch[2] ?? $idMatch[3] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($reservedId !== '') {
+                $reservedIds[$reservedId] = true;
+            }
+        }
+    }
+
+    /** @var list<array{level:int,id:string,title:string}> $items */
+    $items = [];
+    $generatedIds = $reservedIds;
+    $processedHtml = preg_replace_callback(
+        '/<h([23])\b([^>]*)>(.*?)<\/h\1>/is',
+        static function (array $matches) use (&$items, &$generatedIds): string {
+            $level = (int)$matches[1];
+            $attributes = (string)$matches[2];
+            $innerHtml = (string)$matches[3];
+            $title = normalizePlainText(html_entity_decode(strip_tags($innerHtml), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+            if ($title === '' || !blogArticleHeadingIsVisibleForToc($attributes)) {
+                return (string)$matches[0];
+            }
+
+            $headingId = trim((string)(blogArticleHeadingAttribute($attributes, 'id') ?? ''));
+            if ($headingId === '') {
+                $baseId = slugify($title);
+                if ($baseId === '') {
+                    $baseId = 'cast';
+                }
+
+                $headingId = $baseId;
+                $suffix = 2;
+                while (isset($generatedIds[$headingId])) {
+                    $headingId = $baseId . '-' . $suffix;
+                    $suffix++;
+                }
+                $generatedIds[$headingId] = true;
+                $attributes = blogArticleHeadingSetId($attributes, $headingId);
+            }
+
+            $items[] = [
+                'level' => $level,
+                'id' => $headingId,
+                'title' => $title,
+            ];
+
+            return '<h' . $level . $attributes . '>' . $innerHtml . '</h' . $level . '>';
+        },
+        $html
+    );
+
+    return [
+        'html' => $processedHtml ?? $html,
+        'items' => $items,
+    ];
+}
+
 // ─────────────────────────────── Statické stránky ────────────────────────
 
 /**

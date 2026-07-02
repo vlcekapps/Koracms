@@ -219,6 +219,7 @@ try {
 
 $captchaExpr = captchaGenerate();
 
+$articleContent = buildBlogArticleTableOfContents(renderContent((string)($article['content'] ?? '')));
 $articleSeries = ($previewToken === '') ? articleSeriesNavigation($pdo, $article) : [];
 $related = ($previewToken === '') ? relatedArticles($pdo, $article, 3) : [];
 $articleBlog = $GLOBALS['current_blog'] ?? getBlogById((int)($article['blog_id'] ?? 1));
@@ -255,6 +256,8 @@ renderPublicPage([
     'view' => 'modules/blog-article',
     'view_data' => [
         'article' => $article,
+        'articleContentHtml' => $articleContent['html'],
+        'articleToc' => $articleContent['items'],
         'blog' => $articleBlog,
         'tags' => $tags,
         'articleSeries' => $articleSeries,
