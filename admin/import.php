@@ -193,6 +193,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Články importovány.';
                 }
 
+                if (!empty($data['article_tags']) && is_array($data['article_tags'])) {
+                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)");
+                    foreach ($data['article_tags'] as $row) {
+                        $articleId = (int)($row['article_id'] ?? 0);
+                        $tagId = (int)($row['tag_id'] ?? 0);
+                        if ($articleId <= 0 || $tagId <= 0) {
+                            continue;
+                        }
+                        $ins->execute([$articleId, $tagId]);
+                    }
+                    $summary[] = 'Vazby článků na štítky importovány.';
+                }
+
+                if (!empty($data['article_related']) && is_array($data['article_related'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_article_related (article_id, related_article_id, sort_order, created_at)
+                         VALUES (?, ?, ?, ?)"
+                    );
+                    foreach ($data['article_related'] as $row) {
+                        $articleId = (int)($row['article_id'] ?? 0);
+                        $relatedArticleId = (int)($row['related_article_id'] ?? 0);
+                        if ($articleId <= 0 || $relatedArticleId <= 0 || $articleId === $relatedArticleId) {
+                            continue;
+                        }
+                        $ins->execute([
+                            $articleId,
+                            $relatedArticleId,
+                            (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Ručně související články importovány.';
+                }
+
                 // Statické stránky
                 if (!empty($data['pages']) && is_array($data['pages'])) {
                     $ins = $pdo->prepare(

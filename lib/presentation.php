@@ -7219,21 +7219,159 @@ function formPublicUrl(array $form, array $query = []): string
 // ──────────────────────── Související články ─────────────────────────────
 
 /**
- * Vrátí související články z téhož blogu – prioritně se stejnou kategorií
- * nebo sdílenými štítky. Výsledky se řadí podle počtu společných štítků a data.
+ * @return list<int>
  */
+function loadArticleRelatedIds(PDO $pdo, int $articleId): array
+{
+    if ($articleId <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT related_article_id
+             FROM cms_article_related
+             WHERE article_id = ?
+             ORDER BY sort_order ASC, related_article_id ASC"
+        );
+        $stmt->execute([$articleId]);
+        return normalizeRelatedArticleIds($stmt->fetchAll(PDO::FETCH_COLUMN), $articleId);
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
 /**
+ * @param array<int, mixed> $ids
+ * @return list<int>
+ */
+function normalizeRelatedArticleIds(array $ids, int $excludeArticleId = 0): array
+{
+    $normalized = [];
+    foreach ($ids as $rawId) {
+        $relatedId = (int)$rawId;
+        if ($relatedId <= 0 || $relatedId === $excludeArticleId || in_array($relatedId, $normalized, true)) {
+            continue;
+        }
+        $normalized[] = $relatedId;
+    }
+
+    return $normalized;
+}
+
+/**
+ * @return list<array{id:int,title:string,display_date:string}>
+ */
+function relatedArticleOptions(PDO $pdo, int $blogId, int $excludeArticleId = 0): array
+{
+    if ($blogId <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, title, COALESCE(publish_at, created_at) AS display_date
+             FROM cms_articles
+             WHERE blog_id = ?
+               AND id <> ?
+               AND deleted_at IS NULL
+               AND status = 'published'
+               AND (publish_at IS NULL OR publish_at <= NOW())
+             ORDER BY COALESCE(publish_at, created_at) DESC, id DESC"
+        );
+        $stmt->execute([$blogId, max(0, $excludeArticleId)]);
+        $rows = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $rows[] = [
+                'id' => (int)$row['id'],
+                'title' => (string)$row['title'],
+                'display_date' => (string)($row['display_date'] ?? ''),
+            ];
+        }
+        return $rows;
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * @param list<int> $relatedArticleIds
+ */
+function saveArticleRelatedArticles(PDO $pdo, int $articleId, array $relatedArticleIds): void
+{
+    $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ?")->execute([$articleId]);
+    $normalizedRelatedIds = normalizeRelatedArticleIds($relatedArticleIds, $articleId);
+    if ($normalizedRelatedIds === []) {
+        return;
+    }
+
+    $insert = $pdo->prepare(
+        "INSERT IGNORE INTO cms_article_related (article_id, related_article_id, sort_order)
+         VALUES (?, ?, ?)"
+    );
+    foreach ($normalizedRelatedIds as $sortOrder => $relatedArticleId) {
+        $insert->execute([$articleId, $relatedArticleId, $sortOrder + 1]);
+    }
+}
+
+/**
+ * @param array<string, mixed> $article
+ * @return list<array<string, mixed>>
+ */
+function manualRelatedArticles(PDO $pdo, array $article, int $limit): array
+{
+    $articleId = (int)($article['id'] ?? 0);
+    $blogId = (int)($article['blog_id'] ?? 1);
+    if ($articleId <= 0 || $blogId <= 0 || $limit <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT a.id, a.title, a.slug, a.perex, a.image_file, a.blog_id,
+                    a.created_at, a.category_id,
+                    b.slug AS blog_slug,
+                    100 AS relevance_score
+             FROM cms_article_related ar
+             INNER JOIN cms_articles a ON a.id = ar.related_article_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE ar.article_id = ?
+               AND a.blog_id = ?
+               AND a.id <> ?
+               AND a.deleted_at IS NULL
+               AND a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             ORDER BY ar.sort_order ASC, ar.related_article_id ASC
+             LIMIT ?"
+        );
+        $stmt->execute([$articleId, $blogId, $articleId, $limit]);
+        return $stmt->fetchAll() ?: [];
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * Vrátí související články z téhož blogu. Ruční výběr autora má přednost,
+ * zbytek se doplní automaticky podle stejné kategorie, štítků a novosti.
+ *
  * @param array<string, mixed> $article
  * @return list<array<string, mixed>>
  */
 function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
 {
+    $limit = max(0, min(10, $limit));
     $articleId = (int)($article['id'] ?? 0);
     $blogId = (int)($article['blog_id'] ?? 1);
     $categoryId = $article['category_id'] ?? null;
 
-    if ($articleId <= 0) {
+    if ($articleId <= 0 || $limit <= 0) {
         return [];
+    }
+
+    $results = manualRelatedArticles($pdo, $article, $limit);
+    if (count($results) >= $limit) {
+        return array_slice($results, 0, $limit);
     }
 
     // Načtení ID štítků aktuálního článku
@@ -7266,10 +7404,17 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
     }
 
     $scoreExpr = $scoreParts !== [] ? implode(' + ', $scoreParts) : '0';
+    $excludeIds = array_values(array_unique(array_merge(
+        [$articleId],
+        array_map(static fn (array $row): int => (int)$row['id'], $results)
+    )));
+    $excludePlaceholders = implode(',', array_fill(0, count($excludeIds), '?'));
 
     $params[] = $blogId;
-    $params[] = $articleId;
-    $params[] = $limit;
+    foreach ($excludeIds as $excludeId) {
+        $params[] = $excludeId;
+    }
+    $params[] = $limit - count($results);
 
     try {
         $stmt = $pdo->prepare(
@@ -7280,7 +7425,7 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
              FROM cms_articles a
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
              WHERE a.blog_id = ?
-               AND a.id != ?
+               AND a.id NOT IN ({$excludePlaceholders})
                AND a.deleted_at IS NULL
                AND a.status = 'published'
                AND (a.publish_at IS NULL OR a.publish_at <= NOW())
@@ -7289,9 +7434,11 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
              LIMIT ?"
         );
         $stmt->execute($params);
-        $results = $stmt->fetchAll();
+        foreach ($stmt->fetchAll() as $row) {
+            $results[] = $row;
+        }
     } catch (\PDOException $e) {
-        $results = [];
+        // Automatický výběr je jen fallback. Ruční související články ponecháme.
     }
 
     // Pokud nemáme dostatek výsledků s relevancí, doplníme nejnovější z blogu

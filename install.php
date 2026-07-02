@@ -265,6 +265,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             PRIMARY KEY (article_id, tag_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_article_related (
+            article_id         INT      NOT NULL,
+            related_article_id INT      NOT NULL,
+            sort_order         INT      NOT NULL DEFAULT 0,
+            created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (article_id, related_article_id),
+            INDEX idx_article_related_order (article_id, sort_order),
+            INDEX idx_article_related_target (related_article_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_rate_limit (
             id           VARCHAR(64) NOT NULL PRIMARY KEY,
             attempts     INT         NOT NULL DEFAULT 1,

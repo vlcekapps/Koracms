@@ -94,6 +94,8 @@ function renderBlogFormCategoryOptions(array $tree, int $parentId = 0, int $dept
 
 $allTags = [];
 $articleTagIds = [];
+$relatedArticleIds = $id !== null ? loadArticleRelatedIds($pdo, $id) : [];
+$relatedArticleOptions = relatedArticleOptions($pdo, $currentBlogId, $id ?? 0);
 $sourceCategoryName = '';
 $sourceTagDetails = [];
 $noCategoryLabel = '– bez kategorie –';
@@ -129,6 +131,7 @@ if (isMultiBlog()) {
         $blogFormOptions[(int)$blogEntry['id']] = [
             'categories' => [],
             'tags' => [],
+            'related_articles' => [],
             'comments_default' => (int)($blogEntry['comments_default'] ?? 1),
             'can_manage_taxonomies' => canCurrentUserManageBlogTaxonomies((int)($blogEntry['id'] ?? 0)),
         ];
@@ -172,6 +175,38 @@ if (isMultiBlog()) {
     } catch (\PDOException $e) {
         koraLog('warning', 'admin article form taxonomy query failed', [
             'section' => 'all_tags',
+            'article_id' => $id,
+            'blog_id' => $currentBlogId,
+            'exception' => $e,
+        ]);
+    }
+
+    try {
+        $excludeArticleId = $id ?? 0;
+        $allRelatedStmt = $pdo->prepare(
+            "SELECT id, blog_id, title, COALESCE(publish_at, created_at) AS display_date
+             FROM cms_articles
+             WHERE id <> ?
+               AND deleted_at IS NULL
+               AND status = 'published'
+               AND (publish_at IS NULL OR publish_at <= NOW())
+             ORDER BY blog_id ASC, COALESCE(publish_at, created_at) DESC, id DESC"
+        );
+        $allRelatedStmt->execute([$excludeArticleId]);
+        foreach ($allRelatedStmt->fetchAll() as $relatedRow) {
+            $blogId = (int)($relatedRow['blog_id'] ?? 0);
+            if (!isset($blogFormOptions[$blogId])) {
+                continue;
+            }
+            $blogFormOptions[$blogId]['related_articles'][] = [
+                'id' => (int)$relatedRow['id'],
+                'title' => (string)$relatedRow['title'],
+                'display_date' => (string)($relatedRow['display_date'] ?? ''),
+            ];
+        }
+    } catch (\PDOException $e) {
+        koraLog('warning', 'admin article form taxonomy query failed', [
+            'section' => 'related_articles',
             'article_id' => $id,
             'blog_id' => $currentBlogId,
             'exception' => $e,
@@ -237,6 +272,7 @@ $fieldErrorMap = [
     'publish_range' => ['publish_at', 'unpublish_at'],
     'category_target' => ['category_id'],
     'tags_target' => ['tags'],
+    'related_articles_target' => ['related_article_ids'],
     'missing_category_action' => ['missing_category_action'],
     'missing_tags_action' => ['missing_tags_action'],
     'image_upload' => ['image'],
@@ -250,6 +286,7 @@ $fieldErrorMessages = [
     'publish_range' => 'Plánované zrušení publikace musí být později než plánované publikování.',
     'category_target' => 'Vybraná kategorie nepatří do cílového blogu.',
     'tags_target' => 'Vybrané štítky nepatří do cílového blogu.',
+    'related_articles_target' => 'Vybrané související články nepatří do cílového blogu.',
     'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'image_upload' => 'Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.',
@@ -329,6 +366,8 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Vybraná kategorie nepatří do cílového blogu.</p>
 <?php elseif ($err === 'tags_target'): ?>
   <p role="alert" class="error" id="form-error">Vybrané štítky nepatří do cílového blogu.</p>
+<?php elseif ($err === 'related_articles_target'): ?>
+  <p role="alert" class="error" id="form-error">Vybrané související články nepatří do cílového blogu.</p>
 <?php elseif ($err === 'missing_category_action'): ?>
   <p role="alert" class="error" id="form-error">Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
 <?php elseif ($err === 'missing_tags_action'): ?>
@@ -483,6 +522,33 @@ adminHeader($pageTitle);
     <?php endif; ?>
   </fieldset>
 
+  <fieldset id="article-related-fieldset" class="blog-form-fieldset" aria-describedby="blog-related-help blog-related-empty<?= $err === 'related_articles_target' ? ' blog-related-error' : '' ?>">
+    <legend>Související články</legend>
+    <label for="related_article_ids">Ruční výběr souvisejících článků</label>
+    <select id="related_article_ids" name="related_article_ids[]" multiple size="<?= min(8, max(3, count($relatedArticleOptions))) ?>"
+            <?= $relatedArticleOptions === [] ? 'disabled ' : '' ?>
+            <?= adminFieldAttributes('related_article_ids', $err, $fieldErrorMap, ['blog-related-help', 'blog-related-empty'], 'blog-related-error') ?>>
+      <?php foreach ($relatedArticleOptions as $relatedOption): ?>
+        <?php
+          $relatedDate = trim($relatedOption['display_date']);
+          $relatedLabel = (string)$relatedOption['title'];
+          if ($relatedDate !== '') {
+              $relatedTimestamp = strtotime($relatedDate);
+              if ($relatedTimestamp !== false) {
+                  $relatedLabel .= ' - ' . date('j. n. Y', $relatedTimestamp);
+              }
+          }
+          ?>
+        <option value="<?= (int)$relatedOption['id'] ?>"<?= in_array((int)$relatedOption['id'], $relatedArticleIds, true) ? ' selected' : '' ?>>
+          <?= h($relatedLabel) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+    <small id="blog-related-help" class="field-help">Vyberte publikované články ze stejného blogu, které se mají na veřejném detailu ukázat v bloku Související články. Pokud nic nevyberete, Kora CMS použije automatické doporučení podle kategorie, štítků a novosti.</small>
+    <small id="blog-related-empty" class="field-help"<?= $relatedArticleOptions === [] ? '' : ' hidden' ?>>V tomto blogu zatím není jiný publikovaný článek, který by šel ručně doporučit.</small>
+    <?php adminRenderFieldError('related_article_ids', $err, $fieldErrorMap, $fieldErrorMessages['related_articles_target'], 'blog-related-error'); ?>
+  </fieldset>
+
   <fieldset>
     <legend>Text článku</legend>
 
@@ -492,8 +558,8 @@ adminHeader($pageTitle);
     <label for="content">Text článku <span aria-hidden="true">*</span></label>
     <textarea id="content" name="content" rows="15" required aria-required="true"
               <?= !$useWysiwyg
-              ? adminFieldAttributes('content', $err, $fieldErrorMap, ['blog-content-help'])
-              : adminFieldAttributes('content', $err, $fieldErrorMap) ?>><?= h($article['content'] ?? '') ?></textarea>
+                ? adminFieldAttributes('content', $err, $fieldErrorMap, ['blog-content-help'])
+                : adminFieldAttributes('content', $err, $fieldErrorMap) ?>><?= h($article['content'] ?? '') ?></textarea>
     <?php if (!$useWysiwyg): ?><small id="blog-content-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small><?php endif; ?>
     <?php adminRenderFieldError('content', $err, $fieldErrorMap, $fieldErrorMessages['content']); ?>
     <?php if (!$useWysiwyg): ?>
@@ -632,6 +698,8 @@ adminHeader($pageTitle);
     const missingTagsActionInputs = Array.from(document.querySelectorAll('input[name="missing_tags_action"]'));
     const categorySelectionModeInput = document.getElementById('category-selection-mode');
     const tagSelectionModeInput = document.getElementById('tag-selection-mode');
+    const relatedSelect = document.getElementById('related_article_ids');
+    const relatedEmpty = document.getElementById('blog-related-empty');
     const commentsCheckbox = document.getElementById('comments_enabled');
     const noCategoryLabel = <?= json_encode($noCategoryLabel, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const blogOptions = <?= json_encode($blogFormOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -666,6 +734,7 @@ adminHeader($pageTitle);
             tags: <?= json_encode(array_map('intval', $articleTagIds)) ?>,
             categoryMode: 'manual',
             tagsMode: 'manual',
+            relatedArticles: <?= json_encode(array_map('intval', $relatedArticleIds)) ?>,
             missingCategoryAction: 'drop',
             missingTagsAction: 'drop',
         }
@@ -689,6 +758,7 @@ adminHeader($pageTitle);
             tags: [],
             categoryMode: 'auto',
             tagsMode: 'auto',
+            relatedArticles: [],
             missingCategoryAction: 'drop',
             missingTagsAction: 'drop',
         };
@@ -722,6 +792,28 @@ adminHeader($pageTitle);
         fallback.tags = resolvedTagIds;
 
         return fallback;
+    };
+
+    const escapeHtml = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const relatedArticleLabel = (article) => {
+        const title = String(article.title || '');
+        const dateValue = String(article.display_date || '').trim();
+        if (dateValue === '') {
+            return title;
+        }
+
+        const date = new Date(dateValue.replace(' ', 'T'));
+        if (Number.isNaN(date.getTime())) {
+            return title;
+        }
+
+        return title + ' - ' + date.toLocaleDateString('cs-CZ');
     };
 
     const setRadioValue = (inputs, value, fallbackValue = 'drop') => {
@@ -818,6 +910,9 @@ adminHeader($pageTitle);
             tags: Array.from(tagsContainer.querySelectorAll('input[name="tags[]"]:checked')).map((input) => Number(input.value)),
             categoryMode: categorySelectionModeInput ? categorySelectionModeInput.value : 'manual',
             tagsMode: tagSelectionModeInput ? tagSelectionModeInput.value : 'manual',
+            relatedArticles: relatedSelect
+                ? Array.from(relatedSelect.selectedOptions).map((option) => Number(option.value))
+                : [],
             missingCategoryAction: selectedRadioValue(missingCategoryActionInputs),
             missingTagsAction: selectedRadioValue(missingTagsActionInputs),
         };
@@ -830,6 +925,7 @@ adminHeader($pageTitle);
 
         const state = rememberedSelections[blogId] || resolveAutoSelections(blogId);
         const selectedTags = new Set((state.tags || []).map((value) => Number(value)));
+        const selectedRelatedArticles = new Set((state.relatedArticles || []).map((value) => Number(value)));
         const categoryMarkup = [];
         categoryMarkup.push('<option value="">' + noCategoryLabel + '</option>');
 
@@ -881,6 +977,21 @@ adminHeader($pageTitle);
         }
         if (isNewArticle && commentsCheckbox && !commentsTouched) {
             commentsCheckbox.checked = (blogOptions[blogId].comments_default || 0) === 1;
+        }
+
+        if (relatedSelect) {
+            const relatedArticles = blogOptions[blogId].related_articles || [];
+            relatedSelect.disabled = relatedArticles.length === 0;
+            relatedSelect.size = String(Math.min(8, Math.max(3, relatedArticles.length)));
+            relatedSelect.innerHTML = relatedArticles.map((relatedArticle) => {
+                const selected = selectedRelatedArticles.has(Number(relatedArticle.id)) ? ' selected' : '';
+                return '<option value="' + String(relatedArticle.id) + '"' + selected + '>'
+                    + escapeHtml(relatedArticleLabel(relatedArticle))
+                    + '</option>';
+            }).join('');
+            if (relatedEmpty) {
+                relatedEmpty.hidden = relatedArticles.length > 0;
+            }
         }
 
         const tags = blogOptions[blogId].tags || [];
@@ -947,6 +1058,7 @@ adminHeader($pageTitle);
     missingTagsActionInputs.forEach((input) => {
         input.addEventListener('change', rememberCurrentSelections);
     });
+    relatedSelect?.addEventListener('change', rememberCurrentSelections);
 })();
 </script>
 

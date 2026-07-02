@@ -240,7 +240,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s datem, místem, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
@@ -283,6 +283,8 @@ V multiblog administraci nově umí přesun článků mezi blogy vedle automatic
 Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce vyplní, použije se na veřejném indexu blogu pro čtečky obrazovky; pokud zůstane prázdný, logo se dál bere jako dekorativní a asistivní technologie ho přeskočí.
 
 Veřejný index blogu zobrazuje doporučený článek v přirozenějším pořadí: nejdřív nadpis bloku, potom název článku jako hlavní odkaz a až pod ním datum, přibližnou dobu čtení, počet přečtení a autora.
+
+Editor článku umožňuje ručně vybrat související články ze stejného blogu. Veřejný detail článku zobrazí ruční výběr jako první a pokud je položek méně, doplní zbytek automaticky podle kategorie, štítků a novosti. Při změně blogu se ruční výběr validuje proti cílovému blogu, takže se do detailu nepropíše odkaz na článek z cizího blogu.
 
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 

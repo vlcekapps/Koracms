@@ -286,10 +286,13 @@ Editor článku respektuje vybraný blog:
 - horní odkazy vedou na správný veřejný blog, jeho RSS feed a správu taxonomií
 - nové články mohou převzít výchozí komentáře z blogu
 - jeden článek v blogu lze označit jako `Doporučený článek blogu`
+- u článku lze ručně vybrat související články ze stejného blogu; na veřejném detailu se ruční výběr zobrazí před automaticky doplněnými články
 - náhledový obrázek používá sdílenou upload validaci a při výměně nebo odebrání uklízí i staré miniatury, WebP a responsive varianty
 - při hromadném mazání se případné selhání odstranění náhledového obrázku nebo miniatury zapíše do strukturovaného logu bez plné cesty k souboru
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
+
+Ručně vybrané související články se validují proti právě vybranému blogu. Editor nabídne jen publikované články stejného blogu a server při uložení znovu ověří, že podstrčené ID nepatří do jiného blogu. Pokud autor nic nevybere, veřejný detail článku dál použije automatické související články podle kategorie, štítků a novosti.
 
 ### Stránky a odkazy blogu
 
@@ -347,6 +350,8 @@ Každý blog může mít na svém indexu:
 - filtr podle autora, kategorie a štítků
 
 Pokud je nastavený doporučený článek blogu a návštěvník nemá aktivní filtr, default šablona ho zobrazí nad výpisem článků jako samostatný blok. Nejprve je vidět nadpis `Doporučený článek`, pod ním název článku jako hlavní odkaz a až potom metadata článku: datum, přibližná doba čtení, počet přečtení a autor.
+
+Na detailu článku může být blok `Související články`. Pokud autor v editoru vybral konkrétní související články, zobrazí se jako první; pokud jich je méně než limit bloku, Kora CMS doplní další položky automaticky. Díky tomu lze u důležitých článků vést čtenáře přesněji, ale běžné články dál fungují bez ruční práce.
 
 ### Veřejní autoři
 

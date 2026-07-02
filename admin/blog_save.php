@@ -13,6 +13,7 @@ $perex = trim($_POST['perex'] ?? '');
 $content = trim($_POST['content'] ?? '');
 $categoryId = inputInt('post', 'category_id');
 $tagIds = array_map('intval', (array)($_POST['tags'] ?? []));
+$relatedArticleIds = normalizeRelatedArticleIds((array)($_POST['related_article_ids'] ?? []), $id ?? 0);
 $categorySelectionMode = trim((string)($_POST['category_selection_mode'] ?? ($id !== null ? 'auto' : 'manual')));
 $tagSelectionMode = trim((string)($_POST['tag_selection_mode'] ?? ($id !== null ? 'auto' : 'manual')));
 $missingCategoryAction = trim((string)($_POST['missing_category_action'] ?? 'drop'));
@@ -175,6 +176,27 @@ if ($categoryId !== null) {
     $categoryCheckStmt->execute([$categoryId, $blogId]);
     if ((int)$categoryCheckStmt->fetchColumn() === 0) {
         $redirectToForm($id, $blogId, 'category_target');
+    }
+}
+
+if ($relatedArticleIds !== []) {
+    $relatedPlaceholders = implode(',', array_fill(0, count($relatedArticleIds), '?'));
+    $relatedCheckStmt = $pdo->prepare(
+        "SELECT id
+         FROM cms_articles
+         WHERE blog_id = ?
+           AND id IN ({$relatedPlaceholders})
+           AND deleted_at IS NULL
+           AND status = 'published'
+           AND (publish_at IS NULL OR publish_at <= NOW())"
+    );
+    $relatedCheckStmt->execute(array_merge([$blogId], $relatedArticleIds));
+    $validRelatedArticleIds = array_values(array_map('intval', $relatedCheckStmt->fetchAll(PDO::FETCH_COLUMN)));
+    sort($validRelatedArticleIds);
+    $requestedRelatedArticleIds = $relatedArticleIds;
+    sort($requestedRelatedArticleIds);
+    if ($validRelatedArticleIds !== $requestedRelatedArticleIds) {
+        $redirectToForm($id, $blogId, 'related_articles_target');
     }
 }
 
@@ -404,6 +426,8 @@ try {
             $insertTag->execute([$id, $tagId]);
         }
     }
+
+    saveArticleRelatedArticles($pdo, $id, $relatedArticleIds);
 
     $pdo->commit();
 } catch (\Throwable $e) {

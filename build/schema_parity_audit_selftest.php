@@ -136,6 +136,11 @@ CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
   item_key VARCHAR(120),
   url VARCHAR(500)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_article_related (
+  article_id INT,
+  related_article_id INT,
+  sort_order INT
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -157,6 +162,9 @@ PHP,
 // cms_admin_shortcuts
 // uq_admin_shortcut_user_item
 // idx_admin_shortcut_user_order
+// cms_article_related
+// idx_article_related_order
+// idx_article_related_target
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

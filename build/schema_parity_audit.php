@@ -106,6 +106,9 @@ $criticalInstallColumns = [
     'cms_admin_shortcuts.item_type' => ['cms_admin_shortcuts', 'item_type'],
     'cms_admin_shortcuts.item_key' => ['cms_admin_shortcuts', 'item_key'],
     'cms_admin_shortcuts.url' => ['cms_admin_shortcuts', 'url'],
+    'cms_article_related.article_id' => ['cms_article_related', 'article_id'],
+    'cms_article_related.related_article_id' => ['cms_article_related', 'related_article_id'],
+    'cms_article_related.sort_order' => ['cms_article_related', 'sort_order'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -135,6 +138,9 @@ $criticalMigrationSnippets = [
     'cms_admin_shortcuts',
     'uq_admin_shortcut_user_item',
     'idx_admin_shortcut_user_order',
+    'cms_article_related',
+    'idx_article_related_order',
+    'idx_article_related_target',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

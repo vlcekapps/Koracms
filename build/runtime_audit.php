@@ -11445,6 +11445,27 @@ if (!str_contains($blogFormSource, 'comments_default')) {
 if (!str_contains($blogFormSource, 'name="is_featured_in_blog"')) {
     $blogAdminIssues[] = 'article form is missing per-blog featured article toggle';
 }
+if (!str_contains($blogInstallSource, 'cms_article_related') || !str_contains($blogMigrateSource, 'cms_article_related')) {
+    $blogAdminIssues[] = 'blog schema is missing manual related article table in install or migrate';
+}
+if (!str_contains($blogFormSource, 'name="related_article_ids[]"') || !str_contains($blogFormSource, 'blog-related-help') || !str_contains($blogFormSource, 'related_articles')) {
+    $blogAdminIssues[] = 'article form is missing manual related article controls';
+}
+if (!str_contains($blogSaveSource, 'normalizeRelatedArticleIds') || !str_contains($blogSaveSource, 'related_articles_target') || !str_contains($blogSaveSource, 'saveArticleRelatedArticles')) {
+    $blogAdminIssues[] = 'article save is missing manual related article validation or persistence';
+}
+if (!str_contains($blogPresentationSource, 'manualRelatedArticles') || !str_contains($blogPresentationSource, 'cms_article_related') || !str_contains($blogPresentationSource, 'zbytek se doplní automaticky')) {
+    $blogAdminIssues[] = 'public related article helper is missing manual-first related article fallback';
+}
+if (!str_contains($blogBulkSource, 'DELETE FROM cms_article_related')
+    || !str_contains($blogDeleteSource, 'DELETE FROM cms_article_related')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_article_related')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php'), 'DELETE FROM cms_article_related')) {
+    $blogAdminIssues[] = 'manual related article links are missing cleanup on destructive article workflows';
+}
+if (!str_contains($blogExportSource, 'article_related') || !str_contains($blogImportSource, 'article_related')) {
+    $blogAdminIssues[] = 'JSON export/import is missing manual related article links';
+}
 if (!str_contains($blogFormSource, 'canCurrentUserManageBlogTaxonomies($currentBlogId)')) {
     $blogAdminIssues[] = 'article form is missing taxonomy management guard for multiblog links';
 }

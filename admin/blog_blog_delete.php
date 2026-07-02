@@ -32,6 +32,7 @@ if ($id !== null) {
             $articleIds->execute([$id]);
             foreach ($articleIds->fetchAll(PDO::FETCH_COLUMN) as $artId) {
                 $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$artId]);
+                $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$artId, $artId]);
                 $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$artId]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$artId]);
             }

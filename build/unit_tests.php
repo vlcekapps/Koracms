@@ -589,6 +589,8 @@ assert_equals('vse', normalizeAuthorContentType(''), 'empty author content filte
 assert_equals('clanky', normalizeAuthorContentType('Články'), 'author content filter accepts Czech label');
 assert_equals('novinky', normalizeAuthorContentType('novinky'), 'author content filter accepts news');
 assert_equals('vse', normalizeAuthorContentType('externi'), 'invalid author content filter falls back to all');
+assert_equals([12, 9, 7], normalizeRelatedArticleIds(['12', 9, 9, 0, -1, '7'], 0), 'related article IDs are positive and deduplicated');
+assert_equals([5, 8], normalizeRelatedArticleIds([5, 10, '8', 10], 10), 'related article IDs exclude the current article');
 assert_equals(
     '3 články, 2 novinky',
     authorContentSummaryLabel([

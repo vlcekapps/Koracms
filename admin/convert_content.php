@@ -62,6 +62,7 @@ if ($direction === 'article_to_page') {
     $newPageId = (int)$pdo->lastInsertId();
 
     $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$id]);
+    $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$id, $id]);
     $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$id]);
 

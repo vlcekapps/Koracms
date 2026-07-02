@@ -2978,6 +2978,171 @@ try {
 
     httpIntegrationPrintResult('public_feed_http', $publicFeedIssues, $failures);
 
+    $blogRelatedIssues = [];
+    saveSetting('module_blog', '1');
+    clearSettingsCache();
+
+    $relatedBlogSlug = 'http-related-blog-' . bin2hex(random_bytes(4));
+    $foreignRelatedBlogSlug = 'http-related-foreign-' . bin2hex(random_bytes(4));
+    foreach ([
+        ['name' => 'HTTP Ruční související', 'slug' => $relatedBlogSlug],
+        ['name' => 'HTTP Cizí související', 'slug' => $foreignRelatedBlogSlug],
+    ] as $relatedBlogRow) {
+        $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+            ->execute([$relatedBlogRow['name'], $relatedBlogRow['slug'], $adminUserId]);
+        $createdBlogs[] = (int)$pdo->lastInsertId();
+    }
+    [$relatedBlogId, $foreignRelatedBlogId] = array_slice($createdBlogs, -2);
+
+    $mainRelatedSlug = 'http-related-main-' . bin2hex(random_bytes(4));
+    $manualRelatedTitle = 'HTTP Ručně vybraný související ' . bin2hex(random_bytes(3));
+    $autoRelatedTitle = 'HTTP Automaticky doplněný související ' . bin2hex(random_bytes(3));
+    $foreignRelatedTitle = 'HTTP Cizí související ' . bin2hex(random_bytes(3));
+    $relatedArticleRows = [
+        [
+            'title' => 'HTTP Hlavní článek se souvisejícími',
+            'slug' => $mainRelatedSlug,
+            'blog_id' => $relatedBlogId,
+            'created_at' => '2026-01-10 10:00:00',
+        ],
+        [
+            'title' => $manualRelatedTitle,
+            'slug' => 'http-related-manual-' . bin2hex(random_bytes(4)),
+            'blog_id' => $relatedBlogId,
+            'created_at' => '2024-01-01 10:00:00',
+        ],
+        [
+            'title' => $autoRelatedTitle,
+            'slug' => 'http-related-auto-' . bin2hex(random_bytes(4)),
+            'blog_id' => $relatedBlogId,
+            'created_at' => '2026-01-20 10:00:00',
+        ],
+        [
+            'title' => $foreignRelatedTitle,
+            'slug' => 'http-related-foreign-article-' . bin2hex(random_bytes(4)),
+            'blog_id' => $foreignRelatedBlogId,
+            'created_at' => '2026-01-21 10:00:00',
+        ],
+    ];
+    $relatedCreatedIds = [];
+    foreach ($relatedArticleRows as $relatedArticleRow) {
+        $pdo->prepare(
+            "INSERT INTO cms_articles
+                (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+             VALUES (?, ?, ?, '', '<p>HTTP související články.</p>', 1, ?, 'published', ?)"
+        )->execute([
+            $relatedArticleRow['title'],
+            $relatedArticleRow['slug'],
+            $relatedArticleRow['blog_id'],
+            $adminUserId,
+            $relatedArticleRow['created_at'],
+        ]);
+        $relatedCreatedIds[] = (int)$pdo->lastInsertId();
+        $createdArticles[] = (int)$pdo->lastInsertId();
+    }
+    [$mainRelatedArticleId, $manualRelatedArticleId, $autoRelatedArticleId, $foreignRelatedArticleId] = $relatedCreatedIds;
+
+    $relatedFormResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $mainRelatedArticleId,
+        $adminSession['cookie'],
+        0
+    );
+    if (!str_contains($relatedFormResponse['body'], 'Související články') || !str_contains($relatedFormResponse['body'], $manualRelatedTitle)) {
+        $blogRelatedIssues[] = 'editor článku nezobrazil ruční výběr souvisejících článků';
+    }
+
+    $relatedSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$mainRelatedArticleId,
+        'blog_id' => (string)$relatedBlogId,
+        'title' => 'HTTP Hlavní článek se souvisejícími',
+        'slug' => $mainRelatedSlug,
+        'perex' => '',
+        'content' => '<p>HTTP související články.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'related_article_ids' => [(string)$manualRelatedArticleId],
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $relatedBlogId,
+        'comments_enabled' => '1',
+        'article_status' => 'published',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($relatedSaveResponse) !== 302) {
+        $blogRelatedIssues[] = 'uložení ručně souvisejícího článku nevrátilo redirect';
+    }
+    $storedRelatedStmt = $pdo->prepare("SELECT related_article_id FROM cms_article_related WHERE article_id = ? ORDER BY sort_order ASC");
+    $storedRelatedStmt->execute([$mainRelatedArticleId]);
+    $storedRelatedIds = array_values(array_map('intval', $storedRelatedStmt->fetchAll(PDO::FETCH_COLUMN) ?: []));
+    if ($storedRelatedIds !== [$manualRelatedArticleId]) {
+        $blogRelatedIssues[] = 'uložení ručně souvisejícího článku nezapsalo očekávanou vazbu';
+    }
+
+    $publicRelatedResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/' . rawurlencode($relatedBlogSlug) . '/' . rawurlencode($mainRelatedSlug),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($publicRelatedResponse) !== 200) {
+        $blogRelatedIssues[] = 'veřejný detail článku s ručním doporučením nevrátil 200';
+    } else {
+        $manualPosition = strpos($publicRelatedResponse['body'], $manualRelatedTitle);
+        $autoPosition = strpos($publicRelatedResponse['body'], $autoRelatedTitle);
+        if ($manualPosition === false) {
+            $blogRelatedIssues[] = 'veřejný detail článku nezobrazil ručně vybraný související článek';
+        }
+        if ($autoPosition === false) {
+            $blogRelatedIssues[] = 'veřejný detail článku nedoplnil automatický související článek po ručním výběru';
+        }
+        if ($manualPosition !== false && $autoPosition !== false && $manualPosition > $autoPosition) {
+            $blogRelatedIssues[] = 'ručně vybraný související článek není před automatickým fallbackem';
+        }
+    }
+
+    $invalidRelatedResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$mainRelatedArticleId,
+        'blog_id' => (string)$relatedBlogId,
+        'title' => 'HTTP Hlavní článek se souvisejícími',
+        'slug' => $mainRelatedSlug,
+        'perex' => '',
+        'content' => '<p>HTTP související články.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'related_article_ids' => [(string)$foreignRelatedArticleId],
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $relatedBlogId,
+        'comments_enabled' => '1',
+        'article_status' => 'published',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($invalidRelatedResponse) !== 302) {
+        $blogRelatedIssues[] = 'podvržený cizí související článek nevrátil redirect';
+    }
+    $invalidRelatedLocationHeader = '';
+    foreach (($invalidRelatedResponse['headers'] ?? []) as $headerLine) {
+        if (stripos((string)$headerLine, 'Location:') === 0) {
+            $invalidRelatedLocationHeader = trim(substr((string)$headerLine, 9));
+            break;
+        }
+    }
+    if (
+        $invalidRelatedLocationHeader === ''
+        || !str_contains($invalidRelatedLocationHeader, BASE_URL . '/admin/blog_form.php')
+        || !str_contains($invalidRelatedLocationHeader, 'err=related_articles_target')
+    ) {
+        $blogRelatedIssues[] = 'podvržený cizí související článek nemíří zpět na editor';
+    }
+    $foreignRelatedStoredStmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM cms_article_related
+         WHERE article_id = ? AND related_article_id = ?"
+    );
+    $foreignRelatedStoredStmt->execute([$mainRelatedArticleId, $foreignRelatedArticleId]);
+    if ((int)$foreignRelatedStoredStmt->fetchColumn() !== 0) {
+        $blogRelatedIssues[] = 'podvržený cizí související článek se přesto uložil';
+    }
+
+    httpIntegrationPrintResult('blog_related_articles_http', $blogRelatedIssues, $failures);
+
     $authorHubIssues = [];
     saveSetting('module_blog', '1');
     saveSetting('module_news', '1');
@@ -4985,6 +5150,7 @@ try {
     }
     foreach ($createdArticles as $articleIdToDelete) {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$articleIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$articleIdToDelete, $articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$articleIdToDelete]);
     }
