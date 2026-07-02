@@ -240,7 +240,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie a štítky s veřejnými landing stránkami a SEO poli, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s datem, místem, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
@@ -289,6 +289,8 @@ Editor článku umožňuje ručně vybrat související články ze stejného bl
 Blogy mají také tematické série článků. Správa série patří ke konkrétnímu blogu, umožňuje název, slug, popis, aktivní stav a ruční pořadí článků. Editor článku pak nabídne zařazení jen do sérií cílového blogu. Čtenář na detailu článku uvidí blok `Tento článek je součástí série`, aktuální díl je označený pro asistivní technologie a veřejná stránka série má URL `/{blog-slug}/serie/{series-slug}`.
 
 Delší blogové články dostanou na veřejném detailu automatickou osnovu `V tomto článku`, pokud obsah obsahuje alespoň dva viditelné nadpisy `h2` nebo `h3`. Kora CMS doplní stabilní kotvy k nadpisům, ručně zadaná `id` zachová a odkazy v osnově pomáhají čtenářům i čtečkám obrazovky rychle přeskakovat mezi částmi článku.
+
+Kategorie a štítky blogu nejsou jen interní filtry. Správce k nim může vyplnit veřejný slug, popis, meta title a meta description. Veřejné stránky mají čisté adresy `/{blog-slug}/kategorie/{category-slug}` a `/{blog-slug}/stitky/{tag-slug}`, zobrazují popis nad výpisem článků a používají vlastní canonical/SEO metadata. Staré query odkazy `?kat=` a `?tag=` zůstávají kompatibilní.
 
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
@@ -719,6 +721,12 @@ server {
     location = /sitemap.xml { rewrite ^ /sitemap.php last; }
 
     # Multi-blog catch-all (musí být poslední)
+    location ~ ^/([a-z0-9\-]+)/kategorie/([a-z0-9\-]+)/?$ {
+        try_files $uri $uri/ /blog_router.php?blog_slug=$1&category_slug=$2&$args;
+    }
+    location ~ ^/([a-z0-9\-]+)/stitky/([a-z0-9\-]+)/?$ {
+        try_files $uri $uri/ /blog_router.php?blog_slug=$1&tag_slug=$2&$args;
+    }
     location ~ ^/([a-z0-9\-]+)/stranka/([a-z0-9\-]+)/?$ {
         try_files $uri $uri/ /blog_router.php?blog_slug=$1&page_slug=$2&$args;
     }

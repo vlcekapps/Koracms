@@ -8140,6 +8140,8 @@ $foundationChecks = [
         && str_contains($httpServerRouterSource, "routeToScript('robots.php')")
         && str_contains($httpServerRouterSource, "routeToScript('sitemap.php')")
         && str_contains($httpServerRouterSource, "routeToScript('authors/index.php')")
+        && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'category_slug']]")
+        && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'tag_slug']]")
         && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'series_slug']]")
         && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'page_slug']]")
         && str_contains($httpServerRouterSource, "['blog_router.php', ['blog_slug', 'slug']]")
@@ -8154,6 +8156,8 @@ $foundationChecks = [
         && str_contains($httpServerRouterSelftestSource, 'HTTP server router self-test OK')
         && str_contains($httpServerRouterSelftestSource, "httpServerRouterSelfTestFetchJson(\$baseUrl . '/')")
         && str_contains($httpServerRouterSelftestSource, "/snd/serie/vikend-s-veterany?preview=1")
+        && str_contains($httpServerRouterSelftestSource, "/snd/kategorie/linuxovy-koutek?preview=1")
+        && str_contains($httpServerRouterSelftestSource, "/snd/stitky/nvda-tip?preview=1")
         && str_contains($httpServerRouterSelftestSource, "/snd/stranka/o-projektu?preview=1")
         && str_contains($httpServerRouterSelftestSource, "/podcast/porad/epizoda")
         && str_contains($httpServerRouterSelftestSource, "/assets/app.css")
@@ -11575,7 +11579,8 @@ if (str_contains($blogCatsSource, 'style=')) {
 foreach ([
     'button-row admin-stack-sm',
     'class="admin-select-sm"',
-    'button-row button-row--baseline',
+    'class="form-grid"',
+    'class="form-stack"',
     'class="admin-input-auto"',
 ] as $blogCatsUtilityFragment) {
     if (!str_contains($blogCatsSource, $blogCatsUtilityFragment)) {
@@ -11595,7 +11600,8 @@ foreach ([
     'button-row admin-stack-sm',
     'class="admin-select-sm"',
     'class="btn admin-action-row"',
-    'button-row button-row--baseline',
+    'class="form-grid"',
+    'class="form-stack"',
     'class="admin-input-auto"',
 ] as $blogTagsUtilityFragment) {
     if (!str_contains($blogTagsSource, $blogTagsUtilityFragment)) {
@@ -11703,7 +11709,7 @@ if (!str_contains($blogSaveSource, 'resolveArticleMoveTaxonomyState(') || !str_c
 if (!str_contains($blogSaveSource, 'missing_category_action') || !str_contains($blogSaveSource, 'missing_tags_action') || !str_contains($blogSaveSource, '$canCreateTargetTaxonomies')) {
     $blogAdminIssues[] = 'article save is missing missing-taxonomy create controls for single-article blog changes';
 }
-if (!str_contains($blogSaveSource, 'INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)') || !str_contains($blogSaveSource, 'INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)')) {
+if (!str_contains($blogSaveSource, 'INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)') || !str_contains($blogSaveSource, 'INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)')) {
     $blogAdminIssues[] = 'article save is missing creation of missing target taxonomies during single-article move';
 }
 if (!str_contains($blogSaveSource, "err=category_target") && !str_contains($blogSaveSource, "'category_target'")) {
@@ -11982,6 +11988,70 @@ if (!str_contains($blogRouterSource, "\$_GET['series_slug']")
     || !str_contains($blogHtaccessSource, '/serie/([a-z0-9\\-]+)')
     || strpos($blogHtaccessSource, 'serie/([a-z0-9\\-]+)') > strpos($blogHtaccessSource, 'blog_router.php?blog_slug=$1&slug=$2')) {
     $blogAdminIssues[] = 'blog router or rewrite rules are missing article series route before article catch-all';
+}
+$blogCategoryRoutePos = strpos($blogHtaccessSource, '/kategorie/([a-z0-9\\-]+)');
+$blogTagRoutePos = strpos($blogHtaccessSource, '/stitky/([a-z0-9\\-]+)');
+$blogArticleRoutePos = strpos($blogHtaccessSource, 'blog_router.php?blog_slug=$1&slug=$2');
+if (!str_contains($blogRouterSource, "\$_GET['category_slug']")
+    || !str_contains($blogRouterSource, "\$_GET['tag_slug']")
+    || !str_contains($blogRouterSource, "require __DIR__ . '/blog/index.php'")
+    || $blogCategoryRoutePos === false
+    || $blogTagRoutePos === false
+    || $blogArticleRoutePos === false
+    || $blogCategoryRoutePos > $blogArticleRoutePos
+    || $blogTagRoutePos > $blogArticleRoutePos) {
+    $blogAdminIssues[] = 'blog router or rewrite rules are missing taxonomy landing routes before article catch-all';
+}
+if (!str_contains($blogPresentationSource, 'function blogCategoryPath(')
+    || !str_contains($blogPresentationSource, 'function blogTagPath(')
+    || !str_contains($blogPresentationSource, 'function uniqueBlogCategorySlug(')
+    || !str_contains($blogPresentationSource, 'function nextBlogTaxonomySlug(')) {
+    $blogAdminIssues[] = 'blog helpers are missing public taxonomy landing URL or slug helpers';
+}
+if (!str_contains($blogIndexControllerSource, "\$_GET['category_slug']")
+    || !str_contains($blogIndexControllerSource, "\$_GET['tag_slug']")
+    || !str_contains($blogIndexControllerSource, 'renderPublicNotFoundPage')
+    || !str_contains($blogIndexControllerSource, 'blogCategoryUrl($blog, $activeCategory)')
+    || !str_contains($blogIndexControllerSource, 'blogTagUrl($blog, $activeTag)')) {
+    $blogAdminIssues[] = 'public blog index is missing clean taxonomy landing handling, SEO URL or 404 handling';
+}
+if (!str_contains($blogIndexViewSource, 'blogCategoryPath($blog, $category')
+    || !str_contains($blogIndexViewSource, 'blogTagPath($blog, $tag')
+    || !str_contains($blogIndexViewSource, 'blog-taxonomy-description')
+    || !str_contains($blogIndexViewSource, 'aria-labelledby="blog-title"')) {
+    $blogAdminIssues[] = 'blog index view is missing clean taxonomy links or taxonomy description block';
+}
+if (!str_contains($blogArticleViewSource, 'blogCategoryPath($blog, [')
+    || !str_contains($blogArticleViewSource, 'blogTagPath($blog, $tag)')) {
+    $blogAdminIssues[] = 'blog article detail still does not link categories and tags to clean taxonomy landing URLs';
+}
+if (!str_contains($blogCatsSource, 'name="slug"')
+    || !str_contains($blogCatsSource, 'name="description"')
+    || !str_contains($blogCatsSource, 'name="meta_title"')
+    || !str_contains($blogCatsSource, 'name="meta_description"')
+    || !str_contains($blogCatsSource, 'aria-describedby="category-slug-help')
+    || !str_contains($blogCatsSource, 'blogCategoryPath($currentBlog, $category)')) {
+    $blogAdminIssues[] = 'blog category admin is missing slug, description, SEO fields or public landing links';
+}
+if (!str_contains($blogTagsSource, 'name="slug"')
+    || !str_contains($blogTagsSource, 'name="description"')
+    || !str_contains($blogTagsSource, 'name="meta_title"')
+    || !str_contains($blogTagsSource, 'name="meta_description"')
+    || !str_contains($blogTagsSource, 'aria-describedby="tag-slug-help')
+    || !str_contains($blogTagsSource, 'blogTagPath($currentBlog, $tag)')) {
+    $blogAdminIssues[] = 'blog tag admin is missing slug, description, SEO fields or public landing links';
+}
+if (!str_contains($blogInstallSource, 'uq_categories_blog_slug')
+    || !str_contains($blogMigrateSource, 'uq_categories_blog_slug')
+    || !str_contains($blogExportSource, 'meta_description')
+    || !str_contains($blogImportSource, 'uniqueBlogCategorySlug')
+    || !str_contains($blogWpImportSource, 'uniqueBlogCategorySlug')
+    || !str_contains($blogEstrankyImportSource, 'uniqueBlogCategorySlug')) {
+    $blogAdminIssues[] = 'blog taxonomy landing schema, export/import or import fallback support is incomplete';
+}
+if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 'blogCategoryUrl(')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 'blogTagUrl(')) {
+    $blogAdminIssues[] = 'sitemap is missing public category or tag landing URLs';
 }
 if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExportSource, "'blog_slug_redirects'")) {
     $blogAdminIssues[] = 'export is missing blog membership and slug redirect datasets';
@@ -15804,6 +15874,10 @@ if (!str_contains($blogStaticHtaccessSource, '/stranka/') || !str_contains($blog
 }
 if (!str_contains($blogStaticReadmeSource, '/blog_router.php?blog_slug=$1&page_slug=$2&$args')) {
     $blogStaticPageIssues[] = 'README nginx sample is missing the blog static page route';
+}
+if (!str_contains($blogStaticReadmeSource, '/blog_router.php?blog_slug=$1&category_slug=$2&$args')
+    || !str_contains($blogStaticReadmeSource, '/blog_router.php?blog_slug=$1&tag_slug=$2&$args')) {
+    $blogStaticPageIssues[] = 'README nginx sample is missing blog taxonomy landing routes';
 }
 if (!str_contains($blogIndexControllerSource, 'SELECT id, title, slug, blog_id, blog_nav_order') || !str_contains($blogIndexControllerSource, '$blogPages') || !str_contains($blogIndexControllerSource, 'loadNavigationLinks($pdo, $blogId, true)')) {
     $blogStaticPageIssues[] = 'blog index controller is missing loading of ordered blog pages';

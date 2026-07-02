@@ -148,7 +148,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
         if ($existingId) {
             $sectionMap[$secId] = (int)$existingId;
         } else {
-            $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$secTitle, $blogId]);
+            $secSlug = uniqueBlogCategorySlug($pdo, $secTitle, $blogId);
+            $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$secTitle, $secSlug, $blogId]);
             $sectionMap[$secId] = (int)$pdo->lastInsertId();
             $insertedSections++;
         }

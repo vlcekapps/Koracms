@@ -73,9 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_categories (
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             name       VARCHAR(255) NOT NULL,
+            slug       VARCHAR(150) NOT NULL,
             blog_id    INT          NOT NULL DEFAULT 1,
             parent_id  INT          NULL DEFAULT NULL,
+            description TEXT         NULL,
+            meta_title VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT    NULL,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_categories_blog_slug (blog_id, slug),
             INDEX idx_categories_blog_id (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -254,7 +260,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             name       VARCHAR(100) NOT NULL,
             slug       VARCHAR(100) NOT NULL,
             blog_id    INT          NOT NULL DEFAULT 1,
+            description TEXT         NULL,
+            meta_title VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT    NULL,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_tags_blog_slug (blog_id, slug),
             INDEX idx_tags_blog_id (blog_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");

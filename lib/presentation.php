@@ -722,6 +722,186 @@ function blogSeriesUrl(array $blog, array $series): string
     return siteUrl('/' . rawurlencode($blogSlug) . '/serie/' . rawurlencode($seriesSlug));
 }
 
+function blogTaxonomySlug(string $value): string
+{
+    return articleSlug($value);
+}
+
+function blogCategorySlug(string $value): string
+{
+    return blogTaxonomySlug($value);
+}
+
+function blogTagSlug(string $value): string
+{
+    return blogTaxonomySlug($value);
+}
+
+/**
+ * @param array<int, string> $existingSlugs
+ */
+function nextBlogTaxonomySlug(string $candidate, array $existingSlugs, string $fallback): string
+{
+    $base = blogTaxonomySlug($candidate);
+    if ($base === '') {
+        $base = blogTaxonomySlug($fallback);
+    }
+    if ($base === '') {
+        $base = 'polozka';
+    }
+
+    $used = [];
+    foreach ($existingSlugs as $existingSlug) {
+        $normalized = blogTaxonomySlug((string)$existingSlug);
+        if ($normalized !== '') {
+            $used[$normalized] = true;
+        }
+    }
+
+    $slug = $base;
+    $suffix = 2;
+    while (isset($used[$slug])) {
+        $slug = $base . '-' . $suffix;
+        $suffix++;
+    }
+
+    return $slug;
+}
+
+function uniqueBlogCategorySlug(PDO $pdo, string $candidate, int $blogId, ?int $excludeId = null): string
+{
+    $base = blogCategorySlug($candidate);
+    if ($base === '') {
+        $base = 'kategorie';
+    }
+
+    $slug = $base;
+    $suffix = 2;
+    while (true) {
+        $params = [$blogId, $slug];
+        $sql = "SELECT id FROM cms_categories WHERE blog_id = ? AND slug = ?";
+        if ($excludeId !== null) {
+            $sql .= " AND id <> ?";
+            $params[] = $excludeId;
+        }
+        $sql .= " LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+
+        $slug = $base . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueBlogTagSlug(PDO $pdo, string $candidate, int $blogId, ?int $excludeId = null): string
+{
+    $base = blogTagSlug($candidate);
+    if ($base === '') {
+        $base = 'stitek';
+    }
+
+    $slug = $base;
+    $suffix = 2;
+    while (true) {
+        $params = [$blogId, $slug];
+        $sql = "SELECT id FROM cms_tags WHERE blog_id = ? AND slug = ?";
+        if ($excludeId !== null) {
+            $sql .= " AND id <> ?";
+            $params[] = $excludeId;
+        }
+        $sql .= " LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+
+        $slug = $base . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function blogCategoryRequestPath(array $blog, array $category, array $query = []): string
+{
+    $blogSlug = blogTaxonomySlug((string)($blog['slug'] ?? ($category['blog_slug'] ?? 'blog')));
+    if ($blogSlug === '') {
+        $blogSlug = 'blog';
+    }
+    $categorySlug = blogCategorySlug((string)($category['slug'] ?? ''));
+    if ($categorySlug === '') {
+        return appendUrlQuery('/blog/index.php', ['kat' => (int)($category['id'] ?? 0)] + $query);
+    }
+
+    return appendUrlQuery('/' . rawurlencode($blogSlug) . '/kategorie/' . rawurlencode($categorySlug), $query);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function blogCategoryPath(array $blog, array $category, array $query = []): string
+{
+    return BASE_URL . blogCategoryRequestPath($blog, $category, $query);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function blogCategoryUrl(array $blog, array $category, array $query = []): string
+{
+    return siteUrl(blogCategoryRequestPath($blog, $category, $query));
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $tag
+ * @param array<string, mixed> $query
+ */
+function blogTagRequestPath(array $blog, array $tag, array $query = []): string
+{
+    $blogSlug = blogTaxonomySlug((string)($blog['slug'] ?? ($tag['blog_slug'] ?? 'blog')));
+    if ($blogSlug === '') {
+        $blogSlug = 'blog';
+    }
+    $tagSlug = blogTagSlug((string)($tag['slug'] ?? ''));
+    if ($tagSlug === '') {
+        return appendUrlQuery('/blog/index.php', ['tag' => (string)($tag['slug'] ?? '')] + $query);
+    }
+
+    return appendUrlQuery('/' . rawurlencode($blogSlug) . '/stitky/' . rawurlencode($tagSlug), $query);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $tag
+ * @param array<string, mixed> $query
+ */
+function blogTagPath(array $blog, array $tag, array $query = []): string
+{
+    return BASE_URL . blogTagRequestPath($blog, $tag, $query);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $tag
+ * @param array<string, mixed> $query
+ */
+function blogTagUrl(array $blog, array $tag, array $query = []): string
+{
+    return siteUrl(blogTagRequestPath($blog, $tag, $query));
+}
+
 function saveBlogSlugRedirect(PDO $pdo, int $blogId, string $oldSlug): void
 {
     $oldSlug = slugify(trim($oldSlug));

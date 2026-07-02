@@ -117,8 +117,15 @@ $tables = [
     'cms_categories' => "CREATE TABLE IF NOT EXISTS cms_categories (
         id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name       VARCHAR(255) NOT NULL,
+        slug       VARCHAR(150) NOT NULL,
         blog_id    INT          NOT NULL DEFAULT 1,
+        parent_id  INT          NULL DEFAULT NULL,
+        description TEXT         NULL,
+        meta_title VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT    NULL,
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_categories_blog_slug (blog_id, slug),
         INDEX idx_categories_blog_id (blog_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
@@ -233,8 +240,15 @@ $tables = [
     'cms_tags' => "CREATE TABLE IF NOT EXISTS cms_tags (
         id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name       VARCHAR(100) NOT NULL,
-        slug       VARCHAR(100) NOT NULL UNIQUE,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        slug       VARCHAR(100) NOT NULL,
+        blog_id    INT          NOT NULL DEFAULT 1,
+        description TEXT         NULL,
+        meta_title VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT    NULL,
+        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_tags_blog_slug (blog_id, slug),
+        INDEX idx_tags_blog_id (blog_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_article_tags' => "CREATE TABLE IF NOT EXISTS cms_article_tags (
@@ -1161,7 +1175,17 @@ $addColumns = [
     // Multiblog – blog_id sloupce
     'cms_articles.blog_id'           => "ALTER TABLE cms_articles ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
     'cms_categories.blog_id'         => "ALTER TABLE cms_categories ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
+    'cms_categories.slug'            => "ALTER TABLE cms_categories ADD COLUMN slug VARCHAR(150) NOT NULL DEFAULT '' AFTER name",
+    'cms_categories.parent_id'       => "ALTER TABLE cms_categories ADD COLUMN parent_id INT NULL DEFAULT NULL AFTER blog_id",
+    'cms_categories.description'     => "ALTER TABLE cms_categories ADD COLUMN description TEXT AFTER parent_id",
+    'cms_categories.meta_title'      => "ALTER TABLE cms_categories ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER description",
+    'cms_categories.meta_description' => "ALTER TABLE cms_categories ADD COLUMN meta_description TEXT AFTER meta_title",
+    'cms_categories.updated_at'      => "ALTER TABLE cms_categories ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     'cms_tags.blog_id'               => "ALTER TABLE cms_tags ADD COLUMN blog_id INT NOT NULL DEFAULT 1",
+    'cms_tags.description'           => "ALTER TABLE cms_tags ADD COLUMN description TEXT AFTER blog_id",
+    'cms_tags.meta_title'            => "ALTER TABLE cms_tags ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER description",
+    'cms_tags.meta_description'      => "ALTER TABLE cms_tags ADD COLUMN meta_description TEXT AFTER meta_title",
+    'cms_tags.updated_at'            => "ALTER TABLE cms_tags ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_comments – stavový model moderace
     'cms_comments.status'            => "ALTER TABLE cms_comments ADD COLUMN status ENUM('pending','approved','spam','trash') NOT NULL DEFAULT 'pending'",
     // cms_log – user_id pro audit log
@@ -1212,8 +1236,6 @@ $addColumns = [
     'cms_board.preview_token'        => "ALTER TABLE cms_board ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_board.publish_at'           => "ALTER TABLE cms_board ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     'cms_board.unpublish_at'         => "ALTER TABLE cms_board ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
-    // Hierarchické kategorie blogu
-    'cms_categories.parent_id'       => "ALTER TABLE cms_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -1233,6 +1255,76 @@ foreach ($addColumns as $tableCol => $sql) {
     } catch (\PDOException $e) {
         $log[] = "✗ Sloupec <code>{$tableCol}</code> – CHYBA: " . h($e->getMessage());
     }
+}
+
+try {
+    $categoryRows = $pdo->query(
+        "SELECT id, blog_id, name, slug
+         FROM cms_categories
+         ORDER BY blog_id ASC, name ASC, id ASC"
+    )->fetchAll();
+    $categorySlugUsage = [];
+    $categoryUpdate = $pdo->prepare("UPDATE cms_categories SET slug = ? WHERE id = ?");
+    foreach ($categoryRows as $categoryRow) {
+        $rowBlogId = (int)($categoryRow['blog_id'] ?? 1);
+        $baseSlug = blogCategorySlug((string)($categoryRow['slug'] ?? ''));
+        if ($baseSlug === '') {
+            $baseSlug = blogCategorySlug((string)($categoryRow['name'] ?? ''));
+        }
+        if ($baseSlug === '') {
+            $baseSlug = 'kategorie';
+        }
+
+        $candidateSlug = $baseSlug;
+        $suffix = 2;
+        while (isset($categorySlugUsage[$rowBlogId][$candidateSlug])) {
+            $candidateSlug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+        $categorySlugUsage[$rowBlogId][$candidateSlug] = true;
+
+        if ((string)($categoryRow['slug'] ?? '') !== $candidateSlug) {
+            $categoryUpdate->execute([$candidateSlug, (int)$categoryRow['id']]);
+        }
+    }
+    $log[] = '· cms_categories: slugs kategorií zkontrolovány a doplněny';
+} catch (\PDOException $e) {
+    $log[] = '· cms_categories slugs – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
+    $tagRows = $pdo->query(
+        "SELECT id, blog_id, name, slug
+         FROM cms_tags
+         ORDER BY blog_id ASC, name ASC, id ASC"
+    )->fetchAll();
+    $tagSlugUsage = [];
+    $tagUpdate = $pdo->prepare("UPDATE cms_tags SET slug = ? WHERE id = ?");
+    foreach ($tagRows as $tagRow) {
+        $rowBlogId = (int)($tagRow['blog_id'] ?? 1);
+        $baseSlug = blogTagSlug((string)($tagRow['slug'] ?? ''));
+        if ($baseSlug === '') {
+            $baseSlug = blogTagSlug((string)($tagRow['name'] ?? ''));
+        }
+        if ($baseSlug === '') {
+            $baseSlug = 'stitek';
+        }
+
+        $candidateSlug = $baseSlug;
+        $suffix = 2;
+        while (isset($tagSlugUsage[$rowBlogId][$candidateSlug])) {
+            $candidateSlug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+        $tagSlugUsage[$rowBlogId][$candidateSlug] = true;
+
+        if ((string)($tagRow['slug'] ?? '') !== $candidateSlug) {
+            $tagUpdate->execute([$candidateSlug, (int)$tagRow['id']]);
+        }
+    }
+    $log[] = '· cms_tags: slugs štítků zkontrolovány a doplněny';
+} catch (\PDOException $e) {
+    $log[] = '· cms_tags slugs – přeskočeno: ' . h($e->getMessage());
 }
 
 // ── 3. Migrace textových kategorií ke stažení → cms_dl_categories ─────────────
@@ -2685,6 +2777,18 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = '· cms_tags index – přeskočeno: ' . h($e->getMessage());
+}
+
+try {
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_categories WHERE Key_name = 'uq_categories_blog_slug'")->fetch();
+    if (!$idxCheck) {
+        try { $pdo->exec("ALTER TABLE cms_categories DROP INDEX slug"); } catch (\PDOException $e) {}
+        try { $pdo->exec("ALTER TABLE cms_categories DROP INDEX uq_cms_categories_slug"); } catch (\PDOException $e) {}
+        $pdo->exec("ALTER TABLE cms_categories ADD UNIQUE KEY uq_categories_blog_slug (blog_id, slug)");
+        $log[] = '· cms_categories: přidán UNIQUE index (blog_id, slug)';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· cms_categories unique index – přeskočeno: ' . h($e->getMessage());
 }
 
 try {

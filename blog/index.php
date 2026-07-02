@@ -62,7 +62,12 @@ try {
 $blogSeries = publicBlogSeries($pdo, $blogId, 6);
 
 $katId = inputInt('get', 'kat');
-$tagSlug = trim((string)($_GET['tag'] ?? ''));
+$categoryPathSlug = blogCategorySlug(trim((string)($_GET['category_slug'] ?? '')));
+$tagSlug = blogTagSlug(trim((string)($_GET['tag'] ?? '')));
+$tagPathSlug = blogTagSlug(trim((string)($_GET['tag_slug'] ?? '')));
+if ($tagPathSlug !== '') {
+    $tagSlug = $tagPathSlug;
+}
 $authorSlug = authorSlug(trim((string)($_GET['autor'] ?? '')));
 $searchQuery = trim((string)($_GET['q'] ?? ''));
 $archiveFilter = trim((string)($_GET['archiv'] ?? ''));
@@ -70,9 +75,29 @@ if (!preg_match('/^\d{4}-\d{2}$/', $archiveFilter)) {
     $archiveFilter = '';
 }
 
-$catStmt = $pdo->prepare("SELECT id, name, parent_id FROM cms_categories WHERE blog_id = ? ORDER BY name");
-$catStmt->execute([$blogId]);
-$categories = $catStmt->fetchAll();
+$taxonomyLandingColumnsAvailable = true;
+try {
+    $catStmt = $pdo->prepare(
+        "SELECT id, name, slug, parent_id, description, meta_title, meta_description
+         FROM cms_categories
+         WHERE blog_id = ?
+         ORDER BY name"
+    );
+    $catStmt->execute([$blogId]);
+    $categories = $catStmt->fetchAll();
+} catch (\PDOException $e) {
+    $taxonomyLandingColumnsAvailable = false;
+    koraLog('warning', 'blog index categories query failed', ['blog_id' => $blogId, 'exception' => $e]);
+    $catStmt = $pdo->prepare("SELECT id, name, parent_id FROM cms_categories WHERE blog_id = ? ORDER BY name");
+    $catStmt->execute([$blogId]);
+    $categories = array_map(static function (array $category): array {
+        $category['slug'] = '';
+        $category['description'] = '';
+        $category['meta_title'] = '';
+        $category['meta_description'] = '';
+        return $category;
+    }, $catStmt->fetchAll());
+}
 
 $activeAuthor = $authorSlug !== '' ? fetchPublicAuthorBySlug($pdo, $authorSlug) : null;
 $showAuthorsIndexLink = false;
@@ -89,11 +114,68 @@ if (getSetting('blog_authors_index_enabled', '0') === '1') {
 
 $allTags = [];
 try {
-    $tagStmt = $pdo->prepare("SELECT name, slug FROM cms_tags WHERE blog_id = ? ORDER BY name");
+    $tagStmt = $pdo->prepare(
+        "SELECT id, name, slug, description, meta_title, meta_description
+         FROM cms_tags
+         WHERE blog_id = ?
+         ORDER BY name"
+    );
     $tagStmt->execute([$blogId]);
     $allTags = $tagStmt->fetchAll();
 } catch (\PDOException $e) {
     koraLog('warning', 'blog index tags query failed', ['blog_id' => $blogId, 'exception' => $e]);
+    try {
+        $tagStmt = $pdo->prepare("SELECT id, name, slug FROM cms_tags WHERE blog_id = ? ORDER BY name");
+        $tagStmt->execute([$blogId]);
+        $allTags = array_map(static function (array $tag): array {
+            $tag['description'] = '';
+            $tag['meta_title'] = '';
+            $tag['meta_description'] = '';
+            return $tag;
+        }, $tagStmt->fetchAll());
+    } catch (\PDOException $fallbackException) {
+        koraLog('warning', 'blog index tags fallback query failed', ['blog_id' => $blogId, 'exception' => $fallbackException]);
+    }
+}
+
+$activeCategory = null;
+if ($categoryPathSlug !== '') {
+    foreach ($categories as $categoryRow) {
+        if (blogCategorySlug((string)($categoryRow['slug'] ?? '')) === $categoryPathSlug) {
+            $activeCategory = $categoryRow;
+            $katId = (int)$categoryRow['id'];
+            break;
+        }
+    }
+
+    if ($activeCategory === null) {
+        renderPublicNotFoundPage([
+            'body_class' => 'page-not-found',
+        ]);
+    }
+} elseif ($katId !== null) {
+    foreach ($categories as $categoryRow) {
+        if ((int)$categoryRow['id'] === $katId) {
+            $activeCategory = $categoryRow;
+            break;
+        }
+    }
+}
+
+$activeTag = null;
+if ($tagSlug !== '') {
+    foreach ($allTags as $tagRow) {
+        if (blogTagSlug((string)($tagRow['slug'] ?? '')) === $tagSlug) {
+            $activeTag = $tagRow;
+            break;
+        }
+    }
+
+    if ($tagPathSlug !== '' && $activeTag === null) {
+        renderPublicNotFoundPage([
+            'body_class' => 'page-not-found',
+        ]);
+    }
 }
 
 $blogArchives = [];
@@ -128,6 +210,7 @@ try {
 
 $where = "WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND a.blog_id = ?";
 $params = [$blogId];
+$categorySlugSelect = $taxonomyLandingColumnsAvailable ? 'c.slug AS category_slug' : "'' AS category_slug";
 
 if ($katId !== null) {
     $catIds = categoryWithChildrenIds($pdo, $katId);
@@ -142,8 +225,9 @@ if ($tagSlug !== '') {
     $where .= " AND EXISTS (
         SELECT 1 FROM cms_article_tags at2
         JOIN cms_tags t ON t.id = at2.tag_id
-        WHERE at2.article_id = a.id AND t.slug = ?
+        WHERE at2.article_id = a.id AND t.blog_id = ? AND t.slug = ?
     )";
+    $params[] = $blogId;
     $params[] = $tagSlug;
 }
 
@@ -184,7 +268,7 @@ if ($showFeaturedArticle) {
     try {
         $featuredStmt = $pdo->prepare(
             "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.category_id, a.blog_id,
-                    c.name AS category, b.slug AS blog_slug,
+                    c.name AS category, {$categorySlugSelect}, b.slug AS blog_slug,
                     a.view_count,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.role AS author_role
@@ -218,7 +302,7 @@ $pag = paginate($pdo, "SELECT COUNT(*) FROM cms_articles a {$where}", $params, $
 
 $stmt = $pdo->prepare(
     "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.created_at, a.category_id, a.blog_id,
-            c.name AS category, b.slug AS blog_slug,
+            c.name AS category, {$categorySlugSelect}, b.slug AS blog_slug,
             a.view_count,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
             u.author_public_enabled, u.author_slug, u.role AS author_role
@@ -237,22 +321,12 @@ $articles = array_map(
 );
 
 $pageHeading = $blogName;
-if ($activeAuthor) {
+if ($activeCategory) {
+    $pageHeading = $blogName . ' – ' . (string)$activeCategory['name'];
+} elseif ($activeTag) {
+    $pageHeading = $blogName . ' – #' . (string)$activeTag['name'];
+} elseif ($activeAuthor) {
     $pageHeading = $blogName . ' – ' . $activeAuthor['author_display_name'];
-} elseif ($katId !== null) {
-    $categoryNames = array_column($categories, 'name', 'id');
-    $pageHeading = $blogName . ' – ' . ($categoryNames[$katId] ?? 'Kategorie');
-} elseif ($tagSlug !== '') {
-    $activeTag = null;
-    foreach ($allTags as $tagRow) {
-        if ((string)$tagRow['slug'] === $tagSlug) {
-            $activeTag = $tagRow;
-            break;
-        }
-    }
-    if ($activeTag) {
-        $pageHeading = $blogName . ' – #' . $activeTag['name'];
-    }
 } elseif ($archiveFilter !== '') {
     $archiveDate = DateTimeImmutable::createFromFormat('Y-m', $archiveFilter);
     $pageHeading = $blogName . ' – archiv ' . ($archiveDate ? formatCzechMonthYear($archiveDate) : $archiveFilter);
@@ -266,10 +340,10 @@ $queryBase = [];
 if ($searchQuery !== '') {
     $queryBase['q'] = $searchQuery;
 }
-if ($katId !== null) {
+if ($katId !== null && $activeCategory === null) {
     $queryBase['kat'] = $katId;
 }
-if ($tagSlug !== '') {
+if ($tagSlug !== '' && $activeTag === null) {
     $queryBase['tag'] = $tagSlug;
 }
 if ($authorSlug !== '') {
@@ -280,6 +354,11 @@ if ($archiveFilter !== '') {
 }
 
 $blogIndexBase = blogIndexPath($blog);
+if ($activeCategory) {
+    $blogIndexBase = blogCategoryPath($blog, $activeCategory);
+} elseif ($activeTag) {
+    $blogIndexBase = blogTagPath($blog, $activeTag);
+}
 $paginBase = $blogIndexBase . (str_contains($blogIndexBase, '?') ? '&' : '?');
 if ($queryBase !== []) {
     $paginBase .= http_build_query($queryBase) . '&';
@@ -289,11 +368,32 @@ $blogMetaTitle = trim((string)($blog['meta_title'] ?? ''));
 $blogMetaDescription = trim((string)($blog['meta_description'] ?? ''));
 $metaTitle = $blogMetaTitle !== '' ? $blogMetaTitle : $blogName;
 $metaDescription = $blogMetaDescription !== '' ? $blogMetaDescription : trim((string)($blog['description'] ?? ''));
+$metaUrl = blogIndexUrl($blog);
 
-if ($searchQuery !== '') {
+if ($activeCategory) {
+    $categoryMetaTitle = trim((string)($activeCategory['meta_title'] ?? ''));
+    $categoryMetaDescription = trim((string)($activeCategory['meta_description'] ?? ''));
+    $categoryDescription = trim((string)($activeCategory['description'] ?? ''));
+    $metaTitle = $categoryMetaTitle !== '' ? $categoryMetaTitle : $pageHeading;
+    $metaDescription = $categoryMetaDescription !== ''
+        ? $categoryMetaDescription
+        : ($categoryDescription !== '' ? normalizePlainText($categoryDescription) : $metaDescription);
+    $metaUrl = blogCategoryUrl($blog, $activeCategory);
+} elseif ($activeTag) {
+    $tagMetaTitle = trim((string)($activeTag['meta_title'] ?? ''));
+    $tagMetaDescription = trim((string)($activeTag['meta_description'] ?? ''));
+    $tagDescription = trim((string)($activeTag['description'] ?? ''));
+    $metaTitle = $tagMetaTitle !== '' ? $tagMetaTitle : $pageHeading;
+    $metaDescription = $tagMetaDescription !== ''
+        ? $tagMetaDescription
+        : ($tagDescription !== '' ? normalizePlainText($tagDescription) : $metaDescription);
+    $metaUrl = blogTagUrl($blog, $activeTag);
+}
+
+if ($searchQuery !== '' && !$activeCategory && !$activeTag) {
     $metaTitle = 'Hledání v blogu ' . $blogName;
 }
-if ($activeAuthor) {
+if ($activeAuthor && !$activeCategory && !$activeTag) {
     $metaTitle = $pageHeading;
 }
 if ($metaDescription === '') {
@@ -312,7 +412,7 @@ renderPublicPage([
         'title' => $metaTitle . ' – ' . $siteName,
         'description' => $metaDescription,
         'image' => $blogMetaImage,
-        'url' => blogIndexUrl($blog),
+        'url' => $metaUrl,
         'type' => 'website',
     ],
     'extra_head_html' => $extraHeadHtml,
@@ -327,6 +427,8 @@ renderPublicPage([
         'page' => $page,
         'katId' => $katId,
         'tagSlug' => $tagSlug,
+        'activeCategory' => $activeCategory,
+        'activeTag' => $activeTag,
         'activeAuthor' => $activeAuthor,
         'showAuthorsIndexLink' => $showAuthorsIndexLink,
         'publicBlogs' => $publicBlogs,

@@ -35,6 +35,8 @@ function coreModuleDefinitions(): array
             'search_result_types' => ['blog' => 'Článek'],
             'sitemap_sections' => [
                 'blog' => 'Blogy a články',
+                'blog_categories' => 'Kategorie blogu',
+                'blog_tags' => 'Štítky blogu',
                 'blog_series' => 'Série článků blogu',
             ],
             'settings_default' => '1',

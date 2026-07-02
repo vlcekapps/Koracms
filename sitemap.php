@@ -100,6 +100,68 @@ if (isModuleEnabled('blog')) {
     }
 
     try {
+        $categoryList = $pdo->query(
+            "SELECT c.id, c.name, c.slug, c.blog_id, b.slug AS blog_slug,
+                    GREATEST(
+                        COALESCE(c.updated_at, c.created_at),
+                        COALESCE(MAX(a.updated_at), MAX(a.created_at), COALESCE(c.updated_at, c.created_at))
+                    ) AS sitemap_lastmod
+             FROM cms_categories c
+             INNER JOIN cms_blogs b ON b.id = c.blog_id
+             LEFT JOIN cms_categories child ON child.parent_id = c.id AND child.blog_id = c.blog_id
+             INNER JOIN cms_articles a ON a.blog_id = c.blog_id
+                AND (a.category_id = c.id OR a.category_id = child.id)
+                AND a.deleted_at IS NULL
+                AND a.status = 'published'
+                AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             WHERE c.slug <> ''
+             GROUP BY c.id, c.name, c.slug, c.blog_id, b.slug, c.created_at, c.updated_at
+             ORDER BY b.sort_order ASC, c.name ASC"
+        )->fetchAll();
+        foreach ($categoryList as $category) {
+            sitemapWriteUrl(
+                blogCategoryUrl(['slug' => (string)$category['blog_slug']], $category),
+                'weekly',
+                '0.5',
+                sitemapLastmod((string)($category['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('blog_categories', $e);
+    }
+
+    try {
+        $tagList = $pdo->query(
+            "SELECT t.id, t.name, t.slug, t.blog_id, b.slug AS blog_slug,
+                    GREATEST(
+                        COALESCE(t.updated_at, t.created_at),
+                        COALESCE(MAX(a.updated_at), MAX(a.created_at), COALESCE(t.updated_at, t.created_at))
+                    ) AS sitemap_lastmod
+             FROM cms_tags t
+             INNER JOIN cms_blogs b ON b.id = t.blog_id
+             INNER JOIN cms_article_tags at2 ON at2.tag_id = t.id
+             INNER JOIN cms_articles a ON a.id = at2.article_id
+                AND a.blog_id = t.blog_id
+                AND a.deleted_at IS NULL
+                AND a.status = 'published'
+                AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             WHERE t.slug <> ''
+             GROUP BY t.id, t.name, t.slug, t.blog_id, b.slug, t.created_at, t.updated_at
+             ORDER BY b.sort_order ASC, t.name ASC"
+        )->fetchAll();
+        foreach ($tagList as $tag) {
+            sitemapWriteUrl(
+                blogTagUrl(['slug' => (string)$tag['blog_slug']], $tag),
+                'weekly',
+                '0.5',
+                sitemapLastmod((string)($tag['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('blog_tags', $e);
+    }
+
+    try {
         $seriesList = $pdo->query(
             "SELECT s.id, s.slug, s.blog_id, COALESCE(s.updated_at, s.created_at) AS sitemap_lastmod,
                     b.slug AS blog_slug

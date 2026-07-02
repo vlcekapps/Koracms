@@ -221,7 +221,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         if ($eid = $ex->fetchColumn()) {
             $catMap[$slug] = (int)$eid;
         } else {
-            $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$name, $blogId]);
+            $categorySlug = uniqueBlogCategorySlug($pdo, (string)$name, $blogId);
+            $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $categorySlug, $blogId]);
             $catMap[$slug] = (int)$pdo->lastInsertId();
             $insertedCats++;
         }

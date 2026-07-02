@@ -18,6 +18,8 @@ $blogSlug = slugify(trim((string)($_GET['blog_slug'] ?? '')));
 $articleSlug = articleSlug(trim((string)($_GET['slug'] ?? '')));
 $pageSlug = pageSlug(trim((string)($_GET['page_slug'] ?? '')));
 $seriesSlug = blogSeriesSlug(trim((string)($_GET['series_slug'] ?? '')));
+$categorySlug = blogCategorySlug(trim((string)($_GET['category_slug'] ?? '')));
+$tagSlug = blogTagSlug(trim((string)($_GET['tag_slug'] ?? '')));
 
 if ($blogSlug === '') {
     renderPublicNotFoundPage([
@@ -47,6 +49,44 @@ if (!$blog) {
             if ($legacyPage) {
                 header('Location: ' . pagePublicPath($legacyPage), true, 301);
                 exit;
+            }
+        }
+
+        if ($categorySlug !== '') {
+            try {
+                $categoryStmt = $pdo->prepare(
+                    "SELECT id, name, slug, blog_id
+                     FROM cms_categories
+                     WHERE blog_id = ? AND slug = ?
+                     LIMIT 1"
+                );
+                $categoryStmt->execute([(int)$legacyBlog['id'], $categorySlug]);
+                $legacyCategory = $categoryStmt->fetch() ?: null;
+                if ($legacyCategory) {
+                    header('Location: ' . blogCategoryPath($legacyBlog, $legacyCategory), true, 301);
+                    exit;
+                }
+            } catch (\PDOException $e) {
+                // Při postupném nasazení může být kód novější než DB migrace.
+            }
+        }
+
+        if ($tagSlug !== '') {
+            try {
+                $tagStmt = $pdo->prepare(
+                    "SELECT id, name, slug, blog_id
+                     FROM cms_tags
+                     WHERE blog_id = ? AND slug = ?
+                     LIMIT 1"
+                );
+                $tagStmt->execute([(int)$legacyBlog['id'], $tagSlug]);
+                $legacyTag = $tagStmt->fetch() ?: null;
+                if ($legacyTag) {
+                    header('Location: ' . blogTagPath($legacyBlog, $legacyTag), true, 301);
+                    exit;
+                }
+            } catch (\PDOException $e) {
+                // Při postupném nasazení může být kód novější než DB migrace.
             }
         }
 
@@ -100,7 +140,13 @@ if (!$blog) {
 $GLOBALS['current_blog'] = $blog;
 $_GET['blog_id'] = (int)$blog['id'];
 
-if ($seriesSlug !== '') {
+if ($categorySlug !== '') {
+    $_GET['category_slug'] = $categorySlug;
+    require __DIR__ . '/blog/index.php';
+} elseif ($tagSlug !== '') {
+    $_GET['tag_slug'] = $tagSlug;
+    require __DIR__ . '/blog/index.php';
+} elseif ($seriesSlug !== '') {
     $_GET['series_slug'] = $seriesSlug;
     require __DIR__ . '/blog/series.php';
 } elseif ($pageSlug !== '') {

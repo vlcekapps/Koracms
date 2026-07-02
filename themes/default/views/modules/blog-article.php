@@ -29,7 +29,11 @@ $articleToc = isset($articleToc) && is_array($articleToc) ? $articleToc : [];
         <h1 id="clanek-nadpis" class="section-title section-title--hero"><?= h($article['title']) ?></h1>
         <p class="meta-row">
           <?php if (!empty($article['category'])): ?>
-            <a class="pill" href="<?= h(blogIndexPath($blog)) ?>?kat=<?= (int)$article['category_id'] ?>"><?= h($article['category']) ?></a>
+            <a class="pill" href="<?= h(blogCategoryPath($blog, [
+                'id' => (int)$article['category_id'],
+                'name' => (string)$article['category'],
+                'slug' => (string)($article['category_slug'] ?? ''),
+            ])) ?>"><?= h($article['category']) ?></a>
           <?php endif; ?>
           <time datetime="<?= h(str_replace(' ', 'T', $article['created_at'])) ?>"><?= formatCzechDate($article['created_at']) ?></time>
           <?php if (!empty($article['author_name'])): ?>
@@ -79,7 +83,7 @@ $articleToc = isset($articleToc) && is_array($articleToc) ? $articleToc : [];
       <nav aria-labelledby="blog-article-tags-heading">
         <ul class="chip-list">
           <?php foreach ($tags as $tag): ?>
-            <li><a class="chip-link" href="<?= h(blogIndexPath($blog)) ?>?tag=<?= rawurlencode($tag['slug']) ?>">#<?= h($tag['name']) ?></a></li>
+            <li><a class="chip-link" href="<?= h(blogTagPath($blog, $tag)) ?>">#<?= h($tag['name']) ?></a></li>
           <?php endforeach; ?>
         </ul>
       </nav>

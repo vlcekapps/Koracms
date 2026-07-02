@@ -303,6 +303,17 @@ Server při ukládání článku znovu ověřuje, že vybraná série patří do
 
 Ručně vybrané související články se validují proti právě vybranému blogu. Editor nabídne jen publikované články stejného blogu a server při uložení znovu ověří, že podstrčené ID nepatří do jiného blogu. Pokud autor nic nevybere, veřejný detail článku dál použije automatické související články podle kategorie, štítků a novosti.
 
+### Veřejné stránky kategorií a štítků
+
+Kategorie i štítky každého blogu mají vlastní veřejné landing stránky. Ve správě **Kategorie blogu** a **Štítky blogu** lze kromě názvu vyplnit slug, popis, `Meta title` a `Meta description`. Když slug necháte prázdný, CMS ho vygeneruje z názvu a v rámci daného blogu ho automaticky odliší číselnou příponou.
+
+Veřejné adresy mají tvar:
+
+- `/{blog-slug}/kategorie/{category-slug}`
+- `/{blog-slug}/stitky/{tag-slug}`
+
+Landing stránka zobrazuje stejné publikované články jako původní filtry `?kat=` a `?tag=`, ale má vlastní nadpis, popis nad výpisem článků a canonical/SEO metadata z vyplněných polí. Staré query odkazy zůstávají funkční kvůli starším sdíleným odkazům a kombinovaným filtrům. Sitemap do XML přidá jen ty kategorie a štítky, které mají alespoň jeden veřejně publikovaný článek.
+
 ### Stránky a odkazy blogu
 
 Každý blog může mít vlastní horní navigaci nad výpisem článků. Do stejného pořadí lze přidat statické stránky blogu i externí nebo interní odkazy. Odkaz má název, cílovou adresu, volitelný přístupný popis pro čtečky obrazovky, přepínač zobrazení a volbu otevření v novém okně. Přístupný popis se ve veřejném výstupu přidává jako skrytý text za viditelný název odkazu, takže čtečka nehlásí jiný název než ten, který je vidět na stránce. Pokud se odkaz otevírá v novém okně, veřejný výstup automaticky přidá bezpečné atributy `target="_blank"` a `rel="noopener noreferrer"` a stejným skrytým textem oznámí otevření v novém okně.

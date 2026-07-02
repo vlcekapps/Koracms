@@ -21,7 +21,7 @@ $previewToken = trim($_GET['preview'] ?? '');
 if ($previewToken !== '') {
     if ($slug !== '') {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
+            "SELECT a.*, c.name AS category, c.id AS category_id, c.slug AS category_slug, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
@@ -33,7 +33,7 @@ if ($previewToken !== '') {
         $stmt->execute([$slug, $previewToken]);
     } else {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
+            "SELECT a.*, c.name AS category, c.id AS category_id, c.slug AS category_slug, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
@@ -47,7 +47,7 @@ if ($previewToken !== '') {
 } else {
     if ($slug !== '') {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
+            "SELECT a.*, c.name AS category, c.id AS category_id, c.slug AS category_slug, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a
@@ -59,7 +59,7 @@ if ($previewToken !== '') {
         $stmt->execute([$slug]);
     } else {
         $stmt = $pdo->prepare(
-            "SELECT a.*, c.name AS category, c.id AS category_id, b.slug AS blog_slug,
+            "SELECT a.*, c.name AS category, c.id AS category_id, c.slug AS category_slug, b.slug AS blog_slug,
                     COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
                     u.author_public_enabled, u.author_slug, u.author_bio, u.author_avatar, u.author_website, u.role AS author_role
              FROM cms_articles a

@@ -315,6 +315,18 @@ try {
     httpServerRouterSelfTestAssert(($blogSeriesRoute['get']['series_slug'] ?? '') === 'vikend-s-veterany', 'Blog series series_slug was not routed.');
     httpServerRouterSelfTestAssert(($blogSeriesRoute['get']['preview'] ?? '') === '1', 'Blog series query string was not preserved.');
 
+    $blogCategoryRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/kategorie/linuxovy-koutek?preview=1');
+    httpServerRouterSelfTestAssertRoute($blogCategoryRoute, 'blog-router', '/blog_router.php');
+    httpServerRouterSelfTestAssert(($blogCategoryRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog category blog_slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogCategoryRoute['get']['category_slug'] ?? '') === 'linuxovy-koutek', 'Blog category slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogCategoryRoute['get']['preview'] ?? '') === '1', 'Blog category query string was not preserved.');
+
+    $blogTagRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/stitky/nvda-tip?preview=1');
+    httpServerRouterSelfTestAssertRoute($blogTagRoute, 'blog-router', '/blog_router.php');
+    httpServerRouterSelfTestAssert(($blogTagRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog tag blog_slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogTagRoute['get']['tag_slug'] ?? '') === 'nvda-tip', 'Blog tag slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogTagRoute['get']['preview'] ?? '') === '1', 'Blog tag query string was not preserved.');
+
     $blogRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/vikend-s-veterany');
     httpServerRouterSelfTestAssertRoute($blogRoute, 'blog-router', '/blog_router.php');
     httpServerRouterSelfTestAssert(($blogRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog route blog_slug was not routed.');

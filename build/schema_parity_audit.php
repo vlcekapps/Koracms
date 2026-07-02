@@ -115,6 +115,15 @@ $criticalInstallColumns = [
     'cms_blog_series_items.series_id' => ['cms_blog_series_items', 'series_id'],
     'cms_blog_series_items.article_id' => ['cms_blog_series_items', 'article_id'],
     'cms_blog_series_items.sort_order' => ['cms_blog_series_items', 'sort_order'],
+    'cms_categories.slug' => ['cms_categories', 'slug'],
+    'cms_categories.description' => ['cms_categories', 'description'],
+    'cms_categories.meta_title' => ['cms_categories', 'meta_title'],
+    'cms_categories.meta_description' => ['cms_categories', 'meta_description'],
+    'cms_categories.updated_at' => ['cms_categories', 'updated_at'],
+    'cms_tags.description' => ['cms_tags', 'description'],
+    'cms_tags.meta_title' => ['cms_tags', 'meta_title'],
+    'cms_tags.meta_description' => ['cms_tags', 'meta_description'],
+    'cms_tags.updated_at' => ['cms_tags', 'updated_at'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -153,6 +162,16 @@ $criticalMigrationSnippets = [
     'cms_blog_series_items',
     'idx_blog_series_items_article',
     'idx_blog_series_items_order',
+    'cms_categories.slug',
+    'uq_categories_blog_slug',
+    'cms_categories.description',
+    'cms_categories.meta_title',
+    'cms_categories.meta_description',
+    'cms_categories.updated_at',
+    'cms_tags.description',
+    'cms_tags.meta_title',
+    'cms_tags.meta_description',
+    'cms_tags.updated_at',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {
@@ -201,6 +220,14 @@ schemaParityRequire(
     str_contains($feedSource, 'articleExcerpt(')
     && str_contains($dbSource, "require_once __DIR__ . '/lib/presentation.php';"),
     'feed.php must keep articleExcerpt() available through db.php presentation helpers.',
+    $issues
+);
+schemaParityRequire(
+    str_contains($sitemapSource, 'blogCategoryUrl(')
+    && str_contains($sitemapSource, 'blogTagUrl(')
+    && str_contains($sitemapSource, 'cms_categories c')
+    && str_contains($sitemapSource, 'cms_tags t'),
+    'sitemap.php must keep public blog category and tag landing URLs.',
     $issues
 );
 

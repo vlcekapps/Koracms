@@ -16,7 +16,12 @@ $renderAuthorName = static function (array $article): string {
 };
 $searchQuery = trim((string)($searchQuery ?? ''));
 $archiveFilter = trim((string)($archiveFilter ?? ''));
-$filterLink = static function (array $params = []) use ($blog, $activeAuthor, $searchQuery, $katId, $tagSlug, $archiveFilter): string {
+$activeCategory = is_array($activeCategory ?? null) ? $activeCategory : null;
+$activeTag = is_array($activeTag ?? null) ? $activeTag : null;
+$taxonomyDescription = $activeCategory
+    ? trim((string)($activeCategory['description'] ?? ''))
+    : ($activeTag ? trim((string)($activeTag['description'] ?? '')) : '');
+$preservedFilterQuery = static function () use ($activeAuthor, $searchQuery, $archiveFilter): array {
     $query = [];
     if (!empty($activeAuthor['author_slug'])) {
         $query['autor'] = (string)$activeAuthor['author_slug'];
@@ -24,17 +29,29 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor, $s
     if ($searchQuery !== '') {
         $query['q'] = $searchQuery;
     }
-    if ($katId !== null) {
-        $query['kat'] = (int)$katId;
-    }
-    if ($tagSlug !== '') {
-        $query['tag'] = $tagSlug;
-    }
     if ($archiveFilter !== '') {
         $query['archiv'] = $archiveFilter;
     }
 
+    return $query;
+};
+$filterLink = static function (array $params = []) use ($blog, $activeCategory, $activeTag, $preservedFilterQuery, $katId, $tagSlug): string {
+    $query = $preservedFilterQuery();
+    $base = blogIndexPath($blog);
+    if ($activeCategory) {
+        $base = blogCategoryPath($blog, $activeCategory);
+    } elseif ($activeTag) {
+        $base = blogTagPath($blog, $activeTag);
+    } elseif ($katId !== null) {
+        $query['kat'] = (int)$katId;
+    } elseif ($tagSlug !== '') {
+        $query['tag'] = $tagSlug;
+    }
+
     foreach ($params as $key => $value) {
+        if ($key === 'kat' || $key === 'tag') {
+            $base = blogIndexPath($blog);
+        }
         if ($value === null || $value === '') {
             unset($query[$key]);
             continue;
@@ -42,10 +59,23 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor, $s
         $query[$key] = $value;
     }
 
-    $base = blogIndexPath($blog);
     return $query === [] ? $base : $base . '?' . http_build_query($query);
 };
+$categoryLandingLink = static function (array $category) use ($blog, $preservedFilterQuery): string {
+    return blogCategoryPath($blog, $category, $preservedFilterQuery());
+};
+$tagLandingLink = static function (array $tag) use ($blog, $preservedFilterQuery, $activeCategory): string {
+    $query = $preservedFilterQuery();
+    if ($activeCategory) {
+        $query['kat'] = (int)($activeCategory['id'] ?? 0);
+    }
+
+    return blogTagPath($blog, $tag, $query);
+};
 $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || $searchQuery !== '' || $archiveFilter !== '';
+$searchAction = $activeCategory
+    ? blogCategoryPath($blog, $activeCategory)
+    : ($activeTag ? blogTagPath($blog, $activeTag) : blogIndexPath($blog));
 $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
 $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
 ?>
@@ -65,6 +95,11 @@ $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
         <?php if (!empty($blog['intro_content'])): ?>
           <div class="prose blog-intro-content">
             <?= renderContent((string)$blog['intro_content']) ?>
+          </div>
+        <?php endif; ?>
+        <?php if ($taxonomyDescription !== ''): ?>
+          <div class="prose blog-taxonomy-description" aria-labelledby="blog-title">
+            <?= renderContent($taxonomyDescription) ?>
           </div>
         <?php endif; ?>
       </div>
@@ -208,10 +243,10 @@ $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
         </nav>
       <?php endif; ?>
 
-      <form action="<?= h(blogIndexPath($blog)) ?>" method="get" class="form-stack blog-secondary-tools__block" role="search" aria-labelledby="blog-search-heading">
+      <form action="<?= h($searchAction) ?>" method="get" class="form-stack blog-secondary-tools__block" role="search" aria-labelledby="blog-search-heading">
         <h2 id="blog-search-heading" class="section-title section-title--compact blog-secondary-tools__title">Hledání v blogu</h2>
-        <?php if ($katId !== null): ?><input type="hidden" name="kat" value="<?= (int)$katId ?>"><?php endif; ?>
-        <?php if ($tagSlug !== ''): ?><input type="hidden" name="tag" value="<?= h($tagSlug) ?>"><?php endif; ?>
+        <?php if ($activeCategory === null && $katId !== null): ?><input type="hidden" name="kat" value="<?= (int)$katId ?>"><?php endif; ?>
+        <?php if ($activeTag === null && $tagSlug !== ''): ?><input type="hidden" name="tag" value="<?= h($tagSlug) ?>"><?php endif; ?>
         <?php if (!empty($activeAuthor['author_slug'])): ?><input type="hidden" name="autor" value="<?= h((string)$activeAuthor['author_slug']) ?>"><?php endif; ?>
         <?php if ($archiveFilter !== ''): ?><input type="hidden" name="archiv" value="<?= h($archiveFilter) ?>"><?php endif; ?>
         <label for="blog-search-q">Hledat v blogu</label>
@@ -231,7 +266,7 @@ $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
             <li><a class="chip-link" href="<?= h($filterLink(['kat' => null, 'tag' => null])) ?>"<?= ($katId === null && $tagSlug === '') ? ' aria-current="page"' : '' ?>>Vše</a></li>
             <?php foreach ($categories as $category): ?>
               <li>
-                <a class="chip-link" href="<?= h($filterLink(['kat' => (int)$category['id'], 'tag' => null])) ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
+                <a class="chip-link" href="<?= h($categoryLandingLink($category)) ?>"<?= $katId === (int)$category['id'] ? ' aria-current="page"' : '' ?>>
                   <?= h($category['name']) ?>
                 </a>
               </li>
@@ -246,7 +281,7 @@ $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
           <ul class="chip-list">
             <?php foreach ($allTags as $tag): ?>
               <li>
-                <a class="chip-link" href="<?= h($filterLink(['tag' => (string)$tag['slug']])) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
+                <a class="chip-link" href="<?= h($tagLandingLink($tag)) ?>"<?= $tagSlug === $tag['slug'] ? ' aria-current="page"' : '' ?>>
                   #<?= h($tag['name']) ?>
                 </a>
               </li>

@@ -14,7 +14,7 @@ $data = [
 
 $tables = [
     'settings'    => "SELECT `key`, value FROM cms_settings WHERE `key` NOT IN ('admin_password')",
-    'categories'  => "SELECT id, name, blog_id, created_at FROM cms_categories",
+    'categories'  => "SELECT id, name, slug, blog_id, parent_id, description, meta_title, meta_description, created_at, updated_at FROM cms_categories",
     'blogs'       => "SELECT id, name, slug, description, intro_content, logo_file, logo_alt_text, meta_title, meta_description,
                              rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav,
                              created_by_user_id,
@@ -29,7 +29,7 @@ $tables = [
     'article_related' => "SELECT article_id, related_article_id, sort_order, created_at FROM cms_article_related",
     'blog_series' => "SELECT id, blog_id, title, slug, description, is_active, sort_order, created_at, updated_at FROM cms_blog_series",
     'blog_series_items' => "SELECT series_id, article_id, sort_order, created_at FROM cms_blog_series_items",
-    'tags'        => "SELECT id, name, slug, blog_id, created_at FROM cms_tags",
+    'tags'        => "SELECT id, name, slug, blog_id, description, meta_title, meta_description, created_at, updated_at FROM cms_tags",
     'pages'       => "SELECT id, title, slug, content, blog_id, blog_nav_order, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",
     'nav_links'   => "SELECT id, blog_id, title, url, alt_text, target_blank, is_active, nav_order, created_at, updated_at

@@ -147,8 +147,9 @@ if ($articleIsMovingToAnotherBlog && $categoryId === null && $categorySelectionM
     } elseif ($articleMoveTaxonomyState['missing_category_name'] !== '' && $missingCategoryAction === 'create' && $canCreateTargetTaxonomies) {
         $missingCategoryName = trim((string)$articleMoveTaxonomyState['missing_category_name']);
         if ($missingCategoryName !== '') {
-            $insertCategoryStmt = $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)");
-            $insertCategoryStmt->execute([$missingCategoryName, $blogId]);
+            $missingCategorySlug = uniqueBlogCategorySlug($pdo, $missingCategoryName, $blogId);
+            $insertCategoryStmt = $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)");
+            $insertCategoryStmt->execute([$missingCategoryName, $missingCategorySlug, $blogId]);
             $categoryId = (int)$pdo->lastInsertId();
             $targetCategoryLookup[normalizeBlogTaxonomyName($missingCategoryName)] = [
                 'id' => $categoryId,

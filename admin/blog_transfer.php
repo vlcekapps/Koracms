@@ -132,7 +132,7 @@ function blogTransferTagSummary(array $tags): string
  */
 function blogTransferLoadCategories(PDO $pdo, int $blogId): array
 {
-    $stmt = $pdo->prepare("SELECT id, name FROM cms_categories WHERE blog_id = ? ORDER BY name ASC, id ASC");
+    $stmt = $pdo->prepare("SELECT id, name, slug FROM cms_categories WHERE blog_id = ? ORDER BY name ASC, id ASC");
     $stmt->execute([$blogId]);
     return $stmt->fetchAll() ?: [];
 }
@@ -457,12 +457,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '') {
                 $targetCategoryMap = blogTransferCategoryMapByName($targetCategories);
                 $targetCategoryMapById = blogTransferCategoryMapById($targetCategories);
                 if ($categoryStrategy === 'create') {
-                    $insertCategory = $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)");
+                    $insertCategory = $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)");
                     foreach ($categoryResolution['missing'] as $normalizedName => $categoryName) {
                         if (isset($targetCategoryMap[$normalizedName])) {
                             continue;
                         }
-                        $insertCategory->execute([$categoryName, (int)$targetBlog['id']]);
+                        $categorySlug = uniqueBlogCategorySlug($pdo, (string)$categoryName, (int)$targetBlog['id']);
+                        $insertCategory->execute([$categoryName, $categorySlug, (int)$targetBlog['id']]);
                         $targetCategoryMap[$normalizedName] = [
                             'id' => (int)$pdo->lastInsertId(),
                             'name' => $categoryName,

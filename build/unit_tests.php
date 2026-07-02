@@ -288,11 +288,45 @@ test_section('module sitemap sections');
 $sitemapSections = moduleSitemapSections();
 $sitemapSectionMap = sitemapSectionModuleMap();
 assert_equals('Blogy a články', $sitemapSections['blog']['blog'] ?? null, 'blog sitemap section label comes from manifest');
+assert_equals('Kategorie blogu', $sitemapSections['blog']['blog_categories'] ?? null, 'blog category sitemap section label comes from manifest');
+assert_equals('Štítky blogu', $sitemapSections['blog']['blog_tags'] ?? null, 'blog tag sitemap section label comes from manifest');
 assert_equals('blog', $sitemapSectionMap['blog'] ?? null, 'blog sitemap section maps to blog module');
+assert_equals('blog', $sitemapSectionMap['blog_categories'] ?? null, 'blog category sitemap section maps to blog module');
+assert_equals('blog', $sitemapSectionMap['blog_tags'] ?? null, 'blog tag sitemap section maps to blog module');
 assert_equals('gallery', $sitemapSectionMap['gallery_photos'] ?? null, 'gallery photos sitemap section maps to gallery module');
 assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcast episodes sitemap section maps to podcast module');
 assert_equals('forms', $sitemapSectionMap['forms'] ?? null, 'forms sitemap section maps to forms module');
 assert_false(isset($sitemapSections['statistics']), 'statistics module has no sitemap section');
+
+test_section('blog taxonomy landing links');
+
+assert_equals('linuxovy-koutek', blogCategorySlug('Linuxový koutek'), 'category slug normalizes Czech diacritics');
+assert_equals('nvda-tip', blogTagSlug('NVDA tip'), 'tag slug uses shared blog taxonomy normalization');
+assert_equals(
+    'linuxovy-koutek-3',
+    nextBlogTaxonomySlug('Linuxový koutek', ['linuxovy-koutek', 'linuxovy-koutek-2'], 'kategorie'),
+    'taxonomy slug helper deduplicates within existing slugs'
+);
+assert_equals(
+    'kategorie',
+    nextBlogTaxonomySlug('', [], 'Kategorie'),
+    'taxonomy slug helper uses fallback for empty input'
+);
+assert_equals(
+    '/snd/kategorie/linuxovy-koutek',
+    blogCategoryRequestPath(['slug' => 'snd'], ['id' => 12, 'name' => 'Linuxový koutek', 'slug' => 'linuxovy-koutek']),
+    'category landing request path uses clean blog URL'
+);
+assert_equals(
+    '/snd/stitky/nvda-tip?q=screenreader',
+    blogTagRequestPath(['slug' => 'snd'], ['id' => 8, 'name' => 'NVDA tip', 'slug' => 'nvda-tip'], ['q' => 'screenreader']),
+    'tag landing request path keeps compatible query filters'
+);
+assert_equals(
+    '/blog/index.php?kat=5',
+    blogCategoryRequestPath(['slug' => 'blog'], ['id' => 5, 'name' => 'Starší kategorie', 'slug' => '']),
+    'category landing path falls back to legacy query filter without slug'
+);
 
 test_section('navigation links');
 

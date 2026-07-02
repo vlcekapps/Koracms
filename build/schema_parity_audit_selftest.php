@@ -152,6 +152,24 @@ CREATE TABLE IF NOT EXISTS cms_blog_series_items (
   article_id INT,
   sort_order INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_categories (
+  id INT,
+  name VARCHAR(255),
+  slug VARCHAR(150),
+  description TEXT,
+  meta_title VARCHAR(160),
+  meta_description TEXT,
+  updated_at DATETIME
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_tags (
+  id INT,
+  name VARCHAR(100),
+  slug VARCHAR(100),
+  description TEXT,
+  meta_title VARCHAR(160),
+  meta_description TEXT,
+  updated_at DATETIME
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -182,6 +200,16 @@ PHP,
 // cms_blog_series_items
 // idx_blog_series_items_article
 // idx_blog_series_items_order
+// cms_categories.slug
+// uq_categories_blog_slug
+// cms_categories.description
+// cms_categories.meta_title
+// cms_categories.meta_description
+// cms_categories.updated_at
+// cms_tags.description
+// cms_tags.meta_title
+// cms_tags.meta_description
+// cms_tags.updated_at
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php
@@ -204,6 +232,8 @@ PHP,
         'sitemap.php' => <<<'PHP'
 <?php
 $sql = 'SELECT p.slug FROM cms_gallery_photos p INNER JOIN cms_gallery_albums a ON a.id = p.album_id ORDER BY p.created_at DESC, p.id DESC';
+$url = blogCategoryUrl($blog, $category) . blogTagUrl($blog, $tag);
+$taxonomySql = 'FROM cms_categories c INNER JOIN cms_tags t ON t.blog_id = c.blog_id';
 PHP,
         'feed.php' => <<<'PHP'
 <?php

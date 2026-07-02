@@ -72,18 +72,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Kategorie (přidá jen chybějící podle jména)
                 if (!empty($data['categories']) && is_array($data['categories'])) {
-                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_categories (id, name, blog_id) VALUES (?,?,?)");
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_categories
+                         (id, name, slug, blog_id, parent_id, description, meta_title, meta_description, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)"
+                    );
                     foreach ($data['categories'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name'], max(1, (int)($row['blog_id'] ?? 1))]);
+                        $rowBlogId = max(1, (int)($row['blog_id'] ?? 1));
+                        $rowName = trim((string)($row['name'] ?? ''));
+                        if ($rowName === '') {
+                            continue;
+                        }
+                        $rowId = (int)($row['id'] ?? 0);
+                        $rowSlug = blogCategorySlug((string)($row['slug'] ?? ''));
+                        if ($rowSlug === '') {
+                            $rowSlug = blogCategorySlug($rowName);
+                        }
+                        $rowSlug = uniqueBlogCategorySlug($pdo, $rowSlug, $rowBlogId, $rowId > 0 ? $rowId : null);
+                        $ins->execute([
+                            $rowId,
+                            $rowName,
+                            $rowSlug,
+                            $rowBlogId,
+                            !empty($row['parent_id']) ? (int)$row['parent_id'] : null,
+                            (string)($row['description'] ?? ''),
+                            (string)($row['meta_title'] ?? ''),
+                            (string)($row['meta_description'] ?? ''),
+                            (string)($row['created_at'] ?? date('Y-m-d H:i:s')),
+                            (string)($row['updated_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
                     }
                     $summary[] = 'Kategorie importovány.';
                 }
 
                 // Tagy
                 if (!empty($data['tags']) && is_array($data['tags'])) {
-                    $ins = $pdo->prepare("INSERT IGNORE INTO cms_tags (id, name, slug, blog_id) VALUES (?,?,?,?)");
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_tags
+                         (id, name, slug, blog_id, description, meta_title, meta_description, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?)"
+                    );
                     foreach ($data['tags'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name'], $row['slug'], max(1, (int)($row['blog_id'] ?? 1))]);
+                        $rowBlogId = max(1, (int)($row['blog_id'] ?? 1));
+                        $rowName = trim((string)($row['name'] ?? ''));
+                        if ($rowName === '') {
+                            continue;
+                        }
+                        $rowId = (int)($row['id'] ?? 0);
+                        $rowSlug = blogTagSlug((string)($row['slug'] ?? ''));
+                        if ($rowSlug === '') {
+                            $rowSlug = blogTagSlug($rowName);
+                        }
+                        $rowSlug = uniqueBlogTagSlug($pdo, $rowSlug, $rowBlogId, $rowId > 0 ? $rowId : null);
+                        $ins->execute([
+                            $rowId,
+                            $rowName,
+                            $rowSlug,
+                            $rowBlogId,
+                            (string)($row['description'] ?? ''),
+                            (string)($row['meta_title'] ?? ''),
+                            (string)($row['meta_description'] ?? ''),
+                            (string)($row['created_at'] ?? date('Y-m-d H:i:s')),
+                            (string)($row['updated_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
                     }
                     $summary[] = 'Tagy importovány.';
                 }

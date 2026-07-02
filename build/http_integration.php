@@ -3407,6 +3407,183 @@ try {
 
     httpIntegrationPrintResult('blog_article_series_http', $blogSeriesIssues, $failures);
 
+    $blogTaxonomyIssues = [];
+    $taxonomyBlogSlug = 'http-taxonomy-blog-' . bin2hex(random_bytes(4));
+    $taxonomyOtherBlogSlug = 'http-taxonomy-other-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)"
+    )->execute(['HTTP Taxonomy Blog', $taxonomyBlogSlug, $adminUserId]);
+    $taxonomyBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $taxonomyBlogId;
+    $pdo->prepare(
+        "INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)"
+    )->execute(['HTTP Taxonomy Other Blog', $taxonomyOtherBlogSlug, $adminUserId]);
+    $taxonomyOtherBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $taxonomyOtherBlogId;
+
+    $taxonomyCategorySlug = 'http-taxonomie-' . bin2hex(random_bytes(4));
+    $taxonomyTagSlug = 'http-stitek-' . bin2hex(random_bytes(4));
+    $taxonomyCategoryName = 'HTTP Taxonomická kategorie';
+    $taxonomyTagName = 'HTTP Taxonomický štítek';
+    $taxonomyArticleTitle = 'HTTP Taxonomy Landing Article ' . bin2hex(random_bytes(3));
+    $taxonomyArticleSlug = 'http-taxonomy-landing-article-' . bin2hex(random_bytes(4));
+    $taxonomyOtherArticleTitle = 'HTTP Taxonomy Other Article ' . bin2hex(random_bytes(3));
+
+    $pdo->prepare(
+        "INSERT INTO cms_categories (name, slug, blog_id, description, meta_title, meta_description)
+         VALUES (?, ?, ?, ?, ?, ?)"
+    )->execute([
+        $taxonomyCategoryName,
+        $taxonomyCategorySlug,
+        $taxonomyBlogId,
+        'Popis veřejné landing stránky kategorie.',
+        'HTTP Meta Kategorie',
+        'Meta popis veřejné kategorie.',
+    ]);
+    $taxonomyCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $taxonomyCategoryId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_categories (name, slug, blog_id, description)
+         VALUES (?, ?, ?, ?)"
+    )->execute([
+        'HTTP Stejný slug v jiném blogu',
+        $taxonomyCategorySlug,
+        $taxonomyOtherBlogId,
+        'Stejný slug v jiném blogu je povolený.',
+    ]);
+    $createdCategories[] = (int)$pdo->lastInsertId();
+
+    $pdo->prepare(
+        "INSERT INTO cms_tags (name, slug, blog_id, description, meta_title, meta_description)
+         VALUES (?, ?, ?, ?, ?, ?)"
+    )->execute([
+        $taxonomyTagName,
+        $taxonomyTagSlug,
+        $taxonomyBlogId,
+        'Popis veřejné landing stránky štítku.',
+        'HTTP Meta Štítek',
+        'Meta popis veřejného štítku.',
+    ]);
+    $taxonomyTagId = (int)$pdo->lastInsertId();
+    $createdTags[] = $taxonomyTagId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, category_id, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'published', NOW())"
+    )->execute([
+        $taxonomyArticleTitle,
+        $taxonomyArticleSlug,
+        $taxonomyBlogId,
+        'Perex pro taxonomy landing test.',
+        '<p>Obsah článku pro veřejné landing stránky kategorií a štítků.</p>',
+        $taxonomyCategoryId,
+        $adminUserId,
+    ]);
+    $taxonomyArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $taxonomyArticleId;
+    $pdo->prepare("INSERT INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)")->execute([$taxonomyArticleId, $taxonomyTagId]);
+
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Jiný článek bez taxonomy.</p>', 1, ?, 'published', NOW())"
+    )->execute([
+        $taxonomyOtherArticleTitle,
+        'http-taxonomy-other-article-' . bin2hex(random_bytes(4)),
+        $taxonomyBlogId,
+        $adminUserId,
+    ]);
+    $createdArticles[] = (int)$pdo->lastInsertId();
+
+    $taxonomyCategoryAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($taxonomyCategoryAdmin) !== 200
+        || !str_contains($taxonomyCategoryAdmin['body'], 'name="slug"')
+        || !str_contains($taxonomyCategoryAdmin['body'], 'name="description"')
+        || !str_contains($taxonomyCategoryAdmin['body'], 'name="meta_title"')
+        || !str_contains($taxonomyCategoryAdmin['body'], $taxonomyCategoryName)
+        || !str_contains($taxonomyCategoryAdmin['body'], 'Zobrazit na webu')) {
+        $blogTaxonomyIssues[] = 'admin kategorie nezobrazily slug, popis, SEO pole nebo veřejný odkaz';
+    }
+
+    $taxonomyTagAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($taxonomyTagAdmin) !== 200
+        || !str_contains($taxonomyTagAdmin['body'], 'name="slug"')
+        || !str_contains($taxonomyTagAdmin['body'], 'name="description"')
+        || !str_contains($taxonomyTagAdmin['body'], 'name="meta_title"')
+        || !str_contains($taxonomyTagAdmin['body'], $taxonomyTagName)
+        || !str_contains($taxonomyTagAdmin['body'], 'Zobrazit na webu')) {
+        $blogTaxonomyIssues[] = 'admin štítky nezobrazily slug, popis, SEO pole nebo veřejný odkaz';
+    }
+
+    $duplicateCategoryResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$taxonomyBlogId,
+        'name' => 'HTTP Duplicitní kategorie',
+        'slug' => $taxonomyCategorySlug,
+        'parent_id' => '',
+        'description' => '',
+        'meta_title' => '',
+        'meta_description' => '',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($duplicateCategoryResponse) !== 200
+        || !str_contains($duplicateCategoryResponse['body'], 'Tento slug už v tomto blogu používá jiná kategorie.')) {
+        $blogTaxonomyIssues[] = 'admin kategorie neodmítly duplicitní slug v jednom blogu';
+    }
+
+    $categoryLandingPath = '/' . rawurlencode($taxonomyBlogSlug) . '/kategorie/' . rawurlencode($taxonomyCategorySlug);
+    $categoryLandingResponse = fetchUrl($baseUrl . BASE_URL . $categoryLandingPath, '', 0);
+    if (httpIntegrationStatusCode($categoryLandingResponse) !== 200) {
+        $blogTaxonomyIssues[] = 'veřejná URL kategorie nevrátila 200';
+    } else {
+        foreach ([$taxonomyCategoryName, $taxonomyArticleTitle, 'Popis veřejné landing stránky kategorie.', 'HTTP Meta Kategorie', 'rel="canonical"', $categoryLandingPath] as $expectedCategoryFragment) {
+            if (!str_contains($categoryLandingResponse['body'], $expectedCategoryFragment)) {
+                $blogTaxonomyIssues[] = 'veřejná URL kategorie neobsahuje očekávaný fragment: ' . $expectedCategoryFragment;
+            }
+        }
+        if (str_contains($categoryLandingResponse['body'], $taxonomyOtherArticleTitle)) {
+            $blogTaxonomyIssues[] = 'veřejná URL kategorie zobrazila článek mimo kategorii';
+        }
+    }
+
+    $tagLandingPath = '/' . rawurlencode($taxonomyBlogSlug) . '/stitky/' . rawurlencode($taxonomyTagSlug);
+    $tagLandingResponse = fetchUrl($baseUrl . BASE_URL . $tagLandingPath, '', 0);
+    if (httpIntegrationStatusCode($tagLandingResponse) !== 200) {
+        $blogTaxonomyIssues[] = 'veřejná URL štítku nevrátila 200';
+    } else {
+        foreach ([$taxonomyTagName, $taxonomyArticleTitle, 'Popis veřejné landing stránky štítku.', 'HTTP Meta Štítek', 'rel="canonical"', $tagLandingPath] as $expectedTagFragment) {
+            if (!str_contains($tagLandingResponse['body'], $expectedTagFragment)) {
+                $blogTaxonomyIssues[] = 'veřejná URL štítku neobsahuje očekávaný fragment: ' . $expectedTagFragment;
+            }
+        }
+        if (str_contains($tagLandingResponse['body'], $taxonomyOtherArticleTitle)) {
+            $blogTaxonomyIssues[] = 'veřejná URL štítku zobrazila článek mimo štítek';
+        }
+    }
+
+    $legacyCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/blog/index.php?blog_id=' . $taxonomyBlogId . '&kat=' . $taxonomyCategoryId, '', 0);
+    if (httpIntegrationStatusCode($legacyCategoryResponse) !== 200 || !str_contains($legacyCategoryResponse['body'], $taxonomyArticleTitle)) {
+        $blogTaxonomyIssues[] = 'starý filtr ?kat= nezobrazil článek kategorie';
+    }
+
+    $legacyTagResponse = fetchUrl($baseUrl . BASE_URL . '/blog/index.php?blog_id=' . $taxonomyBlogId . '&tag=' . rawurlencode($taxonomyTagSlug), '', 0);
+    if (httpIntegrationStatusCode($legacyTagResponse) !== 200 || !str_contains($legacyTagResponse['body'], $taxonomyArticleTitle)) {
+        $blogTaxonomyIssues[] = 'starý filtr ?tag= nezobrazil článek štítku';
+    }
+
+    $missingCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/' . rawurlencode($taxonomyBlogSlug) . '/kategorie/neexistujici-taxonomie', '', 0);
+    if (httpIntegrationStatusCode($missingCategoryResponse) !== 404) {
+        $blogTaxonomyIssues[] = 'neexistující slug kategorie nevrátil veřejnou 404';
+    }
+
+    $taxonomySitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+    if (httpIntegrationStatusCode($taxonomySitemapResponse) !== 200
+        || !str_contains($taxonomySitemapResponse['body'], $categoryLandingPath)
+        || !str_contains($taxonomySitemapResponse['body'], $tagLandingPath)) {
+        $blogTaxonomyIssues[] = 'sitemap neobsahuje veřejné URL kategorií a štítků s publikovaným článkem';
+    }
+
+    httpIntegrationPrintResult('blog_taxonomy_landing_http', $blogTaxonomyIssues, $failures);
+
     $authorHubIssues = [];
     saveSetting('module_blog', '1');
     saveSetting('module_news', '1');
@@ -3672,24 +3849,24 @@ try {
 
     $sourceCategoryName = 'HTTP Zdrojová kategorie';
     $targetCategoryName = 'HTTP Cílová kategorie';
-    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$sourceCategoryName, $sourceBlogId]);
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$sourceCategoryName, uniqueBlogCategorySlug($pdo, $sourceCategoryName, $sourceBlogId), $sourceBlogId]);
     $sourceCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $sourceCategoryId;
-    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$targetCategoryName, $targetBlogId]);
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$targetCategoryName, uniqueBlogCategorySlug($pdo, $targetCategoryName, $targetBlogId), $targetBlogId]);
     $targetCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $targetCategoryId;
-    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute(['HTTP Cizí kategorie', $foreignBlogId]);
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute(['HTTP Cizí kategorie', uniqueBlogCategorySlug($pdo, 'HTTP Cizí kategorie', $foreignBlogId), $foreignBlogId]);
     $foreignCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $foreignCategoryId;
     $sharedCategoryName = 'HTTP Sdílená kategorie';
-    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$sharedCategoryName, $sourceBlogId]);
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$sharedCategoryName, uniqueBlogCategorySlug($pdo, $sharedCategoryName, $sourceBlogId), $sourceBlogId]);
     $sharedSourceCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $sharedSourceCategoryId;
-    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$sharedCategoryName, $targetBlogId]);
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$sharedCategoryName, uniqueBlogCategorySlug($pdo, $sharedCategoryName, $targetBlogId), $targetBlogId]);
     $sharedTargetCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $sharedTargetCategoryId;
     $createSourceCategoryName = 'HTTP Kategorie k vytvoření';
-    $pdo->prepare("INSERT INTO cms_categories (name, blog_id) VALUES (?, ?)")->execute([$createSourceCategoryName, $sourceBlogId]);
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$createSourceCategoryName, uniqueBlogCategorySlug($pdo, $createSourceCategoryName, $sourceBlogId), $sourceBlogId]);
     $createSourceCategoryId = (int)$pdo->lastInsertId();
     $createdCategories[] = $createSourceCategoryId;
 
