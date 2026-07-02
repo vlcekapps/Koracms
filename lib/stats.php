@@ -143,22 +143,12 @@ function statsContentPathHash(string $path): string
 
 function statsPageTypeModuleKey(string $pageType): string
 {
-    return match ($pageType) {
-        'article' => 'blog',
-        'page' => 'pages',
-        'news' => 'news',
-        'board' => 'board',
-        'event' => 'events',
-        'faq' => 'faq',
-        'poll' => 'polls',
-        'download' => 'downloads',
-        'food_card' => 'food',
-        'gallery_album', 'gallery_photo' => 'gallery',
-        'podcast_show', 'podcast_episode' => 'podcast',
-        'place' => 'places',
-        'form' => 'forms',
-        default => '',
-    };
+    $pageType = trim($pageType);
+    if ($pageType === 'page') {
+        return 'pages';
+    }
+
+    return moduleStatsPageTypeMap()[$pageType] ?? '';
 }
 
 function statsContentModuleLabel(string $moduleKey): string
@@ -192,21 +182,10 @@ function statsContentModuleIsVisible(string $moduleKey): bool
  */
 function statsContentModuleOptions(): array
 {
-    $modules = [
-        'pages' => 'Statické stránky',
-        'blog' => statsContentModuleLabel('blog'),
-        'news' => statsContentModuleLabel('news'),
-        'board' => statsContentModuleLabel('board'),
-        'events' => statsContentModuleLabel('events'),
-        'faq' => statsContentModuleLabel('faq'),
-        'polls' => statsContentModuleLabel('polls'),
-        'downloads' => statsContentModuleLabel('downloads'),
-        'food' => statsContentModuleLabel('food'),
-        'gallery' => statsContentModuleLabel('gallery'),
-        'podcast' => statsContentModuleLabel('podcast'),
-        'places' => statsContentModuleLabel('places'),
-        'forms' => statsContentModuleLabel('forms'),
-    ];
+    $modules = ['pages' => 'Statické stránky'];
+    foreach (array_keys(moduleStatsPageTypes()) as $moduleKey) {
+        $modules[$moduleKey] = statsContentModuleLabel($moduleKey);
+    }
 
     return array_filter(
         $modules,

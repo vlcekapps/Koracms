@@ -1230,6 +1230,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
     $contentReferenceTypeModules = [];
     $searchResultTypeModules = [];
     $sitemapSectionModules = [];
+    $statsPageTypeModules = [];
 
     foreach ($requiredCoreModuleKeys as $moduleKey) {
         if (!isset($blocks[$moduleKey])) {
@@ -1246,6 +1247,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $contentReferenceTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues);
         $searchResultTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'search_result_types', $issues);
         $sitemapSections = moduleContractAuditManifestStringMapField($block, $moduleKey, 'sitemap_sections', $issues);
+        $statsPageTypes = moduleContractAuditManifestStringListField($block, $moduleKey, 'stats_page_types', $issues);
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues);
@@ -1306,6 +1308,18 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
                 $issues[] = 'sitemap_sections key ' . $sitemapSection . ' is duplicated by modules ' . $sitemapSectionModules[$sitemapSection] . ' and ' . $moduleKey . '.';
             } else {
                 $sitemapSectionModules[$sitemapSection] = $moduleKey;
+            }
+        }
+        foreach ($statsPageTypes as $statsPageType) {
+            moduleContractAuditRequire(
+                preg_match('/^[a-z][a-z0-9_]*$/', $statsPageType) === 1,
+                'core module manifest entry ' . $moduleKey . ' contains invalid stats_page_types key ' . $statsPageType . '.',
+                $issues
+            );
+            if (isset($statsPageTypeModules[$statsPageType]) && $statsPageTypeModules[$statsPageType] !== $moduleKey) {
+                $issues[] = 'stats_page_types key ' . $statsPageType . ' is duplicated by modules ' . $statsPageTypeModules[$statsPageType] . ' and ' . $moduleKey . '.';
+            } else {
+                $statsPageTypeModules[$statsPageType] = $moduleKey;
             }
         }
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
@@ -1512,6 +1526,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
+            'stats_page_types',
             'requires_module',
             'requires_modules',
             'internalRedirectTarget()',
@@ -1542,6 +1557,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
+            'stats_page_types',
             'public_module_navigation_http',
             'admin_disabled_modules_http',
             'content_reference_disabled_modules_http',
@@ -1562,6 +1578,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
+            'stats_page_types',
             'composer ci:module-ready',
         ],
         $issues
@@ -1601,6 +1618,8 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function searchResultTypeModuleMap(')
     && str_contains($definitionsSource, 'function moduleSitemapSections(')
     && str_contains($definitionsSource, 'function sitemapSectionModuleMap(')
+    && str_contains($definitionsSource, 'function moduleStatsPageTypes(')
+    && str_contains($definitionsSource, 'function moduleStatsPageTypeMap(')
     && str_contains($definitionsSource, 'function moduleAdminLabel('),
     'lib/definitions.php must keep the central module manifest helper set.',
     $issues
@@ -1637,6 +1656,7 @@ foreach ([
     "'content_reference_types'",
     "'search_result_types'",
     "'sitemap_sections'",
+    "'stats_page_types'",
     "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(
@@ -1693,6 +1713,14 @@ moduleContractAuditRequire(
 moduleContractAuditRequire(
     str_contains($statsSource, 'return moduleNavigationDefaults();'),
     'lib/stats.php navModuleDefaults() must derive public module navigation from the central manifest.',
+    $issues
+);
+
+moduleContractAuditRequire(
+    str_contains($statsSource, 'moduleStatsPageTypeMap()[$pageType] ??')
+    && str_contains($statsSource, 'array_keys(moduleStatsPageTypes())')
+    && !str_contains($statsSource, "'food_card' => 'food'"),
+    'lib/stats.php content trend page_type mapping must derive from module stats_page_types manifest entries.',
     $issues
 );
 

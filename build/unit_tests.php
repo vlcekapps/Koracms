@@ -301,6 +301,18 @@ assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcas
 assert_equals('forms', $sitemapSectionMap['forms'] ?? null, 'forms sitemap section maps to forms module');
 assert_false(isset($sitemapSections['statistics']), 'statistics module has no sitemap section');
 
+test_section('module stats page types');
+
+$statsPageTypes = moduleStatsPageTypes();
+$statsPageTypeMap = moduleStatsPageTypeMap();
+assert_equals(['article'], $statsPageTypes['blog'] ?? null, 'blog stats page type comes from manifest');
+assert_equals('blog', $statsPageTypeMap['article'] ?? null, 'article stats page type maps to blog module');
+assert_equals('gallery', $statsPageTypeMap['gallery_photo'] ?? null, 'gallery photo stats page type maps to gallery module');
+assert_equals('podcast', $statsPageTypeMap['podcast_episode'] ?? null, 'podcast episode stats page type maps to podcast module');
+assert_equals('food', $statsPageTypeMap['food_card'] ?? null, 'food card stats page type maps to food module');
+assert_equals('forms', $statsPageTypeMap['form'] ?? null, 'form stats page type maps to forms module');
+assert_false(isset($statsPageTypes['statistics']), 'statistics module has no measured public content type');
+
 test_section('blog taxonomy landing links');
 
 assert_equals('linuxovy-koutek', blogCategorySlug('Linuxový koutek'), 'category slug normalizes Czech diacritics');

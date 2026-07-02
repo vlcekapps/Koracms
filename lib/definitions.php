@@ -12,6 +12,7 @@
  *     content_reference_types:array<string,string>,
  *     search_result_types:array<string,string>,
  *     sitemap_sections:array<string,string>,
+ *     stats_page_types:list<string>,
  *     settings_default:string,
  *     public_nav_path:string,
  *     public_paths:list<string>,
@@ -39,6 +40,7 @@ function coreModuleDefinitions(): array
                 'blog_tags' => 'Štítky blogu',
                 'blog_series' => 'Série článků blogu',
             ],
+            'stats_page_types' => ['article'],
             'settings_default' => '1',
             'public_nav_path' => '/blog/index.php',
             'public_paths' => [
@@ -70,6 +72,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['news' => 'Novinky'],
             'search_result_types' => ['news' => 'Novinka'],
             'sitemap_sections' => ['news' => 'Novinky'],
+            'stats_page_types' => ['news'],
             'settings_default' => '1',
             'public_nav_path' => '/news/index.php',
             'public_paths' => [
@@ -93,6 +96,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
+            'stats_page_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/chat/index.php',
             'public_paths' => [
@@ -115,6 +119,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
+            'stats_page_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/contact/index.php',
             'public_paths' => [
@@ -144,6 +149,7 @@ function coreModuleDefinitions(): array
                 'gallery_albums' => 'Alba galerie',
                 'gallery_photos' => 'Fotografie galerie',
             ],
+            'stats_page_types' => ['gallery_album', 'gallery_photo'],
             'settings_default' => '1',
             'public_nav_path' => '/gallery/index.php',
             'public_paths' => [
@@ -172,6 +178,7 @@ function coreModuleDefinitions(): array
                 'events' => 'Události',
                 'event_types' => 'Typy akcí',
             ],
+            'stats_page_types' => ['event'],
             'settings_default' => '1',
             'public_nav_path' => '/events/index.php',
             'public_paths' => [
@@ -203,6 +210,7 @@ function coreModuleDefinitions(): array
                 'podcast_shows' => 'Podcastové pořady',
                 'podcast_episodes' => 'Podcastové epizody',
             ],
+            'stats_page_types' => ['podcast_show', 'podcast_episode'],
             'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
             'public_paths' => [
@@ -231,6 +239,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['place' => 'Zajímavá místa'],
             'search_result_types' => ['place' => 'Místo'],
             'sitemap_sections' => ['places' => 'Zajímavá místa'],
+            'stats_page_types' => ['place'],
             'settings_default' => '1',
             'public_nav_path' => '/places/index.php',
             'public_paths' => [
@@ -255,6 +264,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
+            'stats_page_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '',
             'public_paths' => [
@@ -282,6 +292,7 @@ function coreModuleDefinitions(): array
                 'download_categories' => 'Kategorie ke stažení',
                 'download_series' => 'Série ke stažení',
             ],
+            'stats_page_types' => ['download'],
             'settings_default' => '1',
             'public_nav_path' => '/downloads/index.php',
             'public_paths' => [
@@ -309,6 +320,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'search_result_types' => ['food_card' => 'Lístek'],
             'sitemap_sections' => ['food' => 'Jídelní lístek'],
+            'stats_page_types' => ['food_card'],
             'settings_default' => '1',
             'public_nav_path' => '/food/index.php',
             'public_paths' => [
@@ -336,6 +348,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['poll' => 'Ankety'],
             'search_result_types' => ['poll' => 'Anketa'],
             'sitemap_sections' => ['polls' => 'Ankety'],
+            'stats_page_types' => ['poll'],
             'settings_default' => '0',
             'public_nav_path' => '/polls/index.php',
             'public_paths' => [
@@ -361,6 +374,7 @@ function coreModuleDefinitions(): array
                 'faq' => 'FAQ',
                 'faq_categories' => 'Kategorie FAQ',
             ],
+            'stats_page_types' => ['faq'],
             'settings_default' => '0',
             'public_nav_path' => '/faq/index.php',
             'public_paths' => [
@@ -388,6 +402,7 @@ function coreModuleDefinitions(): array
                 'board' => '',
                 'board_categories' => 'Kategorie vývěsky',
             ],
+            'stats_page_types' => ['board'],
             'settings_default' => '0',
             'public_nav_path' => '/board/index.php',
             'public_paths' => [
@@ -416,6 +431,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'search_result_types' => ['reservation_resource' => 'Rezervace'],
             'sitemap_sections' => ['reservations' => 'Rezervace'],
+            'stats_page_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '/reservations/index.php',
             'public_paths' => [
@@ -446,6 +462,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => ['forms' => 'Formuláře'],
             'search_result_types' => [],
             'sitemap_sections' => ['forms' => 'Formuláře'],
+            'stats_page_types' => ['form'],
             'settings_default' => '0',
             'public_nav_path' => '',
             'public_paths' => [
@@ -468,6 +485,7 @@ function coreModuleDefinitions(): array
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
+            'stats_page_types' => [],
             'settings_default' => '0',
             'public_nav_path' => '',
             'public_paths' => [],
@@ -791,6 +809,50 @@ function sitemapSectionModuleMap(): array
     foreach (moduleSitemapSections() as $moduleKey => $sectionLabels) {
         foreach (array_keys($sectionLabels) as $section) {
             $map[$section] = $moduleKey;
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * @return array<string, list<string>>
+ */
+function moduleStatsPageTypes(): array
+{
+    $types = [];
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        $pageTypes = $definition['stats_page_types'];
+        if ($pageTypes === []) {
+            continue;
+        }
+
+        $normalizedPageTypes = [];
+        foreach ($pageTypes as $pageType) {
+            $pageType = trim((string)$pageType);
+            if ($pageType !== '') {
+                $normalizedPageTypes[] = $pageType;
+            }
+        }
+
+        $normalizedPageTypes = array_values(array_unique($normalizedPageTypes));
+        if ($normalizedPageTypes !== []) {
+            $types[$moduleKey] = $normalizedPageTypes;
+        }
+    }
+
+    return $types;
+}
+
+/**
+ * @return array<string,string>
+ */
+function moduleStatsPageTypeMap(): array
+{
+    $map = [];
+    foreach (moduleStatsPageTypes() as $moduleKey => $pageTypes) {
+        foreach ($pageTypes as $pageType) {
+            $map[$pageType] = $moduleKey;
         }
     }
 
