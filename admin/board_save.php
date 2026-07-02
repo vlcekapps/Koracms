@@ -121,6 +121,14 @@ if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL)) {
     $redirectToForm($id, 'contact_email');
 }
 
+if ($categoryId !== null) {
+    $categoryCheck = $pdo->prepare("SELECT id FROM cms_board_categories WHERE id = ?");
+    $categoryCheck->execute([$categoryId]);
+    if (!$categoryCheck->fetch()) {
+        $redirectToForm($id, 'category');
+    }
+}
+
 $slug = boardSlug($submittedSlug !== '' ? $submittedSlug : $title);
 if ($slug === '') {
     $redirectToForm($id, 'slug');
@@ -163,13 +171,17 @@ if (koraUploadHasFile($_FILES['file'] ?? null)) {
 }
 
 if ($id !== null) {
+    $oldPath = boardPublicPath($existingDocument);
+    $oldPublic = boardIsPubliclyReachable($existingDocument);
+    $oldAttachmentChecksum = boardAttachmentChecksum($existingDocument);
+    $oldFilename = trim((string)($existingDocument['filename'] ?? ''));
+
     if (($existingDocument['preview_token'] ?? '') === '') {
         $previewToken = bin2hex(random_bytes(16));
         $pdo->prepare("UPDATE cms_board SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
     }
 
     $oldSnapshot = $boardRevisionSnapshot($existingDocument);
-    $oldPath = boardPublicPath($existingDocument);
     $requestedStatus = trim($_POST['article_status'] ?? '');
     if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
         $requestedStatus = $existingDocument['status'] ?? 'published';
@@ -180,7 +192,7 @@ if ($id !== null) {
     // Při první publikaci aktualizovat created_at
     $publishingNow = $requestedStatus === 'published' && ($existingDocument['status'] ?? '') !== 'published';
 
-    $set = "title = ?, slug = ?, board_type = ?, excerpt = ?, description = ?, category_id = ?,
+    $set = "title=?, slug=?, board_type=?, excerpt=?, description=?, category_id=?,
             posted_date = ?, removal_date = ?, image_file = ?, contact_name = ?, contact_phone = ?,
             contact_email = ?, is_pinned = ?, is_published = ?, publish_at = ?, unpublish_at = ?, status = ?, author_id = COALESCE(author_id, ?)";
     if ($publishingNow) {
@@ -216,6 +228,25 @@ if ($id !== null) {
 
     $params[] = $id;
     $pdo->prepare("UPDATE cms_board SET {$set} WHERE id = ?")->execute($params);
+    $documentStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+    $documentStmt->execute([$id]);
+    $updatedDocument = $documentStmt->fetch() ?: [
+        'id' => $id,
+        'title' => $title,
+        'slug' => $slug,
+        'category_id' => $categoryId,
+        'posted_date' => $postedDate,
+        'removal_date' => $removalDate,
+        'filename' => $newFilename ?? (string)($existingDocument['filename'] ?? ''),
+        'original_name' => $newOriginalName ?? (string)($existingDocument['original_name'] ?? ''),
+        'file_size' => $newFileSize ?? (int)($existingDocument['file_size'] ?? 0),
+        'is_published' => $isPublished,
+        'status' => $requestedStatus,
+        'publish_at' => $publishAtSql,
+        'unpublish_at' => $unpublishAtSql,
+        'deleted_at' => null,
+    ];
+    $newPublic = boardIsPubliclyReachable($updatedDocument);
     $newSnapshot = $boardRevisionSnapshot([
         'title' => $title,
         'slug' => $slug,
@@ -232,8 +263,30 @@ if ($id !== null) {
         'is_published' => $isPublished,
     ]);
     saveRevision($pdo, 'board', $id, $oldSnapshot, $newSnapshot);
-    upsertPathRedirect($pdo, $oldPath, boardPublicPath(['id' => $id, 'slug' => $slug]));
-    logAction('board_edit', "id={$id} title={$title} slug={$slug} type={$boardType} pinned={$isPinned}");
+    if ($oldPublic && $newPublic) {
+        $newPath = boardPublicPath($updatedDocument);
+        upsertPathRedirect($pdo, $oldPath, $newPath);
+        if ($oldPath !== $newPath) {
+            recordBoardPublicationEvent($pdo, $updatedDocument, 'url_changed', currentUserId());
+        }
+    }
+    if (!$oldPublic && $newPublic) {
+        recordBoardPublicationEvent($pdo, $updatedDocument, 'published', currentUserId());
+        $sentNotifications = notifyBoardSubscribers($pdo, $updatedDocument);
+        if ($sentNotifications > 0) {
+            logAction('board_notify', "id={$id} sent={$sentNotifications}");
+        }
+    } elseif ($oldPublic && !$newPublic) {
+        $eventType = !empty($removalDate) && (string)$removalDate < date('Y-m-d') ? 'removed' : 'hidden';
+        recordBoardPublicationEvent($pdo, $updatedDocument, $eventType, currentUserId());
+    } elseif ($oldPublic && $newPublic) {
+        $newAttachmentChecksum = boardAttachmentChecksum($updatedDocument);
+        $newFilenameStored = trim((string)($updatedDocument['filename'] ?? ''));
+        if ($oldFilename !== $newFilenameStored || $oldAttachmentChecksum !== $newAttachmentChecksum) {
+            recordBoardPublicationEvent($pdo, $updatedDocument, 'attachment_changed', currentUserId());
+        }
+    }
+    logAction('board_edit', "id={$id} name={$title} slug={$slug} type={$boardType} pinned={$isPinned}");
 } else {
     $requestedStatus = trim($_POST['article_status'] ?? '');
     if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
@@ -278,7 +331,32 @@ if ($id !== null) {
     ]);
 
     $id = (int)$pdo->lastInsertId();
-    logAction('board_add', "id={$id} title={$title} slug={$slug} type={$boardType} status={$status} pinned={$isPinned}");
+    $documentStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+    $documentStmt->execute([$id]);
+    $createdDocument = $documentStmt->fetch() ?: [
+        'id' => $id,
+        'title' => $title,
+        'slug' => $slug,
+        'category_id' => $categoryId,
+        'posted_date' => $postedDate,
+        'removal_date' => $removalDate,
+        'filename' => $newFilename ?? '',
+        'original_name' => $newOriginalName ?? '',
+        'file_size' => $newFileSize ?? 0,
+        'is_published' => $visible,
+        'status' => $status,
+        'publish_at' => $publishAtSql,
+        'unpublish_at' => $unpublishAtSql,
+        'deleted_at' => null,
+    ];
+    if (boardIsPubliclyReachable($createdDocument)) {
+        recordBoardPublicationEvent($pdo, $createdDocument, 'published', currentUserId());
+        $sentNotifications = notifyBoardSubscribers($pdo, $createdDocument);
+        if ($sentNotifications > 0) {
+            logAction('board_notify', "id={$id} sent={$sentNotifications}");
+        }
+    }
+    logAction('board_add', "id={$id} name={$title} slug={$slug} type={$boardType} status={$status} pinned={$isPinned}");
     if ($status === 'pending') {
         notifyPendingContent('Vývěska', $title, '/admin/board.php');
     }

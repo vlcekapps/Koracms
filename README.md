@@ -251,7 +251,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Ankety** | Hlasování s plánováním, fulltextovým hledáním, slug URL, SEO fallbacky a revizemi |
 | **Znalostní báze** | FAQ s kategoriemi, hledáním, stránkováním, SEO a FAQPage strukturovanými daty |
 | **Formuláře** | Form Builder s přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge |
-| **Vývěska** | Úřední deska s typem položky, datem vyvěšení, připnutím, filtrováním a archivem |
+| **Vývěska** | Úřední deska s typem položky, datem vyvěšení, připnutím, filtrováním, archivem, kategoriovými landing stránkami, evidencí zveřejnění a bezpečným odběrem |
 | **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování a storno přes token |
 | **Statické stránky** | Vlastní stránky se slug URL a volitelným zobrazením v navigaci |
 | **Kontakt** | Kontaktní formulář s CAPTCHA, honeypotem a rate limitingem |
@@ -273,6 +273,8 @@ Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / a
 Modul **Galerie** nově chrání neveřejná alba i fotografie i na úrovni detailu, vyhledávání a sitemapy, používá bezpečný media endpoint místo přímých `/uploads/gallery/` cest, podporuje redirecty po změně slugu, historii revizí, veřejné hledání, stránkování alb i detailu a structured data pro alba i fotografie.
 
 Modul **Chat** nově funguje jako moderovaná veřejná nástěnka: nové zprávy se nejdřív ukládají ke schválení, veřejně se nezobrazuje e-mail ani web autora, veřejný výpis podporuje hledání, řazení a stránkování a administrace nabízí inbox workflow se schvalováním, interní poznámkou, historií změn a odpovědí e-mailem.
+
+Modul **Vývěska** nově podporuje důvěryhodnější veřejný archiv: detail položky ukazuje evidenci zveřejnění včetně změn URL, příloh a SHA-256 otisku souboru, kategorie mají čisté URL `/board/kategorie/{slug}` s popisem a SEO metadata a samostatný odběr vývěsky je oddělený od newsletteru. Přihlášení k odběru probíhá na `/board/subscribe.php`, vyžaduje captcha, rate-limit a potvrzení e-mailem.
 
 Knihovna **Média** nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery místo ručně skládaných `/uploads/media/...` URL, blokuje mazání používaných souborů a podporuje náhradu souboru, rozšířená metadata i hromadné akce v administraci. Souborové přesuny, náhrady a úklid miniatur se logují strukturovaně bez fyzických cest. Admin obrazovka médií používá pro upload, filtry, grid, hromadné akce a detail metadat sdílenou CSS vrstvu bez lokálních `style` atributů.
 
@@ -704,6 +706,7 @@ server {
     location ~ ^/authors/?$ { rewrite ^ /authors/index.php last; }
     location ~ ^/author/([a-z0-9\-]+)/?$ { rewrite ^/author/(.+?)/?$ /author.php?slug=$1 last; }
     location ~ ^/blog/([a-z0-9\-]+)/?$ { rewrite ^/blog/(.+?)/?$ /blog/article.php?slug=$1 last; }
+    location ~ ^/board/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/board/kategorie/(.+?)/?$ /board/index.php?category_slug=$1 last; }
     location ~ ^/board/([a-z0-9\-]+)/?$ { rewrite ^/board/(.+?)/?$ /board/document.php?slug=$1 last; }
     location ~ ^/downloads/([a-z0-9\-]+)/?$ { rewrite ^/downloads/(.+?)/?$ /downloads/item.php?slug=$1 last; }
     location ~ ^/events/([a-z0-9\-]+)/?$ { rewrite ^/events/(.+?)/?$ /events/event.php?slug=$1 last; }

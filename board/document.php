@@ -21,7 +21,7 @@ $previewToken = trim($_GET['preview'] ?? '');
 if ($previewToken !== '') {
     if ($slug !== '') {
         $stmt = $pdo->prepare(
-            "SELECT b.*, COALESCE(c.name, '') AS category_name
+            "SELECT b.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
              FROM cms_board b
              LEFT JOIN cms_board_categories c ON c.id = b.category_id
              WHERE b.slug = ? AND b.preview_token = ? AND b.deleted_at IS NULL
@@ -30,7 +30,7 @@ if ($previewToken !== '') {
         $stmt->execute([$slug, $previewToken]);
     } else {
         $stmt = $pdo->prepare(
-            "SELECT b.*, COALESCE(c.name, '') AS category_name
+            "SELECT b.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
              FROM cms_board b
              LEFT JOIN cms_board_categories c ON c.id = b.category_id
              WHERE b.id = ? AND b.preview_token = ? AND b.deleted_at IS NULL
@@ -41,7 +41,7 @@ if ($previewToken !== '') {
 } else {
     if ($slug !== '') {
         $stmt = $pdo->prepare(
-            "SELECT b.*, COALESCE(c.name, '') AS category_name
+            "SELECT b.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
              FROM cms_board b
              LEFT JOIN cms_board_categories c ON c.id = b.category_id
              WHERE b.slug = ? AND " . boardPublicVisibilitySql('b') . "
@@ -50,7 +50,7 @@ if ($previewToken !== '') {
         $stmt->execute([$slug]);
     } else {
         $stmt = $pdo->prepare(
-            "SELECT b.*, COALESCE(c.name, '') AS category_name
+            "SELECT b.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
              FROM cms_board b
              LEFT JOIN cms_board_categories c ON c.id = b.category_id
              WHERE b.id = ? AND " . boardPublicVisibilitySql('b') . "
@@ -76,6 +76,7 @@ if (!$document) {
 }
 
 $document = hydrateBoardPresentation($document);
+$publicationEvents = boardPublicationEvents($pdo, (int)$document['id']);
 
 if ($slug === '' && !empty($document['slug'])) {
     header('Location: ' . boardPublicPath($document));
@@ -105,6 +106,7 @@ renderPublicPage([
     'view_data' => [
         'boardLabel' => $boardLabel,
         'document' => $document,
+        'publicationEvents' => $publicationEvents,
     ],
     'current_nav' => 'board',
     'body_class' => 'page-board-article',

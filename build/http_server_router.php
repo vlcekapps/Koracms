@@ -112,6 +112,7 @@ if ($routePath === '') {
     $routeMap = [
         '#^author/([a-z0-9-]+)/?$#i' => ['author.php', ['slug']],
         '#^blog/([a-z0-9-]+)/?$#i' => ['blog/article.php', ['slug']],
+        '#^board/kategorie/([a-z0-9-]+)/?$#i' => ['board/index.php', ['category_slug']],
         '#^board/([a-z0-9-]+)/?$#i' => ['board/document.php', ['slug']],
         '#^downloads/([a-z0-9-]+)/?$#i' => ['downloads/item.php', ['slug']],
         '#^events/([a-z0-9-]+)\.ics$#i' => ['events/ics.php', ['slug']],

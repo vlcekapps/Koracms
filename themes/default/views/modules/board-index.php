@@ -12,6 +12,8 @@ $selectedCategoryId = $selectedCategoryId ?? null;
 $selectedMonth = (string)($selectedMonth ?? '');
 $clearUrl = (string)($clearUrl ?? (BASE_URL . '/board/index.php'));
 $pageHeading = (string)($pageHeading ?? $boardLabel);
+$activeCategory = is_array($activeCategory ?? null) ? $activeCategory : null;
+$activeCategoryDescription = $activeCategory !== null ? trim((string)($activeCategory['description'] ?? '')) : '';
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="board-title">
@@ -21,6 +23,16 @@ $pageHeading = (string)($pageHeading ?? $boardLabel);
         <h1 id="board-title" class="section-title section-title--hero"><?= h($pageHeading) ?></h1>
       </div>
     </div>
+
+    <?php if ($activeCategoryDescription !== ''): ?>
+      <div class="prose article-shell__lead">
+        <?= renderContent($activeCategoryDescription) ?>
+      </div>
+    <?php endif; ?>
+
+    <p class="button-row button-row--start">
+      <a class="button-secondary" href="<?= BASE_URL ?>/board/subscribe.php">Odebírat nové položky vývěsky</a>
+    </p>
 
     <?php if ($scopeLinks !== []): ?>
       <h2 id="board-scope-heading" class="sr-only">Rozsah výpisu vývěsky</h2>
@@ -138,7 +150,17 @@ $pageHeading = (string)($pageHeading ?? $boardLabel);
                         <span class="pill">Důležité</span>
                       <?php endif; ?>
                       <?php if ((string)($document['category_name'] ?? '') !== ''): ?>
-                        <span class="pill"><?= h((string)$document['category_name']) ?></span>
+                        <?php
+                        $documentCategory = [
+                            'id' => (int)($document['category_id'] ?? 0),
+                            'slug' => (string)($document['category_slug'] ?? ''),
+                        ];
+                        ?>
+                        <?php if (boardCategorySlug((string)$documentCategory['slug']) !== ''): ?>
+                          <a class="pill" href="<?= h(boardCategoryPath($documentCategory)) ?>"><?= h((string)$document['category_name']) ?></a>
+                        <?php else: ?>
+                          <span class="pill"><?= h((string)$document['category_name']) ?></span>
+                        <?php endif; ?>
                       <?php endif; ?>
                       <?php if ((string)($document['posted_date'] ?? '') !== ''): ?>
                         <span>Vyvěšeno <time datetime="<?= h((string)$document['posted_date']) ?>"><?= formatCzechDate((string)$document['posted_date']) ?></time></span>

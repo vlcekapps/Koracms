@@ -226,6 +226,32 @@ if (isModuleEnabled('board')) {
     } catch (\PDOException $e) {
         sitemapLogSectionError('board', $e);
     }
+
+    try {
+        $boardCategories = $pdo->query(
+            "SELECT c.id, c.name, c.slug,
+                    GREATEST(
+                        COALESCE(c.updated_at, c.created_at),
+                        COALESCE(MAX(b.created_at), COALESCE(c.updated_at, c.created_at))
+                    ) AS sitemap_lastmod
+             FROM cms_board_categories c
+             INNER JOIN cms_board b ON b.category_id = c.id
+                AND " . boardPublicVisibilitySql('b') . "
+             WHERE c.slug <> ''
+             GROUP BY c.id, c.name, c.slug, c.created_at, c.updated_at
+             ORDER BY c.sort_order ASC, c.name ASC"
+        )->fetchAll();
+        foreach ($boardCategories as $category) {
+            sitemapWriteUrl(
+                boardCategoryUrl($category),
+                'weekly',
+                '0.5',
+                sitemapLastmod((string)($category['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('board_categories', $e);
+    }
 }
 
 if (isModuleEnabled('downloads')) {

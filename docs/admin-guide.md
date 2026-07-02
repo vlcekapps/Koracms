@@ -627,6 +627,19 @@ Formulář nově zobrazuje i kontextovou nápovědu podle typu položky a odkaz 
 - Pokud má datum sejmutí a to už uplynulo, přesune se do archivu.
 - Veřejný výpis nově umí hledání, filtr podle kategorie, filtr podle období vyvěšení a přepínání `aktuální / archiv / vše`.
 - Veřejný detail archivní položky vrací návštěvníka zpět rovnou do archivního výpisu.
+- Detail veřejné položky může zobrazit sekci **Evidence zveřejnění**, kde návštěvník uvidí důležité veřejné události položky: zveřejnění, změnu URL, změnu přílohy, sejmutí, skrytí, smazání nebo obnovu. U přílohy se ukládá i název, velikost a SHA-256 otisk souboru.
+
+### Kategorie vývěsky
+
+Kategorie vývěsky mají vlastní veřejné landing stránky. Ve správě kategorií lze kromě názvu vyplnit slug, popis, `Meta title` a `Meta description`. Když slug necháte prázdný, CMS ho vygeneruje z názvu a pohlídá jeho jedinečnost.
+
+Veřejná adresa kategorie má tvar `/board/kategorie/slug-kategorie`. Zobrazuje stejný typ výpisu jako filtr vývěsky, ale s vlastním nadpisem, popisem, canonical URL a SEO metadaty. Starý filtr přes parametr kategorie zůstává funkční kvůli kompatibilitě.
+
+### Odběr vývěsky
+
+Odběr vývěsky je oddělený od běžného newsletteru. Návštěvník se přihlásí přes samostatnou stránku `/board/subscribe.php`, vyplní e-mail, volitelně vybere konkrétní kategorie, opíše captcha kód a odběr potvrdí odkazem z e-mailu. Teprve potvrzený odběratel může dostávat upozornění.
+
+Upozornění se posílá jen při první veřejné publikaci položky nebo při přechodu položky z neveřejného stavu do veřejného. Běžná editace už veřejné položky e-maily znovu neposílá, aby vývěska odběratele nespamovala.
 
 ### Přílohy a přístupová práva
 

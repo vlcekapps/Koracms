@@ -82,9 +82,16 @@ $moduleConfig = match ($module) {
         'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
             $dir = dirname(__DIR__) . '/uploads/board/images/';
             foreach ($deleteIds as $id) {
-                $stmt = $pdo->prepare("SELECT image_file FROM cms_board WHERE id = ?");
+                $stmt = $pdo->prepare("SELECT id, slug, image_file FROM cms_board WHERE id = ?");
                 $stmt->execute([$id]);
-                $file = (string)$stmt->fetchColumn();
+                $document = $stmt->fetch() ?: null;
+                if (!$document) {
+                    continue;
+                }
+                deleteRedirectsTargetingPath($pdo, boardPublicPath($document));
+                $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$id]);
+                $file = (string)($document['image_file'] ?? '');
                 if ($file !== '' && is_file($dir . $file)) {
                     if (!unlink($dir . $file)) {
                         adminBulkLogFileDeleteFailure('board', (int)$id, 'image_file', $dir . $file);
@@ -313,10 +320,35 @@ if ($action === 'delete') {
 } elseif ($action === 'publish') {
     $ph = implode(',', array_fill(0, count($ids), '?'));
     $table = $moduleConfig['table'];
+    $previousBoardDocuments = [];
+    if ($module === 'board') {
+        $previousStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id IN ({$ph})");
+        $previousStmt->execute($ids);
+        foreach ($previousStmt->fetchAll() as $document) {
+            $previousBoardDocuments[(int)$document['id']] = $document;
+        }
+    }
 
     // Ověříme, zda tabulka má sloupec status
     try {
-        $pdo->prepare("UPDATE {$table} SET status = 'published' WHERE id IN ({$ph})")->execute($ids);
+        if ($module === 'board') {
+            $pdo->prepare("UPDATE {$table} SET status = 'published', is_published = 1 WHERE id IN ({$ph})")->execute($ids);
+            $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id IN ({$ph})");
+            $updatedStmt->execute($ids);
+            foreach ($updatedStmt->fetchAll() as $updatedDocument) {
+                $documentId = (int)($updatedDocument['id'] ?? 0);
+                $previousDocument = $previousBoardDocuments[$documentId] ?? [];
+                if ($previousDocument !== [] && shouldSendBoardPublicationNotice($previousDocument, $updatedDocument)) {
+                    recordBoardPublicationEvent($pdo, $updatedDocument, 'published', currentUserId());
+                    $sentNotifications = notifyBoardSubscribers($pdo, $updatedDocument);
+                    if ($sentNotifications > 0) {
+                        logAction('board_notify', "id={$documentId} sent={$sentNotifications}");
+                    }
+                }
+            }
+        } else {
+            $pdo->prepare("UPDATE {$table} SET status = 'published' WHERE id IN ({$ph})")->execute($ids);
+        }
         logAction($moduleConfig['log_prefix'] . '_bulk_publish', 'ids=' . implode(',', $ids));
     } catch (\PDOException $e) {
         adminBulkLogFailure('publish', [
@@ -328,9 +360,27 @@ if ($action === 'delete') {
 } elseif ($action === 'hide') {
     $ph = implode(',', array_fill(0, count($ids), '?'));
     $table = $moduleConfig['table'];
+    $previousBoardDocuments = [];
+    if ($module === 'board') {
+        $previousStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id IN ({$ph})");
+        $previousStmt->execute($ids);
+        foreach ($previousStmt->fetchAll() as $document) {
+            $previousBoardDocuments[(int)$document['id']] = $document;
+        }
+    }
 
     try {
         $pdo->prepare("UPDATE {$table} SET status = 'pending' WHERE id IN ({$ph})")->execute($ids);
+        if ($module === 'board') {
+            $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id IN ({$ph})");
+            $updatedStmt->execute($ids);
+            foreach ($updatedStmt->fetchAll() as $updatedDocument) {
+                $documentId = (int)($updatedDocument['id'] ?? 0);
+                if (isset($previousBoardDocuments[$documentId]) && boardIsPubliclyReachable($previousBoardDocuments[$documentId])) {
+                    recordBoardPublicationEvent($pdo, $updatedDocument, 'hidden', currentUserId());
+                }
+            }
+        }
         logAction($moduleConfig['log_prefix'] . '_bulk_hide', 'ids=' . implode(',', $ids));
     } catch (\PDOException $e) {
         adminBulkLogFailure('hide', [

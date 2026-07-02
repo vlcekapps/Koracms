@@ -612,10 +612,16 @@ $tables = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_board_categories' => "CREATE TABLE IF NOT EXISTS cms_board_categories (
-        id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        name       VARCHAR(255) NOT NULL,
-        sort_order INT          NOT NULL DEFAULT 0,
-        created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name             VARCHAR(255) NOT NULL,
+        slug             VARCHAR(150) NOT NULL DEFAULT '',
+        description      TEXT,
+        meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
+        sort_order       INT          NOT NULL DEFAULT 0,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_board_categories_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_board' => "CREATE TABLE IF NOT EXISTS cms_board (
@@ -644,6 +650,41 @@ $tables = [
         deleted_at     DATETIME     NULL DEFAULT NULL,
         created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_cms_board_slug (slug)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_board_publication_events' => "CREATE TABLE IF NOT EXISTS cms_board_publication_events (
+        id                  INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        board_id            INT          NOT NULL,
+        event_type          VARCHAR(50)  NOT NULL,
+        event_date          DATETIME     NOT NULL,
+        actor_user_id       INT          NULL DEFAULT NULL,
+        public_path         VARCHAR(500) NOT NULL DEFAULT '',
+        attachment_name     VARCHAR(255) NOT NULL DEFAULT '',
+        attachment_size     INT          NOT NULL DEFAULT 0,
+        attachment_checksum CHAR(64)     NOT NULL DEFAULT '',
+        created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_board_publication_events_board (board_id, created_at),
+        INDEX idx_board_publication_events_type (event_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_board_subscribers' => "CREATE TABLE IF NOT EXISTS cms_board_subscribers (
+        id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        email          VARCHAR(255) NOT NULL,
+        token          VARCHAR(64)  NOT NULL,
+        confirmed      TINYINT(1)   NOT NULL DEFAULT 0,
+        all_categories TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        confirmed_at   DATETIME     NULL DEFAULT NULL,
+        UNIQUE KEY uq_board_subscribers_email (email),
+        UNIQUE KEY uq_board_subscribers_token (token),
+        INDEX idx_board_subscribers_confirmed (confirmed)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_board_subscriber_categories' => "CREATE TABLE IF NOT EXISTS cms_board_subscriber_categories (
+        subscriber_id INT NOT NULL,
+        category_id   INT NOT NULL,
+        PRIMARY KEY (subscriber_id, category_id),
+        INDEX idx_board_subscriber_categories_category (category_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     // ── Rezervační systém ──
@@ -1078,6 +1119,11 @@ $addColumns = [
     'cms_board.contact_phone'        => "ALTER TABLE cms_board ADD COLUMN contact_phone VARCHAR(100) NOT NULL DEFAULT ''",
     'cms_board.contact_email'        => "ALTER TABLE cms_board ADD COLUMN contact_email VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_board.is_pinned'            => "ALTER TABLE cms_board ADD COLUMN is_pinned TINYINT(1) NOT NULL DEFAULT 0",
+    'cms_board_categories.slug'      => "ALTER TABLE cms_board_categories ADD COLUMN slug VARCHAR(150) NOT NULL DEFAULT '' AFTER name",
+    'cms_board_categories.description' => "ALTER TABLE cms_board_categories ADD COLUMN description TEXT AFTER slug",
+    'cms_board_categories.meta_title' => "ALTER TABLE cms_board_categories ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT '' AFTER description",
+    'cms_board_categories.meta_description' => "ALTER TABLE cms_board_categories ADD COLUMN meta_description TEXT AFTER meta_title",
+    'cms_board_categories.updated_at' => "ALTER TABLE cms_board_categories ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_downloads
     'cms_downloads.slug'             => "ALTER TABLE cms_downloads ADD COLUMN slug VARCHAR(255) NOT NULL DEFAULT '' AFTER title",
     'cms_downloads.download_type'    => "ALTER TABLE cms_downloads ADD COLUMN download_type VARCHAR(50) NOT NULL DEFAULT 'document' AFTER slug",
@@ -2134,6 +2180,49 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy míst – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $boardCategorySlugColumnCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_board_categories' AND COLUMN_NAME = 'slug'"
+    );
+    $boardCategorySlugColumnCheck->execute();
+
+    if ((int)$boardCategorySlugColumnCheck->fetchColumn() > 0) {
+        $boardCategories = $pdo->query("SELECT id, name, slug FROM cms_board_categories ORDER BY id")->fetchAll();
+        $updateBoardCategorySlugStmt = $pdo->prepare("UPDATE cms_board_categories SET slug = ? WHERE id = ?");
+
+        foreach ($boardCategories as $boardCategory) {
+            $existingSlug = trim((string)($boardCategory['slug'] ?? ''));
+            $resolvedSlug = uniqueBoardCategorySlug(
+                $pdo,
+                $existingSlug !== '' ? $existingSlug : (string)$boardCategory['name'],
+                (int)$boardCategory['id']
+            );
+            if ($existingSlug !== $resolvedSlug) {
+                $updateBoardCategorySlugStmt->execute([$resolvedSlug, (int)$boardCategory['id']]);
+            }
+        }
+
+        $boardCategorySlugIndexCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'cms_board_categories'
+               AND COLUMN_NAME = 'slug' AND NON_UNIQUE = 0"
+        );
+        $boardCategorySlugIndexCheck->execute();
+        if ((int)$boardCategorySlugIndexCheck->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE cms_board_categories ADD UNIQUE KEY uq_cms_board_categories_slug (slug)");
+            $log[] = "✓ Unikátní index <code>uq_cms_board_categories_slug</code> přidán – OK";
+        } else {
+            $log[] = "· Unikátní index pro <code>cms_board_categories.slug</code> již existuje – přeskočeno";
+        }
+    } else {
+        $log[] = "· Slugy kategorií vývěsky – sloupec <code>cms_board_categories.slug</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Slugy kategorií vývěsky – CHYBA: " . h($e->getMessage());
 }
 
 try {

@@ -31,6 +31,12 @@ if ($id !== null && isset($moduleConfig[$module])) {
     }
 
     $pdo = db_connect();
+    $previousBoardDocument = null;
+    if ($module === 'board') {
+        $previousStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+        $previousStmt->execute([$id]);
+        $previousBoardDocument = $previousStmt->fetch() ?: null;
+    }
     if ($config['has_published']) {
         $pdo->prepare(
             "UPDATE {$config['table']} SET status = 'published', is_published = 1 WHERE id = ?"
@@ -39,6 +45,18 @@ if ($id !== null && isset($moduleConfig[$module])) {
         $pdo->prepare(
             "UPDATE {$config['table']} SET status = 'published' WHERE id = ?"
         )->execute([$id]);
+    }
+    if ($module === 'board' && is_array($previousBoardDocument)) {
+        $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+        $updatedStmt->execute([$id]);
+        $updatedBoardDocument = $updatedStmt->fetch() ?: null;
+        if ($updatedBoardDocument && shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument)) {
+            recordBoardPublicationEvent($pdo, $updatedBoardDocument, 'published', currentUserId());
+            $sentNotifications = notifyBoardSubscribers($pdo, $updatedBoardDocument);
+            if ($sentNotifications > 0) {
+                logAction('board_notify', "id={$id} sent={$sentNotifications}");
+            }
+        }
     }
     logAction('approve', "module={$module} id={$id}");
 }

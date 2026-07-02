@@ -38,15 +38,43 @@ $stmt = $pdo->prepare(
     "SELECT b.id, b.title, b.slug, b.board_type, b.category_id, c.name AS category_name,
             b.posted_date, b.removal_date, b.original_name, b.file_size, b.is_pinned, b.image_file,
             b.is_published, b.created_at, COALESCE(b.status,'published') AS status,
+            COALESCE(ev.event_count, 0) AS publication_event_count,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_board b
      LEFT JOIN cms_board_categories c ON c.id = b.category_id
      LEFT JOIN cms_users u ON u.id = b.author_id
+     LEFT JOIN (
+         SELECT board_id, COUNT(*) AS event_count
+         FROM cms_board_publication_events
+         GROUP BY board_id
+     ) ev ON ev.board_id = b.id
      {$whereSql}
      ORDER BY b.is_pinned DESC, b.posted_date DESC, b.created_at DESC, b.title"
 );
 $stmt->execute($params);
 $items = $stmt->fetchAll();
+
+$subscriberStats = [
+    'confirmed' => 0,
+    'pending' => 0,
+    'category_specific' => 0,
+];
+try {
+    $stats = $pdo->query(
+        "SELECT
+            SUM(CASE WHEN confirmed = 1 THEN 1 ELSE 0 END) AS confirmed_count,
+            SUM(CASE WHEN confirmed = 0 THEN 1 ELSE 0 END) AS pending_count,
+            SUM(CASE WHEN all_categories = 0 THEN 1 ELSE 0 END) AS category_specific_count
+         FROM cms_board_subscribers"
+    )->fetch() ?: [];
+    $subscriberStats = [
+        'confirmed' => (int)($stats['confirmed_count'] ?? 0),
+        'pending' => (int)($stats['pending_count'] ?? 0),
+        'category_specific' => (int)($stats['category_specific_count'] ?? 0),
+    ];
+} catch (\PDOException $e) {
+    koraLog('warning', 'board subscriber summary failed', ['exception' => $e]);
+}
 
 $publicLabel = boardModulePublicLabel();
 
@@ -55,6 +83,14 @@ adminHeader('Úřední deska');
 <p class="field-help field-help--flush">
   Návštěvníci tuto sekci na webu vidí jako <strong><?= h($publicLabel) ?></strong>.
 </p>
+<section class="admin-panel admin-panel--compact" aria-labelledby="board-subscribers-heading">
+  <h2 id="board-subscribers-heading">Odběr vývěsky</h2>
+  <p class="field-help field-help--flush">
+    Potvrzení odběratelé: <strong><?= (int)$subscriberStats['confirmed'] ?></strong>,
+    čekající na potvrzení: <strong><?= (int)$subscriberStats['pending'] ?></strong>,
+    odběr jen vybraných kategorií: <strong><?= (int)$subscriberStats['category_specific'] ?></strong>.
+  </p>
+</section>
 <p class="button-row button-row--start">
   <a href="board_form.php" class="btn">+ Přidat položku</a>
   <a href="board_cats.php">Kategorie vývěsky</a>
@@ -97,6 +133,7 @@ adminHeader('Úřední deska');
         <th scope="col">Příloha</th>
         <th scope="col">Autor</th>
         <th scope="col">Stav</th>
+        <th scope="col">Evidence</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -116,7 +153,13 @@ adminHeader('Úřední deska');
           <small class="table-meta">/board/<?= h((string)($document['slug'] ?? '')) ?></small>
         </td>
         <td><?= h(boardTypeLabel((string)($document['board_type'] ?? 'document'))) ?></td>
-        <td><?= $document['category_name'] ? h((string)$document['category_name']) : '<em>-</em>' ?></td>
+        <td>
+          <?php if ($document['category_name']): ?>
+            <?= h((string)$document['category_name']) ?>
+          <?php else: ?>
+            <em>-</em>
+          <?php endif; ?>
+        </td>
         <td>
           <time datetime="<?= h((string)$document['posted_date']) ?>"><?= h(formatCzechDate((string)$document['posted_date'])) ?></time>
           <?php if (!empty($document['removal_date'])): ?>
@@ -145,6 +188,13 @@ adminHeader('Úřední deska');
             <em>Archivováno</em>
           <?php else: ?>
             Publikováno
+          <?php endif; ?>
+        </td>
+        <td>
+          <?php if ((int)($document['publication_event_count'] ?? 0) > 0): ?>
+            <?= (int)$document['publication_event_count'] ?> záznamů
+          <?php else: ?>
+            <em>bez záznamu</em>
           <?php endif; ?>
         </td>
         <td class="actions">

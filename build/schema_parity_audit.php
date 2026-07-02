@@ -124,6 +124,17 @@ $criticalInstallColumns = [
     'cms_tags.meta_title' => ['cms_tags', 'meta_title'],
     'cms_tags.meta_description' => ['cms_tags', 'meta_description'],
     'cms_tags.updated_at' => ['cms_tags', 'updated_at'],
+    'cms_board_categories.slug' => ['cms_board_categories', 'slug'],
+    'cms_board_categories.description' => ['cms_board_categories', 'description'],
+    'cms_board_categories.meta_title' => ['cms_board_categories', 'meta_title'],
+    'cms_board_categories.meta_description' => ['cms_board_categories', 'meta_description'],
+    'cms_board_categories.updated_at' => ['cms_board_categories', 'updated_at'],
+    'cms_board_publication_events.board_id' => ['cms_board_publication_events', 'board_id'],
+    'cms_board_publication_events.event_type' => ['cms_board_publication_events', 'event_type'],
+    'cms_board_subscribers.email' => ['cms_board_subscribers', 'email'],
+    'cms_board_subscribers.confirmed' => ['cms_board_subscribers', 'confirmed'],
+    'cms_board_subscriber_categories.subscriber_id' => ['cms_board_subscriber_categories', 'subscriber_id'],
+    'cms_board_subscriber_categories.category_id' => ['cms_board_subscriber_categories', 'category_id'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -172,6 +183,17 @@ $criticalMigrationSnippets = [
     'cms_tags.meta_title',
     'cms_tags.meta_description',
     'cms_tags.updated_at',
+    'cms_board_categories.slug',
+    'uq_cms_board_categories_slug',
+    'cms_board_categories.description',
+    'cms_board_categories.meta_title',
+    'cms_board_categories.meta_description',
+    'cms_board_categories.updated_at',
+    'cms_board_publication_events',
+    'idx_board_publication_events_board',
+    'cms_board_subscribers',
+    'uq_board_subscribers_email',
+    'cms_board_subscriber_categories',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {
@@ -228,6 +250,13 @@ schemaParityRequire(
     && str_contains($sitemapSource, 'cms_categories c')
     && str_contains($sitemapSource, 'cms_tags t'),
     'sitemap.php must keep public blog category and tag landing URLs.',
+    $issues
+);
+schemaParityRequire(
+    str_contains($sitemapSource, 'boardCategoryUrl(')
+    && str_contains($sitemapSource, 'cms_board_categories c')
+    && str_contains($sitemapSource, "sitemapLogSectionError('board_categories'"),
+    'sitemap.php must keep public board category landing URLs.',
     $issues
 );
 

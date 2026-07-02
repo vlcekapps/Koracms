@@ -9,6 +9,7 @@ $backUrl = BASE_URL . '/board/index.php' . ($documentIsArchived ? '?scope=archiv
 $leadText = normalizePlainText((string)($document['excerpt'] ?? ''));
 $hasAttachment = (string)($document['original_name'] ?? '') !== '';
 $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
+$publicationEvents = is_array($publicationEvents ?? null) ? $publicationEvents : [];
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="dokument-nadpis">
@@ -21,7 +22,16 @@ $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
             <span class="pill">Důležité</span>
           <?php endif; ?>
           <?php if ($documentCategory !== ''): ?>
-            <span class="pill"><?= h($documentCategory) ?></span>
+            <?php
+            $categoryLink = boardCategorySlug((string)($document['category_slug'] ?? '')) !== ''
+                ? boardCategoryPath(['id' => (int)($document['category_id'] ?? 0), 'slug' => (string)$document['category_slug']])
+                : '';
+            ?>
+            <?php if ($categoryLink !== ''): ?>
+              <a class="pill" href="<?= h($categoryLink) ?>"><?= h($documentCategory) ?></a>
+            <?php else: ?>
+              <span class="pill"><?= h($documentCategory) ?></span>
+            <?php endif; ?>
           <?php endif; ?>
           <time datetime="<?= h($documentPostedDate) ?>"><?= formatCzechDate($documentPostedDate) ?></time>
           <?php if ($documentIsArchived): ?>
@@ -85,6 +95,40 @@ $hasExtraInfoCard = $documentRemovalDate !== '' || $hasAttachment;
       <div class="prose article-shell__content">
         <?= renderContent((string)$document['description']) ?>
       </div>
+    <?php endif; ?>
+
+    <?php if ($publicationEvents !== []): ?>
+      <section class="card" aria-labelledby="board-publication-evidence-heading">
+        <div class="card__body">
+          <h2 id="board-publication-evidence-heading" class="card__title">Evidence zveřejnění</h2>
+          <p class="field-help field-help--flush">Tato veřejná evidence zachycuje důležité změny dostupnosti položky a příloh.</p>
+          <ol class="timeline-list">
+            <?php foreach ($publicationEvents as $event): ?>
+              <li>
+                <strong><?= h(boardPublicationEventLabel((string)($event['event_type'] ?? ''))) ?></strong>
+                <?php if ((string)($event['event_date'] ?? '') !== ''): ?>
+                  <span>
+                    <time datetime="<?= h(str_replace(' ', 'T', (string)$event['event_date'])) ?>"><?= h(formatCzechDate((string)$event['event_date'])) ?></time>
+                  </span>
+                <?php endif; ?>
+                <?php if ((string)($event['public_path'] ?? '') !== ''): ?>
+                  <br><span>Veřejná adresa: <a href="<?= h((string)$event['public_path']) ?>"><?= h((string)$event['public_path']) ?></a></span>
+                <?php endif; ?>
+                <?php if ((string)($event['attachment_name'] ?? '') !== ''): ?>
+                  <br><span>Příloha: <?= h((string)$event['attachment_name']) ?>
+                    <?php if ((int)($event['attachment_size'] ?? 0) > 0): ?>
+                      (<?= h(formatFileSize((int)$event['attachment_size'])) ?>)
+                    <?php endif; ?>
+                  </span>
+                <?php endif; ?>
+                <?php if ((string)($event['attachment_checksum'] ?? '') !== ''): ?>
+                  <br><span>SHA-256: <code><?= h((string)$event['attachment_checksum']) ?></code></span>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ol>
+        </div>
+      </section>
     <?php endif; ?>
 
     <div class="article-actions">

@@ -1232,6 +1232,21 @@ body.theme-public textarea.form-control {
   list-style: none;
 }
 
+.timeline-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding-left: 1.35rem;
+}
+
+.timeline-list li {
+  padding-left: 0.25rem;
+}
+
+.timeline-list code {
+  overflow-wrap: anywhere;
+}
+
 .info-card {
   padding: 1.1rem 1.15rem;
   border: 1px solid var(--border-soft);

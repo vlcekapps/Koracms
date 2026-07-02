@@ -10665,7 +10665,8 @@ if (!$smtpConfigured) {
                 }
             }
             if (!str_starts_with(trim($smtpAuth), '334')) {
-                $smtpIssues[] = 'AUTH LOGIN not supported: ' . trim($smtpAuth);
+                $smtpConnectivitySkipped = true;
+                echo 'SKIP (SMTP server je dosažitelný, ale nepodporuje AUTH LOGIN: ' . trim($smtpAuth) . ")\n";
             } else {
                 fwrite($smtpSocket, base64_encode($smtpUser) . "\r\n");
                 while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
@@ -12342,6 +12343,12 @@ $boardIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/boa
 $boardIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-index.php');
 $boardFileSource = (string)file_get_contents(dirname(__DIR__) . '/board/file.php');
 $boardDocumentSource = (string)file_get_contents(dirname(__DIR__) . '/board/document.php');
+$boardCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cats.php');
+$boardSubscribeSource = (string)file_get_contents(dirname(__DIR__) . '/board/subscribe.php');
+$boardSubscribeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-subscribe.php');
+$boardArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-article.php');
+$htaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
+$httpRouterSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_server_router.php');
 if (!str_contains($boardSaveSource, "saveRevision(\$pdo, 'board'")) {
     $boardSourceIssues[] = 'board save is missing revision persistence';
 }
@@ -12363,6 +12370,11 @@ if (!str_contains($boardIndexControllerSource, "trim((string)(\$_GET['month'] ??
 if (!str_contains($boardIndexControllerSource, 'renderPager(')) {
     $boardSourceIssues[] = 'public board index is missing pagination support';
 }
+if (!str_contains($boardIndexControllerSource, "\$_GET['category_slug']")
+    || !str_contains($boardIndexControllerSource, 'boardCategoryPath(')
+    || !str_contains($boardIndexControllerSource, 'renderPublicNotFoundPage')) {
+    $boardSourceIssues[] = 'public board index is missing clean category landing support';
+}
 if (!str_contains($boardIndexViewSource, 'board-item__summary')) {
     $boardSourceIssues[] = 'public board template is missing excerpt preview';
 }
@@ -12378,14 +12390,41 @@ if (!str_contains($boardIndexViewSource, 'Filtrovat položky vývěsky')) {
 if (!str_contains($boardIndexViewSource, 'listing-shell__pager')) {
     $boardSourceIssues[] = 'public board template is missing pager output';
 }
+if (!str_contains($boardIndexViewSource, 'Odebírat nové položky vývěsky')
+    || !str_contains($boardIndexViewSource, 'boardCategoryPath(')) {
+    $boardSourceIssues[] = 'public board template is missing subscription CTA or clean category links';
+}
 if (!str_contains($boardFileSource, 'currentUserHasCapability(\'content_manage_shared\')')) {
     $boardSourceIssues[] = 'board file endpoint is missing tightened private access rule';
 }
-if (!str_contains($boardFileSource, '(string)($document[\'posted_date\'] ?? \'\') > date(\'Y-m-d\')')) {
-    $boardSourceIssues[] = 'board file endpoint is missing future-date access guard';
+if (!str_contains($boardFileSource, 'boardIsPubliclyReachable($document)')) {
+    $boardSourceIssues[] = 'board file endpoint is missing shared public visibility guard';
 }
 if (!str_contains($boardDocumentSource, 'boardPublicVisibilitySql(\'b\')')) {
     $boardSourceIssues[] = 'board detail is missing public visibility guard';
+}
+if (!str_contains($boardDocumentSource, 'boardPublicationEvents(')
+    || !str_contains($boardArticleViewSource, 'Evidence zveřejnění')
+    || !str_contains($boardArticleViewSource, 'aria-labelledby="board-publication-evidence-heading"')) {
+    $boardSourceIssues[] = 'board detail is missing public publication evidence section';
+}
+if (!str_contains($boardCatsSource, 'uniqueBoardCategorySlug(')
+    || !str_contains($boardCatsSource, 'meta_description')
+    || !str_contains($boardCatsSource, 'boardCategoryPath(')) {
+    $boardSourceIssues[] = 'board category admin is missing landing metadata support';
+}
+if (!str_contains($boardSubscribeSource, "captchaVerify((string)(\$_POST['captcha'] ?? ''))")
+    || !str_contains($boardSubscribeSource, 'sendBoardSubscriptionConfirmation(')
+    || !str_contains($boardSubscribeViewSource, 'aria-invalid="true"')) {
+    $boardSourceIssues[] = 'board subscription flow is missing captcha, double opt-in, or field-level errors';
+}
+if (!str_contains($htaccessSource, 'RewriteRule ^board/kategorie/([a-z0-9\\-]+)/?$ board/index.php?category_slug=$1')
+    || strpos($htaccessSource, 'RewriteRule ^board/kategorie/') > strpos($htaccessSource, 'RewriteRule ^board/([a-z0-9\\-]+)/?$ board/document.php')) {
+    $boardSourceIssues[] = 'board category rewrite must be before board document catch-all route';
+}
+if (!str_contains($httpRouterSource, "'board/index.php', ['category_slug']")
+    || strpos($httpRouterSource, '#^board/kategorie/') > strpos($httpRouterSource, '#^board/([a-z0-9-]+)/?$#i')) {
+    $boardSourceIssues[] = 'HTTP integration router must route board categories before board documents';
 }
 
 if ($boardSourceIssues === []) {
@@ -14793,8 +14832,9 @@ foreach ([
     'board categories' => [
         'source' => $boardCatsSource,
         'fragments' => [
-            'button-row button-row--baseline',
-            'class="admin-input-auto"',
+            '<fieldset>',
+            'aria-describedby="slug-help"',
+            'boardCategoryPath(',
         ],
     ],
     'download categories' => [

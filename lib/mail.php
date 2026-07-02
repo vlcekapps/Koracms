@@ -181,6 +181,51 @@ function sendNewsletterSubscriptionConfirmation(string $recipient, string $token
     return sendMail($recipient, $subject, $body);
 }
 
+function sendBoardSubscriptionConfirmation(string $recipient, string $token): bool
+{
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $boardLabel = boardModulePublicLabel();
+    $confirmUrl = siteUrl('/board/subscribe_confirm.php?token=' . rawurlencode($token));
+    $subject = 'Potvrďte odběr sekce ' . $boardLabel . ' – ' . $siteName;
+    $body = "Dobrý den,\n\n"
+        . "pro potvrzení odběru nových položek sekce {$boardLabel} na webu {$siteName} klikněte na odkaz:\n"
+        . $confirmUrl . "\n\n"
+        . "Pokud jste se k odběru nepřihlásili, tento e-mail ignorujte.\n\n"
+        . "— " . $siteName;
+
+    return sendMail($recipient, $subject, $body);
+}
+
+/**
+ * @param array<string, mixed> $document
+ */
+function sendBoardItemNotification(string $recipient, string $token, array $document): bool
+{
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $boardLabel = boardModulePublicLabel();
+    $title = trim((string)($document['title'] ?? ''));
+    if ($title === '') {
+        return false;
+    }
+
+    $documentUrl = boardPublicUrl($document);
+    $unsubscribeUrl = siteUrl('/board/unsubscribe.php?token=' . rawurlencode($token));
+    $summary = boardExcerpt($document, 220);
+    $subject = 'Nová položka v sekci ' . $boardLabel . ': ' . $title;
+    $body = "Dobrý den,\n\n"
+        . "v sekci {$boardLabel} byla zveřejněna nová položka:\n\n"
+        . $title . "\n"
+        . $documentUrl . "\n\n";
+    if ($summary !== '') {
+        $body .= $summary . "\n\n";
+    }
+    $body .= "Odběr těchto upozornění můžete odhlásit zde:\n"
+        . $unsubscribeUrl . "\n\n"
+        . "— " . $siteName;
+
+    return sendMail($recipient, $subject, $body);
+}
+
 /**
  * Odešle e-mail v UTF-8 přes SMTP. Vrátí true při úspěchu.
  *
@@ -210,6 +255,19 @@ function sendMail(string $to, string $subject, string $body, array $options = []
     if ($safeReplyTo !== '' && !filter_var($safeReplyTo, FILTER_VALIDATE_EMAIL)) {
         $safeReplyTo = $safeFrom;
         $safeReplyToName = $siteName;
+    }
+
+    if (getenv('KORA_DISABLE_OUTBOUND_MAIL') === '1') {
+        return true;
+    }
+    $safeToDomain = mailEmailDomain($safeTo);
+    if (
+        in_array($safeToDomain, ['example.com', 'example.net', 'example.org', 'example.test', 'localhost'], true)
+        || str_ends_with($safeToDomain, '.test')
+        || str_ends_with($safeToDomain, '.invalid')
+        || str_ends_with($safeToDomain, '.localhost')
+    ) {
+        return true;
     }
 
     [$encodedBody, $transferEncoding] = mailEncodeBody($body);

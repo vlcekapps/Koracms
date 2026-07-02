@@ -8,6 +8,13 @@ verifyCsrf();
 $id = inputInt('post', 'id');
 if ($id !== null) {
     $pdo = db_connect();
+    $stmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ? AND deleted_at IS NULL");
+    $stmt->execute([$id]);
+    $document = $stmt->fetch() ?: null;
+    if ($document) {
+        recordBoardPublicationEvent($pdo, $document, 'deleted', currentUserId());
+        deleteRedirectsTargetingPath($pdo, boardPublicPath($document));
+    }
     $pdo->prepare("UPDATE cms_board SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
     logAction('board_delete', "id={$id} soft=true");
 }

@@ -37,6 +37,7 @@ $perPage = max(1, (int)getSetting('board_per_page', '10'));
 
 $q = trim((string)($_GET['q'] ?? ''));
 $categoryId = inputInt('get', 'kat');
+$categorySlug = boardCategorySlug(trim((string)($_GET['category_slug'] ?? '')));
 $monthFilter = trim((string)($_GET['month'] ?? ''));
 $scope = trim((string)($_GET['scope'] ?? 'current'));
 $allowedScopes = ['current', 'archive', 'all'];
@@ -47,10 +48,41 @@ if (!preg_match('/^\d{4}-\d{2}$/', $monthFilter)) {
     $monthFilter = '';
 }
 
-$categories = $pdo->query("SELECT id, name FROM cms_board_categories ORDER BY sort_order, name")->fetchAll();
+$categories = $pdo->query(
+    "SELECT id, name, slug, description, meta_title, meta_description, updated_at
+     FROM cms_board_categories
+     ORDER BY sort_order, name"
+)->fetchAll();
+$activeCategory = null;
+if ($categorySlug !== '') {
+    foreach ($categories as $category) {
+        if (boardCategorySlug((string)($category['slug'] ?? '')) === $categorySlug) {
+            $activeCategory = $category;
+            $categoryId = (int)$category['id'];
+            break;
+        }
+    }
+    if ($activeCategory === null) {
+        renderPublicNotFoundPage([
+            'title' => 'Kategorie nenalezena',
+            'meta' => [
+                'url' => BASE_URL . '/board/kategorie/' . rawurlencode($categorySlug),
+            ],
+            'body_class' => 'page-board-category-not-found',
+        ]);
+    }
+}
 $validCategoryIds = array_map(static fn (array $category): int => (int)$category['id'], $categories);
 if ($categoryId !== null && !in_array($categoryId, $validCategoryIds, true)) {
     $categoryId = null;
+}
+if ($categoryId !== null && $activeCategory === null) {
+    foreach ($categories as $category) {
+        if ((int)$category['id'] === $categoryId) {
+            $activeCategory = $category;
+            break;
+        }
+    }
 }
 
 $monthOptions = [];
@@ -141,7 +173,7 @@ $pagination = paginate(
 ['total' => $totalItems, 'totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $pagination;
 
 $stmt = $pdo->prepare(
-    "SELECT b.*, COALESCE(c.name, '') AS category_name
+    "SELECT b.*, COALESCE(c.name, '') AS category_name, COALESCE(c.slug, '') AS category_slug
      FROM cms_board b
      LEFT JOIN cms_board_categories c ON c.id = b.category_id
      {$whereSql}
@@ -157,11 +189,11 @@ $items = array_map(
 $itemsGrouped = groupBoardByCategory($items);
 $showCategoryHeadings = count($itemsGrouped) > 1;
 
-$buildBoardIndexUrl = static function (array $overrides = []) use ($q, $categoryId, $monthFilter, $scope): string {
+$buildBoardIndexUrl = static function (array $overrides = []) use ($q, $categoryId, $activeCategory, $monthFilter, $scope): string {
     $query = [];
     $merged = array_merge([
         'q' => $q,
-        'kat' => $categoryId,
+        'kat' => $activeCategory !== null && boardCategorySlug((string)($activeCategory['slug'] ?? '')) !== '' ? null : $categoryId,
         'month' => $monthFilter,
         'scope' => $scope,
     ], $overrides);
@@ -173,7 +205,11 @@ $buildBoardIndexUrl = static function (array $overrides = []) use ($q, $category
         $query[$key] = $value;
     }
 
-    return BASE_URL . '/board/index.php' . ($query !== [] ? '?' . http_build_query($query) : '');
+    $basePath = $activeCategory !== null && boardCategorySlug((string)($activeCategory['slug'] ?? '')) !== ''
+        ? boardCategoryPath($activeCategory)
+        : BASE_URL . '/board/index.php';
+
+    return $basePath . ($query !== [] ? (str_contains($basePath, '?') ? '&' : '?') . http_build_query($query) : '');
 };
 
 $scopeLinks = [
@@ -226,20 +262,35 @@ $pageHeading = match ($scope) {
     'all' => $allItemsLabel,
     default => $boardLabel,
 };
+if ($activeCategory !== null) {
+    $pageHeading = 'Kategorie: ' . (string)($activeCategory['name'] ?? '');
+}
 
 $metaTitle = $pageHeading . ' - ' . $siteName;
+if ($activeCategory !== null && trim((string)($activeCategory['meta_title'] ?? '')) !== '') {
+    $metaTitle = trim((string)$activeCategory['meta_title']) . ' - ' . $siteName;
+}
 if ($filterSummary !== []) {
     $metaTitle = $pageHeading . ' - ' . implode(', ', $filterSummary) . ' - ' . $siteName;
 }
 
 $paginBase = $buildBoardIndexUrl(['strana' => null]);
 $paginBase .= str_contains($paginBase, '?') ? '&' : '?';
+$canonicalPath = str_replace(BASE_URL, '', $buildBoardIndexUrl(['strana' => null]));
+$metaDescription = '';
+if ($activeCategory !== null) {
+    $metaDescription = trim((string)($activeCategory['meta_description'] ?? ''));
+    if ($metaDescription === '') {
+        $metaDescription = normalizePlainText((string)($activeCategory['description'] ?? ''));
+    }
+}
 
 renderPublicPage([
     'title' => $metaTitle,
     'meta' => [
         'title' => $metaTitle,
-        'url' => siteUrl(str_replace(BASE_URL, '', $buildBoardIndexUrl(['strana' => null]))),
+        'description' => $metaDescription,
+        'url' => siteUrl($canonicalPath),
     ],
     'view' => 'modules/board-index',
     'view_data' => [
@@ -253,6 +304,7 @@ renderPublicPage([
         'scopeLinks' => $scopeLinks,
         'searchQuery' => $q,
         'selectedCategoryId' => $categoryId,
+        'activeCategory' => $activeCategory,
         'selectedMonth' => $monthFilter,
         'categories' => $categories,
         'monthOptions' => $monthOptions,

@@ -1181,6 +1181,11 @@ function boardSlug(string $value): string
     return slugify(trim($value));
 }
 
+function boardCategorySlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function galleryAlbumSlug(string $value): string
 {
     return slugify(trim($value));
@@ -4148,6 +4153,37 @@ function boardPublicUrl(array $document, array $query = []): string
     return siteUrl(appendUrlQuery(boardPublicRequestPath($document), $query));
 }
 
+/**
+ * @param array<string, mixed> $category
+ */
+function boardCategoryRequestPath(array $category): string
+{
+    $slug = boardCategorySlug((string)($category['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/board/kategorie/' . rawurlencode($slug);
+    }
+
+    return '/board/index.php?kat=' . (int)($category['id'] ?? 0);
+}
+
+/**
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function boardCategoryPath(array $category, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(boardCategoryRequestPath($category), $query);
+}
+
+/**
+ * @param array<string, mixed> $category
+ * @param array<string, mixed> $query
+ */
+function boardCategoryUrl(array $category, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(boardCategoryRequestPath($category), $query));
+}
+
 function boardPublicVisibilitySql(string $alias = ''): string
 {
     $prefix = $alias !== '' ? rtrim($alias, '.') . '.' : '';
@@ -4166,6 +4202,245 @@ function boardScopeVisibilitySql(string $scope, string $alias = ''): string
         'all' => '1 = 1',
         default => "{$prefix}removal_date IS NULL OR {$prefix}removal_date >= CURDATE()",
     };
+}
+
+/**
+ * @param array<string, mixed> $document
+ */
+function boardIsPubliclyReachable(array $document): bool
+{
+    if ((int)($document['is_published'] ?? 0) !== 1) {
+        return false;
+    }
+    if ((string)($document['status'] ?? 'published') !== 'published') {
+        return false;
+    }
+    if (!empty($document['deleted_at'])) {
+        return false;
+    }
+    if (boardSlug((string)($document['slug'] ?? '')) === '') {
+        return false;
+    }
+
+    $today = date('Y-m-d');
+    $now = date('Y-m-d H:i:s');
+    $postedDate = trim((string)($document['posted_date'] ?? ''));
+    $publishAt = trim((string)($document['publish_at'] ?? ''));
+    $unpublishAt = trim((string)($document['unpublish_at'] ?? ''));
+
+    if ($postedDate !== '' && $postedDate > $today) {
+        return false;
+    }
+    if ($publishAt !== '' && $publishAt > $now) {
+        return false;
+    }
+    if ($unpublishAt !== '' && $unpublishAt <= $now) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * @param array<string, mixed> $document
+ */
+function boardAttachmentChecksum(array $document): string
+{
+    $storedName = basename(trim((string)($document['filename'] ?? '')));
+    if ($storedName === '') {
+        return '';
+    }
+
+    $path = dirname(__DIR__) . '/uploads/board/' . $storedName;
+    if (!is_file($path)) {
+        return '';
+    }
+
+    $checksum = hash_file('sha256', $path);
+    return is_string($checksum) ? $checksum : '';
+}
+
+/**
+ * @return array<string, string>
+ */
+function boardPublicationEventLabels(): array
+{
+    return [
+        'published' => 'Zveřejnění',
+        'url_changed' => 'Změna veřejné adresy',
+        'attachment_changed' => 'Výměna přílohy',
+        'removed' => 'Sejmutí',
+        'hidden' => 'Skrytí',
+        'deleted' => 'Smazání',
+        'restored' => 'Obnovení',
+    ];
+}
+
+function boardPublicationEventLabel(string $eventType): string
+{
+    $labels = boardPublicationEventLabels();
+    return $labels[$eventType] ?? 'Změna položky';
+}
+
+/**
+ * @param array<string, mixed> $document
+ */
+function recordBoardPublicationEvent(PDO $pdo, array $document, string $eventType, ?int $actorUserId = null): void
+{
+    if (!array_key_exists($eventType, boardPublicationEventLabels())) {
+        $eventType = 'published';
+    }
+
+    $boardId = (int)($document['id'] ?? 0);
+    if ($boardId <= 0) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO cms_board_publication_events
+             (board_id, event_type, event_date, actor_user_id, public_path, attachment_name, attachment_size, attachment_checksum)
+             VALUES (?, ?, NOW(), ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $boardId,
+            $eventType,
+            $actorUserId,
+            boardPublicPath($document),
+            trim((string)($document['original_name'] ?? '')),
+            max(0, (int)($document['file_size'] ?? 0)),
+            boardAttachmentChecksum($document),
+        ]);
+    } catch (\PDOException $e) {
+        koraLog('warning', 'board publication event save failed', [
+            'board_id' => $boardId,
+            'event_type' => $eventType,
+            'exception' => $e,
+        ]);
+    }
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function boardPublicationEvents(PDO $pdo, int $boardId): array
+{
+    if ($boardId <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT e.*,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), '') AS actor_name
+             FROM cms_board_publication_events e
+             LEFT JOIN cms_users u ON u.id = e.actor_user_id
+             WHERE e.board_id = ?
+             ORDER BY e.event_date DESC, e.id DESC"
+        );
+        $stmt->execute([$boardId]);
+        return $stmt->fetchAll() ?: [];
+    } catch (\PDOException $e) {
+        koraLog('warning', 'board publication events load failed', [
+            'board_id' => $boardId,
+            'exception' => $e,
+        ]);
+        return [];
+    }
+}
+
+/**
+ * @param array<int, mixed> $values
+ * @param array<int, mixed> $validIds
+ * @return list<int>
+ */
+function normalizeBoardSubscriberCategoryIds(array $values, array $validIds): array
+{
+    $validMap = [];
+    foreach ($validIds as $validId) {
+        $id = (int)$validId;
+        if ($id > 0) {
+            $validMap[$id] = true;
+        }
+    }
+
+    $selected = [];
+    foreach ($values as $value) {
+        $id = (int)$value;
+        if ($id > 0 && isset($validMap[$id])) {
+            $selected[$id] = $id;
+        }
+    }
+
+    $result = array_values($selected);
+    sort($result);
+    return $result;
+}
+
+/**
+ * @param array<string, mixed> $oldDocument
+ * @param array<string, mixed> $newDocument
+ */
+function shouldSendBoardPublicationNotice(array $oldDocument, array $newDocument): bool
+{
+    return !boardIsPubliclyReachable($oldDocument) && boardIsPubliclyReachable($newDocument);
+}
+
+/**
+ * @param array<string, mixed> $document
+ */
+function notifyBoardSubscribers(PDO $pdo, array $document): int
+{
+    if (!boardIsPubliclyReachable($document)) {
+        return 0;
+    }
+
+    $categoryId = (int)($document['category_id'] ?? 0);
+    try {
+        if ($categoryId > 0) {
+            $stmt = $pdo->prepare(
+                "SELECT DISTINCT s.email, s.token
+                 FROM cms_board_subscribers s
+                 WHERE s.confirmed = 1
+                   AND (
+                       s.all_categories = 1
+                       OR EXISTS (
+                           SELECT 1
+                           FROM cms_board_subscriber_categories sc
+                           WHERE sc.subscriber_id = s.id AND sc.category_id = ?
+                       )
+                   )"
+            );
+            $stmt->execute([$categoryId]);
+        } else {
+            $stmt = $pdo->query(
+                "SELECT DISTINCT s.email, s.token
+                 FROM cms_board_subscribers s
+                 WHERE s.confirmed = 1 AND s.all_categories = 1"
+            );
+        }
+        $subscribers = $stmt->fetchAll() ?: [];
+    } catch (\PDOException $e) {
+        koraLog('warning', 'board subscriber load failed', [
+            'board_id' => (int)($document['id'] ?? 0),
+            'exception' => $e,
+        ]);
+        return 0;
+    }
+
+    $sent = 0;
+    foreach ($subscribers as $subscriber) {
+        $email = trim((string)($subscriber['email'] ?? ''));
+        $token = trim((string)($subscriber['token'] ?? ''));
+        if ($email === '' || $token === '') {
+            continue;
+        }
+        if (sendBoardItemNotification($email, $token, $document)) {
+            $sent++;
+        }
+    }
+
+    return $sent;
 }
 
 function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $statusCode = 301): void
@@ -5086,6 +5361,27 @@ function uniqueBoardSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
     $slug = $baseSlug;
     $suffix = 2;
     $stmt = $pdo->prepare("SELECT id FROM cms_board WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function uniqueBoardCategorySlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = boardCategorySlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'kategorie';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_board_categories WHERE slug = ? AND id != ?");
 
     while (true) {
         $stmt->execute([$slug, $excludeId ?? 0]);

@@ -59,6 +59,7 @@ $formError = match ($err) {
     'removal_date' => 'Zadejte platné datum sejmutí.',
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
+    'category' => 'Vybraná kategorie neexistuje.',
     'contact_email' => 'Kontaktní e-mail nemá platný formát.',
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
@@ -70,6 +71,7 @@ $fieldErrorMap = [
     'removal_date' => ['removal_date'],
     'dates' => ['posted_date', 'removal_date'],
     'slug' => ['slug'],
+    'category' => ['category_id'],
     'contact_email' => ['contact_email'],
     'image' => ['board_image'],
     'file' => ['file'],
@@ -81,6 +83,7 @@ $fieldErrorMessages = [
     'removal_date' => 'Zadejte platné datum sejmutí.',
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
+    'category' => 'Vybraná kategorie neexistuje.',
     'contact_email' => 'Kontaktní e-mail nemá platný formát.',
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
@@ -148,7 +151,8 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <small id="board-type-help" class="field-help"><?= h($boardTypeHelpMap[$currentBoardType] ?? '') ?></small>
 
     <label for="category_id">Kategorie</label>
-    <select id="category_id" name="category_id">
+    <select id="category_id" name="category_id"
+            <?= adminFieldAttributes('category_id', $err, $fieldErrorMap) ?>>
       <option value="">- bez kategorie -</option>
       <?php foreach ($categories as $category): ?>
         <option value="<?= (int)$category['id'] ?>"<?= ((int)($document['category_id'] ?? 0) === (int)$category['id']) ? ' selected' : '' ?>>
@@ -156,6 +160,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
         </option>
       <?php endforeach; ?>
     </select>
+    <?php adminRenderFieldError('category_id', $err, $fieldErrorMap, $fieldErrorMessages['category']); ?>
 
     <label for="excerpt">Krátký text / perex</label>
     <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="board-excerpt-help"><?= h((string)($document['excerpt'] ?? '')) ?></textarea>

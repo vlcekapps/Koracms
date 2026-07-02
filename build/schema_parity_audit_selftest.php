@@ -170,6 +170,29 @@ CREATE TABLE IF NOT EXISTS cms_tags (
   meta_description TEXT,
   updated_at DATETIME
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_board_categories (
+  id INT,
+  name VARCHAR(255),
+  slug VARCHAR(150),
+  description TEXT,
+  meta_title VARCHAR(160),
+  meta_description TEXT,
+  updated_at DATETIME
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_board_publication_events (
+  id INT,
+  board_id INT,
+  event_type VARCHAR(40)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_board_subscribers (
+  id INT,
+  email VARCHAR(255),
+  confirmed TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_board_subscriber_categories (
+  subscriber_id INT,
+  category_id INT
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -210,6 +233,17 @@ PHP,
 // cms_tags.meta_title
 // cms_tags.meta_description
 // cms_tags.updated_at
+// cms_board_categories.slug
+// uq_cms_board_categories_slug
+// cms_board_categories.description
+// cms_board_categories.meta_title
+// cms_board_categories.meta_description
+// cms_board_categories.updated_at
+// cms_board_publication_events
+// idx_board_publication_events_board
+// cms_board_subscribers
+// uq_board_subscribers_email
+// cms_board_subscriber_categories
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php
@@ -234,6 +268,9 @@ PHP,
 $sql = 'SELECT p.slug FROM cms_gallery_photos p INNER JOIN cms_gallery_albums a ON a.id = p.album_id ORDER BY p.created_at DESC, p.id DESC';
 $url = blogCategoryUrl($blog, $category) . blogTagUrl($blog, $tag);
 $taxonomySql = 'FROM cms_categories c INNER JOIN cms_tags t ON t.blog_id = c.blog_id';
+$boardCategory = boardCategoryUrl($category);
+$boardTaxonomySql = 'FROM cms_board_categories c';
+sitemapLogSectionError('board_categories', $e);
 PHP,
         'feed.php' => <<<'PHP'
 <?php

@@ -34,6 +34,8 @@ $createdPageIds = [];
 $createdGalleryAlbumIds = [];
 $createdMediaIds = [];
 $createdBoardIds = [];
+$createdBoardCategoryIds = [];
+$createdBoardSubscriberIds = [];
 $createdPollIds = [];
 $createdResourceIds = [];
 $createdWidgetIds = [];
@@ -3989,6 +3991,213 @@ try {
         $boardIssues[] = 'neplatné datum vývěsky neoznačilo pole posted_date jako aria-invalid';
     }
 
+    $boardCategorySlug = 'http-board-category-' . bin2hex(random_bytes(4));
+    $boardCategoryName = 'HTTP kategorie vývěsky';
+    $boardCategoryResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/board_cats.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'name' => $boardCategoryName,
+            'slug' => $boardCategorySlug,
+            'description' => '<p>Popis landing stránky vývěsky.</p>',
+            'meta_title' => 'Meta kategorie vývěsky',
+            'meta_description' => 'Meta popis kategorie vývěsky.',
+            'sort_order' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($boardCategoryResponse) !== 200 || !str_contains($boardCategoryResponse['body'], 'Kategorie uložena.')) {
+        $boardIssues[] = 'uložení kategorie vývěsky nevrátilo úspěšnou stránku';
+    }
+    $boardCategoryStmt = $pdo->prepare("SELECT * FROM cms_board_categories WHERE slug = ?");
+    $boardCategoryStmt->execute([$boardCategorySlug]);
+    $boardCategory = $boardCategoryStmt->fetch() ?: null;
+    $boardCategoryId = $boardCategory ? (int)$boardCategory['id'] : 0;
+    if ($boardCategoryId <= 0) {
+        $boardIssues[] = 'kategorie vývěsky se neuložila do databáze';
+    } else {
+        $createdBoardCategoryIds[] = $boardCategoryId;
+    }
+
+    if ($boardCategoryId > 0) {
+        $duplicateBoardCategoryResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/board_cats.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'name' => 'Duplicitní kategorie',
+                'slug' => $boardCategorySlug,
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '2',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (!str_contains($duplicateBoardCategoryResponse['body'], 'Tento slug už používá jiná kategorie vývěsky.')) {
+            $boardIssues[] = 'duplicitní slug kategorie vývěsky nebyl odmítnut';
+        }
+
+        $boardSlug = 'http-board-item-' . bin2hex(random_bytes(4));
+        $boardTitle = 'HTTP položka vývěsky';
+        $validBoardResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/board_save.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'title' => $boardTitle,
+                'slug' => $boardSlug,
+                'board_type' => 'notice',
+                'excerpt' => 'Krátký text položky vývěsky.',
+                'description' => '<p>Detail položky vývěsky.</p>',
+                'category_id' => (string)$boardCategoryId,
+                'posted_date' => date('Y-m-d'),
+                'removal_date' => '',
+                'publish_at' => '',
+                'unpublish_at' => '',
+                'article_status' => 'published',
+                'contact_name' => '',
+                'contact_phone' => '',
+                'contact_email' => '',
+                'is_published' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($validBoardResponse) !== 302) {
+            $boardIssues[] = 'platné uložení položky vývěsky nevrátilo redirect';
+        }
+        $boardStmt = $pdo->prepare("SELECT * FROM cms_board WHERE slug = ?");
+        $boardStmt->execute([$boardSlug]);
+        $boardDocument = $boardStmt->fetch() ?: null;
+        $boardDocumentId = $boardDocument ? (int)$boardDocument['id'] : 0;
+        if ($boardDocumentId <= 0) {
+            $boardIssues[] = 'platná položka vývěsky se neuložila';
+        } else {
+            $createdBoardIds[] = $boardDocumentId;
+            $eventCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_board_publication_events WHERE board_id = ? AND event_type = 'published'");
+            $eventCountStmt->execute([$boardDocumentId]);
+            if ((int)$eventCountStmt->fetchColumn() !== 1) {
+                $boardIssues[] = 'publikování položky vývěsky nezapsalo evidenční událost';
+            }
+        }
+
+        $categoryLandingResponse = fetchUrl($baseUrl . BASE_URL . '/board/kategorie/' . rawurlencode($boardCategorySlug), '', 0);
+        if (httpIntegrationStatusCode($categoryLandingResponse) !== 200
+            || !str_contains($categoryLandingResponse['body'], 'Kategorie: ' . $boardCategoryName)
+            || !str_contains($categoryLandingResponse['body'], 'Popis landing stránky vývěsky.')
+            || !str_contains($categoryLandingResponse['body'], $boardTitle)) {
+            $boardIssues[] = 'veřejná landing stránka kategorie vývěsky nezobrazuje očekávaný obsah';
+        }
+        if (!str_contains($categoryLandingResponse['body'], '/board/subscribe.php')) {
+            $boardIssues[] = 'veřejný výpis vývěsky neobsahuje odkaz na bezpečný odběr';
+        }
+        $missingBoardCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/board/kategorie/neexistujici-kategorie-http', '', 0);
+        if (httpIntegrationStatusCode($missingBoardCategoryResponse) !== 404) {
+            $boardIssues[] = 'neexistující čistý slug kategorie vývěsky nevrací 404';
+        }
+
+        if ($boardDocumentId > 0) {
+            $boardDetailResponse = fetchUrl($baseUrl . boardPublicPath($boardDocument), '', 0);
+            if (httpIntegrationStatusCode($boardDetailResponse) !== 200
+                || !str_contains($boardDetailResponse['body'], 'Evidence zveřejnění')
+                || !str_contains($boardDetailResponse['body'], 'Zveřejnění')) {
+                $boardIssues[] = 'detail položky vývěsky nezobrazuje veřejnou evidenci zveřejnění';
+            }
+        }
+
+        $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+        if (!str_contains($sitemapResponse['body'], h(boardCategoryUrl($boardCategory)))) {
+            $boardIssues[] = 'sitemap neobsahuje veřejnou kategorii vývěsky s publikovanou položkou';
+        }
+
+        $pdo->prepare('DELETE FROM cms_rate_limit WHERE id IN (?, ?)')
+            ->execute([
+                rateLimitKey('board_subscribe', '127.0.0.1'),
+                rateLimitKey('board_subscribe_subject', 'subject:http-board-test@example.test'),
+            ]);
+
+        $invalidBoardSubscribeEmail = 'http-board-invalid-captcha-' . bin2hex(random_bytes(4)) . '@example.test';
+        $invalidBoardSubscribeSession = koraPrimeTestSession([], 'kora-http-board-invalid-captcha');
+        $invalidBoardSubscribePage = fetchUrl($baseUrl . BASE_URL . '/board/subscribe.php', $invalidBoardSubscribeSession['cookie'], 0);
+        $invalidBoardSubscribeCsrf = extractHiddenInputValue($invalidBoardSubscribePage['body'], 'csrf_token');
+        $invalidBoardSubscribeResponse = postUrl(
+            $baseUrl . BASE_URL . '/board/subscribe.php',
+            [
+                'csrf_token' => $invalidBoardSubscribeCsrf,
+                'email' => $invalidBoardSubscribeEmail,
+                'category_ids[]' => (string)$boardCategoryId,
+                'captcha' => 'nespravne',
+            ],
+            $invalidBoardSubscribeSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($invalidBoardSubscribeResponse) !== 200
+            || !str_contains($invalidBoardSubscribeResponse['body'], 'Chybná odpověď na ověřovací otázku.')
+            || !httpIntegrationFieldHasAriaInvalid($invalidBoardSubscribeResponse['body'], 'board-subscribe-captcha')) {
+            $boardIssues[] = 'odběr vývěsky se špatnou captchou nezobrazil přístupnou chybu';
+        }
+        $invalidBoardSubscriberCount = $pdo->prepare("SELECT COUNT(*) FROM cms_board_subscribers WHERE email = ?");
+        $invalidBoardSubscriberCount->execute([$invalidBoardSubscribeEmail]);
+        if ((int)$invalidBoardSubscriberCount->fetchColumn() !== 0) {
+            $boardIssues[] = 'odběr vývěsky se špatnou captchou uložil odběratele';
+        }
+
+        $validBoardSubscribeEmail = 'http-board-subscriber-' . bin2hex(random_bytes(4)) . '@example.test';
+        $validBoardSubscribeSession = koraPrimeTestSession([], 'kora-http-board-valid-captcha');
+        $validBoardSubscribePage = fetchUrl($baseUrl . BASE_URL . '/board/subscribe.php', $validBoardSubscribeSession['cookie'], 0);
+        $validBoardSubscribeCsrf = extractHiddenInputValue($validBoardSubscribePage['body'], 'csrf_token');
+        $validBoardSubscribeCaptcha = httpIntegrationExtractCaptchaAnswer($validBoardSubscribePage['body']);
+        $validBoardSubscribeResponse = postUrl(
+            $baseUrl . BASE_URL . '/board/subscribe.php',
+            [
+                'csrf_token' => $validBoardSubscribeCsrf,
+                'email' => $validBoardSubscribeEmail,
+                'category_ids[]' => (string)$boardCategoryId,
+                'captcha' => $validBoardSubscribeCaptcha,
+            ],
+            $validBoardSubscribeSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($validBoardSubscribeResponse) !== 200
+            || (!str_contains($validBoardSubscribeResponse['body'], 'Téměř hotovo') && !str_contains($validBoardSubscribeResponse['body'], 'potvrzovací e-mail se nepodařilo odeslat'))) {
+            $boardIssues[] = 'platný odběr vývěsky nezobrazil očekávanou odpověď';
+        }
+        $subscriberStmt = $pdo->prepare("SELECT * FROM cms_board_subscribers WHERE email = ?");
+        $subscriberStmt->execute([$validBoardSubscribeEmail]);
+        $boardSubscriber = $subscriberStmt->fetch() ?: null;
+        $boardSubscriberId = $boardSubscriber ? (int)$boardSubscriber['id'] : 0;
+        if ($boardSubscriberId <= 0) {
+            $boardIssues[] = 'platný odběr vývěsky nevytvořil čekajícího odběratele';
+        } else {
+            $createdBoardSubscriberIds[] = $boardSubscriberId;
+            if ((int)($boardSubscriber['confirmed'] ?? 0) !== 0 || (int)($boardSubscriber['all_categories'] ?? 1) !== 0) {
+                $boardIssues[] = 'čekající odběratel vývěsky nemá očekávaný stav nebo rozsah';
+            }
+            $subscriberCategoryStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_board_subscriber_categories WHERE subscriber_id = ? AND category_id = ?");
+            $subscriberCategoryStmt->execute([$boardSubscriberId, $boardCategoryId]);
+            if ((int)$subscriberCategoryStmt->fetchColumn() !== 1) {
+                $boardIssues[] = 'odběr vývěsky neuložil vybranou kategorii';
+            }
+
+            $confirmResponse = fetchUrl($baseUrl . BASE_URL . '/board/subscribe_confirm.php?token=' . rawurlencode((string)$boardSubscriber['token']), '', 0);
+            $confirmedStmt = $pdo->prepare("SELECT confirmed FROM cms_board_subscribers WHERE id = ?");
+            $confirmedStmt->execute([$boardSubscriberId]);
+            if (httpIntegrationStatusCode($confirmResponse) !== 200 || (int)$confirmedStmt->fetchColumn() !== 1) {
+                $boardIssues[] = 'potvrzení odběru vývěsky tokenem nefunguje';
+            }
+
+            $unsubscribeResponse = fetchUrl($baseUrl . BASE_URL . '/board/unsubscribe.php?token=' . rawurlencode((string)$boardSubscriber['token']), '', 0);
+            $subscriberExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_board_subscribers WHERE id = ?");
+            $subscriberExistsStmt->execute([$boardSubscriberId]);
+            if (httpIntegrationStatusCode($unsubscribeResponse) !== 200 || (int)$subscriberExistsStmt->fetchColumn() !== 0) {
+                $boardIssues[] = 'odhlášení odběru vývěsky tokenem nefunguje';
+            } else {
+                $createdBoardSubscriberIds = array_values(array_diff($createdBoardSubscriberIds, [$boardSubscriberId]));
+            }
+        }
+    }
+
     httpIntegrationPrintResult('board_save_http', $boardIssues, $failures);
 
     $blogTransferIssues = [];
@@ -5805,8 +6014,18 @@ try {
         }
     }
     foreach ($createdBoardIds as $boardIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$boardIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$boardIdToDelete]);
         $pdo->prepare("DELETE FROM cms_board WHERE id = ?")->execute([$boardIdToDelete]);
+    }
+    foreach ($createdBoardSubscriberIds as $subscriberIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_board_subscriber_categories WHERE subscriber_id = ?")->execute([$subscriberIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_board_subscribers WHERE id = ?")->execute([$subscriberIdToDelete]);
+    }
+    foreach ($createdBoardCategoryIds as $boardCategoryIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_board_subscriber_categories WHERE category_id = ?")->execute([$boardCategoryIdToDelete]);
+        $pdo->prepare("UPDATE cms_board SET category_id = NULL WHERE category_id = ?")->execute([$boardCategoryIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_board_categories WHERE id = ?")->execute([$boardCategoryIdToDelete]);
     }
     foreach ($createdPollIds as $pollIdToDelete) {
         $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$pollIdToDelete]);

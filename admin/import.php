@@ -972,10 +972,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Kategorie úřední desky
                 if (!empty($data['board_categories']) && is_array($data['board_categories'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_board_categories (id, name, sort_order) VALUES (?,?,?)"
+                        "INSERT IGNORE INTO cms_board_categories
+                         (id, name, slug, description, meta_title, meta_description, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['board_categories'] as $row) {
-                        $ins->execute([(int)$row['id'], $row['name'], (int)($row['sort_order'] ?? 0)]);
+                        $categoryName = trim((string)($row['name'] ?? ''));
+                        if ($categoryName === '') {
+                            continue;
+                        }
+                        $categorySlug = boardCategorySlug((string)($row['slug'] ?? ''));
+                        $categorySlug = uniqueBoardCategorySlug(
+                            $pdo,
+                            $categorySlug !== '' ? $categorySlug : $categoryName,
+                            (int)$row['id']
+                        );
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $ins->execute([
+                            (int)$row['id'],
+                            $categoryName,
+                            $categorySlug,
+                            $row['description'] ?? '',
+                            trim((string)($row['meta_title'] ?? '')),
+                            trim((string)($row['meta_description'] ?? '')),
+                            (int)($row['sort_order'] ?? 0),
+                            $createdAt,
+                            $row['updated_at'] ?? $createdAt,
+                        ]);
                     }
                     $summary[] = 'Kategorie úřední desky importovány.';
                 }
@@ -986,8 +1009,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT IGNORE INTO cms_board
                          (id, title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
                           image_file, contact_name, contact_phone, contact_email,
-                          filename, original_name, file_size, sort_order, is_pinned, is_published, status, created_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          filename, original_name, file_size, sort_order, is_pinned, is_published, status,
+                          publish_at, unpublish_at, preview_token, deleted_at, created_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['board'] as $row) {
                         $importTitle = trim((string)($row['title'] ?? ''));
@@ -1021,10 +1045,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (int)($row['is_pinned'] ?? 0),
                             (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
+                            $row['publish_at'] ?? null,
+                            $row['unpublish_at'] ?? null,
+                            $row['preview_token'] ?? '',
+                            $row['deleted_at'] ?? null,
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                         ]);
                     }
                     $summary[] = 'Úřední deska importována.';
+                }
+
+                // Evidence zveřejnění vývěsky
+                if (!empty($data['board_publication_events']) && is_array($data['board_publication_events'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_board_publication_events
+                         (id, board_id, event_type, event_date, actor_user_id, public_path,
+                          attachment_name, attachment_size, attachment_checksum, created_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['board_publication_events'] as $row) {
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            (int)($row['board_id'] ?? 0),
+                            trim((string)($row['event_type'] ?? 'published')),
+                            $row['event_date'] ?? date('Y-m-d H:i:s'),
+                            isset($row['actor_user_id']) && $row['actor_user_id'] !== '' ? (int)$row['actor_user_id'] : null,
+                            (string)($row['public_path'] ?? ''),
+                            (string)($row['attachment_name'] ?? ''),
+                            (int)($row['attachment_size'] ?? 0),
+                            (string)($row['attachment_checksum'] ?? ''),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Evidence zveřejnění vývěsky importována.';
+                }
+
+                // Odběratelé vývěsky
+                if (!empty($data['board_subscribers']) && is_array($data['board_subscribers'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_board_subscribers
+                         (id, email, token, confirmed, all_categories, created_at, confirmed_at)
+                         VALUES (?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['board_subscribers'] as $row) {
+                        $email = trim((string)($row['email'] ?? ''));
+                        $token = trim((string)($row['token'] ?? ''));
+                        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $token === '') {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $email,
+                            $token,
+                            (int)($row['confirmed'] ?? 0),
+                            (int)($row['all_categories'] ?? 1),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['confirmed_at'] ?? null,
+                        ]);
+                    }
+                    $summary[] = 'Odběratelé vývěsky importováni.';
+                }
+
+                if (!empty($data['board_subscriber_categories']) && is_array($data['board_subscriber_categories'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_board_subscriber_categories (subscriber_id, category_id) VALUES (?, ?)"
+                    );
+                    foreach ($data['board_subscriber_categories'] as $row) {
+                        $subscriberId = (int)($row['subscriber_id'] ?? 0);
+                        $categoryId = (int)($row['category_id'] ?? 0);
+                        if ($subscriberId > 0 && $categoryId > 0) {
+                            $ins->execute([$subscriberId, $categoryId]);
+                        }
+                    }
+                    $summary[] = 'Předvolby odběru vývěsky importovány.';
                 }
 
                 // Komentáře

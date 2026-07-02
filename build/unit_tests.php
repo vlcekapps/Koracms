@@ -218,11 +218,13 @@ assert_equals('Blog', moduleDefinition('blog')['label'] ?? null, 'module definit
 assert_equals(null, moduleDefinition('unknown_module'), 'module definition returns null for unknown module');
 assert_true(in_array('/blog/article.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog article route is declared as a public module entrypoint');
 assert_true(in_array('/blog/series.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog series route is declared as a public module entrypoint');
+assert_true(in_array('/board/subscribe.php', $modulePublicEntryPoints['board'] ?? [], true), 'board subscription route is declared as a public module entrypoint');
 assert_true(in_array('/podcast/audio.php', $modulePublicEntryPoints['podcast'] ?? [], true), 'podcast audio endpoint is declared as a public module entrypoint');
 assert_true(in_array('/subscribe.php', $modulePublicEntryPoints['newsletter'] ?? [], true), 'newsletter subscribe route is declared as a public module entrypoint');
 assert_true(in_array('/forms/index.php', $modulePublicEntryPoints['forms'] ?? [], true), 'forms public route is declared even without main navigation');
 assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics has no standalone public entrypoint');
 assert_equals('blog', $modulePublicPathMap['/blog/page.php'] ?? null, 'blog static page public path maps to blog module');
+assert_equals('board', $modulePublicPathMap['/board/subscribe.php'] ?? null, 'board subscribe public path maps to board module');
 assert_equals('newsletter', $modulePublicPathMap['/subscribe.php'] ?? null, 'newsletter subscribe public path maps to newsletter module');
 
 test_section('module admin entrypoints');
@@ -293,6 +295,7 @@ assert_equals('Štítky blogu', $sitemapSections['blog']['blog_tags'] ?? null, '
 assert_equals('blog', $sitemapSectionMap['blog'] ?? null, 'blog sitemap section maps to blog module');
 assert_equals('blog', $sitemapSectionMap['blog_categories'] ?? null, 'blog category sitemap section maps to blog module');
 assert_equals('blog', $sitemapSectionMap['blog_tags'] ?? null, 'blog tag sitemap section maps to blog module');
+assert_equals('board', $sitemapSectionMap['board_categories'] ?? null, 'board category sitemap section maps to board module');
 assert_equals('gallery', $sitemapSectionMap['gallery_photos'] ?? null, 'gallery photos sitemap section maps to gallery module');
 assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcast episodes sitemap section maps to podcast module');
 assert_equals('forms', $sitemapSectionMap['forms'] ?? null, 'forms sitemap section maps to forms module');
@@ -356,6 +359,48 @@ assert_false(
 assert_false(
     blogArticleIsPubliclyReachable(['slug' => '', 'status' => 'published', 'deleted_at' => null, 'publish_at' => null, 'unpublish_at' => null]),
     'article without slug is not a canonical public redirect target'
+);
+assert_equals('dulezita-oznameni', boardCategorySlug('Důležitá oznámení'), 'board category slug normalizes Czech diacritics');
+assert_equals('/board/kategorie/dulezita-oznameni', boardCategoryRequestPath(['id' => 4, 'slug' => 'dulezita-oznameni']), 'board category clean request path uses slug');
+assert_equals('/board/index.php?kat=4', boardCategoryRequestPath(['id' => 4, 'slug' => '']), 'board category request path falls back to legacy filter');
+assert_equals([2, 5], normalizeBoardSubscriberCategoryIds(['5', 2, 2, 99, 0, -1], [2, 5, 8]), 'board subscriber category IDs are valid, positive and deduplicated');
+assert_true(
+    boardIsPubliclyReachable([
+        'slug' => 'verejna-polozka',
+        'status' => 'published',
+        'is_published' => 1,
+        'deleted_at' => null,
+        'posted_date' => date('Y-m-d'),
+        'publish_at' => null,
+        'unpublish_at' => null,
+    ]),
+    'published board item is publicly reachable'
+);
+assert_false(
+    boardIsPubliclyReachable([
+        'slug' => 'budouci-polozka',
+        'status' => 'published',
+        'is_published' => 1,
+        'deleted_at' => null,
+        'posted_date' => date('Y-m-d', time() + 86400),
+        'publish_at' => null,
+        'unpublish_at' => null,
+    ]),
+    'future board item is not publicly reachable'
+);
+assert_true(
+    shouldSendBoardPublicationNotice(
+        ['slug' => 'polozka', 'status' => 'draft', 'is_published' => 0, 'deleted_at' => null, 'posted_date' => date('Y-m-d')],
+        ['slug' => 'polozka', 'status' => 'published', 'is_published' => 1, 'deleted_at' => null, 'posted_date' => date('Y-m-d')]
+    ),
+    'board notice is sent when item becomes public'
+);
+assert_false(
+    shouldSendBoardPublicationNotice(
+        ['slug' => 'polozka', 'status' => 'published', 'is_published' => 1, 'deleted_at' => null, 'posted_date' => date('Y-m-d')],
+        ['slug' => 'polozka', 'status' => 'published', 'is_published' => 1, 'deleted_at' => null, 'posted_date' => date('Y-m-d')]
+    ),
+    'board notice is not sent for ordinary edit of public item'
 );
 
 test_section('navigation links');

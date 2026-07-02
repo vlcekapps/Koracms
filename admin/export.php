@@ -78,11 +78,18 @@ $tables = [
     'faq_categories' => "SELECT id, name, parent_id, sort_order, created_at FROM cms_faq_categories",
     'faqs'          => "SELECT id, question, slug, excerpt, answer, category_id, meta_title, meta_description,
                                is_published, status, created_at, updated_at FROM cms_faqs",
-    'board_categories' => "SELECT id, name, sort_order, created_at FROM cms_board_categories",
+    'board_categories' => "SELECT id, name, slug, description, meta_title, meta_description, sort_order, created_at, updated_at
+                               FROM cms_board_categories",
     'board'         => "SELECT id, title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
                                image_file, contact_name, contact_phone, contact_email,
                                filename, original_name, file_size, sort_order, is_pinned, is_published,
-                               status, created_at FROM cms_board",
+                               status, publish_at, unpublish_at, preview_token, deleted_at, created_at FROM cms_board",
+    'board_publication_events' => "SELECT id, board_id, event_type, event_date, actor_user_id, public_path,
+                                          attachment_name, attachment_size, attachment_checksum, created_at
+                                   FROM cms_board_publication_events",
+    'board_subscribers' => "SELECT id, email, token, confirmed, all_categories, created_at, confirmed_at
+                            FROM cms_board_subscribers",
+    'board_subscriber_categories' => "SELECT subscriber_id, category_id FROM cms_board_subscriber_categories",
     'comments'      => "SELECT id, article_id, author_name, author_email, content, status, is_approved, created_at
                                FROM cms_comments",
     'subscribers'   => "SELECT id, email, confirmed, token, created_at FROM cms_subscribers",

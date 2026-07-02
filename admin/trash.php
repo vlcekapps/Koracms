@@ -34,7 +34,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($itemId !== null && isset($moduleConfig[$module])) {
         $cfg = $moduleConfig[$module];
         if ($action === 'restore') {
+            $previousBoardDocument = null;
+            if ($module === 'board') {
+                $previousStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+                $previousStmt->execute([$itemId]);
+                $previousBoardDocument = $previousStmt->fetch() ?: null;
+            }
             $pdo->prepare("UPDATE {$cfg['table']} SET deleted_at = NULL WHERE id = ?")->execute([$itemId]);
+            if ($module === 'board' && is_array($previousBoardDocument)) {
+                $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
+                $updatedStmt->execute([$itemId]);
+                $updatedBoardDocument = $updatedStmt->fetch() ?: null;
+                if ($updatedBoardDocument) {
+                    recordBoardPublicationEvent($pdo, $updatedBoardDocument, 'restored', currentUserId());
+                    if (shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument)) {
+                        $sentNotifications = notifyBoardSubscribers($pdo, $updatedBoardDocument);
+                        if ($sentNotifications > 0) {
+                            logAction('board_notify', "id={$itemId} sent={$sentNotifications}");
+                        }
+                    }
+                }
+            }
             $success = $cfg['label'] . ' obnoven(a).';
             logAction('trash_restore', "module={$module} id={$itemId}");
         } elseif ($action === 'purge') {
@@ -69,6 +89,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);
             } elseif ($module === 'gallery_photos') {
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'board') {
+                $boardRedirectStmt = $pdo->prepare(
+                    "SELECT id, slug
+                     FROM cms_board
+                     WHERE id = ?
+                     LIMIT 1"
+                );
+                $boardRedirectStmt->execute([$itemId]);
+                $boardForRedirectCleanup = $boardRedirectStmt->fetch() ?: null;
+                if ($boardForRedirectCleanup) {
+                    deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup));
+                }
+                $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
             }
             $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
             $success = $cfg['label'] . ' trvale smazán(a).';

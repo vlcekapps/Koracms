@@ -8,6 +8,7 @@ verifyCsrf();
 $id = inputInt('post', 'id');
 if ($id !== null) {
     $pdo = db_connect();
+    $pdo->prepare("DELETE FROM cms_board_subscriber_categories WHERE category_id = ?")->execute([$id]);
     $pdo->prepare("UPDATE cms_board SET category_id = NULL WHERE category_id = ?")->execute([$id]);
     $pdo->prepare("DELETE FROM cms_board_categories WHERE id = ?")->execute([$id]);
     logAction('board_cat_delete', "id={$id}");

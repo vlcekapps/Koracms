@@ -613,10 +613,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_categories (
-            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            name       VARCHAR(255) NOT NULL,
-            sort_order INT          NOT NULL DEFAULT 0,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name             VARCHAR(255) NOT NULL,
+            slug             VARCHAR(150) NOT NULL DEFAULT '',
+            description      TEXT,
+            meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            sort_order       INT          NOT NULL DEFAULT 0,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_board_categories_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board (
@@ -648,6 +654,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_board_slug (slug),
             FULLTEXT INDEX ft_board_search (title, excerpt, description)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_publication_events (
+            id                  INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            board_id            INT          NOT NULL,
+            event_type          VARCHAR(50)  NOT NULL,
+            event_date          DATETIME     NOT NULL,
+            actor_user_id       INT          NULL DEFAULT NULL,
+            public_path         VARCHAR(500) NOT NULL DEFAULT '',
+            attachment_name     VARCHAR(255) NOT NULL DEFAULT '',
+            attachment_size     INT          NOT NULL DEFAULT 0,
+            attachment_checksum CHAR(64)     NOT NULL DEFAULT '',
+            created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_board_publication_events_board (board_id, created_at),
+            INDEX idx_board_publication_events_type (event_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_subscribers (
+            id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            email          VARCHAR(255) NOT NULL,
+            token          VARCHAR(64)  NOT NULL,
+            confirmed      TINYINT(1)   NOT NULL DEFAULT 0,
+            all_categories TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            confirmed_at   DATETIME     NULL DEFAULT NULL,
+            UNIQUE KEY uq_board_subscribers_email (email),
+            UNIQUE KEY uq_board_subscribers_token (token),
+            INDEX idx_board_subscribers_confirmed (confirmed)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_board_subscriber_categories (
+            subscriber_id INT NOT NULL,
+            category_id   INT NOT NULL,
+            PRIMARY KEY (subscriber_id, category_id),
+            INDEX idx_board_subscriber_categories_category (category_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         // ── Rezervační systém ───────────────────────────────────────────────
