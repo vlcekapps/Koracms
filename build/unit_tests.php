@@ -625,6 +625,19 @@ assert_equals('', statsNormalizeReferrer('javascript:alert(1)'), 'stats referrer
 assert_equals('', statsNormalizeReferrer('https://user:pass@example.com/private'), 'stats referrer rejects URL credentials');
 unset($_SERVER['HTTP_HOST']);
 
+test_section('stats content trends helpers');
+
+assert_equals('/snd/clanek', statsNormalizePagePath('/snd/clanek?token=secret#detail'), 'stats content path drops query and fragment');
+assert_equals('/snd/clanek', statsNormalizePagePath('https://pvlcek.cz/snd/clanek?token=secret#detail'), 'stats content path keeps only absolute URL path');
+assert_equals('/', statsNormalizePagePath("bad\npath"), 'stats content path rejects control characters');
+assert_equals(hash('sha256', '/snd/clanek'), statsContentPathHash('/snd/clanek?token=secret'), 'stats content path hash is based on normalized path');
+assert_equals('food', statsPageTypeModuleKey('food_card'), 'food card views map to food module');
+assert_equals('gallery', statsPageTypeModuleKey('gallery_photo'), 'gallery photo views map to gallery module');
+assert_equals('forms', statsPageTypeModuleKey('form'), 'public form views map to forms module');
+assert_equals('', statsPageTypeModuleKey('token_endpoint'), 'unknown or token endpoints do not map to content trends');
+assert_equals(['2026-04-07', '2026-04-09'], statsPreviousDateRange('2026-04-10', '2026-04-12'), 'previous period has the same inclusive length');
+assert_equals('all', statsNormalizeContentModuleFilter('definitely-not-a-module'), 'unknown content module filter falls back to all');
+
 test_section('normalizeHttpMethods()');
 
 assert_equals(['GET', 'POST'], normalizeHttpMethods(['get', ' POST ', 'GET']), 'method normalizer trims, uppercases and deduplicates');

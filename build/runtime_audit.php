@@ -71,6 +71,9 @@ $contactTopicsAdminSource = (string) file_get_contents(__DIR__ . '/../admin/cont
 $contactReplyAdminSource = (string) file_get_contents(__DIR__ . '/../admin/contact_reply.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
 $formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
+$foodCardSource = (string) file_get_contents(__DIR__ . '/../food/card.php');
+$galleryAlbumSource = (string) file_get_contents(__DIR__ . '/../gallery/album.php');
+$galleryPhotoSource = (string) file_get_contents(__DIR__ . '/../gallery/photo.php');
 $downloadsIndexSource = (string) file_get_contents(__DIR__ . '/../downloads/index.php');
 $downloadsItemSource = (string) file_get_contents(__DIR__ . '/../downloads/item.php');
 $downloadsSeriesSource = (string) file_get_contents(__DIR__ . '/../downloads/series.php');
@@ -14414,6 +14417,38 @@ if (!str_contains($adminStatisticsSource, 'Nejčtenější statické stránky')
     || !str_contains($adminStatisticsSource, 'Stránka blogu: ')
     || !str_contains($adminStatisticsSource, 'statisticsLogSectionError(\'top_pages\'')) {
     $adminFieldErrorIssues[] = 'admin statistics detail is missing top static pages report';
+}
+$statsContentAggregatePos = strpos($statsSource, 'statsAggregateContentDaily($pdo);');
+$statsRawRetentionDeletePos = strpos($statsSource, 'DELETE FROM cms_page_views');
+if (!$installTableContains('cms_stats_content_daily', 'normalized_path')
+    || !$installTableContains('cms_stats_content_daily', 'unique_visitors')
+    || !str_contains($migrateSource, 'cms_stats_content_daily')
+    || !str_contains($migrateSource, 'uq_stats_content_daily')
+    || !str_contains($migrateSource, 'idx_stats_content_module_date')) {
+    $adminFieldErrorIssues[] = 'content statistics aggregate table must exist in install.php and migrate.php';
+}
+if (!str_contains($statsSource, 'function statsNormalizePagePath(')
+    || !str_contains($statsSource, 'function statsBuildRawContentDailyRows(')
+    || !str_contains($statsSource, 'function statsLoadContentTrendRows(')
+    || $statsContentAggregatePos === false
+    || $statsRawRetentionDeletePos === false
+    || $statsContentAggregatePos > $statsRawRetentionDeletePos) {
+    $adminFieldErrorIssues[] = 'content statistics must normalize paths and aggregate before raw page view retention cleanup';
+}
+if (!str_contains($adminStatisticsSource, 'Výkon obsahu')
+    || !str_contains($adminStatisticsSource, 'sec-content-performance')
+    || !str_contains($adminStatisticsSource, 'statsPreviousDateRange($dateFrom, $dateTo)')
+    || !str_contains($adminStatisticsSource, 'statsLoadContentTrendRows($pdo, $dateFrom, $dateTo, $contentModuleFilter)')
+    || !str_contains($adminStatisticsSource, "'export' => 'content_csv'")
+    || !str_contains($adminStatisticsSource, 'sendAdminAttachmentHeaders(')
+    || !str_contains($adminStatisticsSource, "fputcsv(\$outputHandle, ['Modul', 'Obsah', 'Typ', 'URL', 'Zobrazení', 'Unikátní návštěvníci', 'Předchozí období', 'Změna']")) {
+    $adminFieldErrorIssues[] = 'admin statistics detail is missing long-term content performance tables or safe CSV export';
+}
+if (!str_contains($foodCardSource, "trackPageView('food_card', (int)\$card['id']);")
+    || !str_contains($galleryAlbumSource, "trackPageView('gallery_album', (int)\$album['id']);")
+    || !str_contains($galleryPhotoSource, "trackPageView('gallery_photo', (int)\$photo['id']);")
+    || !str_contains($formsIndexSource, "trackPageView('form', (int)\$form['id']);")) {
+    $adminFieldErrorIssues[] = 'content statistics tracking is missing for food cards, gallery albums/photos or public forms';
 }
 foreach ([
     'admin dashboard statistics chart' => [

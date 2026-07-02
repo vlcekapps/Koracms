@@ -71,6 +71,8 @@ if ($albumSlug === '') {
     exit;
 }
 
+trackPageView('gallery_album', (int)$album['id']);
+
 $trail = gallery_breadcrumb((int)$album['id']);
 
 $subAlbumWhereParts = [

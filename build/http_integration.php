@@ -58,6 +58,7 @@ $createdContactTopicIds = [];
 $createdContactMessageIds = [];
 $createdNavLinkIds = [];
 $createdPageViewIds = [];
+$createdStatsContentTokens = [];
 $createdTempFiles = [];
 $createdRedirectPaths = [];
 
@@ -2219,6 +2220,103 @@ try {
     }
 
     httpIntegrationPrintResult('visitor_top_static_pages_http', $topStaticPagesIssues, $failures);
+
+    $contentTrendsIssues = [];
+    $contentTrendsToken = bin2hex(random_bytes(4));
+    $createdStatsContentTokens[] = $contentTrendsToken;
+    $contentTrendsTitle = 'HTTP content trend page ' . $contentTrendsToken;
+    $contentTrendsSlug = 'http-content-trend-' . $contentTrendsToken;
+    $contentTrendTo = date('Y-m-d');
+    $contentTrendFrom = date('Y-m-d', strtotime('-2 days'));
+    [$contentTrendPreviousFrom] = statsPreviousDateRange($contentTrendFrom, $contentTrendTo);
+
+    $pdo->prepare(
+        "INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, status, created_at)
+         VALUES (?, ?, 'HTTP content trends page', 1, 0, 'published', ?)"
+    )->execute([
+        $contentTrendsTitle,
+        $contentTrendsSlug,
+        $contentTrendFrom . ' 08:00:00',
+    ]);
+    $contentTrendPageId = (int)$pdo->lastInsertId();
+    $createdPageIds[] = $contentTrendPageId;
+
+    $contentTrendInsert = $pdo->prepare(
+        "INSERT INTO cms_page_views (page_url, page_type, page_ref_id, ip_hash, user_agent, referrer, created_at)
+         VALUES (?, 'page', ?, ?, ?, ?, ?)"
+    );
+    foreach ([
+        [$contentTrendFrom . ' 09:00:00', '/page.php?slug=' . $contentTrendsSlug . '&token=secret#detail', 'content-current-a', 'HTTP content trends current', 'https://external.example.test/source?secret=1'],
+        [$contentTrendFrom . ' 10:00:00', '/page.php?slug=' . $contentTrendsSlug . '&token=secret#detail', 'content-current-b', 'HTTP content trends current', 'https://external.example.test/source?secret=2'],
+        [$contentTrendTo . ' 11:00:00', pagePublicPath(['id' => $contentTrendPageId, 'slug' => $contentTrendsSlug]), 'content-today-a', 'HTTP content trends today', 'https://external.example.test/source?secret=3'],
+        [$contentTrendPreviousFrom . ' 12:00:00', '/page.php?slug=' . $contentTrendsSlug . '&token=secret#detail', 'content-previous-a', 'HTTP content trends previous', 'https://external.example.test/source?secret=4'],
+    ] as $contentTrendSeed) {
+        [$contentTrendCreatedAt, $contentTrendPath, $contentTrendVisitor, $contentTrendAgent, $contentTrendReferrer] = $contentTrendSeed;
+        $contentTrendInsert->execute([
+            $contentTrendPath,
+            $contentTrendPageId,
+            hash('sha256', $contentTrendsToken . '-' . $contentTrendVisitor),
+            $contentTrendAgent,
+            $contentTrendReferrer,
+            $contentTrendCreatedAt,
+        ]);
+        $createdPageViewIds[] = (int)$pdo->lastInsertId();
+    }
+
+    $contentTrendsUrl = $baseUrl . BASE_URL . '/admin/statistics.php?from=' . $contentTrendFrom . '&to=' . $contentTrendTo . '&module=pages';
+    $contentTrendsResponse = fetchUrl($contentTrendsUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($contentTrendsResponse) !== 200) {
+        $contentTrendsIssues[] = 'admin statistiky s obsahovými trendy nevrátily 200';
+    }
+    if (!str_contains($contentTrendsResponse['body'], 'Výkon obsahu')
+        || !str_contains($contentTrendsResponse['body'], 'Výkon podle modulů')
+        || !str_contains($contentTrendsResponse['body'], 'Největší nárůsty')) {
+        $contentTrendsIssues[] = 'admin statistiky nezobrazily sekce výkonu obsahu';
+    }
+    if (!str_contains($contentTrendsResponse['body'], $contentTrendsTitle)) {
+        $contentTrendsIssues[] = 'admin statistiky nezobrazily testovací obsah v trendech';
+    }
+    if (str_contains($contentTrendsResponse['body'], 'token=secret') || str_contains($contentTrendsResponse['body'], '#detail')) {
+        $contentTrendsIssues[] = 'obsahové trendy zobrazily query token nebo fragment URL';
+    }
+    $contentAggregateViewsStmt = $pdo->prepare("SELECT COALESCE(SUM(total_views), 0) FROM cms_stats_content_daily WHERE title_snapshot = ?");
+    $contentAggregateViewsStmt->execute([$contentTrendsTitle]);
+    if ((int)$contentAggregateViewsStmt->fetchColumn() < 2) {
+        $contentTrendsIssues[] = 'starší raw návštěvy se neuložily do denních obsahových agregací';
+    }
+
+    $pdo->prepare(
+        "DELETE FROM cms_page_views
+         WHERE page_type = 'page'
+           AND page_ref_id = ?
+           AND DATE(created_at) = ?"
+    )->execute([$contentTrendPageId, $contentTrendFrom]);
+    $contentTrendsAfterRawDelete = fetchUrl($contentTrendsUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($contentTrendsAfterRawDelete) !== 200
+        || !str_contains($contentTrendsAfterRawDelete['body'], $contentTrendsTitle)) {
+        $contentTrendsIssues[] = 'obsahové trendy nezůstaly dostupné po smazání starších raw návštěv';
+    }
+
+    $contentTrendsCsvUrl = $contentTrendsUrl . '&export=content_csv';
+    $contentTrendsCsvResponse = fetchUrl($contentTrendsCsvUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($contentTrendsCsvResponse) !== 200) {
+        $contentTrendsIssues[] = 'CSV export obsahových trendů nevrátil 200';
+    }
+    if (!httpIntegrationHeaderContains($contentTrendsCsvResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($contentTrendsCsvResponse, 'X-Content-Type-Options', 'nosniff')) {
+        $contentTrendsIssues[] = 'CSV export obsahových trendů neposílá bezpečné download hlavičky';
+    }
+    if (!str_contains($contentTrendsCsvResponse['body'], $contentTrendsTitle)
+        || !str_contains($contentTrendsCsvResponse['body'], 'Modul;Obsah;Typ;URL;Zobrazení')) {
+        $contentTrendsIssues[] = 'CSV export neobsahuje očekávaná agregovaná pole';
+    }
+    foreach (['ip_hash', 'user_agent', 'referrer', 'token=secret', '#detail'] as $forbiddenCsvFragment) {
+        if (str_contains($contentTrendsCsvResponse['body'], $forbiddenCsvFragment)) {
+            $contentTrendsIssues[] = 'CSV export obsahových trendů obsahuje zakázaný raw údaj: ' . $forbiddenCsvFragment;
+        }
+    }
+
+    httpIntegrationPrintResult('visitor_content_trends_http', $contentTrendsIssues, $failures);
 
     $socialLinksWidgetIssues = [];
     $socialLinksWidgetTitle = 'HTTP social links ' . bin2hex(random_bytes(4));
@@ -7331,6 +7429,17 @@ try {
     foreach ($createdContactTopicIds as $contactTopicIdToDelete) {
         $pdo->prepare("UPDATE cms_contact SET topic_id = NULL WHERE topic_id = ?")->execute([$contactTopicIdToDelete]);
         $pdo->prepare("DELETE FROM cms_contact_topics WHERE id = ?")->execute([$contactTopicIdToDelete]);
+    }
+
+    foreach ($createdStatsContentTokens as $statsContentTokenToDelete) {
+        $pdo->prepare(
+            "DELETE FROM cms_stats_content_daily
+             WHERE title_snapshot LIKE ?
+                OR normalized_path LIKE ?"
+        )->execute([
+            '%' . $statsContentTokenToDelete . '%',
+            '%' . $statsContentTokenToDelete . '%',
+        ]);
     }
 
     foreach ($createdPageViewIds as $pageViewIdToDelete) {

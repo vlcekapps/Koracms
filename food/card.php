@@ -78,6 +78,8 @@ if ($cardId !== null && $canonicalPath !== '' && $canonicalPath !== $legacyPath)
     exit;
 }
 
+trackPageView('food_card', (int)$card['id']);
+
 $description = trim((string)($card['description'] ?? ''));
 if ($description === '') {
     $description = trim($card['type_label'] . ($card['validity_label'] !== '' ? ', ' . $card['validity_label'] : ''));

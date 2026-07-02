@@ -973,6 +973,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unique_visitors INT  NOT NULL DEFAULT 0
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_stats_content_daily (
+            id              BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            stat_date       DATE         NOT NULL,
+            page_type       VARCHAR(50)  NOT NULL DEFAULT '',
+            page_ref_id     INT          NOT NULL DEFAULT 0,
+            normalized_path VARCHAR(500) NOT NULL,
+            path_hash       CHAR(64)     NOT NULL,
+            module_key      VARCHAR(50)  NOT NULL DEFAULT '',
+            title_snapshot  VARCHAR(255) NOT NULL DEFAULT '',
+            total_views     INT          NOT NULL DEFAULT 0,
+            unique_visitors INT          NOT NULL DEFAULT 0,
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_stats_content_daily (stat_date, page_type, page_ref_id, path_hash),
+            INDEX idx_stats_content_module_date (module_key, stat_date),
+            INDEX idx_stats_content_path_hash (path_hash)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         // ── Formuláře ──
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_forms (

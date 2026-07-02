@@ -199,6 +199,10 @@ if ($slug === '' && !empty($form['slug'])) {
     exit;
 }
 
+if (!$isEmbedded && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    trackPageView('form', (int)$form['id']);
+}
+
 $fields = $pdo->prepare("SELECT * FROM cms_form_fields WHERE form_id = ? ORDER BY sort_order, id");
 $fields->execute([(int)$form['id']]);
 $fields = $fields->fetchAll();

@@ -307,6 +307,18 @@ CREATE TABLE IF NOT EXISTS cms_food_order_items (
   item_title VARCHAR(255),
   quantity INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_stats_content_daily (
+  id INT,
+  stat_date DATE,
+  page_type VARCHAR(50),
+  page_ref_id INT,
+  normalized_path VARCHAR(500),
+  path_hash CHAR(64),
+  module_key VARCHAR(50),
+  title_snapshot VARCHAR(255),
+  total_views INT,
+  unique_visitors INT
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -431,6 +443,10 @@ PHP,
 // cms_food_order_items
 // idx_food_order_items_order
 // idx_food_order_items_item
+// cms_stats_content_daily
+// uq_stats_content_daily
+// idx_stats_content_module_date
+// idx_stats_content_path_hash
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

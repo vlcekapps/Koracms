@@ -17,6 +17,12 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
     $dateTo   = date('Y-m-d');
 }
+if ($dateFrom > $dateTo) {
+    [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+}
+
+$contentModuleOptions = statsContentModuleOptions();
+$contentModuleFilter = statsNormalizeContentModuleFilter((string)($_GET['module'] ?? 'all'));
 
 $fmt = fn (int $n) => number_format($n, 0, ',', "\u{00a0}");
 
@@ -166,6 +172,94 @@ try {
     statisticsLogSectionError('top_pages', $e);
 }
 
+// ── Dlouhodobé obsahové trendy ─────────────────────────────────────────────
+$contentTrendRows = [];
+$contentPreviousRows = [];
+$contentRowsWithTrend = [];
+$contentTopRows = [];
+$contentGrowthRows = [];
+$contentModuleSummary = [];
+$previousFrom = $dateFrom;
+$previousTo = $dateTo;
+try {
+    [$previousFrom, $previousTo] = statsPreviousDateRange($dateFrom, $dateTo);
+    $contentTrendRows = statsLoadContentTrendRows($pdo, $dateFrom, $dateTo, $contentModuleFilter);
+    $contentPreviousRows = statsLoadContentTrendRows($pdo, $previousFrom, $previousTo, $contentModuleFilter);
+
+    $previousByKey = [];
+    foreach ($contentPreviousRows as $previousRow) {
+        $previousByKey[(string)$previousRow['key']] = (int)$previousRow['views'];
+    }
+
+    foreach ($contentTrendRows as $trendRow) {
+        $trendRow['previous_views'] = $previousByKey[(string)$trendRow['key']] ?? 0;
+        $trendRow['delta_views'] = (int)$trendRow['views'] - (int)$trendRow['previous_views'];
+        $contentRowsWithTrend[] = $trendRow;
+
+        if (!isset($contentModuleSummary[$trendRow['module_key']])) {
+            $contentModuleSummary[$trendRow['module_key']] = [
+                'module_label' => (string)$trendRow['module_label'],
+                'views' => 0,
+                'unique_visitors' => 0,
+                'items' => 0,
+            ];
+        }
+        $contentModuleSummary[$trendRow['module_key']]['views'] += (int)$trendRow['views'];
+        $contentModuleSummary[$trendRow['module_key']]['unique_visitors'] += (int)$trendRow['unique_visitors'];
+        $contentModuleSummary[$trendRow['module_key']]['items']++;
+
+        if ((int)$trendRow['delta_views'] > 0) {
+            $contentGrowthRows[] = $trendRow;
+        }
+    }
+
+    $contentTopRows = $contentRowsWithTrend;
+    uasort(
+        $contentModuleSummary,
+        static fn (array $a, array $b): int => $b['views'] <=> $a['views'] ?: strcmp($a['module_label'], $b['module_label'])
+    );
+    usort(
+        $contentGrowthRows,
+        static fn (array $a, array $b): int => $b['delta_views'] <=> $a['delta_views'] ?: $b['views'] <=> $a['views']
+    );
+
+    $contentTopRows = array_slice($contentTopRows, 0, 20);
+    $contentGrowthRows = array_slice($contentGrowthRows, 0, 20);
+} catch (\PDOException $e) {
+    statisticsLogSectionError('content_trends', $e);
+}
+
+if ((string)($_GET['export'] ?? '') === 'content_csv') {
+    $isHeadRequest = requireReadOnlyHttpMethod();
+    sendAdminAttachmentHeaders(
+        'text/csv; charset=UTF-8',
+        'statistiky-obsahu-' . $dateFrom . '-' . $dateTo . '.csv'
+    );
+    if ($isHeadRequest) {
+        exit;
+    }
+
+    $outputHandle = fopen('php://output', 'wb');
+    if ($outputHandle !== false) {
+        fwrite($outputHandle, "\xEF\xBB\xBF");
+        fputcsv($outputHandle, ['Modul', 'Obsah', 'Typ', 'URL', 'Zobrazení', 'Unikátní návštěvníci', 'Předchozí období', 'Změna'], ';');
+        foreach ($contentRowsWithTrend as $trendRow) {
+            fputcsv($outputHandle, [
+                (string)$trendRow['module_label'],
+                (string)$trendRow['title'],
+                (string)$trendRow['page_type'],
+                (string)$trendRow['path'],
+                (int)$trendRow['views'],
+                (int)$trendRow['unique_visitors'],
+                (int)$trendRow['previous_views'],
+                (int)$trendRow['delta_views'],
+            ], ';');
+        }
+        fclose($outputHandle);
+    }
+    exit;
+}
+
 // ── Rezervace ───────────────────────────────────────────────────────────────
 $resMonthly   = [];
 $resStatus    = [];
@@ -283,6 +377,14 @@ $statusLabels = [
     'no_show'   => 'Nedostavení se',
 ];
 
+$contentTotalTrendViews = array_sum(array_map(static fn (array $row): int => (int)$row['views'], $contentModuleSummary));
+$contentExportUrl = 'statistics.php?' . http_build_query([
+    'from' => $dateFrom,
+    'to' => $dateTo,
+    'module' => $contentModuleFilter,
+    'export' => 'content_csv',
+]);
+
 adminHeader('Statistiky');
 ?>
 
@@ -298,6 +400,17 @@ adminHeader('Statistiky');
       <label for="to" class="admin-compact-label">Do</label>
       <input type="date" id="to" name="to" value="<?= h($dateTo) ?>"
              class="admin-input-auto">
+    </div>
+    <div class="admin-form-grid__cell">
+      <label for="module" class="admin-compact-label">Modul obsahu</label>
+      <select id="module" name="module" class="admin-input-auto">
+        <option value="all">Všechny moduly</option>
+        <?php foreach ($contentModuleOptions as $moduleKey => $moduleLabel): ?>
+          <option value="<?= h($moduleKey) ?>"<?= $contentModuleFilter === $moduleKey ? ' selected' : '' ?>>
+            <?= h($moduleLabel) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
     </div>
     <button type="submit" class="btn">Zobrazit</button>
   </fieldset>
@@ -394,6 +507,104 @@ adminHeader('Statistiky');
         <?php endforeach; ?>
       </tbody>
     </table>
+  <?php endif; ?>
+</section>
+
+<!-- ── 2. Výkon obsahu ────────────────────────────────────────────────────── -->
+<section aria-labelledby="sec-content-performance">
+  <h2 id="sec-content-performance">Výkon obsahu</h2>
+  <p class="field-help">
+    Dlouhodobé součty vycházejí z denních agregací bez IP hashů, user-agentů a raw referrerů. Dnešní návštěvy se přičítají živě z raw dat.
+    Předchozí období: <strong><?= h($previousFrom) ?></strong> – <strong><?= h($previousTo) ?></strong>.
+  </p>
+  <p>
+    <a class="btn" href="<?= h($contentExportUrl) ?>">Exportovat agregovaný obsah do CSV</a>
+  </p>
+
+  <?php if ($contentTopRows === []): ?>
+    <p>Za zvolené období nejsou k dispozici obsahové trendy.</p>
+  <?php else: ?>
+    <h3 id="sec-content-modules">Výkon podle modulů</h3>
+    <table aria-labelledby="sec-content-modules">
+      <caption class="sr-only">Souhrn výkonu obsahu podle modulů za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+      <thead>
+        <tr>
+          <th scope="col">Modul</th>
+          <th scope="col">Obsahů</th>
+          <th scope="col">Zobrazení</th>
+          <th scope="col">Unikátní návštěvníci</th>
+          <th scope="col">Podíl zobrazení</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($contentModuleSummary as $moduleSummary): ?>
+          <tr>
+            <td><?= h((string)$moduleSummary['module_label']) ?></td>
+            <td><?= $fmt((int)$moduleSummary['items']) ?></td>
+            <td><?= $fmt((int)$moduleSummary['views']) ?></td>
+            <td><?= $fmt((int)$moduleSummary['unique_visitors']) ?></td>
+            <td><?= $contentTotalTrendViews > 0 ? h(number_format(((int)$moduleSummary['views'] / $contentTotalTrendViews) * 100, 1, ',', "\u{00a0}") . "\u{00a0}%") : '0&nbsp;%' ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+
+    <h3 id="sec-content-top">Nejčtenější obsah za období</h3>
+    <table aria-labelledby="sec-content-top">
+      <caption class="sr-only">Nejčtenější obsah za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Obsah</th>
+          <th scope="col">Modul</th>
+          <th scope="col">Zobrazení</th>
+          <th scope="col">Unikátní</th>
+          <th scope="col">Proti předchozímu období</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($contentTopRows as $contentIndex => $trendRow): ?>
+          <tr>
+            <td><?= $contentIndex + 1 ?></td>
+            <td><a href="<?= h((string)$trendRow['path']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$trendRow['title']) ?><?= newWindowLinkSrOnlySuffix() ?></a></td>
+            <td><?= h((string)$trendRow['module_label']) ?></td>
+            <td><?= $fmt((int)$trendRow['views']) ?></td>
+            <td><?= $fmt((int)$trendRow['unique_visitors']) ?></td>
+            <td>
+              <?= ((int)$trendRow['delta_views'] >= 0 ? '+' : '') . $fmt((int)$trendRow['delta_views']) ?>
+              <span class="field-help">(dříve <?= $fmt((int)$trendRow['previous_views']) ?>)</span>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+
+    <h3 id="sec-content-growth">Největší nárůsty</h3>
+    <?php if ($contentGrowthRows === []): ?>
+      <p>Za zvolené období žádný obsah nerostl proti předchozímu stejně dlouhému období.</p>
+    <?php else: ?>
+      <table aria-labelledby="sec-content-growth">
+        <caption class="sr-only">Obsah s největším nárůstem za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+        <thead>
+          <tr>
+            <th scope="col">Obsah</th>
+            <th scope="col">Modul</th>
+            <th scope="col">Zobrazení</th>
+            <th scope="col">Nárůst</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($contentGrowthRows as $growthRow): ?>
+            <tr>
+              <td><a href="<?= h((string)$growthRow['path']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$growthRow['title']) ?><?= newWindowLinkSrOnlySuffix() ?></a></td>
+              <td><?= h((string)$growthRow['module_label']) ?></td>
+              <td><?= $fmt((int)$growthRow['views']) ?></td>
+              <td>+<?= $fmt((int)$growthRow['delta_views']) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
   <?php endif; ?>
 </section>
 

@@ -207,6 +207,15 @@ $criticalInstallColumns = [
     'cms_food_order_items.order_id' => ['cms_food_order_items', 'order_id'],
     'cms_food_order_items.item_title' => ['cms_food_order_items', 'item_title'],
     'cms_food_order_items.quantity' => ['cms_food_order_items', 'quantity'],
+    'cms_stats_content_daily.stat_date' => ['cms_stats_content_daily', 'stat_date'],
+    'cms_stats_content_daily.page_type' => ['cms_stats_content_daily', 'page_type'],
+    'cms_stats_content_daily.page_ref_id' => ['cms_stats_content_daily', 'page_ref_id'],
+    'cms_stats_content_daily.normalized_path' => ['cms_stats_content_daily', 'normalized_path'],
+    'cms_stats_content_daily.path_hash' => ['cms_stats_content_daily', 'path_hash'],
+    'cms_stats_content_daily.module_key' => ['cms_stats_content_daily', 'module_key'],
+    'cms_stats_content_daily.title_snapshot' => ['cms_stats_content_daily', 'title_snapshot'],
+    'cms_stats_content_daily.total_views' => ['cms_stats_content_daily', 'total_views'],
+    'cms_stats_content_daily.unique_visitors' => ['cms_stats_content_daily', 'unique_visitors'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -337,6 +346,10 @@ $criticalMigrationSnippets = [
     'cms_food_order_items',
     'idx_food_order_items_order',
     'idx_food_order_items_item',
+    'cms_stats_content_daily',
+    'uq_stats_content_daily',
+    'idx_stats_content_module_date',
+    'idx_stats_content_path_hash',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

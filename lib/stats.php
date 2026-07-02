@@ -111,6 +111,604 @@ function statsReferrerDisplayLabel(string $referrer): string
     return $host . ($path === '' || $path === '/' ? '' : $path);
 }
 
+function statsNormalizePagePath(string $pageUrl): string
+{
+    $pageUrl = trim($pageUrl);
+    if ($pageUrl === '' || preg_match('/[\x00-\x1F\x7F]/', $pageUrl) === 1) {
+        return '/';
+    }
+
+    $parts = parse_url($pageUrl);
+    if (is_array($parts)) {
+        $path = (string)($parts['path'] ?? '/');
+    } else {
+        $path = preg_replace('/[?#].*$/', '', $pageUrl) ?? '/';
+    }
+
+    $path = trim($path);
+    if ($path === '') {
+        $path = '/';
+    }
+    if (!str_starts_with($path, '/')) {
+        $path = '/' . $path;
+    }
+
+    return mb_substr($path, 0, 500);
+}
+
+function statsContentPathHash(string $path): string
+{
+    return hash('sha256', statsNormalizePagePath($path));
+}
+
+function statsPageTypeModuleKey(string $pageType): string
+{
+    return match ($pageType) {
+        'article' => 'blog',
+        'page' => 'pages',
+        'news' => 'news',
+        'board' => 'board',
+        'event' => 'events',
+        'faq' => 'faq',
+        'poll' => 'polls',
+        'download' => 'downloads',
+        'food_card' => 'food',
+        'gallery_album', 'gallery_photo' => 'gallery',
+        'podcast_show', 'podcast_episode' => 'podcast',
+        'place' => 'places',
+        'form' => 'forms',
+        default => '',
+    };
+}
+
+function statsContentModuleLabel(string $moduleKey): string
+{
+    if ($moduleKey === 'pages') {
+        return 'Statické stránky';
+    }
+
+    $definition = coreModuleDefinitions()[$moduleKey] ?? null;
+    if (is_array($definition)) {
+        $label = trim((string)$definition['admin_label']);
+        if ($label !== '') {
+            return $label;
+        }
+    }
+
+    return $moduleKey;
+}
+
+function statsContentModuleIsVisible(string $moduleKey): bool
+{
+    if ($moduleKey === 'pages') {
+        return true;
+    }
+
+    return $moduleKey !== '' && isset(coreModuleDefinitions()[$moduleKey]) && isModuleEnabled($moduleKey);
+}
+
+/**
+ * @return array<string,string>
+ */
+function statsContentModuleOptions(): array
+{
+    $modules = [
+        'pages' => 'Statické stránky',
+        'blog' => statsContentModuleLabel('blog'),
+        'news' => statsContentModuleLabel('news'),
+        'board' => statsContentModuleLabel('board'),
+        'events' => statsContentModuleLabel('events'),
+        'faq' => statsContentModuleLabel('faq'),
+        'polls' => statsContentModuleLabel('polls'),
+        'downloads' => statsContentModuleLabel('downloads'),
+        'food' => statsContentModuleLabel('food'),
+        'gallery' => statsContentModuleLabel('gallery'),
+        'podcast' => statsContentModuleLabel('podcast'),
+        'places' => statsContentModuleLabel('places'),
+        'forms' => statsContentModuleLabel('forms'),
+    ];
+
+    return array_filter(
+        $modules,
+        static fn (string $label, string $moduleKey): bool => $label !== '' && statsContentModuleIsVisible($moduleKey),
+        ARRAY_FILTER_USE_BOTH
+    );
+}
+
+function statsNormalizeContentModuleFilter(string $moduleKey): string
+{
+    $moduleKey = trim($moduleKey);
+
+    return isset(statsContentModuleOptions()[$moduleKey]) ? $moduleKey : 'all';
+}
+
+/**
+ * @return array{0:string,1:string}
+ */
+function statsPreviousDateRange(string $dateFrom, string $dateTo): array
+{
+    try {
+        $from = new \DateTimeImmutable($dateFrom);
+        $to = new \DateTimeImmutable($dateTo);
+    } catch (\Exception $e) {
+        $to = new \DateTimeImmutable();
+        $from = $to->modify('-30 days');
+    }
+
+    if ($from > $to) {
+        [$from, $to] = [$to, $from];
+    }
+
+    $days = $from->diff($to)->days + 1;
+    $previousTo = $from->modify('-1 day');
+    $previousFrom = $previousTo->modify('-' . ($days - 1) . ' days');
+
+    return [$previousFrom->format('Y-m-d'), $previousTo->format('Y-m-d')];
+}
+
+/**
+ * @return array{title:string,path:string}
+ */
+function statsContentResolve(PDO $pdo, string $pageType, int $pageRefId, string $fallbackPath): array
+{
+    $fallbackPath = statsNormalizePagePath($fallbackPath);
+    $fallback = [
+        'title' => $fallbackPath,
+        'path' => BASE_URL . $fallbackPath,
+    ];
+
+    if ($pageRefId <= 0) {
+        return $fallback;
+    }
+
+    static $cache = [];
+    $cacheKey = $pageType . ':' . $pageRefId . ':' . $fallbackPath;
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
+    try {
+        $row = null;
+        switch ($pageType) {
+            case 'article':
+                $stmt = $pdo->prepare(
+                    "SELECT a.id, a.title, a.slug, b.slug AS blog_slug
+                     FROM cms_articles a
+                     LEFT JOIN cms_blogs b ON b.id = a.blog_id
+                     WHERE a.id = ?
+                     LIMIT 1"
+                );
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = [
+                        'title' => trim((string)$row['title']),
+                        'path' => articlePublicPath($row),
+                    ];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'page':
+                $stmt = $pdo->prepare(
+                    "SELECT p.id, p.title, p.slug, p.blog_id, b.slug AS blog_slug
+                     FROM cms_pages p
+                     LEFT JOIN cms_blogs b ON b.id = p.blog_id
+                     WHERE p.id = ?
+                     LIMIT 1"
+                );
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = [
+                        'title' => trim((string)$row['title']),
+                        'path' => pagePublicPath($row),
+                    ];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'news':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_news WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => newsPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'board':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_board WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => boardPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'event':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_events WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => eventPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'faq':
+                $stmt = $pdo->prepare("SELECT id, question, slug FROM cms_faqs WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['question']), 'path' => faqPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'poll':
+                $stmt = $pdo->prepare("SELECT id, question, slug FROM cms_polls WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['question']), 'path' => pollPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'download':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_downloads WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => downloadPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'food_card':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_food_cards WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => foodCardPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'gallery_album':
+                $stmt = $pdo->prepare("SELECT id, name, slug FROM cms_gallery_albums WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['name']), 'path' => galleryAlbumPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'gallery_photo':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_gallery_photos WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $title = trim((string)($row['title'] ?? ''));
+                    $cache[$cacheKey] = [
+                        'title' => $title !== '' ? $title : 'Fotografie #' . $pageRefId,
+                        'path' => galleryPhotoPublicPath($row),
+                    ];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'podcast_show':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_podcast_shows WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => podcastShowPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'podcast_episode':
+                $stmt = $pdo->prepare(
+                    "SELECT e.id, e.title, e.slug, s.slug AS show_slug
+                     FROM cms_podcasts e
+                     INNER JOIN cms_podcast_shows s ON s.id = e.show_id
+                     WHERE e.id = ?
+                     LIMIT 1"
+                );
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => podcastEpisodePublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'place':
+                $stmt = $pdo->prepare("SELECT id, name, slug FROM cms_places WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['name']), 'path' => placePublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'form':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_forms WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => formPublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+        }
+    } catch (\PDOException $e) {
+    }
+
+    $cache[$cacheKey] = $fallback;
+    return $fallback;
+}
+
+/**
+ * @return list<array{stat_date:string,page_type:string,page_ref_id:int,normalized_path:string,path_hash:string,module_key:string,title_snapshot:string,total_views:int,unique_visitors:int}>
+ */
+function statsBuildRawContentDailyRows(PDO $pdo, string $dateFrom, string $dateTo): array
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT DATE(created_at) AS stat_date,
+                    page_url,
+                    page_type,
+                    COALESCE(page_ref_id, 0) AS page_ref_id,
+                    ip_hash
+             FROM cms_page_views
+             WHERE created_at >= ?
+               AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
+             ORDER BY created_at"
+        );
+        $stmt->execute([$dateFrom, $dateTo]);
+    } catch (\PDOException $e) {
+        return [];
+    }
+
+    /** @var array<string,array{stat_date:string,page_type:string,page_ref_id:int,normalized_path:string,path_hash:string,module_key:string,total_views:int,visitor_hashes:array<string,bool>}> $buckets */
+    $buckets = [];
+    foreach ($stmt->fetchAll() as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $pageType = trim((string)($row['page_type'] ?? ''));
+        $moduleKey = statsPageTypeModuleKey($pageType);
+        if ($moduleKey === '') {
+            continue;
+        }
+
+        $normalizedPath = statsNormalizePagePath((string)($row['page_url'] ?? ''));
+        $pathHash = statsContentPathHash($normalizedPath);
+        $pageRefId = max(0, (int)($row['page_ref_id'] ?? 0));
+        $statDate = (string)($row['stat_date'] ?? '');
+        if ($statDate === '') {
+            continue;
+        }
+
+        $bucketKey = implode('|', [$statDate, $pageType, (string)$pageRefId, $pathHash]);
+        if (!isset($buckets[$bucketKey])) {
+            $buckets[$bucketKey] = [
+                'stat_date' => $statDate,
+                'page_type' => $pageType,
+                'page_ref_id' => $pageRefId,
+                'normalized_path' => $normalizedPath,
+                'path_hash' => $pathHash,
+                'module_key' => $moduleKey,
+                'total_views' => 0,
+                'visitor_hashes' => [],
+            ];
+        }
+
+        $buckets[$bucketKey]['total_views']++;
+        $ipHash = trim((string)($row['ip_hash'] ?? ''));
+        if ($ipHash !== '') {
+            $buckets[$bucketKey]['visitor_hashes'][$ipHash] = true;
+        }
+    }
+
+    $dailyRows = [];
+    foreach ($buckets as $bucket) {
+        $content = statsContentResolve($pdo, $bucket['page_type'], $bucket['page_ref_id'], $bucket['normalized_path']);
+        $title = trim($content['title']);
+        if ($title === '') {
+            $title = $bucket['normalized_path'];
+        }
+
+        $dailyRows[] = [
+            'stat_date' => $bucket['stat_date'],
+            'page_type' => $bucket['page_type'],
+            'page_ref_id' => $bucket['page_ref_id'],
+            'normalized_path' => $bucket['normalized_path'],
+            'path_hash' => $bucket['path_hash'],
+            'module_key' => $bucket['module_key'],
+            'title_snapshot' => mb_substr($title, 0, 255),
+            'total_views' => $bucket['total_views'],
+            'unique_visitors' => count($bucket['visitor_hashes']),
+        ];
+    }
+
+    return $dailyRows;
+}
+
+/**
+ * @param list<array{stat_date:string,page_type:string,page_ref_id:int,normalized_path:string,path_hash:string,module_key:string,title_snapshot:string,total_views:int,unique_visitors:int}> $dailyRows
+ */
+function statsUpsertContentDailyRows(PDO $pdo, array $dailyRows): void
+{
+    if ($dailyRows === []) {
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        "INSERT INTO cms_stats_content_daily
+            (stat_date, page_type, page_ref_id, normalized_path, path_hash, module_key, title_snapshot, total_views, unique_visitors)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+            normalized_path = VALUES(normalized_path),
+            module_key = VALUES(module_key),
+            title_snapshot = VALUES(title_snapshot),
+            total_views = VALUES(total_views),
+            unique_visitors = VALUES(unique_visitors),
+            updated_at = NOW()"
+    );
+
+    foreach ($dailyRows as $row) {
+        $stmt->execute([
+            $row['stat_date'],
+            $row['page_type'],
+            $row['page_ref_id'],
+            $row['normalized_path'],
+            $row['path_hash'],
+            $row['module_key'],
+            $row['title_snapshot'],
+            $row['total_views'],
+            $row['unique_visitors'],
+        ]);
+    }
+}
+
+function statsAggregateContentDaily(PDO $pdo): void
+{
+    try {
+        $range = $pdo->query(
+            "SELECT MIN(DATE(created_at)) AS min_date, MAX(DATE(created_at)) AS max_date
+             FROM cms_page_views
+             WHERE DATE(created_at) < CURDATE()"
+        )->fetch();
+        if (!is_array($range) || empty($range['min_date']) || empty($range['max_date'])) {
+            return;
+        }
+
+        statsUpsertContentDailyRows(
+            $pdo,
+            statsBuildRawContentDailyRows($pdo, (string)$range['min_date'], (string)$range['max_date'])
+        );
+    } catch (\PDOException $e) {
+    }
+}
+
+/**
+ * @return list<array{key:string,module_key:string,module_label:string,page_type:string,page_ref_id:int,normalized_path:string,title:string,path:string,views:int,unique_visitors:int}>
+ */
+function statsLoadContentTrendRows(PDO $pdo, string $dateFrom, string $dateTo, string $moduleFilter = 'all'): array
+{
+    /** @var array<string,array{key:string,module_key:string,module_label:string,page_type:string,page_ref_id:int,normalized_path:string,title:string,path:string,views:int,unique_visitors:int}> $rows */
+    $rows = [];
+    $addRow = static function (
+        string $pageType,
+        int $pageRefId,
+        string $moduleKey,
+        string $normalizedPath,
+        string $title,
+        int $views,
+        int $uniqueVisitors
+    ) use (&$rows, $moduleFilter): void {
+        if (!statsContentModuleIsVisible($moduleKey)) {
+            return;
+        }
+        if ($moduleFilter !== 'all' && $moduleFilter !== $moduleKey) {
+            return;
+        }
+
+        $normalizedPath = statsNormalizePagePath($normalizedPath);
+        $key = implode('|', [$pageType, (string)$pageRefId, statsContentPathHash($normalizedPath)]);
+        if (!isset($rows[$key])) {
+            $rows[$key] = [
+                'key' => $key,
+                'module_key' => $moduleKey,
+                'module_label' => statsContentModuleLabel($moduleKey),
+                'page_type' => $pageType,
+                'page_ref_id' => $pageRefId,
+                'normalized_path' => $normalizedPath,
+                'title' => $title !== '' ? $title : $normalizedPath,
+                'path' => BASE_URL . $normalizedPath,
+                'views' => 0,
+                'unique_visitors' => 0,
+            ];
+        }
+
+        $rows[$key]['views'] += max(0, $views);
+        $rows[$key]['unique_visitors'] += max(0, $uniqueVisitors);
+    };
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT page_type,
+                    page_ref_id,
+                    normalized_path,
+                    module_key,
+                    MAX(title_snapshot) AS title_snapshot,
+                    SUM(total_views) AS views,
+                    SUM(unique_visitors) AS unique_visitors
+             FROM cms_stats_content_daily
+             WHERE stat_date >= ?
+               AND stat_date <= ?
+             GROUP BY page_type, page_ref_id, normalized_path, path_hash, module_key"
+        );
+        $stmt->execute([$dateFrom, $dateTo]);
+        foreach ($stmt->fetchAll() as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $addRow(
+                (string)($row['page_type'] ?? ''),
+                (int)($row['page_ref_id'] ?? 0),
+                (string)($row['module_key'] ?? ''),
+                (string)($row['normalized_path'] ?? '/'),
+                (string)($row['title_snapshot'] ?? ''),
+                (int)($row['views'] ?? 0),
+                (int)($row['unique_visitors'] ?? 0)
+            );
+        }
+    } catch (\PDOException $e) {
+    }
+
+    $today = date('Y-m-d');
+    if ($dateFrom <= $today && $dateTo >= $today) {
+        foreach (statsBuildRawContentDailyRows($pdo, $today, $today) as $row) {
+            $addRow(
+                $row['page_type'],
+                $row['page_ref_id'],
+                $row['module_key'],
+                $row['normalized_path'],
+                $row['title_snapshot'],
+                $row['total_views'],
+                $row['unique_visitors']
+            );
+        }
+    }
+
+    foreach ($rows as $key => $row) {
+        $resolved = statsContentResolve($pdo, $row['page_type'], $row['page_ref_id'], $row['normalized_path']);
+        if ($resolved['title'] !== '') {
+            $rows[$key]['title'] = $resolved['title'];
+        }
+        if ($resolved['path'] !== '') {
+            $rows[$key]['path'] = $resolved['path'];
+        }
+    }
+
+    uasort(
+        $rows,
+        static fn (array $a, array $b): int => $b['views'] <=> $a['views'] ?: strcmp($a['title'], $b['title'])
+    );
+
+    return array_values($rows);
+}
+
 function trackPageView(string $pageType = 'other', ?int $refId = null): void
 {
     static $done = false;
@@ -226,6 +824,7 @@ function statsCleanup(): void
 
     try {
         $pdo = db_connect();
+        statsAggregateContentDaily($pdo);
 
         // Agregace: dny starší než včerejšek, které ještě nejsou v cms_stats_daily
         $pdo->exec(

@@ -84,6 +84,8 @@ if ($photoSlug === '') {
     exit;
 }
 
+trackPageView('gallery_photo', (int)$photo['id']);
+
 $albumId = (int)$album['id'];
 
 $sequenceStmt = $pdo->prepare(
