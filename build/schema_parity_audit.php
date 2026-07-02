@@ -182,6 +182,8 @@ $criticalInstallColumns = [
     'cms_food_items.section_id' => ['cms_food_items', 'section_id'],
     'cms_food_items.title' => ['cms_food_items', 'title'],
     'cms_food_items.price_amount' => ['cms_food_items', 'price_amount'],
+    'cms_food_items.media_id' => ['cms_food_items', 'media_id'],
+    'cms_food_items.image_alt_text' => ['cms_food_items', 'image_alt_text'],
     'cms_food_items.allergens' => ['cms_food_items', 'allergens'],
     'cms_food_items.dietary_flags' => ['cms_food_items', 'dietary_flags'],
     'cms_food_items.is_available' => ['cms_food_items', 'is_available'],
@@ -293,6 +295,7 @@ $criticalMigrationSnippets = [
     'cms_food_items',
     'idx_food_items_card_order',
     'idx_food_items_section_order',
+    'idx_food_items_media',
     'ft_food_items_search',
 ];
 

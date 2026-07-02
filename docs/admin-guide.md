@@ -438,9 +438,22 @@ Z přehledu lístků i z editoru konkrétního lístku vede odkaz `Položky lís
 - cenu, měnu a volitelnou poznámku k ceně
 - alergeny podle číselníku 1-14
 - dietní štítky, například vegetariánské, veganské, bez lepku, bez laktózy, pikantní nebo alkohol
+- volitelný obrázek z veřejných obrázků knihovny médií a vlastní alt text obrázku
 - dostupnost položky a pořadí v sekci
 
-Pokud lístek žádné strukturované položky nemá, veřejný web dál použije původní HTML obsah lístku. Pokud má lístek strukturované položky i HTML obsah, položky se zobrazí jako hlavní menu a HTML obsah jako doplňkové poznámky k lístku. Alergeny, dietní štítky a nedostupnost se zobrazují textově, ne jen barvou.
+Správa položek nabízí i rychlé bezpečné akce: sekce a položky lze posouvat nahoru/dolů, položku lze duplikovat a vybrané položky lze hromadně označit jako dostupné nebo nedostupné.
+
+Pokud lístek žádné strukturované položky nemá, veřejný web dál použije původní HTML obsah lístku. Pokud má lístek strukturované položky i HTML obsah, položky se zobrazí jako hlavní menu a HTML obsah jako doplňkové poznámky k lístku. Alergeny, dietní štítky a nedostupnost se zobrazují textově, ne jen barvou. U zobrazených strukturovaných položek se doplní také alergenová legenda, aby návštěvník nemusel význam čísel hádat.
+
+### Veřejné filtry strukturovaných položek
+
+Veřejný index, archiv i detail konkrétního lístku podporují položkové filtry:
+
+- dietní štítky, například `Veganské` nebo `Bez lepku`
+- alergeny, které má výpis vynechat
+- volbu `Pouze dostupné položky`
+
+Více dietních štítků se vyhodnocuje současně, takže položka musí splnit všechny vybrané štítky. Filtr `Bez alergenu` znamená, že se zobrazí jen položky, které vybrané alergeny neobsahují. Pokud je aktivní položkový filtr, starší HTML-only lístky se v archivu nezobrazují, protože jejich položky nejde bezpečně filtrovat.
 
 ### Jak funguje platnost na webu
 
@@ -469,15 +482,17 @@ Veřejný archiv nově podporuje:
 - hledání podle názvů a popisů strukturovaných položek
 - filtrování podle typu
 - přepínání scope `Platí nyní / Připravujeme / Archivní / Všechny lístky`
+- filtrování strukturovaných položek podle dietních štítků, alergenů a dostupnosti
 - stránkování
 
 Detail lístku nově:
 
 - ukazuje jasný stav `Platí nyní / Připravujeme / Archivní`
 - zobrazuje strukturované sekce a položky, pokud jsou vyplněné
+- zachovává aktivní položkové filtry i při návratu zpět do archivu
 - zachovává návrat do původního archivního kontextu
 - nabízí akci `Vytisknout`
-- vkládá structured data typu `Menu`; u strukturovaných položek doplňuje i `MenuSection`, `MenuItem` a cenu
+- vkládá structured data typu `Menu`; u strukturovaných položek doplňuje i `MenuSection`, `MenuItem`, cenu a obrázek, pokud je vybraný z veřejné knihovny médií
 
 ### Co patří do README a co sem
 

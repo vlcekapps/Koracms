@@ -2614,6 +2614,27 @@ body.theme-public textarea.form-control {
   margin: 1.25rem 0;
 }
 
+.food-structured-filters {
+  margin: 1rem 0 1.5rem;
+}
+
+.food-filter-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.food-filter-group {
+  border: 1px solid var(--border, #d8dee8);
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+}
+
+.food-filter-options {
+  display: grid;
+  gap: 0.4rem;
+}
+
 .food-menu-section {
   border: 1px solid var(--border, #d8dee8);
   border-radius: 1rem;
@@ -2647,6 +2668,10 @@ body.theme-public textarea.form-control {
   padding-top: 0.85rem;
 }
 
+.food-menu-item--with-image {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
 .food-menu-item:first-child {
   border-top: 0;
   padding-top: 0;
@@ -2654,6 +2679,14 @@ body.theme-public textarea.form-control {
 
 .food-menu-item--unavailable {
   opacity: 0.78;
+}
+
+.food-menu-item__image {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+  border: 1px solid var(--border, #d8dee8);
 }
 
 .food-menu-item__title,
@@ -2687,6 +2720,37 @@ body.theme-public textarea.form-control {
 
 .food-menu-notes {
   margin-top: 1.25rem;
+}
+
+.food-allergen-legend {
+  border-top: 1px solid var(--border, #d8dee8);
+  padding-top: 1rem;
+}
+
+.food-allergen-legend__title {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+}
+
+.food-allergen-legend__list {
+  display: grid;
+  gap: 0.45rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin: 0;
+}
+
+.food-allergen-legend__list div {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.food-allergen-legend__list dt {
+  font-weight: 700;
+}
+
+.food-allergen-legend__list dd {
+  margin: 0;
 }
 
 @media (max-width: 640px) {

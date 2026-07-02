@@ -2975,6 +2975,198 @@ function foodDietaryFlagLabels(array $flags): array
 }
 
 /**
+ * @param array<string,mixed> $source
+ * @return array{dietary_flags:list<string>,excluded_allergens:list<int>,available_only:bool,active:bool}
+ */
+function normalizeFoodStructuredFilters(array $source): array
+{
+    $dietaryFlags = normalizeFoodDietaryFlags($source['dieta'] ?? []);
+    $excludedAllergens = normalizeFoodAllergenList($source['bez_alergenu'] ?? []);
+    $availableOnly = trim((string)($source['pouze_dostupne'] ?? '')) === '1';
+
+    return [
+        'dietary_flags' => $dietaryFlags,
+        'excluded_allergens' => $excludedAllergens,
+        'available_only' => $availableOnly,
+        'active' => $dietaryFlags !== [] || $excludedAllergens !== [] || $availableOnly,
+    ];
+}
+
+/**
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ */
+function foodStructuredFiltersAreActive(array $filters): bool
+{
+    return !empty($filters['dietary_flags'])
+        || !empty($filters['excluded_allergens'])
+        || !empty($filters['available_only']);
+}
+
+/**
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ * @return array<string,mixed>
+ */
+function foodStructuredFilterQueryParams(array $filters): array
+{
+    $query = [];
+    $dietaryFlags = normalizeFoodDietaryFlags($filters['dietary_flags'] ?? []);
+    $excludedAllergens = normalizeFoodAllergenList($filters['excluded_allergens'] ?? []);
+    if ($dietaryFlags !== []) {
+        $query['dieta'] = $dietaryFlags;
+    }
+    if ($excludedAllergens !== []) {
+        $query['bez_alergenu'] = $excludedAllergens;
+    }
+    if (!empty($filters['available_only'])) {
+        $query['pouze_dostupne'] = '1';
+    }
+
+    return $query;
+}
+
+/**
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ * @return list<string>
+ */
+function foodStructuredFilterSummary(array $filters): array
+{
+    $summary = [];
+    $dietaryLabels = foodDietaryFlagLabels(normalizeFoodDietaryFlags($filters['dietary_flags'] ?? []));
+    if ($dietaryLabels !== []) {
+        $summary[] = 'štítky: ' . implode(', ', $dietaryLabels);
+    }
+
+    $excludedAllergens = normalizeFoodAllergenList($filters['excluded_allergens'] ?? []);
+    if ($excludedAllergens !== []) {
+        $summary[] = 'bez alergenů: ' . implode(', ', foodAllergenLabels($excludedAllergens));
+    }
+
+    if (!empty($filters['available_only'])) {
+        $summary[] = 'jen dostupné položky';
+    }
+
+    return $summary;
+}
+
+/**
+ * @param array<string,mixed> $item
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ */
+function foodItemMatchesStructuredFilters(array $item, array $filters): bool
+{
+    if (!empty($filters['available_only']) && (int)($item['is_available'] ?? 1) !== 1) {
+        return false;
+    }
+
+    $itemDietaryFlags = normalizeFoodDietaryFlags($item['dietary_flag_values'] ?? ($item['dietary_flags'] ?? []));
+    foreach (normalizeFoodDietaryFlags($filters['dietary_flags'] ?? []) as $requiredFlag) {
+        if (!in_array($requiredFlag, $itemDietaryFlags, true)) {
+            return false;
+        }
+    }
+
+    $itemAllergens = normalizeFoodAllergenList($item['allergen_values'] ?? ($item['allergens'] ?? []));
+    foreach (normalizeFoodAllergenList($filters['excluded_allergens'] ?? []) as $excludedAllergen) {
+        if (in_array($excludedAllergen, $itemAllergens, true)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @param list<array<string,mixed>> $sections
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ * @return list<array<string,mixed>>
+ */
+function foodFilterStructuredSections(array $sections, array $filters): array
+{
+    if (!foodStructuredFiltersAreActive($filters)) {
+        return $sections;
+    }
+
+    $filteredSections = [];
+    foreach ($sections as $section) {
+        $items = [];
+        foreach (($section['items'] ?? []) as $item) {
+            if (is_array($item) && foodItemMatchesStructuredFilters($item, $filters)) {
+                $items[] = $item;
+            }
+        }
+        if ($items === []) {
+            continue;
+        }
+        $section['items'] = $items;
+        $section['item_count'] = count($items);
+        $filteredSections[] = $section;
+    }
+
+    return $filteredSections;
+}
+
+/**
+ * @param list<array<string,mixed>> $sections
+ * @return list<array{number:int,label:string}>
+ */
+function foodStructuredAllergenLegend(array $sections): array
+{
+    $usedAllergens = [];
+    foreach ($sections as $section) {
+        foreach (($section['items'] ?? []) as $item) {
+            foreach (normalizeFoodAllergenList($item['allergen_values'] ?? ($item['allergens'] ?? [])) as $allergen) {
+                $usedAllergens[$allergen] = true;
+            }
+        }
+    }
+    if ($usedAllergens === []) {
+        return [];
+    }
+
+    $definitions = foodAllergenDefinitions();
+    $numbers = array_keys($usedAllergens);
+    sort($numbers);
+    $legend = [];
+    foreach ($numbers as $number) {
+        if (isset($definitions[$number])) {
+            $legend[] = ['number' => (int)$number, 'label' => $definitions[$number]];
+        }
+    }
+
+    return $legend;
+}
+
+/**
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ * @return array{sql:string,params:list<int|string>}
+ */
+function foodStructuredFilterExistsSql(array $filters, string $cardAlias = 'cms_food_cards'): array
+{
+    if (!foodStructuredFiltersAreActive($filters)) {
+        return ['sql' => '', 'params' => []];
+    }
+
+    $conditions = ["fi.card_id = {$cardAlias}.id"];
+    $params = [];
+    if (!empty($filters['available_only'])) {
+        $conditions[] = 'fi.is_available = 1';
+    }
+    foreach (normalizeFoodDietaryFlags($filters['dietary_flags'] ?? []) as $flag) {
+        $conditions[] = 'FIND_IN_SET(?, fi.dietary_flags) > 0';
+        $params[] = $flag;
+    }
+    foreach (normalizeFoodAllergenList($filters['excluded_allergens'] ?? []) as $allergen) {
+        $conditions[] = "(fi.allergens = '' OR FIND_IN_SET(?, fi.allergens) = 0)";
+        $params[] = $allergen;
+    }
+
+    return [
+        'sql' => 'EXISTS (SELECT 1 FROM cms_food_items fi WHERE ' . implode(' AND ', $conditions) . ')',
+        'params' => $params,
+    ];
+}
+
+/**
  * @return string|null|false
  */
 function normalizeFoodPriceInput(string $value)
@@ -3043,6 +3235,41 @@ function hydrateFoodItemPresentation(array $item): array
     $item['price_note'] = trim((string)($item['price_note'] ?? ''));
     $item['price_label'] = foodPriceLabel($priceAmount, (string)$item['price_currency'], (string)$item['price_note']);
     $item['is_available'] = (int)($item['is_available'] ?? 1) === 1 ? 1 : 0;
+    $item['media_id'] = (int)($item['media_id'] ?? 0);
+    $item['image_alt_text'] = mb_substr(trim((string)($item['image_alt_text'] ?? '')), 0, 255);
+    $item['image_url'] = '';
+    $item['image_thumb_url'] = '';
+    $item['image_alt'] = '';
+
+    $media = null;
+    if ($item['media_id'] > 0 && isset($item['media_filename'], $item['media_mime_type'])) {
+        $media = [
+            'id' => $item['media_id'],
+            'filename' => (string)$item['media_filename'],
+            'original_name' => (string)($item['media_original_name'] ?? ''),
+            'mime_type' => (string)$item['media_mime_type'],
+            'visibility' => (string)($item['media_visibility'] ?? 'private'),
+            'alt_text' => (string)($item['media_alt_text'] ?? ''),
+        ];
+    } elseif ($item['media_id'] > 0 && function_exists('mediaGetById')) {
+        $media = mediaGetById($item['media_id']);
+    }
+
+    if (is_array($media)
+        && function_exists('mediaIsPublic')
+        && function_exists('mediaCanPreviewImage')
+        && function_exists('mediaFileUrl')
+        && mediaIsPublic($media)
+        && mediaCanPreviewImage($media)
+    ) {
+        $fallbackAlt = trim((string)($media['alt_text'] ?? ''));
+        if ($fallbackAlt === '') {
+            $fallbackAlt = trim((string)($item['title'] ?? ''));
+        }
+        $item['image_url'] = mediaFileUrl($media);
+        $item['image_thumb_url'] = function_exists('mediaThumbUrl') ? mediaThumbUrl($media) : $item['image_url'];
+        $item['image_alt'] = $item['image_alt_text'] !== '' ? $item['image_alt_text'] : $fallbackAlt;
+    }
 
     return $item;
 }
@@ -3065,11 +3292,14 @@ function foodLoadCardSections(PDO $pdo, int $cardId): array
     }
 
     $itemStmt = $pdo->prepare(
-        "SELECT id, card_id, section_id, title, description, price_amount, price_currency,
-                price_note, allergens, dietary_flags, is_available, sort_order
-         FROM cms_food_items
-         WHERE card_id = ?
-         ORDER BY section_id, sort_order, id"
+        "SELECT fi.id, fi.card_id, fi.section_id, fi.title, fi.description, fi.price_amount, fi.price_currency,
+                fi.price_note, fi.media_id, fi.image_alt_text, fi.allergens, fi.dietary_flags, fi.is_available, fi.sort_order,
+                m.filename AS media_filename, m.original_name AS media_original_name, m.mime_type AS media_mime_type,
+                m.visibility AS media_visibility, m.alt_text AS media_alt_text
+         FROM cms_food_items fi
+         LEFT JOIN cms_media m ON m.id = fi.media_id
+         WHERE fi.card_id = ?
+         ORDER BY fi.section_id, fi.sort_order, fi.id"
     );
     $itemStmt->execute([$cardId]);
     $itemsBySection = [];
@@ -3102,6 +3332,28 @@ function foodAttachSectionsToCards(PDO $pdo, array $cards): array
     unset($card);
 
     return $cards;
+}
+
+/**
+ * @param array<string,mixed> $card
+ * @param array{dietary_flags?:list<string>,excluded_allergens?:list<int>,available_only?:bool} $filters
+ * @return array<string,mixed>
+ */
+function foodApplyStructuredFiltersToCard(array $card, array $filters): array
+{
+    $sourceSections = is_array($card['sections'] ?? null) ? $card['sections'] : [];
+    $card['source_sections'] = $sourceSections;
+    $card['structured_filter_active'] = foodStructuredFiltersAreActive($filters);
+    $card['has_structured_source_items'] = foodCardHasStructuredItems($sourceSections);
+    if (!empty($card['structured_filter_active'])) {
+        $card['sections'] = foodFilterStructuredSections($sourceSections, $filters);
+    } else {
+        $card['sections'] = $sourceSections;
+    }
+    $card['has_structured_items'] = foodCardHasStructuredItems($card['sections']);
+    $card['structured_item_count'] = foodCardStructuredItemCount($card['sections']);
+
+    return $card;
 }
 
 /**
@@ -3244,6 +3496,10 @@ function foodCardStructuredData(array $card): string
             $itemDescription = trim((string)($item['description'] ?? ''));
             if ($itemDescription !== '') {
                 $menuItem['description'] = $itemDescription;
+            }
+            $itemImageUrl = trim((string)($item['image_url'] ?? ''));
+            if ($itemImageUrl !== '') {
+                $menuItem['image'] = siteUrl(str_starts_with($itemImageUrl, BASE_URL) ? substr($itemImageUrl, strlen(BASE_URL)) : $itemImageUrl);
             }
             $priceAmount = trim((string)($item['price_amount'] ?? ''));
             if ($priceAmount !== '') {

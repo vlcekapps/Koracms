@@ -38,6 +38,8 @@ $itemState = [
     'price_amount' => '',
     'price_currency' => 'CZK',
     'price_note' => '',
+    'media_id' => '',
+    'image_alt_text' => '',
     'allergens' => [],
     'dietary_flags' => [],
     'is_available' => '1',
@@ -73,6 +75,80 @@ $itemBelongsToCard = static function (?int $itemId) use ($pdo, $cardId): bool {
     return (bool)$stmt->fetch();
 };
 
+$loadItemForCard = static function (?int $itemId) use ($pdo, $cardId): ?array {
+    if ($itemId === null) {
+        return null;
+    }
+    $stmt = $pdo->prepare("SELECT * FROM cms_food_items WHERE id = ? AND card_id = ?");
+    $stmt->execute([$itemId, $cardId]);
+    $item = $stmt->fetch() ?: null;
+
+    return is_array($item) ? $item : null;
+};
+
+$normalizeSectionOrders = static function () use ($pdo, $cardId): void {
+    $stmt = $pdo->prepare("SELECT id FROM cms_food_sections WHERE card_id = ? ORDER BY sort_order, id");
+    $stmt->execute([$cardId]);
+    $update = $pdo->prepare("UPDATE cms_food_sections SET sort_order = ? WHERE id = ? AND card_id = ?");
+    $order = 10;
+    foreach ($stmt->fetchAll() as $row) {
+        $update->execute([$order, (int)$row['id'], $cardId]);
+        $order += 10;
+    }
+};
+
+$normalizeItemOrders = static function (int $sectionId) use ($pdo, $cardId): void {
+    $stmt = $pdo->prepare("SELECT id FROM cms_food_items WHERE card_id = ? AND section_id = ? ORDER BY sort_order, id");
+    $stmt->execute([$cardId, $sectionId]);
+    $update = $pdo->prepare("UPDATE cms_food_items SET sort_order = ? WHERE id = ? AND card_id = ? AND section_id = ?");
+    $order = 10;
+    foreach ($stmt->fetchAll() as $row) {
+        $update->execute([$order, (int)$row['id'], $cardId, $sectionId]);
+        $order += 10;
+    }
+};
+
+$moveOrderedRow = static function (string $table, int $rowId, string $direction, ?int $sectionId = null) use ($pdo, $cardId): bool {
+    if (!in_array($table, ['cms_food_sections', 'cms_food_items'], true) || !in_array($direction, ['up', 'down'], true)) {
+        return false;
+    }
+    $where = 'card_id = ?';
+    $params = [$cardId];
+    if ($table === 'cms_food_items') {
+        if ($sectionId === null) {
+            return false;
+        }
+        $where .= ' AND section_id = ?';
+        $params[] = $sectionId;
+    }
+
+    $stmt = $pdo->prepare("SELECT id, sort_order FROM {$table} WHERE {$where} ORDER BY sort_order, id");
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+    $currentIndex = null;
+    foreach ($rows as $index => $row) {
+        if ((int)$row['id'] === $rowId) {
+            $currentIndex = $index;
+            break;
+        }
+    }
+    if ($currentIndex === null) {
+        return false;
+    }
+    $targetIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
+    if (!isset($rows[$targetIndex])) {
+        return false;
+    }
+
+    $first = $rows[$currentIndex];
+    $second = $rows[$targetIndex];
+    $update = $pdo->prepare("UPDATE {$table} SET sort_order = ? WHERE id = ?");
+    $update->execute([(int)$second['sort_order'], (int)$first['id']]);
+    $update->execute([(int)$first['sort_order'], (int)$second['id']]);
+
+    return true;
+};
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = trim((string)($_POST['action'] ?? ''));
@@ -94,6 +170,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logAction('food_item_delete', "card={$cardId} item={$deleteItemId}");
         }
         $redirectToItems('deleted');
+    }
+
+    if ($action === 'move_section') {
+        $sectionId = inputInt('post', 'section_id');
+        $direction = trim((string)($_POST['direction'] ?? ''));
+        if ($sectionBelongsToCard($sectionId)) {
+            $normalizeSectionOrders();
+            $moveOrderedRow('cms_food_sections', (int)$sectionId, $direction);
+            logAction('food_section_move', "card={$cardId} section={$sectionId} direction={$direction}");
+        }
+        $redirectToItems('moved');
+    }
+
+    if ($action === 'move_item') {
+        $itemId = inputInt('post', 'item_id');
+        $item = $loadItemForCard($itemId);
+        $direction = trim((string)($_POST['direction'] ?? ''));
+        if ($item) {
+            $sectionId = (int)$item['section_id'];
+            $normalizeItemOrders($sectionId);
+            $moveOrderedRow('cms_food_items', (int)$item['id'], $direction, $sectionId);
+            logAction('food_item_move', "card={$cardId} item={$itemId} direction={$direction}");
+        }
+        $redirectToItems('moved');
+    }
+
+    if ($action === 'duplicate_item') {
+        $itemId = inputInt('post', 'item_id');
+        $item = $loadItemForCard($itemId);
+        if ($item) {
+            $maxStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) + 10 FROM cms_food_items WHERE card_id = ? AND section_id = ?");
+            $maxStmt->execute([$cardId, (int)$item['section_id']]);
+            $sortOrder = (int)$maxStmt->fetchColumn();
+            $pdo->prepare(
+                "INSERT INTO cms_food_items
+                 (card_id, section_id, title, description, price_amount, price_currency, price_note,
+                  media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )->execute([
+                $cardId,
+                (int)$item['section_id'],
+                'Kopie: ' . (string)$item['title'],
+                (string)($item['description'] ?? ''),
+                $item['price_amount'],
+                (string)$item['price_currency'],
+                (string)$item['price_note'],
+                $item['media_id'] !== null ? (int)$item['media_id'] : null,
+                (string)($item['image_alt_text'] ?? ''),
+                (string)$item['allergens'],
+                (string)$item['dietary_flags'],
+                (int)$item['is_available'],
+                $sortOrder,
+            ]);
+            logAction('food_item_duplicate', "card={$cardId} item={$itemId}");
+        }
+        $redirectToItems('duplicated');
+    }
+
+    if ($action === 'bulk_availability') {
+        $rawItemIds = array_map('intval', (array)($_POST['item_ids'] ?? []));
+        $itemIds = array_values(array_unique(array_filter($rawItemIds, static fn (int $id): bool => $id > 0)));
+        $availability = trim((string)($_POST['bulk_availability'] ?? ''));
+        if ($itemIds !== [] && in_array($availability, ['available', 'unavailable'], true)) {
+            $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+            $params = array_merge([(int)($availability === 'available' ? 1 : 0), $cardId], $itemIds);
+            $pdo->prepare(
+                "UPDATE cms_food_items
+                 SET is_available = ?, updated_at = NOW()
+                 WHERE card_id = ? AND id IN ({$placeholders})"
+            )->execute($params);
+            logAction('food_item_bulk_availability', "card={$cardId} count=" . count($itemIds) . " state={$availability}");
+        }
+        $redirectToItems('bulk');
     }
 
     if ($action === 'save_section') {
@@ -145,6 +294,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $itemId = inputInt('post', 'item_id');
         $sectionId = inputInt('post', 'section_id');
         $priceAmount = normalizeFoodPriceInput((string)($_POST['price_amount'] ?? ''));
+        $mediaId = inputInt('post', 'media_id') ?? 0;
+        $media = $mediaId > 0 ? mediaGetById($mediaId) : null;
+        $mediaIsValid = $mediaId <= 0 || (is_array($media) && mediaIsPublic($media) && mediaCanPreviewImage($media));
         $allergens = normalizeFoodAllergenList($_POST['allergens'] ?? []);
         $dietaryFlags = normalizeFoodDietaryFlags($_POST['dietary_flags'] ?? []);
         $itemState = [
@@ -155,6 +307,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'price_amount' => $priceAmount !== false && $priceAmount !== null ? $priceAmount : trim((string)($_POST['price_amount'] ?? '')),
             'price_currency' => normalizeFoodCurrency((string)($_POST['price_currency'] ?? 'CZK')),
             'price_note' => trim((string)($_POST['price_note'] ?? '')),
+            'media_id' => $mediaId > 0 ? (string)$mediaId : '',
+            'image_alt_text' => mb_substr(trim((string)($_POST['image_alt_text'] ?? '')), 0, 255),
             'allergens' => $allergens,
             'dietary_flags' => $dietaryFlags,
             'is_available' => isset($_POST['is_available']) ? '1' : '0',
@@ -171,13 +325,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($priceAmount === false) {
             $error = 'Cena musí být číslo s nejvýše dvěma desetinnými místy.';
             $fieldErrors[] = 'item_price_amount';
+        } elseif (!$mediaIsValid) {
+            $error = 'Vyberte platný veřejný obrázek z knihovny médií, nebo ponechte obrázek prázdný.';
+            $fieldErrors[] = 'item_media_id';
         } elseif ($itemId !== null && !$itemBelongsToCard($itemId)) {
             $error = 'Upravovaná položka nepatří k tomuto lístku.';
         } elseif ($itemId !== null) {
             $pdo->prepare(
                 "UPDATE cms_food_items
                  SET section_id = ?, title = ?, description = ?, price_amount = ?, price_currency = ?,
-                     price_note = ?, allergens = ?, dietary_flags = ?, is_available = ?, sort_order = ?, updated_at = NOW()
+                     price_note = ?, media_id = ?, image_alt_text = ?, allergens = ?, dietary_flags = ?, is_available = ?, sort_order = ?, updated_at = NOW()
                  WHERE id = ? AND card_id = ?"
             )->execute([
                 $sectionId,
@@ -186,6 +343,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $priceAmount,
                 $itemState['price_currency'],
                 $itemState['price_note'],
+                $mediaId > 0 ? $mediaId : null,
+                $itemState['image_alt_text'],
                 implode(',', $allergens),
                 implode(',', $dietaryFlags),
                 (int)$itemState['is_available'],
@@ -205,8 +364,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 "INSERT INTO cms_food_items
                  (card_id, section_id, title, description, price_amount, price_currency, price_note,
-                  allergens, dietary_flags, is_available, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                  media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             )->execute([
                 $cardId,
                 $sectionId,
@@ -215,6 +374,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $priceAmount,
                 $itemState['price_currency'],
                 $itemState['price_note'],
+                $mediaId > 0 ? $mediaId : null,
+                $itemState['image_alt_text'],
                 implode(',', $allergens),
                 implode(',', $dietaryFlags),
                 (int)$itemState['is_available'],
@@ -258,6 +419,8 @@ if ($editItemId !== null && $error === '') {
             'price_amount' => $editItem['price_amount'] !== null ? (string)$editItem['price_amount'] : '',
             'price_currency' => (string)$editItem['price_currency'],
             'price_note' => (string)$editItem['price_note'],
+            'media_id' => (int)$editItem['media_id'] > 0 ? (string)(int)$editItem['media_id'] : '',
+            'image_alt_text' => (string)$editItem['image_alt_text'],
             'allergens' => $editItem['allergen_values'],
             'dietary_flags' => $editItem['dietary_flag_values'],
             'is_available' => (string)(int)$editItem['is_available'],
@@ -270,12 +433,25 @@ if ($editItemId !== null && $error === '') {
 
 $allergenDefinitions = foodAllergenDefinitions();
 $dietaryFlagDefinitions = foodDietaryFlagDefinitions();
+$selectedMediaId = (int)($itemState['media_id'] !== '' ? $itemState['media_id'] : 0);
+$mediaOptionsStmt = $pdo->prepare(
+    "SELECT id, original_name, filename, alt_text
+     FROM cms_media
+     WHERE visibility = 'public' AND mime_type LIKE 'image/%' AND mime_type <> 'image/svg+xml'
+     ORDER BY (id = ?) DESC, created_at DESC, id DESC
+     LIMIT 201"
+);
+$mediaOptionsStmt->execute([$selectedMediaId]);
+$mediaOptions = $mediaOptionsStmt->fetchAll();
 
 adminHeader('Položky lístku: ' . (string)$card['title']);
 ?>
 
 <?php if ($message === 'saved'): ?><p class="success" role="status">Položky lístku byly uloženy.</p><?php endif; ?>
 <?php if ($message === 'deleted'): ?><p class="success" role="status">Položka nebo sekce byla smazána.</p><?php endif; ?>
+<?php if ($message === 'moved'): ?><p class="success" role="status">Pořadí bylo upraveno.</p><?php endif; ?>
+<?php if ($message === 'duplicated'): ?><p class="success" role="status">Položka byla zkopírována.</p><?php endif; ?>
+<?php if ($message === 'bulk'): ?><p class="success" role="status">Dostupnost vybraných položek byla upravena.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="food-items-error" class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
@@ -326,7 +502,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
   <?php if ($sections === []): ?>
     <p class="field-help field-help--flush">Nejprve přidejte alespoň jednu sekci lístku.</p>
   <?php else: ?>
-    <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['item_title', 'item_section_id', 'item_price_amount']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
+    <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['item_title', 'item_section_id', 'item_price_amount', 'item_media_id']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="action" value="save_item">
       <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
@@ -354,6 +530,31 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
         <label for="item-description">Popis položky</label>
         <textarea id="item-description" name="description" rows="3" aria-describedby="item-description-help"><?= h((string)$itemState['description']) ?></textarea>
         <small id="item-description-help" class="field-help">Volitelně doplňte složení, porci nebo krátkou poznámku.</small>
+
+        <fieldset class="admin-fieldset-card">
+          <legend>Obrázek položky</legend>
+          <p id="item-media-help" class="field-help field-help--flush">Volitelné. Použijte veřejný obrázek z knihovny médií; soukromá média a SVG se u položek nezobrazují.</p>
+          <label for="item-media-id">Obrázek z knihovny médií</label>
+          <select id="item-media-id" name="media_id" class="admin-input-wide" <?= adminFieldAttributes('item_media_id', $fieldErrors, [], ['item-media-help']) ?>>
+            <option value="">Bez obrázku</option>
+            <?php foreach ($mediaOptions as $mediaOption): ?>
+              <?php
+              $mediaLabel = trim((string)($mediaOption['original_name'] ?? ''));
+                if ($mediaLabel === '') {
+                    $mediaLabel = (string)($mediaOption['filename'] ?? '');
+                }
+                ?>
+              <option value="<?= (int)$mediaOption['id'] ?>"<?= (string)$itemState['media_id'] === (string)(int)$mediaOption['id'] ? ' selected' : '' ?>>
+                <?= h($mediaLabel) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <?php adminRenderFieldError('item_media_id', $fieldErrors, [], $error); ?>
+
+          <label for="item-image-alt">Alternativní text obrázku pro tuto položku</label>
+          <input type="text" id="item-image-alt" name="image_alt_text" maxlength="255" value="<?= h((string)$itemState['image_alt_text']) ?>" aria-describedby="item-image-alt-help">
+          <small id="item-image-alt-help" class="field-help">Když ho necháte prázdný, použije se alt text z knihovny médií a případně název položky.</small>
+        </fieldset>
 
         <div class="form-grid">
           <div class="form-group">
@@ -433,6 +634,22 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
           <a class="btn" href="food_items.php?card=<?= (int)$cardId ?>&amp;edit_section=<?= (int)$section['id'] ?>">Upravit sekci</a>
           <form method="post" class="admin-inline-form">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="action" value="move_section">
+            <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
+            <input type="hidden" name="section_id" value="<?= (int)$section['id'] ?>">
+            <input type="hidden" name="direction" value="up">
+            <button type="submit" class="btn">Posunout sekci nahoru</button>
+          </form>
+          <form method="post" class="admin-inline-form">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+            <input type="hidden" name="action" value="move_section">
+            <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
+            <input type="hidden" name="section_id" value="<?= (int)$section['id'] ?>">
+            <input type="hidden" name="direction" value="down">
+            <button type="submit" class="btn">Posunout sekci dolů</button>
+          </form>
+          <form method="post" class="admin-inline-form">
+            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="action" value="delete_section">
             <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
             <input type="hidden" name="section_id" value="<?= (int)$section['id'] ?>">
@@ -444,11 +661,25 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
       <?php if (empty($section['items'])): ?>
         <p class="field-help">Tato sekce zatím nemá žádné položky.</p>
       <?php else: ?>
+        <form id="food-bulk-form-<?= (int)$section['id'] ?>" method="post" class="admin-inline-form admin-action-row" aria-labelledby="food-bulk-title-<?= (int)$section['id'] ?>">
+          <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+          <input type="hidden" name="action" value="bulk_availability">
+          <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
+          <strong id="food-bulk-title-<?= (int)$section['id'] ?>">Hromadná dostupnost položek v této sekci</strong>
+          <label for="food-bulk-availability-<?= (int)$section['id'] ?>" class="sr-only">Nový stav dostupnosti</label>
+          <select id="food-bulk-availability-<?= (int)$section['id'] ?>" name="bulk_availability">
+            <option value="available">Označit jako dostupné</option>
+            <option value="unavailable">Označit jako nedostupné</option>
+          </select>
+          <button type="submit" class="btn">Použít na vybrané položky</button>
+        </form>
         <table>
           <caption>Položky sekce <?= h((string)$section['title']) ?></caption>
           <thead>
             <tr>
+              <th scope="col">Výběr</th>
               <th scope="col">Položka</th>
+              <th scope="col">Obrázek</th>
               <th scope="col">Cena</th>
               <th scope="col">Alergeny a štítky</th>
               <th scope="col">Stav</th>
@@ -459,9 +690,20 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
             <?php foreach ($section['items'] as $item): ?>
               <tr>
                 <td>
+                  <label class="sr-only" for="food-item-select-<?= (int)$item['id'] ?>">Vybrat položku <?= h((string)$item['title']) ?></label>
+                  <input id="food-item-select-<?= (int)$item['id'] ?>" form="food-bulk-form-<?= (int)$section['id'] ?>" type="checkbox" name="item_ids[]" value="<?= (int)$item['id'] ?>">
+                </td>
+                <td>
                   <strong><?= h((string)$item['title']) ?></strong>
                   <?php if (trim((string)($item['description'] ?? '')) !== ''): ?>
                     <br><small class="table-meta"><?= h((string)$item['description']) ?></small>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php if ((string)($item['image_thumb_url'] ?? '') !== ''): ?>
+                    <img src="<?= h((string)$item['image_thumb_url']) ?>" alt="<?= h((string)$item['image_alt']) ?>" class="admin-thumb" loading="lazy">
+                  <?php else: ?>
+                    <span class="table-meta">Bez obrázku</span>
                   <?php endif; ?>
                 </td>
                 <td><?= h((string)($item['price_label'] !== '' ? $item['price_label'] : 'Bez ceny')) ?></td>
@@ -476,6 +718,29 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                 <td><?= (int)$item['is_available'] === 1 ? 'Dostupná' : 'Nedostupná' ?></td>
                 <td class="actions">
                   <a class="btn" href="food_items.php?card=<?= (int)$cardId ?>&amp;edit_item=<?= (int)$item['id'] ?>">Upravit</a>
+                  <form method="post" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                    <input type="hidden" name="action" value="move_item">
+                    <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
+                    <input type="hidden" name="item_id" value="<?= (int)$item['id'] ?>">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" class="btn">Nahoru</button>
+                  </form>
+                  <form method="post" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                    <input type="hidden" name="action" value="move_item">
+                    <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
+                    <input type="hidden" name="item_id" value="<?= (int)$item['id'] ?>">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" class="btn">Dolů</button>
+                  </form>
+                  <form method="post" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                    <input type="hidden" name="action" value="duplicate_item">
+                    <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
+                    <input type="hidden" name="item_id" value="<?= (int)$item['id'] ?>">
+                    <button type="submit" class="btn">Kopírovat</button>
+                  </form>
                   <form method="post" class="admin-inline-form">
                     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                     <input type="hidden" name="action" value="delete_item">

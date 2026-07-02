@@ -629,6 +629,8 @@ $tables = [
         price_amount   DECIMAL(10,2) NULL DEFAULT NULL,
         price_currency VARCHAR(3)    NOT NULL DEFAULT 'CZK',
         price_note     VARCHAR(255)  NOT NULL DEFAULT '',
+        media_id       INT           NULL DEFAULT NULL,
+        image_alt_text VARCHAR(255)  NOT NULL DEFAULT '',
         allergens      VARCHAR(100)  NOT NULL DEFAULT '',
         dietary_flags  VARCHAR(255)  NOT NULL DEFAULT '',
         is_available   TINYINT(1)    NOT NULL DEFAULT 1,
@@ -1422,6 +1424,8 @@ $addColumns = [
     'cms_board.preview_token'        => "ALTER TABLE cms_board ADD COLUMN preview_token VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_board.publish_at'           => "ALTER TABLE cms_board ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
     'cms_board.unpublish_at'         => "ALTER TABLE cms_board ADD COLUMN unpublish_at DATETIME NULL DEFAULT NULL",
+    'cms_food_items.media_id'        => "ALTER TABLE cms_food_items ADD COLUMN media_id INT NULL DEFAULT NULL AFTER price_note",
+    'cms_food_items.image_alt_text'  => "ALTER TABLE cms_food_items ADD COLUMN image_alt_text VARCHAR(255) NOT NULL DEFAULT '' AFTER media_id",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -3468,6 +3472,27 @@ $eventModuleIndexes = [
 ];
 
 foreach ($eventModuleIndexes as $tableName => $indexes) {
+    foreach ($indexes as $indexName => $indexColumns) {
+        try {
+            $pdo->exec("ALTER TABLE {$tableName} ADD INDEX {$indexName} ({$indexColumns})");
+            $log[] = "✓ Index <code>{$indexName}</code> na <code>{$tableName}</code> – OK";
+        } catch (\PDOException $e) {
+            if (str_contains($e->getMessage(), 'Duplicate key name')) {
+                $log[] = "· Index <code>{$indexName}</code> na <code>{$tableName}</code> – již existuje";
+            } else {
+                $log[] = "✗ Index <code>{$indexName}</code> – CHYBA: " . h($e->getMessage());
+            }
+        }
+    }
+}
+
+$foodModuleIndexes = [
+    'cms_food_items' => [
+        'idx_food_items_media' => 'media_id',
+    ],
+];
+
+foreach ($foodModuleIndexes as $tableName => $indexes) {
     foreach ($indexes as $indexName => $indexColumns) {
         try {
             $pdo->exec("ALTER TABLE {$tableName} ADD INDEX {$indexName} ({$indexColumns})");

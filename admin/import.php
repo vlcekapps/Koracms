@@ -972,8 +972,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_food_items
                          (id, card_id, section_id, title, description, price_amount, price_currency, price_note,
-                          allergens, dietary_flags, is_available, sort_order, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    $mediaExistsStmt = $pdo->prepare(
+                        "SELECT id FROM cms_media
+                         WHERE id = ? AND visibility = 'public' AND mime_type LIKE 'image/%' AND mime_type <> 'image/svg+xml'"
                     );
                     foreach ($data['food_items'] as $row) {
                         $sectionId = (int)($row['section_id'] ?? 0);
@@ -987,6 +991,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             continue;
                         }
                         $priceAmount = normalizeFoodPriceInput((string)($row['price_amount'] ?? ''));
+                        $mediaId = (int)($row['media_id'] ?? 0);
+                        if ($mediaId > 0) {
+                            $mediaExistsStmt->execute([$mediaId]);
+                            if (!$mediaExistsStmt->fetch()) {
+                                $mediaId = 0;
+                            }
+                        }
                         $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
                         $updatedAt = $row['updated_at'] ?? $createdAt;
                         $ins->execute([
@@ -998,6 +1009,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $priceAmount === false ? null : $priceAmount,
                             normalizeFoodCurrency((string)($row['price_currency'] ?? 'CZK')),
                             trim((string)($row['price_note'] ?? '')),
+                            $mediaId > 0 ? $mediaId : null,
+                            mb_substr(trim((string)($row['image_alt_text'] ?? '')), 0, 255),
                             implode(',', normalizeFoodAllergenList($row['allergens'] ?? '')),
                             implode(',', normalizeFoodDietaryFlags($row['dietary_flags'] ?? '')),
                             (int)($row['is_available'] ?? 1) === 1 ? 1 : 0,

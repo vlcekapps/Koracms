@@ -21,6 +21,8 @@ foreach (['q', 'typ', 'scope', 'strana'] as $queryKey) {
         $listingQuery[$queryKey] = $queryValue;
     }
 }
+$foodFilters = normalizeFoodStructuredFilters($_GET);
+$listingQuery = array_merge($listingQuery, foodStructuredFilterQueryParams($foodFilters));
 
 if ($slug !== '') {
     $stmt = $pdo->prepare(
@@ -65,6 +67,7 @@ if (!$cardRow) {
 $card = hydrateFoodCardPresentation($cardRow);
 $card['sections'] = foodLoadCardSections($pdo, (int)$card['id']);
 $card = hydrateFoodCardPresentation($card);
+$card = foodApplyStructuredFiltersToCard($card, $foodFilters);
 $canonicalPath = foodCardPublicPath($card);
 $legacyPath = $cardId !== null ? BASE_URL . '/food/card.php?id=' . urlencode((string)$cardId) : '';
 if ($cardId !== null && $canonicalPath !== '' && $canonicalPath !== $legacyPath) {
@@ -103,6 +106,7 @@ renderPublicPage([
         'validityLabel' => $card['validity_label'],
         'backUrl' => $backUrl,
         'backLabel' => $backLabel,
+        'foodFilters' => $foodFilters,
     ],
     'current_nav' => 'food',
     'body_class' => 'page-food-card',

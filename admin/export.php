@@ -76,7 +76,7 @@ $tables = [
                                is_current, is_published, status, created_at, updated_at FROM cms_food_cards",
     'food_sections' => "SELECT id, card_id, title, description, sort_order, created_at, updated_at FROM cms_food_sections",
     'food_items'    => "SELECT id, card_id, section_id, title, description, price_amount, price_currency,
-                               price_note, allergens, dietary_flags, is_available, sort_order, created_at, updated_at
+                               price_note, media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order, created_at, updated_at
                         FROM cms_food_items",
     'podcast_shows' => "SELECT id, title, slug, description, author, subtitle, cover_image,
                                language, category, owner_name, owner_email, explicit_mode, show_type, feed_complete,

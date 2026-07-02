@@ -11,6 +11,9 @@ $pagerHtml = (string)($pagerHtml ?? '');
 $hasActiveFilters = !empty($hasActiveFilters);
 $clearUrl = (string)($clearUrl ?? (BASE_URL . '/food/archive.php'));
 $pageHeading = (string)($pageHeading ?? 'Archiv lístků');
+$foodFilters = is_array($foodFilters ?? null) ? $foodFilters : normalizeFoodStructuredFilters([]);
+$foodFilterHiddenFields = is_array($foodFilterHiddenFields ?? null) ? $foodFilterHiddenFields : [];
+$foodFilterClearUrl = (string)($foodFilterClearUrl ?? $clearUrl);
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="food-archive-title">
@@ -76,6 +79,12 @@ $pageHeading = (string)($pageHeading ?? 'Archiv lístků');
         </div>
       </fieldset>
     </form>
+
+    <?php
+    $foodFilterAction = BASE_URL . '/food/archive.php';
+    $foodFilterTitleId = 'food-archive-structured-filter-title';
+    require __DIR__ . '/food-filters.php';
+    ?>
 
     <?php if ($filterSummaryLabel !== ''): ?>
       <p class="meta-row meta-row--tight">

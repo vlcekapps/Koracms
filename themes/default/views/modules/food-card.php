@@ -28,20 +28,42 @@ $backLabel = (string)($backLabel ?? 'Zpět do archivu');
       <?php endif; ?>
     </p>
 
+    <?php
+    $foodFilterAction = (string)$card['public_path'];
+    $foodFilterClearUrl = (string)$card['public_path'];
+    $foodFilterTitleId = 'food-card-structured-filter-title';
+    $foodFilters = is_array($foodFilters ?? null) ? $foodFilters : normalizeFoodStructuredFilters([]);
+    $foodFilterHiddenFields = [];
+    require __DIR__ . '/food-filters.php';
+    ?>
+
     <?php if (!empty($card['has_structured_items'])): ?>
       <?php
       $foodStructuredSections = $card['sections'];
       $foodStructuredMenuId = 'food-card-structured-menu';
       $foodStructuredMenuHeading = 'Položky lístku';
+      $foodStructuredEmptyMessage = '';
       require __DIR__ . '/food-structured-menu.php';
       ?>
+    <?php elseif (!empty($card['structured_filter_active']) && !empty($card['has_structured_source_items'])): ?>
+      <?php
+      $foodStructuredSections = $card['sections'];
+      $foodStructuredMenuId = 'food-card-structured-menu';
+      $foodStructuredMenuHeading = 'Položky lístku';
+      $foodStructuredEmptyMessage = 'Tento lístek nemá žádnou položku odpovídající filtru.';
+      require __DIR__ . '/food-structured-menu.php';
+      ?>
+    <?php elseif (!empty($card['structured_filter_active'])): ?>
+      <p class="empty-state">Tento lístek nemá strukturované položky, které by šlo filtrovat.</p>
+    <?php endif; ?>
+    <?php if (!empty($card['has_structured_items'])): ?>
       <?php if (trim((string)$card['content']) !== ''): ?>
         <section class="food-menu-notes" aria-labelledby="food-card-notes-title">
           <h2 id="food-card-notes-title" class="section-title section-title--compact">Poznámky k lístku</h2>
           <div class="prose menu-content"><?= renderContent($card['content']) ?></div>
         </section>
       <?php endif; ?>
-    <?php else: ?>
+    <?php elseif (empty($card['structured_filter_active'])): ?>
       <div class="prose menu-content">
         <?php if (!empty($card['content'])): ?>
           <?= renderContent($card['content']) ?>

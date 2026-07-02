@@ -5158,6 +5158,18 @@ try {
     $createdFoodIds[] = $foodCardId;
 
     $foodItemsAdminUrl = $baseUrl . BASE_URL . '/admin/food_items.php?card=' . $foodCardId;
+    $pdo->prepare(
+        "INSERT INTO cms_media (filename, original_name, mime_type, file_size, folder, alt_text, visibility, uploaded_by, created_at)
+         VALUES (?, ?, 'image/jpeg', 1234, 'media', ?, 'public', ?, NOW())"
+    )->execute([
+        'http-food-' . bin2hex(random_bytes(4)) . '.jpg',
+        'http-food.jpg',
+        'HTTP obrázek položky',
+        $adminUserId,
+    ]);
+    $foodMediaId = (int)$pdo->lastInsertId();
+    $createdMediaIds[] = $foodMediaId;
+
     $foodItemsAdminPage = fetchUrl($foodItemsAdminUrl, $adminSession['cookie'], 0);
     if (httpIntegrationStatusCode($foodItemsAdminPage) !== 200
         || !str_contains($foodItemsAdminPage['body'], 'Přidat sekci')
@@ -5189,7 +5201,8 @@ try {
         $foodItemsWithSectionPage = fetchUrl($foodItemsAdminUrl, $adminSession['cookie'], 0);
         if (!str_contains($foodItemsWithSectionPage['body'], 'Alergeny')
             || !str_contains($foodItemsWithSectionPage['body'], 'Dietní štítky')
-            || !str_contains($foodItemsWithSectionPage['body'], 'Položka je dostupná')) {
+            || !str_contains($foodItemsWithSectionPage['body'], 'Položka je dostupná')
+            || !str_contains($foodItemsWithSectionPage['body'], 'Obrázek položky')) {
             $foodStructuredIssues[] = 'správa strukturovaných položek po vytvoření sekce nezobrazila pole položky';
         }
     }
@@ -5206,6 +5219,8 @@ try {
             'price_amount' => '129,90',
             'price_currency' => 'CZK',
             'price_note' => 'za porci',
+            'media_id' => (string)$foodMediaId,
+            'image_alt_text' => 'HTTP smažený sýr na talíři',
             'allergens[0]' => '1',
             'allergens[1]' => '7',
             'dietary_flags[0]' => 'vegetarian',
@@ -5215,7 +5230,7 @@ try {
         if (httpIntegrationStatusCode($itemResponse) !== 302) {
             $foodStructuredIssues[] = 'uložení položky strukturovaného lístku nevrátilo redirect';
         }
-        $foodItemStmt = $pdo->prepare("SELECT id, price_amount, allergens, dietary_flags FROM cms_food_items WHERE card_id = ? AND section_id = ? AND title = ? ORDER BY id DESC LIMIT 1");
+        $foodItemStmt = $pdo->prepare("SELECT id, price_amount, media_id, image_alt_text, allergens, dietary_flags FROM cms_food_items WHERE card_id = ? AND section_id = ? AND title = ? ORDER BY id DESC LIMIT 1");
         $foodItemStmt->execute([$foodCardId, $foodSectionId, 'HTTP Smažený sýr']);
         $foodItemRow = $foodItemStmt->fetch() ?: [];
         $foodItemId = (int)($foodItemRow['id'] ?? 0);
@@ -5225,9 +5240,75 @@ try {
             $createdFoodItemIds[] = $foodItemId;
         }
         if ((string)($foodItemRow['price_amount'] ?? '') !== '129.90'
+            || (int)($foodItemRow['media_id'] ?? 0) !== $foodMediaId
+            || (string)($foodItemRow['image_alt_text'] ?? '') !== 'HTTP smažený sýr na talíři'
             || (string)($foodItemRow['allergens'] ?? '') !== '1,7'
             || (string)($foodItemRow['dietary_flags'] ?? '') !== 'vegetarian') {
-            $foodStructuredIssues[] = 'položka strukturovaného lístku neuložila cenu, alergeny nebo dietní štítky normalizovaně';
+            $foodStructuredIssues[] = 'položka strukturovaného lístku neuložila cenu, obrázek, alergeny nebo dietní štítky normalizovaně';
+        }
+
+        $veganItemResponse = postUrl($foodItemsAdminUrl, [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'save_item',
+            'card_id' => (string)$foodCardId,
+            'item_id' => '0',
+            'section_id' => (string)$foodSectionId,
+            'title' => 'HTTP Veganský salát',
+            'description' => 'Bezlepková zeleninová položka.',
+            'price_amount' => '99',
+            'price_currency' => 'CZK',
+            'price_note' => '',
+            'dietary_flags[0]' => 'vegan',
+            'dietary_flags[1]' => 'gluten_free',
+            'is_available' => '1',
+            'sort_order' => '30',
+        ], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($veganItemResponse) !== 302) {
+            $foodStructuredIssues[] = 'uložení druhé položky strukturovaného lístku nevrátilo redirect';
+        }
+        $foodItemStmt->execute([$foodCardId, $foodSectionId, 'HTTP Veganský salát']);
+        $veganItemRow = $foodItemStmt->fetch() ?: [];
+        $veganItemId = (int)($veganItemRow['id'] ?? 0);
+        if ($veganItemId <= 0) {
+            $foodStructuredIssues[] = 'druhá položka strukturovaného lístku se neuložila do databáze';
+        } else {
+            $createdFoodItemIds[] = $veganItemId;
+        }
+
+        if ($foodItemId > 0) {
+            $duplicateItemResponse = postUrl($foodItemsAdminUrl, [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'duplicate_item',
+                'card_id' => (string)$foodCardId,
+                'item_id' => (string)$foodItemId,
+            ], $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($duplicateItemResponse) !== 302) {
+                $foodStructuredIssues[] = 'kopírování položky strukturovaného lístku nevrátilo redirect';
+            }
+            $duplicateStmt = $pdo->prepare("SELECT id FROM cms_food_items WHERE card_id = ? AND title = ? ORDER BY id DESC LIMIT 1");
+            $duplicateStmt->execute([$foodCardId, 'Kopie: HTTP Smažený sýr']);
+            $duplicateItemId = (int)($duplicateStmt->fetchColumn() ?: 0);
+            if ($duplicateItemId <= 0) {
+                $foodStructuredIssues[] = 'kopírování položky nevytvořilo novou položku';
+            } else {
+                $createdFoodItemIds[] = $duplicateItemId;
+                $bulkResponse = postUrl($foodItemsAdminUrl, [
+                    'csrf_token' => $adminSession['csrf'],
+                    'action' => 'bulk_availability',
+                    'card_id' => (string)$foodCardId,
+                    'item_ids[0]' => (string)$duplicateItemId,
+                    'bulk_availability' => 'unavailable',
+                ], $adminSession['cookie'], 0);
+                if (httpIntegrationStatusCode($bulkResponse) !== 302) {
+                    $foodStructuredIssues[] = 'hromadná změna dostupnosti položky nevrátila redirect';
+                }
+                $availabilityStmt = $pdo->prepare("SELECT is_available FROM cms_food_items WHERE id = ? AND card_id = ?");
+                $availabilityStmt->execute([$duplicateItemId, $foodCardId]);
+                $storedAvailability = $availabilityStmt->fetchColumn();
+                if ((int)$storedAvailability !== 0) {
+                    $foodStructuredIssues[] = 'hromadná změna dostupnosti neuložila nedostupný stav';
+                }
+            }
         }
 
         $invalidItemResponse = postUrl($foodItemsAdminUrl, [
@@ -5254,12 +5335,34 @@ try {
     $foodCardResponse = fetchUrl($baseUrl . $foodCardPath, '', 0);
     if (httpIntegrationStatusCode($foodCardResponse) !== 200
         || !str_contains($foodCardResponse['body'], 'HTTP Smažený sýr')
+        || !str_contains($foodCardResponse['body'], 'HTTP Veganský salát')
         || !str_contains($foodCardResponse['body'], '129,90 Kč (za porci)')
         || !str_contains($foodCardResponse['body'], 'Alergeny: 1 -')
         || !str_contains($foodCardResponse['body'], 'Vegetariánské')
+        || !str_contains($foodCardResponse['body'], 'food-menu-item__image')
+        || !str_contains($foodCardResponse['body'], 'HTTP smažený sýr na talíři')
+        || !str_contains($foodCardResponse['body'], 'Použité alergeny')
         || !str_contains($foodCardResponse['body'], 'Poznámky k lístku')
         || !str_contains($foodCardResponse['body'], '"hasMenuSection"')) {
-        $foodStructuredIssues[] = 'veřejný detail lístku nezobrazuje strukturované položky, cenu, alergeny, poznámky nebo JSON-LD';
+        $foodStructuredIssues[] = 'veřejný detail lístku nezobrazuje strukturované položky, cenu, alergeny, obrázek, poznámky nebo JSON-LD';
+    }
+
+    $foodFilteredPath = $foodCardPath . '?' . http_build_query([
+        'dieta' => ['vegan', 'gluten_free'],
+        'bez_alergenu' => [1, 7],
+        'pouze_dostupne' => '1',
+    ]);
+    $foodFilteredResponse = fetchUrl($baseUrl . $foodFilteredPath, '', 0);
+    if (httpIntegrationStatusCode($foodFilteredResponse) !== 200
+        || !str_contains($foodFilteredResponse['body'], 'HTTP Veganský salát')
+        || str_contains($foodFilteredResponse['body'], 'HTTP Smažený sýr')) {
+        $foodStructuredIssues[] = 'veřejný detail lístku nefiltruje položky podle diety, alergenů a dostupnosti';
+    }
+
+    $foodFilteredEmptyResponse = fetchUrl($baseUrl . $foodCardPath . '?' . http_build_query(['dieta' => ['spicy']]), '', 0);
+    if (httpIntegrationStatusCode($foodFilteredEmptyResponse) !== 200
+        || !str_contains($foodFilteredEmptyResponse['body'], 'Tento lístek nemá žádnou položku odpovídající filtru.')) {
+        $foodStructuredIssues[] = 'veřejný detail lístku nezobrazuje empty state pro prázdný filtr položek';
     }
 
     $foodArchiveResponse = fetchUrl($baseUrl . BASE_URL . '/food/archive.php?q=' . rawurlencode('Smažený sýr'), '', 0);
@@ -5269,11 +5372,23 @@ try {
         $foodStructuredIssues[] = 'archiv jídelních lístků nehledá podle názvu strukturované položky';
     }
 
+    $foodFilteredArchiveResponse = fetchUrl($baseUrl . BASE_URL . '/food/archive.php?' . http_build_query([
+        'dieta' => ['vegan', 'gluten_free'],
+        'bez_alergenu' => [1, 7],
+        'pouze_dostupne' => '1',
+    ]), '', 0);
+    if (httpIntegrationStatusCode($foodFilteredArchiveResponse) !== 200
+        || !str_contains($foodFilteredArchiveResponse['body'], $foodTitle)
+        || !str_contains($foodFilteredArchiveResponse['body'], 'HTTP Veganský salát')) {
+        $foodStructuredIssues[] = 'archiv jídelních lístků nefiltruje podle strukturovaných položek';
+    }
+
     $adminExportWithFoodResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
     if (!str_contains($adminExportWithFoodResponse['body'], '"food_sections"')
         || !str_contains($adminExportWithFoodResponse['body'], '"food_items"')
+        || !str_contains($adminExportWithFoodResponse['body'], '"image_alt_text"')
         || !str_contains($adminExportWithFoodResponse['body'], 'HTTP Smažený sýr')) {
-        $foodStructuredIssues[] = 'JSON export neobsahuje strukturované sekce a položky lístků';
+        $foodStructuredIssues[] = 'JSON export neobsahuje strukturované sekce, položky nebo obrázková pole lístků';
     }
 
     httpIntegrationPrintResult('food_structured_items_http', $foodStructuredIssues, $failures);

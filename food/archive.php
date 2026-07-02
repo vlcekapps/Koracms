@@ -27,6 +27,7 @@ $perPage = 12;
 $q = trim((string)($_GET['q'] ?? ''));
 $filterType = trim((string)($_GET['typ'] ?? 'vse'));
 $scope = trim((string)($_GET['scope'] ?? 'all'));
+$foodFilters = normalizeFoodStructuredFilters($_GET);
 
 if (!in_array($filterType, ['food', 'beverage', 'vse'], true)) {
     $filterType = 'vse';
@@ -53,6 +54,12 @@ if ($q !== '') {
 if ($filterType !== 'vse') {
     $whereParts[] = 'type = ?';
     $params[] = $filterType;
+}
+
+$structuredFilterSql = foodStructuredFilterExistsSql($foodFilters);
+if ($structuredFilterSql['sql'] !== '') {
+    $whereParts[] = $structuredFilterSql['sql'];
+    $params = array_merge($params, $structuredFilterSql['params']);
 }
 
 $countCardsForScope = static function (string $scopeKey) use ($pdo, $whereParts, $params): int {
@@ -120,15 +127,18 @@ $cards = array_map(
     static fn (array $card): array => hydrateFoodCardPresentation($card),
     $cardsStmt->fetchAll()
 );
-$cards = foodAttachSectionsToCards($pdo, $cards);
+$cards = array_map(
+    static fn (array $card): array => foodApplyStructuredFiltersToCard($card, $foodFilters),
+    foodAttachSectionsToCards($pdo, $cards)
+);
 
-$buildFoodArchiveUrl = static function (array $overrides = []) use ($q, $filterType, $scope): string {
+$buildFoodArchiveUrl = static function (array $overrides = []) use ($q, $filterType, $scope, $foodFilters): string {
     $query = [];
     $merged = array_merge([
         'q' => $q,
         'typ' => $filterType,
         'scope' => $scope,
-    ], $overrides);
+    ], foodStructuredFilterQueryParams($foodFilters), $overrides);
 
     foreach ($merged as $key => $value) {
         if ($value === null || $value === '' || ($key === 'typ' && $value === 'vse') || ($key === 'scope' && $value === 'all')) {
@@ -178,6 +188,9 @@ if ($q !== '') {
 if ($filterType !== 'vse') {
     $filterSummary[] = 'typ: ' . foodCardTypeLabel($filterType);
 }
+foreach (foodStructuredFilterSummary($foodFilters) as $structuredFilterLabel) {
+    $filterSummary[] = $structuredFilterLabel;
+}
 
 $pageHeading = match ($scope) {
     'current' => 'Právě platné lístky',
@@ -225,11 +238,23 @@ renderPublicPage([
         'filterType' => $filterType,
         'searchQuery' => $q,
         'scope' => $scope,
+        'foodFilters' => $foodFilters,
+        'foodFilterHiddenFields' => [
+            'q' => $q,
+            'typ' => $filterType !== 'vse' ? $filterType : '',
+            'scope' => $scope !== 'all' ? $scope : '',
+        ],
+        'foodFilterClearUrl' => $buildFoodArchiveUrl([
+            'dieta' => null,
+            'bez_alergenu' => null,
+            'pouze_dostupne' => null,
+            'strana' => null,
+        ]),
         'scopeLinks' => $scopeLinks,
         'filterSummary' => $filterSummary,
         'resultCountLabel' => foodCardsCountLabel($totalItems),
         'pagerHtml' => renderPager($page, $pages, $pagerBase, 'Stránkování archivu lístků', 'Předchozí stránka', 'Další stránka'),
-        'hasActiveFilters' => $q !== '' || $filterType !== 'vse' || $scope !== 'all',
+        'hasActiveFilters' => $q !== '' || $filterType !== 'vse' || $scope !== 'all' || foodStructuredFiltersAreActive($foodFilters),
         'clearUrl' => BASE_URL . '/food/archive.php',
         'pageHeading' => $pageHeading,
     ],

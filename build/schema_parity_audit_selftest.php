@@ -271,6 +271,8 @@ CREATE TABLE IF NOT EXISTS cms_food_items (
   section_id INT,
   title VARCHAR(255),
   price_amount DECIMAL(10,2),
+  media_id INT,
+  image_alt_text VARCHAR(255),
   allergens VARCHAR(100),
   dietary_flags VARCHAR(255),
   is_available TINYINT(1)
@@ -373,8 +375,11 @@ PHP,
 // cms_food_sections
 // idx_food_sections_card_order
 // cms_food_items
+// cms_food_items.media_id
+// cms_food_items.image_alt_text
 // idx_food_items_card_order
 // idx_food_items_section_order
+// idx_food_items_media
 // ft_food_items_search
 PHP,
         'blog/index.php' => <<<'PHP'

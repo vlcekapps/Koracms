@@ -642,6 +642,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             price_amount   DECIMAL(10,2) NULL DEFAULT NULL,
             price_currency VARCHAR(3)    NOT NULL DEFAULT 'CZK',
             price_note     VARCHAR(255)  NOT NULL DEFAULT '',
+            media_id       INT           NULL DEFAULT NULL,
+            image_alt_text VARCHAR(255)  NOT NULL DEFAULT '',
             allergens      VARCHAR(100)  NOT NULL DEFAULT '',
             dietary_flags  VARCHAR(255)  NOT NULL DEFAULT '',
             is_available   TINYINT(1)    NOT NULL DEFAULT 1,
@@ -650,6 +652,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_food_items_card_order (card_id, sort_order, id),
             INDEX idx_food_items_section_order (section_id, sort_order, id),
+            INDEX idx_food_items_media (media_id),
             FULLTEXT INDEX ft_food_items_search (title, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 

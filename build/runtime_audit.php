@@ -13636,17 +13636,17 @@ foreach (["'valid_from' =>", "'valid_to' =>", "'valid_range' =>"] as $foodFormFr
 }
 $foodInstallSource = (string)file_get_contents(dirname(__DIR__) . '/install.php');
 $foodMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
-foreach (['cms_food_sections', 'cms_food_items', 'idx_food_sections_card_order', 'idx_food_items_card_order', 'idx_food_items_section_order'] as $foodSchemaFragment) {
+foreach (['cms_food_sections', 'cms_food_items', 'media_id', 'image_alt_text', 'idx_food_sections_card_order', 'idx_food_items_card_order', 'idx_food_items_section_order', 'idx_food_items_media'] as $foodSchemaFragment) {
     if (!str_contains($foodInstallSource, $foodSchemaFragment) || !str_contains($foodMigrateSource, $foodSchemaFragment)) {
         $editorialValidationIssues[] = 'food structured menu schema is missing install/migrate fragment: ' . $foodSchemaFragment;
     }
 }
-foreach (['foodAllergenDefinitions', 'normalizeFoodAllergenList', 'foodDietaryFlagDefinitions', 'normalizeFoodPriceInput', 'foodLoadCardSections', 'hasMenuSection'] as $foodHelperFragment) {
+foreach (['foodAllergenDefinitions', 'normalizeFoodAllergenList', 'foodDietaryFlagDefinitions', 'normalizeFoodPriceInput', 'normalizeFoodStructuredFilters', 'foodFilterStructuredSections', 'foodStructuredAllergenLegend', 'foodStructuredFilterExistsSql', 'foodApplyStructuredFiltersToCard', 'mediaFileUrl', 'hasMenuSection'] as $foodHelperFragment) {
     if (!str_contains($presentationSource, $foodHelperFragment)) {
         $editorialValidationIssues[] = 'food structured menu helper is missing: ' . $foodHelperFragment;
     }
 }
-foreach (['verifyCsrf()', '$sectionBelongsToCard', '$itemBelongsToCard', 'adminFieldAttributes(', 'Položky lístku'] as $foodItemsFragment) {
+foreach (['verifyCsrf()', '$sectionBelongsToCard', '$itemBelongsToCard', 'adminFieldAttributes(', 'mediaCanPreviewImage', 'bulk_availability', 'duplicate_item', 'move_item', 'image_alt_text', 'Položky lístku'] as $foodItemsFragment) {
     if (!str_contains($foodItemsAdminSource, $foodItemsFragment)) {
         $editorialValidationIssues[] = 'food items admin is missing guarded fragment: ' . $foodItemsFragment;
     }
@@ -16562,6 +16562,8 @@ $themeChatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/def
 $themeContactViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/contact.php');
 $themeFoodIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-index.php');
 $themeFoodStructuredMenuViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-structured-menu.php');
+$themeFoodFiltersViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-filters.php');
+$themeFoodArchiveViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-archive.php');
 $themeDownloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
 $themeDownloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
 $themeEventsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-article.php');
@@ -16949,13 +16951,21 @@ if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Oprav
 if (!str_contains($themeFoodCardViewSource, 'js-print-page')) {
     $themeLayoutIssues[] = 'food card view is missing shared print button hook';
 }
-foreach (['food-structured-menu', 'aria-labelledby="<?= h($foodStructuredMenuId) ?>"', 'food-menu-item__price', 'Alergeny:'] as $foodStructuredViewFragment) {
+foreach (['food-structured-menu', 'aria-labelledby="<?= h($foodStructuredMenuId) ?>"', 'food-menu-item__price', 'food-menu-item__image', 'food-allergen-legend', 'Alergeny:'] as $foodStructuredViewFragment) {
     if (!str_contains($themeFoodStructuredMenuViewSource, $foodStructuredViewFragment)) {
         $themeLayoutIssues[] = 'food structured menu view is missing fragment: ' . $foodStructuredViewFragment;
     }
 }
 if (!str_contains($themeFoodIndexViewSource, 'food-structured-menu.php') || !str_contains($themeFoodCardViewSource, 'food-structured-menu.php')) {
     $themeLayoutIssues[] = 'food public views do not include structured menu renderer';
+}
+foreach (['name="dieta[]"', 'name="bez_alergenu[]"', 'name="pouze_dostupne"', 'aria-labelledby="<?= h($foodFilterTitleId) ?>"', '<legend>Dietní štítky</legend>', '<legend>Zobrazit položky bez alergenů</legend>'] as $foodFilterViewFragment) {
+    if (!str_contains($themeFoodFiltersViewSource, $foodFilterViewFragment)) {
+        $themeLayoutIssues[] = 'food structured filter view is missing fragment: ' . $foodFilterViewFragment;
+    }
+}
+if (!str_contains($themeFoodIndexViewSource, 'food-filters.php') || !str_contains($themeFoodCardViewSource, 'food-filters.php') || !str_contains($themeFoodArchiveViewSource, 'food-filters.php')) {
+    $themeLayoutIssues[] = 'food public views do not include structured filter renderer';
 }
 $themeHeadingBackedGroups = [
     'food tabs' => [

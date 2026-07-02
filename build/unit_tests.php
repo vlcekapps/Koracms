@@ -1060,6 +1060,55 @@ assert_true(foodCardHasStructuredItems($foodSectionsFixture), 'food structured m
 assert_equals(3, foodCardStructuredItemCount($foodSectionsFixture), 'food structured menu counts items across sections');
 assert_equals(['Česnečka', 'Rajská polévka'], foodCardItemPreviewLabels($foodSectionsFixture, 2), 'food structured menu preview keeps order and limit');
 
+$foodFilterState = normalizeFoodStructuredFilters([
+    'dieta' => ['vegetarian', 'gluten_free', 'unknown'],
+    'bez_alergenu' => ['1', '7', '99'],
+    'pouze_dostupne' => '1',
+]);
+assert_equals(['vegetarian', 'gluten_free'], $foodFilterState['dietary_flags'], 'food filters normalize dietary flags');
+assert_equals([1, 7], $foodFilterState['excluded_allergens'], 'food filters normalize excluded allergens');
+assert_true($foodFilterState['active'], 'food filters detect active state');
+
+$filteredFoodSectionsFixture = [
+    [
+        'title' => 'Hlavní jídla',
+        'items' => [
+            [
+                'title' => 'Veganský salát',
+                'dietary_flag_values' => ['vegan', 'gluten_free'],
+                'allergen_values' => [],
+                'is_available' => 1,
+            ],
+            [
+                'title' => 'Smažený sýr',
+                'dietary_flag_values' => ['vegetarian'],
+                'allergen_values' => [1, 7],
+                'is_available' => 1,
+            ],
+            [
+                'title' => 'Archivní polévka',
+                'dietary_flag_values' => ['vegan', 'gluten_free'],
+                'allergen_values' => [],
+                'is_available' => 0,
+            ],
+        ],
+    ],
+];
+$matchingFoodSections = foodFilterStructuredSections($filteredFoodSectionsFixture, normalizeFoodStructuredFilters([
+    'dieta' => ['vegan', 'gluten_free'],
+    'bez_alergenu' => [1, 7],
+    'pouze_dostupne' => '1',
+]));
+assert_equals(1, foodCardStructuredItemCount($matchingFoodSections), 'food filters keep only matching structured items');
+assert_equals('Veganský salát', $matchingFoodSections[0]['items'][0]['title'], 'food filters keep expected item');
+assert_equals([
+    ['number' => 1, 'label' => 'Obiloviny obsahující lepek'],
+    ['number' => 7, 'label' => 'Mléko'],
+], foodStructuredAllergenLegend($filteredFoodSectionsFixture), 'food allergen legend lists used allergens');
+$foodFilterSql = foodStructuredFilterExistsSql($foodFilterState);
+assert_contains('EXISTS (SELECT 1 FROM cms_food_items fi', $foodFilterSql['sql'], 'food filter SQL uses structured items EXISTS');
+assert_equals(['vegetarian', 'gluten_free', 1, 7], $foodFilterSql['params'], 'food filter SQL keeps stable parameter order');
+
 $foodStructuredData = foodCardStructuredData([
     'title' => 'Testovací lístek',
     'slug' => 'testovaci-listek',
@@ -1075,6 +1124,7 @@ $foodStructuredData = foodCardStructuredData([
                     'price_amount' => '129.00',
                     'price_currency' => 'CZK',
                     'is_available' => 1,
+                    'image_url' => BASE_URL . '/uploads/media/syr.jpg',
                 ],
             ],
         ],
@@ -1084,6 +1134,7 @@ assert_contains('"hasMenuSection"', $foodStructuredData, 'food structured data c
 assert_contains('"@type":"MenuItem"', $foodStructuredData, 'food structured data contains MenuItem');
 assert_contains('"price":"129.00"', $foodStructuredData, 'food structured data contains price');
 assert_contains('"priceCurrency":"CZK"', $foodStructuredData, 'food structured data keeps ISO currency');
+assert_contains('"image":"', $foodStructuredData, 'food structured data contains item image');
 
 $_SERVER['HTTP_USER_AGENT'] = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 assert_equals(true, isSocialPreviewCrawler(), 'Facebook crawler is detected as social preview crawler');

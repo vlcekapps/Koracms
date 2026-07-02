@@ -7,6 +7,15 @@
       </div>
     </div>
 
+    <?php
+    $foodFilterAction = BASE_URL . '/food/index.php';
+    $foodFilterClearUrl = BASE_URL . '/food/index.php';
+    $foodFilterTitleId = 'food-index-structured-filter-title';
+    $foodFilters = is_array($foodFilters ?? null) ? $foodFilters : normalizeFoodStructuredFilters([]);
+    $foodFilterHiddenFields = [];
+    require __DIR__ . '/food-filters.php';
+    ?>
+
     <h2 id="food-tabs-heading" class="sr-only">Typ lístku</h2>
     <div class="tabs-nav" role="tablist" aria-labelledby="food-tabs-heading">
       <button type="button" class="tabs-nav__tab" role="tab" aria-selected="true" aria-controls="food-panel-food"
@@ -28,15 +37,28 @@
           $foodStructuredSections = $foodCard['sections'];
           $foodStructuredMenuId = 'food-panel-food-menu';
           $foodStructuredMenuHeading = 'Položky jídelního lístku';
+          $foodStructuredEmptyMessage = '';
           require __DIR__ . '/food-structured-menu.php';
           ?>
+        <?php elseif (!empty($foodCard['structured_filter_active']) && !empty($foodCard['has_structured_source_items'])): ?>
+          <?php
+          $foodStructuredSections = $foodCard['sections'];
+          $foodStructuredMenuId = 'food-panel-food-menu';
+          $foodStructuredMenuHeading = 'Položky jídelního lístku';
+          $foodStructuredEmptyMessage = 'Aktuální jídelní lístek nemá žádnou položku odpovídající filtru.';
+          require __DIR__ . '/food-structured-menu.php';
+          ?>
+        <?php elseif (!empty($foodCard['structured_filter_active'])): ?>
+          <p class="empty-state">Aktuální jídelní lístek nemá strukturované položky, které by šlo filtrovat.</p>
+        <?php endif; ?>
+        <?php if (!empty($foodCard['has_structured_items'])): ?>
           <?php if (trim((string)$foodCard['content']) !== ''): ?>
             <section class="food-menu-notes" aria-labelledby="food-panel-food-notes">
               <h3 id="food-panel-food-notes">Poznámky k lístku</h3>
               <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
             </section>
           <?php endif; ?>
-        <?php else: ?>
+        <?php elseif (empty($foodCard['structured_filter_active'])): ?>
           <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
         <?php endif; ?>
         <div class="button-row button-row--start">
@@ -60,15 +82,28 @@
           $foodStructuredSections = $beverageCard['sections'];
           $foodStructuredMenuId = 'food-panel-beverage-menu';
           $foodStructuredMenuHeading = 'Položky nápojového lístku';
+          $foodStructuredEmptyMessage = '';
           require __DIR__ . '/food-structured-menu.php';
           ?>
+        <?php elseif (!empty($beverageCard['structured_filter_active']) && !empty($beverageCard['has_structured_source_items'])): ?>
+          <?php
+          $foodStructuredSections = $beverageCard['sections'];
+          $foodStructuredMenuId = 'food-panel-beverage-menu';
+          $foodStructuredMenuHeading = 'Položky nápojového lístku';
+          $foodStructuredEmptyMessage = 'Aktuální nápojový lístek nemá žádnou položku odpovídající filtru.';
+          require __DIR__ . '/food-structured-menu.php';
+          ?>
+        <?php elseif (!empty($beverageCard['structured_filter_active'])): ?>
+          <p class="empty-state">Aktuální nápojový lístek nemá strukturované položky, které by šlo filtrovat.</p>
+        <?php endif; ?>
+        <?php if (!empty($beverageCard['has_structured_items'])): ?>
           <?php if (trim((string)$beverageCard['content']) !== ''): ?>
             <section class="food-menu-notes" aria-labelledby="food-panel-beverage-notes">
               <h3 id="food-panel-beverage-notes">Poznámky k lístku</h3>
               <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
             </section>
           <?php endif; ?>
-        <?php else: ?>
+        <?php elseif (empty($beverageCard['structured_filter_active'])): ?>
           <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
         <?php endif; ?>
         <div class="button-row button-row--start">
